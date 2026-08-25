@@ -107,19 +107,61 @@ def best_xi(players: Iterable[Candidate], gw_index: int) -> tuple[float, list[in
     if any(len(by[pos]) < POSITION_COUNTS[pos] for pos in POSITION_COUNTS):
         return 0.0, []
     gk = by["GK"][0]
-    best_score = -1.0; best_ids: list[int] = []
+    best_score = -1.0
+    best_ids: list[int] = []
     for d in range(3, 6):
         for m in range(2, 6):
             f = 10 - d - m
             if not (1 <= f <= 3):
                 continue
-            if d > len(by["DEF"]) or m > len(by["MID"]) or f > len(by["FWD"]):
-                continue
             chosen = [gk] + by["DEF"][:d] + by["MID"][:m] + by["FWD"][:f]
             score = sum(_gw_value(p, gw_index) for p in chosen)
             if score > best_score:
-                best_score = score; best_ids = [p.element for p in chosen]
+                best_score = score
+                best_ids = [p.element for p in chosen]
     return max(0.0, best_score), best_ids
+
+
+def _group_by_position(players: Iterable[Candidate]) -> dict[str, list[Candidate]]:
+    by = {pos: [] for pos in POSITION_COUNTS}
+    for p in players:
+        by[p.position].append(p)
+    return by
+
+
+def _best_xi_score_grouped(by: dict[str, list[Candidate]], gw_index: int) -> float:
+    """Score-only legal XI evaluator used in hot loops. Semantics match best_xi()."""
+    gk = max((_gw_value(p, gw_index) for p in by["GK"]), default=0.0)
+    dv = sorted((_gw_value(p, gw_index) for p in by["DEF"]), reverse=True)
+    mv = sorted((_gw_value(p, gw_index) for p in by["MID"]), reverse=True)
+    fv = sorted((_gw_value(p, gw_index) for p in by["FWD"]), reverse=True)
+    dp = [0.0]
+    mp = [0.0]
+    fp = [0.0]
+    for v in dv: dp.append(dp[-1] + v)
+    for v in mv: mp.append(mp[-1] + v)
+    for v in fv: fp.append(fp[-1] + v)
+    best = 0.0
+    for d in range(3, 6):
+        for m in range(2, 6):
+            f = 10 - d - m
+            if 1 <= f <= 3:
+                score = gk + dp[d] + mp[m] + fp[f]
+                if score > best:
+                    best = score
+    return best
+
+
+def squad_utility_fast(players: Iterable[Candidate], horizon: int = 5, bench_weight: float = 0.12) -> float:
+    """Equivalent to squad_utility but avoids regrouping the 15-player squad for every GW."""
+    ps = list(players)
+    by = _group_by_position(ps)
+    total = 0.0
+    for i in range(horizon):
+        xi_score = _best_xi_score_grouped(by, i)
+        squad_total = sum(_gw_value(p, i) for p in ps)
+        total += xi_score + bench_weight * (squad_total - xi_score)
+    return total
 
 
 def squad_utility(players: Iterable[Candidate], horizon: int = 5, bench_weight: float = 0.12) -> float:
@@ -127,7 +169,8 @@ def squad_utility(players: Iterable[Candidate], horizon: int = 5, bench_weight: 
     total = 0.0
     for i in range(horizon):
         xi_score, xi_ids = best_xi(ps, i)
-        bench = sum(_gw_value(p, i) for p in ps if p.element not in set(xi_ids))
+        ids = set(xi_ids)
+        bench = sum(_gw_value(p, i) for p in ps if p.element not in ids)
         total += xi_score + bench_weight * bench
     return total
 
@@ -149,23 +192,32 @@ def optimize_squad(candidates: list[Candidate], locked_ids: set[int] | None = No
                     new_cost = cost + p.cost
                     if new_cost > budget or clubs[p.team_id] >= MAX_PER_CLUB:
                         continue
-                    cc = clubs.copy(); cc[p.team_id] += 1
+                    cc = clubs.copy()
+                    cc[p.team_id] += 1
                     nxt.append((selected + (p,), new_cost, cc, score + p.objective, idx))
             nxt.sort(key=lambda s: (s[3], -s[1]), reverse=True)
             states = nxt[:beam_size]
             if not states:
                 raise RuntimeError(f"no legal optimizer state while selecting {pos}")
 
-    # Heuristic beam is player-level; final selection is reranked by legal XI utility.
-    finalists = []
-    for selected, cost, clubs, heuristic, _ in states:
-        ok, reason = validate_squad(selected, budget)
-        if ok:
-            finalists.append((squad_utility(selected, 5), heuristic, -cost, selected, cost))
+    # All complete beam states are structurally legal by construction. Avoid validating
+    # thousands of finalists; validate only the winner as a fail-closed invariant check.
+    finalists = [
+        (squad_utility_fast(selected, 5), heuristic, -cost, selected, cost)
+        for selected, cost, _clubs, heuristic, _ in states
+    ]
     if not finalists:
         raise RuntimeError("optimizer produced no legal finalist")
     best = max(finalists, key=lambda x: (x[0], x[1], x[2]))
-    return {"players": list(best[3]), "cost": best[4], "itb": budget-best[4], "objective": best[1], "xi_utility_5": best[0], "screened_players": len(candidates), "pool_sizes": pool_sizes}
+    ok, reason = validate_squad(best[3], budget)
+    if not ok:
+        raise RuntimeError(f"optimizer winner failed legality invariant: {reason}")
+    return {
+        "players": list(best[3]), "cost": best[4], "itb": budget - best[4],
+        "objective": best[1], "xi_utility_5": best[0], "screened_players": len(candidates),
+        "pool_sizes": pool_sizes, "beam_size": beam_size,
+        "performance": {"fast_finalist_scoring": True, "winner_only_legality_check": True},
+    }
 
 
 def squad_metrics(players: Iterable[Candidate]) -> dict:
@@ -173,7 +225,9 @@ def squad_metrics(players: Iterable[Candidate]) -> dict:
     xi5 = 0.0
     xi_detail = []
     for i in range(5):
-        score, ids = best_xi(ps, i); xi5 += score; xi_detail.append({"gw_offset": i+1, "xpts": round(score,2), "elements": ids})
+        score, ids = best_xi(ps, i)
+        xi5 += score
+        xi_detail.append({"gw_offset": i + 1, "xpts": round(score, 2), "elements": ids})
     return {
         "cost": sum(p.cost for p in ps),
         "objective": round(sum(p.objective for p in ps), 4),
@@ -182,7 +236,7 @@ def squad_metrics(players: Iterable[Candidate]) -> dict:
         "squad_xpts_10": round(sum(p.x10 for p in ps), 2),
         "squad_xpts_15": round(sum(p.x15 for p in ps), 2),
         "best_xi_xpts_5": round(xi5, 2),
-        "bench_adjusted_utility_5": round(squad_utility(ps,5), 2),
+        "bench_adjusted_utility_5": round(squad_utility_fast(ps, 5), 2),
         "best_xi_by_gw": xi_detail,
     }
 
@@ -197,6 +251,10 @@ def classify_gain(delta_utility: float, delta_xi5: float) -> str:
 
 def decision_report(predictions: dict, universe: dict, locked: dict, budget: int = BUDGET_TENTHS) -> dict:
     candidates = build_candidates(predictions, universe)
+    return decision_report_from_candidates(candidates, locked, budget)
+
+
+def decision_report_from_candidates(candidates: list[Candidate], locked: dict, budget: int = BUDGET_TENTHS) -> dict:
     by_id = {p.element: p for p in candidates}
     locked_ids = {int(p["element"]) for p in locked.get("players", [])}
     missing = sorted(locked_ids - set(by_id))
@@ -209,28 +267,38 @@ def decision_report(predictions: dict, universe: dict, locked: dict, budget: int
 
     optimized = optimize_squad(candidates, locked_ids=locked_ids, budget=budget)
     target = optimized["players"]
-    current_m = squad_metrics(current); target_m = squad_metrics(target)
+    current_m = squad_metrics(current)
+    target_m = squad_metrics(target)
     target_ids = {p.element for p in target}
-    outs = sorted((by_id[x] for x in locked_ids-target_ids), key=lambda p:(p.position,p.name))
-    ins = sorted((by_id[x] for x in target_ids-locked_ids), key=lambda p:(p.position,p.name))
+    outs = sorted((by_id[x] for x in locked_ids - target_ids), key=lambda p: (p.position, p.name))
+    ins = sorted((by_id[x] for x in target_ids - locked_ids), key=lambda p: (p.position, p.name))
     delta_xi5 = target_m["best_xi_xpts_5"] - current_m["best_xi_xpts_5"]
     delta_utility = target_m["bench_adjusted_utility_5"] - current_m["bench_adjusted_utility_5"]
 
-    direct = []; baseline_itb = int(locked.get("itb_tenths",0) or 0)
+    direct = []
+    baseline_itb = int(locked.get("itb_tenths", 0) or 0)
     for owned in current:
-        alternatives=[p for p in candidates if p.position==owned.position and p.element not in locked_ids and p.cost<=owned.cost+baseline_itb]
-        alternatives.sort(key=lambda p:p.objective,reverse=True)
+        alternatives = [p for p in candidates if p.position == owned.position and p.element not in locked_ids and p.cost <= owned.cost + baseline_itb]
+        alternatives.sort(key=lambda p: p.objective, reverse=True)
         if alternatives:
-            c=alternatives[0]; direct.append({"owned":owned.element,"owned_name":owned.name,"challenger":c.element,"challenger_name":c.name,"position":owned.position,"cost_delta":c.cost-owned.cost,"objective_delta":round(c.objective-owned.objective,4),"xpts5_delta":round(c.x5-owned.x5,2)})
-    direct.sort(key=lambda x:x["objective_delta"],reverse=True)
+            c = alternatives[0]
+            direct.append({
+                "owned": owned.element, "owned_name": owned.name, "challenger": c.element,
+                "challenger_name": c.name, "position": owned.position, "cost_delta": c.cost - owned.cost,
+                "objective_delta": round(c.objective - owned.objective, 4), "xpts5_delta": round(c.x5 - owned.x5, 2),
+            })
+    direct.sort(key=lambda x: x["objective_delta"], reverse=True)
 
     return {
-        "schema_version":441,"engine":"v4.4.1-wc-optimizer","wildcard_active":bool(locked.get("wildcard_active")),"budget_tenths":budget,"baseline_itb_tenths":baseline_itb,"screened_players":len(candidates),
-        "current":current_m,"optimized":target_m|{"itb":optimized["itb"]},
-        "delta":{"best_xi_xpts_5":round(delta_xi5,2),"bench_adjusted_utility_5":round(delta_utility,2)},
-        "classification":classify_gain(delta_utility,delta_xi5),
-        "out":[{"element":p.element,"name":p.name,"position":p.position,"cost":p.cost} for p in outs],
-        "in":[{"element":p.element,"name":p.name,"position":p.position,"cost":p.cost} for p in ins],
-        "optimized_elements":[p.element for p in target],"direct_challengers":direct[:15],
-        "hard_constraints":{"squad_size":15,"positions":POSITION_COUNTS,"budget_tenths":budget,"max_per_club":MAX_PER_CLUB,"legal_xi":True},
+        "schema_version": 446, "engine": "v4.4.5-wc-optimizer-fast-finalist",
+        "wildcard_active": bool(locked.get("wildcard_active")), "budget_tenths": budget,
+        "baseline_itb_tenths": baseline_itb, "screened_players": len(candidates),
+        "current": current_m, "optimized": target_m | {"itb": optimized["itb"]},
+        "delta": {"best_xi_xpts_5": round(delta_xi5, 2), "bench_adjusted_utility_5": round(delta_utility, 2)},
+        "classification": classify_gain(delta_utility, delta_xi5),
+        "out": [{"element": p.element, "name": p.name, "position": p.position, "cost": p.cost} for p in outs],
+        "in": [{"element": p.element, "name": p.name, "position": p.position, "cost": p.cost} for p in ins],
+        "optimized_elements": [p.element for p in target], "direct_challengers": direct[:15],
+        "hard_constraints": {"squad_size": 15, "positions": POSITION_COUNTS, "budget_tenths": budget, "max_per_club": MAX_PER_CLUB, "legal_xi": True},
+        "performance": {"fast_finalist_scoring": True, "winner_only_legality_check": True, "beam_size_unchanged": optimized["beam_size"] == 6000},
     }

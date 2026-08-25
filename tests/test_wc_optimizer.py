@@ -1,4 +1,4 @@
-from src.engines.v4_wc_optimizer import Candidate, validate_squad, best_xi, classify_gain, squad_utility, squad_utility_fast
+from src.engines.v4_wc_optimizer import Candidate, validate_squad, best_xi, classify_gain, squad_utility, squad_utility_fast, _club_add, _club_count
 
 
 def c(e,pos,team,cost=50,x=3.0):
@@ -23,6 +23,15 @@ def test_club_limit_rejected():
     ps[0]=c(ps[0].element,"GK",1); ps[1]=c(ps[1].element,"GK",1); ps[2]=c(ps[2].element,"DEF",1); ps[3]=c(ps[3].element,"DEF",1)
     ok,reason=validate_squad(ps,1000)
     assert not ok and reason=="club_limit"
+
+
+def test_packed_club_signature_exact_counts():
+    sig=0
+    for _ in range(3): sig=_club_add(sig,7)
+    for _ in range(2): sig=_club_add(sig,1)
+    assert _club_count(sig,7)==3
+    assert _club_count(sig,1)==2
+    assert _club_count(sig,2)==0
 
 
 def test_best_xi_is_legal_343_or_better():

@@ -20,6 +20,17 @@ REGISTRIES = {
 }
 EXPECTED_COUNTS = {"dss_core": 50, "dss_extensions": 16, "enhancements": 8, "gate0": 16}
 
+# These files are products of the decision pipeline and therefore must not make
+# PRE-FLIGHT fail simply because the pipeline has not run yet.
+POSTFLIGHT_OUTPUTS = {
+    "data/wc_decision_v4.json",
+    "data/wc_package_audit_v4.json",
+    "data/lineup_decision_v4.json",
+    "data/recommendation_sanity_v4.json",
+    "data/decision_pipeline_v4.json",
+    "data/framework_health_v4.json",
+}
+
 
 def _exists(rel: str) -> bool:
     return (ROOT / rel).exists()
@@ -30,7 +41,7 @@ def _registry_rows(name: str, obj: dict) -> list[dict]:
     return list(obj.get(key) or [])
 
 
-def _audit_registry(name: str, obj: dict) -> dict:
+def _audit_registry(name: str, obj: dict, phase: str) -> dict:
     rows = _registry_rows(name, obj)
     ids = [str(x.get("id")) for x in rows]
     duplicate_ids = sorted(k for k, v in Counter(ids).items() if v > 1)
@@ -42,11 +53,16 @@ def _audit_registry(name: str, obj: dict) -> dict:
         req = list(row.get("required_files") or [])
         present = [p for p in req if _exists(p)]
         missing = [p for p in req if not _exists(p)]
+        deferred_missing = [p for p in missing if phase == "preflight" and p in POSTFLIGHT_OUTPUTS]
+        blocking_missing = [p for p in missing if p not in deferred_missing]
+
         if not req:
             status = "DECLARED"
         elif not missing:
             status = "ACTIVE"
-        elif present:
+        elif not blocking_missing and deferred_missing:
+            status = "DEFERRED"
+        elif present or deferred_missing:
             status = "PARTIAL"
         else:
             status = "FAILED" if row.get("critical") else "PARTIAL"
@@ -54,6 +70,7 @@ def _audit_registry(name: str, obj: dict) -> dict:
         audited.append({
             "id": row.get("id"), "name": row.get("name"), "critical": bool(row.get("critical")),
             "status": status, "required_files": req, "missing_files": missing,
+            "deferred_files": deferred_missing, "blocking_missing_files": blocking_missing,
         })
     return {
         "registry": obj.get("registry"), "expected": expected, "declared": len(rows),
@@ -140,7 +157,7 @@ def _gate0(phase: str, locked: dict, universe: dict, lineup: dict, packages: dic
 
 def audit(phase: str = "postflight") -> dict:
     regs = {k: read_json(v, {}) for k, v in REGISTRIES.items()}
-    registry_health = {k: _audit_registry(k, v) for k, v in regs.items()}
+    registry_health = {k: _audit_registry(k, v, phase) for k, v in regs.items()}
     integrity_ok = all(x["integrity_ok"] for x in registry_health.values())
 
     locked = read_json(CONFIG / "locked_squad.json", {})
@@ -154,8 +171,10 @@ def audit(phase: str = "postflight") -> dict:
     critical_partial = []
     for group in ("dss_core", "dss_extensions", "enhancements"):
         for item in registry_health[group]["items"]:
-            if item["critical"] and item["status"] == "FAILED": critical_failed.append(item["id"])
-            elif item["critical"] and item["status"] == "PARTIAL": critical_partial.append(item["id"])
+            if item["critical"] and item["status"] == "FAILED":
+                critical_failed.append(item["id"])
+            elif item["critical"] and item["status"] == "PARTIAL":
+                critical_partial.append(item["id"])
 
     if not integrity_ok or not gate0["pass"] or critical_failed:
         overall = "RED"
@@ -165,8 +184,8 @@ def audit(phase: str = "postflight") -> dict:
         overall = "GREEN"
 
     out = {
-        "schema_version": 4601,
-        "engine": "v4.6-framework-health-auditor",
+        "schema_version": 4602,
+        "engine": "v4.6.3-framework-health-auditor-phase-aware",
         "phase": phase,
         "overall": overall,
         "go_allowed": overall != "RED" and gate0["pass"],
@@ -182,6 +201,7 @@ def audit(phase: str = "postflight") -> dict:
             "raw_optimizer_distinct_from_governed_recommendation": True,
             "manual_draft_distinct_from_final_lock": True,
             "gate0_fail_blocks_go": True,
+            "preflight_defers_postflight_outputs": True,
         },
     }
     atomic_json(PRE_OUT if phase == "preflight" else OUT, out)

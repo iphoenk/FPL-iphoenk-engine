@@ -24,7 +24,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - name: Generate API + advanced-stats snapshot
-        run: python -m src.engine daily -- --stats
+        run: python -m src.engine daily --stats
       - name: Commit data safely
         shell: bash
         run: |

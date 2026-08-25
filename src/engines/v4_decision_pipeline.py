@@ -1,15 +1,66 @@
 from __future__ import annotations
 
 import json
+import traceback
+from multiprocessing import get_context
 from time import perf_counter
 
 from src.utils import DATA, CONFIG, atomic_json, read_json
-from src.engines.v4_wc_optimizer import decision_report
-from src.engines.v4_wc_package_audit import audit_packages
+from src.engines.v4_wc_optimizer import build_candidates, decision_report_from_candidates
+from src.engines.v4_wc_package_audit import audit_packages_from_candidates
 from src.engines.v4_lineup_optimizer import optimize_lineup, MANUAL_FILE
 from src.engines.v4_recommendation_sanity import sanity_report
 
 OUTFILE = DATA / "decision_pipeline_v4.json"
+_SHARED = None
+
+
+def _decision_worker(kind, conn):
+    """Linux fork worker: read shared in-memory inputs via copy-on-write, write compact result."""
+    t = perf_counter()
+    try:
+        shared = _SHARED
+        if not shared:
+            raise RuntimeError("decision worker started without shared inputs")
+        if kind == "wc":
+            out = decision_report_from_candidates(shared["candidates"], shared["locked"])
+            atomic_json(DATA / "wc_decision_v4.json", out)
+        elif kind == "packages":
+            out = audit_packages_from_candidates(shared["candidates"], shared["locked"])
+            atomic_json(DATA / "wc_package_audit_v4.json", out)
+        else:
+            raise RuntimeError(f"unknown decision worker: {kind}")
+        conn.send({"ok": True, "ms": round((perf_counter() - t) * 1000.0, 1)})
+    except Exception:
+        conn.send({"ok": False, "ms": round((perf_counter() - t) * 1000.0, 1), "error": traceback.format_exc()})
+    finally:
+        conn.close()
+
+
+def _run_parallel_wc_package(candidates, locked):
+    global _SHARED
+    _SHARED = {"candidates": candidates, "locked": locked}
+    ctx = get_context("fork")
+    recv_wc, send_wc = ctx.Pipe(duplex=False)
+    recv_pkg, send_pkg = ctx.Pipe(duplex=False)
+    p_wc = ctx.Process(target=_decision_worker, args=("wc", send_wc), name="v46-wc")
+    p_pkg = ctx.Process(target=_decision_worker, args=("packages", send_pkg), name="v46-packages")
+    wall = perf_counter()
+    p_wc.start()
+    p_pkg.start()
+    send_wc.close()
+    send_pkg.close()
+    wc_status = recv_wc.recv()
+    pkg_status = recv_pkg.recv()
+    p_wc.join()
+    p_pkg.join()
+    wall_ms = round((perf_counter() - wall) * 1000.0, 1)
+    _SHARED = None
+    if not wc_status.get("ok") or p_wc.exitcode != 0:
+        raise RuntimeError("parallel WC worker failed:\n" + str(wc_status.get("error") or p_wc.exitcode))
+    if not pkg_status.get("ok") or p_pkg.exitcode != 0:
+        raise RuntimeError("parallel package worker failed:\n" + str(pkg_status.get("error") or p_pkg.exitcode))
+    return wc_status, pkg_status, wall_ms
 
 
 def run():
@@ -19,17 +70,16 @@ def run():
     locked = read_json(CONFIG / "locked_squad.json", {})
     manual = read_json(MANUAL_FILE, {})
     latest = read_json(DATA / "latest.json", {})
-    timings = {"load_shared_inputs_ms": round((perf_counter() - t0) * 1000.0, 1)}
+    candidates = build_candidates(predictions, universe)
+    timings = {"load_shared_inputs_and_candidates_ms": round((perf_counter() - t0) * 1000.0, 1)}
 
-    t = perf_counter()
-    wc = decision_report(predictions, universe, locked)
-    atomic_json(DATA / "wc_decision_v4.json", wc)
-    timings["wc_decision_ms"] = round((perf_counter() - t) * 1000.0, 1)
-
-    t = perf_counter()
-    packages = audit_packages(predictions, universe, locked)
-    atomic_json(DATA / "wc_package_audit_v4.json", packages)
-    timings["package_audit_ms"] = round((perf_counter() - t) * 1000.0, 1)
+    wc_status, pkg_status, parallel_wall = _run_parallel_wc_package(candidates, locked)
+    timings["wc_decision_cpu_ms"] = wc_status["ms"]
+    timings["package_audit_cpu_ms"] = pkg_status["ms"]
+    timings["wc_package_parallel_wall_ms"] = parallel_wall
+    timings["parallel_speedup_estimate"] = round((wc_status["ms"] + pkg_status["ms"]) / max(1.0, parallel_wall), 3)
+    wc = read_json(DATA / "wc_decision_v4.json", {})
+    packages = read_json(DATA / "wc_package_audit_v4.json", {})
 
     t = perf_counter()
     lineup = optimize_lineup(predictions, universe, locked, manual=manual)
@@ -43,8 +93,8 @@ def run():
     timings["total_pipeline_ms"] = round((perf_counter() - t0) * 1000.0, 1)
 
     out = {
-        "schema_version": 460,
-        "engine": "v4.6-unified-decision-pipeline",
+        "schema_version": 461,
+        "engine": "v4.6.1-unified-decision-pipeline-fast-parallel",
         "timings": timings,
         "results": {
             "wc_raw": wc.get("classification"),
@@ -57,8 +107,15 @@ def run():
         },
         "performance_guardrails": {
             "shared_json_loaded_once": True,
+            "shared_candidates_built_once": True,
+            "fork_copy_on_write": True,
+            "parallel_wc_package": True,
+            "fast_wc_finalist_scoring": True,
+            "redundant_package_validation_removed": True,
             "concise_stdout": True,
             "search_quality_reduction": False,
+            "wc_beam_unchanged": True,
+            "package_frontier_beam_unchanged": True,
         },
     }
     atomic_json(OUTFILE, out)

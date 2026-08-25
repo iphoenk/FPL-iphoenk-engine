@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 import argparse, json
 from pathlib import Path
@@ -8,6 +7,7 @@ from src.sources import core_insights, vaastav
 from src.engines.team_value import sell_cost, build_transfer_spells
 from src.models.fixture import next_fixtures
 from src.models.projection import project_points
+from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 TEAM_ID=3462711
 
@@ -175,7 +175,6 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
             "purchase_source":source,"ownership":p.get("selected_by_percent"),"status":p.get("status")
         })
 
-    # Advanced stats sync for latest completed/current GW when requested.
     adv_summary={}
     stats_gw=phase["current_gw"] or phase["last_finished_gw"]
     if sync_stats and stats_gw:
@@ -186,7 +185,6 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
         if deep_stats:
             adv_summary["deep"]=core_insights.sync_optional_deep_files(stats_gw)
 
-    # Live payload
     live_payload={"generated_at":iso_now(),"status":"IDLE","scoring_gw":scoring_gw,"players":[]}
     if picks and live:
         live_by={e["id"]:e for e in live.get("elements",[])}
@@ -204,12 +202,11 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
                       "scoring_gw":scoring_gw,"gross_points":gross,"hit":hit,"net_points":gross-hit,"players":detail}
     atomic_json(DATA/"live.json",live_payload)
 
-    # Prices / universe
     prev=read_json(DATA/"price_cache.json",{}).get("players",{})
     cur={};confirmed=[];momentum=[]
     total_players=bootstrap.get("total_players",0) or 0
     for p in bootstrap["elements"]:
-        cur[str(p["id"])]={"now_cost":p["now_cost"],"ownership":p.get("selected_by_percent")}
+        cur[str(p["id"]) ]={"now_cost":p["now_cost"],"ownership":p.get("selected_by_percent")}
         old=prev.get(str(p["id"]))
         if old and old.get("now_cost")!=p["now_cost"]:
             confirmed.append({"element":p["id"],"name":p["web_name"],"previous":old["now_cost"],
@@ -239,7 +236,7 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
                                             "sell_value":sum(x["sell_cost"] for x in ledger if x["sell_cost"] is not None),
                                             "itb":lock.get("itb_tenths") if use_lock else (entry or {}).get("last_deadline_bank")}})
 
-    snapshot={"schema_version":31,"engine_version":"3.1.0","generated_at":iso_now(),"mode":mode,
+    snapshot={"schema_version":SCHEMA_VERSION,"engine_version":ENGINE_VERSION,"generated_at":iso_now(),"mode":mode,
               "team_id":TEAM_ID,"phase":phase,"endpoint_health":health,
               "squad_authority":"LOCKED_PRE_DEADLINE" if use_lock else "OFFICIAL_SUBMITTED",
               "advanced_stats_sync":adv_summary,

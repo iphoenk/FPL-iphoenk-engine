@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-25T12:16:02.104549+00:00",
-  "status": "PROVISIONAL",
+  "generated_at": "2026-08-25T12:32:45.818183+00:00",
+  "status": "RECONCILED_OR_IDLE",
   "scoring_gw": 1,
   "gross_points": 71,
   "hit": 0,

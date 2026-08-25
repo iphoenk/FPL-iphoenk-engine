@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.6
+name: FPL iphoenk collector v3.7
 
 on:
   workflow_dispatch:
@@ -20,6 +20,7 @@ concurrency:
 
 env:
   RUNTIME_BRANCH: runtime-data
+  FPL_TEAM_ID: "3462711"
 
 jobs:
   gate:
@@ -53,7 +54,7 @@ jobs:
         run: pip install -r requirements.txt pytest
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
-      - name: Reliability, rules, cadence and Official expansion tests
+      - name: Reliability, rules, Official expansion and auth-policy tests
         run: python -m pytest -q
 
   collect:
@@ -75,12 +76,22 @@ jobs:
       - run: pip install -r requirements.txt pytest
       - name: Collector mode
         run: echo "Collector gate=${{ needs.gate.outputs.reason }} runtime_branch=${RUNTIME_BRANCH}"
-      - name: Generate Official FPL snapshot
+      - name: Generate public Official FPL snapshot
         run: |
           python -m src.engine daily --stats
           python -m src.reliability_overlay
           python -m src.engines.price_radar
           python -m src.engines.official_expansion
+      - name: Optional authenticated Official read-only overlay
+        env:
+          FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
+          FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
+          FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
+          FPL_REFRESH_TOKEN: ${{ secrets.FPL_REFRESH_TOKEN }}
+          FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
+          FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
+          FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
+        run: python -m src.engines.authenticated_official
       - name: Validate generated snapshot
         run: |
           python - <<'PY'
@@ -92,6 +103,7 @@ jobs:
           p=json.load(open('data/prices.json'))
           c=json.load(open('data/chips.json'))
           d=json.load(open('data/official_detail.json'))
+          a=json.load(open('data/auth.json'))
           assert s['engine_version'] == ENGINE_VERSION
           assert s['schema_version'] == SCHEMA_VERSION
           assert s.get('snapshot_id')
@@ -109,6 +121,11 @@ jobs:
           assert d.get('owned_element_ids')
           assert d.get('official_health',{}).get('element_summary',{}).get('requested',0) >= 15
           assert 'fixture_stats' in d and 'event_live_rich' in d and 'dream_team' in d
+          auth=s.get('authenticated_official',{})
+          assert auth == a
+          assert auth.get('state') in {'DISABLED','MISCONFIGURED','VALID','EXPIRED_OR_REJECTED','UNAVAILABLE','ENTRY_MISMATCH','PARTIAL','PARTIAL_AUTH_REJECTED','POLICY_BLOCKED'}
+          assert auth.get('raw_authenticated_payload_persisted') is False
+          assert auth.get('policy',{}).get('resource_methods') == ['GET']
           r=validate_snapshot(s)
           print(r)
           if not r['ok']: raise SystemExit(2)

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T13:53:41.070609+00:00",
+  "generated_at": "2026-08-25T14:01:23.207585+00:00",
   "players": [
     {
       "element": 1,
@@ -900,6 +900,21 @@
       "minutes": 0,
       "transfers_in_event": 2133,
       "transfers_out_event": 367
+    },
+    {
+      "element": 611,
+      "name": "Wan-Bissaka",
+      "team": "Aston Villa",
+      "team_id": 2,
+      "position": "DEF",
+      "element_type": 2,
+      "now_cost": 45,
+      "ownership": "0.0",
+      "status": "a",
+      "points": 0,
+      "minutes": 0,
+      "transfers_in_event": 0,
+      "transfers_out_event": 0
     },
     {
       "element": 57,

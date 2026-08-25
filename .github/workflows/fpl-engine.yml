@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.4
+name: FPL iphoenk collector v3.5
 
 on:
   workflow_dispatch:
@@ -32,7 +32,7 @@ jobs:
         run: pip install -r requirements.txt pytest
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
-      - name: Reliability tests
+      - name: Reliability and rules tests
         run: python -m pytest -q
 
   collect:
@@ -62,14 +62,20 @@ jobs:
           python - <<'PY'
           import json
           from src.engines.reliability import validate_snapshot
+          from src.rules import RULESET_ID
           from src.version import ENGINE_VERSION, SCHEMA_VERSION
           s=json.load(open('data/latest.json'))
           p=json.load(open('data/prices.json'))
+          c=json.load(open('data/chips.json'))
           assert s['engine_version'] == ENGINE_VERSION
           assert s['schema_version'] == SCHEMA_VERSION
           assert s.get('snapshot_id')
           assert s.get('native',{}).get('entry')
           assert s.get('provenance',{}).get('entry',{}).get('source') == 'official_fpl'
+          assert s.get('ruleset',{}).get('id') == RULESET_ID
+          assert (s.get('ruleset',{}).get('goal_points',{}).get('1') == 10 or s.get('ruleset',{}).get('goal_points',{}).get(1) == 10)
+          assert s.get('chip_ledger',{}).get('ruleset_id') == RULESET_ID
+          assert c.get('ruleset_id') == RULESET_ID
           assert s.get('price_summary',{}).get('filter_policy',{}).get('min_ownership_pct') == 0.5
           assert all(x.get('ownership_pct',0) >= 0.5 and abs(x.get('net_transfers',0)) >= 5000 for x in p.get('top_buy_pressure',[]))
           assert all(x.get('ownership_pct',0) >= 0.5 and abs(x.get('net_transfers',0)) >= 5000 for x in p.get('top_sell_pressure',[]))
@@ -84,7 +90,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data/
           if git diff --cached --quiet; then echo "No data changes"; exit 0; fi
-          git commit -m "data: refresh FPL v3.4 snapshot"
+          git commit -m "data: refresh FPL v3.5 snapshot"
           git fetch origin main
           git rebase origin/main
           git push origin main

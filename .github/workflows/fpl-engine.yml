@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.3.1
+name: FPL iphoenk collector v3.4
 
 on:
   workflow_dispatch:
@@ -52,18 +52,22 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt pytest
-      - name: Generate API + advanced-stats snapshot
-        run: python -m src.engine daily --stats
+      - name: Generate Official FPL snapshot
+        run: |
+          python -m src.engine daily --stats
+          python -m src.reliability_overlay
       - name: Validate generated snapshot
         run: |
           python - <<'PY'
           import json
           from src.engines.reliability import validate_snapshot
           from src.version import ENGINE_VERSION, SCHEMA_VERSION
-
           s=json.load(open('data/latest.json'))
-          assert s['engine_version'] == ENGINE_VERSION, (s['engine_version'], ENGINE_VERSION)
-          assert s['schema_version'] == SCHEMA_VERSION, (s['schema_version'], SCHEMA_VERSION)
+          assert s['engine_version'] == ENGINE_VERSION
+          assert s['schema_version'] == SCHEMA_VERSION
+          assert s.get('snapshot_id')
+          assert s.get('native',{}).get('entry')
+          assert s.get('provenance',{}).get('entry',{}).get('source') == 'official_fpl'
           r=validate_snapshot(s)
           print(r)
           if not r['ok']: raise SystemExit(2)
@@ -75,7 +79,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data/
           if git diff --cached --quiet; then echo "No data changes"; exit 0; fi
-          git commit -m "data: refresh FPL v3.3.1 snapshot"
+          git commit -m "data: refresh FPL v3.4 snapshot"
           git fetch origin main
           git rebase origin/main
           git push origin main

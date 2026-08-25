@@ -37,16 +37,10 @@ jobs:
       - name: Persist forward-valid deadline snapshot and reconcile finished GW when available
         env: {PYTHONPATH: "${{ github.workspace }}"}
         run: python -m src.engines.v4_validation_cycle cycle
-      - name: Wildcard full-universe decision optimizer
+      - name: V4.6 unified decision and evidence pipeline
         env: {PYTHONPATH: "${{ github.workspace }}"}
-        run: python -m src.engines.v4_wc_decision
-      - name: Bounded wildcard challenger package audit
-        env: {PYTHONPATH: "${{ github.workspace }}"}
-        run: python -m src.engines.v4_wc_package_audit
-      - name: GW lineup bench captain optimizer
-        env: {PYTHONPATH: "${{ github.workspace }}"}
-        run: python -m src.engines.v4_lineup_optimizer
-      - name: V4 acceptance and quality gate
+        run: python -m src.engines.v4_decision_pipeline
+      - name: V4.6 acceptance and quality gate
         env: {PYTHONPATH: "${{ github.workspace }}"}
         run: |
           python - <<'PY'
@@ -57,10 +51,12 @@ jobs:
           c=json.load(open('data/compliance_audit.json')); assert c.get('overall')=='PASS', c
           p=json.load(open('data/predictions_v4.json')); players=p.get('players',[])
           assert p.get('point_in_time') is True and len(players) >= 500
+
           w=json.load(open('data/wc_decision_v4.json'))
           assert w.get('engine')=='v4.4.1-wc-optimizer', w
           assert w.get('screened_players',0)>=500 and len(w.get('optimized_elements',[]))==15
           assert w.get('classification') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
+
           a=json.load(open('data/wc_package_audit_v4.json'))
           assert int(a.get('schema_version',0)) >= 444, a
           assert str(a.get('engine','')).startswith('v4.4.3-wc-package-audit'), a
@@ -68,6 +64,7 @@ jobs:
           assert a.get('overall_verdict') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
           assert a.get('guardrails',{}).get('risk_penalty_enabled') is True
           assert a.get('performance',{}).get('metrics_cache_entries',0) > 0
+
           l=json.load(open('data/lineup_decision_v4.json'))
           assert int(l.get('schema_version',0)) >= 452, l
           assert str(l.get('engine','')).startswith('v4.5.2-lineup-robust-governance'), l
@@ -81,6 +78,27 @@ jobs:
           assert guards.get('captain_risk_adjusted') and guards.get('captain_safe_pool_preferred')
           assert guards.get('manual_draft_not_overwritten_without_margin') and guards.get('prediction_interval_robustness')
           assert l.get('governance',{}).get('decision') in {'OPTIMIZER_ONLY','HOLD_MANUAL_DRAFT','CHANGE_RECOMMENDED'}
+
+          e=json.load(open('data/recommendation_sanity_v4.json'))
+          assert int(e.get('schema_version',0)) >= 460, e
+          assert str(e.get('engine','')).startswith('v4.6-evidence-fusion-sanity'), e
+          assert e.get('point_in_time') is True
+          assert e.get('final_verdict') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
+          eg=e.get('guardrails',{})
+          assert eg.get('raw_optimizer_not_authoritative') and eg.get('rate_spike_detection')
+          assert eg.get('team_cluster_penalty') and eg.get('outgoing_baseline_resistance')
+          assert eg.get('early_season_multi_change_cap') and eg.get('point_in_time_required')
+          if e.get('recommended_package'):
+              assert 1 <= int(e['recommended_package']['replacements']) <= 4
+
+          q=json.load(open('data/decision_pipeline_v4.json'))
+          assert int(q.get('schema_version',0)) >= 460, q
+          assert q.get('engine')=='v4.6-unified-decision-pipeline', q
+          assert q.get('performance_guardrails',{}).get('shared_json_loaded_once') is True
+          assert q.get('performance_guardrails',{}).get('search_quality_reduction') is False
+          timings=q.get('timings',{})
+          assert timings.get('total_pipeline_ms',0) > 0 and timings.get('package_audit_ms',0) > 0
+
           all_x=[]
           for row in players:
               assert len(row.get('fixtures',[])) <= 15 and row.get('xpts_5',0) >= 0
@@ -91,13 +109,13 @@ jobs:
                   assert fx['lower80'] <= x <= fx['upper80']
                   d=fx['xmins']; assert abs(d['start_probability']+d['bench_probability']+d['dnp_probability']-1) < .002
           assert all_x and statistics.median(all_x) < 8 and sum(x>15 for x in all_x)/len(all_x) < .03
-          print('V4.5.2 STABILITY GATE PASS', {'rules':c['overall'],'wc':w['classification'],'package':a['overall_verdict'],'lineup_decision':l['governance']['decision'],'formation':l['formation'],'captain':l['captain']['name'],'vice':l['vice_captain']['name'],'metric_cache':a['performance']['metrics_cache_entries']})
+          print('V4.6 QUALITY GATE PASS', {'rules':c['overall'],'wc_raw':w['classification'],'package_raw':a['overall_verdict'],'recommendation_final':e['final_verdict'],'recommended_changes':(e.get('recommended_package') or {}).get('replacements'),'lineup':l['governance']['decision'],'formation':l['formation'],'captain':l['captain']['name'],'pipeline_ms':timings['total_pipeline_ms'],'package_ms':timings['package_audit_ms']})
           PY
       - name: Package V4 quality-test inputs
         if: always()
         run: |
           mkdir -p v4-artifact
-          cp data/predictions_v4.json data/latest.json data/live.json data/universe.json data/team.json data/compliance_audit.json data/wc_decision_v4.json data/wc_package_audit_v4.json data/lineup_decision_v4.json v4-artifact/ 2>/dev/null || true
+          cp data/predictions_v4.json data/latest.json data/live.json data/universe.json data/team.json data/compliance_audit.json data/wc_decision_v4.json data/wc_package_audit_v4.json data/lineup_decision_v4.json data/recommendation_sanity_v4.json data/decision_pipeline_v4.json v4-artifact/ 2>/dev/null || true
           cp config/manual_lineup.json v4-artifact/ 2>/dev/null || true
           if [ -d data/validation ]; then cp -R data/validation v4-artifact/; fi
       - name: Upload V4 prediction artifact

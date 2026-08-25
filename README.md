@@ -16,8 +16,12 @@ Combine:
 - 2026/27 scoring compliance: goalkeeper goals are worth 10 points in projections
 - single engine/service version source in `src/version.py`
 - authenticated manual `/refresh` using `FPL_REFRESH_API_KEY`
-- one shared live poller for all SSE clients instead of one Official FPL polling loop per client
-- regression coverage for goalkeeper goal scoring
+- constant-time refresh-key comparison and fail-closed manual refresh when no key is configured
+- one shared live poller per service process instead of one Official FPL polling loop per SSE client
+- manual refresh and background polling serialized through the same process-local lock
+- SSE keep-alives plus anti-buffering/no-cache response headers
+- regression coverage for all position goal values, release metadata and refresh authentication
+- pull-request test gate plus snapshot version/schema assertions
 
 ## P0 Production Core
 Implemented:
@@ -64,7 +68,8 @@ python fpl_daily_tasks.py stats-sync --gw 1 --deep
 python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
 
 export FPL_REFRESH_API_KEY="replace-with-a-long-random-secret"
-uvicorn live_service:app --host 0.0.0.0 --port 8000
+export FPL_LIVE_POLL_SECONDS="60"
+uvicorn live_service:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 
 ## Live endpoints
@@ -76,7 +81,9 @@ uvicorn live_service:app --host 0.0.0.0 --port 8000
 - POST `/refresh` with header `X-FPL-Refresh-Key`
 - GET `/stream` via Server-Sent Events
 
-`/refresh` is disabled with HTTP 503 when `FPL_REFRESH_API_KEY` is not configured. The background poller is shared by all `/stream` clients, so additional subscribers do not multiply Official FPL API polling.
+`/refresh` is disabled with HTTP 503 when `FPL_REFRESH_API_KEY` is not configured and returns HTTP 401 for an invalid key. `FPL_LIVE_POLL_SECONDS` has a 30-second safety floor.
+
+The background poller is shared by all `/stream` clients within one service process, so additional subscribers do not multiply Official FPL API polling. The poller is process-local: multiple Uvicorn workers each create their own polling chain. Use one worker when exactly one polling chain per host is required, or use an external single scheduler/coordinator for multi-worker deployments.
 
 ## Source authority
 1. Official FPL API

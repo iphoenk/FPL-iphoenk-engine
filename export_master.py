@@ -47,7 +47,28 @@ def detect_event(bootstrap):
     nxt = next((e for e in events if e.get("is_next")), None)
     finished = [e for e in events if e.get("finished")]
     last_finished = max(finished, key=lambda e: e["id"]) if finished else None
-    planning = current or nxt
+
+    now = datetime.now(timezone.utc)
+
+    if current:
+        deadline_raw = current.get("deadline_time")
+        deadline = None
+
+        if deadline_raw:
+            try:
+                deadline = datetime.fromisoformat(
+                    deadline_raw.replace("Z", "+00:00")
+                )
+            except ValueError:
+                deadline = None
+
+        if deadline is not None and deadline > now:
+            planning = current
+        else:
+            planning = nxt or current
+    else:
+        planning = nxt
+
     return current, nxt, last_finished, planning
 
 

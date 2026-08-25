@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.2
+name: FPL iphoenk collector v3.3
 
 on:
   workflow_dispatch:
@@ -35,7 +35,11 @@ jobs:
           python - <<'PY'
           import json
           from src.engines.reliability import validate_snapshot
+          from src.version import ENGINE_VERSION, SCHEMA_VERSION
+
           s=json.load(open('data/latest.json'))
+          assert s['engine_version'] == ENGINE_VERSION, (s['engine_version'], ENGINE_VERSION)
+          assert s['schema_version'] == SCHEMA_VERSION, (s['schema_version'], SCHEMA_VERSION)
           r=validate_snapshot(s)
           print(r)
           if not r['ok']: raise SystemExit(2)
@@ -47,7 +51,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data/
           if git diff --cached --quiet; then echo "No data changes"; exit 0; fi
-          git commit -m "data: refresh FPL v3.2 snapshot"
+          git commit -m "data: refresh FPL v3.3 snapshot"
           git fetch origin main
           git rebase origin/main
           git push origin main

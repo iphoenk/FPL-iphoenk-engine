@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.5
+name: FPL iphoenk collector v3.5.1
 
 on:
   workflow_dispatch:
@@ -8,7 +8,11 @@ on:
     paths-ignore:
       - 'data/**'
   schedule:
-    - cron: "20 * * * *"
+    # Primary hourly refresh. :55 is intentionally away from top-of-hour congestion
+    # and gives the :30 Master Monitor checkpoints a useful freshness buffer.
+    - cron: "55 * * * *"
+    # Adaptive redundancy slot. Collector gate only enables this on deadline/match windows.
+    - cron: "15 * * * *"
 
 permissions:
   contents: read
@@ -17,8 +21,28 @@ concurrency:
   group: fpl-iphoenk-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  RUNTIME_BRANCH: runtime-data
+
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      should_collect: ${{ steps.cadence.outputs.should_collect }}
+      reason: ${{ steps.cadence.outputs.reason }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decide collector cadence
+        id: cadence
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          FPL_SCHEDULE_EXPR: ${{ github.event.schedule }}
+        run: python -m src.engines.collector_gate
+
   test:
+    needs: gate
+    if: github.event_name == 'pull_request' || needs.gate.outputs.should_collect == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -32,12 +56,12 @@ jobs:
         run: pip install -r requirements.txt pytest
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
-      - name: Reliability and rules tests
+      - name: Reliability, rules and cadence tests
         run: python -m pytest -q
 
   collect:
-    if: github.event_name != 'pull_request'
-    needs: test
+    if: github.event_name != 'pull_request' && needs.gate.outputs.should_collect == 'true'
+    needs: [gate, test]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -52,6 +76,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt pytest
+      - name: Collector mode
+        run: echo "Collector gate=${{ needs.gate.outputs.reason }} runtime_branch=${RUNTIME_BRANCH}"
       - name: Generate Official FPL snapshot
         run: |
           python -m src.engine daily --stats
@@ -83,14 +109,43 @@ jobs:
           print(r)
           if not r['ok']: raise SystemExit(2)
           PY
-      - name: Commit data safely
+      - name: Stamp runtime publication metadata
+        run: |
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          p='data/latest.json'
+          s=json.load(open(p))
+          s['runtime_publish']={
+              'branch': os.environ.get('RUNTIME_BRANCH','runtime-data'),
+              'source_commit': os.environ.get('GITHUB_SHA'),
+              'published_at': datetime.now(timezone.utc).isoformat(),
+          }
+          with open(p,'w') as f: json.dump(s,f,indent=2,ensure_ascii=False)
+          PY
+      - name: Publish validated bridge to runtime branch
         shell: bash
         run: |
+          set -euo pipefail
+          runtime_tmp="$(mktemp -d)"
+          cp -a data/. "$runtime_tmp/"
+
           git config user.name "fpl-iphoenk-bot"
           git config user.email "actions@users.noreply.github.com"
+          git fetch origin "$RUNTIME_BRANCH" || true
+          if git show-ref --verify --quiet "refs/remotes/origin/$RUNTIME_BRANCH"; then
+            git checkout -B "$RUNTIME_BRANCH" "origin/$RUNTIME_BRANCH"
+          else
+            git checkout -b "$RUNTIME_BRANCH"
+          fi
+
+          rm -rf data
+          mkdir -p data
+          cp -a "$runtime_tmp/." data/
           git add data/
-          if git diff --cached --quiet; then echo "No data changes"; exit 0; fi
-          git commit -m "data: refresh FPL v3.5 snapshot"
-          git fetch origin main
-          git rebase origin/main
-          git push origin main
+          if git diff --cached --quiet; then
+            echo "No runtime data changes"
+            exit 0
+          fi
+          git commit -m "data: refresh FPL runtime snapshot [skip ci]"
+          git push origin "$RUNTIME_BRANCH"

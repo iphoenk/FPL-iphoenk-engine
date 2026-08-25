@@ -58,12 +58,14 @@ jobs:
           assert w.get('classification') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
 
           a=json.load(open('data/wc_package_audit_v4.json'))
-          assert int(a.get('schema_version',0)) >= 444, a
-          assert str(a.get('engine','')).startswith('v4.4.3-wc-package-audit'), a
+          assert int(a.get('schema_version',0)) >= 445, a
+          assert str(a.get('engine','')).startswith('v4.4.4-wc-package-audit'), a
           assert a.get('max_replacements')==4 and set(a.get('best_by_replacement_count',{}))=={'1','2','3','4'}
           assert a.get('overall_verdict') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
           assert a.get('guardrails',{}).get('risk_penalty_enabled') is True
-          assert a.get('performance',{}).get('metrics_cache_entries',0) > 0
+          perf=a.get('performance',{})
+          assert perf.get('metrics_cache_entries',0) > 0
+          assert perf.get('single_pass_metrics') is True and perf.get('compact_target_cache') is True
 
           l=json.load(open('data/lineup_decision_v4.json'))
           assert int(l.get('schema_version',0)) >= 452, l
@@ -109,7 +111,7 @@ jobs:
                   assert fx['lower80'] <= x <= fx['upper80']
                   d=fx['xmins']; assert abs(d['start_probability']+d['bench_probability']+d['dnp_probability']-1) < .002
           assert all_x and statistics.median(all_x) < 8 and sum(x>15 for x in all_x)/len(all_x) < .03
-          print('V4.6 QUALITY GATE PASS', {'rules':c['overall'],'wc_raw':w['classification'],'package_raw':a['overall_verdict'],'recommendation_final':e['final_verdict'],'recommended_changes':(e.get('recommended_package') or {}).get('replacements'),'lineup':l['governance']['decision'],'formation':l['formation'],'captain':l['captain']['name'],'pipeline_ms':timings['total_pipeline_ms'],'package_ms':timings['package_audit_ms']})
+          print('V4.6 QUALITY GATE PASS', {'rules':c['overall'],'wc_raw':w['classification'],'package_raw':a['overall_verdict'],'recommendation_final':e['final_verdict'],'recommended_changes':(e.get('recommended_package') or {}).get('replacements'),'lineup':l['governance']['decision'],'formation':l['formation'],'captain':l['captain']['name'],'pipeline_ms':timings['total_pipeline_ms'],'package_ms':timings['package_audit_ms'],'single_pass_metrics':perf['single_pass_metrics']})
           PY
       - name: Package V4 quality-test inputs
         if: always()

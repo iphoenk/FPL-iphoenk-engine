@@ -7,26 +7,45 @@ from src.engines.v4_wc_optimizer import BUDGET_TENTHS, MAX_PER_CLUB, POSITION_CO
 OUTFILE=DATA/'wc_package_audit_v4.json'
 
 def payload(p): return {'element':p.element,'name':p.name,'position':p.position,'team':p.team,'team_id':p.team_id,'cost':p.cost,'xpts_3':round(p.x3,2),'xpts_5':round(p.x5,2),'xpts_10':round(p.x10,2),'xpts_15':round(p.x15,2),'uncertainty':round(p.uncertainty,3),'objective':round(p.objective,4)}
-
 def package_class(dxi,du,k):
     xr={1:1.5,2:2.5,3:3.5,4:4.5}[k]; ur={1:1.8,2:3.0,3:4.2,4:5.4}[k]
     if dxi>=xr and du>=ur:return 'MATERIAL_UPGRADE'
     if dxi>=xr*.55 and du>=ur*.55:return 'OPTIONAL_IMPROVEMENT'
     return 'KEEP_BASELINE'
-
-def _package_class(delta_x5,delta_obj,replacements):
-    x5_req={1:2.0,2:3.5,3:5.0,4:6.5}[replacements]; obj_req={1:0.25,2:0.45,3:0.65,4:0.85}[replacements]
-    if delta_x5>=x5_req and delta_obj>=obj_req:return 'MATERIAL_UPGRADE'
-    if delta_x5>=x5_req*.55 and delta_obj>=obj_req*.55:return 'OPTIONAL_IMPROVEMENT'
-    return 'KEEP_BASELINE'
-
-def frontier(cands,ids,n=18):
+def _package_class(delta_x5,delta_obj,replacements): return package_class(delta_x5,delta_obj,replacements)
+def frontier(cands,ids,n=12):
     out=[]
     for pos in POSITION_COUNTS:
-        rows=[p for p in cands if p.position==pos and p.element not in ids]; rows.sort(key=lambda p:(p.objective,p.x5,-p.cost),reverse=True); out+=rows[:n]
+        rows=[p for p in cands if p.position==pos and p.element not in ids]
+        rows.sort(key=lambda p:(p.objective,p.x5,-p.cost),reverse=True); out+=rows[:n]
     return out
 
-def audit_packages(predictions,universe,locked,max_replacements=4,budget=BUDGET_TENTHS,per_position_frontier=18,top_per_size=12):
+def _bounded_ins_states(cur,outids,need,bp,budget,beam=100):
+    keep=[p for p in cur if p.element not in outids]
+    base_cost=sum(p.cost for p in keep); base_clubs=Counter(p.team_id for p in keep)
+    slots=[]
+    for pos,n in need.items(): slots += [pos]*n
+    states=[(tuple(),base_cost,base_clubs,0.0)]
+    for pos in slots:
+        nxt=[]
+        for chosen,cost,clubs,score in states:
+            used={p.element for p in chosen}
+            for p in bp[pos]:
+                if p.element in used or cost+p.cost>budget or clubs[p.team_id]>=MAX_PER_CLUB: continue
+                cc=clubs.copy(); cc[p.team_id]+=1
+                nxt.append((chosen+(p,),cost+p.cost,cc,score+p.objective))
+        nxt.sort(key=lambda s:(s[3],-s[1]),reverse=True)
+        dedup=[]; seen=set()
+        for s in nxt:
+            key=tuple(sorted(p.element for p in s[0]))
+            if key in seen: continue
+            seen.add(key); dedup.append(s)
+            if len(dedup)>=beam: break
+        states=dedup
+        if not states: break
+    return [s[0] for s in states]
+
+def audit_packages(predictions,universe,locked,max_replacements=4,budget=BUDGET_TENTHS,per_position_frontier=12,top_per_size=12,beam_size=100):
     cands=build_candidates(predictions,universe); by={p.element:p for p in cands}; ids={int(x['element']) for x in locked.get('players',[])}
     missing=ids-set(by)
     if missing:raise RuntimeError(f'baseline players missing from candidate universe: {sorted(missing)}')
@@ -37,26 +56,27 @@ def audit_packages(predictions,universe,locked,max_replacements=4,budget=BUDGET_
         packs=[]
         for outs in combinations(cur,k):
             outids={p.element for p in outs}; need=Counter(p.position for p in outs)
-            if any(len(bp[pos])<n for pos,n in need.items()):continue
-            pools=[(n,bp[pos]) for pos,n in need.items()]
-            def rec(i,chosen):
-                if i==len(pools):
-                    if len({p.element for p in chosen})!=k:return
-                    target=[p for p in cur if p.element not in outids]+list(chosen); ok,_=validate_squad(target,budget)
-                    if not ok:return
-                    tm=squad_metrics(target); dxi=tm['best_xi_xpts_5']-cm['best_xi_xpts_5']; du=tm['bench_adjusted_utility_5']-cm['bench_adjusted_utility_5']
-                    packs.append({'replacements':k,'out':[payload(p) for p in sorted(outs,key=lambda x:(x.position,x.name))],'in':[payload(p) for p in sorted(chosen,key=lambda x:(x.position,x.name))],'target_cost':tm['cost'],'target_itb':budget-tm['cost'],'delta_cost':tm['cost']-basecost,'delta_objective':round(tm['objective']-cm['objective'],4),'delta_squad_xpts_3':round(tm['squad_xpts_3']-cm['squad_xpts_3'],2),'delta_squad_xpts_5':round(tm['squad_xpts_5']-cm['squad_xpts_5'],2),'delta_squad_xpts_10':round(tm['squad_xpts_10']-cm['squad_xpts_10'],2),'delta_squad_xpts_15':round(tm['squad_xpts_15']-cm['squad_xpts_15'],2),'delta_best_xi_xpts_5':round(dxi,2),'delta_bench_adjusted_utility_5':round(du,2),'classification':package_class(dxi,du,k)}); return
-                n,rows=pools[i]
-                for combo in combinations(rows,n):
-                    t=chosen+combo
-                    if len({p.element for p in t})==len(t):rec(i+1,t)
-            rec(0,tuple())
+            if any(len(bp[pos])<n for pos,n in need.items()): continue
+            if k<=2:
+                pools=[]
+                for pos,n in need.items(): pools.append(list(combinations(bp[pos],n)))
+                states=[tuple()]
+                for comboset in pools:
+                    states=[s+c for s in states for c in comboset if len({p.element for p in s+c})==len(s+c)]
+            else:
+                states=_bounded_ins_states(cur,outids,need,bp,budget,beam_size)
+            for chosen in states:
+                if len(chosen)!=k: continue
+                target=[p for p in cur if p.element not in outids]+list(chosen); ok,_=validate_squad(target,budget)
+                if not ok: continue
+                tm=squad_metrics(target); dxi=tm['best_xi_xpts_5']-cm['best_xi_xpts_5']; du=tm['bench_adjusted_utility_5']-cm['bench_adjusted_utility_5']
+                packs.append({'replacements':k,'out':[payload(p) for p in sorted(outs,key=lambda x:(x.position,x.name))],'in':[payload(p) for p in sorted(chosen,key=lambda x:(x.position,x.name))],'target_cost':tm['cost'],'target_itb':budget-tm['cost'],'delta_cost':tm['cost']-basecost,'delta_objective':round(tm['objective']-cm['objective'],4),'delta_squad_xpts_3':round(tm['squad_xpts_3']-cm['squad_xpts_3'],2),'delta_squad_xpts_5':round(tm['squad_xpts_5']-cm['squad_xpts_5'],2),'delta_squad_xpts_10':round(tm['squad_xpts_10']-cm['squad_xpts_10'],2),'delta_squad_xpts_15':round(tm['squad_xpts_15']-cm['squad_xpts_15'],2),'delta_best_xi_xpts_5':round(dxi,2),'delta_bench_adjusted_utility_5':round(du,2),'classification':package_class(dxi,du,k)})
         packs.sort(key=lambda r:(r['delta_bench_adjusted_utility_5'],r['delta_best_xi_xpts_5'],r['delta_objective'],r['target_itb']),reverse=True); results[str(k)]=packs[:top_per_size]
     best={k:(rows[0] if rows else None) for k,rows in results.items()}; mat=[x for x in best.values() if x and x['classification']=='MATERIAL_UPGRADE']; opt=[x for x in best.values() if x and x['classification']=='OPTIONAL_IMPROVEMENT']
     if mat:overall=max(mat,key=lambda x:(x['delta_bench_adjusted_utility_5'],x['delta_best_xi_xpts_5'])); verdict='MATERIAL_UPGRADE'
     elif opt:overall=max(opt,key=lambda x:(x['delta_bench_adjusted_utility_5'],x['delta_best_xi_xpts_5'])); verdict='OPTIONAL_IMPROVEMENT'
     else:overall=None; verdict='KEEP_15'
-    return {'schema_version':442,'engine':'v4.4.2-wc-package-audit','wildcard_active':bool(locked.get('wildcard_active')),'baseline':cm|{'itb':budget-basecost},'screened_players':len(cands),'frontier_players':len(fr),'max_replacements':max_replacements,'best_by_replacement_count':best,'packages':results,'overall_verdict':verdict,'recommended_package':overall,'guardrails':{'max_per_club':MAX_PER_CLUB,'budget_tenths':budget,'position_counts':POSITION_COUNTS,'larger_packages_require_higher_gain':True,'ranking_metric':'best-XI plus bench-adjusted 5GW utility'}}
+    return {'schema_version':442,'engine':'v4.4.2-wc-package-audit','wildcard_active':bool(locked.get('wildcard_active')),'baseline':cm|{'itb':budget-basecost},'screened_players':len(cands),'frontier_players':len(fr),'max_replacements':max_replacements,'best_by_replacement_count':best,'packages':results,'overall_verdict':verdict,'recommended_package':overall,'guardrails':{'max_per_club':MAX_PER_CLUB,'budget_tenths':budget,'position_counts':POSITION_COUNTS,'larger_packages_require_higher_gain':True,'ranking_metric':'best-XI plus bench-adjusted 5GW utility','search':'exhaustive k<=2, bounded beam k=3-4','frontier_per_position':per_position_frontier,'beam_size':beam_size}}
 def run():
     out=audit_packages(read_json(DATA/'predictions_v4.json',{}),read_json(DATA/'universe.json',{}),read_json(CONFIG/'locked_squad.json',{})); atomic_json(OUTFILE,out); print(json.dumps(out,ensure_ascii=False,indent=2)); return out
 if __name__=='__main__':run()

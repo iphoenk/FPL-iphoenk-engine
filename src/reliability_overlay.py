@@ -1,9 +1,9 @@
 from __future__ import annotations
 import json
-from pathlib import Path
 from src.sources.official_fpl import get_json
 from src.utils import DATA, atomic_json, iso_now
 from src.engines.snapshot_meta import source_meta, age_minutes, snapshot_id, changes
+from src.rules import build_chip_ledger, ruleset_metadata
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 TEAM_ID=3462711
@@ -31,10 +31,13 @@ def run_overlay():
     entry_summary={k:entry.get(k) for k in ENTRY_FIELDS}
     entry_summary["id"]=entry.get("id")
     entry_summary["fetched_at"]=h.get("fetched_at")
+    used_chips=(history or {}).get("chips",[])
+    chip_ledger=build_chip_ledger(used_chips, phase.get("planning_gw") or phase.get("current_gw"))
+    ruleset=ruleset_metadata()
 
     native={
         "entry":entry_summary,
-        "history":{"current":(history or {}).get("current",[]),"chips":(history or {}).get("chips",[]),"past":(history or {}).get("past",[])},
+        "history":{"current":(history or {}).get("current",[]),"chips":used_chips,"past":(history or {}).get("past",[])},
         "transfers":transfers or [],
         "picks":{"gw":submitted,"payload":picks} if submitted else None,
     }
@@ -46,10 +49,11 @@ def run_overlay():
     current.update({
         "engine_version":ENGINE_VERSION,"schema_version":SCHEMA_VERSION,"generated_at":iso_now(),
         "endpoint_health":health,"entry":entry_summary,"native":native,"provenance":provenance,"source_freshness":freshness,
-        "change_log":delta,"snapshot_id":snapshot_id(native),
+        "change_log":delta,"snapshot_id":snapshot_id(native),"ruleset":ruleset,"chip_ledger":chip_ledger,
     })
     atomic_json(path,current)
     atomic_json(DATA/"native.json",{"generated_at":current["generated_at"],"snapshot_id":current["snapshot_id"],**native})
+    atomic_json(DATA/"chips.json",{"generated_at":current["generated_at"],"used":used_chips,"ledger":chip_ledger,"ruleset_id":ruleset["id"]})
     return current
 
 if __name__ == "__main__": run_overlay()

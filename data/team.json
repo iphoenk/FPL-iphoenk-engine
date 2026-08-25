@@ -1,0 +1,299 @@
+{
+  "generated_at": "2026-08-25T11:19:02.637321+00:00",
+  "team_id": 3462711,
+  "squad_authority": "LOCKED_PRE_DEADLINE",
+  "squad": [
+    {
+      "element": 572,
+      "name": "Tzolakis",
+      "position": "GK",
+      "purchase_cost": 45,
+      "source": "locked_squad"
+    },
+    {
+      "element": 109,
+      "name": "Verbruggen",
+      "position": "GK",
+      "purchase_cost": 45,
+      "source": "locked_squad"
+    },
+    {
+      "element": 115,
+      "name": "De Cuyper",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "source": "locked_squad"
+    },
+    {
+      "element": 8,
+      "name": "Calafiori",
+      "position": "DEF",
+      "purchase_cost": 55,
+      "source": "locked_squad"
+    },
+    {
+      "element": 88,
+      "name": "Kayode",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "source": "locked_squad"
+    },
+    {
+      "element": 254,
+      "name": "Robinson",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "source": "locked_squad"
+    },
+    {
+      "element": 473,
+      "name": "Aina",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "source": "locked_squad"
+    },
+    {
+      "element": 525,
+      "name": "Fernandes",
+      "position": "MID",
+      "purchase_cost": 120,
+      "source": "locked_squad"
+    },
+    {
+      "element": 15,
+      "name": "Ødegaard",
+      "position": "MID",
+      "purchase_cost": 65,
+      "source": "locked_squad"
+    },
+    {
+      "element": 557,
+      "name": "Tzolis",
+      "position": "MID",
+      "purchase_cost": 65,
+      "source": "locked_squad"
+    },
+    {
+      "element": 40,
+      "name": "Rogers",
+      "position": "MID",
+      "purchase_cost": 75,
+      "source": "locked_squad"
+    },
+    {
+      "element": 488,
+      "name": "I.Sangaré",
+      "position": "MID",
+      "purchase_cost": 55,
+      "source": "locked_squad"
+    },
+    {
+      "element": 411,
+      "name": "Haaland",
+      "position": "FWD",
+      "purchase_cost": 155,
+      "source": "locked_squad"
+    },
+    {
+      "element": 165,
+      "name": "João Pedro",
+      "position": "FWD",
+      "purchase_cost": 75,
+      "source": "locked_squad"
+    },
+    {
+      "element": 346,
+      "name": "Calvert-Lewin",
+      "position": "FWD",
+      "purchase_cost": 60,
+      "source": "locked_squad"
+    }
+  ],
+  "team_value_ledger": [
+    {
+      "element": 572,
+      "name": "Tzolakis",
+      "team": "Hull City",
+      "position": "GK",
+      "purchase_cost": 45,
+      "now_cost": 45,
+      "sell_cost": 45,
+      "purchase_source": "locked_squad",
+      "ownership": "1.6",
+      "status": "a"
+    },
+    {
+      "element": 109,
+      "name": "Verbruggen",
+      "team": "Brighton",
+      "position": "GK",
+      "purchase_cost": 45,
+      "now_cost": 45,
+      "sell_cost": 45,
+      "purchase_source": "locked_squad",
+      "ownership": "21.7",
+      "status": "a"
+    },
+    {
+      "element": 115,
+      "name": "De Cuyper",
+      "team": "Brighton",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "now_cost": 45,
+      "sell_cost": 45,
+      "purchase_source": "locked_squad",
+      "ownership": "5.0",
+      "status": "a"
+    },
+    {
+      "element": 8,
+      "name": "Calafiori",
+      "team": "Arsenal",
+      "position": "DEF",
+      "purchase_cost": 55,
+      "now_cost": 55,
+      "sell_cost": 55,
+      "purchase_source": "locked_squad",
+      "ownership": "41.0",
+      "status": "a"
+    },
+    {
+      "element": 88,
+      "name": "Kayode",
+      "team": "Brentford",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "now_cost": 45,
+      "sell_cost": 45,
+      "purchase_source": "locked_squad",
+      "ownership": "5.5",
+      "status": "a"
+    },
+    {
+      "element": 254,
+      "name": "Robinson",
+      "team": "Fulham",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "now_cost": 45,
+      "sell_cost": 45,
+      "purchase_source": "locked_squad",
+      "ownership": "1.7",
+      "status": "a"
+    },
+    {
+      "element": 473,
+      "name": "Aina",
+      "team": "Nott'm Forest",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "now_cost": 45,
+      "sell_cost": 45,
+      "purchase_source": "locked_squad",
+      "ownership": "3.6",
+      "status": "a"
+    },
+    {
+      "element": 525,
+      "name": "Fernandes",
+      "team": "Spurs",
+      "position": "MID",
+      "purchase_cost": 120,
+      "now_cost": 60,
+      "sell_cost": 60,
+      "purchase_source": "locked_squad",
+      "ownership": "1.8",
+      "status": "a"
+    },
+    {
+      "element": 15,
+      "name": "Ødegaard",
+      "team": "Arsenal",
+      "position": "MID",
+      "purchase_cost": 65,
+      "now_cost": 65,
+      "sell_cost": 65,
+      "purchase_source": "locked_squad",
+      "ownership": "10.5",
+      "status": "a"
+    },
+    {
+      "element": 557,
+      "name": "Tzolis",
+      "team": "Arsenal",
+      "position": "MID",
+      "purchase_cost": 65,
+      "now_cost": 65,
+      "sell_cost": 65,
+      "purchase_source": "locked_squad",
+      "ownership": "25.7",
+      "status": "a"
+    },
+    {
+      "element": 40,
+      "name": "Rogers",
+      "team": "Chelsea",
+      "position": "MID",
+      "purchase_cost": 75,
+      "now_cost": 75,
+      "sell_cost": 75,
+      "purchase_source": "locked_squad",
+      "ownership": "25.3",
+      "status": "a"
+    },
+    {
+      "element": 488,
+      "name": "I.Sangaré",
+      "team": "Nott'm Forest",
+      "position": "MID",
+      "purchase_cost": 55,
+      "now_cost": 50,
+      "sell_cost": 50,
+      "purchase_source": "locked_squad",
+      "ownership": "1.0",
+      "status": "a"
+    },
+    {
+      "element": 411,
+      "name": "Haaland",
+      "team": "Man City",
+      "position": "FWD",
+      "purchase_cost": 155,
+      "now_cost": 155,
+      "sell_cost": 155,
+      "purchase_source": "locked_squad",
+      "ownership": "68.6",
+      "status": "a"
+    },
+    {
+      "element": 165,
+      "name": "João Pedro",
+      "team": "Chelsea",
+      "position": "FWD",
+      "purchase_cost": 75,
+      "now_cost": 75,
+      "sell_cost": 75,
+      "purchase_source": "locked_squad",
+      "ownership": "65.5",
+      "status": "a"
+    },
+    {
+      "element": 346,
+      "name": "Calvert-Lewin",
+      "team": "Leeds",
+      "position": "FWD",
+      "purchase_cost": 60,
+      "now_cost": 60,
+      "sell_cost": 60,
+      "purchase_source": "locked_squad",
+      "ownership": "29.8",
+      "status": "a"
+    }
+  ],
+  "totals": {
+    "market_value": 930,
+    "sell_value": 930,
+    "itb": 5
+  }
+}

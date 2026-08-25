@@ -1,0 +1,74 @@
+{
+  "bootstrap": {
+    "status": "LIVE",
+    "http_status": 200,
+    "latency_ms": 159,
+    "attempts": 1,
+    "fetched_at": "2026-08-25T11:19:00.897199+00:00",
+    "error": null,
+    "url": "https://fantasy.premierleague.com/api/bootstrap-static/"
+  },
+  "fixtures": {
+    "status": "LIVE",
+    "http_status": 200,
+    "latency_ms": 87,
+    "attempts": 1,
+    "fetched_at": "2026-08-25T11:19:00.985214+00:00",
+    "error": null,
+    "url": "https://fantasy.premierleague.com/api/fixtures/"
+  },
+  "event_status": {
+    "status": "LIVE",
+    "http_status": 200,
+    "latency_ms": 73,
+    "attempts": 1,
+    "fetched_at": "2026-08-25T11:19:01.059328+00:00",
+    "error": null,
+    "url": "https://fantasy.premierleague.com/api/event-status/"
+  },
+  "entry": {
+    "status": "LIVE",
+    "http_status": 200,
+    "latency_ms": 343,
+    "attempts": 1,
+    "fetched_at": "2026-08-25T11:19:01.402747+00:00",
+    "error": null,
+    "url": "https://fantasy.premierleague.com/api/entry/3462711/"
+  },
+  "history": {
+    "status": "LIVE",
+    "http_status": 200,
+    "latency_ms": 224,
+    "attempts": 1,
+    "fetched_at": "2026-08-25T11:19:01.627311+00:00",
+    "error": null,
+    "url": "https://fantasy.premierleague.com/api/entry/3462711/history/"
+  },
+  "transfers": {
+    "status": "LIVE",
+    "http_status": 200,
+    "latency_ms": 85,
+    "attempts": 1,
+    "fetched_at": "2026-08-25T11:19:01.712662+00:00",
+    "error": null,
+    "url": "https://fantasy.premierleague.com/api/entry/3462711/transfers/"
+  },
+  "picks": {
+    "status": "LIVE",
+    "http_status": 200,
+    "latency_ms": 96,
+    "attempts": 1,
+    "fetched_at": "2026-08-25T11:19:01.810456+00:00",
+    "error": null,
+    "url": "https://fantasy.premierleague.com/api/entry/3462711/event/1/picks/"
+  },
+  "event_live": {
+    "status": "LIVE",
+    "http_status": 200,
+    "latency_ms": 67,
+    "attempts": 1,
+    "fetched_at": "2026-08-25T11:19:01.878089+00:00",
+    "error": null,
+    "url": "https://fantasy.premierleague.com/api/event/1/live/"
+  }
+}

@@ -1,0 +1,706 @@
+{
+  "generated_at": "2026-08-25T11:19:02.624783+00:00",
+  "status": "PROVISIONAL",
+  "scoring_gw": 1,
+  "gross_points": 71,
+  "hit": 0,
+  "net_points": 71,
+  "players": [
+    {
+      "element": 109,
+      "name": "Verbruggen",
+      "team": "Brighton",
+      "position": "GK",
+      "pick_position": 1,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 1,
+      "goals_conceded": 0,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 25,
+      "total_points": 6,
+      "defensive_contribution": 0,
+      "explain": [
+        {
+          "fixture": 7,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "clean_sheets",
+              "points": 4,
+              "value": 1,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 8,
+      "name": "Calafiori",
+      "team": "Arsenal",
+      "position": "DEF",
+      "pick_position": 2,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 80,
+      "goals_scored": 0,
+      "assists": 1,
+      "clean_sheets": 1,
+      "goals_conceded": 0,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 31,
+      "total_points": 9,
+      "defensive_contribution": 5,
+      "explain": [
+        {
+          "fixture": 1,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 80,
+              "points_modification": 0
+            },
+            {
+              "identifier": "assists",
+              "points": 3,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "clean_sheets",
+              "points": 4,
+              "value": 1,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 11,
+      "name": "Mosquera",
+      "team": "Arsenal",
+      "position": "DEF",
+      "pick_position": 3,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 1,
+      "goals_conceded": 0,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 27,
+      "total_points": 6,
+      "defensive_contribution": 6,
+      "explain": [
+        {
+          "fixture": 1,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "clean_sheets",
+              "points": 4,
+              "value": 1,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 418,
+      "name": "Maguire",
+      "team": "Man Utd",
+      "position": "DEF",
+      "pick_position": 4,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 2,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 15,
+      "total_points": 1,
+      "defensive_contribution": 4,
+      "explain": [
+        {
+          "fixture": 4,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "goals_conceded",
+              "points": -1,
+              "value": 2,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 426,
+      "name": "B.Fernandes",
+      "team": "Man Utd",
+      "position": "MID",
+      "pick_position": 5,
+      "multiplier": 1,
+      "captain": false,
+      "vice": true,
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 2,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 18,
+      "total_points": 2,
+      "defensive_contribution": 6,
+      "explain": [
+        {
+          "fixture": 4,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 368,
+      "name": "Szoboszlai",
+      "team": "Liverpool",
+      "position": "MID",
+      "pick_position": 6,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 1,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 2,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 1,
+      "bps": 29,
+      "total_points": 8,
+      "defensive_contribution": 7,
+      "explain": [
+        {
+          "fixture": 9,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "goals_scored",
+              "points": 5,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "bonus",
+              "points": 1,
+              "value": 1,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 557,
+      "name": "Tzolis",
+      "team": "Arsenal",
+      "position": "MID",
+      "pick_position": 7,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 75,
+      "goals_scored": 0,
+      "assists": 1,
+      "clean_sheets": 1,
+      "goals_conceded": 0,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 30,
+      "total_points": 6,
+      "defensive_contribution": 6,
+      "explain": [
+        {
+          "fixture": 1,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 75,
+              "points_modification": 0
+            },
+            {
+              "identifier": "assists",
+              "points": 3,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "clean_sheets",
+              "points": 1,
+              "value": 1,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 237,
+      "name": "Ndiaye",
+      "team": "Everton",
+      "position": "MID",
+      "pick_position": 8,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 1,
+      "clean_sheets": 1,
+      "goals_conceded": 0,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 1,
+      "bps": 36,
+      "total_points": 9,
+      "defensive_contribution": 12,
+      "explain": [
+        {
+          "fixture": 3,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "assists",
+              "points": 3,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "clean_sheets",
+              "points": 1,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "bonus",
+              "points": 1,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "defensive_contribution",
+              "points": 2,
+              "value": 12,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 411,
+      "name": "Haaland",
+      "team": "Man City",
+      "position": "FWD",
+      "pick_position": 9,
+      "multiplier": 2,
+      "captain": true,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 1,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 6,
+      "total_points": 2,
+      "defensive_contribution": 3,
+      "explain": [
+        {
+          "fixture": 8,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 165,
+      "name": "João Pedro",
+      "team": "Chelsea",
+      "position": "FWD",
+      "pick_position": 10,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 1,
+      "assists": 1,
+      "clean_sheets": 0,
+      "goals_conceded": 2,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 2,
+      "bps": 45,
+      "total_points": 11,
+      "defensive_contribution": 3,
+      "explain": [
+        {
+          "fixture": 10,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "goals_scored",
+              "points": 4,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "assists",
+              "points": 3,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "bonus",
+              "points": 2,
+              "value": 2,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 346,
+      "name": "Calvert-Lewin",
+      "team": "Leeds",
+      "position": "FWD",
+      "pick_position": 11,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 1,
+      "goals_conceded": 0,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 1,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": -2,
+      "total_points": 1,
+      "defensive_contribution": 2,
+      "explain": [
+        {
+          "fixture": 6,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "yellow_cards",
+              "points": -1,
+              "value": 1,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 496,
+      "name": "Kinsky",
+      "team": "Spurs",
+      "position": "GK",
+      "pick_position": 12,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 3,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 5,
+      "bonus": 0,
+      "bps": 15,
+      "total_points": 2,
+      "defensive_contribution": 0,
+      "explain": [
+        {
+          "fixture": 2,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "goals_conceded",
+              "points": -1,
+              "value": 3,
+              "points_modification": 0
+            },
+            {
+              "identifier": "saves",
+              "points": 1,
+              "value": 5,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 124,
+      "name": "Groß",
+      "team": "Brighton",
+      "position": "MID",
+      "pick_position": 13,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 1,
+      "goals_conceded": 0,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 1,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 18,
+      "total_points": 2,
+      "defensive_contribution": 5,
+      "explain": [
+        {
+          "fixture": 7,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "clean_sheets",
+              "points": 1,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "yellow_cards",
+              "points": -1,
+              "value": 1,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 469,
+      "name": "N.Williams",
+      "team": "Nott'm Forest",
+      "position": "DEF",
+      "pick_position": 14,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 1,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 13,
+      "total_points": 2,
+      "defensive_contribution": 6,
+      "explain": [
+        {
+          "fixture": 6,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 259,
+      "name": "Diop",
+      "team": "Ipswich Town",
+      "position": "DEF",
+      "pick_position": 15,
+      "multiplier": 1,
+      "captain": false,
+      "vice": false,
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 1,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 7,
+      "total_points": 2,
+      "defensive_contribution": 5,
+      "explain": [
+        {
+          "fixture": 5,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

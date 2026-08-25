@@ -48,6 +48,10 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python -m src.engines.v4_wc_package_audit
+      - name: GW lineup bench captain optimizer
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m src.engines.v4_lineup_optimizer
       - name: V4 acceptance and quality gate
         env:
           PYTHONPATH: ${{ github.workspace }}
@@ -72,6 +76,16 @@ jobs:
           assert set(a.get('best_by_replacement_count',{}))=={'1','2','3','4'}
           assert a.get('overall_verdict') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
           assert a.get('guardrails',{}).get('risk_penalty_enabled') is True, a.get('guardrails')
+          l=json.load(open('data/lineup_decision_v4.json'))
+          assert l.get('engine')=='v4.5-lineup-bench-captain', l
+          assert int(l.get('schema_version',0)) >= 450
+          assert len(l.get('starting_xi',[]))==11
+          assert l.get('formation') in {'3-4-3','3-5-2','4-3-3','4-4-2','4-5-1','5-2-3','5-3-2','5-4-1'}
+          xi_ids={x['element'] for x in l['starting_xi']}
+          assert l['captain']['element'] in xi_ids and l['vice_captain']['element'] in xi_ids
+          assert l['captain']['element'] != l['vice_captain']['element']
+          assert len(l.get('bench',{}).get('order',[]))==3 and l.get('bench',{}).get('gk')
+          assert l.get('chip_context',{}).get('single_chip_rule_respected') is True
           all_x=[]
           for row in players:
               assert len(row.get('fixtures',[])) <= 15
@@ -85,7 +99,7 @@ jobs:
                   d=fx['xmins']; assert abs(d['start_probability']+d['bench_probability']+d['dnp_probability']-1) < .002
           assert all_x and statistics.median(all_x) < 8, statistics.median(all_x)
           assert sum(x>15 for x in all_x)/len(all_x) < .03
-          print('V4 QUALITY GATE PASS', {'median_xpts':round(statistics.median(all_x),3),'max_xpts':round(max(all_x),3),'rules_audit':c['overall'],'wc_decision':w['classification'],'package_audit':a['overall_verdict']})
+          print('V4 QUALITY GATE PASS', {'median_xpts':round(statistics.median(all_x),3),'max_xpts':round(max(all_x),3),'rules_audit':c['overall'],'wc_decision':w['classification'],'package_audit':a['overall_verdict'],'formation':l['formation'],'captain':l['captain']['name'],'vice':l['vice_captain']['name']})
           PY
       - name: Package V4 quality-test inputs
         if: always()
@@ -99,6 +113,7 @@ jobs:
           cp data/compliance_audit.json v4-artifact/ 2>/dev/null || true
           cp data/wc_decision_v4.json v4-artifact/ 2>/dev/null || true
           cp data/wc_package_audit_v4.json v4-artifact/ 2>/dev/null || true
+          cp data/lineup_decision_v4.json v4-artifact/ 2>/dev/null || true
           if [ -d data/validation ]; then cp -R data/validation v4-artifact/; fi
       - name: Upload V4 prediction artifact
         if: always()

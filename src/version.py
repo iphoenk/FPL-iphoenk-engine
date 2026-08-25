@@ -1,3 +1,3 @@
-ENGINE_VERSION = "3.4.0"
+ENGINE_VERSION = "3.4.1"
 SCHEMA_VERSION = 33
 SERVICE_TITLE = f"FPL iphoenk Engine v{ENGINE_VERSION.rsplit('.', 1)[0]}"

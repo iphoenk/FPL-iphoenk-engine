@@ -1,22 +1,44 @@
-# FPL iphoenk Engine v3.3.1
+# FPL iphoenk Engine v3.4.1
 
-A production-oriented personal FPL data platform.
+A production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Design goal
 Combine:
 - Official FPL API authority
+- persisted native team/event state for downstream AI monitoring
 - FPL-Core-Insights advanced community stats
 - vaastav historical backbone
 - live score/persistence
 - exact team-value logic
 - leakage-safe modelling
 - projection/calibration/portfolio frameworks
+- provenance, freshness and snapshot-integrity metadata
+- noise-resistant Price Radar
 
-## v3.3.1 data persistence
+## v3.4.1 Price Radar fix
+- applies actionable filtering before persisting `top_buy_pressure` / `top_sell_pressure`
+- minimum ownership threshold: 0.5%
+- minimum absolute event net transfers: 5,000
+- separates `actionable_pressure` from `market_noise`
+- attaches confidence labels so tiny-ownership ratio spikes cannot dominate tactical decisions
+- persists the filtered result consistently into both `data/prices.json` and `data/latest.json`
+- adds regression coverage to prevent 0.0%-ownership noise from reappearing as actionable pressure
+- patch release only; schema remains 33
+
+## v3.4 reliability and native persistence
+- persists native Official FPL `entry`, `history`, `transfers`, and submitted `picks`
+- exposes per-source provenance and fetch timestamps
+- calculates per-source freshness rather than relying only on global snapshot age
+- adds snapshot integrity ID for deduplication/audit
+- adds native-field change log for reconciliation and conflict tracking
+- keeps Official FPL native fields authoritative while treating bridge data as persisted Tier-1-derived state
+- preserves fail-closed validation for structural squad errors
+- schema version 33
+
+## v3.3.1 data persistence foundation
 - persists native Official FPL entry fields in `data/latest.json` and `data/team.json`
 - includes current event, overall/event points and rank, last-deadline bank/value and transfer count
 - each native entry block carries the Official API fetch timestamp
-- schema version is 32 so downstream consumers can distinguish the new payload contract
 
 ## v3.3 hardening
 - 2026/27 scoring compliance: goalkeeper goals are worth 10 points in projections
@@ -36,11 +58,14 @@ Implemented:
 - exact sell-value logic
 - endpoint health/retry/latency
 - live FPL player stat expansion
-- price deltas and momentum
+- confirmed price deltas and filtered transfer-pressure radar
 - Core Insights + vaastav sync
 - leakage guard
 - fail-closed validation
 - persistent snapshots
+- native Official entry/history/transfers/picks persistence
+- provenance and per-source freshness
+- snapshot integrity and change logging
 - safe GitHub workflow
 
 ## P1 Intelligence
@@ -60,6 +85,20 @@ Framework implemented:
 - model versioning hooks
 
 P2 is deliberately not marketed as a trained production model until enough season data exists.
+
+## Data flow
+Normal production path:
+
+`Official FPL API -> GitHub collector/engine -> persisted data/*.json bridge -> FPL Master Monitor`
+
+Direct ChatGPT browsing of Official team-specific endpoints is an optional cross-check only and is not required for the production data path.
+
+## Collector / reporting cadence
+The GitHub collector is the data-refresh layer. User-visible Master Monitor cadence is separate and mode-aware:
+- Normal Mode: 04:30 Deep Review, 12:30 Midday Tactical Monitor, 21:30 Night Tactical + Price Monitor (WIB)
+- Match Mode: approximately every 3 hours while relevant PL/FPL matches are active
+- Deadline Day Mode: hourly at :30 WIB until the definitive Final Review
+- After Final Review: silent except genuinely material emergency updates
 
 ## Main commands
 ```bash
@@ -92,11 +131,14 @@ uvicorn live_service:app --host 0.0.0.0 --port 8000 --workers 1
 The background poller is shared by all `/stream` clients within one service process, so additional subscribers do not multiply Official FPL API polling. The poller is process-local: multiple Uvicorn workers each create their own polling chain. Use one worker when exactly one polling chain per host is required, or use an external single scheduler/coordinator for multi-worker deployments.
 
 ## Source authority
-1. Official FPL API
-2. FPL-Core-Insights community enrichment
-3. vaastav historical dataset
-4. Understat/mirrors if explicitly enabled
-5. web/news/tactical overlays outside this repository
+1. Official FPL API native fields
+2. Persisted Official-FPL-derived bridge state
+3. FPL-Core-Insights community enrichment
+4. vaastav historical dataset
+5. Understat/mirrors if explicitly enabled
+6. web/news/tactical overlays outside this repository
+
+If direct Official FPL and persisted bridge disagree on a current native field, direct current Official FPL wins and the conflict should be logged.
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.
@@ -105,4 +147,4 @@ Historical xP-like fields should be shifted or excluded unless timestamp eligibi
 ## Important
 FPL-Core-Insights and vaastav are community-maintained. They are useful enrichments, not licensed Opta feeds.
 
-GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy `live_service.py` to an always-on host for near-live polling.
+GitHub Actions is persistence/archive and scheduled collection, not true streaming infrastructure. `live_service.py` remains available for near-live hosting if that is ever required, but the normal Master Monitor architecture does not require a separate public proxy service.

@@ -56,6 +56,7 @@ jobs:
         run: |
           python -m src.engine daily --stats
           python -m src.reliability_overlay
+          python -m src.engines.price_radar
       - name: Validate generated snapshot
         run: |
           python - <<'PY'
@@ -63,11 +64,15 @@ jobs:
           from src.engines.reliability import validate_snapshot
           from src.version import ENGINE_VERSION, SCHEMA_VERSION
           s=json.load(open('data/latest.json'))
+          p=json.load(open('data/prices.json'))
           assert s['engine_version'] == ENGINE_VERSION
           assert s['schema_version'] == SCHEMA_VERSION
           assert s.get('snapshot_id')
           assert s.get('native',{}).get('entry')
           assert s.get('provenance',{}).get('entry',{}).get('source') == 'official_fpl'
+          assert s.get('price_summary',{}).get('filter_policy',{}).get('min_ownership_pct') == 0.5
+          assert all(x.get('ownership_pct',0) >= 0.5 and abs(x.get('net_transfers',0)) >= 5000 for x in p.get('top_buy_pressure',[]))
+          assert all(x.get('ownership_pct',0) >= 0.5 and abs(x.get('net_transfers',0)) >= 5000 for x in p.get('top_sell_pressure',[]))
           r=validate_snapshot(s)
           print(r)
           if not r['ok']: raise SystemExit(2)

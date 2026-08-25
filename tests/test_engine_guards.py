@@ -9,7 +9,24 @@ def test_leakage_gate():
     assert not leakage_allowed(None,"2026-08-28T17:30:00Z")
 
 def test_snapshot_validator():
-    s={"schema_version":32,"engine_version":"3.2.0","generated_at":"x","phase":{},"team_summary":{"itb":5,"market_value":995,"sell_value":995},"files":{k:k for k in ("team","live","prices","health","universe","chips")},"meta":{}}
+    s={
+        "schema_version":32,
+        "engine_version":"3.3.1",
+        "generated_at":"x",
+        "phase":{},
+        "entry":{
+            "id":3462711,
+            "current_event":1,
+            "summary_overall_points":71,
+            "summary_overall_rank":462166,
+            "summary_event_points":71,
+            "summary_event_rank":462167,
+            "fetched_at":"2026-08-25T17:00:00+00:00",
+        },
+        "team_summary":{"itb":5,"market_value":995,"sell_value":995},
+        "files":{k:k for k in ("team","live","prices","health","universe","chips")},
+        "meta":{},
+    }
     assert validate_snapshot(s)["ok"]
 
 def test_projection_distribution():

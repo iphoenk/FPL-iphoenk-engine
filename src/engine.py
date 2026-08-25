@@ -45,12 +45,48 @@ def maps(bootstrap):
             if n: by_name[n.casefold()]=p
     return teams,pos,by_id,by_name
 
-def resolve_name(name,by_name):
-    q=name.casefold()
-    if q in by_name:return by_name[q]
-    for k,p in by_name.items():
-        if q in k or k in q:return p
-    return None
+def resolve_locked_player(row, by_id, teams, pos):
+    """
+    Locked-squad identity is authoritative by Official FPL element ID.
+    Names are display metadata only and are NEVER used for fuzzy matching.
+    Fail closed if the element disappears or identity metadata conflicts.
+    """
+    element = row.get("element")
+    if element is None:
+        raise RuntimeError(
+            f"FAIL CLOSED: locked player {row.get('name')} has no canonical element ID"
+        )
+
+    p = by_id.get(int(element))
+    if not p:
+        raise RuntimeError(
+            f"FAIL CLOSED: locked element {element} ({row.get('name')}) not found in bootstrap"
+        )
+
+    actual_position = pos.get(p.get("element_type"))
+    expected_position = row.get("position")
+    if expected_position and actual_position != expected_position:
+        raise RuntimeError(
+            f"FAIL CLOSED: element {element} position mismatch: "
+            f"expected {expected_position}, got {actual_position}"
+        )
+
+    expected_web_name = row.get("expected_web_name")
+    if expected_web_name and p.get("web_name") != expected_web_name:
+        raise RuntimeError(
+            f"FAIL CLOSED: element {element} name mismatch: "
+            f"expected {expected_web_name}, got {p.get('web_name')}"
+        )
+
+    expected_team = row.get("expected_team")
+    actual_team = teams.get(p.get("team"))
+    if expected_team and actual_team != expected_team:
+        raise RuntimeError(
+            f"FAIL CLOSED: element {element} team mismatch: "
+            f"expected {expected_team}, got {actual_team}"
+        )
+
+    return p
 
 def expanded_live(el):
     s=el.get("stats",{})
@@ -92,11 +128,19 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
     use_lock=bool(lock.get("wildcard_active")) and phase["planning_gw"]!=submitted_gw
     squad=[]
     if use_lock:
+        seen_elements=set()
         for row in lock.get("players",[]):
-            p=resolve_name(row["name"],by_name)
-            if p:
-                squad.append({"element":p["id"],"name":p["web_name"],"position":row["position"],
-                              "purchase_cost":row["purchase_cost"],"source":"locked_squad"})
+            p=resolve_locked_player(row,by_id,teams,pos)
+            if p["id"] in seen_elements:
+                raise RuntimeError(f"FAIL CLOSED: duplicate locked element ID {p['id']}")
+            seen_elements.add(p["id"])
+            squad.append({
+                "element":p["id"],
+                "name":p["web_name"],
+                "position":pos[p["element_type"]],
+                "purchase_cost":row.get("purchase_cost"),
+                "source":"locked_squad_element_id"
+            })
     elif picks:
         for x in picks.get("picks",[]):
             p=by_id.get(x["element"])
@@ -105,6 +149,13 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
     if squad and len(squad)!=15: raise RuntimeError(f"FAIL CLOSED: squad count {len(squad)}")
     counts={k:sum(1 for p in squad if p["position"]==k) for k in ["GK","DEF","MID","FWD"]}
     if squad and counts!={"GK":2,"DEF":5,"MID":5,"FWD":3}: raise RuntimeError(f"FAIL CLOSED: position counts {counts}")
+
+    club_counts={}
+    for row in squad:
+        club=teams[by_id[row["element"]]["team"]]
+        club_counts[club]=club_counts.get(club,0)+1
+    if squad and max(club_counts.values(), default=0)>3:
+        raise RuntimeError(f"FAIL CLOSED: club limit exceeded {club_counts}")
 
     spells=build_transfer_spells(transfers)
     gw1,_=get_json(f"entry/{TEAM_ID}/event/1/picks/",retries=1)

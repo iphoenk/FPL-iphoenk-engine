@@ -1,4 +1,4 @@
-# FPL iphoenk Engine v3.3
+# FPL iphoenk Engine v3.3.1
 
 A production-oriented personal FPL data platform.
 
@@ -11,6 +11,12 @@ Combine:
 - exact team-value logic
 - leakage-safe modelling
 - projection/calibration/portfolio frameworks
+
+## v3.3.1 data persistence
+- persists native Official FPL entry fields in `data/latest.json` and `data/team.json`
+- includes current event, overall/event points and rank, last-deadline bank/value and transfer count
+- each native entry block carries the Official API fetch timestamp
+- schema version is 32 so downstream consumers can distinguish the new payload contract
 
 ## v3.3 hardening
 - 2026/27 scoring compliance: goalkeeper goals are worth 10 points in projections

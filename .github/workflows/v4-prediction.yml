@@ -13,48 +13,41 @@ concurrency:
 jobs:
   validate-v4:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 8
     steps:
       - name: Checkout V4 prediction branch
         uses: actions/checkout@v4
         with:
           ref: v4-prediction-engine
-          fetch-depth: 0
+          fetch-depth: 1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
       - run: pip install -r requirements.txt pytest
       - name: Unit and acceptance tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+        env: {PYTHONPATH: "${{ github.workspace }}"}
         run: python -m pytest -q
       - name: Mandatory FPL 2026/27 rules compliance audit
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+        env: {PYTHONPATH: "${{ github.workspace }}"}
         run: python -m src.engines.compliance_audit
       - name: Generate V4 point-in-time prediction snapshot
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+        env: {PYTHONPATH: "${{ github.workspace }}"}
         run: python -m src.engine daily --stats
       - name: Persist forward-valid deadline snapshot and reconcile finished GW when available
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+        env: {PYTHONPATH: "${{ github.workspace }}"}
         run: python -m src.engines.v4_validation_cycle cycle
       - name: Wildcard full-universe decision optimizer
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+        env: {PYTHONPATH: "${{ github.workspace }}"}
         run: python -m src.engines.v4_wc_decision
       - name: Bounded wildcard challenger package audit
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+        env: {PYTHONPATH: "${{ github.workspace }}"}
         run: python -m src.engines.v4_wc_package_audit
       - name: GW lineup bench captain optimizer
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+        env: {PYTHONPATH: "${{ github.workspace }}"}
         run: python -m src.engines.v4_lineup_optimizer
       - name: V4 acceptance and quality gate
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+        env: {PYTHONPATH: "${{ github.workspace }}"}
         run: |
           python - <<'PY'
           import json, statistics
@@ -66,56 +59,46 @@ jobs:
           assert p.get('point_in_time') is True and len(players) >= 500
           w=json.load(open('data/wc_decision_v4.json'))
           assert w.get('engine')=='v4.4.1-wc-optimizer', w
-          assert w.get('screened_players',0)>=500, w.get('screened_players')
-          assert len(w.get('optimized_elements',[]))==15
+          assert w.get('screened_players',0)>=500 and len(w.get('optimized_elements',[]))==15
           assert w.get('classification') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
           a=json.load(open('data/wc_package_audit_v4.json'))
-          assert int(a.get('schema_version',0)) >= 443, a
-          assert str(a.get('engine','')).startswith('v4.4.2-wc-package-audit'), a
-          assert a.get('max_replacements')==4
-          assert set(a.get('best_by_replacement_count',{}))=={'1','2','3','4'}
+          assert int(a.get('schema_version',0)) >= 444, a
+          assert str(a.get('engine','')).startswith('v4.4.3-wc-package-audit'), a
+          assert a.get('max_replacements')==4 and set(a.get('best_by_replacement_count',{}))=={'1','2','3','4'}
           assert a.get('overall_verdict') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
-          assert a.get('guardrails',{}).get('risk_penalty_enabled') is True, a.get('guardrails')
+          assert a.get('guardrails',{}).get('risk_penalty_enabled') is True
+          assert a.get('performance',{}).get('metrics_cache_entries',0) > 0
           l=json.load(open('data/lineup_decision_v4.json'))
-          assert int(l.get('schema_version',0)) >= 451, l
-          assert str(l.get('engine','')).startswith('v4.5.1-lineup-bench-captain'), l
+          assert int(l.get('schema_version',0)) >= 452, l
+          assert str(l.get('engine','')).startswith('v4.5.2-lineup-robust-governance'), l
           assert len(l.get('starting_xi',[]))==11
           assert l.get('formation') in {'3-4-3','3-5-2','4-3-3','4-4-2','4-5-1','5-2-3','5-3-2','5-4-1'}
           xi_ids={x['element'] for x in l['starting_xi']}
-          assert l['captain']['element'] in xi_ids and l['vice_captain']['element'] in xi_ids
-          assert l['captain']['element'] != l['vice_captain']['element']
+          assert l['captain']['element'] in xi_ids and l['vice_captain']['element'] in xi_ids and l['captain']['element'] != l['vice_captain']['element']
           assert len(l.get('bench',{}).get('order',[]))==3 and l.get('bench',{}).get('gk')
           assert l.get('chip_context',{}).get('single_chip_rule_respected') is True
-          assert l.get('guardrails',{}).get('captain_risk_adjusted') is True
-          assert l.get('guardrails',{}).get('captain_safe_pool_preferred') is True
+          guards=l.get('guardrails',{})
+          assert guards.get('captain_risk_adjusted') and guards.get('captain_safe_pool_preferred')
+          assert guards.get('manual_draft_not_overwritten_without_margin') and guards.get('prediction_interval_robustness')
+          assert l.get('governance',{}).get('decision') in {'OPTIMIZER_ONLY','HOLD_MANUAL_DRAFT','CHANGE_RECOMMENDED'}
           all_x=[]
           for row in players:
-              assert len(row.get('fixtures',[])) <= 15
-              assert row.get('xpts_5',0) >= 0
+              assert len(row.get('fixtures',[])) <= 15 and row.get('xpts_5',0) >= 0
               for fx in row.get('fixtures',[]):
-                  x=fx['xpts']; all_x.append(x)
-                  assert 0 <= x < 25, (row.get('name'),fx)
-                  assert fx['components'].get('defcon',0) <= 2.001, (row.get('name'),fx)
-                  if row.get('position')=='GK': assert fx['components'].get('defcon',0)==0, (row.get('name'),fx)
+                  x=fx['xpts']; all_x.append(x); assert 0 <= x < 25
+                  assert fx['components'].get('defcon',0) <= 2.001
+                  if row.get('position')=='GK': assert fx['components'].get('defcon',0)==0
                   assert fx['lower80'] <= x <= fx['upper80']
                   d=fx['xmins']; assert abs(d['start_probability']+d['bench_probability']+d['dnp_probability']-1) < .002
-          assert all_x and statistics.median(all_x) < 8, statistics.median(all_x)
-          assert sum(x>15 for x in all_x)/len(all_x) < .03
-          print('V4 QUALITY GATE PASS', {'median_xpts':round(statistics.median(all_x),3),'max_xpts':round(max(all_x),3),'rules_audit':c['overall'],'wc_decision':w['classification'],'package_audit':a['overall_verdict'],'formation':l['formation'],'captain':l['captain']['name'],'vice':l['vice_captain']['name']})
+          assert all_x and statistics.median(all_x) < 8 and sum(x>15 for x in all_x)/len(all_x) < .03
+          print('V4.5.2 STABILITY GATE PASS', {'rules':c['overall'],'wc':w['classification'],'package':a['overall_verdict'],'lineup_decision':l['governance']['decision'],'formation':l['formation'],'captain':l['captain']['name'],'vice':l['vice_captain']['name'],'metric_cache':a['performance']['metrics_cache_entries']})
           PY
       - name: Package V4 quality-test inputs
         if: always()
         run: |
           mkdir -p v4-artifact
-          cp data/predictions_v4.json v4-artifact/ 2>/dev/null || true
-          cp data/latest.json v4-artifact/ 2>/dev/null || true
-          cp data/live.json v4-artifact/ 2>/dev/null || true
-          cp data/universe.json v4-artifact/ 2>/dev/null || true
-          cp data/team.json v4-artifact/ 2>/dev/null || true
-          cp data/compliance_audit.json v4-artifact/ 2>/dev/null || true
-          cp data/wc_decision_v4.json v4-artifact/ 2>/dev/null || true
-          cp data/wc_package_audit_v4.json v4-artifact/ 2>/dev/null || true
-          cp data/lineup_decision_v4.json v4-artifact/ 2>/dev/null || true
+          cp data/predictions_v4.json data/latest.json data/live.json data/universe.json data/team.json data/compliance_audit.json data/wc_decision_v4.json data/wc_package_audit_v4.json data/lineup_decision_v4.json v4-artifact/ 2>/dev/null || true
+          cp config/manual_lineup.json v4-artifact/ 2>/dev/null || true
           if [ -d data/validation ]; then cp -R data/validation v4-artifact/; fi
       - name: Upload V4 prediction artifact
         if: always()

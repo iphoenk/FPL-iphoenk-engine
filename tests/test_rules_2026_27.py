@@ -28,7 +28,7 @@ def test_match_scoring_reconstruction_goalkeeper():
     }
     result = score_from_official_stats(stats, 1)
     assert result["complete"] is True
-    assert result["points"] == 24  # 2 appearance +10 goal +4 CS +2 saves +5 pen save +3 bonus
+    assert result["points"] == 26  # 2 appearance +10 goal +4 CS +2 saves +5 pen save +3 bonus
 
 
 def test_match_scoring_reconstruction_defender_dc():

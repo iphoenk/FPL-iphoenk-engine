@@ -1,4 +1,4 @@
-# FPL iphoenk Engine v3.1
+# FPL iphoenk Engine v3.3
 
 A production-oriented personal FPL data platform.
 
@@ -11,6 +11,13 @@ Combine:
 - exact team-value logic
 - leakage-safe modelling
 - projection/calibration/portfolio frameworks
+
+## v3.3 hardening
+- 2026/27 scoring compliance: goalkeeper goals are worth 10 points in projections
+- single engine/service version source in `src/version.py`
+- authenticated manual `/refresh` using `FPL_REFRESH_API_KEY`
+- one shared live poller for all SSE clients instead of one Official FPL polling loop per client
+- regression coverage for goalkeeper goal scoring
 
 ## P0 Production Core
 Implemented:
@@ -56,6 +63,7 @@ python fpl_daily_tasks.py stats-sync --gw 1
 python fpl_daily_tasks.py stats-sync --gw 1 --deep
 python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
 
+export FPL_REFRESH_API_KEY="replace-with-a-long-random-secret"
 uvicorn live_service:app --host 0.0.0.0 --port 8000
 ```
 
@@ -65,8 +73,10 @@ uvicorn live_service:app --host 0.0.0.0 --port 8000
 - GET `/live`
 - GET `/team`
 - GET `/prices`
-- POST `/refresh`
+- POST `/refresh` with header `X-FPL-Refresh-Key`
 - GET `/stream` via Server-Sent Events
+
+`/refresh` is disabled with HTTP 503 when `FPL_REFRESH_API_KEY` is not configured. The background poller is shared by all `/stream` clients, so additional subscribers do not multiply Official FPL API polling.
 
 ## Source authority
 1. Official FPL API

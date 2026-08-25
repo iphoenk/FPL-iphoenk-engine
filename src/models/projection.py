@@ -1,5 +1,7 @@
 from __future__ import annotations
 import math
+from src.rules import GOAL_POINTS, ASSIST_POINTS, CLEAN_SHEET_POINTS, RULESET_ID
+
 
 def clamp(x,a,b): return max(a,min(b,x))
 
@@ -33,15 +35,15 @@ def project_points(player:dict, advanced:dict|None=None, fixture_difficulty:floa
     dist=xmins_distribution(player,adv); share=dist["expected_minutes"]/90
     xg90=_f(adv.get("xg_per90"),adv.get("expected_goals",0))
     xa90=_f(adv.get("xa_per90"),adv.get("expected_assists",0))
-    pos=player.get("element_type")
-    goal_pts={1:10,2:6,3:5,4:4}.get(pos,4); cs_pts={1:4,2:4,3:1,4:0}.get(pos,0)
+    pos=int(player.get("element_type") or 4)
+    goal_pts=GOAL_POINTS.get(pos,GOAL_POINTS[4]); cs_pts=CLEAN_SHEET_POINTS.get(pos,0)
     appearance=(2 if dist["expected_minutes"]>=60 else 1)*clamp(share,0,1)
-    attack=(xg90*goal_pts + xa90*3)*share
+    attack=(xg90*goal_pts + xa90*ASSIST_POINTS)*share
     cs_prob=clamp(_f(adv.get("clean_sheet_probability"),0.48-0.075*(fixture_difficulty-2)),0.05,0.70)
     clean=cs_pts*cs_prob*share
     saves=0.0
     if pos==1: saves=max(0,_f(adv.get("saves_per90"),_f(player.get("saves"))/max(1,_f(player.get("minutes"))/90))/3)*share
-    defcon=_f(adv.get("defcon_points_per90"))*share
+    dc=_f(adv.get("dc_points_per90"),adv.get("defcon_points_per90",0))*share
     bonus=_f(adv.get("bonus_per90"),0.35)*share
-    total=appearance+attack+clean+saves+defcon+bonus
-    return {"xmins":dist,"projected_points":round(total,3),"components":{"appearance":round(appearance,3),"attack":round(attack,3),"clean_sheet":round(clean,3),"saves":round(saves,3),"defcon":round(defcon,3),"bonus":round(bonus,3)},"model":"interpretable_projection_v2","confidence":"MEDIUM-LOW pending multi-GW calibration"}
+    total=appearance+attack+clean+saves+dc+bonus
+    return {"xmins":dist,"projected_points":round(total,3),"components":{"appearance":round(appearance,3),"attack":round(attack,3),"clean_sheet":round(clean,3),"saves":round(saves,3),"defensive_contribution":round(dc,3),"bonus":round(bonus,3)},"model":"interpretable_projection_v3","ruleset_id":RULESET_ID,"confidence":"MEDIUM-LOW pending multi-GW calibration"}

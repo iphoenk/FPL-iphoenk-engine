@@ -1,0 +1,255 @@
+{
+  "generated_at": "2026-08-25T18:01:48.390885+00:00",
+  "snapshot_id": "24847ee01afb655c",
+  "entry": {
+    "summary_overall_points": 71,
+    "summary_overall_rank": 461668,
+    "summary_event_points": 71,
+    "summary_event_rank": 461668,
+    "current_event": 1,
+    "last_deadline_bank": 0,
+    "last_deadline_value": 1000,
+    "last_deadline_total_transfers": 0,
+    "id": 3462711,
+    "fetched_at": "2026-08-25T18:01:48.201657+00:00"
+  },
+  "history": {
+    "current": [
+      {
+        "event": 1,
+        "points": 71,
+        "total_points": 71,
+        "rank": 462167,
+        "rank_sort": 491943,
+        "overall_rank": 462166,
+        "percentile_rank": 10,
+        "overall_rank_percentage": "5",
+        "bank": 0,
+        "value": 1000,
+        "event_transfers": 0,
+        "event_transfers_cost": 0,
+        "points_on_bench": 0
+      }
+    ],
+    "chips": [
+      {
+        "name": "bboost",
+        "time": "2026-08-21T13:52:44.153226Z",
+        "event": 1
+      }
+    ],
+    "past": [
+      {
+        "season_name": "2014/15",
+        "total_points": 1465,
+        "rank": 2691993,
+        "rank_percentage": "77"
+      },
+      {
+        "season_name": "2016/17",
+        "total_points": 1791,
+        "rank": 1893092,
+        "rank_percentage": "42"
+      },
+      {
+        "season_name": "2017/18",
+        "total_points": 2035,
+        "rank": 909455,
+        "rank_percentage": "15"
+      },
+      {
+        "season_name": "2018/19",
+        "total_points": 1990,
+        "rank": 2006466,
+        "rank_percentage": "32"
+      },
+      {
+        "season_name": "2019/20",
+        "total_points": 2185,
+        "rank": 363380,
+        "rank_percentage": "5"
+      },
+      {
+        "season_name": "2020/21",
+        "total_points": 2210,
+        "rank": 847840,
+        "rank_percentage": "10"
+      },
+      {
+        "season_name": "2021/22",
+        "total_points": 2267,
+        "rank": 817553,
+        "rank_percentage": "9"
+      },
+      {
+        "season_name": "2022/23",
+        "total_points": 2175,
+        "rank": 3023313,
+        "rank_percentage": "26"
+      },
+      {
+        "season_name": "2023/24",
+        "total_points": 2144,
+        "rank": 2946410,
+        "rank_percentage": "27"
+      },
+      {
+        "season_name": "2024/25",
+        "total_points": 1743,
+        "rank": 8071445,
+        "rank_percentage": "71"
+      },
+      {
+        "season_name": "2025/26",
+        "total_points": 2081,
+        "rank": 2594811,
+        "rank_percentage": "20"
+      }
+    ]
+  },
+  "transfers": [],
+  "picks": {
+    "gw": 1,
+    "payload": {
+      "active_chip": "bboost",
+      "automatic_subs": [],
+      "entry_history": {
+        "event": 1,
+        "points": 71,
+        "total_points": 71,
+        "rank": 462167,
+        "rank_sort": 491943,
+        "overall_rank": 462166,
+        "percentile_rank": 10,
+        "overall_rank_percentage": "5",
+        "bank": 0,
+        "value": 1000,
+        "event_transfers": 0,
+        "event_transfers_cost": 0,
+        "points_on_bench": 0
+      },
+      "picks": [
+        {
+          "element": 109,
+          "position": 1,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 1
+        },
+        {
+          "element": 8,
+          "position": 2,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 2
+        },
+        {
+          "element": 11,
+          "position": 3,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 2
+        },
+        {
+          "element": 418,
+          "position": 4,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 2
+        },
+        {
+          "element": 426,
+          "position": 5,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": true,
+          "element_type": 3
+        },
+        {
+          "element": 368,
+          "position": 6,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 3
+        },
+        {
+          "element": 557,
+          "position": 7,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 3
+        },
+        {
+          "element": 237,
+          "position": 8,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 3
+        },
+        {
+          "element": 411,
+          "position": 9,
+          "multiplier": 2,
+          "is_captain": true,
+          "is_vice_captain": false,
+          "element_type": 4
+        },
+        {
+          "element": 165,
+          "position": 10,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 4
+        },
+        {
+          "element": 346,
+          "position": 11,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 4
+        },
+        {
+          "element": 496,
+          "position": 12,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 1
+        },
+        {
+          "element": 124,
+          "position": 13,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 3
+        },
+        {
+          "element": 469,
+          "position": 14,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 2
+        },
+        {
+          "element": 259,
+          "position": 15,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 2
+        }
+      ]
+    }
+  }
+}

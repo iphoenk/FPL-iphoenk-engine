@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T17:47:19.013980+00:00",
+  "generated_at": "2026-08-25T18:01:47.993646+00:00",
   "players": {
     "1": {
       "now_cost": 60,
@@ -99,7 +99,7 @@
     },
     "26": {
       "now_cost": 75,
-      "ownership": "6.9"
+      "ownership": "7.0"
     },
     "27": {
       "now_cost": 60,
@@ -663,7 +663,7 @@
     },
     "154": {
       "now_cost": 95,
-      "ownership": "12.8"
+      "ownership": "12.9"
     },
     "155": {
       "now_cost": 70,
@@ -683,7 +683,7 @@
     },
     "159": {
       "now_cost": 55,
-      "ownership": "3.5"
+      "ownership": "3.4"
     },
     "161": {
       "now_cost": 50,
@@ -699,7 +699,7 @@
     },
     "165": {
       "now_cost": 75,
-      "ownership": "65.9"
+      "ownership": "66.0"
     },
     "166": {
       "now_cost": 65,
@@ -871,7 +871,7 @@
     },
     "584": {
       "now_cost": 55,
-      "ownership": "0.2"
+      "ownership": "0.1"
     },
     "599": {
       "now_cost": 50,

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T22:33:22.921006+00:00",
+  "generated_at": "2026-08-25T23:39:55.260643+00:00",
   "team_id": 3462711,
   "squad_authority": "LOCKED_PRE_DEADLINE",
   "squad": [
@@ -140,10 +140,10 @@
       "team": "Brighton",
       "position": "DEF",
       "purchase_cost": 45,
-      "now_cost": 45,
+      "now_cost": 46,
       "sell_cost": 45,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "5.9",
+      "ownership": "6.0",
       "status": "a"
     },
     {
@@ -155,7 +155,7 @@
       "now_cost": 55,
       "sell_cost": 55,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "41.2",
+      "ownership": "41.3",
       "status": "a"
     },
     {
@@ -215,7 +215,7 @@
       "now_cost": 65,
       "sell_cost": 65,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "10.7",
+      "ownership": "10.8",
       "status": "a"
     },
     {
@@ -248,10 +248,10 @@
       "team": "Brentford",
       "position": "MID",
       "purchase_cost": 55,
-      "now_cost": 55,
+      "now_cost": 56,
       "sell_cost": 55,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "6.6",
+      "ownership": "6.7",
       "status": "a"
     },
     {
@@ -287,12 +287,12 @@
       "now_cost": 60,
       "sell_cost": 60,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "29.6",
+      "ownership": "29.5",
       "status": "a"
     }
   ],
   "totals": {
-    "market_value": 995,
+    "market_value": 997,
     "sell_value": 995,
     "itb": 5
   }

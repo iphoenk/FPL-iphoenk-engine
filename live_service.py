@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import secrets
+import threading
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Header, HTTPException
@@ -16,13 +17,20 @@ from src.version import ENGINE_VERSION
 POLL = max(30, int(os.getenv("FPL_LIVE_POLL_SECONDS", "60")))
 REFRESH_TOKEN = os.getenv("FPL_REFRESH_TOKEN")
 _poller_task: asyncio.Task | None = None
+_run_lock = threading.Lock()
+
+
+def _run_live_locked():
+    """Serialize FPL refreshes inside this service process."""
+    with _run_lock:
+        return run("live", sync_stats=False)
 
 
 async def _shared_poller() -> None:
     """One poller per service process, shared by all SSE clients."""
     while True:
         try:
-            await asyncio.to_thread(run, "live", False)
+            await asyncio.to_thread(_run_live_locked)
         except Exception:
             # Endpoint health/latest snapshots retain failure evidence.
             pass
@@ -40,6 +48,7 @@ async def lifespan(app: FastAPI):
             _poller_task.cancel()
             with suppress(asyncio.CancelledError):
                 await _poller_task
+            _poller_task = None
 
 
 app = FastAPI(
@@ -51,7 +60,10 @@ app = FastAPI(
 
 def _require_refresh_token(authorization: str | None) -> None:
     if not REFRESH_TOKEN:
-        raise HTTPException(status_code=503, detail="Manual refresh disabled: FPL_REFRESH_TOKEN is not configured")
+        raise HTTPException(
+            status_code=503,
+            detail="Manual refresh disabled: FPL_REFRESH_TOKEN is not configured",
+        )
     expected = f"Bearer {REFRESH_TOKEN}"
     if not authorization or not secrets.compare_digest(authorization, expected):
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -85,7 +97,7 @@ def prices():
 @app.post("/refresh")
 def refresh(authorization: str | None = Header(default=None)):
     _require_refresh_token(authorization)
-    return run("live", sync_stats=False)
+    return _run_live_locked()
 
 
 @app.get("/stream")
@@ -98,6 +110,12 @@ async def stream():
             if encoded != last:
                 yield f"data: {encoded}\n\n"
                 last = encoded
+            else:
+                yield ": keep-alive\n\n"
             await asyncio.sleep(POLL)
 
-    return StreamingResponse(events(), media_type="text/event-stream")
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

@@ -1,9 +1,33 @@
-# FPL iphoenk Engine v3.5.0
+# FPL iphoenk Engine v3.5.1
 
 A production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Design goal
 Combine Official FPL API authority, a single authoritative FPL 2026/27 ruleset, persisted native team/event state, community enrichments, live score/persistence, exact team-value logic, leakage-safe modelling, projection/calibration frameworks, provenance/freshness, snapshot integrity and a noise-resistant Price Radar.
+
+## v3.5.1 Runtime publishing + cadence hardening
+The source branch `main` remains protected. Generated collector data is no longer pushed directly to `main`, because protected-branch PR requirements correctly reject bot data commits with GH006.
+
+Runtime bridge architecture:
+
+`Official FPL API -> tested collector from main -> validation gate -> runtime-data branch -> FPL Master Monitor`
+
+Authoritative persisted runtime bridge:
+`https://raw.githubusercontent.com/iphoenk/FPL-iphoenk-engine/runtime-data/data/latest.json`
+
+Key hardening:
+- generated `data/**` is published to the dedicated `runtime-data` branch, keeping source-code protection intact
+- `latest.json` receives `runtime_publish.branch`, `source_commit` and `published_at` metadata
+- hourly primary collector moved to minute `:55` to reduce top-of-hour GitHub Actions congestion and improve freshness before `:30` Master Monitor checkpoints
+- adaptive collector slot at minute `:15` runs only in deadline-intensive or active-match windows
+- deadline-intensive mode activates within 24 hours of deadline, covering the preceding evening for late-midnight WIB deadlines
+- adaptive match detection uses Official fixtures and fails soft; the hourly collector remains the safety net
+- pull requests run tests but never publish runtime data
+- push/manual runs always collect; scheduled adaptive runs are gated
+- regression tests cover cadence decisions and match/deadline windows
+- schema remains 34
+
+`main/data/**` should be treated as historical/source-repository material only. Runtime consumers must use `runtime-data/data/**`.
 
 ## v3.5 Official Rules Compliance
 `src/rules.py` is the single source of truth for published FPL 2026/27 rules used by the engine.
@@ -35,12 +59,15 @@ Implemented and regression-tested:
 - snapshot integrity ID and native change log
 - fail-closed structural validation
 
-## Production data flow
-`Official FPL API -> GitHub collector/engine -> persisted data/*.json bridge -> FPL Master Monitor`
-
-Direct ChatGPT browsing of Official team-specific endpoints is optional cross-check only.
-
 ## Collector / reporting cadence
+Collector cadence and user-visible reporting are deliberately separate.
+
+Collector:
+- primary hourly scheduled slot: `:55`
+- adaptive deadline/match redundancy slot: `:15`
+- manual and source-code push runs: immediate collection
+
+Master Monitor user-visible reports:
 - Normal Mode: 04:30 Deep Review, 12:30 Midday Tactical Monitor, 21:30 Night Tactical + Price Monitor WIB
 - Match Mode: approximately every 3 hours while relevant PL/FPL matches are active
 - Deadline Day: hourly at :30 WIB until definitive Final Review
@@ -58,7 +85,7 @@ python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
 
 ## Source authority
 1. Official FPL API native fields and Official scoring
-2. Persisted Official-FPL-derived bridge state
+2. Persisted Official-FPL-derived runtime bridge on `runtime-data`
 3. FPL-Core-Insights community enrichment
 4. vaastav historical dataset
 5. other mirrors only if explicitly enabled

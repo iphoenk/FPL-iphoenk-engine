@@ -36,6 +36,10 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python -m src.engine daily --stats
+      - name: Persist forward-valid deadline snapshot and reconcile finished GW when available
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m src.engines.v4_validation_cycle cycle
       - name: V4 acceptance and quality gate
         env:
           PYTHONPATH: ${{ github.workspace }}
@@ -73,6 +77,7 @@ jobs:
           cp data/universe.json v4-artifact/ 2>/dev/null || true
           cp data/team.json v4-artifact/ 2>/dev/null || true
           cp data/compliance_audit.json v4-artifact/ 2>/dev/null || true
+          if [ -d data/validation ]; then cp -R data/validation v4-artifact/; fi
       - name: Upload V4 prediction artifact
         if: always()
         uses: actions/upload-artifact@v4

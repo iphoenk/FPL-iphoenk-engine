@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import json
-from itertools import combinations
-from pathlib import Path
 
 from src.utils import DATA, CONFIG, atomic_json, read_json
 
@@ -39,8 +37,13 @@ def _player_row(pred: dict, universe_row: dict, idx: int = 0) -> dict:
     avail = max(0.0, min(1.0, 1.0-dnp))
     ceiling = max(xpts, upper)
     floor = min(xpts, lower)
-    captain_score = xpts + 0.12*(ceiling-xpts) - 0.22*dnp - 0.08*max(0.0, 0.75-start)
-    vice_score = xpts + 0.05*(ceiling-xpts) - 0.45*dnp - 0.12*max(0.0, 0.85-start)
+
+    # Captaincy must be materially more conservative than plain XI selection.
+    # A high-ceiling player with serious DNP/bench risk should not beat a nailed
+    # alternative merely because his raw xPts is slightly higher.
+    start_shortfall = max(0.0, 0.90-start)
+    captain_score = xpts + 0.10*(ceiling-xpts) - 2.00*dnp - 0.75*start_shortfall
+    vice_score = xpts + 0.04*(ceiling-xpts) - 2.50*dnp - 0.90*max(0.0, 0.92-start)
     bench_score = xpts * (0.70 + 0.30*avail) + 0.08*start
     return {
         "element": int(pred.get("element")),
@@ -89,6 +92,14 @@ def _bench(rows: list[dict], xi_ids: set[int]) -> tuple[dict,list[dict]]:
     return gks[0], outfield
 
 
+def _captain_pool(xi: list[dict]) -> list[dict]:
+    non_gk = [r for r in xi if r["position"] != "GK"] or xi
+    # Prefer genuinely captainable players when at least one exists. This is a
+    # guardrail, not an absolute ban: if an entire XI is risky, fall back to all.
+    safe = [r for r in non_gk if r["dnp_probability"] < 0.30 and r["start_probability"] >= 0.70]
+    return safe or non_gk
+
+
 def optimize_lineup(predictions: dict, universe: dict, locked: dict, gw_index: int = 0) -> dict:
     pmap = {int(p.get("element")): p for p in predictions.get("players", []) if p.get("element") is not None}
     umap = {int(p.get("element")): p for p in universe.get("players", []) if p.get("element") is not None}
@@ -100,14 +111,18 @@ def optimize_lineup(predictions: dict, universe: dict, locked: dict, gw_index: i
     xi, formation, xi_xpts = _legal_xi(rows)
     xi_ids = {r["element"] for r in xi}
     bench_gk, bench_out = _bench(rows, xi_ids)
-    captain_pool = [r for r in xi if r["position"] != "GK"] or xi
+
+    captain_pool = _captain_pool(xi)
     captain = max(captain_pool, key=lambda r:(r["captain_score"],r["xpts"],r["upper80"]))
-    vice_pool = [r for r in xi if r["element"] != captain["element"]]
+    vice_candidates = [r for r in xi if r["element"] != captain["element"]]
+    safe_vice = [r for r in vice_candidates if r["dnp_probability"] < 0.25 and r["start_probability"] >= 0.75]
+    vice_pool = safe_vice or vice_candidates
     vice = max(vice_pool, key=lambda r:(r["vice_score"],r["xpts"],r["start_probability"]))
+
     chip = "WILDCARD" if bool(locked.get("wildcard_active")) else "NONE"
     return {
-        "schema_version": 450,
-        "engine": "v4.5-lineup-bench-captain",
+        "schema_version": 451,
+        "engine": "v4.5.1-lineup-bench-captain-risk-guard",
         "gw_offset": gw_index+1,
         "formation": formation,
         "xi_xpts": round(xi_xpts,2),
@@ -116,7 +131,7 @@ def optimize_lineup(predictions: dict, universe: dict, locked: dict, gw_index: i
         "vice_captain": vice,
         "bench": {"gk": bench_gk, "order": [{"slot":i+1, **r} for i,r in enumerate(bench_out)]},
         "chip_context": {"active_chip": chip, "other_chip_recommendation": "NONE" if chip=="WILDCARD" else "UNASSESSED", "single_chip_rule_respected": True},
-        "guardrails": {"legal_formation": True, "one_gk_in_xi": True, "captain_in_xi": True, "vice_in_xi": True, "bench_has_one_gk_three_outfield": True, "captain_risk_adjusted": True},
+        "guardrails": {"legal_formation": True, "one_gk_in_xi": True, "captain_in_xi": True, "vice_in_xi": True, "bench_has_one_gk_three_outfield": True, "captain_risk_adjusted": True, "captain_safe_pool_preferred": True},
     }
 
 

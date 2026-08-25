@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T18:36:25.448033+00:00",
+  "generated_at": "2026-08-25T18:44:08.364103+00:00",
   "team_id": 3462711,
   "entry": {
     "id": 3462711,
@@ -11,7 +11,7 @@
     "last_deadline_bank": 0,
     "last_deadline_value": 1000,
     "last_deadline_total_transfers": 0,
-    "fetched_at": "2026-08-25T18:36:24.558915+00:00"
+    "fetched_at": "2026-08-25T18:44:07.743686+00:00"
   },
   "squad_authority": "LOCKED_PRE_DEADLINE",
   "squad": [

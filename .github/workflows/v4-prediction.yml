@@ -77,8 +77,8 @@ jobs:
           assert a.get('overall_verdict') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
           assert a.get('guardrails',{}).get('risk_penalty_enabled') is True, a.get('guardrails')
           l=json.load(open('data/lineup_decision_v4.json'))
-          assert l.get('engine')=='v4.5-lineup-bench-captain', l
-          assert int(l.get('schema_version',0)) >= 450
+          assert int(l.get('schema_version',0)) >= 451, l
+          assert str(l.get('engine','')).startswith('v4.5.1-lineup-bench-captain'), l
           assert len(l.get('starting_xi',[]))==11
           assert l.get('formation') in {'3-4-3','3-5-2','4-3-3','4-4-2','4-5-1','5-2-3','5-3-2','5-4-1'}
           xi_ids={x['element'] for x in l['starting_xi']}
@@ -86,6 +86,8 @@ jobs:
           assert l['captain']['element'] != l['vice_captain']['element']
           assert len(l.get('bench',{}).get('order',[]))==3 and l.get('bench',{}).get('gk')
           assert l.get('chip_context',{}).get('single_chip_rule_respected') is True
+          assert l.get('guardrails',{}).get('captain_risk_adjusted') is True
+          assert l.get('guardrails',{}).get('captain_safe_pool_preferred') is True
           all_x=[]
           for row in players:
               assert len(row.get('fixtures',[])) <= 15

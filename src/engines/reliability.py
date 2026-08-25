@@ -7,8 +7,12 @@ REQUIRED_FILES = ("team", "live", "prices", "health", "universe", "chips")
 def validate_snapshot(snapshot: dict) -> dict:
     errors=[]
     if not isinstance(snapshot, dict): errors.append("snapshot_not_object")
-    for key in ("schema_version","engine_version","generated_at","phase","team_summary","files","meta"):
+    for key in ("schema_version","engine_version","generated_at","phase","entry","team_summary","files","meta"):
         if key not in snapshot: errors.append(f"missing:{key}")
+    entry=snapshot.get("entry") or {}
+    if not entry.get("fetched_at"): errors.append("missing_entry:fetched_at")
+    for key in ("id","current_event","summary_overall_points","summary_overall_rank","summary_event_points","summary_event_rank"):
+        if entry.get(key) is None: errors.append(f"missing_entry:{key}")
     files=snapshot.get("files") or {}
     for key in REQUIRED_FILES:
         if not files.get(key): errors.append(f"missing_file_pointer:{key}")

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T14:06:04.986323+00:00",
+  "generated_at": "2026-08-25T15:08:27.498139+00:00",
   "players": {
     "1": {
       "now_cost": 60,
@@ -51,7 +51,7 @@
     },
     "13": {
       "now_cost": 75,
-      "ownership": "17.6"
+      "ownership": "17.5"
     },
     "14": {
       "now_cost": 65,
@@ -59,7 +59,7 @@
     },
     "15": {
       "now_cost": 65,
-      "ownership": "10.5"
+      "ownership": "10.6"
     },
     "16": {
       "now_cost": 65,
@@ -75,7 +75,7 @@
     },
     "19": {
       "now_cost": 55,
-      "ownership": "1.1"
+      "ownership": "1.0"
     },
     "20": {
       "now_cost": 55,
@@ -95,7 +95,7 @@
     },
     "25": {
       "now_cost": 75,
-      "ownership": "7.8"
+      "ownership": "7.7"
     },
     "26": {
       "now_cost": 75,
@@ -211,7 +211,7 @@
     },
     "55": {
       "now_cost": 80,
-      "ownership": "9.3"
+      "ownership": "9.2"
     },
     "56": {
       "now_cost": 55,
@@ -459,7 +459,7 @@
     },
     "565": {
       "now_cost": 55,
-      "ownership": "6.1"
+      "ownership": "6.2"
     },
     "109": {
       "now_cost": 45,
@@ -479,7 +479,7 @@
     },
     "115": {
       "now_cost": 45,
-      "ownership": "5.3"
+      "ownership": "5.4"
     },
     "116": {
       "now_cost": 45,
@@ -511,7 +511,7 @@
     },
     "123": {
       "now_cost": 60,
-      "ownership": "1.6"
+      "ownership": "1.7"
     },
     "124": {
       "now_cost": 55,
@@ -663,11 +663,11 @@
     },
     "154": {
       "now_cost": 95,
-      "ownership": "12.5"
+      "ownership": "12.6"
     },
     "155": {
       "now_cost": 70,
-      "ownership": "5.0"
+      "ownership": "4.9"
     },
     "156": {
       "now_cost": 65,
@@ -699,7 +699,7 @@
     },
     "165": {
       "now_cost": 75,
-      "ownership": "65.7"
+      "ownership": "65.8"
     },
     "166": {
       "now_cost": 65,
@@ -1115,7 +1115,7 @@
     },
     "253": {
       "now_cost": 50,
-      "ownership": "0.0"
+      "ownership": "0.1"
     },
     "254": {
       "now_cost": 45,
@@ -1343,7 +1343,7 @@
     },
     "259": {
       "now_cost": 40,
-      "ownership": "17.7"
+      "ownership": "17.6"
     },
     "267": {
       "now_cost": 50,
@@ -1555,7 +1555,7 @@
     },
     "346": {
       "now_cost": 60,
-      "ownership": "29.8"
+      "ownership": "29.7"
     },
     "347": {
       "now_cost": 55,
@@ -1571,7 +1571,7 @@
     },
     "385": {
       "now_cost": 50,
-      "ownership": "3.5"
+      "ownership": "3.6"
     },
     "598": {
       "now_cost": 45,
@@ -1655,7 +1655,7 @@
     },
     "367": {
       "now_cost": 70,
-      "ownership": "4.9"
+      "ownership": "5.0"
     },
     "368": {
       "now_cost": 70,
@@ -1787,11 +1787,11 @@
     },
     "399": {
       "now_cost": 75,
-      "ownership": "9.6"
+      "ownership": "9.7"
     },
     "400": {
       "now_cost": 75,
-      "ownership": "1.6"
+      "ownership": "1.5"
     },
     "401": {
       "now_cost": 70,
@@ -1879,7 +1879,7 @@
     },
     "418": {
       "now_cost": 50,
-      "ownership": "17.6"
+      "ownership": "17.5"
     },
     "419": {
       "now_cost": 50,
@@ -1911,15 +1911,15 @@
     },
     "426": {
       "now_cost": 120,
-      "ownership": "49.7"
+      "ownership": "49.6"
     },
     "427": {
       "now_cost": 80,
-      "ownership": "37.0"
+      "ownership": "36.9"
     },
     "428": {
       "now_cost": 80,
-      "ownership": "9.8"
+      "ownership": "9.7"
     },
     "429": {
       "now_cost": 70,
@@ -1931,7 +1931,7 @@
     },
     "431": {
       "now_cost": 60,
-      "ownership": "1.3"
+      "ownership": "1.2"
     },
     "432": {
       "now_cost": 55,
@@ -2003,7 +2003,7 @@
     },
     "449": {
       "now_cost": 50,
-      "ownership": "3.9"
+      "ownership": "4.0"
     },
     "450": {
       "now_cost": 50,
@@ -2135,7 +2135,7 @@
     },
     "480": {
       "now_cost": 80,
-      "ownership": "10.2"
+      "ownership": "10.1"
     },
     "482": {
       "now_cost": 60,
@@ -2227,7 +2227,7 @@
     },
     "499": {
       "now_cost": 55,
-      "ownership": "14.1"
+      "ownership": "14.0"
     },
     "500": {
       "now_cost": 50,
@@ -2367,7 +2367,7 @@
     },
     "534": {
       "now_cost": 45,
-      "ownership": "6.7"
+      "ownership": "6.6"
     },
     "535": {
       "now_cost": 50,
@@ -2407,7 +2407,7 @@
     },
     "544": {
       "now_cost": 55,
-      "ownership": "4.5"
+      "ownership": "4.6"
     },
     "545": {
       "now_cost": 50,
@@ -2439,7 +2439,7 @@
     },
     "552": {
       "now_cost": 60,
-      "ownership": "13.5"
+      "ownership": "13.4"
     },
     "553": {
       "now_cost": 55,

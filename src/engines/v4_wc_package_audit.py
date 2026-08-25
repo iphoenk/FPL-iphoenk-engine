@@ -3,7 +3,10 @@ import json
 from collections import Counter
 from itertools import combinations
 from src.utils import DATA, CONFIG, atomic_json, read_json
-from src.engines.v4_wc_optimizer import BUDGET_TENTHS, MAX_PER_CLUB, POSITION_COUNTS, build_candidates, best_xi, validate_squad
+from src.engines.v4_wc_optimizer import (
+    BUDGET_TENTHS, MAX_PER_CLUB, POSITION_COUNTS, build_candidates, best_xi,
+    validate_squad, _group_by_position, _best_xi_score_grouped,
+)
 
 OUTFILE = DATA / "wc_package_audit_v4.json"
 
@@ -37,15 +40,17 @@ def _gw_value(p, idx):
 
 def _fast_metrics(players, include_detail=False):
     ps = list(players)
+    by = _group_by_position(ps)
     xi5 = 0.0
     utility5 = 0.0
     detail = []
     for i in range(5):
-        score, ids = best_xi(ps, i)
+        score = _best_xi_score_grouped(by, i)
         total = sum(_gw_value(p, i) for p in ps)
         xi5 += score
         utility5 += score + .12 * (total - score)
         if include_detail:
+            _, ids = best_xi(ps, i)
             detail.append({"gw_offset": i + 1, "xpts": round(score, 2), "elements": ids})
     out = {
         "cost": sum(p.cost for p in ps),
@@ -177,9 +182,6 @@ def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=BUD
             for chosen in _candidate_states(cur, outids, need, bp, budget, k, beam_size):
                 if len(chosen) != k:
                     continue
-                # _candidate_states guarantees same-position replacement count, unique INs,
-                # budget and club legality against the unchanged keep set. The baseline is
-                # already valid, so repeating validate_squad(target) here is redundant hot-loop work.
                 target = keep + list(chosen)
                 tm = metrics(target)
                 evaluated += 1
@@ -224,8 +226,8 @@ def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=BUD
         verdict = "KEEP_15"
 
     return {
-        "schema_version": 446,
-        "engine": "v4.4.5-wc-package-audit-fast-legal",
+        "schema_version": 447,
+        "engine": "v4.4.6-wc-package-audit-score-only-hotloop",
         "wildcard_active": bool(locked.get("wildcard_active")),
         "baseline": cm | {"itb": budget - basecost},
         "screened_players": len(cands), "frontier_players": len(fr),
@@ -238,6 +240,7 @@ def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=BUD
             "frontier_per_position": per_position_frontier,
             "beam_size": beam_size,
             "single_pass_metrics": True,
+            "score_only_hotloop": True,
             "compact_target_cache": True,
             "redundant_target_validation_removed": True,
             "candidate_reuse_supported": True,
@@ -246,7 +249,7 @@ def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=BUD
             "max_per_club": MAX_PER_CLUB, "budget_tenths": budget,
             "position_counts": POSITION_COUNTS, "larger_packages_require_higher_gain": True,
             "ranking_metric": "risk-adjusted best-XI plus bench-adjusted 5GW utility",
-            "search": "shortlisted k<=2, bounded beam k=3-4, compact memoized single-pass metrics",
+            "search": "shortlisted k<=2, bounded beam k=3-4, score-only compact memoized metrics",
             "frontier_per_position": per_position_frontier, "beam_size": beam_size,
             "risk_penalty_enabled": True,
             "search_width_unchanged": True,

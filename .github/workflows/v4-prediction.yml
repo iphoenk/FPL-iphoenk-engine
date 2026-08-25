@@ -44,6 +44,10 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python -m src.engines.v4_wc_decision
+      - name: Bounded wildcard challenger package audit
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m src.engines.v4_wc_package_audit
       - name: V4 acceptance and quality gate
         env:
           PYTHONPATH: ${{ github.workspace }}
@@ -61,6 +65,11 @@ jobs:
           assert w.get('screened_players',0)>=500, w.get('screened_players')
           assert len(w.get('optimized_elements',[]))==15
           assert w.get('classification') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
+          a=json.load(open('data/wc_package_audit_v4.json'))
+          assert a.get('engine')=='v4.4.2-wc-package-audit', a
+          assert a.get('max_replacements')==4
+          assert set(a.get('best_by_replacement_count',{}))=={'1','2','3','4'}
+          assert a.get('overall_verdict') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
           all_x=[]
           for row in players:
               assert len(row.get('fixtures',[])) <= 15
@@ -74,7 +83,7 @@ jobs:
                   d=fx['xmins']; assert abs(d['start_probability']+d['bench_probability']+d['dnp_probability']-1) < .002
           assert all_x and statistics.median(all_x) < 8, statistics.median(all_x)
           assert sum(x>15 for x in all_x)/len(all_x) < .03
-          print('V4 QUALITY GATE PASS', {'median_xpts':round(statistics.median(all_x),3),'max_xpts':round(max(all_x),3),'rules_audit':c['overall'],'wc_decision':w['classification']})
+          print('V4 QUALITY GATE PASS', {'median_xpts':round(statistics.median(all_x),3),'max_xpts':round(max(all_x),3),'rules_audit':c['overall'],'wc_decision':w['classification'],'package_audit':a['overall_verdict']})
           PY
       - name: Package V4 quality-test inputs
         if: always()
@@ -87,6 +96,7 @@ jobs:
           cp data/team.json v4-artifact/ 2>/dev/null || true
           cp data/compliance_audit.json v4-artifact/ 2>/dev/null || true
           cp data/wc_decision_v4.json v4-artifact/ 2>/dev/null || true
+          cp data/wc_package_audit_v4.json v4-artifact/ 2>/dev/null || true
           if [ -d data/validation ]; then cp -R data/validation v4-artifact/; fi
       - name: Upload V4 prediction artifact
         if: always()

@@ -97,6 +97,15 @@ def expanded_live(el):
     out["explain"]=el.get("explain")
     return out
 
+def native_entry_summary(entry, fetched_at=None):
+    e=entry or {}
+    keys=["id","current_event","summary_overall_points","summary_overall_rank",
+          "summary_event_points","summary_event_rank","last_deadline_bank",
+          "last_deadline_value","last_deadline_total_transfers"]
+    out={k:e.get(k) for k in keys}
+    out["fetched_at"]=fetched_at
+    return out
+
 def run(mode="daily", sync_stats=False, deep_stats=False):
     health={}
     bootstrap,h=get_json("bootstrap-static/");health["bootstrap"]=h
@@ -229,7 +238,9 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
     atomic_json(DATA/"universe.json",{"generated_at":iso_now(),"players":universe})
     atomic_json(DATA/"health.json",health)
     atomic_json(DATA/"chips.json",{"generated_at":iso_now(),"used":(history or {}).get("chips",[])})
+    entry_summary=native_entry_summary(entry,(health.get("entry") or {}).get("fetched_at"))
     atomic_json(DATA/"team.json",{"generated_at":iso_now(),"team_id":TEAM_ID,
+                                  "entry":entry_summary,
                                   "squad_authority":"LOCKED_PRE_DEADLINE" if use_lock else "OFFICIAL_SUBMITTED",
                                   "squad":squad,"team_value_ledger":ledger,
                                   "totals":{"market_value":sum(x["now_cost"] for x in ledger),
@@ -238,6 +249,7 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
 
     snapshot={"schema_version":SCHEMA_VERSION,"engine_version":ENGINE_VERSION,"generated_at":iso_now(),"mode":mode,
               "team_id":TEAM_ID,"phase":phase,"endpoint_health":health,
+              "entry":entry_summary,
               "squad_authority":"LOCKED_PRE_DEADLINE" if use_lock else "OFFICIAL_SUBMITTED",
               "advanced_stats_sync":adv_summary,
               "team_summary":{"itb":lock.get("itb_tenths") if use_lock else (entry or {}).get("last_deadline_bank"),

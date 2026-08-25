@@ -1,4 +1,4 @@
-from src.engines.v4_wc_optimizer import Candidate, validate_squad, best_xi, classify_gain
+from src.engines.v4_wc_optimizer import Candidate, validate_squad, best_xi, classify_gain, squad_utility, squad_utility_fast
 
 
 def c(e,pos,team,cost=50,x=3.0):
@@ -33,6 +33,11 @@ def test_best_xi_is_legal_343_or_better():
     counts={pos:sum(p.position==pos for p in chosen) for pos in ["GK","DEF","MID","FWD"]}
     assert counts["GK"]==1
     assert counts["DEF"]>=3 and counts["MID"]>=2 and counts["FWD"]>=1
+
+
+def test_fast_utility_is_numerically_equivalent():
+    ps=legal_squad()
+    assert abs(squad_utility(ps,5)-squad_utility_fast(ps,5)) < 1e-9
 
 
 def test_gain_classification_requires_material_margin():

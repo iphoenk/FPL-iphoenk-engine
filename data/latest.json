@@ -1,7 +1,7 @@
 {
   "schema_version": 31,
   "engine_version": "3.1.0",
-  "generated_at": "2026-08-25T11:26:35.759948+00:00",
+  "generated_at": "2026-08-25T11:40:34.069918+00:00",
   "mode": "daily",
   "team_id": 3462711,
   "phase": {
@@ -18,72 +18,72 @@
     "bootstrap": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 85,
+      "latency_ms": 195,
       "attempts": 1,
-      "fetched_at": "2026-08-25T11:26:33.306209+00:00",
+      "fetched_at": "2026-08-25T11:40:31.853605+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/bootstrap-static/"
     },
     "fixtures": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 26,
+      "latency_ms": 93,
       "attempts": 1,
-      "fetched_at": "2026-08-25T11:26:33.332974+00:00",
+      "fetched_at": "2026-08-25T11:40:31.947734+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/fixtures/"
     },
     "event_status": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 161,
+      "latency_ms": 201,
       "attempts": 1,
-      "fetched_at": "2026-08-25T11:26:33.494698+00:00",
+      "fetched_at": "2026-08-25T11:40:32.148961+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/event-status/"
     },
     "entry": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 492,
+      "latency_ms": 256,
       "attempts": 1,
-      "fetched_at": "2026-08-25T11:26:33.987624+00:00",
+      "fetched_at": "2026-08-25T11:40:32.405747+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/"
     },
     "history": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 159,
+      "latency_ms": 194,
       "attempts": 1,
-      "fetched_at": "2026-08-25T11:26:34.147405+00:00",
+      "fetched_at": "2026-08-25T11:40:32.600821+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/history/"
     },
     "transfers": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 159,
+      "latency_ms": 221,
       "attempts": 1,
-      "fetched_at": "2026-08-25T11:26:34.307431+00:00",
+      "fetched_at": "2026-08-25T11:40:32.822273+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/transfers/"
     },
     "picks": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 161,
+      "latency_ms": 203,
       "attempts": 1,
-      "fetched_at": "2026-08-25T11:26:34.470114+00:00",
+      "fetched_at": "2026-08-25T11:40:33.027195+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/event/1/picks/"
     },
     "event_live": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 29,
+      "latency_ms": 104,
       "attempts": 1,
-      "fetched_at": "2026-08-25T11:26:34.500019+00:00",
+      "fetched_at": "2026-08-25T11:40:33.131917+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/event/1/live/"
     }
@@ -91,9 +91,9 @@
   "squad_authority": "LOCKED_PRE_DEADLINE",
   "advanced_stats_sync": {
     "core_insights": {
-      "ok": false,
-      "rows": null,
-      "error": "HTTPError: 404 Client Error: Not Found for url: https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/2026-2027/players/gw1.csv"
+      "ok": true,
+      "rows": 610,
+      "error": null
     },
     "vaastav": {
       "ok": false,
@@ -102,12 +102,14 @@
     },
     "deep": {
       "shots": {
-        "ok": false,
-        "error": "404 Client Error: Not Found for url: https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/2026-2027/gws/shots.csv"
+        "ok": true,
+        "rows": 277,
+        "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/2026-2027/By%20Gameweek/GW1/shots.csv"
       },
       "playermatchstats": {
-        "ok": false,
-        "error": "404 Client Error: Not Found for url: https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/2026-2027/matchstats/playermatchstats.csv"
+        "ok": true,
+        "rows": 399,
+        "url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/2026-2027/By%20Gameweek/GW1/playermatchstats.csv"
       }
     }
   },
@@ -127,65 +129,65 @@
       {
         "element": 607,
         "name": "Lynch",
-        "net_transfers": 1621,
+        "net_transfers": 1634,
         "ownership_pct": 0.0,
-        "momentum": 1621.0
+        "momentum": 1634.0
       },
       {
         "element": 605,
         "name": "Yalcouyé",
-        "net_transfers": 1397,
+        "net_transfers": 1418,
         "ownership_pct": 0.0,
-        "momentum": 1397.0
+        "momentum": 1418.0
       },
       {
         "element": 601,
         "name": "Williams-Barnett",
-        "net_transfers": 1089,
+        "net_transfers": 1100,
         "ownership_pct": 0.0,
-        "momentum": 1089.0
+        "momentum": 1100.0
       },
       {
         "element": 608,
         "name": "Jebbison",
-        "net_transfers": 774,
+        "net_transfers": 782,
         "ownership_pct": 0.0,
-        "momentum": 774.0
+        "momentum": 782.0
       },
       {
         "element": 606,
         "name": "Rowe",
-        "net_transfers": 650,
+        "net_transfers": 656,
         "ownership_pct": 0.0,
-        "momentum": 650.0
+        "momentum": 656.0
       },
       {
         "element": 610,
         "name": "De Fougerolles",
-        "net_transfers": 630,
+        "net_transfers": 645,
         "ownership_pct": 0.0,
-        "momentum": 630.0
+        "momentum": 645.0
       },
       {
         "element": 602,
         "name": "Humphreys",
-        "net_transfers": 543,
+        "net_transfers": 544,
         "ownership_pct": 0.0,
-        "momentum": 543.0
+        "momentum": 544.0
       },
       {
         "element": 253,
         "name": "Andersen",
-        "net_transfers": 369,
+        "net_transfers": 376,
         "ownership_pct": 0.0,
-        "momentum": 369.0
+        "momentum": 376.0
       },
       {
         "element": 255,
         "name": "J.Cuenca",
-        "net_transfers": 203,
+        "net_transfers": 206,
         "ownership_pct": 0.0,
-        "momentum": 203.0
+        "momentum": 206.0
       },
       {
         "element": 75,

@@ -1,33 +1,76 @@
-# FPL iphoenk Engine v3.6.0
+# FPL iphoenk Engine v3.7.0
 
 A production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Design goal
-Combine Official FPL API authority, a single authoritative FPL 2026/27 ruleset, persisted native team/event state, expanded Official FPL detail surfaces, community enrichments, live score/persistence, exact team-value logic, leakage-safe modelling, projection/calibration frameworks, provenance/freshness, snapshot integrity and a noise-resistant Price Radar.
+Combine Official FPL API authority, a single authoritative FPL 2026/27 ruleset, persisted native team/event state, expanded public Official FPL detail surfaces, an optional authenticated read-only Official layer, community enrichments, live score/persistence, exact team-value logic, leakage-safe modelling, provenance/freshness, snapshot integrity and a noise-resistant Price Radar.
+
+## v3.7 Authenticated Official read-only layer
+Authenticated Official FPL is an optional precision layer, never a dependency for the public core engine.
+
+Supported resource endpoints are deliberately allowlisted to exactly three GET routes:
+- `GET /api/me/`
+- `GET /api/my-team/{team_id}/`
+- `GET /api/entry/{team_id}/transfers-latest/`
+
+Security policy:
+- the authenticated resource client exposes GET only; there is no generic method or transfer/team-write API
+- `/api/me/` must verify the configured entry ID before any team-specific authenticated state is trusted
+- credential material is never written to `data/**`, runtime-data, logs, exceptions or artifacts
+- raw authenticated JSON is never persisted publicly
+- the public collector remains operational when auth is disabled, missing, expired or rejected
+- authenticated failure is reported as a separate optional-layer state, not as Official public core failure
+- secrets are injected only into the authenticated overlay step and are not made available to pull-request jobs
+
+Supported auth modes:
+- `disabled` (default)
+- `session_cookie`: base64-encoded filtered FPL/Premier League Cookie header in `FPL_SESSION_B64`
+- `bearer_token`: short-lived access token in `FPL_ACCESS_TOKEN`
+- `refresh_token`: refresh token in `FPL_REFRESH_TOKEN`; requires configured `FPL_OIDC_TOKEN_URL` and `FPL_OIDC_CLIENT_ID`, plus optional `FPL_OIDC_CLIENT_SECRET`
+
+Recommended secret configuration:
+- `FPL_AUTH_MODE`
+- one credential matching the chosen mode
+- for refresh-token mode, the OIDC token URL/client ID required by the current Premier League identity flow
+
+Do not put credentials in README, repository files, `runtime-data`, chat messages or workflow logs. A GitHub Environment Secret such as `fpl-readonly` is preferred when practical; repository Actions secrets are supported by the workflow without changing source code.
+
+Persisted safe output is `data/auth.json` plus `authenticated_official` in `latest.json`. It contains only:
+- auth health/state and endpoint health without credential/header values
+- verified entry ID
+- exact purchase/selling prices only for players already in the authoritative squad state
+- safe finance summary such as bank/value when Official authenticated data exposes it
+- chip-state summary
+- current-draft count, a one-way fingerprint and whether it matches the authoritative squad, without publishing the raw private draft
+- count/availability summary for `transfers-latest`, not the raw transfer payload
+
+Possible states include `DISABLED`, `VALID`, `EXPIRED_OR_REJECTED`, `ENTRY_MISMATCH`, `PARTIAL`, `MISCONFIGURED` and `UNAVAILABLE`.
+
+If mobile credential bootstrap remains unavailable, nothing else breaks. The engine continues using public Official FPL plus the existing purchase/sell-value reconstruction. Authenticated data simply upgrades selected fields when a valid credential is present.
+
+Schema version: 36.
 
 ## v3.6 Official FPL P0/P1 expansion
-The collector now exploits more of the public Official FPL surface before relying on external data.
+The collector exploits more of the public Official FPL surface before relying on external data.
 
 P0 implemented:
-- selective `element-summary/{id}/` collection for all 15 owned players plus actionable Price Radar candidates and top Official performers, capped by `FPL_ELEMENT_SUMMARY_MAX` (default 40) to avoid brute-force API load
+- selective `element-summary/{id}/` collection for all 15 owned players plus actionable Price Radar candidates and top Official performers, capped by `FPL_ELEMENT_SUMMARY_MAX` (default 40)
 - Official `team/set-piece-notes/` collection with fail-soft health status
 - richer `event/{gw}/live/` persistence including minutes, goals, assists, clean sheets, goals conceded, own goals, penalties, cards, saves, bonus, BPS, total points and defensive contribution when present
-- fixture-stat reconciliation from Official `fixtures/`, preserving match `stats` payload for the planning/current window
+- fixture-stat reconciliation from Official `fixtures/`
 
 P1 implemented:
 - season and latest-GW Official Dream Team surfaces
-- optional Classic mini-league standings via `FPL_CLASSIC_LEAGUE_IDS` (comma-separated IDs)
+- optional Classic mini-league standings via `FPL_CLASSIC_LEAGUE_IDS`
 - optional H2H standings via `FPL_H2H_LEAGUE_IDS`
-- public entry cup state via `entry/{team_id}/cup/` when available
-- all optional/secondary surfaces fail soft and are separated from core Official health
+- public entry cup state when available
+- optional/secondary surfaces fail soft and remain separate from core Official health
 
 Outputs:
-- `data/official_detail.json` contains Official element summaries, set-piece notes, fixture stats, rich live data, Dream Team, optional league/cup data and detail health
-- `data/latest.json` contains `official_detail_summary` and `official_health_panel`
-- health is layered: Official core, Official detail/secondary surfaces and element-summary coverage
-- schema version 35
+- `data/official_detail.json`
+- `official_detail_summary` and `official_health_panel` in `data/latest.json`
 
-Important load-control rule: the engine does not fetch element-summary for the full 600+ player universe each hour. Universal screening stays bootstrap-first; deeper Official detail is selective.
+Important load-control rule: the engine does not fetch element-summary for the full player universe every hour. Universal screening remains bootstrap-first and detail fetches are selective.
 
 ## v3.5.1 Runtime publishing + cadence hardening
 The source branch `main` remains protected. Generated collector data is published to `runtime-data` rather than pushed directly to `main`.
@@ -91,20 +134,22 @@ Master Monitor user-visible reports:
 pip install -r requirements.txt
 python fpl_daily_tasks.py daily --stats
 python -m src.engines.official_expansion
+python -m src.engines.authenticated_official
 python fpl_daily_tasks.py deadline --stats
 python fpl_daily_tasks.py live
 ```
 
 ## Source authority
-1. Official FPL API native fields and Official scoring
-2. Persisted Official-FPL-derived runtime bridge on `runtime-data`
-3. Official FPL detail/secondary surfaces such as element-summary and set-piece notes
-4. FPL-Core-Insights community enrichment
-5. vaastav historical dataset
-6. other mirrors only if explicitly enabled
-7. web/news/tactical overlays
+1. Direct Official FPL native fields and Official scoring
+2. Authenticated Official FPL native account fields when valid and directly applicable
+3. Persisted Official-FPL-derived runtime bridge on `runtime-data`
+4. Official FPL public detail/secondary surfaces such as element-summary and set-piece notes
+5. FPL-Core-Insights community enrichment
+6. vaastav historical dataset
+7. other mirrors only if explicitly enabled
+8. web/news/tactical overlays
 
-If direct Official FPL and persisted bridge disagree on a current native field, direct Official FPL wins and the conflict is logged.
+Direct Official native fields win conflicts with persisted/derived state. Authenticated account-native fields win reconstructed equivalents such as sell price when auth is verified for the expected entry.
 
 ## Rules authority principle
 Local reconstruction is an audit aid only. It must not override Official FPL `total_points`, bonus allocation, rank, price or other native fields. BPS is not fully reconstructed without all required raw official metrics.

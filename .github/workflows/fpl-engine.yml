@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.1
+name: FPL iphoenk collector v3.2
 
 on:
   workflow_dispatch:
@@ -15,6 +15,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,20 +23,29 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt pytest
+      - name: Reliability tests
+        run: pytest -q
       - name: Generate API + advanced-stats snapshot
         run: python -m src.engine daily --stats
+      - name: Validate generated snapshot
+        run: |
+          python - <<'PY'
+          import json
+          from src.engines.reliability import validate_snapshot
+          s=json.load(open('data/latest.json'))
+          r=validate_snapshot(s)
+          print(r)
+          if not r['ok']: raise SystemExit(2)
+          PY
       - name: Commit data safely
         shell: bash
         run: |
           git config user.name "fpl-iphoenk-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/
-          if git diff --cached --quiet; then
-            echo "No data changes"
-            exit 0
-          fi
-          git commit -m "data: refresh FPL v3.1 snapshot"
+          if git diff --cached --quiet; then echo "No data changes"; exit 0; fi
+          git commit -m "data: refresh FPL v3.2 snapshot"
           git fetch origin main
           git rebase origin/main
           git push origin main

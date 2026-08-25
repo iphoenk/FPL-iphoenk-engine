@@ -1,0 +1,13 @@
+{
+  "team_id": 3462711,
+  "live_poll_seconds": 60,
+  "normal_stale_minutes": 90,
+  "deadline_stale_minutes": 30,
+  "matchday_stale_minutes": 10,
+  "api_retries": 3,
+  "api_backoff_seconds": 0.8,
+  "projection_horizon_gws": 5,
+  "strategic_horizon_gws": 15,
+  "fail_closed": true,
+  "schema_version": 31
+}

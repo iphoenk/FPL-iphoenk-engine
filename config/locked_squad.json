@@ -1,0 +1,84 @@
+{
+  "team_id": 3462711,
+  "authoritative_phase": "pre_deadline_wc",
+  "locked_at": "2026-08-25T03:44:30Z",
+  "itb_tenths": 5,
+  "wildcard_active": true,
+  "players": [
+    {
+      "name": "Tzolakis",
+      "position": "GK",
+      "purchase_cost": 45
+    },
+    {
+      "name": "Verbruggen",
+      "position": "GK",
+      "purchase_cost": 45
+    },
+    {
+      "name": "De Cuyper",
+      "position": "DEF",
+      "purchase_cost": 45
+    },
+    {
+      "name": "Calafiori",
+      "position": "DEF",
+      "purchase_cost": 55
+    },
+    {
+      "name": "Kayode",
+      "position": "DEF",
+      "purchase_cost": 45
+    },
+    {
+      "name": "Robinson",
+      "position": "DEF",
+      "purchase_cost": 45
+    },
+    {
+      "name": "Aina",
+      "position": "DEF",
+      "purchase_cost": 45
+    },
+    {
+      "name": "Bruno Fernandes",
+      "position": "MID",
+      "purchase_cost": 120
+    },
+    {
+      "name": "Ødegaard",
+      "position": "MID",
+      "purchase_cost": 65
+    },
+    {
+      "name": "Tzolis",
+      "position": "MID",
+      "purchase_cost": 65
+    },
+    {
+      "name": "Rogers",
+      "position": "MID",
+      "purchase_cost": 75
+    },
+    {
+      "name": "Sangaré",
+      "position": "MID",
+      "purchase_cost": 55
+    },
+    {
+      "name": "Haaland",
+      "position": "FWD",
+      "purchase_cost": 155
+    },
+    {
+      "name": "João Pedro",
+      "position": "FWD",
+      "purchase_cost": 75
+    },
+    {
+      "name": "Calvert-Lewin",
+      "position": "FWD",
+      "purchase_cost": 60
+    }
+  ]
+}

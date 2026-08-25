@@ -1,7 +1,7 @@
 {
   "schema_version": 40,
   "engine_version": "4.0.0-rc1",
-  "generated_at": "2026-08-25T19:01:40.084828+00:00",
+  "generated_at": "2026-08-25T22:32:13.399931+00:00",
   "mode": "daily",
   "team_id": 3462711,
   "phase": {
@@ -18,72 +18,72 @@
     "bootstrap": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 291,
+      "latency_ms": 90,
       "attempts": 1,
-      "fetched_at": "2026-08-25T19:01:39.270489+00:00",
+      "fetched_at": "2026-08-25T22:32:10.708604+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/bootstrap-static/"
     },
     "fixtures": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 38,
+      "latency_ms": 28,
       "attempts": 1,
-      "fetched_at": "2026-08-25T19:01:39.309289+00:00",
+      "fetched_at": "2026-08-25T22:32:10.736821+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/fixtures/"
     },
     "event_status": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 46,
+      "latency_ms": 167,
       "attempts": 1,
-      "fetched_at": "2026-08-25T19:01:39.356010+00:00",
+      "fetched_at": "2026-08-25T22:32:10.904638+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/event-status/"
     },
     "entry": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 156,
+      "latency_ms": 465,
       "attempts": 1,
-      "fetched_at": "2026-08-25T19:01:39.513028+00:00",
+      "fetched_at": "2026-08-25T22:32:11.370589+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/"
     },
     "history": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 42,
+      "latency_ms": 418,
       "attempts": 1,
-      "fetched_at": "2026-08-25T19:01:39.556099+00:00",
+      "fetched_at": "2026-08-25T22:32:11.788900+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/history/"
     },
     "transfers": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 36,
+      "latency_ms": 425,
       "attempts": 1,
-      "fetched_at": "2026-08-25T19:01:39.592858+00:00",
+      "fetched_at": "2026-08-25T22:32:12.214364+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/transfers/"
     },
     "picks": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 39,
+      "latency_ms": 171,
       "attempts": 1,
-      "fetched_at": "2026-08-25T19:01:39.633636+00:00",
+      "fetched_at": "2026-08-25T22:32:12.386103+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/event/1/picks/"
     },
     "event_live": {
       "status": "IDLE",
       "http_status": 200,
-      "latency_ms": 42,
+      "latency_ms": 30,
       "attempts": 1,
-      "fetched_at": "2026-08-25T19:01:39.676778+00:00",
+      "fetched_at": "2026-08-25T22:32:12.417266+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/event/1/live/"
     }
@@ -153,7 +153,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -206,7 +206,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -259,7 +259,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -312,7 +312,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -365,7 +365,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -418,7 +418,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -471,7 +471,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -524,7 +524,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -577,7 +577,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -630,7 +630,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -683,7 +683,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -736,7 +736,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -789,7 +789,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -842,7 +842,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -895,7 +895,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -930,7 +930,7 @@
             "event": 2,
             "xpts": 4.212,
             "lower80": 1.545,
-            "upper80": 6.878,
+            "upper80": 6.879,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -963,13 +963,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -982,8 +982,8 @@
           {
             "event": 3,
             "xpts": 4.192,
-            "lower80": 1.53,
-            "upper80": 6.853,
+            "lower80": 1.531,
+            "upper80": 6.854,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -1016,13 +1016,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1034,7 +1034,7 @@
           },
           {
             "event": 4,
-            "xpts": 4.454,
+            "xpts": 4.455,
             "lower80": 1.724,
             "upper80": 7.185,
             "xmins": {
@@ -1069,13 +1069,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1087,8 +1087,8 @@
           },
           {
             "event": 5,
-            "xpts": 3.97,
-            "lower80": 1.368,
+            "xpts": 3.971,
+            "lower80": 1.369,
             "upper80": 6.572,
             "xmins": {
               "start_probability": 0.8832,
@@ -1122,13 +1122,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1141,8 +1141,8 @@
           {
             "event": 6,
             "xpts": 3.969,
-            "lower80": 1.367,
-            "upper80": 6.57,
+            "lower80": 1.368,
+            "upper80": 6.571,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -1175,13 +1175,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1193,8 +1193,8 @@
           },
           {
             "event": 7,
-            "xpts": 3.97,
-            "lower80": 1.368,
+            "xpts": 3.971,
+            "lower80": 1.369,
             "upper80": 6.572,
             "xmins": {
               "start_probability": 0.8832,
@@ -1228,13 +1228,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1246,7 +1246,7 @@
           },
           {
             "event": 8,
-            "xpts": 4.454,
+            "xpts": 4.455,
             "lower80": 1.724,
             "upper80": 7.185,
             "xmins": {
@@ -1281,13 +1281,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1300,8 +1300,8 @@
           {
             "event": 9,
             "xpts": 3.969,
-            "lower80": 1.367,
-            "upper80": 6.57,
+            "lower80": 1.368,
+            "upper80": 6.571,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -1334,13 +1334,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1352,8 +1352,8 @@
           },
           {
             "event": 10,
-            "xpts": 3.97,
-            "lower80": 1.368,
+            "xpts": 3.971,
+            "lower80": 1.369,
             "upper80": 6.572,
             "xmins": {
               "start_probability": 0.8832,
@@ -1387,13 +1387,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1406,8 +1406,8 @@
           {
             "event": 11,
             "xpts": 3.969,
-            "lower80": 1.367,
-            "upper80": 6.57,
+            "lower80": 1.368,
+            "upper80": 6.571,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -1440,13 +1440,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1458,8 +1458,8 @@
           },
           {
             "event": 12,
-            "xpts": 3.97,
-            "lower80": 1.368,
+            "xpts": 3.971,
+            "lower80": 1.369,
             "upper80": 6.572,
             "xmins": {
               "start_probability": 0.8832,
@@ -1493,13 +1493,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1511,7 +1511,7 @@
           },
           {
             "event": 13,
-            "xpts": 4.454,
+            "xpts": 4.455,
             "lower80": 1.724,
             "upper80": 7.185,
             "xmins": {
@@ -1546,13 +1546,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1566,7 +1566,7 @@
             "event": 14,
             "xpts": 3.749,
             "lower80": 1.208,
-            "upper80": 6.289,
+            "upper80": 6.29,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -1599,13 +1599,13 @@
             "calibration": {
               "clean_sheet_probability": 0.115,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1617,7 +1617,7 @@
           },
           {
             "event": 15,
-            "xpts": 4.454,
+            "xpts": 4.455,
             "lower80": 1.724,
             "upper80": 7.185,
             "xmins": {
@@ -1652,13 +1652,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1672,7 +1672,7 @@
             "event": 16,
             "xpts": 4.212,
             "lower80": 1.545,
-            "upper80": 6.878,
+            "upper80": 6.879,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -1705,13 +1705,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.1053,
-              "role_prior": 0.5408
+              "role_prior": 0.5415
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1725,16 +1725,16 @@
         "xpts_3": 12.86,
         "xpts_5": 20.8,
         "xpts_10": 41.13,
-        "xpts_15": 61.97,
-        "mean_xpts": 4.131,
-        "uncertainty": 0.225,
+        "xpts_15": 61.98,
+        "mean_xpts": 4.132,
+        "uncertainty": 0.226,
         "model": "v4.3.1-rules-compliance",
         "stable_key": "2026-27:368",
         "priors": {
           "xg90_prior": 0.2283,
-          "xa90_prior": 0.2065,
+          "xa90_prior": 0.2066,
           "premium_prior": 0.1053,
-          "role_prior": 0.5408
+          "role_prior": 0.5415
         }
       },
       {
@@ -1785,7 +1785,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1838,7 +1838,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1891,7 +1891,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1944,7 +1944,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -1997,7 +1997,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2050,7 +2050,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2103,7 +2103,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2156,7 +2156,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2209,7 +2209,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2262,7 +2262,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2315,7 +2315,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2368,7 +2368,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2421,7 +2421,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2474,7 +2474,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2527,7 +2527,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2580,8 +2580,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -2595,13 +2595,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2633,8 +2633,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -2648,13 +2648,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2668,7 +2668,7 @@
             "event": 4,
             "xpts": 3.899,
             "lower80": 1.317,
-            "upper80": 6.482,
+            "upper80": 6.481,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -2686,8 +2686,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -2701,13 +2701,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2739,8 +2739,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -2754,13 +2754,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2773,8 +2773,8 @@
           {
             "event": 6,
             "xpts": 4.143,
-            "lower80": 1.495,
-            "upper80": 6.792,
+            "lower80": 1.494,
+            "upper80": 6.791,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -2792,8 +2792,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -2807,13 +2807,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2845,8 +2845,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -2860,13 +2860,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2879,8 +2879,8 @@
           {
             "event": 8,
             "xpts": 4.143,
-            "lower80": 1.495,
-            "upper80": 6.792,
+            "lower80": 1.494,
+            "upper80": 6.791,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -2898,8 +2898,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -2913,13 +2913,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2931,9 +2931,9 @@
           },
           {
             "event": 9,
-            "xpts": 3.683,
-            "lower80": 1.161,
-            "upper80": 6.205,
+            "xpts": 3.682,
+            "lower80": 1.16,
+            "upper80": 6.204,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -2951,8 +2951,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -2966,13 +2966,13 @@
             "calibration": {
               "clean_sheet_probability": 0.115,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -2985,8 +2985,8 @@
           {
             "event": 10,
             "xpts": 4.143,
-            "lower80": 1.495,
-            "upper80": 6.792,
+            "lower80": 1.494,
+            "upper80": 6.791,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -3004,8 +3004,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -3019,13 +3019,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3037,9 +3037,9 @@
           },
           {
             "event": 11,
-            "xpts": 3.683,
-            "lower80": 1.161,
-            "upper80": 6.205,
+            "xpts": 3.682,
+            "lower80": 1.16,
+            "upper80": 6.204,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -3057,8 +3057,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -3072,13 +3072,13 @@
             "calibration": {
               "clean_sheet_probability": 0.115,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3091,8 +3091,8 @@
           {
             "event": 12,
             "xpts": 4.143,
-            "lower80": 1.495,
-            "upper80": 6.792,
+            "lower80": 1.494,
+            "upper80": 6.791,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -3110,8 +3110,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -3125,13 +3125,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3163,8 +3163,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -3178,13 +3178,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3216,8 +3216,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -3231,13 +3231,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3269,8 +3269,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -3284,13 +3284,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3303,7 +3303,7 @@
           {
             "event": 16,
             "xpts": 3.469,
-            "lower80": 1.008,
+            "lower80": 1.007,
             "upper80": 5.93,
             "xmins": {
               "start_probability": 0.8832,
@@ -3322,8 +3322,8 @@
               "bonus": 0.172
             },
             "rates": {
-              "xg90": 0.2781,
-              "xa90": 0.2497,
+              "xg90": 0.278,
+              "xa90": 0.2496,
               "raw_xg90": 0.08,
               "raw_xa90": 0.26,
               "current_season_weight": 0.1111,
@@ -3337,13 +3337,13 @@
             "calibration": {
               "clean_sheet_probability": 0.08,
               "premium_prior": 0.6316,
-              "role_prior": 0.5963
+              "role_prior": 0.5956
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3356,7 +3356,7 @@
         ],
         "xpts_3": 12.19,
         "xpts_5": 20.24,
-        "xpts_10": 39.8,
+        "xpts_10": 39.79,
         "xpts_15": 59.6,
         "mean_xpts": 3.974,
         "uncertainty": 0.246,
@@ -3366,7 +3366,7 @@
           "xg90_prior": 0.3028,
           "xa90_prior": 0.2484,
           "premium_prior": 0.6316,
-          "role_prior": 0.5963
+          "role_prior": 0.5956
         }
       },
       {
@@ -3378,7 +3378,7 @@
             "event": 2,
             "xpts": 3.615,
             "lower80": 1.102,
-            "upper80": 6.127,
+            "upper80": 6.128,
             "xmins": {
               "start_probability": 0.8691,
               "bench_probability": 0.0942,
@@ -3397,7 +3397,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3411,13 +3411,13 @@
             "calibration": {
               "clean_sheet_probability": 0.115,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3429,9 +3429,9 @@
           },
           {
             "event": 3,
-            "xpts": 4.485,
+            "xpts": 4.486,
             "lower80": 1.736,
-            "upper80": 7.234,
+            "upper80": 7.235,
             "xmins": {
               "start_probability": 0.8691,
               "bench_probability": 0.0942,
@@ -3450,7 +3450,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3464,13 +3464,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3484,7 +3484,7 @@
             "event": 4,
             "xpts": 4.172,
             "lower80": 1.506,
-            "upper80": 6.838,
+            "upper80": 6.839,
             "xmins": {
               "start_probability": 0.8691,
               "bench_probability": 0.0942,
@@ -3503,7 +3503,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3517,13 +3517,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3536,7 +3536,7 @@
           {
             "event": 5,
             "xpts": 3.9,
-            "lower80": 1.307,
+            "lower80": 1.308,
             "upper80": 6.492,
             "xmins": {
               "start_probability": 0.8691,
@@ -3556,7 +3556,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3570,13 +3570,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3588,7 +3588,7 @@
           },
           {
             "event": 6,
-            "xpts": 3.893,
+            "xpts": 3.894,
             "lower80": 1.303,
             "upper80": 6.484,
             "xmins": {
@@ -3609,7 +3609,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3623,13 +3623,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3643,7 +3643,7 @@
             "event": 7,
             "xpts": 4.193,
             "lower80": 1.521,
-            "upper80": 6.864,
+            "upper80": 6.865,
             "xmins": {
               "start_probability": 0.8691,
               "bench_probability": 0.0942,
@@ -3662,7 +3662,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3676,13 +3676,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3696,7 +3696,7 @@
             "event": 8,
             "xpts": 3.615,
             "lower80": 1.102,
-            "upper80": 6.127,
+            "upper80": 6.128,
             "xmins": {
               "start_probability": 0.8691,
               "bench_probability": 0.0942,
@@ -3715,7 +3715,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3729,13 +3729,13 @@
             "calibration": {
               "clean_sheet_probability": 0.115,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3768,7 +3768,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3782,13 +3782,13 @@
             "calibration": {
               "clean_sheet_probability": 0.08,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3802,7 +3802,7 @@
             "event": 10,
             "xpts": 4.193,
             "lower80": 1.521,
-            "upper80": 6.864,
+            "upper80": 6.865,
             "xmins": {
               "start_probability": 0.8691,
               "bench_probability": 0.0942,
@@ -3821,7 +3821,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3835,13 +3835,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3855,7 +3855,7 @@
             "event": 11,
             "xpts": 4.172,
             "lower80": 1.506,
-            "upper80": 6.838,
+            "upper80": 6.839,
             "xmins": {
               "start_probability": 0.8691,
               "bench_probability": 0.0942,
@@ -3874,7 +3874,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3888,13 +3888,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3906,9 +3906,9 @@
           },
           {
             "event": 12,
-            "xpts": 4.485,
+            "xpts": 4.486,
             "lower80": 1.736,
-            "upper80": 7.234,
+            "upper80": 7.235,
             "xmins": {
               "start_probability": 0.8691,
               "bench_probability": 0.0942,
@@ -3927,7 +3927,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3941,13 +3941,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -3959,7 +3959,7 @@
           },
           {
             "event": 13,
-            "xpts": 3.893,
+            "xpts": 3.894,
             "lower80": 1.303,
             "upper80": 6.484,
             "xmins": {
@@ -3980,7 +3980,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -3994,13 +3994,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4012,7 +4012,7 @@
           },
           {
             "event": 14,
-            "xpts": 3.893,
+            "xpts": 3.894,
             "lower80": 1.303,
             "upper80": 6.484,
             "xmins": {
@@ -4033,7 +4033,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -4047,13 +4047,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4067,7 +4067,7 @@
             "event": 15,
             "xpts": 4.193,
             "lower80": 1.521,
-            "upper80": 6.864,
+            "upper80": 6.865,
             "xmins": {
               "start_probability": 0.8691,
               "bench_probability": 0.0942,
@@ -4086,7 +4086,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -4100,13 +4100,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4118,9 +4118,9 @@
           },
           {
             "event": 16,
-            "xpts": 4.485,
+            "xpts": 4.486,
             "lower80": 1.736,
-            "upper80": 7.234,
+            "upper80": 7.235,
             "xmins": {
               "start_probability": 0.8691,
               "bench_probability": 0.0942,
@@ -4139,7 +4139,7 @@
             },
             "rates": {
               "xg90": 0.2272,
-              "xa90": 0.108,
+              "xa90": 0.1081,
               "raw_xg90": 1.7182,
               "raw_xa90": 0.2455,
               "current_season_weight": 0.0966,
@@ -4153,13 +4153,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.0,
-              "role_prior": 0.3701
+              "role_prior": 0.3715
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4174,15 +4174,15 @@
         "xpts_5": 20.07,
         "xpts_10": 39.61,
         "xpts_15": 60.56,
-        "mean_xpts": 4.037,
+        "mean_xpts": 4.038,
         "uncertainty": 0.326,
         "model": "v4.3.1-rules-compliance",
         "stable_key": "2026-27:115",
         "priors": {
           "xg90_prior": 0.0678,
-          "xa90_prior": 0.0933,
+          "xa90_prior": 0.0934,
           "premium_prior": 0.0,
-          "role_prior": 0.3701
+          "role_prior": 0.3715
         }
       },
       {
@@ -4233,7 +4233,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4286,7 +4286,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4339,7 +4339,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4392,7 +4392,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4445,7 +4445,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4498,7 +4498,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4551,7 +4551,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4604,7 +4604,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4657,7 +4657,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4710,7 +4710,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4763,7 +4763,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4816,7 +4816,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4869,7 +4869,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4922,7 +4922,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -4975,7 +4975,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5010,7 +5010,7 @@
             "event": 2,
             "xpts": 4.239,
             "lower80": 1.565,
-            "upper80": 6.914,
+            "upper80": 6.913,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5029,7 +5029,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5043,13 +5043,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5063,7 +5063,7 @@
             "event": 3,
             "xpts": 3.781,
             "lower80": 1.231,
-            "upper80": 6.331,
+            "upper80": 6.33,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5082,7 +5082,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5096,13 +5096,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5135,7 +5135,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5149,13 +5149,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5169,7 +5169,7 @@
             "event": 5,
             "xpts": 3.781,
             "lower80": 1.231,
-            "upper80": 6.331,
+            "upper80": 6.33,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5188,7 +5188,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5202,13 +5202,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5233,7 +5233,7 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.799,
+              "attack": 1.798,
               "clean_sheet": 0.181,
               "saves": 0,
               "defcon": 0.125,
@@ -5241,7 +5241,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5255,13 +5255,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5275,7 +5275,7 @@
             "event": 7,
             "xpts": 3.781,
             "lower80": 1.231,
-            "upper80": 6.331,
+            "upper80": 6.33,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5294,7 +5294,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5308,13 +5308,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5339,7 +5339,7 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.799,
+              "attack": 1.798,
               "clean_sheet": 0.181,
               "saves": 0,
               "defcon": 0.125,
@@ -5347,7 +5347,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5361,13 +5361,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5381,7 +5381,7 @@
             "event": 9,
             "xpts": 3.569,
             "lower80": 1.079,
-            "upper80": 6.059,
+            "upper80": 6.058,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5392,7 +5392,7 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.44,
+              "attack": 1.439,
               "clean_sheet": 0.102,
               "saves": 0,
               "defcon": 0.125,
@@ -5400,7 +5400,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5414,13 +5414,13 @@
             "calibration": {
               "clean_sheet_probability": 0.115,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5445,7 +5445,7 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.799,
+              "attack": 1.798,
               "clean_sheet": 0.181,
               "saves": 0,
               "defcon": 0.125,
@@ -5453,7 +5453,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5467,13 +5467,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5487,7 +5487,7 @@
             "event": 11,
             "xpts": 3.569,
             "lower80": 1.079,
-            "upper80": 6.059,
+            "upper80": 6.058,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5498,7 +5498,7 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.44,
+              "attack": 1.439,
               "clean_sheet": 0.102,
               "saves": 0,
               "defcon": 0.125,
@@ -5506,7 +5506,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5520,13 +5520,13 @@
             "calibration": {
               "clean_sheet_probability": 0.115,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5551,7 +5551,7 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.799,
+              "attack": 1.798,
               "clean_sheet": 0.181,
               "saves": 0,
               "defcon": 0.125,
@@ -5559,7 +5559,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5573,13 +5573,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5593,7 +5593,7 @@
             "event": 13,
             "xpts": 3.781,
             "lower80": 1.231,
-            "upper80": 6.331,
+            "upper80": 6.33,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5612,7 +5612,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5626,13 +5626,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5646,7 +5646,7 @@
             "event": 14,
             "xpts": 4.239,
             "lower80": 1.565,
-            "upper80": 6.914,
+            "upper80": 6.913,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5665,7 +5665,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5679,13 +5679,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5699,7 +5699,7 @@
             "event": 15,
             "xpts": 3.781,
             "lower80": 1.231,
-            "upper80": 6.331,
+            "upper80": 6.33,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5718,7 +5718,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5732,13 +5732,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5750,7 +5750,7 @@
           },
           {
             "event": 16,
-            "xpts": 3.366,
+            "xpts": 3.365,
             "lower80": 0.934,
             "upper80": 5.797,
             "xmins": {
@@ -5771,7 +5771,7 @@
             },
             "rates": {
               "xg90": 0.2726,
-              "xa90": 0.2176,
+              "xa90": 0.2175,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
               "current_season_weight": 0.1111,
@@ -5785,13 +5785,13 @@
             "calibration": {
               "clean_sheet_probability": 0.08,
               "premium_prior": 0.2105,
-              "role_prior": 0.5677
+              "role_prior": 0.5669
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5811,10 +5811,10 @@
         "model": "v4.3.1-rules-compliance",
         "stable_key": "2026-27:427",
         "priors": {
-          "xg90_prior": 0.2442,
+          "xg90_prior": 0.2441,
           "xa90_prior": 0.216,
           "premium_prior": 0.2105,
-          "role_prior": 0.5677
+          "role_prior": 0.5669
         }
       },
       {
@@ -5824,9 +5824,9 @@
         "fixtures": [
           {
             "event": 2,
-            "xpts": 4.166,
-            "lower80": 1.511,
-            "upper80": 6.82,
+            "xpts": 4.167,
+            "lower80": 1.512,
+            "upper80": 6.821,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5837,15 +5837,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 2.122,
+              "attack": 2.123,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -5859,13 +5859,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5877,9 +5877,9 @@
           },
           {
             "event": 3,
-            "xpts": 3.39,
+            "xpts": 3.391,
             "lower80": 0.952,
-            "upper80": 5.829,
+            "upper80": 5.83,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5897,8 +5897,8 @@
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -5912,13 +5912,13 @@
             "calibration": {
               "clean_sheet_probability": 0.08,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5930,9 +5930,9 @@
           },
           {
             "event": 4,
-            "xpts": 4.166,
-            "lower80": 1.511,
-            "upper80": 6.82,
+            "xpts": 4.167,
+            "lower80": 1.512,
+            "upper80": 6.821,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5943,15 +5943,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 2.122,
+              "attack": 2.123,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -5965,13 +5965,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -5985,7 +5985,7 @@
             "event": 5,
             "xpts": 3.761,
             "lower80": 1.217,
-            "upper80": 6.304,
+            "upper80": 6.305,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -5996,15 +5996,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.717,
+              "attack": 1.718,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6018,13 +6018,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6036,9 +6036,9 @@
           },
           {
             "event": 6,
-            "xpts": 3.959,
+            "xpts": 3.96,
             "lower80": 1.361,
-            "upper80": 6.558,
+            "upper80": 6.559,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -6049,15 +6049,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.916,
+              "attack": 1.917,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6071,13 +6071,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6091,7 +6091,7 @@
             "event": 7,
             "xpts": 3.761,
             "lower80": 1.217,
-            "upper80": 6.304,
+            "upper80": 6.305,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -6102,15 +6102,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.717,
+              "attack": 1.718,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6124,13 +6124,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6142,9 +6142,9 @@
           },
           {
             "event": 8,
-            "xpts": 3.959,
+            "xpts": 3.96,
             "lower80": 1.361,
-            "upper80": 6.558,
+            "upper80": 6.559,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -6155,15 +6155,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.916,
+              "attack": 1.917,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6177,13 +6177,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6208,15 +6208,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.709,
+              "attack": 1.71,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6230,13 +6230,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6250,7 +6250,7 @@
             "event": 10,
             "xpts": 3.761,
             "lower80": 1.217,
-            "upper80": 6.304,
+            "upper80": 6.305,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -6261,15 +6261,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.717,
+              "attack": 1.718,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6283,13 +6283,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6301,9 +6301,9 @@
           },
           {
             "event": 11,
-            "xpts": 4.166,
-            "lower80": 1.511,
-            "upper80": 6.82,
+            "xpts": 4.167,
+            "lower80": 1.512,
+            "upper80": 6.821,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -6314,15 +6314,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 2.122,
+              "attack": 2.123,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6336,13 +6336,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6356,7 +6356,7 @@
             "event": 12,
             "xpts": 3.761,
             "lower80": 1.217,
-            "upper80": 6.304,
+            "upper80": 6.305,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -6367,15 +6367,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.717,
+              "attack": 1.718,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6389,13 +6389,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6407,9 +6407,9 @@
           },
           {
             "event": 13,
-            "xpts": 3.959,
+            "xpts": 3.96,
             "lower80": 1.361,
-            "upper80": 6.558,
+            "upper80": 6.559,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -6420,15 +6420,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.916,
+              "attack": 1.917,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6442,13 +6442,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6473,15 +6473,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.709,
+              "attack": 1.71,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6495,13 +6495,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6513,9 +6513,9 @@
           },
           {
             "event": 15,
-            "xpts": 3.39,
+            "xpts": 3.391,
             "lower80": 0.952,
-            "upper80": 5.829,
+            "upper80": 5.83,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -6533,8 +6533,8 @@
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6548,13 +6548,13 @@
             "calibration": {
               "clean_sheet_probability": 0.08,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6566,9 +6566,9 @@
           },
           {
             "event": 16,
-            "xpts": 3.959,
+            "xpts": 3.96,
             "lower80": 1.361,
-            "upper80": 6.558,
+            "upper80": 6.559,
             "xmins": {
               "start_probability": 0.8832,
               "bench_probability": 0.0841,
@@ -6579,15 +6579,15 @@
             },
             "components": {
               "appearance": 1.747,
-              "attack": 1.916,
+              "attack": 1.917,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.051,
               "bonus": 0.245
             },
             "rates": {
-              "xg90": 0.4342,
-              "xa90": 0.1425,
+              "xg90": 0.4344,
+              "xa90": 0.1426,
               "raw_xg90": 0.63,
               "raw_xa90": 0.06,
               "current_season_weight": 0.1111,
@@ -6601,13 +6601,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.1579,
-              "role_prior": 0.7069
+              "role_prior": 0.7084
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6619,18 +6619,18 @@
           }
         ],
         "xpts_3": 11.72,
-        "xpts_5": 19.44,
-        "xpts_10": 38.84,
-        "xpts_15": 57.66,
-        "mean_xpts": 3.844,
+        "xpts_5": 19.45,
+        "xpts_10": 38.85,
+        "xpts_15": 57.67,
+        "mean_xpts": 3.845,
         "uncertainty": 0.234,
         "model": "v4.3.1-rules-compliance",
         "stable_key": "2026-27:165",
         "priors": {
-          "xg90_prior": 0.4098,
-          "xa90_prior": 0.1528,
+          "xg90_prior": 0.4099,
+          "xa90_prior": 0.1529,
           "premium_prior": 0.1579,
-          "role_prior": 0.7069
+          "role_prior": 0.7084
         }
       },
       {
@@ -6653,14 +6653,14 @@
             },
             "components": {
               "appearance": 1.728,
-              "attack": 1.898,
+              "attack": 1.899,
               "clean_sheet": 0.218,
               "saves": 0,
               "defcon": 0.114,
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -6675,13 +6675,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6713,7 +6713,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -6728,13 +6728,13 @@
             "calibration": {
               "clean_sheet_probability": 0.08,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6759,14 +6759,14 @@
             },
             "components": {
               "appearance": 1.728,
-              "attack": 1.898,
+              "attack": 1.899,
               "clean_sheet": 0.218,
               "saves": 0,
               "defcon": 0.114,
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -6781,13 +6781,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6819,7 +6819,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -6834,13 +6834,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6872,7 +6872,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -6887,13 +6887,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6925,7 +6925,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -6940,13 +6940,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -6978,7 +6978,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -6993,13 +6993,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7031,7 +7031,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -7046,13 +7046,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7084,7 +7084,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -7099,13 +7099,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7130,14 +7130,14 @@
             },
             "components": {
               "appearance": 1.728,
-              "attack": 1.898,
+              "attack": 1.899,
               "clean_sheet": 0.218,
               "saves": 0,
               "defcon": 0.114,
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -7152,13 +7152,13 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7190,7 +7190,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -7205,13 +7205,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7243,7 +7243,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -7258,13 +7258,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7296,7 +7296,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -7311,13 +7311,13 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7349,7 +7349,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -7364,13 +7364,13 @@
             "calibration": {
               "clean_sheet_probability": 0.08,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7402,7 +7402,7 @@
               "bonus": 0.202
             },
             "rates": {
-              "xg90": 0.3156,
+              "xg90": 0.3157,
               "xa90": 0.1959,
               "raw_xg90": 1.0667,
               "raw_xa90": 0.1111,
@@ -7417,13 +7417,13 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.1579,
-              "role_prior": 0.4731
+              "role_prior": 0.4739
             },
             "provenance": {
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7443,10 +7443,10 @@
         "model": "v4.3.1-rules-compliance",
         "stable_key": "2026-27:40",
         "priors": {
-          "xg90_prior": 0.2311,
-          "xa90_prior": 0.2054,
+          "xg90_prior": 0.2312,
+          "xa90_prior": 0.2055,
           "premium_prior": 0.1579,
-          "role_prior": 0.4731
+          "role_prior": 0.4739
         }
       },
       {
@@ -7497,7 +7497,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7550,7 +7550,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7603,7 +7603,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7656,7 +7656,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7709,7 +7709,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7762,7 +7762,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7815,7 +7815,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7868,7 +7868,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7921,7 +7921,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -7974,7 +7974,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -8027,7 +8027,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -8080,7 +8080,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -8133,7 +8133,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -8186,7 +8186,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -8239,7 +8239,7 @@
               "model": "v4.3.1-rules-compliance",
               "fixture_source": "official_fpl",
               "advanced_source": "official_fpl_current_state",
-              "point_in_time": "2026-08-25T19:01:40.084828+00:00",
+              "point_in_time": "2026-08-25T22:32:13.399931+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "attacking_rate_shrinkage": true,
               "defcon_rate_shrinkage": true,
@@ -8283,58 +8283,58 @@
       {
         "element": 610,
         "name": "De Fougerolles",
-        "net_transfers": 1045,
+        "net_transfers": 1175,
         "ownership_pct": 0.0,
-        "momentum": 1045.0
+        "momentum": 1175.0
       },
       {
         "element": 608,
         "name": "Jebbison",
-        "net_transfers": 961,
+        "net_transfers": 1034,
         "ownership_pct": 0.0,
-        "momentum": 961.0
+        "momentum": 1034.0
       },
       {
         "element": 606,
         "name": "Rowe",
-        "net_transfers": 755,
+        "net_transfers": 782,
         "ownership_pct": 0.0,
-        "momentum": 755.0
+        "momentum": 782.0
       },
       {
         "element": 602,
         "name": "Humphreys",
-        "net_transfers": 618,
+        "net_transfers": 642,
         "ownership_pct": 0.0,
-        "momentum": 618.0
+        "momentum": 642.0
       },
       {
         "element": 255,
         "name": "J.Cuenca",
-        "net_transfers": 265,
+        "net_transfers": 281,
         "ownership_pct": 0.0,
-        "momentum": 265.0
+        "momentum": 281.0
       },
       {
         "element": 145,
         "name": "Fofana",
-        "net_transfers": 229,
+        "net_transfers": 258,
         "ownership_pct": 0.0,
-        "momentum": 229.0
-      },
-      {
-        "element": 75,
-        "name": "Christie",
-        "net_transfers": 166,
-        "ownership_pct": 0.0,
-        "momentum": 166.0
+        "momentum": 258.0
       },
       {
         "element": 611,
         "name": "Wan-Bissaka",
-        "net_transfers": 162,
+        "net_transfers": 247,
         "ownership_pct": 0.0,
-        "momentum": 162.0
+        "momentum": 247.0
+      },
+      {
+        "element": 75,
+        "name": "Christie",
+        "net_transfers": 178,
+        "ownership_pct": 0.0,
+        "momentum": 178.0
       },
       {
         "element": 119,

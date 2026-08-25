@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T19:01:40.084828+00:00",
+  "generated_at": "2026-08-25T22:32:13.399931+00:00",
   "team_id": 3462711,
   "squad_authority": "LOCKED_PRE_DEADLINE",
   "squad": [
@@ -119,7 +119,7 @@
       "now_cost": 45,
       "sell_cost": 45,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "1.8",
+      "ownership": "1.9",
       "status": "a"
     },
     {
@@ -143,7 +143,7 @@
       "now_cost": 45,
       "sell_cost": 45,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "5.7",
+      "ownership": "5.9",
       "status": "a"
     },
     {
@@ -167,7 +167,7 @@
       "now_cost": 45,
       "sell_cost": 45,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "5.9",
+      "ownership": "6.1",
       "status": "a"
     },
     {
@@ -203,7 +203,7 @@
       "now_cost": 120,
       "sell_cost": 120,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "49.5",
+      "ownership": "49.4",
       "status": "a"
     },
     {
@@ -239,7 +239,7 @@
       "now_cost": 75,
       "sell_cost": 75,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "25.5",
+      "ownership": "25.6",
       "status": "a"
     },
     {
@@ -251,7 +251,7 @@
       "now_cost": 55,
       "sell_cost": 55,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "6.4",
+      "ownership": "6.6",
       "status": "a"
     },
     {
@@ -275,7 +275,7 @@
       "now_cost": 75,
       "sell_cost": 75,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "66.0",
+      "ownership": "66.2",
       "status": "a"
     },
     {

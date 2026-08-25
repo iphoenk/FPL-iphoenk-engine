@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T18:28:07.676448+00:00",
+  "generated_at": "2026-08-25T18:30:55.894117+00:00",
   "players": [
     {
       "element": 1,
@@ -1615,7 +1615,7 @@
       "element_type": 3,
       "now_cost": 50,
       "ownership": "0.0",
-      "status": "d",
+      "status": "a",
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 28,

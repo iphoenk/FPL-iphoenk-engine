@@ -34,7 +34,7 @@ def project_points(player:dict, advanced:dict|None=None, fixture_difficulty:floa
     xg90=_f(adv.get("xg_per90"),adv.get("expected_goals",0))
     xa90=_f(adv.get("xa_per90"),adv.get("expected_assists",0))
     pos=player.get("element_type")
-    goal_pts={1:6,2:6,3:5,4:4}.get(pos,4); cs_pts={1:4,2:4,3:1,4:0}.get(pos,0)
+    goal_pts={1:10,2:6,3:5,4:4}.get(pos,4); cs_pts={1:4,2:4,3:1,4:0}.get(pos,0)
     appearance=(2 if dist["expected_minutes"]>=60 else 1)*clamp(share,0,1)
     attack=(xg90*goal_pts + xa90*3)*share
     cs_prob=clamp(_f(adv.get("clean_sheet_probability"),0.48-0.075*(fixture_difficulty-2)),0.05,0.70)

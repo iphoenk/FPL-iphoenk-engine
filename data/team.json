@@ -1,6 +1,18 @@
 {
-  "generated_at": "2026-08-25T17:26:55.328370+00:00",
+  "generated_at": "2026-08-25T17:34:38.350452+00:00",
   "team_id": 3462711,
+  "entry": {
+    "id": 3462711,
+    "current_event": 1,
+    "summary_overall_points": 71,
+    "summary_overall_rank": 461668,
+    "summary_event_points": 71,
+    "summary_event_rank": 461668,
+    "last_deadline_bank": 0,
+    "last_deadline_value": 1000,
+    "last_deadline_total_transfers": 0,
+    "fetched_at": "2026-08-25T17:34:37.474297+00:00"
+  },
   "squad_authority": "LOCKED_PRE_DEADLINE",
   "squad": [
     {

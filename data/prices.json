@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T17:26:55.319862+00:00",
+  "generated_at": "2026-08-25T17:34:38.341523+00:00",
   "confirmed_changes": [],
   "top_buy_pressure": [
     {
@@ -112,70 +112,70 @@
       "name": "De Cuyper",
       "net_transfers": 298471,
       "ownership_pct": 5.6,
-      "momentum": 0.5523905938266899
+      "momentum": 0.5523599256786267
     },
     {
       "element": 123,
       "name": "Hinshelwood",
       "net_transfers": 85299,
       "ownership_pct": 1.8,
-      "momentum": 0.49113867200994954
+      "momentum": 0.49111039462017664
     },
     {
       "element": 98,
       "name": "Janelt",
       "net_transfers": 13040,
       "ownership_pct": 0.3,
-      "momentum": 0.45049402335383126
+      "momentum": 0.45047846063495356
     },
     {
       "element": 565,
       "name": "M.Sangaré",
       "net_transfers": 239062,
       "ownership_pct": 6.3,
-      "momentum": 0.3932807559560824
+      "momentum": 0.3932581127519119
     },
     {
       "element": 268,
       "name": "King",
       "net_transfers": 15152,
       "ownership_pct": 0.4,
-      "momentum": 0.39259988599264134
+      "momentum": 0.3925795419214426
     },
     {
       "element": 316,
       "name": "Emersonn",
       "net_transfers": 43052,
       "ownership_pct": 1.2,
-      "momentum": 0.37183030470531336
+      "momentum": 0.3718110372225581
     },
     {
       "element": 88,
       "name": "Kayode",
       "net_transfers": 189788,
       "ownership_pct": 5.9,
-      "momentum": 0.3333872033052741
+      "momentum": 0.33336846394896225
     },
     {
       "element": 327,
       "name": "Bijol",
       "net_transfers": 21598,
       "ownership_pct": 0.7,
-      "momentum": 0.3197808705952028
+      "momentum": 0.3197619329622172
     },
     {
       "element": 454,
       "name": "Elanga",
       "net_transfers": 43165,
       "ownership_pct": 1.5,
-      "momentum": 0.29824500794583014
+      "momentum": 0.298228523262723
     },
     {
       "element": 572,
       "name": "Tzolakis",
       "net_transfers": 51137,
       "ownership_pct": 1.8,
-      "momentum": 0.2944390704530275
+      "momentum": 0.2944221180751471
     }
   ],
   "top_sell_pressure": [

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T11:46:06.406633+00:00",
+  "generated_at": "2026-08-25T12:16:02.118937+00:00",
   "team_id": 3462711,
   "squad_authority": "LOCKED_PRE_DEADLINE",
   "squad": [
@@ -8,105 +8,105 @@
       "name": "Tzolakis",
       "position": "GK",
       "purchase_cost": 45,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 109,
       "name": "Verbruggen",
       "position": "GK",
       "purchase_cost": 45,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 115,
       "name": "De Cuyper",
       "position": "DEF",
       "purchase_cost": 45,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 8,
       "name": "Calafiori",
       "position": "DEF",
       "purchase_cost": 55,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 88,
       "name": "Kayode",
       "position": "DEF",
       "purchase_cost": 45,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 254,
       "name": "Robinson",
       "position": "DEF",
       "purchase_cost": 45,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 473,
       "name": "Aina",
       "position": "DEF",
       "purchase_cost": 45,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
-      "element": 525,
-      "name": "Fernandes",
+      "element": 426,
+      "name": "B.Fernandes",
       "position": "MID",
       "purchase_cost": 120,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 15,
       "name": "Ødegaard",
       "position": "MID",
       "purchase_cost": 65,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 557,
       "name": "Tzolis",
       "position": "MID",
       "purchase_cost": 65,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 40,
       "name": "Rogers",
       "position": "MID",
       "purchase_cost": 75,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
-      "element": 488,
-      "name": "I.Sangaré",
+      "element": 565,
+      "name": "M.Sangaré",
       "position": "MID",
       "purchase_cost": 55,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 411,
       "name": "Haaland",
       "position": "FWD",
       "purchase_cost": 155,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 165,
       "name": "João Pedro",
       "position": "FWD",
       "purchase_cost": 75,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     },
     {
       "element": 346,
       "name": "Calvert-Lewin",
       "position": "FWD",
       "purchase_cost": 60,
-      "source": "locked_squad"
+      "source": "locked_squad_element_id"
     }
   ],
   "team_value_ledger": [
@@ -118,7 +118,7 @@
       "purchase_cost": 45,
       "now_cost": 45,
       "sell_cost": 45,
-      "purchase_source": "locked_squad",
+      "purchase_source": "locked_squad_element_id",
       "ownership": "1.6",
       "status": "a"
     },
@@ -130,7 +130,7 @@
       "purchase_cost": 45,
       "now_cost": 45,
       "sell_cost": 45,
-      "purchase_source": "locked_squad",
+      "purchase_source": "locked_squad_element_id",
       "ownership": "21.7",
       "status": "a"
     },
@@ -142,7 +142,7 @@
       "purchase_cost": 45,
       "now_cost": 45,
       "sell_cost": 45,
-      "purchase_source": "locked_squad",
+      "purchase_source": "locked_squad_element_id",
       "ownership": "5.1",
       "status": "a"
     },
@@ -154,7 +154,7 @@
       "purchase_cost": 55,
       "now_cost": 55,
       "sell_cost": 55,
-      "purchase_source": "locked_squad",
+      "purchase_source": "locked_squad_element_id",
       "ownership": "41.1",
       "status": "a"
     },
@@ -166,8 +166,8 @@
       "purchase_cost": 45,
       "now_cost": 45,
       "sell_cost": 45,
-      "purchase_source": "locked_squad",
-      "ownership": "5.5",
+      "purchase_source": "locked_squad_element_id",
+      "ownership": "5.6",
       "status": "a"
     },
     {
@@ -178,7 +178,7 @@
       "purchase_cost": 45,
       "now_cost": 45,
       "sell_cost": 45,
-      "purchase_source": "locked_squad",
+      "purchase_source": "locked_squad_element_id",
       "ownership": "1.7",
       "status": "a"
     },
@@ -190,20 +190,20 @@
       "purchase_cost": 45,
       "now_cost": 45,
       "sell_cost": 45,
-      "purchase_source": "locked_squad",
+      "purchase_source": "locked_squad_element_id",
       "ownership": "3.6",
       "status": "a"
     },
     {
-      "element": 525,
-      "name": "Fernandes",
-      "team": "Spurs",
+      "element": 426,
+      "name": "B.Fernandes",
+      "team": "Man Utd",
       "position": "MID",
       "purchase_cost": 120,
-      "now_cost": 60,
-      "sell_cost": 60,
-      "purchase_source": "locked_squad",
-      "ownership": "1.8",
+      "now_cost": 120,
+      "sell_cost": 120,
+      "purchase_source": "locked_squad_element_id",
+      "ownership": "49.8",
       "status": "a"
     },
     {
@@ -214,7 +214,7 @@
       "purchase_cost": 65,
       "now_cost": 65,
       "sell_cost": 65,
-      "purchase_source": "locked_squad",
+      "purchase_source": "locked_squad_element_id",
       "ownership": "10.5",
       "status": "a"
     },
@@ -226,7 +226,7 @@
       "purchase_cost": 65,
       "now_cost": 65,
       "sell_cost": 65,
-      "purchase_source": "locked_squad",
+      "purchase_source": "locked_squad_element_id",
       "ownership": "25.7",
       "status": "a"
     },
@@ -238,20 +238,20 @@
       "purchase_cost": 75,
       "now_cost": 75,
       "sell_cost": 75,
-      "purchase_source": "locked_squad",
+      "purchase_source": "locked_squad_element_id",
       "ownership": "25.3",
       "status": "a"
     },
     {
-      "element": 488,
-      "name": "I.Sangaré",
-      "team": "Nott'm Forest",
+      "element": 565,
+      "name": "M.Sangaré",
+      "team": "Brentford",
       "position": "MID",
       "purchase_cost": 55,
-      "now_cost": 50,
-      "sell_cost": 50,
-      "purchase_source": "locked_squad",
-      "ownership": "1.0",
+      "now_cost": 55,
+      "sell_cost": 55,
+      "purchase_source": "locked_squad_element_id",
+      "ownership": "5.9",
       "status": "a"
     },
     {
@@ -262,7 +262,7 @@
       "purchase_cost": 155,
       "now_cost": 155,
       "sell_cost": 155,
-      "purchase_source": "locked_squad",
+      "purchase_source": "locked_squad_element_id",
       "ownership": "68.6",
       "status": "a"
     },
@@ -274,8 +274,8 @@
       "purchase_cost": 75,
       "now_cost": 75,
       "sell_cost": 75,
-      "purchase_source": "locked_squad",
-      "ownership": "65.5",
+      "purchase_source": "locked_squad_element_id",
+      "ownership": "65.6",
       "status": "a"
     },
     {
@@ -286,14 +286,14 @@
       "purchase_cost": 60,
       "now_cost": 60,
       "sell_cost": 60,
-      "purchase_source": "locked_squad",
+      "purchase_source": "locked_squad_element_id",
       "ownership": "29.8",
       "status": "a"
     }
   ],
   "totals": {
-    "market_value": 930,
-    "sell_value": 930,
+    "market_value": 995,
+    "sell_value": 995,
     "itb": 5
   }
 }

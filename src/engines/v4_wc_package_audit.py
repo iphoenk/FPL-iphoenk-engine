@@ -7,11 +7,19 @@ from src.engines.v4_wc_optimizer import BUDGET_TENTHS, MAX_PER_CLUB, POSITION_CO
 OUTFILE=DATA/'wc_package_audit_v4.json'
 
 def payload(p): return {'element':p.element,'name':p.name,'position':p.position,'team':p.team,'team_id':p.team_id,'cost':p.cost,'xpts_3':round(p.x3,2),'xpts_5':round(p.x5,2),'xpts_10':round(p.x10,2),'xpts_15':round(p.x15,2),'uncertainty':round(p.uncertainty,3),'objective':round(p.objective,4)}
+
 def package_class(dxi,du,k):
     xr={1:1.5,2:2.5,3:3.5,4:4.5}[k]; ur={1:1.8,2:3.0,3:4.2,4:5.4}[k]
     if dxi>=xr and du>=ur:return 'MATERIAL_UPGRADE'
     if dxi>=xr*.55 and du>=ur*.55:return 'OPTIONAL_IMPROVEMENT'
     return 'KEEP_BASELINE'
+
+def _package_class(delta_x5,delta_obj,replacements):
+    x5_req={1:2.0,2:3.5,3:5.0,4:6.5}[replacements]; obj_req={1:0.25,2:0.45,3:0.65,4:0.85}[replacements]
+    if delta_x5>=x5_req and delta_obj>=obj_req:return 'MATERIAL_UPGRADE'
+    if delta_x5>=x5_req*.55 and delta_obj>=obj_req*.55:return 'OPTIONAL_IMPROVEMENT'
+    return 'KEEP_BASELINE'
+
 def frontier(cands,ids,n=18):
     out=[]
     for pos in POSITION_COUNTS:

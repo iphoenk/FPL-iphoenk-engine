@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
-from itertools import combinations
 from typing import Iterable
 
 POSITION_COUNTS = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
@@ -34,11 +33,6 @@ def _f(v, default=0.0) -> float:
 
 
 def player_objective(pred: dict) -> float:
-    """Multi-horizon WC objective expressed as expected points per GW.
-
-    Primary horizon is 3-5 GWs, with a smaller strategic 10-15 GW tail.
-    Uncertainty receives a modest penalty so fragile projections do not dominate.
-    """
     x3 = _f(pred.get("xpts_3")) / 3.0
     x5 = _f(pred.get("xpts_5")) / 5.0
     x10 = _f(pred.get("xpts_10")) / 10.0
@@ -58,8 +52,7 @@ def build_candidates(predictions: dict, universe: dict) -> list[Candidate]:
         pos = u.get("position") or pred.get("position")
         if pos not in POSITION_COUNTS:
             continue
-        status = u.get("status")
-        if status in {"u", "s"}:
+        if u.get("status") in {"u", "s"}:
             continue
         out.append(Candidate(
             element=eid,
@@ -95,54 +88,47 @@ def validate_squad(players: Iterable[Candidate], budget: int = BUDGET_TENTHS) ->
     return True, "ok"
 
 
-def _position_combos(cands: list[Candidate], n: int, locked_ids: set[int], pool_size: int) -> list[tuple[Candidate, ...]]:
+def _pool(cands: list[Candidate], locked_ids: set[int], pool_size: int) -> list[Candidate]:
     ranked = sorted(cands, key=lambda p: (p.objective, p.x5, -p.cost), reverse=True)
-    forced = [p for p in ranked if p.element in locked_ids]
     pool = ranked[:pool_size]
     seen = {p.element for p in pool}
-    pool.extend(p for p in forced if p.element not in seen)
-    combos = []
-    for combo in combinations(pool, n):
-        clubs = Counter(p.team_id for p in combo)
-        if max(clubs.values(), default=0) <= MAX_PER_CLUB:
-            combos.append(combo)
-    combos.sort(key=lambda c: sum(p.objective for p in c), reverse=True)
-    # Keep a generous frontier. All universe players are screened before pruning.
-    return combos[:12000]
+    pool.extend(p for p in ranked if p.element in locked_ids and p.element not in seen)
+    return pool
 
 
 def optimize_squad(candidates: list[Candidate], locked_ids: set[int] | None = None, budget: int = BUDGET_TENTHS,
-                   pool_sizes: dict[str, int] | None = None, beam_size: int = 12000) -> dict:
+                   pool_sizes: dict[str, int] | None = None, beam_size: int = 6000) -> dict:
     locked_ids = locked_ids or set()
     pool_sizes = pool_sizes or {"GK": 20, "DEF": 34, "MID": 40, "FWD": 28}
-    by_pos = {pos: [p for p in candidates if p.position == pos] for pos in POSITION_COUNTS}
-    combo_sets = {pos: _position_combos(by_pos[pos], n, locked_ids, pool_sizes[pos]) for pos, n in POSITION_COUNTS.items()}
+    by_pos = {pos: _pool([p for p in candidates if p.position == pos], locked_ids, pool_sizes[pos]) for pos in POSITION_COUNTS}
 
-    # Beam joins position-complete combinations while enforcing budget and club limits.
-    states = [(tuple(), 0, Counter(), 0.0)]
+    # State: selected tuple, cost, club counts, score, last index used for current position.
+    states = [(tuple(), 0, Counter(), 0.0, -1)]
     for pos in ["GK", "DEF", "MID", "FWD"]:
-        nxt = []
-        for current, cost, clubs, score in states:
-            for combo in combo_sets[pos]:
-                new_cost = cost + sum(p.cost for p in combo)
-                if new_cost > budget:
-                    continue
-                cc = clubs.copy()
-                valid = True
-                for p in combo:
-                    cc[p.team_id] += 1
-                    if cc[p.team_id] > MAX_PER_CLUB:
-                        valid = False
-                        break
-                if not valid:
-                    continue
-                nxt.append((current + combo, new_cost, cc, score + sum(p.objective for p in combo)))
-        nxt.sort(key=lambda s: s[3], reverse=True)
-        states = nxt[:beam_size]
-        if not states:
-            raise RuntimeError(f"no legal optimizer state after {pos}")
+        need = POSITION_COUNTS[pos]
+        pool = by_pos[pos]
+        # reset position-local combination index
+        states = [(sel, cost, clubs, score, -1) for sel, cost, clubs, score, _ in states]
+        for _slot in range(need):
+            nxt = []
+            for selected, cost, clubs, score, last_idx in states:
+                for idx in range(last_idx + 1, len(pool)):
+                    p = pool[idx]
+                    if p.element in {x.element for x in selected}:
+                        continue
+                    new_cost = cost + p.cost
+                    if new_cost > budget:
+                        continue
+                    if clubs[p.team_id] >= MAX_PER_CLUB:
+                        continue
+                    cc = clubs.copy(); cc[p.team_id] += 1
+                    nxt.append((selected + (p,), new_cost, cc, score + p.objective, idx))
+            nxt.sort(key=lambda s: (s[3], -s[1]), reverse=True)
+            states = nxt[:beam_size]
+            if not states:
+                raise RuntimeError(f"no legal optimizer state while selecting {pos}")
 
-    best = states[0]
+    best = max(states, key=lambda s: (s[3], -s[1]))
     ok, reason = validate_squad(best[0], budget)
     if not ok:
         raise RuntimeError(f"optimizer produced invalid squad: {reason}")
@@ -169,7 +155,6 @@ def squad_metrics(players: Iterable[Candidate]) -> dict:
 
 
 def classify_gain(delta_objective: float, delta_x5: float) -> str:
-    # Squad objective is per-GW across 15 players. Require a meaningful margin before disturbing a WC lock.
     if delta_x5 >= 5.0 and delta_objective >= 0.8:
         return "MATERIAL_UPGRADE"
     if delta_x5 >= 2.0 and delta_objective >= 0.3:
@@ -193,30 +178,22 @@ def decision_report(predictions: dict, universe: dict, locked: dict, budget: int
     target = optimized["players"]
     current_m = squad_metrics(current)
     target_m = squad_metrics(target)
-    out_ids = locked_ids - {p.element for p in target}
-    in_ids = {p.element for p in target} - locked_ids
-    outs = sorted((by_id[x] for x in out_ids), key=lambda p: p.position)
-    ins = sorted((by_id[x] for x in in_ids), key=lambda p: p.position)
+    target_ids = {p.element for p in target}
+    out_ids = locked_ids - target_ids
+    in_ids = target_ids - locked_ids
+    outs = sorted((by_id[x] for x in out_ids), key=lambda p: (p.position, p.name))
+    ins = sorted((by_id[x] for x in in_ids), key=lambda p: (p.position, p.name))
     delta_obj = target_m["objective"] - current_m["objective"]
     delta_x5 = target_m["xpts_5"] - current_m["xpts_5"]
 
-    # Direct challengers: best same-position alternatives against every locked player.
     direct = []
+    baseline_itb = int(locked.get("itb_tenths", 0) or 0)
     for owned in current:
-        alternatives = [p for p in candidates if p.position == owned.position and p.element not in locked_ids and p.cost <= owned.cost + int(locked.get("itb_tenths", 0) or 0)]
+        alternatives = [p for p in candidates if p.position == owned.position and p.element not in locked_ids and p.cost <= owned.cost + baseline_itb]
         alternatives.sort(key=lambda p: p.objective, reverse=True)
         if alternatives:
             c = alternatives[0]
-            direct.append({
-                "owned": owned.element,
-                "owned_name": owned.name,
-                "challenger": c.element,
-                "challenger_name": c.name,
-                "position": owned.position,
-                "cost_delta": c.cost - owned.cost,
-                "objective_delta": round(c.objective - owned.objective, 4),
-                "xpts5_delta": round(c.x5 - owned.x5, 2),
-            })
+            direct.append({"owned": owned.element,"owned_name": owned.name,"challenger": c.element,"challenger_name": c.name,"position": owned.position,"cost_delta": c.cost-owned.cost,"objective_delta": round(c.objective-owned.objective,4),"xpts5_delta": round(c.x5-owned.x5,2)})
     direct.sort(key=lambda x: x["objective_delta"], reverse=True)
 
     return {
@@ -224,15 +201,15 @@ def decision_report(predictions: dict, universe: dict, locked: dict, budget: int
         "engine": "v4.4.1-wc-optimizer",
         "wildcard_active": bool(locked.get("wildcard_active")),
         "budget_tenths": budget,
-        "baseline_itb_tenths": int(locked.get("itb_tenths", 0) or 0),
+        "baseline_itb_tenths": baseline_itb,
         "screened_players": len(candidates),
         "current": current_m,
         "optimized": target_m | {"itb": optimized["itb"]},
         "delta": {"objective": round(delta_obj, 4), "xpts_5": round(delta_x5, 2)},
         "classification": classify_gain(delta_obj, delta_x5),
-        "out": [{"element": p.element, "name": p.name, "position": p.position, "cost": p.cost} for p in outs],
-        "in": [{"element": p.element, "name": p.name, "position": p.position, "cost": p.cost} for p in ins],
+        "out": [{"element": p.element,"name": p.name,"position": p.position,"cost": p.cost} for p in outs],
+        "in": [{"element": p.element,"name": p.name,"position": p.position,"cost": p.cost} for p in ins],
         "optimized_elements": [p.element for p in target],
         "direct_challengers": direct[:15],
-        "hard_constraints": {"squad_size": 15, "positions": POSITION_COUNTS, "budget_tenths": budget, "max_per_club": MAX_PER_CLUB},
+        "hard_constraints": {"squad_size":15,"positions":POSITION_COUNTS,"budget_tenths":budget,"max_per_club":MAX_PER_CLUB},
     }

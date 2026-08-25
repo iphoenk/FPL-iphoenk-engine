@@ -1,21 +1,19 @@
-name: FPL iphoenk collector v3.2
+name: FPL iphoenk V4 prediction gate
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "20 * * * *"
 
 permissions:
   contents: write
 
 concurrency:
-  group: fpl-iphoenk-collector
+  group: fpl-iphoenk-v4-gate
   cancel-in-progress: true
 
 jobs:
-  collect:
+  validate-v4:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
@@ -26,28 +24,42 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt pytest
-      - name: Reliability tests
+      - name: Unit and acceptance tests
         run: python -m pytest -q
-      - name: Generate API + advanced-stats snapshot
+      - name: Generate V4 point-in-time prediction snapshot
         run: python -m src.engine daily --stats
-      - name: Validate generated snapshot
+      - name: V4 acceptance gate
         run: |
           python - <<'PY'
           import json
           from src.engines.reliability import validate_snapshot
           s=json.load(open('data/latest.json'))
           r=validate_snapshot(s)
-          print(r)
-          if not r['ok']: raise SystemExit(2)
+          assert r['ok'], r
+          assert s['schema_version'] >= 40
+          assert s['engine_version'].startswith('4.0')
+          ps=s.get('prediction_summary') or {}
+          assert ps.get('players',0) >= 500, ps
+          p=json.load(open('data/predictions_v4.json'))
+          assert p.get('point_in_time') is True
+          assert len(p.get('players',[])) >= 500
+          for row in p['players'][:50]:
+              assert len(row.get('fixtures',[])) <= 15
+              assert row.get('xpts_5',0) >= 0
+              for fx in row.get('fixtures',[]):
+                  assert fx['lower80'] <= fx['xpts'] <= fx['upper80']
+                  d=fx['xmins']
+                  assert abs(d['start_probability']+d['bench_probability']+d['dnp_probability']-1) < .002
+          print('V4 ACCEPTANCE PASS')
           PY
-      - name: Commit data safely
+      - name: Upload branch data only
         shell: bash
         run: |
           git config user.name "fpl-iphoenk-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/
           if git diff --cached --quiet; then echo "No data changes"; exit 0; fi
-          git commit -m "data: refresh FPL v3.2 snapshot"
-          git fetch origin main
-          git rebase origin/main
-          git push origin main
+          git commit -m "data(v4): prediction acceptance snapshot"
+          git fetch origin v4-prediction-engine
+          git rebase origin/v4-prediction-engine
+          git push origin HEAD:v4-prediction-engine

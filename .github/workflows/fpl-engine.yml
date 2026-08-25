@@ -2,20 +2,42 @@ name: FPL iphoenk collector v3.3
 
 on:
   workflow_dispatch:
+  pull_request:
   schedule:
     - cron: "20 * * * *"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: fpl-iphoenk-collector
+  group: fpl-iphoenk-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  collect:
+  test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+      - name: Compile runtime modules
+        run: python -m compileall -q src live_service.py fpl_daily_tasks.py
+      - name: Reliability tests
+        run: python -m pytest -q
+
+  collect:
+    if: github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
@@ -26,8 +48,6 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt pytest
-      - name: Reliability tests
-        run: python -m pytest -q
       - name: Generate API + advanced-stats snapshot
         run: python -m src.engine daily --stats
       - name: Validate generated snapshot
@@ -35,7 +55,11 @@ jobs:
           python - <<'PY'
           import json
           from src.engines.reliability import validate_snapshot
+          from src.version import ENGINE_VERSION, SCHEMA_VERSION
+
           s=json.load(open('data/latest.json'))
+          assert s['engine_version'] == ENGINE_VERSION, (s['engine_version'], ENGINE_VERSION)
+          assert s['schema_version'] == SCHEMA_VERSION, (s['schema_version'], SCHEMA_VERSION)
           r=validate_snapshot(s)
           print(r)
           if not r['ok']: raise SystemExit(2)

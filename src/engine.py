@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 import argparse, json
 from pathlib import Path
@@ -8,6 +7,7 @@ from src.sources import core_insights, vaastav
 from src.engines.team_value import sell_cost, build_transfer_spells
 from src.models.fixture import next_fixtures
 from src.models.projection import project_points
+from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 TEAM_ID=3462711
 
@@ -239,7 +239,7 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
                                             "sell_value":sum(x["sell_cost"] for x in ledger if x["sell_cost"] is not None),
                                             "itb":lock.get("itb_tenths") if use_lock else (entry or {}).get("last_deadline_bank")}})
 
-    snapshot={"schema_version":31,"engine_version":"3.1.0","generated_at":iso_now(),"mode":mode,
+    snapshot={"schema_version":SCHEMA_VERSION,"engine_version":ENGINE_VERSION,"generated_at":iso_now(),"mode":mode,
               "team_id":TEAM_ID,"phase":phase,"endpoint_health":health,
               "squad_authority":"LOCKED_PRE_DEADLINE" if use_lock else "OFFICIAL_SUBMITTED",
               "advanced_stats_sync":adv_summary,

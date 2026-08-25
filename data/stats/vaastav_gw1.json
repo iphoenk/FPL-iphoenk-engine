@@ -2,7 +2,7 @@
   "source": "vaastav/Fantasy-Premier-League",
   "gw": 1,
   "season": "2026-27",
-  "fetched_at": "2026-08-25T14:53:47.212564+00:00",
+  "fetched_at": "2026-08-25T14:55:39.523927+00:00",
   "source_url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/cleaned_players.csv",
   "row_count": 599,
   "data_mode": "SEASON_SNAPSHOT_FALLBACK",

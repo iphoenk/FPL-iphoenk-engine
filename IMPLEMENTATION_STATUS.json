@@ -1,5 +1,6 @@
 {
-  "version": "3.1.0",
+  "version": "3.3.0",
+  "schema_version": 31,
   "P0": {
     "status": "IMPLEMENTED",
     "items": [
@@ -16,7 +17,11 @@
       "atomic writes",
       "fail-closed squad sanity",
       "per-GW snapshots",
-      "safe workflow rebase"
+      "safe workflow rebase",
+      "2026/27 goalkeeper goal scoring compliance",
+      "single-source release metadata for runtime snapshots and live service",
+      "authenticated manual live refresh",
+      "shared SSE polling per service process"
     ]
   },
   "P1": {

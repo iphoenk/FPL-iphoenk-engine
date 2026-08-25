@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-25T18:01:48.390885+00:00",
-  "snapshot_id": "24847ee01afb655c",
+  "generated_at": "2026-08-25T18:28:42.892661+00:00",
+  "snapshot_id": "6b9c8a7e995bc96f",
   "entry": {
     "summary_overall_points": 71,
     "summary_overall_rank": 461668,
@@ -11,7 +11,7 @@
     "last_deadline_value": 1000,
     "last_deadline_total_transfers": 0,
     "id": 3462711,
-    "fetched_at": "2026-08-25T18:01:48.201657+00:00"
+    "fetched_at": "2026-08-25T18:28:42.794184+00:00"
   },
   "history": {
     "current": [

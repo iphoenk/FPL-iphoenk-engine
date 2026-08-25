@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T14:01:23.206534+00:00",
+  "generated_at": "2026-08-25T14:05:40.136502+00:00",
   "confirmed_changes": [],
   "top_buy_pressure": [
     {
@@ -119,7 +119,7 @@
       "name": "De Cuyper",
       "net_transfers": 279846,
       "ownership_pct": 5.3,
-      "momentum": 0.5486315872020076
+      "momentum": 0.5486305116246243
     },
     {
       "element": 123,
@@ -140,7 +140,7 @@
       "name": "M.Sangaré",
       "net_transfers": 224272,
       "ownership_pct": 6.1,
-      "momentum": 0.38201722784049
+      "momentum": 0.3820159264148533
     },
     {
       "element": 268,
@@ -154,14 +154,14 @@
       "name": "Emersonn",
       "net_transfers": 41528,
       "ownership_pct": 1.2,
-      "momentum": 0.35958402964784525
+      "momentum": 0.35958091609663173
     },
     {
       "element": 88,
       "name": "Kayode",
       "net_transfers": 180543,
       "ownership_pct": 5.7,
-      "momentum": 0.32911210114915707
+      "momentum": 0.3291109012756618
     },
     {
       "element": 327,
@@ -175,7 +175,7 @@
       "name": "Tzolakis",
       "net_transfers": 48243,
       "ownership_pct": 1.7,
-      "momentum": 0.2948658394963633
+      "momentum": 0.2948640372591085
     }
   ],
   "top_sell_pressure": [

@@ -1,0 +1,51 @@
+{
+  "version": "3.1.0",
+  "P0": {
+    "status": "IMPLEMENTED",
+    "items": [
+      "Official FPL API source authority",
+      "phase-aware planning/submitted/scoring GW",
+      "pre-deadline locked squad authority",
+      "public purchase/sell-value reconstruction",
+      "endpoint health/retry/latency",
+      "expanded live player stats",
+      "price delta/momentum",
+      "FPL-Core-Insights GW sync",
+      "vaastav historical sync",
+      "data leakage guard module",
+      "atomic writes",
+      "fail-closed squad sanity",
+      "per-GW snapshots",
+      "safe workflow rebase"
+    ]
+  },
+  "P1": {
+    "status": "IMPLEMENTED AS WORKING BASE / NEEDS CALIBRATION",
+    "items": [
+      "optional shots.csv and playermatchstats.csv ingestion",
+      "fixture model using official FDR fallback",
+      "interpretable xPts/xMins projection scaffold",
+      "advanced stats query CLI",
+      "FastAPI live endpoints",
+      "SSE live stream",
+      "team/universe split outputs"
+    ]
+  },
+  "P2": {
+    "status": "IMPLEMENTED AS FRAMEWORK / REQUIRES SEASON DATA TO CALIBRATE",
+    "items": [
+      "Monte Carlo points scenario engine",
+      "portfolio package legality/score engine",
+      "calibration metrics MAE/Brier/Spearman",
+      "model versioning hooks",
+      "rank-simulation scaffold"
+    ],
+    "not_claimed_as_finished": [
+      "true overall-rank conversion model",
+      "live EO population model",
+      "production ML projection model",
+      "full mini-league rival spy",
+      "literal heatmap renderer"
+    ]
+  }
+}

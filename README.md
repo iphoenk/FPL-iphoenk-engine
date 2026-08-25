@@ -1,62 +1,85 @@
-# FPL iphoenk Engine
+# FPL iphoenk Engine v3.1
 
-Read-only FPL public-data collector for Team ID **3462711**.
+A production-oriented personal FPL data platform.
 
-## What it does
+## Design goal
+Combine:
+- Official FPL API authority
+- FPL-Core-Insights advanced community stats
+- vaastav historical backbone
+- live score/persistence
+- exact team-value logic
+- leakage-safe modelling
+- projection/calibration/portfolio frameworks
 
-- Pulls direct public FPL API data
-- Auto-detects current / next Gameweek
-- Produces an endpoint-health state
-- Resolves team-specific public picks
-- Builds a public purchase/sell-value ledger where ownership-spell data is reconstructable
-- Tracks used chips
-- Produces provisional live team score during a live GW
-- Exports the full API-first FPL player universe
-- Persists `data/latest.json` plus a compact `data/history.jsonl`
+## P0 Production Core
+Implemented:
+- phase-aware FPL state
+- locked pre-deadline squad authority
+- exact sell-value logic
+- endpoint health/retry/latency
+- live FPL player stat expansion
+- price deltas and momentum
+- Core Insights + vaastav sync
+- leakage guard
+- fail-closed validation
+- persistent snapshots
+- safe GitHub workflow
 
-## Public bridge URL
+## P1 Intelligence
+Working base:
+- optional shots.csv / playermatchstats.csv ingestion
+- advanced-stat CLI
+- fixture model
+- interpretable xMins/xPts scaffold
+- FastAPI JSON endpoints
+- SSE live streaming
 
-After this repository is public, the Master Monitor can read:
+## P2 Advanced
+Framework implemented:
+- Monte Carlo points scenarios
+- package/portfolio legality evaluator
+- MAE/Brier/Spearman calibration utilities
+- model versioning hooks
 
-`https://raw.githubusercontent.com/<YOUR_GITHUB_USERNAME>/<REPO>/main/data/latest.json`
+P2 is deliberately not marketed as a trained production model until enough season data exists.
 
-For this account, replace `<YOUR_GITHUB_USERNAME>` with `iphoenk`.
-
-## Local setup
-
+## Main commands
 ```bash
 pip install -r requirements.txt
-python export_master.py
+
+python fpl_daily_tasks.py daily --stats
+python fpl_daily_tasks.py deadline --stats
+python fpl_daily_tasks.py live
+
+python fpl_daily_tasks.py stats-sync --gw 1
+python fpl_daily_tasks.py stats-sync --gw 1 --deep
+python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
+
+uvicorn live_service:app --host 0.0.0.0 --port 8000
 ```
 
-## Enhanced local collector
+## Live endpoints
+- GET `/health`
+- GET `/latest`
+- GET `/live`
+- GET `/team`
+- GET `/prices`
+- POST `/refresh`
+- GET `/stream` via Server-Sent Events
 
-```bash
-python fpl_daily_tasks.py current-gw
-python fpl_daily_tasks.py health
-python fpl_daily_tasks.py price-check
-python fpl_daily_tasks.py price-predict --top 10
-python fpl_daily_tasks.py team-value
-python fpl_daily_tasks.py chip-state
-python fpl_daily_tasks.py live-score
-python fpl_daily_tasks.py reconcile
-python fpl_daily_tasks.py snapshot
-```
+## Source authority
+1. Official FPL API
+2. FPL-Core-Insights community enrichment
+3. vaastav historical dataset
+4. Understat/mirrors if explicitly enabled
+5. web/news/tactical overlays outside this repository
 
-## GitHub Actions
+## Leakage guard
+Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.
+Historical xP-like fields should be shifted or excluded unless timestamp eligibility is proven.
 
-`.github/workflows/fpl-engine.yml` runs hourly at minute `:20` UTC-clock cadence.
+## Important
+FPL-Core-Insights and vaastav are community-maintained. They are useful enrichments, not licensed Opta feeds.
 
-The FPL Master Monitor can run at `:30`, leaving a buffer for the collector.
-
-### Important
-
-GitHub Actions scheduled workflows can be delayed by GitHub. `data/latest.json` includes a timestamp, so the Master Monitor must always validate freshness rather than assume the scheduled run happened exactly on time.
-
-## Security
-
-No FPL username, password, OAuth token, session cookie, or private endpoint is required.
-
-This collector uses public read-only endpoints only.
-
-Never commit an authenticated FPL session cookie to this repository.
+GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy `live_service.py` to an always-on host for near-live polling.

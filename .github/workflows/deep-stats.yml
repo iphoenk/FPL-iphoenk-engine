@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - name: Deep stats refresh
-        run: python src/engine.py daily --stats --deep-stats
+      run: python -m src.engine daily --stats --deep-
       - name: Commit safely
         run: |
           git config user.name "fpl-iphoenk-bot"

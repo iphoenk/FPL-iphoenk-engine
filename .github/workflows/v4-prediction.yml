@@ -66,10 +66,12 @@ jobs:
           assert len(w.get('optimized_elements',[]))==15
           assert w.get('classification') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
           a=json.load(open('data/wc_package_audit_v4.json'))
-          assert a.get('engine')=='v4.4.2-wc-package-audit', a
+          assert int(a.get('schema_version',0)) >= 443, a
+          assert str(a.get('engine','')).startswith('v4.4.2-wc-package-audit'), a
           assert a.get('max_replacements')==4
           assert set(a.get('best_by_replacement_count',{}))=={'1','2','3','4'}
           assert a.get('overall_verdict') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
+          assert a.get('guardrails',{}).get('risk_penalty_enabled') is True, a.get('guardrails')
           all_x=[]
           for row in players:
               assert len(row.get('fixtures',[])) <= 15

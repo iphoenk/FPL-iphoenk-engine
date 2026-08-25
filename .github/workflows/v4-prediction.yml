@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -r requirements.txt pytest
+      - run: pip install --disable-pip-version-check -r requirements.txt pytest
       - name: Unit and acceptance tests
         env: {PYTHONPATH: "${{ github.workspace }}"}
         run: python -m pytest -q
@@ -37,10 +37,10 @@ jobs:
       - name: Persist forward-valid deadline snapshot and reconcile finished GW when available
         env: {PYTHONPATH: "${{ github.workspace }}"}
         run: python -m src.engines.v4_validation_cycle cycle
-      - name: V4.6 unified decision and evidence pipeline
+      - name: V4.6.1 high-performance unified decision and evidence pipeline
         env: {PYTHONPATH: "${{ github.workspace }}"}
         run: python -m src.engines.v4_decision_pipeline
-      - name: V4.6 acceptance and quality gate
+      - name: V4.6.1 acceptance and quality gate
         env: {PYTHONPATH: "${{ github.workspace }}"}
         run: |
           python - <<'PY'
@@ -53,19 +53,26 @@ jobs:
           assert p.get('point_in_time') is True and len(players) >= 500
 
           w=json.load(open('data/wc_decision_v4.json'))
-          assert w.get('engine')=='v4.4.1-wc-optimizer', w
+          assert int(w.get('schema_version',0)) >= 446, w
+          assert str(w.get('engine','')).startswith('v4.4.5-wc-optimizer'), w
           assert w.get('screened_players',0)>=500 and len(w.get('optimized_elements',[]))==15
           assert w.get('classification') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
+          wp=w.get('performance',{})
+          assert wp.get('fast_finalist_scoring') and wp.get('winner_only_legality_check')
+          assert wp.get('beam_size_unchanged') is True
 
           a=json.load(open('data/wc_package_audit_v4.json'))
-          assert int(a.get('schema_version',0)) >= 445, a
-          assert str(a.get('engine','')).startswith('v4.4.4-wc-package-audit'), a
+          assert int(a.get('schema_version',0)) >= 446, a
+          assert str(a.get('engine','')).startswith('v4.4.5-wc-package-audit'), a
           assert a.get('max_replacements')==4 and set(a.get('best_by_replacement_count',{}))=={'1','2','3','4'}
           assert a.get('overall_verdict') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
           assert a.get('guardrails',{}).get('risk_penalty_enabled') is True
+          assert a.get('guardrails',{}).get('search_width_unchanged') is True
           perf=a.get('performance',{})
           assert perf.get('metrics_cache_entries',0) > 0
           assert perf.get('single_pass_metrics') is True and perf.get('compact_target_cache') is True
+          assert perf.get('redundant_target_validation_removed') is True
+          assert perf.get('candidate_reuse_supported') is True
 
           l=json.load(open('data/lineup_decision_v4.json'))
           assert int(l.get('schema_version',0)) >= 452, l
@@ -94,12 +101,18 @@ jobs:
               assert 1 <= int(e['recommended_package']['replacements']) <= 4
 
           q=json.load(open('data/decision_pipeline_v4.json'))
-          assert int(q.get('schema_version',0)) >= 460, q
-          assert q.get('engine')=='v4.6-unified-decision-pipeline', q
-          assert q.get('performance_guardrails',{}).get('shared_json_loaded_once') is True
-          assert q.get('performance_guardrails',{}).get('search_quality_reduction') is False
+          assert int(q.get('schema_version',0)) >= 461, q
+          assert str(q.get('engine','')).startswith('v4.6.1-unified-decision-pipeline-fast-parallel'), q
+          pg=q.get('performance_guardrails',{})
+          assert pg.get('shared_json_loaded_once') and pg.get('shared_candidates_built_once')
+          assert pg.get('fork_copy_on_write') and pg.get('parallel_wc_package')
+          assert pg.get('fast_wc_finalist_scoring') and pg.get('redundant_package_validation_removed')
+          assert pg.get('search_quality_reduction') is False
+          assert pg.get('wc_beam_unchanged') and pg.get('package_frontier_beam_unchanged')
           timings=q.get('timings',{})
-          assert timings.get('total_pipeline_ms',0) > 0 and timings.get('package_audit_ms',0) > 0
+          assert timings.get('total_pipeline_ms',0) > 0
+          assert timings.get('wc_decision_cpu_ms',0) > 0 and timings.get('package_audit_cpu_ms',0) > 0
+          assert timings.get('wc_package_parallel_wall_ms',0) > 0 and timings.get('parallel_speedup_estimate',0) > 0
 
           all_x=[]
           for row in players:
@@ -111,7 +124,13 @@ jobs:
                   assert fx['lower80'] <= x <= fx['upper80']
                   d=fx['xmins']; assert abs(d['start_probability']+d['bench_probability']+d['dnp_probability']-1) < .002
           assert all_x and statistics.median(all_x) < 8 and sum(x>15 for x in all_x)/len(all_x) < .03
-          print('V4.6 QUALITY GATE PASS', {'rules':c['overall'],'wc_raw':w['classification'],'package_raw':a['overall_verdict'],'recommendation_final':e['final_verdict'],'recommended_changes':(e.get('recommended_package') or {}).get('replacements'),'lineup':l['governance']['decision'],'formation':l['formation'],'captain':l['captain']['name'],'pipeline_ms':timings['total_pipeline_ms'],'package_ms':timings['package_audit_ms'],'single_pass_metrics':perf['single_pass_metrics']})
+          print('V4.6.1 QUALITY GATE PASS', {
+              'rules':c['overall'], 'wc_raw':w['classification'], 'package_raw':a['overall_verdict'],
+              'recommendation_final':e['final_verdict'], 'recommended_changes':(e.get('recommended_package') or {}).get('replacements'),
+              'lineup':l['governance']['decision'], 'formation':l['formation'], 'captain':l['captain']['name'],
+              'pipeline_ms':timings['total_pipeline_ms'], 'parallel_wall_ms':timings['wc_package_parallel_wall_ms'],
+              'wc_cpu_ms':timings['wc_decision_cpu_ms'], 'package_cpu_ms':timings['package_audit_cpu_ms'],
+              'speedup_estimate':timings['parallel_speedup_estimate']})
           PY
       - name: Package V4 quality-test inputs
         if: always()

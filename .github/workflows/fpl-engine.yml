@@ -2,6 +2,10 @@ name: FPL iphoenk V4 prediction gate
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - v4-prediction-engine
+
 
 permissions:
   contents: write

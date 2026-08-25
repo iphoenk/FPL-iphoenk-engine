@@ -1,5 +1,5 @@
 from __future__ import annotations
-import asyncio, json, os
+import asyncio, json, os, secrets
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
@@ -41,6 +41,12 @@ async def lifespan(app:FastAPI):
         except asyncio.CancelledError:
             pass
 
+def _require_refresh_key(value:str|None)->None:
+    if not REFRESH_API_KEY:
+        raise HTTPException(status_code=503,detail="manual refresh disabled: FPL_REFRESH_API_KEY is not configured")
+    if not value or not secrets.compare_digest(value,REFRESH_API_KEY):
+        raise HTTPException(status_code=401,detail="invalid refresh key")
+
 app=FastAPI(title=SERVICE_TITLE,version=ENGINE_VERSION,lifespan=lifespan)
 
 @app.get("/health")
@@ -60,10 +66,7 @@ def prices(): return read_json(DATA/"prices.json",{})
 
 @app.post("/refresh")
 async def refresh(x_fpl_refresh_key:str|None=Header(default=None)):
-    if not REFRESH_API_KEY:
-        raise HTTPException(status_code=503,detail="manual refresh disabled: FPL_REFRESH_API_KEY is not configured")
-    if x_fpl_refresh_key!=REFRESH_API_KEY:
-        raise HTTPException(status_code=401,detail="invalid refresh key")
+    _require_refresh_key(x_fpl_refresh_key)
     return await _refresh_once()
 
 @app.get("/stream")
@@ -76,5 +79,11 @@ async def stream():
             if encoded!=last:
                 yield f"data: {encoded}\n\n"
                 last=encoded
+            else:
+                yield ": keep-alive\n\n"
             await asyncio.sleep(min(POLL,15))
-    return StreamingResponse(events(),media_type="text/event-stream")
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"},
+    )

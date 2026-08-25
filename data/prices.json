@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T15:21:38.511344+00:00",
+  "generated_at": "2026-08-25T15:33:46.371700+00:00",
   "confirmed_changes": [],
   "top_buy_pressure": [
     {
@@ -126,56 +126,56 @@
       "name": "De Cuyper",
       "net_transfers": 288385,
       "ownership_pct": 5.4,
-      "momentum": 0.5543445457463761
+      "momentum": 0.5543051220149771
     },
     {
       "element": 123,
       "name": "Hinshelwood",
       "net_transfers": 82594,
       "ownership_pct": 1.7,
-      "momentum": 0.5043138452144711
+      "momentum": 0.5042768962127642
     },
     {
       "element": 98,
       "name": "Janelt",
       "net_transfers": 12567,
       "ownership_pct": 0.3,
-      "momentum": 0.4348292446628144
+      "momentum": 0.4347991557969761
     },
     {
       "element": 565,
       "name": "M.Sangaré",
       "net_transfers": 230963,
       "ownership_pct": 6.2,
-      "momentum": 0.3866796808293348
+      "momentum": 0.3866524927177152
     },
     {
       "element": 268,
       "name": "King",
       "net_transfers": 14391,
       "ownership_pct": 0.4,
-      "momentum": 0.3734527053328143
+      "momentum": 0.3734236338159738
     },
     {
       "element": 316,
       "name": "Emersonn",
       "net_transfers": 42177,
       "ownership_pct": 1.2,
-      "momentum": 0.36483400515544173
+      "momentum": 0.3648087601847527
     },
     {
       "element": 88,
       "name": "Kayode",
       "net_transfers": 184857,
       "ownership_pct": 5.7,
-      "momentum": 0.33663674655681997
+      "momentum": 0.33661283978673195
     },
     {
       "element": 327,
       "name": "Bijol",
       "net_transfers": 21025,
       "ownership_pct": 0.7,
-      "momentum": 0.3117770923542322
+      "momentum": 0.3117539775507481
     }
   ],
   "top_sell_pressure": [

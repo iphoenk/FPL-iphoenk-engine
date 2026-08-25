@@ -1,6 +1,6 @@
 {
-  "version": "3.3.0",
-  "schema_version": 31,
+  "version": "3.3.1",
+  "schema_version": 32,
   "P0": {
     "status": "IMPLEMENTED",
     "items": [
@@ -21,7 +21,8 @@
       "2026/27 goalkeeper goal scoring compliance",
       "single-source runtime release metadata",
       "authenticated manual refresh",
-      "shared service-process live polling"
+      "shared service-process live polling",
+      "persisted native Official FPL entry rank/points/bank/value fields"
     ]
   },
   "P1": {

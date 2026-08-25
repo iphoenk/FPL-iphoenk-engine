@@ -1,9 +1,21 @@
-# FPL iphoenk Engine v3.7.0
+# FPL iphoenk Engine v3.7.1
 
 A production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Design goal
 Combine Official FPL API authority, a single authoritative FPL 2026/27 ruleset, persisted native team/event state, expanded public Official FPL detail surfaces, an optional authenticated read-only Official layer, community enrichments, live score/persistence, exact team-value logic, leakage-safe modelling, provenance/freshness, snapshot integrity and a noise-resistant Price Radar.
+
+## v3.7.1 Runtime publication isolation
+v3.7.1 hardens the `runtime-data` publisher after a production run correctly generated and validated a v3.7 snapshot but Git refused to switch the dirty collector worktree from `main` to `runtime-data`.
+
+Fixes and tuning:
+- generated `data/**` is copied first, then published from a separate detached Git worktree
+- the collector worktree never switches away from `main` while generated files are dirty
+- all non-PR production triggers share one concurrency queue, preventing push/schedule/manual runs from racing each other during runtime publication
+- PR runs retain branch-scoped cancellation so stale CI attempts can still be cancelled
+- runtime publish retries up to three times against the newest `runtime-data` head if an external race occurs
+- `main` branch protection remains untouched
+- schema remains 36
 
 ## v3.7 Authenticated Official read-only layer
 Authenticated Official FPL is an optional precision layer, never a dependency for the public core engine.

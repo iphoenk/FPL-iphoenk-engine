@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-25T09:22:27.565241+00:00",
+  "generated_at": "2026-08-25T09:36:08.030364+00:00",
   "team_id": 3462711,
   "phase": {
     "current_gw": 1,
     "next_gw": 2,
     "last_finished_gw": null,
-    "planning_gw": 1,
-    "deadline_time": "2026-08-21T17:30:00Z"
+    "planning_gw": 2,
+    "deadline_time": "2026-08-28T17:30:00Z"
   },
   "endpoint_health": {
     "bootstrap": {
@@ -772,11 +772,11 @@
       "event": 1,
       "points": 71,
       "total_points": 71,
-      "rank": 377063,
-      "rank_sort": 403809,
-      "overall_rank": 377062,
-      "percentile_rank": 5,
-      "overall_rank_percentage": "4",
+      "rank": 462167,
+      "rank_sort": 491943,
+      "overall_rank": 462167,
+      "percentile_rank": 10,
+      "overall_rank_percentage": "5",
       "bank": 0,
       "value": 1000,
       "event_transfers": 0,

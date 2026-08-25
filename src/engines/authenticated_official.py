@@ -89,14 +89,19 @@ def _safe_finance(my_team: dict | None, allowed_elements: set[int]) -> dict:
                 item[key] = value
         prices.append(item)
 
-    exact_sell_total = sum(x.get("selling_price", 0) or 0 for x in prices) if prices else None
-    exact_purchase_total = sum(x.get("purchase_price", 0) or 0 for x in prices) if prices else None
+    expected = len(allowed_elements)
+    covered = len({x["element"] for x in prices})
+    complete = bool(expected) and covered == expected and all("selling_price" in x for x in prices)
+    exact_sell_total = sum(x["selling_price"] or 0 for x in prices) if complete else None
+    purchase_complete = bool(expected) and covered == expected and all("purchase_price" in x for x in prices)
+    exact_purchase_total = sum(x["purchase_price"] or 0 for x in prices) if purchase_complete else None
 
     return {
         "bank": transfers.get("bank"),
         "value": transfers.get("value"),
         "transfers_made": transfers.get("made"),
         "transfer_cost": transfers.get("cost"),
+        "coverage": {"expected": expected, "covered": covered, "complete": complete},
         "exact_sell_total": exact_sell_total,
         "exact_purchase_total": exact_purchase_total,
         "prices_for_authoritative_squad": prices,
@@ -134,6 +139,7 @@ def _persist(summary: dict):
     atomic_json(DATA / "auth.json", summary)
     latest = _load("latest.json", {})
     latest["authenticated_official"] = summary
+    latest.setdefault("files", {})["auth"] = "data/auth.json"
     atomic_json(DATA / "latest.json", latest)
     return summary
 

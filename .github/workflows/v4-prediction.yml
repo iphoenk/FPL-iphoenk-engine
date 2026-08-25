@@ -62,8 +62,8 @@ jobs:
           assert wp.get('beam_size_unchanged') is True
 
           a=json.load(open('data/wc_package_audit_v4.json'))
-          assert int(a.get('schema_version',0)) >= 446, a
-          assert str(a.get('engine','')).startswith('v4.4.5-wc-package-audit'), a
+          assert int(a.get('schema_version',0)) >= 447, a
+          assert str(a.get('engine','')).startswith('v4.4.6-wc-package-audit'), a
           assert a.get('max_replacements')==4 and set(a.get('best_by_replacement_count',{}))=={'1','2','3','4'}
           assert a.get('overall_verdict') in {'KEEP_15','OPTIONAL_IMPROVEMENT','MATERIAL_UPGRADE'}
           assert a.get('guardrails',{}).get('risk_penalty_enabled') is True
@@ -71,6 +71,7 @@ jobs:
           perf=a.get('performance',{})
           assert perf.get('metrics_cache_entries',0) > 0
           assert perf.get('single_pass_metrics') is True and perf.get('compact_target_cache') is True
+          assert perf.get('score_only_hotloop') is True
           assert perf.get('redundant_target_validation_removed') is True
           assert perf.get('candidate_reuse_supported') is True
 
@@ -130,7 +131,7 @@ jobs:
               'lineup':l['governance']['decision'], 'formation':l['formation'], 'captain':l['captain']['name'],
               'pipeline_ms':timings['total_pipeline_ms'], 'parallel_wall_ms':timings['wc_package_parallel_wall_ms'],
               'wc_cpu_ms':timings['wc_decision_cpu_ms'], 'package_cpu_ms':timings['package_audit_cpu_ms'],
-              'speedup_estimate':timings['parallel_speedup_estimate']})
+              'speedup_estimate':timings['parallel_speedup_estimate'], 'score_only_hotloop':perf['score_only_hotloop']})
           PY
       - name: Package V4 quality-test inputs
         if: always()

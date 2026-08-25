@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.5.1
+name: FPL iphoenk collector v3.6
 
 on:
   workflow_dispatch:
@@ -8,10 +8,7 @@ on:
     paths-ignore:
       - 'data/**'
   schedule:
-    # Primary hourly refresh. :55 is intentionally away from top-of-hour congestion
-    # and gives the :30 Master Monitor checkpoints a useful freshness buffer.
     - cron: "55 * * * *"
-    # Adaptive redundancy slot. Collector gate only enables this on deadline/match windows.
     - cron: "15 * * * *"
 
 permissions:
@@ -56,14 +53,14 @@ jobs:
         run: pip install -r requirements.txt pytest
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
-      - name: Reliability, rules and cadence tests
+      - name: Reliability, rules, cadence and Official expansion tests
         run: python -m pytest -q
 
   collect:
     if: github.event_name != 'pull_request' && needs.gate.outputs.should_collect == 'true'
     needs: [gate, test]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: write
     env:
@@ -83,6 +80,7 @@ jobs:
           python -m src.engine daily --stats
           python -m src.reliability_overlay
           python -m src.engines.price_radar
+          python -m src.engines.official_expansion
       - name: Validate generated snapshot
         run: |
           python - <<'PY'
@@ -93,6 +91,7 @@ jobs:
           s=json.load(open('data/latest.json'))
           p=json.load(open('data/prices.json'))
           c=json.load(open('data/chips.json'))
+          d=json.load(open('data/official_detail.json'))
           assert s['engine_version'] == ENGINE_VERSION
           assert s['schema_version'] == SCHEMA_VERSION
           assert s.get('snapshot_id')
@@ -105,6 +104,11 @@ jobs:
           assert s.get('price_summary',{}).get('filter_policy',{}).get('min_ownership_pct') == 0.5
           assert all(x.get('ownership_pct',0) >= 0.5 and abs(x.get('net_transfers',0)) >= 5000 for x in p.get('top_buy_pressure',[]))
           assert all(x.get('ownership_pct',0) >= 0.5 and abs(x.get('net_transfers',0)) >= 5000 for x in p.get('top_sell_pressure',[]))
+          ods=s.get('official_detail_summary',{})
+          assert ods.get('detail_requested',0) >= 15
+          assert d.get('owned_element_ids')
+          assert d.get('official_health',{}).get('element_summary',{}).get('requested',0) >= 15
+          assert 'fixture_stats' in d and 'event_live_rich' in d and 'dream_team' in d
           r=validate_snapshot(s)
           print(r)
           if not r['ok']: raise SystemExit(2)
@@ -129,7 +133,6 @@ jobs:
           set -euo pipefail
           runtime_tmp="$(mktemp -d)"
           cp -a data/. "$runtime_tmp/"
-
           git config user.name "fpl-iphoenk-bot"
           git config user.email "actions@users.noreply.github.com"
           git fetch origin "$RUNTIME_BRANCH" || true
@@ -138,7 +141,6 @@ jobs:
           else
             git checkout -b "$RUNTIME_BRANCH"
           fi
-
           rm -rf data
           mkdir -p data
           cp -a "$runtime_tmp/." data/

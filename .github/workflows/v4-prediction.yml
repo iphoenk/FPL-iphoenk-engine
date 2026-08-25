@@ -58,3 +58,20 @@ jobs:
                   assert abs(d['start_probability']+d['bench_probability']+d['dnp_probability']-1) < .002
           print('V4 ACCEPTANCE PASS')
           PY
+      - name: Package V4 quality-test inputs
+        if: always()
+        run: |
+          mkdir -p v4-artifact
+          cp data/predictions_v4.json v4-artifact/ 2>/dev/null || true
+          cp data/latest.json v4-artifact/ 2>/dev/null || true
+          cp data/live.json v4-artifact/ 2>/dev/null || true
+          cp data/universe.json v4-artifact/ 2>/dev/null || true
+          cp data/team.json v4-artifact/ 2>/dev/null || true
+      - name: Upload V4 prediction artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-prediction-quality-inputs
+          path: v4-artifact/
+          if-no-files-found: error
+          retention-days: 30

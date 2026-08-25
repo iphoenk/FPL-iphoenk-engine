@@ -14,10 +14,13 @@ Combine:
 
 ## v3.3 hardening
 - 2026/27 scoring compliance: goalkeeper goals = 10 points
-- central release metadata in `src/version.py`
+- central release metadata in `src/version.py`, consumed by runtime snapshots and FastAPI
 - authenticated manual `/refresh` using `FPL_REFRESH_TOKEN`
 - one shared live poller per service process instead of one FPL poll loop per SSE client
-- regression coverage for position goal scoring
+- serialized poller/manual refresh execution inside each service process
+- SSE keep-alives and anti-buffering headers
+- regression coverage for position scoring, release metadata and refresh authentication
+- pull-request test gate before collector changes are merged
 
 ## P0 Production Core
 Implemented:
@@ -64,7 +67,8 @@ python fpl_daily_tasks.py stats-sync --gw 1 --deep
 python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
 
 export FPL_REFRESH_TOKEN="replace-with-a-long-random-secret"
-uvicorn live_service:app --host 0.0.0.0 --port 8000
+export FPL_LIVE_POLL_SECONDS="60"
+uvicorn live_service:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 
 ## Live endpoints
@@ -75,6 +79,10 @@ uvicorn live_service:app --host 0.0.0.0 --port 8000
 - GET `/prices`
 - POST `/refresh` requires `Authorization: Bearer <FPL_REFRESH_TOKEN>`
 - GET `/stream` via Server-Sent Events; clients share the service poller
+
+`FPL_LIVE_POLL_SECONDS` has a 30-second safety floor. Manual refresh is disabled with HTTP 503 when `FPL_REFRESH_TOKEN` is not configured and returns HTTP 401 for an invalid token.
+
+The shared poller is process-local. Run the live service with one worker when you want exactly one Official FPL polling chain on a host. Multiple Uvicorn workers each create their own process-local poller; use an external single scheduler or equivalent coordination if multi-worker deployment is required.
 
 ## Source authority
 1. Official FPL API

@@ -1,10 +1,11 @@
-# FPL iphoenk Engine v3.4.1
+# FPL iphoenk Engine v3.5.0
 
 A production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Design goal
 Combine:
 - Official FPL API authority
+- a single authoritative FPL 2026/27 ruleset inside the engine
 - persisted native team/event state for downstream AI monitoring
 - FPL-Core-Insights advanced community stats
 - vaastav historical backbone
@@ -15,15 +16,34 @@ Combine:
 - provenance, freshness and snapshot-integrity metadata
 - noise-resistant Price Radar
 
+## v3.5 Official Rules Compliance
+`src/rules.py` is the single source of truth for published FPL 2026/27 rules used by the engine.
+
+Implemented and regression-tested:
+- basic scoring: appearance, goals by position, assists, clean sheets, saves, penalty saves/misses, goals conceded, cards, own goals and bonus values
+- goalkeeper goals = 10 points, defender = 6, midfielder = 5, forward = 4
+- defensive contribution (DC) rules: defenders reach 10 CBIT for +2; midfielders/forwards reach 12 CBIRT for +2; maximum +2 DC points per match
+- official scoring reconstruction helper for event-live auditing; Official `total_points` remains authority
+- 2026/27 BPS deltas are persisted as rules metadata; full BPS reconstruction remains Official FPL/Opta authority when raw metrics are unavailable
+- two chip sets per season: Wildcard, Free Hit, Triple Captain and Bench Boost once in each half
+- first chip set expires after the GW19 deadline and is not carried over; second set applies from GW20
+- only one chip can be used in a Gameweek
+- Free Hit cannot be used in GW1, and a first-half Free Hit used in GW19 cannot be followed by the refreshed Free Hit in GW20
+- chip ledger is derived from Official history and persisted into `data/chips.json` and `data/latest.json`
+- projection scoring imports constants from the rules module instead of hardcoding scoring independently
+- ruleset identity and official source URLs are persisted in the bridge for auditability
+- schema version 34
+
+Official rule references are stored in `src/rules.py` and point to PremierLeague.com pages for scoring, defensive contributions, chips and 2026/27 BPS changes.
+
 ## v3.4.1 Price Radar fix
 - applies actionable filtering before persisting `top_buy_pressure` / `top_sell_pressure`
 - minimum ownership threshold: 0.5%
 - minimum absolute event net transfers: 5,000
-- separates `actionable_pressure` from `market_noise`
+- separates actionable pressure from market noise
 - attaches confidence labels so tiny-ownership ratio spikes cannot dominate tactical decisions
 - persists the filtered result consistently into both `data/prices.json` and `data/latest.json`
 - adds regression coverage to prevent 0.0%-ownership noise from reappearing as actionable pressure
-- patch release only; schema remains 33
 
 ## v3.4 reliability and native persistence
 - persists native Official FPL `entry`, `history`, `transfers`, and submitted `picks`
@@ -33,23 +53,13 @@ Combine:
 - adds native-field change log for reconciliation and conflict tracking
 - keeps Official FPL native fields authoritative while treating bridge data as persisted Tier-1-derived state
 - preserves fail-closed validation for structural squad errors
-- schema version 33
 
-## v3.3.1 data persistence foundation
-- persists native Official FPL entry fields in `data/latest.json` and `data/team.json`
-- includes current event, overall/event points and rank, last-deadline bank/value and transfer count
-- each native entry block carries the Official API fetch timestamp
-
-## v3.3 hardening
-- 2026/27 scoring compliance: goalkeeper goals are worth 10 points in projections
+## v3.3 hardening foundation
+- first 2026/27 goalkeeper-goal correction
 - single engine/service version source in `src/version.py`
-- authenticated manual `/refresh` using `FPL_REFRESH_API_KEY`
-- constant-time refresh-key comparison and fail-closed manual refresh when no key is configured
-- one shared live poller per service process instead of one Official FPL polling loop per SSE client
-- manual refresh and background polling serialized through the same process-local lock
-- SSE keep-alives plus anti-buffering/no-cache response headers
-- regression coverage for all position goal values, release metadata and refresh authentication
-- pull-request test gate plus snapshot version/schema assertions
+- authenticated manual `/refresh`
+- one shared live poller per service process
+- regression and CI gates
 
 ## P0 Production Core
 Implemented:
@@ -58,6 +68,7 @@ Implemented:
 - exact sell-value logic
 - endpoint health/retry/latency
 - live FPL player stat expansion
+- official 2026/27 rules compliance and chip ledger
 - confirmed price deltas and filtered transfer-pressure radar
 - Core Insights + vaastav sync
 - leakage guard
@@ -87,8 +98,6 @@ Framework implemented:
 P2 is deliberately not marketed as a trained production model until enough season data exists.
 
 ## Data flow
-Normal production path:
-
 `Official FPL API -> GitHub collector/engine -> persisted data/*.json bridge -> FPL Master Monitor`
 
 Direct ChatGPT browsing of Official team-specific endpoints is an optional cross-check only and is not required for the production data path.
@@ -103,18 +112,11 @@ The GitHub collector is the data-refresh layer. User-visible Master Monitor cade
 ## Main commands
 ```bash
 pip install -r requirements.txt
-
 python fpl_daily_tasks.py daily --stats
 python fpl_daily_tasks.py deadline --stats
 python fpl_daily_tasks.py live
-
 python fpl_daily_tasks.py stats-sync --gw 1
-python fpl_daily_tasks.py stats-sync --gw 1 --deep
 python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
-
-export FPL_REFRESH_API_KEY="replace-with-a-long-random-secret"
-export FPL_LIVE_POLL_SECONDS="60"
-uvicorn live_service:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 
 ## Live endpoints
@@ -126,12 +128,8 @@ uvicorn live_service:app --host 0.0.0.0 --port 8000 --workers 1
 - POST `/refresh` with header `X-FPL-Refresh-Key`
 - GET `/stream` via Server-Sent Events
 
-`/refresh` is disabled with HTTP 503 when `FPL_REFRESH_API_KEY` is not configured and returns HTTP 401 for an invalid key. `FPL_LIVE_POLL_SECONDS` has a 30-second safety floor.
-
-The background poller is shared by all `/stream` clients within one service process, so additional subscribers do not multiply Official FPL API polling. The poller is process-local: multiple Uvicorn workers each create their own polling chain. Use one worker when exactly one polling chain per host is required, or use an external single scheduler/coordinator for multi-worker deployments.
-
 ## Source authority
-1. Official FPL API native fields
+1. Official FPL API native fields and Official scoring
 2. Persisted Official-FPL-derived bridge state
 3. FPL-Core-Insights community enrichment
 4. vaastav historical dataset
@@ -140,11 +138,11 @@ The background poller is shared by all `/stream` clients within one service proc
 
 If direct Official FPL and persisted bridge disagree on a current native field, direct current Official FPL wins and the conflict should be logged.
 
+## Rules authority principle
+The engine may reconstruct published scoring components for audit, but must not override Official FPL `total_points`, bonus allocation, rank, price or other native fields with a local reconstruction. BPS is not fully reconstructed unless all required official raw metrics are available.
+
 ## Leakage guard
-Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.
-Historical xP-like fields should be shifted or excluded unless timestamp eligibility is proven.
+Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions. Historical xP-like fields should be shifted or excluded unless timestamp eligibility is proven.
 
 ## Important
-FPL-Core-Insights and vaastav are community-maintained. They are useful enrichments, not licensed Opta feeds.
-
-GitHub Actions is persistence/archive and scheduled collection, not true streaming infrastructure. `live_service.py` remains available for near-live hosting if that is ever required, but the normal Master Monitor architecture does not require a separate public proxy service.
+FPL-Core-Insights and vaastav are community-maintained enrichments, not licensed Opta feeds. GitHub Actions is persistence/archive and scheduled collection, not true streaming infrastructure.

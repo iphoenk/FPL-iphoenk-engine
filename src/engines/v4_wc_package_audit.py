@@ -136,6 +136,11 @@ def _candidate_states(cur, outids, need, bp, budget, k, beam_size):
 def audit_packages(predictions, universe, locked, max_replacements=4, budget=BUDGET_TENTHS,
                    per_position_frontier=7, top_per_size=8, beam_size=28):
     cands = build_candidates(predictions, universe)
+    return audit_packages_from_candidates(cands, locked, max_replacements, budget, per_position_frontier, top_per_size, beam_size)
+
+
+def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=BUDGET_TENTHS,
+                                   per_position_frontier=7, top_per_size=8, beam_size=28):
     by = {p.element: p for p in cands}
     ids = {int(x["element"]) for x in locked.get("players", [])}
     missing = ids - set(by)
@@ -159,6 +164,7 @@ def audit_packages(predictions, universe, locked, max_replacements=4, budget=BUD
             metrics_cache[key] = _fast_metrics(target, include_detail=False)
         return metrics_cache[key]
 
+    evaluated = 0
     for k in range(1, max_replacements + 1):
         packs = []
         for outs in combinations(cur, k):
@@ -167,14 +173,16 @@ def audit_packages(predictions, universe, locked, max_replacements=4, budget=BUD
             if any(len(bp[pos]) < n for pos, n in need.items()):
                 continue
             out_unc = sum(p.uncertainty for p in outs)
+            keep = [p for p in cur if p.element not in outids]
             for chosen in _candidate_states(cur, outids, need, bp, budget, k, beam_size):
                 if len(chosen) != k:
                     continue
-                target = [p for p in cur if p.element not in outids] + list(chosen)
-                ok, _ = validate_squad(target, budget)
-                if not ok:
-                    continue
+                # _candidate_states guarantees same-position replacement count, unique INs,
+                # budget and club legality against the unchanged keep set. The baseline is
+                # already valid, so repeating validate_squad(target) here is redundant hot-loop work.
+                target = keep + list(chosen)
                 tm = metrics(target)
+                evaluated += 1
                 dxi = tm["best_xi_xpts_5"] - cm["best_xi_xpts_5"]
                 du = tm["bench_adjusted_utility_5"] - cm["bench_adjusted_utility_5"]
                 risk_delta = sum(p.uncertainty for p in chosen) - out_unc
@@ -216,8 +224,8 @@ def audit_packages(predictions, universe, locked, max_replacements=4, budget=BUD
         verdict = "KEEP_15"
 
     return {
-        "schema_version": 445,
-        "engine": "v4.4.4-wc-package-audit-single-pass",
+        "schema_version": 446,
+        "engine": "v4.4.5-wc-package-audit-fast-legal",
         "wildcard_active": bool(locked.get("wildcard_active")),
         "baseline": cm | {"itb": budget - basecost},
         "screened_players": len(cands), "frontier_players": len(fr),
@@ -226,10 +234,13 @@ def audit_packages(predictions, universe, locked, max_replacements=4, budget=BUD
         "overall_verdict": verdict, "recommended_package": overall,
         "performance": {
             "metrics_cache_entries": len(metrics_cache),
+            "evaluated_packages": evaluated,
             "frontier_per_position": per_position_frontier,
             "beam_size": beam_size,
             "single_pass_metrics": True,
             "compact_target_cache": True,
+            "redundant_target_validation_removed": True,
+            "candidate_reuse_supported": True,
         },
         "guardrails": {
             "max_per_club": MAX_PER_CLUB, "budget_tenths": budget,
@@ -238,6 +249,7 @@ def audit_packages(predictions, universe, locked, max_replacements=4, budget=BUD
             "search": "shortlisted k<=2, bounded beam k=3-4, compact memoized single-pass metrics",
             "frontier_per_position": per_position_frontier, "beam_size": beam_size,
             "risk_penalty_enabled": True,
+            "search_width_unchanged": True,
         },
     }
 

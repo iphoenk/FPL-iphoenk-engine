@@ -1,7 +1,7 @@
 {
   "schema_version": 33,
   "engine_version": "3.4.0",
-  "generated_at": "2026-08-25T18:28:42.892661+00:00",
+  "generated_at": "2026-08-25T18:32:03.153211+00:00",
   "mode": "daily",
   "team_id": 3462711,
   "phase": {
@@ -18,72 +18,72 @@
     "bootstrap": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 104,
+      "latency_ms": 233,
       "attempts": 1,
-      "fetched_at": "2026-08-25T18:28:41.473973+00:00",
+      "fetched_at": "2026-08-25T18:32:00.865436+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/bootstrap-static/"
     },
     "fixtures": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 35,
+      "latency_ms": 54,
       "attempts": 1,
-      "fetched_at": "2026-08-25T18:28:41.509421+00:00",
+      "fetched_at": "2026-08-25T18:32:00.920478+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/fixtures/"
     },
     "event_status": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 174,
+      "latency_ms": 192,
       "attempts": 1,
-      "fetched_at": "2026-08-25T18:28:41.683423+00:00",
+      "fetched_at": "2026-08-25T18:32:01.112690+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/event-status/"
     },
     "entry": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 39,
+      "latency_ms": 210,
       "attempts": 1,
-      "fetched_at": "2026-08-25T18:28:42.794184+00:00",
+      "fetched_at": "2026-08-25T18:32:03.000586+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/"
     },
     "history": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 30,
+      "latency_ms": 46,
       "attempts": 1,
-      "fetched_at": "2026-08-25T18:28:42.824436+00:00",
+      "fetched_at": "2026-08-25T18:32:03.047258+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/history/"
     },
     "transfers": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 37,
+      "latency_ms": 48,
       "attempts": 1,
-      "fetched_at": "2026-08-25T18:28:42.861954+00:00",
+      "fetched_at": "2026-08-25T18:32:03.095485+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/transfers/"
     },
     "picks": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 30,
+      "latency_ms": 56,
       "attempts": 1,
-      "fetched_at": "2026-08-25T18:28:42.892206+00:00",
+      "fetched_at": "2026-08-25T18:32:03.152491+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/event/1/picks/"
     },
     "event_live": {
       "status": "IDLE",
       "http_status": 200,
-      "latency_ms": 33,
+      "latency_ms": 61,
       "attempts": 1,
-      "fetched_at": "2026-08-25T18:28:42.036902+00:00",
+      "fetched_at": "2026-08-25T18:32:01.524739+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/event/1/live/"
     }
@@ -98,7 +98,7 @@
     "last_deadline_value": 1000,
     "last_deadline_total_transfers": 0,
     "id": 3462711,
-    "fetched_at": "2026-08-25T18:28:42.794184+00:00"
+    "fetched_at": "2026-08-25T18:32:03.000586+00:00"
   },
   "squad_authority": "LOCKED_PRE_DEADLINE",
   "advanced_stats_sync": {
@@ -223,7 +223,7 @@
       "last_deadline_value": 1000,
       "last_deadline_total_transfers": 0,
       "id": 3462711,
-      "fetched_at": "2026-08-25T18:28:42.794184+00:00"
+      "fetched_at": "2026-08-25T18:32:03.000586+00:00"
     },
     "history": {
       "current": [
@@ -473,7 +473,7 @@
       "derived": false,
       "status": "LIVE",
       "http_status": 200,
-      "fetched_at": "2026-08-25T18:28:41.473973+00:00"
+      "fetched_at": "2026-08-25T18:32:00.865436+00:00"
     },
     "fixtures": {
       "source": "official_fpl",
@@ -482,7 +482,7 @@
       "derived": false,
       "status": "LIVE",
       "http_status": 200,
-      "fetched_at": "2026-08-25T18:28:41.509421+00:00"
+      "fetched_at": "2026-08-25T18:32:00.920478+00:00"
     },
     "event_status": {
       "source": "official_fpl",
@@ -491,7 +491,7 @@
       "derived": false,
       "status": "LIVE",
       "http_status": 200,
-      "fetched_at": "2026-08-25T18:28:41.683423+00:00"
+      "fetched_at": "2026-08-25T18:32:01.112690+00:00"
     },
     "entry": {
       "source": "official_fpl",
@@ -500,7 +500,7 @@
       "derived": false,
       "status": "LIVE",
       "http_status": 200,
-      "fetched_at": "2026-08-25T18:28:42.794184+00:00"
+      "fetched_at": "2026-08-25T18:32:03.000586+00:00"
     },
     "history": {
       "source": "official_fpl",
@@ -509,7 +509,7 @@
       "derived": false,
       "status": "LIVE",
       "http_status": 200,
-      "fetched_at": "2026-08-25T18:28:42.824436+00:00"
+      "fetched_at": "2026-08-25T18:32:03.047258+00:00"
     },
     "transfers": {
       "source": "official_fpl",
@@ -518,7 +518,7 @@
       "derived": false,
       "status": "LIVE",
       "http_status": 200,
-      "fetched_at": "2026-08-25T18:28:42.861954+00:00"
+      "fetched_at": "2026-08-25T18:32:03.095485+00:00"
     },
     "picks": {
       "source": "official_fpl",
@@ -527,46 +527,46 @@
       "derived": false,
       "status": "LIVE",
       "http_status": 200,
-      "fetched_at": "2026-08-25T18:28:42.892206+00:00"
+      "fetched_at": "2026-08-25T18:32:03.152491+00:00"
     }
   },
   "source_freshness": {
     "bootstrap": {
-      "fetched_at": "2026-08-25T18:28:41.473973+00:00",
-      "age_minutes": 0.02,
+      "fetched_at": "2026-08-25T18:32:00.865436+00:00",
+      "age_minutes": 0.04,
       "status": "LIVE"
     },
     "fixtures": {
-      "fetched_at": "2026-08-25T18:28:41.509421+00:00",
-      "age_minutes": 0.02,
+      "fetched_at": "2026-08-25T18:32:00.920478+00:00",
+      "age_minutes": 0.04,
       "status": "LIVE"
     },
     "event_status": {
-      "fetched_at": "2026-08-25T18:28:41.683423+00:00",
-      "age_minutes": 0.02,
+      "fetched_at": "2026-08-25T18:32:01.112690+00:00",
+      "age_minutes": 0.03,
       "status": "LIVE"
     },
     "entry": {
-      "fetched_at": "2026-08-25T18:28:42.794184+00:00",
+      "fetched_at": "2026-08-25T18:32:03.000586+00:00",
       "age_minutes": 0.0,
       "status": "LIVE"
     },
     "history": {
-      "fetched_at": "2026-08-25T18:28:42.824436+00:00",
+      "fetched_at": "2026-08-25T18:32:03.047258+00:00",
       "age_minutes": 0.0,
       "status": "LIVE"
     },
     "transfers": {
-      "fetched_at": "2026-08-25T18:28:42.861954+00:00",
+      "fetched_at": "2026-08-25T18:32:03.095485+00:00",
       "age_minutes": 0.0,
       "status": "LIVE"
     },
     "picks": {
-      "fetched_at": "2026-08-25T18:28:42.892206+00:00",
+      "fetched_at": "2026-08-25T18:32:03.152491+00:00",
       "age_minutes": 0.0,
       "status": "LIVE"
     }
   },
   "change_log": [],
-  "snapshot_id": "6b9c8a7e995bc96f"
+  "snapshot_id": "34505f7eeaa8d8e8"
 }

@@ -16,6 +16,8 @@ jobs:
   collect:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      PYTHONPATH: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,7 +27,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt pytest
       - name: Reliability tests
-        run: pytest -q
+        run: python -m pytest -q
       - name: Generate API + advanced-stats snapshot
         run: python -m src.engine daily --stats
       - name: Validate generated snapshot

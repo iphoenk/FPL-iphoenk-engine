@@ -1,5 +1,5 @@
 {
-  "version": "5.0.0-alpha.1",
+  "version": "5.0.0-alpha.2",
   "principles": {
     "avoid_hardcode": {
       "required": true,
@@ -18,6 +18,7 @@
       "architecture": "BOUNDED_CONTEXT_MICROSERVICES",
       "policy": "V5 production runtime must execute as independently runnable bounded-context services. A monorepo and shared immutable image are allowed, but business domains must not collapse back into one process or duplicate authority across services.",
       "service_registry": "config/v5_service_registry.json",
+      "transport_registry": "config/v5_service_transport_registry.json",
       "requirements": [
         "independent process/container boundary",
         "versioned request/response contract",
@@ -25,11 +26,15 @@
         "explicit dependency graph",
         "unique service ownership of business modules",
         "registry-driven endpoint/timeout configuration",
+        "registry-driven retry and circuit-breaker policy",
+        "connection reuse for internal HTTP transport",
+        "non-idempotent persistence operations are never automatically retried",
         "correlation-id propagation",
+        "transport retry/circuit observability",
         "parallel fan-out for independent service calls",
         "no raw credential persistence"
       ],
-      "performance_guard": "Use bounded contexts rather than per-function services. Avoid chatty service graphs, batch large reads, parallelize independent intelligence services, cache immutable registry data, and measure cross-service latency."
+      "performance_guard": "Use bounded contexts rather than per-function services. Avoid chatty service graphs, batch large reads, parallelize independent intelligence services, cache immutable registry data, reuse internal HTTP connections, and measure cross-service latency including retry overhead."
     },
     "performance_first": {
       "required": true,

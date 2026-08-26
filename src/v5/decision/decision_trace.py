@@ -16,28 +16,45 @@ def _cfg() -> dict[str, Any]:
     return data
 
 
-def _f(value: Any, default: float = 0.0) -> float:
+def _f(value: Any) -> float:
     try:
-        return float(default if value is None else value)
-    except (TypeError, ValueError):
-        return float(default)
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(f"invalid numeric decision-trace configuration/value: {value!r}") from exc
 
 
 def _confidence(score: float) -> Confidence:
     bands = _cfg()["confidence"]
-    if score >= _f(bands.get("high_minimum"), 0.80):
+    if score >= _f(bands["high_minimum"]):
         return Confidence.HIGH
-    if score >= _f(bands.get("medium_high_minimum"), 0.70):
+    if score >= _f(bands["medium_high_minimum"]):
         return Confidence.MEDIUM_HIGH
-    if score >= _f(bands.get("medium_minimum"), 0.58):
+    if score >= _f(bands["medium_minimum"]):
         return Confidence.MEDIUM
-    if score >= _f(bands.get("medium_low_minimum"), 0.45):
+    if score >= _f(bands["medium_low_minimum"]):
         return Confidence.MEDIUM_LOW
     return Confidence.LOW
 
 
 def _package_probability(package: dict[str, Any]) -> float:
-    return _f((package.get("monte_carlo") or {}).get("p_outperform_hold_independent_baseline"), 0.5)
+    default = _f(_cfg()["package_selection"]["default_outperform_hold_probability"])
+    value = (package.get("monte_carlo") or {}).get("p_outperform_hold_independent_baseline")
+    return default if value is None else _f(value)
+
+
+def _gate0_context(preflight: dict[str, Any]) -> tuple[bool, tuple[str, ...], tuple[str, ...]]:
+    trace_policy = _cfg()["trace"]
+    required = bool(trace_policy.get("require_gate0_preflight", True))
+    items = preflight.get("items") if isinstance(preflight.get("items"), list) else []
+    checked = tuple(str(item.get("id")) for item in items if item.get("id"))
+    pass_status = str(trace_policy["gate0_pass_status"])
+    failed = tuple(
+        str(item.get("id"))
+        for item in items
+        if item.get("id") and str(item.get("status")) != pass_status
+    )
+    passed = bool(preflight.get("pass")) if items else not required
+    return passed, checked, failed
 
 
 def build_trace(
@@ -48,21 +65,30 @@ def build_trace(
     packages: dict[str, Any],
     lineup: dict[str, Any],
     dss: dict[str, Any],
+    gate0_preflight: dict[str, Any],
 ) -> dict[str, Any]:
-    policy = _cfg()["package_selection"]
+    cfg = _cfg()
+    policy = cfg["package_selection"]
+    trace_policy = cfg["trace"]
     ranked = packages.get("packages") or []
     hold = packages.get("hold") or next((item for item in ranked if item.get("id") == "HOLD"), {})
     best = ranked[0] if ranked else hold
-    hold_robust = _f((hold.get("score") or {}).get("robust_score"))
-    best_robust = _f((best.get("score") or {}).get("robust_score"), hold_robust)
+    hold_robust = _f((hold.get("score") or {}).get("robust_score") or 0.0)
+    best_value = (best.get("score") or {}).get("robust_score")
+    best_robust = hold_robust if best_value is None else _f(best_value)
     robust_gain = best_robust - hold_robust
     probability = _package_probability(best)
-    minimum_gain = _f(policy.get("minimum_robust_gain_to_review"), 0.5)
-    minimum_probability = _f(policy.get("minimum_outperform_hold_probability"), 0.55)
-    strong_gain = _f(policy.get("strong_robust_gain"), 2.0)
-    strong_probability = _f(policy.get("strong_outperform_hold_probability"), 0.65)
+    minimum_gain = _f(policy["minimum_robust_gain_to_review"])
+    minimum_probability = _f(policy["minimum_outperform_hold_probability"])
+    strong_gain = _f(policy["strong_robust_gain"])
+    strong_probability = _f(policy["strong_outperform_hold_probability"])
+    preflight_passed, gate0_checked, gate0_failed = _gate0_context(gate0_preflight)
 
-    if best.get("id") == "HOLD" or robust_gain < minimum_gain or probability < minimum_probability:
+    if not preflight_passed:
+        decision_type = "BLOCKED"
+        action = "BLOCK decision output because Gate0 preflight did not pass"
+        chosen = hold or best
+    elif best.get("id") == "HOLD" or robust_gain < minimum_gain or probability < minimum_probability:
         decision_type = "HOLD"
         action = "HOLD current squad; no transfer package clears the configured review threshold"
         chosen = hold
@@ -73,10 +99,13 @@ def build_trace(
         incoming = ", ".join(str(row.get("name") or row.get("element")) for row in chosen.get("ins") or [])
         action = f"REVIEW transfer package: {outgoing} -> {incoming}"
 
+    critical_partial = int(dss.get("critical_partial_count") or 0)
     confidence_basis = probability
-    if dss.get("critical_partial_count"):
-        confidence_basis *= max(0.25, 1.0 - 0.03 * int(dss["critical_partial_count"]))
-    confidence = _confidence(confidence_basis)
+    if critical_partial:
+        per_module = _f(cfg["confidence"]["critical_partial_penalty_per_module"])
+        floor = _f(cfg["confidence"]["critical_partial_floor_multiplier"])
+        confidence_basis *= max(floor, 1.0 - per_module * critical_partial)
+    confidence = Confidence.LOW if not preflight_passed else _confidence(confidence_basis)
 
     reasons_for = [
         f"robust score delta vs HOLD = {robust_gain:.3f}",
@@ -87,14 +116,15 @@ def build_trace(
         reasons_for.append("package clears configured strong-review thresholds")
 
     reasons_against = []
-    critical_partial = int(dss.get("critical_partial_count") or 0)
+    if gate0_failed:
+        reasons_against.append(f"Gate0 preflight failures: {', '.join(gate0_failed)}")
     if critical_partial:
         reasons_against.append(f"{critical_partial} critical DSS capabilities remain PARTIAL")
     price_alert_count = len(((price.get("alerts") or {}).get("alerts") or []))
     if price_alert_count:
         reasons_against.append(f"market timing context contains {price_alert_count} active price alerts")
     if not reasons_against:
-        reasons_against.append("no additional decision-local blocker detected; final Gate0/governance still required")
+        reasons_against.append("no additional decision-local blocker detected; final postflight governance still required")
 
     evidence = (
         EvidenceRef(
@@ -110,6 +140,17 @@ def build_trace(
             provenance={"model_version": prediction.get("model_version")},
         ),
         EvidenceRef(
+            source="governance-service",
+            field="gate0_preflight",
+            authority="governance-service",
+            provenance={
+                "model": gate0_preflight.get("model"),
+                "pass": preflight_passed,
+                "checked_ids": list(gate0_checked),
+                "failed_ids": list(gate0_failed),
+            },
+        ),
+        EvidenceRef(
             source="decision-service",
             field="package_optimizer+lineup_optimizer+dss",
             authority="decision-service",
@@ -121,6 +162,23 @@ def build_trace(
         for row in [*(chosen.get("outs") or []), *(chosen.get("ins") or [])]
         if row.get("element") is not None
     )
+    local_labels = trace_policy.get("local_constraint_labels") or {}
+    local_checked = []
+    if packages.get("local_legality_prevalidated"):
+        local_checked.append(str(local_labels["package_ready"]))
+    if lineup.get("status") == "READY":
+        local_checked.append(str(local_labels["lineup_ready"]))
+    constraints_checked = tuple([*gate0_checked, *local_checked])
+
+    projection_model = prediction.get("model_version")
+    ruleset_id = (truth.get("rules") or {}).get("ruleset_id") or prediction.get("ruleset_id")
+    if trace_policy.get("require_projection_model", True) and not projection_model:
+        raise RuntimeError("DecisionTrace requires prediction model version")
+    if trace_policy.get("require_ruleset_id", True) and not ruleset_id:
+        raise RuntimeError("DecisionTrace requires ruleset_id")
+    if trace_policy.get("require_dss_coverage", True) and not isinstance(dss.get("core"), dict):
+        raise RuntimeError("DecisionTrace requires DSS coverage evidence")
+
     trace = DecisionTrace(
         decision_type=decision_type,
         action=action,
@@ -130,17 +188,9 @@ def build_trace(
         reasons_for=tuple(reasons_for),
         reasons_against=tuple(reasons_against),
         evidence=evidence,
-        constraints_checked=(
-            "squad_structure",
-            "club_limit",
-            "element_uniqueness",
-            "sell_value_affordability",
-            "legal_formation",
-            "captain_vice_distinct",
-            "bench_structure",
-        ),
-        projection_model=str(prediction.get("model_version") or "unknown"),
-        ruleset_id=str((truth.get("rules") or {}).get("ruleset_id") or prediction.get("ruleset_id") or "unknown"),
+        constraints_checked=constraints_checked,
+        projection_model=str(projection_model) if projection_model else None,
+        ruleset_id=str(ruleset_id) if ruleset_id else None,
     )
     trace.validate()
     raw = asdict(trace)
@@ -149,5 +199,6 @@ def build_trace(
     raw["selected_package_id"] = chosen.get("id")
     raw["robust_gain_vs_hold"] = round(robust_gain, 4)
     raw["p_outperform_hold_independent_baseline"] = round(probability, 4)
+    raw["gate0_preflight_pass"] = preflight_passed
     raw["production_recommendation"] = None
     return raw

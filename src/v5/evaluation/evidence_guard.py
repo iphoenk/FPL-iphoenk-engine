@@ -24,13 +24,24 @@ def _dt(value: Any) -> datetime | None:
         return None
 
 
+def _horizon_gameweeks(raw: Any, planning_gw: int) -> list[int]:
+    if isinstance(raw, (list, tuple, set)):
+        return [int(value) for value in raw]
+    if raw is None:
+        return []
+    count = int(raw)
+    if count <= 0 or planning_gw <= 0:
+        return []
+    return list(range(planning_gw, planning_gw + count))
+
+
 def evaluate(prediction: dict[str, Any], context: dict[str, Any], truth: dict[str, Any] | None = None) -> dict[str, Any]:
     cfg = _cfg()
     truth = truth or {}
     planning_gw = int(context.get("planning_gw") or prediction.get("planning_gw") or 0)
-    horizon_gws = [int(x) for x in prediction.get("horizon_gws") or []]
+    horizon_gws = _horizon_gameweeks(prediction.get("horizon_gws"), planning_gw)
     leakage_cfg = cfg.get("leakage") or {}
-    leakage_ok = bool(planning_gw > 0)
+    leakage_ok = bool(planning_gw > 0 and horizon_gws)
     if leakage_cfg.get("require_prediction_gw_not_before_planning_gw", True):
         leakage_ok = leakage_ok and all(gw >= planning_gw for gw in horizon_gws)
     forbidden = set(str(x) for x in leakage_cfg.get("forbidden_same_gw_fields") or [])
@@ -44,16 +55,21 @@ def evaluate(prediction: dict[str, Any], context: dict[str, Any], truth: dict[st
     generated = _dt(prediction.get("generated_at"))
     now = datetime.now(timezone.utc)
     age_seconds = (now - generated).total_seconds() if generated else None
-    freshness_ok = generated is not None and age_seconds is not None and age_seconds <= float(freshness_cfg.get("max_prediction_age_seconds", 1800))
+    max_age = float(freshness_cfg.get("max_prediction_age_seconds", 1800))
+    freshness_ok = generated is not None and age_seconds is not None and 0.0 <= age_seconds <= max_age
     if freshness_cfg.get("require_deadline", True):
         freshness_ok = freshness_ok and bool(context.get("deadline_time"))
 
     quality = prediction.get("prediction_quality") if isinstance(prediction.get("prediction_quality"), dict) else {}
-    ruleset_match = bool(prediction.get("ruleset_id")) and prediction.get("ruleset_id") == ((truth.get("rules") or {}).get("ruleset_id") if isinstance(truth.get("rules"), dict) else prediction.get("ruleset_id"))
+    truth_rules = truth.get("rules") if isinstance(truth.get("rules"), dict) else {}
+    require_ruleset = bool((cfg.get("reliability") or {}).get("require_ruleset_match", True))
+    ruleset_match = bool(prediction.get("ruleset_id")) and (
+        not require_ruleset or (bool(truth_rules.get("ruleset_id")) and prediction.get("ruleset_id") == truth_rules.get("ruleset_id"))
+    )
     validation = (truth.get("team") or {}).get("validation") if isinstance(truth.get("team"), dict) else {}
     reliability_ok = bool(quality) and quality.get("status") == str((cfg.get("reliability") or {}).get("healthy_prediction_status", "HEALTHY")) and ruleset_match
-    if (cfg.get("reliability") or {}).get("require_truth_validation", True) and truth:
-        reliability_ok = reliability_ok and bool(validation.get("passed"))
+    if (cfg.get("reliability") or {}).get("require_truth_validation", True):
+        reliability_ok = reliability_ok and bool(truth) and bool(validation.get("passed"))
 
     capabilities = []
     if leakage_ok:

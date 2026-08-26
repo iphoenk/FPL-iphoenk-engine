@@ -8,7 +8,7 @@ from src.sources import official_fpl
 def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     registry = _load_registry()
     _validate_dag(registry)
-    assert registry["schema_version"] >= 5
+    assert registry["schema_version"] >= 6
     assert registry["architecture"] == "V3_BOUNDED_PROCESS_MICROSERVICES"
     assert registry["policy"]["parallelize_independent_services"] is True
     assert registry["policy"]["latest_json_single_writer_during_fan_in"] is True
@@ -17,11 +17,13 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     assert registry["policy"]["mechanical_validity_is_not_prediction_quality"] is True
     assert registry["policy"]["two_layer_report_contract"] is True
     assert registry["policy"]["full_dss_watchlist_generator"] is True
+    assert registry["policy"]["report_materializer_is_serving_only"] is True
+    assert registry["policy"]["report_serving_requires_15_owned_and_20_external_watchlist"] is True
     services = registry["services"]
     assert set(services) == {
         "collector", "price", "historical_prior", "prediction", "authenticated_official", "rules",
         "official_detail", "prediction_evaluation", "lineup_governance", "challenger", "governance",
-        "watchlist", "reporting",
+        "watchlist", "reporting", "report_materializer",
     }
     assert services["price"]["depends_on"] == ["collector"]
     assert services["historical_prior"]["depends_on"] == ["collector"]
@@ -36,6 +38,7 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     }
     assert services["watchlist"]["depends_on"] == ["governance"]
     assert services["reporting"]["depends_on"] == ["watchlist"]
+    assert set(services["report_materializer"]["depends_on"]) == {"reporting", "official_detail"}
     commands = services["governance"]["commands"]
     assert any(c.get("module") == "src.engines.framework_health_audit" and "postflight" in c.get("args", []) for c in commands)
     assert any(c.get("module") == "src.engines.lineup_framework_health_overlay" for c in commands)
@@ -47,6 +50,10 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     assert services["reporting"]["commands"] == [
         {"module": "src.engines.report_architecture", "args": []},
         {"module": "src.engines.report_enrichment", "args": []},
+    ]
+    assert services["report_materializer"]["commands"] == [
+        {"module": "src.engines.report_materializer", "args": []},
+        {"module": "src.engines.report_serving_validate", "args": []},
     ]
 
 

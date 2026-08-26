@@ -1,7 +1,7 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.14-full-dss-watchlist-decision-first-report",
+  "production_contract": "v3.15-fast-report-serving-15-owned-20-watchlist",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,
@@ -21,14 +21,17 @@
     "user_report_is_decision_first": true,
     "technical_state_is_appendix_only": true,
     "full_dss_watchlist_generator": true,
-    "watchlist_requires_postflight_framework_state": true
+    "watchlist_requires_postflight_framework_state": true,
+    "report_materializer_is_serving_only": true,
+    "report_serving_requires_15_owned_and_20_external_watchlist": true,
+    "technical_and_full_source_artifacts_are_lazy_load": true
   },
   "runtime": {
     "max_parallel_services": 5,
     "service_timeout_seconds": 180,
     "http_cache_ttl_seconds": 180,
     "performance_budget_seconds": 45,
-    "performance_target": "preserve sub-45-second runtime while adding full-universe DSS watchlist screening"
+    "performance_target": "preserve sub-45-second runtime while materializing small report-serving artifacts"
   },
   "services": {
     "collector": {
@@ -187,6 +190,29 @@
       "artifacts": ["user_report.json", "technical_appendix.json", "report_state.json"],
       "latest_keys": ["report_summary"],
       "latest_file_keys": ["user_report", "technical_appendix", "report_state"]
+    },
+    "report_materializer": {
+      "stage": "serving-output",
+      "depends_on": ["reporting", "official_detail"],
+      "critical": true,
+      "isolated": true,
+      "inputs": [
+        "latest.json", "user_report.json", "technical_appendix.json", "team.json", "projections.json",
+        "dss_watchlist.json", "official_detail.json"
+      ],
+      "commands": [
+        {"module": "src.engines.report_materializer", "args": []},
+        {"module": "src.engines.report_serving_validate", "args": []}
+      ],
+      "artifacts": [
+        "user_report.json", "decision_brief.json", "deep_review_payload.json", "dss_watchlist_summary.json",
+        "official_detail_owned.json", "official_detail_watchlist.json", "report_artifact_registry.json"
+      ],
+      "latest_keys": ["report_serving"],
+      "latest_file_keys": [
+        "user_report", "decision_brief", "deep_review_payload", "dss_watchlist_summary",
+        "official_detail_owned", "official_detail_watchlist", "report_artifact_registry"
+      ]
     }
   }
 }

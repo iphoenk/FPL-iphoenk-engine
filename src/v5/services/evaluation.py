@@ -24,13 +24,14 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         raise KeyError(f"unsupported evaluation operation: {operation}")
     prediction = payload.get("prediction") if isinstance(payload.get("prediction"), dict) else {}
     context = payload.get("context") if isinstance(payload.get("context"), dict) else {}
+    truth = payload.get("truth") if isinstance(payload.get("truth"), dict) else {}
     bootstrap = payload.get("bootstrap") if isinstance(payload.get("bootstrap"), dict) else {}
     event_live = payload.get("event_live") if isinstance(payload.get("event_live"), dict) else None
     ledger = payload.get("ledger") if isinstance(payload.get("ledger"), dict) else None
     observations = payload.get("observations") if isinstance(payload.get("observations"), dict) else None
     result = evaluate(prediction, context, bootstrap, event_live, ledger)
     scorecard = challenger_scorecard(prediction, observations, result["accuracy"])
-    evidence_guard = evaluate_evidence_guard(prediction, context)
+    evidence_guard = evaluate_evidence_guard(prediction, context, truth)
     capabilities = set(BASE_CAPABILITIES)
     capabilities.update(str(x) for x in evidence_guard.get("capabilities") or [])
     return {

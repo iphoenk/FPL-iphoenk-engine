@@ -1,29 +1,30 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "registry": "HARD_CONSTRAINT_SOLVER_GATE_0",
   "description": "Fail-closed legality gate. Any critical failure blocks GO regardless of DSS score or projected gain.",
   "contract": {
     "expected_count": 16,
     "id_prefix": "G0-",
     "first_index": 1,
-    "zero_pad": 2
+    "zero_pad": 2,
+    "phases": ["preflight", "postflight"]
   },
   "checks": [
-    {"id":"G0-01","name":"Squad Size = 15","critical":true},
-    {"id":"G0-02","name":"Exactly 2 Goalkeepers","critical":true},
-    {"id":"G0-03","name":"Exactly 5 Defenders","critical":true},
-    {"id":"G0-04","name":"Exactly 5 Midfielders","critical":true},
-    {"id":"G0-05","name":"Exactly 3 Forwards","critical":true},
-    {"id":"G0-06","name":"Budget / Affordability","critical":true},
-    {"id":"G0-07","name":"Maximum 3 Players Per Club","critical":true},
-    {"id":"G0-08","name":"No Duplicate Player","critical":true},
-    {"id":"G0-09","name":"Player Eligibility / Registration","critical":true},
-    {"id":"G0-10","name":"Legal XI Formation","critical":true},
-    {"id":"G0-11","name":"Exactly 1 Starting Goalkeeper","critical":true},
-    {"id":"G0-12","name":"Captain and Vice in Starting XI and Distinct","critical":true},
-    {"id":"G0-13","name":"Bench Structure = 1 GK + 3 Outfield","critical":true},
-    {"id":"G0-14","name":"Single-Chip Rule / Chip Legality","critical":true},
-    {"id":"G0-15","name":"Selling-Price / ITB Arithmetic Reconciliation","critical":true},
-    {"id":"G0-16","name":"Wildcard Package Revalidated After Every Edit","critical":true}
+    {"id":"G0-01","name":"Squad Size = 15","critical":true,"phase":"preflight"},
+    {"id":"G0-02","name":"Exactly 2 Goalkeepers","critical":true,"phase":"preflight"},
+    {"id":"G0-03","name":"Exactly 5 Defenders","critical":true,"phase":"preflight"},
+    {"id":"G0-04","name":"Exactly 5 Midfielders","critical":true,"phase":"preflight"},
+    {"id":"G0-05","name":"Exactly 3 Forwards","critical":true,"phase":"preflight"},
+    {"id":"G0-06","name":"Budget / Affordability","critical":true,"phase":"postflight"},
+    {"id":"G0-07","name":"Maximum 3 Players Per Club","critical":true,"phase":"preflight"},
+    {"id":"G0-08","name":"No Duplicate Player","critical":true,"phase":"preflight"},
+    {"id":"G0-09","name":"Player Eligibility / Registration","critical":true,"phase":"preflight"},
+    {"id":"G0-10","name":"Legal XI Formation","critical":true,"phase":"postflight"},
+    {"id":"G0-11","name":"Exactly 1 Starting Goalkeeper","critical":true,"phase":"postflight"},
+    {"id":"G0-12","name":"Captain and Vice in Starting XI and Distinct","critical":true,"phase":"postflight"},
+    {"id":"G0-13","name":"Bench Structure = 1 GK + 3 Outfield","critical":true,"phase":"postflight"},
+    {"id":"G0-14","name":"Single-Chip Rule / Chip Legality","critical":true,"phase":"postflight"},
+    {"id":"G0-15","name":"Selling-Price / ITB Arithmetic Reconciliation","critical":true,"phase":"preflight"},
+    {"id":"G0-16","name":"Wildcard Package Revalidated After Every Edit","critical":true,"phase":"postflight"}
   ]
 }

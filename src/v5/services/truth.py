@@ -8,6 +8,7 @@ from src.rules import (
     CHIP_DISPLAY_NAMES,
     CHIP_RULES,
     CLEAN_SHEET_POINTS,
+    DC_RULES,
     GOAL_POINTS,
     LINEUP_RULES,
     RULESET_ID,
@@ -29,6 +30,7 @@ def _rules_view() -> dict[str, Any]:
         "goal_points": {str(k): int(v) for k, v in GOAL_POINTS.items()},
         "assist_points": int(ASSIST_POINTS),
         "clean_sheet_points": {str(k): int(v) for k, v in CLEAN_SHEET_POINTS.items()},
+        "defensive_contributions": {str(k): dict(v) for k, v in DC_RULES.items()},
         "squad": SQUAD_RULES,
         "lineup": LINEUP_RULES,
         "chips": CHIP_RULES,
@@ -39,10 +41,6 @@ def _rules_view() -> dict[str, Any]:
 def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None, entry_history: dict[str, Any] | None) -> dict[str, Any]:
     used = (entry_history or {}).get("chips") if isinstance((entry_history or {}).get("chips"), list) else []
     ledger = build_chip_ledger(used, current_gw=context.planning_gw or context.current_gw or 1)
-
-    # Submitted picks belong to submitted_gw, not automatically to planning_gw.
-    # During PRE_DEADLINE planning, the latest user lock/draft is authoritative;
-    # a chip used in the previous submitted GW must never leak into the new GW.
     raw_active = None
     source = None
     if context.phase.value == "PRE_DEADLINE":
@@ -52,7 +50,6 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
     elif isinstance(submitted, dict):
         raw_active = submitted.get("active_chip")
         source = "submitted_picks" if raw_active else None
-
     active_chip = CHIP_API_NAMES.get(str(raw_active), str(raw_active)) if raw_active else None
     current_half = str(ledger.get("current_half") or 1)
     available = set(((ledger.get("halves") or {}).get(current_half) or {}).get("available") or [])
@@ -88,6 +85,7 @@ def _capabilities(team: dict[str, Any], chip_state: dict[str, Any]) -> list[str]
         "universe_registration",
         "availability",
         "manual_authority",
+        "defcon_rules",
     }
     if bool((team.get("validation") or {}).get("passed")):
         capabilities.add("structural_fit")
@@ -102,18 +100,15 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     bootstrap = payload.get("bootstrap")
     if not isinstance(bootstrap, dict):
         raise ValueError("truth service requires bootstrap")
-
     if operation == "context":
         return context_dict(build_event_context(bootstrap, now=parse_datetime(payload.get("now"))))
     if operation == "rules":
         return _rules_view()
-
     identity = build_index(bootstrap)
     if operation == "resolve":
         return list(resolve_many(payload.get("element_ids") or (), identity))
     if operation != "assemble":
         raise KeyError(f"unsupported truth operation: {operation}")
-
     context = build_event_context(bootstrap, now=parse_datetime(payload.get("now")))
     auth_runtime = payload.get("auth_runtime") if isinstance(payload.get("auth_runtime"), dict) else {}
     dynamic = payload.get("dynamic") if isinstance(payload.get("dynamic"), dict) else {}
@@ -137,12 +132,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         scoring_gw=context.scoring_gw,
         is_live_event=context.is_live_event,
     )
-    chip_state = _chip_state(
-        context,
-        lock,
-        submitted,
-        base.get("entry_history") if isinstance(base.get("entry_history"), dict) else None,
-    )
+    chip_state = _chip_state(context, lock, submitted, base.get("entry_history") if isinstance(base.get("entry_history"), dict) else None)
     return {
         "context": context_dict(context),
         "team": team,

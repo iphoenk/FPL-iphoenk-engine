@@ -6,6 +6,7 @@ from src.v5.authenticated_official import collect_runtime
 from src.v5.official_auth import expected_team_id
 from src.v5.public_api import fetch_many
 from src.v5.request_plan import request_specs
+from src.v5.sources.fusion import collect as collect_source_fusion
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:
@@ -24,4 +25,9 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         return {"payloads": data, "health": health}
     if operation == "collect_authenticated":
         return collect_runtime(payload.get("owned_ids") or ())
+    if operation == "collect_enrichment":
+        bootstrap = payload.get("bootstrap")
+        if not isinstance(bootstrap, dict):
+            raise ValueError("collect_enrichment requires bootstrap")
+        return collect_source_fusion(bootstrap)
     raise KeyError(f"unsupported ingestion operation: {operation}")

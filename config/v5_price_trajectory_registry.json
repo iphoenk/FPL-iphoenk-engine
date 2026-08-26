@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "timezone": "Europe/London",
+  "threshold_percent": 100.0,
+  "filters": {
+    "min_ownership_pct": 0.5,
+    "min_abs_net_transfers": 5000,
+    "high_net_transfers": 25000,
+    "top_pressure_limit": 25,
+    "market_watch_capacity": 50
+  },
+  "projection_health": {
+    "min_abs_hourly_rate_pct": 0.25,
+    "min_hours_to_deadline": 1.0,
+    "max_static_delta_pct": 0.05
+  },
+  "trend": {
+    "material_rate_delta_pct_per_hour": 0.05
+  },
+  "trajectory": {
+    "min_abs_rate_pct_per_hour": 0.01,
+    "max_eta_hours": 168.0,
+    "directional_progress_min_abs_pct": 5.0
+  },
+  "urgency": {
+    "critical_progress_pct": 90.0,
+    "critical_near_deadline_progress_pct": 75.0,
+    "critical_hours": 24.0,
+    "high_progress_pct": 75.0,
+    "high_hours": 24.0,
+    "medium_progress_pct": 50.0,
+    "medium_hours": 48.0,
+    "actionable_levels": ["CRITICAL", "HIGH", "MEDIUM"],
+    "alert_levels": ["CRITICAL", "HIGH"]
+  },
+  "likelihood_labels": {
+    "-5": "VERY_LIKELY_DROP",
+    "-4": "DROP_SIGNAL_LEVEL_4",
+    "-3": "DROP_SIGNAL_LEVEL_3",
+    "-2": "DROP_SIGNAL_LEVEL_2",
+    "-1": "DROP_SIGNAL_LEVEL_1",
+    "0": "STABLE",
+    "1": "RISE_SIGNAL_LEVEL_1",
+    "2": "RISE_SIGNAL_LEVEL_2",
+    "3": "RISE_SIGNAL_LEVEL_3",
+    "4": "RISE_SIGNAL_LEVEL_4",
+    "5": "VERY_LIKELY_RISE"
+  }
+}

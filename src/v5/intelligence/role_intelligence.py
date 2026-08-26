@@ -43,17 +43,9 @@ def _set_piece_role(player: dict[str, Any], cfg: dict[str, Any]) -> dict[str, An
     tail = _f(set_piece_cfg.get("tail_weight"), 0.08)
     corners = _order_share(player.get("corners_and_indirect_freekicks_order"), weights, tail)
     direct = _order_share(player.get("direct_freekicks_order"), weights, tail)
-    share = _clamp(
-        _f(set_piece_cfg.get("corners_weight"), 0.65) * corners
-        + _f(set_piece_cfg.get("direct_freekicks_weight"), 0.35) * direct
-    )
-
+    share = _clamp(_f(set_piece_cfg.get("corners_weight"), 0.65) * corners + _f(set_piece_cfg.get("direct_freekicks_weight"), 0.35) * direct)
     penalty_cfg = cfg.get("penalties") or {}
-    penalty_share = _order_share(
-        player.get("penalties_order"),
-        penalty_cfg.get("order_weights") or {},
-        _f(penalty_cfg.get("tail_weight"), 0.02),
-    )
+    penalty_share = _order_share(player.get("penalties_order"), penalty_cfg.get("order_weights") or {}, _f(penalty_cfg.get("tail_weight"), 0.02))
     return {
         "set_piece_share": round(share, 4),
         "penalty_share": round(penalty_share, 4),
@@ -65,7 +57,6 @@ def _set_piece_role(player: dict[str, Any], cfg: dict[str, Any]) -> dict[str, An
 
 
 def build_role_intelligence(bootstrap: dict[str, Any], team_matches: dict[int, int] | None = None) -> dict[str, Any]:
-    """Build role evidence in O(players), with grouped peer aggregates rather than repeated universe scans."""
     cfg = _cfg()
     team_matches = team_matches or {}
     groups: dict[tuple[int, str], list[dict[str, Any]]] = defaultdict(list)
@@ -85,41 +76,30 @@ def build_role_intelligence(bootstrap: dict[str, Any], team_matches: dict[int, i
         for row in rows:
             starts = max(0.0, _f(row.get("starts")))
             observed = _clamp(starts / max(1, matches)) if matches else neutral
-            rates[int(row["id"])] = (
-                (observed * matches + neutral * shrink) / max(1e-6, matches + shrink)
-                if matches
-                else neutral
-            )
+            rates[int(row["id"])] = ((observed * matches + neutral * shrink) / max(1e-6, matches + shrink) if matches else neutral)
         credible = sum(rate >= credible_threshold for rate in rates.values())
         total_rate = sum(rates.values())
         group_stats[key] = {"rates": rates, "credible": credible, "total_rate": total_rate}
 
     competition_cfg = cfg.get("competition") or {}
     slots_cfg = cfg.get("position_slots") or {}
+    tactical_cfg = cfg.get("tactical_role_proxy") or {}
+    labels = tactical_cfg.get("labels") or {}
     out = {}
     for key, rows in groups.items():
         team_id, position = key
         stats = group_stats[key]
         slots = max(1.0, _f(slots_cfg.get(position), 1.0))
         excess = max(0.0, _f(stats["credible"]) - slots)
-        excess_pressure = _clamp(
-            excess / slots * _f(competition_cfg.get("excess_peer_pressure_scale"), 0.35)
-        )
+        excess_pressure = _clamp(excess / slots * _f(competition_cfg.get("excess_peer_pressure_scale"), 0.35))
         total_rate = max(1e-6, _f(stats["total_rate"]))
         for player in rows:
             element = int(player["id"])
             role_start = _clamp(_f(stats["rates"].get(element), 0.5), 0.01, 0.99)
             share = role_start / total_rate
             expected_share = min(1.0, slots / max(1.0, len(rows)))
-            share_pressure = _clamp(
-                max(0.0, expected_share - share)
-                * _f(competition_cfg.get("share_pressure_scale"), 0.25)
-            )
-            rotation_risk = _clamp(
-                excess_pressure + share_pressure,
-                0.0,
-                _f(competition_cfg.get("maximum_rotation_risk"), 0.45),
-            )
+            share_pressure = _clamp(max(0.0, expected_share - share) * _f(competition_cfg.get("share_pressure_scale"), 0.25))
+            rotation_risk = _clamp(excess_pressure + share_pressure, 0.0, _f(competition_cfg.get("maximum_rotation_risk"), 0.45))
             role = _set_piece_role(player, cfg)
             out[element] = {
                 "model": str(cfg.get("model_id")),
@@ -128,6 +108,9 @@ def build_role_intelligence(bootstrap: dict[str, Any], team_matches: dict[int, i
                 "rotation_risk": round(rotation_risk, 4),
                 "credible_same_position_players": int(stats["credible"]),
                 "position_slots_prior": round(slots, 2),
+                "tactical_role_proxy": str(labels.get(position) or position),
+                "tactical_role_evidence_level": str(tactical_cfg.get("evidence_level") or "PROXY"),
+                "system_fit_proxy": round(_clamp(role_start * (1.0 - rotation_risk)), 4),
                 **role,
             }
     return {

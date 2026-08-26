@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Iterable
 
+from src.v5.config_cache import load_json_config
 from src.v5.price_trajectory import (
     alerts,
     build_trajectory,
@@ -11,6 +12,8 @@ from src.v5.price_trajectory import (
     price_row,
     risk_sort_key,
 )
+
+PRICE_CONFIG = "config/v5_price_trajectory_registry.json"
 
 
 def build_price_snapshot(
@@ -59,6 +62,7 @@ def build_price_snapshot(
                     "delta": int(current) - int(old),
                 }
             )
+    limit = int(load_json_config(PRICE_CONFIG)["filters"]["top_pressure_limit"])
     return {
         "prices": {
             "generated_at": generated_at.isoformat(),
@@ -66,8 +70,8 @@ def build_price_snapshot(
             "players": enriched,
             "top_buy_pressure": buy,
             "top_sell_pressure": sell,
-            "top_rise_risk": rising[:25],
-            "top_fall_risk": falling[:25],
+            "top_rise_risk": rising[:limit],
+            "top_fall_risk": falling[:limit],
             "market_noise": {"buy": buy_noise, "sell": sell_noise},
         },
         "trajectory_state": new_state,

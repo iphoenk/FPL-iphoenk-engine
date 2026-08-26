@@ -1,5 +1,5 @@
 {
-  "version":15,
+  "version":16,
   "module_policy":{
     "minimum_registered_modules":42,
     "required_truth_modules":["rules","source_authority","public_api","official_authenticated","event_context","identity","phase_state","squad","finance","team_service","live_scoring"],
@@ -23,8 +23,8 @@
     "require_deployment_manifest":"deploy/v5/docker-compose.yml"
   },
   "convergence":{
-    "production_baseline":"v3.17.0",
-    "production_main_sha":"8f699f4ec4551a146d4d5130effb82fe6fd8f3ac",
+    "production_baseline":"v3.17.1",
+    "production_main_sha":"6c09c8c602963a3511e0d455afc9aeab338d102e",
     "configuration_ownership_required":true,
     "p0_capabilities_required":["P0-1_prediction_calibration_backtest","P0-2_xmins_role_v2","P0-3_team_strength_fixture_probability","P0-4_multi_horizon_package_optimizer","P0-5_external_challenger_scorecard"],
     "decision_bridge_only_forbidden":true,
@@ -62,6 +62,6 @@
     "critical_dss_partial_allowed":false,
     "critical_enhancement_partial_allowed":false
   },
-  "production":{"promotion_must_remain_locked_during_alpha":true},
+  "production":{"promotion_must_remain_locked_during_beta":true},
   "architecture":{"require_entrypoint":true,"require_config":true,"require_adjustment_surface":true,"require_microservices":true}
 }

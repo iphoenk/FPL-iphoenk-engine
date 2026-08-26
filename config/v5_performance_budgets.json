@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "mode": "bootstrap",
   "policy": {
     "measure_wall_clock": true,
@@ -16,8 +16,10 @@
     "single_player_projection_ms": 10,
     "projection_100_players_ms": 500,
     "decision_lineup_15_players_ms": 25,
+    "projection_index_10000_lookups_ms": 50,
+    "decision_package_optimizer_synthetic_ms": 2000,
     "dss_registry_audit_ms": 25,
-    "gate0_full_16_ms": 25,
+    "gate0_full_registry_ms": 25,
     "decision_finalize_ms": 50,
     "decision_pipeline_soft_target_seconds": 5,
     "internal_service_transport_overhead_soft_ms": 75,

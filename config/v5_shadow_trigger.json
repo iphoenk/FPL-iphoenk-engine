@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "post-dss-enhancement-v3.15",
-  "requested_at": "2026-08-26T10:07:30Z",
+  "requested_cycle": "post-dss-enhancement-v3.15-rerun",
+  "requested_at": "2026-08-26T10:17:30Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "v3.15-fast-report-serving",
   "v5_role": "shadow_only",

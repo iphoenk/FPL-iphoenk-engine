@@ -21,8 +21,8 @@ def _assert_framework_health() -> tuple[dict, dict]:
     post = _load("framework_health_v4.json")
 
     for obj, phase in ((pre, "preflight"), (post, "postflight")):
-        assert int(obj.get("schema_version", 0)) >= 471, obj
-        assert str(obj.get("engine", "")).startswith("v4.7.1-framework-health-correctness-probes"), obj
+        assert int(obj.get("schema_version", 0)) >= 472, obj
+        assert str(obj.get("engine", "")).startswith("v4.7.2-framework-health-performance-cache"), obj
         assert obj.get("phase") == phase, obj
         assert obj.get("registry_integrity") is True, obj
         assert obj.get("overall") in {"GREEN", "AMBER"}, obj
@@ -37,6 +37,9 @@ def _assert_framework_health() -> tuple[dict, dict]:
         governance = obj.get("governance", {})
         assert governance.get("file_exists_is_not_sufficient_for_active") is True
         assert governance.get("critical_partial_blocks_unqualified_go") is True
+        performance = obj.get("performance", {})
+        assert performance.get("prediction_snapshot_reads") == 1
+        assert performance.get("audit_scoped_cache") is True
 
     # PRE-FLIGHT is intentionally incomplete. Post-flight-only outputs must be DEFERRED,
     # never misclassified as failures.
@@ -73,7 +76,9 @@ def run() -> dict:
     reliability = validate_snapshot(latest)
     assert reliability["ok"], reliability
     assert latest.get("schema_version", 0) >= 40
-    assert str(latest.get("engine_version", "")).startswith("4.0")
+    assert int(latest.get("schema_version", 0)) >= 472
+    assert str(latest.get("engine_version", "")).startswith("4.7.2-performance-hotfix")
+    assert latest.get("meta", {}).get("parallel_fetch_is_single_snapshot_not_polling") is True
 
     compliance = _load("compliance_audit.json")
     assert compliance.get("overall") == "PASS", compliance
@@ -88,21 +93,22 @@ def run() -> dict:
     assert 0 <= coverage.get("advanced_materially_distinct", -1) <= coverage.get("advanced_matched", 0), coverage
 
     wc = _load("wc_decision_v4.json")
-    assert int(wc.get("schema_version", 0)) >= 464, wc
-    assert str(wc.get("engine", "")).startswith("v4.6.4-wc-optimizer-sell-cost-correctness"), wc
+    assert int(wc.get("schema_version", 0)) >= 472, wc
+    assert str(wc.get("engine", "")).startswith("v4.7.2-wc-optimizer-performance-hotfix"), wc
     assert wc.get("screened_players", 0) >= 500 and len(wc.get("optimized_elements", [])) == 15
     assert wc.get("classification") in {"KEEP_15", "OPTIONAL_IMPROVEMENT", "MATERIAL_UPGRADE"}
     wp = wc.get("performance", {})
     assert wp.get("fast_finalist_scoring") and wp.get("winner_only_legality_check")
     assert wp.get("beam_size_unchanged") and wp.get("packed_club_signature") and wp.get("counter_copy_eliminated")
     assert wp.get("direct_challenger_position_index")
+    assert wp.get("precomputed_club_bits") and wp.get("bounded_top_k_same_beam")
     wa = wc.get("affordability", {})
     assert wa.get("price_basis") == "owned_sell_cost_unowned_now_cost", wa
     assert wc.get("budget_tenths") == wa.get("available_budget_tenths"), wa
 
     packages = _load("wc_package_audit_v4.json")
-    assert int(packages.get("schema_version", 0)) >= 464, packages
-    assert str(packages.get("engine", "")).startswith("v4.6.4-wc-package-audit-sell-cost-correctness"), packages
+    assert int(packages.get("schema_version", 0)) >= 472, packages
+    assert str(packages.get("engine", "")).startswith("v4.7.2-wc-package-audit-performance-hotfix"), packages
     assert packages.get("max_replacements") == 4
     assert set(packages.get("best_by_replacement_count", {})) == {"1", "2", "3", "4"}
     assert packages.get("overall_verdict") in {"KEEP_15", "OPTIONAL_IMPROVEMENT", "MATERIAL_UPGRADE"}
@@ -112,6 +118,7 @@ def run() -> dict:
     assert pp.get("metrics_cache_entries", 0) > 0
     assert pp.get("single_pass_metrics") and pp.get("compact_target_cache") and pp.get("score_only_hotloop")
     assert pp.get("redundant_target_validation_removed") and pp.get("candidate_reuse_supported")
+    assert pp.get("packed_club_signature") and pp.get("top_packages_only_payload_materialization")
     pa = packages.get("affordability", {})
     assert pa.get("price_basis") == "owned_sell_cost_unowned_now_cost", pa
     assert packages.get("guardrails", {}).get("budget_tenths") == pa.get("available_budget_tenths"), pa
@@ -143,13 +150,14 @@ def run() -> dict:
     assert sg.get("early_season_multi_change_cap") and sg.get("point_in_time_required")
 
     pipeline = _load("decision_pipeline_v4.json")
-    assert int(pipeline.get("schema_version", 0)) >= 464, pipeline
-    assert str(pipeline.get("engine", "")).startswith("v4.6.4-unified-decision-pipeline-correctness"), pipeline
+    assert int(pipeline.get("schema_version", 0)) >= 472, pipeline
+    assert str(pipeline.get("engine", "")).startswith("v4.7.2-unified-decision-pipeline-performance"), pipeline
     pg = pipeline.get("performance_guardrails", {})
     assert pg.get("shared_json_loaded_once") and pg.get("shared_candidates_built_once")
     assert pg.get("fork_copy_on_write") and pg.get("parallel_wc_package")
     assert pg.get("search_quality_reduction") is False
     assert pg.get("wc_beam_unchanged") and pg.get("package_frontier_beam_unchanged")
+    assert pg.get("bounded_top_k_same_wc_beam") and pg.get("top_packages_only_payload_materialization")
     timings = pipeline.get("timings", {})
     assert timings.get("total_pipeline_ms", 0) > 0
 
@@ -208,7 +216,7 @@ def run() -> dict:
         "captain": lineup["captain"]["name"],
         "pipeline_ms": timings["total_pipeline_ms"],
     }
-    print("V4.7.1 CORRECTNESS + TRUTHFUL HEALTH QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.7.2 PERFORMANCE + DECISION-EQUIVALENCE QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

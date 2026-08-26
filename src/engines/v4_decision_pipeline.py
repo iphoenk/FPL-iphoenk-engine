@@ -93,8 +93,8 @@ def run():
     timings["total_pipeline_ms"] = round((perf_counter() - t0) * 1000.0, 1)
 
     out = {
-        "schema_version": 464,
-        "engine": "v4.6.4-unified-decision-pipeline-correctness",
+        "schema_version": 472,
+        "engine": "v4.7.2-unified-decision-pipeline-performance",
         "timings": timings,
         "results": {
             "wc_raw": wc.get("classification"),
@@ -116,6 +116,8 @@ def run():
             "search_quality_reduction": False,
             "wc_beam_unchanged": True,
             "package_frontier_beam_unchanged": True,
+            "bounded_top_k_same_wc_beam": True,
+            "top_packages_only_payload_materialization": True,
         },
     }
     atomic_json(OUTFILE, out)

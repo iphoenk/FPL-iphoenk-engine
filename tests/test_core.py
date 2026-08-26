@@ -1,5 +1,23 @@
 
 from src.engines.team_value import sell_cost
+
+
+def test_official_snapshot_fetches_are_concurrent(monkeypatch):
+    import threading
+    import src.engine as engine
+
+    barrier = threading.Barrier(3)
+
+    def fake_get(path, retries=3):
+        barrier.wait(timeout=1)
+        return {"path": path}, {"status": "LIVE", "retries": retries}
+
+    monkeypatch.setattr(engine, "get_json", fake_get)
+    out = engine._parallel_official_get([
+        ("one", "one/", 3), ("two", "two/", 2), ("three", "three/", 1),
+    ])
+    assert set(out) == {"one", "two", "three"}
+    assert out["two"][1]["retries"] == 2
 from src.models.optimizer import legal_counts
 
 def test_sell_value():

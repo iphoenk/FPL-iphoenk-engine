@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.7.1
+# FPL iphoenk Engine V4.7.2
 
 A production-oriented personal FPL data platform.
 
@@ -103,3 +103,12 @@ GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy
 - Advanced-data health reports materially distinct enrichment separately from matched records.
 - Role competition, empirical set-piece shares, weak advanced enrichment and opponent-defence fallback remain truthfully `PARTIAL`.
 - Remaining unrelated framework debt stays `PARTIAL`, so health may remain `AMBER` and unqualified `GO` remains blocked while governed recommendations may still be produced.
+
+## V4.7.2 performance hotfix
+
+- Official FPL snapshot endpoints and independent statistics sources refresh concurrently, while bootstrap remains the phase authority and no polling is added.
+- GW1 purchase-price reconstruction is fetched only when the sell-cost ledger actually lacks evidence.
+- Framework health reads one immutable prediction snapshot per audit and memoizes repeated operational probes within that audit only.
+- WC optimization keeps beam size 6000 and the same ranking key, using packed precomputed club bits and bounded top-k selection instead of full sorting.
+- Package audit preserves its frontier and beam widths, while materializing JSON payloads only for retained top packages.
+- Decision equivalence is an acceptance requirement; V4.7.1 prediction formulas and V4.6.4 correctness thresholds are unchanged.

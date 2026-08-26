@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, replace
+from heapq import nlargest
 from typing import Iterable
 
 from src.engines.team_value import sell_cost
@@ -162,12 +163,15 @@ def _best_xi_score_grouped(by:dict[str,list[Candidate]],gw_index:int)->float:
     for v in dv: dp.append(dp[-1]+v)
     for v in mv: mp.append(mp[-1]+v)
     for v in fv: fp.append(fp[-1]+v)
-    best=0.0
-    for d in range(3,6):
-        for m in range(2,6):
-            f=10-d-m
-            if 1<=f<=3: best=max(best,gk+dp[d]+mp[m]+fp[f])
-    return best
+    # The eight legal FPL formations are fixed. Expanding them avoids the
+    # nested formation loop in the package-audit hot path without changing
+    # any formation, score, or tie semantics.
+    return max(
+        gk+dp[3]+mp[4]+fp[3], gk+dp[3]+mp[5]+fp[2],
+        gk+dp[4]+mp[3]+fp[3], gk+dp[4]+mp[4]+fp[2],
+        gk+dp[4]+mp[5]+fp[1], gk+dp[5]+mp[2]+fp[3],
+        gk+dp[5]+mp[3]+fp[2], gk+dp[5]+mp[4]+fp[1],
+    )
 
 
 def squad_utility_fast(players:Iterable[Candidate],horizon:int=5,bench_weight:float=.12)->float:
@@ -199,6 +203,8 @@ def optimize_squad(candidates:list[Candidate],locked_ids:set[int]|None=None,budg
     states=[(tuple(),0,0,0.0,-1)]
     for pos in ["GK","DEF","MID","FWD"]:
         pool=by_pos[pos]; costs=[p.cost for p in pool]; teams=[p.team_id for p in pool]; objs=[p.objective for p in pool]
+        team_shifts=[_club_shift(team_id) for team_id in teams]
+        team_bits=[1 << shift for shift in team_shifts]
         states=[(sel,cost,sig,score,-1) for sel,cost,sig,score,_ in states]
         for _slot in range(POSITION_COUNTS[pos]):
             nxt=[]; append=nxt.append; plen=len(pool)
@@ -206,17 +212,18 @@ def optimize_squad(candidates:list[Candidate],locked_ids:set[int]|None=None,budg
                 for idx in range(last_idx+1,plen):
                     new_cost=cost+costs[idx]
                     if new_cost>budget: continue
-                    team_id=teams[idx]
-                    if _club_count(sig,team_id)>=MAX_PER_CLUB: continue
-                    append((selected+(pool[idx],),new_cost,_club_add(sig,team_id),score+objs[idx],idx))
-            nxt.sort(key=lambda s:(s[3],-s[1]),reverse=True); states=nxt[:beam_size]
+                    shift=team_shifts[idx]
+                    if ((sig >> shift) & 0b11)>=MAX_PER_CLUB: continue
+                    append((selected+(pool[idx],),new_cost,sig+team_bits[idx],score+objs[idx],idx))
+            rank=lambda s:(s[3],-s[1])
+            states=nlargest(beam_size,nxt,key=rank) if len(nxt)>beam_size else sorted(nxt,key=rank,reverse=True)
             if not states: raise RuntimeError(f"no legal optimizer state while selecting {pos}")
     finalists=[(squad_utility_fast(selected,5),heuristic,-cost,selected,cost) for selected,cost,_sig,heuristic,_ in states]
     if not finalists: raise RuntimeError("optimizer produced no legal finalist")
     best=max(finalists,key=lambda x:(x[0],x[1],x[2])); ok,reason=validate_squad(best[3],budget)
     if not ok: raise RuntimeError(f"optimizer winner failed legality invariant: {reason}")
     return {"players":list(best[3]),"cost":best[4],"itb":budget-best[4],"objective":best[1],"xi_utility_5":best[0],"screened_players":len(candidates),"pool_sizes":pool_sizes,"beam_size":beam_size,
-            "performance":{"fast_finalist_scoring":True,"winner_only_legality_check":True,"packed_club_signature":True,"counter_copy_eliminated":True}}
+            "performance":{"fast_finalist_scoring":True,"winner_only_legality_check":True,"packed_club_signature":True,"counter_copy_eliminated":True,"precomputed_club_bits":True,"bounded_top_k_same_beam":True}}
 
 
 def squad_metrics(players:Iterable[Candidate])->dict:
@@ -256,4 +263,4 @@ def decision_report_from_candidates(candidates:list[Candidate],locked:dict,budge
             if c.cost<=owned.cost+baseline_itb:
                 direct.append({"owned":owned.element,"owned_name":owned.name,"challenger":c.element,"challenger_name":c.name,"position":owned.position,"cost_delta":c.cost-owned.cost,"objective_delta":round(c.objective-owned.objective,4),"xpts5_delta":round(c.x5-owned.x5,2)}); break
     direct.sort(key=lambda x:x["objective_delta"],reverse=True)
-    return {"schema_version":464,"engine":"v4.6.4-wc-optimizer-sell-cost-correctness","wildcard_active":bool(locked.get("wildcard_active")),"budget_tenths":budget,"baseline_itb_tenths":baseline_itb,"affordability":affordability,"screened_players":len(candidates),"current":current_m,"optimized":target_m|{"itb":optimized["itb"]},"delta":{"best_xi_xpts_5":round(dx,2),"bench_adjusted_utility_5":round(du,2)},"classification":classify_gain(du,dx),"out":[{"element":p.element,"name":p.name,"position":p.position,"sell_cost":p.cost} for p in outs],"in":[{"element":p.element,"name":p.name,"position":p.position,"now_cost":p.cost} for p in ins],"optimized_elements":[p.element for p in target],"direct_challengers":direct[:15],"hard_constraints":{"squad_size":15,"positions":POSITION_COUNTS,"budget_tenths":budget,"max_per_club":MAX_PER_CLUB,"legal_xi":True,"owned_price_basis":"sell_cost","unowned_price_basis":"now_cost"},"performance":optimized["performance"]|{"beam_size_unchanged":optimized["beam_size"]==6000,"direct_challenger_position_index":True}}
+    return {"schema_version":472,"engine":"v4.7.2-wc-optimizer-performance-hotfix","wildcard_active":bool(locked.get("wildcard_active")),"budget_tenths":budget,"baseline_itb_tenths":baseline_itb,"affordability":affordability,"screened_players":len(candidates),"current":current_m,"optimized":target_m|{"itb":optimized["itb"]},"delta":{"best_xi_xpts_5":round(dx,2),"bench_adjusted_utility_5":round(du,2)},"classification":classify_gain(du,dx),"out":[{"element":p.element,"name":p.name,"position":p.position,"sell_cost":p.cost} for p in outs],"in":[{"element":p.element,"name":p.name,"position":p.position,"now_cost":p.cost} for p in ins],"optimized_elements":[p.element for p in target],"direct_challengers":direct[:15],"hard_constraints":{"squad_size":15,"positions":POSITION_COUNTS,"budget_tenths":budget,"max_per_club":MAX_PER_CLUB,"legal_xi":True,"owned_price_basis":"sell_cost","unowned_price_basis":"now_cost"},"performance":optimized["performance"]|{"beam_size_unchanged":optimized["beam_size"]==6000,"direct_challenger_position_index":True}}

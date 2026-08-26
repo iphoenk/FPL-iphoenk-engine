@@ -32,6 +32,8 @@ POSTFLIGHT_OUTPUTS = {
     "data/framework_health_v4.json",
 }
 LEGAL_FORMS = {"3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-2-3", "5-3-2", "5-4-1"}
+_PREDICTION_CACHE: dict | None = None
+_PROBE_CACHE: dict[tuple[str | None, str], tuple[str, dict]] | None = None
 
 
 def _exists(rel: str) -> bool:
@@ -56,8 +58,14 @@ def _registry_integrity(name: str, obj: dict) -> dict:
     }
 
 
+def _prediction_obj() -> dict:
+    if _PREDICTION_CACHE is not None:
+        return _PREDICTION_CACHE
+    return read_json(DATA / "predictions_v4.json", {})
+
+
 def _predictions() -> list[dict]:
-    return list(read_json(DATA / "predictions_v4.json", {}).get("players") or [])
+    return list(_prediction_obj().get("players") or [])
 
 
 def _probe_universe() -> tuple[bool, dict]:
@@ -147,7 +155,7 @@ def _probe_advanced_sync() -> tuple[bool, dict]:
 
 
 def _probe_advanced_integration() -> tuple[bool, dict]:
-    obj = read_json(DATA / "predictions_v4.json", {})
+    obj = _prediction_obj()
     players = list(obj.get("players") or [])
     fixtures = [fixture for player in players for fixture in (player.get("fixtures") or [])[:1]]
     sources = {str((fixture.get("provenance") or {}).get("advanced_source")) for fixture in fixtures}
@@ -206,7 +214,7 @@ def _probe_opponent_defence() -> tuple[bool, dict]:
 
 
 def _probe_last_season() -> tuple[bool, dict]:
-    obj = read_json(DATA / "predictions_v4.json", {})
+    obj = _prediction_obj()
     players = list(obj.get("players") or [])
     coverage = obj.get("input_coverage") or {}
     matched = sum(float((player.get("priors") or {}).get("last_season_weight", 0)) > 0 and bool((player.get("priors") or {}).get("last_season_source")) for player in players)
@@ -244,7 +252,7 @@ def _probe_defcon() -> tuple[bool, dict]:
 
 
 def _probe_point_in_time() -> tuple[bool, dict]:
-    obj = read_json(DATA / "predictions_v4.json", {})
+    obj = _prediction_obj()
     players = list(obj.get("players") or [])
     proven = sum(
         bool((fixture.get("provenance") or {}).get("point_in_time"))
@@ -497,7 +505,14 @@ def _audit_registry(name: str, obj: dict, phase: str) -> dict:
             status = "DEFERRED"
             detail = {"reason": "requires postflight evidence", "deferred_files": deferred}
         else:
-            status, detail = _operational_probe(row.get("operational_probe"), phase)
+            probe = row.get("operational_probe")
+            cache_key = (probe, phase)
+            if _PROBE_CACHE is not None and cache_key in _PROBE_CACHE:
+                status, detail = _PROBE_CACHE[cache_key]
+            else:
+                status, detail = _operational_probe(probe, phase)
+                if _PROBE_CACHE is not None:
+                    _PROBE_CACHE[cache_key] = (status, detail)
             if status == "FAILED" and not row.get("critical"):
                 status = "PARTIAL"
         counts[status] += 1
@@ -598,8 +613,8 @@ def _gate0(phase: str, compliance: dict, lineup: dict, packages: dict) -> dict:
     return {"phase": phase, "counts": dict(result_counts), "items": items, "pass": result_counts.get("FAIL", 0) == 0}
 
 
-def audit(phase: str = "postflight", strict: bool = False) -> dict[str, Any]:
-    started = time.perf_counter()
+def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: float | None = None) -> dict[str, Any]:
+    started = time.perf_counter() if started is None else started
     registries = {name: read_json(path, {}) for name, path in REGISTRIES.items()}
     health = {name: _audit_registry(name, registries[name], phase) for name in ("dss_core", "dss_extensions", "enhancements")}
     gate_integrity = _registry_integrity("gate0", registries["gate0"])
@@ -639,8 +654,8 @@ def audit(phase: str = "postflight", strict: bool = False) -> dict[str, Any]:
     recommendation_allowed = overall != "RED" and gate0["pass"]
     go_allowed = overall == "GREEN" and gate0["pass"] and (phase == "preflight" or gate0["counts"].get("DEFERRED", 0) == 0)
     out = {
-        "schema_version": 471,
-        "engine": "v4.7.1-framework-health-correctness-probes",
+        "schema_version": 472,
+        "engine": "v4.7.2-framework-health-performance-cache",
         "phase": phase,
         "overall": overall,
         "decision_engine": "HEALTHY" if overall == "GREEN" else "DEGRADED" if overall == "AMBER" else "BLOCKED",
@@ -665,6 +680,11 @@ def audit(phase: str = "postflight", strict: bool = False) -> dict[str, Any]:
             "raw_optimizer_is_not_final_decision": True,
             "preflight_defers_postflight_outputs": True,
         },
+        "performance": {
+            "prediction_snapshot_reads": 1,
+            "operational_probe_cache_entries": len(_PROBE_CACHE or {}),
+            "audit_scoped_cache": True,
+        },
         "performance_ms": round((time.perf_counter() - started) * 1000, 2),
     }
     atomic_json(PRE_OUT if phase == "preflight" else OUT, out)
@@ -682,6 +702,20 @@ def audit(phase: str = "postflight", strict: bool = False) -> dict[str, Any]:
     if strict and overall == "RED":
         raise SystemExit(2)
     return out
+
+
+def audit(phase: str = "postflight", strict: bool = False) -> dict[str, Any]:
+    """Run one truthful audit over a single immutable evidence snapshot."""
+    global _PREDICTION_CACHE, _PROBE_CACHE
+    started = time.perf_counter()
+    _PREDICTION_CACHE = read_json(DATA / "predictions_v4.json", {})
+    _PROBE_CACHE = {}
+    try:
+        return _audit_with_cache(phase, strict, started)
+    finally:
+        # Never carry evidence across PRE/POST-FLIGHT boundaries.
+        _PREDICTION_CACHE = None
+        _PROBE_CACHE = None
 
 
 def run() -> dict:

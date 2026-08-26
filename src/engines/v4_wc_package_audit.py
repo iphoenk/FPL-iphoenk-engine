@@ -79,7 +79,9 @@ def frontier(cands, ids, n=7):
 def _bounded_ins_states(cur, outids, need, bp, budget, beam=28):
     keep = [p for p in cur if p.element not in outids]
     base_cost = sum(p.cost for p in keep)
-    base_clubs = Counter(p.team_id for p in keep)
+    base_clubs = 0
+    for p in keep:
+        base_clubs += 1 << ((p.team_id - 1) * 2)
     slots = []
     for pos, n in need.items():
         slots += [pos] * n
@@ -89,11 +91,10 @@ def _bounded_ins_states(cur, outids, need, bp, budget, beam=28):
         for chosen, cost, clubs, score in states:
             used = {p.element for p in chosen}
             for p in bp[pos]:
-                if p.element in used or cost + p.cost > budget or clubs[p.team_id] >= MAX_PER_CLUB:
+                shift = (p.team_id - 1) * 2
+                if p.element in used or cost + p.cost > budget or ((clubs >> shift) & 0b11) >= MAX_PER_CLUB:
                     continue
-                cc = clubs.copy()
-                cc[p.team_id] += 1
-                nxt.append((chosen + (p,), cost + p.cost, cc, score + p.objective - .12 * p.uncertainty))
+                nxt.append((chosen + (p,), cost + p.cost, clubs + (1 << shift), score + p.objective - .12 * p.uncertainty))
         nxt.sort(key=lambda s: (s[3], -s[1]), reverse=True)
         dedup, seen = [], set()
         for s in nxt:
@@ -119,18 +120,21 @@ def _candidate_states(cur, outids, need, bp, budget, k, beam_size):
         states = [s + c for s in states for c in comboset if len({p.element for p in s + c}) == len(s + c)]
     keep = [p for p in cur if p.element not in outids]
     keep_cost = sum(p.cost for p in keep)
-    clubs = Counter(p.team_id for p in keep)
+    clubs = 0
+    for p in keep:
+        clubs += 1 << ((p.team_id - 1) * 2)
     legal = []
     for chosen in states:
         if keep_cost + sum(p.cost for p in chosen) > budget:
             continue
-        cc = clubs.copy()
+        cc = clubs
         ok = True
         for p in chosen:
-            cc[p.team_id] += 1
-            if cc[p.team_id] > MAX_PER_CLUB:
+            shift = (p.team_id - 1) * 2
+            if ((cc >> shift) & 0b11) >= MAX_PER_CLUB:
                 ok = False
                 break
+            cc += 1 << shift
         if ok:
             legal.append((sum(p.objective - .12 * p.uncertainty for p in chosen), chosen))
     legal.sort(key=lambda x: x[0], reverse=True)
@@ -198,8 +202,8 @@ def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=Non
                 adj_util = du - risk_penalty
                 packs.append({
                     "replacements": k,
-                    "out": [payload(p) for p in sorted(outs, key=lambda x: (x.position, x.name))],
-                    "in": [payload(p) for p in sorted(chosen, key=lambda x: (x.position, x.name))],
+                    "_out_players": sorted(outs, key=lambda x: (x.position, x.name)),
+                    "_in_players": sorted(chosen, key=lambda x: (x.position, x.name)),
                     "target_cost": tm["cost"], "target_itb": budget - tm["cost"],
                     "delta_cost": tm["cost"] - basecost,
                     "delta_objective": round(tm["objective"] - cm["objective"], 4),
@@ -215,7 +219,11 @@ def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=Non
                     "classification": package_class(adj_xi, adj_util, k),
                 })
         packs.sort(key=lambda r: (r["adjusted_utility_gain_5"], r["adjusted_best_xi_gain_5"], r["delta_objective"], r["target_itb"]), reverse=True)
-        results[str(k)] = packs[:top_per_size]
+        selected = packs[:top_per_size]
+        for row in selected:
+            row["out"] = [payload(p) for p in row.pop("_out_players")]
+            row["in"] = [payload(p) for p in row.pop("_in_players")]
+        results[str(k)] = selected
 
     best = {k: (rows[0] if rows else None) for k, rows in results.items()}
     mat = [x for x in best.values() if x and x["classification"] == "MATERIAL_UPGRADE"]
@@ -231,8 +239,8 @@ def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=Non
         verdict = "KEEP_15"
 
     return {
-        "schema_version": 464,
-        "engine": "v4.6.4-wc-package-audit-sell-cost-correctness",
+        "schema_version": 472,
+        "engine": "v4.7.2-wc-package-audit-performance-hotfix",
         "wildcard_active": bool(locked.get("wildcard_active")),
         "affordability": affordability,
         "baseline": cm | {"itb": budget - basecost},
@@ -250,6 +258,8 @@ def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=Non
             "compact_target_cache": True,
             "redundant_target_validation_removed": True,
             "candidate_reuse_supported": True,
+            "packed_club_signature": True,
+            "top_packages_only_payload_materialization": True,
         },
         "guardrails": {
             "max_per_club": MAX_PER_CLUB, "budget_tenths": budget,

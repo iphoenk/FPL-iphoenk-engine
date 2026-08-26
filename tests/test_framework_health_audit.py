@@ -61,3 +61,22 @@ def test_v47_prediction_quality_probes_reject_missing_output_evidence(monkeypatc
     for probe in ('set_piece_role', 'penalty_role', 'opponent_defence_dynamic', 'last_season_integration'):
         status, _ = audit._operational_probe(probe, 'postflight')
         assert status != 'ACTIVE', probe
+
+
+def test_registry_reuses_same_operational_probe_within_one_audit(monkeypatch):
+    import src.engines.framework_health_audit as audit
+
+    calls = []
+    monkeypatch.setattr(audit, '_exists', lambda _: True)
+    monkeypatch.setattr(audit, '_operational_probe', lambda name, phase: (calls.append((name, phase)) or ('ACTIVE', {})))
+    audit._PROBE_CACHE = {}
+    try:
+        obj = {'registry': 'test', 'modules': [
+            {'id': 'A', 'operational_probe': 'same'},
+            {'id': 'B', 'operational_probe': 'same'},
+        ]}
+        result = audit._audit_registry('dss_core', obj, 'preflight')
+        assert result['counts']['ACTIVE'] == 2
+        assert calls == [('same', 'preflight')]
+    finally:
+        audit._PROBE_CACHE = None

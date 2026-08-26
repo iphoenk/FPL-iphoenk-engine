@@ -1,4 +1,4 @@
-name: FPL iphoenk V4.7.1 correctness gate
+name: FPL iphoenk V4.7.2 performance gate
 
 on:
   workflow_dispatch:
@@ -42,7 +42,7 @@ jobs:
         run: python -m src.engines.v4_decision_pipeline
       - name: Framework health POST-FLIGHT
         run: python -m src.engines.framework_health_audit --phase postflight --strict
-      - name: Centralized V4.7.1 correctness quality gate
+      - name: Centralized V4.7.2 performance quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise acceptance summary
         run: |
@@ -50,6 +50,8 @@ jobs:
           import json
           h=json.load(open('data/framework_health_v4.json'))
           w=json.load(open('data/wc_decision_v4.json'))
+          latest=json.load(open('data/latest.json'))
+          pipeline=json.load(open('data/decision_pipeline_v4.json'))
           print({
               'health': h['overall'],
               'recommendation_allowed': h['recommendation_allowed'],
@@ -57,6 +59,10 @@ jobs:
               'gate0': h['gate0']['counts'],
               'budget_tenths': w['budget_tenths'],
               'price_basis': w['affordability']['price_basis'],
+              'refresh_ms': latest.get('performance', {}).get('engine_before_snapshot_write_ms'),
+              'preflight_ms': json.load(open('data/framework_health_preflight_v4.json')).get('performance_ms'),
+              'decision_pipeline_ms': pipeline.get('timings', {}).get('total_pipeline_ms'),
+              'postflight_ms': h.get('performance_ms'),
           })
           PY
       - name: Upload branch data only

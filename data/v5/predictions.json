@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T11:47:37.979775+00:00",
+  "generated_at": "2026-08-26T12:24:39.195720+00:00",
   "schema_version": 513,
   "model_version": "player_projection_v5_historical_prior",
   "ruleset_id": "FPL_2026_27",
@@ -31790,7 +31790,7 @@
       "position": "MID",
       "now_cost": 50,
       "status": "a",
-      "ownership_pct": 0.4,
+      "ownership_pct": 0.3,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -55310,7 +55310,7 @@
       "position": "DEF",
       "now_cost": 45,
       "status": "a",
-      "ownership_pct": 6.3,
+      "ownership_pct": 6.4,
       "current_season": {
         "starts": 1,
         "minutes": 75
@@ -64107,7 +64107,7 @@
       "position": "MID",
       "now_cost": 56,
       "status": "a",
-      "ownership_pct": 6.9,
+      "ownership_pct": 7.0,
       "current_season": {
         "starts": 1,
         "minutes": 75
@@ -87684,7 +87684,7 @@
       "position": "MID",
       "now_cost": 95,
       "status": "a",
-      "ownership_pct": 13.6,
+      "ownership_pct": 13.7,
       "current_season": {
         "starts": 1,
         "minutes": 82
@@ -100493,7 +100493,7 @@
       "position": "DEF",
       "now_cost": 40,
       "status": "a",
-      "ownership_pct": 0.9,
+      "ownership_pct": 0.8,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -164538,7 +164538,7 @@
       "position": "DEF",
       "now_cost": 40,
       "status": "a",
-      "ownership_pct": 2.4,
+      "ownership_pct": 2.5,
       "current_season": {
         "starts": 1,
         "minutes": 63
@@ -201184,7 +201184,7 @@
       "position": "MID",
       "now_cost": 70,
       "status": "a",
-      "ownership_pct": 5.3,
+      "ownership_pct": 5.4,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -206717,7 +206717,7 @@
       "position": "FWD",
       "now_cost": 90,
       "status": "a",
-      "ownership_pct": 16.7,
+      "ownership_pct": 16.6,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -215495,7 +215495,7 @@
       "position": "MID",
       "now_cost": 85,
       "status": "a",
-      "ownership_pct": 24.9,
+      "ownership_pct": 24.8,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -264108,7 +264108,7 @@
     },
     {
       "element": 403,
-      "name": "Savinho",
+      "name": "Sávio",
       "team_id": 19,
       "position": "MID",
       "now_cost": 65,
@@ -266908,7 +266908,7 @@
       "position": "DEF",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 7.9,
+      "ownership_pct": 7.8,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -269722,7 +269722,7 @@
       "position": "DEF",
       "now_cost": 45,
       "status": "u",
-      "ownership_pct": 0.6,
+      "ownership_pct": 0.5,
       "current_season": {
         "starts": 0,
         "minutes": 0

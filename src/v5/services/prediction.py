@@ -36,6 +36,20 @@ def _capabilities() -> list[str]:
     return sorted({*BASE_CAPABILITIES, *(str(x) for x in role_cfg.get("capabilities") or [])})
 
 
+def _quality_degraded_context(quality: dict[str, Any]) -> dict[str, Any] | None:
+    if quality.get("status") == "HEALTHY":
+        return None
+    failed = [str(value) for value in quality.get("failed_checks") or []]
+    return {
+        "service_id": "prediction",
+        "operation": "build",
+        "behavior": "prediction remains available for review but quality guard blocks unqualified GO",
+        "blocks_unqualified_go": True,
+        "error_type": "PredictionQualityDegraded",
+        "error": ",".join(failed) if failed else "prediction quality guard not healthy",
+    }
+
+
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation not in {"build", "build_full", "status"}:
         raise KeyError(f"unsupported prediction operation: {operation}")
@@ -73,10 +87,12 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         prior,
         owned_ids=payload.get("owned_ids") or (),
     )
+    degraded_context = _quality_degraded_context(quality)
     result = {
         **result,
         "historical_prior_artifact": prior,
         "prediction_quality": quality,
+        **({"degraded_context": degraded_context} if degraded_context else {}),
     }
     if operation == "build_full":
         return {**result, "capabilities": capabilities}
@@ -118,6 +134,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "historical_prior": result.get("historical_prior"),
         "historical_prior_artifact": prior,
         "prediction_quality": quality,
+        **({"degraded_context": degraded_context} if degraded_context else {}),
         "team_strength": result.get("team_strength"),
         "role_intelligence": result.get("role_intelligence"),
         "players": compact_players,

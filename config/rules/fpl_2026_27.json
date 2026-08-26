@@ -78,6 +78,7 @@
   "finance": {
     "price_unit_millions": 0.1,
     "sell_value": {
+      "method": "official_half_profit_floor",
       "if_now_cost_lte_purchase_cost": "sell_cost = now_cost",
       "if_now_cost_gt_purchase_cost": "sell_cost = purchase_cost + floor((now_cost - purchase_cost) / 2)",
       "profit_share_rounding": "floor_to_0.1m_units"

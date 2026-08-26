@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FPL Ruleset Registry Contract",
+  "type": "object",
+  "required": ["ruleset_id", "season", "authority", "sources", "squad", "lineup", "scoring", "defensive_contributions", "chips", "finance", "bonus_bps"],
+  "properties": {
+    "ruleset_id": {"type": "string"},
+    "season": {"type": "string"},
+    "authority": {"type": "string"},
+    "sources": {"type": "object"},
+    "squad": {"type": "object"},
+    "lineup": {"type": "object"},
+    "scoring": {"type": "object"},
+    "defensive_contributions": {"type": "object"},
+    "chips": {"type": "object"},
+    "finance": {"type": "object"},
+    "bonus_bps": {"type": "object"}
+  },
+  "additionalProperties": true
+}

@@ -2,11 +2,9 @@ name: V5 Unified Gate
 
 on:
   push:
-    branches:
-      - v5-unified-engine
+    branches: [v5-unified-engine]
   pull_request:
-    branches:
-      - v5-unified-engine
+    branches: [v5-unified-engine]
   workflow_dispatch:
 
 permissions:
@@ -15,12 +13,14 @@ permissions:
 jobs:
   bootstrap-acceptance:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -32,6 +32,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pytest
+
+      - name: Production baseline drift gate
+        run: |
+          git fetch origin main --quiet
+          EXPECTED=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_main_sha'])")
+          ACTUAL=$(git rev-parse origin/main)
+          echo "accepted=$EXPECTED current=$ACTUAL"
+          test "$EXPECTED" = "$ACTUAL"
 
       - name: V5 bootstrap acceptance
         run: python -m src.v5.acceptance
@@ -60,5 +68,14 @@ jobs:
       - name: V5 V3.12 decision parity
         run: python -m pytest -q tests/test_v5_v312_decision_parity.py
 
+      - name: V5 V3.13 reporting and watchlist parity
+        run: python -m pytest -q tests/test_v5_v313_reporting_watchlist.py
+
       - name: V5 native decision and Gate0 governance
         run: python -m pytest -q tests/test_v5_decision_governance.py
+
+      - name: V4 adopted-intelligence regression suite
+        run: python -m pytest -q tests/test_v4_prediction.py tests/test_v4_lineup_optimizer.py tests/test_v4_validation.py tests/test_v4_recommendation_sanity.py tests/test_v4_wc_package_audit.py
+
+      - name: V5 complete regression suite
+        run: python -m pytest -q

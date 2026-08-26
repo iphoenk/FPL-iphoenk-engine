@@ -132,54 +132,53 @@ def collect(bootstrap: dict[str, Any]) -> dict[str, Any]:
             for index, (competition_key, aliases) in enumerate((cfg.get("competitions") or {}).items()):
                 if index >= int(cfg.get("max_competition_requests_per_refresh") or 6):
                     break
-                try:
-                    league = _resolve_league(session, cfg, headers, competition_key, list(aliases or []))
-                    resolved[competition_key] = league
-                    if not league:
-                        failures.append({"competition": competition_key, "reason": "LEAGUE_UNRESOLVED"})
+                league = _resolve_league(session, cfg, headers, competition_key, list(aliases or []))
+                resolved[competition_key] = league
+                if not league:
+                    failures.append({"competition": competition_key, "reason": "LEAGUE_UNRESOLVED"})
+                    continue
+                cache = _cache_path(cache_dir, f"fixtures_{competition_key}_{from_date}_{to_date}")
+                cached = _load_cache(cache, ttl)
+                if cached:
+                    response_rows = cached.get("response") or []
+                else:
+                    payload = _get(
+                        session,
+                        str(cfg["base_url"]),
+                        headers,
+                        "fixtures",
+                        {"league": int(league["id"]), "season": int(cfg["season"]), "from": from_date, "to": to_date},
+                        float(cfg["timeout_seconds"]),
+                    )
+                    response_rows = payload.get("response") or []
+                    _write_cache(cache, {"generated_at": _now().isoformat(), "response": response_rows})
+                for item in response_rows:
+                    if not isinstance(item, dict):
                         continue
-                    cache = _cache_path(cache_dir, f"fixtures_{competition_key}_{from_date}_{to_date}")
-                    cached = _load_cache(cache, ttl)
-                    if cached:
-                        response_rows = cached.get("response") or []
-                    else:
-                        payload = _get(
-                            session,
-                            str(cfg["base_url"]),
-                            headers,
-                            "fixtures",
-                            {"league": int(league["id"]), "season": int(cfg["season"]), "from": from_date, "to": to_date},
-                            float(cfg["timeout_seconds"]),
-                        )
-                        response_rows = payload.get("response") or []
-                        _write_cache(cache, {"generated_at": _now().isoformat(), "response": response_rows})
-                    for item in response_rows:
-                        if not isinstance(item, dict):
-                            continue
-                        fixture = item.get("fixture") if isinstance(item.get("fixture"), dict) else {}
-                        teams = item.get("teams") if isinstance(item.get("teams"), dict) else {}
-                        home = teams.get("home") if isinstance(teams.get("home"), dict) else {}
-                        away = teams.get("away") if isinstance(teams.get("away"), dict) else {}
-                        matched = []
-                        for side in (home, away):
-                            key_name = _normalize_team_name(side.get("name"))
-                            if key_name in fpl_teams:
-                                matched.append(fpl_teams[key_name])
-                        if not matched:
-                            continue
-                        for club in matched:
-                            fixtures.append({
-                                "fixture_id": fixture.get("id"),
-                                "kickoff_time": fixture.get("date"),
-                                "competition_key": competition_key,
-                                "competition_class": _competition_class(competition_key),
-                                "competition_name": league.get("name"),
-                                "fpl_team_id": club["fpl_team_id"],
-                                "fpl_team_name": club["name"],
-                                "home": home.get("name"),
-                                "away": away.get("name"),
-                                "status": ((fixture.get("status") or {}).get("short") if isinstance(fixture.get("status"), dict) else None),
-                            })
+                    fixture = item.get("fixture") if isinstance(item.get("fixture"), dict) else {}
+                    teams = item.get("teams") if isinstance(item.get("teams"), dict) else {}
+                    home = teams.get("home") if isinstance(teams.get("home"), dict) else {}
+                    away = teams.get("away") if isinstance(teams.get("away"), dict) else {}
+                    matched = []
+                    for side in (home, away):
+                        key_name = _normalize_team_name(side.get("name"))
+                        if key_name in fpl_teams:
+                            matched.append(fpl_teams[key_name])
+                    if not matched:
+                        continue
+                    for club in matched:
+                        fixtures.append({
+                            "fixture_id": fixture.get("id"),
+                            "kickoff_time": fixture.get("date"),
+                            "competition_key": competition_key,
+                            "competition_class": _competition_class(competition_key),
+                            "competition_name": league.get("name"),
+                            "fpl_team_id": club["fpl_team_id"],
+                            "fpl_team_name": club["name"],
+                            "home": home.get("name"),
+                            "away": away.get("name"),
+                            "status": ((fixture.get("status") or {}).get("short") if isinstance(fixture.get("status"), dict) else None),
+                        })
     except Exception as exc:
         return {
             "source": "api_football",

@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
   "production_contract": "v3.10-output-compatible",
   "transport": "isolated-filesystem-contract",
@@ -11,7 +11,8 @@
     "deterministic_fan_in": true,
     "no_business_logic_rewrite_required": true,
     "fail_closed_on_critical_service_failure": true,
-    "latest_json_single_writer_during_fan_in": true
+    "latest_json_single_writer_during_fan_in": true,
+    "dependency_aware_scheduling": true
   },
   "runtime": {
     "max_parallel_services": 5,
@@ -23,37 +24,28 @@
   "services": {
     "collector": {
       "stage": "base",
+      "depends_on": [],
       "critical": true,
       "isolated": false,
       "commands": [
-        {"module": "src.engine", "args": ["daily", "--stats"]},
+        {"module": "src.engine", "args": ["{mode}", "{stats}", "{deep_stats}"]},
         {"module": "src.reliability_overlay", "args": []}
       ]
     },
     "price": {
-      "stage": "fanout",
+      "stage": "parallel",
+      "depends_on": ["collector"],
       "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "team.json", "prices.json", "price_trajectory.json"],
-      "commands": [
-        {"code": "import os; from src.engines.price_radar import patch_files; patch_files(os.environ['FPL_DATA_DIR'])"}
-      ],
+      "commands": [{"code": "import os; from src.engines.price_radar import patch_files; patch_files(os.environ['FPL_DATA_DIR'])"}],
       "artifacts": ["prices.json", "price_trajectory.json", "price_alerts.json"],
       "latest_keys": ["price_summary"],
       "latest_file_keys": ["price_trajectory", "price_alerts"]
     },
-    "official_detail": {
-      "stage": "fanout",
-      "critical": true,
-      "isolated": true,
-      "inputs": ["latest.json", "team.json", "prices.json"],
-      "commands": [{"module": "src.engines.official_expansion", "args": []}],
-      "artifacts": ["official_detail.json"],
-      "latest_keys": ["official_detail_summary", "official_health_panel"],
-      "latest_file_keys": []
-    },
     "prediction": {
-      "stage": "fanout",
+      "stage": "parallel",
+      "depends_on": ["collector"],
       "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "team.json"],
@@ -63,8 +55,9 @@
       "latest_file_keys": ["team_strength", "projections", "package_optimizer"]
     },
     "authenticated_official": {
-      "stage": "fanout",
-      "critical": false,
+      "stage": "parallel",
+      "depends_on": ["collector"],
+      "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "team.json"],
       "commands": [{"module": "src.engines.authenticated_official", "args": []}],
@@ -73,7 +66,8 @@
       "latest_file_keys": ["auth"]
     },
     "rules": {
-      "stage": "fanout",
+      "stage": "parallel",
+      "depends_on": ["collector"],
       "critical": true,
       "isolated": true,
       "inputs": [],
@@ -82,8 +76,20 @@
       "latest_keys": [],
       "latest_file_keys": []
     },
+    "official_detail": {
+      "stage": "parallel",
+      "depends_on": ["price"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["latest.json", "team.json", "prices.json"],
+      "commands": [{"module": "src.engines.official_expansion", "args": []}],
+      "artifacts": ["official_detail.json"],
+      "latest_keys": ["official_detail_summary", "official_health_panel"],
+      "latest_file_keys": []
+    },
     "prediction_evaluation": {
-      "stage": "evaluation",
+      "stage": "parallel",
+      "depends_on": ["prediction"],
       "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "projections.json", "prediction_ledger.json"],
@@ -93,7 +99,8 @@
       "latest_file_keys": ["prediction_ledger", "prediction_accuracy"]
     },
     "challenger": {
-      "stage": "challenger",
+      "stage": "parallel",
+      "depends_on": ["prediction_evaluation"],
       "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "projections.json", "prediction_ledger.json", "challenger_observations.json"],
@@ -103,7 +110,8 @@
       "latest_file_keys": ["challenger_scorecard"]
     },
     "governance": {
-      "stage": "governance",
+      "stage": "final",
+      "depends_on": ["price", "prediction", "authenticated_official", "rules", "official_detail", "prediction_evaluation", "challenger"],
       "critical": true,
       "isolated": false,
       "commands": [

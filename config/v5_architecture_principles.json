@@ -8,7 +8,10 @@
     },
     "modular_authority": {
       "required": true,
-      "policy": "Create a dedicated module or registry whenever a domain has its own authority, lifecycle, provenance, or tuning surface. Consumers must depend on that shared authority instead of duplicating logic.",
+      "default_action": "SEPARATE_WHEN_PRACTICAL",
+      "policy": "If a domain can reasonably be separated into a dedicated module or registry, V5 should do so by default whenever separation improves identification, adjustment, authority clarity, provenance, testing, maintenance, or reuse. Consumers must depend on the shared authority instead of duplicating logic.",
+      "performance_guard": "Do not create runtime fragmentation that causes material latency regression. Prefer cached registries and stable module boundaries over repeated file reads, duplicated transforms, or excessive indirection.",
+      "discoverability": "Every separated domain should be registered in config/v5_module_registry.json with its plane, entrypoint, controlling config, status, and adjustment surface.",
       "examples": [
         "Official FPL rules registry",
         "source authority registry",

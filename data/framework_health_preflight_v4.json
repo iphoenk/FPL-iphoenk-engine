@@ -6,11 +6,11 @@
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-26T06:49:00.205120+00:00",
-    "local_as_of": "2026-08-26T13:49:00.205120+07:00",
+    "as_of": "2026-08-26T11:43:01.830418+00:00",
+    "local_as_of": "2026-08-26T18:43:01.830418+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 3521.0,
+    "minutes_to_deadline": 3227.0,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -1286,7 +1286,11 @@
         "status": "DEFERRED",
         "required_files": [
           "src/engines/v4_recommendation_sanity.py",
-          "data/recommendation_sanity_v4.json"
+          "data/recommendation_sanity_v4.json",
+          "src/services/orchestrator.py",
+          "src/services/contracts.py",
+          "config/service_registry.json",
+          "config/service_contract_registry.json"
         ],
         "probe": "final_governance",
         "detail": {
@@ -1346,5 +1350,5 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 385.9
+  "performance_ms": 244.22
 }

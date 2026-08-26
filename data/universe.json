@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T06:49:00.709384+00:00",
+  "generated_at": "2026-08-26T11:43:02.891834+00:00",
   "players": [
     {
       "element": 1,
@@ -13,8 +13,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 68821,
-      "transfers_out_event": 50187
+      "transfers_in_event": 71321,
+      "transfers_out_event": 52184
     },
     {
       "element": 2,
@@ -28,8 +28,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 225,
-      "transfers_out_event": 930
+      "transfers_in_event": 232,
+      "transfers_out_event": 954
     },
     {
       "element": 3,
@@ -43,8 +43,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 75,
-      "transfers_out_event": 341
+      "transfers_in_event": 76,
+      "transfers_out_event": 352
     },
     {
       "element": 4,
@@ -54,12 +54,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 80,
-      "ownership": "29.4",
+      "ownership": "29.3",
       "status": "a",
       "points": 5,
       "minutes": 90,
-      "transfers_in_event": 40577,
-      "transfers_out_event": 78115
+      "transfers_in_event": 41985,
+      "transfers_out_event": 81022
     },
     {
       "element": 5,
@@ -73,8 +73,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 299,
-      "transfers_out_event": 2309
+      "transfers_in_event": 305,
+      "transfers_out_event": 2369
     },
     {
       "element": 6,
@@ -88,8 +88,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 646,
-      "transfers_out_event": 5221
+      "transfers_in_event": 662,
+      "transfers_out_event": 5343
     },
     {
       "element": 7,
@@ -103,8 +103,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 6824,
-      "transfers_out_event": 5966
+      "transfers_in_event": 7032,
+      "transfers_out_event": 6170
     },
     {
       "element": 8,
@@ -118,8 +118,8 @@
       "status": "a",
       "points": 9,
       "minutes": 80,
-      "transfers_in_event": 231572,
-      "transfers_out_event": 25142
+      "transfers_in_event": 238134,
+      "transfers_out_event": 26243
     },
     {
       "element": 9,
@@ -133,8 +133,8 @@
       "status": "a",
       "points": 1,
       "minutes": 9,
-      "transfers_in_event": 2853,
-      "transfers_out_event": 29191
+      "transfers_in_event": 2916,
+      "transfers_out_event": 29974
     },
     {
       "element": 10,
@@ -144,12 +144,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 55,
-      "ownership": "5.9",
+      "ownership": "6.0",
       "status": "a",
       "points": 11,
       "minutes": 90,
-      "transfers_in_event": 92093,
-      "transfers_out_event": 13252
+      "transfers_in_event": 95172,
+      "transfers_out_event": 13947
     },
     {
       "element": 11,
@@ -159,12 +159,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 55,
-      "ownership": "6.0",
+      "ownership": "5.9",
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 11254,
-      "transfers_out_event": 26753
+      "transfers_in_event": 11532,
+      "transfers_out_event": 27770
     },
     {
       "element": 12,
@@ -178,8 +178,8 @@
       "status": "a",
       "points": 9,
       "minutes": 67,
-      "transfers_in_event": 61559,
-      "transfers_out_event": 18982
+      "transfers_in_event": 63241,
+      "transfers_out_event": 19928
     },
     {
       "element": 13,
@@ -193,8 +193,8 @@
       "status": "a",
       "points": 3,
       "minutes": 67,
-      "transfers_in_event": 25560,
-      "transfers_out_event": 100951
+      "transfers_in_event": 26333,
+      "transfers_out_event": 104570
     },
     {
       "element": 14,
@@ -204,12 +204,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 65,
-      "ownership": "1.9",
+      "ownership": "1.8",
       "status": "a",
       "points": 1,
       "minutes": 14,
-      "transfers_in_event": 3874,
-      "transfers_out_event": 30064
+      "transfers_in_event": 4033,
+      "transfers_out_event": 30975
     },
     {
       "element": 15,
@@ -219,12 +219,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 65,
-      "ownership": "10.8",
+      "ownership": "10.9",
       "status": "a",
       "points": 11,
       "minutes": 75,
-      "transfers_in_event": 200308,
-      "transfers_out_event": 20856
+      "transfers_in_event": 206541,
+      "transfers_out_event": 21833
     },
     {
       "element": 16,
@@ -238,8 +238,8 @@
       "status": "a",
       "points": 1,
       "minutes": 22,
-      "transfers_in_event": 830,
-      "transfers_out_event": 5376
+      "transfers_in_event": 866,
+      "transfers_out_event": 5543
     },
     {
       "element": 17,
@@ -253,8 +253,8 @@
       "status": "a",
       "points": 1,
       "minutes": 14,
-      "transfers_in_event": 1801,
-      "transfers_out_event": 11184
+      "transfers_in_event": 1852,
+      "transfers_out_event": 11524
     },
     {
       "element": 18,
@@ -268,8 +268,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 867,
-      "transfers_out_event": 4963
+      "transfers_in_event": 899,
+      "transfers_out_event": 5126
     },
     {
       "element": 19,
@@ -283,8 +283,8 @@
       "status": "a",
       "points": 1,
       "minutes": 22,
-      "transfers_in_event": 1097,
-      "transfers_out_event": 14028
+      "transfers_in_event": 1129,
+      "transfers_out_event": 14459
     },
     {
       "element": 20,
@@ -298,8 +298,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 294,
-      "transfers_out_event": 1743
+      "transfers_in_event": 303,
+      "transfers_out_event": 1795
     },
     {
       "element": 22,
@@ -313,8 +313,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 51,
-      "transfers_out_event": 232
+      "transfers_in_event": 52,
+      "transfers_out_event": 239
     },
     {
       "element": 23,
@@ -328,8 +328,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 51,
-      "transfers_out_event": 153
+      "transfers_in_event": 53,
+      "transfers_out_event": 154
     },
     {
       "element": 24,
@@ -343,8 +343,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 44,
-      "transfers_out_event": 114
+      "transfers_in_event": 45,
+      "transfers_out_event": 117
     },
     {
       "element": 25,
@@ -358,8 +358,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 6365,
-      "transfers_out_event": 154352
+      "transfers_in_event": 6513,
+      "transfers_out_event": 159121
     },
     {
       "element": 26,
@@ -373,8 +373,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 130943,
-      "transfers_out_event": 21524
+      "transfers_in_event": 134507,
+      "transfers_out_event": 22559
     },
     {
       "element": 27,
@@ -388,8 +388,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1347,
-      "transfers_out_event": 5072
+      "transfers_in_event": 1382,
+      "transfers_out_event": 5230
     },
     {
       "element": 31,
@@ -399,12 +399,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 45,
-      "ownership": "11.4",
+      "ownership": "11.3",
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 30400,
-      "transfers_out_event": 162765
+      "transfers_in_event": 31569,
+      "transfers_out_event": 167436
     },
     {
       "element": 452,
@@ -414,12 +414,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 70,
-      "ownership": "3.2",
+      "ownership": "3.1",
       "status": "d",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 606,
-      "transfers_out_event": 85440
+      "transfers_in_event": 619,
+      "transfers_out_event": 88182
     },
     {
       "element": 557,
@@ -433,8 +433,8 @@
       "status": "a",
       "points": 6,
       "minutes": 75,
-      "transfers_in_event": 156546,
-      "transfers_out_event": 30571
+      "transfers_in_event": 161710,
+      "transfers_out_event": 31912
     },
     {
       "element": 28,
@@ -444,12 +444,12 @@
       "position": "GK",
       "element_type": 1,
       "now_cost": 50,
-      "ownership": "4.2",
+      "ownership": "4.1",
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 5748,
-      "transfers_out_event": 37075
+      "transfers_in_event": 5866,
+      "transfers_out_event": 38360
     },
     {
       "element": 29,
@@ -463,8 +463,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 509,
-      "transfers_out_event": 511
+      "transfers_in_event": 524,
+      "transfers_out_event": 528
     },
     {
       "element": 30,
@@ -479,7 +479,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 3992
+      "transfers_out_event": 4086
     },
     {
       "element": 32,
@@ -489,12 +489,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 45,
-      "ownership": "8.1",
+      "ownership": "8.0",
       "status": "a",
       "points": -1,
       "minutes": 90,
-      "transfers_in_event": 23852,
-      "transfers_out_event": 68693
+      "transfers_in_event": 24076,
+      "transfers_out_event": 71161
     },
     {
       "element": 33,
@@ -508,8 +508,8 @@
       "status": "a",
       "points": 1,
       "minutes": 16,
-      "transfers_in_event": 2674,
-      "transfers_out_event": 2323
+      "transfers_in_event": 2716,
+      "transfers_out_event": 2399
     },
     {
       "element": 34,
@@ -523,8 +523,8 @@
       "status": "a",
       "points": 0,
       "minutes": 73,
-      "transfers_in_event": 1617,
-      "transfers_out_event": 3232
+      "transfers_in_event": 1632,
+      "transfers_out_event": 3371
     },
     {
       "element": 35,
@@ -538,8 +538,8 @@
       "status": "a",
       "points": 1,
       "minutes": 16,
-      "transfers_in_event": 495,
-      "transfers_out_event": 614
+      "transfers_in_event": 508,
+      "transfers_out_event": 642
     },
     {
       "element": 36,
@@ -553,8 +553,8 @@
       "status": "a",
       "points": 0,
       "minutes": 81,
-      "transfers_in_event": 2110,
-      "transfers_out_event": 5725
+      "transfers_in_event": 2135,
+      "transfers_out_event": 5936
     },
     {
       "element": 37,
@@ -568,8 +568,8 @@
       "status": "a",
       "points": -2,
       "minutes": 90,
-      "transfers_in_event": 1472,
-      "transfers_out_event": 2657
+      "transfers_in_event": 1495,
+      "transfers_out_event": 2759
     },
     {
       "element": 38,
@@ -583,8 +583,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 5343,
-      "transfers_out_event": 9349
+      "transfers_in_event": 5497,
+      "transfers_out_event": 9690
     },
     {
       "element": 39,
@@ -599,7 +599,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 5150
+      "transfers_out_event": 5295
     },
     {
       "element": 41,
@@ -609,12 +609,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 60,
-      "ownership": "1.3",
+      "ownership": "1.2",
       "status": "a",
       "points": 2,
       "minutes": 85,
-      "transfers_in_event": 3589,
-      "transfers_out_event": 12783
+      "transfers_in_event": 3682,
+      "transfers_out_event": 13324
     },
     {
       "element": 44,
@@ -624,12 +624,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 55,
-      "ownership": "0.2",
+      "ownership": "0.1",
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 750,
-      "transfers_out_event": 1781
+      "transfers_in_event": 768,
+      "transfers_out_event": 1844
     },
     {
       "element": 45,
@@ -643,8 +643,8 @@
       "status": "a",
       "points": 1,
       "minutes": 81,
-      "transfers_in_event": 5605,
-      "transfers_out_event": 27722
+      "transfers_in_event": 5772,
+      "transfers_out_event": 28801
     },
     {
       "element": 46,
@@ -658,8 +658,8 @@
       "status": "a",
       "points": 2,
       "minutes": 73,
-      "transfers_in_event": 1311,
-      "transfers_out_event": 1684
+      "transfers_in_event": 1338,
+      "transfers_out_event": 1759
     },
     {
       "element": 47,
@@ -673,8 +673,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 1878,
-      "transfers_out_event": 3195
+      "transfers_in_event": 1929,
+      "transfers_out_event": 3311
     },
     {
       "element": 48,
@@ -688,8 +688,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 109,
-      "transfers_out_event": 402
+      "transfers_in_event": 113,
+      "transfers_out_event": 408
     },
     {
       "element": 49,
@@ -704,7 +704,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 99
+      "transfers_out_event": 102
     },
     {
       "element": 50,
@@ -718,8 +718,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2519,
-      "transfers_out_event": 4581
+      "transfers_in_event": 2590,
+      "transfers_out_event": 4731
     },
     {
       "element": 51,
@@ -733,8 +733,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 4834,
-      "transfers_out_event": 3310
+      "transfers_in_event": 5067,
+      "transfers_out_event": 3444
     },
     {
       "element": 52,
@@ -748,8 +748,8 @@
       "status": "a",
       "points": 1,
       "minutes": 8,
-      "transfers_in_event": 261,
-      "transfers_out_event": 395
+      "transfers_in_event": 265,
+      "transfers_out_event": 410
     },
     {
       "element": 53,
@@ -763,8 +763,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 174,
-      "transfers_out_event": 6754
+      "transfers_in_event": 176,
+      "transfers_out_event": 6926
     },
     {
       "element": 54,
@@ -778,8 +778,8 @@
       "status": "s",
       "points": -2,
       "minutes": 39,
-      "transfers_in_event": 109,
-      "transfers_out_event": 1375
+      "transfers_in_event": 114,
+      "transfers_out_event": 1428
     },
     {
       "element": 55,
@@ -789,12 +789,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 80,
-      "ownership": "9.0",
+      "ownership": "8.9",
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 8870,
-      "transfers_out_event": 143720
+      "transfers_in_event": 9019,
+      "transfers_out_event": 150130
     },
     {
       "element": 56,
@@ -808,8 +808,8 @@
       "status": "d",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 391,
-      "transfers_out_event": 1710
+      "transfers_in_event": 397,
+      "transfers_out_event": 1772
     },
     {
       "element": 160,
@@ -823,8 +823,8 @@
       "status": "a",
       "points": 1,
       "minutes": 4,
-      "transfers_in_event": 1580,
-      "transfers_out_event": 6696
+      "transfers_in_event": 1606,
+      "transfers_out_event": 6946
     },
     {
       "element": 582,
@@ -838,8 +838,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 954,
-      "transfers_out_event": 5559
+      "transfers_in_event": 979,
+      "transfers_out_event": 5756
     },
     {
       "element": 596,
@@ -853,8 +853,8 @@
       "status": "a",
       "points": 1,
       "minutes": 8,
-      "transfers_in_event": 690,
-      "transfers_out_event": 698
+      "transfers_in_event": 703,
+      "transfers_out_event": 724
     },
     {
       "element": 597,
@@ -868,8 +868,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2833,
-      "transfers_out_event": 4287
+      "transfers_in_event": 2902,
+      "transfers_out_event": 4455
     },
     {
       "element": 606,
@@ -883,8 +883,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 948,
-      "transfers_out_event": 146
+      "transfers_in_event": 984,
+      "transfers_out_event": 156
     },
     {
       "element": 607,
@@ -898,8 +898,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2722,
-      "transfers_out_event": 486
+      "transfers_in_event": 2877,
+      "transfers_out_event": 529
     },
     {
       "element": 611,
@@ -913,8 +913,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 351,
-      "transfers_out_event": 29
+      "transfers_in_event": 464,
+      "transfers_out_event": 36
     },
     {
       "element": 57,
@@ -928,8 +928,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 14324,
-      "transfers_out_event": 7941
+      "transfers_in_event": 14973,
+      "transfers_out_event": 8335
     },
     {
       "element": 58,
@@ -943,8 +943,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 5714,
-      "transfers_out_event": 6453
+      "transfers_in_event": 5965,
+      "transfers_out_event": 6706
     },
     {
       "element": 59,
@@ -958,8 +958,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 912,
-      "transfers_out_event": 559
+      "transfers_in_event": 944,
+      "transfers_out_event": 581
     },
     {
       "element": 60,
@@ -973,8 +973,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 5493,
-      "transfers_out_event": 4242
+      "transfers_in_event": 5700,
+      "transfers_out_event": 4415
     },
     {
       "element": 61,
@@ -988,8 +988,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 12926,
-      "transfers_out_event": 15885
+      "transfers_in_event": 13362,
+      "transfers_out_event": 16553
     },
     {
       "element": 62,
@@ -1003,8 +1003,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2071,
-      "transfers_out_event": 1628
+      "transfers_in_event": 2114,
+      "transfers_out_event": 1681
     },
     {
       "element": 63,
@@ -1018,8 +1018,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 58,
-      "transfers_out_event": 215
+      "transfers_in_event": 59,
+      "transfers_out_event": 224
     },
     {
       "element": 64,
@@ -1033,8 +1033,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 1646,
-      "transfers_out_event": 609
+      "transfers_in_event": 1716,
+      "transfers_out_event": 640
     },
     {
       "element": 65,
@@ -1048,8 +1048,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 68,
-      "transfers_out_event": 389
+      "transfers_in_event": 69,
+      "transfers_out_event": 396
     },
     {
       "element": 66,
@@ -1063,8 +1063,8 @@
       "status": "d",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 289,
-      "transfers_out_event": 1751
+      "transfers_in_event": 293,
+      "transfers_out_event": 1781
     },
     {
       "element": 67,
@@ -1078,8 +1078,8 @@
       "status": "a",
       "points": 2,
       "minutes": 88,
-      "transfers_in_event": 14732,
-      "transfers_out_event": 13845
+      "transfers_in_event": 15325,
+      "transfers_out_event": 14407
     },
     {
       "element": 68,
@@ -1093,8 +1093,8 @@
       "status": "a",
       "points": 10,
       "minutes": 90,
-      "transfers_in_event": 43924,
-      "transfers_out_event": 6726
+      "transfers_in_event": 45802,
+      "transfers_out_event": 7038
     },
     {
       "element": 69,
@@ -1108,8 +1108,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 5198,
-      "transfers_out_event": 8237
+      "transfers_in_event": 5414,
+      "transfers_out_event": 8605
     },
     {
       "element": 70,
@@ -1123,8 +1123,8 @@
       "status": "a",
       "points": 3,
       "minutes": 74,
-      "transfers_in_event": 8984,
-      "transfers_out_event": 5880
+      "transfers_in_event": 9338,
+      "transfers_out_event": 6144
     },
     {
       "element": 71,
@@ -1138,8 +1138,8 @@
       "status": "a",
       "points": 3,
       "minutes": 75,
-      "transfers_in_event": 1917,
-      "transfers_out_event": 1065
+      "transfers_in_event": 1985,
+      "transfers_out_event": 1107
     },
     {
       "element": 72,
@@ -1153,8 +1153,8 @@
       "status": "a",
       "points": 1,
       "minutes": 1,
-      "transfers_in_event": 270,
-      "transfers_out_event": 574
+      "transfers_in_event": 279,
+      "transfers_out_event": 598
     },
     {
       "element": 73,
@@ -1168,8 +1168,8 @@
       "status": "a",
       "points": 1,
       "minutes": 15,
-      "transfers_in_event": 1844,
-      "transfers_out_event": 2115
+      "transfers_in_event": 1929,
+      "transfers_out_event": 2169
     },
     {
       "element": 74,
@@ -1183,8 +1183,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 324,
-      "transfers_out_event": 473
+      "transfers_in_event": 346,
+      "transfers_out_event": 491
     },
     {
       "element": 75,
@@ -1198,8 +1198,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 311,
-      "transfers_out_event": 126
+      "transfers_in_event": 326,
+      "transfers_out_event": 129
     },
     {
       "element": 76,
@@ -1213,8 +1213,8 @@
       "status": "a",
       "points": 1,
       "minutes": 15,
-      "transfers_in_event": 70,
-      "transfers_out_event": 95
+      "transfers_in_event": 72,
+      "transfers_out_event": 102
     },
     {
       "element": 77,
@@ -1228,8 +1228,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 34,
-      "transfers_out_event": 743
+      "transfers_in_event": 35,
+      "transfers_out_event": 760
     },
     {
       "element": 78,
@@ -1239,12 +1239,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 75,
-      "ownership": "0.4",
+      "ownership": "0.3",
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 362,
-      "transfers_out_event": 9823
+      "transfers_in_event": 368,
+      "transfers_out_event": 10128
     },
     {
       "element": 79,
@@ -1254,12 +1254,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 60,
-      "ownership": "2.7",
+      "ownership": "2.8",
       "status": "a",
       "points": 4,
       "minutes": 74,
-      "transfers_in_event": 40786,
-      "transfers_out_event": 10892
+      "transfers_in_event": 42510,
+      "transfers_out_event": 11376
     },
     {
       "element": 80,
@@ -1274,7 +1274,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 807
+      "transfers_out_event": 837
     },
     {
       "element": 81,
@@ -1288,8 +1288,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 586,
-      "transfers_out_event": 825
+      "transfers_in_event": 625,
+      "transfers_out_event": 862
     },
     {
       "element": 566,
@@ -1303,8 +1303,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 3866,
-      "transfers_out_event": 1257
+      "transfers_in_event": 4034,
+      "transfers_out_event": 1314
     },
     {
       "element": 573,
@@ -1318,8 +1318,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 353,
-      "transfers_out_event": 897
+      "transfers_in_event": 361,
+      "transfers_out_event": 936
     },
     {
       "element": 608,
@@ -1333,8 +1333,8 @@
       "status": "a",
       "points": 1,
       "minutes": 15,
-      "transfers_in_event": 1299,
-      "transfers_out_event": 208
+      "transfers_in_event": 1393,
+      "transfers_out_event": 227
     },
     {
       "element": 82,
@@ -1348,8 +1348,8 @@
       "status": "a",
       "points": 7,
       "minutes": 90,
-      "transfers_in_event": 48325,
-      "transfers_out_event": 11042
+      "transfers_in_event": 50133,
+      "transfers_out_event": 11595
     },
     {
       "element": 83,
@@ -1363,8 +1363,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 427,
-      "transfers_out_event": 548
+      "transfers_in_event": 440,
+      "transfers_out_event": 571
     },
     {
       "element": 84,
@@ -1378,8 +1378,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 16413,
-      "transfers_out_event": 5322
+      "transfers_in_event": 17107,
+      "transfers_out_event": 5605
     },
     {
       "element": 85,
@@ -1393,8 +1393,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 117,
-      "transfers_out_event": 3075
+      "transfers_in_event": 119,
+      "transfers_out_event": 3171
     },
     {
       "element": 86,
@@ -1408,8 +1408,8 @@
       "status": "a",
       "points": 10,
       "minutes": 90,
-      "transfers_in_event": 26112,
-      "transfers_out_event": 3859
+      "transfers_in_event": 27674,
+      "transfers_out_event": 4042
     },
     {
       "element": 87,
@@ -1423,8 +1423,8 @@
       "status": "a",
       "points": 8,
       "minutes": 90,
-      "transfers_in_event": 35377,
-      "transfers_out_event": 7068
+      "transfers_in_event": 37036,
+      "transfers_out_event": 7482
     },
     {
       "element": 88,
@@ -1434,12 +1434,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 45,
-      "ownership": "6.2",
+      "ownership": "6.3",
       "status": "a",
       "points": 13,
       "minutes": 75,
-      "transfers_in_event": 217113,
-      "transfers_out_event": 11524
+      "transfers_in_event": 225725,
+      "transfers_out_event": 12186
     },
     {
       "element": 89,
@@ -1453,8 +1453,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 405,
-      "transfers_out_event": 1374
+      "transfers_in_event": 417,
+      "transfers_out_event": 1428
     },
     {
       "element": 90,
@@ -1468,8 +1468,8 @@
       "status": "a",
       "points": 1,
       "minutes": 14,
-      "transfers_in_event": 398,
-      "transfers_out_event": 356
+      "transfers_in_event": 416,
+      "transfers_out_event": 368
     },
     {
       "element": 91,
@@ -1483,8 +1483,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 298,
-      "transfers_out_event": 625
+      "transfers_in_event": 305,
+      "transfers_out_event": 646
     },
     {
       "element": 92,
@@ -1498,8 +1498,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 87,
-      "transfers_out_event": 128
+      "transfers_in_event": 89,
+      "transfers_out_event": 137
     },
     {
       "element": 93,
@@ -1513,8 +1513,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 109,
-      "transfers_out_event": 755
+      "transfers_in_event": 111,
+      "transfers_out_event": 787
     },
     {
       "element": 94,
@@ -1528,8 +1528,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 13495,
-      "transfers_out_event": 15307
+      "transfers_in_event": 14054,
+      "transfers_out_event": 15895
     },
     {
       "element": 95,
@@ -1543,8 +1543,8 @@
       "status": "a",
       "points": 3,
       "minutes": 66,
-      "transfers_in_event": 4650,
-      "transfers_out_event": 6289
+      "transfers_in_event": 4813,
+      "transfers_out_event": 6547
     },
     {
       "element": 96,
@@ -1558,8 +1558,8 @@
       "status": "a",
       "points": 1,
       "minutes": 14,
-      "transfers_in_event": 1318,
-      "transfers_out_event": 4825
+      "transfers_in_event": 1394,
+      "transfers_out_event": 4991
     },
     {
       "element": 97,
@@ -1573,8 +1573,8 @@
       "status": "a",
       "points": 6,
       "minutes": 66,
-      "transfers_in_event": 2273,
-      "transfers_out_event": 827
+      "transfers_in_event": 2375,
+      "transfers_out_event": 865
     },
     {
       "element": 98,
@@ -1588,8 +1588,8 @@
       "status": "a",
       "points": 9,
       "minutes": 90,
-      "transfers_in_event": 16831,
-      "transfers_out_event": 2210
+      "transfers_in_event": 17775,
+      "transfers_out_event": 2332
     },
     {
       "element": 99,
@@ -1604,7 +1604,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 21,
-      "transfers_out_event": 35
+      "transfers_out_event": 36
     },
     {
       "element": 100,
@@ -1618,8 +1618,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 39,
-      "transfers_out_event": 190
+      "transfers_in_event": 49,
+      "transfers_out_event": 194
     },
     {
       "element": 102,
@@ -1633,8 +1633,8 @@
       "status": "a",
       "points": 1,
       "minutes": 23,
-      "transfers_in_event": 519,
-      "transfers_out_event": 8219
+      "transfers_in_event": 532,
+      "transfers_out_event": 8508
     },
     {
       "element": 103,
@@ -1648,8 +1648,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 124,
-      "transfers_out_event": 227
+      "transfers_in_event": 129,
+      "transfers_out_event": 239
     },
     {
       "element": 105,
@@ -1663,8 +1663,8 @@
       "status": "a",
       "points": 1,
       "minutes": 23,
-      "transfers_in_event": 1098,
-      "transfers_out_event": 1484
+      "transfers_in_event": 1200,
+      "transfers_out_event": 1537
     },
     {
       "element": 106,
@@ -1674,12 +1674,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 80,
-      "ownership": "17.0",
+      "ownership": "16.9",
       "status": "a",
       "points": 0,
       "minutes": 82,
-      "transfers_in_event": 60552,
-      "transfers_out_event": 82716
+      "transfers_in_event": 62959,
+      "transfers_out_event": 86258
     },
     {
       "element": 107,
@@ -1693,8 +1693,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 5324,
-      "transfers_out_event": 5466
+      "transfers_in_event": 5544,
+      "transfers_out_event": 5669
     },
     {
       "element": 108,
@@ -1708,8 +1708,8 @@
       "status": "a",
       "points": 1,
       "minutes": 7,
-      "transfers_in_event": 2630,
-      "transfers_out_event": 3078
+      "transfers_in_event": 2751,
+      "transfers_out_event": 3196
     },
     {
       "element": 565,
@@ -1719,12 +1719,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 56,
-      "ownership": "6.8",
+      "ownership": "6.9",
       "status": "a",
       "points": 14,
       "minutes": 75,
-      "transfers_in_event": 280685,
-      "transfers_out_event": 12303
+      "transfers_in_event": 291333,
+      "transfers_out_event": 12930
     },
     {
       "element": 109,
@@ -1738,8 +1738,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 53114,
-      "transfers_out_event": 25325
+      "transfers_in_event": 55271,
+      "transfers_out_event": 26466
     },
     {
       "element": 111,
@@ -1753,8 +1753,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 6509,
-      "transfers_out_event": 8505
+      "transfers_in_event": 6762,
+      "transfers_out_event": 8855
     },
     {
       "element": 113,
@@ -1768,8 +1768,8 @@
       "status": "d",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1999,
-      "transfers_out_event": 36570
+      "transfers_in_event": 2013,
+      "transfers_out_event": 37824
     },
     {
       "element": 114,
@@ -1783,8 +1783,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 2184,
-      "transfers_out_event": 817
+      "transfers_in_event": 2301,
+      "transfers_out_event": 868
     },
     {
       "element": 115,
@@ -1794,12 +1794,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 46,
-      "ownership": "6.1",
+      "ownership": "6.3",
       "status": "a",
       "points": 17,
       "minutes": 77,
-      "transfers_in_event": 339856,
-      "transfers_out_event": 11041
+      "transfers_in_event": 349697,
+      "transfers_out_event": 11703
     },
     {
       "element": 116,
@@ -1813,8 +1813,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 7976,
-      "transfers_out_event": 2993
+      "transfers_in_event": 8350,
+      "transfers_out_event": 3144
     },
     {
       "element": 117,
@@ -1828,8 +1828,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 126,
-      "transfers_out_event": 147
+      "transfers_in_event": 133,
+      "transfers_out_event": 152
     },
     {
       "element": 118,
@@ -1843,8 +1843,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 357,
-      "transfers_out_event": 584
+      "transfers_in_event": 364,
+      "transfers_out_event": 599
     },
     {
       "element": 119,
@@ -1858,8 +1858,8 @@
       "status": "a",
       "points": 1,
       "minutes": 26,
-      "transfers_in_event": 192,
-      "transfers_out_event": 130
+      "transfers_in_event": 197,
+      "transfers_out_event": 131
     },
     {
       "element": 120,
@@ -1873,8 +1873,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 618,
-      "transfers_out_event": 468
+      "transfers_in_event": 631,
+      "transfers_out_event": 485
     },
     {
       "element": 121,
@@ -1888,8 +1888,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 124,
-      "transfers_out_event": 904
+      "transfers_in_event": 127,
+      "transfers_out_event": 932
     },
     {
       "element": 122,
@@ -1903,8 +1903,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 115,
-      "transfers_out_event": 2617
+      "transfers_in_event": 116,
+      "transfers_out_event": 2691
     },
     {
       "element": 123,
@@ -1914,12 +1914,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 60,
-      "ownership": "2.0",
+      "ownership": "2.1",
       "status": "a",
       "points": 16,
       "minutes": 63,
-      "transfers_in_event": 105173,
-      "transfers_out_event": 11135
+      "transfers_in_event": 109786,
+      "transfers_out_event": 11707
     },
     {
       "element": 124,
@@ -1933,8 +1933,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 15309,
-      "transfers_out_event": 67585
+      "transfers_in_event": 15837,
+      "transfers_out_event": 69582
     },
     {
       "element": 125,
@@ -1948,8 +1948,8 @@
       "status": "a",
       "points": 5,
       "minutes": 90,
-      "transfers_in_event": 19856,
-      "transfers_out_event": 5554
+      "transfers_in_event": 20812,
+      "transfers_out_event": 5887
     },
     {
       "element": 126,
@@ -1963,8 +1963,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 443,
-      "transfers_out_event": 897
+      "transfers_in_event": 457,
+      "transfers_out_event": 934
     },
     {
       "element": 127,
@@ -1978,8 +1978,8 @@
       "status": "a",
       "points": 6,
       "minutes": 85,
-      "transfers_in_event": 12545,
-      "transfers_out_event": 9978
+      "transfers_in_event": 13101,
+      "transfers_out_event": 10372
     },
     {
       "element": 128,
@@ -1994,7 +1994,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 134
+      "transfers_out_event": 140
     },
     {
       "element": 129,
@@ -2008,8 +2008,8 @@
       "status": "a",
       "points": 2,
       "minutes": 63,
-      "transfers_in_event": 2175,
-      "transfers_out_event": 4707
+      "transfers_in_event": 2252,
+      "transfers_out_event": 4870
     },
     {
       "element": 130,
@@ -2023,8 +2023,8 @@
       "status": "a",
       "points": 7,
       "minutes": 77,
-      "transfers_in_event": 9299,
-      "transfers_out_event": 1747
+      "transfers_in_event": 9580,
+      "transfers_out_event": 1838
     },
     {
       "element": 131,
@@ -2038,8 +2038,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1715,
-      "transfers_out_event": 2957
+      "transfers_in_event": 1827,
+      "transfers_out_event": 3053
     },
     {
       "element": 132,
@@ -2054,7 +2054,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 1167
+      "transfers_out_event": 1205
     },
     {
       "element": 133,
@@ -2069,7 +2069,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 40
+      "transfers_out_event": 41
     },
     {
       "element": 134,
@@ -2083,8 +2083,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1167,
-      "transfers_out_event": 1780
+      "transfers_in_event": 1209,
+      "transfers_out_event": 1843
     },
     {
       "element": 135,
@@ -2098,8 +2098,8 @@
       "status": "a",
       "points": 1,
       "minutes": 12,
-      "transfers_in_event": 259,
-      "transfers_out_event": 532
+      "transfers_in_event": 273,
+      "transfers_out_event": 554
     },
     {
       "element": 137,
@@ -2113,8 +2113,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 64,
-      "transfers_out_event": 173
+      "transfers_in_event": 65,
+      "transfers_out_event": 177
     },
     {
       "element": 138,
@@ -2128,8 +2128,8 @@
       "status": "a",
       "points": 1,
       "minutes": 26,
-      "transfers_in_event": 587,
-      "transfers_out_event": 1311
+      "transfers_in_event": 611,
+      "transfers_out_event": 1370
     },
     {
       "element": 139,
@@ -2143,8 +2143,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 236,
-      "transfers_out_event": 455
+      "transfers_in_event": 240,
+      "transfers_out_event": 468
     },
     {
       "element": 328,
@@ -2158,8 +2158,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1124,
-      "transfers_out_event": 1622
+      "transfers_in_event": 1146,
+      "transfers_out_event": 1687
     },
     {
       "element": 504,
@@ -2173,8 +2173,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 15968,
-      "transfers_out_event": 7275
+      "transfers_in_event": 16419,
+      "transfers_out_event": 7559
     },
     {
       "element": 594,
@@ -2188,8 +2188,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1837,
-      "transfers_out_event": 2401
+      "transfers_in_event": 1875,
+      "transfers_out_event": 2501
     },
     {
       "element": 600,
@@ -2203,8 +2203,8 @@
       "status": "a",
       "points": 1,
       "minutes": 12,
-      "transfers_in_event": 164,
-      "transfers_out_event": 96
+      "transfers_in_event": 171,
+      "transfers_out_event": 101
     },
     {
       "element": 605,
@@ -2218,8 +2218,8 @@
       "status": "a",
       "points": 1,
       "minutes": 4,
-      "transfers_in_event": 2463,
-      "transfers_out_event": 486
+      "transfers_in_event": 2618,
+      "transfers_out_event": 524
     },
     {
       "element": 40,
@@ -2229,12 +2229,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 75,
-      "ownership": "25.6",
+      "ownership": "25.7",
       "status": "a",
       "points": 8,
       "minutes": 81,
-      "transfers_in_event": 149592,
-      "transfers_out_event": 40249
+      "transfers_in_event": 156777,
+      "transfers_out_event": 41956
     },
     {
       "element": 101,
@@ -2248,8 +2248,8 @@
       "status": "d",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 168,
-      "transfers_out_event": 479
+      "transfers_in_event": 171,
+      "transfers_out_event": 489
     },
     {
       "element": 136,
@@ -2263,8 +2263,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 920,
-      "transfers_out_event": 15940
+      "transfers_in_event": 971,
+      "transfers_out_event": 16471
     },
     {
       "element": 140,
@@ -2274,12 +2274,12 @@
       "position": "GK",
       "element_type": 1,
       "now_cost": 50,
-      "ownership": "2.4",
+      "ownership": "2.3",
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 6371,
-      "transfers_out_event": 12047
+      "transfers_in_event": 6565,
+      "transfers_out_event": 12569
     },
     {
       "element": 141,
@@ -2294,7 +2294,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 417
+      "transfers_out_event": 425
     },
     {
       "element": 142,
@@ -2308,8 +2308,8 @@
       "status": "a",
       "points": 0,
       "minutes": 90,
-      "transfers_in_event": 43282,
-      "transfers_out_event": 49280
+      "transfers_in_event": 44395,
+      "transfers_out_event": 51677
     },
     {
       "element": 143,
@@ -2319,12 +2319,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 55,
-      "ownership": "0.2",
+      "ownership": "0.1",
       "status": "u",
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 6275
+      "transfers_out_event": 6408
     },
     {
       "element": 144,
@@ -2338,8 +2338,8 @@
       "status": "a",
       "points": 1,
       "minutes": 75,
-      "transfers_in_event": 9058,
-      "transfers_out_event": 6931
+      "transfers_in_event": 9289,
+      "transfers_out_event": 7203
     },
     {
       "element": 145,
@@ -2353,8 +2353,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 451,
-      "transfers_out_event": 177
+      "transfers_in_event": 473,
+      "transfers_out_event": 179
     },
     {
       "element": 146,
@@ -2369,7 +2369,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 232,
-      "transfers_out_event": 443
+      "transfers_out_event": 475
     },
     {
       "element": 147,
@@ -2383,8 +2383,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 201,
-      "transfers_out_event": 1288
+      "transfers_in_event": 208,
+      "transfers_out_event": 1345
     },
     {
       "element": 148,
@@ -2398,8 +2398,8 @@
       "status": "a",
       "points": 1,
       "minutes": 64,
-      "transfers_in_event": 2731,
-      "transfers_out_event": 2855
+      "transfers_in_event": 2836,
+      "transfers_out_event": 2965
     },
     {
       "element": 149,
@@ -2413,8 +2413,8 @@
       "status": "a",
       "points": 0,
       "minutes": 90,
-      "transfers_in_event": 7785,
-      "transfers_out_event": 11031
+      "transfers_in_event": 7972,
+      "transfers_out_event": 11540
     },
     {
       "element": 150,
@@ -2428,8 +2428,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 330,
-      "transfers_out_event": 628
+      "transfers_in_event": 338,
+      "transfers_out_event": 653
     },
     {
       "element": 151,
@@ -2443,8 +2443,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 3704,
-      "transfers_out_event": 1712
+      "transfers_in_event": 3942,
+      "transfers_out_event": 1809
     },
     {
       "element": 152,
@@ -2458,8 +2458,8 @@
       "status": "d",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 4668,
-      "transfers_out_event": 32089
+      "transfers_in_event": 4700,
+      "transfers_out_event": 33685
     },
     {
       "element": 153,
@@ -2473,8 +2473,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 317,
-      "transfers_out_event": 598
+      "transfers_in_event": 328,
+      "transfers_out_event": 619
     },
     {
       "element": 154,
@@ -2484,12 +2484,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 95,
-      "ownership": "13.4",
+      "ownership": "13.6",
       "status": "a",
       "points": 13,
       "minutes": 82,
-      "transfers_in_event": 193330,
-      "transfers_out_event": 21722
+      "transfers_in_event": 205769,
+      "transfers_out_event": 22268
     },
     {
       "element": 155,
@@ -2503,8 +2503,8 @@
       "status": "a",
       "points": 1,
       "minutes": 25,
-      "transfers_in_event": 12550,
-      "transfers_out_event": 47341
+      "transfers_in_event": 12731,
+      "transfers_out_event": 49850
     },
     {
       "element": 156,
@@ -2518,8 +2518,8 @@
       "status": "a",
       "points": 1,
       "minutes": 14,
-      "transfers_in_event": 4248,
-      "transfers_out_event": 13107
+      "transfers_in_event": 4349,
+      "transfers_out_event": 13738
     },
     {
       "element": 157,
@@ -2533,8 +2533,8 @@
       "status": "a",
       "points": 1,
       "minutes": 7,
-      "transfers_in_event": 4047,
-      "transfers_out_event": 15063
+      "transfers_in_event": 4132,
+      "transfers_out_event": 15702
     },
     {
       "element": 158,
@@ -2548,8 +2548,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 199,
-      "transfers_out_event": 485
+      "transfers_in_event": 204,
+      "transfers_out_event": 515
     },
     {
       "element": 159,
@@ -2559,12 +2559,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 55,
-      "ownership": "3.4",
+      "ownership": "3.3",
       "status": "d",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 8990,
-      "transfers_out_event": 58109
+      "transfers_in_event": 9034,
+      "transfers_out_event": 60926
     },
     {
       "element": 161,
@@ -2578,8 +2578,8 @@
       "status": "a",
       "points": 1,
       "minutes": 64,
-      "transfers_in_event": 728,
-      "transfers_out_event": 597
+      "transfers_in_event": 769,
+      "transfers_out_event": 633
     },
     {
       "element": 163,
@@ -2593,8 +2593,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 948,
-      "transfers_out_event": 1931
+      "transfers_in_event": 961,
+      "transfers_out_event": 2000
     },
     {
       "element": 164,
@@ -2608,8 +2608,8 @@
       "status": "a",
       "points": 1,
       "minutes": 8,
-      "transfers_in_event": 169,
-      "transfers_out_event": 539
+      "transfers_in_event": 175,
+      "transfers_out_event": 558
     },
     {
       "element": 165,
@@ -2619,12 +2619,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 75,
-      "ownership": "66.3",
+      "ownership": "66.5",
       "status": "a",
       "points": 11,
       "minutes": 90,
-      "transfers_in_event": 235049,
-      "transfers_out_event": 19868
+      "transfers_in_event": 246710,
+      "transfers_out_event": 20245
     },
     {
       "element": 166,
@@ -2638,8 +2638,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1861,
-      "transfers_out_event": 5143
+      "transfers_in_event": 1914,
+      "transfers_out_event": 5341
     },
     {
       "element": 167,
@@ -2653,8 +2653,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2105,
-      "transfers_out_event": 4795
+      "transfers_in_event": 2429,
+      "transfers_out_event": 5023
     },
     {
       "element": 168,
@@ -2668,8 +2668,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1648,
-      "transfers_out_event": 3955
+      "transfers_in_event": 1685,
+      "transfers_out_event": 4113
     },
     {
       "element": 169,
@@ -2683,8 +2683,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2045,
-      "transfers_out_event": 2975
+      "transfers_in_event": 2097,
+      "transfers_out_event": 3099
     },
     {
       "element": 170,
@@ -2698,8 +2698,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1145,
-      "transfers_out_event": 1587
+      "transfers_in_event": 1165,
+      "transfers_out_event": 1632
     },
     {
       "element": 200,
@@ -2713,8 +2713,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 40120,
-      "transfers_out_event": 27682
+      "transfers_in_event": 41839,
+      "transfers_out_event": 28798
     },
     {
       "element": 560,
@@ -2728,8 +2728,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 243,
-      "transfers_out_event": 475
+      "transfers_in_event": 257,
+      "transfers_out_event": 497
     },
     {
       "element": 561,
@@ -2744,7 +2744,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 94,
-      "transfers_out_event": 326
+      "transfers_out_event": 347
     },
     {
       "element": 568,
@@ -2758,8 +2758,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 227,
-      "transfers_out_event": 1035
+      "transfers_in_event": 231,
+      "transfers_out_event": 1089
     },
     {
       "element": 578,
@@ -2773,8 +2773,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 177,
-      "transfers_out_event": 655
+      "transfers_in_event": 183,
+      "transfers_out_event": 680
     },
     {
       "element": 583,
@@ -2788,8 +2788,8 @@
       "status": "a",
       "points": 1,
       "minutes": 25,
-      "transfers_in_event": 741,
-      "transfers_out_event": 1453
+      "transfers_in_event": 758,
+      "transfers_out_event": 1526
     },
     {
       "element": 104,
@@ -2803,8 +2803,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 1073,
-      "transfers_out_event": 947
+      "transfers_in_event": 1129,
+      "transfers_out_event": 981
     },
     {
       "element": 110,
@@ -2818,8 +2818,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 3644,
-      "transfers_out_event": 2689
+      "transfers_in_event": 3837,
+      "transfers_out_event": 2772
     },
     {
       "element": 171,
@@ -2833,8 +2833,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1396,
-      "transfers_out_event": 3879
+      "transfers_in_event": 1467,
+      "transfers_out_event": 4011
     },
     {
       "element": 172,
@@ -2848,8 +2848,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 143,
-      "transfers_out_event": 2118
+      "transfers_in_event": 150,
+      "transfers_out_event": 2198
     },
     {
       "element": 173,
@@ -2863,8 +2863,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 20551,
-      "transfers_out_event": 14181
+      "transfers_in_event": 21397,
+      "transfers_out_event": 14791
     },
     {
       "element": 174,
@@ -2878,8 +2878,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 333,
-      "transfers_out_event": 2955
+      "transfers_in_event": 344,
+      "transfers_out_event": 3038
     },
     {
       "element": 175,
@@ -2893,8 +2893,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 20006,
-      "transfers_out_event": 33365
+      "transfers_in_event": 20793,
+      "transfers_out_event": 34530
     },
     {
       "element": 176,
@@ -2908,8 +2908,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 1563,
-      "transfers_out_event": 2396
+      "transfers_in_event": 1649,
+      "transfers_out_event": 2501
     },
     {
       "element": 177,
@@ -2923,8 +2923,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 109,
-      "transfers_out_event": 334
+      "transfers_in_event": 120,
+      "transfers_out_event": 345
     },
     {
       "element": 178,
@@ -2938,8 +2938,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 397,
-      "transfers_out_event": 503
+      "transfers_in_event": 401,
+      "transfers_out_event": 525
     },
     {
       "element": 179,
@@ -2953,8 +2953,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 86,
-      "transfers_out_event": 259
+      "transfers_in_event": 88,
+      "transfers_out_event": 270
     },
     {
       "element": 180,
@@ -2968,8 +2968,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 681,
-      "transfers_out_event": 1117
+      "transfers_in_event": 711,
+      "transfers_out_event": 1158
     },
     {
       "element": 181,
@@ -2983,8 +2983,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 171,
-      "transfers_out_event": 206
+      "transfers_in_event": 176,
+      "transfers_out_event": 222
     },
     {
       "element": 182,
@@ -2998,8 +2998,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 1812,
-      "transfers_out_event": 2722
+      "transfers_in_event": 1921,
+      "transfers_out_event": 2851
     },
     {
       "element": 183,
@@ -3013,8 +3013,8 @@
       "status": "a",
       "points": 1,
       "minutes": 20,
-      "transfers_in_event": 459,
-      "transfers_out_event": 808
+      "transfers_in_event": 506,
+      "transfers_out_event": 840
     },
     {
       "element": 184,
@@ -3028,8 +3028,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 1052,
-      "transfers_out_event": 980
+      "transfers_in_event": 1105,
+      "transfers_out_event": 1024
     },
     {
       "element": 185,
@@ -3043,8 +3043,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 86,
-      "transfers_out_event": 935
+      "transfers_in_event": 90,
+      "transfers_out_event": 976
     },
     {
       "element": 186,
@@ -3058,8 +3058,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 185,
-      "transfers_out_event": 1041
+      "transfers_in_event": 203,
+      "transfers_out_event": 1064
     },
     {
       "element": 187,
@@ -3073,8 +3073,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 47,
-      "transfers_out_event": 168
+      "transfers_in_event": 48,
+      "transfers_out_event": 174
     },
     {
       "element": 188,
@@ -3088,8 +3088,8 @@
       "status": "a",
       "points": 1,
       "minutes": 28,
-      "transfers_in_event": 140,
-      "transfers_out_event": 1161
+      "transfers_in_event": 159,
+      "transfers_out_event": 1196
     },
     {
       "element": 189,
@@ -3103,8 +3103,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 695,
-      "transfers_out_event": 2065
+      "transfers_in_event": 718,
+      "transfers_out_event": 2127
     },
     {
       "element": 190,
@@ -3118,8 +3118,8 @@
       "status": "a",
       "points": 2,
       "minutes": 81,
-      "transfers_in_event": 985,
-      "transfers_out_event": 798
+      "transfers_in_event": 1064,
+      "transfers_out_event": 820
     },
     {
       "element": 191,
@@ -3133,8 +3133,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 443,
-      "transfers_out_event": 1258
+      "transfers_in_event": 459,
+      "transfers_out_event": 1297
     },
     {
       "element": 192,
@@ -3148,8 +3148,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1912,
-      "transfers_out_event": 4804
+      "transfers_in_event": 1969,
+      "transfers_out_event": 4960
     },
     {
       "element": 193,
@@ -3163,8 +3163,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 75,
-      "transfers_out_event": 3931
+      "transfers_in_event": 76,
+      "transfers_out_event": 4054
     },
     {
       "element": 194,
@@ -3178,8 +3178,8 @@
       "status": "a",
       "points": 2,
       "minutes": 69,
-      "transfers_in_event": 8136,
-      "transfers_out_event": 4699
+      "transfers_in_event": 8511,
+      "transfers_out_event": 4907
     },
     {
       "element": 195,
@@ -3193,8 +3193,8 @@
       "status": "a",
       "points": 2,
       "minutes": 69,
-      "transfers_in_event": 11112,
-      "transfers_out_event": 5342
+      "transfers_in_event": 11606,
+      "transfers_out_event": 5580
     },
     {
       "element": 196,
@@ -3209,7 +3209,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 460
+      "transfers_out_event": 468
     },
     {
       "element": 197,
@@ -3224,7 +3224,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 613
+      "transfers_out_event": 629
     },
     {
       "element": 492,
@@ -3238,8 +3238,8 @@
       "status": "a",
       "points": 1,
       "minutes": 20,
-      "transfers_in_event": 3094,
-      "transfers_out_event": 5503
+      "transfers_in_event": 3389,
+      "transfers_out_event": 5736
     },
     {
       "element": 575,
@@ -3253,8 +3253,8 @@
       "status": "a",
       "points": 1,
       "minutes": 61,
-      "transfers_in_event": 545,
-      "transfers_out_event": 1759
+      "transfers_in_event": 569,
+      "transfers_out_event": 1822
     },
     {
       "element": 584,
@@ -3268,8 +3268,8 @@
       "status": "a",
       "points": 1,
       "minutes": 8,
-      "transfers_in_event": 240,
-      "transfers_out_event": 881
+      "transfers_in_event": 248,
+      "transfers_out_event": 917
     },
     {
       "element": 599,
@@ -3283,8 +3283,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1101,
-      "transfers_out_event": 880
+      "transfers_in_event": 1148,
+      "transfers_out_event": 919
     },
     {
       "element": 42,
@@ -3298,8 +3298,8 @@
       "status": "a",
       "points": 1,
       "minutes": 27,
-      "transfers_in_event": 277,
-      "transfers_out_event": 411
+      "transfers_in_event": 284,
+      "transfers_out_event": 428
     },
     {
       "element": 198,
@@ -3313,8 +3313,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 3741,
-      "transfers_out_event": 9179
+      "transfers_in_event": 3885,
+      "transfers_out_event": 9460
     },
     {
       "element": 199,
@@ -3328,8 +3328,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 341,
-      "transfers_out_event": 750
+      "transfers_in_event": 347,
+      "transfers_out_event": 773
     },
     {
       "element": 201,
@@ -3343,8 +3343,8 @@
       "status": "a",
       "points": 0,
       "minutes": 54,
-      "transfers_in_event": 12645,
-      "transfers_out_event": 77377
+      "transfers_in_event": 12853,
+      "transfers_out_event": 80244
     },
     {
       "element": 202,
@@ -3358,8 +3358,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 2771,
-      "transfers_out_event": 3664
+      "transfers_in_event": 2839,
+      "transfers_out_event": 3818
     },
     {
       "element": 203,
@@ -3373,8 +3373,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 588,
-      "transfers_out_event": 2296
+      "transfers_in_event": 597,
+      "transfers_out_event": 2378
     },
     {
       "element": 204,
@@ -3388,8 +3388,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 4428,
-      "transfers_out_event": 31871
+      "transfers_in_event": 4528,
+      "transfers_out_event": 33008
     },
     {
       "element": 205,
@@ -3403,8 +3403,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 94,
-      "transfers_out_event": 226
+      "transfers_in_event": 96,
+      "transfers_out_event": 238
     },
     {
       "element": 206,
@@ -3419,7 +3419,7 @@
       "points": 1,
       "minutes": 72,
       "transfers_in_event": 253,
-      "transfers_out_event": 1885
+      "transfers_out_event": 1926
     },
     {
       "element": 207,
@@ -3433,8 +3433,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 146,
-      "transfers_out_event": 834
+      "transfers_in_event": 149,
+      "transfers_out_event": 871
     },
     {
       "element": 208,
@@ -3448,8 +3448,8 @@
       "status": "d",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1876,
-      "transfers_out_event": 112816
+      "transfers_in_event": 1884,
+      "transfers_out_event": 116926
     },
     {
       "element": 210,
@@ -3463,8 +3463,8 @@
       "status": "a",
       "points": 4,
       "minutes": 90,
-      "transfers_in_event": 4152,
-      "transfers_out_event": 4725
+      "transfers_in_event": 4317,
+      "transfers_out_event": 4905
     },
     {
       "element": 211,
@@ -3478,8 +3478,8 @@
       "status": "a",
       "points": 1,
       "minutes": 35,
-      "transfers_in_event": 184,
-      "transfers_out_event": 1479
+      "transfers_in_event": 188,
+      "transfers_out_event": 1542
     },
     {
       "element": 212,
@@ -3493,8 +3493,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 13928,
-      "transfers_out_event": 58250
+      "transfers_in_event": 14321,
+      "transfers_out_event": 60363
     },
     {
       "element": 213,
@@ -3508,8 +3508,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 147,
-      "transfers_out_event": 894
+      "transfers_in_event": 152,
+      "transfers_out_event": 921
     },
     {
       "element": 214,
@@ -3523,8 +3523,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 1248,
-      "transfers_out_event": 1939
+      "transfers_in_event": 1280,
+      "transfers_out_event": 2021
     },
     {
       "element": 215,
@@ -3539,7 +3539,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 48,
-      "transfers_out_event": 117
+      "transfers_out_event": 126
     },
     {
       "element": 216,
@@ -3553,8 +3553,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 159,
-      "transfers_out_event": 391
+      "transfers_in_event": 163,
+      "transfers_out_event": 400
     },
     {
       "element": 217,
@@ -3569,7 +3569,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 11,
-      "transfers_out_event": 451
+      "transfers_out_event": 459
     },
     {
       "element": 218,
@@ -3583,8 +3583,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 173,
-      "transfers_out_event": 674
+      "transfers_in_event": 175,
+      "transfers_out_event": 707
     },
     {
       "element": 219,
@@ -3599,7 +3599,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 21,
-      "transfers_out_event": 55
+      "transfers_out_event": 59
     },
     {
       "element": 220,
@@ -3614,7 +3614,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 47
+      "transfers_out_event": 48
     },
     {
       "element": 221,
@@ -3628,8 +3628,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 279,
-      "transfers_out_event": 640
+      "transfers_in_event": 287,
+      "transfers_out_event": 666
     },
     {
       "element": 222,
@@ -3643,8 +3643,8 @@
       "status": "a",
       "points": 1,
       "minutes": 27,
-      "transfers_in_event": 951,
-      "transfers_out_event": 4322
+      "transfers_in_event": 973,
+      "transfers_out_event": 4536
     },
     {
       "element": 223,
@@ -3658,8 +3658,8 @@
       "status": "a",
       "points": 2,
       "minutes": 62,
-      "transfers_in_event": 15786,
-      "transfers_out_event": 41147
+      "transfers_in_event": 16266,
+      "transfers_out_event": 42949
     },
     {
       "element": 224,
@@ -3673,8 +3673,8 @@
       "status": "a",
       "points": 1,
       "minutes": 55,
-      "transfers_in_event": 2031,
-      "transfers_out_event": 3552
+      "transfers_in_event": 2100,
+      "transfers_out_event": 3693
     },
     {
       "element": 225,
@@ -3703,8 +3703,8 @@
       "status": "a",
       "points": 2,
       "minutes": 62,
-      "transfers_in_event": 224,
-      "transfers_out_event": 980
+      "transfers_in_event": 233,
+      "transfers_out_event": 1022
     },
     {
       "element": 555,
@@ -3718,8 +3718,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 3884,
-      "transfers_out_event": 4153
+      "transfers_in_event": 4031,
+      "transfers_out_event": 4324
     },
     {
       "element": 577,
@@ -3733,8 +3733,8 @@
       "status": "a",
       "points": 1,
       "minutes": 18,
-      "transfers_in_event": 624,
-      "transfers_out_event": 1639
+      "transfers_in_event": 635,
+      "transfers_out_event": 1701
     },
     {
       "element": 588,
@@ -3748,8 +3748,8 @@
       "status": "a",
       "points": 1,
       "minutes": 35,
-      "transfers_in_event": 316,
-      "transfers_out_event": 494
+      "transfers_in_event": 321,
+      "transfers_out_event": 502
     },
     {
       "element": 595,
@@ -3764,7 +3764,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 83,
-      "transfers_out_event": 102
+      "transfers_out_event": 108
     },
     {
       "element": 21,
@@ -3778,8 +3778,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 79,
-      "transfers_out_event": 2004
+      "transfers_in_event": 80,
+      "transfers_out_event": 2068
     },
     {
       "element": 209,
@@ -3793,8 +3793,8 @@
       "status": "a",
       "points": 1,
       "minutes": 6,
-      "transfers_in_event": 360,
-      "transfers_out_event": 1568
+      "transfers_in_event": 365,
+      "transfers_out_event": 1626
     },
     {
       "element": 226,
@@ -3808,8 +3808,8 @@
       "status": "a",
       "points": 7,
       "minutes": 90,
-      "transfers_in_event": 43177,
-      "transfers_out_event": 15533
+      "transfers_in_event": 44633,
+      "transfers_out_event": 16267
     },
     {
       "element": 227,
@@ -3823,8 +3823,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 179,
-      "transfers_out_event": 251
+      "transfers_in_event": 188,
+      "transfers_out_event": 266
     },
     {
       "element": 228,
@@ -3838,8 +3838,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 163,
-      "transfers_out_event": 248
+      "transfers_in_event": 168,
+      "transfers_out_event": 257
     },
     {
       "element": 229,
@@ -3853,8 +3853,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 29850,
-      "transfers_out_event": 19250
+      "transfers_in_event": 30776,
+      "transfers_out_event": 20157
     },
     {
       "element": 230,
@@ -3868,8 +3868,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 13180,
-      "transfers_out_event": 4902
+      "transfers_in_event": 13550,
+      "transfers_out_event": 5145
     },
     {
       "element": 231,
@@ -3883,8 +3883,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2485,
-      "transfers_out_event": 15374
+      "transfers_in_event": 2535,
+      "transfers_out_event": 15926
     },
     {
       "element": 232,
@@ -3898,8 +3898,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1068,
-      "transfers_out_event": 4296
+      "transfers_in_event": 1091,
+      "transfers_out_event": 4471
     },
     {
       "element": 233,
@@ -3913,8 +3913,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 13040,
-      "transfers_out_event": 4770
+      "transfers_in_event": 13462,
+      "transfers_out_event": 4960
     },
     {
       "element": 234,
@@ -3928,8 +3928,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 140,
-      "transfers_out_event": 243
+      "transfers_in_event": 142,
+      "transfers_out_event": 249
     },
     {
       "element": 235,
@@ -3943,8 +3943,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 723,
-      "transfers_out_event": 1070
+      "transfers_in_event": 744,
+      "transfers_out_event": 1115
     },
     {
       "element": 236,
@@ -3958,8 +3958,8 @@
       "status": "a",
       "points": 11,
       "minutes": 90,
-      "transfers_in_event": 86127,
-      "transfers_out_event": 15292
+      "transfers_in_event": 88772,
+      "transfers_out_event": 15936
     },
     {
       "element": 237,
@@ -3973,8 +3973,8 @@
       "status": "a",
       "points": 9,
       "minutes": 90,
-      "transfers_in_event": 74910,
-      "transfers_out_event": 28934
+      "transfers_in_event": 77534,
+      "transfers_out_event": 30282
     },
     {
       "element": 239,
@@ -3988,8 +3988,8 @@
       "status": "a",
       "points": 1,
       "minutes": 11,
-      "transfers_in_event": 826,
-      "transfers_out_event": 1120
+      "transfers_in_event": 857,
+      "transfers_out_event": 1159
     },
     {
       "element": 240,
@@ -4003,8 +4003,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 15,
-      "transfers_out_event": 249
+      "transfers_in_event": 16,
+      "transfers_out_event": 252
     },
     {
       "element": 242,
@@ -4018,8 +4018,8 @@
       "status": "a",
       "points": 3,
       "minutes": 83,
-      "transfers_in_event": 1367,
-      "transfers_out_event": 1476
+      "transfers_in_event": 1406,
+      "transfers_out_event": 1531
     },
     {
       "element": 243,
@@ -4033,8 +4033,8 @@
       "status": "a",
       "points": 1,
       "minutes": 1,
-      "transfers_in_event": 542,
-      "transfers_out_event": 730
+      "transfers_in_event": 558,
+      "transfers_out_event": 753
     },
     {
       "element": 244,
@@ -4048,8 +4048,8 @@
       "status": "a",
       "points": 8,
       "minutes": 90,
-      "transfers_in_event": 7126,
-      "transfers_out_event": 1310
+      "transfers_in_event": 7471,
+      "transfers_out_event": 1365
     },
     {
       "element": 245,
@@ -4063,8 +4063,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 115,
-      "transfers_out_event": 458
+      "transfers_in_event": 120,
+      "transfers_out_event": 476
     },
     {
       "element": 246,
@@ -4078,8 +4078,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 306,
-      "transfers_out_event": 349
+      "transfers_in_event": 319,
+      "transfers_out_event": 370
     },
     {
       "element": 247,
@@ -4093,8 +4093,8 @@
       "status": "a",
       "points": 3,
       "minutes": 78,
-      "transfers_in_event": 726,
-      "transfers_out_event": 1363
+      "transfers_in_event": 741,
+      "transfers_out_event": 1411
     },
     {
       "element": 248,
@@ -4108,8 +4108,8 @@
       "status": "a",
       "points": 1,
       "minutes": 11,
-      "transfers_in_event": 5312,
-      "transfers_out_event": 24393
+      "transfers_in_event": 5482,
+      "transfers_out_event": 25343
     },
     {
       "element": 249,
@@ -4119,12 +4119,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 55,
-      "ownership": "2.2",
+      "ownership": "2.3",
       "status": "a",
       "points": 8,
       "minutes": 78,
-      "transfers_in_event": 62371,
-      "transfers_out_event": 11077
+      "transfers_in_event": 64875,
+      "transfers_out_event": 11674
     },
     {
       "element": 250,
@@ -4138,8 +4138,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 6809,
-      "transfers_out_event": 6762
+      "transfers_in_event": 7138,
+      "transfers_out_event": 7086
     },
     {
       "element": 251,
@@ -4153,8 +4153,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 887,
-      "transfers_out_event": 2270
+      "transfers_in_event": 917,
+      "transfers_out_event": 2375
     },
     {
       "element": 252,
@@ -4168,8 +4168,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 478,
-      "transfers_out_event": 401
+      "transfers_in_event": 487,
+      "transfers_out_event": 414
     },
     {
       "element": 253,
@@ -4183,8 +4183,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1072,
-      "transfers_out_event": 354
+      "transfers_in_event": 1161,
+      "transfers_out_event": 371
     },
     {
       "element": 254,
@@ -4198,8 +4198,8 @@
       "status": "a",
       "points": 1,
       "minutes": 81,
-      "transfers_in_event": 7190,
-      "transfers_out_event": 5984
+      "transfers_in_event": 7443,
+      "transfers_out_event": 6247
     },
     {
       "element": 255,
@@ -4213,8 +4213,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 434,
-      "transfers_out_event": 128
+      "transfers_in_event": 456,
+      "transfers_out_event": 137
     },
     {
       "element": 256,
@@ -4228,8 +4228,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 235,
-      "transfers_out_event": 1219
+      "transfers_in_event": 239,
+      "transfers_out_event": 1270
     },
     {
       "element": 257,
@@ -4243,8 +4243,8 @@
       "status": "a",
       "points": 0,
       "minutes": 90,
-      "transfers_in_event": 4954,
-      "transfers_out_event": 3658
+      "transfers_in_event": 5094,
+      "transfers_out_event": 3830
     },
     {
       "element": 258,
@@ -4258,8 +4258,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 5584,
-      "transfers_out_event": 1180
+      "transfers_in_event": 5934,
+      "transfers_out_event": 1274
     },
     {
       "element": 261,
@@ -4273,8 +4273,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 3700,
-      "transfers_out_event": 5577
+      "transfers_in_event": 3832,
+      "transfers_out_event": 5805
     },
     {
       "element": 262,
@@ -4288,8 +4288,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 888,
-      "transfers_out_event": 2852
+      "transfers_in_event": 905,
+      "transfers_out_event": 2970
     },
     {
       "element": 263,
@@ -4303,8 +4303,8 @@
       "status": "a",
       "points": 1,
       "minutes": 17,
-      "transfers_in_event": 269,
-      "transfers_out_event": 522
+      "transfers_in_event": 281,
+      "transfers_out_event": 547
     },
     {
       "element": 264,
@@ -4318,8 +4318,8 @@
       "status": "a",
       "points": 2,
       "minutes": 66,
-      "transfers_in_event": 2758,
-      "transfers_out_event": 1914
+      "transfers_in_event": 2858,
+      "transfers_out_event": 1989
     },
     {
       "element": 265,
@@ -4333,8 +4333,8 @@
       "status": "a",
       "points": 2,
       "minutes": 72,
-      "transfers_in_event": 987,
-      "transfers_out_event": 2090
+      "transfers_in_event": 1021,
+      "transfers_out_event": 2187
     },
     {
       "element": 266,
@@ -4349,7 +4349,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 11,
-      "transfers_out_event": 84
+      "transfers_out_event": 85
     },
     {
       "element": 268,
@@ -4363,8 +4363,8 @@
       "status": "a",
       "points": 7,
       "minutes": 90,
-      "transfers_in_event": 19148,
-      "transfers_out_event": 1860
+      "transfers_in_event": 20196,
+      "transfers_out_event": 2006
     },
     {
       "element": 269,
@@ -4378,8 +4378,8 @@
       "status": "a",
       "points": 1,
       "minutes": 17,
-      "transfers_in_event": 654,
-      "transfers_out_event": 1674
+      "transfers_in_event": 666,
+      "transfers_out_event": 1765
     },
     {
       "element": 270,
@@ -4393,8 +4393,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 4039,
-      "transfers_out_event": 9079
+      "transfers_in_event": 4142,
+      "transfers_out_event": 9467
     },
     {
       "element": 271,
@@ -4408,8 +4408,8 @@
       "status": "a",
       "points": 1,
       "minutes": 8,
-      "transfers_in_event": 1739,
-      "transfers_out_event": 3994
+      "transfers_in_event": 1801,
+      "transfers_out_event": 4195
     },
     {
       "element": 272,
@@ -4423,8 +4423,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 15961,
-      "transfers_out_event": 27412
+      "transfers_in_event": 16521,
+      "transfers_out_event": 28503
     },
     {
       "element": 569,
@@ -4434,12 +4434,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 60,
-      "ownership": "2.9",
+      "ownership": "3.0",
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 62977,
-      "transfers_out_event": 8291
+      "transfers_in_event": 67139,
+      "transfers_out_event": 8772
     },
     {
       "element": 570,
@@ -4453,8 +4453,8 @@
       "status": "a",
       "points": 2,
       "minutes": 72,
-      "transfers_in_event": 609,
-      "transfers_out_event": 1092
+      "transfers_in_event": 633,
+      "transfers_out_event": 1141
     },
     {
       "element": 580,
@@ -4468,8 +4468,8 @@
       "status": "a",
       "points": 1,
       "minutes": 23,
-      "transfers_in_event": 260,
-      "transfers_out_event": 489
+      "transfers_in_event": 268,
+      "transfers_out_event": 518
     },
     {
       "element": 610,
@@ -4483,8 +4483,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1440,
-      "transfers_out_event": 159
+      "transfers_in_event": 1580,
+      "transfers_out_event": 174
     },
     {
       "element": 273,
@@ -4498,8 +4498,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2014,
-      "transfers_out_event": 4152
+      "transfers_in_event": 2094,
+      "transfers_out_event": 4326
     },
     {
       "element": 274,
@@ -4513,8 +4513,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 86,
-      "transfers_out_event": 1237
+      "transfers_in_event": 87,
+      "transfers_out_event": 1272
     },
     {
       "element": 275,
@@ -4529,7 +4529,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 91
+      "transfers_out_event": 92
     },
     {
       "element": 276,
@@ -4544,7 +4544,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 290
+      "transfers_out_event": 299
     },
     {
       "element": 277,
@@ -4558,8 +4558,8 @@
       "status": "a",
       "points": 8,
       "minutes": 90,
-      "transfers_in_event": 31546,
-      "transfers_out_event": 5921
+      "transfers_in_event": 32422,
+      "transfers_out_event": 6262
     },
     {
       "element": 278,
@@ -4573,8 +4573,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 65,
-      "transfers_out_event": 1667
+      "transfers_in_event": 68,
+      "transfers_out_event": 1726
     },
     {
       "element": 279,
@@ -4588,8 +4588,8 @@
       "status": "d",
       "points": 14,
       "minutes": 63,
-      "transfers_in_event": 43020,
-      "transfers_out_event": 10152
+      "transfers_in_event": 43959,
+      "transfers_out_event": 10582
     },
     {
       "element": 280,
@@ -4603,8 +4603,8 @@
       "status": "d",
       "points": 6,
       "minutes": 69,
-      "transfers_in_event": 1326,
-      "transfers_out_event": 3359
+      "transfers_in_event": 1352,
+      "transfers_out_event": 3521
     },
     {
       "element": 281,
@@ -4618,8 +4618,8 @@
       "status": "a",
       "points": 1,
       "minutes": 20,
-      "transfers_in_event": 763,
-      "transfers_out_event": 244
+      "transfers_in_event": 787,
+      "transfers_out_event": 251
     },
     {
       "element": 282,
@@ -4633,8 +4633,8 @@
       "status": "a",
       "points": 6,
       "minutes": 84,
-      "transfers_in_event": 9280,
-      "transfers_out_event": 2290
+      "transfers_in_event": 9564,
+      "transfers_out_event": 2411
     },
     {
       "element": 283,
@@ -4649,7 +4649,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 32,
-      "transfers_out_event": 160
+      "transfers_out_event": 162
     },
     {
       "element": 284,
@@ -4663,8 +4663,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 484,
-      "transfers_out_event": 653
+      "transfers_in_event": 507,
+      "transfers_out_event": 674
     },
     {
       "element": 285,
@@ -4678,8 +4678,8 @@
       "status": "a",
       "points": 1,
       "minutes": 26,
-      "transfers_in_event": 483,
-      "transfers_out_event": 435
+      "transfers_in_event": 496,
+      "transfers_out_event": 449
     },
     {
       "element": 286,
@@ -4693,8 +4693,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 8831,
-      "transfers_out_event": 2338
+      "transfers_in_event": 9120,
+      "transfers_out_event": 2441
     },
     {
       "element": 287,
@@ -4708,8 +4708,8 @@
       "status": "a",
       "points": 0,
       "minutes": 19,
-      "transfers_in_event": 221,
-      "transfers_out_event": 571
+      "transfers_in_event": 226,
+      "transfers_out_event": 592
     },
     {
       "element": 288,
@@ -4723,8 +4723,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1143,
-      "transfers_out_event": 2769
+      "transfers_in_event": 1194,
+      "transfers_out_event": 2873
     },
     {
       "element": 289,
@@ -4738,8 +4738,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 6432,
-      "transfers_out_event": 3588
+      "transfers_in_event": 6704,
+      "transfers_out_event": 3719
     },
     {
       "element": 290,
@@ -4753,8 +4753,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 54072,
-      "transfers_out_event": 13063
+      "transfers_in_event": 56237,
+      "transfers_out_event": 13646
     },
     {
       "element": 291,
@@ -4769,7 +4769,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 41,
-      "transfers_out_event": 60
+      "transfers_out_event": 62
     },
     {
       "element": 292,
@@ -4783,8 +4783,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 161,
-      "transfers_out_event": 253
+      "transfers_in_event": 163,
+      "transfers_out_event": 263
     },
     {
       "element": 293,
@@ -4799,7 +4799,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 151
+      "transfers_out_event": 152
     },
     {
       "element": 294,
@@ -4813,8 +4813,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 306,
-      "transfers_out_event": 1608
+      "transfers_in_event": 314,
+      "transfers_out_event": 1641
     },
     {
       "element": 295,
@@ -4828,8 +4828,8 @@
       "status": "a",
       "points": 5,
       "minutes": 90,
-      "transfers_in_event": 48525,
-      "transfers_out_event": 8160
+      "transfers_in_event": 50534,
+      "transfers_out_event": 8646
     },
     {
       "element": 296,
@@ -4843,8 +4843,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 672,
-      "transfers_out_event": 637
+      "transfers_in_event": 693,
+      "transfers_out_event": 659
     },
     {
       "element": 297,
@@ -4858,8 +4858,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 41,
-      "transfers_out_event": 411
+      "transfers_in_event": 42,
+      "transfers_out_event": 422
     },
     {
       "element": 298,
@@ -4869,12 +4869,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 45,
-      "ownership": "0.4",
+      "ownership": "0.3",
       "status": "u",
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 6694
+      "transfers_out_event": 6873
     },
     {
       "element": 299,
@@ -4889,7 +4889,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 947
+      "transfers_out_event": 963
     },
     {
       "element": 340,
@@ -4903,8 +4903,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 34,
-      "transfers_out_event": 198
+      "transfers_in_event": 35,
+      "transfers_out_event": 204
     },
     {
       "element": 556,
@@ -4914,12 +4914,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 40,
-      "ownership": "2.4",
+      "ownership": "2.3",
       "status": "a",
       "points": 1,
       "minutes": 5,
-      "transfers_in_event": 3987,
-      "transfers_out_event": 10031
+      "transfers_in_event": 4082,
+      "transfers_out_event": 10397
     },
     {
       "element": 563,
@@ -4933,8 +4933,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 45,
-      "transfers_out_event": 268
+      "transfers_in_event": 52,
+      "transfers_out_event": 271
     },
     {
       "element": 572,
@@ -4944,12 +4944,12 @@
       "position": "GK",
       "element_type": 1,
       "now_cost": 45,
-      "ownership": "2.0",
+      "ownership": "2.1",
       "status": "a",
       "points": 10,
       "minutes": 90,
-      "transfers_in_event": 62551,
-      "transfers_out_event": 6224
+      "transfers_in_event": 64996,
+      "transfers_out_event": 6573
     },
     {
       "element": 574,
@@ -4963,8 +4963,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 215,
-      "transfers_out_event": 584
+      "transfers_in_event": 221,
+      "transfers_out_event": 602
     },
     {
       "element": 576,
@@ -4978,8 +4978,8 @@
       "status": "a",
       "points": 3,
       "minutes": 70,
-      "transfers_in_event": 823,
-      "transfers_out_event": 344
+      "transfers_in_event": 857,
+      "transfers_out_event": 357
     },
     {
       "element": 585,
@@ -4993,8 +4993,8 @@
       "status": "a",
       "points": 1,
       "minutes": 26,
-      "transfers_in_event": 2113,
-      "transfers_out_event": 2243
+      "transfers_in_event": 2201,
+      "transfers_out_event": 2317
     },
     {
       "element": 586,
@@ -5004,12 +5004,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 40,
-      "ownership": "2.3",
+      "ownership": "2.4",
       "status": "a",
       "points": 15,
       "minutes": 63,
-      "transfers_in_event": 77839,
-      "transfers_out_event": 12067
+      "transfers_in_event": 84465,
+      "transfers_out_event": 12453
     },
     {
       "element": 589,
@@ -5023,8 +5023,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 87,
-      "transfers_out_event": 180
+      "transfers_in_event": 89,
+      "transfers_out_event": 190
     },
     {
       "element": 259,
@@ -5038,8 +5038,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 18491,
-      "transfers_out_event": 42874
+      "transfers_in_event": 18962,
+      "transfers_out_event": 44583
     },
     {
       "element": 267,
@@ -5053,8 +5053,8 @@
       "status": "a",
       "points": 5,
       "minutes": 90,
-      "transfers_in_event": 719,
-      "transfers_out_event": 590
+      "transfers_in_event": 751,
+      "transfers_out_event": 631
     },
     {
       "element": 300,
@@ -5068,8 +5068,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 153,
-      "transfers_out_event": 2605
+      "transfers_in_event": 154,
+      "transfers_out_event": 2707
     },
     {
       "element": 301,
@@ -5083,8 +5083,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 4830,
-      "transfers_out_event": 10775
+      "transfers_in_event": 4991,
+      "transfers_out_event": 11193
     },
     {
       "element": 302,
@@ -5098,8 +5098,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1171,
-      "transfers_out_event": 1116
+      "transfers_in_event": 1214,
+      "transfers_out_event": 1152
     },
     {
       "element": 303,
@@ -5113,8 +5113,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 255,
-      "transfers_out_event": 2928
+      "transfers_in_event": 262,
+      "transfers_out_event": 3046
     },
     {
       "element": 304,
@@ -5128,8 +5128,8 @@
       "status": "a",
       "points": 4,
       "minutes": 90,
-      "transfers_in_event": 9517,
-      "transfers_out_event": 7336
+      "transfers_in_event": 9922,
+      "transfers_out_event": 7702
     },
     {
       "element": 305,
@@ -5143,8 +5143,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 4890,
-      "transfers_out_event": 12837
+      "transfers_in_event": 5034,
+      "transfers_out_event": 13292
     },
     {
       "element": 306,
@@ -5158,8 +5158,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 1109,
-      "transfers_out_event": 3240
+      "transfers_in_event": 1144,
+      "transfers_out_event": 3422
     },
     {
       "element": 307,
@@ -5173,8 +5173,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 300,
-      "transfers_out_event": 689
+      "transfers_in_event": 307,
+      "transfers_out_event": 717
     },
     {
       "element": 308,
@@ -5188,8 +5188,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 192,
-      "transfers_out_event": 2633
+      "transfers_in_event": 196,
+      "transfers_out_event": 2731
     },
     {
       "element": 309,
@@ -5203,8 +5203,8 @@
       "status": "a",
       "points": 4,
       "minutes": 79,
-      "transfers_in_event": 646,
-      "transfers_out_event": 684
+      "transfers_in_event": 703,
+      "transfers_out_event": 719
     },
     {
       "element": 310,
@@ -5219,7 +5219,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 4,
-      "transfers_out_event": 83
+      "transfers_out_event": 84
     },
     {
       "element": 311,
@@ -5248,8 +5248,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 70,
-      "transfers_out_event": 635
+      "transfers_in_event": 71,
+      "transfers_out_event": 658
     },
     {
       "element": 313,
@@ -5263,8 +5263,8 @@
       "status": "a",
       "points": 7,
       "minutes": 19,
-      "transfers_in_event": 2138,
-      "transfers_out_event": 1301
+      "transfers_in_event": 2232,
+      "transfers_out_event": 1363
     },
     {
       "element": 314,
@@ -5278,8 +5278,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 27,
-      "transfers_out_event": 148
+      "transfers_in_event": 30,
+      "transfers_out_event": 154
     },
     {
       "element": 315,
@@ -5293,8 +5293,8 @@
       "status": "a",
       "points": 2,
       "minutes": 65,
-      "transfers_in_event": 438,
-      "transfers_out_event": 1668
+      "transfers_in_event": 442,
+      "transfers_out_event": 1730
     },
     {
       "element": 316,
@@ -5304,12 +5304,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 55,
-      "ownership": "1.3",
+      "ownership": "1.4",
       "status": "a",
       "points": 9,
       "minutes": 65,
-      "transfers_in_event": 54714,
-      "transfers_out_event": 8897
+      "transfers_in_event": 56240,
+      "transfers_out_event": 9357
     },
     {
       "element": 317,
@@ -5324,7 +5324,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 6179
+      "transfers_out_event": 6372
     },
     {
       "element": 318,
@@ -5338,8 +5338,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 101,
-      "transfers_out_event": 1969
+      "transfers_in_event": 102,
+      "transfers_out_event": 2107
     },
     {
       "element": 319,
@@ -5354,7 +5354,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 325
+      "transfers_out_event": 334
     },
     {
       "element": 320,
@@ -5368,8 +5368,8 @@
       "status": "a",
       "points": 1,
       "minutes": 24,
-      "transfers_in_event": 3202,
-      "transfers_out_event": 3850
+      "transfers_in_event": 3310,
+      "transfers_out_event": 4013
     },
     {
       "element": 321,
@@ -5383,8 +5383,8 @@
       "status": "a",
       "points": 1,
       "minutes": 10,
-      "transfers_in_event": 21804,
-      "transfers_out_event": 13306
+      "transfers_in_event": 22919,
+      "transfers_out_event": 13888
     },
     {
       "element": 322,
@@ -5398,8 +5398,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 645,
-      "transfers_out_event": 1454
+      "transfers_in_event": 662,
+      "transfers_out_event": 1503
     },
     {
       "element": 323,
@@ -5413,8 +5413,8 @@
       "status": "a",
       "points": 1,
       "minutes": 24,
-      "transfers_in_event": 3790,
-      "transfers_out_event": 7443
+      "transfers_in_event": 3917,
+      "transfers_out_event": 7741
     },
     {
       "element": 324,
@@ -5428,8 +5428,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 35,
-      "transfers_out_event": 439
+      "transfers_in_event": 36,
+      "transfers_out_event": 454
     },
     {
       "element": 554,
@@ -5444,7 +5444,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 54,
-      "transfers_out_event": 324
+      "transfers_out_event": 356
     },
     {
       "element": 562,
@@ -5458,8 +5458,8 @@
       "status": "a",
       "points": 2,
       "minutes": 79,
-      "transfers_in_event": 553,
-      "transfers_out_event": 2324
+      "transfers_in_event": 566,
+      "transfers_out_event": 2428
     },
     {
       "element": 564,
@@ -5473,8 +5473,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 912,
-      "transfers_out_event": 1796
+      "transfers_in_event": 943,
+      "transfers_out_event": 1884
     },
     {
       "element": 571,
@@ -5488,8 +5488,8 @@
       "status": "d",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 177,
-      "transfers_out_event": 1072
+      "transfers_in_event": 179,
+      "transfers_out_event": 1164
     },
     {
       "element": 591,
@@ -5503,8 +5503,8 @@
       "status": "a",
       "points": 5,
       "minutes": 70,
-      "transfers_in_event": 9941,
-      "transfers_out_event": 2785
+      "transfers_in_event": 10476,
+      "transfers_out_event": 2879
     },
     {
       "element": 592,
@@ -5518,8 +5518,8 @@
       "status": "a",
       "points": 1,
       "minutes": 10,
-      "transfers_in_event": 2209,
-      "transfers_out_event": 3603
+      "transfers_in_event": 2241,
+      "transfers_out_event": 3748
     },
     {
       "element": 602,
@@ -5533,8 +5533,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 884,
-      "transfers_out_event": 223
+      "transfers_in_event": 923,
+      "transfers_out_event": 230
     },
     {
       "element": 260,
@@ -5548,8 +5548,8 @@
       "status": "a",
       "points": 3,
       "minutes": 65,
-      "transfers_in_event": 9872,
-      "transfers_out_event": 33011
+      "transfers_in_event": 10160,
+      "transfers_out_event": 34422
     },
     {
       "element": 326,
@@ -5563,8 +5563,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 223,
-      "transfers_out_event": 3060
+      "transfers_in_event": 243,
+      "transfers_out_event": 3203
     },
     {
       "element": 327,
@@ -5578,8 +5578,8 @@
       "status": "a",
       "points": 10,
       "minutes": 90,
-      "transfers_in_event": 27762,
-      "transfers_out_event": 4254
+      "transfers_in_event": 28784,
+      "transfers_out_event": 4519
     },
     {
       "element": 329,
@@ -5593,8 +5593,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 10155,
-      "transfers_out_event": 6414
+      "transfers_in_event": 10641,
+      "transfers_out_event": 6781
     },
     {
       "element": 330,
@@ -5608,8 +5608,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 4157,
-      "transfers_out_event": 1595
+      "transfers_in_event": 4259,
+      "transfers_out_event": 1677
     },
     {
       "element": 331,
@@ -5624,7 +5624,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 45,
-      "transfers_out_event": 727
+      "transfers_out_event": 742
     },
     {
       "element": 332,
@@ -5634,12 +5634,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 45,
-      "ownership": "0.9",
+      "ownership": "1.0",
       "status": "a",
       "points": 10,
       "minutes": 90,
-      "transfers_in_event": 22933,
-      "transfers_out_event": 4452
+      "transfers_in_event": 24062,
+      "transfers_out_event": 4731
     },
     {
       "element": 333,
@@ -5654,7 +5654,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 125
+      "transfers_out_event": 129
     },
     {
       "element": 334,
@@ -5668,8 +5668,8 @@
       "status": "a",
       "points": 6,
       "minutes": 90,
-      "transfers_in_event": 13953,
-      "transfers_out_event": 6064
+      "transfers_in_event": 14521,
+      "transfers_out_event": 6405
     },
     {
       "element": 335,
@@ -5679,12 +5679,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 60,
-      "ownership": "1.7",
+      "ownership": "1.8",
       "status": "a",
       "points": 13,
       "minutes": 90,
-      "transfers_in_event": 45024,
-      "transfers_out_event": 7449
+      "transfers_in_event": 46828,
+      "transfers_out_event": 7857
     },
     {
       "element": 336,
@@ -5694,12 +5694,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 60,
-      "ownership": "0.5",
+      "ownership": "0.4",
       "status": "a",
       "points": 1,
       "minutes": 24,
-      "transfers_in_event": 887,
-      "transfers_out_event": 5281
+      "transfers_in_event": 916,
+      "transfers_out_event": 5469
     },
     {
       "element": 337,
@@ -5713,8 +5713,8 @@
       "status": "a",
       "points": 3,
       "minutes": 81,
-      "transfers_in_event": 1526,
-      "transfers_out_event": 4885
+      "transfers_in_event": 1582,
+      "transfers_out_event": 5091
     },
     {
       "element": 338,
@@ -5728,8 +5728,8 @@
       "status": "a",
       "points": 5,
       "minutes": 90,
-      "transfers_in_event": 2546,
-      "transfers_out_event": 5853
+      "transfers_in_event": 2661,
+      "transfers_out_event": 6059
     },
     {
       "element": 339,
@@ -5743,8 +5743,8 @@
       "status": "a",
       "points": 1,
       "minutes": 8,
-      "transfers_in_event": 376,
-      "transfers_out_event": 1026
+      "transfers_in_event": 398,
+      "transfers_out_event": 1072
     },
     {
       "element": 341,
@@ -5759,7 +5759,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 12,
-      "transfers_out_event": 527
+      "transfers_out_event": 542
     },
     {
       "element": 342,
@@ -5788,8 +5788,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 384,
-      "transfers_out_event": 1154
+      "transfers_in_event": 437,
+      "transfers_out_event": 1190
     },
     {
       "element": 344,
@@ -5804,7 +5804,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 5,
-      "transfers_out_event": 94
+      "transfers_out_event": 97
     },
     {
       "element": 345,
@@ -5818,8 +5818,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 670,
-      "transfers_out_event": 2830
+      "transfers_in_event": 688,
+      "transfers_out_event": 2932
     },
     {
       "element": 346,
@@ -5829,12 +5829,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 60,
-      "ownership": "29.5",
+      "ownership": "29.4",
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 49503,
-      "transfers_out_event": 101511
+      "transfers_in_event": 51424,
+      "transfers_out_event": 106055
     },
     {
       "element": 347,
@@ -5848,8 +5848,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1182,
-      "transfers_out_event": 5910
+      "transfers_in_event": 1239,
+      "transfers_out_event": 6134
     },
     {
       "element": 348,
@@ -5864,7 +5864,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 4095
+      "transfers_out_event": 4214
     },
     {
       "element": 349,
@@ -5878,8 +5878,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 211,
-      "transfers_out_event": 752
+      "transfers_in_event": 216,
+      "transfers_out_event": 771
     },
     {
       "element": 385,
@@ -5893,8 +5893,8 @@
       "status": "a",
       "points": 9,
       "minutes": 90,
-      "transfers_in_event": 39193,
-      "transfers_out_event": 7673
+      "transfers_in_event": 41274,
+      "transfers_out_event": 8135
     },
     {
       "element": 598,
@@ -5908,8 +5908,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 198,
-      "transfers_out_event": 155
+      "transfers_in_event": 216,
+      "transfers_out_event": 162
     },
     {
       "element": 603,
@@ -5923,8 +5923,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1207,
-      "transfers_out_event": 224
+      "transfers_in_event": 1225,
+      "transfers_out_event": 227
     },
     {
       "element": 604,
@@ -5938,8 +5938,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2116,
-      "transfers_out_event": 475
+      "transfers_in_event": 2190,
+      "transfers_out_event": 487
     },
     {
       "element": 350,
@@ -5953,8 +5953,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 14622,
-      "transfers_out_event": 13029
+      "transfers_in_event": 15274,
+      "transfers_out_event": 13547
     },
     {
       "element": 351,
@@ -5968,8 +5968,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 440,
-      "transfers_out_event": 1447
+      "transfers_in_event": 456,
+      "transfers_out_event": 1498
     },
     {
       "element": 352,
@@ -5983,8 +5983,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2041,
-      "transfers_out_event": 3732
+      "transfers_in_event": 2119,
+      "transfers_out_event": 3865
     },
     {
       "element": 353,
@@ -5999,7 +5999,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 349
+      "transfers_out_event": 358
     },
     {
       "element": 354,
@@ -6013,8 +6013,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 105,
-      "transfers_out_event": 130
+      "transfers_in_event": 106,
+      "transfers_out_event": 133
     },
     {
       "element": 355,
@@ -6028,8 +6028,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 427,
-      "transfers_out_event": 469
+      "transfers_in_event": 439,
+      "transfers_out_event": 479
     },
     {
       "element": 356,
@@ -6043,8 +6043,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 48462,
-      "transfers_out_event": 48410
+      "transfers_in_event": 49989,
+      "transfers_out_event": 50472
     },
     {
       "element": 357,
@@ -6058,8 +6058,8 @@
       "status": "a",
       "points": 0,
       "minutes": 90,
-      "transfers_in_event": 15556,
-      "transfers_out_event": 21546
+      "transfers_in_event": 15988,
+      "transfers_out_event": 22382
     },
     {
       "element": 358,
@@ -6073,8 +6073,8 @@
       "status": "a",
       "points": 0,
       "minutes": 90,
-      "transfers_in_event": 9791,
-      "transfers_out_event": 21665
+      "transfers_in_event": 10106,
+      "transfers_out_event": 22531
     },
     {
       "element": 359,
@@ -6088,8 +6088,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 58,
-      "transfers_out_event": 308
+      "transfers_in_event": 59,
+      "transfers_out_event": 315
     },
     {
       "element": 360,
@@ -6103,8 +6103,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 56,
-      "transfers_out_event": 168
+      "transfers_in_event": 59,
+      "transfers_out_event": 172
     },
     {
       "element": 361,
@@ -6118,8 +6118,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 425,
-      "transfers_out_event": 763
+      "transfers_in_event": 436,
+      "transfers_out_event": 798
     },
     {
       "element": 362,
@@ -6133,8 +6133,8 @@
       "status": "a",
       "points": 1,
       "minutes": 69,
-      "transfers_in_event": 14834,
-      "transfers_out_event": 11529
+      "transfers_in_event": 15330,
+      "transfers_out_event": 11996
     },
     {
       "element": 363,
@@ -6148,8 +6148,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 135,
-      "transfers_out_event": 383
+      "transfers_in_event": 139,
+      "transfers_out_event": 393
     },
     {
       "element": 364,
@@ -6163,8 +6163,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 258,
-      "transfers_out_event": 655
+      "transfers_in_event": 267,
+      "transfers_out_event": 681
     },
     {
       "element": 365,
@@ -6178,8 +6178,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 616,
-      "transfers_out_event": 1396
+      "transfers_in_event": 627,
+      "transfers_out_event": 1452
     },
     {
       "element": 366,
@@ -6193,8 +6193,8 @@
       "status": "a",
       "points": 2,
       "minutes": 62,
-      "transfers_in_event": 17315,
-      "transfers_out_event": 72797
+      "transfers_in_event": 17755,
+      "transfers_out_event": 75851
     },
     {
       "element": 367,
@@ -6208,8 +6208,8 @@
       "status": "a",
       "points": 12,
       "minutes": 90,
-      "transfers_in_event": 114607,
-      "transfers_out_event": 13816
+      "transfers_in_event": 120156,
+      "transfers_out_event": 14542
     },
     {
       "element": 368,
@@ -6223,8 +6223,8 @@
       "status": "a",
       "points": 8,
       "minutes": 90,
-      "transfers_in_event": 145847,
-      "transfers_out_event": 40541
+      "transfers_in_event": 151796,
+      "transfers_out_event": 42142
     },
     {
       "element": 369,
@@ -6238,8 +6238,8 @@
       "status": "a",
       "points": 2,
       "minutes": 62,
-      "transfers_in_event": 3846,
-      "transfers_out_event": 9388
+      "transfers_in_event": 3936,
+      "transfers_out_event": 9757
     },
     {
       "element": 370,
@@ -6253,8 +6253,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 509,
-      "transfers_out_event": 1945
+      "transfers_in_event": 520,
+      "transfers_out_event": 2011
     },
     {
       "element": 371,
@@ -6268,8 +6268,8 @@
       "status": "a",
       "points": 5,
       "minutes": 77,
-      "transfers_in_event": 9224,
-      "transfers_out_event": 9775
+      "transfers_in_event": 9547,
+      "transfers_out_event": 10134
     },
     {
       "element": 372,
@@ -6283,8 +6283,8 @@
       "status": "a",
       "points": 1,
       "minutes": 27,
-      "transfers_in_event": 4333,
-      "transfers_out_event": 13942
+      "transfers_in_event": 4469,
+      "transfers_out_event": 14453
     },
     {
       "element": 373,
@@ -6299,7 +6299,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 25,
-      "transfers_out_event": 823
+      "transfers_out_event": 839
     },
     {
       "element": 374,
@@ -6313,8 +6313,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 378,
-      "transfers_out_event": 687
+      "transfers_in_event": 384,
+      "transfers_out_event": 708
     },
     {
       "element": 375,
@@ -6328,8 +6328,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 106,
-      "transfers_out_event": 461
+      "transfers_in_event": 107,
+      "transfers_out_event": 479
     },
     {
       "element": 376,
@@ -6358,8 +6358,8 @@
       "status": "a",
       "points": 4,
       "minutes": 27,
-      "transfers_in_event": 4060,
-      "transfers_out_event": 3664
+      "transfers_in_event": 4219,
+      "transfers_out_event": 3797
     },
     {
       "element": 378,
@@ -6373,8 +6373,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 695,
-      "transfers_out_event": 2028
+      "transfers_in_event": 725,
+      "transfers_out_event": 2092
     },
     {
       "element": 379,
@@ -6388,8 +6388,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 41788,
-      "transfers_out_event": 60087
+      "transfers_in_event": 43453,
+      "transfers_out_event": 62745
     },
     {
       "element": 380,
@@ -6403,8 +6403,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 526,
-      "transfers_out_event": 2860
+      "transfers_in_event": 550,
+      "transfers_out_event": 2959
     },
     {
       "element": 381,
@@ -6418,8 +6418,8 @@
       "status": "a",
       "points": 1,
       "minutes": 12,
-      "transfers_in_event": 104,
-      "transfers_out_event": 128
+      "transfers_in_event": 109,
+      "transfers_out_event": 135
     },
     {
       "element": 382,
@@ -6433,8 +6433,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 209,
-      "transfers_out_event": 392
+      "transfers_in_event": 211,
+      "transfers_out_event": 401
     },
     {
       "element": 383,
@@ -6448,8 +6448,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 257,
-      "transfers_out_event": 814
+      "transfers_in_event": 261,
+      "transfers_out_event": 853
     },
     {
       "element": 579,
@@ -6463,8 +6463,8 @@
       "status": "a",
       "points": 1,
       "minutes": 20,
-      "transfers_in_event": 19315,
-      "transfers_out_event": 22645
+      "transfers_in_event": 19652,
+      "transfers_out_event": 23391
     },
     {
       "element": 238,
@@ -6478,8 +6478,8 @@
       "status": "a",
       "points": 1,
       "minutes": 8,
-      "transfers_in_event": 822,
-      "transfers_out_event": 1396
+      "transfers_in_event": 848,
+      "transfers_out_event": 1448
     },
     {
       "element": 384,
@@ -6493,8 +6493,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 21358,
-      "transfers_out_event": 29240
+      "transfers_in_event": 22116,
+      "transfers_out_event": 30350
     },
     {
       "element": 386,
@@ -6508,8 +6508,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 92,
-      "transfers_out_event": 158
+      "transfers_in_event": 97,
+      "transfers_out_event": 165
     },
     {
       "element": 387,
@@ -6523,8 +6523,8 @@
       "status": "a",
       "points": 2,
       "minutes": 62,
-      "transfers_in_event": 45376,
-      "transfers_out_event": 67574
+      "transfers_in_event": 46991,
+      "transfers_out_event": 70115
     },
     {
       "element": 388,
@@ -6534,12 +6534,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 60,
-      "ownership": "18.8",
+      "ownership": "18.9",
       "status": "a",
       "points": 10,
       "minutes": 90,
-      "transfers_in_event": 120921,
-      "transfers_out_event": 24490
+      "transfers_in_event": 125174,
+      "transfers_out_event": 25540
     },
     {
       "element": 389,
@@ -6553,8 +6553,8 @@
       "status": "a",
       "points": 1,
       "minutes": 33,
-      "transfers_in_event": 2625,
-      "transfers_out_event": 7533
+      "transfers_in_event": 2692,
+      "transfers_out_event": 7831
     },
     {
       "element": 390,
@@ -6568,8 +6568,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 7206,
-      "transfers_out_event": 8152
+      "transfers_in_event": 7386,
+      "transfers_out_event": 8466
     },
     {
       "element": 391,
@@ -6583,8 +6583,8 @@
       "status": "a",
       "points": 9,
       "minutes": 90,
-      "transfers_in_event": 139679,
-      "transfers_out_event": 19790
+      "transfers_in_event": 144482,
+      "transfers_out_event": 20794
     },
     {
       "element": 392,
@@ -6598,8 +6598,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2104,
-      "transfers_out_event": 10629
+      "transfers_in_event": 2135,
+      "transfers_out_event": 10928
     },
     {
       "element": 393,
@@ -6613,8 +6613,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 4504,
-      "transfers_out_event": 9360
+      "transfers_in_event": 4631,
+      "transfers_out_event": 9703
     },
     {
       "element": 394,
@@ -6629,7 +6629,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 271
+      "transfers_out_event": 279
     },
     {
       "element": 395,
@@ -6643,8 +6643,8 @@
       "status": "a",
       "points": 1,
       "minutes": 56,
-      "transfers_in_event": 2401,
-      "transfers_out_event": 1642
+      "transfers_in_event": 2478,
+      "transfers_out_event": 1713
     },
     {
       "element": 396,
@@ -6658,8 +6658,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 71,
-      "transfers_out_event": 159
+      "transfers_in_event": 80,
+      "transfers_out_event": 162
     },
     {
       "element": 397,
@@ -6673,8 +6673,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 30234,
-      "transfers_out_event": 100671
+      "transfers_in_event": 31190,
+      "transfers_out_event": 104911
     },
     {
       "element": 398,
@@ -6688,8 +6688,8 @@
       "status": "a",
       "points": 1,
       "minutes": 81,
-      "transfers_in_event": 12106,
-      "transfers_out_event": 26446
+      "transfers_in_event": 12500,
+      "transfers_out_event": 27544
     },
     {
       "element": 399,
@@ -6703,8 +6703,8 @@
       "status": "a",
       "points": 8,
       "minutes": 27,
-      "transfers_in_event": 126833,
-      "transfers_out_event": 24937
+      "transfers_in_event": 131464,
+      "transfers_out_event": 25945
     },
     {
       "element": 400,
@@ -6718,8 +6718,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 383,
-      "transfers_out_event": 49341
+      "transfers_in_event": 394,
+      "transfers_out_event": 50784
     },
     {
       "element": 401,
@@ -6733,8 +6733,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 11683,
-      "transfers_out_event": 12157
+      "transfers_in_event": 12586,
+      "transfers_out_event": 12634
     },
     {
       "element": 402,
@@ -6749,7 +6749,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 684
+      "transfers_out_event": 698
     },
     {
       "element": 404,
@@ -6764,7 +6764,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 4493
+      "transfers_out_event": 4582
     },
     {
       "element": 405,
@@ -6778,8 +6778,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 632,
-      "transfers_out_event": 1066
+      "transfers_in_event": 717,
+      "transfers_out_event": 1107
     },
     {
       "element": 406,
@@ -6793,8 +6793,8 @@
       "status": "a",
       "points": 1,
       "minutes": 27,
-      "transfers_in_event": 563,
-      "transfers_out_event": 837
+      "transfers_in_event": 579,
+      "transfers_out_event": 868
     },
     {
       "element": 407,
@@ -6808,8 +6808,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 67,
-      "transfers_out_event": 183
+      "transfers_in_event": 73,
+      "transfers_out_event": 189
     },
     {
       "element": 408,
@@ -6824,7 +6824,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 239
+      "transfers_out_event": 247
     },
     {
       "element": 409,
@@ -6838,8 +6838,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 721,
-      "transfers_out_event": 1704
+      "transfers_in_event": 741,
+      "transfers_out_event": 1761
     },
     {
       "element": 410,
@@ -6853,8 +6853,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 59,
-      "transfers_out_event": 193
+      "transfers_in_event": 62,
+      "transfers_out_event": 201
     },
     {
       "element": 411,
@@ -6868,8 +6868,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 43341,
-      "transfers_out_event": 61985
+      "transfers_in_event": 44742,
+      "transfers_out_event": 64907
     },
     {
       "element": 481,
@@ -6879,12 +6879,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 65,
-      "ownership": "6.6",
+      "ownership": "6.5",
       "status": "d",
       "points": 2,
       "minutes": 62,
-      "transfers_in_event": 5584,
-      "transfers_out_event": 108413
+      "transfers_in_event": 5627,
+      "transfers_out_event": 112968
     },
     {
       "element": 587,
@@ -6898,8 +6898,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 69,
-      "transfers_out_event": 152
+      "transfers_in_event": 73,
+      "transfers_out_event": 156
     },
     {
       "element": 43,
@@ -6913,8 +6913,8 @@
       "status": "a",
       "points": 2,
       "minutes": 66,
-      "transfers_in_event": 8539,
-      "transfers_out_event": 23371
+      "transfers_in_event": 8800,
+      "transfers_out_event": 24198
     },
     {
       "element": 162,
@@ -6928,8 +6928,8 @@
       "status": "a",
       "points": 2,
       "minutes": 66,
-      "transfers_in_event": 5322,
-      "transfers_out_event": 10341
+      "transfers_in_event": 5466,
+      "transfers_out_event": 10709
     },
     {
       "element": 325,
@@ -6943,8 +6943,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 162,
-      "transfers_out_event": 167
+      "transfers_in_event": 174,
+      "transfers_out_event": 174
     },
     {
       "element": 412,
@@ -6954,12 +6954,12 @@
       "position": "GK",
       "element_type": 1,
       "now_cost": 50,
-      "ownership": "15.9",
+      "ownership": "15.8",
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 19872,
-      "transfers_out_event": 59226
+      "transfers_in_event": 20691,
+      "transfers_out_event": 61239
     },
     {
       "element": 413,
@@ -6974,7 +6974,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 476
+      "transfers_out_event": 489
     },
     {
       "element": 414,
@@ -6988,8 +6988,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 128,
-      "transfers_out_event": 729
+      "transfers_in_event": 136,
+      "transfers_out_event": 751
     },
     {
       "element": 415,
@@ -7003,8 +7003,8 @@
       "status": "a",
       "points": 0,
       "minutes": 45,
-      "transfers_in_event": 3302,
-      "transfers_out_event": 18505
+      "transfers_in_event": 3387,
+      "transfers_out_event": 19125
     },
     {
       "element": 416,
@@ -7018,8 +7018,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 87,
-      "transfers_out_event": 376
+      "transfers_in_event": 89,
+      "transfers_out_event": 390
     },
     {
       "element": 417,
@@ -7033,8 +7033,8 @@
       "status": "a",
       "points": 1,
       "minutes": 10,
-      "transfers_in_event": 5889,
-      "transfers_out_event": 20457
+      "transfers_in_event": 6009,
+      "transfers_out_event": 21208
     },
     {
       "element": 418,
@@ -7048,8 +7048,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 32662,
-      "transfers_out_event": 67169
+      "transfers_in_event": 33605,
+      "transfers_out_event": 69721
     },
     {
       "element": 419,
@@ -7063,8 +7063,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 5382,
-      "transfers_out_event": 12731
+      "transfers_in_event": 5474,
+      "transfers_out_event": 13146
     },
     {
       "element": 420,
@@ -7078,8 +7078,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1292,
-      "transfers_out_event": 7206
+      "transfers_in_event": 1313,
+      "transfers_out_event": 7434
     },
     {
       "element": 421,
@@ -7093,8 +7093,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 2116,
-      "transfers_out_event": 2747
+      "transfers_in_event": 2179,
+      "transfers_out_event": 2849
     },
     {
       "element": 422,
@@ -7108,8 +7108,8 @@
       "status": "a",
       "points": 1,
       "minutes": 79,
-      "transfers_in_event": 3860,
-      "transfers_out_event": 4137
+      "transfers_in_event": 3966,
+      "transfers_out_event": 4253
     },
     {
       "element": 423,
@@ -7119,12 +7119,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 45,
-      "ownership": "20.1",
+      "ownership": "20.0",
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 26500,
-      "transfers_out_event": 79063
+      "transfers_in_event": 27335,
+      "transfers_out_event": 81605
     },
     {
       "element": 424,
@@ -7138,8 +7138,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 654,
-      "transfers_out_event": 1377
+      "transfers_in_event": 668,
+      "transfers_out_event": 1421
     },
     {
       "element": 425,
@@ -7154,7 +7154,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 536
+      "transfers_out_event": 553
     },
     {
       "element": 426,
@@ -7164,12 +7164,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 120,
-      "ownership": "49.3",
+      "ownership": "49.2",
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 27287,
-      "transfers_out_event": 142377
+      "transfers_in_event": 28459,
+      "transfers_out_event": 147877
     },
     {
       "element": 427,
@@ -7179,12 +7179,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 80,
-      "ownership": "36.7",
+      "ownership": "36.6",
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 44995,
-      "transfers_out_event": 131667
+      "transfers_in_event": 46820,
+      "transfers_out_event": 136982
     },
     {
       "element": 428,
@@ -7194,12 +7194,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 80,
-      "ownership": "9.7",
+      "ownership": "9.6",
       "status": "a",
       "points": 2,
       "minutes": 79,
-      "transfers_in_event": 16571,
-      "transfers_out_event": 58855
+      "transfers_in_event": 17186,
+      "transfers_out_event": 61037
     },
     {
       "element": 429,
@@ -7213,8 +7213,8 @@
       "status": "a",
       "points": 1,
       "minutes": 45,
-      "transfers_in_event": 10176,
-      "transfers_out_event": 14525
+      "transfers_in_event": 10499,
+      "transfers_out_event": 15070
     },
     {
       "element": 430,
@@ -7229,7 +7229,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 27,
-      "transfers_out_event": 527
+      "transfers_out_event": 539
     },
     {
       "element": 431,
@@ -7243,8 +7243,8 @@
       "status": "d",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1422,
-      "transfers_out_event": 36386
+      "transfers_in_event": 1430,
+      "transfers_out_event": 37587
     },
     {
       "element": 432,
@@ -7258,8 +7258,8 @@
       "status": "a",
       "points": 1,
       "minutes": 23,
-      "transfers_in_event": 2324,
-      "transfers_out_event": 9581
+      "transfers_in_event": 2399,
+      "transfers_out_event": 9917
     },
     {
       "element": 433,
@@ -7289,7 +7289,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 33,
-      "transfers_out_event": 110
+      "transfers_out_event": 116
     },
     {
       "element": 435,
@@ -7303,8 +7303,8 @@
       "status": "a",
       "points": 1,
       "minutes": 10,
-      "transfers_in_event": 222,
-      "transfers_out_event": 404
+      "transfers_in_event": 229,
+      "transfers_out_event": 416
     },
     {
       "element": 436,
@@ -7319,7 +7319,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 42,
-      "transfers_out_event": 171
+      "transfers_out_event": 179
     },
     {
       "element": 437,
@@ -7333,8 +7333,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 748,
-      "transfers_out_event": 1682
+      "transfers_in_event": 774,
+      "transfers_out_event": 1738
     },
     {
       "element": 438,
@@ -7348,8 +7348,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1039,
-      "transfers_out_event": 2809
+      "transfers_in_event": 1061,
+      "transfers_out_event": 2911
     },
     {
       "element": 439,
@@ -7363,8 +7363,8 @@
       "status": "a",
       "points": 1,
       "minutes": 23,
-      "transfers_in_event": 18220,
-      "transfers_out_event": 9969
+      "transfers_in_event": 19046,
+      "transfers_out_event": 10350
     },
     {
       "element": 440,
@@ -7378,8 +7378,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1530,
-      "transfers_out_event": 8483
+      "transfers_in_event": 1563,
+      "transfers_out_event": 8777
     },
     {
       "element": 441,
@@ -7393,8 +7393,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 4288,
-      "transfers_out_event": 7864
+      "transfers_in_event": 4454,
+      "transfers_out_event": 8152
     },
     {
       "element": 442,
@@ -7408,8 +7408,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1921,
-      "transfers_out_event": 7766
+      "transfers_in_event": 1978,
+      "transfers_out_event": 8066
     },
     {
       "element": 443,
@@ -7423,8 +7423,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 116,
-      "transfers_out_event": 157
+      "transfers_in_event": 119,
+      "transfers_out_event": 167
     },
     {
       "element": 444,
@@ -7439,7 +7439,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 77,
-      "transfers_out_event": 244
+      "transfers_out_event": 252
     },
     {
       "element": 445,
@@ -7453,8 +7453,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 11319,
-      "transfers_out_event": 6064
+      "transfers_in_event": 11806,
+      "transfers_out_event": 6375
     },
     {
       "element": 446,
@@ -7468,8 +7468,8 @@
       "status": "a",
       "points": 1,
       "minutes": 1,
-      "transfers_in_event": 1423,
-      "transfers_out_event": 1191
+      "transfers_in_event": 1458,
+      "transfers_out_event": 1242
     },
     {
       "element": 447,
@@ -7483,8 +7483,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 6020,
-      "transfers_out_event": 2072
+      "transfers_in_event": 6202,
+      "transfers_out_event": 2152
     },
     {
       "element": 448,
@@ -7498,8 +7498,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 6175,
-      "transfers_out_event": 51057
+      "transfers_in_event": 6178,
+      "transfers_out_event": 52932
     },
     {
       "element": 449,
@@ -7513,8 +7513,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 36890,
-      "transfers_out_event": 11473
+      "transfers_in_event": 38105,
+      "transfers_out_event": 11975
     },
     {
       "element": 450,
@@ -7528,8 +7528,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 73,
-      "transfers_out_event": 907
+      "transfers_in_event": 74,
+      "transfers_out_event": 931
     },
     {
       "element": 451,
@@ -7544,7 +7544,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 2610
+      "transfers_out_event": 2672
     },
     {
       "element": 453,
@@ -7558,8 +7558,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 5724,
-      "transfers_out_event": 5930
+      "transfers_in_event": 5969,
+      "transfers_out_event": 6172
     },
     {
       "element": 454,
@@ -7569,12 +7569,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 60,
-      "ownership": "1.6",
+      "ownership": "1.7",
       "status": "a",
       "points": 9,
       "minutes": 75,
-      "transfers_in_event": 54306,
-      "transfers_out_event": 6302
+      "transfers_in_event": 56620,
+      "transfers_out_event": 6607
     },
     {
       "element": 456,
@@ -7588,8 +7588,8 @@
       "status": "a",
       "points": 0,
       "minutes": 34,
-      "transfers_in_event": 1044,
-      "transfers_out_event": 2898
+      "transfers_in_event": 1067,
+      "transfers_out_event": 3021
     },
     {
       "element": 457,
@@ -7603,8 +7603,8 @@
       "status": "a",
       "points": 0,
       "minutes": 14,
-      "transfers_in_event": 512,
-      "transfers_out_event": 1606
+      "transfers_in_event": 529,
+      "transfers_out_event": 1688
     },
     {
       "element": 458,
@@ -7618,8 +7618,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 31,
-      "transfers_out_event": 766
+      "transfers_in_event": 32,
+      "transfers_out_event": 794
     },
     {
       "element": 459,
@@ -7633,8 +7633,8 @@
       "status": "a",
       "points": 3,
       "minutes": 75,
-      "transfers_in_event": 765,
-      "transfers_out_event": 303
+      "transfers_in_event": 802,
+      "transfers_out_event": 319
     },
     {
       "element": 460,
@@ -7648,8 +7648,8 @@
       "status": "a",
       "points": 6,
       "minutes": 34,
-      "transfers_in_event": 4564,
-      "transfers_out_event": 1040
+      "transfers_in_event": 4802,
+      "transfers_out_event": 1104
     },
     {
       "element": 461,
@@ -7663,8 +7663,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 330,
-      "transfers_out_event": 2662
+      "transfers_in_event": 334,
+      "transfers_out_event": 2754
     },
     {
       "element": 462,
@@ -7678,8 +7678,8 @@
       "status": "a",
       "points": 1,
       "minutes": 55,
-      "transfers_in_event": 523,
-      "transfers_out_event": 624
+      "transfers_in_event": 535,
+      "transfers_out_event": 647
     },
     {
       "element": 463,
@@ -7693,8 +7693,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 5155,
-      "transfers_out_event": 19845
+      "transfers_in_event": 5284,
+      "transfers_out_event": 20543
     },
     {
       "element": 464,
@@ -7704,12 +7704,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 60,
-      "ownership": "2.7",
+      "ownership": "2.8",
       "status": "a",
       "points": 4,
       "minutes": 90,
-      "transfers_in_event": 78581,
-      "transfers_out_event": 11185
+      "transfers_in_event": 83077,
+      "transfers_out_event": 11869
     },
     {
       "element": 465,
@@ -7719,12 +7719,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 60,
-      "ownership": "1.2",
+      "ownership": "1.1",
       "status": "d",
       "points": 4,
       "minutes": 55,
-      "transfers_in_event": 19769,
-      "transfers_out_event": 7875
+      "transfers_in_event": 19872,
+      "transfers_out_event": 9015
     },
     {
       "element": 466,
@@ -7738,8 +7738,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 4283,
-      "transfers_out_event": 5345
+      "transfers_in_event": 4459,
+      "transfers_out_event": 5513
     },
     {
       "element": 559,
@@ -7753,8 +7753,8 @@
       "status": "a",
       "points": 1,
       "minutes": 14,
-      "transfers_in_event": 496,
-      "transfers_out_event": 1058
+      "transfers_in_event": 508,
+      "transfers_out_event": 1101
     },
     {
       "element": 567,
@@ -7768,8 +7768,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 3385,
-      "transfers_out_event": 2455
+      "transfers_in_event": 3540,
+      "transfers_out_event": 2579
     },
     {
       "element": 593,
@@ -7783,8 +7783,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 3593,
-      "transfers_out_event": 1090
+      "transfers_in_event": 3739,
+      "transfers_out_event": 1141
     },
     {
       "element": 609,
@@ -7798,8 +7798,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2497,
-      "transfers_out_event": 357
+      "transfers_in_event": 2592,
+      "transfers_out_event": 388
     },
     {
       "element": 467,
@@ -7813,8 +7813,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 1746,
-      "transfers_out_event": 6172
+      "transfers_in_event": 1832,
+      "transfers_out_event": 6451
     },
     {
       "element": 468,
@@ -7828,8 +7828,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 122,
-      "transfers_out_event": 296
+      "transfers_in_event": 124,
+      "transfers_out_event": 308
     },
     {
       "element": 469,
@@ -7843,8 +7843,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 10957,
-      "transfers_out_event": 45317
+      "transfers_in_event": 11186,
+      "transfers_out_event": 47383
     },
     {
       "element": 470,
@@ -7858,8 +7858,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 187,
-      "transfers_out_event": 421
+      "transfers_in_event": 189,
+      "transfers_out_event": 441
     },
     {
       "element": 471,
@@ -7873,8 +7873,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 1826,
-      "transfers_out_event": 9124
+      "transfers_in_event": 1871,
+      "transfers_out_event": 9579
     },
     {
       "element": 472,
@@ -7888,8 +7888,8 @@
       "status": "a",
       "points": 4,
       "minutes": 90,
-      "transfers_in_event": 6259,
-      "transfers_out_event": 6502
+      "transfers_in_event": 6414,
+      "transfers_out_event": 6814
     },
     {
       "element": 473,
@@ -7903,8 +7903,8 @@
       "status": "a",
       "points": 5,
       "minutes": 73,
-      "transfers_in_event": 12120,
-      "transfers_out_event": 13472
+      "transfers_in_event": 12501,
+      "transfers_out_event": 13959
     },
     {
       "element": 474,
@@ -7918,8 +7918,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 192,
-      "transfers_out_event": 930
+      "transfers_in_event": 196,
+      "transfers_out_event": 975
     },
     {
       "element": 475,
@@ -7934,7 +7934,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 45,
-      "transfers_out_event": 30
+      "transfers_out_event": 33
     },
     {
       "element": 476,
@@ -7948,8 +7948,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 369,
-      "transfers_out_event": 1307
+      "transfers_in_event": 377,
+      "transfers_out_event": 1363
     },
     {
       "element": 477,
@@ -7963,8 +7963,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 708,
-      "transfers_out_event": 1455
+      "transfers_in_event": 726,
+      "transfers_out_event": 1507
     },
     {
       "element": 478,
@@ -7979,7 +7979,7 @@
       "points": 1,
       "minutes": 16,
       "transfers_in_event": 79,
-      "transfers_out_event": 187
+      "transfers_out_event": 192
     },
     {
       "element": 479,
@@ -7993,8 +7993,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 244,
-      "transfers_out_event": 903
+      "transfers_in_event": 249,
+      "transfers_out_event": 934
     },
     {
       "element": 480,
@@ -8004,12 +8004,12 @@
       "position": "MID",
       "element_type": 3,
       "now_cost": 80,
-      "ownership": "9.8",
+      "ownership": "9.7",
       "status": "d",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 6792,
-      "transfers_out_event": 153610
+      "transfers_in_event": 6855,
+      "transfers_out_event": 162181
     },
     {
       "element": 482,
@@ -8023,8 +8023,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 513,
-      "transfers_out_event": 3131
+      "transfers_in_event": 527,
+      "transfers_out_event": 3251
     },
     {
       "element": 483,
@@ -8038,8 +8038,8 @@
       "status": "a",
       "points": 3,
       "minutes": 61,
-      "transfers_in_event": 622,
-      "transfers_out_event": 2938
+      "transfers_in_event": 648,
+      "transfers_out_event": 3065
     },
     {
       "element": 484,
@@ -8053,8 +8053,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 146,
-      "transfers_out_event": 1354
+      "transfers_in_event": 152,
+      "transfers_out_event": 1399
     },
     {
       "element": 485,
@@ -8068,8 +8068,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 89,
-      "transfers_out_event": 208
+      "transfers_in_event": 90,
+      "transfers_out_event": 217
     },
     {
       "element": 486,
@@ -8083,8 +8083,8 @@
       "status": "a",
       "points": 3,
       "minutes": 73,
-      "transfers_in_event": 325,
-      "transfers_out_event": 274
+      "transfers_in_event": 341,
+      "transfers_out_event": 281
     },
     {
       "element": 487,
@@ -8098,8 +8098,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 147,
-      "transfers_out_event": 679
+      "transfers_in_event": 155,
+      "transfers_out_event": 707
     },
     {
       "element": 488,
@@ -8113,8 +8113,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 2032,
-      "transfers_out_event": 7547
+      "transfers_in_event": 2093,
+      "transfers_out_event": 7808
     },
     {
       "element": 489,
@@ -8128,8 +8128,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 521,
-      "transfers_out_event": 28790
+      "transfers_in_event": 536,
+      "transfers_out_event": 29644
     },
     {
       "element": 490,
@@ -8143,8 +8143,8 @@
       "status": "a",
       "points": 1,
       "minutes": 28,
-      "transfers_in_event": 3184,
-      "transfers_out_event": 16613
+      "transfers_in_event": 3284,
+      "transfers_out_event": 17310
     },
     {
       "element": 491,
@@ -8158,8 +8158,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 6718,
-      "transfers_out_event": 29287
+      "transfers_in_event": 6954,
+      "transfers_out_event": 30738
     },
     {
       "element": 493,
@@ -8173,8 +8173,8 @@
       "status": "a",
       "points": 1,
       "minutes": 1,
-      "transfers_in_event": 223,
-      "transfers_out_event": 468
+      "transfers_in_event": 231,
+      "transfers_out_event": 480
     },
     {
       "element": 558,
@@ -8188,8 +8188,8 @@
       "status": "a",
       "points": 1,
       "minutes": 16,
-      "transfers_in_event": 105,
-      "transfers_out_event": 654
+      "transfers_in_event": 109,
+      "transfers_out_event": 680
     },
     {
       "element": 581,
@@ -8203,8 +8203,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2775,
-      "transfers_out_event": 7796
+      "transfers_in_event": 2838,
+      "transfers_out_event": 8118
     },
     {
       "element": 590,
@@ -8218,8 +8218,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 446,
-      "transfers_out_event": 356
+      "transfers_in_event": 459,
+      "transfers_out_event": 374
     },
     {
       "element": 112,
@@ -8233,8 +8233,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 28863,
-      "transfers_out_event": 63782
+      "transfers_in_event": 29304,
+      "transfers_out_event": 66105
     },
     {
       "element": 403,
@@ -8248,8 +8248,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 4849,
-      "transfers_out_event": 3102
+      "transfers_in_event": 5554,
+      "transfers_out_event": 3204
     },
     {
       "element": 455,
@@ -8263,8 +8263,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 8472,
-      "transfers_out_event": 33245
+      "transfers_in_event": 8746,
+      "transfers_out_event": 34427
     },
     {
       "element": 494,
@@ -8279,7 +8279,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 9125
+      "transfers_out_event": 9318
     },
     {
       "element": 495,
@@ -8293,8 +8293,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2005,
-      "transfers_out_event": 2386
+      "transfers_in_event": 2077,
+      "transfers_out_event": 2475
     },
     {
       "element": 496,
@@ -8308,8 +8308,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 19982,
-      "transfers_out_event": 51186
+      "transfers_in_event": 20754,
+      "transfers_out_event": 53161
     },
     {
       "element": 497,
@@ -8319,12 +8319,12 @@
       "position": "GK",
       "element_type": 1,
       "now_cost": 40,
-      "ownership": "18.9",
+      "ownership": "18.8",
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 20753,
-      "transfers_out_event": 39391
+      "transfers_in_event": 21615,
+      "transfers_out_event": 40919
     },
     {
       "element": 498,
@@ -8338,8 +8338,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 10764,
-      "transfers_out_event": 39074
+      "transfers_in_event": 11031,
+      "transfers_out_event": 40614
     },
     {
       "element": 499,
@@ -8353,8 +8353,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 6559,
-      "transfers_out_event": 266476
+      "transfers_in_event": 7252,
+      "transfers_out_event": 269963
     },
     {
       "element": 500,
@@ -8369,7 +8369,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 8849
+      "transfers_out_event": 9014
     },
     {
       "element": 501,
@@ -8383,8 +8383,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 821,
-      "transfers_out_event": 1644
+      "transfers_in_event": 829,
+      "transfers_out_event": 1696
     },
     {
       "element": 502,
@@ -8398,8 +8398,8 @@
       "status": "a",
       "points": 3,
       "minutes": 90,
-      "transfers_in_event": 14083,
-      "transfers_out_event": 14702
+      "transfers_in_event": 14496,
+      "transfers_out_event": 15214
     },
     {
       "element": 503,
@@ -8413,8 +8413,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2981,
-      "transfers_out_event": 108200
+      "transfers_in_event": 3336,
+      "transfers_out_event": 109445
     },
     {
       "element": 505,
@@ -8429,7 +8429,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 38363
+      "transfers_out_event": 39034
     },
     {
       "element": 506,
@@ -8443,8 +8443,8 @@
       "status": "a",
       "points": 1,
       "minutes": 4,
-      "transfers_in_event": 1298,
-      "transfers_out_event": 3061
+      "transfers_in_event": 1316,
+      "transfers_out_event": 3179
     },
     {
       "element": 507,
@@ -8459,7 +8459,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 520
+      "transfers_out_event": 536
     },
     {
       "element": 508,
@@ -8473,8 +8473,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 2043,
-      "transfers_out_event": 5826
+      "transfers_in_event": 2080,
+      "transfers_out_event": 6055
     },
     {
       "element": 509,
@@ -8488,8 +8488,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 239,
-      "transfers_out_event": 372
+      "transfers_in_event": 244,
+      "transfers_out_event": 390
     },
     {
       "element": 510,
@@ -8503,8 +8503,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 232,
-      "transfers_out_event": 480
+      "transfers_in_event": 238,
+      "transfers_out_event": 495
     },
     {
       "element": 511,
@@ -8518,8 +8518,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 816,
-      "transfers_out_event": 1785
+      "transfers_in_event": 844,
+      "transfers_out_event": 1854
     },
     {
       "element": 512,
@@ -8533,8 +8533,8 @@
       "status": "d",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 216,
-      "transfers_out_event": 1600
+      "transfers_in_event": 223,
+      "transfers_out_event": 1652
     },
     {
       "element": 513,
@@ -8548,8 +8548,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 51,
-      "transfers_out_event": 267
+      "transfers_in_event": 52,
+      "transfers_out_event": 270
     },
     {
       "element": 514,
@@ -8563,8 +8563,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 1824,
-      "transfers_out_event": 5164
+      "transfers_in_event": 1934,
+      "transfers_out_event": 5403
     },
     {
       "element": 515,
@@ -8578,8 +8578,8 @@
       "status": "d",
       "points": 1,
       "minutes": 22,
-      "transfers_in_event": 2628,
-      "transfers_out_event": 16652
+      "transfers_in_event": 2636,
+      "transfers_out_event": 18029
     },
     {
       "element": 516,
@@ -8593,8 +8593,8 @@
       "status": "a",
       "points": 1,
       "minutes": 45,
-      "transfers_in_event": 351,
-      "transfers_out_event": 1237
+      "transfers_in_event": 359,
+      "transfers_out_event": 1298
     },
     {
       "element": 517,
@@ -8624,7 +8624,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 36,
-      "transfers_out_event": 7481
+      "transfers_out_event": 7689
     },
     {
       "element": 519,
@@ -8638,8 +8638,8 @@
       "status": "a",
       "points": 0,
       "minutes": 45,
-      "transfers_in_event": 763,
-      "transfers_out_event": 2877
+      "transfers_in_event": 799,
+      "transfers_out_event": 2981
     },
     {
       "element": 520,
@@ -8653,8 +8653,8 @@
       "status": "a",
       "points": 1,
       "minutes": 45,
-      "transfers_in_event": 434,
-      "transfers_out_event": 1374
+      "transfers_in_event": 446,
+      "transfers_out_event": 1423
     },
     {
       "element": 521,
@@ -8668,8 +8668,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 53,
-      "transfers_out_event": 164
+      "transfers_in_event": 54,
+      "transfers_out_event": 168
     },
     {
       "element": 522,
@@ -8683,8 +8683,8 @@
       "status": "a",
       "points": 2,
       "minutes": 85,
-      "transfers_in_event": 1107,
-      "transfers_out_event": 1634
+      "transfers_in_event": 1147,
+      "transfers_out_event": 1701
     },
     {
       "element": 523,
@@ -8698,8 +8698,8 @@
       "status": "a",
       "points": 2,
       "minutes": 67,
-      "transfers_in_event": 594,
-      "transfers_out_event": 1455
+      "transfers_in_event": 624,
+      "transfers_out_event": 1507
     },
     {
       "element": 524,
@@ -8713,8 +8713,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1688,
-      "transfers_out_event": 6559
+      "transfers_in_event": 1707,
+      "transfers_out_event": 6747
     },
     {
       "element": 525,
@@ -8728,8 +8728,8 @@
       "status": "a",
       "points": 1,
       "minutes": 45,
-      "transfers_in_event": 2493,
-      "transfers_out_event": 20265
+      "transfers_in_event": 2561,
+      "transfers_out_event": 21043
     },
     {
       "element": 526,
@@ -8739,12 +8739,12 @@
       "position": "FWD",
       "element_type": 4,
       "now_cost": 60,
-      "ownership": "1.4",
+      "ownership": "1.3",
       "status": "a",
       "points": 1,
       "minutes": 22,
-      "transfers_in_event": 3186,
-      "transfers_out_event": 12856
+      "transfers_in_event": 3319,
+      "transfers_out_event": 13371
     },
     {
       "element": 527,
@@ -8758,8 +8758,8 @@
       "status": "a",
       "points": 2,
       "minutes": 67,
-      "transfers_in_event": 8641,
-      "transfers_out_event": 22717
+      "transfers_in_event": 8997,
+      "transfers_out_event": 23683
     },
     {
       "element": 528,
@@ -8773,8 +8773,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 8648,
-      "transfers_out_event": 11454
+      "transfers_in_event": 8926,
+      "transfers_out_event": 11860
     },
     {
       "element": 601,
@@ -8788,8 +8788,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 1730,
-      "transfers_out_event": 341
+      "transfers_in_event": 1809,
+      "transfers_out_event": 367
     },
     {
       "element": 529,
@@ -8803,8 +8803,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 2910,
-      "transfers_out_event": 17635
+      "transfers_in_event": 3010,
+      "transfers_out_event": 18370
     },
     {
       "element": 530,
@@ -8819,7 +8819,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 1854
+      "transfers_out_event": 1898
     },
     {
       "element": 531,
@@ -8833,8 +8833,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 141,
-      "transfers_out_event": 553
+      "transfers_in_event": 145,
+      "transfers_out_event": 570
     },
     {
       "element": 532,
@@ -8844,12 +8844,12 @@
       "position": "DEF",
       "element_type": 2,
       "now_cost": 50,
-      "ownership": "5.3",
+      "ownership": "5.2",
       "status": "a",
       "points": 0,
       "minutes": 90,
-      "transfers_in_event": 8025,
-      "transfers_out_event": 29466
+      "transfers_in_event": 8238,
+      "transfers_out_event": 30586
     },
     {
       "element": 533,
@@ -8863,8 +8863,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 3982,
-      "transfers_out_event": 22210
+      "transfers_in_event": 4087,
+      "transfers_out_event": 22992
     },
     {
       "element": 534,
@@ -8878,8 +8878,8 @@
       "status": "a",
       "points": 2,
       "minutes": 79,
-      "transfers_in_event": 8343,
-      "transfers_out_event": 24216
+      "transfers_in_event": 8573,
+      "transfers_out_event": 24959
     },
     {
       "element": 535,
@@ -8893,8 +8893,8 @@
       "status": "a",
       "points": 1,
       "minutes": 23,
-      "transfers_in_event": 1933,
-      "transfers_out_event": 2898
+      "transfers_in_event": 1966,
+      "transfers_out_event": 2998
     },
     {
       "element": 536,
@@ -8908,8 +8908,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 605,
-      "transfers_out_event": 1982
+      "transfers_in_event": 634,
+      "transfers_out_event": 2085
     },
     {
       "element": 537,
@@ -8923,8 +8923,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 43,
-      "transfers_out_event": 76
+      "transfers_in_event": 45,
+      "transfers_out_event": 81
     },
     {
       "element": 538,
@@ -8939,7 +8939,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 767
+      "transfers_out_event": 785
     },
     {
       "element": 539,
@@ -8953,8 +8953,8 @@
       "status": "a",
       "points": 1,
       "minutes": 66,
-      "transfers_in_event": 3350,
-      "transfers_out_event": 10799
+      "transfers_in_event": 3436,
+      "transfers_out_event": 11253
     },
     {
       "element": 540,
@@ -8969,7 +8969,7 @@
       "points": 0,
       "minutes": 0,
       "transfers_in_event": 0,
-      "transfers_out_event": 3716
+      "transfers_out_event": 3802
     },
     {
       "element": 541,
@@ -8983,8 +8983,8 @@
       "status": "a",
       "points": 1,
       "minutes": 90,
-      "transfers_in_event": 663,
-      "transfers_out_event": 1033
+      "transfers_in_event": 678,
+      "transfers_out_event": 1068
     },
     {
       "element": 542,
@@ -8998,8 +8998,8 @@
       "status": "a",
       "points": 2,
       "minutes": 79,
-      "transfers_in_event": 6875,
-      "transfers_out_event": 68975
+      "transfers_in_event": 7088,
+      "transfers_out_event": 71683
     },
     {
       "element": 543,
@@ -9013,8 +9013,8 @@
       "status": "a",
       "points": 1,
       "minutes": 10,
-      "transfers_in_event": 201,
-      "transfers_out_event": 730
+      "transfers_in_event": 208,
+      "transfers_out_event": 748
     },
     {
       "element": 544,
@@ -9028,8 +9028,8 @@
       "status": "a",
       "points": 9,
       "minutes": 90,
-      "transfers_in_event": 24622,
-      "transfers_out_event": 10823
+      "transfers_in_event": 25695,
+      "transfers_out_event": 11273
     },
     {
       "element": 545,
@@ -9043,8 +9043,8 @@
       "status": "a",
       "points": 2,
       "minutes": 90,
-      "transfers_in_event": 755,
-      "transfers_out_event": 2251
+      "transfers_in_event": 781,
+      "transfers_out_event": 2336
     },
     {
       "element": 546,
@@ -9058,8 +9058,8 @@
       "status": "i",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 38,
-      "transfers_out_event": 2591
+      "transfers_in_event": 42,
+      "transfers_out_event": 2662
     },
     {
       "element": 547,
@@ -9073,8 +9073,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 30,
-      "transfers_out_event": 107
+      "transfers_in_event": 31,
+      "transfers_out_event": 111
     },
     {
       "element": 548,
@@ -9088,8 +9088,8 @@
       "status": "a",
       "points": 1,
       "minutes": 10,
-      "transfers_in_event": 76,
-      "transfers_out_event": 365
+      "transfers_in_event": 79,
+      "transfers_out_event": 388
     },
     {
       "element": 549,
@@ -9103,8 +9103,8 @@
       "status": "a",
       "points": 1,
       "minutes": 31,
-      "transfers_in_event": 208,
-      "transfers_out_event": 1692
+      "transfers_in_event": 212,
+      "transfers_out_event": 1750
     },
     {
       "element": 550,
@@ -9118,8 +9118,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 36,
-      "transfers_out_event": 63
+      "transfers_in_event": 37,
+      "transfers_out_event": 65
     },
     {
       "element": 551,
@@ -9133,8 +9133,8 @@
       "status": "a",
       "points": 5,
       "minutes": 58,
-      "transfers_in_event": 3353,
-      "transfers_out_event": 829
+      "transfers_in_event": 3482,
+      "transfers_out_event": 866
     },
     {
       "element": 552,
@@ -9148,8 +9148,8 @@
       "status": "a",
       "points": 2,
       "minutes": 66,
-      "transfers_in_event": 23785,
-      "transfers_out_event": 66728
+      "transfers_in_event": 24680,
+      "transfers_out_event": 69686
     },
     {
       "element": 553,
@@ -9163,8 +9163,8 @@
       "status": "a",
       "points": 1,
       "minutes": 23,
-      "transfers_in_event": 1589,
-      "transfers_out_event": 7552
+      "transfers_in_event": 1644,
+      "transfers_out_event": 7856
     },
     {
       "element": 612,
@@ -9178,8 +9178,8 @@
       "status": "a",
       "points": 0,
       "minutes": 0,
-      "transfers_in_event": 29,
-      "transfers_out_event": 6
+      "transfers_in_event": 35,
+      "transfers_out_event": 7
     }
   ]
 }

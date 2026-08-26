@@ -122,11 +122,11 @@
   "screened_players": 570,
   "current": {
     "cost": 995,
-    "objective": 52.3255,
-    "squad_xpts_3": 157.73,
+    "objective": 52.3249,
+    "squad_xpts_3": 157.72,
     "squad_xpts_5": 262.88,
-    "squad_xpts_10": 526.24,
-    "squad_xpts_15": 789.3,
+    "squad_xpts_10": 526.25,
+    "squad_xpts_15": 789.31,
     "best_xi_xpts_5": 207.78,
     "bench_adjusted_utility_5": 214.4,
     "best_xi_by_gw": [
@@ -183,7 +183,7 @@
       },
       {
         "gw_offset": 4,
-        "xpts": 41.32,
+        "xpts": 41.33,
         "elements": [
           109,
           88,
@@ -219,8 +219,8 @@
   },
   "optimized": {
     "cost": 995,
-    "objective": 60.4024,
-    "squad_xpts_3": 183.44,
+    "objective": 60.4017,
+    "squad_xpts_3": 183.43,
     "squad_xpts_5": 303.13,
     "squad_xpts_10": 604.39,
     "squad_xpts_15": 904.54,
@@ -246,7 +246,7 @@
       },
       {
         "gw_offset": 2,
-        "xpts": 47.46,
+        "xpts": 47.45,
         "elements": [
           226,
           388,
@@ -509,7 +509,7 @@
       "challenger_name": "Schade",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.1534,
+      "objective_delta": 1.1533,
       "xpts5_delta": 5.73
     },
     {
@@ -539,7 +539,7 @@
       "challenger_name": "Thiago",
       "position": "FWD",
       "cost_delta": 5,
-      "objective_delta": 0.3854,
+      "objective_delta": 0.3853,
       "xpts5_delta": 1.73
     },
     {
@@ -599,7 +599,7 @@
       "challenger_name": "Mbeumo",
       "position": "MID",
       "cost_delta": -40,
-      "objective_delta": -0.2655,
+      "objective_delta": -0.2646,
       "xpts5_delta": -1.33
     },
     {

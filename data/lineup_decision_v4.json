@@ -45,7 +45,7 @@
       "position": "DEF",
       "team": "Brighton",
       "xpts": 3.389,
-      "lower80": 0.89,
+      "lower80": 0.891,
       "upper80": 5.887,
       "start_probability": 0.7916,
       "bench_probability": 0.0208,
@@ -54,7 +54,7 @@
       "captain_score": 3.3792,
       "vice_score": 3.1215,
       "bench_score": 3.2616,
-      "interval_width": 4.997
+      "interval_width": 4.996
     },
     {
       "element": 8,
@@ -80,15 +80,15 @@
       "team": "Man Utd",
       "xpts": 4.992,
       "lower80": 2.192,
-      "upper80": 7.792,
+      "upper80": 7.791,
       "start_probability": 0.97,
       "bench_probability": 0.003,
       "dnp_probability": 0.027,
       "availability": 0.973,
-      "captain_score": 5.2835,
+      "captain_score": 5.2833,
       "vice_score": 5.0793,
       "bench_score": 5.0292,
-      "interval_width": 5.6
+      "interval_width": 5.599
     },
     {
       "element": 40,
@@ -200,15 +200,15 @@
     "team": "Man Utd",
     "xpts": 4.992,
     "lower80": 2.192,
-    "upper80": 7.792,
+    "upper80": 7.791,
     "start_probability": 0.97,
     "bench_probability": 0.003,
     "dnp_probability": 0.027,
     "availability": 0.973,
-    "captain_score": 5.2835,
+    "captain_score": 5.2833,
     "vice_score": 5.0793,
     "bench_score": 5.0292,
-    "interval_width": 5.6
+    "interval_width": 5.599
   },
   "vice_captain": {
     "element": 411,

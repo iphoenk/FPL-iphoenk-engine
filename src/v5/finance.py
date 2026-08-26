@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 from src.rules import FINANCE_RULES
 from src.v5.config_cache import load_json_config
@@ -91,17 +91,76 @@ def resolve_sell_value(
     if authenticated_selling_price is not None:
         purchase = int(authenticated_purchase_price) if authenticated_purchase_price is not None else None
         return SellValueResolution(int(authenticated_selling_price), purchase, "authenticated_selling_price", True)
-
     if authenticated_purchase_price is not None:
         purchase = int(authenticated_purchase_price)
         return SellValueResolution(sell_cost(now_cost, purchase), purchase, "authenticated_purchase_price", True)
-
     purchase, source = reconstruct_purchase_cost(
         int(element_id), transfers or [], initial_purchase_costs=initial_purchase_costs
     )
     if purchase is None:
         return SellValueResolution(None, None, source, False)
     return SellValueResolution(sell_cost(now_cost, purchase), purchase, source, False)
+
+
+def build_squad_ledger(
+    squad: Iterable[dict],
+    *,
+    now_costs: Mapping[int, int],
+    transfers: list[dict] | None = None,
+    authenticated_prices: Iterable[dict] | None = None,
+    initial_purchase_costs: Mapping[int, int] | None = None,
+) -> dict[str, Any]:
+    """Build the owned-player ledger in one pass. Transfer spells are indexed once per run."""
+    spells = build_transfer_spells(transfers or [])
+    auth = {int(row["element"]): row for row in (authenticated_prices or []) if row.get("element") is not None}
+    baseline = {int(k): int(v) for k, v in (initial_purchase_costs or {}).items()}
+    ledger = []
+    for squad_row in squad:
+        eid = int(squad_row["element"])
+        if eid not in now_costs:
+            raise RuntimeError(f"missing current price for owned element {eid}")
+        now = int(now_costs[eid])
+        auth_row = auth.get(eid, {})
+        if auth_row.get("selling_price") is not None:
+            resolution = SellValueResolution(
+                int(auth_row["selling_price"]),
+                int(auth_row["purchase_price"]) if auth_row.get("purchase_price") is not None else None,
+                "authenticated_selling_price",
+                True,
+            )
+        elif auth_row.get("purchase_price") is not None:
+            purchase = int(auth_row["purchase_price"])
+            resolution = SellValueResolution(sell_cost(now, purchase), purchase, "authenticated_purchase_price", True)
+        else:
+            spell = spells.get(eid)
+            if spell and spell.get("purchase_cost") is not None:
+                purchase = int(spell["purchase_cost"])
+                resolution = SellValueResolution(sell_cost(now, purchase), purchase, "entry_transfer_history", False)
+            elif eid in baseline:
+                purchase = int(baseline[eid])
+                resolution = SellValueResolution(sell_cost(now, purchase), purchase, "initial_squad_baseline", False)
+            else:
+                resolution = SellValueResolution(None, None, "unresolved", False)
+        ledger.append(
+            {
+                **dict(squad_row),
+                "now_cost": now,
+                "purchase_cost": resolution.purchase_cost,
+                "sell_cost": resolution.sell_cost,
+                "finance_source": resolution.source,
+                "finance_exact": resolution.exact,
+            }
+        )
+    market_value = sum(int(row["now_cost"]) for row in ledger)
+    complete = all(row["sell_cost"] is not None for row in ledger)
+    return {
+        "players": ledger,
+        "market_value": market_value,
+        "sell_value": sum(int(row["sell_cost"]) for row in ledger) if complete else None,
+        "sell_value_complete": complete,
+        "exact_count": sum(bool(row["finance_exact"]) for row in ledger),
+        "unresolved_elements": [int(row["element"]) for row in ledger if row["sell_cost"] is None],
+    }
 
 
 def affordability_cost(*, owned: bool, now_cost: int, sell_value: int | None = None) -> int:

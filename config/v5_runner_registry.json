@@ -1,9 +1,15 @@
 {
-  "version": 2,
+  "version": 3,
   "status": "ALPHA_NOT_PRODUCTION",
+  "modes": ["daily", "deadline", "live"],
   "snapshot": {
     "schema_version": 50,
     "production_promotion_allowed": false
+  },
+  "summary_limits": {
+    "price_rise_risk": 10,
+    "price_fall_risk": 10,
+    "price_alerts": 20
   },
   "pipeline": [
     "public_base_collection",

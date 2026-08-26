@@ -1,97 +1,28 @@
 {
-  "version": 5,
-  "policy": "Any separable V5 domain should be represented by a dedicated module and/or registry when doing so improves authority clarity, identification, tuning, provenance, testing, or maintenance without unacceptable performance cost.",
+  "version": 6,
+  "policy": "Every separable V5 domain is a dedicated module/registry. Runtime deployment groups modules only at bounded-context microservice boundaries; business authority must remain single-source.",
   "modules": {
-    "rules": {
-      "plane": "truth",
-      "entrypoint": "src.rules",
-      "config": "config/rules/registry.json",
-      "adjustment_surface": ["season rules", "scoring", "chips", "finance rules", "lineup constraints"],
-      "status": "ACTIVE"
-    },
-    "source_authority": {
-      "plane": "truth",
-      "entrypoint": "src.v5.source_authority",
-      "config": "config/v5_source_authority_registry.json",
-      "adjustment_surface": ["source priority", "source enablement", "domain authority chains", "fallback policy"],
-      "status": "ACTIVE"
-    },
-    "public_api": {
-      "plane": "truth",
-      "entrypoint": "src.v5.public_api",
-      "config": "config/v5_public_api_registry.json",
-      "adjustment_surface": ["endpoint templates", "timeout", "retry/backoff", "parallel workers", "collection groups", "redirect policy"],
-      "status": "ACTIVE"
-    },
-    "official_authenticated": {
-      "plane": "truth",
-      "entrypoint": "src.v5.authenticated_official",
-      "config": "config/v5_auth_policy_registry.json",
-      "adjustment_surface": ["auth modes", "route allowlist", "timeout", "retry/backoff", "team-id authority", "raw persistence policy"],
-      "status": "ACTIVE"
-    },
-    "finance": {
-      "plane": "truth",
-      "entrypoint": "src.v5.finance",
-      "config": "config/v5_finance_registry.json",
-      "adjustment_surface": ["sell-value authority", "purchase-price reconstruction", "affordability semantics", "fail-closed policy"],
-      "status": "ACTIVE"
-    },
-    "phase_state": {
-      "plane": "truth",
-      "entrypoint": "src.v5.state",
-      "config": "config/v5_phase_authority_registry.json",
-      "adjustment_surface": ["pre-deadline authority", "post-deadline reconciliation", "live authority", "post-GW authority"],
-      "status": "ACTIVE"
-    },
-    "squad": {
-      "plane": "truth",
-      "entrypoint": "src.v5.squad",
-      "config": "config/v5_squad_registry.json",
-      "adjustment_surface": ["authority fallback", "identity validation", "fail-closed validation", "baseline reconciliation"],
-      "status": "ACTIVE"
-    },
-    "price_trajectory": {
-      "plane": "intelligence",
-      "entrypoint": "src.v5.price_trajectory",
-      "config": "config/v5_price_trajectory_registry.json",
-      "adjustment_surface": ["filter thresholds", "trend sensitivity", "urgency bands", "ETA policy", "watch capacity", "market timezone"],
-      "status": "CORE_ACTIVE_PENDING_TASK_WIRING"
-    },
-    "projection": {
-      "plane": "intelligence",
-      "entrypoint": "src.models.projection",
-      "config": "planned: config/v5_projection_registry.json",
-      "adjustment_surface": ["xMins priors", "feature weights", "opponent factors", "set-piece weights", "confidence thresholds"],
-      "status": "PARTIAL_EXTERNALIZATION"
-    },
-    "dss_core": {
-      "plane": "decision",
-      "entrypoint": "registry-driven",
-      "config": "config/dss_core_registry.json",
-      "adjustment_surface": ["module enablement", "priority", "governance metadata"],
-      "status": "ACTIVE"
-    },
-    "dss_extensions": {
-      "plane": "decision",
-      "entrypoint": "registry-driven",
-      "config": "config/dss_extension_registry.json",
-      "adjustment_surface": ["module enablement", "priority", "governance metadata"],
-      "status": "ACTIVE"
-    },
-    "gate0": {
-      "plane": "governance",
-      "entrypoint": "registry-driven",
-      "config": "config/gate0_registry.json",
-      "adjustment_surface": ["constraint enablement", "severity", "validation policy"],
-      "status": "ACTIVE"
-    },
-    "performance": {
-      "plane": "governance",
-      "entrypoint": "src.v5.performance",
-      "config": "config/v5_performance_budgets.json",
-      "adjustment_surface": ["latency budgets", "regression thresholds", "benchmark policy"],
-      "status": "ACTIVE"
-    }
+    "rules": {"plane":"truth","entrypoint":"src.rules","config":"config/rules/registry.json","adjustment_surface":["season rules","scoring","chips","finance rules","lineup constraints"],"status":"ACTIVE"},
+    "source_authority": {"plane":"truth","entrypoint":"src.v5.source_authority","config":"config/v5_source_authority_registry.json","adjustment_surface":["source priority","source enablement","domain authority chains","fallback policy"],"status":"ACTIVE"},
+    "public_api": {"plane":"truth","entrypoint":"src.v5.public_api","config":"config/v5_public_api_registry.json","adjustment_surface":["endpoint templates","timeout","retry/backoff","parallel workers","collection groups","redirect policy"],"status":"ACTIVE"},
+    "official_authenticated": {"plane":"truth","entrypoint":"src.v5.authenticated_official","config":"config/v5_auth_policy_registry.json","adjustment_surface":["auth modes","route allowlist","timeout","retry/backoff","team-id authority","raw persistence policy"],"status":"ACTIVE"},
+    "event_context": {"plane":"truth","entrypoint":"src.v5.event_context","config":"config/v5_event_context_registry.json","adjustment_surface":["event flags","planning GW selection","submitted GW semantics","live detection"],"status":"ACTIVE"},
+    "identity": {"plane":"truth","entrypoint":"src.v5.identity","config":"config/v5_identity_registry.json","adjustment_surface":["element resolution","team resolution","position mapping validation","fail-closed identity policy"],"status":"ACTIVE"},
+    "phase_state": {"plane":"truth","entrypoint":"src.v5.state","config":"config/v5_phase_authority_registry.json","adjustment_surface":["pre-deadline authority","post-deadline reconciliation","live authority","post-GW authority"],"status":"ACTIVE"},
+    "squad": {"plane":"truth","entrypoint":"src.v5.squad","config":"config/v5_squad_registry.json","adjustment_surface":["authority fallback","identity validation","fail-closed validation","baseline reconciliation"],"status":"ACTIVE"},
+    "finance": {"plane":"truth","entrypoint":"src.v5.finance","config":"config/v5_finance_registry.json","adjustment_surface":["sell-value authority","purchase-price reconstruction","affordability semantics","fail-closed policy"],"status":"ACTIVE"},
+    "team_service": {"plane":"truth","entrypoint":"src.v5.team_service","config":"config/v5_squad_registry.json","adjustment_surface":["team assembly","finance overlay","bank authority","purchase baseline integration"],"status":"ACTIVE"},
+    "live_scoring": {"plane":"truth","entrypoint":"src.v5.live_scoring","config":"config/v5_live_scoring_registry.json","adjustment_surface":["live stat fields","transfer-cost subtraction","live statuses","captain multiplier semantics"],"status":"ACTIVE"},
+    "price_trajectory": {"plane":"intelligence","entrypoint":"src.v5.price_trajectory","config":"config/v5_price_trajectory_registry.json","adjustment_surface":["filter thresholds","trend sensitivity","urgency bands","ETA policy","watch capacity","market timezone"],"status":"ACTIVE_ALPHA"},
+    "price_service": {"plane":"intelligence","entrypoint":"src.v5.price_service","config":"config/v5_price_trajectory_registry.json","adjustment_surface":["snapshot list limits","alert composition","owned-vs-watch filtering"],"status":"ACTIVE_ALPHA"},
+    "projection": {"plane":"intelligence","entrypoint":"src.models.projection","config":"config/v5_prediction_bridge_registry.json","adjustment_surface":["xMins priors","feature weights","opponent factors","set-piece weights","confidence thresholds"],"status":"PARTIAL_EXTERNALIZATION"},
+    "prediction_bridge": {"plane":"intelligence","entrypoint":"src.v5.prediction_bridge","config":"config/v5_prediction_bridge_registry.json","adjustment_surface":["upstream model","point-in-time requirement","leakage guard","bridge enablement"],"status":"ACTIVE_ALPHA"},
+    "dss_core": {"plane":"decision","entrypoint":"registry-driven","config":"config/dss_core_registry.json","adjustment_surface":["module enablement","priority","governance metadata"],"status":"ACTIVE"},
+    "dss_extensions": {"plane":"decision","entrypoint":"registry-driven","config":"config/dss_extension_registry.json","adjustment_surface":["module enablement","priority","governance metadata"],"status":"ACTIVE"},
+    "gate0": {"plane":"governance","entrypoint":"registry-driven","config":"config/gate0_registry.json","adjustment_surface":["constraint enablement","severity","validation policy"],"status":"ACTIVE"},
+    "persistence": {"plane":"governance","entrypoint":"src.v5.persistence","config":"config/v5_persistence_registry.json","adjustment_surface":["artifact names","data root","history policy","raw-auth persistence policy"],"status":"ACTIVE"},
+    "performance": {"plane":"governance","entrypoint":"src.v5.performance","config":"config/v5_performance_budgets.json","adjustment_surface":["latency budgets","regression thresholds","benchmark policy","stage timings"],"status":"ACTIVE"},
+    "runner": {"plane":"governance","entrypoint":"src.v5.runner","config":"config/v5_runner_registry.json","adjustment_surface":["pipeline order","feature switches","concurrency","output limits","fail-closed orchestration"],"status":"ACTIVE_ALPHA"},
+    "service_runtime": {"plane":"governance","entrypoint":"src.v5.service_host","config":"config/v5_service_registry.json","adjustment_surface":["service boundaries","ports","dependencies","contract version","timeouts","criticality"],"status":"ACTIVE_ALPHA"}
   }
 }

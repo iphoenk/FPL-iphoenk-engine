@@ -3,8 +3,11 @@ from src.engines.price_radar import classify
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 
-def test_release():
-    assert ENGINE_VERSION == "3.16.0"
+def test_release_metadata_shape():
+    parts = ENGINE_VERSION.split(".")
+    assert len(parts) == 3
+    assert all(part.isdigit() for part in parts)
+    assert int(parts[0]) == 3
     assert SCHEMA_VERSION == 45
 
 

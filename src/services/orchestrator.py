@@ -72,8 +72,8 @@ def orchestrate(
     services = _ordered_services(registry)
     started = time.perf_counter()
     report = {
-        "schema_version": 480,
-        "engine": "v4.8.0-service-orchestrator",
+        "schema_version": 481,
+        "engine": "v4.8.1-service-orchestrator",
         "started_at": iso_now(),
         "completed_at": None,
         "status": "RUNNING",
@@ -87,8 +87,8 @@ def orchestrate(
         "guardrails": dict(registry.get("guardrails") or {}),
     }
     atomic_json(outfile, report)
-    snapshot_path = root / "data/latest.json"
-    snapshot_digest = None
+    locked_artifacts: dict[str, str] = {}
+    lock_targets = {"raw_snapshot": root / "data/runtime/snapshot.v1.json", "enrichment": root / "data/runtime/enrichment.v1.json", "prediction": root / "data/latest.json"}
     service_states: dict[str, str] = {}
 
     try:
@@ -97,15 +97,16 @@ def orchestrate(
             dependencies = service.get("depends_on") or []
             if any(service_states.get(dep) != "PASS" for dep in dependencies):
                 raise RuntimeError(f"dependency not successful for {service_id}")
-            if snapshot_digest and file_digest(snapshot_path) != snapshot_digest:
-                raise RuntimeError(f"immutable snapshot changed before {service_id}")
+            for locked_path, digest in locked_artifacts.items():
+                if file_digest(Path(locked_path)) != digest:
+                    raise RuntimeError(f"immutable artifact changed before {service_id}: {locked_path}")
 
             command = _render_command(service, mode, stats, deep_stats, as_of)
             service_started = time.perf_counter()
             env = os.environ.copy()
             env["PYTHONPATH"] = str(root)
-            if snapshot_digest:
-                env["FPL_SNAPSHOT_SHA256"] = snapshot_digest
+            if str(root / "data/runtime/snapshot.v1.json") in locked_artifacts:
+                env["FPL_SNAPSHOT_SHA256"] = locked_artifacts[str(root / "data/runtime/snapshot.v1.json")]
             row = {
                 "id": service_id,
                 "name": service.get("name"),
@@ -140,6 +141,10 @@ def orchestrate(
                 service_states[service_id] = "FAIL"
                 raise RuntimeError(f"service failed: {service_id} exit={result.returncode}")
 
+            for locked_path, digest in locked_artifacts.items():
+                if file_digest(Path(locked_path)) != digest:
+                    raise RuntimeError(f"immutable snapshot changed during {service_id}: {locked_path}")
+
             validation = validate_contracts(list(service.get("produces") or []), contracts, root=root)
             row["contracts"] = validation
             if not all(item.get("valid") for item in validation):
@@ -147,18 +152,25 @@ def orchestrate(
                 service_states[service_id] = "FAIL"
                 raise RuntimeError(f"contract validation failed: {service_id}")
 
-            if snapshot_digest is None:
-                snapshot_digest = file_digest(snapshot_path)
-                latest = read_json(snapshot_path, {})
+            # Backward-compatible custom registries lock their first latest snapshot.
+            if not locked_artifacts and "latest" in (service.get("produces") or []):
+                target = root / "data/latest.json"
+                digest = file_digest(target)
+                locked_artifacts[str(target)] = digest
+                report["snapshot_identity"] = {"sha256": digest, "generated_at": read_json(target, {}).get("generated_at")}
+
+            if service_id in lock_targets:
+                target = lock_targets[service_id]
+                digest = file_digest(target)
+                locked_artifacts[str(target)] = digest
+                row["locked_artifact"] = {"path": str(target.relative_to(root)), "sha256": digest}
+            if service_id == "raw_snapshot":
+                latest = read_json(lock_targets[service_id], {})
                 report["snapshot_identity"] = {
-                    "sha256": snapshot_digest,
+                    "sha256": locked_artifacts[str(lock_targets[service_id])],
                     "generated_at": latest.get("generated_at"),
                     "checkpoint_policy_id": (latest.get("checkpoint_context") or {}).get("policy_id"),
                 }
-            elif file_digest(snapshot_path) != snapshot_digest:
-                row["status"] = "FAIL"
-                service_states[service_id] = "FAIL"
-                raise RuntimeError(f"immutable snapshot changed during {service_id}")
 
             row["status"] = "PASS"
             service_states[service_id] = "PASS"
@@ -169,7 +181,9 @@ def orchestrate(
         report["duration_ms"] = round((time.perf_counter() - started) * 1000, 2)
         report["summary"] = {"services_passed": len(services), "services_total": len(services), "fail_closed": True}
         atomic_json(outfile, report)
-        print(json.dumps({"orchestrator": "PASS", "services": len(services), "duration_ms": report["duration_ms"], "snapshot": snapshot_digest, "simulated": report["simulated"]}, ensure_ascii=False))
+        report["locked_artifacts"] = {str(Path(path).relative_to(root)): digest for path, digest in locked_artifacts.items()}
+        atomic_json(outfile, report)
+        print(json.dumps({"orchestrator": "PASS", "services": len(services), "duration_ms": report["duration_ms"], "snapshot": (report.get("snapshot_identity") or {}).get("sha256"), "simulated": report["simulated"]}, ensure_ascii=False))
         return report
     except Exception as exc:
         report["status"] = "FAIL"

@@ -1,37 +1,16 @@
-# V4.8 service architecture
+# V4.8.1 service architecture
 
-V4.8.0 is a process-isolated, single-host service architecture. It is intentionally not described as a distributed network deployment: each service runs in its own Python process, while one orchestrator owns ordering, the immutable snapshot, and the final failure state.
+V4.8.1 runs eight **independent**, process-isolated services on one host. The orchestrator owns dependency ordering, contract validation, immutable-artifact locks, and the final fail-closed state.
 
-## Execution flow
+1. `raw_snapshot` is the only service permitted to call the Official FPL API. It also conditionally fetches GW1 picks and reconstructs purchase prices before publishing `snapshot.v1`.
+2. `enrichment` reads the locked raw contract, optionally refreshes community statistics, and publishes `enrichment.v1` with the raw SHA-256 in its lineage.
+3. `prediction` reads both locked contracts and runs the unchanged V4.7.1 prediction formula. Its latest output records both SHA-256 digests.
+4. `rules_compliance` validates FPL rules.
+5. `framework_preflight` runs checkpoint-aware PRE-FLIGHT governance.
+6. `optimization` runs the unchanged V4.7.2 optimizer and unified decision pipeline.
+7. `framework_postflight` runs the 16-check POST-FLIGHT gate.
+8. `report_governance` emits the unchanged V4.7.3 checkpoint decision.
 
-1. `snapshot_prediction` refreshes one authoritative point-in-time snapshot and produces enrichment and V4.7.1 predictions. This is the only transitional composite boundary.
-2. `rules_compliance` proves the FPL rules implementation independently.
-3. `framework_preflight` evaluates framework readiness before optimization.
-4. `optimization` runs the unchanged V4.7.2 WC/package search, lineup governance, and evidence sanity.
-5. `framework_postflight` executes all 16 Gate 0 checks against decision outputs.
-6. `report_governance` applies V4.7.3 checkpoint and action policy.
+Every registry boundary is `INDEPENDENT`. A successful raw, enrichment, or prediction process is locked immediately; any later digest mismatch stops orchestration. Runtime contracts are written beneath `data/runtime/` and are intentionally excluded from Git.
 
-The centralized V4.8 quality gate runs after the orchestrator and validates both the domain outputs and the service execution evidence.
-
-## Contracts and failure model
-
-- `config/service_registry.json` owns dependency order, commands, timeouts, criticality, and declared outputs.
-- `config/service_contract_registry.json` owns artifact paths and minimum schema, version, required-field, equality, and collection-size checks.
-- A service is `PASS` only when its process exits successfully and every declared output satisfies its contract.
-- Dependency failure stops all downstream execution.
-- `latest.json` is hashed after refresh. Any downstream mutation fails the run.
-- Logs, timings, contract hashes, and failure evidence are stored in `data/service_orchestration_v4.json`.
-
-## Preserved invariants
-
-- Prediction formula remains V4.7.1.
-- WC and package search widths remain V4.7.2.
-- Checkpoint governance remains V4.7.3.
-- Gate 0 remains exactly 16 checks.
-- DSS Core, DSS Extension, and Enhancement counts remain 50, 16, and 8.
-- Owned assets use sell cost; unowned assets use current cost.
-- A simulated `--as-of` run never authorizes live execution.
-
-## Remaining extraction debt
-
-Snapshot acquisition, enrichment synchronization, and prediction generation still share one process because V4.7 built them around the same in-memory bootstrap and fixture objects. Separating them safely requires immutable raw snapshot contracts first. Until that equivalence work is complete, splitting them across independently fetching services would create inconsistent point-in-time data and is prohibited.
+The centralized V4.8.1 quality gate verifies 8/8 service evidence, lineage, decision equivalence, sell-cost correctness, Gate 0 (16), DSS Core (50), DSS Extension (16), and Enhancement Layers (8).

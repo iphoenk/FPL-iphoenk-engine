@@ -1,7 +1,7 @@
 {
-  "request_id": "bootstrap",
-  "requested_at": null,
-  "requested_by": "manual_or_chat",
-  "request_note": "Fresh team snapshot on demand",
+  "request_id": "smoke-20260827-0535-wib",
+  "requested_at": "2026-08-26T22:35:00Z",
+  "requested_by": "chat",
+  "request_note": "Smoke-test fresh team snapshot on demand",
   "include_v5_beta_overlay": false
 }

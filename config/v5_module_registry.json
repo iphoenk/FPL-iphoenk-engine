@@ -1,11 +1,10 @@
 {
-  "version": 8,
+  "version": 9,
   "policy": "Every business capability has exactly one bounded-context microservice owner. Cross-service calls use versioned contracts; no service may import another service's business implementation.",
   "modules": {
     "public_api": {"plane":"truth","entrypoint":"src.v5.public_api","config":"config/v5_public_api_registry.json","status":"ACTIVE"},
     "official_authenticated": {"plane":"truth","entrypoint":"src.v5.authenticated_official","config":"config/v5_auth_policy_registry.json","status":"ACTIVE"},
     "source_authority": {"plane":"truth","entrypoint":"src.v5.source_authority","config":"config/v5_source_authority_registry.json","status":"ACTIVE"},
-
     "rules": {"plane":"truth","entrypoint":"src.rules","config":"config/rules/registry.json","status":"ACTIVE"},
     "event_context": {"plane":"truth","entrypoint":"src.v5.event_context","config":"config/v5_event_context_registry.json","status":"ACTIVE"},
     "identity": {"plane":"truth","entrypoint":"src.v5.identity","config":"config/v5_identity_registry.json","status":"ACTIVE"},
@@ -17,8 +16,8 @@
 
     "price_trajectory": {"plane":"intelligence","entrypoint":"src.v5.price_trajectory","config":"config/v5_price_trajectory_registry.json","status":"ACTIVE_ALPHA"},
     "price_service": {"plane":"intelligence","entrypoint":"src.v5.price_service","config":"config/v5_price_trajectory_registry.json","status":"ACTIVE_ALPHA"},
-
     "xmins_v2": {"plane":"intelligence","entrypoint":"src.v5.intelligence.xmins","config":"config/intelligence/xmins_v2.json","status":"ACTIVE_ALPHA"},
+    "role_intelligence": {"plane":"intelligence","entrypoint":"src.v5.intelligence.role_intelligence","config":"config/intelligence/role_intelligence.json","status":"ACTIVE_ALPHA"},
     "team_strength": {"plane":"intelligence","entrypoint":"src.v5.intelligence.team_strength","config":"config/intelligence/team_strength.json","status":"ACTIVE_ALPHA"},
     "projection": {"plane":"intelligence","entrypoint":"src.v5.intelligence.projection","config":"config/intelligence/projection.json","status":"ACTIVE_ALPHA"},
 
@@ -35,7 +34,6 @@
     "gate0": {"plane":"governance","entrypoint":"src.v5.governance.gate0","config":"config/v5_gate0_policy_registry.json","status":"ACTIVE_ALPHA"},
     "enhancement_layers": {"plane":"governance","entrypoint":"src.v5.governance.core","config":"config/enhancement_layers_registry.json","status":"ACTIVE_ALPHA"},
     "framework_health": {"plane":"governance","entrypoint":"src.v5.governance.core","config":"config/v5_acceptance_registry.json","status":"ACTIVE_ALPHA"},
-
     "persistence": {"plane":"governance","entrypoint":"src.v5.persistence","config":"config/v5_persistence_registry.json","status":"ACTIVE"},
     "performance": {"plane":"governance","entrypoint":"src.v5.performance","config":"config/v5_performance_budgets.json","status":"ACTIVE"},
     "runner": {"plane":"governance","entrypoint":"src.v5.services.orchestrator","config":"config/v5_runner_registry.json","status":"ACTIVE_ALPHA"},

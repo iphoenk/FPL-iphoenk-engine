@@ -27,6 +27,14 @@ def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
     tmp.replace(path)
 
 
+def _ids(rows: Any) -> set[int]:
+    return {
+        int(row["element"])
+        for row in (rows or [])
+        if isinstance(row, dict) and row.get("element") is not None
+    }
+
+
 def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int) -> dict[str, Any]:
     v3_latest = _load(v3_latest_path)
     v3_lineup = _load(v3_lineup_path)
@@ -43,9 +51,25 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
     cycle_id = generated_at.replace(":", "").replace("+00:00", "Z").replace("-", "")
 
     v5_team = v5.get("team_summary") if isinstance(v5.get("team_summary"), dict) else {}
+    owned_ids = [int(x) for x in (v5_team.get("owned_ids") or [])]
+    decision = v5.get("decision_summary") if isinstance(v5.get("decision_summary"), dict) else {}
+    lineup = decision.get("lineup") if isinstance(decision.get("lineup"), dict) else {}
+    lineup_ids = _ids(lineup.get("starters")) | _ids(lineup.get("bench"))
     watch = v5.get("watchlist_summary") if isinstance(v5.get("watchlist_summary"), dict) else {}
+    invariants = {
+        "owned_exactly_15": len(owned_ids) == 15 and len(set(owned_ids)) == 15,
+        "lineup_confined_to_owned": len(lineup_ids) == 15 and lineup_ids == set(owned_ids),
+        "watchlist_exactly_20": int(watch.get("candidate_count") or 0) == 20,
+        "user_lock_authority_pre_deadline": (
+            str((v5.get("phase") or {}).get("phase") or "") != "PRE_DEADLINE"
+            or str(v5.get("squad_authority") or "") == "user_lock"
+        ),
+    }
+    invariant_pass = all(invariants.values())
+    cycle_pass = bool(parity.get("pass")) and invariant_pass
+
     result = {
-        "schema_version": 1,
+        "schema_version": 2,
         "cycle_id": cycle_id,
         "generated_at": generated_at,
         "mode": "REAL_SHADOW",
@@ -65,9 +89,11 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
             "engine_version": v5.get("engine_version"),
             "runner_status": v5.get("runner_status"),
             "planning_gw": (v5.get("phase") or {}).get("planning_gw"),
+            "phase": (v5.get("phase") or {}).get("phase"),
             "squad_authority": v5.get("squad_authority"),
-            "owned_count": len(v5_team.get("owned_ids") or []),
-            "decision": v5.get("decision_summary") or {},
+            "owned_count": len(owned_ids),
+            "owned_ids": owned_ids,
+            "decision": decision,
             "watchlist": watch,
             "user_report": v5.get("user_report") or {},
             "governance": v5.get("governance") or {},
@@ -76,10 +102,12 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
             "authenticated_official": v5.get("authenticated_official") or {},
         },
         "parity": parity,
+        "operational_invariants": {"pass": invariant_pass, "checks": invariants},
         "acceptance_progress": {
-            "cycle_pass": bool(parity.get("pass")),
+            "cycle_pass": cycle_pass,
             "required_real_cycles": int(parity.get("required_real_cycles") or 3),
-            "this_cycle_counts": True,
+            "real_cycle_recorded": True,
+            "counts_as_successful_acceptance_cycle": cycle_pass,
             "production_candidate_auto_promoted": False,
         },
     }
@@ -90,13 +118,15 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
     _atomic_write(out / "latest_shadow_cycle.json", result)
     print(json.dumps({
         "cycle_id": cycle_id,
+        "cycle_pass": cycle_pass,
         "parity_pass": parity.get("pass"),
         "checks": parity.get("checks"),
+        "operational_invariants": invariants,
         "xi_diff": parity.get("starting_xi_symmetric_difference"),
         "captain": parity.get("captain"),
-        "v5_owned_count": result["v5"]["owned_count"],
+        "v5_owned_count": len(owned_ids),
         "v5_watchlist_count": watch.get("candidate_count"),
-        "v5_final_state": (result["v5"]["decision"] or {}).get("final_state"),
+        "v5_decision_status": decision.get("status"),
         "auth_state": (result["v5"]["authenticated_official"] or {}).get("state"),
         "output": str(cycle_path),
     }, ensure_ascii=False))

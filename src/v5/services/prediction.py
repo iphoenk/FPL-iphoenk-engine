@@ -71,7 +71,6 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 "mean_xpts": player.get("mean_xpts"),
                 "uncertainty": player.get("uncertainty"),
                 "fixtures": player.get("fixtures"),
-                "rates": player.get("rates"),
                 "projection_confidence": player.get("projection_confidence"),
             }
         )

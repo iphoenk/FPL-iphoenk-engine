@@ -1,6 +1,6 @@
 {
-  "schema_version": 2,
-  "model_id": "v5_dss_source_fusion_v2",
+  "schema_version": 3,
+  "model_id": "v5_dss_source_fusion_v3",
   "season_authority": {
     "registry_path": "config/rules/registry.json",
     "season_field": "season"
@@ -10,6 +10,7 @@
     "fpl_core_insights_primary_for_epl_advanced_stats": true,
     "understat_is_challenger_not_box_touch_proxy": true,
     "api_football_is_cross_competition_enrichment": true,
+    "optional_source_plan_restriction_is_not_engine_failure": true,
     "missing_enrichment_is_unavailable_not_zero": true,
     "network_fetch_owned_by_ingestion_service": true,
     "prediction_network_fetch_forbidden": true
@@ -29,8 +30,21 @@
     "api_key_header": "x-apisports-key",
     "timeout_seconds": 5.0,
     "cache_ttl_seconds": 43200,
+    "availability_cache_ttl_seconds": 21600,
     "cache_dir": "data/v5/source_cache/api_football",
     "resolve_league_ids_dynamically": true,
+    "availability_classification": {
+      "PLAN_RESTRICTED": {
+        "contains_any": ["do not have access to this season", "subscription plan", "plan does not have access"]
+      },
+      "RATE_LIMITED": {
+        "contains_any": ["rate limit", "too many requests", "request limit"]
+      },
+      "AUTH_REJECTED": {
+        "contains_any": ["invalid api key", "invalid key", "unauthorized", "forbidden"]
+      }
+    },
+    "cacheable_unavailability_classes": ["PLAN_RESTRICTED", "RATE_LIMITED"],
     "team_matching": {
       "minimum_similarity": 0.72,
       "minimum_unique_margin": 0.08,

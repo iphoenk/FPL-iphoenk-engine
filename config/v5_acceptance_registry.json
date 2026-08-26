@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "module_policy": {
+    "minimum_registered_modules": 16,
+    "required_truth_modules": [
+      "rules",
+      "source_authority",
+      "public_api",
+      "official_authenticated",
+      "event_context",
+      "identity",
+      "phase_state",
+      "squad",
+      "finance",
+      "team_service",
+      "live_scoring"
+    ],
+    "required_governance_modules": ["performance", "persistence", "runner"],
+    "active_statuses": ["ACTIVE", "ACTIVE_ALPHA"]
+  },
+  "production": {
+    "promotion_must_remain_locked_during_alpha": true
+  },
+  "architecture": {
+    "require_entrypoint": true,
+    "require_config": true,
+    "require_adjustment_surface": true
+  }
+}

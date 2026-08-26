@@ -30,7 +30,10 @@ def test_on_demand_packager_keeps_production_authority_and_full_lineup(tmp_path,
         "formation": "3-4-3",
         "squad_authority": "pre_deadline_wc",
         "starting_xi": [{"name": f"XI{i}"} for i in range(11)],
-        "bench": [{"name": f"B{i}"} for i in range(4)],
+        "bench": {
+            "gk": {"name": "B0"},
+            "order": [{"name": "B1"}, {"name": "B2"}, {"name": "B3"}],
+        },
         "captain": {"name": "XI1"},
         "vice_captain": {"name": "XI2"},
     })
@@ -51,7 +54,7 @@ def test_on_demand_packager_keeps_production_authority_and_full_lineup(tmp_path,
     assert payload["authority"]["v5_beta_overlay_used"] is False
     assert payload["quick_view"]["owned_count"] == 15
     assert len(payload["quick_view"]["starting_xi"]) == 11
-    assert len(payload["quick_view"]["bench"]) == 4
+    assert payload["quick_view"]["bench"] == ["B0", "B1", "B2", "B3"]
     assert payload["quick_view"]["captain"] == "XI1"
     assert payload["quick_view"]["watchlist_count"] == 20
     assert (out / "latest.json").exists()

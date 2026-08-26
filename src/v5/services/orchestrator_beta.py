@@ -27,7 +27,8 @@ def handle(operation:str,payload:dict[str,Any])->Any:
     decision=snapshot.get("decision_summary") or {}
     governance=snapshot.get("framework_health") or {}
     watch_env=_invoke("watchlist_build",{"truth":truth,"price":price,"prediction":prediction,"dss":decision.get("dss") or {}},cid); watchlist=watch_env["data"]
-    report_env=_invoke("reporting_build",{"truth":truth,"price":price,"prediction":prediction,"decision":decision,"governance":governance,"watchlist":watchlist,"previous_report_state":states["report_state"]["data"] or {},"performance":snapshot.get("service_performance") or {}},cid); report=report_env["data"]
+    report_payload={"truth":truth,"price":price,"prediction":prediction,"decision":decision,"governance":governance,"watchlist":watchlist,"previous_report_state":states["report_state"]["data"] or {},"performance":snapshot.get("service_performance") or {},"force_full_report":bool(payload.get("force_full_report",False)),"report_request":payload.get("report_request") if isinstance(payload.get("report_request"),dict) else {}}
+    report_env=_invoke("reporting_build",report_payload,cid); report=report_env["data"]
     write_service,write_operation=_route("artifact_write"); mapping=load_json_config(CONFIG).get("artifact_mapping") or {}
     writes=invoke_parallel_envelopes({"watchlist":(write_service,write_operation,{"name":mapping["watchlist"],"data":watchlist}),"user_report":(write_service,write_operation,{"name":mapping["user_report"],"data":report["user_report"]}),"technical_appendix":(write_service,write_operation,{"name":mapping["technical_appendix"],"data":report["technical_appendix"]}),"report_state":(write_service,write_operation,{"name":mapping["report_state"],"data":report["report_state"]})},correlation_id=cid)
     snapshot["watchlist_summary"]={"status":watchlist.get("status"),"candidate_count":watchlist.get("candidate_count"),"screening_contract":watchlist.get("screening_contract")}

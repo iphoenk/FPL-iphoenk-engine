@@ -67,7 +67,15 @@ def _reference_score(players, planning_gw, changes=0):
     }
 
 
-def test_optimized_package_score_is_exactly_reference_equivalent():
+def _assert_reference_equivalent(actual, reference):
+    for key, value in reference.items():
+        assert actual[key] == value, key
+    assert actual["guardrails"]["team_cluster_penalty_enabled"] is True
+    assert actual["guardrails"]["early_season_change_cap_enabled"] is True
+    assert actual["team_cluster_penalty_points"] == 0.0
+
+
+def test_optimized_package_score_preserves_reference_numerics_with_guardrail_metadata():
     players = _players()
-    assert score_package(players, 2, changes=0) == _reference_score(players, 2, changes=0)
-    assert score_package(players, 2, changes=2) == _reference_score(players, 2, changes=2)
+    _assert_reference_equivalent(score_package(players, 2, changes=0), _reference_score(players, 2, changes=0))
+    _assert_reference_equivalent(score_package(players, 2, changes=2), _reference_score(players, 2, changes=2))

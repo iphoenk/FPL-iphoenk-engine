@@ -1,11 +1,11 @@
 # FPL iphoenk Engine V5
 
-Unified Decision Engine, currently in alpha and not production-promoted.
+Unified Decision Engine, currently in beta and not production-promoted.
 
 ## Operating tracks
 
 - V3.x remains the production/runtime baseline for scheduled tasks and reliability-sensitive operation.
-- V4.x remains the active prediction development and tuning branch.
+- V4.x remains the prediction development and calibration reference track.
 - V5.x is the architectural overhaul that converges V3 truth/reliability with V4 prediction intelligence.
 
 ## V5 design goal
@@ -32,15 +32,23 @@ Unify truth, intelligence, and governance without duplicating authority:
 
 See `docs/V5_ENGINEERING_RULES.md` and `config/v5_architecture_principles.json`.
 
-## Current bootstrap
+## Current beta baseline
 
-V5.0.0-alpha.1 establishes:
+V5.0.0-beta.1 currently converges against the accepted V3.17.0 production truth baseline and includes:
 
 - V3 Official FPL rules registry as V5 single rules authority
 - projection scoring wired to the shared rules registry
 - goalkeeper-goal scoring corrected to the 2026/27 10-point rule
 - V5 contracts for TruthState, PlayerProjection and DecisionTrace
-- convergence and migration manifest
-- bootstrap acceptance and architecture/performance CI gates
+- bounded-context microservices for ingestion, truth, price, prediction, evaluation, decision, governance, watchlist, reporting, snapshot and orchestration
+- strict 50/50 DSS core + 16/16 DSS extension postflight governance
+- exactly 15 owned players and exactly 20 external watchlist players, with 5 per position
+- persistence registry coverage for orchestrator-routed runtime artifacts including source fusion
+- source-fusion observability for Understat and API-Football
+- API-Football provider restrictions classified explicitly, with `PLAN_RESTRICTED` treated as fail-neutral optional-source unavailability rather than fabricated evidence or engine failure
+- cached provider-restriction evidence to avoid repeated quota-wasting calls during the configured TTL
+- convergence, shadow-parity, architecture, persistence, reporting and performance regression gates
 
-Production promotion remains blocked until V3 truth capability parity and V4 prediction capability parity are accepted.
+Official FPL remains the native external authority. External enrichment never overrides Official FPL identity, price, rules or authoritative squad state.
+
+Production promotion remains blocked until the configured real-shadow acceptance criteria are satisfied.

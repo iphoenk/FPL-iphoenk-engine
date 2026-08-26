@@ -30,18 +30,24 @@ def test_full_core_enrichment_uses_real_advanced_stats_and_fail_neutral_missing_
     assert result["status"] == "ACTIVE"
     assert set(result["capabilities"]) == {
         "advanced_stats_sync", "european_congestion", "domestic_cup_congestion", "international_load",
-        "rest_days", "preseason_prior", "current_form",
+        "rest_days", "preseason_prior", "current_form", "source_fusion",
     }
+    assert result["governance"]["missing_external_evidence_is_unavailable_not_zero"] is True
+    assert result["governance"]["official_fpl_identity_price_rules_never_overridden"] is True
     advanced = result["advanced_stats"]
     assert advanced["status"] == "ACTIVE"
     assert advanced["shots_rows"] > 0
     assert advanced["match_rows"] > 0
     assert advanced["coverage_players"] > 0
     assert advanced["missing_player_behavior"] == "UNAVAILABLE_NOT_ZERO"
+    assert advanced["governance"]["fpl_core_insights_primary"] is True
+    assert advanced["governance"]["understat_challenger_only"] is True
+    assert advanced["governance"]["shot_in_box_is_not_box_touch"] is True
     schedule = result["schedule"]
     assert schedule["status"] == "ACTIVE"
     assert schedule["league_rest_days"]["1"]["minimum_pl_rest_days"] == 7.0
     assert schedule["governance"]["missing_specific_match_or_callup_is_unavailable_not_zero"] is True
+    assert schedule["governance"]["actual_cross_competition_fixtures_override_calendar_windows_when_available"] is True
     preseason = result["preseason"]
     assert preseason["status"] == "ACTIVE"
     assert preseason["never_fabricate_minutes_or_roles"] is True

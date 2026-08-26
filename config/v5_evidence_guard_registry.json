@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_evidence_guard_v1",
+  "freshness": {
+    "max_prediction_age_seconds": 1800,
+    "require_deadline": true
+  },
+  "leakage": {
+    "forbidden_same_gw_fields": ["xP", "ep_this", "event_points", "total_points", "bonus", "bps"],
+    "forbidden_source_classes": ["post_match_or_post_gw", "post_gw"],
+    "require_prediction_gw_not_before_planning_gw": true
+  },
+  "reliability": {
+    "require_prediction_quality": true,
+    "healthy_prediction_status": "HEALTHY",
+    "require_ruleset_match": true,
+    "require_truth_validation": true
+  },
+  "early_season": {
+    "through_gw": 5,
+    "maximum_package_changes": 2
+  },
+  "role_proxy": {
+    "enabled": true,
+    "evidence_level": "PROXY",
+    "required_fields": ["role_start_probability", "rotation_risk", "position_slots_prior"]
+  }
+}

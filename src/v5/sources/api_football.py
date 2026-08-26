@@ -49,6 +49,21 @@ def _header_value(headers: requests.structures.CaseInsensitiveDict[str], names: 
     return None
 
 
+def _classify_unavailability(reason: str, cfg: dict[str, Any]) -> str:
+    text = str(reason or "").casefold()
+    rules = cfg.get("availability_classification") if isinstance(cfg.get("availability_classification"), dict) else {}
+    for availability_class, rule in rules.items():
+        if not isinstance(rule, dict):
+            continue
+        contains_any = [str(value).casefold() for value in rule.get("contains_any") or [] if str(value).strip()]
+        contains_all = [str(value).casefold() for value in rule.get("contains_all") or [] if str(value).strip()]
+        any_ok = not contains_any or any(marker in text for marker in contains_any)
+        all_ok = not contains_all or all(marker in text for marker in contains_all)
+        if any_ok and all_ok and (contains_any or contains_all):
+            return str(availability_class)
+    return "SOURCE_ERROR"
+
+
 def _get(
     session: requests.Session,
     cfg: dict[str, Any],
@@ -197,6 +212,7 @@ def _base_observability(cfg: dict[str, Any], credential_present: bool) -> dict[s
         "cache_hits": 0,
         "league_cache_hits": 0,
         "fixture_cache_hits": 0,
+        "availability_cache_hits": 0,
         "competitions_attempted": 0,
         "competitions_resolved": 0,
         "fixtures_returned": 0,
@@ -207,6 +223,36 @@ def _base_observability(cfg: dict[str, Any], credential_present: bool) -> dict[s
         "quota_remaining": None,
         "quota_limit": None,
         "cache_ttl_seconds": int(cfg.get("cache_ttl_seconds") or 0),
+        "availability_cache_ttl_seconds": int(cfg.get("availability_cache_ttl_seconds") or 0),
+    }
+
+
+def _unavailable_result(
+    *,
+    reason: str,
+    availability_class: str,
+    season: dict[str, Any],
+    observability: dict[str, Any],
+    fixtures: list[dict[str, Any]] | None = None,
+    resolved: dict[str, Any] | None = None,
+    failures: list[dict[str, Any]] | None = None,
+    cached_restriction: bool = False,
+) -> dict[str, Any]:
+    return {
+        "source": "api_football",
+        "status": "UNAVAILABLE",
+        "availability_class": availability_class,
+        "reason": reason,
+        "fixtures": list(fixtures or []),
+        "season": season,
+        "resolved_competitions": dict(resolved or {}),
+        "failures": list(failures or []),
+        "observability": observability,
+        "governance": {
+            "fail_neutral": True,
+            "missing_is_unavailable_not_zero": True,
+            "cached_provider_restriction": cached_restriction,
+        },
     }
 
 
@@ -215,21 +261,42 @@ def collect(bootstrap: dict[str, Any]) -> dict[str, Any]:
     season = season_authority()
     season_start_year = int(season["start_year"])
     if not cfg.get("enabled", False):
-        return {"source": "api_football", "status": "DISABLED", "fixtures": [], "season": season}
+        return {
+            "source": "api_football",
+            "status": "DISABLED",
+            "availability_class": "DISABLED",
+            "fixtures": [],
+            "season": season,
+        }
     key = os.getenv(str(cfg["api_key_env"]), "").strip()
     observability = _base_observability(cfg, bool(key))
     if not key:
-        return {
-            "source": "api_football",
-            "status": "UNAVAILABLE",
-            "reason": "API_KEY_MISSING",
-            "fixtures": [],
-            "season": season,
-            "observability": observability,
-            "governance": {"fail_neutral": True, "missing_is_unavailable_not_zero": True},
-        }
-    headers = {str(cfg["api_key_header"]): key}
+        return _unavailable_result(
+            reason="API_KEY_MISSING",
+            availability_class="CREDENTIAL_MISSING",
+            season=season,
+            observability=observability,
+        )
+
     cache_dir = Path(str(cfg["cache_dir"]))
+    availability_cache = _cache_path(cache_dir, f"availability_{season_start_year}")
+    cached_availability = _load_cache(availability_cache, int(cfg.get("availability_cache_ttl_seconds") or 0))
+    cacheable_classes = {str(value) for value in cfg.get("cacheable_unavailability_classes") or []}
+    if cached_availability is not None:
+        cached_class = str(cached_availability.get("availability_class") or "")
+        if cached_class in cacheable_classes:
+            observability["cache_hits"] += 1
+            observability["availability_cache_hits"] += 1
+            observability["competitions_attempted"] = int(cached_availability.get("competitions_attempted") or 1)
+            return _unavailable_result(
+                reason=str(cached_availability.get("reason") or cached_class),
+                availability_class=cached_class,
+                season=season,
+                observability=observability,
+                cached_restriction=True,
+            )
+
+    headers = {str(cfg["api_key_header"]): key}
     ttl = int(cfg["cache_ttl_seconds"])
     from_date = (_now() - timedelta(days=int(cfg["fixture_window_days_before"]))).date().isoformat()
     to_date = (_now() + timedelta(days=int(cfg["fixture_window_days_after"]))).date().isoformat()
@@ -308,21 +375,33 @@ def collect(bootstrap: dict[str, Any]) -> dict[str, Any]:
                         })
         observability["fixtures_matched_to_fpl_teams"] = len(fixtures)
     except Exception as exc:
-        return {
-            "source": "api_football",
-            "status": "UNAVAILABLE",
-            "reason": f"{type(exc).__name__}:{exc}",
-            "fixtures": fixtures,
-            "season": season,
-            "resolved_competitions": resolved,
-            "failures": failures,
-            "observability": observability,
-            "governance": {"fail_neutral": True, "missing_is_unavailable_not_zero": True},
-        }
+        reason = f"{type(exc).__name__}:{exc}"
+        availability_class = _classify_unavailability(reason, cfg)
+        if availability_class in cacheable_classes:
+            _write_cache(
+                availability_cache,
+                {
+                    "generated_at": _now().isoformat(),
+                    "availability_class": availability_class,
+                    "reason": reason,
+                    "competitions_attempted": int(observability.get("competitions_attempted") or 0),
+                },
+            )
+        return _unavailable_result(
+            reason=reason,
+            availability_class=availability_class,
+            season=season,
+            observability=observability,
+            fixtures=fixtures,
+            resolved=resolved,
+            failures=failures,
+        )
+
     resolved_count = int(observability["competitions_resolved"])
     return {
         "source": "api_football",
         "status": "ACTIVE" if resolved_count > 0 else "DEGRADED",
+        "availability_class": "AVAILABLE" if resolved_count > 0 else "NO_COMPETITION_RESOLVED",
         "evidence_status": "AVAILABLE" if fixtures else "EMPTY_WINDOW_OR_NO_FPL_TEAM_MATCH",
         "generated_at": _now().isoformat(),
         "season": season,

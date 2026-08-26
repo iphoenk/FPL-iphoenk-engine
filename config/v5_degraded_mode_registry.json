@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "critical_service_failure": "FAIL_CLOSED",
+    "unlisted_noncritical_failure": "FAIL_CLOSED",
+    "degraded_context_blocks_unqualified_go": true,
+    "record_error_provenance": true
+  },
+  "fallbacks": {
+    "price.build": {
+      "service_id": "price",
+      "operation": "build",
+      "behavior": "STATIC_EMPTY_CONTEXT",
+      "blocks_unqualified_go": true,
+      "payload": {
+        "status": "DEGRADED",
+        "prices": {
+          "generated_at": null,
+          "confirmed_changes": [],
+          "players": [],
+          "top_buy_pressure": [],
+          "top_sell_pressure": [],
+          "top_rise_risk": [],
+          "top_fall_risk": [],
+          "market_noise": {"buy": [], "sell": []}
+        },
+        "trajectory_state": {},
+        "alerts": {
+          "generated_at": null,
+          "alerts": [],
+          "market_watch_candidates": []
+        },
+        "capabilities": []
+      }
+    }
+  }
+}

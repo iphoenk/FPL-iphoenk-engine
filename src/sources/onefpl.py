@@ -168,8 +168,11 @@ def probe(spec: SourceSpec, timeout_seconds: float = 2.5) -> SourceResult:
 
     source_reachable = bool((reachability_document and reachability_document.reachable) or (selected_document and selected_document.reachable))
     structured_reachable = bool(selected_document and selected_document.reachable)
+    structured_attempts = [attempt for attempt in attempts if str(attempt.get("role", "")).startswith("structured_")]
     restricted_statuses = {401, 402, 403, 429}
-    structured_access_restricted = any(attempt.get("http_status") in restricted_statuses for attempt in attempts if str(attempt.get("role", "")).startswith("structured_")) and not structured_reachable
+    structured_access_restricted = any(attempt.get("http_status") in restricted_statuses for attempt in structured_attempts) and not structured_reachable
+    primary_structured_http_status = structured_attempts[0].get("http_status") if structured_attempts else None
+    structured_http_status = selected_document.status_code if selected_document else (structured_attempts[-1].get("http_status") if structured_attempts else None)
 
     if observations:
         price_state = "AVAILABLE"
@@ -197,6 +200,8 @@ def probe(spec: SourceSpec, timeout_seconds: float = 2.5) -> SourceResult:
         capability_state,
         {
             "http_status": selected_document.status_code if selected_document else (reachability_document.status_code if reachability_document else None),
+            "structured_http_status": structured_http_status,
+            "primary_structured_http_status": primary_structured_http_status,
             "content_type": selected_document.content_type if selected_document else None,
             "structured_ingestion": True,
             "parser_version": PARSER_VERSION,

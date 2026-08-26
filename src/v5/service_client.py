@@ -6,9 +6,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import perf_counter
 from typing import Any, Mapping
 
-import requests
-
 from src.v5.service_registry import get_service, registry
+from src.v5.service_transport import post as transport_post, retry_policy
 
 
 def _env_name(service_id: str) -> str:
@@ -39,10 +38,13 @@ def invoke_envelope(
     connect = float(defaults["connect_timeout_ms"]) / 1000.0
     read = float(defaults["read_timeout_ms"]) / 1000.0
     invoke_path = str(defaults["invoke_path"]).format(operation=operation)
+    policy = retry_policy(service_id, operation)
     started = perf_counter()
-    response = requests.post(
+    response, attempts, circuit = transport_post(
+        service_id,
+        operation,
         f"{service_url(service_id)}{invoke_path}",
-        json=body,
+        json_body=body,
         timeout=(connect, read),
     )
     round_trip_ms = round((perf_counter() - started) * 1000.0, 3)
@@ -57,6 +59,9 @@ def invoke_envelope(
     envelope["transport_overhead_ms"] = round(
         max(0.0, round_trip_ms - float(envelope.get("elapsed_ms") or 0.0)), 3
     )
+    envelope["transport_attempts"] = int(attempts)
+    envelope["transport_retry_policy"] = policy.name
+    envelope["transport_circuit"] = circuit
     if not envelope.get("ok"):
         raise RuntimeError(f"{service_id}.{operation} failed: {envelope.get('error')}")
     return envelope

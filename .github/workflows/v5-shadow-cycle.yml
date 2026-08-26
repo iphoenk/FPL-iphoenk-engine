@@ -13,13 +13,14 @@ permissions:
 env:
   PYTHONPATH: ${{ github.workspace }}
   FPL_TEAM_ID: "3462711"
+  V3_SOURCE_BRANCH: v3.15-fast-report-serving
   V3_RUNTIME_BRANCH: runtime-data
   V5_SHADOW_BRANCH: v5-shadow-runtime
 
 jobs:
   shadow-cycle:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout V5 beta
         uses: actions/checkout@v4
@@ -35,14 +36,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Hydrate V3 production reference and prior V5 shadow state
+      - name: Hydrate prior V5 shadow state
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin "$V3_RUNTIME_BRANCH" "$V5_SHADOW_BRANCH"
+          git fetch origin "$V3_SOURCE_BRANCH" "$V3_RUNTIME_BRANCH" "$V5_SHADOW_BRANCH"
           mkdir -p .shadow data/v5
-          git show "origin/${V3_RUNTIME_BRANCH}:data/latest.json" > .shadow/v3_latest.json
-          git show "origin/${V3_RUNTIME_BRANCH}:data/lineup_decision.json" > .shadow/v3_lineup_decision.json
           if git cat-file -e "origin/${V5_SHADOW_BRANCH}:data/v5/latest.json" 2>/dev/null; then
             shadow_tmp="$(mktemp -d)"
             git archive "origin/${V5_SHADOW_BRANCH}" data/v5 | tar -x -C "$shadow_tmp"
@@ -53,6 +52,58 @@ jobs:
           else
             echo "No prior V5 shadow state; starting clean"
           fi
+
+      - name: Generate fresh V3.15 reference
+        shell: bash
+        env:
+          FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
+          FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
+          FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
+          FPL_REFRESH_TOKEN: ${{ secrets.FPL_REFRESH_TOKEN }}
+          FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
+          FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
+          FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          v3_tree="$(mktemp -d)"
+          trap 'git worktree remove --force "$v3_tree" >/dev/null 2>&1 || true; rm -rf "$v3_tree"' EXIT
+          git worktree add --detach "$v3_tree" "origin/$V3_SOURCE_BRANCH"
+
+          mkdir -p "$v3_tree/data/stats"
+          for file in price_cache.json price_trajectory.json rules_source_state.json prediction_ledger.json challenger_observations.json report_state.json dss_watchlist.json; do
+            if git cat-file -e "origin/${V3_RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
+              git show "origin/${V3_RUNTIME_BRANCH}:data/${file}" > "$v3_tree/data/${file}"
+            fi
+          done
+          if git cat-file -e "origin/${V3_RUNTIME_BRANCH}:data/stats/vaastav_previous_season.json" 2>/dev/null; then
+            git show "origin/${V3_RUNTIME_BRANCH}:data/stats/vaastav_previous_season.json" > "$v3_tree/data/stats/vaastav_previous_season.json"
+          fi
+
+          (
+            cd "$v3_tree"
+            export PYTHONPATH="$v3_tree"
+            python -m src.runtime_v3.orchestrator --mode daily --stats
+            python -m src.engines.production_contract_validate
+            python -m src.engines.watchlist_contract_validate
+            python -m src.engines.report_serving_validate
+          )
+
+          cp "$v3_tree/data/latest.json" .shadow/v3_latest.json
+          cp "$v3_tree/data/lineup_decision.json" .shadow/v3_lineup_decision.json
+          python - <<'PY'
+          import json
+          latest=json.load(open('.shadow/v3_latest.json'))
+          lineup=json.load(open('.shadow/v3_lineup_decision.json'))
+          print({
+              'reference_branch': 'v3.15-fast-report-serving',
+              'engine_version': latest.get('engine_version'),
+              'generated_at': latest.get('generated_at'),
+              'planning_gw': (latest.get('phase') or {}).get('planning_gw'),
+              'formation': lineup.get('formation'),
+              'captain': (lineup.get('captain') or {}).get('element') if isinstance(lineup.get('captain'), dict) else lineup.get('captain'),
+          })
+          assert str(latest.get('engine_version') or '').startswith('3.15'), latest.get('engine_version')
+          PY
 
       - name: Start V5 bounded-context microservices
         env:
@@ -79,8 +130,9 @@ jobs:
           docker compose -f deploy/v5/docker-compose.yml ps
           exit 1
 
-      - name: Run real V3 versus V5 shadow cycle
+      - name: Run real V3.15 versus V5 shadow cycle
         env:
+          V3_REFERENCE_BRANCH: v3.15-fast-report-serving
           V5_SERVICE_INGESTION_URL: http://127.0.0.1:8101
           V5_SERVICE_TRUTH_URL: http://127.0.0.1:8102
           V5_SERVICE_PRICE_URL: http://127.0.0.1:8103
@@ -103,14 +155,16 @@ jobs:
           positions=w.get('positions') or {}
           position_counts={pos: len(positions.get(pos) or []) for pos in ('GK','DEF','MID','FWD')}
           print({
+              'v3_engine_version': p['v3'].get('engine_version'),
               'cycle_pass': p['acceptance_progress']['cycle_pass'],
               'parity': p['parity'],
               'operational_invariants': checks,
               'watchlist_position_counts': position_counts,
           })
+          assert str(p['v3'].get('engine_version') or '').startswith('3.15'), p['v3'].get('engine_version')
           assert all(checks.values()), f'V5 operational invariant failure: {checks}'
           assert all(position_counts[pos] == 5 for pos in position_counts), f'watchlist positional contract failed: {position_counts}'
-          assert p['parity']['pass'] is True, f"V3/V5 parity failed: {p['parity']}"
+          assert p['parity']['pass'] is True, f"V3.15/V5 parity failed: {p['parity']}"
           assert p['acceptance_progress']['cycle_pass'] is True, 'cycle must not count as successful acceptance'
           PY
 
@@ -120,6 +174,8 @@ jobs:
         with:
           name: v5-real-shadow-cycle-${{ github.run_number }}
           path: |
+            .shadow/v3_latest.json
+            .shadow/v3_lineup_decision.json
             data/v5/shadow/
             data/v5/user_report.json
             data/v5/technical_appendix.json
@@ -151,7 +207,7 @@ jobs:
             echo "No shadow-state changes"
             exit 0
           fi
-          git commit -m "shadow: record real V3 V5 cycle $GITHUB_RUN_NUMBER [skip ci]"
+          git commit -m "shadow: record real V3.15 V5 cycle $GITHUB_RUN_NUMBER [skip ci]"
           git push origin HEAD:"$V5_SHADOW_BRANCH"
 
       - name: Stop V5 cluster

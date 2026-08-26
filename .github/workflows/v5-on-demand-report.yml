@@ -1,0 +1,162 @@
+name: FPL On Demand Team Report
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [v5-unified-engine]
+    paths:
+      - 'config/v5_on_demand_trigger.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fpl-on-demand-team-report
+  cancel-in-progress: true
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+  PRODUCTION_SOURCE_BRANCH: main
+  PRODUCTION_RUNTIME_BRANCH: runtime-data
+  REPORT_PUBLISH_BRANCH: runtime-data
+
+jobs:
+  on-demand-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout report router
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Resolve current production authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$PRODUCTION_SOURCE_BRANCH" "$PRODUCTION_RUNTIME_BRANCH"
+          SOURCE_SHA=$(git rev-parse "origin/$PRODUCTION_SOURCE_BRANCH")
+          echo "PRODUCTION_SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
+          echo "production_source=$PRODUCTION_SOURCE_BRANCH sha=$SOURCE_SHA"
+
+      - name: Run fresh production snapshot
+        shell: bash
+        env:
+          FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
+          FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
+          FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
+          FPL_REFRESH_TOKEN: ${{ secrets.FPL_REFRESH_TOKEN }}
+          FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
+          FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
+          FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          prod_tree="$(mktemp -d)"
+          trap 'git worktree remove --force "$prod_tree" >/dev/null 2>&1 || true; rm -rf "$prod_tree"' EXIT
+          git worktree add --detach "$prod_tree" "$PRODUCTION_SOURCE_SHA"
+          mkdir -p "$prod_tree/data/stats"
+          for file in price_cache.json price_trajectory.json rules_source_state.json prediction_ledger.json challenger_observations.json report_state.json dss_watchlist.json; do
+            if git cat-file -e "origin/${PRODUCTION_RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
+              git show "origin/${PRODUCTION_RUNTIME_BRANCH}:data/${file}" > "$prod_tree/data/${file}"
+            fi
+          done
+          for stat_file in vaastav_previous_season.json shots_gw1.json playermatchstats_gw1.json core_insights_gw1.json; do
+            if git cat-file -e "origin/${PRODUCTION_RUNTIME_BRANCH}:data/stats/${stat_file}" 2>/dev/null; then
+              git show "origin/${PRODUCTION_RUNTIME_BRANCH}:data/stats/${stat_file}" > "$prod_tree/data/stats/${stat_file}"
+            fi
+          done
+          (
+            cd "$prod_tree"
+            export PYTHONPATH="$prod_tree"
+            python -m src.runtime_v3.orchestrator --mode daily --stats
+            python -m src.engines.production_contract_validate
+            python -m src.engines.watchlist_contract_validate
+            python -m src.engines.report_serving_validate
+          )
+          mkdir -p .on_demand/source
+          for file in latest.json user_report.json lineup_decision.json decision_brief.json framework_health.json dss_watchlist_summary.json; do
+            test -f "$prod_tree/data/$file"
+            cp "$prod_tree/data/$file" ".on_demand/source/$file"
+          done
+
+      - name: Package on-demand report
+        run: |
+          python -m src.v5.on_demand_report \
+            --source-dir .on_demand/source \
+            --output-dir data/on_demand \
+            --request-config config/v5_on_demand_trigger.json \
+            --source-sha "$PRODUCTION_SOURCE_SHA"
+
+      - name: Validate on-demand report contract
+        run: |
+          python - <<'PY'
+          import json, os
+          p=json.load(open('data/on_demand/latest.json'))
+          q=p.get('quick_view') or {}
+          a=p.get('authority') or {}
+          assert p.get('report_type') == 'ON_DEMAND_TEAM_SNAPSHOT', p.get('report_type')
+          assert a.get('production_authoritative') is True, a
+          assert a.get('engine_track') == 'V3_PRODUCTION', a
+          assert a.get('source_sha') == os.environ['PRODUCTION_SOURCE_SHA'], a
+          assert int(q.get('owned_count') or 0) == 15, q.get('owned_count')
+          assert len(q.get('starting_xi') or []) == 11, q.get('starting_xi')
+          assert len(q.get('bench') or []) == 4, q.get('bench')
+          assert p.get('governance',{}).get('auto_submit_fpl_changes') is False
+          print({'engine':a.get('engine_version'),'generated_at':p.get('freshness',{}).get('engine_generated_at'),'formation':q.get('formation'),'captain':q.get('captain'),'overall':q.get('overall')})
+          PY
+
+      - name: Upload on-demand evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: fpl-on-demand-report-${{ github.run_number }}
+          path: |
+            data/on_demand/
+            .on_demand/source/latest.json
+            .on_demand/source/user_report.json
+            .on_demand/source/lineup_decision.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish latest on-demand report
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_tmp="$(mktemp -d)"
+          publish_tree="$(mktemp -d)"
+          trap 'git worktree remove --force "$publish_tree" >/dev/null 2>&1 || true; rm -rf "$report_tmp" "$publish_tree"' EXIT
+          cp -a data/on_demand/. "$report_tmp/"
+          git config user.name "fpl-iphoenk-on-demand-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git fetch origin "$REPORT_PUBLISH_BRANCH"
+          git worktree add --detach "$publish_tree" "origin/$REPORT_PUBLISH_BRANCH"
+          cd "$publish_tree"
+          for attempt in 1 2 3; do
+            git fetch origin "$REPORT_PUBLISH_BRANCH"
+            git reset --hard "origin/$REPORT_PUBLISH_BRANCH"
+            rm -rf data/on_demand
+            mkdir -p data/on_demand
+            cp -a "$report_tmp/." data/on_demand/
+            git add data/on_demand
+            if git diff --cached --quiet; then
+              echo "No on-demand report changes"
+              exit 0
+            fi
+            git commit -m "data: publish on-demand team report $GITHUB_RUN_NUMBER [skip ci]"
+            if git push origin HEAD:"$REPORT_PUBLISH_BRANCH"; then
+              echo "On-demand report published"
+              exit 0
+            fi
+            echo "Runtime publish race, retrying"
+            sleep $((attempt * 2))
+          done
+          echo "ERROR: failed to publish on-demand report after retries"
+          exit 3

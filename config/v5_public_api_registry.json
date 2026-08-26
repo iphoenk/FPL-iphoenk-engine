@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "transport": {
+    "api_base_env": "FPL_API_BASE",
+    "api_base_default": "https://fantasy.premierleague.com/api",
+    "timeout_env": "FPL_TIMEOUT",
+    "timeout_seconds_default": 20,
+    "retries_config": "config/engine.json",
+    "retries_key": "api_retries",
+    "backoff_key": "api_backoff_seconds",
+    "parallel_max_workers": 6,
+    "allow_redirects": true
+  },
+  "endpoints": {
+    "bootstrap": "bootstrap-static/",
+    "fixtures": "fixtures/",
+    "event_status": "event-status/",
+    "entry": "entry/{team_id}/",
+    "entry_history": "entry/{team_id}/history/",
+    "entry_transfers": "entry/{team_id}/transfers/",
+    "entry_picks": "entry/{team_id}/event/{event}/picks/",
+    "event_live": "event/{event}/live/",
+    "element_summary": "element-summary/{element}/",
+    "set_piece_notes": "team/set-piece-notes/"
+  },
+  "collection_groups": {
+    "base": ["bootstrap", "fixtures", "event_status", "entry", "entry_history", "entry_transfers"],
+    "live": ["event_live"],
+    "submitted": ["entry_picks"]
+  }
+}

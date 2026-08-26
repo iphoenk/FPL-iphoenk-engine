@@ -2,8 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.v5.config_cache import load_json_config
 from src.v5.governance.core import build_health
 from src.v5.governance.gate0 import audit as gate0_audit, postflight as gate0_postflight, preflight as gate0_preflight
+
+GATE0_POLICY = "config/v5_gate0_policy_registry.json"
+
+
+def _gate0_policy() -> dict[str, Any]:
+    return load_json_config(GATE0_POLICY)
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:
@@ -11,7 +18,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         return {
             "status": "ACTIVE",
             "capabilities": ["gate0", "framework_health", "enhancement_layers", "final_governance"],
-            "gate0_model": "v5_gate0_full_16_v1",
+            "gate0_model": _gate0_policy().get("model_id"),
         }
     truth = payload.get("truth") if isinstance(payload.get("truth"), dict) else {}
     decision = payload.get("decision") if isinstance(payload.get("decision"), dict) else {}

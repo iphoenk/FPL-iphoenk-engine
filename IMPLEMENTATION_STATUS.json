@@ -1,6 +1,6 @@
 {
-  "version": "3.17.1",
-  "schema_version": 46,
+  "version": "3.18.0",
+  "schema_version": 47,
   "release_metadata_source": "src/version.py",
   "P0": {
     "status": "IMPLEMENTED",
@@ -30,7 +30,17 @@
       "explicit safe fallback states without fabricated external observations",
       "team-cluster package penalty guardrail",
       "early-season package-change cap guardrail",
-      "canonical MASTER_TASK_LIST_V3.md roadmap and Definition-of-Done governance"
+      "canonical MASTER_TASK_LIST_V3.md roadmap and Definition-of-Done governance",
+      "normalized structured challenger observation contract",
+      "separate challenger reachability and capability-data health",
+      "LiveFPL and OneFPL bounded structured public ingestion",
+      "challenger TTL, last-known-good, stale and disagreement governance",
+      "non-authoritative challenger Price Radar context overlay",
+      "registry-owned Price Radar thresholds and refresh cadence",
+      "config-owned projection and strategic horizons",
+      "registry-owned framework expected counts",
+      "version-neutral active prediction and price service entrypoints",
+      "registry-driven production validation contracts"
     ]
   },
   "P1": {

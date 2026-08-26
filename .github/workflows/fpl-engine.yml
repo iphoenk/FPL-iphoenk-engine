@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.9
+name: FPL iphoenk collector v3.10
 
 on:
   workflow_dispatch:
@@ -54,7 +54,7 @@ jobs:
         run: pip install -r requirements.txt pytest
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
-      - name: Reliability, rules registry, Official expansion, auth, Price Radar and framework tests
+      - name: Reliability, rules, P0 intelligence, auth, Price Radar and framework tests
         run: python -m pytest -q
 
   collect:
@@ -81,7 +81,7 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin "$RUNTIME_BRANCH"
-          for file in price_cache.json price_trajectory.json rules_source_state.json; do
+          for file in price_cache.json price_trajectory.json rules_source_state.json prediction_ledger.json challenger_observations.json; do
             if git cat-file -e "origin/${RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
               git show "origin/${RUNTIME_BRANCH}:data/${file}" > "data/${file}"
               echo "Hydrated data/${file} from ${RUNTIME_BRANCH}"
@@ -95,6 +95,11 @@ jobs:
           python -m src.reliability_overlay
           python -m src.engines.price_radar
           python -m src.engines.official_expansion
+      - name: P0 decision intelligence pipeline
+        run: |
+          python -m src.engines.decision_intelligence
+          python -m src.engines.prediction_evaluation
+          python -m src.engines.challenger_scorecard
       - name: Optional authenticated Official read-only overlay
         env:
           FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
@@ -107,11 +112,12 @@ jobs:
         run: python -m src.engines.authenticated_official
       - name: Official FPL Rules Registry integrity audit
         run: python -m src.engines.rules_compliance_audit
-      - name: Framework health PRE-FLIGHT
+      - name: Framework health PRE-FLIGHT plus P0 operational probes
         run: |
           python -m src.engines.framework_health_audit --phase preflight --strict
           cp data/framework_health_preflight.json data/framework_health.json
-      - name: Validate generated snapshot, rules registry and framework contract
+          python -m src.engines.p0_framework_health_overlay
+      - name: Validate generated snapshot, P0 intelligence, rules and framework contract
         run: |
           python - <<'PY'
           import json
@@ -127,6 +133,13 @@ jobs:
           pa=json.load(open('data/price_alerts.json'))
           rr=json.load(open('data/rules_compliance.json'))
           fh=json.load(open('data/framework_health.json'))
+          u=json.load(open('data/universe.json'))
+          ts=json.load(open('data/team_strength.json'))
+          pr=json.load(open('data/projections.json'))
+          po=json.load(open('data/package_optimizer.json'))
+          pe=json.load(open('data/prediction_accuracy.json'))
+          pl=json.load(open('data/prediction_ledger.json'))
+          cs=json.load(open('data/challenger_scorecard.json'))
           assert s['engine_version'] == ENGINE_VERSION
           assert s['schema_version'] == SCHEMA_VERSION
           assert s.get('snapshot_id')
@@ -164,7 +177,32 @@ jobs:
           assert auth.get('state') in {'DISABLED','MISCONFIGURED','VALID','EXPIRED_OR_REJECTED','UNAVAILABLE','ENTRY_MISMATCH','PARTIAL','PARTIAL_AUTH_REJECTED','POLICY_BLOCKED'}
           assert auth.get('raw_authenticated_payload_persisted') is False
           assert auth.get('policy',{}).get('resource_methods') == ['GET']
-          assert fh.get('framework_schema') >= 2
+
+          assert ts.get('teams') and ts.get('matchups')
+          assert len(ts.get('teams',[])) == len({x.get('team_id') for x in u.get('players',[])})
+          assert len(pr.get('players',[])) == len(u.get('players',[]))
+          assert pr.get('horizon_gws') == 15
+          for row in pr.get('players',[]):
+              xm=row.get('xmins',{})
+              prob=sum(float(xm.get(k,0)) for k in ('start_probability','bench_probability','dnp_probability'))
+              assert abs(prob-1.0) < 0.002
+              assert len(row.get('xpts_by_gw',[])) == 15
+              assert len(xm.get('expected_minutes_interval',[])) == 2
+          assert po.get('status') == 'READY', po
+          assert po.get('gate0_prevalidated') is True
+          assert po.get('hold',{}).get('legal') is True
+          assert po.get('hold',{}).get('score',{}).get('valid') is True
+          assert set(po.get('candidate_pool',{})) == {'GK','DEF','MID','FWD'}
+          assert po.get('governance',{}).get('final_go_requires_framework_governance_and_postflight_gate0') is True
+          assert pe.get('freeze_policy') == 'last_pre_deadline_snapshot'
+          assert isinstance(pl.get('records'), dict) and pl.get('records')
+          assert pe.get('governance',{}).get('accuracy_claim_requires_settled_sample') is True
+          provider_ids={x.get('id') for x in cs.get('providers',[])}
+          assert provider_ids == {'internal','onefpl','fffix','ffhub'}
+          assert cs.get('auto_scrape') is False
+          assert cs.get('governance',{}).get('missing_provider_data_is_not_fabricated') is True
+
+          assert fh.get('framework_schema') >= 3
           assert fh.get('registry_integrity') is True
           assert fh.get('rules_registry',{}).get('status') == 'PASS'
           assert fh.get('gate0',{}).get('ruleset_id') == RULESET_ID
@@ -176,6 +214,12 @@ jobs:
           assert fh.get('governance',{}).get('rules_registry_precedes_gate0') is True
           assert fh.get('governance',{}).get('gate0_consumes_active_ruleset') is True
           assert fh.get('governance',{}).get('gate0_fail_blocks_go') is True
+          p0=fh.get('p0_capabilities',{})
+          assert p0.get('P0-1_prediction_calibration_backtest',{}).get('status') == 'ACTIVE'
+          assert p0.get('P0-2_xmins_role_v2',{}).get('status') == 'ACTIVE'
+          assert p0.get('P0-3_team_strength_fixture_probability',{}).get('status') == 'ACTIVE'
+          assert p0.get('P0-4_multi_horizon_package_optimizer',{}).get('status') == 'ACTIVE'
+          assert p0.get('P0-5_external_challenger_scorecard',{}).get('status') in {'ACTIVE','PARTIAL'}
           assert fh.get('overall') in {'GREEN','AMBER'}
           r=validate_snapshot(s)
           print(r)

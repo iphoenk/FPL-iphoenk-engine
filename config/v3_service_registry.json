@@ -162,7 +162,10 @@
         "latest.json", "team.json", "projections.json", "package_optimizer.json", "prices.json",
         "price_alerts.json", "framework_health.json", "dss_watchlist.json"
       ],
-      "commands": [{"module": "src.engines.dss_watchlist", "args": []}],
+      "commands": [
+        {"module": "src.engines.dss_watchlist", "args": []},
+        {"module": "src.engines.watchlist_public_sanitize", "args": []}
+      ],
       "artifacts": ["dss_watchlist.json"],
       "latest_keys": ["dss_watchlist_summary"],
       "latest_file_keys": ["dss_watchlist"]

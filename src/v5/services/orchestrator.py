@@ -6,8 +6,9 @@ from typing import Any
 
 from src.v5 import V5_VERSION
 from src.v5.config_cache import load_json_config
+from src.v5.degraded_mode import fallback_for
 from src.v5.official_auth import expected_team_id
-from src.v5.service_client import invoke_envelope, invoke_parallel_envelopes
+from src.v5.service_client import invoke_envelope, invoke_parallel_envelopes, invoke_parallel_outcomes
 from src.v5.service_registry import registry as service_registry
 
 ORCHESTRATOR_CONFIG = "config/v5_orchestrator_registry.json"
@@ -40,6 +41,18 @@ def _metric(envelope: dict[str, Any]) -> dict[str, Any]:
         "transport_attempts": envelope.get("transport_attempts"),
         "transport_retry_policy": envelope.get("transport_retry_policy"),
         "transport_circuit": envelope.get("transport_circuit"),
+    }
+
+
+def _degraded_metric(outcome: dict[str, Any], degraded_context: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "service_id": outcome.get("service_id"),
+        "operation": outcome.get("operation"),
+        "status": "DEGRADED",
+        "fallback_behavior": degraded_context.get("behavior"),
+        "blocks_unqualified_go": degraded_context.get("blocks_unqualified_go"),
+        "error_type": outcome.get("error_type"),
+        "error": outcome.get("error"),
     }
 
 
@@ -126,7 +139,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     price_service, price_operation = _route("price_build")
     prediction_service, prediction_operation = _route("prediction_build")
     prediction_horizon = int(runner_cfg["prediction_horizon_gws"])
-    intelligence = invoke_parallel_envelopes(
+    intelligence_outcomes = invoke_parallel_outcomes(
         {
             "price": (
                 price_service,
@@ -151,8 +164,27 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         },
         correlation_id=correlation_id,
     )
-    performance["intelligence"] = {key: _metric(value) for key, value in intelligence.items()}
-    price_bundle, prediction = intelligence["price"]["data"], intelligence["prediction"]["data"]
+
+    prediction_outcome = intelligence_outcomes["prediction"]
+    if not prediction_outcome.get("ok"):
+        fallback_for(prediction_service, prediction_operation, prediction_outcome)
+        raise RuntimeError("unreachable: critical prediction fallback must fail closed")
+    prediction_env = prediction_outcome["envelope"]
+    prediction = prediction_env["data"]
+
+    price_outcome = intelligence_outcomes["price"]
+    if price_outcome.get("ok"):
+        price_env = price_outcome["envelope"]
+        price_bundle = price_env["data"]
+        price_metric = _metric(price_env)
+    else:
+        price_bundle = fallback_for(price_service, price_operation, price_outcome)
+        price_metric = _degraded_metric(price_outcome, price_bundle["degraded_context"])
+
+    performance["intelligence"] = {
+        "price": price_metric,
+        "prediction": _metric(prediction_env),
+    }
 
     evaluation_service, evaluation_operation = _route("evaluation_build")
     prepare_service, prepare_operation = _route("decision_prepare")
@@ -231,6 +263,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     auth_summary = auth_runtime.get("summary") if isinstance(auth_runtime.get("summary"), dict) else {}
     accuracy = evaluation.get("accuracy") if isinstance(evaluation.get("accuracy"), dict) else {}
     scorecard = evaluation.get("challenger_scorecard") if isinstance(evaluation.get("challenger_scorecard"), dict) else {}
+    degraded_contexts = framework.get("degraded_contexts") if isinstance(framework.get("degraded_contexts"), list) else []
     snapshot = {
         "schema_version": int(runner_cfg["snapshot"]["schema_version"]),
         "engine_version": V5_VERSION,
@@ -244,10 +277,12 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "team_summary": truth.get("team"),
         "live_summary": truth.get("live"),
         "price_summary": {
+            "status": price_bundle.get("status", "READY"),
             "confirmed_changes": price_rows.get("confirmed_changes", []),
             "top_rise_risk": price_rows.get("top_rise_risk", [])[: int(limits["price_rise_risk"])],
             "top_fall_risk": price_rows.get("top_fall_risk", [])[: int(limits["price_fall_risk"])],
             "alerts": alerts.get("alerts", [])[: int(limits["price_alerts"])],
+            "degraded_context": price_bundle.get("degraded_context"),
         },
         "prediction_summary": {
             "model_version": prediction.get("model_version"),
@@ -282,6 +317,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "recommendation_allowed": framework.get("recommendation_allowed"),
             "go_allowed": framework.get("go_allowed"),
             "gate0_preflight_pass": gate0_preflight.get("pass"),
+            "degraded_contexts": degraded_contexts,
+            "degraded_blocks_unqualified_go": framework.get("degraded_blocks_unqualified_go"),
             "microservices_required": True,
             "raw_authenticated_payload_persisted": False,
         },
@@ -291,9 +328,6 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         write_service, write_operation = _route("artifact_write")
         artifact_mapping = _cfg()["artifact_mapping"]
         artifact_payloads = {
-            "prices": price_bundle.get("prices", {}),
-            "price_trajectory": price_bundle.get("trajectory_state", {}),
-            "price_alerts": price_bundle.get("alerts", {}),
             "predictions": prediction,
             "team_strength": prediction.get("team_strength", {}),
             "prediction_ledger": evaluation.get("ledger", {}),
@@ -302,6 +336,20 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "package_optimizer": decision,
             "framework_health": framework,
         }
+        if not isinstance(price_bundle.get("degraded_context"), dict):
+            artifact_payloads.update(
+                {
+                    "prices": price_bundle.get("prices", {}),
+                    "price_trajectory": price_bundle.get("trajectory_state", {}),
+                    "price_alerts": price_bundle.get("alerts", {}),
+                }
+            )
+        else:
+            performance["price_persistence"] = {
+                "status": "SKIPPED_DEGRADED",
+                "reason": "preserve last known healthy price artifacts",
+            }
+
         writes = invoke_parallel_envelopes(
             {
                 name: (

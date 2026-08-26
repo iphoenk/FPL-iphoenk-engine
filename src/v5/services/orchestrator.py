@@ -57,6 +57,37 @@ def _degraded_metric(outcome: dict[str, Any], degraded_context: dict[str, Any]) 
     }
 
 
+def _source_fusion_summary(source_fusion: dict[str, Any]) -> dict[str, Any]:
+    health = source_fusion.get("health") if isinstance(source_fusion.get("health"), dict) else {}
+    sources = source_fusion.get("sources") if isinstance(source_fusion.get("sources"), dict) else {}
+    api = sources.get("api_football") if isinstance(sources.get("api_football"), dict) else {}
+    understat = sources.get("understat") if isinstance(sources.get("understat"), dict) else {}
+    api_obs = api.get("observability") if isinstance(api.get("observability"), dict) else {}
+    return {
+        "status": source_fusion.get("status"),
+        "season": source_fusion.get("season"),
+        "health": health,
+        "api_football": {
+            "status": api.get("status"),
+            "evidence_status": api.get("evidence_status"),
+            "credential_present": api_obs.get("credential_present"),
+            "network_requests": api_obs.get("network_requests"),
+            "cache_hits": api_obs.get("cache_hits"),
+            "competitions_attempted": api_obs.get("competitions_attempted"),
+            "competitions_resolved": api_obs.get("competitions_resolved"),
+            "fixture_count": len(api.get("fixtures") or []),
+            "quota_remaining": api_obs.get("quota_remaining"),
+            "quota_limit": api_obs.get("quota_limit"),
+            "failure_count": len(api.get("failures") or []),
+        },
+        "understat": {
+            "status": understat.get("status"),
+            "fetch_mode": understat.get("fetch_mode"),
+            "player_count": understat.get("player_count", len(understat.get("players") or [])),
+        },
+    }
+
+
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation == "cluster_health":
         return cluster_health("orchestrator")
@@ -87,6 +118,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
 
     dynamic_service, dynamic_operation = _route("dynamic_collection")
     auth_service, auth_operation = _route("authenticated_collection")
+    enrichment_service, enrichment_operation = _route("enrichment_collection")
     runtime = invoke_parallel_envelopes(
         {
             "dynamic": (
@@ -100,11 +132,21 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 },
             ),
             "auth": (auth_service, auth_operation, {}),
+            "enrichment": (enrichment_service, enrichment_operation, {"bootstrap": bootstrap}),
         },
         correlation_id=correlation_id,
     )
     performance["runtime_overlay"] = {key: _metric(value) for key, value in runtime.items()}
-    dynamic_result, auth_runtime = runtime["dynamic"]["data"], runtime["auth"]["data"]
+    dynamic_result = runtime["dynamic"]["data"]
+    auth_runtime = runtime["auth"]["data"]
+    source_fusion = runtime["enrichment"]["data"]
+    if not isinstance(source_fusion, dict):
+        source_fusion = {
+            "status": "UNAVAILABLE",
+            "sources": {},
+            "reason": "INGESTION_ENRICHMENT_NON_OBJECT",
+            "governance": {"missing_enrichment_is_unavailable_not_zero": True},
+        }
 
     truth_env = _call(
         "truth_assembly",
@@ -168,6 +210,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                     "owned_ids": owned_ids,
                     "historical_prior": states["historical_prior"]["data"] or {},
                     "allow_historical_prior_refresh": bool(feature_switches.get("historical_prior_network_refresh", False)),
+                    "source_fusion": source_fusion,
                 },
             ),
         },
@@ -287,6 +330,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "squad_authority": (truth.get("team") or {}).get("authority"),
         "team_summary": truth.get("team"),
         "live_summary": truth.get("live"),
+        "source_fusion_health": _source_fusion_summary(source_fusion),
         "price_summary": {
             "status": price_bundle.get("status", "READY"),
             "confirmed_changes": price_rows.get("confirmed_changes", []),
@@ -350,6 +394,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         write_service, write_operation = _route("artifact_write")
         artifact_mapping = _cfg()["artifact_mapping"]
         artifact_payloads = {
+            "source_fusion": source_fusion,
             "historical_prior": historical_prior,
             "predictions": prediction,
             "prediction_quality": prediction_quality,

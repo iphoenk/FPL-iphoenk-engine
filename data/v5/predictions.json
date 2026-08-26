@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T12:24:39.195720+00:00",
+  "generated_at": "2026-08-26T13:24:02.628856+00:00",
   "schema_version": 513,
   "model_version": "player_projection_v5_historical_prior",
   "ruleset_id": "FPL_2026_27",
@@ -11325,7 +11325,7 @@
       "position": "GK",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 38.1,
+      "ownership_pct": 38.2,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -16915,7 +16915,7 @@
       "position": "MID",
       "now_cost": 75,
       "status": "a",
-      "ownership_pct": 17.4,
+      "ownership_pct": 17.3,
       "current_season": {
         "starts": 1,
         "minutes": 67
@@ -54841,7 +54841,7 @@
       "position": "DEF",
       "now_cost": 45,
       "status": "a",
-      "ownership_pct": 3.8,
+      "ownership_pct": 3.9,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -66414,7 +66414,7 @@
       "position": "DEF",
       "now_cost": 46,
       "status": "a",
-      "ownership_pct": 6.3,
+      "ownership_pct": 6.4,
       "current_season": {
         "starts": 1,
         "minutes": 77
@@ -86765,7 +86765,7 @@
       "position": "DEF",
       "now_cost": 55,
       "status": "d",
-      "ownership_pct": 2.6,
+      "ownership_pct": 2.5,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -87684,7 +87684,7 @@
       "position": "MID",
       "now_cost": 95,
       "status": "a",
-      "ownership_pct": 13.7,
+      "ownership_pct": 13.8,
       "current_season": {
         "starts": 1,
         "minutes": 82
@@ -91867,7 +91867,7 @@
       "position": "FWD",
       "now_cost": 75,
       "status": "a",
-      "ownership_pct": 66.5,
+      "ownership_pct": 66.6,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -165438,7 +165438,7 @@
       "position": "DEF",
       "now_cost": 40,
       "status": "a",
-      "ownership_pct": 17.5,
+      "ownership_pct": 17.4,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -174476,7 +174476,7 @@
       "position": "MID",
       "now_cost": 55,
       "status": "i",
-      "ownership_pct": 0.2,
+      "ownership_pct": 0.1,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -216433,7 +216433,7 @@
       "position": "MID",
       "now_cost": 75,
       "status": "a",
-      "ownership_pct": 9.9,
+      "ownership_pct": 10.0,
       "current_season": {
         "starts": 0,
         "minutes": 27
@@ -256685,7 +256685,7 @@
       "position": "MID",
       "now_cost": 80,
       "status": "d",
-      "ownership_pct": 9.7,
+      "ownership_pct": 9.6,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -261375,7 +261375,7 @@
       "position": "FWD",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 4.0,
+      "ownership_pct": 3.9,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -263644,7 +263644,7 @@
       "position": "DEF",
       "now_cost": 50,
       "status": "a",
-      "ownership_pct": 10.0,
+      "ownership_pct": 9.9,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -267377,7 +267377,7 @@
       "position": "DEF",
       "now_cost": 55,
       "status": "a",
-      "ownership_pct": 13.9,
+      "ownership_pct": 13.8,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -283095,7 +283095,7 @@
       "position": "DEF",
       "now_cost": 55,
       "status": "a",
-      "ownership_pct": 2.7,
+      "ownership_pct": 2.6,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -293344,8 +293344,64 @@
     },
     "source_fusion": {
       "status": "ACTIVE",
-      "understat_status": "ACTIVE",
-      "api_football_status": "UNAVAILABLE"
+      "season": {
+        "season": "2026/27",
+        "start_year": 2026,
+        "authority": "Official FPL",
+        "registry": "config/rules/registry.json",
+        "ruleset_id": "FPL_2026_27"
+      },
+      "health": {
+        "active_sources": 1,
+        "degraded_sources": 0,
+        "unavailable_sources": 1,
+        "sources": {
+          "understat": {
+            "status": "ACTIVE",
+            "reason": null,
+            "fetch_mode": "NETWORK",
+            "player_count": 310,
+            "fixture_count": 0,
+            "credential_present": null,
+            "network_requests": null,
+            "cache_hits": null,
+            "competitions_attempted": null,
+            "competitions_resolved": null,
+            "quota_remaining": null,
+            "quota_limit": null
+          },
+          "api_football": {
+            "status": "UNAVAILABLE",
+            "reason": "RuntimeError:API-Football errors: {'plan': 'Free plans do not have access to this season, try from 2022 to 2024.'}",
+            "fetch_mode": null,
+            "player_count": 0,
+            "fixture_count": 0,
+            "credential_present": true,
+            "network_requests": 1,
+            "cache_hits": 0,
+            "competitions_attempted": 1,
+            "competitions_resolved": 0,
+            "quota_remaining": null,
+            "quota_limit": null
+          }
+        }
+      },
+      "understat": {
+        "status": "ACTIVE",
+        "fetch_mode": "NETWORK",
+        "player_count": 310
+      },
+      "api_football": {
+        "status": "UNAVAILABLE",
+        "evidence_status": null,
+        "fixture_count": 0,
+        "resolved_competition_count": 0,
+        "credential_present": true,
+        "network_requests": 1,
+        "cache_hits": 0,
+        "quota_remaining": null,
+        "quota_limit": null
+      }
     },
     "governance": {
       "module_active_does_not_mean_every_player_has_evidence": true,

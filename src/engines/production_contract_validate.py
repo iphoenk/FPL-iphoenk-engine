@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from src.engines.reliability import validate_snapshot
 from src.rules import RULESET_ID, active_ruleset_fingerprint
@@ -103,7 +102,7 @@ def run() -> dict:
 
     assert prior.get("players")
     assert float((prior.get("coverage") or {}).get("coverage_ratio") or 0) > 0
-    assert prior.get("governance", {}).get("stable_player_code_is_primary_identity") is True
+    assert prior.get("governance", {}).get("stable_player_code_preferred") is True
     assert pq.get("status") in {"HEALTHY", "DEGRADED"}
     assert pq.get("checks")
     assert pq.get("governance", {}).get("mechanical_validity_is_not_prediction_quality") is True

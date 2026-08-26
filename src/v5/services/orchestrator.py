@@ -37,6 +37,9 @@ def _metric(envelope: dict[str, Any]) -> dict[str, Any]:
         "service_compute_ms": envelope.get("elapsed_ms"),
         "round_trip_ms": envelope.get("round_trip_ms"),
         "transport_overhead_ms": envelope.get("transport_overhead_ms"),
+        "transport_attempts": envelope.get("transport_attempts"),
+        "transport_retry_policy": envelope.get("transport_retry_policy"),
+        "transport_circuit": envelope.get("transport_circuit"),
     }
 
 

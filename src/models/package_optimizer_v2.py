@@ -32,6 +32,20 @@ def _gw_row(player: dict[str, Any], gw: int) -> dict[str, Any]:
     return {"mean": 0.0, "std": 0.0}
 
 
+def _gw_index(players: list[dict[str, Any]]) -> dict[int, dict[int, dict[str, Any]]]:
+    return {
+        int(player.get("element") or -1): {
+            int(row.get("gw") or -1): row
+            for row in (player.get("xpts_by_gw") or [])
+        }
+        for player in players
+    }
+
+
+def _indexed_row(index: dict[int, dict[int, dict[str, Any]]], player: dict[str, Any], gw: int) -> dict[str, Any]:
+    return index.get(int(player.get("element") or -1), {}).get(int(gw), {"mean": 0.0, "std": 0.0})
+
+
 def legal_squad(players: list[dict[str, Any]]) -> bool:
     expected = {k: int(v) for k, v in (SQUAD_RULES.get("position_counts") or {}).items()}
     if len(players) != int(SQUAD_RULES.get("squad_size") or 0):
@@ -53,8 +67,16 @@ def legal_squad(players: list[dict[str, Any]]) -> bool:
     return counts == expected and max(clubs.values(), default=0) <= int(SQUAD_RULES.get("max_players_per_club") or 0)
 
 
-def best_lineup(players: list[dict[str, Any]], gw: int) -> dict[str, Any]:
-    gks = sorted([p for p in players if p.get("position") == "GK"], key=lambda p: _f(_gw_row(p, gw).get("mean")), reverse=True)
+def _best_lineup_indexed(players: list[dict[str, Any]], gw: int, index: dict[int, dict[int, dict[str, Any]]]) -> dict[str, Any]:
+    by_position = {
+        pos: sorted(
+            [p for p in players if p.get("position") == pos],
+            key=lambda p: _f(_indexed_row(index, p, gw).get("mean")),
+            reverse=True,
+        )
+        for pos in ("GK", "DEF", "MID", "FWD")
+    }
+    gks = by_position["GK"]
     if not gks:
         return {"valid": False, "mean": 0.0, "variance": 0.0, "starters": []}
     best: dict[str, Any] | None = None
@@ -63,19 +85,29 @@ def best_lineup(players: list[dict[str, Any]], gw: int) -> dict[str, Any]:
         selected = [gks[0]]
         ok = True
         for pos, count in (("DEF", d), ("MID", m), ("FWD", f)):
-            pool = sorted([p for p in players if p.get("position") == pos], key=lambda p: _f(_gw_row(p, gw).get("mean")), reverse=True)
+            pool = by_position[pos]
             if len(pool) < count:
                 ok = False
                 break
             selected.extend(pool[:count])
         if not ok or len(selected) != int(LINEUP_RULES.get("starting_xi_size") or 11):
             continue
-        mean = sum(_f(_gw_row(p, gw).get("mean")) for p in selected)
-        variance = sum(_f(_gw_row(p, gw).get("std")) ** 2 for p in selected)
-        candidate = {"valid": True, "formation": formation, "mean": mean, "variance": variance, "starters": [int(p["element"]) for p in selected]}
+        mean = sum(_f(_indexed_row(index, p, gw).get("mean")) for p in selected)
+        variance = sum(_f(_indexed_row(index, p, gw).get("std")) ** 2 for p in selected)
+        candidate = {
+            "valid": True,
+            "formation": formation,
+            "mean": mean,
+            "variance": variance,
+            "starters": [int(p["element"]) for p in selected],
+        }
         if best is None or candidate["mean"] > best["mean"]:
             best = candidate
     return best or {"valid": False, "mean": 0.0, "variance": 0.0, "starters": []}
+
+
+def best_lineup(players: list[dict[str, Any]], gw: int) -> dict[str, Any]:
+    return _best_lineup_indexed(players, gw, _gw_index(players))
 
 
 def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int = 0) -> dict[str, Any]:
@@ -83,30 +115,40 @@ def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int 
     horizons = [int(x) for x in cfg.get("horizons") or [3, 5, 10, 15]]
     bench_weight = _f(cfg.get("bench_utility_weight"), 0.10)
     captain_weight = _f(cfg.get("captain_bonus_weight"), 1.0)
-    horizon_results = {}
-    for horizon in horizons:
-        total_mean = 0.0
-        total_var = 0.0
-        valid = True
-        for offset in range(horizon):
-            gw = planning_gw + offset
-            lineup = best_lineup(players, gw)
-            if not lineup["valid"]:
-                valid = False
-                break
+    index = _gw_index(players)
+    horizon_results: dict[str, dict[str, Any]] = {}
+    max_horizon = max(horizons, default=0)
+    horizon_set = set(horizons)
+    total_mean = 0.0
+    total_var = 0.0
+    valid = True
+
+    for offset in range(max_horizon):
+        gw = planning_gw + offset
+        lineup = _best_lineup_indexed(players, gw, index)
+        if not lineup["valid"]:
+            valid = False
+        if valid:
             starter_ids = set(lineup["starters"])
             bench = [p for p in players if int(p["element"]) not in starter_ids]
-            bench_mean = sum(_f(_gw_row(p, gw).get("mean")) for p in bench)
-            bench_var = sum(_f(_gw_row(p, gw).get("std")) ** 2 for p in bench)
-            captain_mean = max((_f(_gw_row(p, gw).get("mean")) for p in players if int(p["element"]) in starter_ids), default=0.0)
-            captain_std = max((_f(_gw_row(p, gw).get("std")) for p in players if int(p["element"]) in starter_ids), default=0.0)
+            bench_mean = sum(_f(_indexed_row(index, p, gw).get("mean")) for p in bench)
+            bench_var = sum(_f(_indexed_row(index, p, gw).get("std")) ** 2 for p in bench)
+            starter_rows = [_indexed_row(index, p, gw) for p in players if int(p["element"]) in starter_ids]
+            captain_mean = max((_f(row.get("mean")) for row in starter_rows), default=0.0)
+            captain_std = max((_f(row.get("std")) for row in starter_rows), default=0.0)
             total_mean += lineup["mean"] + bench_weight * bench_mean + captain_weight * captain_mean
             total_var += lineup["variance"] + (bench_weight ** 2) * bench_var + (captain_weight ** 2) * captain_std ** 2
-        horizon_results[str(horizon)] = {
-            "valid": valid,
-            "mean": round(total_mean, 3) if valid else None,
-            "std": round(math.sqrt(total_var), 3) if valid else None,
-        }
+
+        elapsed = offset + 1
+        if elapsed in horizon_set:
+            horizon_results[str(elapsed)] = {
+                "valid": valid,
+                "mean": round(total_mean, 3) if valid else None,
+                "std": round(math.sqrt(total_var), 3) if valid else None,
+            }
+
+    for horizon in horizons:
+        horizon_results.setdefault(str(horizon), {"valid": False, "mean": None, "std": None})
 
     weights = {str(k): _f(v) for k, v in (cfg.get("horizon_weights") or {}).items()}
     available = [(h, horizon_results[str(h)]) for h in horizons if horizon_results[str(h)]["valid"]]

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "status": "ALPHA_NOT_PRODUCTION",
+  "pipeline": [
+    "public_base_collection",
+    "event_context",
+    "authenticated_runtime_overlay",
+    "public_dynamic_collection",
+    "identity_resolution",
+    "squad_authority",
+    "finance_resolution",
+    "live_scoring",
+    "price_trajectory",
+    "prediction_bridge",
+    "decision_governance",
+    "persistence"
+  ],
+  "base_requests": {
+    "bootstrap": {"route": "bootstrap", "params": {}},
+    "fixtures": {"route": "fixtures", "params": {}},
+    "event_status": {"route": "event_status", "params": {}},
+    "entry": {"route": "entry", "params": {"team_id": "$team_id"}},
+    "entry_history": {"route": "entry_history", "params": {"team_id": "$team_id"}},
+    "entry_transfers": {"route": "entry_transfers", "params": {"team_id": "$team_id"}}
+  },
+  "dynamic_requests": {
+    "submitted_picks": {"route": "entry_picks", "when": "submitted_gw", "params": {"team_id": "$team_id", "event": "$submitted_gw"}},
+    "event_live": {"route": "event_live", "when": "scoring_gw", "params": {"event": "$scoring_gw"}}
+  },
+  "feature_switches": {
+    "authenticated_overlay": true,
+    "price_trajectory": true,
+    "v4_prediction_bridge": true,
+    "persistence": true
+  },
+  "fail_closed": {
+    "bootstrap_missing": true,
+    "squad_unresolved": true,
+    "invalid_squad": true,
+    "owned_sell_value_unknown_for_affordability": true
+  }
+}

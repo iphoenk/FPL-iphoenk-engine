@@ -37,7 +37,8 @@
     "price_challenger_context_is_non_authoritative": true,
     "stale_challenger_observations_are_not_current": true,
     "version_neutral_service_entrypoints": true,
-    "inline_python_service_commands_forbidden": true
+    "inline_python_service_commands_forbidden": true,
+    "framework_expected_counts_are_registry_owned": true
   },
   "runtime": {
     "max_parallel_services": 5,
@@ -176,8 +177,8 @@
       "critical": true,
       "isolated": false,
       "commands": [
-        {"module": "src.engines.framework_health_audit", "args": ["--phase", "preflight", "--strict"]},
-        {"module": "src.engines.framework_health_audit", "args": ["--phase", "postflight", "--strict"]},
+        {"module": "src.engines.framework_health_service", "args": ["--phase", "preflight", "--strict"]},
+        {"module": "src.engines.framework_health_service", "args": ["--phase", "postflight", "--strict"]},
         {"module": "src.engines.p0_framework_health_overlay", "args": []},
         {"module": "src.engines.lineup_framework_health_overlay", "args": []},
         {"module": "src.engines.decision_quality_overlay", "args": []},

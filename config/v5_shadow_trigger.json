@@ -1,7 +1,12 @@
 {
-  "requested_cycle": 1,
-  "requested_at": "2026-08-26T08:32:00Z",
+  "requested_cycle": "post-fix-verification",
+  "requested_at": "2026-08-26T08:41:00Z",
   "mode": "REAL_SHADOW",
   "production_remains": "v3.14",
-  "v5_role": "shadow_only"
+  "v5_role": "shadow_only",
+  "require_owned": 15,
+  "require_watchlist": 20,
+  "require_watchlist_per_position": 5,
+  "require_lineup_owned_boundary": true,
+  "require_parity_fail_closed": true
 }

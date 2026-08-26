@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "registry": "DSS_CORE_50",
+  "expected_count": 50,
   "description": "Canonical 50-module Decision Support System core for FPL player, squad and transfer decisions. Core numbering and meaning are immutable; new intelligence belongs in DSS extensions.",
   "modules": [
     {"id":"DSS-01","name":"Official Player Identity & Eligibility","category":"foundation","critical":true,"required_files":["data/universe.json","src/models/player_identity.py"],"operational_probe":"universe_identity"},

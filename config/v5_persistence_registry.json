@@ -1,26 +1,9 @@
 {
-  "version": 1,
+  "version": 2,
   "data_root": "data/v5",
   "artifacts": {
-    "latest": "latest.json",
-    "health": "health.json",
-    "team": "team.json",
-    "live": "live.json",
-    "prices": "prices.json",
-    "price_trajectory": "price_trajectory.json",
-    "price_alerts": "price_alerts.json",
-    "predictions": "predictions.json",
-    "decision": "decision.json",
-    "history": "history.jsonl"
+    "latest":"latest.json","health":"health.json","team":"team.json","live":"live.json","prices":"prices.json","price_trajectory":"price_trajectory.json","price_alerts":"price_alerts.json","historical_prior":"historical_prior.json","predictions":"predictions.json","prediction_quality":"prediction_quality.json","team_strength":"team_strength.json","prediction_ledger":"prediction_ledger.json","prediction_accuracy":"prediction_accuracy.json","challenger_scorecard":"challenger_scorecard.json","package_optimizer":"package_optimizer.json","watchlist":"dss_watchlist.json","framework_health":"framework_health.json","decision":"decision.json","user_report":"user_report.json","technical_appendix":"technical_appendix.json","report_state":"report_state.json","history":"history.jsonl"
   },
-  "gameweek": {
-    "directory": "gw",
-    "filename_template": "{gw:02d}.json"
-  },
-  "write_policy": {
-    "atomic_json": true,
-    "append_history": true,
-    "persist_raw_authenticated_payload": false,
-    "separate_from_v3_v4_runtime_data": true
-  }
+  "gameweek": {"directory":"gw","filename_template":"{gw:02d}.json"},
+  "write_policy": {"atomic_json":true,"append_history":true,"persist_raw_authenticated_payload":false,"separate_from_v3_v4_runtime_data":true,"do_not_overwrite_healthy_price_state_with_degraded_fallback":true}
 }

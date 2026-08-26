@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from src.v5.config_cache import load_json_config
+from src.v5.sources.season import season_authority
 
 CONFIG = "config/intelligence/source_fusion.json"
 
@@ -36,19 +37,28 @@ def _write_cache(path: Path, payload: dict[str, Any]) -> None:
 
 def collect() -> dict[str, Any]:
     cfg = load_json_config(CONFIG)["understat"]
+    season = season_authority()
+    start_year = int(season["start_year"])
     if not cfg.get("enabled", False):
-        return {"source": "understat", "status": "DISABLED", "players": []}
-    cache = Path(str(cfg["cache_path"]))
+        return {"source": "understat", "status": "DISABLED", "players": [], "season": season}
+    template = str(cfg["cache_path_template"])
+    cache = Path(template.format(season=start_year))
     cached = _load_cache(cache, int(cfg["cache_ttl_seconds"]))
     if cached:
-        return {**cached, "fetch_mode": "CACHE"}
+        return {**cached, "fetch_mode": "CACHE", "season": season, "player_count": len(cached.get("players") or [])}
     try:
         from understatapi import UnderstatClient
     except Exception as exc:
-        return {"source": "understat", "status": "UNAVAILABLE", "reason": f"dependency:{type(exc).__name__}", "players": []}
+        return {
+            "source": "understat",
+            "status": "UNAVAILABLE",
+            "reason": f"dependency:{type(exc).__name__}",
+            "players": [],
+            "season": season,
+        }
     try:
         with UnderstatClient() as client:
-            rows = client.league(league=str(cfg["league"])).get_player_data(season=str(cfg["season"]))
+            rows = client.league(league=str(cfg["league"])).get_player_data(season=str(start_year))
         normalized = []
         for row in rows or []:
             if not isinstance(row, dict):
@@ -71,11 +81,19 @@ def collect() -> dict[str, Any]:
             "status": "ACTIVE" if normalized else "DEGRADED",
             "generated_at": _now().isoformat(),
             "fetch_mode": "NETWORK",
+            "season": season,
             "capabilities": cfg.get("capabilities") or [],
+            "player_count": len(normalized),
             "players": normalized,
             "governance": {"challenger_only": True, "never_proxy_box_touches_from_shot_location": True},
         }
         _write_cache(cache, payload)
         return payload
     except Exception as exc:
-        return {"source": "understat", "status": "UNAVAILABLE", "reason": f"{type(exc).__name__}:{exc}", "players": []}
+        return {
+            "source": "understat",
+            "status": "UNAVAILABLE",
+            "reason": f"{type(exc).__name__}:{exc}",
+            "players": [],
+            "season": season,
+        }

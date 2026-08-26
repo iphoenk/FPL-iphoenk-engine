@@ -140,20 +140,38 @@ jobs:
           V5_SERVICE_WATCHLIST_URL: http://127.0.0.1:8110
         run: python -m src.v5.shadow_cycle
 
-      - name: Validate shadow acceptance invariants and full DSS runtime
+      - name: Validate shadow acceptance invariants, reporting and source health
         run: |
           python - <<'PY'
           import json
           p=json.load(open('data/v5/shadow/latest_shadow_cycle.json'))
           w=json.load(open('data/v5/dss_watchlist.json'))
           f=json.load(open('data/v5/framework_health.json'))
+          trigger=json.load(open('config/v5_shadow_trigger.json'))
           checks=p['operational_invariants']['checks']
           positions=w.get('positions') or {}
           position_counts={pos:len(positions.get(pos) or []) for pos in ('GK','DEF','MID','FWD')}
           core=f.get('dss_core') or {}
           ext=f.get('dss_extensions') or {}
           enh=f.get('enhancements') or {}
-          print({'v3_engine_version':p['v3'].get('engine_version'),'cycle_pass':p['acceptance_progress']['cycle_pass'],'parity':p['parity'],'operational_invariants':checks,'watchlist_position_counts':position_counts,'dss_core_counts':core.get('counts'),'dss_extension_counts':ext.get('counts'),'enhancement_counts':enh.get('counts')})
+          user=p['v5'].get('user_report') or {}
+          source=p['v5'].get('source_fusion_health') or {}
+          api=source.get('api_football') or {}
+          report_xi=((user.get('starting_xi') or {}).get('starting_xi') or [])
+          print({
+            'v3_engine_version':p['v3'].get('engine_version'),
+            'cycle_pass':p['acceptance_progress']['cycle_pass'],
+            'parity':p['parity'],
+            'operational_invariants':checks,
+            'watchlist_position_counts':position_counts,
+            'dss_core_counts':core.get('counts'),
+            'dss_extension_counts':ext.get('counts'),
+            'enhancement_counts':enh.get('counts'),
+            'report_owned_count':(user.get('owned_squad') or {}).get('count'),
+            'report_mode':user.get('report_mode'),
+            'report_xi_count':len(report_xi),
+            'source_fusion':source,
+          })
           assert str(p['v3'].get('engine_version') or '').startswith('3.16'), p['v3'].get('engine_version')
           assert all(checks.values()), f'V5 operational invariant failure: {checks}'
           assert all(position_counts[pos] == 5 for pos in position_counts), f'watchlist positional contract failed: {position_counts}'
@@ -162,6 +180,17 @@ jobs:
           assert enh.get('counts') == {'ACTIVE':8}, f'Enhancements must be 8/8 ACTIVE: {enh.get("counts")}'
           assert p['parity']['pass'] is True, f"V3.16/V5 parity failed: {p['parity']}"
           assert p['acceptance_progress']['cycle_pass'] is True, 'cycle must not count as successful acceptance'
+          if trigger.get('require_reporting_contract', False):
+            assert (user.get('owned_squad') or {}).get('count') == 15, user.get('owned_squad')
+            if user.get('report_mode') == 'FULL_DECISION':
+              assert len(report_xi) == 11, f'FULL_DECISION must publish 11 starters, got {len(report_xi)}'
+            assert (user.get('external_watchlist') or {}).get('candidate_count') == 20, 'report must consume native watchlist payload'
+          if trigger.get('require_source_fusion_observability', False):
+            assert source.get('status') in {'ACTIVE','DEGRADED'}, source
+            assert api.get('status') in {'ACTIVE','DEGRADED'}, api
+            assert api.get('credential_present') is True, 'API-Football credential was not received by Ingestion'
+            assert int(api.get('competitions_attempted') or 0) > 0, api
+            assert int(api.get('network_requests') or 0) + int(api.get('cache_hits') or 0) > 0, api
           PY
 
       - name: Upload shadow-cycle evidence
@@ -173,6 +202,8 @@ jobs:
             .shadow/v3_latest.json
             .shadow/v3_lineup_decision.json
             data/v5/shadow/
+            data/v5/source_fusion.json
+            data/v5/source_cache/
             data/v5/user_report.json
             data/v5/technical_appendix.json
             data/v5/framework_health.json

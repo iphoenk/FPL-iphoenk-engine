@@ -1,8 +1,9 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "model_id": "multi_horizon_package_optimizer_v2",
   "horizons": [3, 5, 10, 15],
   "horizon_weights": {"3": 0.42, "5": 0.33, "10": 0.15, "15": 0.10},
+  "candidate_ranking_horizon": 5,
   "positions": ["GK", "DEF", "MID", "FWD"],
   "max_changes": 2,
   "max_candidates_per_position": 7,

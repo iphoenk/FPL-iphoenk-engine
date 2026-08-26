@@ -4,13 +4,16 @@ import pytest
 
 from src.models.projection import project_points
 from src.rules import GOAL_POINTS, RULESET_ID
+from src.v5 import public_api
 from src.v5.acceptance import run_bootstrap_acceptance
 from src.v5.authenticated_official import safe_finance, summarize_authenticated_payloads
 from src.v5.contracts import Confidence, DecisionTrace, EvidenceRef
 from src.v5.finance import affordability_cost, resolve_sell_value, sell_cost
 from src.v5.official_auth import AuthMaterial, AuthPolicyError, allowed_routes, expected_team_id, safe_get
 from src.v5.price_trajectory import classify, risk_direction, trajectory_eta, urgency
+from src.v5.public_api import FetchSpec
 from src.v5.source_authority import primary_authority as source_primary_authority
+from src.v5.squad import reconcile_baseline, select_squad
 from src.v5.state import Phase, primary_authority as phase_primary_authority, resolve_phase
 
 
@@ -139,3 +142,84 @@ def test_price_trajectory_thresholds_are_registry_driven():
     assert predicted is not None
     assert risk_direction(-80.0, 1.0) == "FALL"
     assert urgency(95.0, None, now) == "CRITICAL"
+
+
+def test_parallel_public_api_deduplicates_identical_paths(monkeypatch):
+    calls = []
+
+    def fake_get_path(path):
+        calls.append(path)
+        return {"path": path}, {"status": "LIVE", "path": path}
+
+    monkeypatch.setattr(public_api, "_get_path", fake_get_path)
+    payloads, health = public_api.fetch_many(
+        {
+            "bootstrap_a": FetchSpec(route="bootstrap", params={}),
+            "bootstrap_b": FetchSpec(route="bootstrap", params={}),
+        }
+    )
+    assert calls == ["bootstrap-static/"]
+    assert payloads["bootstrap_a"] == payloads["bootstrap_b"]
+    assert health["bootstrap_a"]["deduplicated"] is True
+    assert health["bootstrap_b"]["deduplicated"] is True
+
+
+def _fake_squad_inputs():
+    element_types = [1, 1] + [2] * 5 + [3] * 5 + [4] * 4
+    elements = []
+    teams = []
+    for team_id in range(1, 9):
+        teams.append({"id": team_id, "name": f"Team {team_id}"})
+    for eid, element_type in enumerate(element_types, start=1):
+        team_id = ((eid - 1) % 8) + 1
+        elements.append(
+            {
+                "id": eid,
+                "web_name": f"P{eid}",
+                "team": team_id,
+                "element_type": element_type,
+                "now_cost": 50,
+            }
+        )
+    bootstrap = {"elements": elements, "teams": teams}
+    locked_ids = list(range(1, 16))
+    lock = {
+        "players": [
+            {
+                "element": eid,
+                "position": {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}[elements[eid - 1]["element_type"]],
+                "expected_web_name": f"P{eid}",
+                "expected_team": f"Team {elements[eid - 1]['team']}",
+                "purchase_cost": 50,
+            }
+            for eid in locked_ids
+        ]
+    }
+    submitted_ids = list(range(1, 15)) + [16]
+    picks = {"picks": [{"element": eid} for eid in submitted_ids]}
+    return bootstrap, lock, picks
+
+
+def test_squad_authority_switches_by_phase_and_reconciles():
+    bootstrap, lock, picks = _fake_squad_inputs()
+    pre = select_squad(
+        phase=Phase.PRE_DEADLINE,
+        bootstrap=bootstrap,
+        locked_squad=lock,
+        submitted_picks=picks,
+    )
+    post = select_squad(
+        phase=Phase.POST_DEADLINE,
+        bootstrap=bootstrap,
+        locked_squad=lock,
+        submitted_picks=picks,
+    )
+    assert pre["authority"] == "user_lock"
+    assert post["authority"] == "official_public"
+    assert pre["validation"]["passed"] is True
+    assert post["validation"]["passed"] is True
+    reconciliation = reconcile_baseline(pre["squad"], post["squad"])
+    assert reconciliation["changed"] is True
+    assert reconciliation["removals"] == [15]
+    assert reconciliation["additions"] == [16]
+    assert reconciliation["submitted_becomes_baseline"] is True

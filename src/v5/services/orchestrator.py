@@ -63,6 +63,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation != "run":
         raise KeyError(f"unsupported orchestrator operation: {operation}")
     runner_cfg = load_json_config(RUNNER_CONFIG)
+    feature_switches = runner_cfg.get("feature_switches") if isinstance(runner_cfg.get("feature_switches"), dict) else {}
     mode = str(payload.get("mode") or runner_cfg["default_mode"])
     if mode not in {str(value) for value in runner_cfg["modes"]}:
         raise ValueError(f"unsupported V5 runner mode: {mode}")
@@ -124,6 +125,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     states = invoke_parallel_envelopes(
         {
             "price_trajectory": (read_service, read_operation, {"name": "price_trajectory", "default": {}}),
+            "historical_prior": (read_service, read_operation, {"name": "historical_prior", "default": {}}),
             "prediction_ledger": (
                 read_service,
                 read_operation,
@@ -142,6 +144,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     price_service, price_operation = _route("price_build")
     prediction_service, prediction_operation = _route("prediction_build")
     prediction_horizon = int(runner_cfg["prediction_horizon_gws"])
+    owned_ids = (truth.get("team") or {}).get("owned_ids") or []
     intelligence_outcomes = invoke_parallel_outcomes(
         {
             "price": (
@@ -150,7 +153,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 {
                     "bootstrap": bootstrap,
                     "previous_state": states["price_trajectory"]["data"] or {},
-                    "owned_ids": (truth.get("team") or {}).get("owned_ids") or [],
+                    "owned_ids": owned_ids,
                 },
             ),
             "prediction": (
@@ -162,6 +165,9 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                     "rules": truth["rules"],
                     "planning_gw": context.get("planning_gw"),
                     "horizon": prediction_horizon,
+                    "owned_ids": owned_ids,
+                    "historical_prior": states["historical_prior"]["data"] or {},
+                    "allow_historical_prior_refresh": bool(feature_switches.get("historical_prior_network_refresh", False)),
                 },
             ),
         },
@@ -266,6 +272,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     auth_summary = auth_runtime.get("summary") if isinstance(auth_runtime.get("summary"), dict) else {}
     accuracy = evaluation.get("accuracy") if isinstance(evaluation.get("accuracy"), dict) else {}
     scorecard = evaluation.get("challenger_scorecard") if isinstance(evaluation.get("challenger_scorecard"), dict) else {}
+    prediction_quality = prediction.get("prediction_quality") if isinstance(prediction.get("prediction_quality"), dict) else {}
+    historical_prior = prediction.get("historical_prior_artifact") if isinstance(prediction.get("historical_prior_artifact"), dict) else {}
     degraded_context_rows = framework.get("degraded_contexts") if isinstance(framework.get("degraded_contexts"), list) else []
     snapshot = {
         "schema_version": int(runner_cfg["snapshot"]["schema_version"]),
@@ -293,6 +301,16 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "planning_gw": prediction.get("planning_gw"),
             "horizon_gws": prediction.get("horizon_gws"),
             "ruleset_id": prediction.get("ruleset_id"),
+            "historical_prior": {
+                "status": historical_prior.get("status"),
+                "season": historical_prior.get("season"),
+                "fetch_mode": historical_prior.get("fetch_mode"),
+                "coverage": historical_prior.get("coverage"),
+            },
+            "quality": {
+                "status": prediction_quality.get("status"),
+                "failed_checks": prediction_quality.get("failed_checks", []),
+            },
         },
         "evaluation_summary": {
             "status": (accuracy.get("overall") or {}).get("status"),
@@ -322,6 +340,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "gate0_preflight_pass": gate0_preflight.get("pass"),
             "degraded_contexts": degraded_context_rows,
             "degraded_blocks_unqualified_go": framework.get("degraded_blocks_unqualified_go"),
+            "prediction_quality_status": prediction_quality.get("status"),
             "microservices_required": True,
             "raw_authenticated_payload_persisted": False,
         },
@@ -331,7 +350,9 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         write_service, write_operation = _route("artifact_write")
         artifact_mapping = _cfg()["artifact_mapping"]
         artifact_payloads = {
+            "historical_prior": historical_prior,
             "predictions": prediction,
+            "prediction_quality": prediction_quality,
             "team_strength": prediction.get("team_strength", {}),
             "prediction_ledger": evaluation.get("ledger", {}),
             "prediction_accuracy": accuracy,

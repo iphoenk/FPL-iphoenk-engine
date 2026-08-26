@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "v3.15-comparison",
-  "requested_at": "2026-08-26T08:59:00Z",
+  "requested_cycle": "post-dss-enhancement-v3.15",
+  "requested_at": "2026-08-26T10:07:30Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "v3.15-fast-report-serving",
   "v5_role": "shadow_only",
@@ -8,5 +8,7 @@
   "require_watchlist": 20,
   "require_watchlist_per_position": 5,
   "require_lineup_owned_boundary": true,
-  "require_parity_fail_closed": true
+  "require_parity_fail_closed": true,
+  "require_no_critical_dss_partial": true,
+  "require_no_critical_enhancement_partial": true
 }

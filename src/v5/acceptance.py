@@ -6,6 +6,7 @@ from pathlib import Path
 from src.rules import GOAL_POINTS, RULESET_ID, RULESET_SEASON, ruleset_metadata
 from src.v5 import V5_VERSION
 from src.v5.contracts import AcceptanceCheck, AcceptanceReport, Plane
+from src.v5.module_registry import module_specs
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -20,8 +21,11 @@ def _json(path: str) -> dict:
 
 def run_bootstrap_acceptance() -> AcceptanceReport:
     manifest = _json("config/v5_convergence_manifest.json")
+    architecture = _json("config/v5_architecture_principles.json")
     projection_source = (ROOT / "src/models/projection.py").read_text(encoding="utf-8")
     metadata = ruleset_metadata()
+    modules = module_specs()
+    modular_policy = architecture.get("principles", {}).get("modular_authority", {})
 
     checks = (
         AcceptanceCheck(
@@ -71,6 +75,18 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
             "{1:6,2:6,3:5,4:4}" not in projection_source.replace(" ", ""),
             Plane.GOVERNANCE,
             "Legacy hardcoded goal-points map is absent from projection",
+        ),
+        AcceptanceCheck(
+            "modular_separation_default",
+            modular_policy.get("default_action") == "SEPARATE_WHEN_PRACTICAL",
+            Plane.GOVERNANCE,
+            "V5 defaults to dedicated modules/registries for separable domains",
+        ),
+        AcceptanceCheck(
+            "module_registry_discoverable",
+            len(modules) >= 8 and all(m.entrypoint and m.config and m.adjustment_surface for m in modules),
+            Plane.GOVERNANCE,
+            "Every registered V5 domain exposes entrypoint, config and adjustment surface",
         ),
         AcceptanceCheck(
             "production_promotion_locked",

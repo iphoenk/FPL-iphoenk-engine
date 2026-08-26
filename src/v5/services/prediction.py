@@ -111,7 +111,6 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 "historical_prior": player.get("historical_prior"),
                 "xmins": player.get("xmins"),
                 "role": player.get("role"),
-                "rates": player.get("rates"),
                 "xpts_by_gw": player.get("xpts_by_gw"),
                 "horizons": player.get("horizons"),
                 "xpts_3": player.get("xpts_3"),

@@ -33,3 +33,29 @@ def test_critical_framework_items_have_traceability():
         for row in load(filename)[key]:
             if row.get('critical'):
                 assert row.get('required_files'), (filename,row['id'])
+
+
+def test_every_dss_and_enhancement_item_has_operational_probe():
+    for filename,key in [
+        ('dss_core_registry.json','modules'),
+        ('dss_extension_registry.json','modules'),
+        ('enhancement_layers_registry.json','layers'),
+    ]:
+        for row in load(filename)[key]:
+            assert row.get('operational_probe'), (filename,row['id'])
+
+
+def test_file_presence_without_probe_is_never_active():
+    from src.engines.framework_health_audit import _operational_probe
+
+    status, detail = _operational_probe(None, 'postflight')
+    assert status == 'PARTIAL'
+    assert detail['reason'] == 'no operational probe declared'
+
+
+def test_known_v47_prediction_debt_is_reported_partial():
+    from src.engines.framework_health_audit import _operational_probe
+
+    for probe in ('set_piece_role', 'penalty_role', 'opponent_defence_dynamic', 'last_season_integration', 'data_reliability_triangulation'):
+        status, _ = _operational_probe(probe, 'postflight')
+        assert status == 'PARTIAL', probe

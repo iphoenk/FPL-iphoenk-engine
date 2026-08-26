@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterable
+
+from src.engines.team_value import sell_cost
 
 POSITION_COUNTS = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
 BUDGET_TENTHS = 1000
@@ -56,6 +58,60 @@ def build_candidates(predictions: dict, universe: dict) -> list[Candidate]:
                              _f(pred.get("xpts_3")), _f(pred.get("xpts_5")), _f(pred.get("xpts_10")),
                              _f(pred.get("xpts_15")), _f(pred.get("uncertainty")), player_objective(pred), fx))
     return out
+
+
+def reconcile_owned_costs(candidates: list[Candidate], locked: dict) -> tuple[list[Candidate], dict]:
+    """Use selling prices for owned players and current prices for unowned players.
+
+    A Wildcard optimizer can be modelled as liquidating the current squad first.
+    Retained owned players therefore consume their selling value, while new players
+    consume ``now_cost``. Falling back to ``now_cost`` for an owned player with no
+    purchase-price evidence would silently overstate affordability, so this fails
+    closed instead.
+    """
+    by_id = {p.element: p for p in candidates}
+    owned_costs: dict[int, int] = {}
+    ledger: list[dict] = []
+    for row in locked.get("players", []):
+        element = int(row.get("element"))
+        candidate = by_id.get(element)
+        if candidate is None:
+            raise RuntimeError(f"owned player absent from candidate universe: {element}")
+        explicit = row.get("selling_price", row.get("sell_cost"))
+        purchase = row.get("purchase_cost")
+        if explicit is not None:
+            selling = int(explicit)
+            source = "official_or_locked_selling_price"
+        elif purchase is not None:
+            selling = sell_cost(candidate.cost, int(purchase))
+            source = "reconstructed_from_purchase_cost"
+        else:
+            raise RuntimeError(f"owned player {element} lacks purchase/selling price evidence")
+        if selling <= 0 or selling > candidate.cost:
+            raise RuntimeError(
+                f"invalid selling price for owned player {element}: sell={selling}, now={candidate.cost}"
+            )
+        owned_costs[element] = selling
+        ledger.append({
+            "element": element,
+            "purchase_cost": int(purchase) if purchase is not None else None,
+            "now_cost": candidate.cost,
+            "sell_cost": selling,
+            "source": source,
+        })
+
+    effective = [replace(p, cost=owned_costs.get(p.element, p.cost)) for p in candidates]
+    bank = int(locked.get("itb_tenths") or 0)
+    sell_value = sum(owned_costs.values())
+    return effective, {
+        "price_basis": "owned_sell_cost_unowned_now_cost",
+        "owned_players": len(owned_costs),
+        "owned_sell_value_tenths": sell_value,
+        "bank_tenths": bank,
+        "available_budget_tenths": sell_value + bank,
+        "ledger": ledger,
+        "fail_closed_on_missing_purchase_price": True,
+    }
 
 
 def validate_squad(players: Iterable[Candidate], budget: int = BUDGET_TENTHS) -> tuple[bool,str]:
@@ -176,11 +232,16 @@ def classify_gain(delta_utility:float,delta_xi5:float)->str:
     return "KEEP_15"
 
 
-def decision_report(predictions:dict,universe:dict,locked:dict,budget:int=BUDGET_TENTHS)->dict:
+def decision_report(predictions:dict,universe:dict,locked:dict,budget:int|None=None)->dict:
     return decision_report_from_candidates(build_candidates(predictions,universe),locked,budget)
 
 
-def decision_report_from_candidates(candidates:list[Candidate],locked:dict,budget:int=BUDGET_TENTHS)->dict:
+def decision_report_from_candidates(candidates:list[Candidate],locked:dict,budget:int|None=None)->dict:
+    candidates, affordability = reconcile_owned_costs(candidates, locked)
+    derived_budget = int(affordability["available_budget_tenths"])
+    budget = derived_budget if budget is None else int(budget)
+    if budget != derived_budget:
+        raise RuntimeError(f"budget override {budget} disagrees with reconciled sell value {derived_budget}")
     by_id={p.element:p for p in candidates}; locked_ids={int(p["element"]) for p in locked.get("players",[])}; missing=sorted(locked_ids-set(by_id))
     if missing: raise RuntimeError(f"locked players absent from candidate universe: {missing}")
     current=[by_id[e] for e in locked_ids]; ok,reason=validate_squad(current,budget)
@@ -195,4 +256,4 @@ def decision_report_from_candidates(candidates:list[Candidate],locked:dict,budge
             if c.cost<=owned.cost+baseline_itb:
                 direct.append({"owned":owned.element,"owned_name":owned.name,"challenger":c.element,"challenger_name":c.name,"position":owned.position,"cost_delta":c.cost-owned.cost,"objective_delta":round(c.objective-owned.objective,4),"xpts5_delta":round(c.x5-owned.x5,2)}); break
     direct.sort(key=lambda x:x["objective_delta"],reverse=True)
-    return {"schema_version":447,"engine":"v4.4.6-wc-optimizer-packed-clubs","wildcard_active":bool(locked.get("wildcard_active")),"budget_tenths":budget,"baseline_itb_tenths":baseline_itb,"screened_players":len(candidates),"current":current_m,"optimized":target_m|{"itb":optimized["itb"]},"delta":{"best_xi_xpts_5":round(dx,2),"bench_adjusted_utility_5":round(du,2)},"classification":classify_gain(du,dx),"out":[{"element":p.element,"name":p.name,"position":p.position,"cost":p.cost} for p in outs],"in":[{"element":p.element,"name":p.name,"position":p.position,"cost":p.cost} for p in ins],"optimized_elements":[p.element for p in target],"direct_challengers":direct[:15],"hard_constraints":{"squad_size":15,"positions":POSITION_COUNTS,"budget_tenths":budget,"max_per_club":MAX_PER_CLUB,"legal_xi":True},"performance":optimized["performance"]|{"beam_size_unchanged":optimized["beam_size"]==6000,"direct_challenger_position_index":True}}
+    return {"schema_version":464,"engine":"v4.6.4-wc-optimizer-sell-cost-correctness","wildcard_active":bool(locked.get("wildcard_active")),"budget_tenths":budget,"baseline_itb_tenths":baseline_itb,"affordability":affordability,"screened_players":len(candidates),"current":current_m,"optimized":target_m|{"itb":optimized["itb"]},"delta":{"best_xi_xpts_5":round(dx,2),"bench_adjusted_utility_5":round(du,2)},"classification":classify_gain(du,dx),"out":[{"element":p.element,"name":p.name,"position":p.position,"sell_cost":p.cost} for p in outs],"in":[{"element":p.element,"name":p.name,"position":p.position,"now_cost":p.cost} for p in ins],"optimized_elements":[p.element for p in target],"direct_challengers":direct[:15],"hard_constraints":{"squad_size":15,"positions":POSITION_COUNTS,"budget_tenths":budget,"max_per_club":MAX_PER_CLUB,"legal_xi":True,"owned_price_basis":"sell_cost","unowned_price_basis":"now_cost"},"performance":optimized["performance"]|{"beam_size_unchanged":optimized["beam_size"]==6000,"direct_challenger_position_index":True}}

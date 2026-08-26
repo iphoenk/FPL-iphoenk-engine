@@ -1,4 +1,4 @@
-# FPL iphoenk Engine v3.1
+# FPL iphoenk Engine V4.6.4
 
 A production-oriented personal FPL data platform.
 
@@ -17,6 +17,7 @@ Implemented:
 - phase-aware FPL state
 - locked pre-deadline squad authority
 - exact sell-value logic
+- sell-cost-correct Wildcard affordability (owned sell cost, unowned current cost)
 - endpoint health/retry/latency
 - live FPL player stat expansion
 - price deltas and momentum
@@ -56,6 +57,11 @@ python fpl_daily_tasks.py stats-sync --gw 1
 python fpl_daily_tasks.py stats-sync --gw 1 --deep
 python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
 
+python -m src.engines.framework_health_audit --phase preflight --strict
+python -m src.engines.v4_decision_pipeline
+python -m src.engines.framework_health_audit --phase postflight --strict
+python -m src.engines.v4_quality_gate
+
 uvicorn live_service:app --host 0.0.0.0 --port 8000
 ```
 
@@ -83,3 +89,10 @@ Historical xP-like fields should be shifted or excluded unless timestamp eligibi
 FPL-Core-Insights and vaastav are community-maintained. They are useful enrichments, not licensed Opta feeds.
 
 GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy `live_service.py` to an always-on host for near-live polling.
+
+## V4.6.4 correctness baseline
+
+- Gate 0 reconciles owned selling prices with the official half-profit formula.
+- Wildcard budget uses owned `sell_cost` plus bank; unowned targets use `now_cost`.
+- Framework status `ACTIVE` requires an operational probe, not merely a present file.
+- Known V4.7 prediction-quality gaps remain truthfully `PARTIAL`, so framework health is expected to be `AMBER` and unqualified `GO` remains blocked while governed recommendations may still be produced.

@@ -1,4 +1,6 @@
-from src.engines.v4_wc_optimizer import Candidate, validate_squad, best_xi, classify_gain, squad_utility, squad_utility_fast, _club_add, _club_count
+import pytest
+
+from src.engines.v4_wc_optimizer import Candidate, validate_squad, best_xi, classify_gain, squad_utility, squad_utility_fast, reconcile_owned_costs, _club_add, _club_count
 
 
 def c(e,pos,team,cost=50,x=3.0):
@@ -53,3 +55,40 @@ def test_gain_classification_requires_material_margin():
     assert classify_gain(.5,.5)=="KEEP_15"
     assert classify_gain(2.1,1.6)=="OPTIONAL_IMPROVEMENT"
     assert classify_gain(5.0,4.2)=="MATERIAL_UPGRADE"
+
+
+def test_owned_assets_use_sell_cost_while_unowned_use_now_cost():
+    candidates = [
+        c(1, "GK", 1, cost=46),
+        c(2, "DEF", 2, cost=48),
+        c(3, "MID", 3, cost=44),
+        c(4, "FWD", 4, cost=70),
+    ]
+    locked = {
+        "itb_tenths": 5,
+        "players": [
+            {"element": 1, "purchase_cost": 45},
+            {"element": 2, "purchase_cost": 45},
+            {"element": 3, "purchase_cost": 45},
+        ],
+    }
+    reconciled, affordability = reconcile_owned_costs(candidates, locked)
+    costs = {player.element: player.cost for player in reconciled}
+    assert costs == {1: 45, 2: 46, 3: 44, 4: 70}
+    assert affordability["owned_sell_value_tenths"] == 135
+    assert affordability["available_budget_tenths"] == 140
+    assert affordability["price_basis"] == "owned_sell_cost_unowned_now_cost"
+
+
+def test_explicit_selling_price_has_authority_over_reconstruction():
+    reconciled, affordability = reconcile_owned_costs(
+        [c(1, "GK", 1, cost=48)],
+        {"players": [{"element": 1, "purchase_cost": 45, "selling_price": 47}]},
+    )
+    assert reconciled[0].cost == 47
+    assert affordability["ledger"][0]["source"] == "official_or_locked_selling_price"
+
+
+def test_owned_asset_without_purchase_or_selling_price_fails_closed():
+    with pytest.raises(RuntimeError, match="lacks purchase/selling price evidence"):
+        reconcile_owned_costs([c(1, "GK", 1, cost=45)], {"players": [{"element": 1}]})

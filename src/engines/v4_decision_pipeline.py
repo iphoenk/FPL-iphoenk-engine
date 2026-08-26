@@ -93,8 +93,8 @@ def run():
     timings["total_pipeline_ms"] = round((perf_counter() - t0) * 1000.0, 1)
 
     out = {
-        "schema_version": 461,
-        "engine": "v4.6.1-unified-decision-pipeline-fast-parallel",
+        "schema_version": 464,
+        "engine": "v4.6.4-unified-decision-pipeline-correctness",
         "timings": timings,
         "results": {
             "wc_raw": wc.get("classification"),

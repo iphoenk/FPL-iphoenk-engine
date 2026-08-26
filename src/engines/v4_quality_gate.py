@@ -21,33 +21,45 @@ def _assert_framework_health() -> tuple[dict, dict]:
     post = _load("framework_health_v4.json")
 
     for obj, phase in ((pre, "preflight"), (post, "postflight")):
-        assert int(obj.get("schema_version", 0)) >= 4602, obj
-        assert str(obj.get("engine", "")).startswith("v4.6.3-framework-health-auditor"), obj
+        assert int(obj.get("schema_version", 0)) >= 464, obj
+        assert str(obj.get("engine", "")).startswith("v4.6.4-framework-health-operational-probes"), obj
         assert obj.get("phase") == phase, obj
         assert obj.get("registry_integrity") is True, obj
         assert obj.get("overall") in {"GREEN", "AMBER"}, obj
-        assert obj.get("go_allowed") is True, obj
+        assert obj.get("recommendation_allowed") is True, obj
+        assert obj.get("go_allowed") is (obj.get("overall") == "GREEN"), obj
         assert obj.get("gate0", {}).get("pass") is True, obj.get("gate0")
         assert obj.get("gate0", {}).get("counts", {}).get("FAIL", 0) == 0, obj.get("gate0")
         assert obj.get("dss_core", {}).get("declared") == 50 and obj["dss_core"].get("integrity_ok") is True
         assert obj.get("dss_extensions", {}).get("declared") == 16 and obj["dss_extensions"].get("integrity_ok") is True
         assert obj.get("enhancements", {}).get("declared") == 8 and obj["enhancements"].get("integrity_ok") is True
         assert not obj.get("critical_failed"), obj.get("critical_failed")
+        governance = obj.get("governance", {})
+        assert governance.get("file_exists_is_not_sufficient_for_active") is True
+        assert governance.get("critical_partial_blocks_unqualified_go") is True
 
     # PRE-FLIGHT is intentionally incomplete. Post-flight-only outputs must be DEFERRED,
     # never misclassified as failures.
     pre_counts = pre["gate0"]["counts"]
     assert pre_counts.get("PASS", 0) + pre_counts.get("DEFERRED", 0) == 16, pre_counts
-    assert pre.get("reporting_contract", {}).get("preflight_defers_postflight_outputs") is True, pre
+    assert pre.get("governance", {}).get("preflight_defers_postflight_outputs") is True, pre
 
     # POST-FLIGHT is final-decision readiness. Nothing may remain deferred.
     post_counts = post["gate0"]["counts"]
     assert post_counts.get("PASS", 0) == 16 and post_counts.get("DEFERRED", 0) == 0, post_counts
-    rc = post.get("reporting_contract", {})
-    assert rc.get("health_check_first") is True
-    assert rc.get("raw_optimizer_distinct_from_governed_recommendation") is True
-    assert rc.get("manual_draft_distinct_from_final_lock") is True
-    assert rc.get("gate0_fail_blocks_go") is True
+    governance = post.get("governance", {})
+    assert governance.get("health_check_must_precede_recommendation") is True
+    assert governance.get("raw_optimizer_is_not_final_decision") is True
+    assert governance.get("gate0_fail_blocks_go") is True
+
+    # V4.6.4 must report known upstream prediction-quality debt truthfully.
+    core = {row["id"]: row for row in post["dss_core"]["items"]}
+    for module_id in ("DSS-10", "DSS-11", "DSS-12", "DSS-13", "DSS-24", "DSS-35"):
+        assert core[module_id]["status"] == "PARTIAL", core[module_id]
+    enhancements = {row["id"]: row for row in post["enhancements"]["items"]}
+    assert enhancements["ENH-01"]["status"] == "PARTIAL", enhancements["ENH-01"]
+    assert post.get("overall") == "AMBER", post.get("overall")
+    assert post.get("go_allowed") is False, post
 
     return pre, post
 
@@ -69,18 +81,21 @@ def run() -> dict:
     assert predictions.get("point_in_time") is True and len(players) >= 500, predictions
 
     wc = _load("wc_decision_v4.json")
-    assert int(wc.get("schema_version", 0)) >= 447, wc
-    assert str(wc.get("engine", "")).startswith("v4.4.6-wc-optimizer-packed-clubs"), wc
+    assert int(wc.get("schema_version", 0)) >= 464, wc
+    assert str(wc.get("engine", "")).startswith("v4.6.4-wc-optimizer-sell-cost-correctness"), wc
     assert wc.get("screened_players", 0) >= 500 and len(wc.get("optimized_elements", [])) == 15
     assert wc.get("classification") in {"KEEP_15", "OPTIONAL_IMPROVEMENT", "MATERIAL_UPGRADE"}
     wp = wc.get("performance", {})
     assert wp.get("fast_finalist_scoring") and wp.get("winner_only_legality_check")
     assert wp.get("beam_size_unchanged") and wp.get("packed_club_signature") and wp.get("counter_copy_eliminated")
     assert wp.get("direct_challenger_position_index")
+    wa = wc.get("affordability", {})
+    assert wa.get("price_basis") == "owned_sell_cost_unowned_now_cost", wa
+    assert wc.get("budget_tenths") == wa.get("available_budget_tenths"), wa
 
     packages = _load("wc_package_audit_v4.json")
-    assert int(packages.get("schema_version", 0)) >= 447, packages
-    assert str(packages.get("engine", "")).startswith("v4.4.6-wc-package-audit"), packages
+    assert int(packages.get("schema_version", 0)) >= 464, packages
+    assert str(packages.get("engine", "")).startswith("v4.6.4-wc-package-audit-sell-cost-correctness"), packages
     assert packages.get("max_replacements") == 4
     assert set(packages.get("best_by_replacement_count", {})) == {"1", "2", "3", "4"}
     assert packages.get("overall_verdict") in {"KEEP_15", "OPTIONAL_IMPROVEMENT", "MATERIAL_UPGRADE"}
@@ -90,6 +105,9 @@ def run() -> dict:
     assert pp.get("metrics_cache_entries", 0) > 0
     assert pp.get("single_pass_metrics") and pp.get("compact_target_cache") and pp.get("score_only_hotloop")
     assert pp.get("redundant_target_validation_removed") and pp.get("candidate_reuse_supported")
+    pa = packages.get("affordability", {})
+    assert pa.get("price_basis") == "owned_sell_cost_unowned_now_cost", pa
+    assert packages.get("guardrails", {}).get("budget_tenths") == pa.get("available_budget_tenths"), pa
 
     lineup = _load("lineup_decision_v4.json")
     assert int(lineup.get("schema_version", 0)) >= 452, lineup
@@ -118,8 +136,8 @@ def run() -> dict:
     assert sg.get("early_season_multi_change_cap") and sg.get("point_in_time_required")
 
     pipeline = _load("decision_pipeline_v4.json")
-    assert int(pipeline.get("schema_version", 0)) >= 461, pipeline
-    assert str(pipeline.get("engine", "")).startswith("v4.6.1-unified-decision-pipeline-fast-parallel"), pipeline
+    assert int(pipeline.get("schema_version", 0)) >= 464, pipeline
+    assert str(pipeline.get("engine", "")).startswith("v4.6.4-unified-decision-pipeline-correctness"), pipeline
     pg = pipeline.get("performance_guardrails", {})
     assert pg.get("shared_json_loaded_once") and pg.get("shared_candidates_built_once")
     assert pg.get("fork_copy_on_write") and pg.get("parallel_wc_package")
@@ -157,7 +175,7 @@ def run() -> dict:
         "captain": lineup["captain"]["name"],
         "pipeline_ms": timings["total_pipeline_ms"],
     }
-    print("V4.6.3 FRAMEWORK HEALTH + QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.6.4 CORRECTNESS + TRUTHFUL HEALTH QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

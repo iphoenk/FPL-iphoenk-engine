@@ -5,7 +5,7 @@ from itertools import combinations
 from src.utils import DATA, CONFIG, atomic_json, read_json
 from src.engines.v4_wc_optimizer import (
     BUDGET_TENTHS, MAX_PER_CLUB, POSITION_COUNTS, build_candidates, best_xi,
-    validate_squad, _group_by_position, _best_xi_score_grouped,
+    validate_squad, reconcile_owned_costs, _group_by_position, _best_xi_score_grouped,
 )
 
 OUTFILE = DATA / "wc_package_audit_v4.json"
@@ -138,14 +138,19 @@ def _candidate_states(cur, outids, need, bp, budget, k, beam_size):
     return [x[1] for x in legal[:cap]]
 
 
-def audit_packages(predictions, universe, locked, max_replacements=4, budget=BUDGET_TENTHS,
+def audit_packages(predictions, universe, locked, max_replacements=4, budget=None,
                    per_position_frontier=7, top_per_size=8, beam_size=28):
     cands = build_candidates(predictions, universe)
     return audit_packages_from_candidates(cands, locked, max_replacements, budget, per_position_frontier, top_per_size, beam_size)
 
 
-def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=BUDGET_TENTHS,
+def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=None,
                                    per_position_frontier=7, top_per_size=8, beam_size=28):
+    cands, affordability = reconcile_owned_costs(cands, locked)
+    derived_budget = int(affordability["available_budget_tenths"])
+    budget = derived_budget if budget is None else int(budget)
+    if budget != derived_budget:
+        raise RuntimeError(f"budget override {budget} disagrees with reconciled sell value {derived_budget}")
     by = {p.element: p for p in cands}
     ids = {int(x["element"]) for x in locked.get("players", [])}
     missing = ids - set(by)
@@ -226,9 +231,10 @@ def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=BUD
         verdict = "KEEP_15"
 
     return {
-        "schema_version": 447,
-        "engine": "v4.4.6-wc-package-audit-score-only-hotloop",
+        "schema_version": 464,
+        "engine": "v4.6.4-wc-package-audit-sell-cost-correctness",
         "wildcard_active": bool(locked.get("wildcard_active")),
+        "affordability": affordability,
         "baseline": cm | {"itb": budget - basecost},
         "screened_players": len(cands), "frontier_players": len(fr),
         "max_replacements": max_replacements,
@@ -248,6 +254,7 @@ def audit_packages_from_candidates(cands, locked, max_replacements=4, budget=BUD
         "guardrails": {
             "max_per_club": MAX_PER_CLUB, "budget_tenths": budget,
             "position_counts": POSITION_COUNTS, "larger_packages_require_higher_gain": True,
+            "owned_price_basis": "sell_cost", "unowned_price_basis": "now_cost",
             "ranking_metric": "risk-adjusted best-XI plus bench-adjusted 5GW utility",
             "search": "shortlisted k<=2, bounded beam k=3-4, score-only compact memoized metrics",
             "frontier_per_position": per_position_frontier, "beam_size": beam_size,

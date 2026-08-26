@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "locked_squad_config": "config/locked_squad.json",
+  "validation": {
+    "fail_closed": true,
+    "identity_keys": ["element", "position", "expected_web_name", "expected_team"],
+    "require_unique_elements": true,
+    "require_exact_position_counts": true,
+    "require_club_limit": true
+  },
+  "reconciliation": {
+    "enabled": true,
+    "compare_by": "element_id",
+    "submitted_becomes_baseline_after_deadline": true,
+    "record_additions_removals": true
+  }
+}

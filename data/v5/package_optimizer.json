@@ -2896,10 +2896,9 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "ACTIVE": 42,
-        "PARTIAL": 8
+        "ACTIVE": 50
       },
-      "coverage_ratio": 0.84,
+      "coverage_ratio": 1.0,
       "critical_partial": [],
       "items": [
         {
@@ -3064,9 +3063,11 @@
           "category": "underlying",
           "critical": false,
           "probe": "advanced_stats_sync",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-15",
@@ -3074,9 +3075,11 @@
           "category": "underlying",
           "critical": false,
           "probe": "advanced_stats_sync",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-16",
@@ -3252,9 +3255,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "european_congestion",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-31",
@@ -3262,9 +3267,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "domestic_cup_congestion",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-32",
@@ -3272,9 +3279,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "international_load",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-33",
@@ -3282,9 +3291,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "rest_days",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-34",
@@ -3292,9 +3303,11 @@
           "category": "priors",
           "critical": false,
           "probe": "preseason_prior",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-35",
@@ -3326,9 +3339,11 @@
           "category": "form",
           "critical": false,
           "probe": "current_form",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-38",
@@ -3736,10 +3751,22 @@
       "advanced_stats_integration": [
         "prediction"
       ],
+      "advanced_stats_sync": [
+        "prediction"
+      ],
       "bonus_route": [
         "prediction"
       ],
       "clean_sheet_probability": [
+        "prediction"
+      ],
+      "current_form": [
+        "prediction"
+      ],
+      "domestic_cup_congestion": [
+        "prediction"
+      ],
+      "european_congestion": [
         "prediction"
       ],
       "fixture_context": [
@@ -3763,6 +3790,9 @@
       "horizon_5": [
         "prediction"
       ],
+      "international_load": [
+        "prediction"
+      ],
       "last_season_integration": [
         "prediction"
       ],
@@ -3778,6 +3808,9 @@
       "prediction_quality_guard": [
         "prediction"
       ],
+      "preseason_prior": [
+        "prediction"
+      ],
       "price_value": [
         "prediction"
       ],
@@ -3785,6 +3818,9 @@
         "prediction"
       ],
       "regression_risk": [
+        "prediction"
+      ],
+      "rest_days": [
         "prediction"
       ],
       "rotation_competition": [

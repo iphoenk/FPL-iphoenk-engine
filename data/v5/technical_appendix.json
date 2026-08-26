@@ -105,10 +105,9 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "ACTIVE": 42,
-        "PARTIAL": 8
+        "ACTIVE": 50
       },
-      "coverage_ratio": 0.84,
+      "coverage_ratio": 1.0,
       "critical_partial": [],
       "items": [
         {
@@ -273,9 +272,11 @@
           "category": "underlying",
           "critical": false,
           "probe": "advanced_stats_sync",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-15",
@@ -283,9 +284,11 @@
           "category": "underlying",
           "critical": false,
           "probe": "advanced_stats_sync",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-16",
@@ -461,9 +464,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "european_congestion",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-31",
@@ -471,9 +476,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "domestic_cup_congestion",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-32",
@@ -481,9 +488,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "international_load",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-33",
@@ -491,9 +500,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "rest_days",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-34",
@@ -501,9 +512,11 @@
           "category": "priors",
           "critical": false,
           "probe": "preseason_prior",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-35",
@@ -535,9 +548,11 @@
           "category": "form",
           "critical": false,
           "probe": "current_form",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-38",
@@ -945,10 +960,22 @@
       "advanced_stats_integration": [
         "prediction"
       ],
+      "advanced_stats_sync": [
+        "prediction"
+      ],
       "bonus_route": [
         "prediction"
       ],
       "clean_sheet_probability": [
+        "prediction"
+      ],
+      "current_form": [
+        "prediction"
+      ],
+      "domestic_cup_congestion": [
+        "prediction"
+      ],
+      "european_congestion": [
         "prediction"
       ],
       "fixture_context": [
@@ -972,6 +999,9 @@
       "horizon_5": [
         "prediction"
       ],
+      "international_load": [
+        "prediction"
+      ],
       "last_season_integration": [
         "prediction"
       ],
@@ -987,6 +1017,9 @@
       "prediction_quality_guard": [
         "prediction"
       ],
+      "preseason_prior": [
+        "prediction"
+      ],
       "price_value": [
         "prediction"
       ],
@@ -994,6 +1027,9 @@
         "prediction"
       ],
       "regression_risk": [
+        "prediction"
+      ],
+      "rest_days": [
         "prediction"
       ],
       "rotation_competition": [
@@ -1175,7 +1211,7 @@
   "gate0_preflight_pass": true,
   "governance": {
     "framework_schema": 8,
-    "generated_at": "2026-08-26T10:39:10.670507+00:00",
+    "generated_at": "2026-08-26T11:12:23.282340+00:00",
     "auditor": "v5-microservice-governance-v4",
     "overall": "GREEN",
     "decision_engine": "HEALTHY",
@@ -1530,10 +1566,9 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "ACTIVE": 42,
-        "PARTIAL": 8
+        "ACTIVE": 50
       },
-      "coverage_ratio": 0.84,
+      "coverage_ratio": 1.0,
       "critical_partial": [],
       "items": [
         {
@@ -1698,9 +1733,11 @@
           "category": "underlying",
           "critical": false,
           "probe": "advanced_stats_sync",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-15",
@@ -1708,9 +1745,11 @@
           "category": "underlying",
           "critical": false,
           "probe": "advanced_stats_sync",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-16",
@@ -1886,9 +1925,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "european_congestion",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-31",
@@ -1896,9 +1937,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "domestic_cup_congestion",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-32",
@@ -1906,9 +1949,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "international_load",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-33",
@@ -1916,9 +1961,11 @@
           "category": "schedule",
           "critical": false,
           "probe": "rest_days",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-34",
@@ -1926,9 +1973,11 @@
           "category": "priors",
           "critical": false,
           "probe": "preseason_prior",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-35",
@@ -1960,9 +2009,11 @@
           "category": "form",
           "critical": false,
           "probe": "current_form",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "prediction"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-38",
@@ -2465,10 +2516,22 @@
       "advanced_stats_integration": [
         "prediction"
       ],
+      "advanced_stats_sync": [
+        "prediction"
+      ],
       "bonus_route": [
         "prediction"
       ],
       "clean_sheet_probability": [
+        "prediction"
+      ],
+      "current_form": [
+        "prediction"
+      ],
+      "domestic_cup_congestion": [
+        "prediction"
+      ],
+      "european_congestion": [
         "prediction"
       ],
       "fixture_context": [
@@ -2492,6 +2555,9 @@
       "horizon_5": [
         "prediction"
       ],
+      "international_load": [
+        "prediction"
+      ],
       "last_season_integration": [
         "prediction"
       ],
@@ -2507,6 +2573,9 @@
       "prediction_quality_guard": [
         "prediction"
       ],
+      "preseason_prior": [
+        "prediction"
+      ],
       "price_value": [
         "prediction"
       ],
@@ -2514,6 +2583,9 @@
         "prediction"
       ],
       "regression_risk": [
+        "prediction"
+      ],
+      "rest_days": [
         "prediction"
       ],
       "rotation_competition": [
@@ -2662,9 +2734,9 @@
     "base_collection": {
       "service_id": "ingestion",
       "operation": "collect_base",
-      "service_compute_ms": 157.973,
-      "round_trip_ms": 195.441,
-      "transport_overhead_ms": 37.468,
+      "service_compute_ms": 116.475,
+      "round_trip_ms": 171.263,
+      "transport_overhead_ms": 54.788,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2678,8 +2750,8 @@
       "service_id": "truth",
       "operation": "context",
       "service_compute_ms": 0.079,
-      "round_trip_ms": 27.953,
-      "transport_overhead_ms": 27.874,
+      "round_trip_ms": 36.415,
+      "transport_overhead_ms": 36.336,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2693,9 +2765,9 @@
       "auth": {
         "service_id": "ingestion",
         "operation": "collect_authenticated",
-        "service_compute_ms": 0.045,
-        "round_trip_ms": 3.991,
-        "transport_overhead_ms": 3.946,
+        "service_compute_ms": 0.049,
+        "round_trip_ms": 4.298,
+        "transport_overhead_ms": 4.249,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2708,9 +2780,9 @@
       "dynamic": {
         "service_id": "ingestion",
         "operation": "collect_dynamic",
-        "service_compute_ms": 101.97,
-        "round_trip_ms": 115.429,
-        "transport_overhead_ms": 13.459,
+        "service_compute_ms": 37.667,
+        "round_trip_ms": 56.327,
+        "transport_overhead_ms": 18.66,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2724,9 +2796,9 @@
     "truth_assembly": {
       "service_id": "truth",
       "operation": "assemble",
-      "service_compute_ms": 1.498,
-      "round_trip_ms": 61.108,
-      "transport_overhead_ms": 59.61,
+      "service_compute_ms": 1.259,
+      "round_trip_ms": 74.202,
+      "transport_overhead_ms": 72.943,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2737,12 +2809,12 @@
       }
     },
     "state_hydration": {
-      "price_trajectory": {
+      "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 1.67,
-        "round_trip_ms": 12.158,
-        "transport_overhead_ms": 10.488,
+        "service_compute_ms": 2.788,
+        "round_trip_ms": 17.113,
+        "transport_overhead_ms": 14.325,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2755,9 +2827,24 @@
       "challenger_observations": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 0.086,
-        "round_trip_ms": 9.712,
-        "transport_overhead_ms": 9.626,
+        "service_compute_ms": 2.946,
+        "round_trip_ms": 17.999,
+        "transport_overhead_ms": 15.053,
+        "transport_attempts": 1,
+        "transport_retry_policy": "idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "price_trajectory": {
+        "service_id": "snapshot",
+        "operation": "read",
+        "service_compute_ms": 9.626,
+        "round_trip_ms": 22.044,
+        "transport_overhead_ms": 12.418,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2770,24 +2857,9 @@
       "historical_prior": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 1.619,
-        "round_trip_ms": 13.241,
-        "transport_overhead_ms": 11.622,
-        "transport_attempts": 1,
-        "transport_retry_policy": "idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "prediction_ledger": {
-        "service_id": "snapshot",
-        "operation": "read",
-        "service_compute_ms": 4.394,
-        "round_trip_ms": 16.044,
-        "transport_overhead_ms": 11.65,
+        "service_compute_ms": 6.279,
+        "round_trip_ms": 22.03,
+        "transport_overhead_ms": 15.751,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2802,9 +2874,9 @@
       "price": {
         "service_id": "price",
         "operation": "build",
-        "service_compute_ms": 14.157,
-        "round_trip_ms": 85.157,
-        "transport_overhead_ms": 71.0,
+        "service_compute_ms": 29.468,
+        "round_trip_ms": 125.245,
+        "transport_overhead_ms": 95.777,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2817,9 +2889,9 @@
       "prediction": {
         "service_id": "prediction",
         "operation": "build",
-        "service_compute_ms": 116.341,
-        "round_trip_ms": 274.288,
-        "transport_overhead_ms": 157.947,
+        "service_compute_ms": 186.118,
+        "round_trip_ms": 424.15,
+        "transport_overhead_ms": 238.032,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2834,9 +2906,9 @@
       "gate0_preflight": {
         "service_id": "governance",
         "operation": "gate0_preflight",
-        "service_compute_ms": 0.71,
-        "round_trip_ms": 8.213,
-        "transport_overhead_ms": 7.503,
+        "service_compute_ms": 0.685,
+        "round_trip_ms": 10.588,
+        "transport_overhead_ms": 9.903,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2849,9 +2921,9 @@
       "evaluation": {
         "service_id": "evaluation",
         "operation": "build",
-        "service_compute_ms": 2.1,
-        "round_trip_ms": 180.009,
-        "transport_overhead_ms": 177.909,
+        "service_compute_ms": 4.522,
+        "round_trip_ms": 241.562,
+        "transport_overhead_ms": 237.04,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2864,9 +2936,9 @@
       "decision_prepare": {
         "service_id": "decision",
         "operation": "prepare",
-        "service_compute_ms": 345.724,
-        "round_trip_ms": 460.672,
-        "transport_overhead_ms": 114.948,
+        "service_compute_ms": 511.322,
+        "round_trip_ms": 668.697,
+        "transport_overhead_ms": 157.375,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2880,9 +2952,9 @@
     "decision_finalize": {
       "service_id": "decision",
       "operation": "finalize",
-      "service_compute_ms": 0.721,
-      "round_trip_ms": 116.363,
-      "transport_overhead_ms": 115.642,
+      "service_compute_ms": 0.862,
+      "round_trip_ms": 152.145,
+      "transport_overhead_ms": 151.283,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2895,9 +2967,9 @@
     "governance": {
       "service_id": "governance",
       "operation": "audit",
-      "service_compute_ms": 0.609,
-      "round_trip_ms": 116.237,
-      "transport_overhead_ms": 115.628,
+      "service_compute_ms": 0.793,
+      "round_trip_ms": 155.459,
+      "transport_overhead_ms": 154.666,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2908,12 +2980,12 @@
       }
     },
     "artifact_persistence": {
-      "historical_prior": {
+      "prediction_quality": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 7.961,
-        "round_trip_ms": 79.605,
-        "transport_overhead_ms": 71.644,
+        "service_compute_ms": 8.243,
+        "round_trip_ms": 39.577,
+        "transport_overhead_ms": 31.334,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -2923,12 +2995,12 @@
           "cooldown_seconds": 10.0
         }
       },
-      "prediction_quality": {
+      "historical_prior": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 8.839,
-        "round_trip_ms": 37.425,
-        "transport_overhead_ms": 28.586,
+        "service_compute_ms": 9.999,
+        "round_trip_ms": 102.349,
+        "transport_overhead_ms": 92.35,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -2941,9 +3013,9 @@
       "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 8.013,
-        "round_trip_ms": 37.957,
-        "transport_overhead_ms": 29.944,
+        "service_compute_ms": 16.525,
+        "round_trip_ms": 62.697,
+        "transport_overhead_ms": 46.172,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -2956,39 +3028,9 @@
       "team_strength": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 7.689,
-        "round_trip_ms": 43.522,
-        "transport_overhead_ms": 35.833,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "package_optimizer": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 3.076,
-        "round_trip_ms": 35.95,
-        "transport_overhead_ms": 32.874,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "challenger_scorecard": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 7.559,
-        "round_trip_ms": 37.33,
-        "transport_overhead_ms": 29.771,
+        "service_compute_ms": 7.888,
+        "round_trip_ms": 70.318,
+        "transport_overhead_ms": 62.43,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3001,9 +3043,39 @@
       "prediction_accuracy": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 1.742,
-        "round_trip_ms": 58.178,
-        "transport_overhead_ms": 56.436,
+        "service_compute_ms": 1.422,
+        "round_trip_ms": 64.425,
+        "transport_overhead_ms": 63.003,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "package_optimizer": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 4.086,
+        "round_trip_ms": 69.218,
+        "transport_overhead_ms": 65.132,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "challenger_scorecard": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 17.735,
+        "round_trip_ms": 71.203,
+        "transport_overhead_ms": 53.468,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3016,24 +3088,9 @@
       "framework_health": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 3.804,
-        "round_trip_ms": 54.919,
-        "transport_overhead_ms": 51.115,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "price_trajectory": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 3.015,
-        "round_trip_ms": 47.394,
-        "transport_overhead_ms": 44.379,
+        "service_compute_ms": 17.845,
+        "round_trip_ms": 70.303,
+        "transport_overhead_ms": 52.458,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3046,9 +3103,24 @@
       "price_alerts": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 3.154,
-        "round_trip_ms": 99.248,
-        "transport_overhead_ms": 96.094,
+        "service_compute_ms": 3.285,
+        "round_trip_ms": 60.522,
+        "transport_overhead_ms": 57.237,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "price_trajectory": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 4.87,
+        "round_trip_ms": 68.102,
+        "transport_overhead_ms": 63.232,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3061,9 +3133,9 @@
       "prices": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 108.97,
-        "round_trip_ms": 184.998,
-        "transport_overhead_ms": 76.028,
+        "service_compute_ms": 36.884,
+        "round_trip_ms": 158.442,
+        "transport_overhead_ms": 121.558,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3076,9 +3148,9 @@
       "predictions": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 236.099,
-        "round_trip_ms": 408.837,
-        "transport_overhead_ms": 172.738,
+        "service_compute_ms": 318.807,
+        "round_trip_ms": 556.909,
+        "transport_overhead_ms": 238.102,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3092,9 +3164,9 @@
     "snapshot_write": {
       "service_id": "snapshot",
       "operation": "snapshot",
-      "service_compute_ms": 12.366,
-      "round_trip_ms": 17.126,
-      "transport_overhead_ms": 4.76,
+      "service_compute_ms": 16.304,
+      "round_trip_ms": 22.215,
+      "transport_overhead_ms": 5.911,
       "transport_attempts": 1,
       "transport_retry_policy": "non_idempotent",
       "transport_circuit": {
@@ -3104,7 +3176,7 @@
         "cooldown_seconds": 10.0
       }
     },
-    "orchestrator_wall_ms": 1955.629
+    "orchestrator_wall_ms": 2525.608
   },
   "provenance": {
     "ruleset_id": "FPL_2026_27",

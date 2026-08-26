@@ -1,0 +1,15 @@
+import json
+
+from src.engines import framework_health_audit as audit_engine
+from src.engines.framework_health_service import activate_registry_contract
+
+
+def test_framework_expected_counts_are_loaded_from_registries():
+    expected = activate_registry_contract()
+    declared = {
+        name: int(json.loads(path.read_text(encoding="utf-8"))["expected_count"])
+        for name, path in audit_engine.REGISTRIES.items()
+    }
+    assert expected == declared
+    assert audit_engine.EXPECTED_COUNTS == declared
+    assert set(declared) == {"dss_core", "dss_extensions", "enhancements", "gate0"}

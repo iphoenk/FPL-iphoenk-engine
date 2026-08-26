@@ -1,0 +1,38 @@
+name: V5 Unified Gate
+
+on:
+  push:
+    branches:
+      - v5-unified-engine
+  pull_request:
+    branches:
+      - v5-unified-engine
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: V5 bootstrap acceptance
+        run: python -m src.v5.acceptance
+
+      - name: V5 bootstrap tests
+        run: pytest -q tests/test_v5_bootstrap.py

@@ -182,3 +182,31 @@ def test_service_client_exposes_transport_observability(monkeypatch):
     assert envelope["transport_retry_policy"] == "idempotent"
     assert envelope["transport_circuit"]["state"] == "CLOSED"
     assert envelope["round_trip_ms"] >= 0.0
+
+
+def test_parallel_outcomes_preserve_independent_failure_without_raising(monkeypatch):
+    def fake_invoke(service_id, operation, payload, *, correlation_id=None):
+        if service_id == "price":
+            raise requests.ConnectTimeout("synthetic price outage")
+        return {
+            "ok": True,
+            "service_id": service_id,
+            "operation": operation,
+            "elapsed_ms": 1.0,
+            "data": {"status": "READY"},
+        }
+
+    monkeypatch.setattr(service_client, "invoke_envelope", fake_invoke)
+    outcomes = service_client.invoke_parallel_outcomes(
+        {
+            "price": ("price", "build", {}),
+            "prediction": ("prediction", "build", {}),
+        },
+        correlation_id="parallel-outcome-test",
+    )
+
+    assert outcomes["price"]["ok"] is False
+    assert outcomes["price"]["error_type"] == "ConnectTimeout"
+    assert outcomes["price"]["envelope"] is None
+    assert outcomes["prediction"]["ok"] is True
+    assert outcomes["prediction"]["envelope"]["data"]["status"] == "READY"

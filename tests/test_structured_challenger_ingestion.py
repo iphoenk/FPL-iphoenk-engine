@@ -78,6 +78,8 @@ def test_onefpl_probe_separates_site_reachability_and_uses_approved_fallback(mon
     assert result.capabilities["price_prediction"] == "AVAILABLE"
     assert result.detail["structured_fallback_used"] is True
     assert result.detail["selected_structured_url"] == "https://onefpl.vercel.app/prices"
+    assert result.detail["primary_structured_http_status"] == 402
+    assert result.detail["structured_http_status"] == 200
     assert result.observations[0]["source_url"] == "https://onefpl.vercel.app/prices"
 
 
@@ -113,6 +115,9 @@ def test_onefpl_reachable_site_with_restricted_structured_endpoint_is_not_source
     assert result.observation_count == 0
     assert result.capabilities["price_prediction"] == "SOURCE_REACHABLE_STRUCTURED_ACCESS_RESTRICTED"
     assert result.detail["structured_access_restricted"] is True
+    assert result.detail["primary_structured_http_status"] == 402
+    assert result.detail["structured_http_status"] == 402
+    assert result.detail["http_status"] == 200
 
 
 def test_available_observation_cannot_have_missing_value():

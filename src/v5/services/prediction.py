@@ -7,6 +7,7 @@ from src.v5.intelligence.full_core_enrichment import build_full_core_enrichment
 from src.v5.intelligence.historical_prior import resolve_prior
 from src.v5.intelligence.prediction_quality import evaluate_prediction_quality
 from src.v5.intelligence.projection import build_predictions
+from src.v5.service_client import invoke_envelope
 
 ROLE_CONFIG = "config/intelligence/role_intelligence.json"
 BASE_CAPABILITIES = [
@@ -40,24 +41,51 @@ def _quality_degraded_context(quality: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _source_fusion(payload: dict[str, Any], bootstrap: dict[str, Any]) -> dict[str, Any]:
+    supplied = payload.get("source_fusion")
+    if isinstance(supplied, dict):
+        return supplied
+    try:
+        envelope = invoke_envelope("ingestion", "collect_enrichment", {"bootstrap": bootstrap})
+        data = envelope.get("data")
+        return data if isinstance(data, dict) else {"status": "UNAVAILABLE", "sources": {}}
+    except Exception as exc:
+        return {
+            "status": "UNAVAILABLE",
+            "sources": {},
+            "reason": f"{type(exc).__name__}:{exc}",
+            "governance": {"fail_neutral": True, "missing_enrichment_is_unavailable_not_zero": True},
+        }
+
+
 def _compact_enrichment(enrichment: dict[str, Any]) -> dict[str, Any]:
     advanced = enrichment.get("advanced_stats") if isinstance(enrichment.get("advanced_stats"), dict) else {}
     schedule = enrichment.get("schedule") if isinstance(enrichment.get("schedule"), dict) else {}
     preseason = enrichment.get("preseason") if isinstance(enrichment.get("preseason"), dict) else {}
     current_form = enrichment.get("current_form") if isinstance(enrichment.get("current_form"), dict) else {}
+    fusion = enrichment.get("source_fusion") if isinstance(enrichment.get("source_fusion"), dict) else {}
+    fusion_sources = fusion.get("sources") if isinstance(fusion.get("sources"), dict) else {}
     return {
         "status": enrichment.get("status"), "model": enrichment.get("model"),
-        "advanced_stats": {key: advanced.get(key) for key in ("status", "source", "shots_rows", "match_rows", "coverage_players", "missing_player_behavior")},
+        "advanced_stats": {key: advanced.get(key) for key in ("status", "source", "shots_rows", "match_rows", "coverage_players", "missing_player_behavior", "understat_status", "understat_players")},
         "schedule": {
             "status": schedule.get("status"),
             "european_competitions": sorted((schedule.get("european") or {}).keys()),
             "league_rest_team_count": len(schedule.get("league_rest_days") or {}),
+            "cross_competition_rest_team_count": len(schedule.get("cross_competition_rest_days") or {}),
+            "cross_competition_fixture_count": len(schedule.get("cross_competition_fixtures") or []),
             "domestic_cup_source": (schedule.get("domestic_cup") or {}).get("source"),
             "international_source": (schedule.get("international") or {}).get("source"),
+            "api_football_status": ((fusion_sources.get("api_football") or {}).get("status") if isinstance(fusion_sources.get("api_football"), dict) else None),
             "governance": schedule.get("governance"),
         },
         "preseason": preseason,
         "current_form": {"status": current_form.get("status"), "source": current_form.get("source"), "players": len(current_form.get("players") or {})},
+        "source_fusion": {
+            "status": fusion.get("status"),
+            "understat_status": ((fusion_sources.get("understat") or {}).get("status") if isinstance(fusion_sources.get("understat"), dict) else None),
+            "api_football_status": ((fusion_sources.get("api_football") or {}).get("status") if isinstance(fusion_sources.get("api_football"), dict) else None),
+        },
         "governance": enrichment.get("governance"),
     }
 
@@ -66,13 +94,14 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation not in {"build", "build_full", "status"}:
         raise KeyError(f"unsupported prediction operation: {operation}")
     if operation == "status":
-        return {"status": "ACTIVE", "model_family": "P0_NATIVE_V5_HISTORICAL_PRIOR", "bridge_only": False, "capabilities": _capabilities({"capabilities": ["advanced_stats_sync", "european_congestion", "domestic_cup_congestion", "international_load", "rest_days", "preseason_prior", "current_form"]})}
+        return {"status": "ACTIVE", "model_family": "P0_NATIVE_V5_HISTORICAL_PRIOR", "bridge_only": False, "capabilities": _capabilities({"capabilities": ["advanced_stats_sync", "european_congestion", "domestic_cup_congestion", "international_load", "rest_days", "preseason_prior", "current_form", "source_fusion"]})}
     bootstrap = payload.get("bootstrap")
     fixtures = payload.get("fixtures")
     rules = payload.get("rules")
     if not isinstance(bootstrap, dict) or not isinstance(fixtures, list) or not isinstance(rules, dict):
         raise ValueError("prediction service requires bootstrap, fixtures and truth-service rules")
-    enrichment = build_full_core_enrichment(bootstrap, fixtures)
+    source_fusion = _source_fusion(payload, bootstrap)
+    enrichment = build_full_core_enrichment(bootstrap, fixtures, source_fusion=source_fusion)
     capabilities = _capabilities(enrichment)
     planning_gw = int(payload.get("planning_gw") or 1)
     previous_prior = payload.get("historical_prior") if isinstance(payload.get("historical_prior"), dict) else {}

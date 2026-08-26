@@ -1,0 +1,29 @@
+{
+  "version": "5.0.0-alpha.1",
+  "principles": {
+    "avoid_hardcode": {
+      "required": true,
+      "policy": "Domain rules, thresholds, source authority, feature weights, phase policies, chip rules, finance rules, scoring constants, scheduler cadence, and performance budgets must be config/registry driven unless a literal is structurally intrinsic to the implementation.",
+      "exceptions": "Any unavoidable hardcoded value must be documented with rationale, owner, and test coverage."
+    },
+    "modular_authority": {
+      "required": true,
+      "policy": "Create a dedicated module or registry whenever a domain has its own authority, lifecycle, provenance, or tuning surface. Consumers must depend on that shared authority instead of duplicating logic.",
+      "examples": [
+        "Official FPL rules registry",
+        "source authority registry",
+        "phase authority registry",
+        "finance/sell-value engine",
+        "price trajectory configuration",
+        "projection weights and priors",
+        "DSS and Gate0 registries",
+        "performance budgets"
+      ]
+    },
+    "performance_first": {
+      "required": true,
+      "policy": "Every material V5 change must be evaluated for correctness and processing speed. Prefer single-pass transforms, bounded candidate universes, cached immutable lookups, vectorized/batched operations where useful, and avoid repeated network or file reads.",
+      "acceptance": "Performance regression beyond configured budgets blocks promotion unless explicitly reviewed."
+    }
+  }
+}

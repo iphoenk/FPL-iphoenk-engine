@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_shadow_parity_v1",
+  "required_cycles_before_production_candidate": 3,
+  "critical_dimensions": ["squad_authority", "ruleset", "legality", "manual_lock", "starting_xi", "captaincy", "chip", "price_owned", "report_governance"],
+  "tolerances": {
+    "starting_xi_symmetric_difference_max": 2,
+    "captain_must_match_when_both_lock": true,
+    "critical_legality_mismatch_allowed": false,
+    "manual_lock_mismatch_allowed": false
+  },
+  "promotion": {
+    "beta_requires_ci_green": true,
+    "production_candidate_requires_real_shadow_cycles": true,
+    "production_requires_explicit_manual_promotion": true
+  }
+}

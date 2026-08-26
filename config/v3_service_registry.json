@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.13-historical-priors-decision-first-report",
+  "production_contract": "v3.14-full-dss-watchlist-decision-first-report",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,
@@ -19,14 +19,16 @@
     "historical_prior_missing_evidence_is_never_fabricated": true,
     "two_layer_report_contract": true,
     "user_report_is_decision_first": true,
-    "technical_state_is_appendix_only": true
+    "technical_state_is_appendix_only": true,
+    "full_dss_watchlist_generator": true,
+    "watchlist_requires_postflight_framework_state": true
   },
   "runtime": {
     "max_parallel_services": 5,
     "service_timeout_seconds": 180,
     "http_cache_ttl_seconds": 180,
     "performance_budget_seconds": 45,
-    "performance_target": "preserve sub-45-second runtime while adding historical priors, prediction quality and decision-first reporting"
+    "performance_target": "preserve sub-45-second runtime while adding full-universe DSS watchlist screening"
   },
   "services": {
     "collector": {
@@ -151,9 +153,23 @@
         {"module": "src.engines.decision_quality_overlay", "args": []}
       ]
     },
-    "reporting": {
+    "watchlist": {
       "stage": "decision-output",
       "depends_on": ["governance"],
+      "critical": true,
+      "isolated": true,
+      "inputs": [
+        "latest.json", "team.json", "projections.json", "package_optimizer.json", "prices.json",
+        "price_alerts.json", "framework_health.json", "dss_watchlist.json"
+      ],
+      "commands": [{"module": "src.engines.dss_watchlist", "args": []}],
+      "artifacts": ["dss_watchlist.json"],
+      "latest_keys": ["dss_watchlist_summary"],
+      "latest_file_keys": ["dss_watchlist"]
+    },
+    "reporting": {
+      "stage": "decision-output",
+      "depends_on": ["watchlist"],
       "critical": true,
       "isolated": true,
       "inputs": [

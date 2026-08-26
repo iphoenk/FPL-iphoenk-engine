@@ -1,0 +1,7 @@
+{
+  "request_id": "bootstrap",
+  "requested_at": null,
+  "requested_by": "manual_or_chat",
+  "request_note": "Fresh team snapshot on demand",
+  "include_v5_beta_overlay": false
+}

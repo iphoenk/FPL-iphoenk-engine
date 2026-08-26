@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "policy_id": "deadline_aware_refresh_v1",
+  "live_interval_minutes": 1,
+  "default_interval_minutes": 60,
+  "deadline_windows": [
+    {"max_hours": 1, "interval_minutes": 10},
+    {"max_hours": 4, "interval_minutes": 15},
+    {"max_hours": 24, "interval_minutes": 30}
+  ],
+  "always_on_interval_below_minutes": 15
+}

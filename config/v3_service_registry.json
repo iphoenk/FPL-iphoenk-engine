@@ -206,7 +206,7 @@
       ],
       "artifacts": [
         "user_report.json", "decision_brief.json", "deep_review_payload.json", "dss_watchlist_summary.json",
-        "official_detail_owned.json", "official_detail_watchlist.json"
+        "official_detail_owned.json", "official_detail_watchlist.json", "report_artifact_registry.json"
       ],
       "latest_keys": ["report_serving"],
       "latest_file_keys": [

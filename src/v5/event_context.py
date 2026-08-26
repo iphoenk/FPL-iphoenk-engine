@@ -57,12 +57,29 @@ def build_event_context(bootstrap: dict, *, now: datetime | None = None) -> Even
     planning_deadline = planning.get(flags["deadline"]) if planning else None
     submitted = current or last
     scoring = current
-    live_started = bool(current and not current.get(flags["finished"]) and current_deadline and current_time >= current_deadline)
+    live_started = bool(
+        current
+        and not current.get(flags["finished"])
+        and current_deadline
+        and current_time >= current_deadline
+    )
+
+    # A finished current GW must not force POST_GW when a future planning GW
+    # already exists. Between gameweeks the operational phase is PRE_DEADLINE
+    # for the next deadline, so the latest user lock/authenticated draft remains
+    # authoritative for squad, lineup, captaincy and chip planning.
+    planning_is_finished_current = bool(
+        planning
+        and current
+        and int(planning.get("id") or -1) == int(current.get("id") or -2)
+        and current.get(flags["finished"])
+        and not nxt
+    )
     phase = resolve_phase(
         deadline_time=planning_deadline,
         now=current_time,
         live_started=live_started,
-        finished=bool(current and current.get(flags["finished"])),
+        finished=planning_is_finished_current,
     )
     return EventContext(
         current_gw=int(current["id"]) if current else None,

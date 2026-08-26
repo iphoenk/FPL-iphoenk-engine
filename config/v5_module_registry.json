@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "policy": "Every business capability has exactly one bounded-context microservice owner. Cross-service calls use versioned contracts; no service may import another service's business implementation.",
   "modules": {
     "public_api": {"plane":"truth","entrypoint":"src.v5.public_api","config":"config/v5_public_api_registry.json","status":"ACTIVE"},
@@ -27,10 +27,12 @@
     "challenger_scorecard": {"plane":"evaluation","entrypoint":"src.v5.evaluation.core","config":"config/intelligence/challenger_registry.json","status":"ACTIVE_ALPHA"},
 
     "package_optimizer": {"plane":"decision","entrypoint":"src.v5.decision.package_optimizer","config":"config/intelligence/package_optimizer.json","status":"ACTIVE_ALPHA"},
-    "dss_core": {"plane":"decision","entrypoint":"registry-driven","config":"config/dss_core_registry.json","status":"ACTIVE"},
-    "dss_extensions": {"plane":"decision","entrypoint":"registry-driven","config":"config/dss_extension_registry.json","status":"ACTIVE"},
+    "lineup_optimizer": {"plane":"decision","entrypoint":"src.v5.decision.lineup_optimizer","config":"config/v5_decision_registry.json","status":"ACTIVE_ALPHA"},
+    "decision_trace": {"plane":"decision","entrypoint":"src.v5.decision.decision_trace","config":"config/v5_decision_registry.json","status":"ACTIVE_ALPHA"},
+    "dss_core": {"plane":"decision","entrypoint":"src.v5.decision.dss_evaluator","config":"config/dss_core_registry.json","status":"ACTIVE"},
+    "dss_extensions": {"plane":"decision","entrypoint":"src.v5.decision.dss_evaluator","config":"config/dss_extension_registry.json","status":"ACTIVE"},
 
-    "gate0": {"plane":"governance","entrypoint":"src.v5.governance.core","config":"config/gate0_registry.json","status":"ACTIVE_ALPHA"},
+    "gate0": {"plane":"governance","entrypoint":"src.v5.governance.gate0","config":"config/v5_gate0_policy_registry.json","status":"ACTIVE_ALPHA"},
     "enhancement_layers": {"plane":"governance","entrypoint":"src.v5.governance.core","config":"config/enhancement_layers_registry.json","status":"ACTIVE_ALPHA"},
     "framework_health": {"plane":"governance","entrypoint":"src.v5.governance.core","config":"config/v5_acceptance_registry.json","status":"ACTIVE_ALPHA"},
 

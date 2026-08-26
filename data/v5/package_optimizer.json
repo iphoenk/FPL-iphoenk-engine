@@ -3546,7 +3546,7 @@
     ],
     "reasons_against": [
       "8 critical DSS capabilities remain PARTIAL",
-      "market timing context contains 34 active price alerts"
+      "market timing context contains 35 active price alerts"
     ],
     "evidence": [
       {
@@ -3645,7 +3645,7 @@
     "structural_fit"
   ],
   "price_context": {
-    "alert_count": 34
+    "alert_count": 35
   },
   "governance": {
     "candidate_generation_only": true,

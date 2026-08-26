@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T08:42:31.393205+00:00",
+  "generated_at": "2026-08-26T09:03:52.166062+00:00",
   "schema_version": 513,
   "model_version": "player_projection_v5_historical_prior",
   "ruleset_id": "FPL_2026_27",
@@ -17382,7 +17382,7 @@
       "position": "MID",
       "now_cost": 65,
       "status": "a",
-      "ownership_pct": 1.9,
+      "ownership_pct": 1.8,
       "current_season": {
         "starts": 0,
         "minutes": 14
@@ -23403,7 +23403,7 @@
       "position": "DEF",
       "now_cost": 45,
       "status": "a",
-      "ownership_pct": 11.4,
+      "ownership_pct": 11.3,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -23872,7 +23872,7 @@
       "position": "MID",
       "now_cost": 70,
       "status": "d",
-      "ownership_pct": 3.2,
+      "ownership_pct": 3.1,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -55308,7 +55308,7 @@
       "position": "DEF",
       "now_cost": 45,
       "status": "a",
-      "ownership_pct": 6.2,
+      "ownership_pct": 6.3,
       "current_season": {
         "starts": 1,
         "minutes": 75
@@ -70107,7 +70107,7 @@
       "position": "MID",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 2.0,
+      "ownership_pct": 2.1,
       "current_season": {
         "starts": 1,
         "minutes": 63
@@ -164536,7 +164536,7 @@
       "position": "DEF",
       "now_cost": 40,
       "status": "a",
-      "ownership_pct": 2.3,
+      "ownership_pct": 2.4,
       "current_season": {
         "starts": 1,
         "minutes": 63
@@ -221964,7 +221964,7 @@
       "position": "MID",
       "now_cost": 65,
       "status": "d",
-      "ownership_pct": 6.6,
+      "ownership_pct": 6.5,
       "current_season": {
         "starts": 1,
         "minutes": 62

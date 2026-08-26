@@ -29,6 +29,10 @@ BASE_CAPABILITIES = [
     "price_value",
     "ownership_context",
     "bonus_route",
+    "advanced_stats_integration",
+    "sustainability",
+    "team_defensive_risk",
+    "regression_risk",
 ]
 
 

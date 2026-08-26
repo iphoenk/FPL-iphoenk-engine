@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "model_id": "v3_dss_operational_evidence_v1",
+  "policy": {
+    "module_health_means_evaluator_executed": true,
+    "signal_availability_is_separate_from_module_health": true,
+    "missing_external_evidence_is_never_fabricated": true,
+    "safe_fallback_must_be_explicit": true,
+    "active_requires_nonempty_evidence": true,
+    "strict_postflight_requires_all_dss_active": true
+  },
+  "coverage": {
+    "minimum_player_ratio": 0.95
+  },
+  "capabilities": {
+    "tactical_role": {"owner":"projection","evaluator":"projection_role_proxy","fallback":"xMins/current-and-historical-usage proxy; no unsupported tactical-role claim"},
+    "system_fit": {"owner":"projection","evaluator":"projection_role_proxy","fallback":"xMins/usage proxy; no unsupported formation-role claim"},
+    "rotation_competition": {"owner":"projection","evaluator":"projection_role_proxy","fallback":"bench/DNP distribution proxy for competition and rotation"},
+    "set_piece_role": {"owner":"projection","evaluator":"optional_player_role","keys":["set_piece_share","set_piece_role"],"fallback":"neutral set-piece adjustment when player-specific role evidence is unavailable"},
+    "penalty_role": {"owner":"projection","evaluator":"optional_player_role","keys":["penalty_share","penalty_role"],"fallback":"neutral penalty adjustment when player-specific role evidence is unavailable"},
+    "sustainability": {"owner":"projection","evaluator":"projection_rates","required_rate_fields":["xg90","xa90"],"fallback":"shrunk rate bundle with explicit prior provenance"},
+    "bonus_route": {"owner":"projection","evaluator":"projection_rates","required_rate_fields":["bonus90"],"fallback":"shrunk bonus-rate estimate; Official bonus remains scoring authority"},
+    "european_congestion": {"owner":"projection","evaluator":"neutral_schedule_guard","fallback":"congestion_factor=1.0 when no verified European schedule signal is integrated"},
+    "domestic_cup_congestion": {"owner":"projection","evaluator":"neutral_schedule_guard","fallback":"congestion_factor=1.0 when no verified domestic-cup schedule signal is integrated"},
+    "international_load": {"owner":"projection","evaluator":"neutral_schedule_guard","fallback":"congestion_factor=1.0 when no verified international-load signal is integrated"},
+    "rest_days": {"owner":"team_strength","evaluator":"fixture_schedule","fallback":"fixture ordering retained; no unsupported fatigue penalty when kickoff evidence is insufficient"},
+    "preseason_prior": {"owner":"projection","evaluator":"optional_prior","fallback":"historical/current-season/position prior only; preseason signal is neutral when unavailable"},
+    "historical_prior": {"owner":"historical_prior","evaluator":"historical_context","fallback":"position prior for unmatched players; missing player history is never fabricated"},
+    "regression_risk": {"owner":"prediction_quality","evaluator":"prediction_quality","fallback":"small-sample and uncertainty guards remain active before settled calibration data exists"},
+    "price_value": {"owner":"projection","evaluator":"price_value","fallback":"Official current price divided against governed multi-GW projection"},
+    "ownership_context": {"owner":"projection","evaluator":"ownership_context","fallback":"Official selected-by percentage; EO is not invented when unavailable"},
+    "learning_loop": {"owner":"prediction_evaluation","evaluator":"learning_loop","fallback":"ARMED_NO_SETTLED_SAMPLE until a reconciled post-GW sample exists"},
+    "bench_utility": {"owner":"lineup_governance","evaluator":"lineup_output","fallback":"governed bench ordering and autosub utility"},
+    "captaincy": {"owner":"lineup_governance","evaluator":"lineup_output","fallback":"governed captain safe-pool with DNP guard"},
+    "team_cluster_penalty": {"owner":"package_optimizer","evaluator":"package_guardrail","guardrail":"team_cluster_penalty_enabled"},
+    "early_season_change_cap": {"owner":"package_optimizer","evaluator":"package_guardrail","guardrail":"early_season_change_cap_enabled"}
+  }
+}

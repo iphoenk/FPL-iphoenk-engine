@@ -21,8 +21,8 @@ def _assert_framework_health() -> tuple[dict, dict]:
     post = _load("framework_health_v4.json")
 
     for obj, phase in ((pre, "preflight"), (post, "postflight")):
-        assert int(obj.get("schema_version", 0)) >= 470, obj
-        assert str(obj.get("engine", "")).startswith("v4.7-framework-health-prediction-quality-probes"), obj
+        assert int(obj.get("schema_version", 0)) >= 471, obj
+        assert str(obj.get("engine", "")).startswith("v4.7.1-framework-health-correctness-probes"), obj
         assert obj.get("phase") == phase, obj
         assert obj.get("registry_integrity") is True, obj
         assert obj.get("overall") in {"GREEN", "AMBER"}, obj
@@ -52,12 +52,14 @@ def _assert_framework_health() -> tuple[dict, dict]:
     assert governance.get("raw_optimizer_is_not_final_decision") is True
     assert governance.get("gate0_fail_blocks_go") is True
 
-    # V4.7 must prove the upstream prediction inputs are consumed, not merely synced.
+    # V4.7.1 distinguishes implemented evidence from inferred or fallback data.
     core = {row["id"]: row for row in post["dss_core"]["items"]}
-    for module_id in ("DSS-05", "DSS-09", "DSS-10", "DSS-11", "DSS-12", "DSS-13", "DSS-24", "DSS-35"):
+    for module_id in ("DSS-05", "DSS-35"):
         assert core[module_id]["status"] == "ACTIVE", core[module_id]
+    for module_id in ("DSS-09", "DSS-10", "DSS-11", "DSS-12", "DSS-13", "DSS-24"):
+        assert core[module_id]["status"] == "PARTIAL", core[module_id]
     enhancements = {row["id"]: row for row in post["enhancements"]["items"]}
-    assert enhancements["ENH-01"]["status"] == "ACTIVE", enhancements["ENH-01"]
+    assert enhancements["ENH-01"]["status"] == "PARTIAL", enhancements["ENH-01"]
     assert post.get("overall") == "AMBER", post.get("overall")
     assert post.get("go_allowed") is False, post
 
@@ -79,10 +81,11 @@ def run() -> dict:
     predictions = _load("predictions_v4.json")
     players = predictions.get("players", [])
     coverage = predictions.get("input_coverage", {})
-    assert int(predictions.get("schema_version", 0)) >= 470
-    assert str(predictions.get("model_version", "")).startswith("v4.7-prediction-quality")
+    assert int(predictions.get("schema_version", 0)) >= 471
+    assert str(predictions.get("model_version", "")).startswith("v4.7.1-correctness-hotfix")
     assert predictions.get("point_in_time") is True and len(players) >= 500, predictions
     assert coverage.get("advanced_matched", 0) > 0 and coverage.get("last_season_matched", 0) > 0, coverage
+    assert 0 <= coverage.get("advanced_materially_distinct", -1) <= coverage.get("advanced_matched", 0), coverage
 
     wc = _load("wc_decision_v4.json")
     assert int(wc.get("schema_version", 0)) >= 464, wc
@@ -151,6 +154,8 @@ def run() -> dict:
     assert timings.get("total_pipeline_ms", 0) > 0
 
     all_x: list[float] = []
+    strong_direct_evidence: list[float] = []
+    no_direct_evidence: list[float] = []
     for row in players:
         assert len(row.get("fixtures", [])) <= 15 and row.get("xpts_5", 0) >= 0
         for fx in row.get("fixtures", []):
@@ -163,12 +168,30 @@ def run() -> dict:
             assert fx["lower80"] <= x <= fx["upper80"]
             calibration = fx.get("calibration", {})
             provenance = fx.get("provenance", {})
-            for field in ("nailed_prior", "competition_pressure", "set_piece_share", "penalty_share", "last_season_weight", "opponent_defence_resistance"):
+            for field in ("nailed_prior", "current_start_rate", "current_minutes_rate", "competition_pressure", "set_piece_order_weight", "penalty_order_weight", "last_season_weight", "opponent_defence_resistance"):
                 assert field in calibration, (row.get("element"), field)
-            assert provenance.get("xmins_prior_source") and provenance.get("set_piece_source") == "official_fpl_bootstrap_orders"
+            assert provenance.get("xmins_prior_source")
+            assert provenance.get("set_piece_source") == "official_fpl_bootstrap_orders_inferred_metadata"
+            assert provenance.get("role_scoring_mode") == "metadata_only_no_double_count"
+            assert fx["components"].get("set_piece_penalty_adjustment") == 0
             assert str(provenance.get("opponent_defence_source", "")).startswith("official_fpl_")
             xm = fx["xmins"]
             assert abs(xm["start_probability"] + xm["bench_probability"] + xm["dnp_probability"] - 1) < 0.002
+        if row.get("fixtures"):
+            calibration = row["fixtures"][0]["calibration"]
+            xm = row["fixtures"][0]["xmins"]
+            priors = row.get("priors") or {}
+            if xm.get("availability_probability", 0) >= .99 and calibration.get("nailed_prior", 0) >= .8 and calibration.get("current_start_rate", 0) >= .8:
+                strong_direct_evidence.append(xm["start_probability"])
+            if (
+                xm.get("availability_probability", 0) >= .99
+                and not priors.get("prior_season_available")
+                and calibration.get("current_start_rate", 0) == 0
+                and calibration.get("current_minutes_rate", 0) == 0
+            ):
+                no_direct_evidence.append(xm["expected_minutes"])
+    assert strong_direct_evidence and min(strong_direct_evidence) >= .75, strong_direct_evidence
+    assert no_direct_evidence and max(no_direct_evidence) <= 22, no_direct_evidence
     assert all_x and statistics.median(all_x) < 8
     assert sum(x > 15 for x in all_x) / len(all_x) < 0.03
 
@@ -185,7 +208,7 @@ def run() -> dict:
         "captain": lineup["captain"]["name"],
         "pipeline_ms": timings["total_pipeline_ms"],
     }
-    print("V4.7 PREDICTION QUALITY + TRUTHFUL HEALTH QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.7.1 CORRECTNESS + TRUTHFUL HEALTH QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

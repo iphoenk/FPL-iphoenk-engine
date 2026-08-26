@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.7
+# FPL iphoenk Engine V4.7.1
 
 A production-oriented personal FPL data platform.
 
@@ -31,9 +31,9 @@ Implemented:
 Working base:
 - official-ID integration of Core Insights players, shots and player-match stats
 - dedicated prior-season vaastav snapshot with stable-code reconciliation
-- official set-piece and penalty-order role shares
-- venue-normalized dynamic opponent defensive resistance
-- xMins starter-security, positional-competition and rotation priors
+- official set-piece and penalty orders as metadata, without double-counting xG/xA
+- neutral opponent-defence scoring fallback when dedicated defence splits are unavailable
+- direct-evidence xMins priors with broad-position competition retained as diagnostic only
 - advanced-stat CLI
 - fixture model
 - interpretable xMins/xPts scaffold
@@ -94,9 +94,12 @@ FPL-Core-Insights and vaastav are community-maintained. They are useful enrichme
 
 GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy `live_service.py` to an always-on host for near-live polling.
 
-## V4.7 prediction-quality release
+## V4.7.1 correctness hotfix
 
 - V4.6.4 remains the sell-cost and truthful-health correctness baseline.
-- V4.7 connects richer xMins priors, advanced stats, set pieces, penalties, last-season priors and dynamic opponent defence to projection output.
-- Every promoted framework capability is backed by output-field and provenance probes.
+- V4.7.1 removes the mechanical xMins floor and prevents broad FPL positions from suppressing nailed starters.
+- Set-piece and penalty taker orders remain visible metadata but add no blanket scoring multiplier because current xG/xA already contains those events.
+- Overall team strength is diagnostic-only when official defence splits are zero, preventing duplicate fixture adjustment through FDR.
+- Advanced-data health reports materially distinct enrichment separately from matched records.
+- Role competition, empirical set-piece shares, weak advanced enrichment and opponent-defence fallback remain truthfully `PARTIAL`.
 - Remaining unrelated framework debt stays `PARTIAL`, so health may remain `AMBER` and unqualified `GO` remains blocked while governed recommendations may still be produced.

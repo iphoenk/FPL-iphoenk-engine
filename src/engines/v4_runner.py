@@ -23,24 +23,39 @@ def _strength_scale(value, values):
 
 
 def opponent_defence_ratings(teams):
-    # The official API can expose zeroed attack/defence splits early in a season.
-    # In that case its venue-specific overall band is the truthful dynamic fallback.
-    def metric(team, venue):
-        defence = f(team.get(f"strength_defence_{venue}"))
-        return defence if defence > 0 else f(team.get(f"strength_overall_{venue}"), 3)
-
-    home_values = [metric(team, "home") for team in teams.values()]
-    away_values = [metric(team, "away") for team in teams.values()]
-    return {
-        team_id: {
-            "home": _strength_scale(metric(team, "home"), home_values),
-            "away": _strength_scale(metric(team, "away"), away_values),
-            "raw_home": metric(team, "home"),
-            "raw_away": metric(team, "away"),
-            "metric": "defence" if f(team.get("strength_defence_home")) > 0 else "overall_fallback",
-        }
-        for team_id, team in teams.items()
+    # Overall strength substantially overlaps official FDR. When the dedicated
+    # defence split is zeroed, retain overall strength for diagnostics only and
+    # use a neutral scoring value to avoid counting the same fixture signal twice.
+    venue_values = {
+        venue: [f(team.get(f"strength_defence_{venue}")) for team in teams.values()]
+        for venue in ("home", "away")
     }
+    defence_ready = {
+        venue: sum(value > 0 for value in values) >= max(4, len(teams) // 2)
+        for venue, values in venue_values.items()
+    }
+    overall_values = {
+        venue: [f(team.get(f"strength_overall_{venue}"), 3) for team in teams.values()]
+        for venue in ("home", "away")
+    }
+    ratings = {}
+    for team_id, team in teams.items():
+        row = {}
+        modes = []
+        for venue in ("home", "away"):
+            raw_defence = f(team.get(f"strength_defence_{venue}"))
+            raw_overall = f(team.get(f"strength_overall_{venue}"), 3)
+            if defence_ready[venue] and raw_defence > 0:
+                row[venue] = _strength_scale(raw_defence, venue_values[venue])
+                modes.append("defence")
+            else:
+                row[venue] = 0.5
+                modes.append("overall_fallback_diagnostic_only")
+            row[f"raw_{venue}"] = raw_defence if raw_defence > 0 else None
+            row[f"diagnostic_{venue}"] = _strength_scale(raw_overall, overall_values[venue])
+        row["metric"] = "defence" if modes == ["defence", "defence"] else "overall_fallback_diagnostic_only"
+        ratings[team_id] = row
+    return ratings
 
 
 def fixture_map(fixtures, team_id, defence_ratings=None, n=15):
@@ -61,7 +76,9 @@ def fixture_map(fixtures, team_id, defence_ratings=None, n=15):
             "difficulty": fixture.get("team_h_difficulty") if home else fixture.get("team_a_difficulty"),
             "opponent_defence": rating.get(opponent_venue, 0.5),
             "opponent_defence_raw": rating.get(f"raw_{opponent_venue}"),
-            "opponent_defence_source": f"official_fpl_{rating.get('metric', 'venue_strength')}_venue_normalized",
+            "opponent_defence_diagnostic": rating.get(f"diagnostic_{opponent_venue}"),
+            "opponent_defence_source": f"official_fpl_{rating.get('metric', 'unavailable')}",
+            "opponent_defence_scoring_mode": "dynamic" if rating.get("metric") == "defence" else "neutral_fallback",
         })
     return out[:n]
 
@@ -78,12 +95,16 @@ def set_piece_priors(player):
     penalty_order = int(f(player.get("penalties_order")))
     penalty = {1: 1.0, 2: 0.25, 3: 0.08}.get(penalty_order, 0.02 if penalty_order > 0 else 0.0)
     return {
-        "set_piece_share": clamp(0.65 * corners + 0.35 * direct),
-        "penalty_share": clamp(penalty),
+        # Orders identify likely takers but are not empirical event shares.
+        "set_piece_share": None,
+        "penalty_share": None,
+        "set_piece_order_weight": clamp(0.65 * corners + 0.35 * direct),
+        "penalty_order_weight": clamp(penalty),
         "corners_order": int(f(player.get("corners_and_indirect_freekicks_order"))) or None,
         "direct_freekicks_order": int(f(player.get("direct_freekicks_order"))) or None,
         "penalties_order": penalty_order or None,
-        "source": "official_fpl_bootstrap_orders",
+        "source": "official_fpl_bootstrap_orders_inferred_metadata",
+        "role_data_mode": "inferred_order_metadata_only",
     }
 
 
@@ -134,7 +155,10 @@ def minutes_contexts(elements, last_season, finished_events):
     for player in elements:
         previous = last_season.get(player["id"], {})
         pos = int(player.get("element_type", 3))
-        current_rate = clamp(f(player.get("starts")) / max(1, finished_events))
+        current_starts = f(player.get("starts"))
+        current_minutes = f(player.get("minutes"))
+        current_rate = clamp(current_starts / max(1, finished_events))
+        current_minutes_rate = clamp(current_minutes / (90 * max(1, finished_events)))
         price_role = clamp((f(player.get("now_cost")) / 10 - 4) / 8)
         if previous:
             nailed = 0.65 * f(previous.get("start_rate")) + 0.35 * current_rate
@@ -151,15 +175,47 @@ def minutes_contexts(elements, last_season, finished_events):
             )
         )
         competition = clamp(max(0.0, credible_peers - (typical_slots[pos] - 1)) / max(1.0, typical_slots[pos]))
-        rotation = clamp(max(0.0, credible_by_team[player.get("team")] - 11) / 20, 0.0, 0.3)
+        squad_depth = clamp(max(0.0, credible_by_team[player.get("team")] - 11) / 20, 0.0, 0.3)
+        prior_start_minutes = f(previous.get("avg_minutes_when_start"), 0)
+        current_start_minutes = current_minutes / current_starts if current_starts > 0 else 0
+        if prior_start_minutes and current_start_minutes:
+            average_start_minutes = 0.7 * prior_start_minutes + 0.3 * current_start_minutes
+        elif prior_start_minutes:
+            average_start_minutes = prior_start_minutes
+        elif current_start_minutes:
+            average_start_minutes = 0.3 * current_start_minutes + 0.7 * 72
+        else:
+            average_start_minutes = 68
         contexts[player["id"]] = {
             "nailed_prior": clamp(nailed),
+            "current_start_rate": current_rate,
+            "current_minutes_rate": current_minutes_rate,
+            "last_season_start_rate": f(previous.get("start_rate")),
+            "prior_season_available": bool(previous),
+            "sub_appearance_signal": float(current_starts == 0 and current_minutes > 0),
             "competition_pressure": competition,
-            "manager_rotation_rate": rotation,
-            "avg_minutes_when_start": f(previous.get("avg_minutes_when_start"), 78 if current_rate >= 0.5 else 68),
+            "competition_source": "broad_fpl_position_diagnostic_only",
+            "competition_adjustment_applied": False,
+            "squad_depth_pressure": squad_depth,
+            "squad_depth_source": "credible_squad_count_diagnostic_only",
+            "avg_minutes_when_start": average_start_minutes,
             "xmins_prior_source": source,
         }
     return contexts
+
+
+def advanced_materially_distinct(player, advanced):
+    if not advanced or "fpl_core_insights:playermatchstats" not in advanced.get("sources", []):
+        return False
+    minutes = max(1.0, f(player.get("minutes")))
+    official_xg90 = f(player.get("expected_goals")) * 90 / minutes
+    official_xa90 = f(player.get("expected_assists")) * 90 / minutes
+    official_def90 = f(player.get("defensive_contribution")) * 90 / minutes
+    return (
+        abs(f(advanced.get("xg_per90")) - official_xg90) > 0.01
+        or abs(f(advanced.get("xa_per90")) - official_xa90) > 0.01
+        or abs(f(advanced.get("defensive_contribution_per90")) - official_def90) > 0.1
+    )
 
 
 def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
@@ -174,10 +230,13 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
     xmins_context = minutes_contexts(elements, last_season, max(1, finished_events))
     defence_ratings = opponent_defence_ratings(teams)
     rows = []
+    materially_distinct = 0
     for player in elements:
         priors = player_priors(player, last_season.get(player["id"]))
         role = set_piece_priors(player)
         player_advanced = advanced.get(player["id"])
+        material_advanced = advanced_materially_distinct(player, player_advanced)
+        materially_distinct += int(material_advanced)
         fixtures_for_player = fixture_map(fixtures, player["team"], defence_ratings, 15)
         context = {
             "team_attack": strengths.get(player["team"], {}).get("attack", 1),
@@ -185,6 +244,7 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
             "point_in_time": generated_at,
             "advanced_source": "+".join((player_advanced or {}).get("sources", [])) or "official_fpl_current_state",
             "advanced_identity_match": (player_advanced or {}).get("identity_match"),
+            "advanced_materially_distinct": material_advanced,
             "xg90_prior": priors["xg90_prior"],
             "xa90_prior": priors["xa90_prior"],
             "premium_prior": priors["premium_prior"],
@@ -193,6 +253,8 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
             "last_season_source": priors["last_season_source"],
             "set_piece_share": role["set_piece_share"],
             "penalty_share": role["penalty_share"],
+            "set_piece_order_weight": role["set_piece_order_weight"],
+            "penalty_order_weight": role["penalty_order_weight"],
             "set_piece_source": role["source"],
             **xmins_context[player["id"]],
         }
@@ -206,13 +268,14 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
         rows.append(row)
     rows.sort(key=lambda row: row["xpts_5"], reverse=True)
     return {
-        "schema_version": 470,
-        "model_version": "v4.7-prediction-quality",
+        "schema_version": 471,
+        "model_version": "v4.7.1-correctness-hotfix",
         "generated_at": generated_at,
         "point_in_time": True,
         "input_coverage": {
             "players": len(elements),
             "advanced_matched": len(advanced),
+            "advanced_materially_distinct": materially_distinct,
             "last_season_matched": len(last_season),
             **enrichment["meta"],
         },

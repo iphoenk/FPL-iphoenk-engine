@@ -85,7 +85,9 @@ def _probe_availability() -> tuple[bool, dict]:
 def _probe_xmins() -> tuple[bool, dict]:
     checked = 0
     enriched = 0
-    for player in _predictions()[:50]:
+    strong_evidence = []
+    no_evidence = []
+    for player in _predictions():
         for fixture in (player.get("fixtures") or [])[:3]:
             xmins = fixture.get("xmins") or {}
             total = sum(float(xmins.get(key, 0)) for key in ("start_probability", "bench_probability", "dnp_probability"))
@@ -95,11 +97,28 @@ def _probe_xmins() -> tuple[bool, dict]:
             calibration = fixture.get("calibration") or {}
             provenance = fixture.get("provenance") or {}
             enriched += bool(provenance.get("xmins_prior_source")) and all(
-                key in calibration for key in ("nailed_prior", "competition_pressure", "manager_rotation_rate")
+                key in calibration for key in ("nailed_prior", "current_start_rate", "current_minutes_rate")
             )
-    return checked > 0 and enriched == checked, {
+            if fixture is (player.get("fixtures") or [None])[0] and float(xmins.get("availability_probability", 0)) >= .99:
+                priors = player.get("priors") or {}
+                if float(calibration.get("nailed_prior", 0)) >= .8 and float(calibration.get("current_start_rate", 0)) >= .8:
+                    strong_evidence.append(float(xmins.get("start_probability", 0)))
+                if (
+                    not priors.get("prior_season_available")
+                    and float(calibration.get("current_start_rate", 0)) == 0
+                    and float(calibration.get("current_minutes_rate", 0)) == 0
+                ):
+                    no_evidence.append(float(xmins.get("expected_minutes", 90)))
+    strong_ok = bool(strong_evidence) and min(strong_evidence) >= .75
+    no_evidence_ok = bool(no_evidence) and max(no_evidence) <= 22
+    return checked > 0 and enriched == checked and strong_ok and no_evidence_ok, {
         "fixture_distributions_checked": checked,
         "enriched_prior_distributions": enriched,
+        "strong_direct_evidence_players": len(strong_evidence),
+        "strong_direct_evidence_min_pstart": round(min(strong_evidence), 4) if strong_evidence else None,
+        "no_evidence_players": len(no_evidence),
+        "no_evidence_max_xmins": round(max(no_evidence), 1) if no_evidence else None,
+        "direct_evidence_sanity": strong_ok and no_evidence_ok,
     }
 
 
@@ -128,31 +147,62 @@ def _probe_advanced_sync() -> tuple[bool, dict]:
 
 
 def _probe_advanced_integration() -> tuple[bool, dict]:
-    fixtures = [fixture for player in _predictions()[:100] for fixture in (player.get("fixtures") or [])[:1]]
+    obj = read_json(DATA / "predictions_v4.json", {})
+    players = list(obj.get("players") or [])
+    fixtures = [fixture for player in players for fixture in (player.get("fixtures") or [])[:1]]
     sources = {str((fixture.get("provenance") or {}).get("advanced_source")) for fixture in fixtures}
-    integrated = sum(
+    consumed = sum(
         "fpl_core_insights:" in str((fixture.get("provenance") or {}).get("advanced_source"))
         and (fixture.get("provenance") or {}).get("advanced_identity_match") == "official_element_id"
         for fixture in fixtures
     )
-    return integrated > 0, {"prediction_sources": sorted(sources), "integrated_fixture_samples": integrated, "synced_but_not_consumed": integrated == 0}
+    material = int((obj.get("input_coverage") or {}).get("advanced_materially_distinct", 0))
+    material_ratio = material / max(1, len(players))
+    # ACTIVE requires broad independent enrichment, not merely a matching source
+    # label whose values mirror the official current-season fields.
+    active = consumed > 0 and material_ratio >= .25
+    return active, {
+        "prediction_sources": sorted(sources),
+        "consumed_players": consumed,
+        "materially_distinct_players": material,
+        "materially_distinct_ratio": round(material_ratio, 4),
+        "active_minimum_ratio": .25,
+        "synced_but_weakly_enriched": consumed > 0 and not active,
+    }
 
 
 def _probe_role_share(field: str, source_field: str = "set_piece_source") -> tuple[bool, dict]:
     fixtures = [fixture for player in _predictions() for fixture in (player.get("fixtures") or [])[:1]]
     covered = sum(field in (fixture.get("calibration") or {}) for fixture in fixtures)
-    assigned = sum(float((fixture.get("calibration") or {}).get(field, 0)) > 0 for fixture in fixtures)
-    sourced = sum((fixture.get("provenance") or {}).get(source_field) == "official_fpl_bootstrap_orders" for fixture in fixtures)
-    ok = bool(fixtures) and covered == len(fixtures) and sourced == len(fixtures) and assigned > 0
-    return ok, {"fixtures": len(fixtures), "covered": covered, "assigned_roles": assigned, "official_source": sourced}
+    empirical = sum((fixture.get("calibration") or {}).get(field) is not None for fixture in fixtures)
+    inferred = sum((fixture.get("provenance") or {}).get(source_field) == "official_fpl_bootstrap_orders_inferred_metadata" for fixture in fixtures)
+    metadata_only = sum((fixture.get("provenance") or {}).get("role_scoring_mode") == "metadata_only_no_double_count" for fixture in fixtures)
+    ok = bool(fixtures) and empirical == len(fixtures) and metadata_only == 0
+    return ok, {
+        "fixtures": len(fixtures),
+        "covered": covered,
+        "empirical_shares": empirical,
+        "inferred_order_metadata": inferred,
+        "metadata_only_no_double_count": metadata_only,
+        "reason": "official taker order is not an empirical event share" if not ok else None,
+    }
 
 
 def _probe_opponent_defence() -> tuple[bool, dict]:
     fixtures = [fixture for player in _predictions() for fixture in (player.get("fixtures") or [])[:3]]
     values = [float((fixture.get("calibration") or {}).get("opponent_defence_resistance")) for fixture in fixtures if (fixture.get("calibration") or {}).get("opponent_defence_resistance") is not None]
-    sourced = sum(str((fixture.get("provenance") or {}).get("opponent_defence_source", "")).startswith("official_fpl_") for fixture in fixtures)
+    dynamic = sum((fixture.get("provenance") or {}).get("opponent_defence_scoring_mode") == "dynamic" for fixture in fixtures)
+    neutral = sum((fixture.get("provenance") or {}).get("opponent_defence_scoring_mode") == "neutral_fallback" for fixture in fixtures)
     distinct = len({round(value, 3) for value in values})
-    return bool(fixtures) and len(values) == len(fixtures) and sourced == len(fixtures) and distinct > 1, {"fixtures": len(fixtures), "covered": len(values), "official_source": sourced, "distinct_ratings": distinct}
+    ok = bool(fixtures) and len(values) == len(fixtures) and dynamic == len(fixtures) and distinct > 1
+    return ok, {
+        "fixtures": len(fixtures),
+        "covered": len(values),
+        "dynamic_defence": dynamic,
+        "neutral_overall_fallback": neutral,
+        "distinct_scoring_ratings": distinct,
+        "reason": "official defence split unavailable; overall strength retained as diagnostic only" if not ok else None,
+    }
 
 
 def _probe_last_season() -> tuple[bool, dict]:
@@ -166,15 +216,18 @@ def _probe_last_season() -> tuple[bool, dict]:
 def _probe_rotation_competition() -> tuple[bool, dict]:
     players = _predictions()
     covered = sum(
-        all(key in (player.get("priors") or {}) for key in ("nailed_prior", "competition_pressure", "manager_rotation_rate", "xmins_prior_source"))
+        all(key in (player.get("priors") or {}) for key in ("nailed_prior", "competition_pressure", "competition_source", "squad_depth_pressure", "xmins_prior_source"))
         for player in players
     )
-    contextual = sum(
-        float((player.get("priors") or {}).get("competition_pressure", 0)) > 0
-        or float((player.get("priors") or {}).get("manager_rotation_rate", 0)) > 0
-        for player in players
-    )
-    return bool(players) and covered == len(players) and contextual > 0, {"players": len(players), "covered": covered, "contextual_adjustments": contextual}
+    applied = sum(bool((player.get("priors") or {}).get("competition_adjustment_applied")) for player in players)
+    diagnostic = sum((player.get("priors") or {}).get("competition_source") == "broad_fpl_position_diagnostic_only" for player in players)
+    return bool(players) and covered == len(players) and applied > 0, {
+        "players": len(players),
+        "covered": covered,
+        "role_matched_adjustments": applied,
+        "broad_position_diagnostics": diagnostic,
+        "reason": "role-matched competition data unavailable; broad FPL position is not applied" if applied == 0 else None,
+    }
 
 
 def _probe_defcon() -> tuple[bool, dict]:
@@ -399,6 +452,8 @@ def _operational_probe(name: str | None, phase: str) -> tuple[str, dict]:
         "current_form": _probe_advanced_sync,
         "multi_horizon": lambda: _probe_horizon("xpts_15"),
     }
+    if name in {"rotation_competition", "opponent_defence_dynamic"}:
+        return _bool_probe(active[name], false_status="PARTIAL")
     if name in active:
         return _bool_probe(active[name])
     if name == "advanced_stats_integration":
@@ -584,8 +639,8 @@ def audit(phase: str = "postflight", strict: bool = False) -> dict[str, Any]:
     recommendation_allowed = overall != "RED" and gate0["pass"]
     go_allowed = overall == "GREEN" and gate0["pass"] and (phase == "preflight" or gate0["counts"].get("DEFERRED", 0) == 0)
     out = {
-        "schema_version": 470,
-        "engine": "v4.7-framework-health-prediction-quality-probes",
+        "schema_version": 471,
+        "engine": "v4.7.1-framework-health-correctness-probes",
         "phase": phase,
         "overall": overall,
         "decision_engine": "HEALTHY" if overall == "GREEN" else "DEGRADED" if overall == "AMBER" else "BLOCKED",

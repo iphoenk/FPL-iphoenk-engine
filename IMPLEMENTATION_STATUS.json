@@ -1,5 +1,5 @@
 {
-  "version": "4.7.0",
+  "version": "4.7.1",
   "P0": {
     "status": "IMPLEMENTED",
     "items": [
@@ -26,10 +26,10 @@
       "fixture model using official FDR fallback",
       "interpretable xPts/xMins projection scaffold",
       "last-season priors blended by stable player code",
-      "advanced xG/xA/DefCon stats consumed by prediction",
-      "official set-piece and penalty orders consumed as role shares",
-      "venue-normalized dynamic opponent defence",
-      "xMins starter, competition and rotation priors",
+      "advanced xG/xA/DefCon stats consumed with material-enrichment coverage",
+      "official set-piece and penalty orders retained as non-scoring metadata",
+      "neutral opponent-defence fallback until dedicated splits are available",
+      "direct-evidence xMins with broad-position competition diagnostic only",
       "advanced stats query CLI",
       "FastAPI live endpoints",
       "SSE live stream",
@@ -46,6 +46,9 @@
       "rank-simulation scaffold"
     ],
     "not_claimed_as_finished": [
+      "empirical set-piece and penalty event shares",
+      "role-matched positional competition data",
+      "dynamic opponent defence while official splits remain unavailable",
       "true overall-rank conversion model",
       "live EO population model",
       "production ML projection model",

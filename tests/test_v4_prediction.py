@@ -1,6 +1,6 @@
 from src.models.v4_prediction import lineup_distribution,project_fixture,project_horizon,workload_factor,defcon_expected_points,rates,fixture_adjustment
 from src.models.v4_calibration import eligible,backtest,champion_gate
-from src.engines.v4_runner import minutes_contexts,opponent_defence_ratings,player_priors,set_piece_priors
+from src.engines.v4_runner import advanced_materially_distinct,minutes_contexts,opponent_defence_ratings,player_priors,set_piece_priors
 from src.models.v4_prediction_inputs import aggregate_advanced,build_last_season_index
 
 def player():return {"id":1,"web_name":"Test","status":"a","minutes":270,"starts":3,"element_type":3,"expected_goals":"0.9","expected_assists":"0.6","bps":45}
@@ -45,26 +45,50 @@ def test_last_season_prior_uses_stable_code_and_is_blended():
  assert idx[1]["identity_match"]=="stable_player_code" and pri["last_season_weight"]==0.65
  assert pri["xg90_prior"]>player_priors(p)["xg90_prior"]
 
-def test_set_piece_and_penalty_orders_feed_projection():
+def test_set_piece_and_penalty_orders_do_not_double_count_existing_xg_xa():
  role=set_piece_priors({"corners_and_indirect_freekicks_order":1,"direct_freekicks_order":1,"penalties_order":1})
- assert role["set_piece_share"]==1 and role["penalty_share"]==1
+ assert role["set_piece_share"] is None and role["penalty_share"] is None
+ assert role["set_piece_order_weight"]==1 and role["penalty_order_weight"]==1
  base=project_fixture(player(),fixture(),{})
- boosted=project_fixture(player(),fixture(),role)
- assert boosted["components"]["attack"]>base["components"]["attack"]
+ metadata=project_fixture(player(),fixture(),role)
+ assert metadata["components"]["attack"]==base["components"]["attack"]
+ assert metadata["components"]["set_piece_penalty_adjustment"]==0
+ assert metadata["provenance"]["role_scoring_mode"]=="metadata_only_no_double_count"
 
 def test_stronger_opponent_defence_reduces_attack_adjustment():
  weak=fixture_adjustment(fixture(),True,1,0.2)
  strong=fixture_adjustment(fixture(),True,1,0.8)
  assert strong<weak
 
-def test_official_overall_strength_is_dynamic_early_season_fallback():
+def test_official_overall_strength_is_diagnostic_only_early_season_fallback():
  teams={1:{"strength_defence_home":0,"strength_defence_away":0,"strength_overall_home":2,"strength_overall_away":2},2:{"strength_defence_home":0,"strength_defence_away":0,"strength_overall_home":5,"strength_overall_away":5}}
  ratings=opponent_defence_ratings(teams)
- assert ratings[2]["home"]>ratings[1]["home"] and ratings[2]["metric"]=="overall_fallback"
+ assert ratings[2]["home"]==ratings[1]["home"]==.5
+ assert ratings[2]["diagnostic_home"]>ratings[1]["diagnostic_home"]
+ assert ratings[2]["metric"]=="overall_fallback_diagnostic_only"
 
-def test_xmins_context_uses_last_season_and_competition_priors():
+def test_xmins_context_uses_direct_evidence_and_does_not_apply_broad_position_competition():
  rows=[player()|{"id":i,"team":1,"element_type":4,"starts":1,"now_cost":80} for i in range(1,5)]
  previous={i:{"starts":30,"start_rate":.79,"avg_minutes_when_start":82} for i in range(1,5)}
  ctx=minutes_contexts(rows,previous,1)
  assert ctx[1]["xmins_prior_source"]=="current_starts+last_season_starts"
  assert ctx[1]["nailed_prior"]>.8 and ctx[1]["competition_pressure"]>0
+ assert ctx[1]["competition_source"]=="broad_fpl_position_diagnostic_only"
+ assert ctx[1]["competition_adjustment_applied"] is False
+ assert lineup_distribution(rows[0],ctx[1])["start_probability"]>=.9
+
+def test_xmins_no_evidence_has_no_mechanical_start_or_bench_floor():
+ p={"id":10,"web_name":"Unknown","status":"a","minutes":0,"starts":0,"element_type":3,"now_cost":45}
+ ctx=minutes_contexts([p],{},1)[10]
+ d=lineup_distribution(p,ctx)
+ assert d["start_probability"]<.1
+ assert d["bench_probability"]<.15
+ assert d["expected_minutes"]<10
+ assert d["dnp_probability"]>.75
+
+def test_advanced_materiality_requires_deep_values_distinct_from_official():
+ p=player()
+ mirrored={"xg_per90":.3,"xa_per90":.2,"defensive_contribution_per90":0,"sources":["fpl_core_insights:players"]}
+ distinct=mirrored|{"xg_per90":.8,"sources":["fpl_core_insights:playermatchstats"]}
+ assert not advanced_materially_distinct(p,mirrored)
+ assert advanced_materially_distinct(p,distinct)

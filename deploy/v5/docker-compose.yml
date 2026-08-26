@@ -12,6 +12,7 @@ services:
       FPL_OIDC_TOKEN_URL: ${FPL_OIDC_TOKEN_URL:-}
       FPL_OIDC_CLIENT_ID: ${FPL_OIDC_CLIENT_ID:-}
       FPL_OIDC_CLIENT_SECRET: ${FPL_OIDC_CLIENT_SECRET:-}
+      API_FOOTBALL_KEY: ${API_FOOTBALL_KEY:-}
     ports: ["8101:8101"]
     healthcheck: &health
       test: ["CMD", "python", "-c", "import os,requests; p=os.environ['V5_SERVICE_PORT']; requests.get(f'http://127.0.0.1:{p}/health', timeout=2).raise_for_status()"]

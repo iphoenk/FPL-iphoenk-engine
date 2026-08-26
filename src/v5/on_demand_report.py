@@ -35,8 +35,22 @@ def _lineup_names(lineup: dict[str, Any]) -> list[str]:
 
 
 def _bench_names(lineup: dict[str, Any]) -> list[str]:
-    rows = lineup.get("bench") or lineup.get("bench_order") or []
-    return [str(row.get("name")) for row in rows if isinstance(row, dict) and row.get("name")]
+    bench = lineup.get("bench")
+    if isinstance(bench, dict):
+        rows: list[dict[str, Any]] = []
+        gk = bench.get("gk")
+        if isinstance(gk, dict):
+            rows.append(gk)
+        order = bench.get("order")
+        if isinstance(order, list):
+            rows.extend(row for row in order if isinstance(row, dict))
+        return [str(row.get("name")) for row in rows if row.get("name")]
+    if isinstance(bench, list):
+        return [str(row.get("name")) for row in bench if isinstance(row, dict) and row.get("name")]
+    legacy = lineup.get("bench_order")
+    if isinstance(legacy, list):
+        return [str(row.get("name")) for row in legacy if isinstance(row, dict) and row.get("name")]
+    return []
 
 
 def build(source_dir: str, output_dir: str, request_config: str, source_sha: str) -> dict[str, Any]:

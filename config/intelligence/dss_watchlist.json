@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "model_id": "full_dss_watchlist_v1",
+  "screening_contract": "FULL_DSS_SCREEN_V1",
+  "max_per_position": 5,
+  "positions": ["GK", "DEF", "MID", "FWD"],
+  "allowed_statuses": ["a", "d"],
+  "admission": {
+    "minimum_start_probability": 0.45,
+    "maximum_dnp_probability": 0.35,
+    "minimum_dimension_coverage": 0.70,
+    "minimum_critical_dimension_score": 0.60,
+    "critical_dimensions": ["role", "xmins", "fixtures_3_5", "underlying", "competition", "price_value", "squad_fit"],
+    "block_on_critical_dss_failure": true,
+    "cap_confidence_when_critical_dss_partial": true
+  },
+  "dimension_weights": {
+    "role": 0.11,
+    "xmins": 0.15,
+    "fixtures_3_5": 0.22,
+    "underlying": 0.11,
+    "system_fit": 0.07,
+    "competition": 0.08,
+    "set_piece_penalty": 0.04,
+    "price_value": 0.10,
+    "squad_fit": 0.12
+  },
+  "ranking_weights": {
+    "short_horizon": 0.20,
+    "primary_horizon": 0.20,
+    "strategic_horizon": 0.05,
+    "xmins_security": 0.15,
+    "role_security": 0.08,
+    "underlying": 0.08,
+    "value": 0.08,
+    "squad_fit": 0.12,
+    "market_overlay": 0.04
+  },
+  "confidence_multiplier": {
+    "HIGH": 1.00,
+    "MEDIUM": 0.96,
+    "LOW": 0.90,
+    "UNKNOWN": 0.88
+  },
+  "evidence_credit": {
+    "SUPPORTED": 1.0,
+    "PROXY": 0.65,
+    "MISSING": 0.0,
+    "NOT_APPLICABLE": 1.0
+  },
+  "lifecycle": {
+    "enabled": true,
+    "labels": ["NEW", "KEEP", "UP", "DOWN", "REMOVE"]
+  },
+  "governance": {
+    "full_universe_screen": true,
+    "exclude_owned_players": true,
+    "latest_gw_is_evidence_not_primary_driver": true,
+    "primary_horizon_gws": [3, 5],
+    "strategic_horizon_gws": [10, 15],
+    "price_is_overlay_not_primary_reason": true,
+    "missing_set_piece_evidence_is_not_fabricated": true,
+    "partial_tactical_role_evidence_must_be_labelled_proxy": true,
+    "package_optimizer_is_structural_fit_evidence_not_final_buy_instruction": true,
+    "all_dss_core_modules_are_traversed_via_framework_registry": true,
+    "all_dss_extensions_are_traversed_via_framework_registry": true
+  }
+}

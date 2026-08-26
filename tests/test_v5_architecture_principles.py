@@ -21,6 +21,29 @@ def test_architecture_principles_are_mandatory():
     assert cfg["principles"]["performance_first"]["required"] is True
 
 
+def test_microservice_transport_resilience_is_registry_driven_and_persistence_safe():
+    architecture = _load("config/v5_architecture_principles.json")["principles"]["microservices"]
+    transport_path = architecture["transport_registry"]
+    transport = _load(transport_path)
+    requirements = set(architecture["requirements"])
+
+    assert "registry-driven retry and circuit-breaker policy" in requirements
+    assert "non-idempotent persistence operations are never automatically retried" in requirements
+    assert "transport retry/circuit observability" in requirements
+    assert transport["connection_pool"]["enabled"] is True
+    assert transport["circuit_breaker"]["enabled"] is True
+    assert transport["retry"]["policies"]["idempotent"]["max_attempts"] >= 2
+    assert transport["retry"]["policies"]["non_idempotent"]["max_attempts"] == 1
+    assert transport["retry"]["operation_policy"]["snapshot.write"] == "non_idempotent"
+    assert transport["retry"]["operation_policy"]["snapshot.snapshot"] == "non_idempotent"
+
+    client_source = (ROOT / "src/v5/service_client.py").read_text(encoding="utf-8")
+    orchestrator_source = (ROOT / "src/v5/services/orchestrator.py").read_text(encoding="utf-8")
+    assert "transport_post" in client_source
+    assert "transport_attempts" in orchestrator_source
+    assert "transport_circuit" in orchestrator_source
+
+
 def test_projection_uses_rules_authority_for_goal_points():
     assert GOAL_POINTS[POSITION_TO_ELEMENT_TYPE["GK"]] == 10
 

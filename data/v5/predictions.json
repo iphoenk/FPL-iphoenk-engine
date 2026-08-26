@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T21:42:17.612399+00:00",
+  "generated_at": "2026-08-26T21:54:25.661782+00:00",
   "schema_version": 513,
   "model_version": "player_projection_v5_historical_prior",
   "ruleset_id": "FPL_2026_27",
@@ -116845,7 +116845,7 @@
       "position": "MID",
       "now_cost": 65,
       "status": "i",
-      "ownership_pct": 3.2,
+      "ownership_pct": 3.1,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -132975,7 +132975,7 @@
       "position": "MID",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 16.1,
+      "ownership_pct": 16.0,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -189668,7 +189668,7 @@
       "position": "FWD",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 29.3,
+      "ownership_pct": 29.2,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -191525,7 +191525,7 @@
       "position": "GK",
       "now_cost": 50,
       "status": "a",
-      "ownership_pct": 3.9,
+      "ownership_pct": 4.0,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -294282,9 +294282,9 @@
             "player_count": 0,
             "fixture_count": 0,
             "credential_present": true,
-            "network_requests": 1,
-            "cache_hits": 0,
-            "availability_cache_hits": 0,
+            "network_requests": 0,
+            "cache_hits": 1,
+            "availability_cache_hits": 1,
             "competitions_attempted": 1,
             "competitions_resolved": 0,
             "quota_remaining": null,
@@ -294304,8 +294304,8 @@
         "fixture_count": 0,
         "resolved_competition_count": 0,
         "credential_present": true,
-        "network_requests": 1,
-        "cache_hits": 0,
+        "network_requests": 0,
+        "cache_hits": 1,
         "quota_remaining": null,
         "quota_limit": null
       }

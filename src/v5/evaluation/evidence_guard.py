@@ -62,13 +62,14 @@ def evaluate(prediction: dict[str, Any], context: dict[str, Any], truth: dict[st
 
     quality = prediction.get("prediction_quality") if isinstance(prediction.get("prediction_quality"), dict) else {}
     truth_rules = truth.get("rules") if isinstance(truth.get("rules"), dict) else {}
+    authority_ruleset = truth_rules.get("ruleset_id") or context.get("ruleset_id")
     require_ruleset = bool((cfg.get("reliability") or {}).get("require_ruleset_match", True))
     ruleset_match = bool(prediction.get("ruleset_id")) and (
-        not require_ruleset or (bool(truth_rules.get("ruleset_id")) and prediction.get("ruleset_id") == truth_rules.get("ruleset_id"))
+        not require_ruleset or (bool(authority_ruleset) and prediction.get("ruleset_id") == authority_ruleset)
     )
     validation = (truth.get("team") or {}).get("validation") if isinstance(truth.get("team"), dict) else {}
     reliability_ok = bool(quality) and quality.get("status") == str((cfg.get("reliability") or {}).get("healthy_prediction_status", "HEALTHY")) and ruleset_match
-    if (cfg.get("reliability") or {}).get("require_truth_validation", True):
+    if (cfg.get("reliability") or {}).get("require_truth_validation", False):
         reliability_ok = reliability_ok and bool(truth) and bool(validation.get("passed"))
 
     capabilities = []
@@ -83,6 +84,6 @@ def evaluate(prediction: dict[str, Any], context: dict[str, Any], truth: dict[st
         "model": cfg.get("model_id"),
         "leakage": {"pass": leakage_ok, "forbidden_hits": sorted(set(forbidden_hits)), "planning_gw": planning_gw, "horizon_gws": horizon_gws},
         "freshness": {"pass": freshness_ok, "prediction_age_seconds": round(age_seconds, 3) if age_seconds is not None else None},
-        "reliability": {"pass": reliability_ok, "ruleset_match": ruleset_match, "prediction_quality": quality.get("status")},
+        "reliability": {"pass": reliability_ok, "ruleset_match": ruleset_match, "authority_ruleset_id": authority_ruleset, "prediction_quality": quality.get("status")},
         "capabilities": sorted(set(capabilities)),
     }

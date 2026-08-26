@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.v5 import cluster_health
 from src.v5.service_registry import service_specs
+from src.v5.services import orchestrator
 
 
 def _remote_row(spec, *, ready: bool = True):
@@ -75,3 +76,13 @@ def test_critical_prediction_outage_is_red_and_not_ready_for_run(monkeypatch):
     assert report["overall"] == "RED"
     assert report["ready_for_run"] is False
     assert report["critical_failures"] == ["prediction"]
+
+
+def test_orchestrator_exposes_cluster_health_without_running_business_pipeline(monkeypatch):
+    expected = {"mode": "ON_DEMAND_ONLY", "overall": "GREEN", "ready_for_run": True}
+    monkeypatch.setattr(orchestrator, "cluster_health", lambda service_id: {**expected, "service_id": service_id})
+
+    report = orchestrator.handle("cluster_health", {})
+
+    assert report["overall"] == "GREEN"
+    assert report["service_id"] == "orchestrator"

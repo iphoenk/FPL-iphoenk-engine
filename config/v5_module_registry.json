@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "policy": "Any separable V5 domain should be represented by a dedicated module and/or registry when doing so improves authority clarity, identification, tuning, provenance, testing, or maintenance without unacceptable performance cost.",
   "modules": {
     "rules": {
@@ -42,6 +42,13 @@
       "entrypoint": "src.v5.state",
       "config": "config/v5_phase_authority_registry.json",
       "adjustment_surface": ["pre-deadline authority", "post-deadline reconciliation", "live authority", "post-GW authority"],
+      "status": "ACTIVE"
+    },
+    "squad": {
+      "plane": "truth",
+      "entrypoint": "src.v5.squad",
+      "config": "config/v5_squad_registry.json",
+      "adjustment_surface": ["authority fallback", "identity validation", "fail-closed validation", "baseline reconciliation"],
       "status": "ACTIVE"
     },
     "price_trajectory": {

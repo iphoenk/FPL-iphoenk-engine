@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_dss_source_fusion_v1",
+  "policy": {
+    "official_fpl_remains_native_authority": true,
+    "fpl_core_insights_primary_for_epl_advanced_stats": true,
+    "understat_is_challenger_not_box_touch_proxy": true,
+    "api_football_is_cross_competition_enrichment": true,
+    "missing_enrichment_is_unavailable_not_zero": true,
+    "network_fetch_owned_by_ingestion_service": true,
+    "prediction_network_fetch_forbidden": true
+  },
+  "understat": {
+    "enabled": true,
+    "league": "EPL",
+    "season": "2026",
+    "timeout_seconds": 4.0,
+    "cache_ttl_seconds": 21600,
+    "cache_path": "data/v5/source_cache/understat_epl_2026.json",
+    "capabilities": ["shots", "xg", "xa", "key_passes", "xg_chain", "xg_buildup"]
+  },
+  "api_football": {
+    "enabled": true,
+    "base_url": "https://v3.football.api-sports.io",
+    "api_key_env": "API_FOOTBALL_KEY",
+    "api_key_header": "x-apisports-key",
+    "season": 2026,
+    "timeout_seconds": 5.0,
+    "cache_ttl_seconds": 43200,
+    "cache_dir": "data/v5/source_cache/api_football",
+    "resolve_league_ids_dynamically": true,
+    "competitions": {
+      "uefa_champions_league": ["UEFA Champions League", "Champions League"],
+      "uefa_europa_league": ["UEFA Europa League", "Europa League"],
+      "uefa_conference_league": ["UEFA Conference League", "Conference League"],
+      "fa_cup": ["FA Cup"],
+      "efl_cup": ["League Cup", "EFL Cup", "Carabao Cup"],
+      "club_friendlies": ["Club Friendlies"]
+    },
+    "fixture_window_days_before": 14,
+    "fixture_window_days_after": 60,
+    "max_competition_requests_per_refresh": 6,
+    "international": {
+      "enabled": true,
+      "player_minutes_requires_resolved_player_identity": true,
+      "callup_missing_behavior": "UNAVAILABLE_NOT_ZERO",
+      "travel_missing_behavior": "UNAVAILABLE_NOT_ZERO"
+    }
+  },
+  "fusion": {
+    "advanced_stat_priority": ["fpl_core_insights", "understat", "official_fpl"],
+    "fixture_priority": ["official_fpl", "api_football"],
+    "understat_crosscheck_fields": ["shots", "xg", "xa", "key_passes"],
+    "api_football_fixture_classes": ["EUROPE", "DOMESTIC_CUP", "FRIENDLY", "INTERNATIONAL"],
+    "never_replace_official_fpl_identity_or_price": true
+  }
+}

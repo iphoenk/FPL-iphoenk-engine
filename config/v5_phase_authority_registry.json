@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "phases": {
+    "PRE_DEADLINE": {
+      "squad": ["user_lock", "official_authenticated", "official_public"],
+      "lineup": ["user_lock", "official_authenticated"],
+      "captaincy": ["user_lock", "official_authenticated"],
+      "finance": ["official_authenticated", "public_reconstruction"],
+      "scoring": ["official_public"]
+    },
+    "POST_DEADLINE": {
+      "squad": ["official_public"],
+      "lineup": ["official_public"],
+      "captaincy": ["official_public"],
+      "finance": ["official_authenticated", "public_reconstruction"],
+      "scoring": ["official_public"]
+    },
+    "LIVE": {
+      "squad": ["official_public"],
+      "lineup": ["official_public"],
+      "captaincy": ["official_public"],
+      "finance": ["official_authenticated", "public_reconstruction"],
+      "scoring": ["official_public_event_live"]
+    },
+    "POST_GW": {
+      "squad": ["official_public"],
+      "lineup": ["official_public"],
+      "captaincy": ["official_public"],
+      "finance": ["official_authenticated", "public_reconstruction"],
+      "scoring": ["official_final_history"]
+    }
+  },
+  "reconciliation": {
+    "after_deadline": true,
+    "compare": ["latest_pre_deadline_authority", "submitted_picks"],
+    "submitted_picks_become_baseline": true
+  }
+}

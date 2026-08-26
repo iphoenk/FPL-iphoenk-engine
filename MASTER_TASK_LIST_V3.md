@@ -2,9 +2,10 @@
 
 Canonical status: ACTIVE
 Canonical roadmap owner: V3 operational stream
-Current production governance release: V3.17.1
-Current production schema: 46
-Current development candidate: V3.18 Structured Challenger Ingestion + architecture hardening
+Production baseline before V3.18 merge: V3.17.1 / schema 46
+Current release candidate: V3.18.0
+Current candidate schema: 47
+Candidate scope: Structured Challenger Ingestion + architecture hardening
 
 This file is the single human-readable master roadmap for the V3 operational engine. Every V3 feature, refactor, hardening change, operational improvement, and release-governance change must update this file in the same pull request.
 
@@ -52,21 +53,21 @@ Release objective: convert selected challenger sources from probe-only reachabil
 
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
-| V3-SRC-101 | Normalized challenger observation contract | ACTIVE | V3.18 | typed observation with source, capability, payload/value, timestamp, provenance, confidence, stale state, parser/schema version |
-| V3-SRC-102 | Separate source reachability from capability-data health | ACTIVE | V3.18 | source may be LIVE while a capability is UNAVAILABLE/STALE/ERROR |
-| V3-SRC-103 | LiveFPL structured ingestion | ACTIVE | V3.18 | robust public observation only; no invented EO/price/rank values |
-| V3-SRC-104 | OneFPL structured ingestion | ACTIVE | V3.18 | robust public observation only; transfer/price/planner context normalized when actually available |
-| V3-SRC-105 | Provenance and observation timestamps | ACTIVE | V3.18 | every accepted observation has traceable source and observed/fetched time |
-| V3-SRC-106 | TTL, stale cache, last-known-good policy | ACTIVE | V3.18 | stale observations explicitly labelled and never silently treated as current |
-| V3-SRC-107 | Confidence and cross-source disagreement state | ACTIVE | V3.18 | agreement may raise confidence; disagreement is explicit and never silently overwrites Official data |
-| V3-SRC-108 | Price Radar challenger integration | ACTIVE | V3.18 | LiveFPL/OneFPL values consumed only when a valid normalized observation exists |
-| V3-SRC-109 | User-facing source availability rendering | ACTIVE | V3.18 | report distinguishes reachable source from available structured prediction data |
-| V3-SRC-110 | Challenger failure isolation tests | ACTIVE | V3.18 | challenger outage cannot block Official baseline |
-| V3-SRC-111 | No-fabrication regression tests | ACTIVE | V3.18 | missing observation stays missing/explicit fallback |
-| V3-SRC-112 | Official-authority precedence tests | ACTIVE | V3.18 | challenger cannot override Official-native field |
-| V3-SRC-113 | Structured-ingestion performance budget | ACTIVE | V3.18 | bounded parallel ingestion remains inside production runtime budget |
-| V3-SRC-114 | Parser/contract drift handling | ACTIVE | V3.18 | unexpected source shape degrades capability safely instead of corrupting output |
-| V3-SRC-115 | V3.18 release governance | ACTIVE | V3.18 | version/schema decision, README, implementation status, workflow, tests, CI, production collect all consistent |
+| V3-SRC-101 | Normalized challenger observation contract | ACTIVE | V3.18.0 | typed observation with source, capability, payload/value, timestamp, provenance, confidence, stale state, parser/schema version |
+| V3-SRC-102 | Separate source reachability from capability-data health | ACTIVE | V3.18.0 | source may be LIVE while a capability is UNAVAILABLE/STALE/ERROR |
+| V3-SRC-103 | LiveFPL structured ingestion | ACTIVE | V3.18.0 | robust public observation only; no invented EO/price/rank values |
+| V3-SRC-104 | OneFPL structured ingestion | ACTIVE | V3.18.0 | robust public observation only; transfer/price/planner context normalized when actually available |
+| V3-SRC-105 | Provenance and observation timestamps | ACTIVE | V3.18.0 | every accepted observation has traceable source and observed/fetched time |
+| V3-SRC-106 | TTL, stale cache, last-known-good policy | ACTIVE | V3.18.0 | stale observations explicitly labelled and never silently treated as current |
+| V3-SRC-107 | Confidence and cross-source disagreement state | ACTIVE | V3.18.0 | agreement may raise confidence; disagreement is explicit and never silently overwrites Official data |
+| V3-SRC-108 | Price Radar challenger integration | ACTIVE | V3.18.0 | LiveFPL/OneFPL values consumed only when a valid normalized observation exists |
+| V3-SRC-109 | User-facing source availability rendering | ACTIVE | V3.18.0 | report distinguishes reachable source from available structured prediction data |
+| V3-SRC-110 | Challenger failure isolation tests | ACTIVE | V3.18.0 | challenger outage cannot block Official baseline |
+| V3-SRC-111 | No-fabrication regression tests | ACTIVE | V3.18.0 | missing observation stays missing/explicit fallback |
+| V3-SRC-112 | Official-authority precedence tests | ACTIVE | V3.18.0 | challenger cannot override Official-native field |
+| V3-SRC-113 | Structured-ingestion performance budget | ACTIVE | V3.18.0 | bounded parallel ingestion remains inside production runtime budget |
+| V3-SRC-114 | Parser/contract drift handling | ACTIVE | V3.18.0 | unexpected source shape degrades capability safely instead of corrupting output |
+| V3-SRC-115 | V3.18 release governance | ACTIVE | V3.18.0 | version/schema, README, implementation status, workflow, tests, CI and production collect all consistent |
 
 ### V3.18 architecture-hardening scope
 - Version-neutral runtime entrypoints replace version-stamped active service names; historical compatibility modules may remain as shims only.
@@ -79,7 +80,7 @@ Release objective: convert selected challenger sources from probe-only reachabil
 - Reporting remains decision-output plus a separate serving/materializer boundary; additional process fragmentation is not justified by current dependency or failure-isolation evidence.
 
 ### V3.18 release acceptance
-V3.18 is not DONE until all of the following are true:
+V3.18.0 is not DONE until all of the following are true:
 - Gate 0 remains 16/16 PASS.
 - DSS Core remains 50/50 ACTIVE.
 - DSS Extensions remain 16/16 ACTIVE.
@@ -166,7 +167,7 @@ A release cannot be marked DONE until all applicable checks below pass.
 15. Confirm production push/collector run.
 16. Confirm validated publication to `runtime-data`.
 17. Re-read production `framework_health.json`: Gate0 16/16, DSS 50/50, Extensions 16/16, Enhancements 8/8, overall GREEN, decision engine HEALTHY, GO allowed.
-18. Update task status from NEXT/OPEN to DONE only after the applicable production acceptance is complete.
+18. Update task status from ACTIVE to DONE only after the applicable production acceptance is complete.
 
 ## Definition of Done
 A V3 task is DONE only when implementation, tests, documentation, version governance, and production evidence agree. File existence, registry presence, source reachability, or a manually changed status label alone are not sufficient.
@@ -174,13 +175,13 @@ A V3 task is DONE only when implementation, tests, documentation, version govern
 For external evidence tasks, DONE means the adapter/evaluator can explicitly distinguish at least AVAILABLE, UNAVAILABLE/SAFE_FALLBACK, STALE, and ERROR states where applicable. Missing values may never be synthesized solely to keep a module green.
 
 ## Execution order
-1. Keep V3.17.x production GREEN and operational until V3.18 passes production acceptance.
-2. Complete V3.18 Structured Challenger Ingestion and architecture hardening.
+1. Keep V3.17.1 production GREEN and operational until V3.18.0 passes production acceptance.
+2. Complete V3.18.0 Structured Challenger Ingestion and architecture hardening.
 3. Report-source availability and natural-language rendering hardening.
 4. Replace P1 proxies with richer evidence where reliable.
 5. Accumulate settled Gameweeks and calibrate prediction/weighting models.
 6. Pursue P2 capabilities only after P1 calibration has enough evidence and without destabilizing V3 operations.
 
 ## Change log
-- V3.18 candidate: structured LiveFPL/OneFPL observations; reachability/capability separation; TTL/LKG/stale and disagreement governance; Price Radar context integration; registry-driven mutable policy; version-neutral service entrypoints; validator and microservice boundary hardening. Candidate remains ACTIVE until production acceptance.
+- V3.18.0 candidate: structured LiveFPL/OneFPL observations; reachability/capability separation; TTL/LKG/stale and disagreement governance; Price Radar context integration; registry-driven mutable policy; version-neutral service entrypoints; validator and microservice boundary hardening. Remains ACTIVE until production acceptance.
 - V3.17.1: established this canonical master task list, release checklist, Definition of Done, execution order, and mandatory roadmap synchronization rule.

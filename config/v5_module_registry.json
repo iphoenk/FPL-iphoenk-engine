@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "policy": "Any separable V5 domain should be represented by a dedicated module and/or registry when doing so improves authority clarity, identification, tuning, provenance, testing, or maintenance without unacceptable performance cost.",
   "modules": {
     "rules": {
@@ -14,6 +14,13 @@
       "entrypoint": "src.v5.source_authority",
       "config": "config/v5_source_authority_registry.json",
       "adjustment_surface": ["source priority", "source enablement", "domain authority chains", "fallback policy"],
+      "status": "ACTIVE"
+    },
+    "official_authenticated": {
+      "plane": "truth",
+      "entrypoint": "src.v5.authenticated_official",
+      "config": "config/v5_auth_policy_registry.json",
+      "adjustment_surface": ["auth modes", "route allowlist", "timeout", "retry/backoff", "team-id authority", "raw persistence policy"],
       "status": "ACTIVE"
     },
     "finance": {
@@ -32,10 +39,10 @@
     },
     "price_trajectory": {
       "plane": "intelligence",
-      "entrypoint": "planned migration from V3 price radar",
-      "config": "planned: config/v5_price_trajectory_registry.json",
-      "adjustment_surface": ["thresholds", "momentum windows", "urgency bands", "ETA policy"],
-      "status": "PENDING_MIGRATION"
+      "entrypoint": "src.v5.price_trajectory",
+      "config": "config/v5_price_trajectory_registry.json",
+      "adjustment_surface": ["filter thresholds", "trend sensitivity", "urgency bands", "ETA policy", "watch capacity", "market timezone"],
+      "status": "CORE_ACTIVE_PENDING_TASK_WIRING"
     },
     "projection": {
       "plane": "intelligence",

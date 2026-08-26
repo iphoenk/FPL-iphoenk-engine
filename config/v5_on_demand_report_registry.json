@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "model_id": "on_demand_report_router_v1",
+  "authority_strategy": "CURRENT_PRODUCTION_MAIN",
+  "production_source_branch": "main",
+  "production_runtime_branch": "runtime-data",
+  "report_publish_branch": "runtime-data",
+  "report_publish_path": "data/on_demand",
+  "refresh_mode": "daily",
+  "include_stats": true,
+  "force_full_report": true,
+  "v5_beta_overlay_default": false,
+  "freshness_target_minutes": 5,
+  "required_contracts": [
+    "production_contract",
+    "watchlist_contract",
+    "report_serving_contract"
+  ],
+  "governance": {
+    "current_production_track_is_authoritative": true,
+    "v5_beta_never_overrides_production_authority": true,
+    "on_demand_run_never_auto_submits_fpl_changes": true,
+    "on_demand_run_never_promotes_v5": true
+  }
+}

@@ -1,6 +1,6 @@
 {
-  "schema_version": 464,
-  "engine": "v4.6.4-framework-health-operational-probes",
+  "schema_version": 470,
+  "engine": "v4.7-framework-health-prediction-quality-probes",
   "phase": "preflight",
   "overall": "AMBER",
   "decision_engine": "DEGRADED",
@@ -126,8 +126,8 @@
     "integrity_ok": true,
     "registry": "DSS_CORE_50",
     "counts": {
-      "ACTIVE": 17,
-      "PARTIAL": 26,
+      "ACTIVE": 24,
+      "PARTIAL": 19,
       "DEFERRED": 7
     },
     "items": [
@@ -203,7 +203,7 @@
         "probe": "xmins",
         "detail": {
           "fixture_distributions_checked": 150,
-          "quality_note": "functional probe only; richer priors remain V4.7 debt"
+          "enriched_prior_distributions": 150
         }
       },
       {
@@ -217,7 +217,7 @@
         "probe": "xmins_distribution",
         "detail": {
           "fixture_distributions_checked": 150,
-          "quality_note": "functional probe only; richer priors remain V4.7 debt"
+          "enriched_prior_distributions": 150
         }
       },
       {
@@ -250,46 +250,54 @@
         "id": "DSS-09",
         "name": "Positional Competition & Rotation",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
         "probe": "rotation_competition",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "players": 612,
+          "covered": 612,
+          "contextual_adjustments": 593
         }
       },
       {
         "id": "DSS-10",
         "name": "Set-Piece Role",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
         "probe": "set_piece_role",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "fixtures": 612,
+          "covered": 612,
+          "assigned_roles": 95,
+          "official_source": 612
         }
       },
       {
         "id": "DSS-11",
         "name": "Penalty Role",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
         "probe": "penalty_role",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "fixtures": 612,
+          "covered": 612,
+          "assigned_roles": 66,
+          "official_source": 612
         }
       },
       {
         "id": "DSS-12",
         "name": "Expected Goals / Shot Threat",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json",
           "data/stats/shots_gw1.json"
@@ -297,16 +305,18 @@
         "probe": "advanced_stats_integration",
         "detail": {
           "prediction_sources": [
-            "official_fpl_current_state"
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats",
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
           ],
-          "synced_but_not_consumed": true
+          "integrated_fixture_samples": 100,
+          "synced_but_not_consumed": false
         }
       },
       {
         "id": "DSS-13",
         "name": "Expected Assists / Chance Creation",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json",
           "data/stats/playermatchstats_gw1.json"
@@ -314,9 +324,11 @@
         "probe": "advanced_stats_integration",
         "detail": {
           "prediction_sources": [
-            "official_fpl_current_state"
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats",
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
           ],
-          "synced_but_not_consumed": true
+          "integrated_fixture_samples": 100,
+          "synced_but_not_consumed": false
         }
       },
       {
@@ -461,13 +473,16 @@
         "id": "DSS-24",
         "name": "Opponent Strength / Fixture Difficulty",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
         "probe": "opponent_defence_dynamic",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "fixtures": 1836,
+          "covered": 1836,
+          "official_source": 1836,
+          "distinct_ratings": 5
         }
       },
       {
@@ -612,14 +627,16 @@
         "id": "DSS-35",
         "name": "Last-Season Baseline",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
-          "data/stats/vaastav_gw1.json",
+          "data/stats/vaastav_previous_season.json",
           "data/predictions_v4.json"
         ],
         "probe": "last_season_integration",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "source_season": "2025-26",
+          "input_matches": 406,
+          "consumed_priors": 406
         }
       },
       {
@@ -687,10 +704,7 @@
         ],
         "probe": "sell_cost_affordability",
         "detail": {
-          "reason": "requires postflight evidence",
-          "deferred_files": [
-            "data/wc_decision_v4.json"
-          ]
+          "reason": "requires postflight decision evidence"
         }
       },
       {
@@ -761,10 +775,7 @@
         ],
         "probe": "structural_fit",
         "detail": {
-          "reason": "requires postflight evidence",
-          "deferred_files": [
-            "data/wc_decision_v4.json"
-          ]
+          "reason": "requires postflight decision evidence"
         }
       },
       {
@@ -778,11 +789,7 @@
         ],
         "probe": "direct_challenger",
         "detail": {
-          "reason": "requires postflight evidence",
-          "deferred_files": [
-            "data/wc_decision_v4.json",
-            "data/wc_package_audit_v4.json"
-          ]
+          "reason": "requires postflight decision evidence"
         }
       },
       {
@@ -795,10 +802,7 @@
         ],
         "probe": "bench_utility",
         "detail": {
-          "reason": "requires postflight evidence",
-          "deferred_files": [
-            "data/lineup_decision_v4.json"
-          ]
+          "reason": "requires postflight decision evidence"
         }
       },
       {
@@ -811,10 +815,7 @@
         ],
         "probe": "captaincy",
         "detail": {
-          "reason": "requires postflight evidence",
-          "deferred_files": [
-            "data/lineup_decision_v4.json"
-          ]
+          "reason": "requires postflight decision evidence"
         }
       },
       {
@@ -842,11 +843,7 @@
         ],
         "probe": "decision_recheck",
         "detail": {
-          "reason": "requires postflight evidence",
-          "deferred_files": [
-            "data/wc_package_audit_v4.json",
-            "data/lineup_decision_v4.json"
-          ]
+          "reason": "requires postflight decision evidence"
         }
       }
     ]
@@ -858,8 +855,8 @@
     "integrity_ok": true,
     "registry": "DSS_EXTENSIONS",
     "counts": {
-      "ACTIVE": 5,
-      "DEFERRED": 10,
+      "ACTIVE": 6,
+      "DEFERRED": 9,
       "PARTIAL": 1
     },
     "items": [
@@ -882,17 +879,15 @@
         "id": "DSS-X02",
         "name": "Prediction Uncertainty & Interval Width",
         "critical": true,
-        "status": "DEFERRED",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json",
           "data/lineup_decision_v4.json"
         ],
         "probe": "projection_uncertainty",
         "detail": {
-          "reason": "requires postflight evidence",
-          "deferred_files": [
-            "data/lineup_decision_v4.json"
-          ]
+          "fixtures": 150,
+          "valid_intervals": 150
         }
       },
       {
@@ -919,10 +914,7 @@
         ],
         "probe": "reliability_overlay",
         "detail": {
-          "reason": "requires postflight evidence",
-          "deferred_files": [
-            "data/recommendation_sanity_v4.json"
-          ]
+          "reason": "requires postflight decision evidence"
         }
       },
       {
@@ -1091,10 +1083,7 @@
         ],
         "probe": "runtime_observability",
         "detail": {
-          "reason": "requires postflight evidence",
-          "deferred_files": [
-            "data/decision_pipeline_v4.json"
-          ]
+          "reason": "requires postflight decision evidence"
         }
       }
     ]
@@ -1106,8 +1095,7 @@
     "integrity_ok": true,
     "registry": "ENHANCEMENT_LAYERS_8",
     "counts": {
-      "PARTIAL": 1,
-      "ACTIVE": 3,
+      "ACTIVE": 4,
       "DEFERRED": 4
     },
     "items": [
@@ -1115,7 +1103,7 @@
         "id": "ENH-01",
         "name": "Data Reliability & Source Triangulation",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "config/sources.json",
           "src/engines/reliability.py",
@@ -1134,9 +1122,11 @@
           },
           "advanced_integration": {
             "prediction_sources": [
-              "official_fpl_current_state"
+              "fpl_core_insights:players+fpl_core_insights:playermatchstats",
+              "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
             ],
-            "synced_but_not_consumed": true
+            "integrated_fixture_samples": 100,
+            "synced_but_not_consumed": false
           }
         }
       },
@@ -1241,10 +1231,7 @@
         ],
         "probe": "final_governance",
         "detail": {
-          "reason": "requires postflight evidence",
-          "deferred_files": [
-            "data/recommendation_sanity_v4.json"
-          ]
+          "reason": "requires postflight decision evidence"
         }
       }
     ]
@@ -1277,13 +1264,9 @@
   "critical_failed": [],
   "critical_partial": [
     "DSS-07",
-    "DSS-09",
-    "DSS-24",
-    "DSS-35",
     "DSS-39",
     "DSS-44",
-    "DSS-X12",
-    "ENH-01"
+    "DSS-X12"
   ],
   "governance": {
     "gate0_fail_blocks_go": true,
@@ -1294,5 +1277,5 @@
     "raw_optimizer_is_not_final_decision": true,
     "preflight_defers_postflight_outputs": true
   },
-  "performance_ms": 2517.34
+  "performance_ms": 4791.77
 }

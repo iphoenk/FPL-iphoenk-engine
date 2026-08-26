@@ -1,6 +1,6 @@
 {
-  "schema_version": 464,
-  "engine": "v4.6.4-framework-health-operational-probes",
+  "schema_version": 470,
+  "engine": "v4.7-framework-health-prediction-quality-probes",
   "phase": "postflight",
   "overall": "AMBER",
   "decision_engine": "DEGRADED",
@@ -71,7 +71,7 @@
         "id": "G0-10",
         "name": "Legal XI Formation",
         "status": "PASS",
-        "detail": "formation=3-5-2,xi=11"
+        "detail": "formation=3-4-3,xi=11"
       },
       {
         "id": "G0-11",
@@ -83,7 +83,7 @@
         "id": "G0-12",
         "name": "Captain and Vice in Starting XI and Distinct",
         "status": "PASS",
-        "detail": "captain=426,vice=411"
+        "detail": "captain=411,vice=346"
       },
       {
         "id": "G0-13",
@@ -125,8 +125,8 @@
     "integrity_ok": true,
     "registry": "DSS_CORE_50",
     "counts": {
-      "ACTIVE": 24,
-      "PARTIAL": 26
+      "ACTIVE": 31,
+      "PARTIAL": 19
     },
     "items": [
       {
@@ -201,7 +201,7 @@
         "probe": "xmins",
         "detail": {
           "fixture_distributions_checked": 150,
-          "quality_note": "functional probe only; richer priors remain V4.7 debt"
+          "enriched_prior_distributions": 150
         }
       },
       {
@@ -215,7 +215,7 @@
         "probe": "xmins_distribution",
         "detail": {
           "fixture_distributions_checked": 150,
-          "quality_note": "functional probe only; richer priors remain V4.7 debt"
+          "enriched_prior_distributions": 150
         }
       },
       {
@@ -248,46 +248,54 @@
         "id": "DSS-09",
         "name": "Positional Competition & Rotation",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
         "probe": "rotation_competition",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "players": 612,
+          "covered": 612,
+          "contextual_adjustments": 593
         }
       },
       {
         "id": "DSS-10",
         "name": "Set-Piece Role",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
         "probe": "set_piece_role",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "fixtures": 612,
+          "covered": 612,
+          "assigned_roles": 95,
+          "official_source": 612
         }
       },
       {
         "id": "DSS-11",
         "name": "Penalty Role",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
         "probe": "penalty_role",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "fixtures": 612,
+          "covered": 612,
+          "assigned_roles": 66,
+          "official_source": 612
         }
       },
       {
         "id": "DSS-12",
         "name": "Expected Goals / Shot Threat",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json",
           "data/stats/shots_gw1.json"
@@ -295,16 +303,18 @@
         "probe": "advanced_stats_integration",
         "detail": {
           "prediction_sources": [
-            "official_fpl_current_state"
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats",
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
           ],
-          "synced_but_not_consumed": true
+          "integrated_fixture_samples": 100,
+          "synced_but_not_consumed": false
         }
       },
       {
         "id": "DSS-13",
         "name": "Expected Assists / Chance Creation",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json",
           "data/stats/playermatchstats_gw1.json"
@@ -312,9 +322,11 @@
         "probe": "advanced_stats_integration",
         "detail": {
           "prediction_sources": [
-            "official_fpl_current_state"
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats",
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
           ],
-          "synced_but_not_consumed": true
+          "integrated_fixture_samples": 100,
+          "synced_but_not_consumed": false
         }
       },
       {
@@ -459,13 +471,16 @@
         "id": "DSS-24",
         "name": "Opponent Strength / Fixture Difficulty",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
         "probe": "opponent_defence_dynamic",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "fixtures": 1836,
+          "covered": 1836,
+          "official_source": 1836,
+          "distinct_ratings": 5
         }
       },
       {
@@ -610,14 +625,16 @@
         "id": "DSS-35",
         "name": "Last-Season Baseline",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
-          "data/stats/vaastav_gw1.json",
+          "data/stats/vaastav_previous_season.json",
           "data/predictions_v4.json"
         ],
         "probe": "last_season_integration",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "source_season": "2025-26",
+          "input_matches": 406,
+          "consumed_priors": 406
         }
       },
       {
@@ -808,7 +825,7 @@
         "probe": "bench_utility",
         "detail": {
           "xi": 11,
-          "formation": "3-5-2"
+          "formation": "3-4-3"
         }
       },
       {
@@ -822,7 +839,7 @@
         "probe": "captaincy",
         "detail": {
           "xi": 11,
-          "formation": "3-5-2"
+          "formation": "3-4-3"
         }
       },
       {
@@ -851,7 +868,7 @@
         "probe": "decision_recheck",
         "detail": {
           "xi": 11,
-          "formation": "3-5-2"
+          "formation": "3-4-3"
         }
       }
     ]
@@ -1019,7 +1036,7 @@
         "probe": "lineup_robustness",
         "detail": {
           "xi": 11,
-          "formation": "3-5-2"
+          "formation": "3-4-3"
         }
       },
       {
@@ -1033,7 +1050,7 @@
         "probe": "captain_dnp_guard",
         "detail": {
           "xi": 11,
-          "formation": "3-5-2"
+          "formation": "3-4-3"
         }
       },
       {
@@ -1061,7 +1078,7 @@
         ],
         "probe": "data_freshness",
         "detail": {
-          "age_minutes": 0.2,
+          "age_minutes": 0.3,
           "max_age_minutes": 90
         }
       },
@@ -1111,14 +1128,14 @@
         "probe": "runtime_observability",
         "detail": {
           "timings": {
-            "load_shared_inputs_and_candidates_ms": 184.6,
-            "wc_decision_cpu_ms": 4957.3,
-            "package_audit_cpu_ms": 5686.1,
-            "wc_package_parallel_wall_ms": 5703.6,
-            "parallel_speedup_estimate": 1.866,
-            "lineup_ms": 2.3,
+            "load_shared_inputs_and_candidates_ms": 247.0,
+            "wc_decision_cpu_ms": 6116.5,
+            "package_audit_cpu_ms": 7248.8,
+            "wc_package_parallel_wall_ms": 7286.4,
+            "parallel_speedup_estimate": 1.834,
+            "lineup_ms": 2.5,
             "evidence_sanity_ms": 2.9,
-            "total_pipeline_ms": 5927.1
+            "total_pipeline_ms": 7558.8
           }
         }
       }
@@ -1131,15 +1148,14 @@
     "integrity_ok": true,
     "registry": "ENHANCEMENT_LAYERS_8",
     "counts": {
-      "PARTIAL": 1,
-      "ACTIVE": 7
+      "ACTIVE": 8
     },
     "items": [
       {
         "id": "ENH-01",
         "name": "Data Reliability & Source Triangulation",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "config/sources.json",
           "src/engines/reliability.py",
@@ -1158,9 +1174,11 @@
           },
           "advanced_integration": {
             "prediction_sources": [
-              "official_fpl_current_state"
+              "fpl_core_insights:players+fpl_core_insights:playermatchstats",
+              "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
             ],
-            "synced_but_not_consumed": true
+            "integrated_fixture_samples": 100,
+            "synced_but_not_consumed": false
           }
         }
       },
@@ -1192,7 +1210,7 @@
         "probe": "uncertainty_robustness",
         "detail": {
           "xi": 11,
-          "formation": "3-5-2"
+          "formation": "3-4-3"
         }
       },
       {
@@ -1267,7 +1285,7 @@
         "probe": "lineup_governance",
         "detail": {
           "xi": 11,
-          "formation": "3-5-2"
+          "formation": "3-4-3"
         }
       },
       {
@@ -1298,7 +1316,7 @@
   "data_freshness": {
     "status": "PASS",
     "detail": {
-      "age_minutes": 0.2,
+      "age_minutes": 0.3,
       "max_age_minutes": 90
     }
   },
@@ -1317,13 +1335,9 @@
   "critical_failed": [],
   "critical_partial": [
     "DSS-07",
-    "DSS-09",
-    "DSS-24",
-    "DSS-35",
     "DSS-39",
     "DSS-44",
-    "DSS-X12",
-    "ENH-01"
+    "DSS-X12"
   ],
   "governance": {
     "gate0_fail_blocks_go": true,
@@ -1334,5 +1348,5 @@
     "raw_optimizer_is_not_final_decision": true,
     "preflight_defers_postflight_outputs": true
   },
-  "performance_ms": 2638.42
+  "performance_ms": 4798.44
 }

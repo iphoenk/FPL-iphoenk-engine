@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "post-hardcode-cleanup-live-source-fusion",
-  "requested_at": "2026-08-26T13:19:00Z",
+  "requested_cycle": "v3.17-persistence-reporting-live-source-fusion",
+  "requested_at": "2026-08-26T21:19:00Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "accepted_production_baseline_from_manifest",
   "v5_role": "shadow_only",
@@ -15,6 +15,7 @@
   "require_no_critical_dss_partial": true,
   "require_no_critical_enhancement_partial": true,
   "require_reporting_contract": true,
+  "require_persistence_contract": true,
   "require_source_fusion_fail_neutral": true,
   "require_source_fusion_observability": true,
   "require_api_football_live_attempt": true,

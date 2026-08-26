@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "registry": "SOURCE_REGISTRY_V1",
+  "policy": {
+    "official_fpl_is_native_authority": true,
+    "challengers_never_override_official_native_fields": true,
+    "missing_challenger_data_is_never_fabricated": true,
+    "source_failure_isolated_by_default": true,
+    "parallel_probe_enabled": true,
+    "default_timeout_seconds": 2.5,
+    "max_workers": 6,
+    "raw_credentials_forbidden": true,
+    "public_fetch_only_unless_explicit_authenticated_adapter": true
+  },
+  "sources": [
+    {"id":"official_fpl","name":"Official FPL","class":"AUTHORITATIVE","tier":1,"enabled":true,"critical":true,"adapter":"runtime_official","capabilities":["player_identity","prices","fixtures","entry","history","picks","live","rules_native_fields"]},
+    {"id":"fpl_core_insights","name":"FPL Core Insights","class":"ENRICHMENT","tier":2,"enabled":true,"critical":false,"adapter":"artifact","artifact_paths":["stats/shots_gw1.json","stats/playermatchstats_gw1.json"],"capabilities":["advanced_stats","shots","player_match_stats"]},
+    {"id":"vaastav","name":"vaastav FPL Dataset","class":"ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"artifact","artifact_paths":["stats/vaastav_previous_season.json"],"capabilities":["historical_prior","previous_season_stats"]},
+    {"id":"livefpl","name":"LiveFPL","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"livefpl","probe_url":"https://www.livefpl.net/","capabilities":["price_prediction","effective_ownership","live_rank","bonus_crosscheck","defcon_crosscheck","autosub_crosscheck","rank_tier_context"]},
+    {"id":"onefpl","name":"OneFPL","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"onefpl","probe_url":"https://onefpl.com/","capabilities":["price_prediction","transfer_trends","captaincy_context","planner_context"]},
+    {"id":"fffix","name":"Fantasy Football Fix","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"fffix","probe_url":"https://www.fantasyfootballfix.com/","capabilities":["price_prediction","predicted_points","predicted_lineups","ownership_context"]},
+    {"id":"ffhub","name":"Fantasy Football Hub","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"ffhub","probe_url":"https://www.fantasyfootballhub.co.uk/","capabilities":["predicted_points","team_optimization","ownership_context","mini_league_context"]},
+    {"id":"ffscout","name":"Fantasy Football Scout","class":"ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"ffscout","probe_url":"https://www.fantasyfootballscout.co.uk/","capabilities":["team_news","predicted_lineups","role_context","set_piece_context","community_analysis"]},
+    {"id":"understat","name":"Understat","class":"ENRICHMENT","tier":4,"enabled":false,"critical":false,"adapter":"disabled","capabilities":["xg","xa"],"note":"Direct scraping remains disabled by default."}
+  ]
+}

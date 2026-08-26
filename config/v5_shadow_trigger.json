@@ -1,8 +1,8 @@
 {
-  "requested_cycle": "post-fix-verification",
-  "requested_at": "2026-08-26T08:41:00Z",
+  "requested_cycle": "v3.15-comparison",
+  "requested_at": "2026-08-26T08:59:00Z",
   "mode": "REAL_SHADOW",
-  "production_remains": "v3.14",
+  "comparison_reference": "v3.15-fast-report-serving",
   "v5_role": "shadow_only",
   "require_owned": 15,
   "require_watchlist": 20,

@@ -3,29 +3,37 @@
   "principles": {
     "avoid_hardcode": {
       "required": true,
-      "policy": "Domain rules, thresholds, source authority, feature weights, phase policies, chip rules, finance rules, scoring constants, scheduler cadence, and performance budgets must be config/registry driven unless a literal is structurally intrinsic to the implementation.",
+      "policy": "Domain rules, thresholds, source authority, feature weights, phase policies, chip rules, finance rules, scoring constants, scheduler cadence, service boundaries and performance budgets must be config/registry driven unless a literal is structurally intrinsic to the implementation.",
       "exceptions": "Any unavoidable hardcoded value must be documented with rationale, owner, and test coverage."
     },
     "modular_authority": {
       "required": true,
       "default_action": "SEPARATE_WHEN_PRACTICAL",
-      "policy": "If a domain can reasonably be separated into a dedicated module or registry, V5 should do so by default whenever separation improves identification, adjustment, authority clarity, provenance, testing, maintenance, or reuse. Consumers must depend on the shared authority instead of duplicating logic.",
+      "policy": "If a domain can reasonably be separated into a dedicated module or registry, V5 does so by default whenever separation improves identification, adjustment, authority clarity, provenance, testing, maintenance, or reuse. Consumers depend on the shared authority instead of duplicating logic.",
       "performance_guard": "Do not create runtime fragmentation that causes material latency regression. Prefer cached registries and stable module boundaries over repeated file reads, duplicated transforms, or excessive indirection.",
-      "discoverability": "Every separated domain should be registered in config/v5_module_registry.json with its plane, entrypoint, controlling config, status, and adjustment surface.",
-      "examples": [
-        "Official FPL rules registry",
-        "source authority registry",
-        "phase authority registry",
-        "finance/sell-value engine",
-        "price trajectory configuration",
-        "projection weights and priors",
-        "DSS and Gate0 registries",
-        "performance budgets"
-      ]
+      "discoverability": "Every separated domain is registered in config/v5_module_registry.json with its plane, entrypoint, controlling config, status, and adjustment surface."
+    },
+    "microservices": {
+      "required": true,
+      "architecture": "BOUNDED_CONTEXT_MICROSERVICES",
+      "policy": "V5 production runtime must execute as independently runnable bounded-context services. A monorepo and shared immutable image are allowed, but business domains must not collapse back into one process or duplicate authority across services.",
+      "service_registry": "config/v5_service_registry.json",
+      "requirements": [
+        "independent process/container boundary",
+        "versioned request/response contract",
+        "independent health and metadata endpoints",
+        "explicit dependency graph",
+        "unique service ownership of business modules",
+        "registry-driven endpoint/timeout configuration",
+        "correlation-id propagation",
+        "parallel fan-out for independent service calls",
+        "no raw credential persistence"
+      ],
+      "performance_guard": "Use bounded contexts rather than per-function services. Avoid chatty service graphs, batch large reads, parallelize independent intelligence services, cache immutable registry data, and measure cross-service latency."
     },
     "performance_first": {
       "required": true,
-      "policy": "Every material V5 change must be evaluated for correctness and processing speed. Prefer single-pass transforms, bounded candidate universes, cached immutable lookups, vectorized/batched operations where useful, and avoid repeated network or file reads.",
+      "policy": "Every material V5 change must be evaluated for correctness and processing speed. Prefer single-pass transforms, bounded candidate universes, cached immutable lookups, batched/parallel operations where useful, and avoid repeated network or file reads.",
       "acceptance": "Performance regression beyond configured budgets blocks promotion unless explicitly reviewed."
     }
   }

@@ -46,7 +46,7 @@ Current V5 capability set includes:
 - strict 50/50 DSS core + 16/16 DSS extension postflight governance
 - exactly 15 owned players and exactly 20 external watchlist players, with 5 per position
 - persistence registry coverage for orchestrator-routed runtime artifacts including source fusion
-- source-fusion observability for Understat and API-Football
+- source-fusion observability for Understat and API-Football, with provider availability class, fail-neutral state, reason, and cache evidence preserved into the orchestrator summary used by shadow acceptance
 - API-Football provider restrictions classified explicitly, with `PLAN_RESTRICTED` treated as fail-neutral optional-source unavailability rather than fabricated evidence or engine failure
 - cached provider-restriction evidence to avoid repeated quota-wasting calls during the configured TTL
 - convergence, shadow-parity, architecture, persistence, reporting and performance regression gates

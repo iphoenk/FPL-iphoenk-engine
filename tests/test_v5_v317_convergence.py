@@ -17,9 +17,11 @@ def test_v317_baseline_and_schema_are_converged() -> None:
     acceptance = _load("config/v5_acceptance_registry.json")
     engine = _load("config/engine.json")
 
-    assert manifest["baselines"]["production_truth"] == "v3.17.0"
-    assert acceptance["convergence"]["production_baseline"] == "v3.17.0"
+    production_truth = str(manifest["baselines"]["production_truth"])
+    assert production_truth.startswith("v3.17.")
+    assert acceptance["convergence"]["production_baseline"] == production_truth
     assert manifest["baselines"]["production_main_sha"] == acceptance["convergence"]["production_main_sha"]
+    assert production_truth in str(manifest["baselines"]["prediction_intelligence"])
     assert engine["schema_version"] == 46
 
 

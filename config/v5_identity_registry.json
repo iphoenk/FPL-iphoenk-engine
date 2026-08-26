@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "authority": "Official FPL bootstrap-static",
+  "primary_key": "element_id",
+  "player_fields": ["id", "web_name", "team", "element_type", "now_cost", "selected_by_percent", "status"],
+  "team_fields": ["id", "name", "short_name"],
+  "resolved_fields": ["element", "name", "team_id", "team", "team_short_name", "element_type", "position", "now_cost", "ownership", "status"],
+  "fail_closed": {
+    "missing_element": true,
+    "unknown_position": true,
+    "missing_team": true
+  }
+}

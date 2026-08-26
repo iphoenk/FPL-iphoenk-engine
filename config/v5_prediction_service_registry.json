@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "default_operation": "build",
+  "network_contract": {
+    "return_full_predictions_by_default": false,
+    "player_fields": ["element", "name", "position", "stable_key", "xpts_3", "xpts_5", "xpts_10", "xpts_15", "mean_xpts", "uncertainty"],
+    "fixture_count": 5,
+    "fixture_fields": ["event", "xpts", "lower80", "upper80"],
+    "xmins_fields": ["start_probability", "bench_probability", "dnp_probability", "expected_minutes", "p60"],
+    "prior_fields": ["nailed_prior", "competition_pressure", "manager_rotation_rate", "set_piece_share", "penalty_share", "last_season_weight"]
+  },
+  "performance": {
+    "purpose": "avoid retransmitting full per-fixture provenance through orchestrator to decision service",
+    "parallel_safe": true
+  }
+}

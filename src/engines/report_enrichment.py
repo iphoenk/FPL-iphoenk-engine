@@ -53,6 +53,44 @@ def _battle_reasons(leader: dict[str, Any], challenger: dict[str, Any]) -> list[
     return reasons[:3]
 
 
+_DATA_STATE_ID = {
+    "AVAILABLE": "data terstruktur tersedia",
+    "CACHED_LAST_KNOWN_GOOD": "hanya cache terakhir; tidak dipakai sebagai data saat ini",
+    "STALE": "data kedaluwarsa; tidak dipakai sebagai data saat ini",
+    "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION": "situs terjangkau, tetapi data terstruktur belum tersedia",
+    "SOURCE_REACHABLE_NOT_INGESTED": "situs terjangkau, tetapi capability ini belum di-ingest",
+    "UNAVAILABLE": "tidak tersedia",
+    "DISABLED": "dinonaktifkan",
+}
+
+
+def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
+    sources = {str(row.get("id")): row for row in source_health.get("sources") or []}
+    capability_rows = source_health.get("capability_health") or []
+    selected = []
+    for source_id in ("livefpl", "onefpl"):
+        source = sources.get(source_id) or {}
+        price = next(
+            (row for row in capability_rows if row.get("source_id") == source_id and row.get("capability") == "price_prediction"),
+            {},
+        )
+        state = str(price.get("data_state") or "UNAVAILABLE")
+        selected.append({
+            "source": source.get("name") or source_id,
+            "source_id": source_id,
+            "terjangkau": bool(source.get("reachable")),
+            "status_sumber": source.get("status"),
+            "status_data_harga": _DATA_STATE_ID.get(state, "status data belum dikenali"),
+            "structured_state": state,
+            "observasi_baru": int(price.get("fresh_observations") or 0),
+        })
+    return {
+        "otoritas": "Official FPL tetap menjadi sumber native resmi",
+        "challenger": selected,
+        "catatan": "Status situs dan ketersediaan data terstruktur adalah dua hal berbeda. Cache atau data kedaluwarsa tidak diperlakukan sebagai data saat ini.",
+    }
+
+
 def run() -> dict[str, Any]:
     user = read_json(DATA / "user_report.json", {})
     tech = read_json(DATA / "technical_appendix.json", {})
@@ -60,6 +98,7 @@ def run() -> dict[str, Any]:
     lineup = read_json(DATA / "lineup_decision.json", {})
     projections = read_json(DATA / "projections.json", {})
     watchlist = read_json(DATA / "dss_watchlist.json", {})
+    source_health = read_json(DATA / "source_health.json", {})
 
     ledger = {int(row.get("element") or -1): row for row in team.get("team_value_ledger") or []}
     watch_rows = {
@@ -93,6 +132,15 @@ def run() -> dict[str, Any]:
     model_battle["challenger_metrics"] = challenger
     model_battle["main_reasons"] = _battle_reasons(leader, challenger) if leader and challenger else []
 
+    user["source_availability"] = _source_availability(source_health)
+    tech["source_capability_health"] = {
+        "source_overall": source_health.get("overall"),
+        "capabilities": source_health.get("capability_health") or [],
+        "structured_observation_count": source_health.get("structured_observation_count", 0),
+        "structured_cached_count": source_health.get("structured_cached_count", 0),
+        "structured_stale_count": source_health.get("structured_stale_count", 0),
+        "disagreement_count": source_health.get("disagreement_count", 0),
+    }
     tech["runtime"] = {
         "current_run_ref": "data/runtime_performance.json",
         "embedded_during_report_stage": False,
@@ -100,6 +148,7 @@ def run() -> dict[str, Any]:
     }
     tech.setdefault("audit", {})["price_radar_has_current_price_when_source_available"] = True
     tech["audit"]["starting_xi_battle_has_decision_evidence"] = True
+    tech["audit"]["source_reachability_is_separate_from_structured_data"] = True
 
     atomic_json(DATA / "user_report.json", user)
     atomic_json(DATA / "technical_appendix.json", tech)

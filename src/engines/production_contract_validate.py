@@ -4,12 +4,17 @@ import json
 
 from src.engines.reliability import validate_snapshot
 from src.rules import RULESET_ID, active_ruleset_fingerprint
-from src.utils import DATA
+from src.settings import STRATEGIC_HORIZON_GWS
+from src.utils import DATA, ROOT
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 
 def load(name: str):
     return json.loads((DATA / name).read_text(encoding="utf-8"))
+
+
+def load_config(path: str):
+    return json.loads((ROOT / path).read_text(encoding="utf-8"))
 
 
 def run() -> dict:
@@ -38,6 +43,14 @@ def run() -> dict:
     tech = load("technical_appendix.json")
     report_state = load("report_state.json")
 
+    price_policy = load_config("config/intelligence/price_radar.json")
+    challenger_registry = load_config("config/intelligence/challenger_registry.json")
+    reporting = load_config("config/intelligence/reporting.json")
+    dss_core = load_config("config/dss_core_registry.json")
+    dss_extensions = load_config("config/dss_extension_registry.json")
+    enhancements = load_config("config/enhancement_layers_registry.json")
+    gate0_registry = load_config("config/gate0_registry.json")
+
     assert s["engine_version"] == ENGINE_VERSION
     assert s["schema_version"] == SCHEMA_VERSION
     runtime = s.get("runtime_architecture", {})
@@ -64,16 +77,20 @@ def run() -> dict:
     assert rr.get("ruleset_fingerprint_sha256") == active_ruleset_fingerprint()
     assert rr.get("governance", {}).get("remote_change_never_auto_mutates_rules") is True
 
-    assert s.get("price_summary", {}).get("filter_policy", {}).get("min_ownership_pct") == 0.5
-    assert all(x.get("ownership_pct", 0) >= 0.5 and abs(x.get("net_transfers", 0)) >= 5000 for x in p.get("top_buy_pressure", []))
-    assert all(x.get("ownership_pct", 0) >= 0.5 and abs(x.get("net_transfers", 0)) >= 5000 for x in p.get("top_sell_pressure", []))
+    market_policy = price_policy["market_filter"]
+    serving_policy = price_policy["serving"]
+    min_ownership = float(market_policy["minimum_ownership_pct"])
+    min_abs_net = int(market_policy["minimum_abs_net_transfers"])
+    assert s.get("price_summary", {}).get("filter_policy", {}).get("min_ownership_pct") == min_ownership
+    assert all(x.get("ownership_pct", 0) >= min_ownership and abs(x.get("net_transfers", 0)) >= min_abs_net for x in p.get("top_buy_pressure", []))
+    assert all(x.get("ownership_pct", 0) >= min_ownership and abs(x.get("net_transfers", 0)) >= min_abs_net for x in p.get("top_sell_pressure", []))
     assert p.get("official_price_predictor_health", {}).get("status") == "LIVE"
     assert p.get("players")
     assert any(x.get("official_progress_pct") is not None for x in p.get("players", []))
     assert s.get("price_summary", {}).get("trajectory_features", {}).get("predicted_change_date") is True
     assert s.get("price_summary", {}).get("trajectory_features", {}).get("acceleration_deceleration") is True
     assert t.get("players")
-    assert pa.get("policy", {}).get("watch_capacity") == 50
+    assert pa.get("policy", {}).get("watch_capacity") == int(serving_policy["market_watch_capacity"])
 
     ods = s.get("official_detail_summary", {})
     assert ods.get("detail_requested", 0) >= 15
@@ -90,14 +107,14 @@ def run() -> dict:
     assert ts.get("teams") and ts.get("matchups")
     assert len(ts.get("teams", [])) == len({x.get("team_id") for x in u.get("players", [])})
     assert len(pr.get("players", [])) == len(u.get("players", []))
-    assert pr.get("horizon_gws") == 15
+    assert int(pr.get("horizon_gws") or 0) == STRATEGIC_HORIZON_GWS
     assert pr.get("historical_prior_model")
     assert int(pr.get("historical_prior_players_used") or 0) > 0
     for row in pr.get("players", []):
         xm = row.get("xmins", {})
         prob = sum(float(xm.get(k, 0)) for k in ("start_probability", "bench_probability", "dnp_probability"))
         assert abs(prob - 1.0) < 0.002
-        assert len(row.get("xpts_by_gw", [])) == 15
+        assert len(row.get("xpts_by_gw", [])) == STRATEGIC_HORIZON_GWS
         assert len(xm.get("expected_minutes_interval", [])) == 2
 
     assert prior.get("players")
@@ -121,7 +138,8 @@ def run() -> dict:
     assert isinstance(pl.get("records"), dict) and pl.get("records")
     assert pe.get("governance", {}).get("accuracy_claim_requires_settled_sample") is True
     provider_ids = {x.get("id") for x in cs.get("providers", [])}
-    assert provider_ids == {"internal", "onefpl", "fffix", "ffhub"}
+    expected_provider_ids = {x.get("id") for x in challenger_registry.get("providers", []) if x.get("enabled", True)}
+    assert provider_ids == expected_provider_ids
     assert cs.get("auto_scrape") is False
     assert cs.get("governance", {}).get("missing_provider_data_is_not_fabricated") is True
 
@@ -130,9 +148,10 @@ def run() -> dict:
     assert fh.get("rules_registry", {}).get("status") == "PASS"
     assert fh.get("gate0", {}).get("ruleset_id") == RULESET_ID
     assert fh.get("gate0", {}).get("counts", {}).get("FAIL", 0) == 0
-    assert fh.get("dss_core", {}).get("declared") == 50
-    assert fh.get("dss_extensions", {}).get("declared") == 16
-    assert fh.get("enhancements", {}).get("declared") == 8
+    assert fh.get("gate0", {}).get("declared") == int(gate0_registry["expected_count"])
+    assert fh.get("dss_core", {}).get("declared") == int(dss_core["expected_count"])
+    assert fh.get("dss_extensions", {}).get("declared") == int(dss_extensions["expected_count"])
+    assert fh.get("enhancements", {}).get("declared") == int(enhancements["expected_count"])
     assert fh.get("governance", {}).get("file_exists_is_not_sufficient_for_active") is True
     assert fh.get("governance", {}).get("rules_registry_precedes_gate0") is True
     assert fh.get("governance", {}).get("gate0_consumes_active_ruleset") is True
@@ -147,19 +166,23 @@ def run() -> dict:
     assert fh.get("overall") in {"GREEN", "AMBER"}
 
     assert list(user)[0] == "decision"
-    assert user.get("decision", {}).get("overall") in {"HOLD", "CHANGE", "REVIEW"}
+    assert user.get("decision", {}).get("overall") in set(reporting["decision_states"])
     assert user.get("report_mode") in {"COMPACT_STABLE", "FULL_OR_DELTA"}
-    assert len(user.get("action_board") or []) <= 8
-    assert user.get("horizon_policy") == {"primary": [3, 5], "strategic": [10, 15]}
+    assert len(user.get("action_board") or []) <= int(reporting["action_board"]["max_items"])
+    expected_horizon_policy = {
+        "primary": list(reporting["governance"]["primary_horizon_gws"]),
+        "strategic": list(reporting["governance"]["strategic_horizon_gws"]),
+    }
+    assert user.get("horizon_policy") == expected_horizon_policy
     assert (user.get("external_watchlist") or {}).get("status") in {"READY", "INSUFFICIENT_EVIDENCE"}
     serialized_user = json.dumps(user, ensure_ascii=False)
-    for token in ("go_allowed", "SUSPECT_STATIC_OFFSET0", "DSS-", "Gate 0", "epistemik", "asset-value protection"):
+    for token in reporting["language"]["forbidden_user_report_tokens"]:
         assert token not in serialized_user
     assert tech.get("framework_health", {}).get("gate0") is not None
     assert tech.get("framework_health", {}).get("dss_core") is not None
     assert tech.get("audit", {}).get("facts_models_decisions_separated") is True
     assert report_state.get("fingerprint") and report_state.get("state")
-    assert s.get("report_summary", {}).get("model") == "decision_first_report_v1"
+    assert s.get("report_summary", {}).get("model") == reporting["model_id"]
     assert s.get("files", {}).get("user_report") == "data/user_report.json"
     assert s.get("files", {}).get("technical_appendix") == "data/technical_appendix.json"
 

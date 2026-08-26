@@ -2,17 +2,54 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
 from zoneinfo import ZoneInfo
 
+from src.settings import API_RETRIES, PRICE_PRESSURE_LIST_SIZE, PRICE_SUMMARY_LIST_SIZE
 from src.sources.official_fpl import get_json
+from src.utils import ROOT
 
-MIN_OWNERSHIP_PCT = 0.5
-MIN_ABS_NET = 5_000
-HIGH_NET = 25_000
-MAX_MARKET_WATCH = 50
-UK = ZoneInfo("Europe/London")
+CONFIG_PATH = ROOT / "config" / "intelligence" / "price_radar.json"
+
+
+@lru_cache(maxsize=1)
+def load_policy() -> dict:
+    payload = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict) or not payload.get("model_id"):
+        raise RuntimeError("price radar policy must be a configured JSON object")
+    return payload
+
+
+_POLICY = load_policy()
+_MARKET = _POLICY.get("market_filter") or {}
+_TRAJECTORY = _POLICY.get("trajectory") or {}
+_URGENCY = _POLICY.get("urgency") or {}
+_SERVING = _POLICY.get("serving") or {}
+
+MIN_OWNERSHIP_PCT = float(_MARKET["minimum_ownership_pct"])
+MIN_ABS_NET = int(_MARKET["minimum_abs_net_transfers"])
+HIGH_NET = int(_MARKET["high_confidence_abs_net_transfers"])
+MAX_MARKET_WATCH = int(_SERVING["market_watch_capacity"])
+ALERT_SUMMARY_SIZE = int(_SERVING["alert_summary_size"])
+DEADLINE_TIMEZONE = str(_POLICY["deadline_timezone"])
+UK = ZoneInfo(DEADLINE_TIMEZONE)
+MINIMUM_RATE = float(_TRAJECTORY["minimum_rate_pct_per_hour"])
+RISK_PROGRESS_FLOOR = float(_TRAJECTORY["risk_progress_floor_pct"])
+MAXIMUM_ETA_HOURS = float(_TRAJECTORY["maximum_eta_hours"])
+TREND_DELTA = float(_TRAJECTORY["trend_delta_pct_per_hour"])
+STATIC_PROJECTION_MIN_RATE = float(_TRAJECTORY["static_projection_min_rate_pct_per_hour"])
+STATIC_PROJECTION_MIN_HOURS = float(_TRAJECTORY["static_projection_min_hours_to_deadline"])
+STATIC_PROJECTION_TOLERANCE = float(_TRAJECTORY["static_projection_tolerance_pct"])
+CRITICAL_PROGRESS = float(_URGENCY["critical_progress_pct"])
+HIGH_PROGRESS = float(_URGENCY["high_progress_pct"])
+MEDIUM_PROGRESS = float(_URGENCY["medium_progress_pct"])
+CRITICAL_HOURS = float(_URGENCY["critical_hours"])
+HIGH_HOURS = float(_URGENCY["high_hours"])
+MEDIUM_HOURS = float(_URGENCY["medium_hours"])
+ACTIONABLE_PROGRESS = float(_URGENCY["actionable_progress_pct"])
+ALERT_LEVELS = frozenset(str(x) for x in _URGENCY["alert_levels"])
 
 # The API currently exposes a signed ordinal likelihood code. Only +/-5 is
 # safely interpreted here as threshold-crossing / very-likely because observed
@@ -112,7 +149,8 @@ def classify_row(row: dict) -> dict:
     return {**row, "actionable": meta["actionable"], "confidence": meta["confidence"], "market_noise": meta["market_noise"]}
 
 
-def filtered_pressure(rows: Iterable[dict], direction: str, limit: int = 25) -> tuple[list[dict], list[dict]]:
+def filtered_pressure(rows: Iterable[dict], direction: str, limit: int | None = None) -> tuple[list[dict], list[dict]]:
+    limit = PRICE_PRESSURE_LIST_SIZE if limit is None else int(limit)
     classified = [classify_row(r) for r in rows]
     actionable = [r for r in classified if r["actionable"]]
     noise = [r for r in classified if not r["actionable"]]
@@ -134,9 +172,9 @@ def _official_projection_health(progress, rate, projections, hours_to_deadline):
     if (
         p0v is not None
         and rate is not None
-        and abs(rate) >= 0.25
-        and hours_to_deadline >= 1.0
-        and abs(p0v - progress) < 0.05
+        and abs(rate) >= STATIC_PROJECTION_MIN_RATE
+        and hours_to_deadline >= STATIC_PROJECTION_MIN_HOURS
+        and abs(p0v - progress) < STATIC_PROJECTION_TOLERANCE
     ):
         return "SUSPECT_STATIC_OFFSET0"
     return "LIVE"
@@ -148,9 +186,9 @@ def _trend(current_rate, previous_rate, elapsed_hours):
     acceleration = (current_rate - previous_rate) / elapsed_hours
     if current_rate * previous_rate < 0:
         label = "REVERSING"
-    elif abs(current_rate) > abs(previous_rate) + 0.05:
+    elif abs(current_rate) > abs(previous_rate) + TREND_DELTA:
         label = "ACCELERATING"
-    elif abs(current_rate) < max(0.0, abs(previous_rate) - 0.05):
+    elif abs(current_rate) < max(0.0, abs(previous_rate) - TREND_DELTA):
         label = "DECELERATING"
     else:
         label = "STEADY"
@@ -158,12 +196,9 @@ def _trend(current_rate, previous_rate, elapsed_hours):
 
 
 def _trajectory_eta(now, progress, rate):
-    if progress is None or rate is None or abs(rate) < 0.01:
+    if progress is None or rate is None or abs(rate) < MINIMUM_RATE:
         return None, None
-    # A trajectory can only project a crossing if movement continues toward the
-    # threshold implied by the current progress. This prevents a player at -90%
-    # who has just started recovering (+rate) from being mislabelled as a rise.
-    if abs(progress) >= 5:
+    if abs(progress) >= RISK_PROGRESS_FLOOR:
         target = 100.0 if progress > 0 else -100.0
         if (target - progress) * rate <= 0:
             return None, None
@@ -171,7 +206,7 @@ def _trajectory_eta(now, progress, rate):
         target = 100.0 if rate > 0 else -100.0
     remaining = target - progress
     eta = remaining / rate
-    if eta < 0 or eta > 24 * 7:
+    if eta < 0 or eta > MAXIMUM_ETA_HOURS:
         return None, None
     crossing = now + timedelta(hours=eta)
     return round(eta, 2), _deadline_for_crossing(crossing).isoformat()
@@ -193,21 +228,19 @@ def _urgency(progress, predicted_deadline, now):
     abs_progress = abs(progress) if progress is not None else 0.0
     deadline = _parse_dt(predicted_deadline)
     hours = (deadline - now).total_seconds() / 3600 if deadline else None
-    if abs_progress >= 90 or (hours is not None and hours <= 24 and abs_progress >= 75):
+    if abs_progress >= CRITICAL_PROGRESS or (hours is not None and hours <= CRITICAL_HOURS and abs_progress >= HIGH_PROGRESS):
         return "CRITICAL"
-    if abs_progress >= 75 or (hours is not None and hours <= 24):
+    if abs_progress >= HIGH_PROGRESS or (hours is not None and hours <= HIGH_HOURS):
         return "HIGH"
-    if abs_progress >= 50 or (hours is not None and hours <= 48):
+    if abs_progress >= MEDIUM_PROGRESS or (hours is not None and hours <= MEDIUM_HOURS):
         return "MEDIUM"
     return "LOW"
 
 
 def _risk_direction(progress, rate):
-    # Current Official progress tells us which threshold is actually nearby.
-    # Hourly rate tells us whether that risk is intensifying or recovering.
-    if progress is not None and abs(progress) >= 5:
+    if progress is not None and abs(progress) >= RISK_PROGRESS_FLOOR:
         return "RISE" if progress > 0 else "FALL"
-    if rate is None or abs(rate) < 0.01:
+    if rate is None or abs(rate) < MINIMUM_RATE:
         return "STABLE"
     return "RISE" if rate > 0 else "FALL"
 
@@ -271,7 +304,7 @@ def build_trajectory(players: list[dict], previous_state: dict, now: datetime) -
 
         risk = _risk_direction(progress, rate)
         urgency = _urgency(progress, predicted_deadline, now)
-        price_actionable = urgency in {"CRITICAL", "HIGH", "MEDIUM"} or abs(progress or 0) >= 50
+        price_actionable = urgency in {"CRITICAL", "HIGH", "MEDIUM"} or abs(progress or 0) >= ACTIONABLE_PROGRESS
         item = {
             **row,
             "risk_direction": risk,
@@ -308,7 +341,7 @@ def _risk_sort(row: dict):
 def _alerts(rows: list[dict], owned_ids: set[int]) -> list[dict]:
     alerts = []
     for row in rows:
-        if row.get("urgency") not in {"CRITICAL", "HIGH"}:
+        if row.get("urgency") not in ALERT_LEVELS:
             continue
         alerts.append({
             "element": row.get("element"),
@@ -333,6 +366,7 @@ def apply_to_payload(prices: dict) -> dict:
     return {
         **prices,
         "filter_policy": {
+            "model_id": _POLICY.get("model_id"),
             "min_ownership_pct": MIN_OWNERSHIP_PCT,
             "min_abs_net_transfers": MIN_ABS_NET,
             "purpose": "suppress tiny-denominator transfer-momentum noise; Official price progress is evaluated separately",
@@ -351,7 +385,7 @@ def patch_files(data_dir: str | Path = "data") -> None:
     alerts_path = root / "price_alerts.json"
 
     prices = json.loads(prices_path.read_text(encoding="utf-8"))
-    bootstrap, official_health = get_json("bootstrap-static/", retries=2)
+    bootstrap, official_health = get_json("bootstrap-static/", retries=API_RETRIES)
     now = datetime.now(timezone.utc)
 
     enriched = []
@@ -367,16 +401,16 @@ def patch_files(data_dir: str | Path = "data") -> None:
         by_momentum = sorted(enriched, key=lambda r: float(r.get("momentum") or 0), reverse=True)
         prices.update({
             "players": enriched,
-            "top_buy_pressure": by_momentum[:25],
-            "top_sell_pressure": list(reversed(by_momentum[-25:])),
-            "top_rise_risk": rising[:25],
-            "top_fall_risk": falling[:25],
+            "top_buy_pressure": by_momentum[:PRICE_PRESSURE_LIST_SIZE],
+            "top_sell_pressure": list(reversed(by_momentum[-PRICE_PRESSURE_LIST_SIZE:])),
+            "top_rise_risk": rising[:PRICE_PRESSURE_LIST_SIZE],
+            "top_fall_risk": falling[:PRICE_PRESSURE_LIST_SIZE],
             "official_price_predictor_health": official_health,
             "official_price_fields": {
                 "progress": "price_change_percent",
                 "hourly_rate": "price_change_hourly_rate / 100",
                 "projections": "price_change_projections",
-                "price_deadline": "00:00 Europe/London",
+                "price_deadline": f"00:00 {DEADLINE_TIMEZONE}",
                 "authority": "Official FPL bootstrap native fields",
             },
         })
@@ -393,10 +427,14 @@ def patch_files(data_dir: str | Path = "data") -> None:
 
     all_rows = filtered.get("players", [])
     alerts = _alerts(all_rows, owned_ids)
-    external_watch = [r for r in sorted(all_rows, key=_risk_sort, reverse=True) if r.get("element") not in owned_ids][:MAX_MARKET_WATCH]
+    external_watch = [
+        r for r in sorted(all_rows, key=_risk_sort, reverse=True)
+        if r.get("element") not in owned_ids
+    ][:MAX_MARKET_WATCH]
     alert_payload = {
         "generated_at": now.isoformat(),
         "policy": {
+            "model_id": _POLICY.get("model_id"),
             "watch_capacity": MAX_MARKET_WATCH,
             "push_semantics": "consumer should notify only when alert intersects OWNED or a DSS-approved external watchlist and the move is decision-relevant",
             "price_signal_is_overlay": True,
@@ -410,11 +448,11 @@ def patch_files(data_dir: str | Path = "data") -> None:
         latest = json.loads(latest_path.read_text(encoding="utf-8"))
         latest["price_summary"] = {
             "confirmed_changes": filtered.get("confirmed_changes", []),
-            "top_buy_pressure": filtered.get("top_buy_pressure", [])[:10],
-            "top_sell_pressure": filtered.get("top_sell_pressure", [])[:10],
-            "top_rise_risk": filtered.get("top_rise_risk", [])[:10],
-            "top_fall_risk": filtered.get("top_fall_risk", [])[:10],
-            "alerts": alerts[:20],
+            "top_buy_pressure": filtered.get("top_buy_pressure", [])[:PRICE_SUMMARY_LIST_SIZE],
+            "top_sell_pressure": filtered.get("top_sell_pressure", [])[:PRICE_SUMMARY_LIST_SIZE],
+            "top_rise_risk": filtered.get("top_rise_risk", [])[:PRICE_SUMMARY_LIST_SIZE],
+            "top_fall_risk": filtered.get("top_fall_risk", [])[:PRICE_SUMMARY_LIST_SIZE],
+            "alerts": alerts[:ALERT_SUMMARY_SIZE],
             "official_price_predictor_health": filtered.get("official_price_predictor_health", {}),
             "filter_policy": filtered.get("filter_policy", {}),
             "market_noise_count": {

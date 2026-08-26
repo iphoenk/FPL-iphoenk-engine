@@ -8,7 +8,7 @@ from src.sources import official_fpl
 def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     registry = _load_registry()
     _validate_dag(registry)
-    assert registry["schema_version"] >= 7
+    assert registry["schema_version"] >= 9
     assert registry["architecture"] == "V3_BOUNDED_PROCESS_MICROSERVICES"
     assert registry["policy"]["parallelize_independent_services"] is True
     assert registry["policy"]["latest_json_single_writer_during_fan_in"] is True
@@ -22,6 +22,8 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     assert registry["policy"]["source_registry_is_separate_infrastructure_layer"] is True
     assert registry["policy"]["official_fpl_remains_native_authority"] is True
     assert registry["policy"]["challenger_source_failure_does_not_block_decisions"] is True
+    assert registry["policy"]["source_reachability_is_separate_from_capability_data_health"] is True
+    assert registry["policy"]["version_neutral_service_entrypoints"] is True
     services = registry["services"]
     assert set(services) == {
         "collector", "source_layer", "price", "historical_prior", "prediction", "authenticated_official", "rules",
@@ -29,7 +31,7 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
         "watchlist", "reporting", "report_materializer",
     }
     assert services["source_layer"]["depends_on"] == ["collector"]
-    assert services["price"]["depends_on"] == ["collector"]
+    assert services["price"]["depends_on"] == ["collector", "source_layer"]
     assert services["historical_prior"]["depends_on"] == ["collector"]
     assert services["prediction"]["depends_on"] == ["historical_prior"]
     assert services["official_detail"]["depends_on"] == ["price"]
@@ -44,11 +46,13 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     assert services["reporting"]["depends_on"] == ["watchlist"]
     assert set(services["report_materializer"]["depends_on"]) == {"reporting", "official_detail"}
     commands = services["governance"]["commands"]
-    assert any(c.get("module") == "src.engines.framework_health_audit" and "postflight" in c.get("args", []) for c in commands)
+    assert any(c.get("module") == "src.engines.framework_health_service" and "postflight" in c.get("args", []) for c in commands)
     assert any(c.get("module") == "src.engines.lineup_framework_health_overlay" for c in commands)
     assert any(c.get("module") == "src.engines.decision_quality_overlay" for c in commands)
     assert any(c.get("module") == "src.engines.source_framework_overlay" for c in commands)
     assert services["source_layer"]["commands"] == [{"module": "src.engines.source_layer", "args": []}]
+    assert services["price"]["commands"] == [{"module": "src.engines.price_service", "args": []}]
+    assert services["prediction"]["commands"] == [{"module": "src.engines.prediction_service", "args": []}]
     assert services["watchlist"]["commands"] == [
         {"module": "src.engines.dss_watchlist", "args": []},
         {"module": "src.engines.watchlist_public_sanitize", "args": []},
@@ -61,6 +65,9 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
         {"module": "src.engines.report_materializer", "args": []},
         {"module": "src.engines.report_serving_validate", "args": []},
     ]
+    for service in services.values():
+        for command in service.get("commands") or []:
+            assert "code" not in command
 
 
 def test_collector_cli_flags_are_registry_driven():

@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "registry": "SOURCE_REGISTRY_V1",
+  "schema_version": 2,
+  "registry": "SOURCE_REGISTRY_V2",
   "policy": {
     "official_fpl_is_native_authority": true,
     "challengers_never_override_official_native_fields": true,
@@ -10,7 +10,10 @@
     "default_timeout_seconds": 2.5,
     "max_workers": 6,
     "raw_credentials_forbidden": true,
-    "public_fetch_only_unless_explicit_authenticated_adapter": true
+    "public_fetch_only_unless_explicit_authenticated_adapter": true,
+    "source_reachability_is_separate_from_capability_health": true,
+    "stale_observations_are_never_silently_current": true,
+    "challenger_observation_contract": "challenger_observation_v2"
   },
   "sources": [
     {
@@ -54,6 +57,10 @@
       "critical": false,
       "adapter": "livefpl",
       "probe_url": "https://www.livefpl.net/",
+      "structured_url": "https://www.livefpl.net/prices",
+      "observation_ttl_seconds": 1800,
+      "max_fetch_bytes": 1048576,
+      "parser_contract": "livefpl-price-v1",
       "capabilities": ["price_prediction", "effective_ownership", "live_rank", "bonus_crosscheck", "defcon_crosscheck", "autosub_crosscheck", "rank_tier_context"]
     },
     {
@@ -65,6 +72,10 @@
       "critical": false,
       "adapter": "onefpl",
       "probe_url": "https://onefpl.com/",
+      "structured_url": "https://onefpl.com/prices",
+      "observation_ttl_seconds": 1800,
+      "max_fetch_bytes": 1048576,
+      "parser_contract": "onefpl-price-v1",
       "capabilities": ["price_prediction", "transfer_trends", "captaincy_context", "planner_context"]
     },
     {

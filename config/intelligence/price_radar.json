@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "model_id": "official_price_radar_v2",
+  "deadline_timezone": "Europe/London",
+  "market_filter": {
+    "minimum_ownership_pct": 0.5,
+    "minimum_abs_net_transfers": 5000,
+    "high_confidence_abs_net_transfers": 25000
+  },
+  "trajectory": {
+    "minimum_rate_pct_per_hour": 0.01,
+    "risk_progress_floor_pct": 5.0,
+    "maximum_eta_hours": 168,
+    "trend_delta_pct_per_hour": 0.05,
+    "static_projection_min_rate_pct_per_hour": 0.25,
+    "static_projection_min_hours_to_deadline": 1.0,
+    "static_projection_tolerance_pct": 0.05
+  },
+  "urgency": {
+    "critical_progress_pct": 90,
+    "high_progress_pct": 75,
+    "medium_progress_pct": 50,
+    "critical_hours": 24,
+    "high_hours": 24,
+    "medium_hours": 48,
+    "actionable_progress_pct": 50,
+    "alert_levels": ["CRITICAL", "HIGH"]
+  },
+  "serving": {
+    "market_watch_capacity": 50,
+    "alert_summary_size": 20
+  },
+  "governance": {
+    "official_native_fields_are_authoritative": true,
+    "price_signal_is_overlay": true,
+    "challenger_context_cannot_override_official_fields": true
+  }
+}

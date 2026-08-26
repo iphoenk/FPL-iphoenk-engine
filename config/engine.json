@@ -15,5 +15,5 @@
   "price_pressure_list_size": 25,
   "price_summary_list_size": 10,
   "fail_closed": true,
-  "schema_version": 46
+  "schema_version": 47
 }

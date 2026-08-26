@@ -1,7 +1,7 @@
 {
-  "schema_version": 8,
+  "schema_version": 9,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.17-full-dss-operational-evidence-15-owned-20-watchlist",
+  "production_contract": "v3.18-structured-challenger-ingestion-15-owned-20-watchlist",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,
@@ -31,14 +31,21 @@
     "missing_external_observations_are_never_fabricated": true,
     "dss_module_health_is_separate_from_signal_availability": true,
     "all_active_dss_requires_runtime_evidence_contract": true,
-    "strict_postflight_requires_50_core_16_extensions_and_8_enhancements_active": true
+    "strict_postflight_requires_50_core_16_extensions_and_8_enhancements_active": true,
+    "source_reachability_is_separate_from_capability_data_health": true,
+    "structured_challenger_ingestion_is_registry_driven": true,
+    "price_challenger_context_is_non_authoritative": true,
+    "stale_challenger_observations_are_not_current": true,
+    "version_neutral_service_entrypoints": true,
+    "inline_python_service_commands_forbidden": true,
+    "framework_expected_counts_are_registry_owned": true
   },
   "runtime": {
     "max_parallel_services": 5,
     "service_timeout_seconds": 180,
     "http_cache_ttl_seconds": 180,
     "performance_budget_seconds": 45,
-    "performance_target": "preserve sub-45-second runtime while validating full DSS operational evidence and materializing small report-serving artifacts"
+    "performance_target": "preserve sub-45-second runtime while adding bounded structured challenger ingestion and keeping full DSS operational evidence green"
   },
   "services": {
     "collector": {
@@ -57,24 +64,24 @@
       "critical": true,
       "isolated": true,
       "inputs": [
-        "latest.json", "health.json", "stats/shots_gw1.json", "stats/playermatchstats_gw1.json",
+        "latest.json", "health.json", "challenger_observations.json", "stats/shots_gw1.json", "stats/playermatchstats_gw1.json",
         "stats/vaastav_previous_season.json"
       ],
       "commands": [{"module": "src.engines.source_layer", "args": []}],
-      "artifacts": ["source_health.json", "source_registry_runtime.json"],
+      "artifacts": ["source_health.json", "source_registry_runtime.json", "challenger_observations.json"],
       "latest_keys": ["source_layer_summary"],
-      "latest_file_keys": ["source_health", "source_registry_runtime"]
+      "latest_file_keys": ["source_health", "source_registry_runtime", "challenger_observations"]
     },
     "price": {
       "stage": "parallel",
-      "depends_on": ["collector"],
+      "depends_on": ["collector", "source_layer"],
       "critical": true,
       "isolated": true,
-      "inputs": ["latest.json", "team.json", "prices.json", "price_trajectory.json"],
-      "commands": [{"code": "import os; from src.engines.price_radar import patch_files; patch_files(os.environ['FPL_DATA_DIR'])"}],
-      "artifacts": ["prices.json", "price_trajectory.json", "price_alerts.json"],
+      "inputs": ["latest.json", "team.json", "prices.json", "price_trajectory.json", "challenger_observations.json"],
+      "commands": [{"module": "src.engines.price_service", "args": []}],
+      "artifacts": ["prices.json", "price_trajectory.json", "price_alerts.json", "price_challenger_context.json"],
       "latest_keys": ["price_summary"],
-      "latest_file_keys": ["price_trajectory", "price_alerts"]
+      "latest_file_keys": ["price_trajectory", "price_alerts", "price_challenger_context"]
     },
     "historical_prior": {
       "stage": "parallel",
@@ -93,7 +100,7 @@
       "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "team.json", "prior_season.json"],
-      "commands": [{"module": "src.engines.decision_intelligence_v313", "args": []}],
+      "commands": [{"module": "src.engines.prediction_service", "args": []}],
       "artifacts": ["team_strength.json", "projections.json", "package_optimizer.json", "prediction_quality.json"],
       "latest_keys": ["decision_intelligence", "prediction_quality_summary"],
       "latest_file_keys": ["team_strength", "projections", "package_optimizer", "prediction_quality"]
@@ -170,8 +177,8 @@
       "critical": true,
       "isolated": false,
       "commands": [
-        {"module": "src.engines.framework_health_audit", "args": ["--phase", "preflight", "--strict"]},
-        {"module": "src.engines.framework_health_audit", "args": ["--phase", "postflight", "--strict"]},
+        {"module": "src.engines.framework_health_service", "args": ["--phase", "preflight", "--strict"]},
+        {"module": "src.engines.framework_health_service", "args": ["--phase", "postflight", "--strict"]},
         {"module": "src.engines.p0_framework_health_overlay", "args": []},
         {"module": "src.engines.lineup_framework_health_overlay", "args": []},
         {"module": "src.engines.decision_quality_overlay", "args": []},

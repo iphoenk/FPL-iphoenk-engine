@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "registry": "DSS_EXTENSIONS",
+  "expected_count": 16,
   "description": "Post-core intelligence. Extensions may evolve without renumbering the canonical DSS-50.",
   "modules": [
     {"id":"DSS-X01","name":"Point-in-Time / Leakage Protection","critical":true,"required_files":["src/engines/leakage_guard.py"],"operational_probe":"leakage_guard"},

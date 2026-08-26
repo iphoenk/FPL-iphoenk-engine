@@ -100,7 +100,10 @@ def summarize_authenticated_payloads(
     if isinstance(transfers_latest, list):
         transfer_summary = {"available": True, "count": len(transfers_latest)}
     elif isinstance(transfers_latest, dict):
-        values = next((transfers_latest.get(k) for k in ("transfers", "results") if isinstance(transfers_latest.get(k), list)), None)
+        values = next(
+            (transfers_latest.get(k) for k in ("transfers", "results") if isinstance(transfers_latest.get(k), list)),
+            None,
+        )
         transfer_summary = {"available": True, "count": len(values) if isinstance(values, list) else None}
     else:
         transfer_summary = {"available": False, "count": None}
@@ -121,13 +124,11 @@ def summarize_authenticated_payloads(
     }
 
 
-def collect(authoritative_elements: Iterable[int]) -> dict:
-    checked_at = iso_now()
-    expected = expected_team_id()
-    base = {
-        "checked_at": checked_at,
-        "expected_entry": expected,
-        "state": "DISABLED",
+def _base_summary(state: str = "DISABLED") -> dict:
+    return {
+        "checked_at": iso_now(),
+        "expected_entry": expected_team_id(),
+        "state": state,
         "verified_entry": None,
         "endpoint_health": {},
         "safe_finance": {},
@@ -135,22 +136,30 @@ def collect(authoritative_elements: Iterable[int]) -> dict:
         "transfers_latest": {"available": False, "count": None},
         "raw_authenticated_payload_persisted": False,
     }
+
+
+def collect_runtime(authoritative_elements: Iterable[int] = ()) -> dict[str, Any]:
+    """Return safe summary plus in-memory draft payload. Callers must never persist runtime_payloads."""
+    base = _base_summary()
     try:
         material = auth_material_from_env()
     except AuthConfigurationError:
-        return {**base, "state": "MISCONFIGURED"}
+        return {"summary": {**base, "state": "MISCONFIGURED"}, "my_team": None}
     if material is None:
-        return base
+        return {"summary": base, "my_team": None}
     try:
         me, health_me = safe_get("me", material)
     except AuthPolicyError:
-        return {**base, "state": "POLICY_BLOCKED"}
+        return {"summary": {**base, "state": "POLICY_BLOCKED"}, "my_team": None}
     health = {"me": health_me}
     if health_me.get("status") == "AUTH_REJECTED":
-        return {**base, "state": "EXPIRED_OR_REJECTED", "endpoint_health": health}
+        return {"summary": {**base, "state": "EXPIRED_OR_REJECTED", "endpoint_health": health}, "my_team": None}
     verified = _entry_from_me(me)
-    if verified != expected:
-        return {**base, "state": "ENTRY_MISMATCH", "verified_entry": verified, "endpoint_health": health}
+    if verified != expected_team_id():
+        return {
+            "summary": {**base, "state": "ENTRY_MISMATCH", "verified_entry": verified, "endpoint_health": health},
+            "my_team": None,
+        }
     my_team, health_team = safe_get("my_team", material)
     latest, health_latest = safe_get("transfers_latest", material)
     health.update({"my_team": health_team, "transfers_latest": health_latest})
@@ -163,4 +172,8 @@ def collect(authoritative_elements: Iterable[int]) -> dict:
     )
     if health_team.get("status") == "AUTH_REJECTED" or health_latest.get("status") == "AUTH_REJECTED":
         summary["state"] = "PARTIAL_AUTH_REJECTED"
-    return summary
+    return {"summary": summary, "my_team": my_team if isinstance(my_team, dict) else None}
+
+
+def collect(authoritative_elements: Iterable[int]) -> dict:
+    return collect_runtime(authoritative_elements)["summary"]

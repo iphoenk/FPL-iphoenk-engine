@@ -1,5 +1,5 @@
 {
-  "version": 12,
+  "version": 13,
   "policy": "Every business capability has exactly one bounded-context microservice owner. Cross-service calls use versioned contracts; no service may import another service's business implementation.",
   "modules": {
     "public_api": {"plane":"truth","entrypoint":"src.v5.public_api","config":"config/v5_public_api_registry.json","status":"ACTIVE"},
@@ -27,6 +27,7 @@
 
     "projection_index": {"plane":"decision","entrypoint":"src.v5.decision.projection_index","config":"config/intelligence/package_optimizer.json","status":"ACTIVE_ALPHA"},
     "package_optimizer": {"plane":"decision","entrypoint":"src.v5.decision.package_optimizer","config":"config/intelligence/package_optimizer.json","status":"ACTIVE_ALPHA"},
+    "package_governance": {"plane":"decision","entrypoint":"src.v5.decision.package_governance","config":"config/v5_package_governance_registry.json","status":"ACTIVE_ALPHA"},
     "lineup_optimizer": {"plane":"decision","entrypoint":"src.v5.decision.lineup_optimizer","config":"config/v5_decision_registry.json","status":"ACTIVE_ALPHA"},
     "decision_trace": {"plane":"decision","entrypoint":"src.v5.decision.decision_trace","config":"config/v5_decision_registry.json","status":"ACTIVE_ALPHA"},
     "dss_core": {"plane":"decision","entrypoint":"src.v5.decision.dss_evaluator","config":"config/dss_core_registry.json","status":"ACTIVE"},

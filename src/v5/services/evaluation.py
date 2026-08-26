@@ -4,10 +4,12 @@ from typing import Any
 
 from src.v5.evaluation.core import challenger_scorecard, evaluate
 
+BASE_CAPABILITIES = ["prediction_evaluation", "calibration_store", "challenger_scorecard"]
+
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation == "status":
-        return {"status": "ACTIVE", "capabilities": ["prediction_evaluation", "calibration_store", "challenger_scorecard"]}
+        return {"status": "ACTIVE", "capabilities": list(BASE_CAPABILITIES)}
     if operation != "build":
         raise KeyError(f"unsupported evaluation operation: {operation}")
     prediction = payload.get("prediction") if isinstance(payload.get("prediction"), dict) else {}
@@ -17,4 +19,13 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     ledger = payload.get("ledger") if isinstance(payload.get("ledger"), dict) else None
     observations = payload.get("observations") if isinstance(payload.get("observations"), dict) else None
     result = evaluate(prediction, context, bootstrap, event_live, ledger)
-    return {**result, "challenger_scorecard": challenger_scorecard(prediction, observations, result["accuracy"])}
+    scorecard = challenger_scorecard(prediction, observations, result["accuracy"])
+    capabilities = set(BASE_CAPABILITIES)
+    sample_size = int((((result.get("accuracy") or {}).get("overall") or {}).get("sample_size") or 0))
+    if sample_size > 0:
+        capabilities.add("learning_loop")
+    return {
+        **result,
+        "challenger_scorecard": scorecard,
+        "capabilities": sorted(capabilities),
+    }

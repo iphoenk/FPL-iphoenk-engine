@@ -1,108 +1,74 @@
 services:
   ingestion:
-    build:
-      context: ../..
-      dockerfile: deploy/v5/Dockerfile
-    environment:
-      V5_SERVICE_ID: ingestion
-      V5_SERVICE_PORT: 8101
+    build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
+    environment: {V5_SERVICE_ID: ingestion, V5_SERVICE_PORT: 8101}
     ports: ["8101:8101"]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://127.0.0.1:8101/health', timeout=2).raise_for_status()"]
+    healthcheck: &health
+      test: ["CMD", "python", "-c", "import os,requests; p=os.environ['V5_SERVICE_PORT']; requests.get(f'http://127.0.0.1:{p}/health', timeout=2).raise_for_status()"]
       interval: 10s
       timeout: 3s
       retries: 5
 
   truth:
-    build:
-      context: ../..
-      dockerfile: deploy/v5/Dockerfile
-    environment:
-      V5_SERVICE_ID: truth
-      V5_SERVICE_PORT: 8102
+    build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
+    environment: {V5_SERVICE_ID: truth, V5_SERVICE_PORT: 8102}
     ports: ["8102:8102"]
-    depends_on:
-      ingestion:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://127.0.0.1:8102/health', timeout=2).raise_for_status()"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+    depends_on: {ingestion: {condition: service_healthy}}
+    healthcheck: *health
 
   price:
-    build:
-      context: ../..
-      dockerfile: deploy/v5/Dockerfile
-    environment:
-      V5_SERVICE_ID: price
-      V5_SERVICE_PORT: 8103
+    build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
+    environment: {V5_SERVICE_ID: price, V5_SERVICE_PORT: 8103}
     ports: ["8103:8103"]
-    depends_on:
-      truth:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://127.0.0.1:8103/health', timeout=2).raise_for_status()"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+    depends_on: {truth: {condition: service_healthy}}
+    healthcheck: *health
 
   prediction:
-    build:
-      context: ../..
-      dockerfile: deploy/v5/Dockerfile
-    environment:
-      V5_SERVICE_ID: prediction
-      V5_SERVICE_PORT: 8104
+    build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
+    environment: {V5_SERVICE_ID: prediction, V5_SERVICE_PORT: 8104}
     ports: ["8104:8104"]
-    depends_on:
-      truth:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://127.0.0.1:8104/health', timeout=2).raise_for_status()"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+    depends_on: {truth: {condition: service_healthy}}
+    healthcheck: *health
 
   decision:
-    build:
-      context: ../..
-      dockerfile: deploy/v5/Dockerfile
-    environment:
-      V5_SERVICE_ID: decision
-      V5_SERVICE_PORT: 8105
+    build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
+    environment: {V5_SERVICE_ID: decision, V5_SERVICE_PORT: 8105}
     ports: ["8105:8105"]
     depends_on:
-      price:
-        condition: service_healthy
-      prediction:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://127.0.0.1:8105/health', timeout=2).raise_for_status()"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+      price: {condition: service_healthy}
+      prediction: {condition: service_healthy}
+    healthcheck: *health
 
   snapshot:
-    build:
-      context: ../..
-      dockerfile: deploy/v5/Dockerfile
-    environment:
-      V5_SERVICE_ID: snapshot
-      V5_SERVICE_PORT: 8106
+    build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
+    environment: {V5_SERVICE_ID: snapshot, V5_SERVICE_PORT: 8106}
     ports: ["8106:8106"]
-    volumes:
-      - ../../data/v5:/app/data/v5
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://127.0.0.1:8106/health', timeout=2).raise_for_status()"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+    volumes: ["../../data/v5:/app/data/v5"]
+    healthcheck: *health
+
+  evaluation:
+    build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
+    environment: {V5_SERVICE_ID: evaluation, V5_SERVICE_PORT: 8107}
+    ports: ["8107:8107"]
+    depends_on:
+      prediction: {condition: service_healthy}
+      snapshot: {condition: service_healthy}
+    healthcheck: *health
+
+  governance:
+    build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
+    environment: {V5_SERVICE_ID: governance, V5_SERVICE_PORT: 8108}
+    ports: ["8108:8108"]
+    depends_on:
+      truth: {condition: service_healthy}
+      price: {condition: service_healthy}
+      prediction: {condition: service_healthy}
+      evaluation: {condition: service_healthy}
+      decision: {condition: service_healthy}
+    healthcheck: *health
 
   orchestrator:
-    build:
-      context: ../..
-      dockerfile: deploy/v5/Dockerfile
+    build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
     environment:
       V5_SERVICE_ID: orchestrator
       V5_SERVICE_PORT: 8100
@@ -112,22 +78,16 @@ services:
       V5_SERVICE_PREDICTION_URL: http://prediction:8104
       V5_SERVICE_DECISION_URL: http://decision:8105
       V5_SERVICE_SNAPSHOT_URL: http://snapshot:8106
+      V5_SERVICE_EVALUATION_URL: http://evaluation:8107
+      V5_SERVICE_GOVERNANCE_URL: http://governance:8108
     ports: ["8100:8100"]
     depends_on:
-      ingestion:
-        condition: service_healthy
-      truth:
-        condition: service_healthy
-      price:
-        condition: service_healthy
-      prediction:
-        condition: service_healthy
-      decision:
-        condition: service_healthy
-      snapshot:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://127.0.0.1:8100/health', timeout=2).raise_for_status()"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+      ingestion: {condition: service_healthy}
+      truth: {condition: service_healthy}
+      price: {condition: service_healthy}
+      prediction: {condition: service_healthy}
+      decision: {condition: service_healthy}
+      snapshot: {condition: service_healthy}
+      evaluation: {condition: service_healthy}
+      governance: {condition: service_healthy}
+    healthcheck: *health

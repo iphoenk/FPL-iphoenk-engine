@@ -1,11 +1,83 @@
 {
-  "engine":"FPL iphoenk Engine","version":"5.0.0-beta.1","codename":"Unified Decision Engine","track":"microservices_convergence_beta",
-  "baselines":{"production_truth":"v3.16.1","production_main_sha":"c9761bc9beea7fac2ae45dcb0376ac7f6e951692","prediction_intelligence":"v3.16.1-source-layer-plus-v4-research"},
-  "operating_model":{"v3":"production and scheduled-task runtime until V5 acceptance cutover","v4":"prediction R&D and calibration reference only","v5":"beta bounded-context microservices convergence and shadow-run candidate"},
-  "single_authorities":{"rules":"truth service -> config/rules","runtime_settings":"config/engine.json with explicit environment overrides","source_registry":"ingestion/source-authority -> config/sources/registry.json","official_player_identity":"truth service -> Official FPL element id","squad_state":"truth service -> phase-aware resolver","finance":"truth service -> finance engine","price":"price service","projection":"prediction service","prediction_evaluation":"evaluation service","shadow_parity":"evaluation service","package_optimizer":"decision service","external_watchlist":"watchlist service","framework_governance":"governance service","reporting":"reporting service","persistence":"snapshot service","orchestration":"orchestrator service"},
+  "engine":"FPL iphoenk Engine",
+  "version":"5.0.0-beta.1",
+  "codename":"Unified Decision Engine",
+  "track":"microservices_convergence_beta",
+  "baselines":{
+    "production_truth":"v3.17.0",
+    "production_main_sha":"8f699f4ec4551a146d4d5130effb82fe6fd8f3ac",
+    "prediction_intelligence":"v3.17.0-full-dss-plus-v4-research"
+  },
+  "operating_model":{
+    "v3":"production and scheduled-task runtime until V5 acceptance cutover",
+    "v4":"prediction R&D and calibration reference only",
+    "v5":"beta bounded-context microservices convergence and shadow-run candidate"
+  },
+  "single_authorities":{
+    "rules":"truth service -> config/rules",
+    "runtime_settings":"config/engine.json with explicit environment overrides",
+    "source_registry":"ingestion/source-authority -> config/sources/registry.json",
+    "official_player_identity":"truth service -> Official FPL element id",
+    "squad_state":"truth service -> phase-aware resolver",
+    "finance":"truth service -> finance engine",
+    "price":"price service",
+    "projection":"prediction service",
+    "prediction_evaluation":"evaluation service",
+    "shadow_parity":"evaluation service",
+    "package_optimizer":"decision service -> config/intelligence/package_optimizer.json",
+    "package_guardrails":"decision service -> config/intelligence/package_optimizer.json",
+    "external_watchlist":"watchlist service",
+    "framework_governance":"governance service",
+    "reporting":"reporting service",
+    "persistence":"snapshot service -> config/v5_persistence_registry.json",
+    "orchestration":"orchestrator service"
+  },
   "microservices":["ingestion","truth","price","prediction","evaluation","decision","governance","watchlist","reporting","snapshot","orchestrator"],
-  "planes":{"truth":["Official FPL authority","authenticated read-only overlay","source authority registry","rules registry","phase-aware squad state","finance/sell value","live scoring"],"intelligence":["price trajectory","historical priors","prediction quality guard","xMins v3","team strength","xPts and uncertainty","tactical/system-fit proxy evidence","full DSS core enrichment"],"evaluation":["point-in-time leakage guard","freshness guard","evidence-fusion reliability","point-in-time ledger","prediction calibration","external challenger scorecard","V3/V5 shadow parity","learning loop"],"decision":["DSS core 50","DSS extensions 16","multi-horizon package optimizer","early-season change cap","lineup and captaincy governance"],"watchlist":["full DSS external universe screening","evidence-aware admission","exactly 5 per position / 20 total"],"governance":["Gate0","enhancement layers 8","framework health","final GO/HOLD/WAIT/REJECT governance"],"presentation":["decision-first user report","technical appendix","delta-first reporting"],"persistence":["runtime artifacts","history","state hydration"]},
-  "p0_parity":{"P0-1_prediction_calibration_backtest":"evaluation","P0-2_xmins_role_v2":"prediction","P0-3_team_strength_fixture_probability":"prediction","P0-4_multi_horizon_package_optimizer":"decision","P0-5_external_challenger_scorecard":"evaluation"},
-  "acceptance":{"no_regression_vs_v3_16_truth":true,"no_regression_vs_v3_16_source_registry":true,"no_regression_vs_v3_16_configuration_ownership":true,"no_regression_vs_v3_16_watchlist":true,"no_regression_vs_v3_16_reporting":true,"no_regression_vs_v4_research_where_adopted":true,"no_duplicate_authority":true,"official_fpl_only_native_external_authority":true,"missing_enrichment_never_fabricated":true,"rules_registry_required":true,"prediction_provenance_required":true,"decision_trace_required":true,"calibration_required_before_production_promotion":true,"all_business_capabilities_owned_by_exactly_one_service":true,"baseline_sha_must_match_main":true,"all_dss_core_active_required":true,"all_dss_extensions_active_required":true,"no_critical_enhancement_partial":true},
-  "production_promotion":{"allowed":false,"beta":true,"production_candidate":false,"reason":"Production remains V3.16.1; V5 requires successful post-convergence real V3/V5 shadow verification and calibration/postflight acceptance."}
+  "planes":{
+    "truth":["Official FPL authority","authenticated read-only overlay","source authority registry","rules registry","phase-aware squad state","finance/sell value","live scoring"],
+    "intelligence":["price trajectory","historical priors","prediction quality guard","xMins v3","team strength","xPts and uncertainty","tactical/system-fit proxy evidence","full DSS core enrichment"],
+    "evaluation":["point-in-time leakage guard","freshness guard","evidence-fusion reliability","point-in-time ledger","prediction calibration","external challenger scorecard","V3/V5 shadow parity","learning loop"],
+    "decision":["DSS core 50","DSS extensions 16","multi-horizon package optimizer","early-season change cap","team-cluster penalty","strict all-DSS postflight","lineup and captaincy governance"],
+    "watchlist":["full DSS external universe screening","evidence-aware admission","exactly 5 per position / 20 total"],
+    "governance":["Gate0","enhancement layers 8","framework health","final GO/HOLD/WAIT/REJECT governance"],
+    "presentation":["decision-first user report","technical appendix","delta-first reporting"],
+    "persistence":["runtime artifacts","source-fusion artifact","history","state hydration"]
+  },
+  "p0_parity":{
+    "P0-1_prediction_calibration_backtest":"evaluation",
+    "P0-2_xmins_role_v2":"prediction",
+    "P0-3_team_strength_fixture_probability":"prediction",
+    "P0-4_multi_horizon_package_optimizer":"decision",
+    "P0-5_external_challenger_scorecard":"evaluation"
+  },
+  "acceptance":{
+    "no_regression_vs_v3_17_truth":true,
+    "no_regression_vs_v3_17_source_registry":true,
+    "no_regression_vs_v3_17_configuration_ownership":true,
+    "no_regression_vs_v3_17_dss_operationalization":true,
+    "no_regression_vs_v3_17_package_guardrails":true,
+    "no_regression_vs_v3_17_strict_postflight":true,
+    "no_regression_vs_v3_17_watchlist":true,
+    "no_regression_vs_v3_17_reporting":true,
+    "no_regression_vs_v4_research_where_adopted":true,
+    "no_duplicate_authority":true,
+    "official_fpl_only_native_external_authority":true,
+    "missing_enrichment_never_fabricated":true,
+    "rules_registry_required":true,
+    "prediction_provenance_required":true,
+    "decision_trace_required":true,
+    "calibration_required_before_production_promotion":true,
+    "all_business_capabilities_owned_by_exactly_one_service":true,
+    "baseline_sha_must_match_main":true,
+    "all_dss_core_active_required":true,
+    "all_dss_extensions_active_required":true,
+    "no_critical_enhancement_partial":true,
+    "orchestrator_artifacts_must_be_persistence_registered":true
+  },
+  "production_promotion":{
+    "allowed":false,
+    "beta":true,
+    "production_candidate":false,
+    "reason":"Production remains V3.17.0; V5 requires successful post-convergence real V3/V5 shadow verification and calibration/postflight acceptance."
+  }
 }

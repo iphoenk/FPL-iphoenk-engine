@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import math
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable
@@ -15,14 +14,22 @@ HIGH_NET = 25_000
 MAX_MARKET_WATCH = 50
 UK = ZoneInfo("Europe/London")
 
+# The API currently exposes a signed ordinal likelihood code. Only +/-5 is
+# safely interpreted here as threshold-crossing / very-likely because observed
+# projections with that code are beyond +/-100%. Intermediate levels are kept
+# neutral instead of inventing undocumented Official wording.
 LIKELIHOOD_LABELS = {
-    -3: "VERY_LIKELY_DROP",
-    -2: "LIKELY_DROP",
-    -1: "UNLIKELY_DROP",
+    -5: "VERY_LIKELY_DROP",
+    -4: "DROP_SIGNAL_LEVEL_4",
+    -3: "DROP_SIGNAL_LEVEL_3",
+    -2: "DROP_SIGNAL_LEVEL_2",
+    -1: "DROP_SIGNAL_LEVEL_1",
     0: "STABLE",
-    1: "UNLIKELY_RISE",
-    2: "LIKELY_RISE",
-    3: "VERY_LIKELY_RISE",
+    1: "RISE_SIGNAL_LEVEL_1",
+    2: "RISE_SIGNAL_LEVEL_2",
+    3: "RISE_SIGNAL_LEVEL_3",
+    4: "RISE_SIGNAL_LEVEL_4",
+    5: "VERY_LIKELY_RISE",
 }
 
 
@@ -124,9 +131,6 @@ def _official_projection_health(progress, rate, projections, hours_to_deadline):
         return "PROGRESS_ONLY"
     p0 = next((x for x in projections if x.get("offset") == 0), projections[0])
     p0v = p0.get("projected_percent")
-    # During early 2026/27 calibration FPL has at times exposed offset-0 equal to
-    # current progress despite material hourly movement. Detect that condition
-    # instead of silently treating a static projection as a trustworthy forecast.
     if (
         p0v is not None
         and rate is not None
@@ -156,12 +160,17 @@ def _trend(current_rate, previous_rate, elapsed_hours):
 def _trajectory_eta(now, progress, rate):
     if progress is None or rate is None or abs(rate) < 0.01:
         return None, None
-    target = 100.0 if rate > 0 else -100.0
-    remaining = target - progress
-    if remaining == 0 or remaining / rate <= 0:
-        eta = 0.0
+    # A trajectory can only project a crossing if movement continues toward the
+    # threshold implied by the current progress. This prevents a player at -90%
+    # who has just started recovering (+rate) from being mislabelled as a rise.
+    if abs(progress) >= 5:
+        target = 100.0 if progress > 0 else -100.0
+        if (target - progress) * rate <= 0:
+            return None, None
     else:
-        eta = remaining / rate
+        target = 100.0 if rate > 0 else -100.0
+    remaining = target - progress
+    eta = remaining / rate
     if eta < 0 or eta > 24 * 7:
         return None, None
     crossing = now + timedelta(hours=eta)
@@ -194,10 +203,13 @@ def _urgency(progress, predicted_deadline, now):
 
 
 def _risk_direction(progress, rate):
-    signal = rate if rate not in (None, 0) else progress
-    if signal is None or abs(signal) < 0.01:
+    # Current Official progress tells us which threshold is actually nearby.
+    # Hourly rate tells us whether that risk is intensifying or recovering.
+    if progress is not None and abs(progress) >= 5:
+        return "RISE" if progress > 0 else "FALL"
+    if rate is None or abs(rate) < 0.01:
         return "STABLE"
-    return "RISE" if signal > 0 else "FALL"
+    return "RISE" if rate > 0 else "FALL"
 
 
 def _price_row(player: dict, total_players: int) -> dict:
@@ -205,8 +217,6 @@ def _price_row(player: dict, total_players: int) -> dict:
     estimated_owners = max(1, int(total_players * own / 100))
     net = int(player.get("transfers_in_event") or 0) - int(player.get("transfers_out_event") or 0)
     raw_rate = _float(player.get("price_change_hourly_rate"))
-    # Official bootstrap exposes the hourly rate in hundredths of one percentage
-    # point: e.g. 96 == 0.96 percentage-points/hour.
     hourly_rate = round(raw_rate / 100.0, 3) if raw_rate is not None else None
     projections = _normalise_projections(player.get("price_change_projections"))
     return {
@@ -248,15 +258,10 @@ def build_trajectory(players: list[dict], previous_state: dict, now: datetime) -
         if progress is not None and previous_progress is not None and elapsed and elapsed > 0:
             observed_velocity = round((progress - previous_progress) / elapsed, 3)
 
-        projection_health = _official_projection_health(
-            progress, rate, row.get("official_projections", []), hours_to_deadline
-        )
+        projection_health = _official_projection_health(progress, rate, row.get("official_projections", []), hours_to_deadline)
         official_deadline = _official_deadline(now, row.get("official_projections", []))
         eta_hours, trajectory_deadline = _trajectory_eta(now, progress, rate)
 
-        # Prefer an Official projected threshold date when it actually crosses
-        # 100%; otherwise expose our constant-rate trajectory explicitly as a
-        # model estimate, never as an Official guarantee.
         if official_deadline and projection_health == "LIVE":
             predicted_deadline = official_deadline
             prediction_source = "OFFICIAL_PROJECTION"

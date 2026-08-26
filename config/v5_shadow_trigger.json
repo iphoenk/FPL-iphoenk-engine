@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "full-dss-v3.16-runtime-verification",
-  "requested_at": "2026-08-26T11:10:00Z",
+  "requested_cycle": "full-dss-v3.16-runtime-verification-r2",
+  "requested_at": "2026-08-26T11:13:00Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "v3.16-source-registry@94dc304250c21a83b7270944231a07c6ff7099ac",
   "v5_role": "shadow_only",

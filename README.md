@@ -1,15 +1,33 @@
-# FPL iphoenk Engine v3.17.1
+# FPL iphoenk Engine v3.18.0
 
 Production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release
-- Engine version: `3.17.1`
-- Schema version: `46`
+- Engine version: `3.18.0`
+- Schema version: `47`
 - Release metadata source of truth: `src/version.py`
 - Production runtime: bounded-process V3 microservices
 - Runtime state is published to `runtime-data`; `main/data/**` is historical/source-repository material only.
 - Official FPL remains the only native authority. Challenger/enrichment sources are fail-soft and may not overwrite native Official fields.
 - Canonical V3 roadmap and release checklist: `MASTER_TASK_LIST_V3.md`.
+
+## v3.18.0 Structured Challenger Ingestion + Architecture Hardening
+V3.18.0 converts selected challenger capabilities from probe-only reachability into bounded, normalized observations with explicit provenance and capability health. LiveFPL and OneFPL may contribute structured public observations only when a parser produces a valid normalized observation. Missing challenger values remain missing or explicit safe fallback; Official FPL remains native authority.
+
+Release changes:
+- normalized challenger observations with source/capability/status/value/payload, fetched/observed timestamps, provenance, confidence, stale state, TTL and parser/schema metadata
+- separate source reachability from capability-data health
+- last-known-good and stale governance without treating stale data as current
+- explicit cross-source disagreement state
+- non-authoritative challenger context in Price Radar
+- Price Radar thresholds/capacity and refresh cadence moved to config ownership
+- projection and strategic horizons moved to engine configuration ownership
+- DSS Core, Extension, Enhancement and Gate0 expected counts declared by their registries
+- production validators consume registry/config contracts rather than duplicating mutable values
+- active prediction and price service entrypoints are version-neutral
+- coarse-grained service boundaries retained where shared HTTP caching or serial artifact ownership makes further process splitting counterproductive
+
+The release remains subject to the V3 production acceptance contract: Gate0 16/16, DSS 50/50 ACTIVE, Extensions 16/16 ACTIVE, Enhancements 8/8 ACTIVE, production framework GREEN, report/watchlist contracts valid, and runtime inside the configured budget.
 
 ## v3.17.1 Master Task Governance
 V3.17.1 is a governance/documentation maintenance release with no decision-logic or schema change. It establishes `MASTER_TASK_LIST_V3.md` as the single human-readable master roadmap for the operational V3 stream.
@@ -42,7 +60,9 @@ v3.16.1 reduces mutable hardcoding without changing the production output schema
 
 Configuration ownership:
 - `src/version.py` owns engine/schema/service release metadata.
-- `config/engine.json` owns mutable runtime/user settings such as team ID, polling intervals, API retry/backoff/timeout, reconstruction baseline GW, and report list sizes.
+- `config/engine.json` owns mutable runtime/user settings such as team ID, polling intervals, API retry/backoff/timeout, reconstruction baseline GW, projection horizons, and report list sizes.
+- `config/intelligence/price_radar.json` owns mutable Price Radar thresholds, urgency/timing policy, timezone and market-watch capacity.
+- `config/intelligence/refresh_policy.json` owns normal/deadline/match refresh cadence.
 - Environment variables may override explicitly supported runtime settings such as `FPL_TEAM_ID`, `FPL_LIVE_POLL_SECONDS`, and `FPL_TIMEOUT`.
 - `config/rules/registry.json` + the active ruleset own FPL squad, lineup, scoring, chip, finance, and BPS rules.
 - `config/v3_service_registry.json` owns service DAG/runtime orchestration settings.
@@ -100,6 +120,8 @@ Key properties:
 - validated artifact promotion
 - runtime performance budget and metadata
 - production publication to isolated `runtime-data`
+- version-neutral active service entrypoints
+- coarse-grained process boundaries chosen by dependency/data ownership rather than file size
 
 ## Framework governance
 - Gate 0 registry: 16 hard constraint checks
@@ -122,7 +144,7 @@ Operational reports use:
 ## Price Radar
 Official current price and confirmed changes are authority. Official threshold/projection fields, when available, are interpreted conservatively. Engine trajectory dates remain derived estimates.
 
-Price pressure is an overlay, not a football decision. HIGH/CRITICAL price signals should only become actionable when they intersect an owned player or DSS-approved external candidate and materially affect affordability, sell value, or a preferred multi-GW package.
+Price pressure is an overlay, not a football decision. HIGH/CRITICAL price signals should only become actionable when they intersect an owned player or DSS-approved external candidate and materially affect affordability, sell value, or a preferred multi-GW package. Challenger price context remains non-authoritative and is consumed only from valid normalized observations.
 
 ## Authenticated Official read-only layer
 Optional authenticated Official access is precision-only and may never become a dependency for the public core engine.
@@ -149,7 +171,7 @@ Match Mode runs approximately every 3 hours while relevant PL/FPL matches are ac
 pip install -r requirements.txt
 python fpl_daily_tasks.py daily --stats
 python -m src.runtime_v3.orchestrator --mode daily --stats
-python -m src.engines.price_radar
+python -m src.engines.price_service
 python -m src.engines.official_expansion
 python -m src.engines.authenticated_official
 python fpl_daily_tasks.py deadline --stats
@@ -182,6 +204,7 @@ CI must fail on release metadata drift. The master task list must be updated in 
 - v3.16.1: configuration ownership hardening
 - v3.17: runtime-evidence DSS operationalization and optimizer guardrails
 - v3.17.1: canonical V3 master task governance and Definition of Done
+- v3.18.0: structured challenger observations and architecture/configuration hardening
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.

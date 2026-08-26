@@ -1,19 +1,24 @@
 {
-  "schema_version": 1,
-  "registry": "EXTERNAL_CHALLENGER_SCORECARD",
+  "schema_version": 2,
+  "registry": "EXTERNAL_CHALLENGER_SCORECARD_V2",
   "auto_scrape": false,
+  "structured_ingestion_is_registry_driven": true,
+  "observation_contract": "challenger_observation_v2",
   "observation_file": "data/challenger_observations.json",
   "minimum_sample_for_dynamic_weight": 50,
   "providers": [
     {"id": "internal", "name": "FPL iphoenk Engine", "mode": "native", "enabled": true},
-    {"id": "onefpl", "name": "OneFPL", "mode": "observation_file", "enabled": true},
+    {"id": "livefpl", "name": "LiveFPL", "mode": "structured_observation", "enabled": true},
+    {"id": "onefpl", "name": "OneFPL", "mode": "structured_and_observation_file", "enabled": true},
     {"id": "fffix", "name": "Fantasy Football Fix", "mode": "observation_file", "enabled": true},
     {"id": "ffhub", "name": "Fantasy Football Hub", "mode": "observation_file", "enabled": true}
   ],
-  "supported_metrics": ["xpts", "xmins", "start_probability", "price_direction"],
+  "supported_metrics": ["xpts", "xmins", "start_probability", "price_direction", "price_prediction"],
   "governance": {
     "missing_provider_data_is_not_fabricated": true,
     "provider_weight_requires_observed_accuracy": true,
-    "provider_reputation_is_not_accuracy_evidence": true
+    "provider_reputation_is_not_accuracy_evidence": true,
+    "structured_price_context_never_overrides_official_price_fields": true,
+    "cached_or_stale_structured_observations_are_not_current": true
   }
 }

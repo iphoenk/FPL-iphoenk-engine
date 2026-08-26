@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import time
 from html.parser import HTMLParser
-from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from src.sources.base import SourceResult, SourceSpec
+from src.version import ENGINE_VERSION
 
 
 class _TitleParser(HTMLParser):
@@ -39,7 +39,7 @@ def probe_public_web(spec: SourceSpec, timeout_seconds: float = 2.5) -> SourceRe
     url = str(spec.config.get("probe_url") or "").strip()
     if not url.startswith("https://"):
         return SourceResult(spec.source_id, "MISCONFIGURED", False, None, 0, {c: "UNAVAILABLE" for c in spec.capabilities}, {"reason": "https probe_url required"})
-    req = Request(url, headers={"User-Agent": "FPL-iphoenk-engine-source-health/3.16 (+read-only public probe)", "Accept": "text/html,application/xhtml+xml"}, method="GET")
+    req = Request(url, headers={"User-Agent": f"FPL-iphoenk-engine-source-health/{ENGINE_VERSION} (+read-only public probe)", "Accept": "text/html,application/xhtml+xml"}, method="GET")
     started = time.perf_counter()
     try:
         with urlopen(req, timeout=timeout_seconds) as response:

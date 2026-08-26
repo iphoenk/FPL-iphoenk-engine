@@ -1,8 +1,8 @@
 {
-  "requested_cycle": "live-api-football-source-fusion-v3.16-verification",
-  "requested_at": "2026-08-26T12:22:00Z",
+  "requested_cycle": "post-hardcode-cleanup-live-source-fusion",
+  "requested_at": "2026-08-26T13:19:00Z",
   "mode": "REAL_SHADOW",
-  "comparison_reference": "v3.16-source-registry@94dc304250c21a83b7270944231a07c6ff7099ac",
+  "comparison_reference": "accepted_production_baseline_from_manifest",
   "v5_role": "shadow_only",
   "require_owned": 15,
   "require_watchlist": 20,
@@ -14,7 +14,9 @@
   "require_all_enhancements_active": true,
   "require_no_critical_dss_partial": true,
   "require_no_critical_enhancement_partial": true,
+  "require_reporting_contract": true,
   "require_source_fusion_fail_neutral": true,
+  "require_source_fusion_observability": true,
   "require_api_football_live_attempt": true,
   "understat_role": "challenger",
   "api_football_role": "cross_competition_enrichment"

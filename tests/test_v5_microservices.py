@@ -2,8 +2,9 @@ import importlib
 from pathlib import Path
 
 from src.v5.module_registry import module_specs
-from src.v5.service_adapters import decision_adapter, truth_adapter
 from src.v5.service_registry import module_owners, service_specs, validate_registry
+from src.v5.services.decision import handle as decision_handle
+from src.v5.services.truth import handle as truth_handle
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -46,12 +47,12 @@ def test_truth_context_runs_without_network_and_uses_service_boundary():
         "elements": [],
         "teams": [],
     }
-    context = truth_adapter("context", {"bootstrap": bootstrap, "now": "2026-08-29T09:00:00Z"})
+    context = truth_handle("context", {"bootstrap": bootstrap, "now": "2026-08-29T09:00:00Z"})
     assert context["phase"] == "pre_deadline"
     assert context["planning_gw"] == 2
 
 
 def test_decision_service_bridge_does_not_claim_production_recommendation():
-    result = decision_adapter("summarize", {"truth": {}, "price": {}, "prediction": {}})
+    result = decision_handle("summarize", {"truth": {}, "price": {}, "prediction": {}})
     assert result["production_recommendation"] is None
     assert result["status"] == "BRIDGE_ONLY_NO_PRODUCTION_RECOMMENDATION"

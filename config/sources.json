@@ -1,5 +1,7 @@
 {
   "season": "2026-2027",
+  "canonical_registry": "config/sources/registry.json",
+  "legacy_compatibility": true,
   "official_fpl": {
     "enabled": true,
     "tier": 1
@@ -19,5 +21,6 @@
     "enabled": false,
     "tier": 4,
     "note": "Direct scraping disabled by default; use mirrored/open datasets unless explicitly enabled."
-  }
+  },
+  "note": "New source authority, challenger/enrichment classification, adapters and failure policy are defined in config/sources/registry.json. This file remains for legacy consumers only."
 }

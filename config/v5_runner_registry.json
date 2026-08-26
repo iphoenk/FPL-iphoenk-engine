@@ -1,6 +1,6 @@
 {
-  "version":9,"status":"BETA_SHADOW_READY","modes":["daily","deadline","live"],"default_mode":"daily","prediction_horizon_gws":15,
-  "snapshot":{"schema_version":54,"production_promotion_allowed":false},"summary_limits":{"price_rise_risk":10,"price_fall_risk":10,"price_alerts":20,"packages":20},
+  "version":10,"status":"BETA_SHADOW_READY","modes":["daily","deadline","live","on_demand"],"default_mode":"daily","prediction_horizon_gws":15,
+  "snapshot":{"schema_version":55,"production_promotion_allowed":false},"summary_limits":{"price_rise_risk":10,"price_fall_risk":10,"price_alerts":20,"packages":20},
   "pipeline":["public_base_collection","event_context","authenticated_runtime_overlay","public_dynamic_collection","truth_assembly","state_hydration","price_intelligence","historical_prior_and_native_prediction","prediction_quality_guard","evaluation_decision_prepare_gate0_preflight_parallel","decision_finalize","framework_governance_and_watchlist_parallel","decision_first_reporting","persistence"],
   "base_requests":{"bootstrap":{"route":"bootstrap","params":{}},"fixtures":{"route":"fixtures","params":{}},"event_status":{"route":"event_status","params":{}},"entry":{"route":"entry","params":{"team_id":"$team_id"}},"entry_history":{"route":"entry_history","params":{"team_id":"$team_id"}},"entry_transfers":{"route":"entry_transfers","params":{"team_id":"$team_id"}}},
   "dynamic_requests":{"submitted_picks":{"route":"entry_picks","when":"submitted_gw","params":{"team_id":"$team_id","event":"$submitted_gw"}},"event_live":{"route":"event_live","when":"scoring_gw","params":{"event":"$scoring_gw"}}},

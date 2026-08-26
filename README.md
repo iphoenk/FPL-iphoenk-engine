@@ -1,14 +1,29 @@
-# FPL iphoenk Engine v3.17.0
+# FPL iphoenk Engine v3.17.1
 
 Production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release
-- Engine version: `3.17.0`
+- Engine version: `3.17.1`
 - Schema version: `46`
 - Release metadata source of truth: `src/version.py`
 - Production runtime: bounded-process V3 microservices
 - Runtime state is published to `runtime-data`; `main/data/**` is historical/source-repository material only.
 - Official FPL remains the only native authority. Challenger/enrichment sources are fail-soft and may not overwrite native Official fields.
+- Canonical V3 roadmap and release checklist: `MASTER_TASK_LIST_V3.md`.
+
+## v3.17.1 Master Task Governance
+V3.17.1 is a governance/documentation maintenance release with no decision-logic or schema change. It establishes `MASTER_TASK_LIST_V3.md` as the single human-readable master roadmap for the operational V3 stream.
+
+Every V3 feature, refactor, hardening change and release-governance change must update the master task list in the same pull request. A task is not DONE merely because code exists or a registry label is green; the applicable tests, documentation, release consistency and production evidence must agree.
+
+The master task list contains:
+- production keep-green invariants
+- V3.18 Structured Challenger Ingestion tasks
+- P1 intelligence/calibration roadmap
+- user-facing report/UX hardening
+- P2 strategic capabilities
+- engineering hygiene and anti-hardcode requirements
+- mandatory release checklist and Definition of Done
 
 ## v3.17 Full DSS operationalization
 V3.17 converts the remaining framework-only DSS capability states into explicit runtime evidence contracts. A module is ACTIVE only when its evaluator executes and produces evidence or an explicit safe-fallback state; unavailable external signals are never fabricated.
@@ -150,8 +165,9 @@ Every version-changing commit must keep these surfaces consistent:
 - `config/engine.json` schema metadata
 - workflow display name
 - release regression tests
+- `MASTER_TASK_LIST_V3.md`
 
-CI must fail on release metadata drift.
+CI must fail on release metadata drift. The master task list must be updated in the same PR for every V3 change.
 
 ## Historical milestones
 - v3.4: reliability and native persistence
@@ -165,6 +181,7 @@ CI must fail on release metadata drift.
 - v3.16: Source Registry + Adapter Layer
 - v3.16.1: configuration ownership hardening
 - v3.17: runtime-evidence DSS operationalization and optimizer guardrails
+- v3.17.1: canonical V3 master task governance and Definition of Done
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.

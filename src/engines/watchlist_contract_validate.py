@@ -33,13 +33,19 @@ def run() -> dict:
     allowed_lifecycle = set(((policy.get("lifecycle") or {}).get("labels") or []))
     min_coverage = float(((policy.get("admission") or {}).get("minimum_dimension_coverage") or 0))
     owned = {int(row.get("element") or -1) for row in team.get("team_value_ledger") or []}
+    target_owned = int(policy.get("owned_target") or 15)
+    target_total = int(policy.get("target_total") or 20)
+    target_per_position = int(policy.get("target_per_position") or policy.get("max_per_position") or 5)
+    assert len(owned) == target_owned, ("owned_count", len(owned), target_owned)
+
     candidate_audit = watch.get("candidate_audit") or {}
     published = set()
     position_counts = {}
     for position in policy.get("positions") or []:
         rows = (watch.get("positions") or {}).get(position) or []
         position_counts[position] = len(rows)
-        assert 1 <= len(rows) <= int(policy.get("max_per_position") or 5), (position, len(rows))
+        assert len(rows) == target_per_position, (position, len(rows), target_per_position)
+        assert len(rows) <= int(policy.get("max_per_position") or 5), (position, len(rows))
         for expected_rank, row in enumerate(rows, start=1):
             element = int(row["element"])
             technical = candidate_audit.get(str(element)) or {}
@@ -64,7 +70,7 @@ def run() -> dict:
     summary = watch.get("screening_summary") or {}
     assert int(summary.get("projection_players") or 0) >= 500
     assert int(summary.get("published_candidates") or 0) == len(published)
-    assert len(published) <= 20
+    assert len(published) == target_total, ("watchlist_total", len(published), target_total)
     assert len(candidate_audit) == len(published)
     assert watch.get("governance", {}).get("price_is_overlay_not_primary_reason") is True
     assert latest.get("files", {}).get("dss_watchlist") == "data/dss_watchlist.json"
@@ -82,6 +88,7 @@ def run() -> dict:
 
     result = {
         "status": "PASS",
+        "owned": len(owned),
         "published": len(published),
         "position_counts": position_counts,
         "core_traversed": (audit.get("dss_core") or {}).get("traversed"),

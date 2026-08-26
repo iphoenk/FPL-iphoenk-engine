@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.8
+name: FPL iphoenk collector v3.9
 
 on:
   workflow_dispatch:
@@ -54,7 +54,7 @@ jobs:
         run: pip install -r requirements.txt pytest
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
-      - name: Reliability, rules, Official expansion, auth, Price Radar and framework tests
+      - name: Reliability, rules registry, Official expansion, auth, Price Radar and framework tests
         run: python -m pytest -q
 
   collect:
@@ -76,12 +76,12 @@ jobs:
       - run: pip install -r requirements.txt pytest
       - name: Collector mode
         run: echo "Collector gate=${{ needs.gate.outputs.reason }} runtime_branch=${RUNTIME_BRANCH}"
-      - name: Hydrate persisted price state from runtime bridge
+      - name: Hydrate persisted state from runtime bridge
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin "$RUNTIME_BRANCH"
-          for file in price_cache.json price_trajectory.json; do
+          for file in price_cache.json price_trajectory.json rules_source_state.json; do
             if git cat-file -e "origin/${RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
               git show "origin/${RUNTIME_BRANCH}:data/${file}" > "data/${file}"
               echo "Hydrated data/${file} from ${RUNTIME_BRANCH}"
@@ -105,16 +105,18 @@ jobs:
           FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
           FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
         run: python -m src.engines.authenticated_official
+      - name: Official FPL Rules Registry integrity audit
+        run: python -m src.engines.rules_compliance_audit
       - name: Framework health PRE-FLIGHT
         run: |
           python -m src.engines.framework_health_audit --phase preflight --strict
           cp data/framework_health_preflight.json data/framework_health.json
-      - name: Validate generated snapshot and framework contract
+      - name: Validate generated snapshot, rules registry and framework contract
         run: |
           python - <<'PY'
           import json
           from src.engines.reliability import validate_snapshot
-          from src.rules import RULESET_ID
+          from src.rules import RULESET_ID, active_ruleset_fingerprint
           from src.version import ENGINE_VERSION, SCHEMA_VERSION
           s=json.load(open('data/latest.json'))
           p=json.load(open('data/prices.json'))
@@ -123,6 +125,7 @@ jobs:
           a=json.load(open('data/auth.json'))
           t=json.load(open('data/price_trajectory.json'))
           pa=json.load(open('data/price_alerts.json'))
+          rr=json.load(open('data/rules_compliance.json'))
           fh=json.load(open('data/framework_health.json'))
           assert s['engine_version'] == ENGINE_VERSION
           assert s['schema_version'] == SCHEMA_VERSION
@@ -130,9 +133,15 @@ jobs:
           assert s.get('native',{}).get('entry')
           assert s.get('provenance',{}).get('entry',{}).get('source') == 'official_fpl'
           assert s.get('ruleset',{}).get('id') == RULESET_ID
+          assert s.get('ruleset',{}).get('fingerprint_sha256') == active_ruleset_fingerprint()
           assert (s.get('ruleset',{}).get('goal_points',{}).get('1') == 10 or s.get('ruleset',{}).get('goal_points',{}).get(1) == 10)
           assert s.get('chip_ledger',{}).get('ruleset_id') == RULESET_ID
           assert c.get('ruleset_id') == RULESET_ID
+          assert rr.get('overall') == 'PASS', rr
+          assert rr.get('ruleset_id') == RULESET_ID
+          assert rr.get('registry_integrity',{}).get('status') == 'PASS'
+          assert rr.get('ruleset_fingerprint_sha256') == active_ruleset_fingerprint()
+          assert rr.get('governance',{}).get('remote_change_never_auto_mutates_rules') is True
           assert s.get('price_summary',{}).get('filter_policy',{}).get('min_ownership_pct') == 0.5
           assert all(x.get('ownership_pct',0) >= 0.5 and abs(x.get('net_transfers',0)) >= 5000 for x in p.get('top_buy_pressure',[]))
           assert all(x.get('ownership_pct',0) >= 0.5 and abs(x.get('net_transfers',0)) >= 5000 for x in p.get('top_sell_pressure',[]))
@@ -155,12 +164,17 @@ jobs:
           assert auth.get('state') in {'DISABLED','MISCONFIGURED','VALID','EXPIRED_OR_REJECTED','UNAVAILABLE','ENTRY_MISMATCH','PARTIAL','PARTIAL_AUTH_REJECTED','POLICY_BLOCKED'}
           assert auth.get('raw_authenticated_payload_persisted') is False
           assert auth.get('policy',{}).get('resource_methods') == ['GET']
+          assert fh.get('framework_schema') >= 2
           assert fh.get('registry_integrity') is True
+          assert fh.get('rules_registry',{}).get('status') == 'PASS'
+          assert fh.get('gate0',{}).get('ruleset_id') == RULESET_ID
           assert fh.get('gate0',{}).get('counts',{}).get('FAIL',0) == 0
           assert fh.get('dss_core',{}).get('declared') == 50
           assert fh.get('dss_extensions',{}).get('declared') == 16
           assert fh.get('enhancements',{}).get('declared') == 8
           assert fh.get('governance',{}).get('file_exists_is_not_sufficient_for_active') is True
+          assert fh.get('governance',{}).get('rules_registry_precedes_gate0') is True
+          assert fh.get('governance',{}).get('gate0_consumes_active_ruleset') is True
           assert fh.get('governance',{}).get('gate0_fail_blocks_go') is True
           assert fh.get('overall') in {'GREEN','AMBER'}
           r=validate_snapshot(s)

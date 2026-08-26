@@ -5,7 +5,7 @@ from typing import Any
 
 from src.v5.config_cache import load_json_config
 
-CONFIG = "config/intelligence/xmins_v2.json"
+CONFIG = "config/intelligence/xmins_v3.json"
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -60,18 +60,37 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
     raw_start = _sigmoid(weighted_logit / max(1e-6, total_weight))
     rotation_risk = clamp(_f(context.get("rotation_risk"), 0.0), 0.0, 1.0)
     congestion_factor = clamp(_f(context.get("congestion_factor"), 1.0), 0.0, 1.0)
-    start_probability = clamp(raw_start * availability * (1.0 - rotation_risk * clamp(_f(cfg.get("rotation_risk_strength"), 0.55), 0.0, 1.0)) * congestion_factor, 0.0, availability)
-    bench_probability = clamp((availability - start_probability) * clamp(_f(cfg.get("bench_share_when_not_start"), 0.65), 0.0, 1.0), 0.0, 1.0 - start_probability)
+    start_probability = clamp(
+        raw_start
+        * availability
+        * (1.0 - rotation_risk * clamp(_f(cfg.get("rotation_risk_strength"), 0.55), 0.0, 1.0))
+        * congestion_factor,
+        0.0,
+        availability,
+    )
+    bench_probability = clamp(
+        (availability - start_probability) * clamp(_f(cfg.get("bench_share_when_not_start"), 0.65), 0.0, 1.0),
+        0.0,
+        1.0 - start_probability,
+    )
     dnp_probability = clamp(1.0 - start_probability - bench_probability, 0.0, 1.0)
     norm = start_probability + bench_probability + dnp_probability
-    start_probability, bench_probability, dnp_probability = start_probability / norm, bench_probability / norm, dnp_probability / norm
+    start_probability, bench_probability, dnp_probability = (
+        start_probability / norm,
+        bench_probability / norm,
+        dnp_probability / norm,
+    )
 
     fallback_start = _f(cfg.get("fallback_starter_minutes"), 72.0)
     fallback_bench = _f(cfg.get("fallback_bench_minutes"), 18.0)
     observed_start_minutes = _f(player.get("minutes")) / starts if starts > 0 else fallback_start
     shrink_starts = max(0.0, _f(cfg.get("starter_minutes_shrinkage_starts"), 4.0))
     starter_minutes = (observed_start_minutes * starts + fallback_start * shrink_starts) / max(1e-6, starts + shrink_starts)
-    starter_minutes = clamp(_f(context.get("starter_minutes_prior"), starter_minutes), _f(cfg.get("starter_minutes_min"), 45.0), _f(cfg.get("starter_minutes_max"), 90.0))
+    starter_minutes = clamp(
+        _f(context.get("starter_minutes_prior"), starter_minutes),
+        _f(cfg.get("starter_minutes_min"), 45.0),
+        _f(cfg.get("starter_minutes_max"), 90.0),
+    )
     bench_minutes = clamp(_f(context.get("bench_minutes_prior"), fallback_bench), 1.0, 45.0)
     expected_minutes = start_probability * starter_minutes + bench_probability * bench_minutes
 
@@ -82,9 +101,18 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
         if probability > 0:
             entropy -= probability * math.log(probability)
     entropy /= math.log(3)
-    half_width = _f(uncertainty.get("base_start_probability_half_width"), 0.12) + (_f(uncertainty.get("small_sample_extra_half_width"), 0.12) if small_sample else 0.0)
-    minutes_std = _f(uncertainty.get("base_minutes_std"), 11.0) + entropy * _f(uncertainty.get("entropy_minutes_std_multiplier"), 18.0) + (_f(uncertainty.get("small_sample_minutes_std_extra"), 8.0) if small_sample else 0.0)
+    half_width = _f(uncertainty.get("base_start_probability_half_width"), 0.12) + (
+        _f(uncertainty.get("small_sample_extra_half_width"), 0.12) if small_sample else 0.0
+    )
+    minutes_std = (
+        _f(uncertainty.get("base_minutes_std"), 11.0)
+        + entropy * _f(uncertainty.get("entropy_minutes_std_multiplier"), 18.0)
+        + (_f(uncertainty.get("small_sample_minutes_std_extra"), 8.0) if small_sample else 0.0)
+    )
+
     conf = cfg.get("confidence") or {}
+    prior_probability = context.get("prior_start_probability")
+    prior_minutes = max(0.0, _f(context.get("prior_evidence_minutes")))
     if starts >= _f(conf.get("high_min_starts"), 6) and len(signals) >= 2 and availability >= 0.95:
         confidence = "HIGH"
     elif starts >= _f(conf.get("medium_min_starts"), 2) and availability >= 0.75:
@@ -92,16 +120,36 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
     else:
         confidence = "LOW"
 
+    medium_prior = max(0.0, _f(conf.get("medium_prior_minutes"), 900.0))
+    high_prior = max(medium_prior, _f(conf.get("high_prior_minutes"), 1800.0))
+    if prior_probability is not None and prior_minutes >= medium_prior and confidence == "LOW":
+        confidence = "MEDIUM"
+    high_current_starts = max(0.0, _f(conf.get("high_minimum_current_starts"), 2.0))
+    if (
+        prior_probability is not None
+        and prior_minutes >= high_prior
+        and starts >= high_current_starts
+        and (not bool(conf.get("high_requires_current_start", True)) or starts >= 1.0)
+        and availability >= 0.75
+    ):
+        confidence = "HIGH"
+
     return {
-        "model": str(cfg.get("model_id") or "xmins_v2"),
+        "model": str(cfg.get("model_id") or "xmins_v3_historical_prior"),
         "start_probability": round(start_probability, 4),
         "bench_probability": round(bench_probability, 4),
         "dnp_probability": round(dnp_probability, 4),
         "expected_minutes": round(expected_minutes, 1),
         "starter_minutes_if_start": round(starter_minutes, 1),
         "bench_minutes_if_used": round(bench_minutes, 1),
-        "start_probability_interval": [round(clamp(start_probability - half_width, 0.0, 1.0), 4), round(clamp(start_probability + half_width, 0.0, 1.0), 4)],
-        "expected_minutes_interval": [round(clamp(expected_minutes - 1.28 * minutes_std, 0.0, 90.0), 1), round(clamp(expected_minutes + 1.28 * minutes_std, 0.0, 90.0), 1)],
+        "start_probability_interval": [
+            round(clamp(start_probability - half_width, 0.0, 1.0), 4),
+            round(clamp(start_probability + half_width, 0.0, 1.0), 4),
+        ],
+        "expected_minutes_interval": [
+            round(clamp(expected_minutes - 1.28 * minutes_std, 0.0, 90.0), 1),
+            round(clamp(expected_minutes + 1.28 * minutes_std, 0.0, 90.0), 1),
+        ],
         "minutes_std": round(minutes_std, 2),
         "availability": round(availability, 4),
         "availability_source": availability_source,
@@ -109,5 +157,18 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
         "congestion_factor": round(congestion_factor, 4),
         "small_sample_guard": small_sample,
         "confidence": confidence,
+        "historical_prior": {
+            "available": prior_probability is not None,
+            "start_probability": round(_f(prior_probability), 4) if prior_probability is not None else None,
+            "evidence_minutes": round(prior_minutes, 1),
+            "source": context.get("prior_source"),
+            "identity_match": context.get("prior_identity_match"),
+            "starter_minutes_prior": context.get("starter_minutes_prior"),
+        },
         "evidence": [{"signal": n, "probability": round(p, 4), "weight": round(w, 3)} for n, p, w in signals],
+        "governance": {
+            "current_official_availability_is_authority": True,
+            "historical_prior_is_shrinkage_evidence": True,
+            "missing_historical_prior_is_not_fabricated": True,
+        },
     }

@@ -39,11 +39,20 @@ def _rules_view() -> dict[str, Any]:
 def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None, entry_history: dict[str, Any] | None) -> dict[str, Any]:
     used = (entry_history or {}).get("chips") if isinstance((entry_history or {}).get("chips"), list) else []
     ledger = build_chip_ledger(used, current_gw=context.planning_gw or context.current_gw or 1)
-    raw_active = submitted.get("active_chip") if isinstance(submitted, dict) else None
-    source = "submitted_picks" if raw_active else None
-    if raw_active is None and context.phase.value == "PRE_DEADLINE" and bool(lock.get("wildcard_active")):
-        raw_active = "wildcard"
-        source = "user_lock"
+
+    # Submitted picks belong to submitted_gw, not automatically to planning_gw.
+    # During PRE_DEADLINE planning, the latest user lock/draft is authoritative;
+    # a chip used in the previous submitted GW must never leak into the new GW.
+    raw_active = None
+    source = None
+    if context.phase.value == "PRE_DEADLINE":
+        if bool(lock.get("wildcard_active")):
+            raw_active = "wildcard"
+            source = "user_lock"
+    elif isinstance(submitted, dict):
+        raw_active = submitted.get("active_chip")
+        source = "submitted_picks" if raw_active else None
+
     active_chip = CHIP_API_NAMES.get(str(raw_active), str(raw_active)) if raw_active else None
     current_half = str(ledger.get("current_half") or 1)
     available = set(((ledger.get("halves") or {}).get(current_half) or {}).get("available") or [])
@@ -59,6 +68,7 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
         "raw_active_chip": raw_active,
         "source": source,
         "planning_gw": gw,
+        "submitted_gw": context.submitted_gw,
         "current_half": int(current_half),
         "available_this_half": sorted(available),
         "one_chip_per_gameweek": bool(CHIP_RULES.get("one_chip_per_gameweek", True)),

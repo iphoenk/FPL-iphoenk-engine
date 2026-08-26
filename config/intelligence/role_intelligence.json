@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "model_id": "official_role_intelligence_v1",
+  "schema_version": 2,
+  "model_id": "official_role_intelligence_v2_proxy",
   "position_slots": {"GK": 1.0, "DEF": 4.0, "MID": 4.0, "FWD": 2.0},
   "neutral_role_start_probability": {"GK": 0.72, "DEF": 0.68, "MID": 0.68, "FWD": 0.62},
   "start_rate_shrinkage_matches": 4.0,
@@ -20,11 +20,17 @@
     "order_weights": {"1": 1.0, "2": 0.25, "3": 0.08},
     "tail_weight": 0.02
   },
+  "tactical_role_proxy": {
+    "enabled": true,
+    "evidence_level": "PROXY",
+    "basis": ["official_position", "start_rate", "same_position_competition", "set_piece_order"],
+    "labels": {"GK":"GOALKEEPER","DEF":"DEFENSIVE_UNIT","MID":"MIDFIELD_UNIT","FWD":"FORWARD_UNIT"}
+  },
   "projection_adjustment": {
     "set_piece_assist_uplift": 0.08,
     "penalty_goal_uplift": 0.18,
     "maximum_attack_multiplier": 1.30
   },
-  "capabilities": ["rotation_competition", "set_piece_role", "penalty_role"],
-  "non_claims": ["tactical_role", "system_fit"]
+  "capabilities": ["rotation_competition", "set_piece_role", "penalty_role", "tactical_role", "system_fit"],
+  "non_claims": ["manager-confirmed tactical role", "tracking-data formation assignment"]
 }

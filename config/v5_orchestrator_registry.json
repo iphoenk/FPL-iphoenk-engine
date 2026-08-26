@@ -1,47 +1,17 @@
 {
-  "version": 5,
+  "version": 6,
   "routing": {
-    "base_collection": {"service": "ingestion", "operation": "collect_base"},
-    "event_context": {"service": "truth", "operation": "context"},
-    "dynamic_collection": {"service": "ingestion", "operation": "collect_dynamic"},
-    "authenticated_collection": {"service": "ingestion", "operation": "collect_authenticated"},
-    "truth_assembly": {"service": "truth", "operation": "assemble"},
-    "artifact_read": {"service": "snapshot", "operation": "read"},
-    "price_build": {"service": "price", "operation": "build"},
-    "prediction_build": {"service": "prediction", "operation": "build"},
-    "evaluation_build": {"service": "evaluation", "operation": "build"},
-    "decision_prepare": {"service": "decision", "operation": "prepare"},
-    "gate0_preflight": {"service": "governance", "operation": "gate0_preflight"},
-    "decision_finalize": {"service": "decision", "operation": "finalize"},
-    "governance_audit": {"service": "governance", "operation": "audit"},
-    "artifact_write": {"service": "snapshot", "operation": "write"},
-    "snapshot_write": {"service": "snapshot", "operation": "snapshot"}
+    "base_collection":{"service":"ingestion","operation":"collect_base"},"event_context":{"service":"truth","operation":"context"},"dynamic_collection":{"service":"ingestion","operation":"collect_dynamic"},"authenticated_collection":{"service":"ingestion","operation":"collect_authenticated"},"truth_assembly":{"service":"truth","operation":"assemble"},"artifact_read":{"service":"snapshot","operation":"read"},"price_build":{"service":"price","operation":"build"},"prediction_build":{"service":"prediction","operation":"build"},"evaluation_build":{"service":"evaluation","operation":"build"},"decision_prepare":{"service":"decision","operation":"prepare"},"gate0_preflight":{"service":"governance","operation":"gate0_preflight"},"decision_finalize":{"service":"decision","operation":"finalize"},"governance_audit":{"service":"governance","operation":"audit"},"reporting_build":{"service":"reporting","operation":"build"},"artifact_write":{"service":"snapshot","operation":"write"},"snapshot_write":{"service":"snapshot","operation":"snapshot"}
   },
   "parallel_groups": {
-    "runtime_overlay": ["dynamic_collection", "authenticated_collection"],
-    "state_hydration": ["price_trajectory", "historical_prior", "prediction_ledger", "challenger_observations"],
-    "intelligence": ["price_build", "prediction_build"],
-    "analysis_preflight": ["evaluation_build", "decision_prepare", "gate0_preflight"],
-    "artifact_persistence": ["prices","price_trajectory","price_alerts","historical_prior","predictions","prediction_quality","team_strength","prediction_ledger","prediction_accuracy","challenger_scorecard","package_optimizer","framework_health"]
+    "runtime_overlay":["dynamic_collection","authenticated_collection"],
+    "state_hydration":["price_trajectory","historical_prior","prediction_ledger","challenger_observations","report_state"],
+    "intelligence":["price_build","prediction_build"],
+    "analysis_preflight":["evaluation_build","decision_prepare","gate0_preflight"],
+    "artifact_persistence":["prices","price_trajectory","price_alerts","historical_prior","predictions","prediction_quality","team_strength","prediction_ledger","prediction_accuracy","challenger_scorecard","package_optimizer","watchlist","framework_health","user_report","technical_appendix","report_state"]
   },
   "artifact_mapping": {
-    "prices": "prices",
-    "price_trajectory": "price_trajectory",
-    "price_alerts": "price_alerts",
-    "historical_prior": "historical_prior",
-    "predictions": "predictions",
-    "prediction_quality": "prediction_quality",
-    "team_strength": "team_strength",
-    "prediction_ledger": "prediction_ledger",
-    "prediction_accuracy": "prediction_accuracy",
-    "challenger_scorecard": "challenger_scorecard",
-    "package_optimizer": "package_optimizer",
-    "framework_health": "framework_health"
+    "prices":"prices","price_trajectory":"price_trajectory","price_alerts":"price_alerts","historical_prior":"historical_prior","predictions":"predictions","prediction_quality":"prediction_quality","team_strength":"team_strength","prediction_ledger":"prediction_ledger","prediction_accuracy":"prediction_accuracy","challenger_scorecard":"challenger_scorecard","package_optimizer":"package_optimizer","watchlist":"watchlist","framework_health":"framework_health","user_report":"user_report","technical_appendix":"technical_appendix","report_state":"report_state"
   },
-  "observability": {
-    "record_service_compute_ms": true,
-    "record_round_trip_ms": true,
-    "record_transport_overhead_ms": true,
-    "propagate_correlation_id": true
-  }
+  "observability": {"record_service_compute_ms":true,"record_round_trip_ms":true,"record_transport_overhead_ms":true,"propagate_correlation_id":true}
 }

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from src.rules import RULESET_ID
 from src.v5.config_cache import load_json_config
 
 
@@ -28,6 +29,7 @@ def context_dict(context) -> dict[str, Any]:
         "deadline_time": context.deadline_time,
         "is_live_event": context.is_live_event,
         "phase": context.phase.value,
+        "ruleset_id": RULESET_ID,
     }
 
 

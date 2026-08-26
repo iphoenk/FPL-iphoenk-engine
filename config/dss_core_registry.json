@@ -37,7 +37,7 @@
     {"id":"DSS-32","name":"International Call-Up, Minutes, Travel & Fatigue","category":"schedule","critical":false,"required_files":["data/predictions_v4.json"],"operational_probe":"international_load"},
     {"id":"DSS-33","name":"Rest Days / Recovery Window","category":"schedule","critical":false,"required_files":["data/predictions_v4.json"],"operational_probe":"rest_days"},
     {"id":"DSS-34","name":"Preseason Role & Performance","category":"priors","critical":false,"required_files":["data/predictions_v4.json"],"operational_probe":"preseason_prior"},
-    {"id":"DSS-35","name":"Last-Season Baseline","category":"priors","critical":true,"required_files":["data/stats/vaastav_gw1.json","data/predictions_v4.json"],"operational_probe":"last_season_integration"},
+    {"id":"DSS-35","name":"Last-Season Baseline","category":"priors","critical":true,"required_files":["data/stats/vaastav_previous_season.json","data/predictions_v4.json"],"operational_probe":"last_season_integration"},
     {"id":"DSS-36","name":"Multi-Season / Historical Prior","category":"priors","critical":false,"required_files":["data/history.jsonl","data/predictions_v4.json"],"operational_probe":"historical_prior"},
     {"id":"DSS-37","name":"Current-Season Form","category":"form","critical":false,"required_files":["data/stats/playermatchstats_gw1.json"],"operational_probe":"current_form"},
     {"id":"DSS-38","name":"Regression / Overperformance Risk","category":"form","critical":false,"required_files":["data/predictions_v4.json"],"operational_probe":"regression_risk"},

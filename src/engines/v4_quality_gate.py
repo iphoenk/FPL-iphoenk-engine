@@ -21,8 +21,8 @@ def _assert_framework_health() -> tuple[dict, dict]:
     post = _load("framework_health_v4.json")
 
     for obj, phase in ((pre, "preflight"), (post, "postflight")):
-        assert int(obj.get("schema_version", 0)) >= 464, obj
-        assert str(obj.get("engine", "")).startswith("v4.6.4-framework-health-operational-probes"), obj
+        assert int(obj.get("schema_version", 0)) >= 470, obj
+        assert str(obj.get("engine", "")).startswith("v4.7-framework-health-prediction-quality-probes"), obj
         assert obj.get("phase") == phase, obj
         assert obj.get("registry_integrity") is True, obj
         assert obj.get("overall") in {"GREEN", "AMBER"}, obj
@@ -52,12 +52,12 @@ def _assert_framework_health() -> tuple[dict, dict]:
     assert governance.get("raw_optimizer_is_not_final_decision") is True
     assert governance.get("gate0_fail_blocks_go") is True
 
-    # V4.6.4 must report known upstream prediction-quality debt truthfully.
+    # V4.7 must prove the upstream prediction inputs are consumed, not merely synced.
     core = {row["id"]: row for row in post["dss_core"]["items"]}
-    for module_id in ("DSS-10", "DSS-11", "DSS-12", "DSS-13", "DSS-24", "DSS-35"):
-        assert core[module_id]["status"] == "PARTIAL", core[module_id]
+    for module_id in ("DSS-05", "DSS-09", "DSS-10", "DSS-11", "DSS-12", "DSS-13", "DSS-24", "DSS-35"):
+        assert core[module_id]["status"] == "ACTIVE", core[module_id]
     enhancements = {row["id"]: row for row in post["enhancements"]["items"]}
-    assert enhancements["ENH-01"]["status"] == "PARTIAL", enhancements["ENH-01"]
+    assert enhancements["ENH-01"]["status"] == "ACTIVE", enhancements["ENH-01"]
     assert post.get("overall") == "AMBER", post.get("overall")
     assert post.get("go_allowed") is False, post
 
@@ -78,7 +78,11 @@ def run() -> dict:
 
     predictions = _load("predictions_v4.json")
     players = predictions.get("players", [])
+    coverage = predictions.get("input_coverage", {})
+    assert int(predictions.get("schema_version", 0)) >= 470
+    assert str(predictions.get("model_version", "")).startswith("v4.7-prediction-quality")
     assert predictions.get("point_in_time") is True and len(players) >= 500, predictions
+    assert coverage.get("advanced_matched", 0) > 0 and coverage.get("last_season_matched", 0) > 0, coverage
 
     wc = _load("wc_decision_v4.json")
     assert int(wc.get("schema_version", 0)) >= 464, wc
@@ -157,6 +161,12 @@ def run() -> dict:
             if row.get("position") == "GK":
                 assert fx["components"].get("defcon", 0) == 0
             assert fx["lower80"] <= x <= fx["upper80"]
+            calibration = fx.get("calibration", {})
+            provenance = fx.get("provenance", {})
+            for field in ("nailed_prior", "competition_pressure", "set_piece_share", "penalty_share", "last_season_weight", "opponent_defence_resistance"):
+                assert field in calibration, (row.get("element"), field)
+            assert provenance.get("xmins_prior_source") and provenance.get("set_piece_source") == "official_fpl_bootstrap_orders"
+            assert str(provenance.get("opponent_defence_source", "")).startswith("official_fpl_")
             xm = fx["xmins"]
             assert abs(xm["start_probability"] + xm["bench_probability"] + xm["dnp_probability"] - 1) < 0.002
     assert all_x and statistics.median(all_x) < 8
@@ -175,7 +185,7 @@ def run() -> dict:
         "captain": lineup["captain"]["name"],
         "pipeline_ms": timings["total_pipeline_ms"],
     }
-    print("V4.6.4 CORRECTNESS + TRUTHFUL HEALTH QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.7 PREDICTION QUALITY + TRUTHFUL HEALTH QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

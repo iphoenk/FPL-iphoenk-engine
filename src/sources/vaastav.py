@@ -27,6 +27,16 @@ def _season_candidates():
     return out
 
 
+def previous_season():
+    """Return vaastav's short label for the season before the configured one."""
+    configured = str(_cfg().get("season", "2026-2027"))
+    try:
+        start = int(configured[:4]) - 1
+    except (TypeError, ValueError):
+        start = 2025
+    return f"{start}-{str(start + 1)[-2:]}"
+
+
 def _base():
     return _cfg().get("vaastav", {}).get(
         "raw_base",
@@ -96,4 +106,47 @@ def sync_gw(gw: int):
     }
     CACHE.mkdir(parents=True, exist_ok=True)
     atomic_json(CACHE / f"vaastav_gw{gw}_error.json", failure)
+    return failure
+
+
+def sync_previous_season():
+    """Fetch a dedicated prior-season snapshot, never a current-season fallback."""
+    season = previous_season()
+    last_error = None
+    for filename in ("players_raw.csv", "cleaned_players.csv"):
+        url = f"{_base()}/{season}/{filename}"
+        try:
+            rows = _fetch_csv(url)
+            if not rows:
+                raise RuntimeError("empty CSV")
+            columns = set(rows[0])
+            required = {"first_name", "second_name", "minutes"}
+            if not required.issubset(columns):
+                raise RuntimeError(f"schema missing required columns: {sorted(required - columns)}")
+            payload = {
+                "source": "vaastav/Fantasy-Premier-League",
+                "season": season,
+                "fetched_at": iso_now(),
+                "available_at": iso_now(),
+                "source_url": url,
+                "row_count": len(rows),
+                "data_mode": "PREVIOUS_SEASON_SNAPSHOT",
+                "status": "LIVE",
+                "schema_columns": sorted(columns),
+                "rows": rows,
+            }
+            CACHE.mkdir(parents=True, exist_ok=True)
+            atomic_json(CACHE / "vaastav_previous_season.json", payload)
+            return payload
+        except Exception as exc:
+            last_error = f"{type(exc).__name__}: {exc}"
+    failure = {
+        "source": "vaastav/Fantasy-Premier-League",
+        "season": season,
+        "fetched_at": iso_now(),
+        "status": "FAILED",
+        "error": last_error,
+    }
+    CACHE.mkdir(parents=True, exist_ok=True)
+    atomic_json(CACHE / "vaastav_previous_season_error.json", failure)
     return failure

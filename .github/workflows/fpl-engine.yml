@@ -42,7 +42,7 @@ jobs:
         run: python -m src.engines.v4_decision_pipeline
       - name: Framework health POST-FLIGHT
         run: python -m src.engines.framework_health_audit --phase postflight --strict
-      - name: Centralized V4.6.4 correctness quality gate
+      - name: Centralized V4.7 prediction quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise acceptance summary
         run: |

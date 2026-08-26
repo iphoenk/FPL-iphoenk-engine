@@ -1,5 +1,5 @@
 {
-  "version": "4.6.4",
+  "version": "4.7.0",
   "P0": {
     "status": "IMPLEMENTED",
     "items": [
@@ -25,6 +25,11 @@
       "optional shots.csv and playermatchstats.csv ingestion",
       "fixture model using official FDR fallback",
       "interpretable xPts/xMins projection scaffold",
+      "last-season priors blended by stable player code",
+      "advanced xG/xA/DefCon stats consumed by prediction",
+      "official set-piece and penalty orders consumed as role shares",
+      "venue-normalized dynamic opponent defence",
+      "xMins starter, competition and rotation priors",
       "advanced stats query CLI",
       "FastAPI live endpoints",
       "SSE live stream",

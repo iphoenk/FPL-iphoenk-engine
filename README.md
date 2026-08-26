@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.6.4
+# FPL iphoenk Engine V4.7
 
 A production-oriented personal FPL data platform.
 
@@ -29,7 +29,11 @@ Implemented:
 
 ## P1 Intelligence
 Working base:
-- optional shots.csv / playermatchstats.csv ingestion
+- official-ID integration of Core Insights players, shots and player-match stats
+- dedicated prior-season vaastav snapshot with stable-code reconciliation
+- official set-piece and penalty-order role shares
+- venue-normalized dynamic opponent defensive resistance
+- xMins starter-security, positional-competition and rotation priors
 - advanced-stat CLI
 - fixture model
 - interpretable xMins/xPts scaffold
@@ -90,9 +94,9 @@ FPL-Core-Insights and vaastav are community-maintained. They are useful enrichme
 
 GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy `live_service.py` to an always-on host for near-live polling.
 
-## V4.6.4 correctness baseline
+## V4.7 prediction-quality release
 
-- Gate 0 reconciles owned selling prices with the official half-profit formula.
-- Wildcard budget uses owned `sell_cost` plus bank; unowned targets use `now_cost`.
-- Framework status `ACTIVE` requires an operational probe, not merely a present file.
-- Known V4.7 prediction-quality gaps remain truthfully `PARTIAL`, so framework health is expected to be `AMBER` and unqualified `GO` remains blocked while governed recommendations may still be produced.
+- V4.6.4 remains the sell-cost and truthful-health correctness baseline.
+- V4.7 connects richer xMins priors, advanced stats, set pieces, penalties, last-season priors and dynamic opponent defence to projection output.
+- Every promoted framework capability is backed by output-field and provenance probes.
+- Remaining unrelated framework debt stays `PARTIAL`, so health may remain `AMBER` and unqualified `GO` remains blocked while governed recommendations may still be produced.

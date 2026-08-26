@@ -84,6 +84,7 @@ def _probe_availability() -> tuple[bool, dict]:
 
 def _probe_xmins() -> tuple[bool, dict]:
     checked = 0
+    enriched = 0
     for player in _predictions()[:50]:
         for fixture in (player.get("fixtures") or [])[:3]:
             xmins = fixture.get("xmins") or {}
@@ -91,9 +92,14 @@ def _probe_xmins() -> tuple[bool, dict]:
             if abs(total - 1) >= .002 or not 0 <= float(xmins.get("expected_minutes", -1)) <= 90:
                 return False, {"reason": "invalid xMins distribution", "element": player.get("element")}
             checked += 1
-    return checked > 0, {
+            calibration = fixture.get("calibration") or {}
+            provenance = fixture.get("provenance") or {}
+            enriched += bool(provenance.get("xmins_prior_source")) and all(
+                key in calibration for key in ("nailed_prior", "competition_pressure", "manager_rotation_rate")
+            )
+    return checked > 0 and enriched == checked, {
         "fixture_distributions_checked": checked,
-        "quality_note": "functional probe only; richer priors remain V4.7 debt",
+        "enriched_prior_distributions": enriched,
     }
 
 
@@ -122,13 +128,53 @@ def _probe_advanced_sync() -> tuple[bool, dict]:
 
 
 def _probe_advanced_integration() -> tuple[bool, dict]:
-    sources = {
-        str((fixture.get("provenance") or {}).get("advanced_source"))
-        for player in _predictions()[:50]
-        for fixture in (player.get("fixtures") or [])[:1]
-    }
-    integrated = any(source not in {"None", "official_fpl_current_state", "official_fpl"} for source in sources)
-    return integrated, {"prediction_sources": sorted(sources), "synced_but_not_consumed": not integrated}
+    fixtures = [fixture for player in _predictions()[:100] for fixture in (player.get("fixtures") or [])[:1]]
+    sources = {str((fixture.get("provenance") or {}).get("advanced_source")) for fixture in fixtures}
+    integrated = sum(
+        "fpl_core_insights:" in str((fixture.get("provenance") or {}).get("advanced_source"))
+        and (fixture.get("provenance") or {}).get("advanced_identity_match") == "official_element_id"
+        for fixture in fixtures
+    )
+    return integrated > 0, {"prediction_sources": sorted(sources), "integrated_fixture_samples": integrated, "synced_but_not_consumed": integrated == 0}
+
+
+def _probe_role_share(field: str, source_field: str = "set_piece_source") -> tuple[bool, dict]:
+    fixtures = [fixture for player in _predictions() for fixture in (player.get("fixtures") or [])[:1]]
+    covered = sum(field in (fixture.get("calibration") or {}) for fixture in fixtures)
+    assigned = sum(float((fixture.get("calibration") or {}).get(field, 0)) > 0 for fixture in fixtures)
+    sourced = sum((fixture.get("provenance") or {}).get(source_field) == "official_fpl_bootstrap_orders" for fixture in fixtures)
+    ok = bool(fixtures) and covered == len(fixtures) and sourced == len(fixtures) and assigned > 0
+    return ok, {"fixtures": len(fixtures), "covered": covered, "assigned_roles": assigned, "official_source": sourced}
+
+
+def _probe_opponent_defence() -> tuple[bool, dict]:
+    fixtures = [fixture for player in _predictions() for fixture in (player.get("fixtures") or [])[:3]]
+    values = [float((fixture.get("calibration") or {}).get("opponent_defence_resistance")) for fixture in fixtures if (fixture.get("calibration") or {}).get("opponent_defence_resistance") is not None]
+    sourced = sum(str((fixture.get("provenance") or {}).get("opponent_defence_source", "")).startswith("official_fpl_") for fixture in fixtures)
+    distinct = len({round(value, 3) for value in values})
+    return bool(fixtures) and len(values) == len(fixtures) and sourced == len(fixtures) and distinct > 1, {"fixtures": len(fixtures), "covered": len(values), "official_source": sourced, "distinct_ratings": distinct}
+
+
+def _probe_last_season() -> tuple[bool, dict]:
+    obj = read_json(DATA / "predictions_v4.json", {})
+    players = list(obj.get("players") or [])
+    coverage = obj.get("input_coverage") or {}
+    matched = sum(float((player.get("priors") or {}).get("last_season_weight", 0)) > 0 and bool((player.get("priors") or {}).get("last_season_source")) for player in players)
+    return coverage.get("last_season") is not None and matched > 0, {"source_season": coverage.get("last_season"), "input_matches": coverage.get("last_season_matched", 0), "consumed_priors": matched}
+
+
+def _probe_rotation_competition() -> tuple[bool, dict]:
+    players = _predictions()
+    covered = sum(
+        all(key in (player.get("priors") or {}) for key in ("nailed_prior", "competition_pressure", "manager_rotation_rate", "xmins_prior_source"))
+        for player in players
+    )
+    contextual = sum(
+        float((player.get("priors") or {}).get("competition_pressure", 0)) > 0
+        or float((player.get("priors") or {}).get("manager_rotation_rate", 0)) > 0
+        for player in players
+    )
+    return bool(players) and covered == len(players) and contextual > 0, {"players": len(players), "covered": covered, "contextual_adjustments": contextual}
 
 
 def _probe_defcon() -> tuple[bool, dict]:
@@ -331,7 +377,12 @@ def _operational_probe(name: str | None, phase: str) -> tuple[str, dict]:
         "availability": _probe_availability,
         "xmins": _probe_xmins,
         "xmins_distribution": _probe_xmins,
+        "rotation_competition": _probe_rotation_competition,
+        "set_piece_role": lambda: _probe_role_share("set_piece_share"),
+        "penalty_role": lambda: _probe_role_share("penalty_share"),
         "advanced_stats_sync": _probe_advanced_sync,
+        "opponent_defence_dynamic": _probe_opponent_defence,
+        "last_season_integration": _probe_last_season,
         "defcon_rules": _probe_defcon,
         "clean_sheet_probability": lambda: _probe_prediction_component("clean_sheet"),
         "horizon_3": lambda: _probe_horizon("xpts_3"),
@@ -363,11 +414,11 @@ def _operational_probe(name: str | None, phase: str) -> tuple[str, dict]:
         return _probe_learning_loop()
 
     known_partial = {
-        "tactical_role", "system_fit", "rotation_competition", "set_piece_role", "penalty_role",
+        "tactical_role", "system_fit",
         "sustainability", "bonus_route", "team_defensive_risk", "team_attacking_strength",
-        "team_defensive_strength", "fixture_context", "opponent_defence_dynamic", "fixture_swing",
+        "team_defensive_strength", "fixture_context", "fixture_swing",
         "european_congestion", "domestic_cup_congestion", "international_load", "rest_days",
-        "preseason_prior", "last_season_integration", "historical_prior", "regression_risk",
+        "preseason_prior", "historical_prior", "regression_risk",
         "price_value", "ownership_context", "calibration_store",
     }
     if name in known_partial:
@@ -533,8 +584,8 @@ def audit(phase: str = "postflight", strict: bool = False) -> dict[str, Any]:
     recommendation_allowed = overall != "RED" and gate0["pass"]
     go_allowed = overall == "GREEN" and gate0["pass"] and (phase == "preflight" or gate0["counts"].get("DEFERRED", 0) == 0)
     out = {
-        "schema_version": 464,
-        "engine": "v4.6.4-framework-health-operational-probes",
+        "schema_version": 470,
+        "engine": "v4.7-framework-health-prediction-quality-probes",
         "phase": phase,
         "overall": overall,
         "decision_engine": "HEALTHY" if overall == "GREEN" else "DEGRADED" if overall == "AMBER" else "BLOCKED",

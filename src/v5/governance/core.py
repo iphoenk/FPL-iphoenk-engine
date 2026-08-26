@@ -8,29 +8,65 @@ from src.v5.config_cache import load_json_config
 from src.v5.governance.gate0 import audit as gate0_audit
 
 ENH = "config/enhancement_layers_registry.json"
+DSS_POLICY = "config/v5_dss_policy_registry.json"
+GATE_REGISTRY = "config/gate0_registry.json"
+GATE_POLICY = "config/v5_gate0_policy_registry.json"
+SERVICE_REGISTRY = "config/v5_service_registry.json"
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _enhancement_registry() -> list[dict[str, Any]]:
-    data = load_json_config(ENH)
-    rows = data.get("layers")
-    if not isinstance(rows, list):
-        raise RuntimeError("invalid enhancement layer registry")
-    return rows
+def _expected_ids(contract: dict[str, Any]) -> set[str]:
+    expected = int(contract["expected_count"])
+    first = int(contract.get("first_index", 1))
+    prefix = str(contract["id_prefix"])
+    zero_pad = int(contract.get("zero_pad", 0))
+    return {
+        f"{prefix}{index:0{zero_pad}d}" if zero_pad else f"{prefix}{index}"
+        for index in range(first, first + expected)
+    }
 
 
-def _integrity(rows: list[dict[str, Any]], expected: int) -> dict[str, Any]:
+def _integrity(rows: list[dict[str, Any]], contract: dict[str, Any]) -> dict[str, Any]:
     ids = [str(row.get("id")) for row in rows]
     duplicates = sorted(key for key, count in Counter(ids).items() if count > 1)
+    expected_ids = _expected_ids(contract)
+    declared_ids = set(ids)
+    expected = int(contract["expected_count"])
     return {
         "expected": expected,
         "declared": len(rows),
         "duplicate_ids": duplicates,
-        "integrity_ok": len(rows) == expected and not duplicates,
+        "missing_ids": sorted(expected_ids - declared_ids),
+        "unexpected_ids": sorted(declared_ids - expected_ids),
+        "integrity_ok": len(rows) == expected and not duplicates and declared_ids == expected_ids,
     }
+
+
+def _enhancement_registry() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    data = load_json_config(ENH)
+    rows = data.get("layers")
+    contract = data.get("contract")
+    if not isinstance(rows, list) or not isinstance(contract, dict):
+        raise RuntimeError("invalid enhancement layer registry")
+    return rows, contract
+
+
+def _dss_policy() -> dict[str, Any]:
+    data = load_json_config(DSS_POLICY)
+    if not isinstance(data.get("registries"), dict):
+        raise RuntimeError("invalid DSS governance policy registry")
+    return data
+
+
+def _gate_contract() -> dict[str, Any]:
+    data = load_json_config(GATE_REGISTRY)
+    contract = data.get("contract")
+    if not isinstance(contract, dict):
+        raise RuntimeError("invalid Gate0 registry contract")
+    return contract
 
 
 def _capability_sources(
@@ -77,7 +113,7 @@ def _capability_sources(
 
 
 def _audit_enhancements(capability_sources: dict[str, list[str]]) -> dict[str, Any]:
-    rows = _enhancement_registry()
+    rows, contract = _enhancement_registry()
     items = []
     for row in rows:
         probe = str(row.get("operational_probe") or "")
@@ -98,10 +134,15 @@ def _audit_enhancements(capability_sources: dict[str, list[str]]) -> dict[str, A
             }
         )
     counts = Counter(item["status"] for item in items)
-    return {**_integrity(rows, 8), "counts": dict(counts), "items": items}
+    return {**_integrity(rows, contract), "counts": dict(counts), "items": items}
 
 
-def _decision_dss(decision: dict[str, Any], section: str, expected: int) -> dict[str, Any]:
+def _decision_dss(decision: dict[str, Any], section: str) -> dict[str, Any]:
+    policy = _dss_policy()
+    registry_policy = (policy.get("registries") or {}).get(section)
+    if not isinstance(registry_policy, dict):
+        raise RuntimeError(f"missing DSS registry policy section: {section}")
+    expected = int(registry_policy["expected_count"])
     dss = decision.get("dss") if isinstance(decision.get("dss"), dict) else {}
     block = dss.get(section) if isinstance(dss.get(section), dict) else {}
     items = block.get("items") if isinstance(block.get("items"), list) else []
@@ -122,8 +163,8 @@ def build_health(
     evaluation: dict[str, Any],
 ) -> dict[str, Any]:
     gate = gate0_audit(truth, decision)
-    core = _decision_dss(decision, "core", 50)
-    extensions = _decision_dss(decision, "extensions", 16)
+    core = _decision_dss(decision, "core")
+    extensions = _decision_dss(decision, "extensions")
     capability_sources = _capability_sources(truth, prediction, price, decision, evaluation, gate)
     enhancements = _audit_enhancements(capability_sources)
 
@@ -146,10 +187,16 @@ def build_health(
     go_allowed = bool(recommendation_allowed and not critical_partial)
     overall = "RED" if not recommendation_allowed else ("GREEN" if go_allowed else "AMBER")
 
+    gate_contract = _gate_contract()
+    dss_registries = _dss_policy()["registries"]
+    _, enhancement_contract = _enhancement_registry()
+    gate_policy = load_json_config(GATE_POLICY)
+    service_registry = load_json_config(SERVICE_REGISTRY)
+
     return {
-        "framework_schema": 6,
+        "framework_schema": 7,
         "generated_at": _now(),
-        "auditor": "v5-microservice-governance-v2",
+        "auditor": "v5-microservice-governance-v3",
         "overall": overall,
         "decision_engine": "HEALTHY" if go_allowed else ("DEGRADED" if recommendation_allowed else "BLOCKED"),
         "recommendation_allowed": recommendation_allowed,
@@ -170,14 +217,14 @@ def build_health(
         "gate0_failures": gate_failures,
         "critical_partial": critical_partial,
         "governance": {
-            "gate0_full_16_required": True,
-            "gate0_fail_blocks_go": True,
+            "gate0_required_count": int(gate_contract["expected_count"]),
+            "gate0_fail_blocks_go": bool(gate_policy.get("fail_closed", True)),
             "dss_authority": "decision-service",
             "enhancement_authority": "governance-service",
-            "dss_core_count_immutable": 50,
-            "dss_extension_count_immutable": 16,
-            "enhancement_count_immutable": 8,
-            "service_boundary_enforced": True,
+            "dss_core_required_count": int(dss_registries["core"]["expected_count"]),
+            "dss_extension_required_count": int(dss_registries["extensions"]["expected_count"]),
+            "enhancement_required_count": int(enhancement_contract["expected_count"]),
+            "service_boundary_enforced": bool(service_registry.get("mandatory")),
             "production_auto_submit": False,
         },
     }

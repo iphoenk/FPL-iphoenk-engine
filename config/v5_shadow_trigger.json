@@ -1,15 +1,17 @@
 {
-  "requested_cycle": "expanded-core-v3.15-rerun",
-  "requested_at": "2026-08-26T10:37:30Z",
+  "requested_cycle": "full-dss-v3.16-runtime-verification",
+  "requested_at": "2026-08-26T11:10:00Z",
   "mode": "REAL_SHADOW",
-  "comparison_reference": "v3.15-fast-report-serving",
+  "comparison_reference": "v3.16-source-registry@94dc304250c21a83b7270944231a07c6ff7099ac",
   "v5_role": "shadow_only",
   "require_owned": 15,
   "require_watchlist": 20,
   "require_watchlist_per_position": 5,
   "require_lineup_owned_boundary": true,
   "require_parity_fail_closed": true,
+  "require_all_core_active": true,
+  "require_all_extensions_active": true,
+  "require_all_enhancements_active": true,
   "require_no_critical_dss_partial": true,
-  "require_no_critical_enhancement_partial": true,
-  "require_all_extensions_active": true
+  "require_no_critical_enhancement_partial": true
 }

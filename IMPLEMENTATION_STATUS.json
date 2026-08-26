@@ -1,6 +1,6 @@
 {
-  "version": "3.16.1",
-  "schema_version": 45,
+  "version": "3.17.0",
+  "schema_version": 46,
   "release_metadata_source": "src/version.py",
   "P0": {
     "status": "IMPLEMENTED",
@@ -25,7 +25,11 @@
       "rules-registry-owned squad constraints",
       "authenticated manual refresh",
       "shared service-process live polling",
-      "persisted native Official FPL entry rank/points/bank/value fields"
+      "persisted native Official FPL entry rank/points/bank/value fields",
+      "runtime-evidence DSS operationalization gate",
+      "explicit safe fallback states without fabricated external observations",
+      "team-cluster package penalty guardrail",
+      "early-season package-change cap guardrail"
     ]
   },
   "P1": {

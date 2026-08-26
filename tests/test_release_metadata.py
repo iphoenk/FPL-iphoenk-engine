@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_release_metadata_single_source_of_truth():
-    assert ENGINE_VERSION == "3.16.1"
-    assert SCHEMA_VERSION == 45
+    assert ENGINE_VERSION == "3.17.0"
+    assert SCHEMA_VERSION == 46
     assert ENGINE_RUNTIME_VERSION == ENGINE_VERSION
     assert ENGINE_RUNTIME_SCHEMA == SCHEMA_VERSION
     assert app.version == ENGINE_VERSION

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_gate0_full_16_v1",
+  "status_values": ["PASS", "FAIL", "DEFERRED"],
+  "preflight_checks": ["G0-01", "G0-02", "G0-03", "G0-04", "G0-05", "G0-07", "G0-08", "G0-09", "G0-15"],
+  "postflight_checks": ["G0-06", "G0-10", "G0-11", "G0-12", "G0-13", "G0-14", "G0-16"],
+  "fail_closed": true,
+  "deferred_blocks_unqualified_go": true,
+  "affordability": {
+    "require_nonnegative_resulting_itb": true,
+    "validate_every_returned_package": true
+  },
+  "chip": {
+    "require_truth_chip_state": true,
+    "maximum_active_chips": 1
+  },
+  "lineup": {
+    "require_ready_status": true,
+    "require_formation_in_official_rules": true,
+    "require_captain_and_vice_in_xi": true,
+    "require_distinct_captain_and_vice": true,
+    "require_exact_bench_structure": true
+  }
+}

@@ -70,7 +70,6 @@ jobs:
           v3_tree="$(mktemp -d)"
           trap 'git worktree remove --force "$v3_tree" >/dev/null 2>&1 || true; rm -rf "$v3_tree"' EXIT
           git worktree add --detach "$v3_tree" "$V3_SOURCE_SHA"
-
           mkdir -p "$v3_tree/data/stats"
           for file in price_cache.json price_trajectory.json rules_source_state.json prediction_ledger.json challenger_observations.json report_state.json dss_watchlist.json; do
             if git cat-file -e "origin/${V3_RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
@@ -82,7 +81,6 @@ jobs:
               git show "origin/${V3_RUNTIME_BRANCH}:data/stats/${stat_file}" > "$v3_tree/data/stats/${stat_file}"
             fi
           done
-
           (
             cd "$v3_tree"
             export PYTHONPATH="$v3_tree"
@@ -91,21 +89,13 @@ jobs:
             python -m src.engines.watchlist_contract_validate
             python -m src.engines.report_serving_validate
           )
-
           cp "$v3_tree/data/latest.json" .shadow/v3_latest.json
           cp "$v3_tree/data/lineup_decision.json" .shadow/v3_lineup_decision.json
           python - <<'PY'
           import json
           latest=json.load(open('.shadow/v3_latest.json'))
           lineup=json.load(open('.shadow/v3_lineup_decision.json'))
-          print({
-              'reference_sha': '94dc304250c21a83b7270944231a07c6ff7099ac',
-              'engine_version': latest.get('engine_version'),
-              'generated_at': latest.get('generated_at'),
-              'planning_gw': (latest.get('phase') or {}).get('planning_gw'),
-              'formation': lineup.get('formation'),
-              'captain': (lineup.get('captain') or {}).get('element') if isinstance(lineup.get('captain'), dict) else lineup.get('captain'),
-          })
+          print({'reference_sha':'94dc304250c21a83b7270944231a07c6ff7099ac','engine_version':latest.get('engine_version'),'generated_at':latest.get('generated_at'),'planning_gw':(latest.get('phase') or {}).get('planning_gw'),'formation':lineup.get('formation'),'captain':(lineup.get('captain') or {}).get('element') if isinstance(lineup.get('captain'),dict) else lineup.get('captain')})
           assert str(latest.get('engine_version') or '').startswith('3.16'), latest.get('engine_version')
           PY
 
@@ -158,26 +148,17 @@ jobs:
           f=json.load(open('data/v5/framework_health.json'))
           checks=p['operational_invariants']['checks']
           positions=w.get('positions') or {}
-          position_counts={pos: len(positions.get(pos) or []) for pos in ('GK','DEF','MID','FWD')}
-          core=((f.get('dss') or {}).get('core') or {})
-          ext=f.get('dss_extensions') or ((f.get('dss') or {}).get('extensions') or {})
+          position_counts={pos:len(positions.get(pos) or []) for pos in ('GK','DEF','MID','FWD')}
+          core=f.get('dss_core') or {}
+          ext=f.get('dss_extensions') or {}
           enh=f.get('enhancements') or {}
-          print({
-              'v3_engine_version': p['v3'].get('engine_version'),
-              'cycle_pass': p['acceptance_progress']['cycle_pass'],
-              'parity': p['parity'],
-              'operational_invariants': checks,
-              'watchlist_position_counts': position_counts,
-              'dss_core_counts': core.get('counts'),
-              'dss_extension_counts': ext.get('counts'),
-              'enhancement_counts': enh.get('counts'),
-          })
+          print({'v3_engine_version':p['v3'].get('engine_version'),'cycle_pass':p['acceptance_progress']['cycle_pass'],'parity':p['parity'],'operational_invariants':checks,'watchlist_position_counts':position_counts,'dss_core_counts':core.get('counts'),'dss_extension_counts':ext.get('counts'),'enhancement_counts':enh.get('counts')})
           assert str(p['v3'].get('engine_version') or '').startswith('3.16'), p['v3'].get('engine_version')
           assert all(checks.values()), f'V5 operational invariant failure: {checks}'
           assert all(position_counts[pos] == 5 for pos in position_counts), f'watchlist positional contract failed: {position_counts}'
-          assert core.get('counts') == {'ACTIVE': 50}, f'DSS core must be 50/50 ACTIVE: {core.get("counts")}'
-          assert ext.get('counts') == {'ACTIVE': 16}, f'DSS extensions must be 16/16 ACTIVE: {ext.get("counts")}'
-          assert enh.get('counts') == {'ACTIVE': 8}, f'Enhancements must be 8/8 ACTIVE: {enh.get("counts")}'
+          assert core.get('counts') == {'ACTIVE':50}, f'DSS core must be 50/50 ACTIVE: {core.get("counts")}'
+          assert ext.get('counts') == {'ACTIVE':16}, f'DSS extensions must be 16/16 ACTIVE: {ext.get("counts")}'
+          assert enh.get('counts') == {'ACTIVE':8}, f'Enhancements must be 8/8 ACTIVE: {enh.get("counts")}'
           assert p['parity']['pass'] is True, f"V3.16/V5 parity failed: {p['parity']}"
           assert p['acceptance_progress']['cycle_pass'] is True, 'cycle must not count as successful acceptance'
           PY

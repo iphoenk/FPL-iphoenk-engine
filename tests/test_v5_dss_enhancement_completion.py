@@ -1,22 +1,49 @@
+from datetime import datetime, timedelta, timezone
+
 from src.v5.decision.dss_evaluator import evaluate_dss
 from src.v5.evaluation.evidence_guard import evaluate as evaluate_evidence_guard
 from src.v5.governance.core import _audit_enhancements
 
 
-def test_evidence_guard_activates_native_reliability_contracts():
+def _healthy_truth(ruleset_id="FPL_2026_27"):
+    return {"rules": {"ruleset_id": ruleset_id}, "team": {"validation": {"passed": True}}}
+
+
+def test_evidence_guard_accepts_scalar_horizon_and_activates_native_contracts():
+    now = datetime.now(timezone.utc)
     prediction = {
-        "generated_at": "2099-01-01T00:00:00+00:00",
+        "generated_at": (now - timedelta(seconds=2)).isoformat(),
         "planning_gw": 2,
-        "horizon_gws": [2, 3, 4, 5, 6],
+        "horizon_gws": 5,
         "ruleset_id": "FPL_2026_27",
         "prediction_quality": {"status": "HEALTHY"},
         "players": [{"current_season": {"starts": 1}}],
     }
-    context = {"planning_gw": 2, "deadline_time": "2099-01-02T00:00:00Z"}
-    result = evaluate_evidence_guard(prediction, context)
+    context = {"planning_gw": 2, "deadline_time": (now + timedelta(days=1)).isoformat()}
+    result = evaluate_evidence_guard(prediction, context, _healthy_truth())
     caps = set(result["capabilities"])
     assert result["leakage"]["pass"] is True
+    assert result["leakage"]["horizon_gws"] == [2, 3, 4, 5, 6]
+    assert result["freshness"]["pass"] is True
+    assert result["reliability"]["pass"] is True
     assert {"leakage_guard", "data_freshness", "source_health", "reliability_overlay", "data_reliability_triangulation"}.issubset(caps)
+
+
+def test_evidence_guard_rejects_future_timestamp_and_ruleset_mismatch():
+    now = datetime.now(timezone.utc)
+    prediction = {
+        "generated_at": (now + timedelta(minutes=5)).isoformat(),
+        "planning_gw": 2,
+        "horizon_gws": [2, 3],
+        "ruleset_id": "FPL_2026_27",
+        "prediction_quality": {"status": "HEALTHY"},
+        "players": [],
+    }
+    context = {"planning_gw": 2, "deadline_time": (now + timedelta(days=1)).isoformat()}
+    result = evaluate_evidence_guard(prediction, context, _healthy_truth("OTHER_RULESET"))
+    assert result["freshness"]["pass"] is False
+    assert result["reliability"]["ruleset_match"] is False
+    assert result["reliability"]["pass"] is False
 
 
 def test_no_critical_dss_partial_with_native_v5_capabilities():

@@ -1,0 +1,123 @@
+from __future__ import annotations
+
+import math
+from datetime import datetime, timezone
+from typing import Any
+
+from src.v5.config_cache import load_json_config
+from src.v5.intelligence.team_strength import build_team_strength
+from src.v5.intelligence.xmins import estimate_xmins
+
+CONFIG = "config/intelligence/projection.json"
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _f(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(default if value is None else value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
+
+
+def _blended_rate(player: dict[str, Any], field: str, prior: float, shrink: float) -> tuple[float, str]:
+    minutes = max(0.0, _f(player.get("minutes")))
+    cumulative = max(0.0, _f(player.get(field)))
+    observed = cumulative * 90.0 / minutes if minutes > 0 else prior
+    value = (observed * minutes + prior * shrink) / max(1e-6, minutes + shrink)
+    return max(0.0, value), ("observed_shrunk_to_position_prior" if minutes > 0 else "position_prior")
+
+
+def _p60(xmins: dict[str, Any], cfg: dict[str, Any]) -> float:
+    transition = cfg.get("appearance_60_probability_transition") or {}
+    low = _f(transition.get("start_minutes_low"), 55.0)
+    high = max(low + 1.0, _f(transition.get("start_minutes_high"), 70.0))
+    conditional = clamp((_f(xmins.get("starter_minutes_if_start"), 72.0) - low) / (high - low), 0.0, 1.0)
+    return clamp(_f(xmins.get("start_probability")) * conditional, 0.0, 1.0)
+
+
+def build_predictions(bootstrap: dict[str, Any], fixtures: list[dict[str, Any]], rules: dict[str, Any], planning_gw: int, horizon: int = 15) -> dict[str, Any]:
+    cfg = load_json_config(CONFIG)
+    strength = build_team_strength(bootstrap, fixtures)
+    teams = {int(t["id"]): t.get("name") for t in bootstrap.get("teams") or []}
+    positions = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
+    team_rows = {int(t["team_id"]): t for t in strength.get("teams") or []}
+    matchups_by_team: dict[int, list[dict[str, Any]]] = {}
+    for matchup in strength.get("matchups") or []:
+        for tid in (int(matchup["team_h"]), int(matchup["team_a"])):
+            matchups_by_team.setdefault(tid, []).append(matchup)
+    for rows in matchups_by_team.values():
+        rows.sort(key=lambda x: (int(x.get("event") or 999), x.get("kickoff_time") or ""))
+
+    goal_points = {int(k): int(v) for k, v in (rules.get("goal_points") or {}).items()}
+    cs_points = {int(k): int(v) for k, v in (rules.get("clean_sheet_points") or {}).items()}
+    assist_points = int(rules.get("assist_points") or 3)
+    shrink = max(1.0, _f(cfg.get("rate_shrinkage_minutes"), 450.0))
+    priors = cfg.get("position_priors") or {}
+    league_baseline = strength.get("baseline") or {}
+    players = []
+
+    for player in bootstrap.get("elements") or []:
+        element_type = int(player.get("element_type") or 4)
+        position = positions.get(element_type, "FWD")
+        prior = priors.get(position) or priors.get("FWD") or {}
+        xg90, xg_source = _blended_rate(player, "expected_goals", _f(prior.get("xg90")), shrink)
+        xa90, xa_source = _blended_rate(player, "expected_assists", _f(prior.get("xa90")), shrink)
+        bonus90, bonus_source = _blended_rate(player, "bonus", _f(prior.get("bonus90")), shrink)
+        saves90, saves_source = _blended_rate(player, "saves", _f(prior.get("saves90")), shrink)
+        dc90 = _f(prior.get("dc90"))
+        rates = {"xg90": xg90, "xa90": xa90, "bonus90": bonus90, "saves90": saves90, "dc90": dc90}
+        team_id = int(player.get("team") or -1)
+        xmins = estimate_xmins(player, {"team_matches_played": int((team_rows.get(team_id) or {}).get("matches_played") or 0)})
+        p60 = _p60(xmins, cfg)
+        share = clamp(_f(xmins.get("expected_minutes")) / 90.0, 0.0, 1.0)
+        team_matchups = [m for m in matchups_by_team.get(team_id, []) if planning_gw <= int(m.get("event") or -1) < planning_gw + horizon]
+        by_gw = []
+        network_fixtures = []
+        for gw in range(planning_gw, planning_gw + horizon):
+            details = []
+            for matchup in [m for m in team_matchups if int(m.get("event") or -1) == gw]:
+                home = int(matchup["team_h"]) == team_id
+                team_xg = _f(matchup.get("home_expected_goals") if home else matchup.get("away_expected_goals"), 1.3)
+                league_base = _f(league_baseline.get("home_goals" if home else "away_goals"), 1.3)
+                attack_multiplier = clamp(team_xg / max(0.2, league_base), _f(cfg.get("attack_multiplier_min"), 0.55), _f(cfg.get("attack_multiplier_max"), 1.75))
+                cs_prob = clamp(_f(matchup.get("home_clean_sheet_probability") if home else matchup.get("away_clean_sheet_probability")), 0.0, 1.0)
+                appearance = _f(xmins.get("start_probability")) * (1.0 + p60) + _f(xmins.get("bench_probability"))
+                attack = (xg90 * goal_points.get(element_type, 4) + xa90 * assist_points) * share * attack_multiplier
+                clean = cs_points.get(element_type, 0) * cs_prob * p60
+                saves = (saves90 / 3.0) * share if position == "GK" else 0.0
+                mean = max(0.0, appearance + attack + clean + dc90 * share + bonus90 * share + saves)
+                unc = cfg.get("uncertainty") or {}
+                std = max(_f(unc.get("minimum_points_std"), 1.15), mean * _f(unc.get("coefficient_of_variation"), 0.42) + _f(xmins.get("minutes_std")) * _f(unc.get("xmins_std_points_multiplier"), 0.035) + (_f(unc.get("small_sample_extra_std"), 0.45) if xmins.get("small_sample_guard") else 0.0))
+                row = {"gw": gw, "event": gw, "kickoff_time": matchup.get("kickoff_time"), "opponent": matchup.get("team_a") if home else matchup.get("team_h"), "home": home, "xpts": round(mean, 3), "mean": round(mean, 3), "std": round(std, 3), "clean_sheet_probability": round(cs_prob, 4)}
+                details.append(row)
+                if len(network_fixtures) < 5:
+                    network_fixtures.append({"event": gw, "xpts": row["xpts"], "lower80": round(max(0.0, mean - 1.28 * std), 3), "upper80": round(mean + 1.28 * std, 3), "xmins": {k: xmins.get(k) for k in ("start_probability", "bench_probability", "dnp_probability", "expected_minutes")}})
+            gw_mean = sum(_f(x.get("mean")) for x in details)
+            gw_std = math.sqrt(sum(_f(x.get("std")) ** 2 for x in details)) if details else 0.0
+            by_gw.append({"gw": gw, "mean": round(gw_mean, 3), "std": round(gw_std, 3), "clean_sheet_probability": round(1 - math.prod(1 - _f(x.get("clean_sheet_probability")) for x in details), 4) if details else 0.0, "fixtures": details})
+        horizons = {}
+        for h in (3, 5, 10, 15):
+            subset = by_gw[:h]
+            horizons[str(h)] = {"mean": round(sum(_f(x["mean"]) for x in subset), 3), "std": round(math.sqrt(sum(_f(x["std"]) ** 2 for x in subset)), 3)}
+        players.append({
+            "element": int(player["id"]), "name": player.get("web_name"), "team_id": team_id, "team": teams.get(team_id), "position": position,
+            "element_type": element_type, "now_cost": int(player.get("now_cost") or 0), "status": player.get("status"), "ownership_pct": _f(player.get("selected_by_percent")),
+            "xmins": xmins, "xpts_by_gw": by_gw, "horizons": horizons,
+            "xpts_3": horizons["3"]["mean"], "xpts_5": horizons["5"]["mean"], "xpts_10": horizons["10"]["mean"], "xpts_15": horizons["15"]["mean"],
+            "mean_xpts": by_gw[0]["mean"] if by_gw else 0.0, "uncertainty": by_gw[0]["std"] if by_gw else 0.0, "fixtures": network_fixtures,
+            "rates": {**{k: round(v, 4) for k, v in rates.items()}, "sources": {"xg90": xg_source, "xa90": xa_source, "bonus90": bonus_source, "saves90": saves_source, "dc90": "position_prior"}},
+            "projection_confidence": xmins.get("confidence"),
+        })
+    return {
+        "generated_at": _now(), "schema_version": 510, "model_version": str(cfg.get("model_id") or "player_projection_v310"),
+        "ruleset_id": rules.get("ruleset_id"), "planning_gw": planning_gw, "horizon_gws": horizon,
+        "team_strength": strength, "players": players,
+        "network_contract": {"bounded": True, "max_fixture_rows_per_player": 5, "full_provenance_omitted": True},
+    }

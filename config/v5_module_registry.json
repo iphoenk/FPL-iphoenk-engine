@@ -1,28 +1,42 @@
 {
-  "version": 6,
-  "policy": "Every separable V5 domain is a dedicated module/registry. Runtime deployment groups modules only at bounded-context microservice boundaries; business authority must remain single-source.",
+  "version": 7,
+  "policy": "Every business capability has exactly one bounded-context microservice owner. Cross-service calls use versioned contracts; no service may import another service's business implementation.",
   "modules": {
-    "rules": {"plane":"truth","entrypoint":"src.rules","config":"config/rules/registry.json","adjustment_surface":["season rules","scoring","chips","finance rules","lineup constraints"],"status":"ACTIVE"},
-    "source_authority": {"plane":"truth","entrypoint":"src.v5.source_authority","config":"config/v5_source_authority_registry.json","adjustment_surface":["source priority","source enablement","domain authority chains","fallback policy"],"status":"ACTIVE"},
-    "public_api": {"plane":"truth","entrypoint":"src.v5.public_api","config":"config/v5_public_api_registry.json","adjustment_surface":["endpoint templates","timeout","retry/backoff","parallel workers","collection groups","redirect policy"],"status":"ACTIVE"},
-    "official_authenticated": {"plane":"truth","entrypoint":"src.v5.authenticated_official","config":"config/v5_auth_policy_registry.json","adjustment_surface":["auth modes","route allowlist","timeout","retry/backoff","team-id authority","raw persistence policy"],"status":"ACTIVE"},
-    "event_context": {"plane":"truth","entrypoint":"src.v5.event_context","config":"config/v5_event_context_registry.json","adjustment_surface":["event flags","planning GW selection","submitted GW semantics","live detection"],"status":"ACTIVE"},
-    "identity": {"plane":"truth","entrypoint":"src.v5.identity","config":"config/v5_identity_registry.json","adjustment_surface":["element resolution","team resolution","position mapping validation","fail-closed identity policy"],"status":"ACTIVE"},
-    "phase_state": {"plane":"truth","entrypoint":"src.v5.state","config":"config/v5_phase_authority_registry.json","adjustment_surface":["pre-deadline authority","post-deadline reconciliation","live authority","post-GW authority"],"status":"ACTIVE"},
-    "squad": {"plane":"truth","entrypoint":"src.v5.squad","config":"config/v5_squad_registry.json","adjustment_surface":["authority fallback","identity validation","fail-closed validation","baseline reconciliation"],"status":"ACTIVE"},
-    "finance": {"plane":"truth","entrypoint":"src.v5.finance","config":"config/v5_finance_registry.json","adjustment_surface":["sell-value authority","purchase-price reconstruction","affordability semantics","fail-closed policy"],"status":"ACTIVE"},
-    "team_service": {"plane":"truth","entrypoint":"src.v5.team_service","config":"config/v5_squad_registry.json","adjustment_surface":["team assembly","finance overlay","bank authority","purchase baseline integration"],"status":"ACTIVE"},
-    "live_scoring": {"plane":"truth","entrypoint":"src.v5.live_scoring","config":"config/v5_live_scoring_registry.json","adjustment_surface":["live stat fields","transfer-cost subtraction","live statuses","captain multiplier semantics"],"status":"ACTIVE"},
-    "price_trajectory": {"plane":"intelligence","entrypoint":"src.v5.price_trajectory","config":"config/v5_price_trajectory_registry.json","adjustment_surface":["filter thresholds","trend sensitivity","urgency bands","ETA policy","watch capacity","market timezone"],"status":"ACTIVE_ALPHA"},
-    "price_service": {"plane":"intelligence","entrypoint":"src.v5.price_service","config":"config/v5_price_trajectory_registry.json","adjustment_surface":["snapshot list limits","alert composition","owned-vs-watch filtering"],"status":"ACTIVE_ALPHA"},
-    "projection": {"plane":"intelligence","entrypoint":"src.models.projection","config":"config/v5_prediction_bridge_registry.json","adjustment_surface":["xMins priors","feature weights","opponent factors","set-piece weights","confidence thresholds"],"status":"PARTIAL_EXTERNALIZATION"},
-    "prediction_bridge": {"plane":"intelligence","entrypoint":"src.v5.prediction_bridge","config":"config/v5_prediction_bridge_registry.json","adjustment_surface":["upstream model","point-in-time requirement","leakage guard","bridge enablement"],"status":"ACTIVE_ALPHA"},
-    "dss_core": {"plane":"decision","entrypoint":"registry-driven","config":"config/dss_core_registry.json","adjustment_surface":["module enablement","priority","governance metadata"],"status":"ACTIVE"},
-    "dss_extensions": {"plane":"decision","entrypoint":"registry-driven","config":"config/dss_extension_registry.json","adjustment_surface":["module enablement","priority","governance metadata"],"status":"ACTIVE"},
-    "gate0": {"plane":"governance","entrypoint":"registry-driven","config":"config/gate0_registry.json","adjustment_surface":["constraint enablement","severity","validation policy"],"status":"ACTIVE"},
-    "persistence": {"plane":"governance","entrypoint":"src.v5.persistence","config":"config/v5_persistence_registry.json","adjustment_surface":["artifact names","data root","history policy","raw-auth persistence policy"],"status":"ACTIVE"},
-    "performance": {"plane":"governance","entrypoint":"src.v5.performance","config":"config/v5_performance_budgets.json","adjustment_surface":["latency budgets","regression thresholds","benchmark policy","stage timings"],"status":"ACTIVE"},
-    "runner": {"plane":"governance","entrypoint":"src.v5.runner","config":"config/v5_runner_registry.json","adjustment_surface":["pipeline order","feature switches","concurrency","output limits","fail-closed orchestration"],"status":"ACTIVE_ALPHA"},
-    "service_runtime": {"plane":"governance","entrypoint":"src.v5.service_host","config":"config/v5_service_registry.json","adjustment_surface":["service boundaries","ports","dependencies","contract version","timeouts","criticality"],"status":"ACTIVE_ALPHA"}
+    "public_api": {"plane":"truth","entrypoint":"src.v5.public_api","config":"config/v5_public_api_registry.json","status":"ACTIVE"},
+    "official_authenticated": {"plane":"truth","entrypoint":"src.v5.authenticated_official","config":"config/v5_auth_policy_registry.json","status":"ACTIVE"},
+    "source_authority": {"plane":"truth","entrypoint":"src.v5.source_authority","config":"config/v5_source_authority_registry.json","status":"ACTIVE"},
+
+    "rules": {"plane":"truth","entrypoint":"src.rules","config":"config/rules/registry.json","status":"ACTIVE"},
+    "event_context": {"plane":"truth","entrypoint":"src.v5.event_context","config":"config/v5_event_context_registry.json","status":"ACTIVE"},
+    "identity": {"plane":"truth","entrypoint":"src.v5.identity","config":"config/v5_identity_registry.json","status":"ACTIVE"},
+    "phase_state": {"plane":"truth","entrypoint":"src.v5.state","config":"config/v5_phase_authority_registry.json","status":"ACTIVE"},
+    "squad": {"plane":"truth","entrypoint":"src.v5.squad","config":"config/v5_squad_registry.json","status":"ACTIVE"},
+    "finance": {"plane":"truth","entrypoint":"src.v5.finance","config":"config/v5_finance_registry.json","status":"ACTIVE"},
+    "team_service": {"plane":"truth","entrypoint":"src.v5.team_service","config":"config/v5_squad_registry.json","status":"ACTIVE"},
+    "live_scoring": {"plane":"truth","entrypoint":"src.v5.live_scoring","config":"config/v5_live_scoring_registry.json","status":"ACTIVE"},
+
+    "price_trajectory": {"plane":"intelligence","entrypoint":"src.v5.price_trajectory","config":"config/v5_price_trajectory_registry.json","status":"ACTIVE_ALPHA"},
+    "price_service": {"plane":"intelligence","entrypoint":"src.v5.price_service","config":"config/v5_price_trajectory_registry.json","status":"ACTIVE_ALPHA"},
+
+    "xmins_v2": {"plane":"intelligence","entrypoint":"src.v5.intelligence.xmins","config":"config/intelligence/xmins_v2.json","status":"ACTIVE_ALPHA"},
+    "team_strength": {"plane":"intelligence","entrypoint":"src.v5.intelligence.team_strength","config":"config/intelligence/team_strength.json","status":"ACTIVE_ALPHA"},
+    "projection": {"plane":"intelligence","entrypoint":"src.v5.intelligence.projection","config":"config/intelligence/projection.json","status":"ACTIVE_ALPHA"},
+
+    "prediction_evaluation": {"plane":"evaluation","entrypoint":"src.v5.evaluation.core","config":"config/intelligence/prediction_evaluation.json","status":"ACTIVE_ALPHA"},
+    "calibration_store": {"plane":"evaluation","entrypoint":"src.v5.evaluation.core","config":"config/intelligence/prediction_evaluation.json","status":"ACTIVE_ALPHA"},
+    "challenger_scorecard": {"plane":"evaluation","entrypoint":"src.v5.evaluation.core","config":"config/intelligence/challenger_registry.json","status":"ACTIVE_ALPHA"},
+
+    "package_optimizer": {"plane":"decision","entrypoint":"src.v5.decision.package_optimizer","config":"config/intelligence/package_optimizer.json","status":"ACTIVE_ALPHA"},
+    "dss_core": {"plane":"decision","entrypoint":"registry-driven","config":"config/dss_core_registry.json","status":"ACTIVE"},
+    "dss_extensions": {"plane":"decision","entrypoint":"registry-driven","config":"config/dss_extension_registry.json","status":"ACTIVE"},
+
+    "gate0": {"plane":"governance","entrypoint":"src.v5.governance.core","config":"config/gate0_registry.json","status":"ACTIVE_ALPHA"},
+    "enhancement_layers": {"plane":"governance","entrypoint":"src.v5.governance.core","config":"config/enhancement_layers_registry.json","status":"ACTIVE_ALPHA"},
+    "framework_health": {"plane":"governance","entrypoint":"src.v5.governance.core","config":"config/v5_acceptance_registry.json","status":"ACTIVE_ALPHA"},
+
+    "persistence": {"plane":"governance","entrypoint":"src.v5.persistence","config":"config/v5_persistence_registry.json","status":"ACTIVE"},
+    "performance": {"plane":"governance","entrypoint":"src.v5.performance","config":"config/v5_performance_budgets.json","status":"ACTIVE"},
+    "runner": {"plane":"governance","entrypoint":"src.v5.services.orchestrator","config":"config/v5_runner_registry.json","status":"ACTIVE_ALPHA"},
+    "service_runtime": {"plane":"governance","entrypoint":"src.v5.service_host","config":"config/v5_service_registry.json","status":"ACTIVE_ALPHA"}
   }
 }

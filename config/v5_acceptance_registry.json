@@ -1,27 +1,17 @@
 {
-  "version": 2,
+  "version": 3,
   "module_policy": {
-    "minimum_registered_modules": 22,
-    "required_truth_modules": [
-      "rules",
-      "source_authority",
-      "public_api",
-      "official_authenticated",
-      "event_context",
-      "identity",
-      "phase_state",
-      "squad",
-      "finance",
-      "team_service",
-      "live_scoring"
-    ],
-    "required_governance_modules": ["performance", "persistence", "runner", "service_runtime"],
+    "minimum_registered_modules": 29,
+    "required_truth_modules": ["rules","source_authority","public_api","official_authenticated","event_context","identity","phase_state","squad","finance","team_service","live_scoring"],
+    "required_intelligence_modules": ["price_trajectory","xmins_v2","team_strength","projection","prediction_evaluation","calibration_store","challenger_scorecard","package_optimizer"],
+    "required_framework_modules": ["dss_core","dss_extensions","gate0","enhancement_layers","framework_health"],
+    "required_governance_modules": ["performance","persistence","runner","service_runtime"],
     "active_statuses": ["ACTIVE", "ACTIVE_ALPHA"]
   },
   "service_policy": {
     "mandatory": true,
-    "minimum_services": 7,
-    "required_services": ["orchestrator", "ingestion", "truth", "price", "prediction", "decision", "snapshot"],
+    "minimum_services": 9,
+    "required_services": ["orchestrator","ingestion","truth","price","prediction","evaluation","decision","governance","snapshot"],
     "require_unique_ports": true,
     "require_acyclic_dependencies": true,
     "require_exactly_one_service_owner_per_registered_module": true,
@@ -30,13 +20,13 @@
     "require_versioned_contract": true,
     "require_deployment_manifest": "deploy/v5/docker-compose.yml"
   },
-  "production": {
-    "promotion_must_remain_locked_during_alpha": true
+  "convergence": {
+    "production_baseline": "v3.10.0",
+    "p0_capabilities_required": ["P0-1_prediction_calibration_backtest","P0-2_xmins_role_v2","P0-3_team_strength_fixture_probability","P0-4_multi_horizon_package_optimizer","P0-5_external_challenger_scorecard"],
+    "decision_bridge_only_forbidden": true,
+    "v4_prediction_bridge_must_not_be_authority": true,
+    "governance_service_must_block_go_until_postflight_gate0": true
   },
-  "architecture": {
-    "require_entrypoint": true,
-    "require_config": true,
-    "require_adjustment_surface": true,
-    "require_microservices": true
-  }
+  "production": {"promotion_must_remain_locked_during_alpha": true},
+  "architecture": {"require_entrypoint": true,"require_config": true,"require_adjustment_surface": true,"require_microservices": true}
 }

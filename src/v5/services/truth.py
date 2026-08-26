@@ -2,11 +2,24 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.rules import ASSIST_POINTS, CLEAN_SHEET_POINTS, GOAL_POINTS, LINEUP_RULES, RULESET_ID, SQUAD_RULES
 from src.v5.event_context import build_event_context
 from src.v5.identity import build_index, resolve_many
 from src.v5.live_scoring import personalized_live_score
 from src.v5.team_service import build_team_state
 from src.v5.services.common import context_dict, locked_squad, parse_datetime
+
+
+def _rules_view() -> dict[str, Any]:
+    return {
+        "ruleset_id": RULESET_ID,
+        "goal_points": {str(k): int(v) for k, v in GOAL_POINTS.items()},
+        "assist_points": int(ASSIST_POINTS),
+        "clean_sheet_points": {str(k): int(v) for k, v in CLEAN_SHEET_POINTS.items()},
+        "squad": SQUAD_RULES,
+        "lineup": LINEUP_RULES,
+        "authority": "truth-service",
+    }
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:
@@ -16,6 +29,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
 
     if operation == "context":
         return context_dict(build_event_context(bootstrap, now=parse_datetime(payload.get("now"))))
+    if operation == "rules":
+        return _rules_view()
 
     identity = build_index(bootstrap)
     if operation == "resolve":
@@ -44,4 +59,4 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         scoring_gw=context.scoring_gw,
         is_live_event=context.is_live_event,
     )
-    return {"context": context_dict(context), "team": team, "live": live}
+    return {"context": context_dict(context), "team": team, "live": live, "rules": _rules_view()}

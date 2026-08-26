@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.v5.config_cache import load_json_config
 from src.v5.intelligence.projection import build_predictions
 
-CAPABILITIES = [
+ROLE_CONFIG = "config/intelligence/role_intelligence.json"
+BASE_CAPABILITIES = [
     "xmins",
     "xmins_distribution",
     "small_sample_guard",
@@ -25,15 +27,21 @@ CAPABILITIES = [
 ]
 
 
+def _capabilities() -> list[str]:
+    role_cfg = load_json_config(ROLE_CONFIG)
+    return sorted({*BASE_CAPABILITIES, *(str(x) for x in role_cfg.get("capabilities") or [])})
+
+
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation not in {"build", "build_full", "status"}:
         raise KeyError(f"unsupported prediction operation: {operation}")
+    capabilities = _capabilities()
     if operation == "status":
         return {
             "status": "ACTIVE",
             "model_family": "P0_NATIVE_V310",
             "bridge_only": False,
-            "capabilities": list(CAPABILITIES),
+            "capabilities": capabilities,
         }
     bootstrap = payload.get("bootstrap")
     fixtures = payload.get("fixtures")
@@ -49,7 +57,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         horizon=int(payload.get("horizon") or 15),
     )
     if operation == "build_full":
-        return {**result, "capabilities": list(CAPABILITIES)}
+        return {**result, "capabilities": capabilities}
     compact_players = []
     for player in result.get("players") or []:
         compact_players.append(
@@ -62,6 +70,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 "status": player.get("status"),
                 "ownership_pct": player.get("ownership_pct"),
                 "xmins": player.get("xmins"),
+                "role": player.get("role"),
                 "xpts_by_gw": player.get("xpts_by_gw"),
                 "horizons": player.get("horizons"),
                 "xpts_3": player.get("xpts_3"),
@@ -82,7 +91,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "planning_gw": result.get("planning_gw"),
         "horizon_gws": result.get("horizon_gws"),
         "team_strength": result.get("team_strength"),
+        "role_intelligence": result.get("role_intelligence"),
         "players": compact_players,
         "network_contract": result.get("network_contract"),
-        "capabilities": list(CAPABILITIES),
+        "capabilities": capabilities,
     }

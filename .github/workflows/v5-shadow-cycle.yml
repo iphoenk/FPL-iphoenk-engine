@@ -51,7 +51,7 @@ jobs:
             rm -rf "$shadow_tmp"
             echo "Hydrated prior V5 shadow state"
           else
-            echo "No prior V5 shadow state; starting cycle 1 clean"
+            echo "No prior V5 shadow state; starting clean"
           fi
 
       - name: Start V5 bounded-context microservices
@@ -93,16 +93,25 @@ jobs:
           V5_SERVICE_WATCHLIST_URL: http://127.0.0.1:8110
         run: python -m src.v5.shadow_cycle
 
-      - name: Validate owned and watchlist invariants
+      - name: Validate shadow acceptance invariants
         run: |
           python - <<'PY'
           import json
           p=json.load(open('data/v5/shadow/latest_shadow_cycle.json'))
-          owned=p['v5']['owned_count']
-          watch=p['v5']['watchlist'].get('candidate_count')
-          print({'owned_count': owned, 'watchlist_count': watch, 'parity': p['parity']})
-          assert owned == 15, f'V5 owned invariant failed: {owned} != 15'
-          assert watch == 20, f'V5 watchlist invariant failed: {watch} != 20'
+          w=json.load(open('data/v5/dss_watchlist.json'))
+          checks=p['operational_invariants']['checks']
+          positions=w.get('positions') or {}
+          position_counts={pos: len(positions.get(pos) or []) for pos in ('GK','DEF','MID','FWD')}
+          print({
+              'cycle_pass': p['acceptance_progress']['cycle_pass'],
+              'parity': p['parity'],
+              'operational_invariants': checks,
+              'watchlist_position_counts': position_counts,
+          })
+          assert all(checks.values()), f'V5 operational invariant failure: {checks}'
+          assert all(position_counts[pos] == 5 for pos in position_counts), f'watchlist positional contract failed: {position_counts}'
+          assert p['parity']['pass'] is True, f"V3/V5 parity failed: {p['parity']}"
+          assert p['acceptance_progress']['cycle_pass'] is True, 'cycle must not count as successful acceptance'
           PY
 
       - name: Upload shadow-cycle evidence

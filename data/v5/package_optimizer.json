@@ -1,31 +1,2117 @@
 {
-  "status": "BLOCKED",
+  "status": "READY",
   "model": "v5_native_decision_governance_v5",
-  "package_model": null,
-  "package_governance_model": null,
+  "package_model": "multi_horizon_package_optimizer_v2",
+  "package_governance_model": "v5_package_governance_v1",
   "ruleset_id": "FPL_2026_27",
-  "gate0_preflight_pass": false,
-  "local_legality_prevalidated": false,
-  "package_count": 0,
-  "hold": null,
-  "packages": [],
-  "candidate_pool": {},
-  "package_governance": {
-    "status": "BLOCKED",
-    "reason": "package optimizer is not READY",
-    "selected_package": null,
-    "selected_package_id": null,
-    "manual_authority_override": false
+  "gate0_preflight_pass": true,
+  "local_legality_prevalidated": true,
+  "package_count": 220,
+  "hold": {
+    "id": "HOLD",
+    "changes": 0,
+    "outs": [],
+    "ins": [],
+    "affordability": {
+      "resulting_itb": 5
+    },
+    "score": {
+      "valid": true,
+      "horizons": {
+        "3": {
+          "valid": true,
+          "mean": 134.837,
+          "std": 19.089
+        },
+        "5": {
+          "valid": true,
+          "mean": 224.922,
+          "std": 24.635
+        },
+        "10": {
+          "valid": true,
+          "mean": 447.971,
+          "std": 34.766
+        },
+        "15": {
+          "valid": true,
+          "mean": 667.869,
+          "std": 42.431
+        }
+      },
+      "objective_mean": 264.838,
+      "objective_std": 13.25,
+      "robust_score": 263.248,
+      "performance": {
+        "projection_lookup": "indexed_o1",
+        "horizon_evaluation": "single_pass_prefix",
+        "gw_lineups_evaluated": 15
+      }
+    },
+    "legal": true
   },
-  "selected_package": null,
-  "selected_package_id": null,
-  "optimizer_best_candidate": null,
-  "optimizer_best_challenger": null,
+  "packages": [
+    {
+      "id": "2:557,165->123,106",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "sell_cost": 65
+        },
+        {
+          "element": 165,
+          "name": "João Pedro",
+          "sell_cost": 75
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 106,
+          "name": "Thiago",
+          "now_cost": 80
+        }
+      ],
+      "affordability": {
+        "cash_available": 145,
+        "incoming_cost": 140,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 143.61,
+            "std": 19.646
+          },
+          "5": {
+            "valid": true,
+            "mean": 239.806,
+            "std": 25.375
+          },
+          "10": {
+            "valid": true,
+            "mean": 472.78,
+            "std": 35.617
+          },
+          "15": {
+            "valid": true,
+            "mean": 705.624,
+            "std": 43.5
+          }
+        },
+        "objective_mean": 280.932,
+        "objective_std": 13.626,
+        "robust_score": 278.896,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 272.247,
+        "p50": 281.319,
+        "p75": 290.536,
+        "p_outperform_hold_independent_baseline": 0.8014
+      }
+    },
+    {
+      "id": "2:557,8->123,388",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "sell_cost": 65
+        },
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "sell_cost": 55
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 388,
+          "name": "Guéhi",
+          "now_cost": 60
+        }
+      ],
+      "affordability": {
+        "cash_available": 125,
+        "incoming_cost": 120,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 143.199,
+            "std": 19.652
+          },
+          "5": {
+            "valid": true,
+            "mean": 238.603,
+            "std": 25.345
+          },
+          "10": {
+            "valid": true,
+            "mean": 473.637,
+            "std": 35.703
+          },
+          "15": {
+            "valid": true,
+            "mean": 703.001,
+            "std": 43.476
+          }
+        },
+        "objective_mean": 280.228,
+        "objective_std": 13.626,
+        "robust_score": 278.193,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 272.35,
+        "p50": 281.494,
+        "p75": 289.675,
+        "p_outperform_hold_independent_baseline": 0.791
+      }
+    },
+    {
+      "id": "2:165,15->106,123",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 165,
+          "name": "João Pedro",
+          "sell_cost": 75
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "sell_cost": 65
+        }
+      ],
+      "ins": [
+        {
+          "element": 106,
+          "name": "Thiago",
+          "now_cost": 80
+        },
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        }
+      ],
+      "affordability": {
+        "cash_available": 145,
+        "incoming_cost": 140,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 142.825,
+            "std": 19.6
+          },
+          "5": {
+            "valid": true,
+            "mean": 238.88,
+            "std": 25.332
+          },
+          "10": {
+            "valid": true,
+            "mean": 470.601,
+            "std": 35.543
+          },
+          "15": {
+            "valid": true,
+            "mean": 702.7,
+            "std": 43.419
+          }
+        },
+        "objective_mean": 279.677,
+        "objective_std": 13.599,
+        "robust_score": 277.645,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 269.811,
+        "p50": 278.117,
+        "p75": 286.809,
+        "p_outperform_hold_independent_baseline": 0.7828
+      }
+    },
+    {
+      "id": "2:165,426->106,123",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 165,
+          "name": "João Pedro",
+          "sell_cost": 75
+        },
+        {
+          "element": 426,
+          "name": "B.Fernandes",
+          "sell_cost": 120
+        }
+      ],
+      "ins": [
+        {
+          "element": 106,
+          "name": "Thiago",
+          "now_cost": 80
+        },
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        }
+      ],
+      "affordability": {
+        "cash_available": 200,
+        "incoming_cost": 140,
+        "resulting_itb": 60
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 143.511,
+            "std": 19.655
+          },
+          "5": {
+            "valid": true,
+            "mean": 238.252,
+            "std": 25.316
+          },
+          "10": {
+            "valid": true,
+            "mean": 468.677,
+            "std": 35.502
+          },
+          "15": {
+            "valid": true,
+            "mean": 699.635,
+            "std": 43.365
+          }
+        },
+        "objective_mean": 279.163,
+        "objective_std": 13.605,
+        "robust_score": 277.13,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 271.228,
+        "p50": 280.453,
+        "p75": 287.913,
+        "p_outperform_hold_independent_baseline": 0.7747
+      }
+    },
+    {
+      "id": "2:8,15->388,123",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "sell_cost": 55
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "sell_cost": 65
+        }
+      ],
+      "ins": [
+        {
+          "element": 388,
+          "name": "Guéhi",
+          "now_cost": 60
+        },
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        }
+      ],
+      "affordability": {
+        "cash_available": 125,
+        "incoming_cost": 120,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 142.414,
+            "std": 19.606
+          },
+          "5": {
+            "valid": true,
+            "mean": 237.677,
+            "std": 25.302
+          },
+          "10": {
+            "valid": true,
+            "mean": 471.459,
+            "std": 35.629
+          },
+          "15": {
+            "valid": true,
+            "mean": 700.073,
+            "std": 43.394
+          }
+        },
+        "objective_mean": 278.973,
+        "objective_std": 13.598,
+        "robust_score": 276.942,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 269.599,
+        "p50": 278.302,
+        "p75": 287.252,
+        "p_outperform_hold_independent_baseline": 0.7717
+      }
+    },
+    {
+      "id": "2:8,426->388,123",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "sell_cost": 55
+        },
+        {
+          "element": 426,
+          "name": "B.Fernandes",
+          "sell_cost": 120
+        }
+      ],
+      "ins": [
+        {
+          "element": 388,
+          "name": "Guéhi",
+          "now_cost": 60
+        },
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        }
+      ],
+      "affordability": {
+        "cash_available": 180,
+        "incoming_cost": 120,
+        "resulting_itb": 60
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 143.1,
+            "std": 19.66
+          },
+          "5": {
+            "valid": true,
+            "mean": 237.209,
+            "std": 25.298
+          },
+          "10": {
+            "valid": true,
+            "mean": 469.693,
+            "std": 35.597
+          },
+          "15": {
+            "valid": true,
+            "mean": 697.167,
+            "std": 43.347
+          }
+        },
+        "objective_mean": 278.552,
+        "objective_std": 13.608,
+        "robust_score": 276.519,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 269.083,
+        "p50": 276.872,
+        "p75": 285.244,
+        "p_outperform_hold_independent_baseline": 0.7649
+      }
+    },
+    {
+      "id": "2:165,40->106,123",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 165,
+          "name": "João Pedro",
+          "sell_cost": 75
+        },
+        {
+          "element": 40,
+          "name": "Rogers",
+          "sell_cost": 75
+        }
+      ],
+      "ins": [
+        {
+          "element": 106,
+          "name": "Thiago",
+          "now_cost": 80
+        },
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        }
+      ],
+      "affordability": {
+        "cash_available": 155,
+        "incoming_cost": 140,
+        "resulting_itb": 15
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 142.743,
+            "std": 19.614
+          },
+          "5": {
+            "valid": true,
+            "mean": 237.661,
+            "std": 25.293
+          },
+          "10": {
+            "valid": true,
+            "mean": 466.83,
+            "std": 35.44
+          },
+          "15": {
+            "valid": true,
+            "mean": 695.556,
+            "std": 43.248
+          }
+        },
+        "objective_mean": 277.96,
+        "objective_std": 13.583,
+        "robust_score": 275.93,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 269.799,
+        "p50": 278.621,
+        "p75": 287.165,
+        "p_outperform_hold_independent_baseline": 0.7554
+      }
+    },
+    {
+      "id": "2:165,346->106,249",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 165,
+          "name": "João Pedro",
+          "sell_cost": 75
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "sell_cost": 60
+        }
+      ],
+      "ins": [
+        {
+          "element": 106,
+          "name": "Thiago",
+          "now_cost": 80
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "now_cost": 55
+        }
+      ],
+      "affordability": {
+        "cash_available": 140,
+        "incoming_cost": 135,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 142.645,
+            "std": 19.523
+          },
+          "5": {
+            "valid": true,
+            "mean": 236.968,
+            "std": 25.157
+          },
+          "10": {
+            "valid": true,
+            "mean": 465.489,
+            "std": 35.264
+          },
+          "15": {
+            "valid": true,
+            "mean": 695.327,
+            "std": 43.087
+          }
+        },
+        "objective_mean": 277.466,
+        "objective_std": 13.517,
+        "robust_score": 275.444,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 269.138,
+        "p50": 277.4,
+        "p75": 285.211,
+        "p_outperform_hold_independent_baseline": 0.7477
+      }
+    },
+    {
+      "id": "2:8,40->388,123",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "sell_cost": 55
+        },
+        {
+          "element": 40,
+          "name": "Rogers",
+          "sell_cost": 75
+        }
+      ],
+      "ins": [
+        {
+          "element": 388,
+          "name": "Guéhi",
+          "now_cost": 60
+        },
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        }
+      ],
+      "affordability": {
+        "cash_available": 135,
+        "incoming_cost": 120,
+        "resulting_itb": 15
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 142.332,
+            "std": 19.619
+          },
+          "5": {
+            "valid": true,
+            "mean": 236.617,
+            "std": 25.275
+          },
+          "10": {
+            "valid": true,
+            "mean": 467.847,
+            "std": 35.535
+          },
+          "15": {
+            "valid": true,
+            "mean": 693.088,
+            "std": 43.23
+          }
+        },
+        "objective_mean": 277.349,
+        "objective_std": 13.585,
+        "robust_score": 275.319,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 268.58,
+        "p50": 277.976,
+        "p75": 286.87,
+        "p_outperform_hold_independent_baseline": 0.7451
+      }
+    },
+    {
+      "id": "2:557,346->123,249",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "sell_cost": 65
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "sell_cost": 60
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "now_cost": 55
+        }
+      ],
+      "affordability": {
+        "cash_available": 130,
+        "incoming_cost": 115,
+        "resulting_itb": 15
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 142.073,
+            "std": 19.525
+          },
+          "5": {
+            "valid": true,
+            "mean": 235.86,
+            "std": 25.142
+          },
+          "10": {
+            "valid": true,
+            "mean": 467.245,
+            "std": 35.397
+          },
+          "15": {
+            "valid": true,
+            "mean": 696.699,
+            "std": 43.205
+          }
+        },
+        "objective_mean": 277.261,
+        "objective_std": 13.526,
+        "robust_score": 275.238,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 270.221,
+        "p50": 279.796,
+        "p75": 287.918,
+        "p_outperform_hold_independent_baseline": 0.7441
+      }
+    },
+    {
+      "id": "2:565,346->123,249",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 565,
+          "name": "M.Sangaré",
+          "sell_cost": 55
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "sell_cost": 60
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "now_cost": 55
+        }
+      ],
+      "affordability": {
+        "cash_available": 120,
+        "incoming_cost": 115,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 141.865,
+            "std": 19.509
+          },
+          "5": {
+            "valid": true,
+            "mean": 235.273,
+            "std": 25.114
+          },
+          "10": {
+            "valid": true,
+            "mean": 466.632,
+            "std": 35.377
+          },
+          "15": {
+            "valid": true,
+            "mean": 695.609,
+            "std": 43.174
+          }
+        },
+        "objective_mean": 276.779,
+        "objective_std": 13.514,
+        "robust_score": 274.757,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 268.325,
+        "p50": 276.737,
+        "p75": 285.523,
+        "p_outperform_hold_independent_baseline": 0.736
+      }
+    },
+    {
+      "id": "2:8,346->388,249",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "sell_cost": 55
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "sell_cost": 60
+        }
+      ],
+      "ins": [
+        {
+          "element": 388,
+          "name": "Guéhi",
+          "now_cost": 60
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "now_cost": 55
+        }
+      ],
+      "affordability": {
+        "cash_available": 120,
+        "incoming_cost": 115,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 142.234,
+            "std": 19.528
+          },
+          "5": {
+            "valid": true,
+            "mean": 235.765,
+            "std": 25.127
+          },
+          "10": {
+            "valid": true,
+            "mean": 466.346,
+            "std": 35.35
+          },
+          "15": {
+            "valid": true,
+            "mean": 692.7,
+            "std": 43.062
+          }
+        },
+        "objective_mean": 276.763,
+        "objective_std": 13.516,
+        "robust_score": 274.741,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 265.445,
+        "p50": 275.968,
+        "p75": 285.652,
+        "p_outperform_hold_independent_baseline": 0.7357
+      }
+    },
+    {
+      "id": "2:557,565->123,94",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "sell_cost": 65
+        },
+        {
+          "element": 565,
+          "name": "M.Sangaré",
+          "sell_cost": 55
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 94,
+          "name": "Schade",
+          "now_cost": 60
+        }
+      ],
+      "affordability": {
+        "cash_available": 125,
+        "incoming_cost": 120,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 140.787,
+            "std": 19.476
+          },
+          "5": {
+            "valid": true,
+            "mean": 235.144,
+            "std": 25.154
+          },
+          "10": {
+            "valid": true,
+            "mean": 466.206,
+            "std": 35.415
+          },
+          "15": {
+            "valid": true,
+            "mean": 695.455,
+            "std": 43.235
+          }
+        },
+        "objective_mean": 276.204,
+        "objective_std": 13.518,
+        "robust_score": 274.182,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 268.937,
+        "p50": 277.625,
+        "p75": 285.398,
+        "p_outperform_hold_independent_baseline": 0.7259
+      }
+    },
+    {
+      "id": "2:15,346->123,249",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "sell_cost": 65
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "sell_cost": 60
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "now_cost": 55
+        }
+      ],
+      "affordability": {
+        "cash_available": 130,
+        "incoming_cost": 115,
+        "resulting_itb": 15
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 141.395,
+            "std": 19.482
+          },
+          "5": {
+            "valid": true,
+            "mean": 235.111,
+            "std": 25.108
+          },
+          "10": {
+            "valid": true,
+            "mean": 465.403,
+            "std": 35.338
+          },
+          "15": {
+            "valid": true,
+            "mean": 694.112,
+            "std": 43.137
+          }
+        },
+        "objective_mean": 276.194,
+        "objective_std": 13.502,
+        "robust_score": 274.174,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 268.069,
+        "p50": 277.49,
+        "p75": 285.857,
+        "p_outperform_hold_independent_baseline": 0.7258
+      }
+    },
+    {
+      "id": "2:8,557->388,94",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "sell_cost": 55
+        },
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "sell_cost": 65
+        }
+      ],
+      "ins": [
+        {
+          "element": 388,
+          "name": "Guéhi",
+          "now_cost": 60
+        },
+        {
+          "element": 94,
+          "name": "Schade",
+          "now_cost": 60
+        }
+      ],
+      "affordability": {
+        "cash_available": 125,
+        "incoming_cost": 120,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 140.982,
+            "std": 19.483
+          },
+          "5": {
+            "valid": true,
+            "mean": 235.462,
+            "std": 25.157
+          },
+          "10": {
+            "valid": true,
+            "mean": 466.235,
+            "std": 35.398
+          },
+          "15": {
+            "valid": true,
+            "mean": 692.726,
+            "std": 43.126
+          }
+        },
+        "objective_mean": 276.123,
+        "objective_std": 13.516,
+        "robust_score": 274.101,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 268.798,
+        "p50": 278.024,
+        "p75": 285.122,
+        "p_outperform_hold_independent_baseline": 0.7245
+      }
+    },
+    {
+      "id": "2:557,165->123,249",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "sell_cost": 65
+        },
+        {
+          "element": 165,
+          "name": "João Pedro",
+          "sell_cost": 75
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "now_cost": 55
+        }
+      ],
+      "affordability": {
+        "cash_available": 145,
+        "incoming_cost": 115,
+        "resulting_itb": 30
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 141.641,
+            "std": 19.508
+          },
+          "5": {
+            "valid": true,
+            "mean": 234.794,
+            "std": 25.104
+          },
+          "10": {
+            "valid": true,
+            "mean": 465.597,
+            "std": 35.348
+          },
+          "15": {
+            "valid": true,
+            "mean": 692.95,
+            "std": 43.105
+          }
+        },
+        "objective_mean": 276.106,
+        "objective_std": 13.508,
+        "robust_score": 274.085,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 267.109,
+        "p50": 277.113,
+        "p75": 285.136,
+        "p_outperform_hold_independent_baseline": 0.7242
+      }
+    },
+    {
+      "id": "2:557,15->123,368",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "sell_cost": 65
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "sell_cost": 65
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 368,
+          "name": "Szoboszlai",
+          "now_cost": 70
+        }
+      ],
+      "affordability": {
+        "cash_available": 135,
+        "incoming_cost": 130,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 140.251,
+            "std": 19.438
+          },
+          "5": {
+            "valid": true,
+            "mean": 234.872,
+            "std": 25.136
+          },
+          "10": {
+            "valid": true,
+            "mean": 466.588,
+            "std": 35.424
+          },
+          "15": {
+            "valid": true,
+            "mean": 695.562,
+            "std": 43.232
+          }
+        },
+        "objective_mean": 275.958,
+        "objective_std": 13.505,
+        "robust_score": 273.937,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 267.369,
+        "p50": 276.103,
+        "p75": 283.522,
+        "p_outperform_hold_independent_baseline": 0.7217
+      }
+    },
+    {
+      "id": "2:426,346->123,249",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 426,
+          "name": "B.Fernandes",
+          "sell_cost": 120
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "sell_cost": 60
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "now_cost": 55
+        }
+      ],
+      "affordability": {
+        "cash_available": 185,
+        "incoming_cost": 115,
+        "resulting_itb": 70
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 142.016,
+            "std": 19.532
+          },
+          "5": {
+            "valid": true,
+            "mean": 234.577,
+            "std": 25.101
+          },
+          "10": {
+            "valid": true,
+            "mean": 463.572,
+            "std": 35.304
+          },
+          "15": {
+            "valid": true,
+            "mean": 691.218,
+            "std": 43.091
+          }
+        },
+        "objective_mean": 275.715,
+        "objective_std": 13.51,
+        "robust_score": 273.694,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 268.774,
+        "p50": 277.89,
+        "p75": 285.97,
+        "p_outperform_hold_independent_baseline": 0.7173
+      }
+    },
+    {
+      "id": "2:565,165->123,249",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 565,
+          "name": "M.Sangaré",
+          "sell_cost": 55
+        },
+        {
+          "element": 165,
+          "name": "João Pedro",
+          "sell_cost": 75
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "now_cost": 55
+        }
+      ],
+      "affordability": {
+        "cash_available": 135,
+        "incoming_cost": 115,
+        "resulting_itb": 20
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 141.565,
+            "std": 19.505
+          },
+          "5": {
+            "valid": true,
+            "mean": 234.11,
+            "std": 25.067
+          },
+          "10": {
+            "valid": true,
+            "mean": 464.727,
+            "std": 35.313
+          },
+          "15": {
+            "valid": true,
+            "mean": 691.695,
+            "std": 43.062
+          }
+        },
+        "objective_mean": 275.592,
+        "objective_std": 13.496,
+        "robust_score": 273.573,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 266.757,
+        "p50": 273.996,
+        "p75": 284.087,
+        "p_outperform_hold_independent_baseline": 0.7152
+      }
+    },
+    {
+      "id": "2:557,15->123,94",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "sell_cost": 65
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "sell_cost": 65
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 94,
+          "name": "Schade",
+          "now_cost": 60
+        }
+      ],
+      "affordability": {
+        "cash_available": 135,
+        "incoming_cost": 120,
+        "resulting_itb": 15
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 140.143,
+            "std": 19.436
+          },
+          "5": {
+            "valid": true,
+            "mean": 234.808,
+            "std": 25.138
+          },
+          "10": {
+            "valid": true,
+            "mean": 465.293,
+            "std": 35.385
+          },
+          "15": {
+            "valid": true,
+            "mean": 694.05,
+            "std": 43.197
+          }
+        },
+        "objective_mean": 275.546,
+        "objective_std": 13.501,
+        "robust_score": 273.525,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 268.603,
+        "p50": 275.791,
+        "p75": 284.465,
+        "p_outperform_hold_independent_baseline": 0.7143
+      }
+    }
+  ],
+  "candidate_pool": {
+    "GK": [
+      {
+        "element": 82,
+        "name": "Kelleher",
+        "now_cost": 50,
+        "candidate_score": 15.354
+      },
+      {
+        "element": 385,
+        "name": "Trafford",
+        "now_cost": 50,
+        "candidate_score": 14.643
+      },
+      {
+        "element": 226,
+        "name": "Pickford",
+        "now_cost": 55,
+        "candidate_score": 14.49
+      },
+      {
+        "element": 384,
+        "name": "Donnarumma",
+        "now_cost": 55,
+        "candidate_score": 13.724
+      },
+      {
+        "element": 1,
+        "name": "Raya",
+        "now_cost": 60,
+        "candidate_score": 13.423
+      },
+      {
+        "element": 467,
+        "name": "Sels",
+        "now_cost": 50,
+        "candidate_score": 13.312
+      },
+      {
+        "element": 198,
+        "name": "Henderson",
+        "now_cost": 50,
+        "candidate_score": 13.247
+      }
+    ],
+    "DEF": [
+      {
+        "element": 388,
+        "name": "Guéhi",
+        "now_cost": 60,
+        "candidate_score": 21.288
+      },
+      {
+        "element": 387,
+        "name": "O'Reilly",
+        "now_cost": 65,
+        "candidate_score": 17.932
+      },
+      {
+        "element": 229,
+        "name": "Tarkowski",
+        "now_cost": 60,
+        "candidate_score": 15.76
+      },
+      {
+        "element": 84,
+        "name": "Collins",
+        "now_cost": 55,
+        "candidate_score": 15.601
+      },
+      {
+        "element": 391,
+        "name": "Gvardiol",
+        "now_cost": 55,
+        "candidate_score": 15.383
+      },
+      {
+        "element": 356,
+        "name": "Virgil",
+        "now_cost": 65,
+        "candidate_score": 14.915
+      },
+      {
+        "element": 130,
+        "name": "Wieffer",
+        "now_cost": 50,
+        "candidate_score": 14.883
+      }
+    ],
+    "MID": [
+      {
+        "element": 123,
+        "name": "Hinshelwood",
+        "now_cost": 60,
+        "candidate_score": 20.268
+      },
+      {
+        "element": 12,
+        "name": "Saka",
+        "now_cost": 95,
+        "candidate_score": 19.56
+      },
+      {
+        "element": 368,
+        "name": "Szoboszlai",
+        "now_cost": 70,
+        "candidate_score": 17.27
+      },
+      {
+        "element": 94,
+        "name": "Schade",
+        "now_cost": 60,
+        "candidate_score": 17.205
+      },
+      {
+        "element": 154,
+        "name": "Palmer",
+        "now_cost": 95,
+        "candidate_score": 17.028
+      },
+      {
+        "element": 399,
+        "name": "Cherki",
+        "now_cost": 75,
+        "candidate_score": 16.758
+      },
+      {
+        "element": 367,
+        "name": "Gakpo",
+        "now_cost": 70,
+        "candidate_score": 16.038
+      }
+    ],
+    "FWD": [
+      {
+        "element": 106,
+        "name": "Thiago",
+        "now_cost": 80,
+        "candidate_score": 22.267
+      },
+      {
+        "element": 249,
+        "name": "Barry",
+        "now_cost": 55,
+        "candidate_score": 17.366
+      },
+      {
+        "element": 569,
+        "name": "Gonzalo",
+        "now_cost": 60,
+        "candidate_score": 15.616
+      },
+      {
+        "element": 379,
+        "name": "Isak",
+        "now_cost": 90,
+        "candidate_score": 15.234
+      },
+      {
+        "element": 25,
+        "name": "Gyökeres",
+        "now_cost": 74,
+        "candidate_score": 14.899
+      },
+      {
+        "element": 248,
+        "name": "Beto",
+        "now_cost": 55,
+        "candidate_score": 14.412
+      },
+      {
+        "element": 316,
+        "name": "Emersonn",
+        "now_cost": 55,
+        "candidate_score": 14.342
+      }
+    ]
+  },
+  "package_governance": {
+    "status": "READY",
+    "model": "v5_package_governance_v1",
+    "selected_package": {
+      "id": "HOLD",
+      "changes": 0,
+      "outs": [],
+      "ins": [],
+      "affordability": {
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 134.837,
+            "std": 19.089
+          },
+          "5": {
+            "valid": true,
+            "mean": 224.922,
+            "std": 24.635
+          },
+          "10": {
+            "valid": true,
+            "mean": 447.971,
+            "std": 34.766
+          },
+          "15": {
+            "valid": true,
+            "mean": 667.869,
+            "std": 42.431
+          }
+        },
+        "objective_mean": 264.838,
+        "objective_std": 13.25,
+        "robust_score": 263.248,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true
+    },
+    "selected_package_id": "HOLD",
+    "optimizer_best_candidate": {
+      "id": "2:557,165->123,106",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "sell_cost": 65
+        },
+        {
+          "element": 165,
+          "name": "João Pedro",
+          "sell_cost": 75
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 106,
+          "name": "Thiago",
+          "now_cost": 80
+        }
+      ],
+      "affordability": {
+        "cash_available": 145,
+        "incoming_cost": 140,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 143.61,
+            "std": 19.646
+          },
+          "5": {
+            "valid": true,
+            "mean": 239.806,
+            "std": 25.375
+          },
+          "10": {
+            "valid": true,
+            "mean": 472.78,
+            "std": 35.617
+          },
+          "15": {
+            "valid": true,
+            "mean": 705.624,
+            "std": 43.5
+          }
+        },
+        "objective_mean": 280.932,
+        "objective_std": 13.626,
+        "robust_score": 278.896,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 272.247,
+        "p50": 281.319,
+        "p75": 290.536,
+        "p_outperform_hold_independent_baseline": 0.8014
+      }
+    },
+    "optimizer_best_candidate_id": "2:557,165->123,106",
+    "optimizer_best_challenger": {
+      "id": "2:557,165->123,106",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "sell_cost": 65
+        },
+        {
+          "element": 165,
+          "name": "João Pedro",
+          "sell_cost": 75
+        }
+      ],
+      "ins": [
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "now_cost": 60
+        },
+        {
+          "element": 106,
+          "name": "Thiago",
+          "now_cost": 80
+        }
+      ],
+      "affordability": {
+        "cash_available": 145,
+        "incoming_cost": 140,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 143.61,
+            "std": 19.646
+          },
+          "5": {
+            "valid": true,
+            "mean": 239.806,
+            "std": 25.375
+          },
+          "10": {
+            "valid": true,
+            "mean": 472.78,
+            "std": 35.617
+          },
+          "15": {
+            "valid": true,
+            "mean": 705.624,
+            "std": 43.5
+          }
+        },
+        "objective_mean": 280.932,
+        "objective_std": 13.626,
+        "robust_score": 278.896,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 272.247,
+        "p50": 281.319,
+        "p75": 290.536,
+        "p_outperform_hold_independent_baseline": 0.8014
+      }
+    },
+    "optimizer_best_challenger_id": "2:557,165->123,106",
+    "manual_authority_override": true,
+    "team_authority": "user_lock",
+    "phase": "PRE_DEADLINE",
+    "governance": {
+      "optimizer_is_candidate_generator_only": true,
+      "auto_select_optimizer_candidate": false,
+      "locked_composition_frozen": true,
+      "manual_authority_overrides_optimizer_candidate": true
+    }
+  },
+  "selected_package": {
+    "id": "HOLD",
+    "changes": 0,
+    "outs": [],
+    "ins": [],
+    "affordability": {
+      "resulting_itb": 5
+    },
+    "score": {
+      "valid": true,
+      "horizons": {
+        "3": {
+          "valid": true,
+          "mean": 134.837,
+          "std": 19.089
+        },
+        "5": {
+          "valid": true,
+          "mean": 224.922,
+          "std": 24.635
+        },
+        "10": {
+          "valid": true,
+          "mean": 447.971,
+          "std": 34.766
+        },
+        "15": {
+          "valid": true,
+          "mean": 667.869,
+          "std": 42.431
+        }
+      },
+      "objective_mean": 264.838,
+      "objective_std": 13.25,
+      "robust_score": 263.248,
+      "performance": {
+        "projection_lookup": "indexed_o1",
+        "horizon_evaluation": "single_pass_prefix",
+        "gw_lineups_evaluated": 15
+      }
+    },
+    "legal": true
+  },
+  "selected_package_id": "HOLD",
+  "optimizer_best_candidate": {
+    "id": "2:557,165->123,106",
+    "changes": 2,
+    "outs": [
+      {
+        "element": 557,
+        "name": "Tzolis",
+        "sell_cost": 65
+      },
+      {
+        "element": 165,
+        "name": "João Pedro",
+        "sell_cost": 75
+      }
+    ],
+    "ins": [
+      {
+        "element": 123,
+        "name": "Hinshelwood",
+        "now_cost": 60
+      },
+      {
+        "element": 106,
+        "name": "Thiago",
+        "now_cost": 80
+      }
+    ],
+    "affordability": {
+      "cash_available": 145,
+      "incoming_cost": 140,
+      "resulting_itb": 5
+    },
+    "score": {
+      "valid": true,
+      "horizons": {
+        "3": {
+          "valid": true,
+          "mean": 143.61,
+          "std": 19.646
+        },
+        "5": {
+          "valid": true,
+          "mean": 239.806,
+          "std": 25.375
+        },
+        "10": {
+          "valid": true,
+          "mean": 472.78,
+          "std": 35.617
+        },
+        "15": {
+          "valid": true,
+          "mean": 705.624,
+          "std": 43.5
+        }
+      },
+      "objective_mean": 280.932,
+      "objective_std": 13.626,
+      "robust_score": 278.896,
+      "performance": {
+        "projection_lookup": "indexed_o1",
+        "horizon_evaluation": "single_pass_prefix",
+        "gw_lineups_evaluated": 15
+      }
+    },
+    "legal": true,
+    "monte_carlo": {
+      "p25": 272.247,
+      "p50": 281.319,
+      "p75": 290.536,
+      "p_outperform_hold_independent_baseline": 0.8014
+    }
+  },
+  "optimizer_best_challenger": {
+    "id": "2:557,165->123,106",
+    "changes": 2,
+    "outs": [
+      {
+        "element": 557,
+        "name": "Tzolis",
+        "sell_cost": 65
+      },
+      {
+        "element": 165,
+        "name": "João Pedro",
+        "sell_cost": 75
+      }
+    ],
+    "ins": [
+      {
+        "element": 123,
+        "name": "Hinshelwood",
+        "now_cost": 60
+      },
+      {
+        "element": 106,
+        "name": "Thiago",
+        "now_cost": 80
+      }
+    ],
+    "affordability": {
+      "cash_available": 145,
+      "incoming_cost": 140,
+      "resulting_itb": 5
+    },
+    "score": {
+      "valid": true,
+      "horizons": {
+        "3": {
+          "valid": true,
+          "mean": 143.61,
+          "std": 19.646
+        },
+        "5": {
+          "valid": true,
+          "mean": 239.806,
+          "std": 25.375
+        },
+        "10": {
+          "valid": true,
+          "mean": 472.78,
+          "std": 35.617
+        },
+        "15": {
+          "valid": true,
+          "mean": 705.624,
+          "std": 43.5
+        }
+      },
+      "objective_mean": 280.932,
+      "objective_std": 13.626,
+      "robust_score": 278.896,
+      "performance": {
+        "projection_lookup": "indexed_o1",
+        "horizon_evaluation": "single_pass_prefix",
+        "gw_lineups_evaluated": 15
+      }
+    },
+    "legal": true,
+    "monte_carlo": {
+      "p25": 272.247,
+      "p50": 281.319,
+      "p75": 290.536,
+      "p_outperform_hold_independent_baseline": 0.8014
+    }
+  },
   "lineup": {
     "status": "READY",
     "planning_gw": 2,
-    "formation": "3-5-2",
+    "formation": "4-4-2",
     "starters": [
+      {
+        "element": 572,
+        "name": "Tzolakis",
+        "position": "GK",
+        "team_id": 11,
+        "mean": 2.767,
+        "std": 2.826,
+        "start_probability": 0.5743,
+        "dnp_probability": 0.149,
+        "score": 2.7034
+      },
+      {
+        "element": 115,
+        "name": "De Cuyper",
+        "position": "DEF",
+        "team_id": 5,
+        "mean": 4.507,
+        "std": 3.555,
+        "start_probability": 0.5778,
+        "dnp_probability": 0.1478,
+        "score": 4.3732
+      },
       {
         "element": 8,
         "name": "Calafiori",
@@ -36,6 +2122,28 @@
         "start_probability": 0.594,
         "dnp_probability": 0.1421,
         "score": 2.9947
+      },
+      {
+        "element": 88,
+        "name": "Kayode",
+        "position": "DEF",
+        "team_id": 4,
+        "mean": 3.183,
+        "std": 2.96,
+        "start_probability": 0.6404,
+        "dnp_probability": 0.1259,
+        "score": 3.1574
+      },
+      {
+        "element": 254,
+        "name": "Robinson",
+        "position": "DEF",
+        "team_id": 10,
+        "mean": 2.714,
+        "std": 2.799,
+        "start_probability": 0.5825,
+        "dnp_probability": 0.1461,
+        "score": 2.6595
       },
       {
         "element": 426,
@@ -49,15 +2157,15 @@
         "score": 2.9304
       },
       {
-        "element": 368,
-        "name": "Szoboszlai",
+        "element": 15,
+        "name": "Ødegaard",
         "position": "MID",
-        "team_id": 14,
-        "mean": 3.239,
-        "std": 2.984,
-        "start_probability": 0.6404,
-        "dnp_probability": 0.1259,
-        "score": 3.211
+        "team_id": 1,
+        "mean": 3.249,
+        "std": 3.028,
+        "start_probability": 0.5757,
+        "dnp_probability": 0.1485,
+        "score": 3.1663
       },
       {
         "element": 557,
@@ -71,15 +2179,15 @@
         "score": 2.8308
       },
       {
-        "element": 237,
-        "name": "Ndiaye",
+        "element": 40,
+        "name": "Rogers",
         "position": "MID",
-        "team_id": 9,
-        "mean": 3.708,
-        "std": 3.192,
-        "start_probability": 0.6231,
-        "dnp_probability": 0.1319,
-        "score": 3.6458
+        "team_id": 6,
+        "mean": 3.179,
+        "std": 2.958,
+        "start_probability": 0.6404,
+        "dnp_probability": 0.1259,
+        "score": 3.1536
       },
       {
         "element": 411,
@@ -102,74 +2210,19 @@
         "start_probability": 0.6118,
         "dnp_probability": 0.1359,
         "score": 2.912
-      },
-      {
-        "element": 496,
-        "name": "Kinsky",
-        "position": "GK",
-        "team_id": 19,
-        "mean": 2.669,
-        "std": 2.79,
-        "start_probability": 0.565,
-        "dnp_probability": 0.1523,
-        "score": 2.6018
-      },
-      {
-        "element": 124,
-        "name": "Groß",
-        "position": "MID",
-        "team_id": 5,
-        "mean": 2.895,
-        "std": 2.878,
-        "start_probability": 0.5784,
-        "dnp_probability": 0.1475,
-        "score": 2.8294
-      },
-      {
-        "element": 469,
-        "name": "N.Williams",
-        "position": "DEF",
-        "team_id": 18,
-        "mean": 2.694,
-        "std": 2.755,
-        "start_probability": 0.6404,
-        "dnp_probability": 0.1259,
-        "score": 2.6889
-      },
-      {
-        "element": 259,
-        "name": "Diop",
-        "position": "DEF",
-        "team_id": 12,
-        "mean": 2.683,
-        "std": 2.803,
-        "start_probability": 0.5516,
-        "dnp_probability": 0.1569,
-        "score": 2.6041
       }
     ],
     "bench": [
       {
-        "element": 418,
-        "name": "Maguire",
-        "position": "DEF",
-        "team_id": 16,
-        "mean": 2.631,
-        "std": 2.765,
-        "start_probability": 0.5821,
-        "dnp_probability": 0.1463,
-        "score": 2.7034
-      },
-      {
-        "element": 11,
-        "name": "Mosquera",
-        "position": "DEF",
-        "team_id": 1,
-        "mean": 2.54,
-        "std": 2.746,
-        "start_probability": 0.5459,
-        "dnp_probability": 0.1589,
-        "score": 2.597
+        "element": 565,
+        "name": "M.Sangaré",
+        "position": "MID",
+        "team_id": 4,
+        "mean": 2.7,
+        "std": 2.802,
+        "start_probability": 0.5662,
+        "dnp_probability": 0.1518,
+        "score": 2.7657
       },
       {
         "element": 346,
@@ -181,6 +2234,17 @@
         "start_probability": 0.6294,
         "dnp_probability": 0.1297,
         "score": 2.5895
+      },
+      {
+        "element": 473,
+        "name": "Aina",
+        "position": "DEF",
+        "team_id": 18,
+        "mean": 2.411,
+        "std": 2.674,
+        "start_probability": 0.5799,
+        "dnp_probability": 0.147,
+        "score": 2.4825
       },
       {
         "element": 109,
@@ -206,15 +2270,15 @@
       "score": 7.284
     },
     "vice_captain": {
-      "element": 237,
-      "name": "Ndiaye",
-      "position": "MID",
-      "team_id": 9,
-      "mean": 3.708,
-      "std": 3.192,
-      "start_probability": 0.6231,
-      "dnp_probability": 0.1319,
-      "score": 3.8504
+      "element": 115,
+      "name": "De Cuyper",
+      "position": "DEF",
+      "team_id": 5,
+      "mean": 4.507,
+      "std": 3.555,
+      "start_probability": 0.5778,
+      "dnp_probability": 0.1478,
+      "score": 4.5659
     },
     "captain_safe_pool": [
       {
@@ -229,67 +2293,67 @@
         "score": 7.284
       },
       {
-        "element": 237,
-        "name": "Ndiaye",
-        "position": "MID",
-        "team_id": 9,
-        "mean": 3.708,
-        "std": 3.192,
-        "start_probability": 0.6231,
-        "dnp_probability": 0.1319,
-        "score": 4.6
-      },
-      {
-        "element": 368,
-        "name": "Szoboszlai",
-        "position": "MID",
-        "team_id": 14,
-        "mean": 3.239,
-        "std": 2.984,
-        "start_probability": 0.6404,
-        "dnp_probability": 0.1259,
-        "score": 4.1111
-      },
-      {
-        "element": 8,
-        "name": "Calafiori",
+        "element": 115,
+        "name": "De Cuyper",
         "position": "DEF",
-        "team_id": 1,
-        "mean": 3.054,
-        "std": 2.936,
-        "start_probability": 0.594,
-        "dnp_probability": 0.1421,
-        "score": 3.8704
+        "team_id": 5,
+        "mean": 4.507,
+        "std": 3.555,
+        "start_probability": 0.5778,
+        "dnp_probability": 0.1478,
+        "score": 5.4183
       },
       {
-        "element": 426,
-        "name": "B.Fernandes",
+        "element": 15,
+        "name": "Ødegaard",
         "position": "MID",
-        "team_id": 16,
-        "mean": 2.946,
-        "std": 2.86,
+        "team_id": 1,
+        "mean": 3.249,
+        "std": 3.028,
+        "start_probability": 0.5757,
+        "dnp_probability": 0.1485,
+        "score": 4.0634
+      },
+      {
+        "element": 88,
+        "name": "Kayode",
+        "position": "DEF",
+        "team_id": 4,
+        "mean": 3.183,
+        "std": 2.96,
         "start_probability": 0.6404,
         "dnp_probability": 0.1259,
-        "score": 3.7958
+        "score": 4.0508
+      },
+      {
+        "element": 40,
+        "name": "Rogers",
+        "position": "MID",
+        "team_id": 6,
+        "mean": 3.179,
+        "std": 2.958,
+        "start_probability": 0.6404,
+        "dnp_probability": 0.1259,
+        "score": 4.0464
       }
     ],
     "main_starting_xi_battle": {
       "status": "CLOSE",
-      "margin": 0.0245,
+      "margin": 0.027,
       "starter_side": [
         {
-          "element": 259,
-          "name": "Diop",
+          "element": 254,
+          "name": "Robinson",
           "position": "DEF",
-          "selection_score": 2.6041
+          "selection_score": 2.6595
         }
       ],
       "bench_side": [
         {
-          "element": 418,
-          "name": "Maguire",
-          "position": "DEF",
-          "selection_score": 2.5796
+          "element": 565,
+          "name": "M.Sangaré",
+          "position": "MID",
+          "selection_score": 2.6325
         }
       ],
       "alternative_formation": "3-5-2"
@@ -297,67 +2361,67 @@
     "alternatives": [
       {
         "rank": 1,
-        "formation": "3-5-2",
-        "selection_score": 35.302,
-        "mean": 35.819,
-        "std": 10.019,
+        "formation": "4-4-2",
+        "selection_score": 36.9345,
+        "mean": 37.53,
+        "std": 10.243,
         "element_ids": [
           8,
-          124,
+          15,
+          40,
+          88,
+          115,
           165,
-          237,
-          259,
-          368,
+          254,
           411,
           426,
-          469,
-          496,
-          557
+          557,
+          572
         ]
       },
       {
         "rank": 2,
         "formation": "3-5-2",
-        "selection_score": 35.2775,
-        "mean": 35.767,
-        "std": 10.008,
+        "selection_score": 36.9075,
+        "mean": 37.516,
+        "std": 10.243,
         "element_ids": [
           8,
-          124,
+          15,
+          40,
+          88,
+          115,
           165,
-          237,
-          368,
           411,
-          418,
           426,
-          469,
-          496,
-          557
+          557,
+          565,
+          572
         ]
       },
       {
         "rank": 3,
-        "formation": "3-5-2",
-        "selection_score": 35.2757,
-        "mean": 35.68,
-        "std": 9.98,
+        "formation": "4-4-2",
+        "selection_score": 36.8065,
+        "mean": 37.293,
+        "std": 10.195,
         "element_ids": [
           8,
+          15,
+          40,
+          88,
           109,
-          124,
+          115,
           165,
-          237,
-          259,
-          368,
+          254,
           411,
           426,
-          469,
           557
         ]
       }
     ],
-    "expected_starting_xi_mean": 35.819,
-    "selection_score": 35.302,
+    "expected_starting_xi_mean": 37.53,
+    "selection_score": 36.934,
     "authority": "v5_decision_lineup_optimizer",
     "performance": {
       "projection_lookup": "indexed_o1",
@@ -377,10 +2441,10 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "ACTIVE": 29,
-        "PARTIAL": 21
+        "ACTIVE": 32,
+        "PARTIAL": 18
       },
-      "coverage_ratio": 0.58,
+      "coverage_ratio": 0.64,
       "critical_partial": [
         {
           "id": "DSS-07",
@@ -413,41 +2477,11 @@
           "detail": "registered capability has no active runtime evidence contract yet"
         },
         {
-          "id": "DSS-40",
-          "name": "Budget Opportunity Cost",
-          "category": "value",
-          "critical": true,
-          "probe": "sell_cost_affordability",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
           "id": "DSS-44",
           "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
           "category": "governance",
           "critical": true,
           "probe": "learning_loop",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
-          "id": "DSS-46",
-          "name": "Direct Challenger / Replacement Quality",
-          "category": "squad",
-          "critical": true,
-          "probe": "direct_challenger",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
-          "id": "DSS-49",
-          "name": "Chip / Blank / Double Strategic Context",
-          "category": "strategy",
-          "critical": true,
-          "probe": "chip_context",
           "status": "PARTIAL",
           "evidence_services": [],
           "detail": "registered capability has no active runtime evidence contract yet"
@@ -894,9 +2928,12 @@
           "category": "value",
           "critical": true,
           "probe": "sell_cost_affordability",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision",
+            "truth"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-41",
@@ -952,6 +2989,7 @@
           "probe": "structural_fit",
           "status": "ACTIVE",
           "evidence_services": [
+            "decision",
             "truth"
           ],
           "detail": "capability advertised by bounded-context owner"
@@ -962,9 +3000,11 @@
           "category": "squad",
           "critical": true,
           "probe": "direct_challenger",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-47",
@@ -996,9 +3036,11 @@
           "category": "strategy",
           "critical": true,
           "probe": "chip_context",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "truth"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-50",
@@ -1022,10 +3064,10 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "PARTIAL": 9,
-        "ACTIVE": 7
+        "PARTIAL": 7,
+        "ACTIVE": 9
       },
-      "coverage_ratio": 0.4375,
+      "coverage_ratio": 0.5625,
       "critical_partial": [
         {
           "id": "DSS-X01",
@@ -1043,16 +3085,6 @@
           "category": null,
           "critical": true,
           "probe": "reliability_overlay",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
-          "id": "DSS-X05",
-          "name": "Outgoing Baseline Resistance",
-          "category": null,
-          "critical": true,
-          "probe": "governed_optimizer",
           "status": "PARTIAL",
           "evidence_services": [],
           "detail": "registered capability has no active runtime evidence contract yet"
@@ -1129,9 +3161,11 @@
           "category": null,
           "critical": true,
           "probe": "governed_optimizer",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-X06",
@@ -1159,9 +3193,11 @@
           "category": null,
           "critical": false,
           "probe": "package_churn_penalty",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-X09",
@@ -1259,10 +3295,18 @@
       "availability": [
         "truth"
       ],
+      "chip_context": [
+        "truth"
+      ],
       "manual_authority": [
         "truth"
       ],
+      "sell_cost_affordability": [
+        "decision",
+        "truth"
+      ],
       "structural_fit": [
+        "decision",
         "truth"
       ],
       "universe_identity": [
@@ -1361,6 +3405,12 @@
       "decision_recheck": [
         "decision"
       ],
+      "direct_challenger": [
+        "decision"
+      ],
+      "governed_optimizer": [
+        "decision"
+      ],
       "lineup_alternatives": [
         "decision"
       ],
@@ -1368,6 +3418,18 @@
         "decision"
       ],
       "lineup_robustness": [
+        "decision"
+      ],
+      "manual_package_authority": [
+        "decision"
+      ],
+      "multi_horizon": [
+        "decision"
+      ],
+      "package_churn_penalty": [
+        "decision"
+      ],
+      "package_structural": [
         "decision"
       ],
       "calibration_store": [
@@ -1384,7 +3446,7 @@
       ]
     },
     "registry_integrity": true,
-    "critical_partial_count": 12,
+    "critical_partial_count": 8,
     "critical_partial": [
       {
         "id": "DSS-07",
@@ -1417,41 +3479,11 @@
         "detail": "registered capability has no active runtime evidence contract yet"
       },
       {
-        "id": "DSS-40",
-        "name": "Budget Opportunity Cost",
-        "category": "value",
-        "critical": true,
-        "probe": "sell_cost_affordability",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
         "id": "DSS-44",
         "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
         "category": "governance",
         "critical": true,
         "probe": "learning_loop",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-46",
-        "name": "Direct Challenger / Replacement Quality",
-        "category": "squad",
-        "critical": true,
-        "probe": "direct_challenger",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-49",
-        "name": "Chip / Blank / Double Strategic Context",
-        "category": "strategy",
-        "critical": true,
-        "probe": "chip_context",
         "status": "PARTIAL",
         "evidence_services": [],
         "detail": "registered capability has no active runtime evidence contract yet"
@@ -1472,16 +3504,6 @@
         "category": null,
         "critical": true,
         "probe": "reliability_overlay",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-X05",
-        "name": "Outgoing Baseline Resistance",
-        "category": null,
-        "critical": true,
-        "probe": "governed_optimizer",
         "status": "PARTIAL",
         "evidence_services": [],
         "detail": "registered capability has no active runtime evidence contract yet"
@@ -1510,10 +3532,41 @@
     "unqualified_go_allowed": false
   },
   "decision_trace": {
-    "decision_type": "BLOCKED",
-    "action": "BLOCK decision output until package, package-governance and lineup authorities are READY",
-    "confidence": "LOW",
+    "decision_type": "HOLD",
+    "action": "HOLD authoritative manual LOCK; optimizer challenger is review evidence only",
+    "subject_element_ids": [],
+    "score": 15.648,
+    "confidence": "MEDIUM",
+    "reasons_for": [
+      "best challenger robust score delta vs HOLD = 15.648",
+      "best challenger independent-baseline probability of outperforming HOLD = 0.801",
+      "lineup formation = 4-4-2",
+      "authoritative manual LOCK freezes squad composition while retaining optimizer challenger evidence",
+      "optimizer challenger clears configured strong-review thresholds"
+    ],
+    "reasons_against": [
+      "8 critical DSS capabilities remain PARTIAL",
+      "market timing context contains 34 active price alerts"
+    ],
     "evidence": [
+      {
+        "source": "truth-service",
+        "field": "team+rules+chip_state",
+        "authority": "truth-service",
+        "freshness": null,
+        "provenance": {
+          "squad_authority": "user_lock"
+        }
+      },
+      {
+        "source": "prediction-service",
+        "field": "xmins+xpts+horizons",
+        "authority": "prediction-service",
+        "freshness": null,
+        "provenance": {
+          "model_version": "player_projection_v5_historical_prior"
+        }
+      },
       {
         "source": "governance-service",
         "field": "gate0_preflight",
@@ -1521,7 +3574,31 @@
         "freshness": null,
         "provenance": {
           "model": "v5_gate0_registry_driven_v3",
-          "pass": false
+          "pass": true,
+          "checked_ids": [
+            "G0-01",
+            "G0-02",
+            "G0-03",
+            "G0-04",
+            "G0-05",
+            "G0-07",
+            "G0-08",
+            "G0-09",
+            "G0-15"
+          ],
+          "failed_ids": []
+        }
+      },
+      {
+        "source": "decision-service",
+        "field": "package_optimizer+package_governance+lineup_optimizer+dss",
+        "authority": "decision-service",
+        "freshness": null,
+        "provenance": {
+          "package_model": "multi_horizon_package_optimizer_v2",
+          "package_governance_model": "v5_package_governance_v1",
+          "manual_authority_override": true,
+          "dss_model": "capability_contract_dss_v3"
         }
       }
     ],
@@ -1534,8 +3611,19 @@
       "G0-07",
       "G0-08",
       "G0-09",
-      "G0-15"
+      "G0-15",
+      "decision:package_legality_and_affordability",
+      "decision:package_manual_authority_governance",
+      "decision:lineup_legality"
     ],
+    "projection_model": "player_projection_v5_historical_prior",
+    "ruleset_id": "FPL_2026_27",
+    "selected_package_id": "HOLD",
+    "optimizer_best_challenger_id": "2:557,165->123,106",
+    "manual_authority_override": true,
+    "robust_gain_vs_hold": 15.648,
+    "p_outperform_hold_independent_baseline": 0.8014,
+    "gate0_preflight_pass": true,
     "production_recommendation": null
   },
   "capabilities": [
@@ -1544,16 +3632,35 @@
     "captain_safe_pool",
     "captaincy",
     "decision_recheck",
+    "direct_challenger",
+    "governed_optimizer",
     "lineup_alternatives",
     "lineup_governance",
-    "lineup_robustness"
+    "lineup_robustness",
+    "manual_package_authority",
+    "multi_horizon",
+    "package_churn_penalty",
+    "package_structural",
+    "sell_cost_affordability",
+    "structural_fit"
   ],
   "price_context": {
     "alert_count": 34
   },
   "governance": {
-    "manual_authority_override": false,
+    "candidate_generation_only": true,
+    "local_legality_prevalidated": true,
+    "final_go_requires_framework_governance_and_postflight_gate0": true,
+    "price_uses_sell_value_for_outs_and_now_cost_for_ins": true,
     "lineup_authority": "v5_decision_lineup_optimizer",
+    "projection_lookup": "indexed_o1",
+    "horizon_evaluation": "single_pass_prefix",
+    "monte_carlo_seed": "stable_sha256_policy",
+    "optimizer_is_candidate_generator_only": true,
+    "auto_select_optimizer_candidate": false,
+    "locked_composition_frozen": true,
+    "manual_authority_overrides_optimizer_candidate": true,
+    "manual_authority_override": true,
     "dss_evaluation_model": "capability_contract_dss_v3",
     "evaluation_capabilities_consumed": [
       "calibration_store",
@@ -1566,5 +3673,5 @@
     "production_recommendation_enabled": false
   },
   "production_recommendation": null,
-  "final_state": "BLOCKED"
+  "final_state": "HOLD_WAIT_REVIEW_ONLY"
 }

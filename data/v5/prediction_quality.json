@@ -9,7 +9,7 @@
       "pass": true
     },
     "owned_prior_coverage": {
-      "value": 0.9333,
+      "value": 0.8,
       "threshold": 0.5,
       "sample": 15,
       "pass": true
@@ -32,7 +32,7 @@
     "model": "v5_historical_player_priors_v2",
     "season": "2025-26",
     "status": "READY",
-    "fetch_mode": "NETWORK_REFRESH",
+    "fetch_mode": "PERSISTED_CACHE",
     "coverage": {
       "current_players": 612,
       "matched_with_usable_prior": 346,
@@ -44,7 +44,7 @@
   },
   "owned_squad": {
     "players": 15,
-    "historical_prior_players": 14,
+    "historical_prior_players": 12,
     "low_confidence_players": 3
   },
   "governance": {

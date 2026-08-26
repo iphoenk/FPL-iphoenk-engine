@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T08:30:15.650151+00:00",
+  "generated_at": "2026-08-26T08:42:31.393205+00:00",
   "schema_version": 513,
   "model_version": "player_projection_v5_historical_prior",
   "ruleset_id": "FPL_2026_27",
@@ -9,7 +9,7 @@
     "model": "v5_historical_player_priors_v2",
     "season": "2025-26",
     "status": "READY",
-    "fetch_mode": "NETWORK_REFRESH",
+    "fetch_mode": "PERSISTED_CACHE",
     "coverage": {
       "current_players": 612,
       "matched_with_usable_prior": 346,
@@ -5236,7 +5236,7 @@
       "network_failure_may_use_stale_prior": true,
       "missing_prior_must_degrade_quality_not_block_prediction": true
     },
-    "fetch_mode": "NETWORK_REFRESH",
+    "fetch_mode": "PERSISTED_CACHE",
     "cache_fresh": true,
     "source_meta": {
       "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2025-26/players_raw.csv",
@@ -5255,7 +5255,7 @@
         "pass": true
       },
       "owned_prior_coverage": {
-        "value": 0.9333,
+        "value": 0.8,
         "threshold": 0.5,
         "sample": 15,
         "pass": true
@@ -5278,7 +5278,7 @@
       "model": "v5_historical_player_priors_v2",
       "season": "2025-26",
       "status": "READY",
-      "fetch_mode": "NETWORK_REFRESH",
+      "fetch_mode": "PERSISTED_CACHE",
       "coverage": {
         "current_players": 612,
         "matched_with_usable_prior": 346,
@@ -5290,7 +5290,7 @@
     },
     "owned_squad": {
       "players": 15,
-      "historical_prior_players": 14,
+      "historical_prior_players": 12,
       "low_confidence_players": 3
     },
     "governance": {
@@ -15975,7 +15975,7 @@
       "position": "DEF",
       "now_cost": 55,
       "status": "a",
-      "ownership_pct": 6.0,
+      "ownership_pct": 5.9,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -24791,7 +24791,7 @@
       "position": "GK",
       "now_cost": 50,
       "status": "a",
-      "ownership_pct": 4.2,
+      "ownership_pct": 4.1,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -161836,7 +161836,7 @@
       "position": "DEF",
       "now_cost": 40,
       "status": "a",
-      "ownership_pct": 2.4,
+      "ownership_pct": 2.3,
       "current_season": {
         "starts": 0,
         "minutes": 5
@@ -247924,7 +247924,7 @@
       "position": "FWD",
       "now_cost": 60,
       "status": "d",
-      "ownership_pct": 1.2,
+      "ownership_pct": 1.1,
       "current_season": {
         "starts": 1,
         "minutes": 55
@@ -256683,7 +256683,7 @@
       "position": "MID",
       "now_cost": 80,
       "status": "d",
-      "ownership_pct": 9.8,
+      "ownership_pct": 9.7,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -266437,7 +266437,7 @@
       "position": "GK",
       "now_cost": 40,
       "status": "a",
-      "ownership_pct": 18.9,
+      "ownership_pct": 18.8,
       "current_season": {
         "starts": 0,
         "minutes": 0

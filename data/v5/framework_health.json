@@ -1,10 +1,10 @@
 {
   "framework_schema": 8,
-  "generated_at": "2026-08-26T08:30:16.465004+00:00",
+  "generated_at": "2026-08-26T08:42:32.630563+00:00",
   "auditor": "v5-microservice-governance-v4",
-  "overall": "RED",
-  "decision_engine": "BLOCKED",
-  "recommendation_allowed": false,
+  "overall": "AMBER",
+  "decision_engine": "DEGRADED",
+  "recommendation_allowed": true,
   "go_allowed": false,
   "registry_integrity": true,
   "degraded_contexts": [],
@@ -20,10 +20,9 @@
     "phase": "full",
     "model": "v5_gate0_registry_driven_v3",
     "ruleset_id": "FPL_2026_27",
-    "pass": false,
+    "pass": true,
     "counts": {
-      "PASS": 12,
-      "FAIL": 4
+      "PASS": 16
     },
     "items": [
       {
@@ -71,8 +70,8 @@
         "name": "Budget / Affordability",
         "critical": true,
         "phase": "postflight",
-        "status": "FAIL",
-        "detail": "minimum_itb=0,packages=[]"
+        "status": "PASS",
+        "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:165,426->106,123', True, 60), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:565,346->123,249', True, 5), ('2:8,346->388,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
       },
       {
         "id": "G0-07",
@@ -104,7 +103,7 @@
         "critical": true,
         "phase": "postflight",
         "status": "PASS",
-        "detail": "status=READY,formation=3-5-2"
+        "detail": "status=READY,formation=4-4-2"
       },
       {
         "id": "G0-11",
@@ -120,7 +119,7 @@
         "critical": true,
         "phase": "postflight",
         "status": "PASS",
-        "detail": "captain=411,vice=237,captain_in_xi=True,vice_in_xi=True"
+        "detail": "captain=411,vice=115,captain_in_xi=True,vice_in_xi=True"
       },
       {
         "id": "G0-13",
@@ -135,34 +134,33 @@
         "name": "Single-Chip Rule / Chip Legality",
         "critical": true,
         "phase": "postflight",
-        "status": "FAIL",
-        "detail": "active_chip=bench_boost,active_count=1,max_active=1,legal=False"
+        "status": "PASS",
+        "detail": "active_chip=wildcard,active_count=1,max_active=1,legal=True"
       },
       {
         "id": "G0-15",
         "name": "Selling-Price / ITB Arithmetic Reconciliation",
         "critical": true,
         "phase": "preflight",
-        "status": "FAIL",
-        "detail": "complete=False,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=None,calculated_sell=None"
+        "status": "PASS",
+        "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=995,calculated_sell=995"
       },
       {
         "id": "G0-16",
         "name": "Wildcard Package Revalidated After Every Edit",
         "critical": true,
         "phase": "postflight",
-        "status": "FAIL",
-        "detail": "packages=[]"
+        "status": "PASS",
+        "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:165,426->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:565,346->123,249', True, True), ('2:8,346->388,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
       }
     ],
     "preflight": {
       "phase": "preflight",
       "model": "v5_gate0_registry_driven_v3",
       "ruleset_id": "FPL_2026_27",
-      "pass": false,
+      "pass": true,
       "counts": {
-        "PASS": 8,
-        "FAIL": 1
+        "PASS": 9
       },
       "items": [
         {
@@ -234,8 +232,8 @@
           "name": "Selling-Price / ITB Arithmetic Reconciliation",
           "critical": true,
           "phase": "preflight",
-          "status": "FAIL",
-          "detail": "complete=False,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=None,calculated_sell=None"
+          "status": "PASS",
+          "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=995,calculated_sell=995"
         }
       ],
       "registry_integrity": {
@@ -257,10 +255,9 @@
       "phase": "postflight",
       "model": "v5_gate0_registry_driven_v3",
       "ruleset_id": "FPL_2026_27",
-      "pass": false,
+      "pass": true,
       "counts": {
-        "FAIL": 3,
-        "PASS": 4
+        "PASS": 7
       },
       "items": [
         {
@@ -268,8 +265,8 @@
           "name": "Budget / Affordability",
           "critical": true,
           "phase": "postflight",
-          "status": "FAIL",
-          "detail": "minimum_itb=0,packages=[]"
+          "status": "PASS",
+          "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:165,426->106,123', True, 60), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:565,346->123,249', True, 5), ('2:8,346->388,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
         },
         {
           "id": "G0-10",
@@ -277,7 +274,7 @@
           "critical": true,
           "phase": "postflight",
           "status": "PASS",
-          "detail": "status=READY,formation=3-5-2"
+          "detail": "status=READY,formation=4-4-2"
         },
         {
           "id": "G0-11",
@@ -293,7 +290,7 @@
           "critical": true,
           "phase": "postflight",
           "status": "PASS",
-          "detail": "captain=411,vice=237,captain_in_xi=True,vice_in_xi=True"
+          "detail": "captain=411,vice=115,captain_in_xi=True,vice_in_xi=True"
         },
         {
           "id": "G0-13",
@@ -308,16 +305,16 @@
           "name": "Single-Chip Rule / Chip Legality",
           "critical": true,
           "phase": "postflight",
-          "status": "FAIL",
-          "detail": "active_chip=bench_boost,active_count=1,max_active=1,legal=False"
+          "status": "PASS",
+          "detail": "active_chip=wildcard,active_count=1,max_active=1,legal=True"
         },
         {
           "id": "G0-16",
           "name": "Wildcard Package Revalidated After Every Edit",
           "critical": true,
           "phase": "postflight",
-          "status": "FAIL",
-          "detail": "packages=[]"
+          "status": "PASS",
+          "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:165,426->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:565,346->123,249', True, True), ('2:8,346->388,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
         }
       ],
       "registry_integrity": {
@@ -358,10 +355,10 @@
     "unexpected_ids": [],
     "integrity_ok": true,
     "counts": {
-      "ACTIVE": 29,
-      "PARTIAL": 21
+      "ACTIVE": 32,
+      "PARTIAL": 18
     },
-    "coverage_ratio": 0.58,
+    "coverage_ratio": 0.64,
     "critical_partial": [
       {
         "id": "DSS-07",
@@ -394,41 +391,11 @@
         "detail": "registered capability has no active runtime evidence contract yet"
       },
       {
-        "id": "DSS-40",
-        "name": "Budget Opportunity Cost",
-        "category": "value",
-        "critical": true,
-        "probe": "sell_cost_affordability",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
         "id": "DSS-44",
         "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
         "category": "governance",
         "critical": true,
         "probe": "learning_loop",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-46",
-        "name": "Direct Challenger / Replacement Quality",
-        "category": "squad",
-        "critical": true,
-        "probe": "direct_challenger",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-49",
-        "name": "Chip / Blank / Double Strategic Context",
-        "category": "strategy",
-        "critical": true,
-        "probe": "chip_context",
         "status": "PARTIAL",
         "evidence_services": [],
         "detail": "registered capability has no active runtime evidence contract yet"
@@ -875,9 +842,12 @@
         "category": "value",
         "critical": true,
         "probe": "sell_cost_affordability",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision",
+          "truth"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-41",
@@ -933,6 +903,7 @@
         "probe": "structural_fit",
         "status": "ACTIVE",
         "evidence_services": [
+          "decision",
           "truth"
         ],
         "detail": "capability advertised by bounded-context owner"
@@ -943,9 +914,11 @@
         "category": "squad",
         "critical": true,
         "probe": "direct_challenger",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-47",
@@ -977,9 +950,11 @@
         "category": "strategy",
         "critical": true,
         "probe": "chip_context",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "truth"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-50",
@@ -1003,10 +978,10 @@
     "unexpected_ids": [],
     "integrity_ok": true,
     "counts": {
-      "PARTIAL": 9,
-      "ACTIVE": 7
+      "PARTIAL": 7,
+      "ACTIVE": 9
     },
-    "coverage_ratio": 0.4375,
+    "coverage_ratio": 0.5625,
     "critical_partial": [
       {
         "id": "DSS-X01",
@@ -1024,16 +999,6 @@
         "category": null,
         "critical": true,
         "probe": "reliability_overlay",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-X05",
-        "name": "Outgoing Baseline Resistance",
-        "category": null,
-        "critical": true,
-        "probe": "governed_optimizer",
         "status": "PARTIAL",
         "evidence_services": [],
         "detail": "registered capability has no active runtime evidence contract yet"
@@ -1110,9 +1075,11 @@
         "category": null,
         "critical": true,
         "probe": "governed_optimizer",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-X06",
@@ -1140,9 +1107,11 @@
         "category": null,
         "critical": false,
         "probe": "package_churn_penalty",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-X09",
@@ -1244,8 +1213,8 @@
     "unexpected_ids": [],
     "integrity_ok": true,
     "counts": {
-      "PARTIAL": 5,
-      "ACTIVE": 3
+      "PARTIAL": 2,
+      "ACTIVE": 6
     },
     "items": [
       {
@@ -1282,9 +1251,11 @@
         "name": "Multi-Horizon Strategic Optimization",
         "critical": true,
         "probe": "multi_horizon",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "enhancement capability not yet fully backed by native V5 evidence"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability contract satisfied"
       },
       {
         "id": "ENH-05",
@@ -1302,9 +1273,11 @@
         "name": "Package & Structural Optimization",
         "critical": true,
         "probe": "package_structural",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "enhancement capability not yet fully backed by native V5 evidence"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability contract satisfied"
       },
       {
         "id": "ENH-07",
@@ -1322,9 +1295,11 @@
         "name": "Evidence Fusion & Final Sanity Governance",
         "critical": true,
         "probe": "final_governance",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "enhancement capability not yet fully backed by native V5 evidence"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "governance"
+        ],
+        "detail": "capability contract satisfied"
       }
     ]
   },
@@ -1332,10 +1307,18 @@
     "availability": [
       "truth"
     ],
+    "chip_context": [
+      "truth"
+    ],
     "manual_authority": [
       "truth"
     ],
+    "sell_cost_affordability": [
+      "decision",
+      "truth"
+    ],
     "structural_fit": [
+      "decision",
       "truth"
     ],
     "universe_identity": [
@@ -1434,6 +1417,12 @@
     "decision_recheck": [
       "decision"
     ],
+    "direct_challenger": [
+      "decision"
+    ],
+    "governed_optimizer": [
+      "decision"
+    ],
     "lineup_alternatives": [
       "decision"
     ],
@@ -1441,6 +1430,18 @@
       "decision"
     ],
     "lineup_robustness": [
+      "decision"
+    ],
+    "manual_package_authority": [
+      "decision"
+    ],
+    "multi_horizon": [
+      "decision"
+    ],
+    "package_churn_penalty": [
+      "decision"
+    ],
+    "package_structural": [
       "decision"
     ],
     "calibration_store": [
@@ -1457,42 +1458,12 @@
     ],
     "uncertainty_robustness": [
       "governance-derived"
+    ],
+    "final_governance": [
+      "governance"
     ]
   },
-  "gate0_failures": [
-    {
-      "id": "G0-06",
-      "name": "Budget / Affordability",
-      "critical": true,
-      "phase": "postflight",
-      "status": "FAIL",
-      "detail": "minimum_itb=0,packages=[]"
-    },
-    {
-      "id": "G0-14",
-      "name": "Single-Chip Rule / Chip Legality",
-      "critical": true,
-      "phase": "postflight",
-      "status": "FAIL",
-      "detail": "active_chip=bench_boost,active_count=1,max_active=1,legal=False"
-    },
-    {
-      "id": "G0-15",
-      "name": "Selling-Price / ITB Arithmetic Reconciliation",
-      "critical": true,
-      "phase": "preflight",
-      "status": "FAIL",
-      "detail": "complete=False,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=None,calculated_sell=None"
-    },
-    {
-      "id": "G0-16",
-      "name": "Wildcard Package Revalidated After Every Edit",
-      "critical": true,
-      "phase": "postflight",
-      "status": "FAIL",
-      "detail": "packages=[]"
-    }
-  ],
+  "gate0_failures": [],
   "critical_partial": [
     {
       "id": "DSS-07",
@@ -1525,41 +1496,11 @@
       "detail": "registered capability has no active runtime evidence contract yet"
     },
     {
-      "id": "DSS-40",
-      "name": "Budget Opportunity Cost",
-      "category": "value",
-      "critical": true,
-      "probe": "sell_cost_affordability",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
       "id": "DSS-44",
       "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
       "category": "governance",
       "critical": true,
       "probe": "learning_loop",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
-      "id": "DSS-46",
-      "name": "Direct Challenger / Replacement Quality",
-      "category": "squad",
-      "critical": true,
-      "probe": "direct_challenger",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
-      "id": "DSS-49",
-      "name": "Chip / Blank / Double Strategic Context",
-      "category": "strategy",
-      "critical": true,
-      "probe": "chip_context",
       "status": "PARTIAL",
       "evidence_services": [],
       "detail": "registered capability has no active runtime evidence contract yet"
@@ -1580,16 +1521,6 @@
       "category": null,
       "critical": true,
       "probe": "reliability_overlay",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
-      "id": "DSS-X05",
-      "name": "Outgoing Baseline Resistance",
-      "category": null,
-      "critical": true,
-      "probe": "governed_optimizer",
       "status": "PARTIAL",
       "evidence_services": [],
       "detail": "registered capability has no active runtime evidence contract yet"
@@ -1628,33 +1559,6 @@
       "name": "Point-in-Time Integrity & Leakage Safety",
       "critical": true,
       "probe": "leakage_guard",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "enhancement capability not yet fully backed by native V5 evidence"
-    },
-    {
-      "id": "ENH-04",
-      "name": "Multi-Horizon Strategic Optimization",
-      "critical": true,
-      "probe": "multi_horizon",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "enhancement capability not yet fully backed by native V5 evidence"
-    },
-    {
-      "id": "ENH-06",
-      "name": "Package & Structural Optimization",
-      "critical": true,
-      "probe": "package_structural",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "enhancement capability not yet fully backed by native V5 evidence"
-    },
-    {
-      "id": "ENH-08",
-      "name": "Evidence Fusion & Final Sanity Governance",
-      "critical": true,
-      "probe": "final_governance",
       "status": "PARTIAL",
       "evidence_services": [],
       "detail": "enhancement capability not yet fully backed by native V5 evidence"

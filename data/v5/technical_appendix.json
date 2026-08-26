@@ -1,10 +1,41 @@
 {
   "layer": "TECHNICAL_APPENDIX",
   "decision_trace": {
-    "decision_type": "BLOCKED",
-    "action": "BLOCK decision output until package, package-governance and lineup authorities are READY",
-    "confidence": "LOW",
+    "decision_type": "HOLD",
+    "action": "HOLD authoritative manual LOCK; optimizer challenger is review evidence only",
+    "subject_element_ids": [],
+    "score": 15.648,
+    "confidence": "MEDIUM",
+    "reasons_for": [
+      "best challenger robust score delta vs HOLD = 15.648",
+      "best challenger independent-baseline probability of outperforming HOLD = 0.801",
+      "lineup formation = 4-4-2",
+      "authoritative manual LOCK freezes squad composition while retaining optimizer challenger evidence",
+      "optimizer challenger clears configured strong-review thresholds"
+    ],
+    "reasons_against": [
+      "8 critical DSS capabilities remain PARTIAL",
+      "market timing context contains 34 active price alerts"
+    ],
     "evidence": [
+      {
+        "source": "truth-service",
+        "field": "team+rules+chip_state",
+        "authority": "truth-service",
+        "freshness": null,
+        "provenance": {
+          "squad_authority": "user_lock"
+        }
+      },
+      {
+        "source": "prediction-service",
+        "field": "xmins+xpts+horizons",
+        "authority": "prediction-service",
+        "freshness": null,
+        "provenance": {
+          "model_version": "player_projection_v5_historical_prior"
+        }
+      },
       {
         "source": "governance-service",
         "field": "gate0_preflight",
@@ -12,7 +43,31 @@
         "freshness": null,
         "provenance": {
           "model": "v5_gate0_registry_driven_v3",
-          "pass": false
+          "pass": true,
+          "checked_ids": [
+            "G0-01",
+            "G0-02",
+            "G0-03",
+            "G0-04",
+            "G0-05",
+            "G0-07",
+            "G0-08",
+            "G0-09",
+            "G0-15"
+          ],
+          "failed_ids": []
+        }
+      },
+      {
+        "source": "decision-service",
+        "field": "package_optimizer+package_governance+lineup_optimizer+dss",
+        "authority": "decision-service",
+        "freshness": null,
+        "provenance": {
+          "package_model": "multi_horizon_package_optimizer_v2",
+          "package_governance_model": "v5_package_governance_v1",
+          "manual_authority_override": true,
+          "dss_model": "capability_contract_dss_v3"
         }
       }
     ],
@@ -25,8 +80,19 @@
       "G0-07",
       "G0-08",
       "G0-09",
-      "G0-15"
+      "G0-15",
+      "decision:package_legality_and_affordability",
+      "decision:package_manual_authority_governance",
+      "decision:lineup_legality"
     ],
+    "projection_model": "player_projection_v5_historical_prior",
+    "ruleset_id": "FPL_2026_27",
+    "selected_package_id": "HOLD",
+    "optimizer_best_challenger_id": "2:557,165->123,106",
+    "manual_authority_override": true,
+    "robust_gain_vs_hold": 15.648,
+    "p_outperform_hold_independent_baseline": 0.8014,
+    "gate0_preflight_pass": true,
     "production_recommendation": null
   },
   "dss": {
@@ -40,10 +106,10 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "ACTIVE": 29,
-        "PARTIAL": 21
+        "ACTIVE": 32,
+        "PARTIAL": 18
       },
-      "coverage_ratio": 0.58,
+      "coverage_ratio": 0.64,
       "critical_partial": [
         {
           "id": "DSS-07",
@@ -76,41 +142,11 @@
           "detail": "registered capability has no active runtime evidence contract yet"
         },
         {
-          "id": "DSS-40",
-          "name": "Budget Opportunity Cost",
-          "category": "value",
-          "critical": true,
-          "probe": "sell_cost_affordability",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
           "id": "DSS-44",
           "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
           "category": "governance",
           "critical": true,
           "probe": "learning_loop",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
-          "id": "DSS-46",
-          "name": "Direct Challenger / Replacement Quality",
-          "category": "squad",
-          "critical": true,
-          "probe": "direct_challenger",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
-          "id": "DSS-49",
-          "name": "Chip / Blank / Double Strategic Context",
-          "category": "strategy",
-          "critical": true,
-          "probe": "chip_context",
           "status": "PARTIAL",
           "evidence_services": [],
           "detail": "registered capability has no active runtime evidence contract yet"
@@ -557,9 +593,12 @@
           "category": "value",
           "critical": true,
           "probe": "sell_cost_affordability",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision",
+            "truth"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-41",
@@ -615,6 +654,7 @@
           "probe": "structural_fit",
           "status": "ACTIVE",
           "evidence_services": [
+            "decision",
             "truth"
           ],
           "detail": "capability advertised by bounded-context owner"
@@ -625,9 +665,11 @@
           "category": "squad",
           "critical": true,
           "probe": "direct_challenger",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-47",
@@ -659,9 +701,11 @@
           "category": "strategy",
           "critical": true,
           "probe": "chip_context",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "truth"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-50",
@@ -685,10 +729,10 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "PARTIAL": 9,
-        "ACTIVE": 7
+        "PARTIAL": 7,
+        "ACTIVE": 9
       },
-      "coverage_ratio": 0.4375,
+      "coverage_ratio": 0.5625,
       "critical_partial": [
         {
           "id": "DSS-X01",
@@ -706,16 +750,6 @@
           "category": null,
           "critical": true,
           "probe": "reliability_overlay",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
-          "id": "DSS-X05",
-          "name": "Outgoing Baseline Resistance",
-          "category": null,
-          "critical": true,
-          "probe": "governed_optimizer",
           "status": "PARTIAL",
           "evidence_services": [],
           "detail": "registered capability has no active runtime evidence contract yet"
@@ -792,9 +826,11 @@
           "category": null,
           "critical": true,
           "probe": "governed_optimizer",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-X06",
@@ -822,9 +858,11 @@
           "category": null,
           "critical": false,
           "probe": "package_churn_penalty",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-X09",
@@ -922,10 +960,18 @@
       "availability": [
         "truth"
       ],
+      "chip_context": [
+        "truth"
+      ],
       "manual_authority": [
         "truth"
       ],
+      "sell_cost_affordability": [
+        "decision",
+        "truth"
+      ],
       "structural_fit": [
+        "decision",
         "truth"
       ],
       "universe_identity": [
@@ -1024,6 +1070,12 @@
       "decision_recheck": [
         "decision"
       ],
+      "direct_challenger": [
+        "decision"
+      ],
+      "governed_optimizer": [
+        "decision"
+      ],
       "lineup_alternatives": [
         "decision"
       ],
@@ -1031,6 +1083,18 @@
         "decision"
       ],
       "lineup_robustness": [
+        "decision"
+      ],
+      "manual_package_authority": [
+        "decision"
+      ],
+      "multi_horizon": [
+        "decision"
+      ],
+      "package_churn_penalty": [
+        "decision"
+      ],
+      "package_structural": [
         "decision"
       ],
       "calibration_store": [
@@ -1047,7 +1111,7 @@
       ]
     },
     "registry_integrity": true,
-    "critical_partial_count": 12,
+    "critical_partial_count": 8,
     "critical_partial": [
       {
         "id": "DSS-07",
@@ -1080,41 +1144,11 @@
         "detail": "registered capability has no active runtime evidence contract yet"
       },
       {
-        "id": "DSS-40",
-        "name": "Budget Opportunity Cost",
-        "category": "value",
-        "critical": true,
-        "probe": "sell_cost_affordability",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
         "id": "DSS-44",
         "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
         "category": "governance",
         "critical": true,
         "probe": "learning_loop",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-46",
-        "name": "Direct Challenger / Replacement Quality",
-        "category": "squad",
-        "critical": true,
-        "probe": "direct_challenger",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-49",
-        "name": "Chip / Blank / Double Strategic Context",
-        "category": "strategy",
-        "critical": true,
-        "probe": "chip_context",
         "status": "PARTIAL",
         "evidence_services": [],
         "detail": "registered capability has no active runtime evidence contract yet"
@@ -1135,16 +1169,6 @@
         "category": null,
         "critical": true,
         "probe": "reliability_overlay",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-X05",
-        "name": "Outgoing Baseline Resistance",
-        "category": null,
-        "critical": true,
-        "probe": "governed_optimizer",
         "status": "PARTIAL",
         "evidence_services": [],
         "detail": "registered capability has no active runtime evidence contract yet"
@@ -1183,7 +1207,7 @@
         "pass": true
       },
       "owned_prior_coverage": {
-        "value": 0.9333,
+        "value": 0.8,
         "threshold": 0.5,
         "sample": 15,
         "pass": true
@@ -1206,7 +1230,7 @@
       "model": "v5_historical_player_priors_v2",
       "season": "2025-26",
       "status": "READY",
-      "fetch_mode": "NETWORK_REFRESH",
+      "fetch_mode": "PERSISTED_CACHE",
       "coverage": {
         "current_players": 612,
         "matched_with_usable_prior": 346,
@@ -1218,7 +1242,7 @@
     },
     "owned_squad": {
       "players": 15,
-      "historical_prior_players": 14,
+      "historical_prior_players": 12,
       "low_confidence_players": 3
     },
     "governance": {
@@ -1228,14 +1252,14 @@
       "failed_quality_never_fabricates_replacement_evidence": true
     }
   },
-  "gate0_preflight_pass": false,
+  "gate0_preflight_pass": true,
   "governance": {
     "framework_schema": 8,
-    "generated_at": "2026-08-26T08:30:16.465004+00:00",
+    "generated_at": "2026-08-26T08:42:32.630563+00:00",
     "auditor": "v5-microservice-governance-v4",
-    "overall": "RED",
-    "decision_engine": "BLOCKED",
-    "recommendation_allowed": false,
+    "overall": "AMBER",
+    "decision_engine": "DEGRADED",
+    "recommendation_allowed": true,
     "go_allowed": false,
     "registry_integrity": true,
     "degraded_contexts": [],
@@ -1251,10 +1275,9 @@
       "phase": "full",
       "model": "v5_gate0_registry_driven_v3",
       "ruleset_id": "FPL_2026_27",
-      "pass": false,
+      "pass": true,
       "counts": {
-        "PASS": 12,
-        "FAIL": 4
+        "PASS": 16
       },
       "items": [
         {
@@ -1302,8 +1325,8 @@
           "name": "Budget / Affordability",
           "critical": true,
           "phase": "postflight",
-          "status": "FAIL",
-          "detail": "minimum_itb=0,packages=[]"
+          "status": "PASS",
+          "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:165,426->106,123', True, 60), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:565,346->123,249', True, 5), ('2:8,346->388,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
         },
         {
           "id": "G0-07",
@@ -1335,7 +1358,7 @@
           "critical": true,
           "phase": "postflight",
           "status": "PASS",
-          "detail": "status=READY,formation=3-5-2"
+          "detail": "status=READY,formation=4-4-2"
         },
         {
           "id": "G0-11",
@@ -1351,7 +1374,7 @@
           "critical": true,
           "phase": "postflight",
           "status": "PASS",
-          "detail": "captain=411,vice=237,captain_in_xi=True,vice_in_xi=True"
+          "detail": "captain=411,vice=115,captain_in_xi=True,vice_in_xi=True"
         },
         {
           "id": "G0-13",
@@ -1366,34 +1389,33 @@
           "name": "Single-Chip Rule / Chip Legality",
           "critical": true,
           "phase": "postflight",
-          "status": "FAIL",
-          "detail": "active_chip=bench_boost,active_count=1,max_active=1,legal=False"
+          "status": "PASS",
+          "detail": "active_chip=wildcard,active_count=1,max_active=1,legal=True"
         },
         {
           "id": "G0-15",
           "name": "Selling-Price / ITB Arithmetic Reconciliation",
           "critical": true,
           "phase": "preflight",
-          "status": "FAIL",
-          "detail": "complete=False,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=None,calculated_sell=None"
+          "status": "PASS",
+          "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=995,calculated_sell=995"
         },
         {
           "id": "G0-16",
           "name": "Wildcard Package Revalidated After Every Edit",
           "critical": true,
           "phase": "postflight",
-          "status": "FAIL",
-          "detail": "packages=[]"
+          "status": "PASS",
+          "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:165,426->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:565,346->123,249', True, True), ('2:8,346->388,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
         }
       ],
       "preflight": {
         "phase": "preflight",
         "model": "v5_gate0_registry_driven_v3",
         "ruleset_id": "FPL_2026_27",
-        "pass": false,
+        "pass": true,
         "counts": {
-          "PASS": 8,
-          "FAIL": 1
+          "PASS": 9
         },
         "items": [
           {
@@ -1465,8 +1487,8 @@
             "name": "Selling-Price / ITB Arithmetic Reconciliation",
             "critical": true,
             "phase": "preflight",
-            "status": "FAIL",
-            "detail": "complete=False,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=None,calculated_sell=None"
+            "status": "PASS",
+            "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=995,calculated_sell=995"
           }
         ],
         "registry_integrity": {
@@ -1488,10 +1510,9 @@
         "phase": "postflight",
         "model": "v5_gate0_registry_driven_v3",
         "ruleset_id": "FPL_2026_27",
-        "pass": false,
+        "pass": true,
         "counts": {
-          "FAIL": 3,
-          "PASS": 4
+          "PASS": 7
         },
         "items": [
           {
@@ -1499,8 +1520,8 @@
             "name": "Budget / Affordability",
             "critical": true,
             "phase": "postflight",
-            "status": "FAIL",
-            "detail": "minimum_itb=0,packages=[]"
+            "status": "PASS",
+            "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:165,426->106,123', True, 60), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:565,346->123,249', True, 5), ('2:8,346->388,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
           },
           {
             "id": "G0-10",
@@ -1508,7 +1529,7 @@
             "critical": true,
             "phase": "postflight",
             "status": "PASS",
-            "detail": "status=READY,formation=3-5-2"
+            "detail": "status=READY,formation=4-4-2"
           },
           {
             "id": "G0-11",
@@ -1524,7 +1545,7 @@
             "critical": true,
             "phase": "postflight",
             "status": "PASS",
-            "detail": "captain=411,vice=237,captain_in_xi=True,vice_in_xi=True"
+            "detail": "captain=411,vice=115,captain_in_xi=True,vice_in_xi=True"
           },
           {
             "id": "G0-13",
@@ -1539,16 +1560,16 @@
             "name": "Single-Chip Rule / Chip Legality",
             "critical": true,
             "phase": "postflight",
-            "status": "FAIL",
-            "detail": "active_chip=bench_boost,active_count=1,max_active=1,legal=False"
+            "status": "PASS",
+            "detail": "active_chip=wildcard,active_count=1,max_active=1,legal=True"
           },
           {
             "id": "G0-16",
             "name": "Wildcard Package Revalidated After Every Edit",
             "critical": true,
             "phase": "postflight",
-            "status": "FAIL",
-            "detail": "packages=[]"
+            "status": "PASS",
+            "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:165,426->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:565,346->123,249', True, True), ('2:8,346->388,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
           }
         ],
         "registry_integrity": {
@@ -1589,10 +1610,10 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "ACTIVE": 29,
-        "PARTIAL": 21
+        "ACTIVE": 32,
+        "PARTIAL": 18
       },
-      "coverage_ratio": 0.58,
+      "coverage_ratio": 0.64,
       "critical_partial": [
         {
           "id": "DSS-07",
@@ -1625,41 +1646,11 @@
           "detail": "registered capability has no active runtime evidence contract yet"
         },
         {
-          "id": "DSS-40",
-          "name": "Budget Opportunity Cost",
-          "category": "value",
-          "critical": true,
-          "probe": "sell_cost_affordability",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
           "id": "DSS-44",
           "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
           "category": "governance",
           "critical": true,
           "probe": "learning_loop",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
-          "id": "DSS-46",
-          "name": "Direct Challenger / Replacement Quality",
-          "category": "squad",
-          "critical": true,
-          "probe": "direct_challenger",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
-          "id": "DSS-49",
-          "name": "Chip / Blank / Double Strategic Context",
-          "category": "strategy",
-          "critical": true,
-          "probe": "chip_context",
           "status": "PARTIAL",
           "evidence_services": [],
           "detail": "registered capability has no active runtime evidence contract yet"
@@ -2106,9 +2097,12 @@
           "category": "value",
           "critical": true,
           "probe": "sell_cost_affordability",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision",
+            "truth"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-41",
@@ -2164,6 +2158,7 @@
           "probe": "structural_fit",
           "status": "ACTIVE",
           "evidence_services": [
+            "decision",
             "truth"
           ],
           "detail": "capability advertised by bounded-context owner"
@@ -2174,9 +2169,11 @@
           "category": "squad",
           "critical": true,
           "probe": "direct_challenger",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-47",
@@ -2208,9 +2205,11 @@
           "category": "strategy",
           "critical": true,
           "probe": "chip_context",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "truth"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-50",
@@ -2234,10 +2233,10 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "PARTIAL": 9,
-        "ACTIVE": 7
+        "PARTIAL": 7,
+        "ACTIVE": 9
       },
-      "coverage_ratio": 0.4375,
+      "coverage_ratio": 0.5625,
       "critical_partial": [
         {
           "id": "DSS-X01",
@@ -2255,16 +2254,6 @@
           "category": null,
           "critical": true,
           "probe": "reliability_overlay",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
-        },
-        {
-          "id": "DSS-X05",
-          "name": "Outgoing Baseline Resistance",
-          "category": null,
-          "critical": true,
-          "probe": "governed_optimizer",
           "status": "PARTIAL",
           "evidence_services": [],
           "detail": "registered capability has no active runtime evidence contract yet"
@@ -2341,9 +2330,11 @@
           "category": null,
           "critical": true,
           "probe": "governed_optimizer",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-X06",
@@ -2371,9 +2362,11 @@
           "category": null,
           "critical": false,
           "probe": "package_churn_penalty",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-X09",
@@ -2475,8 +2468,8 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "PARTIAL": 5,
-        "ACTIVE": 3
+        "PARTIAL": 2,
+        "ACTIVE": 6
       },
       "items": [
         {
@@ -2513,9 +2506,11 @@
           "name": "Multi-Horizon Strategic Optimization",
           "critical": true,
           "probe": "multi_horizon",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "enhancement capability not yet fully backed by native V5 evidence"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability contract satisfied"
         },
         {
           "id": "ENH-05",
@@ -2533,9 +2528,11 @@
           "name": "Package & Structural Optimization",
           "critical": true,
           "probe": "package_structural",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "enhancement capability not yet fully backed by native V5 evidence"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability contract satisfied"
         },
         {
           "id": "ENH-07",
@@ -2553,9 +2550,11 @@
           "name": "Evidence Fusion & Final Sanity Governance",
           "critical": true,
           "probe": "final_governance",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "enhancement capability not yet fully backed by native V5 evidence"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "governance"
+          ],
+          "detail": "capability contract satisfied"
         }
       ]
     },
@@ -2563,10 +2562,18 @@
       "availability": [
         "truth"
       ],
+      "chip_context": [
+        "truth"
+      ],
       "manual_authority": [
         "truth"
       ],
+      "sell_cost_affordability": [
+        "decision",
+        "truth"
+      ],
       "structural_fit": [
+        "decision",
         "truth"
       ],
       "universe_identity": [
@@ -2665,6 +2672,12 @@
       "decision_recheck": [
         "decision"
       ],
+      "direct_challenger": [
+        "decision"
+      ],
+      "governed_optimizer": [
+        "decision"
+      ],
       "lineup_alternatives": [
         "decision"
       ],
@@ -2672,6 +2685,18 @@
         "decision"
       ],
       "lineup_robustness": [
+        "decision"
+      ],
+      "manual_package_authority": [
+        "decision"
+      ],
+      "multi_horizon": [
+        "decision"
+      ],
+      "package_churn_penalty": [
+        "decision"
+      ],
+      "package_structural": [
         "decision"
       ],
       "calibration_store": [
@@ -2688,42 +2713,12 @@
       ],
       "uncertainty_robustness": [
         "governance-derived"
+      ],
+      "final_governance": [
+        "governance"
       ]
     },
-    "gate0_failures": [
-      {
-        "id": "G0-06",
-        "name": "Budget / Affordability",
-        "critical": true,
-        "phase": "postflight",
-        "status": "FAIL",
-        "detail": "minimum_itb=0,packages=[]"
-      },
-      {
-        "id": "G0-14",
-        "name": "Single-Chip Rule / Chip Legality",
-        "critical": true,
-        "phase": "postflight",
-        "status": "FAIL",
-        "detail": "active_chip=bench_boost,active_count=1,max_active=1,legal=False"
-      },
-      {
-        "id": "G0-15",
-        "name": "Selling-Price / ITB Arithmetic Reconciliation",
-        "critical": true,
-        "phase": "preflight",
-        "status": "FAIL",
-        "detail": "complete=False,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=None,calculated_sell=None"
-      },
-      {
-        "id": "G0-16",
-        "name": "Wildcard Package Revalidated After Every Edit",
-        "critical": true,
-        "phase": "postflight",
-        "status": "FAIL",
-        "detail": "packages=[]"
-      }
-    ],
+    "gate0_failures": [],
     "critical_partial": [
       {
         "id": "DSS-07",
@@ -2756,41 +2751,11 @@
         "detail": "registered capability has no active runtime evidence contract yet"
       },
       {
-        "id": "DSS-40",
-        "name": "Budget Opportunity Cost",
-        "category": "value",
-        "critical": true,
-        "probe": "sell_cost_affordability",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
         "id": "DSS-44",
         "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
         "category": "governance",
         "critical": true,
         "probe": "learning_loop",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-46",
-        "name": "Direct Challenger / Replacement Quality",
-        "category": "squad",
-        "critical": true,
-        "probe": "direct_challenger",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-49",
-        "name": "Chip / Blank / Double Strategic Context",
-        "category": "strategy",
-        "critical": true,
-        "probe": "chip_context",
         "status": "PARTIAL",
         "evidence_services": [],
         "detail": "registered capability has no active runtime evidence contract yet"
@@ -2811,16 +2776,6 @@
         "category": null,
         "critical": true,
         "probe": "reliability_overlay",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-X05",
-        "name": "Outgoing Baseline Resistance",
-        "category": null,
-        "critical": true,
-        "probe": "governed_optimizer",
         "status": "PARTIAL",
         "evidence_services": [],
         "detail": "registered capability has no active runtime evidence contract yet"
@@ -2862,33 +2817,6 @@
         "status": "PARTIAL",
         "evidence_services": [],
         "detail": "enhancement capability not yet fully backed by native V5 evidence"
-      },
-      {
-        "id": "ENH-04",
-        "name": "Multi-Horizon Strategic Optimization",
-        "critical": true,
-        "probe": "multi_horizon",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "enhancement capability not yet fully backed by native V5 evidence"
-      },
-      {
-        "id": "ENH-06",
-        "name": "Package & Structural Optimization",
-        "critical": true,
-        "probe": "package_structural",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "enhancement capability not yet fully backed by native V5 evidence"
-      },
-      {
-        "id": "ENH-08",
-        "name": "Evidence Fusion & Final Sanity Governance",
-        "critical": true,
-        "probe": "final_governance",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "enhancement capability not yet fully backed by native V5 evidence"
       }
     ],
     "governance": {
@@ -2908,9 +2836,9 @@
     "base_collection": {
       "service_id": "ingestion",
       "operation": "collect_base",
-      "service_compute_ms": 670.768,
-      "round_trip_ms": 717.866,
-      "transport_overhead_ms": 47.098,
+      "service_compute_ms": 383.181,
+      "round_trip_ms": 431.298,
+      "transport_overhead_ms": 48.117,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2923,9 +2851,9 @@
     "event_context": {
       "service_id": "truth",
       "operation": "context",
-      "service_compute_ms": 0.09,
-      "round_trip_ms": 36.558,
-      "transport_overhead_ms": 36.468,
+      "service_compute_ms": 0.064,
+      "round_trip_ms": 34.542,
+      "transport_overhead_ms": 34.478,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2939,9 +2867,9 @@
       "auth": {
         "service_id": "ingestion",
         "operation": "collect_authenticated",
-        "service_compute_ms": 0.074,
-        "round_trip_ms": 5.748,
-        "transport_overhead_ms": 5.674,
+        "service_compute_ms": 0.041,
+        "round_trip_ms": 4.062,
+        "transport_overhead_ms": 4.021,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2954,9 +2882,9 @@
       "dynamic": {
         "service_id": "ingestion",
         "operation": "collect_dynamic",
-        "service_compute_ms": 130.584,
-        "round_trip_ms": 149.082,
-        "transport_overhead_ms": 18.498,
+        "service_compute_ms": 79.744,
+        "round_trip_ms": 98.376,
+        "transport_overhead_ms": 18.632,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2970,9 +2898,9 @@
     "truth_assembly": {
       "service_id": "truth",
       "operation": "assemble",
-      "service_compute_ms": 1.284,
-      "round_trip_ms": 79.578,
-      "transport_overhead_ms": 78.294,
+      "service_compute_ms": 1.195,
+      "round_trip_ms": 76.63,
+      "transport_overhead_ms": 75.435,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2983,12 +2911,12 @@
       }
     },
     "state_hydration": {
-      "historical_prior": {
+      "challenger_observations": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 0.065,
-        "round_trip_ms": 8.8,
-        "transport_overhead_ms": 8.735,
+        "service_compute_ms": 4.132,
+        "round_trip_ms": 16.835,
+        "transport_overhead_ms": 12.703,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2998,12 +2926,12 @@
           "cooldown_seconds": 10.0
         }
       },
-      "challenger_observations": {
+      "historical_prior": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 0.147,
-        "round_trip_ms": 6.863,
-        "transport_overhead_ms": 6.716,
+        "service_compute_ms": 3.36,
+        "round_trip_ms": 20.32,
+        "transport_overhead_ms": 16.96,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -3016,9 +2944,9 @@
       "price_trajectory": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 0.22,
-        "round_trip_ms": 9.853,
-        "transport_overhead_ms": 9.633,
+        "service_compute_ms": 1.416,
+        "round_trip_ms": 24.078,
+        "transport_overhead_ms": 22.662,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -3031,9 +2959,9 @@
       "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 0.031,
-        "round_trip_ms": 7.951,
-        "transport_overhead_ms": 7.92,
+        "service_compute_ms": 4.827,
+        "round_trip_ms": 22.534,
+        "transport_overhead_ms": 17.707,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -3048,9 +2976,9 @@
       "price": {
         "service_id": "price",
         "operation": "build",
-        "service_compute_ms": 15.846,
-        "round_trip_ms": 110.184,
-        "transport_overhead_ms": 94.338,
+        "service_compute_ms": 16.962,
+        "round_trip_ms": 102.06,
+        "transport_overhead_ms": 85.098,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -3063,9 +2991,9 @@
       "prediction": {
         "service_id": "prediction",
         "operation": "build",
-        "service_compute_ms": 331.927,
-        "round_trip_ms": 552.047,
-        "transport_overhead_ms": 220.12,
+        "service_compute_ms": 169.14,
+        "round_trip_ms": 376.16,
+        "transport_overhead_ms": 207.02,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -3080,9 +3008,9 @@
       "gate0_preflight": {
         "service_id": "governance",
         "operation": "gate0_preflight",
-        "service_compute_ms": 0.854,
-        "round_trip_ms": 9.887,
-        "transport_overhead_ms": 9.033,
+        "service_compute_ms": 0.694,
+        "round_trip_ms": 8.346,
+        "transport_overhead_ms": 7.652,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -3095,9 +3023,9 @@
       "evaluation": {
         "service_id": "evaluation",
         "operation": "build",
-        "service_compute_ms": 2.346,
-        "round_trip_ms": 236.079,
-        "transport_overhead_ms": 233.733,
+        "service_compute_ms": 2.285,
+        "round_trip_ms": 245.623,
+        "transport_overhead_ms": 243.338,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -3110,9 +3038,9 @@
       "decision_prepare": {
         "service_id": "decision",
         "operation": "prepare",
-        "service_compute_ms": 49.139,
-        "round_trip_ms": 204.253,
-        "transport_overhead_ms": 155.114,
+        "service_compute_ms": 489.675,
+        "round_trip_ms": 641.976,
+        "transport_overhead_ms": 152.301,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -3126,9 +3054,9 @@
     "decision_finalize": {
       "service_id": "decision",
       "operation": "finalize",
-      "service_compute_ms": 0.713,
-      "round_trip_ms": 149.266,
-      "transport_overhead_ms": 148.553,
+      "service_compute_ms": 0.825,
+      "round_trip_ms": 148.723,
+      "transport_overhead_ms": 147.898,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -3141,9 +3069,9 @@
     "governance": {
       "service_id": "governance",
       "operation": "audit",
-      "service_compute_ms": 0.861,
-      "round_trip_ms": 150.815,
-      "transport_overhead_ms": 149.954,
+      "service_compute_ms": 0.682,
+      "round_trip_ms": 148.334,
+      "transport_overhead_ms": 147.652,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -3154,27 +3082,12 @@
       }
     },
     "artifact_persistence": {
-      "prediction_quality": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 2.502,
-        "round_trip_ms": 36.032,
-        "transport_overhead_ms": 33.53,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
       "historical_prior": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 6.129,
-        "round_trip_ms": 98.724,
-        "transport_overhead_ms": 92.595,
+        "service_compute_ms": 6.971,
+        "round_trip_ms": 89.393,
+        "transport_overhead_ms": 82.422,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3184,42 +3097,12 @@
           "cooldown_seconds": 10.0
         }
       },
-      "prediction_accuracy": {
+      "prediction_quality": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 6.09,
-        "round_trip_ms": 39.485,
-        "transport_overhead_ms": 33.395,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "team_strength": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 7.398,
-        "round_trip_ms": 52.075,
-        "transport_overhead_ms": 44.677,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "package_optimizer": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 2.108,
-        "round_trip_ms": 44.691,
-        "transport_overhead_ms": 42.583,
+        "service_compute_ms": 0.369,
+        "round_trip_ms": 34.212,
+        "transport_overhead_ms": 33.843,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3232,9 +3115,9 @@
       "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 8.477,
-        "round_trip_ms": 50.486,
-        "transport_overhead_ms": 42.009,
+        "service_compute_ms": 16.941,
+        "round_trip_ms": 65.765,
+        "transport_overhead_ms": 48.824,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3244,12 +3127,42 @@
           "cooldown_seconds": 10.0
         }
       },
-      "challenger_scorecard": {
+      "team_strength": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 0.494,
-        "round_trip_ms": 46.745,
-        "transport_overhead_ms": 46.251,
+        "service_compute_ms": 10.844,
+        "round_trip_ms": 68.984,
+        "transport_overhead_ms": 58.14,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "package_optimizer": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 5.242,
+        "round_trip_ms": 72.153,
+        "transport_overhead_ms": 66.911,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "prediction_accuracy": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 6.764,
+        "round_trip_ms": 75.73,
+        "transport_overhead_ms": 68.966,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3262,9 +3175,9 @@
       "framework_health": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 2.384,
-        "round_trip_ms": 44.317,
-        "transport_overhead_ms": 41.933,
+        "service_compute_ms": 6.45,
+        "round_trip_ms": 70.6,
+        "transport_overhead_ms": 64.15,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3274,12 +3187,12 @@
           "cooldown_seconds": 10.0
         }
       },
-      "price_trajectory": {
+      "challenger_scorecard": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 6.629,
-        "round_trip_ms": 39.059,
-        "transport_overhead_ms": 32.43,
+        "service_compute_ms": 6.87,
+        "round_trip_ms": 79.527,
+        "transport_overhead_ms": 72.657,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3292,9 +3205,24 @@
       "price_alerts": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 3.528,
-        "round_trip_ms": 37.665,
-        "transport_overhead_ms": 34.137,
+        "service_compute_ms": 26.665,
+        "round_trip_ms": 67.909,
+        "transport_overhead_ms": 41.244,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "price_trajectory": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 24.87,
+        "round_trip_ms": 81.236,
+        "transport_overhead_ms": 56.366,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3307,9 +3235,9 @@
       "prices": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 108.868,
-        "round_trip_ms": 173.466,
-        "transport_overhead_ms": 64.598,
+        "service_compute_ms": 35.647,
+        "round_trip_ms": 148.993,
+        "transport_overhead_ms": 113.346,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3322,9 +3250,9 @@
       "predictions": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 301.918,
-        "round_trip_ms": 518.959,
-        "transport_overhead_ms": 217.041,
+        "service_compute_ms": 297.642,
+        "round_trip_ms": 526.344,
+        "transport_overhead_ms": 228.702,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3338,9 +3266,9 @@
     "snapshot_write": {
       "service_id": "snapshot",
       "operation": "snapshot",
-      "service_compute_ms": 10.798,
-      "round_trip_ms": 16.711,
-      "transport_overhead_ms": 5.913,
+      "service_compute_ms": 15.048,
+      "round_trip_ms": 20.568,
+      "transport_overhead_ms": 5.52,
       "transport_attempts": 1,
       "transport_retry_policy": "non_idempotent",
       "transport_circuit": {
@@ -3350,7 +3278,7 @@
         "cooldown_seconds": 10.0
       }
     },
-    "orchestrator_wall_ms": 2778.177
+    "orchestrator_wall_ms": 2708.909
   },
   "provenance": {
     "ruleset_id": "FPL_2026_27",

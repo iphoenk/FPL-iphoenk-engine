@@ -1,15 +1,25 @@
 {
-  "fingerprint": "921576e867d6cd87",
+  "fingerprint": "89bb37bc83ebb204",
   "state": {
-    "squad": null,
+    "squad": "HOLD",
     "starting_xi": [],
-    "formation": "3-5-2",
+    "formation": "4-4-2",
     "captain": 411,
-    "vice_captain": 237,
+    "vice_captain": 115,
     "chip": null,
     "price": [
       [
         8,
+        "RISE",
+        "CRITICAL"
+      ],
+      [
+        15,
+        "RISE",
+        "CRITICAL"
+      ],
+      [
+        88,
         "RISE",
         "CRITICAL"
       ],
@@ -25,7 +35,7 @@
       ]
     ],
     "critical_health": {
-      "overall": "RED",
+      "overall": "AMBER",
       "go_allowed": false
     }
   }

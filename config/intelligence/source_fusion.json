@@ -1,6 +1,10 @@
 {
-  "schema_version": 1,
-  "model_id": "v5_dss_source_fusion_v1",
+  "schema_version": 2,
+  "model_id": "v5_dss_source_fusion_v2",
+  "season_authority": {
+    "registry_path": "config/rules/registry.json",
+    "season_field": "season"
+  },
   "policy": {
     "official_fpl_remains_native_authority": true,
     "fpl_core_insights_primary_for_epl_advanced_stats": true,
@@ -13,10 +17,9 @@
   "understat": {
     "enabled": true,
     "league": "EPL",
-    "season": "2026",
     "timeout_seconds": 4.0,
     "cache_ttl_seconds": 21600,
-    "cache_path": "data/v5/source_cache/understat_epl_2026.json",
+    "cache_path_template": "data/v5/source_cache/understat_epl_{season}.json",
     "capabilities": ["shots", "xg", "xa", "key_passes", "xg_chain", "xg_buildup"]
   },
   "api_football": {
@@ -24,11 +27,15 @@
     "base_url": "https://v3.football.api-sports.io",
     "api_key_env": "API_FOOTBALL_KEY",
     "api_key_header": "x-apisports-key",
-    "season": 2026,
     "timeout_seconds": 5.0,
     "cache_ttl_seconds": 43200,
     "cache_dir": "data/v5/source_cache/api_football",
     "resolve_league_ids_dynamically": true,
+    "team_matching": {
+      "minimum_similarity": 0.72,
+      "minimum_unique_margin": 0.08,
+      "include_official_short_name": true
+    },
     "competitions": {
       "uefa_champions_league": ["UEFA Champions League", "Champions League"],
       "uefa_europa_league": ["UEFA Europa League", "Europa League"],
@@ -40,6 +47,10 @@
     "fixture_window_days_before": 14,
     "fixture_window_days_after": 60,
     "max_competition_requests_per_refresh": 6,
+    "rate_limit_headers": {
+      "remaining": ["x-ratelimit-requests-remaining", "x-ratelimit-remaining"],
+      "limit": ["x-ratelimit-requests-limit", "x-ratelimit-limit"]
+    },
     "international": {
       "enabled": true,
       "player_minutes_requires_resolved_player_identity": true,

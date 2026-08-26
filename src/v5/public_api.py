@@ -3,10 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
+from string import Formatter
 from typing import Any, Mapping
 
 import requests
@@ -60,6 +62,19 @@ def _cache_root() -> Path | None:
         path = ROOT / path
     path.mkdir(parents=True, exist_ok=True)
     return path.resolve()
+
+
+def _route_for_path(path: str) -> str | None:
+    for route, template in _registry()["endpoints"].items():
+        pattern = "^"
+        for literal, field_name, _format_spec, _conversion in Formatter().parse(str(template)):
+            pattern += re.escape(literal)
+            if field_name is not None:
+                pattern += r"[^/]+"
+        pattern += "$"
+        if re.match(pattern, path):
+            return str(route)
+    return None
 
 
 def _cache_ttl(route: str | None) -> float:
@@ -182,7 +197,8 @@ def route_path(route: str, **params: Any) -> str:
         raise ValueError(f"missing parameter for route {route}: {exc.args[0]}") from exc
 
 
-def _get_path(path: str, *, route: str | None = None) -> tuple[Any | None, dict]:
+def _get_path(path: str) -> tuple[Any | None, dict]:
+    route = _route_for_path(path)
     base, timeout, retries, backoff, _, allow_redirects = _transport()
     cached = _read_cache(base, path, route)
     if cached is not None:
@@ -266,7 +282,7 @@ def _get_path(path: str, *, route: str | None = None) -> tuple[Any | None, dict]
 
 
 def get(route: str, **params: Any) -> tuple[Any | None, dict]:
-    return _get_path(route_path(route, **params), route=route)
+    return _get_path(route_path(route, **params))
 
 
 def fetch_many(specs: Mapping[str, FetchSpec]) -> tuple[dict[str, Any | None], dict[str, dict]]:
@@ -274,17 +290,12 @@ def fetch_many(specs: Mapping[str, FetchSpec]) -> tuple[dict[str, Any | None], d
     _, _, _, _, workers, _ = _transport()
     resolved = {name: route_path(spec.route, **dict(spec.params)) for name, spec in specs.items()}
     names_by_path: dict[str, list[str]] = {}
-    route_by_path: dict[str, str] = {}
     for name, path in resolved.items():
         names_by_path.setdefault(path, []).append(name)
-        route_by_path.setdefault(path, str(specs[name].route))
 
     unique_results: dict[str, tuple[Any | None, dict]] = {}
     with ThreadPoolExecutor(max_workers=min(workers, max(1, len(names_by_path)))) as pool:
-        future_map = {
-            pool.submit(_get_path, path, route=route_by_path[path]): path
-            for path in names_by_path
-        }
+        future_map = {pool.submit(_get_path, path): path for path in names_by_path}
         for future in as_completed(future_map):
             path = future_map[future]
             unique_results[path] = future.result()

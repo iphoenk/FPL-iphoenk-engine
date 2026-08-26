@@ -1,12 +1,12 @@
 {
-  "version": 6,
+  "version": 7,
   "module_policy": {
-    "minimum_registered_modules": 34,
+    "minimum_registered_modules": 35,
     "required_truth_modules": ["rules","source_authority","public_api","official_authenticated","event_context","identity","phase_state","squad","finance","team_service","live_scoring"],
     "required_intelligence_modules": ["price_trajectory","xmins_v2","role_intelligence","team_strength","projection","prediction_evaluation","calibration_store","challenger_scorecard","package_optimizer"],
     "required_decision_modules": ["projection_index","package_optimizer","lineup_optimizer","decision_trace","dss_core","dss_extensions"],
     "required_framework_modules": ["gate0","enhancement_layers","framework_health"],
-    "required_governance_modules": ["performance","persistence","degraded_mode","runner","service_runtime"],
+    "required_governance_modules": ["performance","persistence","degraded_mode","cluster_health","runner","service_runtime"],
     "active_statuses": ["ACTIVE", "ACTIVE_ALPHA"]
   },
   "service_policy": {
@@ -32,7 +32,8 @@
     "v4_prediction_bridge_must_not_be_authority": true,
     "governance_service_must_block_go_until_postflight_gate0": true,
     "degraded_context_must_block_unqualified_go": true,
-    "critical_service_failure_must_fail_closed": true
+    "critical_service_failure_must_fail_closed": true,
+    "cluster_health_must_be_on_demand_only": true
   },
   "production": {"promotion_must_remain_locked_during_alpha": true},
   "architecture": {"require_entrypoint": true,"require_config": true,"require_adjustment_surface": true,"require_microservices": true}

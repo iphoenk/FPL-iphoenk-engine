@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "registry": "fpl_v4_microservice_registry_v1",
+  "architecture_version": "4.8.0",
+  "execution_model": "process_isolated_single_host",
+  "services": [
+    {
+      "id": "snapshot_prediction",
+      "name": "Snapshot, Enrichment & Prediction Service",
+      "boundary_state": "TRANSITIONAL_COMPOSITE",
+      "module": "src.services.snapshot_service",
+      "command": ["{python}", "-m", "src.services.snapshot_service", "{mode}"],
+      "runtime_flags": {"stats": "--stats", "deep_stats": "--deep-stats", "as_of": "--as-of"},
+      "timeout_seconds": 90,
+      "depends_on": [],
+      "produces": ["latest_snapshot", "predictions", "team_state", "universe", "source_health"],
+      "critical": true
+    },
+    {
+      "id": "rules_compliance",
+      "name": "Rules Compliance Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.engines.compliance_audit",
+      "command": ["{python}", "-m", "src.engines.compliance_audit"],
+      "timeout_seconds": 20,
+      "depends_on": ["snapshot_prediction"],
+      "produces": ["compliance"],
+      "critical": true
+    },
+    {
+      "id": "framework_preflight",
+      "name": "Framework PRE-FLIGHT Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.engines.framework_health_audit",
+      "command": ["{python}", "-m", "src.engines.framework_health_audit", "--phase", "preflight", "--strict"],
+      "timeout_seconds": 20,
+      "depends_on": ["rules_compliance"],
+      "produces": ["framework_preflight"],
+      "critical": true
+    },
+    {
+      "id": "optimization",
+      "name": "Optimization & Decision Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.engines.v4_decision_pipeline",
+      "command": ["{python}", "-m", "src.engines.v4_decision_pipeline"],
+      "timeout_seconds": 45,
+      "depends_on": ["framework_preflight"],
+      "produces": ["wc_decision", "wc_package", "lineup", "recommendation_sanity", "decision_pipeline"],
+      "critical": true
+    },
+    {
+      "id": "framework_postflight",
+      "name": "Framework POST-FLIGHT Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.engines.framework_health_audit",
+      "command": ["{python}", "-m", "src.engines.framework_health_audit", "--phase", "postflight", "--strict"],
+      "timeout_seconds": 20,
+      "depends_on": ["optimization"],
+      "produces": ["framework_postflight"],
+      "critical": true
+    },
+    {
+      "id": "report_governance",
+      "name": "Checkpoint Report Governance Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.engines.v4_checkpoint_governance",
+      "command": ["{python}", "-m", "src.engines.v4_checkpoint_governance"],
+      "timeout_seconds": 20,
+      "depends_on": ["framework_postflight"],
+      "produces": ["checkpoint_decision"],
+      "critical": true
+    }
+  ],
+  "guardrails": {
+    "single_snapshot_authority": true,
+    "services_may_not_refetch_snapshot": true,
+    "fail_closed_on_contract_failure": true,
+    "prediction_formula_unchanged": true,
+    "optimizer_search_width_unchanged": true,
+    "gate0_checks_unchanged": 16,
+    "registry_counts_unchanged": {"dss_core": 50, "dss_extensions": 16, "enhancements": 8}
+  }
+}

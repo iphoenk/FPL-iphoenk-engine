@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.7.3
+# FPL iphoenk Engine V4.8.0
 
 A production-oriented personal FPL data platform.
 
@@ -61,10 +61,8 @@ python fpl_daily_tasks.py stats-sync --gw 1
 python fpl_daily_tasks.py stats-sync --gw 1 --deep
 python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
 
-python -m src.engines.framework_health_audit --phase preflight --strict
-python -m src.engines.v4_decision_pipeline
-python -m src.engines.framework_health_audit --phase postflight --strict
-python -m src.engines.v4_checkpoint_governance
+python -m src.services.orchestrator daily --stats
+python -m src.services.orchestrator deadline --stats --as-of "2026-08-28T21:30:00+07:00"
 python -m src.engines.v4_quality_gate
 
 uvicorn live_service:app --host 0.0.0.0 --port 8000
@@ -121,3 +119,14 @@ GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy
 - `LOCKED_15` squad composition is reported separately from the still-adjustable XI, bench order, captain, and vice-captain.
 - Deterministic `--as-of` runs are labelled simulations and can never authorize a live action.
 - The final action is produced only after POST-FLIGHT health, while V4.7.1 predictions and V4.7.2 optimizer search widths remain unchanged.
+
+## V4.8.0 process-isolated service boundaries
+
+- Six registry-driven services run as isolated Python processes under one fail-closed orchestrator.
+- Every service publishes versioned JSON contracts that are validated before its dependants may run.
+- One immutable `latest.json` snapshot is hashed after refresh and checked after every downstream service.
+- Snapshot, enrichment, and prediction remain one explicitly labelled transitional composite boundary; this avoids a risky formula rewrite during the first migration step.
+- Prediction V4.7.1, optimizer V4.7.2, checkpoint governance V4.7.3, sell-cost logic, Gate 0, and registry counts remain unchanged.
+- `data/service_orchestration_v4.json` provides service status, timings, contract hashes, and failure evidence.
+
+See `docs/v4-microservices.md` for service ownership, failure semantics, preserved invariants, and the remaining composite-boundary debt.

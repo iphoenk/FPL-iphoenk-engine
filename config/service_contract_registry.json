@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "registry": "fpl_v4_service_contracts_v1",
+  "contracts": {
+    "latest_snapshot": {"path": "data/latest.json", "min_schema_version": 480, "version_field": "engine_version", "version_prefix": "4.8.0-service-boundaries", "required_paths": ["generated_at", "phase", "checkpoint_context.policy_id", "team_summary.sell_value", "files.predictions", "meta.service_contract_compatible"]},
+    "predictions": {"path": "data/predictions_v4.json", "min_schema_version": 471, "version_field": "model_version", "version_prefix": "v4.7.1-correctness-hotfix", "required_paths": ["generated_at", "players", "input_coverage"], "min_lengths": {"players": 500}},
+    "team_state": {"path": "data/team.json", "required_paths": ["generated_at", "squad_authority", "squad", "team_value_ledger", "totals.sell_value"], "min_lengths": {"squad": 15}},
+    "universe": {"path": "data/universe.json", "required_paths": ["generated_at", "players"], "min_lengths": {"players": 500}},
+    "source_health": {"path": "data/health.json", "required_paths": ["bootstrap.status", "fixtures.status", "entry.status", "history.status", "transfers.status"]},
+    "compliance": {"path": "data/compliance_audit.json", "required_paths": ["overall"], "equals": {"overall": "PASS"}},
+    "framework_preflight": {"path": "data/framework_health_preflight_v4.json", "min_schema_version": 473, "required_paths": ["phase", "overall", "gate0.pass", "checkpoint_context.policy_id"], "equals": {"phase": "preflight", "gate0.pass": true}},
+    "wc_decision": {"path": "data/wc_decision_v4.json", "min_schema_version": 472, "required_paths": ["classification", "affordability.price_basis", "optimized_elements"], "min_lengths": {"optimized_elements": 15}},
+    "wc_package": {"path": "data/wc_package_audit_v4.json", "min_schema_version": 472, "required_paths": ["overall_verdict", "best_by_replacement_count", "affordability.price_basis"]},
+    "lineup": {"path": "data/lineup_decision_v4.json", "min_schema_version": 452, "required_paths": ["formation", "starting_xi", "captain.element", "vice_captain.element"], "min_lengths": {"starting_xi": 11}},
+    "recommendation_sanity": {"path": "data/recommendation_sanity_v4.json", "min_schema_version": 460, "required_paths": ["final_verdict", "guardrails.raw_optimizer_not_authoritative"]},
+    "decision_pipeline": {"path": "data/decision_pipeline_v4.json", "min_schema_version": 473, "required_paths": ["checkpoint_context.policy_id", "results.recommendation_final", "performance_guardrails.search_quality_reduction"], "equals": {"performance_guardrails.search_quality_reduction": false}},
+    "framework_postflight": {"path": "data/framework_health_v4.json", "min_schema_version": 473, "required_paths": ["phase", "overall", "gate0.pass", "checkpoint_context.policy_id"], "equals": {"phase": "postflight", "gate0.pass": true}},
+    "checkpoint_decision": {"path": "data/checkpoint_decision_v4.json", "min_schema_version": 473, "required_paths": ["action_state", "headline", "squad.composition_status", "decision.execution_authorized", "lineup.requires_explicit_final_lock"]}
+  }
+}

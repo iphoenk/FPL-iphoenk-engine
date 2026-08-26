@@ -1,4 +1,4 @@
-name: FPL iphoenk V4.7.3 checkpoint governance gate
+name: FPL iphoenk V4.8.0 service boundary gate
 
 on:
   workflow_dispatch:
@@ -35,19 +35,9 @@ jobs:
         run: pip install --disable-pip-version-check -r requirements.txt pytest
       - name: Unit and acceptance tests
         run: python -m pytest -q
-      - name: Generate V4 point-in-time prediction snapshot
-        run: python -m src.engine daily --stats
-      - name: Rules compliance evidence
-        run: python -m src.engines.compliance_audit
-      - name: Framework health PRE-FLIGHT
-        run: python -m src.engines.framework_health_audit --phase preflight --strict
-      - name: Generate governed V4 decision outputs
-        run: python -m src.engines.v4_decision_pipeline
-      - name: Framework health POST-FLIGHT
-        run: python -m src.engines.framework_health_audit --phase postflight --strict
-      - name: Apply checkpoint and report governance
-        run: python -m src.engines.v4_checkpoint_governance
-      - name: Centralized V4.7.3 checkpoint quality gate
+      - name: Run process-isolated V4 services
+        run: python -m src.services.orchestrator daily --stats
+      - name: Centralized V4.8.0 service quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise acceptance summary
         run: |
@@ -58,6 +48,7 @@ jobs:
           latest=json.load(open('data/latest.json'))
           pipeline=json.load(open('data/decision_pipeline_v4.json'))
           checkpoint=json.load(open('data/checkpoint_decision_v4.json'))
+          orchestration=json.load(open('data/service_orchestration_v4.json'))
           print({
               'health': h['overall'],
               'recommendation_allowed': h['recommendation_allowed'],
@@ -72,6 +63,8 @@ jobs:
               'checkpoint': checkpoint['checkpoint_context']['policy_id'],
               'action': checkpoint['action_state'],
               'headline': checkpoint['headline'],
+              'services': orchestration['summary']['services_passed'],
+              'orchestration_ms': orchestration['duration_ms'],
           })
           PY
       - name: Upload branch data only

@@ -5,6 +5,7 @@ import statistics
 from pathlib import Path
 
 from src.engines.reliability import validate_snapshot
+from src.services.contracts import file_digest
 from src.utils import DATA
 
 
@@ -81,12 +82,28 @@ def run() -> dict:
     reliability = validate_snapshot(latest)
     assert reliability["ok"], reliability
     assert latest.get("schema_version", 0) >= 40
-    assert int(latest.get("schema_version", 0)) >= 473
-    assert str(latest.get("engine_version", "")).startswith("4.7.3-checkpoint-governance")
+    assert int(latest.get("schema_version", 0)) >= 480
+    assert str(latest.get("engine_version", "")).startswith("4.8.0-service-boundaries")
     assert latest.get("meta", {}).get("parallel_fetch_is_single_snapshot_not_polling") is True
     assert latest.get("meta", {}).get("checkpoint_policy_registry_driven") is True
     assert latest.get("meta", {}).get("simulation_never_authorizes_action") is True
+    assert latest.get("meta", {}).get("service_contract_compatible") is True
+    assert latest.get("meta", {}).get("service_boundaries_registry_driven") is True
     assert latest.get("checkpoint_context", {}).get("policy_id")
+
+    orchestration = _load("service_orchestration_v4.json")
+    assert int(orchestration.get("schema_version", 0)) >= 480, orchestration
+    assert str(orchestration.get("engine", "")).startswith("v4.8.0-service-orchestrator"), orchestration
+    assert orchestration.get("status") == "PASS", orchestration
+    services = orchestration.get("services") or []
+    assert len(services) == 6 and all(row.get("status") == "PASS" for row in services), services
+    assert sum(row.get("boundary_state") == "TRANSITIONAL_COMPOSITE" for row in services) == 1, services
+    assert all(all(contract.get("valid") for contract in row.get("contracts") or []) for row in services), services
+    assert orchestration.get("snapshot_identity", {}).get("sha256") == file_digest(DATA / "latest.json"), orchestration
+    og = orchestration.get("guardrails") or {}
+    assert og.get("single_snapshot_authority") and og.get("services_may_not_refetch_snapshot")
+    assert og.get("prediction_formula_unchanged") and og.get("optimizer_search_width_unchanged")
+    assert og.get("gate0_checks_unchanged") == 16
 
     compliance = _load("compliance_audit.json")
     assert compliance.get("overall") == "PASS", compliance
@@ -242,9 +259,11 @@ def run() -> dict:
         "captain": lineup["captain"]["name"],
         "checkpoint": checkpoint["checkpoint_context"]["policy_id"],
         "action": checkpoint["action_state"],
+        "services": len(services),
+        "orchestration_ms": orchestration.get("duration_ms"),
         "pipeline_ms": timings["total_pipeline_ms"],
     }
-    print("V4.7.3 CHECKPOINT GOVERNANCE + DECISION-EQUIVALENCE QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.8.0 SERVICE CONTRACT + DECISION-EQUIVALENCE QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "model_id": "v5_evidence_guard_v1",
+  "schema_version": 2,
+  "model_id": "v5_evidence_guard_v2",
   "freshness": {
     "max_prediction_age_seconds": 1800,
     "require_deadline": true
@@ -14,7 +14,8 @@
     "require_prediction_quality": true,
     "healthy_prediction_status": "HEALTHY",
     "require_ruleset_match": true,
-    "require_truth_validation": true
+    "ruleset_authority": "truth_event_context",
+    "require_truth_validation": false
   },
   "early_season": {
     "through_gw": 5,

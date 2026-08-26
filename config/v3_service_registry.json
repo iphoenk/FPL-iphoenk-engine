@@ -1,7 +1,7 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.12-governed-decision-output",
+  "production_contract": "v3.13-historical-priors-decision-first-report",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,
@@ -14,14 +14,19 @@
     "latest_json_single_writer_during_fan_in": true,
     "dependency_aware_scheduling": true,
     "raw_optimizer_is_not_final_decision": true,
-    "postflight_gate0_requires_governed_lineup_and_package": true
+    "postflight_gate0_requires_governed_lineup_and_package": true,
+    "mechanical_validity_is_not_prediction_quality": true,
+    "historical_prior_missing_evidence_is_never_fabricated": true,
+    "two_layer_report_contract": true,
+    "user_report_is_decision_first": true,
+    "technical_state_is_appendix_only": true
   },
   "runtime": {
     "max_parallel_services": 5,
     "service_timeout_seconds": 180,
     "http_cache_ttl_seconds": 180,
     "performance_budget_seconds": 45,
-    "performance_target": "preserve sub-45-second business runtime while adding governed lineup and postflight validation"
+    "performance_target": "preserve sub-45-second runtime while adding historical priors, prediction quality and decision-first reporting"
   },
   "services": {
     "collector": {
@@ -45,16 +50,27 @@
       "latest_keys": ["price_summary"],
       "latest_file_keys": ["price_trajectory", "price_alerts"]
     },
-    "prediction": {
+    "historical_prior": {
       "stage": "parallel",
       "depends_on": ["collector"],
       "critical": true,
       "isolated": true,
-      "inputs": ["latest.json", "team.json"],
-      "commands": [{"module": "src.engines.decision_intelligence", "args": []}],
-      "artifacts": ["team_strength.json", "projections.json", "package_optimizer.json"],
-      "latest_keys": ["decision_intelligence"],
-      "latest_file_keys": ["team_strength", "projections", "package_optimizer"]
+      "inputs": ["latest.json", "stats/vaastav_previous_season.json"],
+      "commands": [{"module": "src.engines.historical_prior_service", "args": []}],
+      "artifacts": ["prior_season.json", "stats/vaastav_previous_season.json"],
+      "latest_keys": ["historical_prior_summary"],
+      "latest_file_keys": ["prior_season", "vaastav_previous_season"]
+    },
+    "prediction": {
+      "stage": "parallel",
+      "depends_on": ["historical_prior"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["latest.json", "team.json", "prior_season.json"],
+      "commands": [{"module": "src.engines.decision_intelligence_v313", "args": []}],
+      "artifacts": ["team_strength.json", "projections.json", "package_optimizer.json", "prediction_quality.json"],
+      "latest_keys": ["decision_intelligence", "prediction_quality_summary"],
+      "latest_file_keys": ["team_strength", "projections", "package_optimizer", "prediction_quality"]
     },
     "authenticated_official": {
       "stage": "parallel",
@@ -131,8 +147,24 @@
         {"module": "src.engines.framework_health_audit", "args": ["--phase", "preflight", "--strict"]},
         {"module": "src.engines.framework_health_audit", "args": ["--phase", "postflight", "--strict"]},
         {"module": "src.engines.p0_framework_health_overlay", "args": []},
-        {"module": "src.engines.lineup_framework_health_overlay", "args": []}
+        {"module": "src.engines.lineup_framework_health_overlay", "args": []},
+        {"module": "src.engines.decision_quality_overlay", "args": []}
       ]
+    },
+    "reporting": {
+      "stage": "decision-output",
+      "depends_on": ["governance"],
+      "critical": true,
+      "isolated": true,
+      "inputs": [
+        "latest.json", "team.json", "lineup_decision.json", "package_decision.json", "projections.json",
+        "price_alerts.json", "prediction_quality.json", "framework_health.json", "challenger_scorecard.json",
+        "report_state.json", "dss_watchlist.json"
+      ],
+      "commands": [{"module": "src.engines.report_architecture", "args": []}],
+      "artifacts": ["user_report.json", "technical_appendix.json", "report_state.json"],
+      "latest_keys": ["report_summary"],
+      "latest_file_keys": ["user_report", "technical_appendix", "report_state"]
     }
   }
 }

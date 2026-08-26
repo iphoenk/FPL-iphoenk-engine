@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T00:36:59.909904+00:00",
+  "generated_at": "2026-08-26T01:41:27.152043+00:00",
   "players": {
     "1": {
       "now_cost": 60,
@@ -39,7 +39,7 @@
     },
     "10": {
       "now_cost": 55,
-      "ownership": "5.8"
+      "ownership": "5.9"
     },
     "11": {
       "now_cost": 55,
@@ -223,7 +223,7 @@
     },
     "582": {
       "now_cost": 55,
-      "ownership": "0.5"
+      "ownership": "0.4"
     },
     "596": {
       "now_cost": 45,

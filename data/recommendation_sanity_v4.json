@@ -1,0 +1,899 @@
+{
+  "schema_version": 460,
+  "engine": "v4.6-evidence-fusion-sanity",
+  "point_in_time": true,
+  "raw_package_verdict": "MATERIAL_UPGRADE",
+  "final_verdict": "MATERIAL_UPGRADE",
+  "best_by_replacement_count": {
+    "1": {
+      "replacements": 1,
+      "out": [
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 9.41,
+          "xpts_5": 16.11,
+          "xpts_10": 32.39,
+          "xpts_15": 48.48,
+          "uncertainty": 0.137,
+          "objective": 3.1933
+        }
+      ],
+      "in": [
+        {
+          "element": 368,
+          "name": "Szoboszlai",
+          "position": "MID",
+          "team": "Liverpool",
+          "team_id": 14,
+          "cost": 70,
+          "xpts_3": 12.86,
+          "xpts_5": 20.8,
+          "xpts_10": 41.13,
+          "xpts_15": 61.98,
+          "uncertainty": 0.226,
+          "objective": 4.1637
+        }
+      ],
+      "raw_classification": "MATERIAL_UPGRADE",
+      "raw_adjusted_utility_gain_5": 4.65,
+      "evidence_confidence": 0.8401,
+      "sanity_gain_5": 3.906,
+      "classification": "MATERIAL_UPGRADE",
+      "material_eligible": true,
+      "evidence": {
+        "incoming": [
+          {
+            "element": 368,
+            "name": "Szoboszlai",
+            "team": "Liverpool",
+            "position": "MID",
+            "confidence": 0.8401,
+            "grade": "HIGH",
+            "start_probability_5": 0.8832,
+            "dnp_probability_5": 0.0327,
+            "uncertainty": 0.226,
+            "role_prior": 0.5415,
+            "horizon_stability": 0.9098,
+            "rate_spike_risk": 0.3367,
+            "current_season_weight": 0.1111,
+            "market_support": 0.8756,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "outgoing": [
+          {
+            "element": 15,
+            "name": "Ødegaard",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.8297,
+            "grade": "HIGH",
+            "start_probability_5": 0.867,
+            "dnp_probability_5": 0.0372,
+            "uncertainty": 0.137,
+            "role_prior": 0.3411,
+            "horizon_stability": 0.9285,
+            "rate_spike_risk": 0.0236,
+            "current_season_weight": 0.0943,
+            "market_support": 0.5851,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "avg_incoming_confidence": 0.8401,
+        "avg_outgoing_confidence": 0.8297,
+        "min_incoming_confidence": 0.8401,
+        "severe_rate_spikes": 0,
+        "team_cluster_excess": 0,
+        "early_season": true,
+        "reasons": []
+      }
+    },
+    "2": {
+      "replacements": 2,
+      "out": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 9.41,
+          "xpts_5": 16.12,
+          "xpts_10": 32.41,
+          "xpts_15": 48.51,
+          "uncertainty": 0.14,
+          "objective": 3.1945
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 9.41,
+          "xpts_5": 16.11,
+          "xpts_10": 32.39,
+          "xpts_15": 48.48,
+          "uncertainty": 0.137,
+          "objective": 3.1933
+        }
+      ],
+      "in": [
+        {
+          "element": 86,
+          "name": "Lewis-Potter",
+          "position": "MID",
+          "team": "Brentford",
+          "team_id": 4,
+          "cost": 55,
+          "xpts_3": 11.82,
+          "xpts_5": 19.24,
+          "xpts_10": 38.87,
+          "xpts_15": 58.12,
+          "uncertainty": 0.179,
+          "objective": 3.8652
+        },
+        {
+          "element": 368,
+          "name": "Szoboszlai",
+          "position": "MID",
+          "team": "Liverpool",
+          "team_id": 14,
+          "cost": 70,
+          "xpts_3": 12.86,
+          "xpts_5": 20.8,
+          "xpts_10": 41.13,
+          "xpts_15": 61.98,
+          "uncertainty": 0.226,
+          "objective": 4.1637
+        }
+      ],
+      "raw_classification": "MATERIAL_UPGRADE",
+      "raw_adjusted_utility_gain_5": 7.4,
+      "evidence_confidence": 0.7255,
+      "sanity_gain_5": 5.369,
+      "classification": "OPTIONAL_IMPROVEMENT",
+      "material_eligible": false,
+      "evidence": {
+        "incoming": [
+          {
+            "element": 86,
+            "name": "Lewis-Potter",
+            "team": "Brentford",
+            "position": "MID",
+            "confidence": 0.7165,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8832,
+            "dnp_probability_5": 0.0327,
+            "uncertainty": 0.179,
+            "role_prior": 0.1389,
+            "horizon_stability": 0.9522,
+            "rate_spike_risk": 0.342,
+            "current_season_weight": 0.1111,
+            "market_support": 0.0715,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 368,
+            "name": "Szoboszlai",
+            "team": "Liverpool",
+            "position": "MID",
+            "confidence": 0.8401,
+            "grade": "HIGH",
+            "start_probability_5": 0.8832,
+            "dnp_probability_5": 0.0327,
+            "uncertainty": 0.226,
+            "role_prior": 0.5415,
+            "horizon_stability": 0.9098,
+            "rate_spike_risk": 0.3367,
+            "current_season_weight": 0.1111,
+            "market_support": 0.8756,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "outgoing": [
+          {
+            "element": 557,
+            "name": "Tzolis",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.8646,
+            "grade": "HIGH",
+            "start_probability_5": 0.867,
+            "dnp_probability_5": 0.0372,
+            "uncertainty": 0.14,
+            "role_prior": 0.4387,
+            "horizon_stability": 0.927,
+            "rate_spike_risk": 0.007,
+            "current_season_weight": 0.0943,
+            "market_support": 0.7742,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 15,
+            "name": "Ødegaard",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.8297,
+            "grade": "HIGH",
+            "start_probability_5": 0.867,
+            "dnp_probability_5": 0.0372,
+            "uncertainty": 0.137,
+            "role_prior": 0.3411,
+            "horizon_stability": 0.9285,
+            "rate_spike_risk": 0.0236,
+            "current_season_weight": 0.0943,
+            "market_support": 0.5851,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "avg_incoming_confidence": 0.7783,
+        "avg_outgoing_confidence": 0.8472,
+        "min_incoming_confidence": 0.7165,
+        "severe_rate_spikes": 0,
+        "team_cluster_excess": 0,
+        "early_season": true,
+        "reasons": [
+          "WEAK_LINK_EVIDENCE",
+          "STRONG_BASELINE_RESISTANCE"
+        ]
+      }
+    },
+    "3": {
+      "replacements": 3,
+      "out": [
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "position": "DEF",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 55,
+          "xpts_3": 9.17,
+          "xpts_5": 15.85,
+          "xpts_10": 31.91,
+          "xpts_15": 47.75,
+          "uncertainty": 0.18,
+          "objective": 3.1317
+        },
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 9.41,
+          "xpts_5": 16.12,
+          "xpts_10": 32.41,
+          "xpts_15": 48.51,
+          "uncertainty": 0.14,
+          "objective": 3.1945
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 9.41,
+          "xpts_5": 16.11,
+          "xpts_10": 32.39,
+          "xpts_15": 48.48,
+          "uncertainty": 0.137,
+          "objective": 3.1933
+        }
+      ],
+      "in": [
+        {
+          "element": 388,
+          "name": "Guéhi",
+          "position": "DEF",
+          "team": "Man City",
+          "team_id": 15,
+          "cost": 60,
+          "xpts_3": 11.79,
+          "xpts_5": 19.74,
+          "xpts_10": 40.31,
+          "xpts_15": 60.09,
+          "uncertainty": 0.387,
+          "objective": 3.9308
+        },
+        {
+          "element": 86,
+          "name": "Lewis-Potter",
+          "position": "MID",
+          "team": "Brentford",
+          "team_id": 4,
+          "cost": 55,
+          "xpts_3": 11.82,
+          "xpts_5": 19.24,
+          "xpts_10": 38.87,
+          "xpts_15": 58.12,
+          "uncertainty": 0.179,
+          "objective": 3.8652
+        },
+        {
+          "element": 368,
+          "name": "Szoboszlai",
+          "position": "MID",
+          "team": "Liverpool",
+          "team_id": 14,
+          "cost": 70,
+          "xpts_3": 12.86,
+          "xpts_5": 20.8,
+          "xpts_10": 41.13,
+          "xpts_15": 61.98,
+          "uncertainty": 0.226,
+          "objective": 4.1637
+        }
+      ],
+      "raw_classification": "MATERIAL_UPGRADE",
+      "raw_adjusted_utility_gain_5": 10.63,
+      "evidence_confidence": 0.6334,
+      "sanity_gain_5": 6.733,
+      "classification": "OPTIONAL_IMPROVEMENT",
+      "material_eligible": false,
+      "evidence": {
+        "incoming": [
+          {
+            "element": 388,
+            "name": "Guéhi",
+            "team": "Man City",
+            "position": "DEF",
+            "confidence": 0.6565,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8832,
+            "dnp_probability_5": 0.0327,
+            "uncertainty": 0.387,
+            "role_prior": 0.3128,
+            "horizon_stability": 0.9425,
+            "rate_spike_risk": 1.0,
+            "current_season_weight": 0.1111,
+            "market_support": 0.5752,
+            "flags": [
+              "HIGH_UNCERTAINTY",
+              "RAW_RATE_SPIKE",
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 86,
+            "name": "Lewis-Potter",
+            "team": "Brentford",
+            "position": "MID",
+            "confidence": 0.7165,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8832,
+            "dnp_probability_5": 0.0327,
+            "uncertainty": 0.179,
+            "role_prior": 0.1389,
+            "horizon_stability": 0.9522,
+            "rate_spike_risk": 0.342,
+            "current_season_weight": 0.1111,
+            "market_support": 0.0715,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 368,
+            "name": "Szoboszlai",
+            "team": "Liverpool",
+            "position": "MID",
+            "confidence": 0.8401,
+            "grade": "HIGH",
+            "start_probability_5": 0.8832,
+            "dnp_probability_5": 0.0327,
+            "uncertainty": 0.226,
+            "role_prior": 0.5415,
+            "horizon_stability": 0.9098,
+            "rate_spike_risk": 0.3367,
+            "current_season_weight": 0.1111,
+            "market_support": 0.8756,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "outgoing": [
+          {
+            "element": 8,
+            "name": "Calafiori",
+            "team": "Arsenal",
+            "position": "DEF",
+            "confidence": 0.8396,
+            "grade": "HIGH",
+            "start_probability_5": 0.8724,
+            "dnp_probability_5": 0.0357,
+            "uncertainty": 0.18,
+            "role_prior": 0.3496,
+            "horizon_stability": 0.9038,
+            "rate_spike_risk": 0.0104,
+            "current_season_weight": 0.1,
+            "market_support": 1.0,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 557,
+            "name": "Tzolis",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.8646,
+            "grade": "HIGH",
+            "start_probability_5": 0.867,
+            "dnp_probability_5": 0.0372,
+            "uncertainty": 0.14,
+            "role_prior": 0.4387,
+            "horizon_stability": 0.927,
+            "rate_spike_risk": 0.007,
+            "current_season_weight": 0.0943,
+            "market_support": 0.7742,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 15,
+            "name": "Ødegaard",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.8297,
+            "grade": "HIGH",
+            "start_probability_5": 0.867,
+            "dnp_probability_5": 0.0372,
+            "uncertainty": 0.137,
+            "role_prior": 0.3411,
+            "horizon_stability": 0.9285,
+            "rate_spike_risk": 0.0236,
+            "current_season_weight": 0.0943,
+            "market_support": 0.5851,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "avg_incoming_confidence": 0.7377,
+        "avg_outgoing_confidence": 0.8446,
+        "min_incoming_confidence": 0.6565,
+        "severe_rate_spikes": 1,
+        "team_cluster_excess": 0,
+        "early_season": true,
+        "reasons": [
+          "RATE_SPIKE_CAP",
+          "EARLY_SEASON_MULTI_CHANGE_CAP",
+          "WEAK_LINK_EVIDENCE",
+          "STRONG_BASELINE_RESISTANCE"
+        ]
+      }
+    },
+    "4": {
+      "replacements": 4,
+      "out": [
+        {
+          "element": 254,
+          "name": "Robinson",
+          "position": "DEF",
+          "team": "Fulham",
+          "team_id": 10,
+          "cost": 45,
+          "xpts_3": 9.22,
+          "xpts_5": 15.57,
+          "xpts_10": 31.42,
+          "xpts_15": 47.2,
+          "uncertainty": 0.218,
+          "objective": 3.0939
+        },
+        {
+          "element": 565,
+          "name": "M.Sangaré",
+          "position": "MID",
+          "team": "Brentford",
+          "team_id": 4,
+          "cost": 55,
+          "xpts_3": 10.03,
+          "xpts_5": 16.37,
+          "xpts_10": 33.03,
+          "xpts_15": 49.4,
+          "uncertainty": 0.134,
+          "objective": 3.2869
+        },
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 9.41,
+          "xpts_5": 16.12,
+          "xpts_10": 32.41,
+          "xpts_15": 48.51,
+          "uncertainty": 0.14,
+          "objective": 3.1945
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 9.41,
+          "xpts_5": 16.11,
+          "xpts_10": 32.39,
+          "xpts_15": 48.48,
+          "uncertainty": 0.137,
+          "objective": 3.1933
+        }
+      ],
+      "in": [
+        {
+          "element": 388,
+          "name": "Guéhi",
+          "position": "DEF",
+          "team": "Man City",
+          "team_id": 15,
+          "cost": 60,
+          "xpts_3": 11.79,
+          "xpts_5": 19.74,
+          "xpts_10": 40.31,
+          "xpts_15": 60.09,
+          "uncertainty": 0.387,
+          "objective": 3.9308
+        },
+        {
+          "element": 98,
+          "name": "Janelt",
+          "position": "MID",
+          "team": "Brentford",
+          "team_id": 4,
+          "cost": 50,
+          "xpts_3": 11.43,
+          "xpts_5": 18.61,
+          "xpts_10": 37.59,
+          "xpts_15": 56.21,
+          "uncertainty": 0.166,
+          "objective": 3.7388
+        },
+        {
+          "element": 86,
+          "name": "Lewis-Potter",
+          "position": "MID",
+          "team": "Brentford",
+          "team_id": 4,
+          "cost": 55,
+          "xpts_3": 11.82,
+          "xpts_5": 19.24,
+          "xpts_10": 38.87,
+          "xpts_15": 58.12,
+          "uncertainty": 0.179,
+          "objective": 3.8652
+        },
+        {
+          "element": 368,
+          "name": "Szoboszlai",
+          "position": "MID",
+          "team": "Liverpool",
+          "team_id": 14,
+          "cost": 70,
+          "xpts_3": 12.86,
+          "xpts_5": 20.8,
+          "xpts_10": 41.13,
+          "xpts_15": 61.98,
+          "uncertainty": 0.226,
+          "objective": 4.1637
+        }
+      ],
+      "raw_classification": "MATERIAL_UPGRADE",
+      "raw_adjusted_utility_gain_5": 12.83,
+      "evidence_confidence": 0.5123,
+      "sanity_gain_5": 6.572,
+      "classification": "OPTIONAL_IMPROVEMENT",
+      "material_eligible": false,
+      "evidence": {
+        "incoming": [
+          {
+            "element": 388,
+            "name": "Guéhi",
+            "team": "Man City",
+            "position": "DEF",
+            "confidence": 0.6565,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8832,
+            "dnp_probability_5": 0.0327,
+            "uncertainty": 0.387,
+            "role_prior": 0.3128,
+            "horizon_stability": 0.9425,
+            "rate_spike_risk": 1.0,
+            "current_season_weight": 0.1111,
+            "market_support": 0.5752,
+            "flags": [
+              "HIGH_UNCERTAINTY",
+              "RAW_RATE_SPIKE",
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 98,
+            "name": "Janelt",
+            "team": "Brentford",
+            "position": "MID",
+            "confidence": 0.7644,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8832,
+            "dnp_probability_5": 0.0327,
+            "uncertainty": 0.166,
+            "role_prior": 0.2265,
+            "horizon_stability": 0.9527,
+            "rate_spike_risk": 0.1119,
+            "current_season_weight": 0.1111,
+            "market_support": 0.0431,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 86,
+            "name": "Lewis-Potter",
+            "team": "Brentford",
+            "position": "MID",
+            "confidence": 0.7165,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8832,
+            "dnp_probability_5": 0.0327,
+            "uncertainty": 0.179,
+            "role_prior": 0.1389,
+            "horizon_stability": 0.9522,
+            "rate_spike_risk": 0.342,
+            "current_season_weight": 0.1111,
+            "market_support": 0.0715,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 368,
+            "name": "Szoboszlai",
+            "team": "Liverpool",
+            "position": "MID",
+            "confidence": 0.8401,
+            "grade": "HIGH",
+            "start_probability_5": 0.8832,
+            "dnp_probability_5": 0.0327,
+            "uncertainty": 0.226,
+            "role_prior": 0.5415,
+            "horizon_stability": 0.9098,
+            "rate_spike_risk": 0.3367,
+            "current_season_weight": 0.1111,
+            "market_support": 0.8756,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "outgoing": [
+          {
+            "element": 254,
+            "name": "Robinson",
+            "team": "Fulham",
+            "position": "DEF",
+            "confidence": 0.7088,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8735,
+            "dnp_probability_5": 0.0354,
+            "uncertainty": 0.218,
+            "role_prior": 0.1012,
+            "horizon_stability": 0.948,
+            "rate_spike_risk": 0.1489,
+            "current_season_weight": 0.1011,
+            "market_support": 0.0324,
+            "flags": [
+              "LOW_ROLE_PRIOR",
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 565,
+            "name": "M.Sangaré",
+            "team": "Brentford",
+            "position": "MID",
+            "confidence": 0.785,
+            "grade": "HIGH",
+            "start_probability_5": 0.867,
+            "dnp_probability_5": 0.0372,
+            "uncertainty": 0.134,
+            "role_prior": 0.2078,
+            "horizon_stability": 0.9575,
+            "rate_spike_risk": 0.143,
+            "current_season_weight": 0.0943,
+            "market_support": 0.5149,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 557,
+            "name": "Tzolis",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.8646,
+            "grade": "HIGH",
+            "start_probability_5": 0.867,
+            "dnp_probability_5": 0.0372,
+            "uncertainty": 0.14,
+            "role_prior": 0.4387,
+            "horizon_stability": 0.927,
+            "rate_spike_risk": 0.007,
+            "current_season_weight": 0.0943,
+            "market_support": 0.7742,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 15,
+            "name": "Ødegaard",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.8297,
+            "grade": "HIGH",
+            "start_probability_5": 0.867,
+            "dnp_probability_5": 0.0372,
+            "uncertainty": 0.137,
+            "role_prior": 0.3411,
+            "horizon_stability": 0.9285,
+            "rate_spike_risk": 0.0236,
+            "current_season_weight": 0.0943,
+            "market_support": 0.5851,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "avg_incoming_confidence": 0.7444,
+        "avg_outgoing_confidence": 0.797,
+        "min_incoming_confidence": 0.6565,
+        "severe_rate_spikes": 1,
+        "team_cluster_excess": 1,
+        "early_season": true,
+        "reasons": [
+          "RATE_SPIKE_CAP",
+          "TEAM_CLUSTER_PENALTY",
+          "EARLY_SEASON_MULTI_CHANGE_CAP",
+          "WEAK_LINK_EVIDENCE",
+          "STRONG_BASELINE_RESISTANCE"
+        ]
+      }
+    }
+  },
+  "recommended_package": {
+    "replacements": 1,
+    "out": [
+      {
+        "element": 15,
+        "name": "Ødegaard",
+        "position": "MID",
+        "team": "Arsenal",
+        "team_id": 1,
+        "cost": 65,
+        "xpts_3": 9.41,
+        "xpts_5": 16.11,
+        "xpts_10": 32.39,
+        "xpts_15": 48.48,
+        "uncertainty": 0.137,
+        "objective": 3.1933
+      }
+    ],
+    "in": [
+      {
+        "element": 368,
+        "name": "Szoboszlai",
+        "position": "MID",
+        "team": "Liverpool",
+        "team_id": 14,
+        "cost": 70,
+        "xpts_3": 12.86,
+        "xpts_5": 20.8,
+        "xpts_10": 41.13,
+        "xpts_15": 61.98,
+        "uncertainty": 0.226,
+        "objective": 4.1637
+      }
+    ],
+    "raw_classification": "MATERIAL_UPGRADE",
+    "raw_adjusted_utility_gain_5": 4.65,
+    "evidence_confidence": 0.8401,
+    "sanity_gain_5": 3.906,
+    "classification": "MATERIAL_UPGRADE",
+    "material_eligible": true,
+    "evidence": {
+      "incoming": [
+        {
+          "element": 368,
+          "name": "Szoboszlai",
+          "team": "Liverpool",
+          "position": "MID",
+          "confidence": 0.8401,
+          "grade": "HIGH",
+          "start_probability_5": 0.8832,
+          "dnp_probability_5": 0.0327,
+          "uncertainty": 0.226,
+          "role_prior": 0.5415,
+          "horizon_stability": 0.9098,
+          "rate_spike_risk": 0.3367,
+          "current_season_weight": 0.1111,
+          "market_support": 0.8756,
+          "flags": [
+            "EARLY_SEASON_SAMPLE"
+          ]
+        }
+      ],
+      "outgoing": [
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "team": "Arsenal",
+          "position": "MID",
+          "confidence": 0.8297,
+          "grade": "HIGH",
+          "start_probability_5": 0.867,
+          "dnp_probability_5": 0.0372,
+          "uncertainty": 0.137,
+          "role_prior": 0.3411,
+          "horizon_stability": 0.9285,
+          "rate_spike_risk": 0.0236,
+          "current_season_weight": 0.0943,
+          "market_support": 0.5851,
+          "flags": [
+            "EARLY_SEASON_SAMPLE"
+          ]
+        }
+      ],
+      "avg_incoming_confidence": 0.8401,
+      "avg_outgoing_confidence": 0.8297,
+      "min_incoming_confidence": 0.8401,
+      "severe_rate_spikes": 0,
+      "team_cluster_excess": 0,
+      "early_season": true,
+      "reasons": []
+    }
+  },
+  "evidence_health": {
+    "official_universe": true,
+    "prediction_priors_xmins_uncertainty": true,
+    "market_movement": true,
+    "global_advanced_sync_healthy": true
+  },
+  "guardrails": {
+    "raw_optimizer_not_authoritative": true,
+    "rate_spike_detection": true,
+    "team_cluster_penalty": true,
+    "outgoing_baseline_resistance": true,
+    "early_season_multi_change_cap": true,
+    "point_in_time_required": true,
+    "prefer_fewer_changes_when_evidence_similar": true
+  }
+}

@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "v3.17-persistence-reporting-live-source-fusion",
-  "requested_at": "2026-08-26T21:19:00Z",
+  "requested_cycle": "v3.17-final-plan-restricted-acceptance",
+  "requested_at": "2026-08-26T21:35:00Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "accepted_production_baseline_from_manifest",
   "v5_role": "shadow_only",

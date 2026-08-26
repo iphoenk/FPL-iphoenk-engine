@@ -1,55 +1,65 @@
-# FPL iphoenk Engine V4.7
+# FPL iphoenk Engine V5
 
-A production-oriented personal FPL data platform.
+**V5.0.0-alpha.1 · Unified Decision Engine**
 
-## Design goal
-Combine:
+V5 is the architectural convergence track for the FPL iphoenk Engine. It combines the reliability/truth strengths of V3 with the prediction/decision strengths of V4 while enforcing single authoritative implementations for rules, state, finance, projection and decisions.
+
+## Operating tracks
+
+- **V3.x** remains the production and scheduled-task runtime.
+- **V4.x** remains the active prediction R&D, tuning and calibration track.
+- **V5.x** is the overhaul/convergence track and is not production-promoted yet.
+
+## V5 architecture
+
+### Truth plane
 - Official FPL API authority
-- FPL-Core-Insights advanced community stats
-- vaastav historical backbone
-- live score/persistence
-- exact team-value logic
-- leakage-safe modelling
-- projection/calibration/portfolio frameworks
+- authenticated read-only Official overlay target
+- phase-aware squad state
+- registry-driven Official 2026/27 rules
+- exact finance and sell-value target
+- price trajectory target
+- persistence, provenance, freshness and leakage protection
 
-## P0 Production Core
-Implemented:
-- phase-aware FPL state
-- locked pre-deadline squad authority
-- exact sell-value logic
-- sell-cost-correct Wildcard affordability (owned sell cost, unowned current cost)
-- endpoint health/retry/latency
-- live FPL player stat expansion
-- price deltas and momentum
-- Core Insights + vaastav sync
-- leakage guard
-- fail-closed validation
-- persistent snapshots
-- safe GitHub workflow
+### Intelligence plane
+Inherited from the V4.7 baseline:
+- official-ID Core Insights integration
+- prior-season vaastav reconciliation
+- set-piece and penalty role shares
+- venue-normalized opponent defensive resistance
+- xMins starter-security/competition/rotation priors
+- interpretable xPts pipeline
+- Monte Carlo scenarios
+- package/portfolio optimization
+- calibration utilities
 
-## P1 Intelligence
-Working base:
-- official-ID integration of Core Insights players, shots and player-match stats
-- dedicated prior-season vaastav snapshot with stable-code reconciliation
-- official set-piece and penalty-order role shares
-- venue-normalized dynamic opponent defensive resistance
-- xMins starter-security, positional-competition and rotation priors
-- advanced-stat CLI
-- fixture model
-- interpretable xMins/xPts scaffold
-- FastAPI JSON endpoints
-- SSE live streaming
+### Governance plane
+- Gate0 hard constraints
+- DSS core registry
+- DSS extension registry
+- enhancement layers registry
+- preflight/postflight health
+- centralized quality gates
+- V5 convergence acceptance
 
-## P2 Advanced
-Framework implemented:
-- Monte Carlo points scenarios
-- package/portfolio legality evaluator
-- MAE/Brier/Spearman calibration utilities
-- model versioning hooks
+### Decision plane
+V5 introduces explicit contracts for TruthState, PlayerProjection and DecisionTrace. A production-grade V5 recommendation must be traceable from evidence through projection to the final action and checked constraints.
 
-P2 is deliberately not marketed as a trained production model until enough season data exists.
+## First V5 migration completed
 
-## Main commands
+The V3.9 Official FPL rules registry is now present in V5 and `src/models/projection.py` consumes scoring constants from that registry. This removes the V4 hardcoded goalkeeper-goal value and makes the 2026/27 value of **10 points for a goalkeeper goal** authoritative from one rules source.
+
+## Bootstrap acceptance
+
+```bash
+python -m src.v5.acceptance
+python -m pytest -q tests/test_v5_bootstrap.py
+```
+
+The V5 gate currently checks the convergence manifest, V3/V4 baseline declarations, active ruleset integrity, goalkeeper scoring, rules fingerprinting, projection-to-rules wiring, absence of the legacy hardcoded goal map and the production-promotion lock.
+
+## Existing V4 commands retained during convergence
+
 ```bash
 pip install -r requirements.txt
 
@@ -65,38 +75,16 @@ python -m src.engines.framework_health_audit --phase preflight --strict
 python -m src.engines.v4_decision_pipeline
 python -m src.engines.framework_health_audit --phase postflight --strict
 python -m src.engines.v4_quality_gate
-
-uvicorn live_service:app --host 0.0.0.0 --port 8000
 ```
 
-## Live endpoints
-- GET `/health`
-- GET `/latest`
-- GET `/live`
-- GET `/team`
-- GET `/prices`
-- POST `/refresh`
-- GET `/stream` via Server-Sent Events
+## Promotion rule
 
-## Source authority
-1. Official FPL API
-2. FPL-Core-Insights community enrichment
-3. vaastav historical dataset
-4. Understat/mirrors if explicitly enabled
-5. web/news/tactical overlays outside this repository
+V5 cannot replace V3 production until it demonstrates:
 
-## Leakage guard
-Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.
-Historical xP-like fields should be shifted or excluded unless timestamp eligibility is proven.
+1. no material regression against V3 truth/reliability capability;
+2. no material regression against V4 prediction/decision capability;
+3. no duplicated authority in a V5 decision path;
+4. evidence/provenance on predictions and decisions;
+5. calibration reporting separate from structural health.
 
-## Important
-FPL-Core-Insights and vaastav are community-maintained. They are useful enrichments, not licensed Opta feeds.
-
-GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy `live_service.py` to an always-on host for near-live polling.
-
-## V4.7 prediction-quality release
-
-- V4.6.4 remains the sell-cost and truthful-health correctness baseline.
-- V4.7 connects richer xMins priors, advanced stats, set pieces, penalties, last-season priors and dynamic opponent defence to projection output.
-- Every promoted framework capability is backed by output-field and provenance probes.
-- Remaining unrelated framework debt stays `PARTIAL`, so health may remain `AMBER` and unqualified `GO` remains blocked while governed recommendations may still be produced.
+See `docs/V5_CONVERGENCE.md` and `config/v5_convergence_manifest.json` for the migration ledger and acceptance contract.

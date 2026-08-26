@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "status": "ALPHA_MICROSERVICES_CONVERGENCE",
   "modes": ["daily", "deadline", "live"],
   "default_mode": "daily",
@@ -9,7 +9,7 @@
   "pipeline": [
     "public_base_collection","event_context","authenticated_runtime_overlay","public_dynamic_collection",
     "truth_assembly","state_hydration","price_intelligence","native_p0_prediction",
-    "prediction_evaluation_parallel_decision_prepare","decision_finalize","framework_governance","persistence"
+    "evaluation_decision_prepare_gate0_preflight_parallel","decision_finalize","framework_governance","persistence"
   ],
   "base_requests": {
     "bootstrap": {"route": "bootstrap", "params": {}},
@@ -32,6 +32,7 @@
     "multi_horizon_package_optimizer": true,
     "native_lineup_governance": true,
     "capability_contract_dss": true,
+    "gate0_preflight": true,
     "decision_trace": true,
     "framework_governance": true,
     "v4_prediction_bridge": false,
@@ -40,7 +41,7 @@
   "concurrency": {
     "parallelize_dynamic_and_authenticated_collection": true,
     "parallelize_price_and_prediction": true,
-    "parallelize_evaluation_and_decision_prepare": true,
+    "parallelize_evaluation_decision_prepare_and_gate0_preflight": true,
     "max_orchestration_workers": 3
   },
   "fail_closed": {

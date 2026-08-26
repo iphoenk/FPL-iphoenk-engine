@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "model_id": "historical_player_priors_v1",
+  "refresh_hours": 168,
+  "source": {
+    "provider": "vaastav/Fantasy-Premier-League",
+    "filenames": ["players_raw.csv", "cleaned_players.csv"],
+    "timeout_seconds": 25
+  },
+  "starter_prior": {
+    "minimum_minutes": 180,
+    "team_start_share_weight": 0.35,
+    "conditional_start_share_weight": 0.65,
+    "probability_floor": 0.08,
+    "probability_ceiling": 0.97,
+    "season_team_matches": 38
+  },
+  "attacking_prior": {
+    "minimum_minutes": 180,
+    "full_weight_minutes": 1800,
+    "maximum_player_weight": 0.75
+  },
+  "confidence": {
+    "medium_prior_minutes": 900,
+    "high_prior_minutes": 1800,
+    "high_requires_current_start": true
+  },
+  "quality": {
+    "universe_prior_coverage_min": 0.45,
+    "locked_prior_coverage_min": 0.50,
+    "starter_start_probability_std_min": 0.035,
+    "locked_low_confidence_share_max": 0.60,
+    "minimum_starter_sample": 40
+  },
+  "governance": {
+    "previous_season_only": true,
+    "stable_player_code_preferred": true,
+    "unique_full_name_fallback": true,
+    "never_fabricate_missing_prior": true,
+    "current_official_data_remains_authority": true,
+    "historical_prior_is_shrinkage_evidence_not_override": true
+  }
+}

@@ -27,7 +27,10 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     modules = module_specs()
     module_map = {m.name: m for m in modules}
     modular_policy = architecture.get("principles", {}).get("modular_authority", {})
-    truth_modules = tuple(module_map.get(name) for name in ("rules", "source_authority", "finance", "phase_state"))
+    truth_modules = tuple(
+        module_map.get(name)
+        for name in ("rules", "source_authority", "official_authenticated", "finance", "phase_state")
+    )
 
     checks = (
         AcceptanceCheck(
@@ -101,7 +104,7 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
                 for m in truth_modules
             ),
             Plane.TRUTH,
-            "Rules, source authority, finance and phase-state have active discoverable authorities",
+            "Rules, source authority, authenticated Official, finance and phase-state are active",
         ),
         AcceptanceCheck(
             "production_promotion_locked",

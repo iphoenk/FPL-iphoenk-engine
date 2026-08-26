@@ -5,40 +5,48 @@ from pathlib import Path
 
 from src.rules import GOAL_POINTS, RULESET_ID, RULESET_SEASON, ruleset_metadata
 from src.v5 import V5_VERSION
+from src.v5.config_cache import ROOT, load_json_config
 from src.v5.contracts import AcceptanceCheck, AcceptanceReport, Plane
 from src.v5.module_registry import module_specs
+from src.v5.service_registry import registry as service_registry, service_specs, validate_registry
 
-ROOT = Path(__file__).resolve().parents[2]
+ACCEPTANCE_CONFIG = "config/v5_acceptance_registry.json"
+MANIFEST_CONFIG = "config/v5_convergence_manifest.json"
+ARCHITECTURE_CONFIG = "config/v5_architecture_principles.json"
 
 
-def _json(path: str) -> dict:
-    with (ROOT / path).open("r", encoding="utf-8") as handle:
-        value = json.load(handle)
-    if not isinstance(value, dict):
-        raise RuntimeError(f"expected JSON object: {path}")
-    return value
+def _registered_modules_ok(names: list[str], active_statuses: set[str]) -> bool:
+    modules = {m.name: m for m in module_specs()}
+    return all(
+        (m := modules.get(name)) is not None
+        and m.status in active_statuses
+        and bool(m.entrypoint)
+        and bool(m.config)
+        and not m.entrypoint.startswith("planned")
+        and not m.config.startswith("planned")
+        and (ROOT / m.config).exists()
+        for name in names
+    )
 
 
 def run_bootstrap_acceptance() -> AcceptanceReport:
-    manifest = _json("config/v5_convergence_manifest.json")
-    architecture = _json("config/v5_architecture_principles.json")
+    acceptance = load_json_config(ACCEPTANCE_CONFIG)
+    manifest = load_json_config(MANIFEST_CONFIG)
+    architecture = load_json_config(ARCHITECTURE_CONFIG)
     projection_source = (ROOT / "src/models/projection.py").read_text(encoding="utf-8")
     metadata = ruleset_metadata()
     modules = module_specs()
-    module_map = {m.name: m for m in modules}
+    module_policy = acceptance["module_policy"]
+    service_policy = acceptance["service_policy"]
+    active_statuses = {str(x) for x in module_policy["active_statuses"]}
     modular_policy = architecture.get("principles", {}).get("modular_authority", {})
-    truth_modules = tuple(
-        module_map.get(name)
-        for name in (
-            "rules",
-            "source_authority",
-            "public_api",
-            "official_authenticated",
-            "finance",
-            "phase_state",
-            "squad",
-        )
-    )
+    microservice_policy = architecture.get("principles", {}).get("microservices", {})
+    services = service_specs()
+    service_ids = {s.service_id for s in services}
+    required_services = {str(x) for x in service_policy["required_services"]}
+    service_errors = validate_registry()
+    deployment_path = ROOT / str(service_policy["require_deployment_manifest"])
+    service_cfg = service_registry()
 
     checks = (
         AcceptanceCheck(
@@ -97,22 +105,45 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
         ),
         AcceptanceCheck(
             "module_registry_discoverable",
-            len(modules) >= 10 and all(m.entrypoint and m.config and m.adjustment_surface for m in modules),
+            len(modules) >= int(module_policy["minimum_registered_modules"])
+            and all(m.entrypoint and m.config and m.adjustment_surface for m in modules),
             Plane.GOVERNANCE,
             "Every registered V5 domain exposes entrypoint, config and adjustment surface",
         ),
         AcceptanceCheck(
             "truth_plane_authorities_active",
-            all(
-                m is not None
-                and m.status == "ACTIVE"
-                and not m.entrypoint.startswith("planned")
-                and not m.config.startswith("planned")
-                and (ROOT / m.config).exists()
-                for m in truth_modules
-            ),
+            _registered_modules_ok(list(module_policy["required_truth_modules"]), active_statuses),
             Plane.TRUTH,
-            "Rules, public sources, authenticated Official, finance, phase-state and squad authorities are active",
+            "All registry-declared mandatory truth authorities are active and discoverable",
+        ),
+        AcceptanceCheck(
+            "governance_modules_active",
+            _registered_modules_ok(list(module_policy["required_governance_modules"]), active_statuses),
+            Plane.GOVERNANCE,
+            "All registry-declared mandatory governance modules are active and discoverable",
+        ),
+        AcceptanceCheck(
+            "microservices_mandatory",
+            acceptance["architecture"].get("require_microservices") is True
+            and microservice_policy.get("required") is True
+            and service_cfg.get("mandatory") is True
+            and service_cfg.get("architecture") == "bounded-context-microservices",
+            Plane.GOVERNANCE,
+            "V5 runtime architecture is explicitly bounded-context microservices",
+        ),
+        AcceptanceCheck(
+            "microservice_topology_valid",
+            len(services) >= int(service_policy["minimum_services"])
+            and required_services.issubset(service_ids)
+            and not service_errors,
+            Plane.GOVERNANCE,
+            "Registered services have unique ownership, valid ports and an acyclic dependency graph",
+        ),
+        AcceptanceCheck(
+            "microservice_deployment_manifest_present",
+            deployment_path.exists(),
+            Plane.GOVERNANCE,
+            "Independent V5 service deployment manifest is present",
         ),
         AcceptanceCheck(
             "production_promotion_locked",

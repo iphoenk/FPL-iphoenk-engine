@@ -1,4 +1,4 @@
-name: FPL iphoenk V4.7.2 performance gate
+name: FPL iphoenk V4.7.3 checkpoint governance gate
 
 on:
   workflow_dispatch:
@@ -45,7 +45,9 @@ jobs:
         run: python -m src.engines.v4_decision_pipeline
       - name: Framework health POST-FLIGHT
         run: python -m src.engines.framework_health_audit --phase postflight --strict
-      - name: Centralized V4.7.2 performance quality gate
+      - name: Apply checkpoint and report governance
+        run: python -m src.engines.v4_checkpoint_governance
+      - name: Centralized V4.7.3 checkpoint quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise acceptance summary
         run: |
@@ -55,6 +57,7 @@ jobs:
           w=json.load(open('data/wc_decision_v4.json'))
           latest=json.load(open('data/latest.json'))
           pipeline=json.load(open('data/decision_pipeline_v4.json'))
+          checkpoint=json.load(open('data/checkpoint_decision_v4.json'))
           print({
               'health': h['overall'],
               'recommendation_allowed': h['recommendation_allowed'],
@@ -66,6 +69,9 @@ jobs:
               'preflight_ms': json.load(open('data/framework_health_preflight_v4.json')).get('performance_ms'),
               'decision_pipeline_ms': pipeline.get('timings', {}).get('total_pipeline_ms'),
               'postflight_ms': h.get('performance_ms'),
+              'checkpoint': checkpoint['checkpoint_context']['policy_id'],
+              'action': checkpoint['action_state'],
+              'headline': checkpoint['headline'],
           })
           PY
       - name: Upload branch data only

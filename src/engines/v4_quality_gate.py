@@ -21,8 +21,8 @@ def _assert_framework_health() -> tuple[dict, dict]:
     post = _load("framework_health_v4.json")
 
     for obj, phase in ((pre, "preflight"), (post, "postflight")):
-        assert int(obj.get("schema_version", 0)) >= 472, obj
-        assert str(obj.get("engine", "")).startswith("v4.7.2-framework-health-performance-cache"), obj
+        assert int(obj.get("schema_version", 0)) >= 473, obj
+        assert str(obj.get("engine", "")).startswith("v4.7.3-framework-health-checkpoint-aware"), obj
         assert obj.get("phase") == phase, obj
         assert obj.get("registry_integrity") is True, obj
         assert obj.get("overall") in {"GREEN", "AMBER"}, obj
@@ -37,6 +37,11 @@ def _assert_framework_health() -> tuple[dict, dict]:
         governance = obj.get("governance", {})
         assert governance.get("file_exists_is_not_sufficient_for_active") is True
         assert governance.get("critical_partial_blocks_unqualified_go") is True
+        assert governance.get("checkpoint_freshness_policy_enforced") is True
+        checkpoint = obj.get("checkpoint_context", {})
+        assert checkpoint.get("policy_id") and checkpoint.get("max_snapshot_age_minutes", 0) > 0, checkpoint
+        freshness = obj.get("data_freshness", {}).get("detail", {})
+        assert freshness.get("checkpoint_policy_id") == checkpoint.get("policy_id"), freshness
         performance = obj.get("performance", {})
         assert performance.get("prediction_snapshot_reads") == 1
         assert performance.get("audit_scoped_cache") is True
@@ -76,9 +81,12 @@ def run() -> dict:
     reliability = validate_snapshot(latest)
     assert reliability["ok"], reliability
     assert latest.get("schema_version", 0) >= 40
-    assert int(latest.get("schema_version", 0)) >= 472
-    assert str(latest.get("engine_version", "")).startswith("4.7.2-performance-hotfix")
+    assert int(latest.get("schema_version", 0)) >= 473
+    assert str(latest.get("engine_version", "")).startswith("4.7.3-checkpoint-governance")
     assert latest.get("meta", {}).get("parallel_fetch_is_single_snapshot_not_polling") is True
+    assert latest.get("meta", {}).get("checkpoint_policy_registry_driven") is True
+    assert latest.get("meta", {}).get("simulation_never_authorizes_action") is True
+    assert latest.get("checkpoint_context", {}).get("policy_id")
 
     compliance = _load("compliance_audit.json")
     assert compliance.get("overall") == "PASS", compliance
@@ -150,16 +158,34 @@ def run() -> dict:
     assert sg.get("early_season_multi_change_cap") and sg.get("point_in_time_required")
 
     pipeline = _load("decision_pipeline_v4.json")
-    assert int(pipeline.get("schema_version", 0)) >= 472, pipeline
-    assert str(pipeline.get("engine", "")).startswith("v4.7.2-unified-decision-pipeline-performance"), pipeline
+    assert int(pipeline.get("schema_version", 0)) >= 473, pipeline
+    assert str(pipeline.get("engine", "")).startswith("v4.7.3-unified-decision-pipeline-checkpoint-aware"), pipeline
+    assert pipeline.get("checkpoint_context") == latest.get("checkpoint_context"), pipeline
     pg = pipeline.get("performance_guardrails", {})
     assert pg.get("shared_json_loaded_once") and pg.get("shared_candidates_built_once")
     assert pg.get("fork_copy_on_write") and pg.get("parallel_wc_package")
     assert pg.get("search_quality_reduction") is False
     assert pg.get("wc_beam_unchanged") and pg.get("package_frontier_beam_unchanged")
     assert pg.get("bounded_top_k_same_wc_beam") and pg.get("top_packages_only_payload_materialization")
+    assert pg.get("checkpoint_action_deferred_until_postflight_health") is True
     timings = pipeline.get("timings", {})
     assert timings.get("total_pipeline_ms", 0) > 0
+
+    checkpoint = _load("checkpoint_decision_v4.json")
+    assert int(checkpoint.get("schema_version", 0)) >= 473, checkpoint
+    assert str(checkpoint.get("engine", "")).startswith("v4.7.3-checkpoint-governance"), checkpoint
+    assert checkpoint.get("checkpoint_context") == latest.get("checkpoint_context"), checkpoint
+    action = checkpoint.get("action_state")
+    assert action in {"HOLD", "REVIEW_REQUIRED", "GO", "EMERGENCY_UPDATE_ONLY", "REFRESH_REQUIRED", "BLOCKED", "SIMULATION_ONLY"}, checkpoint
+    assert checkpoint.get("decision", {}).get("execution_authorized") is (action == "GO"), checkpoint
+    guardrails = checkpoint.get("guardrails", {})
+    assert guardrails.get("simulation_never_authorizes_action") is True
+    assert guardrails.get("freshness_failure_blocks_action") is True
+    assert guardrails.get("locked_15_separate_from_lineup_lock") is True
+    if latest.get("checkpoint_context", {}).get("is_simulation"):
+        assert action == "SIMULATION_ONLY", checkpoint
+    if health.get("overall") == "AMBER" and not latest.get("checkpoint_context", {}).get("is_simulation"):
+        assert action == "HOLD", checkpoint
 
     all_x: list[float] = []
     strong_direct_evidence: list[float] = []
@@ -214,9 +240,11 @@ def run() -> dict:
         "lineup_governance": lineup["governance"]["decision"],
         "formation": lineup["formation"],
         "captain": lineup["captain"]["name"],
+        "checkpoint": checkpoint["checkpoint_context"]["policy_id"],
+        "action": checkpoint["action_state"],
         "pipeline_ms": timings["total_pipeline_ms"],
     }
-    print("V4.7.2 PERFORMANCE + DECISION-EQUIVALENCE QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.7.3 CHECKPOINT GOVERNANCE + DECISION-EQUIVALENCE QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

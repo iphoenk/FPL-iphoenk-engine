@@ -7,6 +7,7 @@ from src.sources.official_fpl import get_json
 from src.sources import core_insights, vaastav
 from src.engines.team_value import sell_cost, build_transfer_spells
 from src.engines.v4_runner import build_predictions
+from src.engines.checkpoint_policy import resolve_checkpoint
 
 TEAM_ID=3462711
 
@@ -20,10 +21,11 @@ def _parallel_official_get(specs):
  with ThreadPoolExecutor(max_workers=min(6,len(specs)),thread_name_prefix="fpl-api") as pool:
   return dict(pool.map(fetch,specs))
 
-def detect_phase(bootstrap):
+def detect_phase(bootstrap, as_of=None):
+ now=as_of or utcnow()
  events=bootstrap.get("events",[]); current=next((e for e in events if e.get("is_current")),None); nxt=next((e for e in events if e.get("is_next")),None); finished=[e for e in events if e.get("finished")]; last=max(finished,key=lambda e:e["id"]) if finished else None; planning=None
  if current:
-  deadline=parse_dt(current.get("deadline_time")); planning=current if deadline and deadline>utcnow() else (nxt or current)
+  deadline=parse_dt(current.get("deadline_time")); planning=current if deadline and deadline>now else (nxt or current)
  else: planning=nxt
  return {"current_gw":current["id"] if current else None,"next_gw":nxt["id"] if nxt else None,"last_finished_gw":last["id"] if last else None,"planning_gw":planning["id"] if planning else None,"submitted_gw":(current or last or {}).get("id"),"scoring_gw":current["id"] if current else None,"deadline_time":planning.get("deadline_time") if planning else None,"is_live_event":bool(current and not current.get("finished"))}
 
@@ -41,10 +43,12 @@ def resolve_locked_player(row,by_id,teams,pos):
 def expanded_live(el):
  s=el.get("stats",{}); allowed=["minutes","goals_scored","assists","clean_sheets","goals_conceded","own_goals","penalties_saved","penalties_missed","yellow_cards","red_cards","saves","bonus","bps","total_points","defensive_contribution"]; out={k:s.get(k) for k in allowed if k in s}; out["explain"]=el.get("explain"); return out
 
-def run(mode="daily",sync_stats=False,deep_stats=False):
+def run(mode="daily",sync_stats=False,deep_stats=False,as_of=None):
+ report_as_of=parse_dt(as_of) if isinstance(as_of,str) else as_of
+ if report_as_of is not None and report_as_of.tzinfo is None:raise RuntimeError("--as-of must include timezone offset")
  run_started=perf_counter(); timings={}; step_started=perf_counter(); health={}; bootstrap,h=get_json("bootstrap-static/"); health["bootstrap"]=h; timings["bootstrap_ms"]=round((perf_counter()-step_started)*1000,2)
  if not bootstrap: atomic_json(DATA/"health.json",health); raise RuntimeError("bootstrap unavailable")
- phase=detect_phase(bootstrap); teams,pos,by_id=maps(bootstrap); submitted_gw=phase["submitted_gw"]; scoring_gw=phase["scoring_gw"]
+ phase=detect_phase(bootstrap,report_as_of); checkpoint_context=resolve_checkpoint(mode,phase.get("deadline_time"),phase.get("is_live_event",False),as_of=report_as_of,simulated=report_as_of is not None); teams,pos,by_id=maps(bootstrap); submitted_gw=phase["submitted_gw"]; scoring_gw=phase["scoring_gw"]
  official_specs=[("fixtures","fixtures/",3),("event_status","event-status/",3),("entry",f"entry/{TEAM_ID}/",3),("history",f"entry/{TEAM_ID}/history/",3),("transfers",f"entry/{TEAM_ID}/transfers/",3)]
  if submitted_gw:official_specs.append(("picks",f"entry/{TEAM_ID}/event/{submitted_gw}/picks/",3))
  if scoring_gw:official_specs.append(("event_live",f"event/{scoring_gw}/live/",3))
@@ -111,7 +115,7 @@ def run(mode="daily",sync_stats=False,deep_stats=False):
  generated=iso_now(); predictions=build_predictions(bootstrap,fixtures or [],generated,stats_gw=stats_gw); atomic_json(DATA/"predictions_v4.json",predictions)
  atomic_json(DATA/"universe.json",{"generated_at":generated,"players":universe});atomic_json(DATA/"health.json",health);atomic_json(DATA/"chips.json",{"generated_at":generated,"used":(history or {}).get("chips",[])});atomic_json(DATA/"team.json",{"generated_at":generated,"team_id":TEAM_ID,"squad_authority":"LOCKED_PRE_DEADLINE" if use_lock else "OFFICIAL_SUBMITTED","squad":squad,"team_value_ledger":ledger,"totals":{"market_value":sum(x["now_cost"] for x in ledger),"sell_value":sum(x["sell_cost"] for x in ledger if x["sell_cost"] is not None),"itb":lock.get("itb_tenths") if use_lock else (entry or {}).get("last_deadline_bank")}})
  timings["engine_before_snapshot_write_ms"]=round((perf_counter()-run_started)*1000,2)
- snapshot={"schema_version":472,"engine_version":"4.7.2-performance-hotfix","generated_at":generated,"mode":mode,"team_id":TEAM_ID,"phase":phase,"endpoint_health":health,"squad_authority":"LOCKED_PRE_DEADLINE" if use_lock else "OFFICIAL_SUBMITTED","advanced_stats_sync":adv_summary,"prediction_summary":{"model":predictions["model_version"],"players":len(predictions["players"]),"top_5gw":predictions["players"][:10]},"team_summary":{"itb":lock.get("itb_tenths") if use_lock else (entry or {}).get("last_deadline_bank"),"market_value":sum(x["now_cost"] for x in ledger),"sell_value":sum(x["sell_cost"] for x in ledger if x["sell_cost"] is not None)},"live_summary":{"status":live_payload["status"],"gross_points":live_payload.get("gross_points"),"net_points":live_payload.get("net_points")},"price_summary":{"confirmed_changes":confirmed,"top_buy_pressure":momentum[:10]},"files":{"team":"data/team.json","live":"data/live.json","prices":"data/prices.json","health":"data/health.json","universe":"data/universe.json","chips":"data/chips.json","predictions":"data/predictions_v4.json"},"performance":timings,"meta":{"direct_fpl_api_authority":True,"fail_closed":True,"prediction_point_in_time":True,"advanced_stats_are_community_enrichment":True,"leakage_guard_required_for_predictive_training":True,"parallel_fetch_is_single_snapshot_not_polling":True}}
+ snapshot={"schema_version":473,"engine_version":"4.7.3-checkpoint-governance","generated_at":generated,"mode":mode,"checkpoint_context":checkpoint_context,"team_id":TEAM_ID,"phase":phase,"endpoint_health":health,"squad_authority":"LOCKED_PRE_DEADLINE" if use_lock else "OFFICIAL_SUBMITTED","advanced_stats_sync":adv_summary,"prediction_summary":{"model":predictions["model_version"],"players":len(predictions["players"]),"top_5gw":predictions["players"][:10]},"team_summary":{"itb":lock.get("itb_tenths") if use_lock else (entry or {}).get("last_deadline_bank"),"market_value":sum(x["now_cost"] for x in ledger),"sell_value":sum(x["sell_cost"] for x in ledger if x["sell_cost"] is not None)},"live_summary":{"status":live_payload["status"],"gross_points":live_payload.get("gross_points"),"net_points":live_payload.get("net_points")},"price_summary":{"confirmed_changes":confirmed,"top_buy_pressure":momentum[:10]},"files":{"team":"data/team.json","live":"data/live.json","prices":"data/prices.json","health":"data/health.json","universe":"data/universe.json","chips":"data/chips.json","predictions":"data/predictions_v4.json","checkpoint_decision":"data/checkpoint_decision_v4.json"},"performance":timings,"meta":{"direct_fpl_api_authority":True,"fail_closed":True,"prediction_point_in_time":True,"advanced_stats_are_community_enrichment":True,"leakage_guard_required_for_predictive_training":True,"parallel_fetch_is_single_snapshot_not_polling":True,"checkpoint_policy_registry_driven":True,"simulation_never_authorizes_action":True}}
  atomic_json(DATA/"latest.json",snapshot);gw=phase["submitted_gw"] or phase["planning_gw"]
  if gw:atomic_json(DATA/"gw"/f"{gw:02d}.json",snapshot)
  append_jsonl(DATA/"history.jsonl",snapshot);return snapshot
@@ -119,9 +123,9 @@ def run(mode="daily",sync_stats=False,deep_stats=False):
 def cli():
  ap=argparse.ArgumentParser();sub=ap.add_subparsers(dest="cmd",required=True)
  for name in ["daily","deadline","live"]:
-  p=sub.add_parser(name);p.add_argument("--stats",action="store_true");p.add_argument("--deep-stats",action="store_true")
+  p=sub.add_parser(name);p.add_argument("--stats",action="store_true");p.add_argument("--deep-stats",action="store_true");p.add_argument("--as-of",help="Timezone-aware deterministic checkpoint time")
  p=sub.add_parser("stats-sync");p.add_argument("--gw",type=int,required=True);p.add_argument("--deep",action="store_true");p=sub.add_parser("advanced-stats");p.add_argument("--gw",type=int,required=True);p.add_argument("--query",required=True);args=ap.parse_args()
- if args.cmd in {"daily","deadline","live"}:print(json.dumps(run(args.cmd,args.stats,args.deep_stats),ensure_ascii=False,indent=2))
+ if args.cmd in {"daily","deadline","live"}:print(json.dumps(run(args.cmd,args.stats,args.deep_stats,args.as_of),ensure_ascii=False,indent=2))
  elif args.cmd=="stats-sync":
   out={"core_insights":core_insights.sync_gw(args.gw),"vaastav":vaastav.sync_gw(args.gw),"last_season":vaastav.sync_previous_season()}
   if args.deep:out["deep"]=core_insights.sync_optional_deep_files(args.gw)

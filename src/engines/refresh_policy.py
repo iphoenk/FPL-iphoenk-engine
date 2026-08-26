@@ -1,16 +1,31 @@
 from __future__ import annotations
-from datetime import datetime,timezone
 
-def refresh_interval_minutes(deadline:str|None,is_live:bool=False)->int:
-    if is_live: return 1
-    if not deadline: return 60
-    try: d=datetime.fromisoformat(deadline.replace("Z","+00:00")); hours=(d-datetime.now(timezone.utc)).total_seconds()/3600
-    except Exception: return 60
-    if hours<=1: return 10
-    if hours<=4: return 15
-    if hours<=24: return 30
-    return 60
+from datetime import datetime
 
-def mode(deadline:str|None,is_live:bool=False)->dict:
-    mins=refresh_interval_minutes(deadline,is_live)
-    return {"mode":"MATCHDAY_LIVE" if is_live else "DEADLINE_AWARE","recommended_interval_minutes":mins,"requires_always_on_host":mins<15 or is_live}
+from src.engines.checkpoint_policy import resolve_checkpoint
+
+
+def refresh_interval_minutes(
+    deadline: str | None,
+    is_live: bool = False,
+    as_of: datetime | str | None = None,
+    run_mode: str = "daily",
+) -> int:
+    context = resolve_checkpoint(run_mode, deadline, is_live=is_live, as_of=as_of)
+    return int(context["recommended_refresh_minutes"])
+
+
+def mode(
+    deadline: str | None,
+    is_live: bool = False,
+    as_of: datetime | str | None = None,
+    run_mode: str = "daily",
+) -> dict:
+    context = resolve_checkpoint(run_mode, deadline, is_live=is_live, as_of=as_of)
+    minutes = int(context["recommended_refresh_minutes"])
+    return {
+        "mode": context["policy_id"],
+        "recommended_interval_minutes": minutes,
+        "requires_always_on_host": minutes < 15 or is_live,
+        "checkpoint_context": context,
+    }

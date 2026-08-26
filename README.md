@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.7.2
+# FPL iphoenk Engine V4.7.3
 
 A production-oriented personal FPL data platform.
 
@@ -64,6 +64,7 @@ python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
 python -m src.engines.framework_health_audit --phase preflight --strict
 python -m src.engines.v4_decision_pipeline
 python -m src.engines.framework_health_audit --phase postflight --strict
+python -m src.engines.v4_checkpoint_governance
 python -m src.engines.v4_quality_gate
 
 uvicorn live_service:app --host 0.0.0.0 --port 8000
@@ -112,3 +113,11 @@ GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy
 - WC optimization keeps beam size 6000 and the same ranking key, using packed precomputed club bits and bounded top-k selection instead of full sorting.
 - Package audit preserves its frontier and beam widths, while materializing JSON payloads only for retained top packages.
 - Decision equivalence is an acceptance requirement; V4.7.1 prediction formulas and V4.6.4 correctness thresholds are unchanged.
+
+## V4.7.3 checkpoint governance
+
+- Checkpoint selection is registry-driven for 04.30, 12.30, 21.30, deadline review, post-final emergency watch, and matchday live monitoring.
+- Snapshot freshness limits follow the active checkpoint and block recommendations when exceeded.
+- `LOCKED_15` squad composition is reported separately from the still-adjustable XI, bench order, captain, and vice-captain.
+- Deterministic `--as-of` runs are labelled simulations and can never authorize a live action.
+- The final action is produced only after POST-FLIGHT health, while V4.7.1 predictions and V4.7.2 optimizer search widths remain unchanged.

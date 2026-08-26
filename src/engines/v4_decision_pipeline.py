@@ -93,8 +93,9 @@ def run():
     timings["total_pipeline_ms"] = round((perf_counter() - t0) * 1000.0, 1)
 
     out = {
-        "schema_version": 472,
-        "engine": "v4.7.2-unified-decision-pipeline-performance",
+        "schema_version": 473,
+        "engine": "v4.7.3-unified-decision-pipeline-checkpoint-aware",
+        "checkpoint_context": latest.get("checkpoint_context") or {},
         "timings": timings,
         "results": {
             "wc_raw": wc.get("classification"),
@@ -118,6 +119,7 @@ def run():
             "package_frontier_beam_unchanged": True,
             "bounded_top_k_same_wc_beam": True,
             "top_packages_only_payload_materialization": True,
+            "checkpoint_action_deferred_until_postflight_health": True,
         },
     }
     atomic_json(OUTFILE, out)

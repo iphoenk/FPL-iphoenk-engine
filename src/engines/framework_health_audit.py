@@ -280,12 +280,19 @@ def _probe_source_health() -> tuple[bool, dict]:
     return all(states.get(key) == "LIVE" for key in critical), {"critical_endpoints": states}
 
 
-def _probe_freshness(max_age_minutes: int = 90) -> tuple[bool, dict]:
-    generated = parse_dt(read_json(DATA / "latest.json", {}).get("generated_at"))
+def _probe_freshness(max_age_minutes: int | None = None) -> tuple[bool, dict]:
+    latest = read_json(DATA / "latest.json", {})
+    context = latest.get("checkpoint_context") or {}
+    maximum = int(max_age_minutes or context.get("max_snapshot_age_minutes") or 90)
+    generated = parse_dt(latest.get("generated_at"))
     if not generated:
         return False, {"reason": "latest.generated_at missing"}
     age = max(0.0, (utcnow() - generated).total_seconds() / 60)
-    return age <= max_age_minutes, {"age_minutes": round(age, 1), "max_age_minutes": max_age_minutes}
+    return age <= maximum, {
+        "age_minutes": round(age, 1),
+        "max_age_minutes": maximum,
+        "checkpoint_policy_id": context.get("policy_id"),
+    }
 
 
 def _probe_price() -> tuple[bool, dict]:
@@ -651,12 +658,13 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
     else:
         overall = "GREEN"
 
-    recommendation_allowed = overall != "RED" and gate0["pass"]
+    recommendation_allowed = overall != "RED" and gate0["pass"] and freshness_ok
     go_allowed = overall == "GREEN" and gate0["pass"] and (phase == "preflight" or gate0["counts"].get("DEFERRED", 0) == 0)
     out = {
-        "schema_version": 472,
-        "engine": "v4.7.2-framework-health-performance-cache",
+        "schema_version": 473,
+        "engine": "v4.7.3-framework-health-checkpoint-aware",
         "phase": phase,
+        "checkpoint_context": read_json(DATA / "latest.json", {}).get("checkpoint_context") or {},
         "overall": overall,
         "decision_engine": "HEALTHY" if overall == "GREEN" else "DEGRADED" if overall == "AMBER" else "BLOCKED",
         "recommendation_allowed": recommendation_allowed,
@@ -679,6 +687,7 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
             "health_check_must_precede_recommendation": True,
             "raw_optimizer_is_not_final_decision": True,
             "preflight_defers_postflight_outputs": True,
+            "checkpoint_freshness_policy_enforced": True,
         },
         "performance": {
             "prediction_snapshot_reads": 1,

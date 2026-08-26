@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "registry": "fpl_report_actions_v1",
+  "actions": {
+    "HOLD": {
+      "headline": "HOLD LOCK 15",
+      "summary": "Pertahankan komposisi 15 pemain. Rekomendasi masih dapat dipantau, tetapi belum cukup kuat untuk dieksekusi.",
+      "structure_action": "KEEP_LOCKED_15"
+    },
+    "REVIEW_REQUIRED": {
+      "headline": "REVIEW REQUIRED",
+      "summary": "Ada kandidat perubahan yang layak ditinjau, tetapi keputusan memerlukan pemeriksaan final sebelum eksekusi.",
+      "structure_action": "REVIEW_PROPOSED_CHANGES"
+    },
+    "GO": {
+      "headline": "GO",
+      "summary": "Seluruh gate, freshness, dan evidence governance mendukung eksekusi rekomendasi.",
+      "structure_action": "EXECUTE_GOVERNED_RECOMMENDATION"
+    },
+    "EMERGENCY_UPDATE_ONLY": {
+      "headline": "EMERGENCY UPDATE ONLY",
+      "summary": "Final review telah lewat. Perubahan hanya boleh dilakukan bila ada berita material yang memengaruhi kelayakan pemain.",
+      "structure_action": "KEEP_FINAL_STRUCTURE_UNLESS_MATERIAL_EMERGENCY"
+    },
+    "REFRESH_REQUIRED": {
+      "headline": "REFRESH REQUIRED",
+      "summary": "Data melewati batas freshness checkpoint. Jangan mengambil keputusan sebelum snapshot diperbarui.",
+      "structure_action": "NO_ACTION_UNTIL_REFRESH"
+    },
+    "BLOCKED": {
+      "headline": "BLOCKED",
+      "summary": "Hard constraint atau framework health gagal. Rekomendasi tidak boleh digunakan.",
+      "structure_action": "NO_ACTION"
+    },
+    "SIMULATION_ONLY": {
+      "headline": "SIMULATION ONLY",
+      "summary": "Hasil ini menguji perilaku checkpoint dengan waktu simulasi dan tidak mengotorisasi perubahan tim.",
+      "structure_action": "NO_LIVE_ACTION"
+    }
+  }
+}

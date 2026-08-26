@@ -63,22 +63,28 @@ def _source_fusion_summary(source_fusion: dict[str, Any]) -> dict[str, Any]:
     api = sources.get("api_football") if isinstance(sources.get("api_football"), dict) else {}
     understat = sources.get("understat") if isinstance(sources.get("understat"), dict) else {}
     api_obs = api.get("observability") if isinstance(api.get("observability"), dict) else {}
+    api_governance = api.get("governance") if isinstance(api.get("governance"), dict) else {}
     return {
         "status": source_fusion.get("status"),
         "season": source_fusion.get("season"),
         "health": health,
         "api_football": {
             "status": api.get("status"),
+            "availability_class": api.get("availability_class"),
+            "reason": api.get("reason"),
             "evidence_status": api.get("evidence_status"),
             "credential_present": api_obs.get("credential_present"),
             "network_requests": api_obs.get("network_requests"),
             "cache_hits": api_obs.get("cache_hits"),
+            "availability_cache_hits": api_obs.get("availability_cache_hits"),
             "competitions_attempted": api_obs.get("competitions_attempted"),
             "competitions_resolved": api_obs.get("competitions_resolved"),
             "fixture_count": len(api.get("fixtures") or []),
             "quota_remaining": api_obs.get("quota_remaining"),
             "quota_limit": api_obs.get("quota_limit"),
             "failure_count": len(api.get("failures") or []),
+            "fail_neutral": api_governance.get("fail_neutral"),
+            "cached_provider_restriction": api_governance.get("cached_provider_restriction"),
         },
         "understat": {
             "status": understat.get("status"),

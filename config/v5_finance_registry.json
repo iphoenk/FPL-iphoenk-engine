@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "rules_authority": "config/rules/registry.json",
+  "owned_sell_value": {
+    "authority_order": ["authenticated_selling_price", "public_purchase_price_reconstruction"],
+    "fallback_method": "official_half_profit_floor",
+    "fail_closed_when_purchase_cost_unknown": true
+  },
+  "purchase_price_reconstruction": {
+    "authority_order": ["authenticated_purchase_price", "entry_transfer_history", "initial_squad_baseline"],
+    "transfer_history_field": "element_in_cost",
+    "unresolved_policy": "UNKNOWN_NOT_NOW_COST"
+  },
+  "affordability": {
+    "owned_player_cost": "sell_cost",
+    "unowned_player_cost": "now_cost"
+  }
+}

@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "registry": "SOURCE_REGISTRY_V1",
+  "schema_version": 2,
+  "registry": "SOURCE_REGISTRY_V2",
   "policy": {
     "official_fpl_is_native_authority": true,
     "challengers_never_override_official_native_fields": true,
@@ -10,7 +10,9 @@
     "default_timeout_seconds": 2.5,
     "max_workers": 6,
     "raw_credentials_forbidden": true,
-    "public_fetch_only_unless_explicit_authenticated_adapter": true
+    "public_fetch_only_unless_explicit_authenticated_adapter": true,
+    "quota_limited_sources_require_cache": true,
+    "source_reachability_does_not_equal_data_ingestion": true
   },
   "sources": [
     {
@@ -104,12 +106,70 @@
       "id": "understat",
       "name": "Understat",
       "class": "ENRICHMENT",
+      "tier": 3,
+      "enabled": true,
+      "critical": false,
+      "adapter": "understat",
+      "probe_url": "https://understat.com/league/EPL",
+      "cadence": "daily_or_post_match",
+      "capabilities": ["xg", "xa", "shot_coordinates", "shot_xg", "key_pass_context", "box_shot_location_proxy"],
+      "governance": {
+        "box_touches_are_proxy_only": true,
+        "scrape_rate_must_be_conservative": true,
+        "no_claim_of_official_box_touches": true
+      }
+    },
+    {
+      "id": "api_football",
+      "name": "API-Football",
+      "class": "ENRICHMENT",
+      "tier": 3,
+      "enabled": true,
+      "critical": false,
+      "adapter": "api_football",
+      "requires_env": "API_FOOTBALL_KEY",
+      "base_url": "https://v3.football.api-sports.io",
+      "quota": {"free_requests_per_day": 100, "strategy": "persistent_gameweek_cache"},
+      "capabilities": ["competition_fixtures", "european_congestion", "domestic_cup_congestion", "international_fixtures", "international_minutes", "cross_competition_rest_days", "club_friendlies"],
+      "governance": {
+        "competition_ids_runtime_resolved": true,
+        "hardcoded_league_ids_forbidden": true,
+        "callups_not_assumed": true,
+        "travel_distance_not_assumed": true
+      }
+    },
+    {
+      "id": "sportmonks",
+      "name": "Sportmonks Football API",
+      "class": "ENRICHMENT",
       "tier": 4,
       "enabled": false,
       "critical": false,
       "adapter": "disabled",
-      "capabilities": ["xg", "xa"],
-      "note": "Direct scraping remains disabled by default."
+      "requires_env": "SPORTMONKS_TOKEN",
+      "capabilities": ["key_passes", "big_chances_created", "big_chances_missed", "player_statistics"],
+      "note": "Adapter reserved. Free-plan Premier League coverage must be verified before enabling; do not assume free token covers EPL."
+    },
+    {
+      "id": "manual_international_callups",
+      "name": "International Call-up Manual Registry",
+      "class": "ENRICHMENT",
+      "tier": 3,
+      "enabled": false,
+      "critical": false,
+      "adapter": "disabled",
+      "capabilities": ["official_callup", "travel_context"],
+      "note": "Intended for curated international-break evidence when no clean free API exists."
+    },
+    {
+      "id": "manual_preseason",
+      "name": "Preseason Manual Evidence",
+      "class": "ENRICHMENT",
+      "tier": 4,
+      "enabled": false,
+      "critical": false,
+      "adapter": "disabled",
+      "capabilities": ["preseason_role", "preseason_minutes", "friendly_context"]
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
-  "schema_version": 471,
-  "engine": "v4.7.1-framework-health-correctness-probes",
+  "schema_version": 472,
+  "engine": "v4.7.2-framework-health-performance-cache",
   "phase": "preflight",
   "overall": "AMBER",
   "decision_engine": "DEGRADED",
@@ -1060,7 +1060,7 @@
         ],
         "probe": "data_freshness",
         "detail": {
-          "age_minutes": 0.1,
+          "age_minutes": 0.0,
           "max_age_minutes": 90
         }
       },
@@ -1276,7 +1276,7 @@
   "data_freshness": {
     "status": "PASS",
     "detail": {
-      "age_minutes": 0.1,
+      "age_minutes": 0.0,
       "max_age_minutes": 90
     }
   },
@@ -1311,5 +1311,10 @@
     "raw_optimizer_is_not_final_decision": true,
     "preflight_defers_postflight_outputs": true
   },
-  "performance_ms": 5907.27
+  "performance": {
+    "prediction_snapshot_reads": 1,
+    "operational_probe_cache_entries": 69,
+    "audit_scoped_cache": true
+  },
+  "performance_ms": 378.43
 }

@@ -1,6 +1,6 @@
 {
-  "schema_version": 464,
-  "engine": "v4.6.4-wc-optimizer-sell-cost-correctness",
+  "schema_version": 472,
+  "engine": "v4.7.2-wc-optimizer-performance-hotfix",
   "wildcard_active": true,
   "budget_tenths": 1000,
   "baseline_itb_tenths": 5,
@@ -632,6 +632,8 @@
     "winner_only_legality_check": true,
     "packed_club_signature": true,
     "counter_copy_eliminated": true,
+    "precomputed_club_bits": true,
+    "bounded_top_k_same_beam": true,
     "beam_size_unchanged": true,
     "direct_challenger_position_index": true
   }

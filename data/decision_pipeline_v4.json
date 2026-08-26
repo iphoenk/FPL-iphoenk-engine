@@ -1,15 +1,15 @@
 {
-  "schema_version": 464,
-  "engine": "v4.6.4-unified-decision-pipeline-correctness",
+  "schema_version": 472,
+  "engine": "v4.7.2-unified-decision-pipeline-performance",
   "timings": {
-    "load_shared_inputs_and_candidates_ms": 295.6,
-    "wc_decision_cpu_ms": 6405.8,
-    "package_audit_cpu_ms": 4855.0,
-    "wc_package_parallel_wall_ms": 6427.6,
-    "parallel_speedup_estimate": 1.752,
-    "lineup_ms": 2.6,
+    "load_shared_inputs_and_candidates_ms": 338.6,
+    "wc_decision_cpu_ms": 3403.6,
+    "package_audit_cpu_ms": 3017.9,
+    "wc_package_parallel_wall_ms": 3424.3,
+    "parallel_speedup_estimate": 1.875,
+    "lineup_ms": 2.4,
     "evidence_sanity_ms": 3.2,
-    "total_pipeline_ms": 6786.3
+    "total_pipeline_ms": 3818.5
   },
   "results": {
     "wc_raw": "MATERIAL_UPGRADE",
@@ -30,6 +30,8 @@
     "concise_stdout": true,
     "search_quality_reduction": false,
     "wc_beam_unchanged": true,
-    "package_frontier_beam_unchanged": true
+    "package_frontier_beam_unchanged": true,
+    "bounded_top_k_same_wc_beam": true,
+    "top_packages_only_payload_materialization": true
   }
 }

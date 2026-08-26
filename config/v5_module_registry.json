@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "policy": "Any separable V5 domain should be represented by a dedicated module and/or registry when doing so improves authority clarity, identification, tuning, provenance, testing, or maintenance without unacceptable performance cost.",
   "modules": {
     "rules": {
@@ -11,24 +11,24 @@
     },
     "source_authority": {
       "plane": "truth",
-      "entrypoint": "planned: src.v5.sources",
-      "config": "config/sources.json",
-      "adjustment_surface": ["source priority", "freshness", "fallback policy", "phase authority"],
-      "status": "PENDING_CONSOLIDATION"
+      "entrypoint": "src.v5.source_authority",
+      "config": "config/v5_source_authority_registry.json",
+      "adjustment_surface": ["source priority", "source enablement", "domain authority chains", "fallback policy"],
+      "status": "ACTIVE"
     },
     "finance": {
       "plane": "truth",
-      "entrypoint": "planned: src.v5.finance",
-      "config": "planned: config/v5_finance_registry.json",
-      "adjustment_surface": ["sell-value policy", "purchase-price reconstruction", "affordability semantics"],
-      "status": "PENDING_CONSOLIDATION"
+      "entrypoint": "src.v5.finance",
+      "config": "config/v5_finance_registry.json",
+      "adjustment_surface": ["sell-value authority", "purchase-price reconstruction", "affordability semantics", "fail-closed policy"],
+      "status": "ACTIVE"
     },
     "phase_state": {
       "plane": "truth",
-      "entrypoint": "planned: src.v5.state",
-      "config": "planned: config/v5_phase_authority_registry.json",
+      "entrypoint": "src.v5.state",
+      "config": "config/v5_phase_authority_registry.json",
       "adjustment_surface": ["pre-deadline authority", "post-deadline reconciliation", "live authority", "post-GW authority"],
-      "status": "PENDING_CONSOLIDATION"
+      "status": "ACTIVE"
     },
     "price_trajectory": {
       "plane": "intelligence",

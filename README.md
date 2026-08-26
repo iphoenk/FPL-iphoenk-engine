@@ -27,7 +27,7 @@ Release changes:
 - active prediction and price service entrypoints are version-neutral
 - coarse-grained service boundaries retained where shared HTTP caching or serial artifact ownership makes further process splitting counterproductive
 
-The release remains subject to the V3 production acceptance contract: Gate0 16/16, DSS 50/50 ACTIVE, Extensions 16/16 ACTIVE, Enhancements 8/8 ACTIVE, production framework GREEN, report/watchlist contracts valid, and runtime inside the configured budget.
+Production acceptance completed on 26 August 2026. The production collector for merge commit `6ad79610f74893e3badbd3feccb63c4f052440b8` passed the full regression suite, production contract, 15 OWNED + 20 WATCHLIST contract, report-serving validation and runtime budget, then published the validated bridge to `runtime-data`. The published framework is GREEN/HEALTHY with GO allowed, Gate0 16/16 PASS, DSS Core 50/50 ACTIVE, DSS Extensions 16/16 ACTIVE and Enhancement Layers 8/8 ACTIVE. Challenger capability availability remains fail-soft: an unavailable or reachable-without-structured-observation source does not block the Official baseline and missing observations are not fabricated.
 
 ## v3.17.1 Master Task Governance
 V3.17.1 is a governance/documentation maintenance release with no decision-logic or schema change. It establishes `MASTER_TASK_LIST_V3.md` as the single human-readable master roadmap for the operational V3 stream.
@@ -204,7 +204,7 @@ CI must fail on release metadata drift. The master task list must be updated in 
 - v3.16.1: configuration ownership hardening
 - v3.17: runtime-evidence DSS operationalization and optimizer guardrails
 - v3.17.1: canonical V3 master task governance and Definition of Done
-- v3.18.0: structured challenger observations and architecture/configuration hardening
+- v3.18.0: structured challenger observations, architecture/configuration hardening, and production acceptance
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.

@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "evaluation_model": "capability_contract_dss_v3",
+  "schema_version": 2,
+  "evaluation_model": "capability_contract_dss_v317",
   "registries": {
     "core": {
       "path": "config/dss_core_registry.json",
@@ -22,7 +22,12 @@
     "partial": "PARTIAL"
   },
   "governance": {
+    "registry_integrity_required": true,
     "critical_partial_blocks_unqualified_go": true,
-    "registry_integrity_required": true
+    "all_modules_active_for_unqualified_go": true,
+    "module_health_means_evaluator_executed": true,
+    "signal_availability_is_separate_from_module_health": true,
+    "missing_external_evidence_is_never_fabricated": true,
+    "safe_fallback_must_be_explicit": true
   }
 }

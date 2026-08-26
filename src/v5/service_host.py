@@ -54,10 +54,17 @@ def meta() -> dict[str, Any]:
     }
 
 
-@app.post("/v1/invoke/{operation}")
+@app.post(str(DEFAULTS["invoke_path"]))
 def invoke(operation: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
-    payload = body or {}
+    payload = dict(body or {})
     correlation_id = payload.pop("_correlation_id", None)
+    requested_contract = str(payload.pop("_contract_version", DEFAULTS["contract_version"]))
+    active_contract = str(DEFAULTS["contract_version"])
+    if requested_contract != active_contract:
+        raise HTTPException(
+            status_code=409,
+            detail=f"contract mismatch requested={requested_contract} active={active_contract}",
+        )
     started = perf_counter()
     try:
         data = HANDLER(operation, payload)
@@ -72,7 +79,7 @@ def invoke(operation: str, body: dict[str, Any] | None = None) -> dict[str, Any]
             operation=operation,
             ok=False,
             error=f"{type(exc).__name__}: {exc}",
-            contract_version=str(DEFAULTS["contract_version"]),
+            contract_version=active_contract,
             correlation_id=correlation_id,
             elapsed_ms=elapsed,
         ).as_dict()
@@ -82,7 +89,7 @@ def invoke(operation: str, body: dict[str, Any] | None = None) -> dict[str, Any]
         operation=operation,
         ok=True,
         data=data,
-        contract_version=str(DEFAULTS["contract_version"]),
+        contract_version=active_contract,
         correlation_id=correlation_id,
         elapsed_ms=elapsed,
     ).as_dict()

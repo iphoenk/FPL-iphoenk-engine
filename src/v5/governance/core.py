@@ -12,6 +12,7 @@ DSS_POLICY = "config/v5_dss_policy_registry.json"
 GATE_REGISTRY = "config/gate0_registry.json"
 GATE_POLICY = "config/v5_gate0_policy_registry.json"
 SERVICE_REGISTRY = "config/v5_service_registry.json"
+DEGRADED_POLICY = "config/v5_degraded_mode_registry.json"
 
 
 def _now() -> str:
@@ -67,6 +68,39 @@ def _gate_contract() -> dict[str, Any]:
     if not isinstance(contract, dict):
         raise RuntimeError("invalid Gate0 registry contract")
     return contract
+
+
+def degraded_contexts(
+    truth: dict[str, Any],
+    prediction: dict[str, Any],
+    price: dict[str, Any],
+    decision: dict[str, Any],
+    evaluation: dict[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for service_name, payload in (
+        ("truth", truth),
+        ("prediction", prediction),
+        ("price", price),
+        ("decision", decision),
+        ("evaluation", evaluation),
+    ):
+        context = payload.get("degraded_context") if isinstance(payload, dict) else None
+        if not isinstance(context, dict):
+            continue
+        rows.append(
+            {
+                "service": service_name,
+                "service_id": context.get("service_id") or service_name,
+                "operation": context.get("operation"),
+                "behavior": context.get("behavior"),
+                "blocks_unqualified_go": bool(context.get("blocks_unqualified_go")),
+                "error_type": context.get("error_type"),
+                "error": context.get("error"),
+                "generated_at": context.get("generated_at"),
+            }
+        )
+    return rows
 
 
 def _capability_sources(
@@ -182,9 +216,15 @@ def build_health(
         if bool(item.get("critical")) and item.get("status") != "ACTIVE"
     ]
     gate_failures = [item for item in gate.get("items", []) if item.get("status") == "FAIL"]
+    degraded = degraded_contexts(truth, prediction, price, decision, evaluation)
+    degraded_policy = load_json_config(DEGRADED_POLICY).get("policy") or {}
+    degraded_blocks = bool(
+        degraded_policy.get("degraded_context_blocks_unqualified_go", True)
+        and any(bool(row.get("blocks_unqualified_go")) for row in degraded)
+    )
     decision_ready = decision.get("status") == "READY"
     recommendation_allowed = bool(gate.get("pass") and registry_integrity and decision_ready)
-    go_allowed = bool(recommendation_allowed and not critical_partial)
+    go_allowed = bool(recommendation_allowed and not critical_partial and not degraded_blocks)
     overall = "RED" if not recommendation_allowed else ("GREEN" if go_allowed else "AMBER")
 
     gate_contract = _gate_contract()
@@ -194,14 +234,16 @@ def build_health(
     service_registry = load_json_config(SERVICE_REGISTRY)
 
     return {
-        "framework_schema": 7,
+        "framework_schema": 8,
         "generated_at": _now(),
-        "auditor": "v5-microservice-governance-v3",
+        "auditor": "v5-microservice-governance-v4",
         "overall": overall,
         "decision_engine": "HEALTHY" if go_allowed else ("DEGRADED" if recommendation_allowed else "BLOCKED"),
         "recommendation_allowed": recommendation_allowed,
         "go_allowed": go_allowed,
         "registry_integrity": registry_integrity,
+        "degraded_contexts": degraded,
+        "degraded_blocks_unqualified_go": degraded_blocks,
         "rules_registry": {
             "status": "PASS" if truth.get("rules") else "FAIL",
             "detail": {
@@ -224,6 +266,9 @@ def build_health(
             "dss_core_required_count": int(dss_registries["core"]["expected_count"]),
             "dss_extension_required_count": int(dss_registries["extensions"]["expected_count"]),
             "enhancement_required_count": int(enhancement_contract["expected_count"]),
+            "degraded_context_blocks_unqualified_go": bool(
+                degraded_policy.get("degraded_context_blocks_unqualified_go", True)
+            ),
             "service_boundary_enforced": bool(service_registry.get("mandatory")),
             "production_auto_submit": False,
         },

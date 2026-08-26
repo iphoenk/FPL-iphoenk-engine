@@ -1,0 +1,78 @@
+{
+  "engine": "FPL iphoenk Engine",
+  "version": "5.0.0-alpha.1",
+  "codename": "Unified Decision Engine",
+  "track": "architectural_overhaul",
+  "baselines": {
+    "production_truth": "v3.9.1-rules-drift-daily",
+    "prediction_intelligence": "v4-prediction-engine"
+  },
+  "operating_model": {
+    "v3": "production and scheduled-task runtime",
+    "v4": "prediction R&D, tuning and calibration",
+    "v5": "unified overhaul and acceptance candidate"
+  },
+  "single_authorities": {
+    "rules": "src.rules + config/rules",
+    "official_player_identity": "Official FPL element id",
+    "squad_state": "phase-aware Official/locked state resolver",
+    "finance": "one purchase/sell-value engine",
+    "projection": "one governed xMins/xPts pipeline",
+    "decision": "one evidence-to-decision trace"
+  },
+  "planes": {
+    "truth": [
+      "Official FPL authority",
+      "authenticated read-only overlay",
+      "rules registry",
+      "phase-aware squad state",
+      "finance/sell value",
+      "price trajectory",
+      "persistence",
+      "provenance/freshness",
+      "leakage guard"
+    ],
+    "intelligence": [
+      "xMins priors",
+      "advanced stats",
+      "set-piece and penalty shares",
+      "last-season priors",
+      "dynamic opponent defence",
+      "xPts",
+      "Monte Carlo",
+      "package optimizer"
+    ],
+    "governance": [
+      "Gate0",
+      "DSS core registry",
+      "DSS extensions",
+      "enhancement layers",
+      "preflight/postflight health",
+      "quality gate",
+      "calibration"
+    ],
+    "decision": [
+      "XI",
+      "bench order",
+      "captain/vice",
+      "transfers",
+      "Wildcard/packages",
+      "chips",
+      "watchlist",
+      "price-risk actions"
+    ]
+  },
+  "acceptance": {
+    "no_regression_vs_v3_truth": true,
+    "no_regression_vs_v4_prediction": true,
+    "no_duplicate_authority": true,
+    "rules_registry_required": true,
+    "prediction_provenance_required": true,
+    "decision_trace_required": true,
+    "calibration_required_before_production_promotion": true
+  },
+  "production_promotion": {
+    "allowed": false,
+    "reason": "V5 remains alpha until V3 truth parity and V4 intelligence parity are proven by acceptance gates."
+  }
+}

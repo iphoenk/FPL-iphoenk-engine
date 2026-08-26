@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T13:24:03.117178+00:00",
+  "generated_at": "2026-08-26T21:21:14.491402+00:00",
   "registry": "EXTERNAL_CHALLENGER_SCORECARD",
   "planning_gw": 2,
   "auto_scrape": false,
@@ -10,7 +10,7 @@
       "mode": "native",
       "enabled": true,
       "state": "ACTIVE",
-      "current_coverage": 612,
+      "current_coverage": 614,
       "historical_sample": 0,
       "dynamic_weight_eligible": false
     },

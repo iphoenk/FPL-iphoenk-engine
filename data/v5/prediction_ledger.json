@@ -5,7 +5,7 @@
       "gw": 2,
       "deadline_time": "2026-08-28T17:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-08-26T13:24:02.628856+00:00",
+        "generated_at": "2026-08-26T21:21:13.973090+00:00",
         "players": [
           {
             "element": 1,
@@ -1301,10 +1301,10 @@
             "element": 125,
             "name": "Georginio",
             "position": "FWD",
-            "xpts": 2.709,
-            "xpts_std": 2.801,
-            "xmins": 56.2,
-            "start_probability": 0.5767,
+            "xpts": 1.968,
+            "xpts_std": 2.547,
+            "xmins": 42.1,
+            "start_probability": 0.4325,
             "clean_sheet_probability": 0.1441
           },
           {
@@ -1355,16 +1355,6 @@
             "xpts_std": 2.845,
             "xmins": 53.7,
             "start_probability": 0.5918,
-            "clean_sheet_probability": 0.1441
-          },
-          {
-            "element": 131,
-            "name": "Baleba",
-            "position": "MID",
-            "xpts": 0.0,
-            "xpts_std": 1.15,
-            "xmins": 0.0,
-            "start_probability": 0.0,
             "clean_sheet_probability": 0.1441
           },
           {
@@ -1483,6 +1473,16 @@
             "position": "MID",
             "xpts": 2.449,
             "xpts_std": 2.742,
+            "xmins": 39.1,
+            "start_probability": 0.4537,
+            "clean_sheet_probability": 0.1441
+          },
+          {
+            "element": 614,
+            "name": "Hadjam",
+            "position": "DEF",
+            "xpts": 2.14,
+            "xpts_std": 2.611,
             "xmins": 39.1,
             "start_probability": 0.4537,
             "clean_sheet_probability": 0.1441
@@ -2281,10 +2281,10 @@
             "element": 206,
             "name": "Chadi Riad",
             "position": "DEF",
-            "xpts": 1.182,
-            "xpts_std": 2.157,
-            "xmins": 27.6,
-            "start_probability": 0.2775,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2958
           },
           {
@@ -2301,10 +2301,10 @@
             "element": 208,
             "name": "Sarr",
             "position": "MID",
-            "xpts": 1.808,
-            "xpts_std": 2.491,
-            "xmins": 39.3,
-            "start_probability": 0.3902,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2958
           },
           {
@@ -4121,10 +4121,10 @@
             "element": 365,
             "name": "Ramsay",
             "position": "DEF",
-            "xpts": 2.438,
-            "xpts_std": 2.737,
-            "xmins": 39.1,
-            "start_probability": 0.4537,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.4493
           },
           {
@@ -4615,6 +4615,16 @@
             "xpts_std": 2.548,
             "xmins": 56.7,
             "start_probability": 0.5868,
+            "clean_sheet_probability": 0.2958
+          },
+          {
+            "element": 131,
+            "name": "Baleba",
+            "position": "MID",
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2958
           },
           {
@@ -6126,12 +6136,22 @@
             "xmins": 39.1,
             "start_probability": 0.4537,
             "clean_sheet_probability": 0.2958
+          },
+          {
+            "element": 613,
+            "name": "Ahoka",
+            "position": "MID",
+            "xpts": 2.07,
+            "xpts_std": 2.582,
+            "xmins": 39.1,
+            "start_probability": 0.4537,
+            "clean_sheet_probability": 0.2958
           }
         ]
       },
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-08-26T13:24:03.117136+00:00",
+  "updated_at": "2026-08-26T21:21:14.491356+00:00",
   "model": "prediction_evaluation_v1"
 }

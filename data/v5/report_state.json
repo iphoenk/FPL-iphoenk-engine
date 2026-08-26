@@ -1,8 +1,20 @@
 {
-  "fingerprint": "90208b2b3e7f550b",
+  "fingerprint": "6b231e8718af4488",
   "state": {
     "squad": "HOLD",
-    "starting_xi": [],
+    "starting_xi": [
+      8,
+      15,
+      40,
+      88,
+      115,
+      165,
+      254,
+      411,
+      426,
+      557,
+      572
+    ],
     "formation": "4-4-2",
     "captain": 411,
     "vice_captain": 115,
@@ -27,11 +39,6 @@
         165,
         "RISE",
         "CRITICAL"
-      ],
-      [
-        557,
-        "RISE",
-        "HIGH"
       ]
     ],
     "critical_health": {

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "model_id": "official_role_intelligence_v1",
+  "position_slots": {"GK": 1.0, "DEF": 4.0, "MID": 4.0, "FWD": 2.0},
+  "neutral_role_start_probability": {"GK": 0.72, "DEF": 0.68, "MID": 0.68, "FWD": 0.62},
+  "start_rate_shrinkage_matches": 4.0,
+  "credible_peer_start_rate": 0.35,
+  "competition": {
+    "excess_peer_pressure_scale": 0.35,
+    "share_pressure_scale": 0.25,
+    "maximum_rotation_risk": 0.45
+  },
+  "set_pieces": {
+    "order_weights": {"1": 1.0, "2": 0.45, "3": 0.20},
+    "tail_weight": 0.08,
+    "corners_weight": 0.65,
+    "direct_freekicks_weight": 0.35
+  },
+  "penalties": {
+    "order_weights": {"1": 1.0, "2": 0.25, "3": 0.08},
+    "tail_weight": 0.02
+  },
+  "projection_adjustment": {
+    "set_piece_assist_uplift": 0.08,
+    "penalty_goal_uplift": 0.18,
+    "maximum_attack_multiplier": 1.30
+  },
+  "capabilities": ["rotation_competition", "set_piece_role", "penalty_role"],
+  "non_claims": ["tactical_role", "system_fit"]
+}

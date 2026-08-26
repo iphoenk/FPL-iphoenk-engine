@@ -1,8 +1,9 @@
 {
-  "schema_version": 2,
-  "model_id": "multi_horizon_package_optimizer_v1",
+  "schema_version": 3,
+  "model_id": "multi_horizon_package_optimizer_v2",
   "horizons": [3, 5, 10, 15],
   "horizon_weights": {"3": 0.42, "5": 0.33, "10": 0.15, "15": 0.10},
+  "positions": ["GK", "DEF", "MID", "FWD"],
   "max_changes": 2,
   "max_candidates_per_position": 7,
   "max_single_moves_per_out": 4,
@@ -10,7 +11,12 @@
   "max_deterministic_packages": 220,
   "monte_carlo_top_n": 20,
   "monte_carlo_simulations": 300,
-  "monte_carlo_seed": 3462711,
+  "monte_carlo_minimum_simulations": 20,
+  "monte_carlo_seed_policy": {
+    "strategy": "stable_sha256",
+    "namespace": "v5-package-optimizer",
+    "components": ["model_id", "ruleset_id", "planning_gw", "package_id"]
+  },
   "bench_utility_weight": 0.10,
   "captain_bonus_weight": 1.0,
   "risk_aversion": 0.12,

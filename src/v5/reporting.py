@@ -142,11 +142,17 @@ def build_report(payload: dict[str, Any]) -> dict[str, Any]:
     price = payload.get("price") if isinstance(payload.get("price"), dict) else {}
     governance = payload.get("governance") if isinstance(payload.get("governance"), dict) else {}
     previous = payload.get("previous_report_state") if isinstance(payload.get("previous_report_state"), dict) else {}
+    report_request = payload.get("report_request") if isinstance(payload.get("report_request"), dict) else {}
     if not decision or not truth:
         raise ValueError("reporting requires decision and truth payloads")
     current = _state(decision, price, governance)
     changes = _changes(current, previous)
-    compact = bool((cfg.get("stable_report") or {}).get("compact_when_no_material_change", True) and not changes["material_change"])
+    force_full = bool(payload.get("force_full_report", False))
+    compact = bool(
+        not force_full
+        and (cfg.get("stable_report") or {}).get("compact_when_no_material_change", True)
+        and not changes["material_change"]
+    )
     lineup = decision.get("lineup") or {}
     supplied_watchlist = payload.get("watchlist")
     watchlist = supplied_watchlist if isinstance(supplied_watchlist, dict) else decision.get("watchlist")
@@ -157,6 +163,7 @@ def build_report(payload: dict[str, Any]) -> dict[str, Any]:
     user_report = {
         "layer": "USER_REPORT",
         "report_mode": "COMPACT_DELTA" if compact else "FULL_DECISION",
+        "request_context": report_request,
         "decision": {
             "state": "HOLD" if decision.get("selected_package_id") == "HOLD" else ("CHANGE" if selected else "REVIEW"),
             "selected_package_id": decision.get("selected_package_id"),
@@ -186,6 +193,7 @@ def build_report(payload: dict[str, Any]) -> dict[str, Any]:
     user_report["action_board"] = actions[: int((cfg.get("action_board") or {}).get("max_items") or len(actions))]
     technical = {
         "layer": "TECHNICAL_APPENDIX",
+        "request_context": report_request,
         "decision_trace": trace,
         "dss": decision.get("dss") or {},
         "prediction_quality": prediction.get("prediction_quality") or {},

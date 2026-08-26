@@ -2,6 +2,7 @@ import importlib
 from pathlib import Path
 
 from src.v5.module_registry import module_specs
+from src.v5.prediction_view import compact_prediction_view
 from src.v5.service_registry import module_owners, service_specs, validate_registry
 from src.v5.services.decision import handle as decision_handle
 from src.v5.services.truth import handle as truth_handle
@@ -48,7 +49,7 @@ def test_truth_context_runs_without_network_and_uses_service_boundary():
         "teams": [],
     }
     context = truth_handle("context", {"bootstrap": bootstrap, "now": "2026-08-29T09:00:00Z"})
-    assert context["phase"] == "pre_deadline"
+    assert context["phase"] == "PRE_DEADLINE"
     assert context["planning_gw"] == 2
 
 
@@ -56,3 +57,49 @@ def test_decision_service_bridge_does_not_claim_production_recommendation():
     result = decision_handle("summarize", {"truth": {}, "price": {}, "prediction": {}})
     assert result["production_recommendation"] is None
     assert result["status"] == "BRIDGE_ONLY_NO_PRODUCTION_RECOMMENDATION"
+
+
+def test_prediction_network_view_is_bounded_and_omits_full_provenance():
+    fixtures = [
+        {
+            "event": event,
+            "xpts": float(event),
+            "lower80": 0.0,
+            "upper80": 10.0,
+            "xmins": {
+                "start_probability": 0.9,
+                "bench_probability": 0.08,
+                "dnp_probability": 0.02,
+                "expected_minutes": 80,
+                "p60": 0.85,
+            },
+            "provenance": {"large": "should-not-cross-service-boundary"},
+        }
+        for event in range(1, 9)
+    ]
+    compact = compact_prediction_view(
+        {
+            "schema_version": 470,
+            "model_version": "test",
+            "players": [
+                {
+                    "element": 1,
+                    "name": "Test",
+                    "position": "MID",
+                    "stable_key": "test",
+                    "xpts_3": 15.0,
+                    "xpts_5": 25.0,
+                    "xpts_10": 50.0,
+                    "xpts_15": 75.0,
+                    "mean_xpts": 5.0,
+                    "uncertainty": 1.0,
+                    "fixtures": fixtures,
+                    "priors": {"nailed_prior": 0.9},
+                }
+            ],
+        }
+    )
+    player = compact["players"][0]
+    assert len(player["fixtures"]) <= 5
+    assert all("provenance" not in row for row in player["fixtures"])
+    assert compact["network_contract"]["full_provenance_omitted"] is True

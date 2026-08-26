@@ -63,6 +63,7 @@ def build_trace(
     prediction: dict[str, Any],
     price: dict[str, Any],
     packages: dict[str, Any],
+    package_governance: dict[str, Any],
     lineup: dict[str, Any],
     dss: dict[str, Any],
     gate0_preflight: dict[str, Any],
@@ -72,7 +73,17 @@ def build_trace(
     trace_policy = cfg["trace"]
     ranked = packages.get("packages") or []
     hold = packages.get("hold") or next((item for item in ranked if item.get("id") == "HOLD"), {})
-    best = ranked[0] if ranked else hold
+    governed_selected = (
+        package_governance.get("selected_package")
+        if isinstance(package_governance.get("selected_package"), dict)
+        else hold
+    )
+    challenger = (
+        package_governance.get("optimizer_best_challenger")
+        if isinstance(package_governance.get("optimizer_best_challenger"), dict)
+        else None
+    )
+    best = challenger or (ranked[0] if ranked else hold)
     hold_robust = _f((hold.get("score") or {}).get("robust_score") or 0.0)
     best_value = (best.get("score") or {}).get("robust_score")
     best_robust = hold_robust if best_value is None else _f(best_value)
@@ -83,18 +94,23 @@ def build_trace(
     strong_gain = _f(policy["strong_robust_gain"])
     strong_probability = _f(policy["strong_outperform_hold_probability"])
     preflight_passed, gate0_checked, gate0_failed = _gate0_context(gate0_preflight)
+    manual_override = bool(package_governance.get("manual_authority_override"))
 
     if not preflight_passed:
         decision_type = "BLOCKED"
         action = "BLOCK decision output because Gate0 preflight did not pass"
-        chosen = hold or best
-    elif best.get("id") == "HOLD" or robust_gain < minimum_gain or probability < minimum_probability:
+        chosen = governed_selected or hold or best
+    elif manual_override:
+        decision_type = "HOLD"
+        action = "HOLD authoritative manual LOCK; optimizer challenger is review evidence only"
+        chosen = governed_selected or hold
+    elif governed_selected.get("id") == "HOLD" or best.get("id") == "HOLD" or robust_gain < minimum_gain or probability < minimum_probability:
         decision_type = "HOLD"
         action = "HOLD current squad; no transfer package clears the configured review threshold"
-        chosen = hold
+        chosen = governed_selected or hold
     else:
         decision_type = "TRANSFER_PACKAGE_REVIEW"
-        chosen = best
+        chosen = governed_selected if governed_selected.get("id") != "HOLD" else best
         outgoing = ", ".join(str(row.get("name") or row.get("element")) for row in chosen.get("outs") or [])
         incoming = ", ".join(str(row.get("name") or row.get("element")) for row in chosen.get("ins") or [])
         action = f"REVIEW transfer package: {outgoing} -> {incoming}"
@@ -108,12 +124,14 @@ def build_trace(
     confidence = Confidence.LOW if not preflight_passed else _confidence(confidence_basis)
 
     reasons_for = [
-        f"robust score delta vs HOLD = {robust_gain:.3f}",
-        f"independent-baseline probability of outperforming HOLD = {probability:.3f}",
+        f"best challenger robust score delta vs HOLD = {robust_gain:.3f}",
+        f"best challenger independent-baseline probability of outperforming HOLD = {probability:.3f}",
         f"lineup formation = {lineup.get('formation')}",
     ]
+    if manual_override:
+        reasons_for.append("authoritative manual LOCK freezes squad composition while retaining optimizer challenger evidence")
     if robust_gain >= strong_gain and probability >= strong_probability:
-        reasons_for.append("package clears configured strong-review thresholds")
+        reasons_for.append("optimizer challenger clears configured strong-review thresholds")
 
     reasons_against = []
     if gate0_failed:
@@ -152,9 +170,14 @@ def build_trace(
         ),
         EvidenceRef(
             source="decision-service",
-            field="package_optimizer+lineup_optimizer+dss",
+            field="package_optimizer+package_governance+lineup_optimizer+dss",
             authority="decision-service",
-            provenance={"package_model": packages.get("model"), "dss_model": dss.get("evaluation_model")},
+            provenance={
+                "package_model": packages.get("model"),
+                "package_governance_model": package_governance.get("model"),
+                "manual_authority_override": manual_override,
+                "dss_model": dss.get("evaluation_model"),
+            },
         ),
     )
     subject_ids = tuple(
@@ -166,6 +189,10 @@ def build_trace(
     local_checked = []
     if packages.get("local_legality_prevalidated"):
         local_checked.append(str(local_labels["package_ready"]))
+    if package_governance.get("status") == "READY":
+        package_governance_label = local_labels.get("package_governance_ready")
+        if package_governance_label:
+            local_checked.append(str(package_governance_label))
     if lineup.get("status") == "READY":
         local_checked.append(str(local_labels["lineup_ready"]))
     constraints_checked = tuple([*gate0_checked, *local_checked])
@@ -197,6 +224,8 @@ def build_trace(
     raw["confidence"] = trace.confidence.value
     raw["evidence"] = [asdict(item) for item in trace.evidence]
     raw["selected_package_id"] = chosen.get("id")
+    raw["optimizer_best_challenger_id"] = best.get("id")
+    raw["manual_authority_override"] = manual_override
     raw["robust_gain_vs_hold"] = round(robust_gain, 4)
     raw["p_outperform_hold_independent_baseline"] = round(probability, 4)
     raw["gate0_preflight_pass"] = preflight_passed

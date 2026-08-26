@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.7.1
+name: FPL iphoenk collector v3.8
 
 on:
   workflow_dispatch:
@@ -14,9 +14,6 @@ on:
 permissions:
   contents: read
 
-# Production runs share one queue so two independent triggers cannot race while
-# publishing runtime-data. PR runs keep their own branch-scoped concurrency and
-# may cancel stale attempts.
 concurrency:
   group: fpl-iphoenk-${{ github.event_name == 'pull_request' && github.head_ref || 'production' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -57,7 +54,7 @@ jobs:
         run: pip install -r requirements.txt pytest
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
-      - name: Reliability, rules, Official expansion and auth-policy tests
+      - name: Reliability, rules, Official expansion, auth and Price Radar tests
         run: python -m pytest -q
 
   collect:
@@ -79,6 +76,19 @@ jobs:
       - run: pip install -r requirements.txt pytest
       - name: Collector mode
         run: echo "Collector gate=${{ needs.gate.outputs.reason }} runtime_branch=${RUNTIME_BRANCH}"
+      - name: Hydrate persisted price state from runtime bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$RUNTIME_BRANCH"
+          for file in price_cache.json price_trajectory.json; do
+            if git cat-file -e "origin/${RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
+              git show "origin/${RUNTIME_BRANCH}:data/${file}" > "data/${file}"
+              echo "Hydrated data/${file} from ${RUNTIME_BRANCH}"
+            else
+              echo "No prior data/${file}; starting clean"
+            fi
+          done
       - name: Generate public Official FPL snapshot
         run: |
           python -m src.engine daily --stats
@@ -107,6 +117,8 @@ jobs:
           c=json.load(open('data/chips.json'))
           d=json.load(open('data/official_detail.json'))
           a=json.load(open('data/auth.json'))
+          t=json.load(open('data/price_trajectory.json'))
+          pa=json.load(open('data/price_alerts.json'))
           assert s['engine_version'] == ENGINE_VERSION
           assert s['schema_version'] == SCHEMA_VERSION
           assert s.get('snapshot_id')
@@ -119,6 +131,15 @@ jobs:
           assert s.get('price_summary',{}).get('filter_policy',{}).get('min_ownership_pct') == 0.5
           assert all(x.get('ownership_pct',0) >= 0.5 and abs(x.get('net_transfers',0)) >= 5000 for x in p.get('top_buy_pressure',[]))
           assert all(x.get('ownership_pct',0) >= 0.5 and abs(x.get('net_transfers',0)) >= 5000 for x in p.get('top_sell_pressure',[]))
+          assert p.get('official_price_predictor_health',{}).get('status') == 'LIVE'
+          assert p.get('players')
+          assert any(x.get('official_progress_pct') is not None for x in p.get('players',[]))
+          assert s.get('price_summary',{}).get('trajectory_features',{}).get('predicted_change_date') is True
+          assert s.get('price_summary',{}).get('trajectory_features',{}).get('acceleration_deceleration') is True
+          assert t.get('players')
+          assert pa.get('policy',{}).get('watch_capacity') == 50
+          assert s.get('files',{}).get('price_trajectory') == 'data/price_trajectory.json'
+          assert s.get('files',{}).get('price_alerts') == 'data/price_alerts.json'
           ods=s.get('official_detail_summary',{})
           assert ods.get('detail_requested',0) >= 15
           assert d.get('owned_element_ids')
@@ -165,8 +186,6 @@ jobs:
             exit 2
           fi
 
-          # Never switch the collector worktree away from main while generated data
-          # is dirty. Publish from a second detached worktree instead.
           git worktree add --detach "$publish_tree" "origin/$RUNTIME_BRANCH"
           cd "$publish_tree"
 

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "connection_pool": {
+    "enabled": true,
+    "pool_connections": 16,
+    "pool_maxsize": 32
+  },
+  "retry": {
+    "policies": {
+      "idempotent": {
+        "max_attempts": 2,
+        "backoff_ms": 50,
+        "retry_http_statuses": [502, 503, 504],
+        "retry_exception_names": ["ConnectionError", "ConnectTimeout", "ReadTimeout"]
+      },
+      "non_idempotent": {
+        "max_attempts": 1,
+        "backoff_ms": 0,
+        "retry_http_statuses": [],
+        "retry_exception_names": []
+      }
+    },
+    "default_policy": "idempotent",
+    "operation_policy": {
+      "snapshot.write": "non_idempotent",
+      "snapshot.snapshot": "non_idempotent"
+    }
+  },
+  "circuit_breaker": {
+    "enabled": true,
+    "failure_threshold": 3,
+    "cooldown_seconds": 10,
+    "scope": "service_operation",
+    "count_http_statuses": [502, 503, 504],
+    "count_exception_names": ["ConnectionError", "ConnectTimeout", "ReadTimeout"]
+  },
+  "observability": {
+    "include_attempt_count": true,
+    "include_circuit_state": true
+  }
+}

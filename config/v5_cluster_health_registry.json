@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "mode": "ON_DEMAND_ONLY",
+  "policy": {
+    "include_local_orchestrator_readiness": true,
+    "probe_all_registered_remote_services": true,
+    "critical_unavailable_status": "RED",
+    "noncritical_unavailable_status": "AMBER",
+    "all_ready_status": "GREEN",
+    "do_not_probe_on_normal_run": true,
+    "health_probe_must_not_mutate_business_circuits": true
+  },
+  "transport": {
+    "connect_timeout_ms": 250,
+    "read_timeout_ms": 500,
+    "max_workers": 8
+  }
+}

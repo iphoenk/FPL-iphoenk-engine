@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T11:16:47.071786+00:00",
+  "generated_at": "2026-08-26T11:47:37.979775+00:00",
   "schema_version": 513,
   "model_version": "player_projection_v5_historical_prior",
   "ruleset_id": "FPL_2026_27",
@@ -26200,7 +26200,7 @@
       "position": "DEF",
       "now_cost": 45,
       "status": "a",
-      "ownership_pct": 8.1,
+      "ownership_pct": 8.0,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -79749,7 +79749,7 @@
       "position": "MID",
       "now_cost": 75,
       "status": "a",
-      "ownership_pct": 25.6,
+      "ownership_pct": 25.7,
       "current_season": {
         "starts": 1,
         "minutes": 81
@@ -81156,7 +81156,7 @@
       "position": "GK",
       "now_cost": 50,
       "status": "a",
-      "ownership_pct": 2.4,
+      "ownership_pct": 2.3,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -82563,7 +82563,7 @@
       "position": "DEF",
       "now_cost": 55,
       "status": "u",
-      "ownership_pct": 0.2,
+      "ownership_pct": 0.1,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -185466,7 +185466,7 @@
       "position": "MID",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 0.5,
+      "ownership_pct": 0.4,
       "current_season": {
         "starts": 0,
         "minutes": 24
@@ -293302,7 +293302,9 @@
       "shots_rows": 277,
       "match_rows": 399,
       "coverage_players": 399,
-      "missing_player_behavior": "UNAVAILABLE_NOT_ZERO"
+      "missing_player_behavior": "UNAVAILABLE_NOT_ZERO",
+      "understat_status": "ACTIVE",
+      "understat_players": 310
     },
     "schedule": {
       "status": "ACTIVE",
@@ -293312,17 +293314,22 @@
         "europa_league"
       ],
       "league_rest_team_count": 20,
+      "cross_competition_rest_team_count": 20,
+      "cross_competition_fixture_count": 0,
       "domestic_cup_source": "EFL 2026/27 calendar",
       "international_source": "FIFA Men's International Match Calendar 2025-2030",
+      "api_football_status": "UNAVAILABLE",
       "governance": {
         "missing_specific_match_or_callup_is_unavailable_not_zero": true,
-        "calendar_windows_are_risk_context_not_claimed_minutes": true
+        "calendar_windows_are_risk_context_not_claimed_minutes": true,
+        "actual_cross_competition_fixtures_override_calendar_windows_when_available": true
       }
     },
     "preseason": {
       "status": "ACTIVE",
       "evidence_status": "UNAVAILABLE",
       "row_count": 0,
+      "friendly_fixture_count": 0,
       "source_policy": [
         "explicit_preseason_artifact",
         "historical_role_prior_fallback"
@@ -293332,13 +293339,19 @@
     },
     "current_form": {
       "status": "ACTIVE",
-      "source": "official_fpl+advanced_stats",
+      "source": "official_fpl+fpl_core_insights+understat_challenger",
       "players": 612
+    },
+    "source_fusion": {
+      "status": "ACTIVE",
+      "understat_status": "ACTIVE",
+      "api_football_status": "UNAVAILABLE"
     },
     "governance": {
       "module_active_does_not_mean_every_player_has_evidence": true,
       "missing_external_evidence_is_unavailable_not_zero": true,
-      "no_claimed_minutes_without_source": true
+      "no_claimed_minutes_without_source": true,
+      "official_fpl_identity_price_rules_never_overridden": true
     }
   },
   "network_contract": {
@@ -293375,6 +293388,7 @@
     "rotation_competition",
     "set_piece_role",
     "small_sample_guard",
+    "source_fusion",
     "sustainability",
     "system_fit",
     "tactical_role",

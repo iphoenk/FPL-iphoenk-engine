@@ -1,6 +1,6 @@
 {
   "framework_schema": 8,
-  "generated_at": "2026-08-26T11:16:48.414068+00:00",
+  "generated_at": "2026-08-26T11:47:38.974492+00:00",
   "auditor": "v5-microservice-governance-v4",
   "overall": "GREEN",
   "decision_engine": "HEALTHY",
@@ -1384,6 +1384,9 @@
       "prediction"
     ],
     "small_sample_guard": [
+      "prediction"
+    ],
+    "source_fusion": [
       "prediction"
     ],
     "sustainability": [

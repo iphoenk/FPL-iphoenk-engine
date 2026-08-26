@@ -1,11 +1,21 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "model_id": "multi_horizon_package_optimizer_v2",
   "horizons": [3, 5, 10, 15],
   "horizon_weights": {"3": 0.42, "5": 0.33, "10": 0.15, "15": 0.10},
   "candidate_ranking_horizon": 5,
   "positions": ["GK", "DEF", "MID", "FWD"],
   "max_changes": 2,
+  "early_season_change_cap": {
+    "enabled": true,
+    "through_gw": 5,
+    "max_changes": 2
+  },
+  "team_cluster_penalty": {
+    "enabled": true,
+    "free_players_per_club": 2,
+    "points_per_extra_player": 0.05
+  },
   "max_candidates_per_position": 7,
   "max_single_moves_per_out": 4,
   "double_move_seed_limit": 40,

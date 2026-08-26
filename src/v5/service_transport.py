@@ -179,16 +179,16 @@ def post(
         before_call(service_id, operation)
         try:
             response = _session().post(url, json=json_body, timeout=timeout)
+            counted_failure = should_count_failure(status_code=response.status_code)
+            if counted_failure:
+                record_failure(service_id, operation)
             retryable_status = is_retryable_status(response.status_code, policy)
-            if retryable_status:
-                if should_count_failure(status_code=response.status_code):
-                    record_failure(service_id, operation)
-                if attempt < policy.max_attempts:
-                    if policy.backoff_ms > 0:
-                        time.sleep((policy.backoff_ms * attempt) / 1000.0)
-                    continue
-                return response, attempt, circuit_snapshot(service_id, operation)
-            record_success(service_id, operation)
+            if retryable_status and attempt < policy.max_attempts:
+                if policy.backoff_ms > 0:
+                    time.sleep((policy.backoff_ms * attempt) / 1000.0)
+                continue
+            if not counted_failure:
+                record_success(service_id, operation)
             return response, attempt, circuit_snapshot(service_id, operation)
         except requests.RequestException as exc:
             last_exc = exc

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from src.v5.config_cache import load_json_config
 from src.v5.reporting import build_report
+from src.v5.services.orchestrator import _source_fusion_summary
 from src.v5.sources.season import season_authority
 
 
@@ -66,3 +67,48 @@ def test_api_football_has_no_hardcoded_league_ids_and_prediction_has_no_hidden_i
     prediction_source = Path("src/v5/services/prediction.py").read_text(encoding="utf-8")
     assert "invoke_envelope" not in prediction_source
     assert "collect_enrichment" not in prediction_source
+
+
+def test_orchestrator_source_summary_preserves_plan_restriction_evidence():
+    source_fusion = {
+        "status": "ACTIVE",
+        "season": {"season": "2026/27", "start_year": 2026},
+        "health": {
+            "active_sources": 1,
+            "unavailable_sources": 1,
+            "plan_restricted_sources": 1,
+        },
+        "sources": {
+            "understat": {"status": "ACTIVE", "fetch_mode": "CACHE", "player_count": 310},
+            "api_football": {
+                "status": "UNAVAILABLE",
+                "availability_class": "PLAN_RESTRICTED",
+                "reason": "provider plan does not have access to this season",
+                "fixtures": [],
+                "failures": [],
+                "observability": {
+                    "credential_present": True,
+                    "network_requests": 0,
+                    "cache_hits": 1,
+                    "availability_cache_hits": 1,
+                    "competitions_attempted": 1,
+                    "competitions_resolved": 0,
+                    "quota_remaining": None,
+                    "quota_limit": None,
+                },
+                "governance": {
+                    "fail_neutral": True,
+                    "cached_provider_restriction": True,
+                },
+            },
+        },
+    }
+    summary = _source_fusion_summary(source_fusion)
+    api = summary["api_football"]
+    assert api["status"] == "UNAVAILABLE"
+    assert api["availability_class"] == "PLAN_RESTRICTED"
+    assert api["fail_neutral"] is True
+    assert api["cached_provider_restriction"] is True
+    assert api["availability_cache_hits"] == 1
+    assert api["cache_hits"] == 1
+    assert api["competitions_attempted"] == 1

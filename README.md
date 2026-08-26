@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.8.0
+# FPL iphoenk Engine V4.8.1
 
 A production-oriented personal FPL data platform.
 
@@ -120,13 +120,16 @@ GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy
 - Deterministic `--as-of` runs are labelled simulations and can never authorize a live action.
 - The final action is produced only after POST-FLIGHT health, while V4.7.1 predictions and V4.7.2 optimizer search widths remain unchanged.
 
-## V4.8.0 process-isolated service boundaries
+## V4.8.1 independent process-isolated services
 
-- Six registry-driven services run as isolated Python processes under one fail-closed orchestrator.
+- Eight registry-driven services run as isolated Python processes under one fail-closed orchestrator.
 - Every service publishes versioned JSON contracts that are validated before its dependants may run.
-- One immutable `latest.json` snapshot is hashed after refresh and checked after every downstream service.
-- Snapshot, enrichment, and prediction remain one explicitly labelled transitional composite boundary; this avoids a risky formula rewrite during the first migration step.
+- The raw, enrichment, and latest prediction artifacts are hashed after PASS and checked after every downstream service.
+- The registry contains eight independent process boundaries. `raw_snapshot` is the sole Official FPL API authority, `enrichment` consumes `snapshot.v1`, and `prediction` consumes both immutable runtime contracts without refetching official data.
+- `snapshot.v1` and `enrichment.v1` live only under ignored `data/runtime/`; SHA-256 lineage binds raw input, enrichment, and the latest prediction.
+- The orchestrator locks raw snapshot, enrichment, and latest prediction immediately after each service passes, then fails closed on any mutation.
+- Prediction preserves every V4.8.0 operational artifact: live state, prices and price cache, source health, chips, per-GW archive, and append-only snapshot history; `latest.json` retains the complete compatibility pointer set.
 - Prediction V4.7.1, optimizer V4.7.2, checkpoint governance V4.7.3, sell-cost logic, Gate 0, and registry counts remain unchanged.
 - `data/service_orchestration_v4.json` provides service status, timings, contract hashes, and failure evidence.
 
-See `docs/v4-microservices.md` for service ownership, failure semantics, preserved invariants, and the remaining composite-boundary debt.
+See `docs/v4-microservices.md` for service ownership, failure semantics, and preserved invariants.

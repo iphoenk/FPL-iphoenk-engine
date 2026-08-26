@@ -1,4 +1,4 @@
-name: FPL iphoenk V4.8.0 service boundary gate
+name: FPL iphoenk V4.8.1 independent service gate
 
 on:
   workflow_dispatch:
@@ -37,7 +37,7 @@ jobs:
         run: python -m pytest -q
       - name: Run process-isolated V4 services
         run: python -m src.services.orchestrator daily --stats
-      - name: Centralized V4.8.0 service quality gate
+      - name: Centralized V4.8.1 service quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise acceptance summary
         run: |

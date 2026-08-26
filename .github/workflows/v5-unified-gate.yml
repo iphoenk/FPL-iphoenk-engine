@@ -35,4 +35,4 @@ jobs:
         run: python -m src.v5.acceptance
 
       - name: V5 bootstrap tests
-        run: pytest -q tests/test_v5_bootstrap.py
+        run: python -m pytest -q tests/test_v5_bootstrap.py

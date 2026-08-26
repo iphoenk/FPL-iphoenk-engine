@@ -2,14 +2,15 @@
 
 Canonical status: ACTIVE
 Canonical roadmap owner: V3 operational stream
-Current governance release: V3.17.1
-Current schema: 46
+Current production governance release: V3.17.1
+Current production schema: 46
+Current development candidate: V3.18 Structured Challenger Ingestion + architecture hardening
 
 This file is the single human-readable master roadmap for the V3 operational engine. Every V3 feature, refactor, hardening change, operational improvement, and release-governance change must update this file in the same pull request.
 
 ## Status legend
 - DONE: implemented, tested, merged, production-validated when runtime-impacting.
-- ACTIVE: continuously enforced operational requirement.
+- ACTIVE: currently implemented/enforced or under release acceptance.
 - NEXT: highest-priority planned work.
 - OPEN: planned but not the immediate next release.
 - BLOCKED: cannot progress until a named dependency is resolved.
@@ -28,6 +29,7 @@ This file is the single human-readable master roadmap for the V3 operational eng
 9. Release metadata must remain consistent across source, README, implementation status, workflow naming, schema metadata, and tests.
 10. User-facing reports must never expose raw internal shorthand or falsely imply that source reachability equals structured data availability.
 11. V3 production remains operationally stable while new work is developed on separate branches and merged only after full acceptance.
+12. Microservice boundaries are coarse-grained and evidence-driven. New process boundaries must reduce coupling, duplicate I/O, or failure blast radius; file size alone is not a reason to split a service.
 
 ## A. Production baseline and keep-green work
 | ID | Task | Status | Target | Acceptance |
@@ -50,21 +52,31 @@ Release objective: convert selected challenger sources from probe-only reachabil
 
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
-| V3-SRC-101 | Normalized challenger observation contract | NEXT | V3.18 | typed observation with source, capability, payload/value, timestamp, provenance, confidence, stale state, parser/schema version |
-| V3-SRC-102 | Separate source reachability from capability-data health | NEXT | V3.18 | source may be LIVE while a capability is UNAVAILABLE/STALE/ERROR |
-| V3-SRC-103 | LiveFPL structured ingestion | NEXT | V3.18 | robust public observation only; no invented EO/price/rank values |
-| V3-SRC-104 | OneFPL structured ingestion | NEXT | V3.18 | robust public observation only; transfer/price/planner context normalized when actually available |
-| V3-SRC-105 | Provenance and observation timestamps | NEXT | V3.18 | every accepted observation has traceable source and observed/fetched time |
-| V3-SRC-106 | TTL, stale cache, last-known-good policy | NEXT | V3.18 | stale observations explicitly labelled and never silently treated as current |
-| V3-SRC-107 | Confidence and cross-source disagreement state | NEXT | V3.18 | agreement may raise confidence; disagreement is explicit and never silently overwrites Official data |
-| V3-SRC-108 | Price Radar challenger integration | NEXT | V3.18 | LiveFPL/OneFPL values consumed only when a valid normalized observation exists |
-| V3-SRC-109 | User-facing source availability rendering | NEXT | V3.18 | report distinguishes reachable source from available structured prediction data |
-| V3-SRC-110 | Challenger failure isolation tests | NEXT | V3.18 | challenger outage cannot block Official baseline |
-| V3-SRC-111 | No-fabrication regression tests | NEXT | V3.18 | missing observation stays missing/explicit fallback |
-| V3-SRC-112 | Official-authority precedence tests | NEXT | V3.18 | challenger cannot override Official-native field |
-| V3-SRC-113 | Structured-ingestion performance budget | NEXT | V3.18 | bounded parallel ingestion remains inside production runtime budget |
-| V3-SRC-114 | Parser/contract drift handling | NEXT | V3.18 | unexpected source shape degrades capability safely instead of corrupting output |
-| V3-SRC-115 | V3.18 release governance | NEXT | V3.18 | version/schema decision, README, implementation status, workflow, tests, CI, production collect all consistent |
+| V3-SRC-101 | Normalized challenger observation contract | ACTIVE | V3.18 | typed observation with source, capability, payload/value, timestamp, provenance, confidence, stale state, parser/schema version |
+| V3-SRC-102 | Separate source reachability from capability-data health | ACTIVE | V3.18 | source may be LIVE while a capability is UNAVAILABLE/STALE/ERROR |
+| V3-SRC-103 | LiveFPL structured ingestion | ACTIVE | V3.18 | robust public observation only; no invented EO/price/rank values |
+| V3-SRC-104 | OneFPL structured ingestion | ACTIVE | V3.18 | robust public observation only; transfer/price/planner context normalized when actually available |
+| V3-SRC-105 | Provenance and observation timestamps | ACTIVE | V3.18 | every accepted observation has traceable source and observed/fetched time |
+| V3-SRC-106 | TTL, stale cache, last-known-good policy | ACTIVE | V3.18 | stale observations explicitly labelled and never silently treated as current |
+| V3-SRC-107 | Confidence and cross-source disagreement state | ACTIVE | V3.18 | agreement may raise confidence; disagreement is explicit and never silently overwrites Official data |
+| V3-SRC-108 | Price Radar challenger integration | ACTIVE | V3.18 | LiveFPL/OneFPL values consumed only when a valid normalized observation exists |
+| V3-SRC-109 | User-facing source availability rendering | ACTIVE | V3.18 | report distinguishes reachable source from available structured prediction data |
+| V3-SRC-110 | Challenger failure isolation tests | ACTIVE | V3.18 | challenger outage cannot block Official baseline |
+| V3-SRC-111 | No-fabrication regression tests | ACTIVE | V3.18 | missing observation stays missing/explicit fallback |
+| V3-SRC-112 | Official-authority precedence tests | ACTIVE | V3.18 | challenger cannot override Official-native field |
+| V3-SRC-113 | Structured-ingestion performance budget | ACTIVE | V3.18 | bounded parallel ingestion remains inside production runtime budget |
+| V3-SRC-114 | Parser/contract drift handling | ACTIVE | V3.18 | unexpected source shape degrades capability safely instead of corrupting output |
+| V3-SRC-115 | V3.18 release governance | ACTIVE | V3.18 | version/schema decision, README, implementation status, workflow, tests, CI, production collect all consistent |
+
+### V3.18 architecture-hardening scope
+- Version-neutral runtime entrypoints replace version-stamped active service names; historical compatibility modules may remain as shims only.
+- Mutable projection horizon, Price Radar thresholds, refresh cadence and related serving limits are config/registry-owned.
+- DSS Core, DSS Extensions, Enhancement and Gate0 expected counts are declared by their registries and consumed by the active framework-health entrypoint.
+- Production validators consume challenger/report/price/registry contracts instead of duplicating mutable constants.
+- The price service is a single coarse-grained process that runs Official Price Radar then challenger context overlay serially on the same artifact.
+- Collector and prediction remain separate coarse-grained services. Repeated Official reads use the shared cross-process HTTP cache, so a new raw-snapshot microservice is not justified in V3.18.
+- Governance overlays remain one ordered service because they intentionally mutate one framework-health artifact sequentially.
+- Reporting remains decision-output plus a separate serving/materializer boundary; additional process fragmentation is not justified by current dependency or failure-isolation evidence.
 
 ### V3.18 release acceptance
 V3.18 is not DONE until all of the following are true:
@@ -162,12 +174,13 @@ A V3 task is DONE only when implementation, tests, documentation, version govern
 For external evidence tasks, DONE means the adapter/evaluator can explicitly distinguish at least AVAILABLE, UNAVAILABLE/SAFE_FALLBACK, STALE, and ERROR states where applicable. Missing values may never be synthesized solely to keep a module green.
 
 ## Execution order
-1. Keep V3.17.x production GREEN and operational.
-2. V3.18 Structured Challenger Ingestion: LiveFPL + OneFPL first.
+1. Keep V3.17.x production GREEN and operational until V3.18 passes production acceptance.
+2. Complete V3.18 Structured Challenger Ingestion and architecture hardening.
 3. Report-source availability and natural-language rendering hardening.
 4. Replace P1 proxies with richer evidence where reliable.
 5. Accumulate settled Gameweeks and calibrate prediction/weighting models.
 6. Pursue P2 capabilities only after P1 calibration has enough evidence and without destabilizing V3 operations.
 
 ## Change log
+- V3.18 candidate: structured LiveFPL/OneFPL observations; reachability/capability separation; TTL/LKG/stale and disagreement governance; Price Radar context integration; registry-driven mutable policy; version-neutral service entrypoints; validator and microservice boundary hardening. Candidate remains ACTIVE until production acceptance.
 - V3.17.1: established this canonical master task list, release checklist, Definition of Done, execution order, and mandatory roadmap synchronization rule.

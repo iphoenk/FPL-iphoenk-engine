@@ -29,7 +29,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt pytest
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install cached dependencies
+        run: pip install --disable-pip-version-check -r requirements.txt pytest
       - name: Unit and acceptance tests
         run: python -m pytest -q
       - name: Generate V4 point-in-time prediction snapshot

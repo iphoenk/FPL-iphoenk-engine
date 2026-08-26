@@ -1,128 +1,134 @@
-# FPL iphoenk Engine v3.7.1
+# FPL iphoenk Engine v3.8.0
 
 A production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Design goal
-Combine Official FPL API authority, a single authoritative FPL 2026/27 ruleset, persisted native team/event state, expanded public Official FPL detail surfaces, an optional authenticated read-only Official layer, community enrichments, live score/persistence, exact team-value logic, leakage-safe modelling, provenance/freshness, snapshot integrity and a noise-resistant Price Radar.
+Combine Official FPL API authority, a single authoritative FPL 2026/27 ruleset, persisted native team/event state, expanded Official detail surfaces, an optional authenticated read-only Official layer, community enrichments, live score/persistence, exact team-value logic, leakage-safe modelling, provenance/freshness, snapshot integrity and a decision-aware Price Radar.
+
+## v3.8 Price Trajectory Radar
+v3.8 upgrades Price Radar from event net-transfer pressure into a trajectory engine built around the new Official FPL 2026/27 price-change fields.
+
+Official bootstrap fields consumed when present:
+- `price_change_percent`: current Official progress towards the next rise/fall threshold
+- `price_change_hourly_rate`: Official hourly movement; the observed 2026/27 payload is stored in hundredths of a percentage point, so the engine also exposes a normalised `%/hour` value
+- `price_change_projections`: Official projected progress and likelihood for upcoming price-change deadlines
+- `price_change_locked_until`
+- `price_change_calibrating`
+
+Derived trajectory features:
+- predicted change deadline/date
+- Official movement per hour
+- observed progress velocity between persisted collector snapshots
+- acceleration/deceleration and reversal detection
+- constant-rate trajectory ETA when the Official projection does not itself cross the threshold
+- rise/fall risk and LOW/MEDIUM/HIGH/CRITICAL urgency
+- top rise-risk and fall-risk lists
+- up to 50 market watch candidates for intersection with the DSS-approved external watchlist
+- alert candidates for owned players and DSS-approved external candidates
+
+Important authority rule: Official current progress is native Official FPL information. A future projection remains a prediction, even when supplied by FPL. `TRAJECTORY_RATE` dates are explicitly derived estimates and must never be presented as confirmed changes.
+
+### Official projection health guard
+Early 2026/27 observations showed cases where Official offset-0 projected progress stayed equal to current progress despite material hourly movement. v3.8 detects this as `SUSPECT_STATIC_OFFSET0` rather than silently treating it as a trustworthy future forecast. The engine can then expose its trajectory estimate alongside the Official current progress. This is a guard, not an attempt to override Official current progress.
+
+### Persisted state and confirmed-change fix
+The collector now hydrates `price_cache.json` and `price_trajectory.json` from the authoritative `runtime-data` branch before generating a new snapshot. This matters because `main/data/**` is historical only. Without hydration, a fresh runner could compare prices against stale source-repository state rather than the immediately previous production snapshot.
+
+New runtime outputs:
+- `data/price_trajectory.json`
+- `data/price_alerts.json`
+- enriched `data/prices.json`
+- enriched `price_summary` in `data/latest.json`
+
+Price alert semantics are intentionally conservative: price pressure is an overlay, not a football decision. Consumers should notify only when a HIGH/CRITICAL signal intersects an owned player or a DSS-approved external watchlist candidate and the move is decision-relevant for affordability, sell value or a preferred multi-GW package.
+
+Schema version: 37.
 
 ## v3.7.1 Runtime publication isolation
-v3.7.1 hardens the `runtime-data` publisher after a production run correctly generated and validated a v3.7 snapshot but Git refused to switch the dirty collector worktree from `main` to `runtime-data`.
-
-Fixes and tuning:
-- generated `data/**` is copied first, then published from a separate detached Git worktree
-- the collector worktree never switches away from `main` while generated files are dirty
-- all non-PR production triggers share one concurrency queue, preventing push/schedule/manual runs from racing each other during runtime publication
-- PR runs retain branch-scoped cancellation so stale CI attempts can still be cancelled
-- runtime publish retries up to three times against the newest `runtime-data` head if an external race occurs
-- `main` branch protection remains untouched
-- schema remains 36
+Generated `data/**` is published from a separate detached Git worktree to `runtime-data`. Production triggers share one concurrency queue and runtime publication retries against the newest runtime head. The protected `main` branch remains untouched by generated-data writes.
 
 ## v3.7 Authenticated Official read-only layer
 Authenticated Official FPL is an optional precision layer, never a dependency for the public core engine.
 
-Supported resource endpoints are deliberately allowlisted to exactly three GET routes:
+Allowlisted resource routes are exactly:
 - `GET /api/me/`
 - `GET /api/my-team/{team_id}/`
 - `GET /api/entry/{team_id}/transfers-latest/`
 
 Security policy:
-- the authenticated resource client exposes GET only; there is no generic method or transfer/team-write API
-- `/api/me/` must verify the configured entry ID before any team-specific authenticated state is trusted
+- GET-only authenticated resource client; no generic write/transfer/team mutation API
+- `/api/me/` must verify the configured entry ID before account-native state is trusted
 - credential material is never written to `data/**`, runtime-data, logs, exceptions or artifacts
 - raw authenticated JSON is never persisted publicly
-- the public collector remains operational when auth is disabled, missing, expired or rejected
-- authenticated failure is reported as a separate optional-layer state, not as Official public core failure
-- secrets are injected only into the authenticated overlay step and are not made available to pull-request jobs
+- public collection continues if auth is disabled, missing, expired or rejected
+- authenticated failure is a separate optional-layer state, not Official public core failure
+- secrets are not exposed to pull-request jobs
 
 Supported auth modes:
 - `disabled` (default)
-- `session_cookie`: base64-encoded filtered FPL/Premier League Cookie header in `FPL_SESSION_B64`
-- `bearer_token`: short-lived access token in `FPL_ACCESS_TOKEN`
-- `refresh_token`: refresh token in `FPL_REFRESH_TOKEN`; requires configured `FPL_OIDC_TOKEN_URL` and `FPL_OIDC_CLIENT_ID`, plus optional `FPL_OIDC_CLIENT_SECRET`
+- `session_cookie` via `FPL_SESSION_B64`
+- `bearer_token` via `FPL_ACCESS_TOKEN`
+- `refresh_token` via `FPL_REFRESH_TOKEN` plus the configured current OIDC token URL/client ID and optional client secret
 
-Recommended secret configuration:
-- `FPL_AUTH_MODE`
-- one credential matching the chosen mode
-- for refresh-token mode, the OIDC token URL/client ID required by the current Premier League identity flow
+Persisted safe output is `data/auth.json` plus `authenticated_official` in `latest.json`: auth health, verified entry, exact squad purchase/selling prices when available, safe finance summary, chip summary, private-draft integrity fingerprint/count and transfers-latest availability/count. Raw private payloads are not published.
 
-Do not put credentials in README, repository files, `runtime-data`, chat messages or workflow logs. A GitHub Environment Secret such as `fpl-readonly` is preferred when practical; repository Actions secrets are supported by the workflow without changing source code.
-
-Persisted safe output is `data/auth.json` plus `authenticated_official` in `latest.json`. It contains only:
-- auth health/state and endpoint health without credential/header values
-- verified entry ID
-- exact purchase/selling prices only for players already in the authoritative squad state
-- safe finance summary such as bank/value when Official authenticated data exposes it
-- chip-state summary
-- current-draft count, a one-way fingerprint and whether it matches the authoritative squad, without publishing the raw private draft
-- count/availability summary for `transfers-latest`, not the raw transfer payload
-
-Possible states include `DISABLED`, `VALID`, `EXPIRED_OR_REJECTED`, `ENTRY_MISMATCH`, `PARTIAL`, `MISCONFIGURED` and `UNAVAILABLE`.
-
-If mobile credential bootstrap remains unavailable, nothing else breaks. The engine continues using public Official FPL plus the existing purchase/sell-value reconstruction. Authenticated data simply upgrades selected fields when a valid credential is present.
-
-Schema version: 36.
+If mobile credential bootstrap remains unavailable, nothing else breaks. The engine continues with public Official FPL plus purchase/sell-value reconstruction.
 
 ## v3.6 Official FPL P0/P1 expansion
-The collector exploits more of the public Official FPL surface before relying on external data.
+P0:
+- selective `element-summary/{id}/` for all 15 owned players plus screened candidates, capped by `FPL_ELEMENT_SUMMARY_MAX` (default 40)
+- Official `team/set-piece-notes/`
+- richer `event/{gw}/live/`
+- fixture-stat reconciliation from Official fixtures
 
-P0 implemented:
-- selective `element-summary/{id}/` collection for all 15 owned players plus actionable Price Radar candidates and top Official performers, capped by `FPL_ELEMENT_SUMMARY_MAX` (default 40)
-- Official `team/set-piece-notes/` collection with fail-soft health status
-- richer `event/{gw}/live/` persistence including minutes, goals, assists, clean sheets, goals conceded, own goals, penalties, cards, saves, bonus, BPS, total points and defensive contribution when present
-- fixture-stat reconciliation from Official `fixtures/`
-
-P1 implemented:
-- season and latest-GW Official Dream Team surfaces
+P1:
+- season and latest-GW Dream Team
 - optional Classic mini-league standings via `FPL_CLASSIC_LEAGUE_IDS`
 - optional H2H standings via `FPL_H2H_LEAGUE_IDS`
 - public entry cup state when available
 - optional/secondary surfaces fail soft and remain separate from core Official health
 
-Outputs:
-- `data/official_detail.json`
-- `official_detail_summary` and `official_health_panel` in `data/latest.json`
-
-Important load-control rule: the engine does not fetch element-summary for the full player universe every hour. Universal screening remains bootstrap-first and detail fetches are selective.
+Outputs include `data/official_detail.json`, `official_detail_summary` and `official_health_panel` in `latest.json`.
 
 ## v3.5.1 Runtime publishing + cadence hardening
-The source branch `main` remains protected. Generated collector data is published to `runtime-data` rather than pushed directly to `main`.
+The source branch `main` remains protected. Generated collector data is published to `runtime-data`.
 
 Runtime bridge architecture:
-`Official FPL API -> tested collector from main -> validation gate -> runtime-data branch -> FPL Master Monitor`
+`Official FPL API -> tested collector from main -> validation gate -> runtime-data -> FPL Master Monitor`
 
 Authoritative persisted runtime bridge:
 `https://raw.githubusercontent.com/iphoenk/FPL-iphoenk-engine/runtime-data/data/latest.json`
 
-Key hardening:
-- generated `data/**` is published to the dedicated `runtime-data` branch
-- `latest.json` receives `runtime_publish.branch`, `source_commit` and `published_at`
-- primary collector at `:55`; adaptive deadline/match redundancy at `:15`
-- pull requests run tests but never publish runtime data
-- push/manual runs collect immediately
+Collector cadence:
+- primary hourly slot `:55`
+- adaptive deadline/match redundancy `:15`
+- manual/source-code push runs immediately
+- pull requests test but never publish runtime data
 
 `main/data/**` is historical/source-repository material only. Runtime consumers must use `runtime-data/data/**`.
 
 ## v3.5 Official Rules Compliance
 `src/rules.py` is the single source of truth for published FPL 2026/27 rules used by the engine.
 
-Implemented and regression-tested:
-- appearance scoring: 1 point below 60 minutes, 2 points at 60+ minutes
+Regression-tested rules include:
+- appearance 1/2 points
 - goals: GK +10, DEF +6, MID +5, FWD +4
 - assists +3; clean sheets GK/DEF +4 and MID +1
-- goalkeeper saves +1 per three, penalty save +5
-- penalty miss -2, every two goals conceded by GK/DEF -1, yellow -1, red -3, own goal -2
-- defensive contribution points: DEF 10 CBIT = +2; MID/FWD 12 CBIRT = +2; capped at +2 per match
-- published 2026/27 BPS deltas and Official-first BPS authority
-- chip rules for Wildcard, Free Hit, Triple Captain and Bench Boost in both season halves
-- chip ledger derived from Official history and persisted to `data/chips.json` and `data/latest.json`
+- saves, penalty saves/misses, goals conceded, cards, own goals and bonus
+- defensive contribution: DEF 10 CBIT = +2; MID/FWD 12 CBIRT = +2; capped +2 per match
+- published 2026/27 BPS deltas with Official-first BPS authority
+- Wildcard, Free Hit, Triple Captain and Bench Boost rules across both season halves
+- Official-history-driven chip ledger
 
-## v3.4.1 Price Radar fix
-- actionable threshold: ownership >=0.5% and absolute event net transfers >=5,000
-- separates actionable pressure from market noise
-- adds confidence labels and regression coverage
+## v3.4.1 Price Radar baseline
+- transfer-momentum noise filter: ownership >=0.5% and absolute event net transfers >=5,000
+- actionable pressure separated from tiny-denominator market noise
+- confidence labels and regression coverage
+
+v3.8 keeps this filter for transfer-momentum ranking, while evaluating Official price progress separately so an exact Official progress signal is not discarded merely because ownership is low.
 
 ## v3.4 reliability and native persistence
-- persists Official `entry`, `history`, `transfers`, and submitted `picks`
+- persists Official entry/history/transfers/submitted picks
 - per-source provenance/freshness
 - snapshot integrity ID and native change log
 - fail-closed structural validation
@@ -130,21 +136,19 @@ Implemented and regression-tested:
 ## Collector / reporting cadence
 Collector cadence and user-visible reporting are deliberately separate.
 
-Collector:
-- primary hourly scheduled slot: `:55`
-- adaptive deadline/match redundancy slot: `:15`
-- manual and source-code push runs: immediate collection
-
-Master Monitor user-visible reports:
+Master Monitor reports:
 - Normal Mode: 04:30 Deep Review, 12:30 Midday Tactical Monitor, 21:30 Night Tactical + Price Monitor WIB
 - Match Mode: approximately every 3 hours while relevant PL/FPL matches are active
 - Deadline Day: hourly at :30 WIB until definitive Final Review
 - After Final Review: silent except genuinely material emergency updates
 
+All three normal reports must include Price Radar for owned players and the DSS external watchlist by GK/DEF/MID/FWD. The 04:30 report reconciles overnight confirmed changes, 12:30 updates trajectory/affordability, and 21:30 emphasises overnight risk.
+
 ## Main commands
 ```bash
 pip install -r requirements.txt
 python fpl_daily_tasks.py daily --stats
+python -m src.engines.price_radar
 python -m src.engines.official_expansion
 python -m src.engines.authenticated_official
 python fpl_daily_tasks.py deadline --stats
@@ -155,16 +159,21 @@ python fpl_daily_tasks.py live
 1. Direct Official FPL native fields and Official scoring
 2. Authenticated Official FPL native account fields when valid and directly applicable
 3. Persisted Official-FPL-derived runtime bridge on `runtime-data`
-4. Official FPL public detail/secondary surfaces such as element-summary and set-piece notes
+4. Official public detail/secondary surfaces
 5. FPL-Core-Insights community enrichment
 6. vaastav historical dataset
 7. other mirrors only if explicitly enabled
 8. web/news/tactical overlays
 
-Direct Official native fields win conflicts with persisted/derived state. Authenticated account-native fields win reconstructed equivalents such as sell price when auth is verified for the expected entry.
+For Price Radar specifically:
+- Official current price and confirmed price changes are native authority
+- Official `price_change_percent` is native current threshold progress
+- Official future projections are Official predictions, not guarantees
+- engine trajectory dates/acceleration are derived estimates and are labelled as such
+- third-party predictors can be used as independent challengers, not as native authority
 
 ## Rules authority principle
-Local reconstruction is an audit aid only. It must not override Official FPL `total_points`, bonus allocation, rank, price or other native fields. BPS is not fully reconstructed without all required raw official metrics.
+Local reconstruction is an audit aid only. It must not override Official FPL `total_points`, bonus allocation, rank, current price or other native fields. BPS is not fully reconstructed without all required raw Official metrics.
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.

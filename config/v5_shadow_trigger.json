@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "v3.17.1-final-plan-restricted-acceptance",
-  "requested_at": "2026-08-26T21:42:00Z",
+  "requested_cycle": "v3.17.1-final-source-summary-acceptance",
+  "requested_at": "2026-08-26T21:53:00Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "accepted_production_baseline_from_manifest",
   "v5_role": "shadow_only",

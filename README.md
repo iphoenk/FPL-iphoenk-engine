@@ -34,7 +34,7 @@ See `docs/V5_ENGINEERING_RULES.md` and `config/v5_architecture_principles.json`.
 
 ## Current beta baseline
 
-V5.0.0-beta.1 currently converges against the accepted V3.17.1 production baseline. V3.17.1 is a release-governance/metadata update over V3.17.0 and does not change the accepted V3.17 decision schema or decision logic.
+V5.0.0-beta.2 currently converges against the accepted V3.17.1 production baseline. V3.17.1 is a release-governance/metadata update over V3.17.0 and does not change the accepted V3.17 decision schema or decision logic.
 
 Current V5 capability set includes:
 
@@ -50,7 +50,19 @@ Current V5 capability set includes:
 - API-Football provider restrictions classified explicitly, with `PLAN_RESTRICTED` treated as fail-neutral optional-source unavailability rather than fabricated evidence or engine failure
 - cached provider-restriction evidence to avoid repeated quota-wasting calls during the configured TTL
 - convergence, shadow-parity, architecture, persistence, reporting and performance regression gates
+- postvalidated real-shadow acceptance accounting: a cycle counts only after core parity/invariants and the workflow-level reporting/source-health validator both pass
+- acceptance accounting is version- and production-baseline-scoped, so old beta cycles cannot silently satisfy a newer beta release
+- on-demand reporting route for fresh team snapshots; until V5 production promotion, the report refreshes the current production V3 engine and publishes a read-only full snapshot without auto-submitting FPL changes
+- V5 reporting supports forced-full report mode so on-demand snapshots do not collapse into compact delta output
 
 Official FPL remains the native external authority. External enrichment never overrides Official FPL identity, price, rules or authoritative squad state.
 
-Production promotion remains blocked until the configured real-shadow acceptance criteria are satisfied.
+## On-demand team report
+
+The on-demand route is triggered independently from the normal collector cadence. A request refreshes the current production authority, validates production/watchlist/report-serving contracts, packages a full team snapshot, and publishes the latest result under the isolated runtime-data report path. Trigger-only pushes do not run the full V5 regression suite.
+
+While V5 remains beta, on-demand report authority is V3 production. V5 beta may be used only as a non-authoritative shadow overlay. After an explicit production cutover, the routing registry can be changed without altering the report contract.
+
+## Promotion rule
+
+V5.0.0-beta.2 requires three successful postvalidated real-shadow cycles on the same V5 version and accepted production baseline before it can become production-candidate eligible. Failed, pending, older-version, or baseline-mismatched cycles do not count. Reaching 3/3 never auto-promotes V5; production promotion remains an explicit manual governance action.

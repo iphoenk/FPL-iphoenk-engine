@@ -12,10 +12,12 @@ from src.v5.service_registry import registry as service_registry, service_specs,
 ACCEPTANCE_CONFIG = "config/v5_acceptance_registry.json"
 MANIFEST_CONFIG = "config/v5_convergence_manifest.json"
 ARCHITECTURE_CONFIG = "config/v5_architecture_principles.json"
+ORCHESTRATOR_CONFIG = "config/v5_orchestrator_registry.json"
+GATE0_CONFIG = "config/gate0_registry.json"
 
 
 def _registered_modules_ok(names: list[str], active_statuses: set[str]) -> bool:
-    modules = {m.name: m for m in module_specs()}
+    modules = {module.name: module for module in module_specs()}
     return all(
         (module := modules.get(name)) is not None
         and module.status in active_statuses
@@ -32,16 +34,18 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     acceptance = load_json_config(ACCEPTANCE_CONFIG)
     manifest = load_json_config(MANIFEST_CONFIG)
     architecture = load_json_config(ARCHITECTURE_CONFIG)
+    orchestrator_cfg = load_json_config(ORCHESTRATOR_CONFIG)
+    gate0_cfg = load_json_config(GATE0_CONFIG)
     metadata = ruleset_metadata()
     modules = module_specs()
     module_policy = acceptance["module_policy"]
     service_policy = acceptance["service_policy"]
-    active_statuses = {str(x) for x in module_policy["active_statuses"]}
+    active_statuses = {str(value) for value in module_policy["active_statuses"]}
     modular_policy = architecture.get("principles", {}).get("modular_authority", {})
     microservice_policy = architecture.get("principles", {}).get("microservices", {})
     services = service_specs()
     service_ids = {service.service_id for service in services}
-    required_services = {str(x) for x in service_policy["required_services"]}
+    required_services = {str(value) for value in service_policy["required_services"]}
     service_errors = validate_registry()
     deployment_path = ROOT / str(service_policy["require_deployment_manifest"])
     service_cfg = service_registry()
@@ -54,6 +58,14 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     required_decision = list(module_policy.get("required_decision_modules") or [])
     required_framework = list(module_policy.get("required_framework_modules") or [])
     convergence = acceptance.get("convergence") or {}
+    gate0_contract = gate0_cfg.get("contract") if isinstance(gate0_cfg.get("contract"), dict) else {}
+    gate0_checks = gate0_cfg.get("checks") if isinstance(gate0_cfg.get("checks"), list) else []
+    gate0_expected = int(gate0_contract.get("expected_count") or 0)
+    parallel_required = {str(value) for value in convergence.get("analysis_parallel_routes_required") or []}
+    parallel_groups = orchestrator_cfg.get("parallel_groups") if isinstance(orchestrator_cfg.get("parallel_groups"), dict) else {}
+    analysis_group = {str(value) for value in parallel_groups.get("analysis_preflight") or []}
+    routes = orchestrator_cfg.get("routing") if isinstance(orchestrator_cfg.get("routing"), dict) else {}
+
     checks = (
         AcceptanceCheck(
             "v5_manifest",
@@ -66,7 +78,7 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
             manifest.get("baselines", {}).get("production_truth") == "v3.10.0"
             and bool(manifest.get("baselines", {}).get("production_main_sha")),
             Plane.TRUTH,
-            "V5 convergence is anchored to the current v3.10 production baseline",
+            "V5 convergence is anchored to the current production baseline",
         ),
         AcceptanceCheck(
             "p0_baseline_declared",
@@ -114,25 +126,27 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
             "Decision service owns native lineup governance and auditable decision trace",
         ),
         AcceptanceCheck(
-            "gate0_full_16_authority",
-            convergence.get("gate0_full_16_required") is True
+            "gate0_registry_authority",
+            convergence.get("gate0_full_registry_required") is True
+            and gate0_expected > 0
+            and len(gate0_checks) == gate0_expected
             and "def audit(" in gate0_source
-            and "G0-16" in gate0_source
             and "purchase_total + bank" not in gate0_source,
             Plane.GOVERNANCE,
-            "Gate0 owns preflight/postflight 16-check legality without the invalid static £100m team-value cap",
+            "Gate0 legality is governed by the canonical registry contract without a static team-value cap",
         ),
         AcceptanceCheck(
-            "parallel_evaluation_decision_prepare",
-            "decision_prepare" in orchestrator_source
-            and "decision_finalize" in orchestrator_source
-            and "evaluation_and_decision_prepare" in orchestrator_source,
+            "parallel_analysis_preflight",
+            bool(parallel_required)
+            and parallel_required.issubset(analysis_group)
+            and all(name in routes for name in parallel_required)
+            and "decision_finalize" in orchestrator_source,
             Plane.GOVERNANCE,
-            "Heavy decision preparation remains parallel with evaluation before lightweight finalization",
+            "Evaluation, decision preparation and Gate0 preflight run in the registered parallel analysis stage before finalization",
         ),
         AcceptanceCheck(
             "orchestrator_uses_evaluation_and_governance",
-            "evaluation_build" in orchestrator_source and "governance_audit" in orchestrator_source,
+            "evaluation_build" in routes and "governance_audit" in routes,
             Plane.GOVERNANCE,
             "Orchestrator routes calibration and final governance through independent services",
         ),
@@ -159,13 +173,13 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
             "p0_intelligence_modules_active",
             _registered_modules_ok(required_intelligence, active_statuses),
             Plane.INTELLIGENCE,
-            "All five P0 capability families are service-owned and active/alpha",
+            "Required intelligence and evaluation modules are service-owned and active/alpha",
         ),
         AcceptanceCheck(
             "native_decision_modules_active",
             _registered_modules_ok(required_decision, active_statuses),
             Plane.DECISION,
-            "Package, lineup, trace and DSS authorities are explicit Decision Service modules",
+            "Projection index, package, lineup, trace and DSS authorities are explicit Decision Service modules",
         ),
         AcceptanceCheck(
             "framework_modules_active",

@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "full-dss-v3.16-runtime-verification-r2",
-  "requested_at": "2026-08-26T11:13:00Z",
+  "requested_cycle": "source-fusion-full-dss-v3.16-runtime-verification",
+  "requested_at": "2026-08-26T11:46:00Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "v3.16-source-registry@94dc304250c21a83b7270944231a07c6ff7099ac",
   "v5_role": "shadow_only",
@@ -13,5 +13,8 @@
   "require_all_extensions_active": true,
   "require_all_enhancements_active": true,
   "require_no_critical_dss_partial": true,
-  "require_no_critical_enhancement_partial": true
+  "require_no_critical_enhancement_partial": true,
+  "require_source_fusion_fail_neutral": true,
+  "understat_role": "challenger",
+  "api_football_role": "cross_competition_enrichment"
 }

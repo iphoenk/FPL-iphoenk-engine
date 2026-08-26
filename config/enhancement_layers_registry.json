@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "registry": "ENHANCEMENT_LAYERS_8",
+  "expected_count": 8,
   "description": "Eight canonical cross-cutting layers. Layer count is immutable unless architecture is explicitly revised.",
   "layers": [
     {"id":"ENH-01","name":"Data Reliability & Source Triangulation","critical":true,"capabilities":["official-feed priority","advanced-stats enrichment","source health","freshness checks"],"required_files":["config/sources.json","src/engines/reliability.py","data/health.json"],"operational_probe":"reliability_overlay"},

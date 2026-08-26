@@ -1,0 +1,100 @@
+{
+  "ruleset_id": "FPL_2026_27",
+  "season": "2026/27",
+  "authority": "Official FPL",
+  "status": "VERIFIED",
+  "verified_at": "2026-08-26",
+  "sources": {
+    "general_rules": "https://fantasy.premierleague.com/help/rules",
+    "scoring": "https://www.premierleague.com/en/news/2174909/fpl-basics-explained-scoring-points",
+    "defensive_contributions": "https://www.premierleague.com/en/news/4361991",
+    "chips": "https://www.premierleague.com/en/news/4679879/whats-happening-with-fpl-chips-in-202627",
+    "bps_changes": "https://www.premierleague.com/en/news/4679946/whats-new-in-202627-fantasy-changes-to-bonus-points-system"
+  },
+  "rule_provenance": {
+    "squad": {"source": "general_rules", "verification": "VERIFIED"},
+    "lineup": {"source": "general_rules", "verification": "VERIFIED"},
+    "scoring": {"source": "scoring", "verification": "VERIFIED"},
+    "defensive_contributions": {"source": "defensive_contributions", "verification": "VERIFIED"},
+    "chips": {"source": "chips", "verification": "VERIFIED"},
+    "finance": {"source": "general_rules", "verification": "VERIFIED"},
+    "bonus_bps": {"source": "bps_changes", "verification": "VERIFIED"}
+  },
+  "squad": {
+    "budget_tenths": 1000,
+    "squad_size": 15,
+    "position_counts": {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3},
+    "max_players_per_club": 3,
+    "duplicates_allowed": false
+  },
+  "lineup": {
+    "starting_xi_size": 11,
+    "starting_goalkeepers": 1,
+    "outfield_minimums": {"DEF": 3, "MID": 2, "FWD": 1},
+    "legal_formations": ["3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-2-3", "5-3-2", "5-4-1"],
+    "bench": {"goalkeepers": 1, "outfield": 3},
+    "captain": {"must_be_in_starting_xi": true},
+    "vice_captain": {"must_be_in_starting_xi": true, "must_differ_from_captain": true}
+  },
+  "scoring": {
+    "appearance": {"under_60": 1, "at_least_60": 2},
+    "goals": {"GK": 10, "DEF": 6, "MID": 5, "FWD": 4},
+    "assists": 3,
+    "clean_sheet": {"GK": 4, "DEF": 4, "MID": 1, "FWD": 0, "minimum_minutes": 60},
+    "saves": {"interval": 3, "points_per_interval": 1},
+    "penalty_save": 5,
+    "penalty_miss": -2,
+    "goals_conceded": {"eligible_positions": ["GK", "DEF"], "interval": 2, "points_per_interval": -1},
+    "yellow_card": -1,
+    "red_card": -3,
+    "own_goal": -2,
+    "bonus_awards": [3, 2, 1]
+  },
+  "defensive_contributions": {
+    "points_cap_per_match": 2,
+    "by_position": {
+      "GK": {"eligible": false, "threshold": null, "points": 0, "metrics": []},
+      "DEF": {"eligible": true, "threshold": 10, "points": 2, "metrics": ["clearances", "blocks", "interceptions", "tackles"], "label": "CBIT"},
+      "MID": {"eligible": true, "threshold": 12, "points": 2, "metrics": ["clearances", "blocks", "interceptions", "tackles", "ball_recoveries"], "label": "CBIRT"},
+      "FWD": {"eligible": true, "threshold": 12, "points": 2, "metrics": ["clearances", "blocks", "interceptions", "tackles", "ball_recoveries"], "label": "CBIRT"}
+    }
+  },
+  "chips": {
+    "api_names": {"wildcard": "wildcard", "freehit": "free_hit", "3xc": "triple_captain", "bboost": "bench_boost"},
+    "display_names": ["wildcard", "free_hit", "triple_captain", "bench_boost"],
+    "sets_per_season": 2,
+    "halves": {"1": [1, 19], "2": [20, 38]},
+    "one_chip_per_gameweek": true,
+    "first_set_carryover": false,
+    "free_hit_gw1_allowed": false,
+    "free_hit_gw19_to_gw20_consecutive_allowed": false,
+    "effects": {
+      "triple_captain": "captain points x3 instead of x2",
+      "wildcard": "unlimited permanent transfers in the Gameweek",
+      "bench_boost": "bench player points count in team total",
+      "free_hit": "unlimited free transfers for one Gameweek; previous squad returns next deadline"
+    }
+  },
+  "finance": {
+    "price_unit_millions": 0.1,
+    "sell_value": {
+      "method": "official_half_profit_floor",
+      "if_now_cost_lte_purchase_cost": "sell_cost = now_cost",
+      "if_now_cost_gt_purchase_cost": "sell_cost = purchase_cost + floor((now_cost - purchase_cost) / 2)",
+      "profit_share_rounding": "floor_to_0.1m_units"
+    }
+  },
+  "bonus_bps": {
+    "full_reconstruction_authority": "Official FPL/Opta",
+    "tackled_penalty_removed": true,
+    "cbi_bps": "1 BPS per 3 CBI (was per 2)",
+    "goalkeeper_save_bps": "2 BPS for any save +1 inside-box save +1 big-chance save",
+    "penalty_save_bps": 7,
+    "bonus_awards": [3, 2, 1],
+    "ties": {
+      "first": "two tied first get 3 each; next player gets 1",
+      "second": "leader gets 3; two tied second get 2 each",
+      "third": "leader gets 3; second gets 2; players tied third get 1 each"
+    }
+  }
+}

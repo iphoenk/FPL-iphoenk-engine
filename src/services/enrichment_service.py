@@ -14,6 +14,12 @@ SNAPSHOT = RUNTIME / "snapshot.v1.json"
 OUTFILE = RUNTIME / "enrichment.v1.json"
 
 
+def _run_parallel(tasks: dict) -> dict:
+    with ThreadPoolExecutor(max_workers=len(tasks), thread_name_prefix="fpl-enrichment") as pool:
+        futures = {name: pool.submit(fn) for name, fn in tasks.items()}
+        return {name: future.result() for name, future in futures.items()}
+
+
 def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
     started = perf_counter()
     raw = read_json(SNAPSHOT, {})
@@ -27,8 +33,7 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         tasks = {"core_insights": lambda: core_insights.sync_gw(stats_gw), "vaastav": lambda: vaastav.sync_gw(stats_gw), "last_season": vaastav.sync_previous_season}
         if deep_stats:
             tasks["deep"] = lambda: core_insights.sync_optional_deep_files(stats_gw)
-        with ThreadPoolExecutor(max_workers=len(tasks), thread_name_prefix="fpl-enrichment") as pool:
-            results = {name: future.result() for name, future in ((name, pool.submit(fn)) for name, fn in tasks.items())}
+        results = _run_parallel(tasks)
         advanced = {"core_insights": {"ok": bool(results["core_insights"].get("schema_valid")), "rows": results["core_insights"].get("row_count")}, "vaastav": {"ok": bool(results["vaastav"].get("rows")), "rows": results["vaastav"].get("row_count")}, "last_season": {"ok": bool(results["last_season"].get("rows")), "rows": results["last_season"].get("row_count")}}
         if deep_stats:
             advanced["deep"] = results["deep"]

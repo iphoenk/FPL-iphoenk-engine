@@ -88,6 +88,11 @@ def run() -> dict:
     assert latest.get("meta", {}).get("service_contract_compatible") is True
     assert latest.get("meta", {}).get("service_boundaries_registry_driven") is True
     assert latest.get("checkpoint_context", {}).get("policy_id")
+    service_performance = latest.get("performance") or {}
+    for field in ("raw_snapshot_ms", "enrichment_ms", "prediction_ms", "engine_before_snapshot_write_ms"):
+        assert service_performance.get(field, 0) > 0, service_performance
+    component_total = sum(service_performance[field] for field in ("raw_snapshot_ms", "enrichment_ms", "prediction_ms"))
+    assert abs(component_total - service_performance["engine_before_snapshot_write_ms"]) < 0.02, service_performance
 
     orchestration = _load("service_orchestration_v4.json")
     assert int(orchestration.get("schema_version", 0)) >= 481, orchestration

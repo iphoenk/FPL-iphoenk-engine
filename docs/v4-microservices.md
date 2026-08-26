@@ -15,4 +15,8 @@ Every registry boundary is `INDEPENDENT`. A successful raw, enrichment, or predi
 
 The prediction boundary continues to publish the V4.8.0 operational surface (`live.json`, `prices.json`, `price_cache.json`, `health.json`, `chips.json`, the per-GW archive, and append-only `history.jsonl`). `latest.json` keeps pointers to every artifact consumed by reliability and governance checks.
 
+The raw boundary validates the actual authoritative squad, whether locked or officially submitted, before publishing: 15 unique elements, exact 2 GK/5 DEF/5 MID/3 FWD composition, identity/position consistency, and no more than three players per club. The live artifact retains team, position, captain, and vice-captain fields. Endpoint health distinguishes unavailable picks and idle event-live data from genuinely live data.
+
+Independent community enrichment requests are submitted together and then collected. Component timings remain visible as `raw_snapshot_ms`, `enrichment_ms`, and `prediction_ms`, while `engine_before_snapshot_write_ms` is preserved for workflow compatibility.
+
 The centralized V4.8.1 quality gate verifies 8/8 service evidence, lineage, decision equivalence, sell-cost correctness, Gate 0 (16), DSS Core (50), DSS Extension (16), and Enhancement Layers (8).

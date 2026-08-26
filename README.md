@@ -129,6 +129,8 @@ GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy
 - `snapshot.v1` and `enrichment.v1` live only under ignored `data/runtime/`; SHA-256 lineage binds raw input, enrichment, and the latest prediction.
 - The orchestrator locks raw snapshot, enrichment, and latest prediction immediately after each service passes, then fails closed on any mutation.
 - Prediction preserves every V4.8.0 operational artifact: live state, prices and price cache, source health, chips, per-GW archive, and append-only snapshot history; `latest.json` retains the complete compatibility pointer set.
+- Authoritative squads remain fail-closed on 15-player identity, exact 2/5/5/3 composition, uniqueness, and the three-per-club limit. Live player identity/captain fields and truthful endpoint-state normalization remain backward compatible.
+- Community enrichment sources are submitted concurrently before results are collected; `latest.json` reports raw snapshot, enrichment, prediction, and compatibility-total timings.
 - Prediction V4.7.1, optimizer V4.7.2, checkpoint governance V4.7.3, sell-cost logic, Gate 0, and registry counts remain unchanged.
 - `data/service_orchestration_v4.json` provides service status, timings, contract hashes, and failure evidence.
 

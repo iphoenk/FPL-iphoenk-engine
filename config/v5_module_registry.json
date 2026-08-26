@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "policy": "Any separable V5 domain should be represented by a dedicated module and/or registry when doing so improves authority clarity, identification, tuning, provenance, testing, or maintenance without unacceptable performance cost.",
   "modules": {
     "rules": {
@@ -14,6 +14,13 @@
       "entrypoint": "src.v5.source_authority",
       "config": "config/v5_source_authority_registry.json",
       "adjustment_surface": ["source priority", "source enablement", "domain authority chains", "fallback policy"],
+      "status": "ACTIVE"
+    },
+    "public_api": {
+      "plane": "truth",
+      "entrypoint": "src.v5.public_api",
+      "config": "config/v5_public_api_registry.json",
+      "adjustment_surface": ["endpoint templates", "timeout", "retry/backoff", "parallel workers", "collection groups", "redirect policy"],
       "status": "ACTIVE"
     },
     "official_authenticated": {

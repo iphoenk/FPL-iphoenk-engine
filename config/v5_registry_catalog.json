@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "purpose": "Catalog of V5 domains that must resolve through a shared module or registry instead of duplicated implementation logic.",
+  "domains": {
+    "official_rules": {"authority": "config/rules/registry.json", "status": "ACTIVE"},
+    "source_authority": {"authority": "config/sources.json", "status": "MIGRATE/CONSOLIDATE"},
+    "dss_core": {"authority": "config/dss_core_registry.json", "status": "ACTIVE_FROM_V4_BASE"},
+    "dss_extensions": {"authority": "config/dss_extension_registry.json", "status": "ACTIVE_FROM_V4_BASE"},
+    "enhancement_layers": {"authority": "config/enhancement_layers_registry.json", "status": "ACTIVE_FROM_V4_BASE"},
+    "gate0": {"authority": "config/gate0_registry.json", "status": "ACTIVE_FROM_V4_BASE"},
+    "performance_budgets": {"authority": "config/v5_performance_budgets.json", "status": "ACTIVE"},
+    "architecture_principles": {"authority": "config/v5_architecture_principles.json", "status": "ACTIVE"},
+    "finance": {"authority": "planned: src/v5/finance + registry/config", "status": "PENDING_CONSOLIDATION"},
+    "phase_authority": {"authority": "planned: src/v5/state + registry/config", "status": "PENDING_CONSOLIDATION"},
+    "price_trajectory": {"authority": "planned migration from V3", "status": "PENDING_MIGRATION"},
+    "projection_weights": {"authority": "planned registry", "status": "PENDING_EXTERNALIZATION"}
+  }
+}

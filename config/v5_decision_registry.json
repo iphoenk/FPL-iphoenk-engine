@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "model_id": "v5_native_decision_governance_v1",
+  "schema_version": 2,
+  "model_id": "v5_native_decision_governance_v2",
   "lineup": {
     "player_score": {
       "mean_weight": 1.0,
@@ -29,6 +29,7 @@
   },
   "package_selection": {
     "max_trace_packages": 5,
+    "default_outperform_hold_probability": 0.50,
     "minimum_robust_gain_to_review": 0.50,
     "strong_robust_gain": 2.00,
     "minimum_outperform_hold_probability": 0.55,
@@ -38,14 +39,21 @@
     "high_minimum": 0.80,
     "medium_high_minimum": 0.70,
     "medium_minimum": 0.58,
-    "medium_low_minimum": 0.45
+    "medium_low_minimum": 0.45,
+    "critical_partial_penalty_per_module": 0.03,
+    "critical_partial_floor_multiplier": 0.25
   },
   "trace": {
     "require_truth_authority": true,
     "require_ruleset_id": true,
     "require_projection_model": true,
-    "require_gate0_constraints": true,
+    "require_gate0_preflight": true,
     "require_dss_coverage": true,
+    "gate0_pass_status": "PASS",
+    "local_constraint_labels": {
+      "package_ready": "decision:package_legality_and_affordability",
+      "lineup_ready": "decision:lineup_legality"
+    },
     "production_recommendation_enabled": false
   },
   "capabilities": [

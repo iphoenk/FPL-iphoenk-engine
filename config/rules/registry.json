@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "registry": "OFFICIAL_FPL_RULESETS",
+  "active_ruleset": "FPL_2026_27",
+  "season": "2026/27",
+  "rules_file": "config/rules/fpl_2026_27.json",
+  "schema_file": "config/rules/schema.json",
+  "status": "ACTIVE",
+  "authority": "Official FPL",
+  "change_policy": "manual_review_required",
+  "drift_policy": {
+    "auto_mutate_rules": false,
+    "remote_source_change_requires_review": true,
+    "fail_closed_on_registry_integrity_failure": true
+  }
+}

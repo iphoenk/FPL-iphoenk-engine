@@ -1,5 +1,5 @@
 {
-  "version": 13,
+  "version": 14,
   "policy": "Every business capability has exactly one bounded-context microservice owner. Cross-service calls use versioned contracts; no service may import another service's business implementation.",
   "modules": {
     "public_api": {"plane":"truth","entrypoint":"src.v5.public_api","config":"config/v5_public_api_registry.json","status":"ACTIVE"},
@@ -16,7 +16,9 @@
 
     "price_trajectory": {"plane":"intelligence","entrypoint":"src.v5.price_trajectory","config":"config/v5_price_trajectory_registry.json","status":"ACTIVE_ALPHA"},
     "price_service": {"plane":"intelligence","entrypoint":"src.v5.price_service","config":"config/v5_price_trajectory_registry.json","status":"ACTIVE_ALPHA"},
-    "xmins_v2": {"plane":"intelligence","entrypoint":"src.v5.intelligence.xmins","config":"config/intelligence/xmins_v2.json","status":"ACTIVE_ALPHA"},
+    "historical_prior": {"plane":"intelligence","entrypoint":"src.v5.intelligence.historical_prior","config":"config/intelligence/historical_priors.json","status":"ACTIVE_ALPHA"},
+    "prediction_quality": {"plane":"intelligence","entrypoint":"src.v5.intelligence.prediction_quality","config":"config/intelligence/historical_priors.json","status":"ACTIVE_ALPHA"},
+    "xmins_v2": {"plane":"intelligence","entrypoint":"src.v5.intelligence.xmins","config":"config/intelligence/xmins_v3.json","status":"ACTIVE_ALPHA"},
     "role_intelligence": {"plane":"intelligence","entrypoint":"src.v5.intelligence.role_intelligence","config":"config/intelligence/role_intelligence.json","status":"ACTIVE_ALPHA"},
     "team_strength": {"plane":"intelligence","entrypoint":"src.v5.intelligence.team_strength","config":"config/intelligence/team_strength.json","status":"ACTIVE_ALPHA"},
     "projection": {"plane":"intelligence","entrypoint":"src.v5.intelligence.projection","config":"config/intelligence/projection.json","status":"ACTIVE_ALPHA"},

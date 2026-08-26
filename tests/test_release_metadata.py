@@ -40,7 +40,15 @@ def test_master_task_governance_is_wired():
     readme = (ROOT / "README.md").read_text()
     assert "# FPL iphoenk Engine V3 Master Task List" in master
     assert "V3.18 Structured Challenger Ingestion" in master
-    assert f"Current release candidate: V{ENGINE_VERSION}" in master
-    assert f"Current candidate schema: {SCHEMA_VERSION}" in master
+
+    candidate = f"Current release candidate: V{ENGINE_VERSION}" in master
+    production = f"Current production release: V{ENGINE_VERSION}" in master
+    assert candidate != production, "roadmap must identify exactly one current release state"
+    if candidate:
+        assert f"Current candidate schema: {SCHEMA_VERSION}" in master
+    else:
+        assert f"Current production schema: {SCHEMA_VERSION}" in master
+        assert "Production acceptance: COMPLETE" in master
+
     assert "Definition of Done" in master
     assert "MASTER_TASK_LIST_V3.md" in readme

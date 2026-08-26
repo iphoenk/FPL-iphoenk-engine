@@ -8,7 +8,7 @@ from src.sources import official_fpl
 def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     registry = _load_registry()
     _validate_dag(registry)
-    assert registry["schema_version"] >= 6
+    assert registry["schema_version"] >= 7
     assert registry["architecture"] == "V3_BOUNDED_PROCESS_MICROSERVICES"
     assert registry["policy"]["parallelize_independent_services"] is True
     assert registry["policy"]["latest_json_single_writer_during_fan_in"] is True
@@ -19,21 +19,25 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     assert registry["policy"]["full_dss_watchlist_generator"] is True
     assert registry["policy"]["report_materializer_is_serving_only"] is True
     assert registry["policy"]["report_serving_requires_15_owned_and_20_external_watchlist"] is True
+    assert registry["policy"]["source_registry_is_separate_infrastructure_layer"] is True
+    assert registry["policy"]["official_fpl_remains_native_authority"] is True
+    assert registry["policy"]["challenger_source_failure_does_not_block_decisions"] is True
     services = registry["services"]
     assert set(services) == {
-        "collector", "price", "historical_prior", "prediction", "authenticated_official", "rules",
+        "collector", "source_layer", "price", "historical_prior", "prediction", "authenticated_official", "rules",
         "official_detail", "prediction_evaluation", "lineup_governance", "challenger", "governance",
         "watchlist", "reporting", "report_materializer",
     }
+    assert services["source_layer"]["depends_on"] == ["collector"]
     assert services["price"]["depends_on"] == ["collector"]
     assert services["historical_prior"]["depends_on"] == ["collector"]
     assert services["prediction"]["depends_on"] == ["historical_prior"]
     assert services["official_detail"]["depends_on"] == ["price"]
     assert services["prediction_evaluation"]["depends_on"] == ["prediction"]
     assert services["lineup_governance"]["depends_on"] == ["prediction"]
-    assert services["challenger"]["depends_on"] == ["prediction_evaluation"]
+    assert set(services["challenger"]["depends_on"]) == {"prediction_evaluation", "source_layer"}
     assert set(services["governance"]["depends_on"]) == {
-        "price", "prediction", "authenticated_official", "rules", "official_detail",
+        "source_layer", "price", "prediction", "authenticated_official", "rules", "official_detail",
         "prediction_evaluation", "lineup_governance", "challenger",
     }
     assert services["watchlist"]["depends_on"] == ["governance"]
@@ -43,6 +47,8 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     assert any(c.get("module") == "src.engines.framework_health_audit" and "postflight" in c.get("args", []) for c in commands)
     assert any(c.get("module") == "src.engines.lineup_framework_health_overlay" for c in commands)
     assert any(c.get("module") == "src.engines.decision_quality_overlay" for c in commands)
+    assert any(c.get("module") == "src.engines.source_framework_overlay" for c in commands)
+    assert services["source_layer"]["commands"] == [{"module": "src.engines.source_layer", "args": []}]
     assert services["watchlist"]["commands"] == [
         {"module": "src.engines.dss_watchlist", "args": []},
         {"module": "src.engines.watchlist_public_sanitize", "args": []},

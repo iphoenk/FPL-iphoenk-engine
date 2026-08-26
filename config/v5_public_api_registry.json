@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "transport": {
     "api_base_env": "FPL_API_BASE",
     "api_base_default": "https://fantasy.premierleague.com/api",
@@ -10,6 +10,30 @@
     "backoff_key": "api_backoff_seconds",
     "parallel_max_workers": 6,
     "allow_redirects": true
+  },
+  "cache": {
+    "enabled": true,
+    "directory_env": "V5_PUBLIC_API_CACHE_DIR",
+    "directory_default": "data/cache/v5_public_api",
+    "default_ttl_seconds": 120,
+    "route_ttl_seconds": {
+      "bootstrap": 180,
+      "fixtures": 120,
+      "event_status": 60,
+      "entry": 60,
+      "entry_history": 120,
+      "entry_transfers": 60,
+      "entry_picks": 15,
+      "event_live": 15,
+      "element_summary": 120,
+      "set_piece_notes": 300
+    },
+    "singleflight": {
+      "enabled": true,
+      "wait_seconds": 5.0,
+      "poll_ms": 50,
+      "stale_lock_seconds": 30.0
+    }
   },
   "endpoints": {
     "bootstrap": "bootstrap-static/",

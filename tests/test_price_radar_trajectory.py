@@ -3,11 +3,13 @@ from datetime import datetime, timezone
 from src.engines.price_radar import (
     _official_projection_health,
     _price_row,
+    _risk_direction,
+    _trajectory_eta,
     build_trajectory,
 )
 
 
-def test_official_price_fields_are_normalised():
+def test_official_price_fields_are_normalised_without_inventing_ordinal_wording():
     player = {
         "id": 8,
         "web_name": "Calafiori",
@@ -21,13 +23,14 @@ def test_official_price_fields_are_normalised():
         "price_change_hourly_rate": 804,
         "price_change_projections": [
             {"offset": 0, "projected_percent": "65.0", "likelihood": 3},
-            {"offset": 1, "projected_percent": "79.5", "likelihood": 3},
+            {"offset": 1, "projected_percent": "108.0", "likelihood": 5},
         ],
     }
     row = _price_row(player, 10_000_000)
     assert row["official_progress_pct"] == 65.0
     assert row["official_hourly_rate_pct"] == 8.04
-    assert row["official_projections"][0]["likelihood_label"] == "VERY_LIKELY_RISE"
+    assert row["official_projections"][0]["likelihood_label"] == "RISE_SIGNAL_LEVEL_3"
+    assert row["official_projections"][1]["likelihood_label"] == "VERY_LIKELY_RISE"
 
 
 def test_static_offset_zero_projection_is_guarded():
@@ -38,6 +41,14 @@ def test_static_offset_zero_projection_is_guarded():
         12.0,
     )
     assert health == "SUSPECT_STATIC_OFFSET0"
+
+
+def test_near_fall_threshold_does_not_flip_to_rise_on_tiny_recovery_rate():
+    now = datetime(2026, 8, 26, 1, 0, tzinfo=timezone.utc)
+    assert _risk_direction(-90.5, 0.02) == "FALL"
+    eta, deadline = _trajectory_eta(now, -90.5, 0.02)
+    assert eta is None
+    assert deadline is None
 
 
 def test_trajectory_calculates_velocity_acceleration_and_change_date():

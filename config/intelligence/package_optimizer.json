@@ -1,11 +1,12 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "model_id": "multi_horizon_package_optimizer_v1",
   "horizons": [3, 5, 10, 15],
   "horizon_weights": {"3": 0.42, "5": 0.33, "10": 0.15, "15": 0.10},
   "max_changes": 2,
   "max_candidates_per_position": 7,
   "max_single_moves_per_out": 4,
+  "double_move_seed_limit": 40,
   "max_deterministic_packages": 220,
   "monte_carlo_top_n": 20,
   "monte_carlo_simulations": 300,

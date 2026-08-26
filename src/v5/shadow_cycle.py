@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from src.v5.evaluation.shadow_parity import compare
+from src.v5.official_auth import expected_team_id
 from src.v5.services.orchestrator_beta import handle as beta_handle
 
 
@@ -69,7 +70,7 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
     cycle_pass = bool(parity.get("pass")) and invariant_pass
 
     result = {
-        "schema_version": 2,
+        "schema_version": 3,
         "cycle_id": cycle_id,
         "generated_at": generated_at,
         "mode": "REAL_SHADOW",
@@ -96,6 +97,7 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
             "decision": decision,
             "watchlist": watch,
             "user_report": v5.get("user_report") or {},
+            "source_fusion_health": v5.get("source_fusion_health") or {},
             "governance": v5.get("governance") or {},
             "framework_health": v5.get("framework_health") or {},
             "service_performance": v5.get("service_performance") or {},
@@ -127,6 +129,7 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
         "v5_owned_count": len(owned_ids),
         "v5_watchlist_count": watch.get("candidate_count"),
         "v5_decision_status": decision.get("status"),
+        "source_fusion_status": (result["v5"]["source_fusion_health"] or {}).get("status"),
         "auth_state": (result["v5"]["authenticated_official"] or {}).get("state"),
         "output": str(cycle_path),
     }, ensure_ascii=False))
@@ -138,7 +141,8 @@ def cli() -> None:
     parser.add_argument("--v3-latest", default=".shadow/v3_latest.json")
     parser.add_argument("--v3-lineup", default=".shadow/v3_lineup_decision.json")
     parser.add_argument("--output-dir", default="data/v5/shadow")
-    parser.add_argument("--team-id", type=int, default=int(os.getenv("FPL_TEAM_ID", "3462711")))
+    default_team_id = int(os.getenv("FPL_TEAM_ID") or expected_team_id())
+    parser.add_argument("--team-id", type=int, default=default_team_id)
     args = parser.parse_args()
     run(args.v3_latest, args.v3_lineup, args.output_dir, args.team_id)
 

@@ -31,23 +31,12 @@ def _call(name: str, payload: dict[str, Any], correlation_id: str) -> dict[str, 
 
 
 def _metric(envelope: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "service_id": envelope.get("service_id"),
-        "operation": envelope.get("operation"),
-        "service_compute_ms": envelope.get("elapsed_ms"),
-        "round_trip_ms": envelope.get("round_trip_ms"),
-        "transport_overhead_ms": envelope.get("transport_overhead_ms"),
-    }
-
-
-def _parallel_metrics(envelopes: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    return {name: _metric(envelope) for name, envelope in envelopes.items()}
+    return {"service_id": envelope.get("service_id"), "operation": envelope.get("operation"), "service_compute_ms": envelope.get("elapsed_ms"), "round_trip_ms": envelope.get("round_trip_ms"), "transport_overhead_ms": envelope.get("transport_overhead_ms")}
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation != "run":
         raise KeyError(f"unsupported orchestrator operation: {operation}")
-
     runner_cfg = load_json_config(RUNNER_CONFIG)
     mode = str(payload.get("mode") or runner_cfg["default_mode"])
     if mode not in {str(x) for x in runner_cfg["modes"]}:
@@ -67,169 +56,94 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         raise RuntimeError("V5 microservice FAIL CLOSED: bootstrap unavailable")
 
     context_env = _call("event_context", {"bootstrap": bootstrap}, correlation_id)
-    performance["event_context"] = _metric(context_env)
     context = context_env["data"]
+    performance["event_context"] = _metric(context_env)
 
     dynamic_service, dynamic_operation = _route("dynamic_collection")
     auth_service, auth_operation = _route("authenticated_collection")
-    runtime_envs = invoke_parallel_envelopes(
-        {
-            "dynamic_collection": (
-                dynamic_service,
-                dynamic_operation,
-                {
-                    "team_id": team_id,
-                    "submitted_gw": context.get("submitted_gw"),
-                    "scoring_gw": context.get("scoring_gw"),
-                    "planning_gw": context.get("planning_gw"),
-                },
-            ),
-            "authenticated_collection": (auth_service, auth_operation, {}),
-        },
-        correlation_id=correlation_id,
-    )
-    performance["runtime_overlay"] = _parallel_metrics(runtime_envs)
-    dynamic_result = runtime_envs["dynamic_collection"]["data"]
-    auth_runtime = runtime_envs["authenticated_collection"]["data"]
+    runtime = invoke_parallel_envelopes({
+        "dynamic": (dynamic_service, dynamic_operation, {"team_id": team_id, "submitted_gw": context.get("submitted_gw"), "scoring_gw": context.get("scoring_gw"), "planning_gw": context.get("planning_gw")}),
+        "auth": (auth_service, auth_operation, {}),
+    }, correlation_id=correlation_id)
+    performance["runtime_overlay"] = {k: _metric(v) for k, v in runtime.items()}
+    dynamic_result, auth_runtime = runtime["dynamic"]["data"], runtime["auth"]["data"]
 
-    truth_env = _call(
-        "truth_assembly",
-        {
-            "bootstrap": bootstrap,
-            "base": base,
-            "dynamic": dynamic_result["payloads"],
-            "auth_runtime": auth_runtime,
-        },
-        correlation_id,
-    )
-    performance["truth_assembly"] = _metric(truth_env)
+    truth_env = _call("truth_assembly", {"bootstrap": bootstrap, "base": base, "dynamic": dynamic_result["payloads"], "auth_runtime": auth_runtime}, correlation_id)
     truth = truth_env["data"]
-    owned_ids = (truth.get("team") or {}).get("owned_ids") or []
+    performance["truth_assembly"] = _metric(truth_env)
+    if not isinstance(truth.get("rules"), dict):
+        raise RuntimeError("V5 microservice FAIL CLOSED: truth rules unavailable")
 
-    previous_env = _call(
-        "price_state_read",
-        {"name": "price_trajectory", "default": {}},
-        correlation_id,
-    )
-    performance["price_state_read"] = _metric(previous_env)
+    read_service, read_operation = _route("artifact_read")
+    states = invoke_parallel_envelopes({
+        "price_trajectory": (read_service, read_operation, {"name": "price_trajectory", "default": {}}),
+        "prediction_ledger": (read_service, read_operation, {"name": "prediction_ledger", "default": {"schema_version": 1, "records": {}}}),
+        "challenger_observations": (read_service, read_operation, {"name": "challenger_observations", "default": {"schema_version": 1, "observations": []}}),
+    }, correlation_id=correlation_id)
+    performance["state_hydration"] = {k: _metric(v) for k, v in states.items()}
 
     price_service, price_operation = _route("price_build")
-    prediction_service, prediction_operation = _route("prediction_build")
-    intelligence_envs = invoke_parallel_envelopes(
-        {
-            "price": (
-                price_service,
-                price_operation,
-                {
-                    "bootstrap": bootstrap,
-                    "previous_state": previous_env["data"] or {},
-                    "owned_ids": owned_ids,
-                },
-            ),
-            "prediction": (
-                prediction_service,
-                prediction_operation,
-                {
-                    "bootstrap": bootstrap,
-                    "fixtures": base.get("fixtures") or [],
-                    "stats_gw": context.get("current_gw") or context.get("last_finished_gw"),
-                },
-            ),
-        },
-        correlation_id=correlation_id,
-    )
-    performance["intelligence"] = _parallel_metrics(intelligence_envs)
-    price_bundle = intelligence_envs["price"]["data"]
-    prediction = intelligence_envs["prediction"]["data"]
+    pred_service, pred_operation = _route("prediction_build")
+    intelligence = invoke_parallel_envelopes({
+        "price": (price_service, price_operation, {"bootstrap": bootstrap, "previous_state": states["price_trajectory"]["data"] or {}, "owned_ids": (truth.get("team") or {}).get("owned_ids") or []}),
+        "prediction": (pred_service, pred_operation, {"bootstrap": bootstrap, "fixtures": base.get("fixtures") or [], "rules": truth["rules"], "planning_gw": context.get("planning_gw"), "horizon": 15}),
+    }, correlation_id=correlation_id)
+    performance["intelligence"] = {k: _metric(v) for k, v in intelligence.items()}
+    price_bundle, prediction = intelligence["price"]["data"], intelligence["prediction"]["data"]
 
-    decision_env = _call(
-        "decision_build",
-        {"truth": truth, "price": price_bundle, "prediction": prediction},
-        correlation_id,
-    )
-    performance["decision"] = _metric(decision_env)
-    decision = decision_env["data"]
+    evaluation_service, evaluation_operation = _route("evaluation_build")
+    decision_service, decision_operation = _route("decision_build")
+    analysis = invoke_parallel_envelopes({
+        "evaluation": (evaluation_service, evaluation_operation, {"prediction": prediction, "context": context, "bootstrap": bootstrap, "event_live": (dynamic_result.get("payloads") or {}).get("event_live"), "ledger": states["prediction_ledger"]["data"], "observations": states["challenger_observations"]["data"]}),
+        "decision": (decision_service, decision_operation, {"truth": truth, "price": price_bundle, "prediction": prediction}),
+    }, correlation_id=correlation_id)
+    performance["evaluation_and_decision"] = {k: _metric(v) for k, v in analysis.items()}
+    evaluation, decision = analysis["evaluation"]["data"], analysis["decision"]["data"]
+
+    governance_env = _call("governance_audit", {"truth": truth, "price": price_bundle, "prediction": prediction, "evaluation": evaluation, "decision": decision}, correlation_id)
+    framework = governance_env["data"]
+    performance["governance"] = _metric(governance_env)
+    if framework.get("recommendation_allowed") is False:
+        decision["production_recommendation"] = None
+        decision["final_state"] = "BLOCKED"
+    elif framework.get("go_allowed") is False:
+        decision["final_state"] = "HOLD_WAIT_REVIEW_ONLY"
+    else:
+        decision["final_state"] = "GO_ELIGIBLE_NOT_AUTO_SUBMITTED"
 
     limits = runner_cfg["summary_limits"]
     price_rows = price_bundle.get("prices") if isinstance(price_bundle.get("prices"), dict) else {}
     alerts = price_bundle.get("alerts") if isinstance(price_bundle.get("alerts"), dict) else {}
     auth_summary = auth_runtime.get("summary") if isinstance(auth_runtime.get("summary"), dict) else {}
+    accuracy = evaluation.get("accuracy") if isinstance(evaluation.get("accuracy"), dict) else {}
+    scorecard = evaluation.get("challenger_scorecard") if isinstance(evaluation.get("challenger_scorecard"), dict) else {}
     snapshot = {
-        "schema_version": int(runner_cfg["snapshot"]["schema_version"]),
-        "engine_version": V5_VERSION,
-        "runtime_architecture": service_registry()["architecture"],
-        "runner_status": runner_cfg["status"],
-        "mode": mode,
-        "correlation_id": correlation_id,
-        "team_id": team_id,
-        "phase": truth.get("context"),
-        "squad_authority": (truth.get("team") or {}).get("authority"),
-        "team_summary": truth.get("team"),
-        "live_summary": truth.get("live"),
-        "price_summary": {
-            "confirmed_changes": price_rows.get("confirmed_changes", []),
-            "top_rise_risk": price_rows.get("top_rise_risk", [])[: int(limits["price_rise_risk"])],
-            "top_fall_risk": price_rows.get("top_fall_risk", [])[: int(limits["price_fall_risk"])],
-            "alerts": alerts.get("alerts", [])[: int(limits["price_alerts"])],
-        },
-        "prediction_summary": {
-            "model_version": prediction.get("model_version"),
-            "player_count": len(prediction.get("players", []) or []),
-            "network_contract": prediction.get("network_contract", {}),
-        },
-        "decision_summary": decision,
-        "endpoint_health": {
-            "base": base_result.get("health", {}),
-            "dynamic": dynamic_result.get("health", {}),
-        },
-        "authenticated_official": {
-            "state": auth_summary.get("state"),
-            "verified_entry": auth_summary.get("verified_entry"),
-            "endpoint_health": auth_summary.get("endpoint_health", {}),
-            "raw_authenticated_payload_persisted": False,
-        },
-        "governance": {
-            "production_promotion_allowed": bool(runner_cfg["snapshot"].get("production_promotion_allowed", False)),
-            "microservices_required": True,
-            "raw_authenticated_payload_persisted": False,
-        },
+        "schema_version": int(runner_cfg["snapshot"]["schema_version"]), "engine_version": V5_VERSION,
+        "runtime_architecture": service_registry()["architecture"], "runner_status": runner_cfg["status"], "mode": mode,
+        "correlation_id": correlation_id, "team_id": team_id, "phase": truth.get("context"), "squad_authority": (truth.get("team") or {}).get("authority"),
+        "team_summary": truth.get("team"), "live_summary": truth.get("live"),
+        "price_summary": {"confirmed_changes": price_rows.get("confirmed_changes", []), "top_rise_risk": price_rows.get("top_rise_risk", [])[:int(limits["price_rise_risk"])], "top_fall_risk": price_rows.get("top_fall_risk", [])[:int(limits["price_fall_risk"])], "alerts": alerts.get("alerts", [])[:int(limits["price_alerts"])]},
+        "prediction_summary": {"model_version": prediction.get("model_version"), "player_count": len(prediction.get("players") or []), "planning_gw": prediction.get("planning_gw"), "horizon_gws": prediction.get("horizon_gws"), "ruleset_id": prediction.get("ruleset_id")},
+        "evaluation_summary": {"status": (accuracy.get("overall") or {}).get("status"), "sample_size": (accuracy.get("overall") or {}).get("sample_size", 0), "confidence": accuracy.get("confidence"), "challenger_status": scorecard.get("status")},
+        "decision_summary": {**decision, "packages": (decision.get("packages") or [])[:int(limits.get("packages", 20))]},
+        "framework_health": framework,
+        "endpoint_health": {"base": base_result.get("health", {}), "dynamic": dynamic_result.get("health", {})},
+        "authenticated_official": {"state": auth_summary.get("state"), "verified_entry": auth_summary.get("verified_entry"), "endpoint_health": auth_summary.get("endpoint_health", {}), "raw_authenticated_payload_persisted": False},
+        "governance": {"production_promotion_allowed": bool(runner_cfg["snapshot"].get("production_promotion_allowed", False)), "recommendation_allowed": framework.get("recommendation_allowed"), "go_allowed": framework.get("go_allowed"), "microservices_required": True, "raw_authenticated_payload_persisted": False},
     }
 
     if persist:
-        artifact_service, artifact_operation = _route("artifact_write")
-        artifact_map = _cfg()["artifact_mapping"]
-        artifact_envs = invoke_parallel_envelopes(
-            {
-                "prices": (
-                    artifact_service,
-                    artifact_operation,
-                    {"name": str(artifact_map["prices"]), "data": price_bundle.get("prices", {})},
-                ),
-                "price_trajectory": (
-                    artifact_service,
-                    artifact_operation,
-                    {"name": str(artifact_map["price_trajectory"]), "data": price_bundle.get("trajectory_state", {})},
-                ),
-                "price_alerts": (
-                    artifact_service,
-                    artifact_operation,
-                    {"name": str(artifact_map["price_alerts"]), "data": price_bundle.get("alerts", {})},
-                ),
-                "predictions": (
-                    artifact_service,
-                    artifact_operation,
-                    {"name": str(artifact_map["predictions"]), "data": prediction},
-                ),
-            },
-            correlation_id=correlation_id,
-        )
-        performance["artifact_persistence"] = _parallel_metrics(artifact_envs)
+        write_service, write_operation = _route("artifact_write")
+        amap = _cfg()["artifact_mapping"]
+        artifact_payloads = {
+            "prices": price_bundle.get("prices", {}), "price_trajectory": price_bundle.get("trajectory_state", {}), "price_alerts": price_bundle.get("alerts", {}),
+            "predictions": prediction, "team_strength": prediction.get("team_strength", {}), "prediction_ledger": evaluation.get("ledger", {}),
+            "prediction_accuracy": accuracy, "challenger_scorecard": scorecard, "package_optimizer": decision, "framework_health": framework,
+        }
+        writes = invoke_parallel_envelopes({name: (write_service, write_operation, {"name": str(amap[name]), "data": data}) for name, data in artifact_payloads.items()}, correlation_id=correlation_id)
+        performance["artifact_persistence"] = {k: _metric(v) for k, v in writes.items()}
         gw = context.get("submitted_gw") or context.get("planning_gw")
-        snapshot_env = _call(
-            "snapshot_write",
-            {"snapshot": snapshot, "gw": gw},
-            correlation_id,
-        )
+        snapshot_env = _call("snapshot_write", {"snapshot": snapshot, "gw": gw}, correlation_id)
         performance["snapshot_write"] = _metric(snapshot_env)
         snapshot["files"] = snapshot_env["data"]
 

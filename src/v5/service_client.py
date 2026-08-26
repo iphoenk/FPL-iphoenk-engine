@@ -29,19 +29,30 @@ def invoke_envelope(
     correlation_id: str | None = None,
 ) -> dict[str, Any]:
     defaults = registry()["defaults"]
+    contract_version = str(defaults["contract_version"])
     correlation = correlation_id or uuid.uuid4().hex
-    body = {**(payload or {}), "_correlation_id": correlation}
+    body = {
+        **(payload or {}),
+        "_correlation_id": correlation,
+        "_contract_version": contract_version,
+    }
     connect = float(defaults["connect_timeout_ms"]) / 1000.0
     read = float(defaults["read_timeout_ms"]) / 1000.0
+    invoke_path = str(defaults["invoke_path"]).format(operation=operation)
     started = perf_counter()
     response = requests.post(
-        f"{service_url(service_id)}/v1/invoke/{operation}",
+        f"{service_url(service_id)}{invoke_path}",
         json=body,
         timeout=(connect, read),
     )
     round_trip_ms = round((perf_counter() - started) * 1000.0, 3)
     response.raise_for_status()
     envelope = response.json()
+    if str(envelope.get("contract_version")) != contract_version:
+        raise RuntimeError(
+            f"{service_id}.{operation} response contract mismatch: "
+            f"{envelope.get('contract_version')} != {contract_version}"
+        )
     envelope["round_trip_ms"] = round_trip_ms
     envelope["transport_overhead_ms"] = round(
         max(0.0, round_trip_ms - float(envelope.get("elapsed_ms") or 0.0)), 3

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "authority": {
+    "picks": "Official FPL submitted picks",
+    "player_live": "Official FPL event live",
+    "identity": "config/v5_identity_registry.json"
+  },
+  "stat_fields": [
+    "minutes", "goals_scored", "assists", "clean_sheets", "goals_conceded",
+    "own_goals", "penalties_saved", "penalties_missed", "yellow_cards", "red_cards",
+    "saves", "bonus", "bps", "total_points", "defensive_contribution"
+  ],
+  "score": {
+    "use_official_pick_multiplier": true,
+    "subtract_entry_transfer_cost": true,
+    "include_bench_when_multiplier_positive": true
+  },
+  "statuses": {
+    "no_data": "IDLE",
+    "live": "PROVISIONAL",
+    "not_live": "RECONCILED_OR_IDLE"
+  }
+}

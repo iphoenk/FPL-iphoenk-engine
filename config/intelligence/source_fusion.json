@@ -15,6 +15,12 @@
     "network_fetch_owned_by_ingestion_service": true,
     "prediction_network_fetch_forbidden": true
   },
+  "shadow_acceptance": {
+    "api_football_acceptable_unavailability_classes": ["PLAN_RESTRICTED"],
+    "require_api_football_credential": true,
+    "require_competition_attempt": true,
+    "require_network_or_cache_evidence": true
+  },
   "understat": {
     "enabled": true,
     "league": "EPL",

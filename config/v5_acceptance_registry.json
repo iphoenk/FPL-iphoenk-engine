@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "module_policy": {
-    "minimum_registered_modules": 16,
+    "minimum_registered_modules": 22,
     "required_truth_modules": [
       "rules",
       "source_authority",
@@ -15,8 +15,20 @@
       "team_service",
       "live_scoring"
     ],
-    "required_governance_modules": ["performance", "persistence", "runner"],
+    "required_governance_modules": ["performance", "persistence", "runner", "service_runtime"],
     "active_statuses": ["ACTIVE", "ACTIVE_ALPHA"]
+  },
+  "service_policy": {
+    "mandatory": true,
+    "minimum_services": 7,
+    "required_services": ["orchestrator", "ingestion", "truth", "price", "prediction", "decision", "snapshot"],
+    "require_unique_ports": true,
+    "require_acyclic_dependencies": true,
+    "require_exactly_one_service_owner_per_registered_module": true,
+    "require_independent_process": true,
+    "require_health_endpoint": true,
+    "require_versioned_contract": true,
+    "require_deployment_manifest": "deploy/v5/docker-compose.yml"
   },
   "production": {
     "promotion_must_remain_locked_during_alpha": true
@@ -24,6 +36,7 @@
   "architecture": {
     "require_entrypoint": true,
     "require_config": true,
-    "require_adjustment_surface": true
+    "require_adjustment_surface": true,
+    "require_microservices": true
   }
 }

@@ -35,7 +35,9 @@
     "source_reachability_is_separate_from_capability_data_health": true,
     "structured_challenger_ingestion_is_registry_driven": true,
     "price_challenger_context_is_non_authoritative": true,
-    "stale_challenger_observations_are_not_current": true
+    "stale_challenger_observations_are_not_current": true,
+    "version_neutral_service_entrypoints": true,
+    "inline_python_service_commands_forbidden": true
   },
   "runtime": {
     "max_parallel_services": 5,
@@ -75,10 +77,7 @@
       "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "team.json", "prices.json", "price_trajectory.json", "challenger_observations.json"],
-      "commands": [
-        {"code": "import os; from src.engines.price_radar import patch_files; patch_files(os.environ['FPL_DATA_DIR'])"},
-        {"code": "import os; from src.engines.price_challenger_overlay import patch_files; patch_files(os.environ['FPL_DATA_DIR'])"}
-      ],
+      "commands": [{"module": "src.engines.price_service", "args": []}],
       "artifacts": ["prices.json", "price_trajectory.json", "price_alerts.json", "price_challenger_context.json"],
       "latest_keys": ["price_summary"],
       "latest_file_keys": ["price_trajectory", "price_alerts", "price_challenger_context"]
@@ -100,7 +99,7 @@
       "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "team.json", "prior_season.json"],
-      "commands": [{"module": "src.engines.decision_intelligence_v313", "args": []}],
+      "commands": [{"module": "src.engines.prediction_service", "args": []}],
       "artifacts": ["team_strength.json", "projections.json", "package_optimizer.json", "prediction_quality.json"],
       "latest_keys": ["decision_intelligence", "prediction_quality_summary"],
       "latest_file_keys": ["team_strength", "projections", "package_optimizer", "prediction_quality"]

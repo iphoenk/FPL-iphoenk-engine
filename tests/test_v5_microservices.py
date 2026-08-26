@@ -1,6 +1,7 @@
 import importlib
 from pathlib import Path
 
+from src.v5 import service_health
 from src.v5.module_registry import module_specs
 from src.v5.service_registry import module_owners, service_specs, validate_registry
 from src.v5.services.decision import handle as decision_handle
@@ -35,6 +36,30 @@ def test_service_ports_are_unique_and_compose_declares_all_services():
     for service in services:
         assert f"  {service.service_id}:" in compose
         assert f"V5_SERVICE_ID: {service.service_id}" in compose
+
+
+def test_every_service_has_green_local_readiness():
+    for service in service_specs():
+        health = service_health.local_service_health(service.service_id)
+        assert health["ready"] is True, health
+        assert health["status"] == "UP"
+        assert health["owned_module_count"] == len(service.owns_modules)
+        assert all(row["entrypoint_ok"] and row["config_ok"] for row in health["modules"])
+
+
+def test_local_readiness_degrades_when_owned_config_breaks(monkeypatch):
+    original = service_health.load_json_config
+
+    def broken(path: str):
+        if path == "config/v5_decision_registry.json":
+            raise RuntimeError("synthetic config failure")
+        return original(path)
+
+    monkeypatch.setattr(service_health, "load_json_config", broken)
+    health = service_health.local_service_health("decision")
+    assert health["ready"] is False
+    assert health["status"] == "DEGRADED"
+    assert any("v5_decision_registry.json" in error for error in health["local_errors"])
 
 
 def test_truth_context_runs_without_network_and_exposes_rules_contract():

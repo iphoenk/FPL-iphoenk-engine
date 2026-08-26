@@ -1,0 +1,150 @@
+name: V5 Real Shadow Cycle
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [v5-unified-engine]
+    paths:
+      - 'config/v5_shadow_trigger.json'
+
+permissions:
+  contents: write
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+  FPL_TEAM_ID: "3462711"
+  V3_RUNTIME_BRANCH: runtime-data
+  V5_SHADOW_BRANCH: v5-shadow-runtime
+
+jobs:
+  shadow-cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout V5 beta
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Hydrate V3 production reference and prior V5 shadow state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$V3_RUNTIME_BRANCH" "$V5_SHADOW_BRANCH"
+          mkdir -p .shadow data/v5
+          git show "origin/${V3_RUNTIME_BRANCH}:data/latest.json" > .shadow/v3_latest.json
+          git show "origin/${V3_RUNTIME_BRANCH}:data/lineup_decision.json" > .shadow/v3_lineup_decision.json
+          if git cat-file -e "origin/${V5_SHADOW_BRANCH}:data/v5/latest.json" 2>/dev/null; then
+            shadow_tmp="$(mktemp -d)"
+            git archive "origin/${V5_SHADOW_BRANCH}" data/v5 | tar -x -C "$shadow_tmp"
+            rm -rf data/v5
+            cp -a "$shadow_tmp/data/v5" data/v5
+            rm -rf "$shadow_tmp"
+            echo "Hydrated prior V5 shadow state"
+          else
+            echo "No prior V5 shadow state; starting cycle 1 clean"
+          fi
+
+      - name: Start V5 bounded-context microservices
+        env:
+          FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
+          FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
+          FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
+          FPL_REFRESH_TOKEN: ${{ secrets.FPL_REFRESH_TOKEN }}
+          FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
+          FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
+          FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
+        run: docker compose -f deploy/v5/docker-compose.yml up -d --build
+
+      - name: Wait for V5 cluster health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8100/health >/dev/null; then
+              echo "V5 cluster is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f deploy/v5/docker-compose.yml ps
+          exit 1
+
+      - name: Run real V3 versus V5 shadow cycle
+        env:
+          V5_SERVICE_INGESTION_URL: http://127.0.0.1:8101
+          V5_SERVICE_TRUTH_URL: http://127.0.0.1:8102
+          V5_SERVICE_PRICE_URL: http://127.0.0.1:8103
+          V5_SERVICE_PREDICTION_URL: http://127.0.0.1:8104
+          V5_SERVICE_DECISION_URL: http://127.0.0.1:8105
+          V5_SERVICE_SNAPSHOT_URL: http://127.0.0.1:8106
+          V5_SERVICE_EVALUATION_URL: http://127.0.0.1:8107
+          V5_SERVICE_GOVERNANCE_URL: http://127.0.0.1:8108
+          V5_SERVICE_REPORTING_URL: http://127.0.0.1:8109
+          V5_SERVICE_WATCHLIST_URL: http://127.0.0.1:8110
+        run: python -m src.v5.shadow_cycle
+
+      - name: Validate owned and watchlist invariants
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open('data/v5/shadow/latest_shadow_cycle.json'))
+          owned=p['v5']['owned_count']
+          watch=p['v5']['watchlist'].get('candidate_count')
+          print({'owned_count': owned, 'watchlist_count': watch, 'parity': p['parity']})
+          assert owned == 15, f'V5 owned invariant failed: {owned} != 15'
+          assert watch == 20, f'V5 watchlist invariant failed: {watch} != 20'
+          PY
+
+      - name: Upload shadow-cycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v5-real-shadow-cycle-${{ github.run_number }}
+          path: |
+            data/v5/shadow/
+            data/v5/user_report.json
+            data/v5/technical_appendix.json
+            data/v5/framework_health.json
+            data/v5/dss_watchlist.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish isolated V5 shadow state
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f data/v5/shadow/latest_shadow_cycle.json || { echo "No completed cycle to publish"; exit 0; }
+          runtime_tmp="$(mktemp -d)"
+          publish_tree="$(mktemp -d)"
+          trap 'git worktree remove --force "$publish_tree" >/dev/null 2>&1 || true; rm -rf "$runtime_tmp" "$publish_tree"' EXIT
+          cp -a data/v5 "$runtime_tmp/v5"
+          git config user.name "fpl-iphoenk-shadow-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git fetch origin "$V5_SHADOW_BRANCH"
+          git worktree add --detach "$publish_tree" "origin/$V5_SHADOW_BRANCH"
+          cd "$publish_tree"
+          rm -rf data/v5
+          mkdir -p data
+          cp -a "$runtime_tmp/v5" data/v5
+          git add data/v5
+          if git diff --cached --quiet; then
+            echo "No shadow-state changes"
+            exit 0
+          fi
+          git commit -m "shadow: record real V3 V5 cycle $GITHUB_RUN_NUMBER [skip ci]"
+          git push origin HEAD:"$V5_SHADOW_BRANCH"
+
+      - name: Stop V5 cluster
+        if: always()
+        run: docker compose -f deploy/v5/docker-compose.yml down -v

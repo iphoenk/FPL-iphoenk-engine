@@ -93,16 +93,11 @@ def _watch_row(row: dict[str, Any], *, deep: bool = False) -> dict[str, Any]:
         },
     }
     if deep:
-        base["horizons"] = {
-            key: (horizons.get(key) or {}).get("mean") for key in ("3", "5", "10", "15")
-        }
+        base["horizons"] = {key: (horizons.get(key) or {}).get("mean") for key in ("3", "5", "10", "15")}
         base["reasons"] = list(row.get("reasons") or [])[:3]
         base["risks"] = list(row.get("risks") or [])[:3]
         replacement = row.get("direct_replacement_context") or {}
-        base["direct_replacement"] = {
-            "owned_name": replacement.get("owned_name"),
-            "candidate_h5_delta": replacement.get("candidate_h5_delta"),
-        }
+        base["direct_replacement"] = {"owned_name": replacement.get("owned_name"), "candidate_h5_delta": replacement.get("candidate_h5_delta")}
         base["dss_score"] = row.get("dss_score")
         base["evidence_coverage"] = row.get("evidence_coverage")
     return base
@@ -113,11 +108,8 @@ def _watchlist_summary(watchlist: dict[str, Any], *, deep: bool = False) -> dict
     positions = list(contract.get("watchlist_positions") or ["GK", "DEF", "MID", "FWD"])
     target_per = int(contract.get("watchlist_per_position") or 5)
     target_total = int(contract.get("watchlist_total") or 20)
-    owned_ids = set()
     team = read_json(DATA / "team.json", {})
-    for row in team.get("team_value_ledger") or []:
-        if row.get("element") is not None:
-            owned_ids.add(int(row["element"]))
+    owned_ids = {int(row["element"]) for row in team.get("team_value_ledger") or [] if row.get("element") is not None}
     result: dict[str, list[dict[str, Any]]] = {}
     published: list[int] = []
     for position in positions:
@@ -133,19 +125,14 @@ def _watchlist_summary(watchlist: dict[str, Any], *, deep: bool = False) -> dict
         result[position] = compact
     if len(published) != target_total or len(set(published)) != target_total:
         raise RuntimeError(f"report materializer watchlist total contract failed: {len(published)} != {target_total}")
-    return {
-        "status": watchlist.get("status"),
-        "screening_contract": watchlist.get("screening_contract"),
-        "count": len(published),
-        "per_position": target_per,
-        "positions": result,
-    }
+    return {"status": watchlist.get("status"), "screening_contract": watchlist.get("screening_contract"), "count": len(published), "per_position": target_per, "positions": result}
 
 
 def _finance(team: dict[str, Any]) -> dict[str, Any]:
-    market = team.get("market_value")
-    sell = team.get("sell_value")
-    itb = team.get("itb")
+    totals = team.get("totals") if isinstance(team.get("totals"), dict) else {}
+    market = totals.get("market_value", team.get("market_value"))
+    sell = totals.get("sell_value", team.get("sell_value"))
+    itb = totals.get("itb", team.get("itb"))
     if market is None:
         market = sum(int(x.get("now_cost") or 0) for x in team.get("team_value_ledger") or [])
     if sell is None:
@@ -202,11 +189,7 @@ def _price(user: dict[str, Any]) -> dict[str, Any]:
     keys = ("element", "name", "price", "direction", "urgency", "progress_pct", "estimated_change_time", "confidence_note", "action")
     def compact(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return [{key: row.get(key) for key in keys if row.get(key) is not None} for row in rows]
-    return {
-        "decision": section.get("decision"),
-        "owned": compact(list(section.get("owned") or [])),
-        "external_watchlist": compact(list(section.get("external_watchlist") or [])),
-    }
+    return {"decision": section.get("decision"), "owned": compact(list(section.get("owned") or [])), "external_watchlist": compact(list(section.get("external_watchlist") or []))}
 
 
 def _official_partition(full: dict[str, Any], ids: set[int]) -> dict[str, Any]:
@@ -266,7 +249,6 @@ def run() -> dict[str, Any]:
     watch_summary = _watchlist_summary(watchlist, deep=False)
     watch_deep = _watchlist_summary(watchlist, deep=True)
 
-    # USER_REPORT remains decision-first but is materialized into a serving-safe form.
     user.setdefault("owned_squad", {})["count"] = len(owned)
     user["owned_squad"]["facts"] = owned
     user["owned_squad"]["compact_summary"] = None

@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "model_id": "v5_shadow_parity_v1",
+  "schema_version": 2,
+  "model_id": "v5_shadow_parity_v2",
   "required_cycles_before_production_candidate": 3,
   "critical_dimensions": ["squad_authority", "ruleset", "legality", "manual_lock", "starting_xi", "captaincy", "chip", "price_owned", "report_governance"],
   "tolerances": {
@@ -9,9 +9,17 @@
     "critical_legality_mismatch_allowed": false,
     "manual_lock_mismatch_allowed": false
   },
+  "acceptance_accounting": {
+    "require_post_validation_pass": true,
+    "require_same_v5_version": true,
+    "require_same_production_baseline": true,
+    "require_unique_cycle_id": true,
+    "failed_or_pending_cycles_do_not_count": true
+  },
   "promotion": {
     "beta_requires_ci_green": true,
     "production_candidate_requires_real_shadow_cycles": true,
-    "production_requires_explicit_manual_promotion": true
+    "production_requires_explicit_manual_promotion": true,
+    "auto_promotion_forbidden": true
   }
 }

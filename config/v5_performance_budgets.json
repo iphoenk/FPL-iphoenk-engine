@@ -1,32 +1,8 @@
 {
-  "version": 4,
-  "mode": "bootstrap",
-  "policy": {
-    "measure_wall_clock": true,
-    "measure_network_calls": true,
-    "measure_file_reads": true,
-    "measure_service_compute": true,
-    "measure_service_round_trip": true,
-    "measure_transport_overhead": true,
-    "block_unreviewed_regression": true,
-    "notes": "Budgets are bootstrap guardrails and should be tightened after representative V5 workloads are benchmarked."
-  },
+  "version": 5,
+  "mode": "advanced_alpha",
+  "policy": {"measure_wall_clock":true,"measure_network_calls":true,"measure_file_reads":true,"measure_service_compute":true,"measure_service_round_trip":true,"measure_transport_overhead":true,"block_unreviewed_regression":true,"single_pass_first":true,"notes":"Budgets remain guardrails; do not loosen them to hide regressions."},
   "budgets": {
-    "rules_registry_load_ms": 50,
-    "single_player_projection_ms": 10,
-    "projection_100_players_ms": 500,
-    "decision_lineup_15_players_ms": 25,
-    "projection_index_10000_lookups_ms": 50,
-    "decision_package_optimizer_synthetic_ms": 2000,
-    "dss_registry_audit_ms": 25,
-    "gate0_full_registry_ms": 25,
-    "decision_finalize_ms": 50,
-    "decision_pipeline_soft_target_seconds": 5,
-    "internal_service_transport_overhead_soft_ms": 75,
-    "internal_service_health_soft_ms": 100,
-    "orchestrator_non_source_overhead_soft_ms": 750,
-    "duplicate_source_fetches_per_run": 0,
-    "duplicate_rules_file_reads_per_process": 0,
-    "max_prediction_network_fixture_count": 5
+    "rules_registry_load_ms":50,"single_player_projection_ms":10,"projection_100_players_ms":500,"decision_lineup_15_players_ms":25,"projection_index_10000_lookups_ms":50,"decision_package_optimizer_synthetic_ms":2000,"dss_registry_audit_ms":25,"gate0_full_registry_ms":25,"decision_finalize_ms":50,"watchlist_700_players_ms":75,"reporting_build_ms":25,"decision_pipeline_soft_target_seconds":5,"internal_service_transport_overhead_soft_ms":75,"internal_service_health_soft_ms":100,"orchestrator_non_source_overhead_soft_ms":750,"duplicate_source_fetches_per_run":0,"duplicate_rules_file_reads_per_process":0,"max_prediction_network_fixture_count":5
   }
 }

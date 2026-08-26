@@ -202,3 +202,8 @@ def post(
     if last_exc is not None:
         raise last_exc
     raise RuntimeError(f"V5 transport failed without response: {service_id}.{operation}")
+
+
+def diagnostic_get(url: str, *, timeout: tuple[float, float]) -> requests.Response:
+    """GET used by on-demand diagnostics without touching business-operation circuits."""
+    return _session().get(url, timeout=timeout)

@@ -1,7 +1,7 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.10-output-compatible",
+  "production_contract": "v3.12-governed-decision-output",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,
@@ -12,14 +12,16 @@
     "no_business_logic_rewrite_required": true,
     "fail_closed_on_critical_service_failure": true,
     "latest_json_single_writer_during_fan_in": true,
-    "dependency_aware_scheduling": true
+    "dependency_aware_scheduling": true,
+    "raw_optimizer_is_not_final_decision": true,
+    "postflight_gate0_requires_governed_lineup_and_package": true
   },
   "runtime": {
     "max_parallel_services": 5,
     "service_timeout_seconds": 180,
     "http_cache_ttl_seconds": 180,
     "performance_budget_seconds": 45,
-    "performance_target": "reduce business-pipeline wall time versus the previous sequential workflow"
+    "performance_target": "preserve sub-45-second business runtime while adding governed lineup and postflight validation"
   },
   "services": {
     "collector": {
@@ -98,6 +100,17 @@
       "latest_keys": ["prediction_evaluation"],
       "latest_file_keys": ["prediction_ledger", "prediction_accuracy"]
     },
+    "lineup_governance": {
+      "stage": "governed-decision",
+      "depends_on": ["prediction"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["latest.json", "team.json", "chips.json", "projections.json", "package_optimizer.json"],
+      "commands": [{"module": "src.engines.lineup_governance", "args": []}],
+      "artifacts": ["lineup_decision.json", "package_decision.json"],
+      "latest_keys": ["lineup_decision_summary", "package_decision_summary"],
+      "latest_file_keys": ["lineup_decision", "package_decision"]
+    },
     "challenger": {
       "stage": "parallel",
       "depends_on": ["prediction_evaluation"],
@@ -111,13 +124,14 @@
     },
     "governance": {
       "stage": "final",
-      "depends_on": ["price", "prediction", "authenticated_official", "rules", "official_detail", "prediction_evaluation", "challenger"],
+      "depends_on": ["price", "prediction", "authenticated_official", "rules", "official_detail", "prediction_evaluation", "lineup_governance", "challenger"],
       "critical": true,
       "isolated": false,
       "commands": [
         {"module": "src.engines.framework_health_audit", "args": ["--phase", "preflight", "--strict"]},
-        {"copy": ["framework_health_preflight.json", "framework_health.json"]},
-        {"module": "src.engines.p0_framework_health_overlay", "args": []}
+        {"module": "src.engines.framework_health_audit", "args": ["--phase", "postflight", "--strict"]},
+        {"module": "src.engines.p0_framework_health_overlay", "args": []},
+        {"module": "src.engines.lineup_framework_health_overlay", "args": []}
       ]
     }
   }

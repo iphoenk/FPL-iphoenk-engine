@@ -8,20 +8,27 @@ from src.sources import official_fpl
 def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     registry = _load_registry()
     _validate_dag(registry)
+    assert registry["schema_version"] >= 3
     assert registry["architecture"] == "V3_BOUNDED_PROCESS_MICROSERVICES"
     assert registry["policy"]["parallelize_independent_services"] is True
     assert registry["policy"]["latest_json_single_writer_during_fan_in"] is True
+    assert registry["policy"]["raw_optimizer_is_not_final_decision"] is True
+    assert registry["policy"]["postflight_gate0_requires_governed_lineup_and_package"] is True
     services = registry["services"]
     assert set(services) == {
         "collector", "price", "prediction", "authenticated_official", "rules",
-        "official_detail", "prediction_evaluation", "challenger", "governance",
+        "official_detail", "prediction_evaluation", "lineup_governance", "challenger", "governance",
     }
     assert services["price"]["depends_on"] == ["collector"]
     assert services["prediction"]["depends_on"] == ["collector"]
     assert services["official_detail"]["depends_on"] == ["price"]
     assert services["prediction_evaluation"]["depends_on"] == ["prediction"]
+    assert services["lineup_governance"]["depends_on"] == ["prediction"]
     assert services["challenger"]["depends_on"] == ["prediction_evaluation"]
     assert set(services["governance"]["depends_on"]) == set(services) - {"collector", "governance"}
+    commands = services["governance"]["commands"]
+    assert any(c.get("module") == "src.engines.framework_health_audit" and "postflight" in c.get("args", []) for c in commands)
+    assert any(c.get("module") == "src.engines.lineup_framework_health_overlay" for c in commands)
 
 
 def test_collector_cli_flags_are_registry_driven():

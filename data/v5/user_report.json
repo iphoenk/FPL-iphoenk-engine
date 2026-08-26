@@ -133,7 +133,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 104.4,
         "official_hourly_rate_pct": 19.91,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -146,7 +146,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 100.8,
         "official_hourly_rate_pct": 8.91,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -159,7 +159,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 97.2,
         "official_hourly_rate_pct": 14.15,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -172,7 +172,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 92.2,
         "official_hourly_rate_pct": 9.91,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -185,7 +185,7 @@
         "urgency": "HIGH",
         "official_progress_pct": 67.6,
         "official_hourly_rate_pct": 7.77,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -200,7 +200,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -107.1,
         "official_hourly_rate_pct": -8.9,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -226,7 +226,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -93.0,
         "official_hourly_rate_pct": -1.44,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -239,7 +239,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -92.5,
         "official_hourly_rate_pct": -2.35,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -265,7 +265,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -87.2,
         "official_hourly_rate_pct": -12.72,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -278,7 +278,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -85.5,
         "official_hourly_rate_pct": -5.22,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -291,7 +291,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -85.4,
         "official_hourly_rate_pct": -0.43,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-27T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -317,7 +317,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -81.3,
         "official_hourly_rate_pct": -0.2,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-28T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -330,7 +330,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -80.8,
         "official_hourly_rate_pct": -0.94,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-27T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -356,7 +356,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -71.3,
         "official_hourly_rate_pct": -2.74,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"
@@ -369,7 +369,7 @@
         "urgency": "HIGH",
         "official_progress_pct": 68.3,
         "official_hourly_rate_pct": 18.56,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "SUSPECT_STATIC_OFFSET0"

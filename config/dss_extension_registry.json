@@ -3,7 +3,7 @@
   "registry": "DSS_EXTENSIONS",
   "description": "Post-core intelligence. Extensions may evolve without renumbering the canonical DSS-50.",
   "modules": [
-    {"id":"DSS-X01","name":"Point-in-Time / Leakage Protection","critical":true,"required_files":["src/engines/leakage_guard.py"]},
+    {"id":"DSS-X01","name":"Point-in-Time / Leakage Protection","critical":true,"required_files":["src/engines/leakage_guard.py"],"operational_probe":"leakage_guard"},
     {"id":"DSS-X02","name":"Prediction Uncertainty & Interval Width","critical":true,"required_files":["src/models/projection.py"],"operational_probe":"projection_uncertainty"},
     {"id":"DSS-X03","name":"Rate-Spike / Small-Sample Detection","critical":true,"required_files":["src/models/projection.py"],"operational_probe":"small_sample_guard"},
     {"id":"DSS-X04","name":"Evidence Fusion Confidence","critical":true,"required_files":["src/engines/reliability.py"],"operational_probe":"reliability_overlay"},

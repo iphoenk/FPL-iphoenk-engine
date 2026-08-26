@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "policy": "Every business capability has exactly one bounded-context microservice owner. Cross-service calls use versioned contracts; no service may import another service's business implementation.",
   "modules": {
     "public_api": {"plane":"truth","entrypoint":"src.v5.public_api","config":"config/v5_public_api_registry.json","status":"ACTIVE"},
@@ -37,6 +37,7 @@
     "framework_health": {"plane":"governance","entrypoint":"src.v5.governance.core","config":"config/v5_acceptance_registry.json","status":"ACTIVE_ALPHA"},
     "persistence": {"plane":"governance","entrypoint":"src.v5.persistence","config":"config/v5_persistence_registry.json","status":"ACTIVE"},
     "performance": {"plane":"governance","entrypoint":"src.v5.performance","config":"config/v5_performance_budgets.json","status":"ACTIVE"},
+    "degraded_mode": {"plane":"governance","entrypoint":"src.v5.degraded_mode","config":"config/v5_degraded_mode_registry.json","status":"ACTIVE_ALPHA"},
     "runner": {"plane":"governance","entrypoint":"src.v5.services.orchestrator","config":"config/v5_runner_registry.json","status":"ACTIVE_ALPHA"},
     "service_runtime": {"plane":"governance","entrypoint":"src.v5.service_host","config":"config/v5_service_registry.json","status":"ACTIVE_ALPHA"}
   }

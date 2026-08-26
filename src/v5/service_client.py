@@ -82,6 +82,25 @@ def invoke(
     ).get("data")
 
 
+def _parallel_futures(
+    calls: Mapping[str, tuple[str, str, dict[str, Any]]],
+    *,
+    correlation_id: str,
+):
+    pool = ThreadPoolExecutor(max_workers=len(calls))
+    futures = {
+        pool.submit(
+            invoke_envelope,
+            service_id,
+            operation,
+            payload,
+            correlation_id=correlation_id,
+        ): name
+        for name, (service_id, operation, payload) in calls.items()
+    }
+    return pool, futures
+
+
 def invoke_parallel_envelopes(
     calls: Mapping[str, tuple[str, str, dict[str, Any]]],
     *,
@@ -91,19 +110,56 @@ def invoke_parallel_envelopes(
         return {}
     correlation = correlation_id or uuid.uuid4().hex
     results: dict[str, dict[str, Any]] = {}
-    with ThreadPoolExecutor(max_workers=len(calls)) as pool:
-        futures = {
-            pool.submit(
-                invoke_envelope,
-                service_id,
-                operation,
-                payload,
-                correlation_id=correlation,
-            ): name
-            for name, (service_id, operation, payload) in calls.items()
-        }
+    pool, futures = _parallel_futures(calls, correlation_id=correlation)
+    try:
         for future in as_completed(futures):
             results[futures[future]] = future.result()
+    finally:
+        pool.shutdown(wait=True)
+    return results
+
+
+def invoke_parallel_outcomes(
+    calls: Mapping[str, tuple[str, str, dict[str, Any]]],
+    *,
+    correlation_id: str | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Collect independent service outcomes without masking failures.
+
+    This is for orchestrator stages that have an explicit degraded-mode policy.
+    Callers must still fail closed for critical or unregistered failures.
+    """
+    if not calls:
+        return {}
+    correlation = correlation_id or uuid.uuid4().hex
+    results: dict[str, dict[str, Any]] = {}
+    pool, futures = _parallel_futures(calls, correlation_id=correlation)
+    try:
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                envelope = future.result()
+            except Exception as exc:
+                service_id, operation, _ = calls[name]
+                results[name] = {
+                    "ok": False,
+                    "service_id": service_id,
+                    "operation": operation,
+                    "envelope": None,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                }
+            else:
+                results[name] = {
+                    "ok": True,
+                    "service_id": envelope.get("service_id"),
+                    "operation": envelope.get("operation"),
+                    "envelope": envelope,
+                    "error_type": None,
+                    "error": None,
+                }
+    finally:
+        pool.shutdown(wait=True)
     return results
 
 

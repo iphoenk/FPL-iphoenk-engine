@@ -5,6 +5,7 @@ from time import perf_counter
 from typing import Any
 
 from src.v5 import V5_VERSION
+from src.v5.cluster_health import cluster_health
 from src.v5.config_cache import load_json_config
 from src.v5.degraded_mode import fallback_for
 from src.v5.official_auth import expected_team_id
@@ -57,6 +58,8 @@ def _degraded_metric(outcome: dict[str, Any], degraded_context: dict[str, Any]) 
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:
+    if operation == "cluster_health":
+        return cluster_health("orchestrator")
     if operation != "run":
         raise KeyError(f"unsupported orchestrator operation: {operation}")
     runner_cfg = load_json_config(RUNNER_CONFIG)
@@ -263,7 +266,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     auth_summary = auth_runtime.get("summary") if isinstance(auth_runtime.get("summary"), dict) else {}
     accuracy = evaluation.get("accuracy") if isinstance(evaluation.get("accuracy"), dict) else {}
     scorecard = evaluation.get("challenger_scorecard") if isinstance(evaluation.get("challenger_scorecard"), dict) else {}
-    degraded_contexts = framework.get("degraded_contexts") if isinstance(framework.get("degraded_contexts"), list) else []
+    degraded_context_rows = framework.get("degraded_contexts") if isinstance(framework.get("degraded_contexts"), list) else []
     snapshot = {
         "schema_version": int(runner_cfg["snapshot"]["schema_version"]),
         "engine_version": V5_VERSION,
@@ -317,7 +320,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "recommendation_allowed": framework.get("recommendation_allowed"),
             "go_allowed": framework.get("go_allowed"),
             "gate0_preflight_pass": gate0_preflight.get("pass"),
-            "degraded_contexts": degraded_contexts,
+            "degraded_contexts": degraded_context_rows,
             "degraded_blocks_unqualified_go": framework.get("degraded_blocks_unqualified_go"),
             "microservices_required": True,
             "raw_authenticated_payload_persisted": False,

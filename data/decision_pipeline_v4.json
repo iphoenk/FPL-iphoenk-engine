@@ -2,23 +2,23 @@
   "schema_version": 464,
   "engine": "v4.6.4-unified-decision-pipeline-correctness",
   "timings": {
-    "load_shared_inputs_and_candidates_ms": 247.0,
-    "wc_decision_cpu_ms": 6116.5,
-    "package_audit_cpu_ms": 7248.8,
-    "wc_package_parallel_wall_ms": 7286.4,
-    "parallel_speedup_estimate": 1.834,
-    "lineup_ms": 2.5,
-    "evidence_sanity_ms": 2.9,
-    "total_pipeline_ms": 7558.8
+    "load_shared_inputs_and_candidates_ms": 295.6,
+    "wc_decision_cpu_ms": 6405.8,
+    "package_audit_cpu_ms": 4855.0,
+    "wc_package_parallel_wall_ms": 6427.6,
+    "parallel_speedup_estimate": 1.752,
+    "lineup_ms": 2.6,
+    "evidence_sanity_ms": 3.2,
+    "total_pipeline_ms": 6786.3
   },
   "results": {
     "wc_raw": "MATERIAL_UPGRADE",
     "package_raw": "MATERIAL_UPGRADE",
-    "recommendation_final": "MATERIAL_UPGRADE",
-    "recommended_replacements": 1,
+    "recommendation_final": "OPTIONAL_IMPROVEMENT",
+    "recommended_replacements": 3,
     "lineup_governance": "CHANGE_RECOMMENDED",
     "formation": "3-4-3",
-    "captain": "Haaland"
+    "captain": "B.Fernandes"
   },
   "performance_guardrails": {
     "shared_json_loaded_once": true,

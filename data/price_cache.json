@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T02:08:53.260165+00:00",
+  "generated_at": "2026-08-26T04:05:14.505252+00:00",
   "players": {
     "1": {
       "now_cost": 60,
@@ -383,7 +383,7 @@
     },
     "88": {
       "now_cost": 45,
-      "ownership": "6.1"
+      "ownership": "6.2"
     },
     "89": {
       "now_cost": 45,
@@ -479,7 +479,7 @@
     },
     "115": {
       "now_cost": 46,
-      "ownership": "6.0"
+      "ownership": "6.1"
     },
     "116": {
       "now_cost": 45,
@@ -1319,7 +1319,7 @@
     },
     "572": {
       "now_cost": 45,
-      "ownership": "1.9"
+      "ownership": "2.0"
     },
     "574": {
       "now_cost": 50,
@@ -1335,7 +1335,7 @@
     },
     "586": {
       "now_cost": 40,
-      "ownership": "2.2"
+      "ownership": "2.3"
     },
     "589": {
       "now_cost": 50,
@@ -1759,7 +1759,7 @@
     },
     "392": {
       "now_cost": 55,
-      "ownership": "0.9"
+      "ownership": "0.8"
     },
     "393": {
       "now_cost": 55,
@@ -1779,7 +1779,7 @@
     },
     "397": {
       "now_cost": 85,
-      "ownership": "25.0"
+      "ownership": "24.9"
     },
     "398": {
       "now_cost": 70,
@@ -1787,7 +1787,7 @@
     },
     "399": {
       "now_cost": 75,
-      "ownership": "9.8"
+      "ownership": "9.9"
     },
     "400": {
       "now_cost": 75,
@@ -1911,7 +1911,7 @@
     },
     "426": {
       "now_cost": 120,
-      "ownership": "49.4"
+      "ownership": "49.3"
     },
     "427": {
       "now_cost": 80,

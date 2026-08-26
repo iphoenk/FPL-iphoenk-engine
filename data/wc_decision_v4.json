@@ -122,51 +122,85 @@
   "screened_players": 570,
   "current": {
     "cost": 995,
-    "objective": 45.6266,
-    "squad_xpts_3": 137.69,
-    "squad_xpts_5": 229.28,
-    "squad_xpts_10": 458.98,
-    "squad_xpts_15": 688.31,
-    "best_xi_xpts_5": 178.64,
-    "bench_adjusted_utility_5": 184.72,
+    "objective": 52.3255,
+    "squad_xpts_3": 157.73,
+    "squad_xpts_5": 262.88,
+    "squad_xpts_10": 526.24,
+    "squad_xpts_15": 789.3,
+    "best_xi_xpts_5": 207.78,
+    "bench_adjusted_utility_5": 214.4,
     "best_xi_by_gw": [
       {
         "gw_offset": 1,
-        "xpts": 35.81,
+        "xpts": 41.28,
         "elements": [
-          572,
-          115,
+          109,
           88,
-          254,
+          115,
+          8,
           426,
           40,
           565,
           557,
           411,
-          346,
-          165
+          165,
+          346
         ]
       },
       {
         "gw_offset": 2,
-        "xpts": 36.43,
+        "xpts": 42.11,
         "elements": [
-          572,
-          115,
+          109,
           88,
-          254,
-          473,
+          115,
+          8,
           426,
-          565,
           40,
+          565,
+          557,
           411,
-          346,
-          165
+          165,
+          346
         ]
       },
       {
         "gw_offset": 3,
-        "xpts": 35.41,
+        "xpts": 41.89,
+        "elements": [
+          109,
+          115,
+          88,
+          8,
+          40,
+          426,
+          557,
+          565,
+          411,
+          165,
+          346
+        ]
+      },
+      {
+        "gw_offset": 4,
+        "xpts": 41.32,
+        "elements": [
+          109,
+          88,
+          115,
+          8,
+          426,
+          40,
+          557,
+          565,
+          411,
+          165,
+          346
+        ]
+      },
+      {
+        "gw_offset": 5,
+        "xpts": 41.18,
         "elements": [
           109,
           115,
@@ -175,41 +209,7 @@
           426,
           40,
           557,
-          565,
-          411,
-          346,
-          165
-        ]
-      },
-      {
-        "gw_offset": 4,
-        "xpts": 35.75,
-        "elements": [
-          572,
-          115,
-          88,
-          473,
-          254,
-          426,
-          40,
-          557,
-          411,
-          346,
-          165
-        ]
-      },
-      {
-        "gw_offset": 5,
-        "xpts": 35.23,
-        "elements": [
-          572,
-          115,
-          88,
-          8,
-          254,
-          426,
-          40,
-          557,
+          15,
           411,
           165,
           346
@@ -218,106 +218,106 @@
     ]
   },
   "optimized": {
-    "cost": 990,
-    "objective": 54.5206,
-    "squad_xpts_3": 165.42,
-    "squad_xpts_5": 273.61,
-    "squad_xpts_10": 547.26,
-    "squad_xpts_15": 820.31,
-    "best_xi_xpts_5": 209.72,
-    "bench_adjusted_utility_5": 217.38,
+    "cost": 995,
+    "objective": 60.4024,
+    "squad_xpts_3": 183.44,
+    "squad_xpts_5": 303.13,
+    "squad_xpts_10": 604.39,
+    "squad_xpts_15": 904.54,
+    "best_xi_xpts_5": 232.32,
+    "bench_adjusted_utility_5": 240.81,
     "best_xi_by_gw": [
       {
         "gw_offset": 1,
-        "xpts": 42.27,
+        "xpts": 47.25,
         "elements": [
-          110,
-          173,
-          182,
+          140,
+          388,
           356,
+          88,
           426,
-          290,
+          427,
+          40,
           368,
-          286,
-          411,
-          106,
-          379
+          94,
+          165,
+          106
         ]
       },
       {
         "gw_offset": 2,
-        "xpts": 43.26,
+        "xpts": 47.46,
         "elements": [
-          572,
+          226,
+          388,
+          88,
           115,
           356,
-          304,
-          123,
-          290,
+          445,
+          94,
+          426,
           368,
-          286,
-          411,
-          106,
-          379
+          427,
+          106
         ]
       },
       {
         "gw_offset": 3,
-        "xpts": 42.19,
+        "xpts": 46.49,
         "elements": [
-          110,
-          173,
-          182,
-          115,
+          140,
           356,
-          304,
+          388,
+          115,
           368,
-          123,
-          411,
-          106,
-          379
+          40,
+          426,
+          427,
+          94,
+          165,
+          106
         ]
       },
       {
         "gw_offset": 4,
-        "xpts": 40.7,
+        "xpts": 46.0,
         "elements": [
-          572,
-          304,
-          115,
-          173,
-          182,
-          290,
+          226,
+          388,
+          445,
+          356,
           426,
-          286,
-          411,
+          427,
+          94,
+          368,
+          40,
           106,
-          379
+          165
         ]
       },
       {
         "gw_offset": 5,
-        "xpts": 41.31,
+        "xpts": 45.12,
         "elements": [
-          110,
-          304,
-          173,
-          182,
-          115,
-          290,
+          226,
+          388,
+          445,
+          356,
           426,
-          286,
-          411,
-          106,
-          379
+          427,
+          40,
+          368,
+          94,
+          165,
+          106
         ]
       }
     ],
-    "itb": 10
+    "itb": 5
   },
   "delta": {
-    "best_xi_xpts_5": 31.08,
-    "bench_adjusted_utility_5": 32.66
+    "best_xi_xpts_5": 24.54,
+    "bench_adjusted_utility_5": 26.41
   },
   "classification": "MATERIAL_UPGRADE",
   "out": [
@@ -334,12 +334,6 @@
       "sell_cost": 55
     },
     {
-      "element": 88,
-      "name": "Kayode",
-      "position": "DEF",
-      "sell_cost": 45
-    },
-    {
       "element": 254,
       "name": "Robinson",
       "position": "DEF",
@@ -352,10 +346,16 @@
       "sell_cost": 60
     },
     {
-      "element": 165,
-      "name": "João Pedro",
+      "element": 411,
+      "name": "Haaland",
       "position": "FWD",
-      "sell_cost": 75
+      "sell_cost": 155
+    },
+    {
+      "element": 572,
+      "name": "Tzolakis",
+      "position": "GK",
+      "sell_cost": 45
     },
     {
       "element": 109,
@@ -368,12 +368,6 @@
       "name": "M.Sangaré",
       "position": "MID",
       "sell_cost": 55
-    },
-    {
-      "element": 40,
-      "name": "Rogers",
-      "position": "MID",
-      "sell_cost": 75
     },
     {
       "element": 557,
@@ -390,22 +384,16 @@
   ],
   "in": [
     {
-      "element": 182,
-      "name": "Amenda",
+      "element": 388,
+      "name": "Guéhi",
       "position": "DEF",
-      "now_cost": 40
+      "now_cost": 60
     },
     {
-      "element": 304,
-      "name": "O'Shea",
+      "element": 445,
+      "name": "Thiaw",
       "position": "DEF",
-      "now_cost": 40
-    },
-    {
-      "element": 173,
-      "name": "Thomas",
-      "position": "DEF",
-      "now_cost": 40
+      "now_cost": 50
     },
     {
       "element": 356,
@@ -414,10 +402,10 @@
       "now_cost": 65
     },
     {
-      "element": 379,
-      "name": "Isak",
+      "element": 223,
+      "name": "Mateta",
       "position": "FWD",
-      "now_cost": 90
+      "now_cost": 65
     },
     {
       "element": 106,
@@ -426,28 +414,28 @@
       "now_cost": 80
     },
     {
-      "element": 110,
-      "name": "Rushworth",
+      "element": 226,
+      "name": "Pickford",
       "position": "GK",
-      "now_cost": 45
+      "now_cost": 55
     },
     {
-      "element": 286,
-      "name": "Belloumi",
-      "position": "MID",
+      "element": 140,
+      "name": "Sánchez",
+      "position": "GK",
       "now_cost": 50
     },
     {
-      "element": 123,
-      "name": "Hinshelwood",
+      "element": 427,
+      "name": "Mbeumo",
       "position": "MID",
-      "now_cost": 60
+      "now_cost": 80
     },
     {
-      "element": 290,
-      "name": "Slater",
+      "element": 94,
+      "name": "Schade",
       "position": "MID",
-      "now_cost": 45
+      "now_cost": 60
     },
     {
       "element": 368,
@@ -457,53 +445,23 @@
     }
   ],
   "optimized_elements": [
-    572,
-    110,
-    173,
-    115,
-    304,
-    182,
+    226,
+    140,
+    388,
     356,
-    368,
-    290,
+    88,
+    445,
+    115,
     426,
-    286,
-    123,
-    411,
+    427,
+    368,
+    94,
+    40,
     106,
-    379
+    165,
+    223
   ],
   "direct_challengers": [
-    {
-      "owned": 165,
-      "owned_name": "João Pedro",
-      "challenger": 106,
-      "challenger_name": "Thiago",
-      "position": "FWD",
-      "cost_delta": 5,
-      "objective_delta": 1.2634,
-      "xpts5_delta": 6.1
-    },
-    {
-      "owned": 473,
-      "owned_name": "Aina",
-      "challenger": 173,
-      "challenger_name": "Thomas",
-      "position": "DEF",
-      "cost_delta": -5,
-      "objective_delta": 1.1986,
-      "xpts5_delta": 5.98
-    },
-    {
-      "owned": 8,
-      "owned_name": "Calafiori",
-      "challenger": 173,
-      "challenger_name": "Thomas",
-      "position": "DEF",
-      "cost_delta": -15,
-      "objective_delta": 1.1576,
-      "xpts5_delta": 5.77
-    },
     {
       "owned": 15,
       "owned_name": "Ødegaard",
@@ -511,18 +469,28 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.0768,
-      "xpts5_delta": 5.24
+      "objective_delta": 1.5622,
+      "xpts5_delta": 7.67
     },
     {
-      "owned": 254,
-      "owned_name": "Robinson",
-      "challenger": 173,
-      "challenger_name": "Thomas",
+      "owned": 8,
+      "owned_name": "Calafiori",
+      "challenger": 388,
+      "challenger_name": "Guéhi",
       "position": "DEF",
-      "cost_delta": -5,
-      "objective_delta": 1.054,
-      "xpts5_delta": 5.32
+      "cost_delta": 5,
+      "objective_delta": 1.4314,
+      "xpts5_delta": 7.06
+    },
+    {
+      "owned": 473,
+      "owned_name": "Aina",
+      "challenger": 445,
+      "challenger_name": "Thiaw",
+      "position": "DEF",
+      "cost_delta": 5,
+      "objective_delta": 1.2804,
+      "xpts5_delta": 6.51
     },
     {
       "owned": 557,
@@ -531,68 +499,78 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.019,
-      "xpts5_delta": 4.94
+      "objective_delta": 1.1814,
+      "xpts5_delta": 5.75
     },
     {
       "owned": 565,
       "owned_name": "M.Sangaré",
-      "challenger": 290,
-      "challenger_name": "Slater",
+      "challenger": 94,
+      "challenger_name": "Schade",
       "position": "MID",
-      "cost_delta": -10,
-      "objective_delta": 0.9647,
-      "xpts5_delta": 4.96
+      "cost_delta": 5,
+      "objective_delta": 1.1534,
+      "xpts5_delta": 5.73
+    },
+    {
+      "owned": 254,
+      "owned_name": "Robinson",
+      "challenger": 445,
+      "challenger_name": "Thiaw",
+      "position": "DEF",
+      "cost_delta": 5,
+      "objective_delta": 1.1321,
+      "xpts5_delta": 5.84
+    },
+    {
+      "owned": 572,
+      "owned_name": "Tzolakis",
+      "challenger": 82,
+      "challenger_name": "Kelleher",
+      "position": "GK",
+      "cost_delta": 5,
+      "objective_delta": 0.6092,
+      "xpts5_delta": 2.89
+    },
+    {
+      "owned": 165,
+      "owned_name": "João Pedro",
+      "challenger": 106,
+      "challenger_name": "Thiago",
+      "position": "FWD",
+      "cost_delta": 5,
+      "objective_delta": 0.3854,
+      "xpts5_delta": 1.73
     },
     {
       "owned": 40,
       "owned_name": "Rogers",
-      "challenger": 368,
-      "challenger_name": "Szoboszlai",
+      "challenger": 427,
+      "challenger_name": "Mbeumo",
       "position": "MID",
-      "cost_delta": -5,
-      "objective_delta": 0.6368,
-      "xpts5_delta": 3.08
-    },
-    {
-      "owned": 88,
-      "owned_name": "Kayode",
-      "challenger": 173,
-      "challenger_name": "Thomas",
-      "position": "DEF",
-      "cost_delta": -5,
-      "objective_delta": 0.4931,
-      "xpts5_delta": 2.69
+      "cost_delta": 5,
+      "objective_delta": 0.1502,
+      "xpts5_delta": 0.83
     },
     {
       "owned": 109,
       "owned_name": "Verbruggen",
-      "challenger": 110,
-      "challenger_name": "Rushworth",
+      "challenger": 82,
+      "challenger_name": "Kelleher",
       "position": "GK",
-      "cost_delta": 0,
-      "objective_delta": 0.1499,
-      "xpts5_delta": 0.82
-    },
-    {
-      "owned": 426,
-      "owned_name": "B.Fernandes",
-      "challenger": 368,
-      "challenger_name": "Szoboszlai",
-      "position": "MID",
-      "cost_delta": -50,
-      "objective_delta": 0.0379,
-      "xpts5_delta": -0.04
+      "cost_delta": 5,
+      "objective_delta": 0.1288,
+      "xpts5_delta": 0.53
     },
     {
       "owned": 115,
       "owned_name": "De Cuyper",
-      "challenger": 173,
-      "challenger_name": "Thomas",
+      "challenger": 445,
+      "challenger_name": "Thiaw",
       "position": "DEF",
-      "cost_delta": -5,
-      "objective_delta": 0.0132,
-      "xpts5_delta": 0.14
+      "cost_delta": 5,
+      "objective_delta": 0.0579,
+      "xpts5_delta": 0.5
     },
     {
       "owned": 346,
@@ -601,18 +579,28 @@
       "challenger_name": "Mateta",
       "position": "FWD",
       "cost_delta": 5,
-      "objective_delta": -0.0745,
-      "xpts5_delta": -0.31
+      "objective_delta": 0.0025,
+      "xpts5_delta": 0.06
     },
     {
-      "owned": 572,
-      "owned_name": "Tzolakis",
-      "challenger": 110,
-      "challenger_name": "Rushworth",
-      "position": "GK",
-      "cost_delta": 0,
-      "objective_delta": -0.0903,
-      "xpts5_delta": -0.43
+      "owned": 88,
+      "owned_name": "Kayode",
+      "challenger": 445,
+      "challenger_name": "Thiaw",
+      "position": "DEF",
+      "cost_delta": 5,
+      "objective_delta": -0.0173,
+      "xpts5_delta": 0.3
+    },
+    {
+      "owned": 426,
+      "owned_name": "B.Fernandes",
+      "challenger": 427,
+      "challenger_name": "Mbeumo",
+      "position": "MID",
+      "cost_delta": -40,
+      "objective_delta": -0.2655,
+      "xpts5_delta": -1.33
     },
     {
       "owned": 411,
@@ -621,8 +609,8 @@
       "challenger_name": "Thiago",
       "position": "FWD",
       "cost_delta": -75,
-      "objective_delta": -0.5477,
-      "xpts5_delta": -2.96
+      "objective_delta": -0.566,
+      "xpts5_delta": -3.03
     }
   ],
   "hard_constraints": {

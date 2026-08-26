@@ -1,6 +1,6 @@
 {
-  "schema_version": 470,
-  "engine": "v4.7-framework-health-prediction-quality-probes",
+  "schema_version": 471,
+  "engine": "v4.7.1-framework-health-correctness-probes",
   "phase": "preflight",
   "overall": "AMBER",
   "decision_engine": "DEGRADED",
@@ -126,8 +126,8 @@
     "integrity_ok": true,
     "registry": "DSS_CORE_50",
     "counts": {
-      "ACTIVE": 24,
-      "PARTIAL": 19,
+      "ACTIVE": 18,
+      "PARTIAL": 25,
       "DEFERRED": 7
     },
     "items": [
@@ -202,8 +202,13 @@
         ],
         "probe": "xmins",
         "detail": {
-          "fixture_distributions_checked": 150,
-          "enriched_prior_distributions": 150
+          "fixture_distributions_checked": 1836,
+          "enriched_prior_distributions": 1836,
+          "strong_direct_evidence_players": 71,
+          "strong_direct_evidence_min_pstart": 0.8673,
+          "no_evidence_players": 91,
+          "no_evidence_max_xmins": 8.1,
+          "direct_evidence_sanity": true
         }
       },
       {
@@ -216,8 +221,13 @@
         ],
         "probe": "xmins_distribution",
         "detail": {
-          "fixture_distributions_checked": 150,
-          "enriched_prior_distributions": 150
+          "fixture_distributions_checked": 1836,
+          "enriched_prior_distributions": 1836,
+          "strong_direct_evidence_players": 71,
+          "strong_direct_evidence_min_pstart": 0.8673,
+          "no_evidence_players": 91,
+          "no_evidence_max_xmins": 8.1,
+          "direct_evidence_sanity": true
         }
       },
       {
@@ -250,7 +260,7 @@
         "id": "DSS-09",
         "name": "Positional Competition & Rotation",
         "critical": true,
-        "status": "ACTIVE",
+        "status": "PARTIAL",
         "required_files": [
           "data/predictions_v4.json"
         ],
@@ -258,14 +268,16 @@
         "detail": {
           "players": 612,
           "covered": 612,
-          "contextual_adjustments": 593
+          "role_matched_adjustments": 0,
+          "broad_position_diagnostics": 612,
+          "reason": "role-matched competition data unavailable; broad FPL position is not applied"
         }
       },
       {
         "id": "DSS-10",
         "name": "Set-Piece Role",
         "critical": false,
-        "status": "ACTIVE",
+        "status": "PARTIAL",
         "required_files": [
           "data/predictions_v4.json"
         ],
@@ -273,15 +285,17 @@
         "detail": {
           "fixtures": 612,
           "covered": 612,
-          "assigned_roles": 95,
-          "official_source": 612
+          "empirical_shares": 0,
+          "inferred_order_metadata": 612,
+          "metadata_only_no_double_count": 612,
+          "reason": "official taker order is not an empirical event share"
         }
       },
       {
         "id": "DSS-11",
         "name": "Penalty Role",
         "critical": false,
-        "status": "ACTIVE",
+        "status": "PARTIAL",
         "required_files": [
           "data/predictions_v4.json"
         ],
@@ -289,15 +303,17 @@
         "detail": {
           "fixtures": 612,
           "covered": 612,
-          "assigned_roles": 66,
-          "official_source": 612
+          "empirical_shares": 0,
+          "inferred_order_metadata": 612,
+          "metadata_only_no_double_count": 612,
+          "reason": "official taker order is not an empirical event share"
         }
       },
       {
         "id": "DSS-12",
         "name": "Expected Goals / Shot Threat",
         "critical": false,
-        "status": "ACTIVE",
+        "status": "PARTIAL",
         "required_files": [
           "data/predictions_v4.json",
           "data/stats/shots_gw1.json"
@@ -305,18 +321,22 @@
         "probe": "advanced_stats_integration",
         "detail": {
           "prediction_sources": [
+            "fpl_core_insights:players",
             "fpl_core_insights:players+fpl_core_insights:playermatchstats",
             "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
           ],
-          "integrated_fixture_samples": 100,
-          "synced_but_not_consumed": false
+          "consumed_players": 612,
+          "materially_distinct_players": 11,
+          "materially_distinct_ratio": 0.018,
+          "active_minimum_ratio": 0.25,
+          "synced_but_weakly_enriched": true
         }
       },
       {
         "id": "DSS-13",
         "name": "Expected Assists / Chance Creation",
         "critical": false,
-        "status": "ACTIVE",
+        "status": "PARTIAL",
         "required_files": [
           "data/predictions_v4.json",
           "data/stats/playermatchstats_gw1.json"
@@ -324,11 +344,15 @@
         "probe": "advanced_stats_integration",
         "detail": {
           "prediction_sources": [
+            "fpl_core_insights:players",
             "fpl_core_insights:players+fpl_core_insights:playermatchstats",
             "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
           ],
-          "integrated_fixture_samples": 100,
-          "synced_but_not_consumed": false
+          "consumed_players": 612,
+          "materially_distinct_players": 11,
+          "materially_distinct_ratio": 0.018,
+          "active_minimum_ratio": 0.25,
+          "synced_but_weakly_enriched": true
         }
       },
       {
@@ -473,7 +497,7 @@
         "id": "DSS-24",
         "name": "Opponent Strength / Fixture Difficulty",
         "critical": true,
-        "status": "ACTIVE",
+        "status": "PARTIAL",
         "required_files": [
           "data/predictions_v4.json"
         ],
@@ -481,8 +505,10 @@
         "detail": {
           "fixtures": 1836,
           "covered": 1836,
-          "official_source": 1836,
-          "distinct_ratings": 5
+          "dynamic_defence": 0,
+          "neutral_overall_fallback": 1836,
+          "distinct_scoring_ratings": 1,
+          "reason": "official defence split unavailable; overall strength retained as diagnostic only"
         }
       },
       {
@@ -1095,7 +1121,8 @@
     "integrity_ok": true,
     "registry": "ENHANCEMENT_LAYERS_8",
     "counts": {
-      "ACTIVE": 4,
+      "PARTIAL": 1,
+      "ACTIVE": 3,
       "DEFERRED": 4
     },
     "items": [
@@ -1103,7 +1130,7 @@
         "id": "ENH-01",
         "name": "Data Reliability & Source Triangulation",
         "critical": true,
-        "status": "ACTIVE",
+        "status": "PARTIAL",
         "required_files": [
           "config/sources.json",
           "src/engines/reliability.py",
@@ -1122,11 +1149,15 @@
           },
           "advanced_integration": {
             "prediction_sources": [
+              "fpl_core_insights:players",
               "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
             ],
-            "integrated_fixture_samples": 100,
-            "synced_but_not_consumed": false
+            "consumed_players": 612,
+            "materially_distinct_players": 11,
+            "materially_distinct_ratio": 0.018,
+            "active_minimum_ratio": 0.25,
+            "synced_but_weakly_enriched": true
           }
         }
       },
@@ -1264,9 +1295,12 @@
   "critical_failed": [],
   "critical_partial": [
     "DSS-07",
+    "DSS-09",
+    "DSS-24",
     "DSS-39",
     "DSS-44",
-    "DSS-X12"
+    "DSS-X12",
+    "ENH-01"
   ],
   "governance": {
     "gate0_fail_blocks_go": true,
@@ -1277,5 +1311,5 @@
     "raw_optimizer_is_not_final_decision": true,
     "preflight_defers_postflight_outputs": true
   },
-  "performance_ms": 4791.77
+  "performance_ms": 5907.27
 }

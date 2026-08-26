@@ -147,6 +147,7 @@ def assemble_snapshot(
         "v5_bridge": {"enabled": False},
     }
     public_health = {**(base_health or {}), **(dynamic_health or {})}
+    limits = _cfg()["summary_limits"]
     snapshot = {
         "schema_version": int(_cfg()["snapshot"]["schema_version"]),
         "engine_version": V5_VERSION,
@@ -171,9 +172,9 @@ def assemble_snapshot(
         },
         "price_summary": {
             "confirmed_changes": price_bundle["prices"].get("confirmed_changes", []),
-            "top_rise_risk": price_bundle["prices"].get("top_rise_risk", [])[:10],
-            "top_fall_risk": price_bundle["prices"].get("top_fall_risk", [])[:10],
-            "alerts": price_bundle["alerts"].get("alerts", [])[:20],
+            "top_rise_risk": price_bundle["prices"].get("top_rise_risk", [])[: int(limits["price_rise_risk"])],
+            "top_fall_risk": price_bundle["prices"].get("top_fall_risk", [])[: int(limits["price_fall_risk"])],
+            "alerts": price_bundle["alerts"].get("alerts", [])[: int(limits["price_alerts"])],
         },
         "prediction_summary": {
             "status": prediction_payload.get("status", "BUILT"),
@@ -201,9 +202,12 @@ def assemble_snapshot(
     }
 
 
-def run(mode: str = "daily", *, persist: bool = True, include_predictions: bool = True) -> dict[str, Any]:
+def run(mode: str | None = None, *, persist: bool = True, include_predictions: bool = True) -> dict[str, Any]:
     timer = PipelineTimer()
     cfg = _cfg()
+    selected_mode = mode or str(cfg["default_mode"])
+    if selected_mode not in set(str(x) for x in cfg["modes"]):
+        raise ValueError(f"unsupported V5 runner mode: {selected_mode}")
     team_id = expected_team_id()
     tokens = {"team_id": team_id}
 
@@ -223,8 +227,8 @@ def run(mode: str = "daily", *, persist: bool = True, include_predictions: bool 
     dynamic_specs = _request_specs("dynamic_requests", tokens)
 
     with timer.stage("dynamic_and_authenticated_collection"):
-        workers = int(cfg.get("concurrency", {}).get("max_orchestration_workers", 2))
-        if cfg.get("concurrency", {}).get("parallelize_dynamic_and_authenticated_collection", True):
+        workers = int(cfg["concurrency"]["max_orchestration_workers"])
+        if cfg["concurrency"].get("parallelize_dynamic_and_authenticated_collection", True):
             with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
                 dynamic_future = pool.submit(fetch_many, dynamic_specs)
                 if cfg.get("feature_switches", {}).get("authenticated_overlay", True):
@@ -256,7 +260,7 @@ def run(mode: str = "daily", *, persist: bool = True, include_predictions: bool 
 
     with timer.stage("assemble_runtime"):
         result = assemble_snapshot(
-            mode=mode,
+            mode=selected_mode,
             base_payloads=base_payloads,
             base_health=base_health,
             dynamic_payloads=dynamic_payloads,
@@ -289,8 +293,9 @@ def run(mode: str = "daily", *, persist: bool = True, include_predictions: bool 
 
 
 def cli() -> None:
+    cfg = _cfg()
     parser = argparse.ArgumentParser(description="FPL iphoenk Engine V5 alpha runner")
-    parser.add_argument("mode", choices=("daily", "deadline", "live"), nargs="?", default="daily")
+    parser.add_argument("mode", choices=tuple(str(x) for x in cfg["modes"]), nargs="?", default=str(cfg["default_mode"]))
     parser.add_argument("--no-persist", action="store_true")
     parser.add_argument("--no-predictions", action="store_true")
     args = parser.parse_args()

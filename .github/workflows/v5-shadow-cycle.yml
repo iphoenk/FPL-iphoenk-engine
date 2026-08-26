@@ -12,9 +12,7 @@ permissions:
 
 env:
   PYTHONPATH: ${{ github.workspace }}
-  FPL_TEAM_ID: "3462711"
   V3_SOURCE_BRANCH: main
-  V3_SOURCE_SHA: 94dc304250c21a83b7270944231a07c6ff7099ac
   V3_RUNTIME_BRANCH: runtime-data
   V5_SHADOW_BRANCH: v5-shadow-runtime
 
@@ -37,6 +35,18 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Resolve accepted production baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASELINE_SHA=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_main_sha'])")
+          BASELINE_VERSION=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_truth'])")
+          TEAM_ID=$(python -c "import json; print(json.load(open('config/engine.json'))['team_id'])")
+          echo "V3_SOURCE_SHA=$BASELINE_SHA" >> "$GITHUB_ENV"
+          echo "V3_BASELINE_VERSION=$BASELINE_VERSION" >> "$GITHUB_ENV"
+          echo "FPL_TEAM_ID=$TEAM_ID" >> "$GITHUB_ENV"
+          echo "accepted_baseline=$BASELINE_VERSION sha=$BASELINE_SHA team_id=$TEAM_ID"
+
       - name: Hydrate prior V5 shadow state
         shell: bash
         run: |
@@ -55,7 +65,7 @@ jobs:
             echo "No prior V5 shadow state; starting clean"
           fi
 
-      - name: Generate fresh V3.16 reference
+      - name: Generate fresh accepted V3 reference
         shell: bash
         env:
           FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
@@ -92,11 +102,12 @@ jobs:
           cp "$v3_tree/data/latest.json" .shadow/v3_latest.json
           cp "$v3_tree/data/lineup_decision.json" .shadow/v3_lineup_decision.json
           python - <<'PY'
-          import json
+          import json, os
           latest=json.load(open('.shadow/v3_latest.json'))
           lineup=json.load(open('.shadow/v3_lineup_decision.json'))
-          print({'reference_sha':'94dc304250c21a83b7270944231a07c6ff7099ac','engine_version':latest.get('engine_version'),'generated_at':latest.get('generated_at'),'planning_gw':(latest.get('phase') or {}).get('planning_gw'),'formation':lineup.get('formation'),'captain':(lineup.get('captain') or {}).get('element') if isinstance(lineup.get('captain'),dict) else lineup.get('captain')})
-          assert str(latest.get('engine_version') or '').startswith('3.16'), latest.get('engine_version')
+          expected=os.environ['V3_BASELINE_VERSION'].removeprefix('v')
+          print({'reference_sha':os.environ['V3_SOURCE_SHA'],'engine_version':latest.get('engine_version'),'generated_at':latest.get('generated_at'),'planning_gw':(latest.get('phase') or {}).get('planning_gw'),'formation':lineup.get('formation'),'captain':(lineup.get('captain') or {}).get('element') if isinstance(lineup.get('captain'),dict) else lineup.get('captain')})
+          assert str(latest.get('engine_version') or '') == expected, (latest.get('engine_version'), expected)
           PY
 
       - name: Start V5 bounded-context microservices
@@ -125,9 +136,8 @@ jobs:
           docker compose -f deploy/v5/docker-compose.yml ps
           exit 1
 
-      - name: Run real V3.16 versus V5 shadow cycle
+      - name: Run accepted V3 versus V5 shadow cycle
         env:
-          V3_REFERENCE_BRANCH: v3.16-source-registry
           V5_SERVICE_INGESTION_URL: http://127.0.0.1:8101
           V5_SERVICE_TRUTH_URL: http://127.0.0.1:8102
           V5_SERVICE_PRICE_URL: http://127.0.0.1:8103
@@ -143,7 +153,7 @@ jobs:
       - name: Validate shadow acceptance invariants, reporting and source health
         run: |
           python - <<'PY'
-          import json
+          import json, os
           p=json.load(open('data/v5/shadow/latest_shadow_cycle.json'))
           w=json.load(open('data/v5/dss_watchlist.json'))
           f=json.load(open('data/v5/framework_health.json'))
@@ -158,7 +168,9 @@ jobs:
           source=p['v5'].get('source_fusion_health') or {}
           api=source.get('api_football') or {}
           report_xi=((user.get('starting_xi') or {}).get('starting_xi') or [])
+          expected=os.environ['V3_BASELINE_VERSION'].removeprefix('v')
           print({
+            'accepted_v3':expected,
             'v3_engine_version':p['v3'].get('engine_version'),
             'cycle_pass':p['acceptance_progress']['cycle_pass'],
             'parity':p['parity'],
@@ -172,13 +184,13 @@ jobs:
             'report_xi_count':len(report_xi),
             'source_fusion':source,
           })
-          assert str(p['v3'].get('engine_version') or '').startswith('3.16'), p['v3'].get('engine_version')
+          assert str(p['v3'].get('engine_version') or '') == expected, (p['v3'].get('engine_version'), expected)
           assert all(checks.values()), f'V5 operational invariant failure: {checks}'
           assert all(position_counts[pos] == 5 for pos in position_counts), f'watchlist positional contract failed: {position_counts}'
           assert core.get('counts') == {'ACTIVE':50}, f'DSS core must be 50/50 ACTIVE: {core.get("counts")}'
           assert ext.get('counts') == {'ACTIVE':16}, f'DSS extensions must be 16/16 ACTIVE: {ext.get("counts")}'
           assert enh.get('counts') == {'ACTIVE':8}, f'Enhancements must be 8/8 ACTIVE: {enh.get("counts")}'
-          assert p['parity']['pass'] is True, f"V3.16/V5 parity failed: {p['parity']}"
+          assert p['parity']['pass'] is True, f"accepted V3/V5 parity failed: {p['parity']}"
           assert p['acceptance_progress']['cycle_pass'] is True, 'cycle must not count as successful acceptance'
           if trigger.get('require_reporting_contract', False):
             assert (user.get('owned_squad') or {}).get('count') == 15, user.get('owned_squad')
@@ -234,7 +246,7 @@ jobs:
             echo "No shadow-state changes"
             exit 0
           fi
-          git commit -m "shadow: record real V3.16 V5 full-DSS cycle $GITHUB_RUN_NUMBER [skip ci]"
+          git commit -m "shadow: record accepted V3 V5 full-DSS cycle $GITHUB_RUN_NUMBER [skip ci]"
           git push origin HEAD:"$V5_SHADOW_BRANCH"
 
       - name: Stop V5 cluster

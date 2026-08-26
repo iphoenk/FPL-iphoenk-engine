@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "architecture": "bounded-context-microservices",
   "mandatory": true,
   "policy": {
@@ -12,7 +12,8 @@
     "prefer_fewer_domain_services_over_chatty_function_services": true,
     "parallelize_independent_calls": true,
     "service_timeouts_required": true,
-    "circuit_breaker_ready": true
+    "circuit_breaker_ready": true,
+    "module_ownership": "exactly_one_service"
   },
   "defaults": {
     "contract_version": "v1",
@@ -35,9 +36,9 @@
     },
     "truth": {
       "port": 8102,
-      "bounded_context": "phase-identity-squad-finance-live-truth",
+      "bounded_context": "rules-phase-identity-squad-finance-live-truth",
       "handler": "src.v5.service_adapters:truth_adapter",
-      "owns_modules": ["event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
+      "owns_modules": ["rules", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
       "dependencies": ["ingestion"],
       "status": "ACTIVE_ALPHA",
       "critical": true
@@ -80,9 +81,9 @@
     },
     "orchestrator": {
       "port": 8100,
-      "bounded_context": "workflow-orchestration-only",
+      "bounded_context": "workflow-orchestration-and-observability-only",
       "handler": "src.v5.service_adapters:orchestrator_adapter",
-      "owns_modules": ["runner", "performance"],
+      "owns_modules": ["runner", "performance", "service_runtime"],
       "dependencies": ["ingestion", "truth", "price", "prediction", "decision", "snapshot"],
       "status": "ACTIVE_ALPHA",
       "critical": true

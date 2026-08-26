@@ -1,7 +1,13 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "registry": "HARD_CONSTRAINT_SOLVER_GATE_0",
   "description": "Fail-closed legality gate. Any critical failure blocks GO regardless of DSS score or projected gain.",
+  "contract": {
+    "expected_count": 16,
+    "id_prefix": "G0-",
+    "first_index": 1,
+    "zero_pad": 2
+  },
   "checks": [
     {"id":"G0-01","name":"Squad Size = 15","critical":true},
     {"id":"G0-02","name":"Exactly 2 Goalkeepers","critical":true},

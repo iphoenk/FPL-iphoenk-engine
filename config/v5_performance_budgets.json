@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "mode": "bootstrap",
+  "policy": {
+    "measure_wall_clock": true,
+    "measure_network_calls": true,
+    "measure_file_reads": true,
+    "block_unreviewed_regression": true,
+    "notes": "Budgets are bootstrap guardrails and should be tightened after representative V5 workloads are benchmarked."
+  },
+  "budgets": {
+    "rules_registry_load_ms": 50,
+    "single_player_projection_ms": 10,
+    "projection_100_players_ms": 500,
+    "decision_pipeline_soft_target_seconds": 5,
+    "duplicate_source_fetches_per_run": 0,
+    "duplicate_rules_file_reads_per_process": 0
+  }
+}

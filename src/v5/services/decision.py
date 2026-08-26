@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import Counter
 from typing import Any
 from src.v5.config_cache import load_json_config
 from src.v5.decision.decision_trace import build_trace
@@ -15,13 +16,46 @@ def _inputs(payload:dict[str,Any])->tuple[dict[str,Any],dict[str,Any],dict[str,A
     truth=payload.get("truth") if isinstance(payload.get("truth"),dict) else {}; prediction=payload.get("prediction") if isinstance(payload.get("prediction"),dict) else {}; price=payload.get("price") if isinstance(payload.get("price"),dict) else {}; rules=truth.get("rules") if isinstance(truth.get("rules"),dict) else {}; team=truth.get("team") if isinstance(truth.get("team"),dict) else {}
     if not rules or not team or not prediction:raise ValueError("decision service requires truth rules/team and prediction payload")
     return truth,prediction,price,rules,team
+def _apply_team_cluster_penalty(packages:dict[str,Any],prediction:dict[str,Any],team:dict[str,Any])->dict[str,Any]:
+    cfg=((_cfg().get("package_selection") or {}).get("team_cluster_penalty") or {})
+    if not bool(cfg.get("enabled",True)) or packages.get("status")!="READY":return packages
+    soft_limit=int(cfg.get("soft_limit",2)); weight=float(cfg.get("penalty_per_excess_player",0.35))
+    pmap={int(p.get("element")):int(p.get("team_id")) for p in prediction.get("players") or [] if isinstance(p,dict) and p.get("element") is not None and p.get("team_id") is not None}
+    baseline={int(r.get("element")):int(r.get("team_id")) for r in team.get("squad") or [] if isinstance(r,dict) and r.get("element") is not None and r.get("team_id") is not None}
+    if not pmap or not baseline:return packages
+    rows=[]
+    for raw in packages.get("packages") or []:
+        if not isinstance(raw,dict):continue
+        row={**raw}; score=dict(row.get("score") or {})
+        squad=dict(baseline)
+        for out in row.get("outs") or []:
+            if isinstance(out,dict) and out.get("element") is not None:squad.pop(int(out["element"]),None)
+        for incoming in row.get("ins") or []:
+            if isinstance(incoming,dict) and incoming.get("element") is not None:
+                eid=int(incoming["element"]); team_id=pmap.get(eid)
+                if team_id is not None:squad[eid]=team_id
+        counts=Counter(squad.values()); excess=sum(max(0,count-soft_limit) for count in counts.values()); penalty=round(excess*weight,3)
+        raw_robust=score.get("robust_score")
+        if raw_robust is not None:
+            score["raw_robust_score"]=raw_robust; score["team_cluster_penalty"]=penalty; score["robust_score"]=round(float(raw_robust)-penalty,3)
+        row["score"]=score; row["team_cluster"]={"soft_limit":soft_limit,"club_counts":dict(counts),"excess_players":excess,"penalty":penalty}
+        rows.append(row)
+    rows.sort(key=lambda r:float(((r.get("score") or {}).get("robust_score") or -1e9)),reverse=True)
+    out={**packages,"packages":rows,"team_cluster_penalty_applied":True,"team_cluster_penalty_model":{"soft_limit":soft_limit,"penalty_per_excess_player":weight}}
+    hold=next((r for r in rows if r.get("id")=="HOLD"),None)
+    if hold is not None:out["hold"]=hold
+    return out
 def _active_local_capabilities(packages:dict[str,Any],package_governance:dict[str,Any],lineup:dict[str,Any])->list[str]:
     cfg=_cfg(); configured={str(x) for x in cfg["capabilities"]}; activation=cfg["capability_activation"]; active=set()
-    if packages.get("status")=="READY" and bool(packages.get("local_legality_prevalidated")) and package_governance.get("status")=="READY":active.update(configured & {str(x) for x in activation.get("package_ready") or []})
+    if packages.get("status")=="READY" and bool(packages.get("local_legality_prevalidated")) and package_governance.get("status")=="READY":
+        active.update(configured & {str(x) for x in activation.get("package_ready") or []})
+        if not bool(packages.get("team_cluster_penalty_applied")):active.discard("team_cluster_penalty")
+        perf_ready=all(isinstance((row.get("score") or {}).get("performance"),dict) for row in packages.get("packages") or [] if isinstance(row,dict) and (row.get("score") or {}).get("valid"))
+        if not perf_ready:active.discard("runtime_observability")
     if lineup.get("status")=="READY":active.update(configured & {str(x) for x in activation.get("lineup_ready") or []})
     return sorted(active)
 def _prepare(payload:dict[str,Any])->dict[str,Any]:
-    truth,prediction,price,rules,team=_inputs(payload); packages=build_packages(prediction,team,rules); package_governance=govern_packages(packages,truth); lineup=optimize_lineup(team,prediction,rules); capabilities=_active_local_capabilities(packages,package_governance,lineup); ready=packages.get("status")=="READY" and package_governance.get("status")=="READY" and lineup.get("status")=="READY"
+    truth,prediction,price,rules,team=_inputs(payload); packages=_apply_team_cluster_penalty(build_packages(prediction,team,rules),prediction,team); package_governance=govern_packages(packages,truth); lineup=optimize_lineup(team,prediction,rules); capabilities=_active_local_capabilities(packages,package_governance,lineup); ready=packages.get("status")=="READY" and package_governance.get("status")=="READY" and lineup.get("status")=="READY"
     return {"status":"READY" if ready else "BLOCKED","model":_cfg().get("model_id"),"ruleset_id":rules.get("ruleset_id"),"packages":packages,"package_governance":package_governance,"lineup":lineup,"capabilities":capabilities,"price_context":{"alert_count":len(((price.get("alerts") or {}).get("alerts") or []))}}
 def _blocked_trace(reason:str,gate0_preflight:dict[str,Any])->dict[str,Any]:
     items=gate0_preflight.get("items") if isinstance(gate0_preflight.get("items"),list) else []; return {"decision_type":"BLOCKED","action":reason,"confidence":"LOW","evidence":[{"source":"governance-service","field":"gate0_preflight","authority":"governance-service","freshness":None,"provenance":{"model":gate0_preflight.get("model"),"pass":gate0_preflight.get("pass")}}] if gate0_preflight else [],"constraints_checked":[str(x.get("id")) for x in items if x.get("id")],"production_recommendation":None}

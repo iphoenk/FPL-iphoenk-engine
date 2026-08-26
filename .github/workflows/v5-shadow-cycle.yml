@@ -158,6 +158,8 @@ jobs:
           w=json.load(open('data/v5/dss_watchlist.json'))
           f=json.load(open('data/v5/framework_health.json'))
           trigger=json.load(open('config/v5_shadow_trigger.json'))
+          source_cfg=json.load(open('config/intelligence/source_fusion.json'))
+          source_acceptance=source_cfg.get('shadow_acceptance') or {}
           checks=p['operational_invariants']['checks']
           positions=w.get('positions') or {}
           position_counts={pos:len(positions.get(pos) or []) for pos in ('GK','DEF','MID','FWD')}
@@ -169,6 +171,14 @@ jobs:
           api=source.get('api_football') or {}
           report_xi=((user.get('starting_xi') or {}).get('starting_xi') or [])
           expected=os.environ['V3_BASELINE_VERSION'].removeprefix('v')
+          allowed_api_unavailability={str(value) for value in source_acceptance.get('api_football_acceptable_unavailability_classes') or []}
+          api_status=str(api.get('status') or '')
+          api_class=str(api.get('availability_class') or '')
+          accepted_api_unavailability=(
+            api_status == 'UNAVAILABLE'
+            and api_class in allowed_api_unavailability
+            and api.get('fail_neutral') is True
+          )
           print({
             'accepted_v3':expected,
             'v3_engine_version':p['v3'].get('engine_version'),
@@ -183,6 +193,11 @@ jobs:
             'report_mode':user.get('report_mode'),
             'report_xi_count':len(report_xi),
             'source_fusion':source,
+            'api_football_acceptance':{
+              'status':api_status,
+              'availability_class':api_class,
+              'accepted_external_unavailability':accepted_api_unavailability,
+            },
           })
           assert str(p['v3'].get('engine_version') or '') == expected, (p['v3'].get('engine_version'), expected)
           assert all(checks.values()), f'V5 operational invariant failure: {checks}'
@@ -199,10 +214,13 @@ jobs:
             assert (user.get('external_watchlist') or {}).get('candidate_count') == 20, 'report must consume native watchlist payload'
           if trigger.get('require_source_fusion_observability', False):
             assert source.get('status') in {'ACTIVE','DEGRADED'}, source
-            assert api.get('status') in {'ACTIVE','DEGRADED'}, api
-            assert api.get('credential_present') is True, 'API-Football credential was not received by Ingestion'
-            assert int(api.get('competitions_attempted') or 0) > 0, api
-            assert int(api.get('network_requests') or 0) + int(api.get('cache_hits') or 0) > 0, api
+            assert api_status in {'ACTIVE','DEGRADED'} or accepted_api_unavailability, api
+            if source_acceptance.get('require_api_football_credential', True):
+              assert api.get('credential_present') is True, 'API-Football credential was not received by Ingestion'
+            if source_acceptance.get('require_competition_attempt', True):
+              assert int(api.get('competitions_attempted') or 0) > 0, api
+            if source_acceptance.get('require_network_or_cache_evidence', True):
+              assert int(api.get('network_requests') or 0) + int(api.get('cache_hits') or 0) > 0, api
           PY
 
       - name: Upload shadow-cycle evidence

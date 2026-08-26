@@ -1,9 +1,17 @@
-# FPL iphoenk Engine v3.8.0
+# FPL iphoenk Engine v3.8.1
 
 A production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Design goal
 Combine Official FPL API authority, a single authoritative FPL 2026/27 ruleset, persisted native team/event state, expanded Official detail surfaces, an optional authenticated read-only Official layer, community enrichments, live score/persistence, exact team-value logic, leakage-safe modelling, provenance/freshness, snapshot integrity and a decision-aware Price Radar.
+
+## v3.8.1 Price-risk hotfix
+v3.8.1 hardens the new trajectory model after the first production snapshot:
+- current Official progress determines which threshold is actually at risk once progress is materially positive/negative
+- a player near a fall threshold is no longer mislabelled as a rise merely because the latest hourly rate has turned slightly positive during recovery
+- constant-rate ETA is suppressed when movement is away from the currently threatened threshold
+- Official signed likelihood ordinals are preserved conservatively; undocumented intermediate codes are not translated into invented Official wording
+- observed `+/-5` threshold-crossing codes are labelled very-likely, while intermediate levels remain neutral `RISE/DROP_SIGNAL_LEVEL_n`
 
 ## v3.8 Price Trajectory Radar
 v3.8 upgrades Price Radar from event net-transfer pressure into a trajectory engine built around the new Official FPL 2026/27 price-change fields.
@@ -32,7 +40,7 @@ Important authority rule: Official current progress is native Official FPL infor
 Early 2026/27 observations showed cases where Official offset-0 projected progress stayed equal to current progress despite material hourly movement. v3.8 detects this as `SUSPECT_STATIC_OFFSET0` rather than silently treating it as a trustworthy future forecast. The engine can then expose its trajectory estimate alongside the Official current progress. This is a guard, not an attempt to override Official current progress.
 
 ### Persisted state and confirmed-change fix
-The collector now hydrates `price_cache.json` and `price_trajectory.json` from the authoritative `runtime-data` branch before generating a new snapshot. This matters because `main/data/**` is historical only. Without hydration, a fresh runner could compare prices against stale source-repository state rather than the immediately previous production snapshot.
+The collector hydrates `price_cache.json` and `price_trajectory.json` from the authoritative `runtime-data` branch before generating a new snapshot. This matters because `main/data/**` is historical only. Without hydration, a fresh runner could compare prices against stale source-repository state rather than the immediately previous production snapshot.
 
 New runtime outputs:
 - `data/price_trajectory.json`
@@ -142,7 +150,7 @@ Master Monitor reports:
 - Deadline Day: hourly at :30 WIB until definitive Final Review
 - After Final Review: silent except genuinely material emergency updates
 
-All three normal reports must include Price Radar for owned players and the DSS external watchlist by GK/DEF/MID/FWD. The 04:30 report reconciles overnight confirmed changes, 12:30 updates trajectory/affordability, and 21:30 emphasises overnight risk.
+All three normal reports must include Price Radar for owned players and the DSS external watchlist by GK/DEF/MID/FWD. Price changes occur at 00:00 Europe/London, so the WIB conversion is DST-aware rather than hardcoded. The 04:30 report is a late-cycle risk checkpoint when the UK is on BST, 12:30 updates trajectory/affordability, and 21:30 emphasises the next overnight risk window.
 
 ## Main commands
 ```bash

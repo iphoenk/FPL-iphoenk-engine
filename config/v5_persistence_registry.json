@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "data_root": "data/v5",
+  "artifacts": {
+    "latest": "latest.json",
+    "health": "health.json",
+    "team": "team.json",
+    "live": "live.json",
+    "prices": "prices.json",
+    "price_trajectory": "price_trajectory.json",
+    "price_alerts": "price_alerts.json",
+    "predictions": "predictions.json",
+    "decision": "decision.json",
+    "history": "history.jsonl"
+  },
+  "gameweek": {
+    "directory": "gw",
+    "filename_template": "{gw:02d}.json"
+  },
+  "write_policy": {
+    "atomic_json": true,
+    "append_history": true,
+    "persist_raw_authenticated_payload": false,
+    "separate_from_v3_v4_runtime_data": true
+  }
+}

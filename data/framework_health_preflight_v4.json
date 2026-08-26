@@ -1,7 +1,32 @@
 {
-  "schema_version": 472,
-  "engine": "v4.7.2-framework-health-performance-cache",
+  "schema_version": 473,
+  "engine": "v4.7.3-framework-health-checkpoint-aware",
   "phase": "preflight",
+  "checkpoint_context": {
+    "policy_id": "REGULAR_MONITOR",
+    "label": "Regular Tactical Monitor",
+    "run_mode": "daily",
+    "as_of": "2026-08-26T06:49:00.205120+00:00",
+    "local_as_of": "2026-08-26T13:49:00.205120+07:00",
+    "timezone": "Asia/Jakarta",
+    "deadline_time": "2026-08-28T17:30:00+00:00",
+    "minutes_to_deadline": 3521.0,
+    "is_final_review": false,
+    "post_final_emergency_only": false,
+    "is_simulation": false,
+    "max_snapshot_age_minutes": 90,
+    "recommended_refresh_minutes": 180,
+    "report_scope": [
+      "gate0",
+      "locked_15",
+      "availability",
+      "xmins",
+      "price_radar",
+      "challengers"
+    ],
+    "registry": "fpl_checkpoint_policy_v1",
+    "registry_schema_version": 1
+  },
   "overall": "AMBER",
   "decision_engine": "DEGRADED",
   "recommendation_allowed": true,
@@ -1056,12 +1081,15 @@
         "status": "ACTIVE",
         "required_files": [
           "src/engines/refresh_policy.py",
+          "src/engines/checkpoint_policy.py",
+          "config/checkpoint_policy_registry.json",
           "data/health.json"
         ],
         "probe": "data_freshness",
         "detail": {
           "age_minutes": 0.0,
-          "max_age_minutes": 90
+          "max_age_minutes": 90,
+          "checkpoint_policy_id": "REGULAR_MONITOR"
         }
       },
       {
@@ -1277,7 +1305,8 @@
     "status": "PASS",
     "detail": {
       "age_minutes": 0.0,
-      "max_age_minutes": 90
+      "max_age_minutes": 90,
+      "checkpoint_policy_id": "REGULAR_MONITOR"
     }
   },
   "source_health": {
@@ -1309,12 +1338,13 @@
     "file_exists_is_not_sufficient_for_active": true,
     "health_check_must_precede_recommendation": true,
     "raw_optimizer_is_not_final_decision": true,
-    "preflight_defers_postflight_outputs": true
+    "preflight_defers_postflight_outputs": true,
+    "checkpoint_freshness_policy_enforced": true
   },
   "performance": {
     "prediction_snapshot_reads": 1,
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 387.31
+  "performance_ms": 385.9
 }

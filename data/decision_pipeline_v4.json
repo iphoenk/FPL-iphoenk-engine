@@ -1,15 +1,40 @@
 {
-  "schema_version": 472,
-  "engine": "v4.7.2-unified-decision-pipeline-performance",
+  "schema_version": 473,
+  "engine": "v4.7.3-unified-decision-pipeline-checkpoint-aware",
+  "checkpoint_context": {
+    "policy_id": "REGULAR_MONITOR",
+    "label": "Regular Tactical Monitor",
+    "run_mode": "daily",
+    "as_of": "2026-08-26T06:49:00.205120+00:00",
+    "local_as_of": "2026-08-26T13:49:00.205120+07:00",
+    "timezone": "Asia/Jakarta",
+    "deadline_time": "2026-08-28T17:30:00+00:00",
+    "minutes_to_deadline": 3521.0,
+    "is_final_review": false,
+    "post_final_emergency_only": false,
+    "is_simulation": false,
+    "max_snapshot_age_minutes": 90,
+    "recommended_refresh_minutes": 180,
+    "report_scope": [
+      "gate0",
+      "locked_15",
+      "availability",
+      "xmins",
+      "price_radar",
+      "challengers"
+    ],
+    "registry": "fpl_checkpoint_policy_v1",
+    "registry_schema_version": 1
+  },
   "timings": {
-    "load_shared_inputs_and_candidates_ms": 333.1,
-    "wc_decision_cpu_ms": 3067.9,
-    "package_audit_cpu_ms": 2816.1,
-    "wc_package_parallel_wall_ms": 3089.7,
-    "parallel_speedup_estimate": 1.904,
-    "lineup_ms": 2.3,
+    "load_shared_inputs_and_candidates_ms": 301.6,
+    "wc_decision_cpu_ms": 3567.1,
+    "package_audit_cpu_ms": 2768.5,
+    "wc_package_parallel_wall_ms": 3608.4,
+    "parallel_speedup_estimate": 1.756,
+    "lineup_ms": 2.5,
     "evidence_sanity_ms": 3.1,
-    "total_pipeline_ms": 3467.7
+    "total_pipeline_ms": 3996.9
   },
   "results": {
     "wc_raw": "MATERIAL_UPGRADE",
@@ -32,6 +57,7 @@
     "wc_beam_unchanged": true,
     "package_frontier_beam_unchanged": true,
     "bounded_top_k_same_wc_beam": true,
-    "top_packages_only_payload_materialization": true
+    "top_packages_only_payload_materialization": true,
+    "checkpoint_action_deferred_until_postflight_health": true
   }
 }

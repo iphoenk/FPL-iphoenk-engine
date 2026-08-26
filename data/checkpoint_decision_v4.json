@@ -1,0 +1,107 @@
+{
+  "schema_version": 473,
+  "engine": "v4.7.3-checkpoint-governance",
+  "evaluated_at": "2026-08-26T06:49:07.623836+00:00",
+  "checkpoint_context": {
+    "policy_id": "REGULAR_MONITOR",
+    "label": "Regular Tactical Monitor",
+    "run_mode": "daily",
+    "as_of": "2026-08-26T06:49:00.205120+00:00",
+    "local_as_of": "2026-08-26T13:49:00.205120+07:00",
+    "timezone": "Asia/Jakarta",
+    "deadline_time": "2026-08-28T17:30:00+00:00",
+    "minutes_to_deadline": 3521.0,
+    "is_final_review": false,
+    "post_final_emergency_only": false,
+    "is_simulation": false,
+    "max_snapshot_age_minutes": 90,
+    "recommended_refresh_minutes": 180,
+    "report_scope": [
+      "gate0",
+      "locked_15",
+      "availability",
+      "xmins",
+      "price_radar",
+      "challengers"
+    ],
+    "registry": "fpl_checkpoint_policy_v1",
+    "registry_schema_version": 1
+  },
+  "action_state": "HOLD",
+  "headline": "HOLD LOCK 15",
+  "summary": "Pertahankan komposisi 15 pemain. Rekomendasi masih dapat dipantau, tetapi belum cukup kuat untuk dieksekusi.",
+  "structure_action": "KEEP_LOCKED_15",
+  "squad": {
+    "authority": "LOCKED_PRE_DEADLINE",
+    "authority_ok": true,
+    "wildcard_active": true,
+    "locked_players": 15,
+    "composition_status": "LOCKED_15",
+    "hit_recommendation": "NOT_APPLICABLE_WILDCARD_ACTIVE"
+  },
+  "decision": {
+    "raw_package_verdict": "MATERIAL_UPGRADE",
+    "governed_verdict": "OPTIONAL_IMPROVEMENT",
+    "recommended_replacements": 3,
+    "recommended_out": [
+      "Calafiori",
+      "Tzolis",
+      "Ødegaard"
+    ],
+    "recommended_in": [
+      "Guéhi",
+      "Schade",
+      "Szoboszlai"
+    ],
+    "material_eligible": false,
+    "execution_authorized": false
+  },
+  "lineup": {
+    "status": "ADJUSTABLE",
+    "formation": "3-4-3",
+    "captain": "B.Fernandes",
+    "vice_captain": "Haaland",
+    "governance": "CHANGE_RECOMMENDED",
+    "requires_explicit_final_lock": true
+  },
+  "readiness": {
+    "framework_health": "AMBER",
+    "gate0_pass": true,
+    "health_go_allowed": false,
+    "freshness": {
+      "pass": true,
+      "age_minutes": 0.12,
+      "max_age_minutes": 90,
+      "reason": null
+    },
+    "critical_partial": [
+      "DSS-07",
+      "DSS-09",
+      "DSS-24",
+      "DSS-39",
+      "DSS-44",
+      "DSS-X12",
+      "ENH-01"
+    ],
+    "reasons": [
+      "CRITICAL_FRAMEWORK_PARTIAL",
+      "OPTIONAL_NOT_AUTOMATIC_GO"
+    ]
+  },
+  "report_scope": [
+    "gate0",
+    "locked_15",
+    "availability",
+    "xmins",
+    "price_radar",
+    "challengers"
+  ],
+  "guardrails": {
+    "raw_optimizer_not_authoritative": true,
+    "optional_improvement_is_not_automatic_go": true,
+    "simulation_never_authorizes_action": true,
+    "freshness_failure_blocks_action": true,
+    "locked_15_separate_from_lineup_lock": true,
+    "wildcard_active_means_no_hit": true
+  }
+}

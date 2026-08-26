@@ -114,15 +114,15 @@
       "team": "Brentford",
       "xpts": 3.022,
       "lower80": 0.675,
-      "upper80": 5.369,
+      "upper80": 5.37,
       "start_probability": 0.8537,
       "bench_probability": 0.0146,
       "dnp_probability": 0.1316,
       "availability": 0.8684,
-      "captain_score": 3.0865,
-      "vice_score": 2.8827,
+      "captain_score": 3.0866,
+      "vice_score": 2.8828,
       "bench_score": 2.971,
-      "interval_width": 4.694
+      "interval_width": 4.695
     },
     {
       "element": 557,

@@ -41,8 +41,8 @@
       ],
       "raw_classification": "MATERIAL_UPGRADE",
       "raw_adjusted_utility_gain_5": 6.96,
-      "evidence_confidence": 0.6608,
-      "sanity_gain_5": 4.599,
+      "evidence_confidence": 0.6609,
+      "sanity_gain_5": 4.6,
       "classification": "OPTIONAL_IMPROVEMENT",
       "material_eligible": false,
       "evidence": {
@@ -52,7 +52,7 @@
             "name": "Guéhi",
             "team": "Man City",
             "position": "DEF",
-            "confidence": 0.6665,
+            "confidence": 0.6666,
             "grade": "MEDIUM",
             "start_probability_5": 0.97,
             "dnp_probability_5": 0.027,
@@ -61,7 +61,7 @@
             "horizon_stability": 0.9409,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.5775,
+            "market_support": 0.5794,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -90,9 +90,9 @@
             ]
           }
         ],
-        "avg_incoming_confidence": 0.6665,
+        "avg_incoming_confidence": 0.6666,
         "avg_outgoing_confidence": 0.8091,
-        "min_incoming_confidence": 0.6665,
+        "min_incoming_confidence": 0.6666,
         "severe_rate_spikes": 1,
         "team_cluster_excess": 0,
         "early_season": true,
@@ -165,9 +165,9 @@
         }
       ],
       "raw_classification": "MATERIAL_UPGRADE",
-      "raw_adjusted_utility_gain_5": 12.94,
+      "raw_adjusted_utility_gain_5": 12.95,
       "evidence_confidence": 0.6801,
-      "sanity_gain_5": 8.8,
+      "sanity_gain_5": 8.808,
       "classification": "OPTIONAL_IMPROVEMENT",
       "material_eligible": false,
       "evidence": {
@@ -177,7 +177,7 @@
             "name": "Guéhi",
             "team": "Man City",
             "position": "DEF",
-            "confidence": 0.6665,
+            "confidence": 0.6666,
             "grade": "MEDIUM",
             "start_probability_5": 0.97,
             "dnp_probability_5": 0.027,
@@ -186,7 +186,7 @@
             "horizon_stability": 0.9409,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.5775,
+            "market_support": 0.5794,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -253,9 +253,9 @@
             ]
           }
         ],
-        "avg_incoming_confidence": 0.7327,
+        "avg_incoming_confidence": 0.7328,
         "avg_outgoing_confidence": 0.7985,
-        "min_incoming_confidence": 0.6665,
+        "min_incoming_confidence": 0.6666,
         "severe_rate_spikes": 1,
         "team_cluster_excess": 0,
         "early_season": true,
@@ -359,7 +359,7 @@
       "raw_classification": "MATERIAL_UPGRADE",
       "raw_adjusted_utility_gain_5": 18.12,
       "evidence_confidence": 0.6715,
-      "sanity_gain_5": 12.167,
+      "sanity_gain_5": 12.168,
       "classification": "OPTIONAL_IMPROVEMENT",
       "material_eligible": false,
       "evidence": {
@@ -369,7 +369,7 @@
             "name": "Guéhi",
             "team": "Man City",
             "position": "DEF",
-            "confidence": 0.6665,
+            "confidence": 0.6666,
             "grade": "MEDIUM",
             "start_probability_5": 0.97,
             "dnp_probability_5": 0.027,
@@ -378,7 +378,7 @@
             "horizon_stability": 0.9409,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.5775,
+            "market_support": 0.5794,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -409,7 +409,7 @@
             "name": "Szoboszlai",
             "team": "Liverpool",
             "position": "MID",
-            "confidence": 0.8545,
+            "confidence": 0.8546,
             "grade": "HIGH",
             "start_probability_5": 0.97,
             "dnp_probability_5": 0.027,
@@ -418,7 +418,7 @@
             "horizon_stability": 0.9169,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.8783,
+            "market_support": 0.8808,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -449,7 +449,7 @@
             "name": "Tzolis",
             "team": "Arsenal",
             "position": "MID",
-            "confidence": 0.8598,
+            "confidence": 0.8599,
             "grade": "HIGH",
             "start_probability_5": 0.872,
             "dnp_probability_5": 0.1152,
@@ -458,7 +458,7 @@
             "horizon_stability": 0.9253,
             "rate_spike_risk": 0.0054,
             "current_season_weight": 0.0943,
-            "market_support": 0.776,
+            "market_support": 0.7782,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -483,9 +483,9 @@
             ]
           }
         ],
-        "avg_incoming_confidence": 0.7733,
-        "avg_outgoing_confidence": 0.8189,
-        "min_incoming_confidence": 0.6665,
+        "avg_incoming_confidence": 0.7734,
+        "avg_outgoing_confidence": 0.819,
+        "min_incoming_confidence": 0.6666,
         "severe_rate_spikes": 1,
         "team_cluster_excess": 0,
         "early_season": true,
@@ -617,8 +617,8 @@
       ],
       "raw_classification": "MATERIAL_UPGRADE",
       "raw_adjusted_utility_gain_5": 18.66,
-      "evidence_confidence": 0.6129,
-      "sanity_gain_5": 11.437,
+      "evidence_confidence": 0.613,
+      "sanity_gain_5": 11.438,
       "classification": "OPTIONAL_IMPROVEMENT",
       "material_eligible": false,
       "evidence": {
@@ -628,7 +628,7 @@
             "name": "Guéhi",
             "team": "Man City",
             "position": "DEF",
-            "confidence": 0.6665,
+            "confidence": 0.6666,
             "grade": "MEDIUM",
             "start_probability_5": 0.97,
             "dnp_probability_5": 0.027,
@@ -637,7 +637,7 @@
             "horizon_stability": 0.9409,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.5775,
+            "market_support": 0.5794,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -658,7 +658,7 @@
             "horizon_stability": 0.9455,
             "rate_spike_risk": 0.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.0734,
+            "market_support": 0.0736,
             "flags": [
               "LOW_ROLE_PRIOR",
               "EARLY_SEASON_SAMPLE"
@@ -688,7 +688,7 @@
             "name": "Szoboszlai",
             "team": "Liverpool",
             "position": "MID",
-            "confidence": 0.8545,
+            "confidence": 0.8546,
             "grade": "HIGH",
             "start_probability_5": 0.97,
             "dnp_probability_5": 0.027,
@@ -697,7 +697,7 @@
             "horizon_stability": 0.9169,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.8783,
+            "market_support": 0.8808,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -728,7 +728,7 @@
             "name": "Tzolakis",
             "team": "Hull City",
             "position": "GK",
-            "confidence": 0.7064,
+            "confidence": 0.7065,
             "grade": "MEDIUM",
             "start_probability_5": 0.8481,
             "dnp_probability_5": 0.1367,
@@ -737,7 +737,7 @@
             "horizon_stability": 0.9782,
             "rate_spike_risk": 0.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.183,
+            "market_support": 0.1845,
             "flags": [
               "LOW_ROLE_PRIOR",
               "EARLY_SEASON_SAMPLE"
@@ -748,7 +748,7 @@
             "name": "Tzolis",
             "team": "Arsenal",
             "position": "MID",
-            "confidence": 0.8598,
+            "confidence": 0.8599,
             "grade": "HIGH",
             "start_probability_5": 0.872,
             "dnp_probability_5": 0.1152,
@@ -757,7 +757,7 @@
             "horizon_stability": 0.9253,
             "rate_spike_risk": 0.0054,
             "current_season_weight": 0.0943,
-            "market_support": 0.776,
+            "market_support": 0.7782,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -782,9 +782,9 @@
             ]
           }
         ],
-        "avg_incoming_confidence": 0.764,
-        "avg_outgoing_confidence": 0.7908,
-        "min_incoming_confidence": 0.6665,
+        "avg_incoming_confidence": 0.7641,
+        "avg_outgoing_confidence": 0.7909,
+        "min_incoming_confidence": 0.6666,
         "severe_rate_spikes": 1,
         "team_cluster_excess": 0,
         "early_season": true,
@@ -890,7 +890,7 @@
     "raw_classification": "MATERIAL_UPGRADE",
     "raw_adjusted_utility_gain_5": 18.12,
     "evidence_confidence": 0.6715,
-    "sanity_gain_5": 12.167,
+    "sanity_gain_5": 12.168,
     "classification": "OPTIONAL_IMPROVEMENT",
     "material_eligible": false,
     "evidence": {
@@ -900,7 +900,7 @@
           "name": "Guéhi",
           "team": "Man City",
           "position": "DEF",
-          "confidence": 0.6665,
+          "confidence": 0.6666,
           "grade": "MEDIUM",
           "start_probability_5": 0.97,
           "dnp_probability_5": 0.027,
@@ -909,7 +909,7 @@
           "horizon_stability": 0.9409,
           "rate_spike_risk": 1.0,
           "current_season_weight": 0.1111,
-          "market_support": 0.5775,
+          "market_support": 0.5794,
           "flags": [
             "HIGH_UNCERTAINTY",
             "RAW_RATE_SPIKE",
@@ -940,7 +940,7 @@
           "name": "Szoboszlai",
           "team": "Liverpool",
           "position": "MID",
-          "confidence": 0.8545,
+          "confidence": 0.8546,
           "grade": "HIGH",
           "start_probability_5": 0.97,
           "dnp_probability_5": 0.027,
@@ -949,7 +949,7 @@
           "horizon_stability": 0.9169,
           "rate_spike_risk": 0.5055,
           "current_season_weight": 0.1111,
-          "market_support": 0.8783,
+          "market_support": 0.8808,
           "flags": [
             "EARLY_SEASON_SAMPLE"
           ]
@@ -980,7 +980,7 @@
           "name": "Tzolis",
           "team": "Arsenal",
           "position": "MID",
-          "confidence": 0.8598,
+          "confidence": 0.8599,
           "grade": "HIGH",
           "start_probability_5": 0.872,
           "dnp_probability_5": 0.1152,
@@ -989,7 +989,7 @@
           "horizon_stability": 0.9253,
           "rate_spike_risk": 0.0054,
           "current_season_weight": 0.0943,
-          "market_support": 0.776,
+          "market_support": 0.7782,
           "flags": [
             "EARLY_SEASON_SAMPLE"
           ]
@@ -1014,9 +1014,9 @@
           ]
         }
       ],
-      "avg_incoming_confidence": 0.7733,
-      "avg_outgoing_confidence": 0.8189,
-      "min_incoming_confidence": 0.6665,
+      "avg_incoming_confidence": 0.7734,
+      "avg_outgoing_confidence": 0.819,
+      "min_incoming_confidence": 0.6666,
       "severe_rate_spikes": 1,
       "team_cluster_excess": 0,
       "early_season": true,

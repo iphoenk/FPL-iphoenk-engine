@@ -4,8 +4,8 @@ from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 
 def test_release():
-    assert ENGINE_VERSION == "3.12.0"
-    assert SCHEMA_VERSION == 41
+    assert ENGINE_VERSION == "3.13.0"
+    assert SCHEMA_VERSION == 42
 
 
 def test_snapshot_id_stable():

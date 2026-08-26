@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "resource_policy": {
+    "allowed_method": "GET",
+    "allow_redirects": false,
+    "raw_authenticated_payload_persisted": false,
+    "fail_soft": true
+  },
+  "transport": {
+    "api_base_env": "FPL_API_BASE",
+    "api_base_default": "https://fantasy.premierleague.com/api",
+    "timeout_env": "FPL_TIMEOUT",
+    "timeout_seconds_default": 20,
+    "retries_default": 1,
+    "backoff_seconds_default": 0.5
+  },
+  "identity": {
+    "team_id_config": "config/engine.json",
+    "team_id_key": "team_id",
+    "team_id_env_override": "FPL_TEAM_ID"
+  },
+  "routes": {
+    "me": "me/",
+    "my_team": "my-team/{team_id}/",
+    "transfers_latest": "entry/{team_id}/transfers-latest/"
+  },
+  "auth_modes": {
+    "disabled": {"enabled": true},
+    "session_cookie": {"secret_env": "FPL_SESSION_B64", "header": "Cookie", "encoding": "base64_cookie"},
+    "bearer_token": {"secret_env": "FPL_ACCESS_TOKEN", "header": "X-API-Authorization", "prefix": "Bearer "},
+    "refresh_token": {
+      "secret_env": "FPL_REFRESH_TOKEN",
+      "token_url_env": "FPL_OIDC_TOKEN_URL",
+      "client_id_env": "FPL_OIDC_CLIENT_ID",
+      "client_secret_env": "FPL_OIDC_CLIENT_SECRET",
+      "header": "X-API-Authorization",
+      "prefix": "Bearer "
+    }
+  }
+}

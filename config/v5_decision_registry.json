@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_native_decision_governance_v1",
+  "lineup": {
+    "player_score": {
+      "mean_weight": 1.0,
+      "risk_std_penalty": 0.10,
+      "start_probability_weight": 0.55,
+      "dnp_probability_penalty": 0.65
+    },
+    "captain_score": {
+      "mean_weight": 1.0,
+      "ceiling_std_weight": 0.18,
+      "start_probability_weight": 0.70,
+      "dnp_probability_penalty": 0.90
+    },
+    "vice_score": {
+      "mean_weight": 1.0,
+      "risk_std_penalty": 0.08,
+      "start_probability_weight": 0.85,
+      "dnp_probability_penalty": 1.00
+    },
+    "bench_score": {
+      "mean_weight": 1.0,
+      "start_probability_weight": 0.25,
+      "dnp_probability_penalty": 0.50
+    },
+    "tie_breakers": ["mean", "start_probability", "lower_cost", "element_id"]
+  },
+  "package_selection": {
+    "max_trace_packages": 5,
+    "minimum_robust_gain_to_review": 0.50,
+    "strong_robust_gain": 2.00,
+    "minimum_outperform_hold_probability": 0.55,
+    "strong_outperform_hold_probability": 0.65
+  },
+  "confidence": {
+    "high_minimum": 0.80,
+    "medium_high_minimum": 0.70,
+    "medium_minimum": 0.58,
+    "medium_low_minimum": 0.45
+  },
+  "trace": {
+    "require_truth_authority": true,
+    "require_ruleset_id": true,
+    "require_projection_model": true,
+    "require_gate0_constraints": true,
+    "require_dss_coverage": true,
+    "production_recommendation_enabled": false
+  },
+  "capabilities": [
+    "lineup_governance",
+    "captaincy",
+    "bench_utility",
+    "direct_challenger",
+    "structural_fit",
+    "governed_optimizer",
+    "sell_cost_affordability",
+    "package_churn_penalty",
+    "package_structural",
+    "multi_horizon",
+    "decision_recheck"
+  ]
+}

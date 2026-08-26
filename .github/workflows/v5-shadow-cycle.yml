@@ -108,6 +108,7 @@ jobs:
           FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
           FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
           FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
         run: docker compose -f deploy/v5/docker-compose.yml up -d --build
 
       - name: Wait for V5 cluster health

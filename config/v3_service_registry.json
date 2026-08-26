@@ -161,7 +161,10 @@
         "price_alerts.json", "prediction_quality.json", "framework_health.json", "challenger_scorecard.json",
         "report_state.json", "dss_watchlist.json"
       ],
-      "commands": [{"module": "src.engines.report_architecture", "args": []}],
+      "commands": [
+        {"module": "src.engines.report_architecture", "args": []},
+        {"module": "src.engines.report_enrichment", "args": []}
+      ],
       "artifacts": ["user_report.json", "technical_appendix.json", "report_state.json"],
       "latest_keys": ["report_summary"],
       "latest_file_keys": ["user_report", "technical_appendix", "report_state"]

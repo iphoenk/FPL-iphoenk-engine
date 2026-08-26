@@ -1,14 +1,26 @@
-# FPL iphoenk Engine v3.16.1
+# FPL iphoenk Engine v3.17.0
 
 Production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release
-- Engine version: `3.16.1`
-- Schema version: `45`
+- Engine version: `3.17.0`
+- Schema version: `46`
 - Release metadata source of truth: `src/version.py`
 - Production runtime: bounded-process V3 microservices
 - Runtime state is published to `runtime-data`; `main/data/**` is historical/source-repository material only.
 - Official FPL remains the only native authority. Challenger/enrichment sources are fail-soft and may not overwrite native Official fields.
+
+## v3.17 Full DSS operationalization
+V3.17 converts the remaining framework-only DSS capability states into explicit runtime evidence contracts. A module is ACTIVE only when its evaluator executes and produces evidence or an explicit safe-fallback state; unavailable external signals are never fabricated.
+
+Release acceptance requires:
+- Gate 0: 16/16 PASS
+- DSS Core: 50/50 ACTIVE
+- DSS Extensions: 16/16 ACTIVE
+- Enhancement Layers: 8/8 ACTIVE
+- overall framework GREEN and `go_allowed=true`
+
+V3.17 also operationalizes team-cluster penalty and early-season package-change cap as scored optimizer guardrails. These guardrails are configuration-owned and preserve numerical regression equivalence when their penalty is zero.
 
 ## v3.16.1 Configuration ownership hardening
 v3.16.1 reduces mutable hardcoding without changing the production output schema.
@@ -152,6 +164,7 @@ CI must fail on release metadata drift.
 - v3.10-v3.15: decision intelligence, prediction performance, lineup governance, historical priors, full DSS watchlist, and fast report serving
 - v3.16: Source Registry + Adapter Layer
 - v3.16.1: configuration ownership hardening
+- v3.17: runtime-evidence DSS operationalization and optimizer guardrails
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.

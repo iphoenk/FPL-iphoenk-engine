@@ -151,6 +151,7 @@ jobs:
         run: python -m src.v5.shadow_cycle
 
       - name: Validate shadow acceptance invariants, reporting and source health
+        id: validate_shadow
         run: |
           python - <<'PY'
           import json, os
@@ -183,6 +184,7 @@ jobs:
             'accepted_v3':expected,
             'v3_engine_version':p['v3'].get('engine_version'),
             'cycle_pass':p['acceptance_progress']['cycle_pass'],
+            'post_validation_status_before_finalize':p['acceptance_progress'].get('post_validation_status'),
             'parity':p['parity'],
             'operational_invariants':checks,
             'watchlist_position_counts':position_counts,
@@ -206,7 +208,8 @@ jobs:
           assert ext.get('counts') == {'ACTIVE':16}, f'DSS extensions must be 16/16 ACTIVE: {ext.get("counts")}'
           assert enh.get('counts') == {'ACTIVE':8}, f'Enhancements must be 8/8 ACTIVE: {enh.get("counts")}'
           assert p['parity']['pass'] is True, f"accepted V3/V5 parity failed: {p['parity']}"
-          assert p['acceptance_progress']['cycle_pass'] is True, 'cycle must not count as successful acceptance'
+          assert p['acceptance_progress']['cycle_pass'] is True, 'core shadow cycle must pass before postvalidation'
+          assert p['acceptance_progress']['counts_as_successful_acceptance_cycle'] is False, 'cycle must not count before postvalidation finalizer'
           if trigger.get('require_reporting_contract', False):
             assert (user.get('owned_squad') or {}).get('count') == 15, user.get('owned_squad')
             if user.get('report_mode') == 'FULL_DECISION':
@@ -222,6 +225,10 @@ jobs:
             if source_acceptance.get('require_network_or_cache_evidence', True):
               assert int(api.get('network_requests') or 0) + int(api.get('cache_hits') or 0) > 0, api
           PY
+
+      - name: Finalize postvalidated acceptance accounting
+        id: finalize_acceptance
+        run: python -m src.v5.shadow_acceptance
 
       - name: Upload shadow-cycle evidence
         if: always()
@@ -242,7 +249,6 @@ jobs:
           retention-days: 30
 
       - name: Publish isolated V5 shadow state
-        if: always()
         shell: bash
         run: |
           set -euo pipefail
@@ -264,7 +270,7 @@ jobs:
             echo "No shadow-state changes"
             exit 0
           fi
-          git commit -m "shadow: record accepted V3 V5 full-DSS cycle $GITHUB_RUN_NUMBER [skip ci]"
+          git commit -m "shadow: record postvalidated V3 V5 cycle $GITHUB_RUN_NUMBER [skip ci]"
           git push origin HEAD:"$V5_SHADOW_BRANCH"
 
       - name: Stop V5 cluster

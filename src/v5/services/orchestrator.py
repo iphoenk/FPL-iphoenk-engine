@@ -45,7 +45,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         raise KeyError(f"unsupported orchestrator operation: {operation}")
     runner_cfg = load_json_config(RUNNER_CONFIG)
     mode = str(payload.get("mode") or runner_cfg["default_mode"])
-    if mode not in {str(x) for x in runner_cfg["modes"]}:
+    if mode not in {str(value) for value in runner_cfg["modes"]}:
         raise ValueError(f"unsupported V5 runner mode: {mode}")
     correlation_id = str(payload.get("correlation_id") or uuid.uuid4().hex)
     team_id = int(payload.get("team_id") or expected_team_id())
@@ -122,7 +122,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
 
     price_service, price_operation = _route("price_build")
     prediction_service, prediction_operation = _route("prediction_build")
-    prediction_horizon = int(runner_cfg.get("prediction_horizon_gws") or 15)
+    prediction_horizon = int(runner_cfg["prediction_horizon_gws"])
     intelligence = invoke_parallel_envelopes(
         {
             "price": (
@@ -153,6 +153,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
 
     evaluation_service, evaluation_operation = _route("evaluation_build")
     prepare_service, prepare_operation = _route("decision_prepare")
+    preflight_service, preflight_operation = _route("gate0_preflight")
     analysis = invoke_parallel_envelopes(
         {
             "evaluation": (
@@ -172,14 +173,18 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 prepare_operation,
                 {"truth": truth, "price": price_bundle, "prediction": prediction},
             ),
+            "gate0_preflight": (
+                preflight_service,
+                preflight_operation,
+                {"truth": truth},
+            ),
         },
         correlation_id=correlation_id,
     )
-    performance["evaluation_and_decision_prepare"] = {
-        key: _metric(value) for key, value in analysis.items()
-    }
+    performance["analysis_preflight"] = {key: _metric(value) for key, value in analysis.items()}
     evaluation = analysis["evaluation"]["data"]
     prepared = analysis["decision_prepare"]["data"]
+    gate0_preflight = analysis["gate0_preflight"]["data"]
 
     finalize_env = _call(
         "decision_finalize",
@@ -189,6 +194,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "prediction": prediction,
             "evaluation": evaluation,
             "prepared": prepared,
+            "gate0_preflight": gate0_preflight,
         },
         correlation_id,
     )
@@ -255,7 +261,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         },
         "decision_summary": {
             **decision,
-            "packages": (decision.get("packages") or [])[: int(limits.get("packages", 20))],
+            "packages": (decision.get("packages") or [])[: int(limits["packages"])],
         },
         "framework_health": framework,
         "endpoint_health": {
@@ -272,6 +278,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "production_promotion_allowed": bool(runner_cfg["snapshot"].get("production_promotion_allowed", False)),
             "recommendation_allowed": framework.get("recommendation_allowed"),
             "go_allowed": framework.get("go_allowed"),
+            "gate0_preflight_pass": gate0_preflight.get("pass"),
             "microservices_required": True,
             "raw_authenticated_payload_persisted": False,
         },

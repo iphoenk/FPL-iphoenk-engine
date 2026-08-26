@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "architecture": "bounded-context-microservices",
   "mandatory": true,
   "policy": {
@@ -33,6 +33,6 @@
     "snapshot": {"port":8106,"bounded_context":"persistence-snapshot-and-history","handler":"src.v5.services.snapshot:handle","owns_modules":["persistence"],"dependencies":[],"status":"ACTIVE_ALPHA","critical":true},
     "evaluation": {"port":8107,"bounded_context":"prediction-calibration-backtest-and-external-challengers","handler":"src.v5.services.evaluation:handle","owns_modules":["prediction_evaluation","calibration_store","challenger_scorecard"],"dependencies":["prediction","snapshot"],"status":"ACTIVE_ALPHA","critical":true},
     "governance": {"port":8108,"bounded_context":"gate0-framework-health-enhancements-and-final-governance","handler":"src.v5.services.governance:handle","owns_modules":["gate0","enhancement_layers","framework_health"],"dependencies":["truth","price","prediction","evaluation","decision"],"status":"ACTIVE_ALPHA","critical":true},
-    "orchestrator": {"port":8100,"bounded_context":"workflow-orchestration-observability-and-degraded-mode-governance","handler":"src.v5.services.orchestrator:handle","owns_modules":["runner","performance","degraded_mode","service_runtime"],"dependencies":["ingestion","truth","price","prediction","evaluation","decision","governance","snapshot"],"status":"ACTIVE_ALPHA","critical":true}
+    "orchestrator": {"port":8100,"bounded_context":"workflow-orchestration-observability-degraded-mode-and-cluster-health","handler":"src.v5.services.orchestrator:handle","owns_modules":["runner","performance","degraded_mode","cluster_health","service_runtime"],"dependencies":["ingestion","truth","price","prediction","evaluation","decision","governance","snapshot"],"status":"ACTIVE_ALPHA","critical":true}
   }
 }

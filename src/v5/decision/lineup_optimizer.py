@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from typing import Any, Iterable, Mapping
 
 from src.v5.config_cache import load_json_config
@@ -93,12 +94,7 @@ def _rank(players: Iterable[dict[str, Any]], gw: int, profile: str) -> list[dict
         projection = gw_projection(row, gw)
         start_probability, dnp_probability = _minutes_probabilities(row)
         score = _score_from_metrics(policy, projection, start_probability, dnp_probability)
-        ranked.append(
-            (
-                (score, *_tie_values(row, projection, start_probability, tie_breakers)),
-                row,
-            )
-        )
+        ranked.append(((score, *_tie_values(row, projection, start_probability, tie_breakers)), row))
     ranked.sort(key=lambda item: item[0], reverse=True)
     return [item[1] for item in ranked]
 
@@ -123,8 +119,10 @@ def _selection_context(players: list[dict[str, Any]], gw: int) -> dict[str, Any]
 
     by_position: dict[str, list[tuple[tuple[float, ...], dict[str, Any]]]] = {position: [] for position in positions}
     metrics: dict[int, dict[str, float]] = {}
+    indexed: list[dict[str, Any]] = []
     for player in players:
         row = index_player(player)
+        indexed.append(row)
         element = int(row.get("element") or -1)
         projection = gw_projection(row, gw)
         start_probability, dnp_probability = _minutes_probabilities(row)
@@ -136,18 +134,13 @@ def _selection_context(players: list[dict[str, Any]], gw: int) -> dict[str, Any]
         }
         position = str(row.get("position"))
         if position in by_position:
-            by_position[position].append(
-                (
-                    (score, *_tie_values(row, projection, start_probability, tie_breakers)),
-                    row,
-                )
-            )
+            by_position[position].append(((score, *_tie_values(row, projection, start_probability, tie_breakers)), row))
 
     ranked_by_position: dict[str, list[dict[str, Any]]] = {}
     for position, rows in by_position.items():
         rows.sort(key=lambda item: item[0], reverse=True)
         ranked_by_position[position] = [item[1] for item in rows]
-    return {"ranked_by_position": ranked_by_position, "metrics": metrics}
+    return {"ranked_by_position": ranked_by_position, "metrics": metrics, "players": indexed}
 
 
 def _select_formation(players: list[dict[str, Any]], gw: int, lineup_rules: dict[str, Any]) -> dict[str, Any] | None:
@@ -188,8 +181,41 @@ def _select_formation(players: list[dict[str, Any]], gw: int, lineup_rules: dict
     return best
 
 
+def _enumerate_final_candidates(players: list[dict[str, Any]], gw: int, lineup_rules: dict[str, Any]) -> list[dict[str, Any]]:
+    context = _selection_context(players, gw)
+    indexed = context["players"]
+    metrics = context["metrics"]
+    starting_size = _required_int(lineup_rules, "starting_xi_size", "rules.lineup")
+    required_gk = _required_int(lineup_rules, "starting_goalkeepers", "rules.lineup")
+    legal_formations = {str(value) for value in lineup_rules.get("legal_formations") or ()}
+    candidates: list[dict[str, Any]] = []
+    for combo in itertools.combinations(indexed, starting_size):
+        rows = list(combo)
+        if sum(1 for player in rows if player.get("position") == "GK") != required_gk:
+            continue
+        counts = {
+            position: sum(1 for player in rows if player.get("position") == position)
+            for position in ("DEF", "MID", "FWD")
+        }
+        formation = f"{counts['DEF']}-{counts['MID']}-{counts['FWD']}"
+        if formation not in legal_formations:
+            continue
+        starter_metrics = [metrics[int(player["element"])] for player in rows]
+        candidates.append(
+            {
+                "formation": formation,
+                "starters": rows,
+                "selection_score": round(sum(item["score"] for item in starter_metrics), 4),
+                "mean": round(sum(item["mean"] for item in starter_metrics), 4),
+                "variance": round(sum(item["variance"] for item in starter_metrics), 4),
+            }
+        )
+    candidates.sort(key=lambda row: (row["selection_score"], row["mean"], row["formation"]), reverse=True)
+    return candidates
+
+
 def best_lineup(players: list[dict[str, Any]], gw: int, lineup_rules: dict[str, Any]) -> dict[str, Any]:
-    """Single lineup authority used by package scoring and final lineup governance."""
+    """Fast lineup authority for package scoring; final owned XI uses full enumeration once."""
     selected = _select_formation(players, gw, lineup_rules)
     if selected is None:
         return {"valid": False, "mean": 0.0, "variance": 0.0, "starters": []}
@@ -221,6 +247,52 @@ def _merged_owned_players(team: dict[str, Any], prediction: dict[str, Any]) -> l
     return merged
 
 
+def _safe_captain_pool(starters: list[dict[str, Any]], gw: int) -> list[dict[str, Any]]:
+    safety = _cfg()["lineup"].get("captain_safety")
+    if not isinstance(safety, dict):
+        raise RuntimeError("V5 lineup captain_safety policy missing")
+    minimum_start = _f(safety.get("minimum_start_probability"))
+    maximum_dnp = _f(safety.get("maximum_dnp_probability"))
+    minimum_pool = int(safety.get("minimum_pool_size") or 2)
+    safe_pool_size = max(minimum_pool, int(safety.get("safe_pool_size") or minimum_pool))
+    ranked = _rank(starters, gw, "captain_score")
+    safe = []
+    for player in ranked:
+        start_probability, dnp_probability = _minutes_probabilities(player)
+        if start_probability >= minimum_start and dnp_probability <= maximum_dnp:
+            safe.append(player)
+    if len(safe) < minimum_pool and bool(safety.get("fallback_to_all_starters", True)):
+        safe = ranked
+    return safe[:safe_pool_size]
+
+
+def _battle(best: dict[str, Any], second: dict[str, Any] | None, gw: int) -> dict[str, Any]:
+    if second is None:
+        return {"status": "NO_ALTERNATIVE", "margin": None, "starter_side": [], "bench_side": []}
+    threshold = _f(((_cfg()["lineup"].get("alternatives") or {}).get("close_margin_threshold")))
+    best_ids = {int(player["element"]) for player in best["starters"]}
+    second_ids = {int(player["element"]) for player in second["starters"]}
+    pmap = {int(player["element"]): player for player in [*best["starters"], *second["starters"]]}
+    margin = round(float(best["selection_score"]) - float(second["selection_score"]), 4)
+
+    def compact(element: int) -> dict[str, Any]:
+        player = pmap[element]
+        return {
+            "element": element,
+            "name": player.get("name"),
+            "position": player.get("position"),
+            "selection_score": round(player_score(player, gw, "player_score"), 4),
+        }
+
+    return {
+        "status": "CLOSE" if margin < threshold else "CLEAR",
+        "margin": margin,
+        "starter_side": [compact(element) for element in sorted(best_ids - second_ids)],
+        "bench_side": [compact(element) for element in sorted(second_ids - best_ids)],
+        "alternative_formation": second.get("formation"),
+    }
+
+
 def optimize_lineup(team: dict[str, Any], prediction: dict[str, Any], rules: dict[str, Any]) -> dict[str, Any]:
     players = _merged_owned_players(team, prediction)
     lineup_rules = rules.get("lineup") if isinstance(rules.get("lineup"), dict) else {}
@@ -238,23 +310,32 @@ def optimize_lineup(team: dict[str, Any], prediction: dict[str, Any], rules: dic
             "expected_owned": expected_size,
         }
 
-    selected = _select_formation(players, planning_gw, lineup_rules)
+    alternatives_cfg = _cfg()["lineup"].get("alternatives") or {}
+    enumerate_all = bool(alternatives_cfg.get("enumerate_all_legal_xi_for_final_squad", True))
+    candidates = _enumerate_final_candidates(players, planning_gw, lineup_rules) if enumerate_all else []
+    selected = candidates[0] if candidates else _select_formation(players, planning_gw, lineup_rules)
     if selected is None:
         return {"status": "BLOCKED", "reason": "no legal formation", "planning_gw": planning_gw}
 
     starters = selected["starters"]
     starter_ids = {int(player["element"]) for player in starters}
-    captain_rank = _rank(starters, planning_gw, "captain_score")
-    if not captain_rank:
-        return {"status": "BLOCKED", "reason": "captain pool empty", "planning_gw": planning_gw}
+    safe_pool = _safe_captain_pool(starters, planning_gw)
+    if len(safe_pool) < 2:
+        return {"status": "BLOCKED", "reason": "captain safe pool has fewer than two players", "planning_gw": planning_gw}
+    captain = safe_pool[0]
+    safe_ids = {int(player["element"]) for player in safe_pool}
     vice_rank = _rank(
-        (player for player in starters if int(player["element"]) != int(captain_rank[0]["element"])),
+        (
+            player
+            for player in starters
+            if int(player["element"]) != int(captain["element"]) and int(player["element"]) in safe_ids
+        ),
         planning_gw,
         "vice_score",
     )
     if not vice_rank:
-        return {"status": "BLOCKED", "reason": "vice-captain pool empty", "planning_gw": planning_gw}
-    captain, vice = captain_rank[0], vice_rank[0]
+        return {"status": "BLOCKED", "reason": "vice-captain safe pool empty", "planning_gw": planning_gw}
+    vice = vice_rank[0]
 
     bench_players = [player for player in players if int(player["element"]) not in starter_ids]
     reserve_gks = _rank((player for player in bench_players if player.get("position") == "GK"), planning_gw, "bench_score")
@@ -276,6 +357,20 @@ def optimize_lineup(team: dict[str, Any], prediction: dict[str, Any], rules: dic
             "score": round(player_score(player, planning_gw, profile), 4),
         }
 
+    publish_top_n = max(1, int(alternatives_cfg.get("publish_top_n") or 1))
+    published_candidates = (candidates or [selected])[:publish_top_n]
+    published_alternatives = [
+        {
+            "rank": index + 1,
+            "formation": candidate["formation"],
+            "selection_score": candidate["selection_score"],
+            "mean": candidate["mean"],
+            "std": round(float(candidate["variance"]) ** 0.5, 3),
+            "element_ids": sorted(int(player["element"]) for player in candidate["starters"]),
+        }
+        for index, candidate in enumerate(published_candidates)
+    ]
+
     return {
         "status": "READY",
         "planning_gw": planning_gw,
@@ -284,11 +379,16 @@ def optimize_lineup(team: dict[str, Any], prediction: dict[str, Any], rules: dic
         "bench": [view(player, profile="bench_score") for player in bench],
         "captain": view(captain, profile="captain_score"),
         "vice_captain": view(vice, profile="vice_score"),
+        "captain_safe_pool": [view(player, profile="captain_score") for player in safe_pool],
+        "main_starting_xi_battle": _battle(selected, candidates[1] if len(candidates) > 1 else None, planning_gw),
+        "alternatives": published_alternatives,
         "expected_starting_xi_mean": round(selected["mean"], 3),
         "selection_score": round(selected["selection_score"], 3),
         "authority": "v5_decision_lineup_optimizer",
         "performance": {
             "projection_lookup": "indexed_o1",
-            "formation_ranking": "single_rank_per_position_per_gw",
+            "package_scoring_formation_ranking": "single_rank_per_position_per_gw",
+            "final_lineup_enumeration": "all_legal_xi_once" if enumerate_all else "formation_rank_only",
+            "legal_xi_candidates": len(candidates),
         },
     }

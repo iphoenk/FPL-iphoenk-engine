@@ -5,8 +5,11 @@ import pytest
 from src.models.projection import project_points
 from src.rules import GOAL_POINTS, RULESET_ID
 from src.v5.acceptance import run_bootstrap_acceptance
+from src.v5.authenticated_official import safe_finance, summarize_authenticated_payloads
 from src.v5.contracts import Confidence, DecisionTrace, EvidenceRef
 from src.v5.finance import affordability_cost, resolve_sell_value, sell_cost
+from src.v5.official_auth import AuthMaterial, AuthPolicyError, allowed_routes, expected_team_id, safe_get
+from src.v5.price_trajectory import classify, risk_direction, trajectory_eta, urgency
 from src.v5.source_authority import primary_authority as source_primary_authority
 from src.v5.state import Phase, primary_authority as phase_primary_authority, resolve_phase
 
@@ -92,3 +95,47 @@ def test_finance_unknown_purchase_cost_fails_closed():
     assert resolved.purchase_cost is None
     with pytest.raises(RuntimeError):
         affordability_cost(owned=True, now_cost=50, sell_value=None)
+
+
+def test_authenticated_official_routes_are_registry_driven_and_allowlisted():
+    team_id = expected_team_id()
+    routes = allowed_routes()
+    assert routes["my_team"] == f"my-team/{team_id}/"
+    assert routes["transfers_latest"] == f"entry/{team_id}/transfers-latest/"
+    with pytest.raises(AuthPolicyError):
+        safe_get("arbitrary", AuthMaterial(mode="test", headers={}))
+
+
+def test_authenticated_finance_extracts_only_authoritative_squad():
+    team_id = expected_team_id()
+    my_team = {
+        "picks": [
+            {"element": 1, "purchase_price": 45, "selling_price": 47},
+            {"element": 2, "purchase_price": 50, "selling_price": 50},
+            {"element": 999, "purchase_price": 100, "selling_price": 100},
+        ],
+        "transfers": {"bank": 5, "value": 1000, "made": 0, "cost": 0},
+    }
+    finance = safe_finance(my_team, {1, 2})
+    assert finance["coverage"]["complete"] is True
+    assert finance["exact_sell_total"] == 97
+    summary = summarize_authenticated_payloads(
+        me={"player": {"entry": team_id}},
+        my_team=my_team,
+        transfers_latest=[],
+        authoritative_elements={1, 2},
+    )
+    assert summary["state"] == "VALID"
+    assert summary["raw_authenticated_payload_persisted"] is False
+
+
+def test_price_trajectory_thresholds_are_registry_driven():
+    meta = classify(net_transfers=30000, ownership_pct=5.0, estimated_owners=100000)
+    assert meta["actionable"] is True
+    assert meta["confidence"] == "HIGH"
+    now = datetime(2026, 8, 26, 12, 0, tzinfo=timezone.utc)
+    eta, predicted = trajectory_eta(now, 90.0, 2.0)
+    assert eta == 5.0
+    assert predicted is not None
+    assert risk_direction(-80.0, 1.0) == "FALL"
+    assert urgency(95.0, None, now) == "CRITICAL"

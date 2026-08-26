@@ -13,7 +13,7 @@ CONFIG = "config/v5_decision_registry.json"
 
 def _cfg() -> dict[str, Any]:
     data = load_json_config(CONFIG)
-    if not isinstance(data.get("capabilities"), list):
+    if not isinstance(data.get("capabilities"), list) or not isinstance(data.get("capability_activation"), dict):
         raise RuntimeError("invalid V5 decision registry capabilities")
     return data
 
@@ -30,33 +30,14 @@ def _inputs(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], di
 
 
 def _active_local_capabilities(packages: dict[str, Any], lineup: dict[str, Any]) -> list[str]:
-    configured = {str(value) for value in _cfg().get("capabilities") or []}
+    cfg = _cfg()
+    configured = {str(value) for value in cfg["capabilities"]}
+    activation = cfg["capability_activation"]
     active: set[str] = set()
-    if packages.get("status") == "READY" and bool(packages.get("gate0_prevalidated")):
-        active.update(
-            configured
-            & {
-                "direct_challenger",
-                "structural_fit",
-                "governed_optimizer",
-                "sell_cost_affordability",
-                "package_churn_penalty",
-                "package_structural",
-                "multi_horizon",
-                "decision_recheck",
-            }
-        )
+    if packages.get("status") == "READY" and bool(packages.get("local_legality_prevalidated")):
+        active.update(configured & {str(value) for value in activation.get("package_ready") or []})
     if lineup.get("status") == "READY":
-        active.update(
-            configured
-            & {
-                "lineup_governance",
-                "captaincy",
-                "bench_utility",
-                "decision_recheck",
-            }
-        )
-        active.update({"lineup_robustness", "captain_dnp_guard"})
+        active.update(configured & {str(value) for value in activation.get("lineup_ready") or []})
     return sorted(active)
 
 
@@ -76,6 +57,29 @@ def _prepare(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _blocked_trace(reason: str, gate0_preflight: dict[str, Any]) -> dict[str, Any]:
+    items = gate0_preflight.get("items") if isinstance(gate0_preflight.get("items"), list) else []
+    return {
+        "decision_type": "BLOCKED",
+        "action": reason,
+        "confidence": "LOW",
+        "evidence": [
+            {
+                "source": "governance-service",
+                "field": "gate0_preflight",
+                "authority": "governance-service",
+                "freshness": None,
+                "provenance": {
+                    "model": gate0_preflight.get("model"),
+                    "pass": gate0_preflight.get("pass"),
+                },
+            }
+        ] if gate0_preflight else [],
+        "constraints_checked": [str(item.get("id")) for item in items if item.get("id")],
+        "production_recommendation": None,
+    }
+
+
 def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -> dict[str, Any]:
     truth, prediction, price, rules, _ = _inputs(payload)
     prepared = prepared if isinstance(prepared, dict) else _prepare(payload)
@@ -84,6 +88,7 @@ def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -
     local_capabilities = prepared.get("capabilities") if isinstance(prepared.get("capabilities"), list) else []
     evaluation = payload.get("evaluation") if isinstance(payload.get("evaluation"), dict) else {}
     evaluation_capabilities = evaluation.get("capabilities") if isinstance(evaluation.get("capabilities"), list) else []
+    gate0_preflight = payload.get("gate0_preflight") if isinstance(payload.get("gate0_preflight"), dict) else {}
     dss = evaluate_dss(
         truth,
         price,
@@ -92,7 +97,9 @@ def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -
         external_capability_sources={"evaluation": evaluation_capabilities},
     )
 
-    if packages.get("status") == "READY" and lineup.get("status") == "READY":
+    local_ready = packages.get("status") == "READY" and lineup.get("status") == "READY"
+    preflight_ready = bool(gate0_preflight.get("pass"))
+    if local_ready:
         trace = build_trace(
             truth=truth,
             prediction=prediction,
@@ -100,17 +107,14 @@ def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -
             packages=packages,
             lineup=lineup,
             dss=dss,
+            gate0_preflight=gate0_preflight,
         )
-        status = "READY"
+        status = "READY" if preflight_ready else "BLOCKED"
     else:
-        trace = {
-            "decision_type": "BLOCKED",
-            "action": "BLOCK decision output until package and lineup authorities are READY",
-            "confidence": "LOW",
-            "evidence": [],
-            "constraints_checked": [],
-            "production_recommendation": None,
-        }
+        trace = _blocked_trace(
+            "BLOCK decision output until package and lineup authorities are READY",
+            gate0_preflight,
+        )
         status = "BLOCKED"
 
     return {
@@ -118,7 +122,8 @@ def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -
         "model": _cfg().get("model_id"),
         "package_model": packages.get("model"),
         "ruleset_id": rules.get("ruleset_id"),
-        "gate0_prevalidated": bool(packages.get("gate0_prevalidated", False)),
+        "gate0_preflight_pass": preflight_ready,
+        "local_legality_prevalidated": bool(packages.get("local_legality_prevalidated", False)),
         "package_count": packages.get("package_count", 0),
         "hold": packages.get("hold"),
         "packages": packages.get("packages", []),
@@ -133,6 +138,7 @@ def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -
             "lineup_authority": lineup.get("authority"),
             "dss_evaluation_model": dss.get("evaluation_model"),
             "evaluation_capabilities_consumed": sorted(str(x) for x in evaluation_capabilities),
+            "gate0_preflight_model": gate0_preflight.get("model"),
             "decision_trace_required": True,
             "production_recommendation_enabled": bool((_cfg().get("trace") or {}).get("production_recommendation_enabled", False)),
         },

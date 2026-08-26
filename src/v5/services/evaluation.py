@@ -3,9 +3,16 @@ from __future__ import annotations
 from typing import Any
 
 from src.v5.evaluation.core import challenger_scorecard, evaluate
+from src.v5.evaluation.evidence_guard import evaluate as evaluate_evidence_guard
 from src.v5.evaluation.shadow_parity import compare as compare_shadow
 
-BASE_CAPABILITIES = ["prediction_evaluation", "calibration_store", "challenger_scorecard", "shadow_parity"]
+BASE_CAPABILITIES = [
+    "prediction_evaluation",
+    "calibration_store",
+    "challenger_scorecard",
+    "shadow_parity",
+    "learning_loop",
+]
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:
@@ -23,8 +30,12 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     observations = payload.get("observations") if isinstance(payload.get("observations"), dict) else None
     result = evaluate(prediction, context, bootstrap, event_live, ledger)
     scorecard = challenger_scorecard(prediction, observations, result["accuracy"])
+    evidence_guard = evaluate_evidence_guard(prediction, context)
     capabilities = set(BASE_CAPABILITIES)
-    sample_size = int((((result.get("accuracy") or {}).get("overall") or {}).get("sample_size") or 0))
-    if sample_size > 0:
-        capabilities.add("learning_loop")
-    return {**result, "challenger_scorecard": scorecard, "capabilities": sorted(capabilities)}
+    capabilities.update(str(x) for x in evidence_guard.get("capabilities") or [])
+    return {
+        **result,
+        "challenger_scorecard": scorecard,
+        "evidence_guard": evidence_guard,
+        "capabilities": sorted(capabilities),
+    }

@@ -37,7 +37,10 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     assert any(c.get("module") == "src.engines.framework_health_audit" and "postflight" in c.get("args", []) for c in commands)
     assert any(c.get("module") == "src.engines.lineup_framework_health_overlay" for c in commands)
     assert any(c.get("module") == "src.engines.decision_quality_overlay" for c in commands)
-    assert services["reporting"]["commands"] == [{"module": "src.engines.report_architecture", "args": []}]
+    assert services["reporting"]["commands"] == [
+        {"module": "src.engines.report_architecture", "args": []},
+        {"module": "src.engines.report_enrichment", "args": []},
+    ]
 
 
 def test_collector_cli_flags_are_registry_driven():

@@ -119,12 +119,12 @@
   },
   "baseline": {
     "cost": 995,
-    "objective": 52.3249,
+    "objective": 52.3272,
     "squad_xpts_3": 157.72,
-    "squad_xpts_5": 262.88,
-    "squad_xpts_10": 526.25,
-    "squad_xpts_15": 789.31,
-    "best_xi_xpts_5": 207.78,
+    "squad_xpts_5": 262.9,
+    "squad_xpts_10": 526.27,
+    "squad_xpts_15": 789.32,
+    "best_xi_xpts_5": 207.79,
     "bench_adjusted_utility_5": 214.4,
     "best_xi_by_gw": [
       {
@@ -146,7 +146,7 @@
       },
       {
         "gw_offset": 2,
-        "xpts": 42.11,
+        "xpts": 42.12,
         "elements": [
           109,
           88,
@@ -215,7 +215,7 @@
     ],
     "itb": 5
   },
-  "screened_players": 570,
+  "screened_players": 571,
   "frontier_players": 28,
   "max_replacements": 4,
   "best_by_replacement_count": {
@@ -229,12 +229,12 @@
       "delta_squad_xpts_5": 7.06,
       "delta_squad_xpts_10": 14.84,
       "delta_squad_xpts_15": 21.95,
-      "delta_best_xi_xpts_5": 7.06,
-      "delta_bench_adjusted_utility_5": 7.05,
+      "delta_best_xi_xpts_5": 7.05,
+      "delta_bench_adjusted_utility_5": 7.06,
       "risk_delta": 0.252,
       "risk_penalty": 0.088,
-      "adjusted_best_xi_gain_5": 6.97,
-      "adjusted_utility_gain_5": 6.96,
+      "adjusted_best_xi_gain_5": 6.96,
+      "adjusted_utility_gain_5": 6.97,
       "classification": "MATERIAL_UPGRADE",
       "out": [
         {
@@ -274,17 +274,17 @@
       "target_cost": 995,
       "target_itb": 5,
       "delta_cost": 0,
-      "delta_objective": 2.971,
+      "delta_objective": 2.9709,
       "delta_squad_xpts_3": 9.55,
       "delta_squad_xpts_5": 14.53,
       "delta_squad_xpts_10": 30.1,
       "delta_squad_xpts_15": 44.72,
-      "delta_best_xi_xpts_5": 13.1,
-      "delta_bench_adjusted_utility_5": 13.26,
+      "delta_best_xi_xpts_5": 13.09,
+      "delta_bench_adjusted_utility_5": 13.27,
       "risk_delta": 0.344,
       "risk_penalty": 0.32,
-      "adjusted_best_xi_gain_5": 12.78,
-      "adjusted_utility_gain_5": 12.94,
+      "adjusted_best_xi_gain_5": 12.77,
+      "adjusted_utility_gain_5": 12.95,
       "classification": "MATERIAL_UPGRADE",
       "out": [
         {
@@ -352,16 +352,16 @@
       "target_cost": 1000,
       "target_itb": 0,
       "delta_cost": 5,
-      "delta_objective": 4.1524,
-      "delta_squad_xpts_3": 13.61,
-      "delta_squad_xpts_5": 20.28,
+      "delta_objective": 4.1522,
+      "delta_squad_xpts_3": 13.62,
+      "delta_squad_xpts_5": 20.27,
       "delta_squad_xpts_10": 40.98,
       "delta_squad_xpts_15": 61.4,
-      "delta_best_xi_xpts_5": 18.46,
+      "delta_best_xi_xpts_5": 18.45,
       "delta_bench_adjusted_utility_5": 18.67,
       "risk_delta": 0.423,
       "risk_penalty": 0.548,
-      "adjusted_best_xi_gain_5": 17.91,
+      "adjusted_best_xi_gain_5": 17.9,
       "adjusted_utility_gain_5": 18.12,
       "classification": "MATERIAL_UPGRADE",
       "out": [
@@ -387,11 +387,11 @@
           "team_id": 1,
           "cost": 65,
           "xpts_3": 9.02,
-          "xpts_5": 15.46,
-          "xpts_10": 31.09,
+          "xpts_5": 15.47,
+          "xpts_10": 31.1,
           "xpts_15": 46.54,
           "uncertainty": 0.135,
-          "objective": 3.0635
+          "objective": 3.0646
         },
         {
           "element": 15,
@@ -444,12 +444,12 @@
           "team": "Liverpool",
           "team_id": 14,
           "cost": 70,
-          "xpts_3": 13.08,
+          "xpts_3": 13.09,
           "xpts_5": 21.21,
-          "xpts_10": 41.97,
+          "xpts_10": 41.98,
           "xpts_15": 63.22,
           "uncertainty": 0.214,
-          "objective": 4.2449
+          "objective": 4.2459
         }
       ]
     },
@@ -458,16 +458,16 @@
       "target_cost": 1000,
       "target_itb": 0,
       "delta_cost": 5,
-      "delta_objective": 4.6799,
-      "delta_squad_xpts_3": 15.36,
-      "delta_squad_xpts_5": 22.73,
+      "delta_objective": 4.6797,
+      "delta_squad_xpts_3": 15.37,
+      "delta_squad_xpts_5": 22.72,
       "delta_squad_xpts_10": 46.4,
-      "delta_squad_xpts_15": 70.13,
-      "delta_best_xi_xpts_5": 18.97,
+      "delta_squad_xpts_15": 70.12,
+      "delta_best_xi_xpts_5": 18.96,
       "delta_bench_adjusted_utility_5": 19.42,
-      "risk_delta": 0.458,
+      "risk_delta": 0.457,
       "risk_penalty": 0.76,
-      "adjusted_best_xi_gain_5": 18.21,
+      "adjusted_best_xi_gain_5": 18.2,
       "adjusted_utility_gain_5": 18.66,
       "classification": "MATERIAL_UPGRADE",
       "out": [
@@ -495,8 +495,8 @@
           "xpts_3": 9.02,
           "xpts_5": 15.09,
           "xpts_10": 30.38,
-          "xpts_15": 45.18,
-          "uncertainty": 0.181,
+          "xpts_15": 45.19,
+          "uncertainty": 0.182,
           "objective": 3.0031
         },
         {
@@ -507,11 +507,11 @@
           "team_id": 1,
           "cost": 65,
           "xpts_3": 9.02,
-          "xpts_5": 15.46,
-          "xpts_10": 31.09,
+          "xpts_5": 15.47,
+          "xpts_10": 31.1,
           "xpts_15": 46.54,
           "uncertainty": 0.135,
-          "objective": 3.0635
+          "objective": 3.0646
         },
         {
           "element": 15,
@@ -578,12 +578,12 @@
           "team": "Liverpool",
           "team_id": 14,
           "cost": 70,
-          "xpts_3": 13.08,
+          "xpts_3": 13.09,
           "xpts_5": 21.21,
-          "xpts_10": 41.97,
+          "xpts_10": 41.98,
           "xpts_15": 63.22,
           "uncertainty": 0.214,
-          "objective": 4.2449
+          "objective": 4.2459
         }
       ]
     }
@@ -600,12 +600,12 @@
         "delta_squad_xpts_5": 7.06,
         "delta_squad_xpts_10": 14.84,
         "delta_squad_xpts_15": 21.95,
-        "delta_best_xi_xpts_5": 7.06,
-        "delta_bench_adjusted_utility_5": 7.05,
+        "delta_best_xi_xpts_5": 7.05,
+        "delta_bench_adjusted_utility_5": 7.06,
         "risk_delta": 0.252,
         "risk_penalty": 0.088,
-        "adjusted_best_xi_gain_5": 6.97,
-        "adjusted_utility_gain_5": 6.96,
+        "adjusted_best_xi_gain_5": 6.96,
+        "adjusted_utility_gain_5": 6.97,
         "classification": "MATERIAL_UPGRADE",
         "out": [
           {
@@ -645,16 +645,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 1.5622,
-        "delta_squad_xpts_3": 5.18,
+        "delta_objective": 1.5631,
+        "delta_squad_xpts_3": 5.19,
         "delta_squad_xpts_5": 7.67,
-        "delta_squad_xpts_10": 14.76,
+        "delta_squad_xpts_10": 14.77,
         "delta_squad_xpts_15": 22.49,
-        "delta_best_xi_xpts_5": 6.24,
+        "delta_best_xi_xpts_5": 6.23,
         "delta_bench_adjusted_utility_5": 6.41,
         "risk_delta": 0.098,
         "risk_penalty": 0.034,
-        "adjusted_best_xi_gain_5": 6.21,
+        "adjusted_best_xi_gain_5": 6.2,
         "adjusted_utility_gain_5": 6.38,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -681,12 +681,12 @@
             "team": "Liverpool",
             "team_id": 14,
             "cost": 70,
-            "xpts_3": 13.08,
+            "xpts_3": 13.09,
             "xpts_5": 21.21,
-            "xpts_10": 41.97,
+            "xpts_10": 41.98,
             "xpts_15": 63.22,
             "uncertainty": 0.214,
-            "objective": 4.2449
+            "objective": 4.2459
           }
         ]
       },
@@ -745,16 +745,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 1.1814,
-        "delta_squad_xpts_3": 4.06,
-        "delta_squad_xpts_5": 5.75,
+        "delta_objective": 1.1812,
+        "delta_squad_xpts_3": 4.07,
+        "delta_squad_xpts_5": 5.74,
         "delta_squad_xpts_10": 10.88,
         "delta_squad_xpts_15": 16.68,
-        "delta_best_xi_xpts_5": 5.75,
+        "delta_best_xi_xpts_5": 5.74,
         "delta_bench_adjusted_utility_5": 5.74,
         "risk_delta": 0.079,
         "risk_penalty": 0.028,
-        "adjusted_best_xi_gain_5": 5.72,
+        "adjusted_best_xi_gain_5": 5.71,
         "adjusted_utility_gain_5": 5.71,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -766,11 +766,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           }
         ],
         "in": [
@@ -781,12 +781,12 @@
             "team": "Liverpool",
             "team_id": 14,
             "cost": 70,
-            "xpts_3": 13.08,
+            "xpts_3": 13.09,
             "xpts_5": 21.21,
-            "xpts_10": 41.97,
+            "xpts_10": 41.98,
             "xpts_15": 63.22,
             "uncertainty": 0.214,
-            "objective": 4.2449
+            "objective": 4.2459
           }
         ]
       },
@@ -795,16 +795,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 1.1533,
+        "delta_objective": 1.1521,
         "delta_squad_xpts_3": 3.56,
-        "delta_squad_xpts_5": 5.73,
-        "delta_squad_xpts_10": 11.62,
-        "delta_squad_xpts_15": 17.36,
-        "delta_best_xi_xpts_5": 5.66,
+        "delta_squad_xpts_5": 5.72,
+        "delta_squad_xpts_10": 11.61,
+        "delta_squad_xpts_15": 17.35,
+        "delta_best_xi_xpts_5": 5.65,
         "delta_bench_adjusted_utility_5": 5.66,
         "risk_delta": 0.08,
         "risk_penalty": 0.028,
-        "adjusted_best_xi_gain_5": 5.63,
+        "adjusted_best_xi_gain_5": 5.62,
         "adjusted_utility_gain_5": 5.63,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -816,11 +816,11 @@
             "team_id": 4,
             "cost": 55,
             "xpts_3": 9.37,
-            "xpts_5": 15.28,
-            "xpts_10": 30.85,
-            "xpts_15": 46.14,
+            "xpts_5": 15.29,
+            "xpts_10": 30.86,
+            "xpts_15": 46.15,
             "uncertainty": 0.128,
-            "objective": 3.0689
+            "objective": 3.0702
           }
         ],
         "in": [
@@ -845,17 +845,17 @@
         "target_cost": 990,
         "target_itb": 10,
         "delta_cost": -5,
-        "delta_objective": 1.1588,
+        "delta_objective": 1.1576,
         "delta_squad_xpts_3": 3.91,
-        "delta_squad_xpts_5": 5.55,
-        "delta_squad_xpts_10": 11.38,
+        "delta_squad_xpts_5": 5.54,
+        "delta_squad_xpts_10": 11.37,
         "delta_squad_xpts_15": 16.96,
-        "delta_best_xi_xpts_5": 5.55,
-        "delta_bench_adjusted_utility_5": 5.54,
+        "delta_best_xi_xpts_5": 5.54,
+        "delta_bench_adjusted_utility_5": 5.55,
         "risk_delta": 0.073,
         "risk_penalty": 0.026,
-        "adjusted_best_xi_gain_5": 5.52,
-        "adjusted_utility_gain_5": 5.51,
+        "adjusted_best_xi_gain_5": 5.51,
+        "adjusted_utility_gain_5": 5.52,
         "classification": "MATERIAL_UPGRADE",
         "out": [
           {
@@ -866,11 +866,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           }
         ],
         "in": [
@@ -895,14 +895,14 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 1.3426,
+        "delta_objective": 1.3425,
         "delta_squad_xpts_3": 4.5,
         "delta_squad_xpts_5": 6.57,
         "delta_squad_xpts_10": 12.6,
         "delta_squad_xpts_15": 19.22,
         "delta_best_xi_xpts_5": 5.14,
         "delta_bench_adjusted_utility_5": 5.31,
-        "risk_delta": 0.082,
+        "risk_delta": 0.083,
         "risk_penalty": 0.029,
         "adjusted_best_xi_gain_5": 5.11,
         "adjusted_utility_gain_5": 5.28,
@@ -935,8 +935,8 @@
             "xpts_5": 20.11,
             "xpts_10": 39.81,
             "xpts_15": 59.95,
-            "uncertainty": 0.198,
-            "objective": 4.0253
+            "uncertainty": 0.199,
+            "objective": 4.0252
           }
         ]
       },
@@ -997,17 +997,17 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 2.971,
+        "delta_objective": 2.9709,
         "delta_squad_xpts_3": 9.55,
         "delta_squad_xpts_5": 14.53,
         "delta_squad_xpts_10": 30.1,
         "delta_squad_xpts_15": 44.72,
-        "delta_best_xi_xpts_5": 13.1,
-        "delta_bench_adjusted_utility_5": 13.26,
+        "delta_best_xi_xpts_5": 13.09,
+        "delta_bench_adjusted_utility_5": 13.27,
         "risk_delta": 0.344,
         "risk_penalty": 0.32,
-        "adjusted_best_xi_gain_5": 12.78,
-        "adjusted_utility_gain_5": 12.94,
+        "adjusted_best_xi_gain_5": 12.77,
+        "adjusted_utility_gain_5": 12.95,
         "classification": "MATERIAL_UPGRADE",
         "out": [
           {
@@ -1075,16 +1075,16 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 2.5902,
+        "delta_objective": 2.589,
         "delta_squad_xpts_3": 8.43,
-        "delta_squad_xpts_5": 12.61,
-        "delta_squad_xpts_10": 26.22,
+        "delta_squad_xpts_5": 12.6,
+        "delta_squad_xpts_10": 26.21,
         "delta_squad_xpts_15": 38.91,
-        "delta_best_xi_xpts_5": 12.61,
+        "delta_best_xi_xpts_5": 12.6,
         "delta_bench_adjusted_utility_5": 12.6,
         "risk_delta": 0.325,
         "risk_penalty": 0.314,
-        "adjusted_best_xi_gain_5": 12.3,
+        "adjusted_best_xi_gain_5": 12.29,
         "adjusted_utility_gain_5": 12.29,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -1110,11 +1110,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           }
         ],
         "in": [
@@ -1153,16 +1153,16 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 2.7209,
-        "delta_squad_xpts_3": 9.09,
-        "delta_squad_xpts_5": 13.22,
+        "delta_objective": 2.7208,
+        "delta_squad_xpts_3": 9.1,
+        "delta_squad_xpts_5": 13.21,
         "delta_squad_xpts_10": 26.14,
         "delta_squad_xpts_15": 39.45,
-        "delta_best_xi_xpts_5": 11.4,
+        "delta_best_xi_xpts_5": 11.39,
         "delta_bench_adjusted_utility_5": 11.61,
         "risk_delta": 0.171,
         "risk_penalty": 0.26,
-        "adjusted_best_xi_gain_5": 11.14,
+        "adjusted_best_xi_gain_5": 11.13,
         "adjusted_utility_gain_5": 11.35,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -1174,11 +1174,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -1217,12 +1217,12 @@
             "team": "Liverpool",
             "team_id": 14,
             "cost": 70,
-            "xpts_3": 13.08,
+            "xpts_3": 13.09,
             "xpts_5": 21.21,
-            "xpts_10": 41.97,
+            "xpts_10": 41.98,
             "xpts_15": 63.22,
             "uncertainty": 0.214,
-            "objective": 4.2449
+            "objective": 4.2459
           }
         ]
       },
@@ -1236,12 +1236,12 @@
         "delta_squad_xpts_5": 12.18,
         "delta_squad_xpts_10": 23.94,
         "delta_squad_xpts_15": 36.19,
-        "delta_best_xi_xpts_5": 10.75,
-        "delta_bench_adjusted_utility_5": 10.91,
+        "delta_best_xi_xpts_5": 10.74,
+        "delta_bench_adjusted_utility_5": 10.92,
         "risk_delta": 0.143,
         "risk_penalty": 0.25,
-        "adjusted_best_xi_gain_5": 10.5,
-        "adjusted_utility_gain_5": 10.66,
+        "adjusted_best_xi_gain_5": 10.49,
+        "adjusted_utility_gain_5": 10.67,
         "classification": "MATERIAL_UPGRADE",
         "out": [
           {
@@ -1309,8 +1309,8 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 2.5237,
-        "delta_squad_xpts_3": 8.15,
+        "delta_objective": 2.5245,
+        "delta_squad_xpts_3": 8.16,
         "delta_squad_xpts_5": 12.25,
         "delta_squad_xpts_10": 25.96,
         "delta_squad_xpts_15": 39.08,
@@ -1373,12 +1373,12 @@
             "team": "Bournemouth",
             "team_id": 3,
             "cost": 60,
-            "xpts_3": 11.53,
+            "xpts_3": 11.54,
             "xpts_5": 18.73,
             "xpts_10": 38.33,
             "xpts_15": 57.86,
             "uncertainty": 0.244,
-            "objective": 3.775
+            "objective": 3.7758
           }
         ]
       },
@@ -1392,11 +1392,11 @@
         "delta_squad_xpts_5": 13.98,
         "delta_squad_xpts_10": 27.8,
         "delta_squad_xpts_15": 41.05,
-        "delta_best_xi_xpts_5": 10.42,
+        "delta_best_xi_xpts_5": 10.41,
         "delta_bench_adjusted_utility_5": 10.84,
         "risk_delta": 0.11,
         "risk_penalty": 0.238,
-        "adjusted_best_xi_gain_5": 10.18,
+        "adjusted_best_xi_gain_5": 10.17,
         "adjusted_utility_gain_5": 10.6,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -1470,11 +1470,11 @@
         "delta_squad_xpts_5": 13.31,
         "delta_squad_xpts_10": 26.18,
         "delta_squad_xpts_15": 39.09,
-        "delta_best_xi_xpts_5": 10.42,
+        "delta_best_xi_xpts_5": 10.41,
         "delta_bench_adjusted_utility_5": 10.76,
         "risk_delta": 0.065,
         "risk_penalty": 0.223,
-        "adjusted_best_xi_gain_5": 10.2,
+        "adjusted_best_xi_gain_5": 10.19,
         "adjusted_utility_gain_5": 10.54,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -1543,17 +1543,17 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 2.5013,
+        "delta_objective": 2.5001,
         "delta_squad_xpts_3": 8.41,
-        "delta_squad_xpts_5": 12.12,
-        "delta_squad_xpts_10": 23.98,
+        "delta_squad_xpts_5": 12.11,
+        "delta_squad_xpts_10": 23.97,
         "delta_squad_xpts_15": 36.18,
-        "delta_best_xi_xpts_5": 10.3,
-        "delta_bench_adjusted_utility_5": 10.51,
-        "risk_delta": 0.155,
-        "risk_penalty": 0.254,
-        "adjusted_best_xi_gain_5": 10.05,
-        "adjusted_utility_gain_5": 10.26,
+        "delta_best_xi_xpts_5": 10.29,
+        "delta_bench_adjusted_utility_5": 10.52,
+        "risk_delta": 0.156,
+        "risk_penalty": 0.255,
+        "adjusted_best_xi_gain_5": 10.04,
+        "adjusted_utility_gain_5": 10.27,
         "classification": "MATERIAL_UPGRADE",
         "out": [
           {
@@ -1564,11 +1564,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -1597,8 +1597,8 @@
             "xpts_5": 20.11,
             "xpts_10": 39.81,
             "xpts_15": 59.95,
-            "uncertainty": 0.198,
-            "objective": 4.0253
+            "uncertainty": 0.199,
+            "objective": 4.0252
           },
           {
             "element": 94,
@@ -1623,16 +1623,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 4.1524,
-        "delta_squad_xpts_3": 13.61,
-        "delta_squad_xpts_5": 20.28,
+        "delta_objective": 4.1522,
+        "delta_squad_xpts_3": 13.62,
+        "delta_squad_xpts_5": 20.27,
         "delta_squad_xpts_10": 40.98,
         "delta_squad_xpts_15": 61.4,
-        "delta_best_xi_xpts_5": 18.46,
+        "delta_best_xi_xpts_5": 18.45,
         "delta_bench_adjusted_utility_5": 18.67,
         "risk_delta": 0.423,
         "risk_penalty": 0.548,
-        "adjusted_best_xi_gain_5": 17.91,
+        "adjusted_best_xi_gain_5": 17.9,
         "adjusted_utility_gain_5": 18.12,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -1658,11 +1658,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -1715,12 +1715,12 @@
             "team": "Liverpool",
             "team_id": 14,
             "cost": 70,
-            "xpts_3": 13.08,
+            "xpts_3": 13.09,
             "xpts_5": 21.21,
-            "xpts_10": 41.97,
+            "xpts_10": 41.98,
             "xpts_15": 63.22,
             "uncertainty": 0.214,
-            "objective": 4.2449
+            "objective": 4.2459
           }
         ]
       },
@@ -1729,16 +1729,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 3.9328,
+        "delta_objective": 3.9315,
         "delta_squad_xpts_3": 12.93,
-        "delta_squad_xpts_5": 19.18,
-        "delta_squad_xpts_10": 38.82,
+        "delta_squad_xpts_5": 19.17,
+        "delta_squad_xpts_10": 38.81,
         "delta_squad_xpts_15": 58.13,
-        "delta_best_xi_xpts_5": 17.36,
+        "delta_best_xi_xpts_5": 17.35,
         "delta_bench_adjusted_utility_5": 17.57,
-        "risk_delta": 0.407,
-        "risk_penalty": 0.542,
-        "adjusted_best_xi_gain_5": 16.82,
+        "risk_delta": 0.408,
+        "risk_penalty": 0.543,
+        "adjusted_best_xi_gain_5": 16.81,
         "adjusted_utility_gain_5": 17.03,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -1764,11 +1764,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -1811,8 +1811,8 @@
             "xpts_5": 20.11,
             "xpts_10": 39.81,
             "xpts_15": 59.95,
-            "uncertainty": 0.198,
-            "objective": 4.0253
+            "uncertainty": 0.199,
+            "objective": 4.0252
           },
           {
             "element": 94,
@@ -1840,12 +1840,12 @@
         "delta_squad_xpts_5": 21.04,
         "delta_squad_xpts_10": 42.64,
         "delta_squad_xpts_15": 63.0,
-        "delta_best_xi_xpts_5": 16.95,
-        "delta_bench_adjusted_utility_5": 17.43,
+        "delta_best_xi_xpts_5": 16.94,
+        "delta_bench_adjusted_utility_5": 17.44,
         "risk_delta": 0.362,
         "risk_penalty": 0.527,
-        "adjusted_best_xi_gain_5": 16.42,
-        "adjusted_utility_gain_5": 16.9,
+        "adjusted_best_xi_gain_5": 16.41,
+        "adjusted_utility_gain_5": 16.91,
         "classification": "MATERIAL_UPGRADE",
         "out": [
           {
@@ -1946,11 +1946,11 @@
         "delta_squad_xpts_5": 20.37,
         "delta_squad_xpts_10": 41.02,
         "delta_squad_xpts_15": 61.04,
-        "delta_best_xi_xpts_5": 16.95,
+        "delta_best_xi_xpts_5": 16.94,
         "delta_bench_adjusted_utility_5": 17.35,
         "risk_delta": 0.317,
         "risk_penalty": 0.511,
-        "adjusted_best_xi_gain_5": 16.44,
+        "adjusted_best_xi_gain_5": 16.43,
         "adjusted_utility_gain_5": 16.84,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -2047,16 +2047,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 3.8706,
+        "delta_objective": 3.8694,
         "delta_squad_xpts_3": 12.28,
-        "delta_squad_xpts_5": 19.12,
-        "delta_squad_xpts_10": 38.76,
+        "delta_squad_xpts_5": 19.11,
+        "delta_squad_xpts_10": 38.75,
         "delta_squad_xpts_15": 57.19,
-        "delta_best_xi_xpts_5": 16.7,
+        "delta_best_xi_xpts_5": 16.69,
         "delta_bench_adjusted_utility_5": 16.98,
         "risk_delta": 0.343,
         "risk_penalty": 0.52,
-        "adjusted_best_xi_gain_5": 16.18,
+        "adjusted_best_xi_gain_5": 16.17,
         "adjusted_utility_gain_5": 16.46,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -2096,11 +2096,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           }
         ],
         "in": [
@@ -2153,16 +2153,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 3.7223,
+        "delta_objective": 3.7211,
         "delta_squad_xpts_3": 11.71,
-        "delta_squad_xpts_5": 18.45,
-        "delta_squad_xpts_10": 37.14,
+        "delta_squad_xpts_5": 18.44,
+        "delta_squad_xpts_10": 37.13,
         "delta_squad_xpts_15": 55.23,
-        "delta_best_xi_xpts_5": 16.7,
+        "delta_best_xi_xpts_5": 16.69,
         "delta_bench_adjusted_utility_5": 16.9,
         "risk_delta": 0.298,
         "risk_penalty": 0.504,
-        "adjusted_best_xi_gain_5": 16.2,
+        "adjusted_best_xi_gain_5": 16.19,
         "adjusted_utility_gain_5": 16.4,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -2202,11 +2202,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           }
         ],
         "in": [
@@ -2259,16 +2259,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 4.1735,
-        "delta_squad_xpts_3": 13.48,
-        "delta_squad_xpts_5": 20.29,
-        "delta_squad_xpts_10": 42.57,
+        "delta_objective": 4.1731,
+        "delta_squad_xpts_3": 13.49,
+        "delta_squad_xpts_5": 20.28,
+        "delta_squad_xpts_10": 42.56,
         "delta_squad_xpts_15": 63.22,
-        "delta_best_xi_xpts_5": 16.34,
+        "delta_best_xi_xpts_5": 16.33,
         "delta_bench_adjusted_utility_5": 16.81,
         "risk_delta": 0.486,
         "risk_penalty": 0.57,
-        "adjusted_best_xi_gain_5": 15.77,
+        "adjusted_best_xi_gain_5": 15.76,
         "adjusted_utility_gain_5": 16.24,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -2294,11 +2294,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -2351,12 +2351,12 @@
             "team": "Bournemouth",
             "team_id": 3,
             "cost": 60,
-            "xpts_3": 11.53,
+            "xpts_3": 11.54,
             "xpts_5": 18.73,
             "xpts_10": 38.33,
             "xpts_15": 57.86,
             "uncertainty": 0.244,
-            "objective": 3.775
+            "objective": 3.7758
           }
         ]
       },
@@ -2365,16 +2365,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 4.0252,
-        "delta_squad_xpts_3": 12.91,
-        "delta_squad_xpts_5": 19.62,
-        "delta_squad_xpts_10": 40.95,
+        "delta_objective": 4.0249,
+        "delta_squad_xpts_3": 12.92,
+        "delta_squad_xpts_5": 19.61,
+        "delta_squad_xpts_10": 40.94,
         "delta_squad_xpts_15": 61.26,
-        "delta_best_xi_xpts_5": 16.34,
+        "delta_best_xi_xpts_5": 16.33,
         "delta_bench_adjusted_utility_5": 16.73,
         "risk_delta": 0.441,
         "risk_penalty": 0.554,
-        "adjusted_best_xi_gain_5": 15.79,
+        "adjusted_best_xi_gain_5": 15.78,
         "adjusted_utility_gain_5": 16.18,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -2400,11 +2400,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -2457,12 +2457,12 @@
             "team": "Bournemouth",
             "team_id": 3,
             "cost": 60,
-            "xpts_3": 11.53,
+            "xpts_3": 11.54,
             "xpts_5": 18.73,
             "xpts_10": 38.33,
             "xpts_15": 57.86,
             "uncertainty": 0.244,
-            "objective": 3.775
+            "objective": 3.7758
           }
         ]
       }
@@ -2473,16 +2473,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 4.6799,
-        "delta_squad_xpts_3": 15.36,
-        "delta_squad_xpts_5": 22.73,
+        "delta_objective": 4.6797,
+        "delta_squad_xpts_3": 15.37,
+        "delta_squad_xpts_5": 22.72,
         "delta_squad_xpts_10": 46.4,
-        "delta_squad_xpts_15": 70.13,
-        "delta_best_xi_xpts_5": 18.97,
+        "delta_squad_xpts_15": 70.12,
+        "delta_best_xi_xpts_5": 18.96,
         "delta_bench_adjusted_utility_5": 19.42,
-        "risk_delta": 0.458,
+        "risk_delta": 0.457,
         "risk_penalty": 0.76,
-        "adjusted_best_xi_gain_5": 18.21,
+        "adjusted_best_xi_gain_5": 18.2,
         "adjusted_utility_gain_5": 18.66,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -2510,8 +2510,8 @@
             "xpts_3": 9.02,
             "xpts_5": 15.09,
             "xpts_10": 30.38,
-            "xpts_15": 45.18,
-            "uncertainty": 0.181,
+            "xpts_15": 45.19,
+            "uncertainty": 0.182,
             "objective": 3.0031
           },
           {
@@ -2522,11 +2522,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -2593,12 +2593,12 @@
             "team": "Liverpool",
             "team_id": 14,
             "cost": 70,
-            "xpts_3": 13.08,
+            "xpts_3": 13.09,
             "xpts_5": 21.21,
-            "xpts_10": 41.97,
+            "xpts_10": 41.98,
             "xpts_15": 63.22,
             "uncertainty": 0.214,
-            "objective": 4.2449
+            "objective": 4.2459
           }
         ]
       },
@@ -2607,17 +2607,17 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 4.6111,
-        "delta_squad_xpts_3": 14.92,
-        "delta_squad_xpts_5": 22.59,
+        "delta_objective": 4.611,
+        "delta_squad_xpts_3": 14.93,
+        "delta_squad_xpts_5": 22.58,
         "delta_squad_xpts_10": 45.62,
-        "delta_squad_xpts_15": 68.81,
-        "delta_best_xi_xpts_5": 18.89,
-        "delta_bench_adjusted_utility_5": 19.32,
-        "risk_delta": 0.428,
-        "risk_penalty": 0.75,
-        "adjusted_best_xi_gain_5": 18.14,
-        "adjusted_utility_gain_5": 18.57,
+        "delta_squad_xpts_15": 68.8,
+        "delta_best_xi_xpts_5": 18.88,
+        "delta_bench_adjusted_utility_5": 19.33,
+        "risk_delta": 0.427,
+        "risk_penalty": 0.749,
+        "adjusted_best_xi_gain_5": 18.13,
+        "adjusted_utility_gain_5": 18.58,
         "classification": "MATERIAL_UPGRADE",
         "out": [
           {
@@ -2644,8 +2644,8 @@
             "xpts_3": 9.02,
             "xpts_5": 15.09,
             "xpts_10": 30.38,
-            "xpts_15": 45.18,
-            "uncertainty": 0.181,
+            "xpts_15": 45.19,
+            "uncertainty": 0.182,
             "objective": 3.0031
           },
           {
@@ -2656,11 +2656,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -2727,12 +2727,12 @@
             "team": "Liverpool",
             "team_id": 14,
             "cost": 70,
-            "xpts_3": 13.08,
+            "xpts_3": 13.09,
             "xpts_5": 21.21,
-            "xpts_10": 41.97,
+            "xpts_10": 41.98,
             "xpts_15": 63.22,
             "uncertainty": 0.214,
-            "objective": 4.2449
+            "objective": 4.2459
           }
         ]
       },
@@ -2741,17 +2741,17 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 4.9628,
-        "delta_squad_xpts_3": 15.91,
-        "delta_squad_xpts_5": 24.31,
-        "delta_squad_xpts_10": 49.88,
+        "delta_objective": 4.9625,
+        "delta_squad_xpts_3": 15.92,
+        "delta_squad_xpts_5": 24.3,
+        "delta_squad_xpts_10": 49.87,
         "delta_squad_xpts_15": 74.32,
-        "delta_best_xi_xpts_5": 18.41,
-        "delta_bench_adjusted_utility_5": 19.11,
+        "delta_best_xi_xpts_5": 18.4,
+        "delta_bench_adjusted_utility_5": 19.12,
         "risk_delta": 0.471,
         "risk_penalty": 0.765,
-        "adjusted_best_xi_gain_5": 17.65,
-        "adjusted_utility_gain_5": 18.35,
+        "adjusted_best_xi_gain_5": 17.64,
+        "adjusted_utility_gain_5": 18.36,
         "classification": "MATERIAL_UPGRADE",
         "out": [
           {
@@ -2790,11 +2790,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -2861,12 +2861,12 @@
             "team": "Bournemouth",
             "team_id": 3,
             "cost": 60,
-            "xpts_3": 11.53,
+            "xpts_3": 11.54,
             "xpts_5": 18.73,
             "xpts_10": 38.33,
             "xpts_15": 57.86,
             "uncertainty": 0.244,
-            "objective": 3.775
+            "objective": 3.7758
           }
         ]
       },
@@ -2875,16 +2875,16 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 4.8146,
-        "delta_squad_xpts_3": 15.34,
-        "delta_squad_xpts_5": 23.64,
-        "delta_squad_xpts_10": 48.26,
+        "delta_objective": 4.8142,
+        "delta_squad_xpts_3": 15.35,
+        "delta_squad_xpts_5": 23.63,
+        "delta_squad_xpts_10": 48.25,
         "delta_squad_xpts_15": 72.36,
-        "delta_best_xi_xpts_5": 18.41,
+        "delta_best_xi_xpts_5": 18.4,
         "delta_bench_adjusted_utility_5": 19.03,
         "risk_delta": 0.426,
         "risk_penalty": 0.749,
-        "adjusted_best_xi_gain_5": 17.66,
+        "adjusted_best_xi_gain_5": 17.65,
         "adjusted_utility_gain_5": 18.28,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -2924,11 +2924,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -2995,12 +2995,12 @@
             "team": "Bournemouth",
             "team_id": 3,
             "cost": 60,
-            "xpts_3": 11.53,
+            "xpts_3": 11.54,
             "xpts_5": 18.73,
             "xpts_10": 38.33,
             "xpts_15": 57.86,
             "uncertainty": 0.244,
-            "objective": 3.775
+            "objective": 3.7758
           }
         ]
       },
@@ -3009,16 +3009,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 4.1995,
-        "delta_squad_xpts_3": 13.76,
-        "delta_squad_xpts_5": 20.37,
+        "delta_objective": 4.1993,
+        "delta_squad_xpts_3": 13.77,
+        "delta_squad_xpts_5": 20.36,
         "delta_squad_xpts_10": 42.19,
         "delta_squad_xpts_15": 62.73,
-        "delta_best_xi_xpts_5": 18.55,
+        "delta_best_xi_xpts_5": 18.54,
         "delta_bench_adjusted_utility_5": 18.76,
         "risk_delta": 0.44,
         "risk_penalty": 0.754,
-        "adjusted_best_xi_gain_5": 17.8,
+        "adjusted_best_xi_gain_5": 17.79,
         "adjusted_utility_gain_5": 18.01,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -3058,11 +3058,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -3129,12 +3129,12 @@
             "team": "Liverpool",
             "team_id": 14,
             "cost": 70,
-            "xpts_3": 13.08,
+            "xpts_3": 13.09,
             "xpts_5": 21.21,
-            "xpts_10": 41.97,
+            "xpts_10": 41.98,
             "xpts_15": 63.22,
             "uncertainty": 0.214,
-            "objective": 4.2449
+            "objective": 4.2459
           }
         ]
       },
@@ -3143,16 +3143,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 4.1308,
-        "delta_squad_xpts_3": 13.32,
-        "delta_squad_xpts_5": 20.23,
+        "delta_objective": 4.1306,
+        "delta_squad_xpts_3": 13.33,
+        "delta_squad_xpts_5": 20.22,
         "delta_squad_xpts_10": 41.41,
         "delta_squad_xpts_15": 61.41,
-        "delta_best_xi_xpts_5": 18.4,
+        "delta_best_xi_xpts_5": 18.39,
         "delta_bench_adjusted_utility_5": 18.61,
         "risk_delta": 0.41,
         "risk_penalty": 0.744,
-        "adjusted_best_xi_gain_5": 17.66,
+        "adjusted_best_xi_gain_5": 17.65,
         "adjusted_utility_gain_5": 17.87,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -3192,11 +3192,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -3263,12 +3263,12 @@
             "team": "Liverpool",
             "team_id": 14,
             "cost": 70,
-            "xpts_3": 13.08,
+            "xpts_3": 13.09,
             "xpts_5": 21.21,
-            "xpts_10": 41.97,
+            "xpts_10": 41.98,
             "xpts_15": 63.22,
             "uncertainty": 0.214,
-            "objective": 4.2449
+            "objective": 4.2459
           }
         ]
       },
@@ -3277,11 +3277,11 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 4.4603,
+        "delta_objective": 4.4591,
         "delta_squad_xpts_3": 14.68,
-        "delta_squad_xpts_5": 21.63,
-        "delta_squad_xpts_10": 44.24,
-        "delta_squad_xpts_15": 66.86,
+        "delta_squad_xpts_5": 21.62,
+        "delta_squad_xpts_10": 44.23,
+        "delta_squad_xpts_15": 66.85,
         "delta_best_xi_xpts_5": 17.87,
         "delta_bench_adjusted_utility_5": 18.32,
         "risk_delta": 0.442,
@@ -3314,8 +3314,8 @@
             "xpts_3": 9.02,
             "xpts_5": 15.09,
             "xpts_10": 30.38,
-            "xpts_15": 45.18,
-            "uncertainty": 0.181,
+            "xpts_15": 45.19,
+            "uncertainty": 0.182,
             "objective": 3.0031
           },
           {
@@ -3326,11 +3326,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -3387,8 +3387,8 @@
             "xpts_5": 20.11,
             "xpts_10": 39.81,
             "xpts_15": 59.95,
-            "uncertainty": 0.198,
-            "objective": 4.0253
+            "uncertainty": 0.199,
+            "objective": 4.0252
           },
           {
             "element": 94,
@@ -3411,16 +3411,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 4.3916,
+        "delta_objective": 4.3903,
         "delta_squad_xpts_3": 14.24,
-        "delta_squad_xpts_5": 21.49,
-        "delta_squad_xpts_10": 43.46,
-        "delta_squad_xpts_15": 65.54,
-        "delta_best_xi_xpts_5": 17.79,
+        "delta_squad_xpts_5": 21.48,
+        "delta_squad_xpts_10": 43.45,
+        "delta_squad_xpts_15": 65.53,
+        "delta_best_xi_xpts_5": 17.78,
         "delta_bench_adjusted_utility_5": 18.23,
         "risk_delta": 0.412,
         "risk_penalty": 0.744,
-        "adjusted_best_xi_gain_5": 17.05,
+        "adjusted_best_xi_gain_5": 17.04,
         "adjusted_utility_gain_5": 17.49,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -3448,8 +3448,8 @@
             "xpts_3": 9.02,
             "xpts_5": 15.09,
             "xpts_10": 30.38,
-            "xpts_15": 45.18,
-            "uncertainty": 0.181,
+            "xpts_15": 45.19,
+            "uncertainty": 0.182,
             "objective": 3.0031
           },
           {
@@ -3460,11 +3460,11 @@
             "team_id": 1,
             "cost": 65,
             "xpts_3": 9.02,
-            "xpts_5": 15.46,
-            "xpts_10": 31.09,
+            "xpts_5": 15.47,
+            "xpts_10": 31.1,
             "xpts_15": 46.54,
             "uncertainty": 0.135,
-            "objective": 3.0635
+            "objective": 3.0646
           },
           {
             "element": 15,
@@ -3521,8 +3521,8 @@
             "xpts_5": 20.11,
             "xpts_10": 39.81,
             "xpts_15": 59.95,
-            "uncertainty": 0.198,
-            "objective": 4.0253
+            "uncertainty": 0.199,
+            "objective": 4.0252
           },
           {
             "element": 94,
@@ -3548,16 +3548,16 @@
     "target_cost": 1000,
     "target_itb": 0,
     "delta_cost": 5,
-    "delta_objective": 4.6799,
-    "delta_squad_xpts_3": 15.36,
-    "delta_squad_xpts_5": 22.73,
+    "delta_objective": 4.6797,
+    "delta_squad_xpts_3": 15.37,
+    "delta_squad_xpts_5": 22.72,
     "delta_squad_xpts_10": 46.4,
-    "delta_squad_xpts_15": 70.13,
-    "delta_best_xi_xpts_5": 18.97,
+    "delta_squad_xpts_15": 70.12,
+    "delta_best_xi_xpts_5": 18.96,
     "delta_bench_adjusted_utility_5": 19.42,
-    "risk_delta": 0.458,
+    "risk_delta": 0.457,
     "risk_penalty": 0.76,
-    "adjusted_best_xi_gain_5": 18.21,
+    "adjusted_best_xi_gain_5": 18.2,
     "adjusted_utility_gain_5": 18.66,
     "classification": "MATERIAL_UPGRADE",
     "out": [
@@ -3585,8 +3585,8 @@
         "xpts_3": 9.02,
         "xpts_5": 15.09,
         "xpts_10": 30.38,
-        "xpts_15": 45.18,
-        "uncertainty": 0.181,
+        "xpts_15": 45.19,
+        "uncertainty": 0.182,
         "objective": 3.0031
       },
       {
@@ -3597,11 +3597,11 @@
         "team_id": 1,
         "cost": 65,
         "xpts_3": 9.02,
-        "xpts_5": 15.46,
-        "xpts_10": 31.09,
+        "xpts_5": 15.47,
+        "xpts_10": 31.1,
         "xpts_15": 46.54,
         "uncertainty": 0.135,
-        "objective": 3.0635
+        "objective": 3.0646
       },
       {
         "element": 15,
@@ -3668,12 +3668,12 @@
         "team": "Liverpool",
         "team_id": 14,
         "cost": 70,
-        "xpts_3": 13.08,
+        "xpts_3": 13.09,
         "xpts_5": 21.21,
-        "xpts_10": 41.97,
+        "xpts_10": 41.98,
         "xpts_15": 63.22,
         "uncertainty": 0.214,
-        "objective": 4.2449
+        "objective": 4.2459
       }
     ]
   },

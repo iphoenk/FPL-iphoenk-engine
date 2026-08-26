@@ -119,15 +119,15 @@
     ],
     "fail_closed_on_missing_purchase_price": true
   },
-  "screened_players": 570,
+  "screened_players": 571,
   "current": {
     "cost": 995,
-    "objective": 52.3249,
+    "objective": 52.3272,
     "squad_xpts_3": 157.72,
-    "squad_xpts_5": 262.88,
-    "squad_xpts_10": 526.25,
-    "squad_xpts_15": 789.31,
-    "best_xi_xpts_5": 207.78,
+    "squad_xpts_5": 262.9,
+    "squad_xpts_10": 526.27,
+    "squad_xpts_15": 789.32,
+    "best_xi_xpts_5": 207.79,
     "bench_adjusted_utility_5": 214.4,
     "best_xi_by_gw": [
       {
@@ -149,7 +149,7 @@
       },
       {
         "gw_offset": 2,
-        "xpts": 42.11,
+        "xpts": 42.12,
         "elements": [
           109,
           88,
@@ -220,9 +220,9 @@
   "optimized": {
     "cost": 995,
     "objective": 60.4017,
-    "squad_xpts_3": 183.43,
-    "squad_xpts_5": 303.13,
-    "squad_xpts_10": 604.39,
+    "squad_xpts_3": 183.44,
+    "squad_xpts_5": 303.12,
+    "squad_xpts_10": 604.4,
     "squad_xpts_15": 904.54,
     "best_xi_xpts_5": 232.32,
     "bench_adjusted_utility_5": 240.81,
@@ -316,7 +316,7 @@
     "itb": 5
   },
   "delta": {
-    "best_xi_xpts_5": 24.54,
+    "best_xi_xpts_5": 24.53,
     "bench_adjusted_utility_5": 26.41
   },
   "classification": "MATERIAL_UPGRADE",
@@ -469,7 +469,7 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.5622,
+      "objective_delta": 1.5631,
       "xpts5_delta": 7.67
     },
     {
@@ -499,8 +499,8 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.1814,
-      "xpts5_delta": 5.75
+      "objective_delta": 1.1812,
+      "xpts5_delta": 5.74
     },
     {
       "owned": 565,
@@ -509,8 +509,8 @@
       "challenger_name": "Schade",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.1533,
-      "xpts5_delta": 5.73
+      "objective_delta": 1.1521,
+      "xpts5_delta": 5.72
     },
     {
       "owned": 254,
@@ -549,8 +549,8 @@
       "challenger_name": "Mbeumo",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 0.1502,
-      "xpts5_delta": 0.83
+      "objective_delta": 0.1492,
+      "xpts5_delta": 0.82
     },
     {
       "owned": 109,
@@ -599,8 +599,8 @@
       "challenger_name": "Mbeumo",
       "position": "MID",
       "cost_delta": -40,
-      "objective_delta": -0.2646,
-      "xpts5_delta": -1.33
+      "objective_delta": -0.2656,
+      "xpts5_delta": -1.34
     },
     {
       "owned": 411,

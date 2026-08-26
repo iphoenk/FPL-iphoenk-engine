@@ -1,7 +1,7 @@
 {
-  "schema_version": 2,
-  "model": "v5_dss_source_fusion_v2",
-  "generated_at": "2026-08-26T21:21:13.593618+00:00",
+  "schema_version": 3,
+  "model": "v5_dss_source_fusion_v3",
+  "generated_at": "2026-08-26T21:42:17.342112+00:00",
   "status": "ACTIVE",
   "season": {
     "season": "2026/27",
@@ -14,23 +14,28 @@
     "active_sources": 1,
     "degraded_sources": 0,
     "unavailable_sources": 1,
+    "plan_restricted_sources": 1,
     "sources": {
       "understat": {
         "status": "ACTIVE",
+        "availability_class": null,
         "reason": null,
-        "fetch_mode": "NETWORK",
+        "fetch_mode": "CACHE",
         "player_count": 310,
         "fixture_count": 0,
         "credential_present": null,
         "network_requests": null,
         "cache_hits": null,
+        "availability_cache_hits": null,
         "competitions_attempted": null,
         "competitions_resolved": null,
         "quota_remaining": null,
-        "quota_limit": null
+        "quota_limit": null,
+        "fail_neutral": null
       },
       "api_football": {
         "status": "UNAVAILABLE",
+        "availability_class": "PLAN_RESTRICTED",
         "reason": "RuntimeError:API-Football errors: {'plan': 'Free plans do not have access to this season, try from 2022 to 2024.'}",
         "fetch_mode": null,
         "player_count": 0,
@@ -38,10 +43,12 @@
         "credential_present": true,
         "network_requests": 1,
         "cache_hits": 0,
+        "availability_cache_hits": 0,
         "competitions_attempted": 1,
         "competitions_resolved": 0,
         "quota_remaining": null,
-        "quota_limit": null
+        "quota_limit": null,
+        "fail_neutral": true
       }
     }
   },
@@ -50,7 +57,7 @@
       "source": "understat",
       "status": "ACTIVE",
       "generated_at": "2026-08-26T21:21:13.592336+00:00",
-      "fetch_mode": "NETWORK",
+      "fetch_mode": "CACHE",
       "season": {
         "season": "2026/27",
         "start_year": 2026,
@@ -4107,6 +4114,7 @@
     "api_football": {
       "source": "api_football",
       "status": "UNAVAILABLE",
+      "availability_class": "PLAN_RESTRICTED",
       "reason": "RuntimeError:API-Football errors: {'plan': 'Free plans do not have access to this season, try from 2022 to 2024.'}",
       "fixtures": [],
       "season": {
@@ -4127,6 +4135,7 @@
         "cache_hits": 0,
         "league_cache_hits": 0,
         "fixture_cache_hits": 0,
+        "availability_cache_hits": 0,
         "competitions_attempted": 1,
         "competitions_resolved": 0,
         "fixtures_returned": 0,
@@ -4136,11 +4145,13 @@
         "team_matches_unmatched": 0,
         "quota_remaining": null,
         "quota_limit": null,
-        "cache_ttl_seconds": 43200
+        "cache_ttl_seconds": 43200,
+        "availability_cache_ttl_seconds": 21600
       },
       "governance": {
         "fail_neutral": true,
-        "missing_is_unavailable_not_zero": true
+        "missing_is_unavailable_not_zero": true,
+        "cached_provider_restriction": false
       }
     }
   },
@@ -4148,6 +4159,7 @@
     "official_fpl_remains_native_authority": true,
     "fpl_core_insights_remains_primary_epl_advanced_stats": true,
     "challenger_failure_is_fail_neutral": true,
+    "optional_source_plan_restriction_is_not_engine_failure": true,
     "missing_enrichment_is_unavailable_not_zero": true,
     "network_fetch_owner": "ingestion"
   }

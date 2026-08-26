@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T21:21:13.973090+00:00",
+  "generated_at": "2026-08-26T21:42:17.612399+00:00",
   "schema_version": 513,
   "model_version": "player_projection_v5_historical_prior",
   "ruleset_id": "FPL_2026_27",
@@ -53434,7 +53434,7 @@
       "position": "DEF",
       "now_cost": 55,
       "status": "a",
-      "ownership_pct": 2.0,
+      "ownership_pct": 2.1,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -164519,7 +164519,7 @@
       "position": "DEF",
       "now_cost": 40,
       "status": "a",
-      "ownership_pct": 2.7,
+      "ownership_pct": 2.8,
       "current_season": {
         "starts": 1,
         "minutes": 63
@@ -294255,23 +294255,28 @@
         "active_sources": 1,
         "degraded_sources": 0,
         "unavailable_sources": 1,
+        "plan_restricted_sources": 1,
         "sources": {
           "understat": {
             "status": "ACTIVE",
+            "availability_class": null,
             "reason": null,
-            "fetch_mode": "NETWORK",
+            "fetch_mode": "CACHE",
             "player_count": 310,
             "fixture_count": 0,
             "credential_present": null,
             "network_requests": null,
             "cache_hits": null,
+            "availability_cache_hits": null,
             "competitions_attempted": null,
             "competitions_resolved": null,
             "quota_remaining": null,
-            "quota_limit": null
+            "quota_limit": null,
+            "fail_neutral": null
           },
           "api_football": {
             "status": "UNAVAILABLE",
+            "availability_class": "PLAN_RESTRICTED",
             "reason": "RuntimeError:API-Football errors: {'plan': 'Free plans do not have access to this season, try from 2022 to 2024.'}",
             "fetch_mode": null,
             "player_count": 0,
@@ -294279,16 +294284,18 @@
             "credential_present": true,
             "network_requests": 1,
             "cache_hits": 0,
+            "availability_cache_hits": 0,
             "competitions_attempted": 1,
             "competitions_resolved": 0,
             "quota_remaining": null,
-            "quota_limit": null
+            "quota_limit": null,
+            "fail_neutral": true
           }
         }
       },
       "understat": {
         "status": "ACTIVE",
-        "fetch_mode": "NETWORK",
+        "fetch_mode": "CACHE",
         "player_count": 310
       },
       "api_football": {

@@ -8,7 +8,7 @@ from src.sources import official_fpl
 def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     registry = _load_registry()
     _validate_dag(registry)
-    assert registry["schema_version"] >= 4
+    assert registry["schema_version"] >= 5
     assert registry["architecture"] == "V3_BOUNDED_PROCESS_MICROSERVICES"
     assert registry["policy"]["parallelize_independent_services"] is True
     assert registry["policy"]["latest_json_single_writer_during_fan_in"] is True
@@ -16,10 +16,12 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
     assert registry["policy"]["postflight_gate0_requires_governed_lineup_and_package"] is True
     assert registry["policy"]["mechanical_validity_is_not_prediction_quality"] is True
     assert registry["policy"]["two_layer_report_contract"] is True
+    assert registry["policy"]["full_dss_watchlist_generator"] is True
     services = registry["services"]
     assert set(services) == {
         "collector", "price", "historical_prior", "prediction", "authenticated_official", "rules",
-        "official_detail", "prediction_evaluation", "lineup_governance", "challenger", "governance", "reporting",
+        "official_detail", "prediction_evaluation", "lineup_governance", "challenger", "governance",
+        "watchlist", "reporting",
     }
     assert services["price"]["depends_on"] == ["collector"]
     assert services["historical_prior"]["depends_on"] == ["collector"]
@@ -32,11 +34,16 @@ def test_v3_runtime_registry_is_dependency_aware_and_coarse_grained():
         "price", "prediction", "authenticated_official", "rules", "official_detail",
         "prediction_evaluation", "lineup_governance", "challenger",
     }
-    assert services["reporting"]["depends_on"] == ["governance"]
+    assert services["watchlist"]["depends_on"] == ["governance"]
+    assert services["reporting"]["depends_on"] == ["watchlist"]
     commands = services["governance"]["commands"]
     assert any(c.get("module") == "src.engines.framework_health_audit" and "postflight" in c.get("args", []) for c in commands)
     assert any(c.get("module") == "src.engines.lineup_framework_health_overlay" for c in commands)
     assert any(c.get("module") == "src.engines.decision_quality_overlay" for c in commands)
+    assert services["watchlist"]["commands"] == [
+        {"module": "src.engines.dss_watchlist", "args": []},
+        {"module": "src.engines.watchlist_public_sanitize", "args": []},
+    ]
     assert services["reporting"]["commands"] == [
         {"module": "src.engines.report_architecture", "args": []},
         {"module": "src.engines.report_enrichment", "args": []},

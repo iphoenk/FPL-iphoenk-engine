@@ -9,6 +9,7 @@ from typing import Any
 from src.utils import DATA, ROOT, atomic_json, read_json
 
 REGISTRY_PATH = ROOT / "config" / "report_artifact_registry.json"
+REGISTRY_RUNTIME_OUT = DATA / "report_artifact_registry.json"
 BRIEF_OUT = DATA / "decision_brief.json"
 DEEP_OUT = DATA / "deep_review_payload.json"
 WATCH_OUT = DATA / "dss_watchlist_summary.json"
@@ -296,6 +297,7 @@ def run() -> dict[str, Any]:
     watch_ids = {int(x["element"]) for rows in watch_summary["positions"].values() for x in rows}
     atomic_json(OWNED_DETAIL_OUT, _official_partition(official, owned_ids))
     atomic_json(WATCH_DETAIL_OUT, _official_partition(official, watch_ids))
+    atomic_json(REGISTRY_RUNTIME_OUT, load_registry())
 
     latest.setdefault("files", {}).update({
         "decision_brief": "data/decision_brief.json",
@@ -303,7 +305,7 @@ def run() -> dict[str, Any]:
         "dss_watchlist_summary": "data/dss_watchlist_summary.json",
         "official_detail_owned": "data/official_detail_owned.json",
         "official_detail_watchlist": "data/official_detail_watchlist.json",
-        "report_artifact_registry": "config/report_artifact_registry.json",
+        "report_artifact_registry": "data/report_artifact_registry.json",
     })
     latest["report_serving"] = {
         "registry": "REPORT_ARTIFACT_REGISTRY_V1",

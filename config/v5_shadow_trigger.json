@@ -1,0 +1,7 @@
+{
+  "requested_cycle": 1,
+  "requested_at": "2026-08-26T08:32:00Z",
+  "mode": "REAL_SHADOW",
+  "production_remains": "v3.14",
+  "v5_role": "shadow_only"
+}

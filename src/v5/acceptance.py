@@ -25,7 +25,9 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     projection_source = (ROOT / "src/models/projection.py").read_text(encoding="utf-8")
     metadata = ruleset_metadata()
     modules = module_specs()
+    module_map = {m.name: m for m in modules}
     modular_policy = architecture.get("principles", {}).get("modular_authority", {})
+    truth_modules = tuple(module_map.get(name) for name in ("rules", "source_authority", "finance", "phase_state"))
 
     checks = (
         AcceptanceCheck(
@@ -87,6 +89,19 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
             len(modules) >= 8 and all(m.entrypoint and m.config and m.adjustment_surface for m in modules),
             Plane.GOVERNANCE,
             "Every registered V5 domain exposes entrypoint, config and adjustment surface",
+        ),
+        AcceptanceCheck(
+            "truth_plane_authorities_active",
+            all(
+                m is not None
+                and m.status == "ACTIVE"
+                and not m.entrypoint.startswith("planned")
+                and not m.config.startswith("planned")
+                and (ROOT / m.config).exists()
+                for m in truth_modules
+            ),
+            Plane.TRUTH,
+            "Rules, source authority, finance and phase-state have active discoverable authorities",
         ),
         AcceptanceCheck(
             "production_promotion_locked",

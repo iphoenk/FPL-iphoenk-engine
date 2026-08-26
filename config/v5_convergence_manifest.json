@@ -1,6 +1,6 @@
 {
   "engine":"FPL iphoenk Engine",
-  "version":"5.0.0-beta.1",
+  "version":"5.0.0-beta.2",
   "codename":"Unified Decision Engine",
   "track":"microservices_convergence_beta",
   "baselines":{
@@ -24,11 +24,13 @@
     "projection":"prediction service",
     "prediction_evaluation":"evaluation service",
     "shadow_parity":"evaluation service",
+    "shadow_acceptance_accounting":"postvalidation finalizer -> config/v5_shadow_parity_registry.json",
     "package_optimizer":"decision service -> config/intelligence/package_optimizer.json",
     "package_guardrails":"decision service -> config/intelligence/package_optimizer.json",
     "external_watchlist":"watchlist service",
     "framework_governance":"governance service",
     "reporting":"reporting service",
+    "on_demand_reporting":"current production authority router -> config/v5_on_demand_report_registry.json",
     "persistence":"snapshot service -> config/v5_persistence_registry.json",
     "orchestration":"orchestrator service"
   },
@@ -39,8 +41,8 @@
     "evaluation":["point-in-time leakage guard","freshness guard","evidence-fusion reliability","point-in-time ledger","prediction calibration","external challenger scorecard","V3/V5 shadow parity","learning loop"],
     "decision":["DSS core 50","DSS extensions 16","multi-horizon package optimizer","early-season change cap","team-cluster penalty","strict all-DSS postflight","lineup and captaincy governance"],
     "watchlist":["full DSS external universe screening","evidence-aware admission","exactly 5 per position / 20 total"],
-    "governance":["Gate0","enhancement layers 8","framework health","final GO/HOLD/WAIT/REJECT governance"],
-    "presentation":["decision-first user report","technical appendix","delta-first reporting"],
+    "governance":["Gate0","enhancement layers 8","framework health","postvalidated shadow acceptance accounting","final GO/HOLD/WAIT/REJECT governance"],
+    "presentation":["decision-first user report","technical appendix","delta-first reporting","forced-full on-demand snapshot"],
     "persistence":["runtime artifacts","source-fusion artifact","history","state hydration"]
   },
   "p0_parity":{
@@ -72,12 +74,14 @@
     "all_dss_core_active_required":true,
     "all_dss_extensions_active_required":true,
     "no_critical_enhancement_partial":true,
-    "orchestrator_artifacts_must_be_persistence_registered":true
+    "orchestrator_artifacts_must_be_persistence_registered":true,
+    "real_shadow_cycle_counts_only_after_postvalidation":true,
+    "on_demand_reporting_uses_current_production_authority":true
   },
   "production_promotion":{
     "allowed":false,
     "beta":true,
     "production_candidate":false,
-    "reason":"Production remains V3.17.1; V5 requires successful post-convergence real V3/V5 shadow verification and calibration/postflight acceptance."
+    "reason":"Production remains V3.17.1; V5.0.0-beta.2 requires three successful postvalidated real-shadow cycles on the current V5 version and production baseline before production-candidate eligibility."
   }
 }

@@ -35,6 +35,14 @@ def run():
     projections["generated_at"] = _now()
     atomic_json(DATA / "projections.json", projections)
     packages = build_package_optimizer(projections, read_json(DATA / "team.json", {}))
+    hold_guardrails = (((packages.get("hold") or {}).get("score") or {}).get("guardrails") or {})
+    packages.setdefault("governance", {}).update({
+        "team_cluster_penalty_enabled": hold_guardrails.get("team_cluster_penalty_enabled") is True,
+        "early_season_change_cap_enabled": hold_guardrails.get("early_season_change_cap_enabled") is True,
+        "effective_max_changes": hold_guardrails.get("effective_max_changes"),
+        "team_cluster_penalty_points": hold_guardrails.get("cluster_penalty_points"),
+        "risk_guardrails_are_scored_not_label_only": True,
+    })
     atomic_json(DATA / "package_optimizer.json", packages)
     quality = evaluate_prediction_quality(projections, prior)
     atomic_json(DATA / "prediction_quality.json", quality)
@@ -52,7 +60,12 @@ def run():
         "prediction_quality": quality.get("status"), "package_optimizer_status": packages.get("status"),
         "package_count": packages.get("package_count", 0),
         "best_package": (packages.get("packages") or [{}])[0].get("id") if packages.get("packages") else None,
-        "candidate_generation_only": True
+        "candidate_generation_only": True,
+        "risk_guardrails": {
+            "team_cluster_penalty_enabled": (packages.get("governance") or {}).get("team_cluster_penalty_enabled"),
+            "early_season_change_cap_enabled": (packages.get("governance") or {}).get("early_season_change_cap_enabled"),
+            "effective_max_changes": (packages.get("governance") or {}).get("effective_max_changes"),
+        },
     }
     latest["prediction_quality_summary"] = {
         "status": quality.get("status"), "failed_checks": quality.get("failed_checks"), "checks": quality.get("checks")
@@ -68,5 +81,6 @@ if __name__ == "__main__":
         "historical_prior_players": out["projections"].get("historical_prior_players_used"),
         "prediction_quality": out["quality"].get("status"),
         "package_count": out["packages"].get("package_count"),
-        "best_package": (out["packages"].get("packages") or [{}])[0].get("id") if out["packages"].get("packages") else None
+        "best_package": (out["packages"].get("packages") or [{}])[0].get("id") if out["packages"].get("packages") else None,
+        "risk_guardrails": out["packages"].get("governance"),
     }, ensure_ascii=False))

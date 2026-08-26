@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "evaluation_model": "capability_contract_dss_v3",
+  "registries": {
+    "core": {
+      "path": "config/dss_core_registry.json",
+      "expected_count": 50,
+      "id_prefix": "DSS-",
+      "first_index": 1,
+      "zero_pad": 2
+    },
+    "extensions": {
+      "path": "config/dss_extension_registry.json",
+      "expected_count": 16,
+      "id_prefix": "DSS-X",
+      "first_index": 1,
+      "zero_pad": 2
+    }
+  },
+  "statuses": {
+    "active": "ACTIVE",
+    "partial": "PARTIAL"
+  },
+  "governance": {
+    "critical_partial_blocks_unqualified_go": true,
+    "registry_integrity_required": true
+  }
+}

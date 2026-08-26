@@ -1,15 +1,15 @@
 {
-  "version": 7,
+  "version": 8,
   "status": "ALPHA_MICROSERVICES_CONVERGENCE",
   "modes": ["daily", "deadline", "live"],
   "default_mode": "daily",
   "prediction_horizon_gws": 15,
-  "snapshot": {"schema_version": 52, "production_promotion_allowed": false},
+  "snapshot": {"schema_version": 53, "production_promotion_allowed": false},
   "summary_limits": {"price_rise_risk": 10,"price_fall_risk": 10,"price_alerts": 20,"packages": 20},
   "pipeline": [
     "public_base_collection","event_context","authenticated_runtime_overlay","public_dynamic_collection",
-    "truth_assembly","state_hydration","price_intelligence","native_p0_prediction",
-    "evaluation_decision_prepare_gate0_preflight_parallel","decision_finalize","framework_governance","persistence"
+    "truth_assembly","state_hydration","price_intelligence","historical_prior_and_native_prediction",
+    "prediction_quality_guard","evaluation_decision_prepare_gate0_preflight_parallel","decision_finalize","framework_governance","persistence"
   ],
   "base_requests": {
     "bootstrap": {"route": "bootstrap", "params": {}},
@@ -26,7 +26,10 @@
   "feature_switches": {
     "authenticated_overlay": true,
     "price_trajectory": true,
+    "historical_prior": true,
+    "historical_prior_network_refresh": true,
     "native_p0_prediction": true,
+    "prediction_quality_guard": true,
     "prediction_evaluation": true,
     "challenger_scorecard": true,
     "multi_horizon_package_optimizer": true,

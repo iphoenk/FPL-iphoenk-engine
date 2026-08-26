@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import random
+from collections import Counter
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -110,8 +111,51 @@ def best_lineup(players: list[dict[str, Any]], gw: int) -> dict[str, Any]:
     return _best_lineup_indexed(players, gw, _gw_index(players))
 
 
+def _effective_change_cap(cfg: dict[str, Any], planning_gw: int) -> tuple[int, dict[str, Any]]:
+    base = max(0, int(cfg.get("max_changes") or 0))
+    guard = cfg.get("early_season_change_cap") or {}
+    enabled = bool(guard.get("enabled"))
+    through_gw = max(0, int(guard.get("through_gw") or 0))
+    early_cap = max(0, int(guard.get("max_changes") if guard.get("max_changes") is not None else base))
+    effective = min(base, early_cap) if enabled and int(planning_gw) <= through_gw else base
+    return effective, {
+        "early_season_change_cap_enabled": enabled,
+        "early_season_through_gw": through_gw,
+        "configured_max_changes": base,
+        "effective_max_changes": effective,
+    }
+
+
+def _team_cluster_penalty(players: list[dict[str, Any]], cfg: dict[str, Any]) -> tuple[float, dict[str, Any]]:
+    guard = cfg.get("team_cluster_penalty") or {}
+    enabled = bool(guard.get("enabled"))
+    free = max(0, int(guard.get("free_players_per_club") or 0))
+    per_extra = max(0.0, _f(guard.get("points_per_extra_player")))
+    clubs = Counter(int(p.get("team_id") or -1) for p in players if int(p.get("team_id") or -1) > 0)
+    excess = sum(max(0, count - free) for count in clubs.values()) if enabled else 0
+    penalty = excess * per_extra if enabled else 0.0
+    return penalty, {
+        "team_cluster_penalty_enabled": enabled,
+        "free_players_per_club": free,
+        "points_per_extra_player": per_extra,
+        "cluster_excess_players": excess,
+        "cluster_penalty_points": round(penalty, 3),
+        "club_counts": dict(sorted(clubs.items())),
+    }
+
+
 def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int = 0) -> dict[str, Any]:
     cfg = load_config()
+    change_cap, change_guard = _effective_change_cap(cfg, planning_gw)
+    cluster_penalty, cluster_guard = _team_cluster_penalty(players, cfg)
+    guardrails = {**change_guard, **cluster_guard}
+    if int(changes) > change_cap:
+        return {
+            "valid": False,
+            "reason": "early_season_change_cap_exceeded",
+            "guardrails": guardrails,
+        }
+
     horizons = [int(x) for x in cfg.get("horizons") or [3, 5, 10, 15]]
     bench_weight = _f(cfg.get("bench_utility_weight"), 0.10)
     captain_weight = _f(cfg.get("captain_bonus_weight"), 1.0)
@@ -154,17 +198,21 @@ def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int 
     available = [(h, horizon_results[str(h)]) for h in horizons if horizon_results[str(h)]["valid"]]
     weight_sum = sum(weights.get(str(h), 0.0) for h, _ in available)
     if not available or weight_sum <= 0:
-        return {"valid": False, "horizons": horizon_results}
+        return {"valid": False, "horizons": horizon_results, "guardrails": guardrails}
     objective_mean = sum(weights.get(str(h), 0.0) * row["mean"] for h, row in available) / weight_sum
     objective_var = sum((weights.get(str(h), 0.0) / weight_sum) ** 2 * row["std"] ** 2 for h, row in available)
     objective_std = math.sqrt(objective_var)
-    robust = objective_mean - _f(cfg.get("risk_aversion"), 0.12) * objective_std - changes * _f(cfg.get("change_penalty_points"), 0.20)
+    change_penalty = int(changes) * _f(cfg.get("change_penalty_points"), 0.20)
+    robust = objective_mean - _f(cfg.get("risk_aversion"), 0.12) * objective_std - change_penalty - cluster_penalty
     return {
         "valid": True,
         "horizons": horizon_results,
         "objective_mean": round(objective_mean, 3),
         "objective_std": round(objective_std, 3),
+        "change_penalty_points": round(change_penalty, 3),
+        "team_cluster_penalty_points": round(cluster_penalty, 3),
         "robust_score": round(robust, 3),
+        "guardrails": guardrails,
     }
 
 
@@ -181,7 +229,9 @@ def affordable_package(outs: list[dict[str, Any]], ins: list[dict[str, Any]], it
 def simulate_objective(mean: float, std: float, simulations: int, seed: int) -> dict[str, float]:
     rng = random.Random(seed)
     samples = sorted(rng.gauss(mean, max(0.0001, std)) for _ in range(max(20, simulations)))
+
     def pct(q: float) -> float:
         idx = min(len(samples) - 1, max(0, int(round((len(samples) - 1) * q))))
         return samples[idx]
+
     return {"p25": round(pct(0.25), 3), "p50": round(pct(0.50), 3), "p75": round(pct(0.75), 3)}

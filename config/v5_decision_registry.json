@@ -1,6 +1,6 @@
 {
-  "schema_version": 2,
-  "model_id": "v5_native_decision_governance_v2",
+  "schema_version": 3,
+  "model_id": "v5_native_decision_governance_v3",
   "lineup": {
     "player_score": {
       "mean_weight": 1.0,
@@ -56,10 +56,32 @@
     },
     "production_recommendation_enabled": false
   },
+  "capability_activation": {
+    "package_ready": [
+      "direct_challenger",
+      "structural_fit",
+      "governed_optimizer",
+      "sell_cost_affordability",
+      "package_churn_penalty",
+      "package_structural",
+      "multi_horizon",
+      "decision_recheck"
+    ],
+    "lineup_ready": [
+      "lineup_governance",
+      "captaincy",
+      "bench_utility",
+      "lineup_robustness",
+      "captain_dnp_guard",
+      "decision_recheck"
+    ]
+  },
   "capabilities": [
     "lineup_governance",
     "captaincy",
     "bench_utility",
+    "lineup_robustness",
+    "captain_dnp_guard",
     "direct_challenger",
     "structural_fit",
     "governed_optimizer",

@@ -34,7 +34,9 @@ See `docs/V5_ENGINEERING_RULES.md` and `config/v5_architecture_principles.json`.
 
 ## Current beta baseline
 
-V5.0.0-beta.1 currently converges against the accepted V3.17.0 production truth baseline and includes:
+V5.0.0-beta.1 currently converges against the accepted V3.17.1 production baseline. V3.17.1 is a release-governance/metadata update over V3.17.0 and does not change the accepted V3.17 decision schema or decision logic.
+
+Current V5 capability set includes:
 
 - V3 Official FPL rules registry as V5 single rules authority
 - projection scoring wired to the shared rules registry

@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "post-dss-enhancement-v3.15-rerun",
-  "requested_at": "2026-08-26T10:17:30Z",
+  "requested_cycle": "full-extension-v3.15-rerun",
+  "requested_at": "2026-08-26T10:31:30Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "v3.15-fast-report-serving",
   "v5_role": "shadow_only",
@@ -10,5 +10,6 @@
   "require_lineup_owned_boundary": true,
   "require_parity_fail_closed": true,
   "require_no_critical_dss_partial": true,
-  "require_no_critical_enhancement_partial": true
+  "require_no_critical_enhancement_partial": true,
+  "require_all_extensions_active": true
 }

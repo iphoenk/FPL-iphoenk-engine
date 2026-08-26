@@ -1,15 +1,21 @@
 from __future__ import annotations
 import argparse, json
-from pathlib import Path
-from src.utils import ROOT, DATA, CONFIG, iso_now, utcnow, atomic_json, append_jsonl, read_json, parse_dt
+from src.utils import DATA, CONFIG, iso_now, utcnow, atomic_json, append_jsonl, read_json, parse_dt
 from src.sources.official_fpl import get_json
 from src.sources import core_insights, vaastav
 from src.engines.team_value import sell_cost, build_transfer_spells
 from src.models.fixture import next_fixtures
 from src.models.projection import project_points
+from src.rules import ELEMENT_TYPE_TO_POSITION, SQUAD_RULES
+from src.settings import (
+    FAIL_CLOSED,
+    PRICE_PRESSURE_LIST_SIZE,
+    PRICE_SUMMARY_LIST_SIZE,
+    PURCHASE_RECONSTRUCTION_BASELINE_GW,
+    TEAM_ID,
+)
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
-TEAM_ID=3462711
 
 def detect_phase(bootstrap):
     events=bootstrap.get("events",[])
@@ -34,9 +40,10 @@ def detect_phase(bootstrap):
         "is_live_event":bool(current and not current.get("finished"))
     }
 
+
 def maps(bootstrap):
     teams={t["id"]:t["name"] for t in bootstrap["teams"]}
-    pos={1:"GK",2:"DEF",3:"MID",4:"FWD"}
+    pos=dict(ELEMENT_TYPE_TO_POSITION)
     by_id={p["id"]:p for p in bootstrap["elements"]}
     by_name={}
     for p in bootstrap["elements"]:
@@ -44,6 +51,7 @@ def maps(bootstrap):
                   f'{p.get("first_name","")} {p.get("second_name","")}'.strip()]:
             if n: by_name[n.casefold()]=p
     return teams,pos,by_id,by_name
+
 
 def resolve_locked_player(row, by_id, teams, pos):
     """
@@ -88,6 +96,7 @@ def resolve_locked_player(row, by_id, teams, pos):
 
     return p
 
+
 def expanded_live(el):
     s=el.get("stats",{})
     allowed=["minutes","goals_scored","assists","clean_sheets","goals_conceded",
@@ -97,6 +106,7 @@ def expanded_live(el):
     out["explain"]=el.get("explain")
     return out
 
+
 def native_entry_summary(entry, fetched_at=None):
     e=entry or {}
     keys=["id","current_event","summary_overall_points","summary_overall_rank",
@@ -105,6 +115,7 @@ def native_entry_summary(entry, fetched_at=None):
     out={k:e.get(k) for k in keys}
     out["fetched_at"]=fetched_at
     return out
+
 
 def run(mode="daily", sync_stats=False, deep_stats=False):
     health={}
@@ -155,28 +166,34 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
             p=by_id.get(x["element"])
             if p:squad.append({"element":p["id"],"name":p["web_name"],"position":pos[p["element_type"]],"source":"official_picks"})
 
-    if squad and len(squad)!=15: raise RuntimeError(f"FAIL CLOSED: squad count {len(squad)}")
-    counts={k:sum(1 for p in squad if p["position"]==k) for k in ["GK","DEF","MID","FWD"]}
-    if squad and counts!={"GK":2,"DEF":5,"MID":5,"FWD":3}: raise RuntimeError(f"FAIL CLOSED: position counts {counts}")
+    expected_squad_size=int(SQUAD_RULES["squad_size"])
+    expected_position_counts={str(k):int(v) for k,v in dict(SQUAD_RULES["position_counts"]).items()}
+    if squad and len(squad)!=expected_squad_size:
+        raise RuntimeError(f"FAIL CLOSED: squad count {len(squad)} expected {expected_squad_size}")
+    counts={k:sum(1 for p in squad if p["position"]==k) for k in expected_position_counts}
+    if squad and counts!=expected_position_counts:
+        raise RuntimeError(f"FAIL CLOSED: position counts {counts} expected {expected_position_counts}")
 
     club_counts={}
     for row in squad:
         club=teams[by_id[row["element"]]["team"]]
         club_counts[club]=club_counts.get(club,0)+1
-    if squad and max(club_counts.values(), default=0)>3:
-        raise RuntimeError(f"FAIL CLOSED: club limit exceeded {club_counts}")
+    max_players_per_club=int(SQUAD_RULES["max_players_per_club"])
+    if squad and max(club_counts.values(), default=0)>max_players_per_club:
+        raise RuntimeError(f"FAIL CLOSED: club limit exceeded {club_counts}; max={max_players_per_club}")
 
     spells=build_transfer_spells(transfers)
-    gw1,_=get_json(f"entry/{TEAM_ID}/event/1/picks/",retries=1)
-    gw1ids={x["element"] for x in (gw1 or {}).get("picks",[])}
+    baseline_gw=PURCHASE_RECONSTRUCTION_BASELINE_GW
+    baseline_picks,_=get_json(f"entry/{TEAM_ID}/event/{baseline_gw}/picks/",retries=1)
+    baseline_ids={x["element"] for x in (baseline_picks or {}).get("picks",[])}
     ledger=[]
     for row in squad:
         p=by_id[row["element"]]; purchase=row.get("purchase_cost");source=row.get("source")
         if purchase is None:
             if p["id"] in spells and spells[p["id"]].get("purchase_cost") is not None:
                 purchase=spells[p["id"]]["purchase_cost"];source="entry/transfers"
-            elif p["id"] in gw1ids:
-                purchase=p["now_cost"]-p.get("cost_change_start",0);source="gw1_reconstruction"
+            elif p["id"] in baseline_ids:
+                purchase=p["now_cost"]-p.get("cost_change_start",0);source=f"gw{baseline_gw}_reconstruction"
         ledger.append({
             "element":p["id"],"name":p["web_name"],"team":teams[p["team"]],"position":pos[p["element_type"]],
             "purchase_cost":purchase,"now_cost":p["now_cost"],
@@ -226,7 +243,8 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
     momentum.sort(key=lambda x:x["momentum"],reverse=True)
     atomic_json(DATA/"price_cache.json",{"generated_at":iso_now(),"players":cur})
     atomic_json(DATA/"prices.json",{"generated_at":iso_now(),"confirmed_changes":confirmed,
-                                    "top_buy_pressure":momentum[:25],"top_sell_pressure":list(reversed(momentum[-25:]))})
+                                    "top_buy_pressure":momentum[:PRICE_PRESSURE_LIST_SIZE],
+                                    "top_sell_pressure":list(reversed(momentum[-PRICE_PRESSURE_LIST_SIZE:]))})
 
     universe=[]
     for p in bootstrap["elements"]:
@@ -257,10 +275,10 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
                               "sell_value":sum(x["sell_cost"] for x in ledger if x["sell_cost"] is not None)},
               "live_summary":{"status":live_payload["status"],"gross_points":live_payload.get("gross_points"),
                               "net_points":live_payload.get("net_points")},
-              "price_summary":{"confirmed_changes":confirmed,"top_buy_pressure":momentum[:10]},
+              "price_summary":{"confirmed_changes":confirmed,"top_buy_pressure":momentum[:PRICE_SUMMARY_LIST_SIZE]},
               "files":{"team":"data/team.json","live":"data/live.json","prices":"data/prices.json",
                        "health":"data/health.json","universe":"data/universe.json","chips":"data/chips.json"},
-              "meta":{"direct_fpl_api_authority":True,"fail_closed":True,
+              "meta":{"direct_fpl_api_authority":True,"fail_closed":FAIL_CLOSED,
                       "advanced_stats_are_community_enrichment":True,
                       "leakage_guard_required_for_predictive_training":True}}
     atomic_json(DATA/"latest.json",snapshot)
@@ -269,6 +287,7 @@ def run(mode="daily", sync_stats=False, deep_stats=False):
         atomic_json(DATA/"gw"/f"{gw_arch:02d}.json",snapshot)
     append_jsonl(DATA/"history.jsonl",snapshot)
     return snapshot
+
 
 def cli():
     ap=argparse.ArgumentParser()

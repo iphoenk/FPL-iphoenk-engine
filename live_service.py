@@ -4,10 +4,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from src.engine import run
+from src.settings import LIVE_POLL_SECONDS, LIVE_STREAM_HEARTBEAT_SECONDS
 from src.utils import DATA, read_json
 from src.version import ENGINE_VERSION, SERVICE_TITLE
 
-POLL=max(30,int(os.getenv("FPL_LIVE_POLL_SECONDS","60")))
+POLL = LIVE_POLL_SECONDS
 REFRESH_API_KEY=os.getenv("FPL_REFRESH_API_KEY")
 _poll_lock=asyncio.Lock()
 _stop_event=asyncio.Event()
@@ -81,7 +82,7 @@ async def stream():
                 last=encoded
             else:
                 yield ": keep-alive\n\n"
-            await asyncio.sleep(min(POLL,15))
+            await asyncio.sleep(min(POLL,LIVE_STREAM_HEARTBEAT_SECONDS))
     return StreamingResponse(
         events(),
         media_type="text/event-stream",

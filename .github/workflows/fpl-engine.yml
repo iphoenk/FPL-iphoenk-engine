@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.16 microservices
+name: FPL iphoenk collector v3.16.1 microservices
 
 on:
   workflow_dispatch:
@@ -20,7 +20,6 @@ concurrency:
 
 env:
   RUNTIME_BRANCH: runtime-data
-  FPL_TEAM_ID: "3462711"
 
 jobs:
   gate:

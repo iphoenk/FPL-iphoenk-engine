@@ -4,10 +4,11 @@ from pathlib import Path
 
 import requests
 
+from src.settings import API_BACKOFF_SECONDS, API_RETRIES, API_TIMEOUT_SECONDS
 from src.utils import iso_now
 
 BASE_URL = os.getenv("FPL_API_BASE", "https://fantasy.premierleague.com/api")
-TIMEOUT = int(os.getenv("FPL_TIMEOUT", "20"))
+TIMEOUT = API_TIMEOUT_SECONDS
 
 
 def _cache_dir() -> Path | None:
@@ -77,7 +78,9 @@ def _release_lock(path: str, fd) -> None:
             pass
 
 
-def get_json(path: str, retries: int = 3, backoff: float = 0.8):
+def get_json(path: str, retries: int | None = None, backoff: float | None = None):
+    retries = API_RETRIES if retries is None else int(retries)
+    backoff = API_BACKOFF_SECONDS if backoff is None else float(backoff)
     cached = _read_cache(path)
     if cached is not None:
         return cached

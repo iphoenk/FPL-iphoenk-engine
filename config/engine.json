@@ -1,13 +1,19 @@
 {
   "team_id": 3462711,
   "live_poll_seconds": 60,
+  "minimum_live_poll_seconds": 30,
+  "live_stream_heartbeat_seconds": 15,
   "normal_stale_minutes": 90,
   "deadline_stale_minutes": 30,
   "matchday_stale_minutes": 10,
   "api_retries": 3,
   "api_backoff_seconds": 0.8,
+  "api_timeout_seconds": 20,
   "projection_horizon_gws": 5,
   "strategic_horizon_gws": 15,
+  "purchase_reconstruction_baseline_gw": 1,
+  "price_pressure_list_size": 25,
+  "price_summary_list_size": 10,
   "fail_closed": true,
   "schema_version": 45
 }

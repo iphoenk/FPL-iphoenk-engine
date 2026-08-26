@@ -1,5 +1,5 @@
 {
-  "version": "3.16.0",
+  "version": "3.16.1",
   "schema_version": 45,
   "release_metadata_source": "src/version.py",
   "P0": {
@@ -21,6 +21,8 @@
       "safe workflow rebase",
       "2026/27 goalkeeper goal scoring compliance",
       "single-source runtime release metadata",
+      "centralized runtime/config ownership for mutable settings",
+      "rules-registry-owned squad constraints",
       "authenticated manual refresh",
       "shared service-process live polling",
       "persisted native Official FPL entry rank/points/bank/value fields"

@@ -3,42 +3,29 @@ from __future__ import annotations
 from typing import Any
 
 from src.v5.config_cache import load_json_config
+from src.v5.intelligence.full_core_enrichment import build_full_core_enrichment
 from src.v5.intelligence.historical_prior import resolve_prior
 from src.v5.intelligence.prediction_quality import evaluate_prediction_quality
 from src.v5.intelligence.projection import build_predictions
 
 ROLE_CONFIG = "config/intelligence/role_intelligence.json"
 BASE_CAPABILITIES = [
-    "xmins",
-    "xmins_distribution",
-    "historical_prior",
-    "last_season_integration",
-    "prediction_quality_guard",
-    "small_sample_guard",
-    "projection_uncertainty",
-    "team_attacking_strength",
-    "team_defensive_strength",
-    "opponent_defence_dynamic",
-    "clean_sheet_probability",
-    "fixture_context",
-    "fixture_swing",
-    "horizon_3",
-    "horizon_5",
-    "horizon_10",
-    "horizon_15",
-    "price_value",
-    "ownership_context",
-    "bonus_route",
-    "advanced_stats_integration",
-    "sustainability",
-    "team_defensive_risk",
-    "regression_risk",
+    "xmins", "xmins_distribution", "historical_prior", "last_season_integration", "prediction_quality_guard",
+    "small_sample_guard", "projection_uncertainty", "team_attacking_strength", "team_defensive_strength",
+    "opponent_defence_dynamic", "clean_sheet_probability", "fixture_context", "fixture_swing", "horizon_3",
+    "horizon_5", "horizon_10", "horizon_15", "price_value", "ownership_context", "bonus_route",
+    "advanced_stats_integration", "sustainability", "team_defensive_risk", "regression_risk",
 ]
 
 
-def _capabilities() -> list[str]:
+def _capabilities(enrichment: dict[str, Any] | None = None) -> list[str]:
     role_cfg = load_json_config(ROLE_CONFIG)
-    return sorted({*BASE_CAPABILITIES, *(str(x) for x in role_cfg.get("capabilities") or [])})
+    enrichment_caps = enrichment.get("capabilities") if isinstance(enrichment, dict) else []
+    return sorted({
+        *BASE_CAPABILITIES,
+        *(str(x) for x in role_cfg.get("capabilities") or []),
+        *(str(x) for x in enrichment_caps or []),
+    })
 
 
 def _quality_degraded_context(quality: dict[str, Any]) -> dict[str, Any] | None:
@@ -46,33 +33,54 @@ def _quality_degraded_context(quality: dict[str, Any]) -> dict[str, Any] | None:
         return None
     failed = [str(value) for value in quality.get("failed_checks") or []]
     return {
-        "service_id": "prediction",
-        "operation": "build",
+        "service_id": "prediction", "operation": "build",
         "behavior": "prediction remains available for review but quality guard blocks unqualified GO",
-        "blocks_unqualified_go": True,
-        "error_type": "PredictionQualityDegraded",
+        "blocks_unqualified_go": True, "error_type": "PredictionQualityDegraded",
         "error": ",".join(failed) if failed else "prediction quality guard not healthy",
+    }
+
+
+def _compact_enrichment(enrichment: dict[str, Any]) -> dict[str, Any]:
+    advanced = enrichment.get("advanced_stats") if isinstance(enrichment.get("advanced_stats"), dict) else {}
+    schedule = enrichment.get("schedule") if isinstance(enrichment.get("schedule"), dict) else {}
+    preseason = enrichment.get("preseason") if isinstance(enrichment.get("preseason"), dict) else {}
+    current_form = enrichment.get("current_form") if isinstance(enrichment.get("current_form"), dict) else {}
+    return {
+        "status": enrichment.get("status"), "model": enrichment.get("model"),
+        "advanced_stats": {key: advanced.get(key) for key in ("status", "source", "shots_rows", "match_rows", "coverage_players", "missing_player_behavior")},
+        "schedule": {
+            "status": schedule.get("status"),
+            "european_competitions": sorted((schedule.get("european") or {}).keys()),
+            "league_rest_team_count": len(schedule.get("league_rest_days") or {}),
+            "domestic_cup_source": (schedule.get("domestic_cup") or {}).get("source"),
+            "international_source": (schedule.get("international") or {}).get("source"),
+            "governance": schedule.get("governance"),
+        },
+        "preseason": preseason,
+        "current_form": {"status": current_form.get("status"), "source": current_form.get("source"), "players": len(current_form.get("players") or {})},
+        "governance": enrichment.get("governance"),
     }
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation not in {"build", "build_full", "status"}:
         raise KeyError(f"unsupported prediction operation: {operation}")
-    capabilities = _capabilities()
     if operation == "status":
-        return {"status": "ACTIVE", "model_family": "P0_NATIVE_V5_HISTORICAL_PRIOR", "bridge_only": False, "capabilities": capabilities}
+        return {"status": "ACTIVE", "model_family": "P0_NATIVE_V5_HISTORICAL_PRIOR", "bridge_only": False, "capabilities": _capabilities({"capabilities": ["advanced_stats_sync", "european_congestion", "domestic_cup_congestion", "international_load", "rest_days", "preseason_prior", "current_form"]})}
     bootstrap = payload.get("bootstrap")
     fixtures = payload.get("fixtures")
     rules = payload.get("rules")
     if not isinstance(bootstrap, dict) or not isinstance(fixtures, list) or not isinstance(rules, dict):
         raise ValueError("prediction service requires bootstrap, fixtures and truth-service rules")
+    enrichment = build_full_core_enrichment(bootstrap, fixtures)
+    capabilities = _capabilities(enrichment)
     planning_gw = int(payload.get("planning_gw") or 1)
     previous_prior = payload.get("historical_prior") if isinstance(payload.get("historical_prior"), dict) else {}
     prior = resolve_prior(bootstrap, rules, previous_prior=previous_prior, allow_network_refresh=bool(payload.get("allow_historical_prior_refresh", False)))
     result = build_predictions(bootstrap, fixtures, rules, planning_gw, horizon=int(payload.get("horizon") or 15), historical_prior=prior)
     quality = evaluate_prediction_quality(result, prior, owned_ids=payload.get("owned_ids") or ())
     degraded_context = _quality_degraded_context(quality)
-    result = {**result, "historical_prior_artifact": prior, "prediction_quality": quality, **({"degraded_context": degraded_context} if degraded_context else {})}
+    result = {**result, "historical_prior_artifact": prior, "prediction_quality": quality, "full_core_enrichment": enrichment, **({"degraded_context": degraded_context} if degraded_context else {})}
     if operation == "build_full":
         return {**result, "capabilities": capabilities}
     compact_players = []
@@ -92,5 +100,6 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "historical_prior": result.get("historical_prior"), "historical_prior_artifact": prior, "prediction_quality": quality,
         **({"degraded_context": degraded_context} if degraded_context else {}),
         "team_strength": result.get("team_strength"), "role_intelligence": result.get("role_intelligence"), "players": compact_players,
+        "full_core_enrichment": _compact_enrichment(enrichment),
         "network_contract": result.get("network_contract"), "capabilities": capabilities,
     }

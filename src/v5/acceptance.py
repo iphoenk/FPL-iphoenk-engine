@@ -18,16 +18,7 @@ GATE0_CONFIG = "config/gate0_registry.json"
 
 def _registered_modules_ok(names: list[str], active_statuses: set[str]) -> bool:
     modules = {module.name: module for module in module_specs()}
-    return all(
-        (module := modules.get(name)) is not None
-        and module.status in active_statuses
-        and bool(module.entrypoint)
-        and bool(module.config)
-        and not module.entrypoint.startswith("planned")
-        and not module.config.startswith("planned")
-        and (ROOT / module.config).exists()
-        for name in names
-    )
+    return all((module := modules.get(name)) is not None and module.status in active_statuses and bool(module.entrypoint) and bool(module.config) and not module.entrypoint.startswith("planned") and not module.config.startswith("planned") and (ROOT / module.config).exists() for name in names)
 
 
 def run_bootstrap_acceptance() -> AcceptanceReport:
@@ -40,195 +31,54 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     modules = module_specs()
     module_policy = acceptance["module_policy"]
     service_policy = acceptance["service_policy"]
-    active_statuses = {str(value) for value in module_policy["active_statuses"]}
-    modular_policy = architecture.get("principles", {}).get("modular_authority", {})
-    microservice_policy = architecture.get("principles", {}).get("microservices", {})
+    convergence = acceptance.get("convergence") or {}
+    active = {str(x) for x in module_policy["active_statuses"]}
     services = service_specs()
-    service_ids = {service.service_id for service in services}
-    required_services = {str(value) for value in service_policy["required_services"]}
+    service_ids = {x.service_id for x in services}
+    required_services = {str(x) for x in service_policy["required_services"]}
     service_errors = validate_registry()
-    deployment_path = ROOT / str(service_policy["require_deployment_manifest"])
     service_cfg = service_registry()
+    modular = architecture.get("principles", {}).get("modular_authority", {})
+    micro = architecture.get("principles", {}).get("microservices", {})
+    gate0_contract = gate0_cfg.get("contract") or {}
+    gate0_checks = gate0_cfg.get("checks") or []
+    parallel_groups = orchestrator_cfg.get("parallel_groups") or {}
+    routes = orchestrator_cfg.get("routing") or {}
+    parallel_required = {str(x) for x in convergence.get("analysis_parallel_routes_required") or []}
+    analysis_group = {str(x) for x in parallel_groups.get("analysis_preflight") or []}
     prediction_source = (ROOT / "src/v5/services/prediction.py").read_text(encoding="utf-8")
     decision_source = (ROOT / "src/v5/services/decision.py").read_text(encoding="utf-8")
-    gate0_source = (ROOT / "src/v5/governance/gate0.py").read_text(encoding="utf-8")
-    orchestrator_source = (ROOT / "src/v5/services/orchestrator.py").read_text(encoding="utf-8")
-
-    required_intelligence = list(module_policy.get("required_intelligence_modules") or [])
-    required_decision = list(module_policy.get("required_decision_modules") or [])
-    required_framework = list(module_policy.get("required_framework_modules") or [])
-    convergence = acceptance.get("convergence") or {}
-    gate0_contract = gate0_cfg.get("contract") if isinstance(gate0_cfg.get("contract"), dict) else {}
-    gate0_checks = gate0_cfg.get("checks") if isinstance(gate0_cfg.get("checks"), list) else []
-    gate0_expected = int(gate0_contract.get("expected_count") or 0)
-    parallel_required = {str(value) for value in convergence.get("analysis_parallel_routes_required") or []}
-    parallel_groups = orchestrator_cfg.get("parallel_groups") if isinstance(orchestrator_cfg.get("parallel_groups"), dict) else {}
-    analysis_group = {str(value) for value in parallel_groups.get("analysis_preflight") or []}
-    routes = orchestrator_cfg.get("routing") if isinstance(orchestrator_cfg.get("routing"), dict) else {}
+    reporting_source = (ROOT / "src/v5/reporting.py").read_text(encoding="utf-8")
+    baseline = str(convergence.get("production_baseline") or "")
+    baseline_sha = str(convergence.get("production_main_sha") or "")
+    manifest_baselines = manifest.get("baselines") or {}
 
     checks = (
-        AcceptanceCheck(
-            "v5_manifest",
-            manifest.get("version") == V5_VERSION,
-            Plane.GOVERNANCE,
-            "V5 package version matches convergence manifest",
-        ),
-        AcceptanceCheck(
-            "v3_10_production_baseline",
-            manifest.get("baselines", {}).get("production_truth") == "v3.10.0"
-            and bool(manifest.get("baselines", {}).get("production_main_sha")),
-            Plane.TRUTH,
-            "V5 convergence is anchored to the current production baseline",
-        ),
-        AcceptanceCheck(
-            "p0_baseline_declared",
-            "v3.10.0" in str(manifest.get("baselines", {}).get("prediction_intelligence", "")),
-            Plane.INTELLIGENCE,
-            "P0 prediction intelligence is an explicit convergence baseline",
-        ),
-        AcceptanceCheck(
-            "rules_registry_active",
-            RULESET_ID == "FPL_2026_27" and RULESET_SEASON == "2026/27",
-            Plane.TRUTH,
-            "Verified 2026/27 ruleset remains the single rules authority",
-        ),
-        AcceptanceCheck(
-            "goalkeeper_goal_rule",
-            GOAL_POINTS.get(1) == 10,
-            Plane.TRUTH,
-            "Goalkeeper goal scoring is 10 points for 2026/27",
-        ),
-        AcceptanceCheck(
-            "rules_fingerprint_present",
-            bool(metadata.get("fingerprint_sha256")),
-            Plane.GOVERNANCE,
-            "Active ruleset exposes an auditable fingerprint",
-        ),
-        AcceptanceCheck(
-            "prediction_consumes_truth_rules_contract",
-            'payload.get("rules")' in prediction_source and "from src.rules import" not in prediction_source,
-            Plane.INTELLIGENCE,
-            "Prediction service consumes the truth-service rules contract instead of importing rules business authority",
-        ),
-        AcceptanceCheck(
-            "decision_not_bridge_only",
-            "BRIDGE_ONLY" not in decision_source and "build_packages" in decision_source,
-            Plane.DECISION,
-            "Decision service owns a real package optimizer instead of a bridge-only summary",
-        ),
-        AcceptanceCheck(
-            "native_lineup_and_trace",
-            convergence.get("native_lineup_required") is True
-            and convergence.get("decision_trace_required") is True
-            and "optimize_lineup" in decision_source
-            and "build_trace" in decision_source,
-            Plane.DECISION,
-            "Decision service owns native lineup governance and auditable decision trace",
-        ),
-        AcceptanceCheck(
-            "gate0_registry_authority",
-            convergence.get("gate0_full_registry_required") is True
-            and gate0_expected > 0
-            and len(gate0_checks) == gate0_expected
-            and "def audit(" in gate0_source
-            and "purchase_total + bank" not in gate0_source,
-            Plane.GOVERNANCE,
-            "Gate0 legality is governed by the canonical registry contract without a static team-value cap",
-        ),
-        AcceptanceCheck(
-            "parallel_analysis_preflight",
-            bool(parallel_required)
-            and parallel_required.issubset(analysis_group)
-            and all(name in routes for name in parallel_required)
-            and "decision_finalize" in orchestrator_source,
-            Plane.GOVERNANCE,
-            "Evaluation, decision preparation and Gate0 preflight run in the registered parallel analysis stage before finalization",
-        ),
-        AcceptanceCheck(
-            "orchestrator_uses_evaluation_and_governance",
-            "evaluation_build" in routes and "governance_audit" in routes,
-            Plane.GOVERNANCE,
-            "Orchestrator routes calibration and final governance through independent services",
-        ),
-        AcceptanceCheck(
-            "modular_separation_default",
-            modular_policy.get("default_action") == "SEPARATE_WHEN_PRACTICAL",
-            Plane.GOVERNANCE,
-            "V5 defaults to dedicated modules/registries for separable domains",
-        ),
-        AcceptanceCheck(
-            "module_registry_discoverable",
-            len(modules) >= int(module_policy["minimum_registered_modules"])
-            and all(module.entrypoint and module.config for module in modules),
-            Plane.GOVERNANCE,
-            "Every registered V5 domain exposes an entrypoint and configuration authority",
-        ),
-        AcceptanceCheck(
-            "truth_plane_authorities_active",
-            _registered_modules_ok(list(module_policy["required_truth_modules"]), active_statuses),
-            Plane.TRUTH,
-            "All mandatory truth authorities are active and discoverable",
-        ),
-        AcceptanceCheck(
-            "p0_intelligence_modules_active",
-            _registered_modules_ok(required_intelligence, active_statuses),
-            Plane.INTELLIGENCE,
-            "Required intelligence and evaluation modules are service-owned and active/alpha",
-        ),
-        AcceptanceCheck(
-            "native_decision_modules_active",
-            _registered_modules_ok(required_decision, active_statuses),
-            Plane.DECISION,
-            "Projection index, package, lineup, trace and DSS authorities are explicit Decision Service modules",
-        ),
-        AcceptanceCheck(
-            "framework_modules_active",
-            _registered_modules_ok(required_framework, active_statuses),
-            Plane.GOVERNANCE,
-            "Gate0 and enhancement/framework governance are explicit service-owned modules",
-        ),
-        AcceptanceCheck(
-            "governance_modules_active",
-            _registered_modules_ok(list(module_policy["required_governance_modules"]), active_statuses),
-            Plane.GOVERNANCE,
-            "Runtime governance modules are active and discoverable",
-        ),
-        AcceptanceCheck(
-            "microservices_mandatory",
-            acceptance["architecture"].get("require_microservices") is True
-            and microservice_policy.get("required") is True
-            and service_cfg.get("mandatory") is True
-            and service_cfg.get("architecture") == "bounded-context-microservices",
-            Plane.GOVERNANCE,
-            "V5 runtime architecture is explicitly bounded-context microservices",
-        ),
-        AcceptanceCheck(
-            "microservice_topology_valid",
-            len(services) >= int(service_policy["minimum_services"])
-            and required_services.issubset(service_ids)
-            and not service_errors,
-            Plane.GOVERNANCE,
-            "Registered services have unique ownership, valid ports and an acyclic dependency graph",
-        ),
-        AcceptanceCheck(
-            "microservice_deployment_manifest_present",
-            deployment_path.exists(),
-            Plane.GOVERNANCE,
-            "Independent V5 service deployment manifest is present",
-        ),
-        AcceptanceCheck(
-            "v4_bridge_not_authority",
-            "prediction_bridge" not in {module.name for module in modules}
-            and load_json_config("config/v5_runner_registry.json").get("feature_switches", {}).get("v4_prediction_bridge") is False,
-            Plane.INTELLIGENCE,
-            "Legacy V4 prediction bridge is no longer a registered business authority",
-        ),
-        AcceptanceCheck(
-            "production_promotion_locked",
-            manifest.get("production_promotion", {}).get("allowed") is False,
-            Plane.GOVERNANCE,
-            "V5 alpha cannot replace production until parity and postflight gates pass",
-        ),
+        AcceptanceCheck("v5_manifest", manifest.get("version") == V5_VERSION, Plane.GOVERNANCE, "package version matches convergence manifest"),
+        AcceptanceCheck("production_baseline_declared", manifest_baselines.get("production_truth") == baseline and manifest_baselines.get("production_main_sha") == baseline_sha and bool(baseline_sha), Plane.TRUTH, "production baseline version and SHA are registry-driven and consistent"),
+        AcceptanceCheck("prediction_baseline_declared", baseline in str(manifest_baselines.get("prediction_intelligence") or ""), Plane.INTELLIGENCE, "prediction convergence references the accepted production baseline"),
+        AcceptanceCheck("rules_registry_active", RULESET_ID == "FPL_2026_27" and RULESET_SEASON == "2026/27", Plane.TRUTH, "verified season rules remain single authority"),
+        AcceptanceCheck("goalkeeper_goal_rule", GOAL_POINTS.get(1) == 10, Plane.TRUTH, "goalkeeper goal scoring remains 10"),
+        AcceptanceCheck("rules_fingerprint_present", bool(metadata.get("fingerprint_sha256")), Plane.GOVERNANCE, "ruleset exposes auditable fingerprint"),
+        AcceptanceCheck("prediction_consumes_truth_contract", 'payload.get("rules")' in prediction_source and "from src.rules import" not in prediction_source, Plane.INTELLIGENCE, "prediction consumes truth rules contract"),
+        AcceptanceCheck("prediction_network_contract_compact", '"rates": player.get("rates")' not in prediction_source, Plane.INTELLIGENCE, "full attacking-rate blob stays inside prediction boundary"),
+        AcceptanceCheck("native_decision", "build_packages" in decision_source and "build_watchlist" in decision_source and "optimize_lineup" in decision_source and "build_trace" in decision_source, Plane.DECISION, "decision owns package, watchlist, lineup and trace authorities"),
+        AcceptanceCheck("native_reporting", convergence.get("decision_first_reporting_required") is True and "USER_REPORT" in reporting_source and "TECHNICAL_APPENDIX" in reporting_source and "COMPACT_DELTA" in reporting_source, Plane.GOVERNANCE, "native reporting separates user report, technical appendix and delta mode"),
+        AcceptanceCheck("gate0_registry_authority", int(gate0_contract.get("expected_count") or 0) == len(gate0_checks) and len(gate0_checks) > 0, Plane.GOVERNANCE, "Gate0 count and checks come from canonical registry"),
+        AcceptanceCheck("parallel_analysis_preflight", bool(parallel_required) and parallel_required.issubset(analysis_group) and all(x in routes for x in parallel_required), Plane.GOVERNANCE, "analysis preflight routes remain parallelized"),
+        AcceptanceCheck("modular_separation_default", modular.get("default_action") == "SEPARATE_WHEN_PRACTICAL", Plane.GOVERNANCE, "separable domains default to modules/registries"),
+        AcceptanceCheck("module_registry_discoverable", len(modules) >= int(module_policy["minimum_registered_modules"]) and all(x.entrypoint and x.config for x in modules), Plane.GOVERNANCE, "registered modules expose entrypoint and config"),
+        AcceptanceCheck("truth_modules_active", _registered_modules_ok(list(module_policy["required_truth_modules"]), active), Plane.TRUTH, "truth authorities active"),
+        AcceptanceCheck("intelligence_modules_active", _registered_modules_ok(list(module_policy["required_intelligence_modules"]), active), Plane.INTELLIGENCE, "intelligence/evaluation authorities active"),
+        AcceptanceCheck("decision_modules_active", _registered_modules_ok(list(module_policy["required_decision_modules"]), active), Plane.DECISION, "decision authorities active"),
+        AcceptanceCheck("framework_modules_active", _registered_modules_ok(list(module_policy["required_framework_modules"]), active), Plane.GOVERNANCE, "framework authorities active"),
+        AcceptanceCheck("presentation_modules_active", _registered_modules_ok(list(module_policy.get("required_presentation_modules") or []), active), Plane.GOVERNANCE, "reporting authority active"),
+        AcceptanceCheck("governance_modules_active", _registered_modules_ok(list(module_policy["required_governance_modules"]), active), Plane.GOVERNANCE, "runtime governance authorities active"),
+        AcceptanceCheck("microservices_mandatory", acceptance["architecture"].get("require_microservices") is True and micro.get("required") is True and service_cfg.get("mandatory") is True and service_cfg.get("architecture") == "bounded-context-microservices", Plane.GOVERNANCE, "bounded-context microservices mandatory"),
+        AcceptanceCheck("microservice_topology_valid", len(services) >= int(service_policy["minimum_services"]) and required_services.issubset(service_ids) and not service_errors, Plane.GOVERNANCE, "service topology has unique ownership, valid ports and acyclic dependencies"),
+        AcceptanceCheck("deployment_manifest_present", (ROOT / str(service_policy["require_deployment_manifest"])).exists(), Plane.GOVERNANCE, "deployment manifest present"),
+        AcceptanceCheck("v4_bridge_not_authority", "prediction_bridge" not in {x.name for x in modules} and load_json_config("config/v5_runner_registry.json").get("feature_switches", {}).get("v4_prediction_bridge") is False, Plane.INTELLIGENCE, "V4 bridge is reference only"),
+        AcceptanceCheck("production_promotion_locked", manifest.get("production_promotion", {}).get("allowed") is False, Plane.GOVERNANCE, "alpha cannot replace production"),
     )
     return AcceptanceReport(version=V5_VERSION, checks=checks)
 

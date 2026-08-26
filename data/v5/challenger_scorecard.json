@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-08-26T08:30:16.130392+00:00",
+  "registry": "EXTERNAL_CHALLENGER_SCORECARD",
+  "planning_gw": 2,
+  "auto_scrape": false,
+  "providers": [
+    {
+      "id": "internal",
+      "name": "FPL iphoenk Engine",
+      "mode": "native",
+      "enabled": true,
+      "state": "ACTIVE",
+      "current_coverage": 612,
+      "historical_sample": 0,
+      "dynamic_weight_eligible": false
+    },
+    {
+      "id": "onefpl",
+      "name": "OneFPL",
+      "mode": "observation_file",
+      "enabled": true,
+      "state": "NO_OBSERVATION",
+      "current_coverage": 0,
+      "historical_sample": 0,
+      "dynamic_weight_eligible": false
+    },
+    {
+      "id": "fffix",
+      "name": "Fantasy Football Fix",
+      "mode": "observation_file",
+      "enabled": true,
+      "state": "NO_OBSERVATION",
+      "current_coverage": 0,
+      "historical_sample": 0,
+      "dynamic_weight_eligible": false
+    },
+    {
+      "id": "ffhub",
+      "name": "Fantasy Football Hub",
+      "mode": "observation_file",
+      "enabled": true,
+      "state": "NO_OBSERVATION",
+      "current_coverage": 0,
+      "historical_sample": 0,
+      "dynamic_weight_eligible": false
+    }
+  ],
+  "external_observation_count": 0,
+  "governance": {
+    "missing_provider_data_is_not_fabricated": true,
+    "provider_weight_requires_observed_accuracy": true,
+    "provider_reputation_is_not_accuracy_evidence": true
+  },
+  "status": "ACTIVE_INTERNAL_ONLY_EXTERNAL_DATA_ABSENT"
+}

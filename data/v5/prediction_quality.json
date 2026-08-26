@@ -1,0 +1,56 @@
+{
+  "model": "v5_prediction_quality_guard_v1",
+  "status": "HEALTHY",
+  "failed_checks": [],
+  "checks": {
+    "universe_prior_coverage": {
+      "value": 0.5654,
+      "threshold": 0.45,
+      "pass": true
+    },
+    "owned_prior_coverage": {
+      "value": 0.9333,
+      "threshold": 0.5,
+      "sample": 15,
+      "pass": true
+    },
+    "starter_xmins_dispersion": {
+      "value": 0.0547,
+      "threshold": 0.035,
+      "sample": 219,
+      "minimum_sample": 40,
+      "pass": true
+    },
+    "owned_low_confidence_share": {
+      "value": 0.2,
+      "maximum": 0.6,
+      "sample": 15,
+      "pass": true
+    }
+  },
+  "prior": {
+    "model": "v5_historical_player_priors_v2",
+    "season": "2025-26",
+    "status": "READY",
+    "fetch_mode": "NETWORK_REFRESH",
+    "coverage": {
+      "current_players": 612,
+      "matched_with_usable_prior": 346,
+      "coverage_ratio": 0.5654,
+      "matched_by_stable_code": 468,
+      "matched_by_unique_full_name": 0,
+      "rejected_low_minutes": 122
+    }
+  },
+  "owned_squad": {
+    "players": 15,
+    "historical_prior_players": 14,
+    "low_confidence_players": 3
+  },
+  "governance": {
+    "mechanical_validity_is_not_prediction_quality": true,
+    "low_sample_collapse_is_detected": true,
+    "quality_guard_may_downgrade_final_governance": true,
+    "failed_quality_never_fabricates_replacement_evidence": true
+  }
+}

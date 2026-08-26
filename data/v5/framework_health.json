@@ -1,0 +1,1675 @@
+{
+  "framework_schema": 8,
+  "generated_at": "2026-08-26T08:30:16.465004+00:00",
+  "auditor": "v5-microservice-governance-v4",
+  "overall": "RED",
+  "decision_engine": "BLOCKED",
+  "recommendation_allowed": false,
+  "go_allowed": false,
+  "registry_integrity": true,
+  "degraded_contexts": [],
+  "degraded_blocks_unqualified_go": false,
+  "rules_registry": {
+    "status": "PASS",
+    "detail": {
+      "ruleset_id": "FPL_2026_27",
+      "authority": "truth-service"
+    }
+  },
+  "gate0": {
+    "phase": "full",
+    "model": "v5_gate0_registry_driven_v3",
+    "ruleset_id": "FPL_2026_27",
+    "pass": false,
+    "counts": {
+      "PASS": 12,
+      "FAIL": 4
+    },
+    "items": [
+      {
+        "id": "G0-01",
+        "name": "Squad Size = 15",
+        "critical": true,
+        "phase": "preflight",
+        "status": "PASS",
+        "detail": "count=15,expected=15"
+      },
+      {
+        "id": "G0-02",
+        "name": "Exactly 2 Goalkeepers",
+        "critical": true,
+        "phase": "preflight",
+        "status": "PASS",
+        "detail": "GK=2,expected=2"
+      },
+      {
+        "id": "G0-03",
+        "name": "Exactly 5 Defenders",
+        "critical": true,
+        "phase": "preflight",
+        "status": "PASS",
+        "detail": "DEF=5,expected=5"
+      },
+      {
+        "id": "G0-04",
+        "name": "Exactly 5 Midfielders",
+        "critical": true,
+        "phase": "preflight",
+        "status": "PASS",
+        "detail": "MID=5,expected=5"
+      },
+      {
+        "id": "G0-05",
+        "name": "Exactly 3 Forwards",
+        "critical": true,
+        "phase": "preflight",
+        "status": "PASS",
+        "detail": "FWD=3,expected=3"
+      },
+      {
+        "id": "G0-06",
+        "name": "Budget / Affordability",
+        "critical": true,
+        "phase": "postflight",
+        "status": "FAIL",
+        "detail": "minimum_itb=0,packages=[]"
+      },
+      {
+        "id": "G0-07",
+        "name": "Maximum 3 Players Per Club",
+        "critical": true,
+        "phase": "preflight",
+        "status": "PASS",
+        "detail": "max_club=3,limit=3"
+      },
+      {
+        "id": "G0-08",
+        "name": "No Duplicate Player",
+        "critical": true,
+        "phase": "preflight",
+        "status": "PASS",
+        "detail": "unique=15,total=15"
+      },
+      {
+        "id": "G0-09",
+        "name": "Player Eligibility / Registration",
+        "critical": true,
+        "phase": "preflight",
+        "status": "PASS",
+        "detail": "team_validation=True"
+      },
+      {
+        "id": "G0-10",
+        "name": "Legal XI Formation",
+        "critical": true,
+        "phase": "postflight",
+        "status": "PASS",
+        "detail": "status=READY,formation=3-5-2"
+      },
+      {
+        "id": "G0-11",
+        "name": "Exactly 1 Starting Goalkeeper",
+        "critical": true,
+        "phase": "postflight",
+        "status": "PASS",
+        "detail": "starters=11,expected=11,starting_gk=1,expected_gk=1"
+      },
+      {
+        "id": "G0-12",
+        "name": "Captain and Vice in Starting XI and Distinct",
+        "critical": true,
+        "phase": "postflight",
+        "status": "PASS",
+        "detail": "captain=411,vice=237,captain_in_xi=True,vice_in_xi=True"
+      },
+      {
+        "id": "G0-13",
+        "name": "Bench Structure = 1 GK + 3 Outfield",
+        "critical": true,
+        "phase": "postflight",
+        "status": "PASS",
+        "detail": "bench=4,GK=1/1,outfield=3/3"
+      },
+      {
+        "id": "G0-14",
+        "name": "Single-Chip Rule / Chip Legality",
+        "critical": true,
+        "phase": "postflight",
+        "status": "FAIL",
+        "detail": "active_chip=bench_boost,active_count=1,max_active=1,legal=False"
+      },
+      {
+        "id": "G0-15",
+        "name": "Selling-Price / ITB Arithmetic Reconciliation",
+        "critical": true,
+        "phase": "preflight",
+        "status": "FAIL",
+        "detail": "complete=False,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=None,calculated_sell=None"
+      },
+      {
+        "id": "G0-16",
+        "name": "Wildcard Package Revalidated After Every Edit",
+        "critical": true,
+        "phase": "postflight",
+        "status": "FAIL",
+        "detail": "packages=[]"
+      }
+    ],
+    "preflight": {
+      "phase": "preflight",
+      "model": "v5_gate0_registry_driven_v3",
+      "ruleset_id": "FPL_2026_27",
+      "pass": false,
+      "counts": {
+        "PASS": 8,
+        "FAIL": 1
+      },
+      "items": [
+        {
+          "id": "G0-01",
+          "name": "Squad Size = 15",
+          "critical": true,
+          "phase": "preflight",
+          "status": "PASS",
+          "detail": "count=15,expected=15"
+        },
+        {
+          "id": "G0-02",
+          "name": "Exactly 2 Goalkeepers",
+          "critical": true,
+          "phase": "preflight",
+          "status": "PASS",
+          "detail": "GK=2,expected=2"
+        },
+        {
+          "id": "G0-03",
+          "name": "Exactly 5 Defenders",
+          "critical": true,
+          "phase": "preflight",
+          "status": "PASS",
+          "detail": "DEF=5,expected=5"
+        },
+        {
+          "id": "G0-04",
+          "name": "Exactly 5 Midfielders",
+          "critical": true,
+          "phase": "preflight",
+          "status": "PASS",
+          "detail": "MID=5,expected=5"
+        },
+        {
+          "id": "G0-05",
+          "name": "Exactly 3 Forwards",
+          "critical": true,
+          "phase": "preflight",
+          "status": "PASS",
+          "detail": "FWD=3,expected=3"
+        },
+        {
+          "id": "G0-07",
+          "name": "Maximum 3 Players Per Club",
+          "critical": true,
+          "phase": "preflight",
+          "status": "PASS",
+          "detail": "max_club=3,limit=3"
+        },
+        {
+          "id": "G0-08",
+          "name": "No Duplicate Player",
+          "critical": true,
+          "phase": "preflight",
+          "status": "PASS",
+          "detail": "unique=15,total=15"
+        },
+        {
+          "id": "G0-09",
+          "name": "Player Eligibility / Registration",
+          "critical": true,
+          "phase": "preflight",
+          "status": "PASS",
+          "detail": "team_validation=True"
+        },
+        {
+          "id": "G0-15",
+          "name": "Selling-Price / ITB Arithmetic Reconciliation",
+          "critical": true,
+          "phase": "preflight",
+          "status": "FAIL",
+          "detail": "complete=False,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=None,calculated_sell=None"
+        }
+      ],
+      "registry_integrity": {
+        "expected": 16,
+        "declared": 16,
+        "duplicate_ids": [],
+        "missing_ids": [],
+        "unexpected_ids": [],
+        "allowed_phases": [
+          "postflight",
+          "preflight"
+        ],
+        "phase_errors": [],
+        "empty_phases": [],
+        "integrity_ok": true
+      }
+    },
+    "postflight": {
+      "phase": "postflight",
+      "model": "v5_gate0_registry_driven_v3",
+      "ruleset_id": "FPL_2026_27",
+      "pass": false,
+      "counts": {
+        "FAIL": 3,
+        "PASS": 4
+      },
+      "items": [
+        {
+          "id": "G0-06",
+          "name": "Budget / Affordability",
+          "critical": true,
+          "phase": "postflight",
+          "status": "FAIL",
+          "detail": "minimum_itb=0,packages=[]"
+        },
+        {
+          "id": "G0-10",
+          "name": "Legal XI Formation",
+          "critical": true,
+          "phase": "postflight",
+          "status": "PASS",
+          "detail": "status=READY,formation=3-5-2"
+        },
+        {
+          "id": "G0-11",
+          "name": "Exactly 1 Starting Goalkeeper",
+          "critical": true,
+          "phase": "postflight",
+          "status": "PASS",
+          "detail": "starters=11,expected=11,starting_gk=1,expected_gk=1"
+        },
+        {
+          "id": "G0-12",
+          "name": "Captain and Vice in Starting XI and Distinct",
+          "critical": true,
+          "phase": "postflight",
+          "status": "PASS",
+          "detail": "captain=411,vice=237,captain_in_xi=True,vice_in_xi=True"
+        },
+        {
+          "id": "G0-13",
+          "name": "Bench Structure = 1 GK + 3 Outfield",
+          "critical": true,
+          "phase": "postflight",
+          "status": "PASS",
+          "detail": "bench=4,GK=1/1,outfield=3/3"
+        },
+        {
+          "id": "G0-14",
+          "name": "Single-Chip Rule / Chip Legality",
+          "critical": true,
+          "phase": "postflight",
+          "status": "FAIL",
+          "detail": "active_chip=bench_boost,active_count=1,max_active=1,legal=False"
+        },
+        {
+          "id": "G0-16",
+          "name": "Wildcard Package Revalidated After Every Edit",
+          "critical": true,
+          "phase": "postflight",
+          "status": "FAIL",
+          "detail": "packages=[]"
+        }
+      ],
+      "registry_integrity": {
+        "expected": 16,
+        "declared": 16,
+        "duplicate_ids": [],
+        "missing_ids": [],
+        "unexpected_ids": [],
+        "allowed_phases": [
+          "postflight",
+          "preflight"
+        ],
+        "phase_errors": [],
+        "empty_phases": [],
+        "integrity_ok": true
+      }
+    },
+    "registry_integrity": {
+      "expected": 16,
+      "declared": 16,
+      "duplicate_ids": [],
+      "missing_ids": [],
+      "unexpected_ids": [],
+      "allowed_phases": [
+        "postflight",
+        "preflight"
+      ],
+      "phase_errors": [],
+      "empty_phases": [],
+      "integrity_ok": true
+    }
+  },
+  "dss_core": {
+    "expected": 50,
+    "declared": 50,
+    "duplicate_ids": [],
+    "missing_ids": [],
+    "unexpected_ids": [],
+    "integrity_ok": true,
+    "counts": {
+      "ACTIVE": 29,
+      "PARTIAL": 21
+    },
+    "coverage_ratio": 0.58,
+    "critical_partial": [
+      {
+        "id": "DSS-07",
+        "name": "Manager Tactical Role",
+        "category": "role",
+        "critical": true,
+        "probe": "tactical_role",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-17",
+        "name": "Defensive Contributions / DefCon Route",
+        "category": "scoring",
+        "critical": true,
+        "probe": "defcon_rules",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-35",
+        "name": "Last-Season Baseline",
+        "category": "priors",
+        "critical": true,
+        "probe": "last_season_integration",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-40",
+        "name": "Budget Opportunity Cost",
+        "category": "value",
+        "critical": true,
+        "probe": "sell_cost_affordability",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-44",
+        "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
+        "category": "governance",
+        "critical": true,
+        "probe": "learning_loop",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-46",
+        "name": "Direct Challenger / Replacement Quality",
+        "category": "squad",
+        "critical": true,
+        "probe": "direct_challenger",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-49",
+        "name": "Chip / Blank / Double Strategic Context",
+        "category": "strategy",
+        "critical": true,
+        "probe": "chip_context",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      }
+    ],
+    "items": [
+      {
+        "id": "DSS-01",
+        "name": "Official Player Identity & Eligibility",
+        "category": "foundation",
+        "critical": true,
+        "probe": "universe_identity",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "truth"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-02",
+        "name": "Current Price & Position Eligibility",
+        "category": "foundation",
+        "critical": true,
+        "probe": "universe_price_position",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "truth"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-03",
+        "name": "Club & Competition Registration Status",
+        "category": "foundation",
+        "critical": true,
+        "probe": "universe_registration",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "truth"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-04",
+        "name": "Availability, Injury & Suspension",
+        "category": "availability",
+        "critical": true,
+        "probe": "availability",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "truth"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-05",
+        "name": "Starter Security / xMins",
+        "category": "minutes",
+        "critical": true,
+        "probe": "xmins",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-06",
+        "name": "Substitution & DNP Risk",
+        "category": "minutes",
+        "critical": true,
+        "probe": "xmins_distribution",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-07",
+        "name": "Manager Tactical Role",
+        "category": "role",
+        "critical": true,
+        "probe": "tactical_role",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-08",
+        "name": "System / Formation Fit",
+        "category": "role",
+        "critical": false,
+        "probe": "system_fit",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-09",
+        "name": "Positional Competition & Rotation",
+        "category": "role",
+        "critical": true,
+        "probe": "rotation_competition",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-10",
+        "name": "Set-Piece Role",
+        "category": "role",
+        "critical": false,
+        "probe": "set_piece_role",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-11",
+        "name": "Penalty Role",
+        "category": "role",
+        "critical": false,
+        "probe": "penalty_role",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-12",
+        "name": "Expected Goals / Shot Threat",
+        "category": "underlying",
+        "critical": false,
+        "probe": "advanced_stats_integration",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-13",
+        "name": "Expected Assists / Chance Creation",
+        "category": "underlying",
+        "critical": false,
+        "probe": "advanced_stats_integration",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-14",
+        "name": "Shots, Box Touches & Goal Threat",
+        "category": "underlying",
+        "critical": false,
+        "probe": "advanced_stats_sync",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-15",
+        "name": "Key Passes, Big Chances Created & Assist Threat",
+        "category": "underlying",
+        "critical": false,
+        "probe": "advanced_stats_sync",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-16",
+        "name": "Goal Involvement Sustainability",
+        "category": "underlying",
+        "critical": false,
+        "probe": "sustainability",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-17",
+        "name": "Defensive Contributions / DefCon Route",
+        "category": "scoring",
+        "critical": true,
+        "probe": "defcon_rules",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-18",
+        "name": "Bonus Points Route",
+        "category": "scoring",
+        "critical": false,
+        "probe": "bonus_route",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-19",
+        "name": "Clean-Sheet Probability",
+        "category": "scoring",
+        "critical": false,
+        "probe": "clean_sheet_probability",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-20",
+        "name": "Goal-Concession / Defensive Team Risk",
+        "category": "team_strength",
+        "critical": false,
+        "probe": "team_defensive_risk",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-21",
+        "name": "Team Attacking Strength",
+        "category": "team_strength",
+        "critical": false,
+        "probe": "team_attacking_strength",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-22",
+        "name": "Team Defensive Strength",
+        "category": "team_strength",
+        "critical": false,
+        "probe": "team_defensive_strength",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-23",
+        "name": "Home / Away Context",
+        "category": "fixture",
+        "critical": false,
+        "probe": "fixture_context",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-24",
+        "name": "Opponent Strength / Fixture Difficulty",
+        "category": "fixture",
+        "critical": true,
+        "probe": "opponent_defence_dynamic",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-25",
+        "name": "3-GW Short Horizon",
+        "category": "horizon",
+        "critical": true,
+        "probe": "horizon_3",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-26",
+        "name": "5-GW Primary Horizon",
+        "category": "horizon",
+        "critical": true,
+        "probe": "horizon_5",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-27",
+        "name": "10-GW Strategic Horizon",
+        "category": "horizon",
+        "critical": false,
+        "probe": "horizon_10",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-28",
+        "name": "15-GW Strategic Horizon",
+        "category": "horizon",
+        "critical": false,
+        "probe": "horizon_15",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-29",
+        "name": "Fixture Swing / Future Run",
+        "category": "fixture",
+        "critical": false,
+        "probe": "fixture_swing",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-30",
+        "name": "European Congestion & Rotation",
+        "category": "schedule",
+        "critical": false,
+        "probe": "european_congestion",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-31",
+        "name": "Domestic Cup Congestion",
+        "category": "schedule",
+        "critical": false,
+        "probe": "domestic_cup_congestion",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-32",
+        "name": "International Call-Up, Minutes, Travel & Fatigue",
+        "category": "schedule",
+        "critical": false,
+        "probe": "international_load",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-33",
+        "name": "Rest Days / Recovery Window",
+        "category": "schedule",
+        "critical": false,
+        "probe": "rest_days",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-34",
+        "name": "Preseason Role & Performance",
+        "category": "priors",
+        "critical": false,
+        "probe": "preseason_prior",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-35",
+        "name": "Last-Season Baseline",
+        "category": "priors",
+        "critical": true,
+        "probe": "last_season_integration",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-36",
+        "name": "Multi-Season / Historical Prior",
+        "category": "priors",
+        "critical": false,
+        "probe": "historical_prior",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-37",
+        "name": "Current-Season Form",
+        "category": "form",
+        "critical": false,
+        "probe": "current_form",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-38",
+        "name": "Regression / Overperformance Risk",
+        "category": "form",
+        "critical": false,
+        "probe": "regression_risk",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-39",
+        "name": "Price Value / Points per Million",
+        "category": "value",
+        "critical": true,
+        "probe": "price_value",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-40",
+        "name": "Budget Opportunity Cost",
+        "category": "value",
+        "critical": true,
+        "probe": "sell_cost_affordability",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-41",
+        "name": "Ownership & Effective Ownership Context",
+        "category": "market",
+        "critical": false,
+        "probe": "ownership_context",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-42",
+        "name": "Transfer Momentum / Market Pressure",
+        "category": "market",
+        "critical": false,
+        "probe": "transfer_momentum",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "price"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-43",
+        "name": "Price-Rise / Price-Fall Risk",
+        "category": "market",
+        "critical": false,
+        "probe": "price_intelligence",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "price"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-44",
+        "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
+        "category": "governance",
+        "critical": true,
+        "probe": "learning_loop",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-45",
+        "name": "Structural Squad Fit",
+        "category": "squad",
+        "critical": true,
+        "probe": "structural_fit",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "truth"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-46",
+        "name": "Direct Challenger / Replacement Quality",
+        "category": "squad",
+        "critical": true,
+        "probe": "direct_challenger",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-47",
+        "name": "Bench Depth & Autosub Utility",
+        "category": "squad",
+        "critical": false,
+        "probe": "bench_utility",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-48",
+        "name": "Captaincy / Vice-Captaincy Ceiling & Safety",
+        "category": "lineup",
+        "critical": true,
+        "probe": "captaincy",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-49",
+        "name": "Chip / Blank / Double Strategic Context",
+        "category": "strategy",
+        "critical": true,
+        "probe": "chip_context",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-50",
+        "name": "Decision Journal, Arithmetic & Constraint Recheck",
+        "category": "governance",
+        "critical": true,
+        "probe": "decision_recheck",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      }
+    ]
+  },
+  "dss_extensions": {
+    "expected": 16,
+    "declared": 16,
+    "duplicate_ids": [],
+    "missing_ids": [],
+    "unexpected_ids": [],
+    "integrity_ok": true,
+    "counts": {
+      "PARTIAL": 9,
+      "ACTIVE": 7
+    },
+    "coverage_ratio": 0.4375,
+    "critical_partial": [
+      {
+        "id": "DSS-X01",
+        "name": "Point-in-Time / Leakage Protection",
+        "category": null,
+        "critical": true,
+        "probe": "leakage_guard",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X04",
+        "name": "Evidence Fusion Confidence",
+        "category": null,
+        "critical": true,
+        "probe": "reliability_overlay",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X05",
+        "name": "Outgoing Baseline Resistance",
+        "category": null,
+        "critical": true,
+        "probe": "governed_optimizer",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X07",
+        "name": "Early-Season Multi-Change Cap",
+        "category": null,
+        "critical": true,
+        "probe": "early_season_change_cap",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X13",
+        "name": "Data Freshness & Refresh Policy",
+        "category": null,
+        "critical": true,
+        "probe": "data_freshness",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      }
+    ],
+    "items": [
+      {
+        "id": "DSS-X01",
+        "name": "Point-in-Time / Leakage Protection",
+        "category": null,
+        "critical": true,
+        "probe": "leakage_guard",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X02",
+        "name": "Prediction Uncertainty & Interval Width",
+        "category": null,
+        "critical": true,
+        "probe": "projection_uncertainty",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-X03",
+        "name": "Rate-Spike / Small-Sample Detection",
+        "category": null,
+        "critical": true,
+        "probe": "small_sample_guard",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-X04",
+        "name": "Evidence Fusion Confidence",
+        "category": null,
+        "critical": true,
+        "probe": "reliability_overlay",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X05",
+        "name": "Outgoing Baseline Resistance",
+        "category": null,
+        "critical": true,
+        "probe": "governed_optimizer",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X06",
+        "name": "Incoming Team-Cluster Penalty",
+        "category": null,
+        "critical": false,
+        "probe": "team_cluster_penalty",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X07",
+        "name": "Early-Season Multi-Change Cap",
+        "category": null,
+        "critical": true,
+        "probe": "early_season_change_cap",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X08",
+        "name": "Package Churn / Change-Count Penalty",
+        "category": null,
+        "critical": false,
+        "probe": "package_churn_penalty",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X09",
+        "name": "Manual Draft Authority",
+        "category": null,
+        "critical": true,
+        "probe": "manual_authority",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "truth"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-X10",
+        "name": "Lineup Robustness Margin",
+        "category": null,
+        "critical": true,
+        "probe": "lineup_robustness",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-X11",
+        "name": "Captain Safe-Pool / DNP Guard",
+        "category": null,
+        "critical": true,
+        "probe": "captain_dnp_guard",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-X12",
+        "name": "Calibration, Reconciliation & Backtest Store",
+        "category": null,
+        "critical": true,
+        "probe": "calibration_store",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "evaluation"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-X13",
+        "name": "Data Freshness & Refresh Policy",
+        "category": null,
+        "critical": true,
+        "probe": "data_freshness",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X14",
+        "name": "Source / Enrichment Health",
+        "category": null,
+        "critical": false,
+        "probe": "source_health",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      },
+      {
+        "id": "DSS-X15",
+        "name": "Price Intelligence Reconciliation",
+        "category": null,
+        "critical": false,
+        "probe": "price_intelligence",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "price"
+        ],
+        "detail": "capability advertised by bounded-context owner"
+      },
+      {
+        "id": "DSS-X16",
+        "name": "Runtime / Performance Observability",
+        "category": null,
+        "critical": false,
+        "probe": "runtime_observability",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "registered capability has no active runtime evidence contract yet"
+      }
+    ]
+  },
+  "enhancements": {
+    "expected": 8,
+    "declared": 8,
+    "duplicate_ids": [],
+    "missing_ids": [],
+    "unexpected_ids": [],
+    "integrity_ok": true,
+    "counts": {
+      "PARTIAL": 5,
+      "ACTIVE": 3
+    },
+    "items": [
+      {
+        "id": "ENH-01",
+        "name": "Data Reliability & Source Triangulation",
+        "critical": true,
+        "probe": "data_reliability_triangulation",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "enhancement capability not yet fully backed by native V5 evidence"
+      },
+      {
+        "id": "ENH-02",
+        "name": "Point-in-Time Integrity & Leakage Safety",
+        "critical": true,
+        "probe": "leakage_guard",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "enhancement capability not yet fully backed by native V5 evidence"
+      },
+      {
+        "id": "ENH-03",
+        "name": "Uncertainty, Calibration & Robustness",
+        "critical": true,
+        "probe": "uncertainty_robustness",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "governance-derived"
+        ],
+        "detail": "capability contract satisfied"
+      },
+      {
+        "id": "ENH-04",
+        "name": "Multi-Horizon Strategic Optimization",
+        "critical": true,
+        "probe": "multi_horizon",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "enhancement capability not yet fully backed by native V5 evidence"
+      },
+      {
+        "id": "ENH-05",
+        "name": "Risk-Adjusted Market & Value Intelligence",
+        "critical": false,
+        "probe": "price_intelligence",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "price"
+        ],
+        "detail": "capability contract satisfied"
+      },
+      {
+        "id": "ENH-06",
+        "name": "Package & Structural Optimization",
+        "critical": true,
+        "probe": "package_structural",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "enhancement capability not yet fully backed by native V5 evidence"
+      },
+      {
+        "id": "ENH-07",
+        "name": "Lineup, Captaincy & Human-Governance Layer",
+        "critical": true,
+        "probe": "lineup_governance",
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability contract satisfied"
+      },
+      {
+        "id": "ENH-08",
+        "name": "Evidence Fusion & Final Sanity Governance",
+        "critical": true,
+        "probe": "final_governance",
+        "status": "PARTIAL",
+        "evidence_services": [],
+        "detail": "enhancement capability not yet fully backed by native V5 evidence"
+      }
+    ]
+  },
+  "capability_sources": {
+    "availability": [
+      "truth"
+    ],
+    "manual_authority": [
+      "truth"
+    ],
+    "structural_fit": [
+      "truth"
+    ],
+    "universe_identity": [
+      "truth"
+    ],
+    "universe_price_position": [
+      "truth"
+    ],
+    "universe_registration": [
+      "truth"
+    ],
+    "bonus_route": [
+      "prediction"
+    ],
+    "clean_sheet_probability": [
+      "prediction"
+    ],
+    "fixture_context": [
+      "prediction"
+    ],
+    "fixture_swing": [
+      "prediction"
+    ],
+    "historical_prior": [
+      "prediction"
+    ],
+    "horizon_10": [
+      "prediction"
+    ],
+    "horizon_15": [
+      "prediction"
+    ],
+    "horizon_3": [
+      "prediction"
+    ],
+    "horizon_5": [
+      "prediction"
+    ],
+    "opponent_defence_dynamic": [
+      "prediction"
+    ],
+    "ownership_context": [
+      "prediction"
+    ],
+    "penalty_role": [
+      "prediction"
+    ],
+    "prediction_quality_guard": [
+      "prediction"
+    ],
+    "price_value": [
+      "prediction"
+    ],
+    "projection_uncertainty": [
+      "prediction"
+    ],
+    "rotation_competition": [
+      "prediction"
+    ],
+    "set_piece_role": [
+      "prediction"
+    ],
+    "small_sample_guard": [
+      "prediction"
+    ],
+    "team_attacking_strength": [
+      "prediction"
+    ],
+    "team_defensive_strength": [
+      "prediction"
+    ],
+    "xmins": [
+      "prediction"
+    ],
+    "xmins_distribution": [
+      "prediction"
+    ],
+    "transfer_momentum": [
+      "price"
+    ],
+    "price_intelligence": [
+      "price"
+    ],
+    "bench_utility": [
+      "decision"
+    ],
+    "captain_dnp_guard": [
+      "decision"
+    ],
+    "captain_safe_pool": [
+      "decision"
+    ],
+    "captaincy": [
+      "decision"
+    ],
+    "decision_recheck": [
+      "decision"
+    ],
+    "lineup_alternatives": [
+      "decision"
+    ],
+    "lineup_governance": [
+      "decision"
+    ],
+    "lineup_robustness": [
+      "decision"
+    ],
+    "calibration_store": [
+      "evaluation"
+    ],
+    "challenger_scorecard": [
+      "evaluation"
+    ],
+    "prediction_evaluation": [
+      "evaluation"
+    ],
+    "shadow_parity": [
+      "evaluation"
+    ],
+    "uncertainty_robustness": [
+      "governance-derived"
+    ]
+  },
+  "gate0_failures": [
+    {
+      "id": "G0-06",
+      "name": "Budget / Affordability",
+      "critical": true,
+      "phase": "postflight",
+      "status": "FAIL",
+      "detail": "minimum_itb=0,packages=[]"
+    },
+    {
+      "id": "G0-14",
+      "name": "Single-Chip Rule / Chip Legality",
+      "critical": true,
+      "phase": "postflight",
+      "status": "FAIL",
+      "detail": "active_chip=bench_boost,active_count=1,max_active=1,legal=False"
+    },
+    {
+      "id": "G0-15",
+      "name": "Selling-Price / ITB Arithmetic Reconciliation",
+      "critical": true,
+      "phase": "preflight",
+      "status": "FAIL",
+      "detail": "complete=False,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=None,calculated_sell=None"
+    },
+    {
+      "id": "G0-16",
+      "name": "Wildcard Package Revalidated After Every Edit",
+      "critical": true,
+      "phase": "postflight",
+      "status": "FAIL",
+      "detail": "packages=[]"
+    }
+  ],
+  "critical_partial": [
+    {
+      "id": "DSS-07",
+      "name": "Manager Tactical Role",
+      "category": "role",
+      "critical": true,
+      "probe": "tactical_role",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "DSS-17",
+      "name": "Defensive Contributions / DefCon Route",
+      "category": "scoring",
+      "critical": true,
+      "probe": "defcon_rules",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "DSS-35",
+      "name": "Last-Season Baseline",
+      "category": "priors",
+      "critical": true,
+      "probe": "last_season_integration",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "DSS-40",
+      "name": "Budget Opportunity Cost",
+      "category": "value",
+      "critical": true,
+      "probe": "sell_cost_affordability",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "DSS-44",
+      "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
+      "category": "governance",
+      "critical": true,
+      "probe": "learning_loop",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "DSS-46",
+      "name": "Direct Challenger / Replacement Quality",
+      "category": "squad",
+      "critical": true,
+      "probe": "direct_challenger",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "DSS-49",
+      "name": "Chip / Blank / Double Strategic Context",
+      "category": "strategy",
+      "critical": true,
+      "probe": "chip_context",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "DSS-X01",
+      "name": "Point-in-Time / Leakage Protection",
+      "category": null,
+      "critical": true,
+      "probe": "leakage_guard",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "DSS-X04",
+      "name": "Evidence Fusion Confidence",
+      "category": null,
+      "critical": true,
+      "probe": "reliability_overlay",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "DSS-X05",
+      "name": "Outgoing Baseline Resistance",
+      "category": null,
+      "critical": true,
+      "probe": "governed_optimizer",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "DSS-X07",
+      "name": "Early-Season Multi-Change Cap",
+      "category": null,
+      "critical": true,
+      "probe": "early_season_change_cap",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "DSS-X13",
+      "name": "Data Freshness & Refresh Policy",
+      "category": null,
+      "critical": true,
+      "probe": "data_freshness",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "registered capability has no active runtime evidence contract yet"
+    },
+    {
+      "id": "ENH-01",
+      "name": "Data Reliability & Source Triangulation",
+      "critical": true,
+      "probe": "data_reliability_triangulation",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "enhancement capability not yet fully backed by native V5 evidence"
+    },
+    {
+      "id": "ENH-02",
+      "name": "Point-in-Time Integrity & Leakage Safety",
+      "critical": true,
+      "probe": "leakage_guard",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "enhancement capability not yet fully backed by native V5 evidence"
+    },
+    {
+      "id": "ENH-04",
+      "name": "Multi-Horizon Strategic Optimization",
+      "critical": true,
+      "probe": "multi_horizon",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "enhancement capability not yet fully backed by native V5 evidence"
+    },
+    {
+      "id": "ENH-06",
+      "name": "Package & Structural Optimization",
+      "critical": true,
+      "probe": "package_structural",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "enhancement capability not yet fully backed by native V5 evidence"
+    },
+    {
+      "id": "ENH-08",
+      "name": "Evidence Fusion & Final Sanity Governance",
+      "critical": true,
+      "probe": "final_governance",
+      "status": "PARTIAL",
+      "evidence_services": [],
+      "detail": "enhancement capability not yet fully backed by native V5 evidence"
+    }
+  ],
+  "governance": {
+    "gate0_required_count": 16,
+    "gate0_fail_blocks_go": true,
+    "dss_authority": "decision-service",
+    "enhancement_authority": "governance-service",
+    "dss_core_required_count": 50,
+    "dss_extension_required_count": 16,
+    "enhancement_required_count": 8,
+    "degraded_context_blocks_unqualified_go": true,
+    "service_boundary_enforced": true,
+    "production_auto_submit": false
+  }
+}

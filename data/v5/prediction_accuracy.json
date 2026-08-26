@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-08-26T08:30:16.130356+00:00",
+  "model": "prediction_evaluation_v1",
+  "freeze_policy": "last_pre_deadline_snapshot",
+  "overall": {
+    "sample_size": 0,
+    "status": "NO_SETTLED_SAMPLE"
+  },
+  "confidence": "LOW",
+  "settled_gameweeks": [],
+  "collecting_gameweeks": [
+    2
+  ],
+  "dynamic_weight_eligible": false,
+  "governance": {
+    "accuracy_claim_requires_settled_sample": true,
+    "pre_deadline_forecast_is_frozen_before_scoring": true,
+    "post_deadline_information_cannot_rewrite_frozen_forecast": true
+  }
+}

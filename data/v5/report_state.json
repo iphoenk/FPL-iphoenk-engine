@@ -1,0 +1,32 @@
+{
+  "fingerprint": "921576e867d6cd87",
+  "state": {
+    "squad": null,
+    "starting_xi": [],
+    "formation": "3-5-2",
+    "captain": 411,
+    "vice_captain": 237,
+    "chip": null,
+    "price": [
+      [
+        8,
+        "RISE",
+        "CRITICAL"
+      ],
+      [
+        165,
+        "RISE",
+        "CRITICAL"
+      ],
+      [
+        557,
+        "RISE",
+        "HIGH"
+      ]
+    ],
+    "critical_health": {
+      "overall": "RED",
+      "go_allowed": false
+    }
+  }
+}

@@ -1,0 +1,298 @@
+{
+  "layer": "USER_REPORT",
+  "report_mode": "FULL_DECISION",
+  "decision": {
+    "state": "REVIEW",
+    "selected_package_id": null,
+    "confidence": "LOW"
+  },
+  "changes_since_last_report": {
+    "initial_report": true,
+    "material_change": true,
+    "changed": [
+      "initial_baseline"
+    ]
+  },
+  "owned_squad": {
+    "authority": "official_public",
+    "count": 0
+  },
+  "starting_xi": {
+    "decision": "OPEN",
+    "formation": "3-5-2",
+    "battle": {
+      "status": "CLOSE",
+      "margin": 0.0245,
+      "starter_side": [
+        {
+          "element": 259,
+          "name": "Diop",
+          "position": "DEF",
+          "selection_score": 2.6041
+        }
+      ],
+      "bench_side": [
+        {
+          "element": 418,
+          "name": "Maguire",
+          "position": "DEF",
+          "selection_score": 2.5796
+        }
+      ],
+      "alternative_formation": "3-5-2"
+    },
+    "starting_xi": [],
+    "bench": [
+      {
+        "element": 418,
+        "name": "Maguire",
+        "position": "DEF",
+        "team_id": 16,
+        "mean": 2.631,
+        "std": 2.765,
+        "start_probability": 0.5821,
+        "dnp_probability": 0.1463,
+        "score": 2.7034
+      },
+      {
+        "element": 11,
+        "name": "Mosquera",
+        "position": "DEF",
+        "team_id": 1,
+        "mean": 2.54,
+        "std": 2.746,
+        "start_probability": 0.5459,
+        "dnp_probability": 0.1589,
+        "score": 2.597
+      },
+      {
+        "element": 346,
+        "name": "Calvert-Lewin",
+        "position": "FWD",
+        "team_id": 13,
+        "mean": 2.497,
+        "std": 2.679,
+        "start_probability": 0.6294,
+        "dnp_probability": 0.1297,
+        "score": 2.5895
+      },
+      {
+        "element": 109,
+        "name": "Verbruggen",
+        "position": "GK",
+        "team_id": 5,
+        "mean": 2.53,
+        "std": 2.647,
+        "start_probability": 0.6915,
+        "dnp_probability": 0.108,
+        "score": 2.6489
+      }
+    ]
+  },
+  "captaincy": {
+    "decision": "OPEN",
+    "confidence": "LOW",
+    "captain": {
+      "element": 411,
+      "name": "Haaland",
+      "position": "FWD",
+      "team_id": 15,
+      "mean": 6.072,
+      "std": 4.04,
+      "start_probability": 0.788,
+      "dnp_probability": 0.0742,
+      "score": 7.284
+    },
+    "vice_captain": {
+      "element": 237,
+      "name": "Ndiaye",
+      "position": "MID",
+      "team_id": 9,
+      "mean": 3.708,
+      "std": 3.192,
+      "start_probability": 0.6231,
+      "dnp_probability": 0.1319,
+      "score": 3.8504
+    },
+    "candidate_margin": 0.0,
+    "checks": {
+      "start_probability": false,
+      "expected_minutes": false,
+      "dnp_risk": true,
+      "ranking_margin": false
+    }
+  },
+  "chip": {},
+  "price_radar": {
+    "owned": [
+      {
+        "element": 165,
+        "name": "João Pedro",
+        "owned": true,
+        "risk_direction": "RISE",
+        "urgency": "CRITICAL",
+        "official_progress_pct": 101.4,
+        "official_hourly_rate_pct": 15.97,
+        "trajectory": "NEW",
+        "predicted_change_deadline": null,
+        "prediction_source": null,
+        "official_projection_health": "SUSPECT_STATIC_OFFSET0"
+      },
+      {
+        "element": 8,
+        "name": "Calafiori",
+        "owned": true,
+        "risk_direction": "RISE",
+        "urgency": "CRITICAL",
+        "official_progress_pct": 99.5,
+        "official_hourly_rate_pct": 6.94,
+        "trajectory": "NEW",
+        "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
+        "prediction_source": "TRAJECTORY_RATE",
+        "official_projection_health": "SUSPECT_STATIC_OFFSET0"
+      },
+      {
+        "element": 557,
+        "name": "Tzolis",
+        "owned": true,
+        "risk_direction": "RISE",
+        "urgency": "HIGH",
+        "official_progress_pct": 66.5,
+        "official_hourly_rate_pct": 5.65,
+        "trajectory": "NEW",
+        "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
+        "prediction_source": "TRAJECTORY_RATE",
+        "official_projection_health": "SUSPECT_STATIC_OFFSET0"
+      }
+    ],
+    "external": [],
+    "external_status": "INSUFFICIENT_EVIDENCE"
+  },
+  "external_watchlist": {
+    "schema_version": 2,
+    "model": "full_dss_watchlist_v5_v2",
+    "screening_contract": "FULL_DSS_SCREEN_V1",
+    "status": "INSUFFICIENT_EVIDENCE",
+    "positions": {
+      "GK": [],
+      "DEF": [],
+      "MID": [],
+      "FWD": []
+    },
+    "candidate_count": 0,
+    "rejected": 500,
+    "owned_excluded": 15,
+    "dss_traversal": {
+      "core_ids": [
+        "DSS-01",
+        "DSS-02",
+        "DSS-03",
+        "DSS-04",
+        "DSS-05",
+        "DSS-06",
+        "DSS-07",
+        "DSS-08",
+        "DSS-09",
+        "DSS-10",
+        "DSS-11",
+        "DSS-12",
+        "DSS-13",
+        "DSS-14",
+        "DSS-15",
+        "DSS-16",
+        "DSS-17",
+        "DSS-18",
+        "DSS-19",
+        "DSS-20",
+        "DSS-21",
+        "DSS-22",
+        "DSS-23",
+        "DSS-24",
+        "DSS-25",
+        "DSS-26",
+        "DSS-27",
+        "DSS-28",
+        "DSS-29",
+        "DSS-30",
+        "DSS-31",
+        "DSS-32",
+        "DSS-33",
+        "DSS-34",
+        "DSS-35",
+        "DSS-36",
+        "DSS-37",
+        "DSS-38",
+        "DSS-39",
+        "DSS-40",
+        "DSS-41",
+        "DSS-42",
+        "DSS-43",
+        "DSS-44",
+        "DSS-45",
+        "DSS-46",
+        "DSS-47",
+        "DSS-48",
+        "DSS-49",
+        "DSS-50"
+      ],
+      "extension_ids": [
+        "DSS-X01",
+        "DSS-X02",
+        "DSS-X03",
+        "DSS-X04",
+        "DSS-X05",
+        "DSS-X06",
+        "DSS-X07",
+        "DSS-X08",
+        "DSS-X09",
+        "DSS-X10",
+        "DSS-X11",
+        "DSS-X12",
+        "DSS-X13",
+        "DSS-X14",
+        "DSS-X15",
+        "DSS-X16"
+      ],
+      "core_count": 50,
+      "extension_count": 16,
+      "all_modules_traversed": true
+    },
+    "governance": {
+      "full_universe_screen": true,
+      "exclude_owned_players": true,
+      "latest_gw_is_evidence_not_primary_driver": true,
+      "primary_horizon_gws": [
+        3,
+        5
+      ],
+      "strategic_horizon_gws": [
+        10,
+        15
+      ],
+      "price_is_overlay_not_primary_reason": true,
+      "missing_set_piece_evidence_is_not_fabricated": true,
+      "partial_tactical_role_evidence_must_be_labelled_proxy": true,
+      "package_optimizer_is_structural_fit_evidence_not_final_buy_instruction": true,
+      "all_dss_core_modules_are_traversed_via_framework_registry": true,
+      "all_dss_extensions_are_traversed_via_framework_registry": true
+    }
+  },
+  "engine_line": {
+    "status": "RED",
+    "review_only": true
+  },
+  "action_board": [
+    {
+      "action": "REVIEW",
+      "target": "SQUAD"
+    },
+    {
+      "action": "OPEN",
+      "target": "XI"
+    },
+    {
+      "action": "OPEN",
+      "target": "CAPTAIN"
+    }
+  ]
+}

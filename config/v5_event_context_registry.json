@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "authority": "Official FPL bootstrap-static events",
+  "event_flags": {
+    "current": "is_current",
+    "next": "is_next",
+    "finished": "finished",
+    "deadline": "deadline_time"
+  },
+  "policies": {
+    "planning_after_current_deadline": "next_or_current",
+    "submitted_event": "current_or_last_finished",
+    "scoring_event": "current",
+    "live_when_current_unfinished_after_deadline": true
+  }
+}

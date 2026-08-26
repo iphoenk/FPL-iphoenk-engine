@@ -26,6 +26,7 @@ class SourceResult:
     observation_count: int
     capabilities: dict[str, str]
     detail: dict[str, Any]
+    observations: tuple[dict[str, Any], ...] = ()
 
     def as_dict(self) -> dict[str, Any]:
         return {

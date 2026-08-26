@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T10:18:21.275841+00:00",
+  "generated_at": "2026-08-26T10:32:50.465100+00:00",
   "schema_version": 513,
   "model_version": "player_projection_v5_historical_prior",
   "ruleset_id": "FPL_2026_27",
@@ -49777,7 +49777,7 @@
       "position": "FWD",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 2.7,
+      "ownership_pct": 2.8,
       "current_season": {
         "starts": 1,
         "minutes": 74
@@ -229432,7 +229432,7 @@
       "position": "DEF",
       "now_cost": 45,
       "status": "a",
-      "ownership_pct": 20.1,
+      "ownership_pct": 20.0,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -247457,7 +247457,7 @@
       "position": "FWD",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 2.7,
+      "ownership_pct": 2.8,
       "current_season": {
         "starts": 1,
         "minutes": 90

@@ -1,6 +1,6 @@
 {
   "framework_schema": 8,
-  "generated_at": "2026-08-26T10:18:22.602528+00:00",
+  "generated_at": "2026-08-26T10:32:51.807077+00:00",
   "auditor": "v5-microservice-governance-v4",
   "overall": "GREEN",
   "decision_engine": "HEALTHY",
@@ -71,7 +71,7 @@
         "critical": true,
         "phase": "postflight",
         "status": "PASS",
-        "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:165,426->106,123', True, 60), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:565,346->123,249', True, 5), ('2:8,346->388,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
+        "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,426->106,123', True, 60), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,346->388,249', True, 5), ('2:565,346->123,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
       },
       {
         "id": "G0-07",
@@ -151,7 +151,7 @@
         "critical": true,
         "phase": "postflight",
         "status": "PASS",
-        "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:165,426->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:565,346->123,249', True, True), ('2:8,346->388,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
+        "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,426->106,123', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,346->388,249', True, True), ('2:565,346->123,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
       }
     ],
     "preflight": {
@@ -266,7 +266,7 @@
           "critical": true,
           "phase": "postflight",
           "status": "PASS",
-          "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:165,426->106,123', True, 60), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:565,346->123,249', True, 5), ('2:8,346->388,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
+          "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,426->106,123', True, 60), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,346->388,249', True, 5), ('2:565,346->123,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
         },
         {
           "id": "G0-10",
@@ -314,7 +314,7 @@
           "critical": true,
           "phase": "postflight",
           "status": "PASS",
-          "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:165,426->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:565,346->123,249', True, True), ('2:8,346->388,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
+          "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,426->106,123', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,346->388,249', True, True), ('2:565,346->123,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
         }
       ],
       "registry_integrity": {
@@ -947,10 +947,9 @@
     "unexpected_ids": [],
     "integrity_ok": true,
     "counts": {
-      "ACTIVE": 14,
-      "PARTIAL": 2
+      "ACTIVE": 16
     },
-    "coverage_ratio": 0.875,
+    "coverage_ratio": 1.0,
     "critical_partial": [],
     "items": [
       {
@@ -1019,9 +1018,11 @@
         "category": null,
         "critical": false,
         "probe": "team_cluster_penalty",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-X07",
@@ -1137,9 +1138,11 @@
         "category": null,
         "critical": false,
         "probe": "runtime_observability",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       }
     ]
   },
@@ -1398,6 +1401,12 @@
       "decision"
     ],
     "package_structural": [
+      "decision"
+    ],
+    "runtime_observability": [
+      "decision"
+    ],
+    "team_cluster_penalty": [
       "decision"
     ],
     "calibration_store": [

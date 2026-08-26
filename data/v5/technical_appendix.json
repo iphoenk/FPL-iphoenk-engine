@@ -4,10 +4,10 @@
     "decision_type": "HOLD",
     "action": "HOLD authoritative manual LOCK; optimizer challenger is review evidence only",
     "subject_element_ids": [],
-    "score": 15.648,
+    "score": 14.948,
     "confidence": "HIGH",
     "reasons_for": [
-      "best challenger robust score delta vs HOLD = 15.648",
+      "best challenger robust score delta vs HOLD = 14.948",
       "best challenger independent-baseline probability of outperforming HOLD = 0.801",
       "lineup formation = 4-4-2",
       "authoritative manual LOCK freezes squad composition while retaining optimizer challenger evidence",
@@ -89,7 +89,7 @@
     "selected_package_id": "HOLD",
     "optimizer_best_challenger_id": "2:557,165->123,106",
     "manual_authority_override": true,
-    "robust_gain_vs_hold": 15.648,
+    "robust_gain_vs_hold": 14.948,
     "p_outperform_hold_independent_baseline": 0.8014,
     "gate0_preflight_pass": true,
     "production_recommendation": null
@@ -697,10 +697,9 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "ACTIVE": 14,
-        "PARTIAL": 2
+        "ACTIVE": 16
       },
-      "coverage_ratio": 0.875,
+      "coverage_ratio": 1.0,
       "critical_partial": [],
       "items": [
         {
@@ -769,9 +768,11 @@
           "category": null,
           "critical": false,
           "probe": "team_cluster_penalty",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-X07",
@@ -887,9 +888,11 @@
           "category": null,
           "critical": false,
           "probe": "runtime_observability",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         }
       ]
     },
@@ -1049,6 +1052,12 @@
       "package_structural": [
         "decision"
       ],
+      "runtime_observability": [
+        "decision"
+      ],
+      "team_cluster_penalty": [
+        "decision"
+      ],
       "calibration_store": [
         "evaluation"
       ],
@@ -1144,7 +1153,7 @@
   "gate0_preflight_pass": true,
   "governance": {
     "framework_schema": 8,
-    "generated_at": "2026-08-26T10:18:22.602528+00:00",
+    "generated_at": "2026-08-26T10:32:51.807077+00:00",
     "auditor": "v5-microservice-governance-v4",
     "overall": "GREEN",
     "decision_engine": "HEALTHY",
@@ -1215,7 +1224,7 @@
           "critical": true,
           "phase": "postflight",
           "status": "PASS",
-          "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:165,426->106,123', True, 60), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:565,346->123,249', True, 5), ('2:8,346->388,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
+          "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,426->106,123', True, 60), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,346->388,249', True, 5), ('2:565,346->123,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
         },
         {
           "id": "G0-07",
@@ -1295,7 +1304,7 @@
           "critical": true,
           "phase": "postflight",
           "status": "PASS",
-          "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:165,426->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:565,346->123,249', True, True), ('2:8,346->388,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
+          "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,426->106,123', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,346->388,249', True, True), ('2:565,346->123,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
         }
       ],
       "preflight": {
@@ -1410,7 +1419,7 @@
             "critical": true,
             "phase": "postflight",
             "status": "PASS",
-            "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:165,426->106,123', True, 60), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:565,346->123,249', True, 5), ('2:8,346->388,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
+            "detail": "minimum_itb=0,packages=[('2:557,165->123,106', True, 5), ('2:557,8->123,388', True, 5), ('2:165,15->106,123', True, 5), ('2:8,15->388,123', True, 5), ('2:8,426->388,123', True, 60), ('2:165,426->106,123', True, 60), ('2:8,40->388,123', True, 15), ('2:557,346->123,249', True, 15), ('2:165,40->106,123', True, 15), ('2:165,346->106,249', True, 5), ('2:8,346->388,249', True, 5), ('2:565,346->123,249', True, 5), ('2:557,565->123,94', True, 5), ('2:15,346->123,249', True, 15), ('2:8,557->388,94', True, 5), ('2:557,165->123,249', True, 30), ('2:557,15->123,368', True, 5), ('2:426,346->123,249', True, 70), ('2:565,165->123,249', True, 20), ('2:557,15->123,94', True, 15)]"
           },
           {
             "id": "G0-10",
@@ -1458,7 +1467,7 @@
             "critical": true,
             "phase": "postflight",
             "status": "PASS",
-            "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:165,426->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:565,346->123,249', True, True), ('2:8,346->388,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
+            "detail": "packages=[('2:557,165->123,106', True, True), ('2:557,8->123,388', True, True), ('2:165,15->106,123', True, True), ('2:8,15->388,123', True, True), ('2:8,426->388,123', True, True), ('2:165,426->106,123', True, True), ('2:8,40->388,123', True, True), ('2:557,346->123,249', True, True), ('2:165,40->106,123', True, True), ('2:165,346->106,249', True, True), ('2:8,346->388,249', True, True), ('2:565,346->123,249', True, True), ('2:557,565->123,94', True, True), ('2:15,346->123,249', True, True), ('2:8,557->388,94', True, True), ('2:557,165->123,249', True, True), ('2:557,15->123,368', True, True), ('2:426,346->123,249', True, True), ('2:565,165->123,249', True, True), ('2:557,15->123,94', True, True)]"
           }
         ],
         "registry_integrity": {
@@ -2091,10 +2100,9 @@
       "unexpected_ids": [],
       "integrity_ok": true,
       "counts": {
-        "ACTIVE": 14,
-        "PARTIAL": 2
+        "ACTIVE": 16
       },
-      "coverage_ratio": 0.875,
+      "coverage_ratio": 1.0,
       "critical_partial": [],
       "items": [
         {
@@ -2163,9 +2171,11 @@
           "category": null,
           "critical": false,
           "probe": "team_cluster_penalty",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         },
         {
           "id": "DSS-X07",
@@ -2281,9 +2291,11 @@
           "category": null,
           "critical": false,
           "probe": "runtime_observability",
-          "status": "PARTIAL",
-          "evidence_services": [],
-          "detail": "registered capability has no active runtime evidence contract yet"
+          "status": "ACTIVE",
+          "evidence_services": [
+            "decision"
+          ],
+          "detail": "capability advertised by bounded-context owner"
         }
       ]
     },
@@ -2544,6 +2556,12 @@
       "package_structural": [
         "decision"
       ],
+      "runtime_observability": [
+        "decision"
+      ],
+      "team_cluster_penalty": [
+        "decision"
+      ],
       "calibration_store": [
         "evaluation"
       ],
@@ -2600,9 +2618,9 @@
     "base_collection": {
       "service_id": "ingestion",
       "operation": "collect_base",
-      "service_compute_ms": 118.289,
-      "round_trip_ms": 174.402,
-      "transport_overhead_ms": 56.113,
+      "service_compute_ms": 223.271,
+      "round_trip_ms": 278.211,
+      "transport_overhead_ms": 54.94,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2615,9 +2633,9 @@
     "event_context": {
       "service_id": "truth",
       "operation": "context",
-      "service_compute_ms": 0.072,
-      "round_trip_ms": 40.626,
-      "transport_overhead_ms": 40.554,
+      "service_compute_ms": 0.075,
+      "round_trip_ms": 35.889,
+      "transport_overhead_ms": 35.814,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2631,9 +2649,9 @@
       "auth": {
         "service_id": "ingestion",
         "operation": "collect_authenticated",
-        "service_compute_ms": 0.045,
-        "round_trip_ms": 2.98,
-        "transport_overhead_ms": 2.935,
+        "service_compute_ms": 0.041,
+        "round_trip_ms": 4.221,
+        "transport_overhead_ms": 4.18,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2646,9 +2664,9 @@
       "dynamic": {
         "service_id": "ingestion",
         "operation": "collect_dynamic",
-        "service_compute_ms": 32.726,
-        "round_trip_ms": 52.664,
-        "transport_overhead_ms": 19.938,
+        "service_compute_ms": 116.78,
+        "round_trip_ms": 138.37,
+        "transport_overhead_ms": 21.59,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2662,9 +2680,9 @@
     "truth_assembly": {
       "service_id": "truth",
       "operation": "assemble",
-      "service_compute_ms": 1.15,
-      "round_trip_ms": 77.843,
-      "transport_overhead_ms": 76.693,
+      "service_compute_ms": 1.773,
+      "round_trip_ms": 84.916,
+      "transport_overhead_ms": 83.143,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2675,42 +2693,12 @@
       }
     },
     "state_hydration": {
-      "price_trajectory": {
-        "service_id": "snapshot",
-        "operation": "read",
-        "service_compute_ms": 2.351,
-        "round_trip_ms": 15.281,
-        "transport_overhead_ms": 12.93,
-        "transport_attempts": 1,
-        "transport_retry_policy": "idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
       "challenger_observations": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 0.062,
-        "round_trip_ms": 13.439,
-        "transport_overhead_ms": 13.377,
-        "transport_attempts": 1,
-        "transport_retry_policy": "idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "historical_prior": {
-        "service_id": "snapshot",
-        "operation": "read",
-        "service_compute_ms": 5.158,
-        "round_trip_ms": 16.405,
-        "transport_overhead_ms": 11.247,
+        "service_compute_ms": 0.103,
+        "round_trip_ms": 9.689,
+        "transport_overhead_ms": 9.586,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2723,9 +2711,39 @@
       "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 8.875,
-        "round_trip_ms": 20.071,
-        "transport_overhead_ms": 11.196,
+        "service_compute_ms": 2.779,
+        "round_trip_ms": 11.373,
+        "transport_overhead_ms": 8.594,
+        "transport_attempts": 1,
+        "transport_retry_policy": "idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "historical_prior": {
+        "service_id": "snapshot",
+        "operation": "read",
+        "service_compute_ms": 9.328,
+        "round_trip_ms": 20.969,
+        "transport_overhead_ms": 11.641,
+        "transport_attempts": 1,
+        "transport_retry_policy": "idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "price_trajectory": {
+        "service_id": "snapshot",
+        "operation": "read",
+        "service_compute_ms": 8.345,
+        "round_trip_ms": 24.222,
+        "transport_overhead_ms": 15.877,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2740,9 +2758,9 @@
       "price": {
         "service_id": "price",
         "operation": "build",
-        "service_compute_ms": 22.176,
-        "round_trip_ms": 119.869,
-        "transport_overhead_ms": 97.693,
+        "service_compute_ms": 34.488,
+        "round_trip_ms": 143.262,
+        "transport_overhead_ms": 108.774,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2755,9 +2773,9 @@
       "prediction": {
         "service_id": "prediction",
         "operation": "build",
-        "service_compute_ms": 181.706,
-        "round_trip_ms": 413.17,
-        "transport_overhead_ms": 231.464,
+        "service_compute_ms": 194.492,
+        "round_trip_ms": 421.337,
+        "transport_overhead_ms": 226.845,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2772,9 +2790,9 @@
       "gate0_preflight": {
         "service_id": "governance",
         "operation": "gate0_preflight",
-        "service_compute_ms": 0.848,
-        "round_trip_ms": 7.85,
-        "transport_overhead_ms": 7.002,
+        "service_compute_ms": 0.702,
+        "round_trip_ms": 6.975,
+        "transport_overhead_ms": 6.273,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2787,9 +2805,9 @@
       "evaluation": {
         "service_id": "evaluation",
         "operation": "build",
-        "service_compute_ms": 3.246,
-        "round_trip_ms": 243.694,
-        "transport_overhead_ms": 240.448,
+        "service_compute_ms": 3.063,
+        "round_trip_ms": 250.157,
+        "transport_overhead_ms": 247.094,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2802,9 +2820,9 @@
       "decision_prepare": {
         "service_id": "decision",
         "operation": "prepare",
-        "service_compute_ms": 545.772,
-        "round_trip_ms": 702.235,
-        "transport_overhead_ms": 156.463,
+        "service_compute_ms": 554.225,
+        "round_trip_ms": 717.169,
+        "transport_overhead_ms": 162.944,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2818,9 +2836,9 @@
     "decision_finalize": {
       "service_id": "decision",
       "operation": "finalize",
-      "service_compute_ms": 0.799,
-      "round_trip_ms": 151.385,
-      "transport_overhead_ms": 150.586,
+      "service_compute_ms": 0.89,
+      "round_trip_ms": 151.883,
+      "transport_overhead_ms": 150.993,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2833,9 +2851,9 @@
     "governance": {
       "service_id": "governance",
       "operation": "audit",
-      "service_compute_ms": 0.882,
-      "round_trip_ms": 151.22,
-      "transport_overhead_ms": 150.338,
+      "service_compute_ms": 0.921,
+      "round_trip_ms": 151.614,
+      "transport_overhead_ms": 150.693,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2849,24 +2867,9 @@
       "prediction_quality": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 8.494,
-        "round_trip_ms": 43.511,
-        "transport_overhead_ms": 35.017,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "team_strength": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 16.969,
-        "round_trip_ms": 44.808,
-        "transport_overhead_ms": 27.839,
+        "service_compute_ms": 8.153,
+        "round_trip_ms": 43.124,
+        "transport_overhead_ms": 34.971,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -2879,9 +2882,9 @@
       "historical_prior": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 13.52,
-        "round_trip_ms": 109.859,
-        "transport_overhead_ms": 96.339,
+        "service_compute_ms": 8.354,
+        "round_trip_ms": 103.751,
+        "transport_overhead_ms": 95.397,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -2894,9 +2897,9 @@
       "prediction_accuracy": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 8.546,
-        "round_trip_ms": 73.699,
-        "transport_overhead_ms": 65.153,
+        "service_compute_ms": 11.034,
+        "round_trip_ms": 47.169,
+        "transport_overhead_ms": 36.135,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -2906,12 +2909,12 @@
           "cooldown_seconds": 10.0
         }
       },
-      "prediction_ledger": {
+      "team_strength": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 8.527,
-        "round_trip_ms": 77.515,
-        "transport_overhead_ms": 68.988,
+        "service_compute_ms": 11.1,
+        "round_trip_ms": 55.363,
+        "transport_overhead_ms": 44.263,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -2924,9 +2927,9 @@
       "challenger_scorecard": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 1.122,
-        "round_trip_ms": 73.358,
-        "transport_overhead_ms": 72.236,
+        "service_compute_ms": 5.594,
+        "round_trip_ms": 56.657,
+        "transport_overhead_ms": 51.063,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -2939,9 +2942,9 @@
       "package_optimizer": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 6.817,
-        "round_trip_ms": 77.351,
-        "transport_overhead_ms": 70.534,
+        "service_compute_ms": 7.128,
+        "round_trip_ms": 55.65,
+        "transport_overhead_ms": 48.522,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -2951,27 +2954,12 @@
           "cooldown_seconds": 10.0
         }
       },
-      "price_trajectory": {
+      "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 28.165,
-        "round_trip_ms": 61.761,
-        "transport_overhead_ms": 33.596,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "price_alerts": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 4.51,
-        "round_trip_ms": 63.521,
-        "transport_overhead_ms": 59.011,
+        "service_compute_ms": 12.751,
+        "round_trip_ms": 64.404,
+        "transport_overhead_ms": 51.653,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -2984,9 +2972,39 @@
       "framework_health": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 29.982,
-        "round_trip_ms": 82.642,
-        "transport_overhead_ms": 52.66,
+        "service_compute_ms": 2.679,
+        "round_trip_ms": 59.56,
+        "transport_overhead_ms": 56.881,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "price_trajectory": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 4.13,
+        "round_trip_ms": 144.423,
+        "transport_overhead_ms": 140.293,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "price_alerts": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 12.339,
+        "round_trip_ms": 142.814,
+        "transport_overhead_ms": 130.475,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -2999,9 +3017,9 @@
       "prices": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 101.565,
-        "round_trip_ms": 177.014,
-        "transport_overhead_ms": 75.449,
+        "service_compute_ms": 144.61,
+        "round_trip_ms": 208.916,
+        "transport_overhead_ms": 64.306,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3014,9 +3032,9 @@
       "predictions": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 335.501,
-        "round_trip_ms": 581.464,
-        "transport_overhead_ms": 245.963,
+        "service_compute_ms": 333.564,
+        "round_trip_ms": 574.437,
+        "transport_overhead_ms": 240.873,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3030,9 +3048,9 @@
     "snapshot_write": {
       "service_id": "snapshot",
       "operation": "snapshot",
-      "service_compute_ms": 15.699,
-      "round_trip_ms": 21.152,
-      "transport_overhead_ms": 5.453,
+      "service_compute_ms": 16.67,
+      "round_trip_ms": 22.118,
+      "transport_overhead_ms": 5.448,
       "transport_attempts": 1,
       "transport_retry_policy": "non_idempotent",
       "transport_circuit": {
@@ -3042,11 +3060,11 @@
         "cooldown_seconds": 10.0
       }
     },
-    "orchestrator_wall_ms": 2575.658
+    "orchestrator_wall_ms": 2792.111
   },
   "provenance": {
     "ruleset_id": "FPL_2026_27",
     "prediction_model": "player_projection_v5_historical_prior",
-    "decision_model": "v5_native_decision_governance_v6"
+    "decision_model": "v5_native_decision_governance_v7"
   }
 }

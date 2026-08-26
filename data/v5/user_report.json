@@ -256,7 +256,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 116.6,
         "official_hourly_rate_pct": 12.55,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -269,7 +269,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 105.7,
         "official_hourly_rate_pct": 5.41,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -282,7 +282,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 104.9,
         "official_hourly_rate_pct": 8.76,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -295,7 +295,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 97.9,
         "official_hourly_rate_pct": 5.85,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-27T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -310,7 +310,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -102.8,
         "official_hourly_rate_pct": -1.56,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -323,7 +323,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -101.9,
         "official_hourly_rate_pct": -13.77,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-26T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -349,7 +349,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -99.3,
         "official_hourly_rate_pct": -0.77,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-27T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -362,7 +362,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -93.8,
         "official_hourly_rate_pct": -3.6,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-27T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -375,7 +375,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -93.6,
         "official_hourly_rate_pct": -0.15,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-28T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -388,7 +388,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -89.0,
         "official_hourly_rate_pct": -0.27,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-28T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -401,7 +401,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -87.1,
         "official_hourly_rate_pct": -0.16,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-28T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -414,7 +414,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -86.9,
         "official_hourly_rate_pct": -0.41,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-28T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "LIVE"
@@ -427,7 +427,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -84.6,
         "official_hourly_rate_pct": -0.81,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-27T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "LIVE"
@@ -440,7 +440,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -83.0,
         "official_hourly_rate_pct": -8.27,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-28T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -479,7 +479,7 @@
         "urgency": "HIGH",
         "official_progress_pct": 79.1,
         "official_hourly_rate_pct": 10.34,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-28T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -505,7 +505,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -78.5,
         "official_hourly_rate_pct": -0.06,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "LIVE"

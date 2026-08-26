@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "routing": {
     "base_collection": {"service": "ingestion", "operation": "collect_base"},
     "event_context": {"service": "truth", "operation": "context"},
@@ -10,7 +10,8 @@
     "price_build": {"service": "price", "operation": "build"},
     "prediction_build": {"service": "prediction", "operation": "build"},
     "evaluation_build": {"service": "evaluation", "operation": "build"},
-    "decision_build": {"service": "decision", "operation": "build"},
+    "decision_prepare": {"service": "decision", "operation": "prepare"},
+    "decision_finalize": {"service": "decision", "operation": "finalize"},
     "governance_audit": {"service": "governance", "operation": "audit"},
     "artifact_write": {"service": "snapshot", "operation": "write"},
     "snapshot_write": {"service": "snapshot", "operation": "snapshot"}
@@ -19,6 +20,7 @@
     "runtime_overlay": ["dynamic_collection", "authenticated_collection"],
     "state_hydration": ["price_trajectory", "prediction_ledger", "challenger_observations"],
     "intelligence": ["price_build", "prediction_build"],
+    "evaluation_and_decision_prepare": ["evaluation_build", "decision_prepare"],
     "artifact_persistence": ["prices","price_trajectory","price_alerts","predictions","team_strength","prediction_ledger","prediction_accuracy","challenger_scorecard","package_optimizer","framework_health"]
   },
   "artifact_mapping": {
@@ -33,5 +35,10 @@
     "package_optimizer": "package_optimizer",
     "framework_health": "framework_health"
   },
-  "observability": {"record_service_compute_ms": true,"record_round_trip_ms": true,"record_transport_overhead_ms": true,"propagate_correlation_id": true}
+  "observability": {
+    "record_service_compute_ms": true,
+    "record_round_trip_ms": true,
+    "record_transport_overhead_ms": true,
+    "propagate_correlation_id": true
+  }
 }

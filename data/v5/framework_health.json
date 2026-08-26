@@ -1,11 +1,11 @@
 {
   "framework_schema": 8,
-  "generated_at": "2026-08-26T09:03:53.531511+00:00",
+  "generated_at": "2026-08-26T10:18:22.602528+00:00",
   "auditor": "v5-microservice-governance-v4",
-  "overall": "AMBER",
-  "decision_engine": "DEGRADED",
+  "overall": "GREEN",
+  "decision_engine": "HEALTHY",
   "recommendation_allowed": true,
-  "go_allowed": false,
+  "go_allowed": true,
   "registry_integrity": true,
   "degraded_contexts": [],
   "degraded_blocks_unqualified_go": false,
@@ -355,52 +355,11 @@
     "unexpected_ids": [],
     "integrity_ok": true,
     "counts": {
-      "ACTIVE": 32,
-      "PARTIAL": 18
+      "ACTIVE": 37,
+      "PARTIAL": 13
     },
-    "coverage_ratio": 0.64,
-    "critical_partial": [
-      {
-        "id": "DSS-07",
-        "name": "Manager Tactical Role",
-        "category": "role",
-        "critical": true,
-        "probe": "tactical_role",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-17",
-        "name": "Defensive Contributions / DefCon Route",
-        "category": "scoring",
-        "critical": true,
-        "probe": "defcon_rules",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-35",
-        "name": "Last-Season Baseline",
-        "category": "priors",
-        "critical": true,
-        "probe": "last_season_integration",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-44",
-        "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
-        "category": "governance",
-        "critical": true,
-        "probe": "learning_loop",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      }
-    ],
+    "coverage_ratio": 0.74,
+    "critical_partial": [],
     "items": [
       {
         "id": "DSS-01",
@@ -480,9 +439,11 @@
         "category": "role",
         "critical": true,
         "probe": "tactical_role",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-08",
@@ -490,9 +451,11 @@
         "category": "role",
         "critical": false,
         "probe": "system_fit",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-09",
@@ -586,9 +549,11 @@
         "category": "scoring",
         "critical": true,
         "probe": "defcon_rules",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "truth"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-18",
@@ -788,9 +753,11 @@
         "category": "priors",
         "critical": true,
         "probe": "last_season_integration",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-36",
@@ -891,9 +858,11 @@
         "category": "governance",
         "critical": true,
         "probe": "learning_loop",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "evaluation"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-45",
@@ -978,52 +947,11 @@
     "unexpected_ids": [],
     "integrity_ok": true,
     "counts": {
-      "PARTIAL": 7,
-      "ACTIVE": 9
+      "ACTIVE": 14,
+      "PARTIAL": 2
     },
-    "coverage_ratio": 0.5625,
-    "critical_partial": [
-      {
-        "id": "DSS-X01",
-        "name": "Point-in-Time / Leakage Protection",
-        "category": null,
-        "critical": true,
-        "probe": "leakage_guard",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-X04",
-        "name": "Evidence Fusion Confidence",
-        "category": null,
-        "critical": true,
-        "probe": "reliability_overlay",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-X07",
-        "name": "Early-Season Multi-Change Cap",
-        "category": null,
-        "critical": true,
-        "probe": "early_season_change_cap",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      },
-      {
-        "id": "DSS-X13",
-        "name": "Data Freshness & Refresh Policy",
-        "category": null,
-        "critical": true,
-        "probe": "data_freshness",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
-      }
-    ],
+    "coverage_ratio": 0.875,
+    "critical_partial": [],
     "items": [
       {
         "id": "DSS-X01",
@@ -1031,9 +959,11 @@
         "category": null,
         "critical": true,
         "probe": "leakage_guard",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "evaluation"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-X02",
@@ -1065,9 +995,11 @@
         "category": null,
         "critical": true,
         "probe": "reliability_overlay",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "evaluation"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-X05",
@@ -1097,9 +1029,11 @@
         "category": null,
         "critical": true,
         "probe": "early_season_change_cap",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "decision"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-X08",
@@ -1167,9 +1101,11 @@
         "category": null,
         "critical": true,
         "probe": "data_freshness",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "evaluation"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-X14",
@@ -1177,9 +1113,11 @@
         "category": null,
         "critical": false,
         "probe": "source_health",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "evaluation"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-X15",
@@ -1213,8 +1151,7 @@
     "unexpected_ids": [],
     "integrity_ok": true,
     "counts": {
-      "PARTIAL": 2,
-      "ACTIVE": 6
+      "ACTIVE": 8
     },
     "items": [
       {
@@ -1222,18 +1159,22 @@
         "name": "Data Reliability & Source Triangulation",
         "critical": true,
         "probe": "data_reliability_triangulation",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "enhancement capability not yet fully backed by native V5 evidence"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "evaluation"
+        ],
+        "detail": "capability contract satisfied"
       },
       {
         "id": "ENH-02",
         "name": "Point-in-Time Integrity & Leakage Safety",
         "critical": true,
         "probe": "leakage_guard",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "enhancement capability not yet fully backed by native V5 evidence"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "evaluation"
+        ],
+        "detail": "capability contract satisfied"
       },
       {
         "id": "ENH-03",
@@ -1310,6 +1251,9 @@
     "chip_context": [
       "truth"
     ],
+    "defcon_rules": [
+      "truth"
+    ],
     "manual_authority": [
       "truth"
     ],
@@ -1357,6 +1301,9 @@
     "horizon_5": [
       "prediction"
     ],
+    "last_season_integration": [
+      "prediction"
+    ],
     "opponent_defence_dynamic": [
       "prediction"
     ],
@@ -1382,6 +1329,12 @@
       "prediction"
     ],
     "small_sample_guard": [
+      "prediction"
+    ],
+    "system_fit": [
+      "prediction"
+    ],
+    "tactical_role": [
       "prediction"
     ],
     "team_attacking_strength": [
@@ -1420,6 +1373,9 @@
     "direct_challenger": [
       "decision"
     ],
+    "early_season_change_cap": [
+      "decision"
+    ],
     "governed_optimizer": [
       "decision"
     ],
@@ -1450,10 +1406,28 @@
     "challenger_scorecard": [
       "evaluation"
     ],
+    "data_freshness": [
+      "evaluation"
+    ],
+    "data_reliability_triangulation": [
+      "evaluation"
+    ],
+    "leakage_guard": [
+      "evaluation"
+    ],
+    "learning_loop": [
+      "evaluation"
+    ],
     "prediction_evaluation": [
       "evaluation"
     ],
+    "reliability_overlay": [
+      "evaluation"
+    ],
     "shadow_parity": [
+      "evaluation"
+    ],
+    "source_health": [
       "evaluation"
     ],
     "uncertainty_robustness": [
@@ -1464,106 +1438,7 @@
     ]
   },
   "gate0_failures": [],
-  "critical_partial": [
-    {
-      "id": "DSS-07",
-      "name": "Manager Tactical Role",
-      "category": "role",
-      "critical": true,
-      "probe": "tactical_role",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
-      "id": "DSS-17",
-      "name": "Defensive Contributions / DefCon Route",
-      "category": "scoring",
-      "critical": true,
-      "probe": "defcon_rules",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
-      "id": "DSS-35",
-      "name": "Last-Season Baseline",
-      "category": "priors",
-      "critical": true,
-      "probe": "last_season_integration",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
-      "id": "DSS-44",
-      "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
-      "category": "governance",
-      "critical": true,
-      "probe": "learning_loop",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
-      "id": "DSS-X01",
-      "name": "Point-in-Time / Leakage Protection",
-      "category": null,
-      "critical": true,
-      "probe": "leakage_guard",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
-      "id": "DSS-X04",
-      "name": "Evidence Fusion Confidence",
-      "category": null,
-      "critical": true,
-      "probe": "reliability_overlay",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
-      "id": "DSS-X07",
-      "name": "Early-Season Multi-Change Cap",
-      "category": null,
-      "critical": true,
-      "probe": "early_season_change_cap",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
-      "id": "DSS-X13",
-      "name": "Data Freshness & Refresh Policy",
-      "category": null,
-      "critical": true,
-      "probe": "data_freshness",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "registered capability has no active runtime evidence contract yet"
-    },
-    {
-      "id": "ENH-01",
-      "name": "Data Reliability & Source Triangulation",
-      "critical": true,
-      "probe": "data_reliability_triangulation",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "enhancement capability not yet fully backed by native V5 evidence"
-    },
-    {
-      "id": "ENH-02",
-      "name": "Point-in-Time Integrity & Leakage Safety",
-      "critical": true,
-      "probe": "leakage_guard",
-      "status": "PARTIAL",
-      "evidence_services": [],
-      "detail": "enhancement capability not yet fully backed by native V5 evidence"
-    }
-  ],
+  "critical_partial": [],
   "governance": {
     "gate0_required_count": 16,
     "gate0_fail_blocks_go": true,

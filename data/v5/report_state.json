@@ -1,5 +1,5 @@
 {
-  "fingerprint": "89bb37bc83ebb204",
+  "fingerprint": "90208b2b3e7f550b",
   "state": {
     "squad": "HOLD",
     "starting_xi": [],
@@ -35,8 +35,8 @@
       ]
     ],
     "critical_health": {
-      "overall": "AMBER",
-      "go_allowed": false
+      "overall": "GREEN",
+      "go_allowed": true
     }
   }
 }

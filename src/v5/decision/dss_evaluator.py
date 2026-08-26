@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 from src.v5.config_cache import load_json_config
 
@@ -22,6 +22,7 @@ def _capability_sources(
     price: dict[str, Any],
     prediction: dict[str, Any],
     local_capabilities: Iterable[str],
+    external_capability_sources: Mapping[str, Iterable[str]] | None = None,
 ) -> dict[str, list[str]]:
     sources: dict[str, list[str]] = {}
     for service_name, payload in (("truth", truth), ("price", price), ("prediction", prediction)):
@@ -29,7 +30,10 @@ def _capability_sources(
             sources.setdefault(str(capability), []).append(service_name)
     for capability in local_capabilities:
         sources.setdefault(str(capability), []).append("decision")
-    return sources
+    for service_name, capabilities in (external_capability_sources or {}).items():
+        for capability in capabilities:
+            sources.setdefault(str(capability), []).append(str(service_name))
+    return {key: sorted(set(values)) for key, values in sources.items()}
 
 
 def _audit(rows: list[dict[str, Any]], capability_sources: dict[str, list[str]], expected: int) -> dict[str, Any]:
@@ -48,7 +52,7 @@ def _audit(rows: list[dict[str, Any]], capability_sources: dict[str, list[str]],
                 "critical": bool(row.get("critical")),
                 "probe": probe,
                 "status": "ACTIVE" if active else "PARTIAL",
-                "evidence_services": sorted(set(capability_sources.get(probe, []))),
+                "evidence_services": capability_sources.get(probe, []),
                 "detail": (
                     "capability advertised by bounded-context owner"
                     if active
@@ -77,14 +81,21 @@ def evaluate_dss(
     prediction: dict[str, Any],
     *,
     local_capabilities: Iterable[str] = (),
+    external_capability_sources: Mapping[str, Iterable[str]] | None = None,
 ) -> dict[str, Any]:
-    sources = _capability_sources(truth, price, prediction, local_capabilities)
+    sources = _capability_sources(
+        truth,
+        price,
+        prediction,
+        local_capabilities,
+        external_capability_sources=external_capability_sources,
+    )
     core = _audit(_registry(CORE), sources, expected=50)
     extensions = _audit(_registry(EXT), sources, expected=16)
     critical_partial = core["critical_partial"] + extensions["critical_partial"]
     return {
-        "schema_version": 1,
-        "evaluation_model": "capability_contract_dss_v1",
+        "schema_version": 2,
+        "evaluation_model": "capability_contract_dss_v2",
         "core": core,
         "extensions": extensions,
         "capability_sources": sources,

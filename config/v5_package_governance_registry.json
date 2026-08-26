@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_package_governance_v1",
+  "policy": {
+    "optimizer_is_candidate_generator_only": true,
+    "auto_select_optimizer_candidate": false,
+    "freeze_locked_composition_when_authoritative": true,
+    "authoritative_team_authorities": ["user_lock"],
+    "authoritative_phases": ["PRE_DEADLINE"],
+    "manual_authority_overrides_optimizer_candidate": true,
+    "require_hold_package_when_frozen": true,
+    "expose_optimizer_best_challenger": true
+  }
+}

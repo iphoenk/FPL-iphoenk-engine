@@ -1,13 +1,12 @@
 {
-  "schema_version": 2,
-  "model_id": "v5_gate0_registry_driven_v2",
+  "schema_version": 3,
+  "model_id": "v5_gate0_registry_driven_v3",
   "status_values": ["PASS", "FAIL", "DEFERRED"],
-  "preflight_checks": ["G0-01", "G0-02", "G0-03", "G0-04", "G0-05", "G0-07", "G0-08", "G0-09", "G0-15"],
-  "postflight_checks": ["G0-06", "G0-10", "G0-11", "G0-12", "G0-13", "G0-14", "G0-16"],
   "fail_closed": true,
   "deferred_blocks_unqualified_go": true,
   "affordability": {
     "require_nonnegative_resulting_itb": true,
+    "minimum_resulting_itb_tenths": 0,
     "validate_every_returned_package": true
   },
   "chip": {

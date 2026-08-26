@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 import json, os
 from datetime import datetime, timezone
@@ -6,7 +5,8 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data"
+_data_override = os.getenv("FPL_DATA_DIR")
+DATA = Path(_data_override).expanduser().resolve() if _data_override else ROOT / "data"
 CONFIG = ROOT / "config"
 
 def utcnow():

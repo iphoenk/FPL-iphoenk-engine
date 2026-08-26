@@ -1,0 +1,124 @@
+{
+  "schema_version": 2,
+  "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
+  "production_contract": "v3.10-output-compatible",
+  "transport": "isolated-filesystem-contract",
+  "policy": {
+    "coarse_grained_services": true,
+    "single_run_shared_official_cache": true,
+    "parallelize_independent_services": true,
+    "service_data_isolation": true,
+    "deterministic_fan_in": true,
+    "no_business_logic_rewrite_required": true,
+    "fail_closed_on_critical_service_failure": true,
+    "latest_json_single_writer_during_fan_in": true,
+    "dependency_aware_scheduling": true
+  },
+  "runtime": {
+    "max_parallel_services": 5,
+    "service_timeout_seconds": 180,
+    "http_cache_ttl_seconds": 180,
+    "performance_budget_seconds": 45,
+    "performance_target": "reduce business-pipeline wall time versus the previous sequential workflow"
+  },
+  "services": {
+    "collector": {
+      "stage": "base",
+      "depends_on": [],
+      "critical": true,
+      "isolated": false,
+      "commands": [
+        {"module": "src.engine", "args": ["{mode}", "{stats}", "{deep_stats}"]},
+        {"module": "src.reliability_overlay", "args": []}
+      ]
+    },
+    "price": {
+      "stage": "parallel",
+      "depends_on": ["collector"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["latest.json", "team.json", "prices.json", "price_trajectory.json"],
+      "commands": [{"code": "import os; from src.engines.price_radar import patch_files; patch_files(os.environ['FPL_DATA_DIR'])"}],
+      "artifacts": ["prices.json", "price_trajectory.json", "price_alerts.json"],
+      "latest_keys": ["price_summary"],
+      "latest_file_keys": ["price_trajectory", "price_alerts"]
+    },
+    "prediction": {
+      "stage": "parallel",
+      "depends_on": ["collector"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["latest.json", "team.json"],
+      "commands": [{"module": "src.engines.decision_intelligence", "args": []}],
+      "artifacts": ["team_strength.json", "projections.json", "package_optimizer.json"],
+      "latest_keys": ["decision_intelligence"],
+      "latest_file_keys": ["team_strength", "projections", "package_optimizer"]
+    },
+    "authenticated_official": {
+      "stage": "parallel",
+      "depends_on": ["collector"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["latest.json", "team.json"],
+      "commands": [{"module": "src.engines.authenticated_official", "args": []}],
+      "artifacts": ["auth.json"],
+      "latest_keys": ["authenticated_official"],
+      "latest_file_keys": ["auth"]
+    },
+    "rules": {
+      "stage": "parallel",
+      "depends_on": ["collector"],
+      "critical": true,
+      "isolated": true,
+      "inputs": [],
+      "commands": [{"module": "src.engines.rules_compliance_audit", "args": []}],
+      "artifacts": ["rules_compliance.json"],
+      "latest_keys": [],
+      "latest_file_keys": []
+    },
+    "official_detail": {
+      "stage": "parallel",
+      "depends_on": ["price"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["latest.json", "team.json", "prices.json"],
+      "commands": [{"module": "src.engines.official_expansion", "args": []}],
+      "artifacts": ["official_detail.json"],
+      "latest_keys": ["official_detail_summary", "official_health_panel"],
+      "latest_file_keys": []
+    },
+    "prediction_evaluation": {
+      "stage": "parallel",
+      "depends_on": ["prediction"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["latest.json", "projections.json", "prediction_ledger.json"],
+      "commands": [{"module": "src.engines.prediction_evaluation", "args": []}],
+      "artifacts": ["prediction_ledger.json", "prediction_accuracy.json"],
+      "latest_keys": ["prediction_evaluation"],
+      "latest_file_keys": ["prediction_ledger", "prediction_accuracy"]
+    },
+    "challenger": {
+      "stage": "parallel",
+      "depends_on": ["prediction_evaluation"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["latest.json", "projections.json", "prediction_ledger.json", "challenger_observations.json"],
+      "commands": [{"module": "src.engines.challenger_scorecard", "args": []}],
+      "artifacts": ["challenger_scorecard.json"],
+      "latest_keys": ["challenger_scorecard"],
+      "latest_file_keys": ["challenger_scorecard"]
+    },
+    "governance": {
+      "stage": "final",
+      "depends_on": ["price", "prediction", "authenticated_official", "rules", "official_detail", "prediction_evaluation", "challenger"],
+      "critical": true,
+      "isolated": false,
+      "commands": [
+        {"module": "src.engines.framework_health_audit", "args": ["--phase", "preflight", "--strict"]},
+        {"copy": ["framework_health_preflight.json", "framework_health.json"]},
+        {"module": "src.engines.p0_framework_health_overlay", "args": []}
+      ]
+    }
+  }
+}

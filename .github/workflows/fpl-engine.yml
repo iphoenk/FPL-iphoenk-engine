@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.10
+name: FPL iphoenk collector v3.11 microservices
 
 on:
   workflow_dispatch:
@@ -40,7 +40,7 @@ jobs:
 
   test:
     needs: gate
-    if: github.event_name == 'pull_request' || needs.gate.outputs.should_collect == 'true'
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -50,15 +50,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
       - name: Install dependencies
         run: pip install -r requirements.txt pytest
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
-      - name: Reliability, rules, P0 intelligence, auth, Price Radar and framework tests
+      - name: Reliability, microservices, rules, P0 intelligence, auth, Price Radar and framework tests
         run: python -m pytest -q
 
   collect:
-    if: github.event_name != 'pull_request' && needs.gate.outputs.should_collect == 'true'
+    if: always() && github.event_name != 'pull_request' && needs.gate.outputs.should_collect == 'true' && (needs.test.result == 'success' || needs.test.result == 'skipped')
     needs: [gate, test]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -73,9 +74,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt pytest
+          cache: pip
+      - name: Install runtime dependencies
+        run: pip install -r requirements.txt
       - name: Collector mode
-        run: echo "Collector gate=${{ needs.gate.outputs.reason }} runtime_branch=${RUNTIME_BRANCH}"
+        run: echo "Collector gate=${{ needs.gate.outputs.reason }} runtime_branch=${RUNTIME_BRANCH} architecture=V3_BOUNDED_PROCESS_MICROSERVICES"
       - name: Hydrate persisted state from runtime bridge
         shell: bash
         run: |
@@ -89,18 +92,7 @@ jobs:
               echo "No prior data/${file}; starting clean"
             fi
           done
-      - name: Generate public Official FPL snapshot
-        run: |
-          python -m src.engine daily --stats
-          python -m src.reliability_overlay
-          python -m src.engines.price_radar
-          python -m src.engines.official_expansion
-      - name: P0 decision intelligence pipeline
-        run: |
-          python -m src.engines.decision_intelligence
-          python -m src.engines.prediction_evaluation
-          python -m src.engines.challenger_scorecard
-      - name: Optional authenticated Official read-only overlay
+      - name: V3 bounded microservice runtime
         env:
           FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
           FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
@@ -109,15 +101,8 @@ jobs:
           FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
           FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
           FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
-        run: python -m src.engines.authenticated_official
-      - name: Official FPL Rules Registry integrity audit
-        run: python -m src.engines.rules_compliance_audit
-      - name: Framework health PRE-FLIGHT plus P0 operational probes
-        run: |
-          python -m src.engines.framework_health_audit --phase preflight --strict
-          cp data/framework_health_preflight.json data/framework_health.json
-          python -m src.engines.p0_framework_health_overlay
-      - name: Validate generated snapshot, P0 intelligence, rules and framework contract
+        run: python -m src.runtime_v3.orchestrator --mode daily --stats
+      - name: Validate generated snapshot, runtime microservices, P0 intelligence, rules and framework contract
         run: |
           python - <<'PY'
           import json
@@ -140,8 +125,18 @@ jobs:
           pe=json.load(open('data/prediction_accuracy.json'))
           pl=json.load(open('data/prediction_ledger.json'))
           cs=json.load(open('data/challenger_scorecard.json'))
+          rp=json.load(open('data/runtime_performance.json'))
           assert s['engine_version'] == ENGINE_VERSION
           assert s['schema_version'] == SCHEMA_VERSION
+          runtime=s.get('runtime_architecture',{})
+          assert runtime.get('id') == 'v3-bounded-process-microservices-v1', runtime
+          assert runtime.get('architecture') == 'V3_BOUNDED_PROCESS_MICROSERVICES'
+          assert runtime.get('dependency_aware_scheduling') is True
+          assert runtime.get('shared_official_cache') is True
+          assert s.get('files',{}).get('runtime_performance') == 'data/runtime_performance.json'
+          assert rp.get('architecture') == 'V3_BOUNDED_PROCESS_MICROSERVICES'
+          assert rp.get('shared_official_cache_entries',0) > 0
+          assert all(x.get('status') == 'SUCCESS' for x in rp.get('services',{}).values()), rp
           assert s.get('snapshot_id')
           assert s.get('native',{}).get('entry')
           assert s.get('provenance',{}).get('entry',{}).get('source') == 'official_fpl'
@@ -177,7 +172,6 @@ jobs:
           assert auth.get('state') in {'DISABLED','MISCONFIGURED','VALID','EXPIRED_OR_REJECTED','UNAVAILABLE','ENTRY_MISMATCH','PARTIAL','PARTIAL_AUTH_REJECTED','POLICY_BLOCKED'}
           assert auth.get('raw_authenticated_payload_persisted') is False
           assert auth.get('policy',{}).get('resource_methods') == ['GET']
-
           assert ts.get('teams') and ts.get('matchups')
           assert len(ts.get('teams',[])) == len({x.get('team_id') for x in u.get('players',[])})
           assert len(pr.get('players',[])) == len(u.get('players',[]))
@@ -201,7 +195,6 @@ jobs:
           assert provider_ids == {'internal','onefpl','fffix','ffhub'}
           assert cs.get('auto_scrape') is False
           assert cs.get('governance',{}).get('missing_provider_data_is_not_fabricated') is True
-
           assert fh.get('framework_schema') >= 3
           assert fh.get('registry_integrity') is True
           assert fh.get('rules_registry',{}).get('status') == 'PASS'

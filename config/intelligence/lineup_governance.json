@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "model_id": "governed_lineup_v1",
+  "selection": {
+    "risk_aversion_std": 0.12,
+    "dnp_penalty_points": 2.0,
+    "enumerate_all_legal_xi": true,
+    "publish_alternative_lineups": 3
+  },
+  "captaincy": {
+    "risk_aversion_std": 0.10,
+    "dnp_penalty_points": 4.0,
+    "minimum_start_probability": 0.70,
+    "maximum_dnp_probability": 0.15,
+    "safe_pool_size": 5
+  },
+  "bench": {
+    "risk_aversion_std": 0.10,
+    "dnp_penalty_points": 1.5
+  },
+  "package_governance": {
+    "freeze_locked_composition_when_authoritative": true,
+    "authoritative_phases": ["pre_deadline_wc", "pre_deadline_locked"],
+    "auto_accept_optimizer_package": false,
+    "optimizer_is_candidate_generator_only": true
+  },
+  "chip_governance": {
+    "auto_activate_chip": false,
+    "wildcard_context_from_locked_authority": true
+  },
+  "governance": {
+    "rules_registry_is_authority_for_legal_formations": true,
+    "captain_and_vice_must_be_distinct_starters": true,
+    "bench_must_be_one_gk_plus_three_outfield": true,
+    "manual_lock_overrides_optimizer_candidate": true,
+    "gate0_postflight_revalidation_required": true
+  }
+}

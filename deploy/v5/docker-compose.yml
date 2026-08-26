@@ -4,7 +4,7 @@ services:
     environment:
       V5_SERVICE_ID: ingestion
       V5_SERVICE_PORT: 8101
-      FPL_TEAM_ID: ${FPL_TEAM_ID:-3462711}
+      FPL_TEAM_ID: ${FPL_TEAM_ID:-}
       FPL_AUTH_MODE: ${FPL_AUTH_MODE:-disabled}
       FPL_SESSION_B64: ${FPL_SESSION_B64:-}
       FPL_ACCESS_TOKEN: ${FPL_ACCESS_TOKEN:-}
@@ -22,7 +22,7 @@ services:
       retries: 5
   truth:
     build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
-    environment: {V5_SERVICE_ID: truth, V5_SERVICE_PORT: 8102, FPL_TEAM_ID: "${FPL_TEAM_ID:-3462711}"}
+    environment: {V5_SERVICE_ID: truth, V5_SERVICE_PORT: 8102, FPL_TEAM_ID: "${FPL_TEAM_ID:-}"}
     ports: ["8102:8102"]
     depends_on: {ingestion: {condition: service_healthy}}
     healthcheck: *health
@@ -79,7 +79,7 @@ services:
     environment:
       V5_SERVICE_ID: orchestrator
       V5_SERVICE_PORT: 8100
-      FPL_TEAM_ID: ${FPL_TEAM_ID:-3462711}
+      FPL_TEAM_ID: ${FPL_TEAM_ID:-}
       V5_SERVICE_INGESTION_URL: http://ingestion:8101
       V5_SERVICE_TRUTH_URL: http://truth:8102
       V5_SERVICE_PRICE_URL: http://price:8103

@@ -82,26 +82,31 @@ def run() -> dict:
     reliability = validate_snapshot(latest)
     assert reliability["ok"], reliability
     assert latest.get("schema_version", 0) >= 40
-    assert int(latest.get("schema_version", 0)) >= 480
-    assert str(latest.get("engine_version", "")).startswith("4.8.0-service-boundaries")
-    assert latest.get("meta", {}).get("parallel_fetch_is_single_snapshot_not_polling") is True
-    assert latest.get("meta", {}).get("checkpoint_policy_registry_driven") is True
+    assert int(latest.get("schema_version", 0)) >= 481
+    assert str(latest.get("engine_version", "")).startswith("4.8.1-independent-services")
     assert latest.get("meta", {}).get("simulation_never_authorizes_action") is True
     assert latest.get("meta", {}).get("service_contract_compatible") is True
     assert latest.get("meta", {}).get("service_boundaries_registry_driven") is True
     assert latest.get("checkpoint_context", {}).get("policy_id")
+    service_performance = latest.get("performance") or {}
+    for field in ("raw_snapshot_ms", "enrichment_ms", "prediction_ms", "engine_before_snapshot_write_ms"):
+        assert service_performance.get(field, 0) > 0, service_performance
+    component_total = sum(service_performance[field] for field in ("raw_snapshot_ms", "enrichment_ms", "prediction_ms"))
+    assert abs(component_total - service_performance["engine_before_snapshot_write_ms"]) < 0.02, service_performance
 
     orchestration = _load("service_orchestration_v4.json")
-    assert int(orchestration.get("schema_version", 0)) >= 480, orchestration
-    assert str(orchestration.get("engine", "")).startswith("v4.8.0-service-orchestrator"), orchestration
+    assert int(orchestration.get("schema_version", 0)) >= 481, orchestration
+    assert str(orchestration.get("engine", "")).startswith("v4.8.1-service-orchestrator"), orchestration
     assert orchestration.get("status") == "PASS", orchestration
     services = orchestration.get("services") or []
-    assert len(services) == 6 and all(row.get("status") == "PASS" for row in services), services
-    assert sum(row.get("boundary_state") == "TRANSITIONAL_COMPOSITE" for row in services) == 1, services
+    assert len(services) == 8 and all(row.get("status") == "PASS" for row in services), services
+    assert all(row.get("boundary_state") == "INDEPENDENT" for row in services), services
     assert all(all(contract.get("valid") for contract in row.get("contracts") or []) for row in services), services
-    assert orchestration.get("snapshot_identity", {}).get("sha256") == file_digest(DATA / "latest.json"), orchestration
+    assert orchestration.get("snapshot_identity", {}).get("sha256") == file_digest(DATA / "runtime/snapshot.v1.json"), orchestration
+    assert latest.get("lineage", {}).get("snapshot_sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
+    assert latest.get("lineage", {}).get("enrichment_sha256") == file_digest(DATA / "runtime/enrichment.v1.json")
     og = orchestration.get("guardrails") or {}
-    assert og.get("single_snapshot_authority") and og.get("services_may_not_refetch_snapshot")
+    assert og.get("official_fpl_api_authority") == "raw_snapshot_only" and og.get("services_may_not_refetch_snapshot")
     assert og.get("prediction_formula_unchanged") and og.get("optimizer_search_width_unchanged")
     assert og.get("gate0_checks_unchanged") == 16
 
@@ -263,7 +268,7 @@ def run() -> dict:
         "orchestration_ms": orchestration.get("duration_ms"),
         "pipeline_ms": timings["total_pipeline_ms"],
     }
-    print("V4.8.0 SERVICE CONTRACT + DECISION-EQUIVALENCE QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.8.1 SERVICE CONTRACT + DECISION-EQUIVALENCE QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

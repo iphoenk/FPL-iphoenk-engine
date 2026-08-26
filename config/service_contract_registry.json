@@ -1,8 +1,10 @@
 {
-  "schema_version": 1,
-  "registry": "fpl_v4_service_contracts_v1",
+  "schema_version": 2,
+  "registry": "fpl_v4_8_1_service_contracts_v2",
   "contracts": {
-    "latest_snapshot": {"path": "data/latest.json", "min_schema_version": 480, "version_field": "engine_version", "version_prefix": "4.8.0-service-boundaries", "required_paths": ["generated_at", "phase", "checkpoint_context.policy_id", "team_summary.sell_value", "files.predictions", "meta.service_contract_compatible"]},
+    "raw_snapshot": {"path":"data/runtime/snapshot.v1.json","min_schema_version":481,"required_paths":["schema","generated_at","official.bootstrap","official.fixtures","team_value_ledger"],"equals":{"schema":"snapshot.v1"}},
+    "enrichment": {"path":"data/runtime/enrichment.v1.json","min_schema_version":481,"required_paths":["schema","lineage.snapshot_sha256","universe"],"equals":{"schema":"enrichment.v1"},"min_lengths":{"universe":500}},
+    "latest_snapshot": {"path": "data/latest.json", "min_schema_version": 481, "version_field": "engine_version", "version_prefix": "4.8.1-independent-services", "required_paths": ["generated_at", "phase", "checkpoint_context.policy_id", "team_summary.sell_value", "files.team", "files.live", "files.prices", "files.health", "files.universe", "files.chips", "files.predictions", "files.checkpoint_decision", "files.service_orchestration", "lineage.snapshot_sha256", "lineage.enrichment_sha256", "meta.service_contract_compatible"]},
     "predictions": {"path": "data/predictions_v4.json", "min_schema_version": 471, "version_field": "model_version", "version_prefix": "v4.7.1-correctness-hotfix", "required_paths": ["generated_at", "players", "input_coverage"], "min_lengths": {"players": 500}},
     "team_state": {"path": "data/team.json", "required_paths": ["generated_at", "squad_authority", "squad", "team_value_ledger", "totals.sell_value"], "min_lengths": {"squad": 15}},
     "universe": {"path": "data/universe.json", "required_paths": ["generated_at", "players"], "min_lengths": {"players": 500}},

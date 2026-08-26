@@ -16,10 +16,11 @@ def test_registered_services_are_ordered_and_contract_complete():
     services = json.loads((ROOT / "config/service_registry.json").read_text())
     contracts = json.loads((ROOT / "config/service_contract_registry.json").read_text())
     ordered = _ordered_services(services)
-    assert len(ordered) == 6
-    assert ordered[0]["id"] == "snapshot_prediction"
+    assert len(ordered) == 8
+    assert ordered[0]["id"] == "raw_snapshot"
     assert ordered[-1]["id"] == "report_governance"
-    assert sum(row["boundary_state"] == "TRANSITIONAL_COMPOSITE" for row in ordered) == 1
+    assert all(row["boundary_state"] == "INDEPENDENT" for row in ordered)
+    assert [row["id"] for row in ordered[:3]] == ["raw_snapshot", "enrichment", "prediction"]
     declared = contracts["contracts"]
     assert all(name in declared for service in ordered for name in service["produces"])
     assert services["guardrails"]["gate0_checks_unchanged"] == 16
@@ -112,3 +113,15 @@ def test_runtime_flags_only_reach_services_that_declare_them():
     command = _render_command(service, "deadline", True, False, "2026-08-28T21:30:00+07:00")
     assert command[-3:] == ["--stats", "--as-of", "2026-08-28T21:30:00+07:00"]
     assert "deadline" in command
+
+
+def test_only_raw_snapshot_service_imports_official_fpl_client():
+    service_sources = {path.name: path.read_text() for path in (ROOT / "src/services").glob("*.py")}
+    importers = {name for name, source in service_sources.items() if "src.sources.official_fpl" in source}
+    assert importers == {"raw_snapshot_service.py"}
+
+
+def test_v481_latest_contract_preserves_v480_file_pointers():
+    contracts = json.loads((ROOT / "config/service_contract_registry.json").read_text())
+    required = set(contracts["contracts"]["latest_snapshot"]["required_paths"])
+    assert {f"files.{name}" for name in ("team", "live", "prices", "health", "universe", "chips", "predictions", "checkpoint_decision", "service_orchestration")} <= required

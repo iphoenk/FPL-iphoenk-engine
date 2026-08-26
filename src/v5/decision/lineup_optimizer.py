@@ -34,46 +34,73 @@ def _minutes_probabilities(player: dict[str, Any]) -> tuple[float, float]:
     return _f(xmins.get("start_probability")), _f(xmins.get("dnp_probability"))
 
 
+def _score_from_metrics(
+    policy: Mapping[str, Any],
+    projection: Mapping[str, float],
+    start_probability: float,
+    dnp_probability: float,
+) -> float:
+    return (
+        _f(policy.get("mean_weight")) * float(projection["mean"])
+        + _f(policy.get("ceiling_std_weight")) * float(projection["std"])
+        - _f(policy.get("risk_std_penalty")) * float(projection["std"])
+        + _f(policy.get("start_probability_weight")) * start_probability
+        - _f(policy.get("dnp_probability_penalty")) * dnp_probability
+    )
+
+
 def player_score(player: dict[str, Any], gw: int, profile: str = "player_score") -> float:
     policy = _cfg()["lineup"].get(profile)
     if not isinstance(policy, dict):
         raise KeyError(f"unknown V5 lineup score profile: {profile}")
     projection = gw_projection(player, gw)
     start_probability, dnp_probability = _minutes_probabilities(player)
-    return (
-        _f(policy.get("mean_weight")) * projection["mean"]
-        + _f(policy.get("ceiling_std_weight")) * projection["std"]
-        - _f(policy.get("risk_std_penalty")) * projection["std"]
-        + _f(policy.get("start_probability_weight")) * start_probability
-        - _f(policy.get("dnp_probability_penalty")) * dnp_probability
-    )
+    return _score_from_metrics(policy, projection, start_probability, dnp_probability)
 
 
-def _tie_value(player: dict[str, Any], gw: int, name: str) -> float:
-    if name == "mean":
-        return gw_projection(player, gw)["mean"]
-    if name == "start_probability":
-        return _minutes_probabilities(player)[0]
-    if name == "lower_cost":
-        return -float(int(player.get("now_cost") or 0))
-    if name == "element_id":
-        return -float(int(player.get("element") or 0))
-    raise RuntimeError(f"unsupported V5 lineup tie breaker: {name}")
+def _tie_values(
+    player: dict[str, Any],
+    projection: Mapping[str, float],
+    start_probability: float,
+    tie_breakers: tuple[str, ...],
+) -> tuple[float, ...]:
+    values = []
+    for name in tie_breakers:
+        if name == "mean":
+            values.append(float(projection["mean"]))
+        elif name == "start_probability":
+            values.append(start_probability)
+        elif name == "lower_cost":
+            values.append(-float(int(player.get("now_cost") or 0)))
+        elif name == "element_id":
+            values.append(-float(int(player.get("element") or 0)))
+        else:
+            raise RuntimeError(f"unsupported V5 lineup tie breaker: {name}")
+    return tuple(values)
 
 
 def _rank(players: Iterable[dict[str, Any]], gw: int, profile: str) -> list[dict[str, Any]]:
-    tie_breakers = tuple(str(value) for value in _cfg()["lineup"].get("tie_breakers") or ())
+    lineup_cfg = _cfg()["lineup"]
+    policy = lineup_cfg.get(profile)
+    if not isinstance(policy, dict):
+        raise KeyError(f"unknown V5 lineup score profile: {profile}")
+    tie_breakers = tuple(str(value) for value in lineup_cfg.get("tie_breakers") or ())
     if not tie_breakers:
         raise RuntimeError("V5 lineup tie_breakers registry is empty")
-    rows = [index_player(player) for player in players]
-    return sorted(
-        rows,
-        key=lambda player: (
-            player_score(player, gw, profile),
-            *(_tie_value(player, gw, name) for name in tie_breakers),
-        ),
-        reverse=True,
-    )
+    ranked = []
+    for player in players:
+        row = index_player(player)
+        projection = gw_projection(row, gw)
+        start_probability, dnp_probability = _minutes_probabilities(row)
+        score = _score_from_metrics(policy, projection, start_probability, dnp_probability)
+        ranked.append(
+            (
+                (score, *_tie_values(row, projection, start_probability, tie_breakers)),
+                row,
+            )
+        )
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    return [item[1] for item in ranked]
 
 
 def _formation_counts(formation: str, lineup_rules: Mapping[str, Any]) -> dict[str, int]:
@@ -82,27 +109,73 @@ def _formation_counts(formation: str, lineup_rules: Mapping[str, Any]) -> dict[s
     return {"GK": goalkeeper, "DEF": defender, "MID": midfielder, "FWD": forward}
 
 
+def _selection_context(players: list[dict[str, Any]], gw: int) -> dict[str, Any]:
+    lineup_cfg = _cfg()["lineup"]
+    positions = tuple(str(value) for value in lineup_cfg.get("positions") or ())
+    if not positions:
+        raise RuntimeError("V5 lineup positions registry is empty")
+    policy = lineup_cfg.get("player_score")
+    if not isinstance(policy, dict):
+        raise RuntimeError("V5 lineup player_score policy missing")
+    tie_breakers = tuple(str(value) for value in lineup_cfg.get("tie_breakers") or ())
+    if not tie_breakers:
+        raise RuntimeError("V5 lineup tie_breakers registry is empty")
+
+    by_position: dict[str, list[tuple[tuple[float, ...], dict[str, Any]]]] = {position: [] for position in positions}
+    metrics: dict[int, dict[str, float]] = {}
+    for player in players:
+        row = index_player(player)
+        element = int(row.get("element") or -1)
+        projection = gw_projection(row, gw)
+        start_probability, dnp_probability = _minutes_probabilities(row)
+        score = _score_from_metrics(policy, projection, start_probability, dnp_probability)
+        metrics[element] = {
+            "score": score,
+            "mean": float(projection["mean"]),
+            "variance": float(projection["std"]) ** 2,
+        }
+        position = str(row.get("position"))
+        if position in by_position:
+            by_position[position].append(
+                (
+                    (score, *_tie_values(row, projection, start_probability, tie_breakers)),
+                    row,
+                )
+            )
+
+    ranked_by_position: dict[str, list[dict[str, Any]]] = {}
+    for position, rows in by_position.items():
+        rows.sort(key=lambda item: item[0], reverse=True)
+        ranked_by_position[position] = [item[1] for item in rows]
+    return {"ranked_by_position": ranked_by_position, "metrics": metrics}
+
+
 def _select_formation(players: list[dict[str, Any]], gw: int, lineup_rules: dict[str, Any]) -> dict[str, Any] | None:
     best: dict[str, Any] | None = None
     starting_size = _required_int(lineup_rules, "starting_xi_size", "rules.lineup")
     formations = tuple(str(value) for value in lineup_rules.get("legal_formations") or ())
     if not formations:
         raise RuntimeError("Official rules contain no legal formations")
+    context = _selection_context(players, gw)
+    ranked_by_position = context["ranked_by_position"]
+    metrics = context["metrics"]
+
     for formation in formations:
         counts = _formation_counts(formation, lineup_rules)
         starters: list[dict[str, Any]] = []
         valid = True
         for position, count in counts.items():
-            ranked = _rank((p for p in players if p.get("position") == position), gw, "player_score")
+            ranked = ranked_by_position.get(position, [])
             if len(ranked) < count:
                 valid = False
                 break
             starters.extend(ranked[:count])
         if not valid or len(starters) != starting_size:
             continue
-        score = sum(player_score(player, gw, "player_score") for player in starters)
-        mean = sum(gw_projection(player, gw)["mean"] for player in starters)
-        variance = sum(gw_projection(player, gw)["std"] ** 2 for player in starters)
+        starter_metrics = [metrics[int(player["element"])] for player in starters]
+        score = sum(item["score"] for item in starter_metrics)
+        mean = sum(item["mean"] for item in starter_metrics)
+        variance = sum(item["variance"] for item in starter_metrics)
         candidate = {
             "formation": formation,
             "starters": starters,
@@ -214,5 +287,8 @@ def optimize_lineup(team: dict[str, Any], prediction: dict[str, Any], rules: dic
         "expected_starting_xi_mean": round(selected["mean"], 3),
         "selection_score": round(selected["selection_score"], 3),
         "authority": "v5_decision_lineup_optimizer",
-        "performance": {"projection_lookup": "indexed_o1"},
+        "performance": {
+            "projection_lookup": "indexed_o1",
+            "formation_ranking": "single_rank_per_position_per_gw",
+        },
     }

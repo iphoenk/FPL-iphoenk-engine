@@ -9,5 +9,5 @@
   "projection_horizon_gws": 5,
   "strategic_horizon_gws": 15,
   "fail_closed": true,
-  "schema_version": 31
+  "schema_version": 45
 }

@@ -1,9 +1,16 @@
-# FPL iphoenk Engine v3.8.1
+# FPL iphoenk Engine v3.16.0
 
 A production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Design goal
 Combine Official FPL API authority, a single authoritative FPL 2026/27 ruleset, persisted native team/event state, expanded Official detail surfaces, an optional authenticated read-only Official layer, community enrichments, live score/persistence, exact team-value logic, leakage-safe modelling, provenance/freshness, snapshot integrity and a decision-aware Price Radar.
+
+## Current release
+- Engine version: `3.16.0`
+- Schema version: `45`
+- Release metadata source of truth: `src/version.py`
+- Production runtime: bounded-process V3 microservices
+- Generated runtime state is published to `runtime-data`; `main/data/**` is historical/source-repository material only.
 
 ## v3.8.1 Price-risk hotfix
 v3.8.1 hardens the new trajectory model after the first production snapshot:
@@ -50,7 +57,7 @@ New runtime outputs:
 
 Price alert semantics are intentionally conservative: price pressure is an overlay, not a football decision. Consumers should notify only when a HIGH/CRITICAL signal intersects an owned player or a DSS-approved external watchlist candidate and the move is decision-relevant for affordability, sell value or a preferred multi-GW package.
 
-Schema version: 37.
+Historical schema at v3.8: 37.
 
 ## v3.7.1 Runtime publication isolation
 Generated `data/**` is published from a separate detached Git worktree to `runtime-data`. Production triggers share one concurrency queue and runtime publication retries against the newest runtime head. The protected `main` branch remains untouched by generated-data writes.

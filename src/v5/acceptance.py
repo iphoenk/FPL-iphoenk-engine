@@ -29,7 +29,15 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     modular_policy = architecture.get("principles", {}).get("modular_authority", {})
     truth_modules = tuple(
         module_map.get(name)
-        for name in ("rules", "source_authority", "official_authenticated", "finance", "phase_state")
+        for name in (
+            "rules",
+            "source_authority",
+            "public_api",
+            "official_authenticated",
+            "finance",
+            "phase_state",
+            "squad",
+        )
     )
 
     checks = (
@@ -89,7 +97,7 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
         ),
         AcceptanceCheck(
             "module_registry_discoverable",
-            len(modules) >= 8 and all(m.entrypoint and m.config and m.adjustment_surface for m in modules),
+            len(modules) >= 10 and all(m.entrypoint and m.config and m.adjustment_surface for m in modules),
             Plane.GOVERNANCE,
             "Every registered V5 domain exposes entrypoint, config and adjustment surface",
         ),
@@ -104,7 +112,7 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
                 for m in truth_modules
             ),
             Plane.TRUTH,
-            "Rules, source authority, authenticated Official, finance and phase-state are active",
+            "Rules, public sources, authenticated Official, finance, phase-state and squad authorities are active",
         ),
         AcceptanceCheck(
             "production_promotion_locked",

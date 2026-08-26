@@ -1,6 +1,6 @@
 {
-  "schema_version": 8,
-  "model_id": "v5_native_decision_governance_v8",
+  "schema_version": 9,
+  "model_id": "v5_native_decision_governance_v9",
   "lineup": {
     "positions": ["GK", "DEF", "MID", "FWD"],
     "player_score": {"mean_weight": 1.0, "risk_std_penalty": 0.10, "start_probability_weight": 0.55, "dnp_probability_penalty": 0.65},
@@ -19,10 +19,6 @@
     "minimum_outperform_hold_probability": 0.55,
     "strong_outperform_hold_probability": 0.65,
     "guardrail_authority": "config/intelligence/package_optimizer.json"
-  },
-  "strict_postflight": {
-    "require_all_dss_core_active": true,
-    "require_all_dss_extensions_active": true
   },
   "confidence": {
     "high_minimum": 0.80,

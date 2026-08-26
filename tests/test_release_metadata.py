@@ -40,6 +40,7 @@ def test_master_task_governance_is_wired():
     readme = (ROOT / "README.md").read_text()
     assert "# FPL iphoenk Engine V3 Master Task List" in master
     assert "V3.18 Structured Challenger Ingestion" in master
-    assert "V3.18.0" in master
+    assert f"Current release candidate: V{ENGINE_VERSION}" in master
+    assert f"Current candidate schema: {SCHEMA_VERSION}" in master
     assert "Definition of Done" in master
     assert "MASTER_TASK_LIST_V3.md" in readme

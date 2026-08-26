@@ -7,9 +7,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from src.v5.config_cache import load_json_config
 from src.v5.evaluation.shadow_parity import compare
 from src.v5.official_auth import expected_team_id
 from src.v5.services.orchestrator_beta import handle as beta_handle
+
+MANIFEST_CONFIG = "config/v5_convergence_manifest.json"
 
 
 def _load(path: str) -> dict[str, Any]:
@@ -40,6 +43,8 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
     v3_latest = _load(v3_latest_path)
     v3_lineup = _load(v3_lineup_path)
     v3_reference = {**v3_latest, **v3_lineup}
+    manifest = load_json_config(MANIFEST_CONFIG)
+    baselines = manifest.get("baselines") if isinstance(manifest.get("baselines"), dict) else {}
 
     v5 = beta_handle("run", {"mode": "daily", "team_id": team_id, "persist": True})
     if not isinstance(v5, dict):
@@ -68,13 +73,24 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
     }
     invariant_pass = all(invariants.values())
     cycle_pass = bool(parity.get("pass")) and invariant_pass
+    post_status = "PENDING" if cycle_pass else "NOT_ELIGIBLE"
 
     result = {
-        "schema_version": 3,
+        "schema_version": 4,
         "cycle_id": cycle_id,
         "generated_at": generated_at,
         "mode": "REAL_SHADOW",
         "production_remains_v3": True,
+        "acceptance_context": {
+            "production_baseline_version": baselines.get("production_truth"),
+            "production_main_sha": baselines.get("production_main_sha"),
+            "v5_version": v5.get("engine_version"),
+        },
+        "post_validation": {
+            "status": post_status,
+            "validated_at": None,
+            "validator_contract": "V5_REAL_SHADOW_POSTVALIDATION_V1",
+        },
         "v3": {
             "engine_version": v3_latest.get("engine_version"),
             "generated_at": v3_latest.get("generated_at"),
@@ -109,7 +125,9 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
             "cycle_pass": cycle_pass,
             "required_real_cycles": int(parity.get("required_real_cycles") or 3),
             "real_cycle_recorded": True,
-            "counts_as_successful_acceptance_cycle": cycle_pass,
+            "post_validation_required": True,
+            "post_validation_status": post_status,
+            "counts_as_successful_acceptance_cycle": False,
             "production_candidate_auto_promoted": False,
         },
     }
@@ -121,6 +139,7 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
     print(json.dumps({
         "cycle_id": cycle_id,
         "cycle_pass": cycle_pass,
+        "post_validation_status": post_status,
         "parity_pass": parity.get("pass"),
         "checks": parity.get("checks"),
         "operational_invariants": invariants,

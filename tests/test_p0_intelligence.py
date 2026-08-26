@@ -81,7 +81,7 @@ def test_p04_multi_horizon_package_scoring_is_legal():
 def test_p05_challenger_registry_never_auto_scrapes_or_reputation_weights():
     registry = json.loads((ROOT / "config" / "intelligence" / "challenger_registry.json").read_text())
     ids = {p["id"] for p in registry["providers"]}
-    assert ids == {"internal", "onefpl", "fffix", "ffhub"}
+    assert ids == {"internal", "livefpl", "onefpl", "fffix", "ffhub"}
     assert registry["auto_scrape"] is False
     assert registry["governance"]["missing_provider_data_is_not_fabricated"] is True
     assert registry["governance"]["provider_reputation_is_not_accuracy_evidence"] is True

@@ -13,7 +13,8 @@ permissions:
 env:
   PYTHONPATH: ${{ github.workspace }}
   FPL_TEAM_ID: "3462711"
-  V3_SOURCE_BRANCH: v3.15-fast-report-serving
+  V3_SOURCE_BRANCH: main
+  V3_SOURCE_SHA: 94dc304250c21a83b7270944231a07c6ff7099ac
   V3_RUNTIME_BRANCH: runtime-data
   V5_SHADOW_BRANCH: v5-shadow-runtime
 
@@ -41,6 +42,7 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin "$V3_SOURCE_BRANCH" "$V3_RUNTIME_BRANCH" "$V5_SHADOW_BRANCH"
+          test "$(git rev-parse origin/$V3_SOURCE_BRANCH)" = "$V3_SOURCE_SHA"
           mkdir -p .shadow data/v5
           if git cat-file -e "origin/${V5_SHADOW_BRANCH}:data/v5/latest.json" 2>/dev/null; then
             shadow_tmp="$(mktemp -d)"
@@ -53,7 +55,7 @@ jobs:
             echo "No prior V5 shadow state; starting clean"
           fi
 
-      - name: Generate fresh V3.15 reference
+      - name: Generate fresh V3.16 reference
         shell: bash
         env:
           FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
@@ -67,7 +69,7 @@ jobs:
           set -euo pipefail
           v3_tree="$(mktemp -d)"
           trap 'git worktree remove --force "$v3_tree" >/dev/null 2>&1 || true; rm -rf "$v3_tree"' EXIT
-          git worktree add --detach "$v3_tree" "origin/$V3_SOURCE_BRANCH"
+          git worktree add --detach "$v3_tree" "$V3_SOURCE_SHA"
 
           mkdir -p "$v3_tree/data/stats"
           for file in price_cache.json price_trajectory.json rules_source_state.json prediction_ledger.json challenger_observations.json report_state.json dss_watchlist.json; do
@@ -75,9 +77,11 @@ jobs:
               git show "origin/${V3_RUNTIME_BRANCH}:data/${file}" > "$v3_tree/data/${file}"
             fi
           done
-          if git cat-file -e "origin/${V3_RUNTIME_BRANCH}:data/stats/vaastav_previous_season.json" 2>/dev/null; then
-            git show "origin/${V3_RUNTIME_BRANCH}:data/stats/vaastav_previous_season.json" > "$v3_tree/data/stats/vaastav_previous_season.json"
-          fi
+          for stat_file in vaastav_previous_season.json shots_gw1.json playermatchstats_gw1.json core_insights_gw1.json; do
+            if git cat-file -e "origin/${V3_RUNTIME_BRANCH}:data/stats/${stat_file}" 2>/dev/null; then
+              git show "origin/${V3_RUNTIME_BRANCH}:data/stats/${stat_file}" > "$v3_tree/data/stats/${stat_file}"
+            fi
+          done
 
           (
             cd "$v3_tree"
@@ -95,14 +99,14 @@ jobs:
           latest=json.load(open('.shadow/v3_latest.json'))
           lineup=json.load(open('.shadow/v3_lineup_decision.json'))
           print({
-              'reference_branch': 'v3.15-fast-report-serving',
+              'reference_sha': '94dc304250c21a83b7270944231a07c6ff7099ac',
               'engine_version': latest.get('engine_version'),
               'generated_at': latest.get('generated_at'),
               'planning_gw': (latest.get('phase') or {}).get('planning_gw'),
               'formation': lineup.get('formation'),
               'captain': (lineup.get('captain') or {}).get('element') if isinstance(lineup.get('captain'), dict) else lineup.get('captain'),
           })
-          assert str(latest.get('engine_version') or '').startswith('3.15'), latest.get('engine_version')
+          assert str(latest.get('engine_version') or '').startswith('3.16'), latest.get('engine_version')
           PY
 
       - name: Start V5 bounded-context microservices
@@ -130,9 +134,9 @@ jobs:
           docker compose -f deploy/v5/docker-compose.yml ps
           exit 1
 
-      - name: Run real V3.15 versus V5 shadow cycle
+      - name: Run real V3.16 versus V5 shadow cycle
         env:
-          V3_REFERENCE_BRANCH: v3.15-fast-report-serving
+          V3_REFERENCE_BRANCH: v3.16-source-registry
           V5_SERVICE_INGESTION_URL: http://127.0.0.1:8101
           V5_SERVICE_TRUTH_URL: http://127.0.0.1:8102
           V5_SERVICE_PRICE_URL: http://127.0.0.1:8103
@@ -145,26 +149,36 @@ jobs:
           V5_SERVICE_WATCHLIST_URL: http://127.0.0.1:8110
         run: python -m src.v5.shadow_cycle
 
-      - name: Validate shadow acceptance invariants
+      - name: Validate shadow acceptance invariants and full DSS runtime
         run: |
           python - <<'PY'
           import json
           p=json.load(open('data/v5/shadow/latest_shadow_cycle.json'))
           w=json.load(open('data/v5/dss_watchlist.json'))
+          f=json.load(open('data/v5/framework_health.json'))
           checks=p['operational_invariants']['checks']
           positions=w.get('positions') or {}
           position_counts={pos: len(positions.get(pos) or []) for pos in ('GK','DEF','MID','FWD')}
+          core=((f.get('dss') or {}).get('core') or {})
+          ext=f.get('dss_extensions') or ((f.get('dss') or {}).get('extensions') or {})
+          enh=f.get('enhancements') or {}
           print({
               'v3_engine_version': p['v3'].get('engine_version'),
               'cycle_pass': p['acceptance_progress']['cycle_pass'],
               'parity': p['parity'],
               'operational_invariants': checks,
               'watchlist_position_counts': position_counts,
+              'dss_core_counts': core.get('counts'),
+              'dss_extension_counts': ext.get('counts'),
+              'enhancement_counts': enh.get('counts'),
           })
-          assert str(p['v3'].get('engine_version') or '').startswith('3.15'), p['v3'].get('engine_version')
+          assert str(p['v3'].get('engine_version') or '').startswith('3.16'), p['v3'].get('engine_version')
           assert all(checks.values()), f'V5 operational invariant failure: {checks}'
           assert all(position_counts[pos] == 5 for pos in position_counts), f'watchlist positional contract failed: {position_counts}'
-          assert p['parity']['pass'] is True, f"V3.15/V5 parity failed: {p['parity']}"
+          assert core.get('counts') == {'ACTIVE': 50}, f'DSS core must be 50/50 ACTIVE: {core.get("counts")}'
+          assert ext.get('counts') == {'ACTIVE': 16}, f'DSS extensions must be 16/16 ACTIVE: {ext.get("counts")}'
+          assert enh.get('counts') == {'ACTIVE': 8}, f'Enhancements must be 8/8 ACTIVE: {enh.get("counts")}'
+          assert p['parity']['pass'] is True, f"V3.16/V5 parity failed: {p['parity']}"
           assert p['acceptance_progress']['cycle_pass'] is True, 'cycle must not count as successful acceptance'
           PY
 
@@ -207,7 +221,7 @@ jobs:
             echo "No shadow-state changes"
             exit 0
           fi
-          git commit -m "shadow: record real V3.15 V5 cycle $GITHUB_RUN_NUMBER [skip ci]"
+          git commit -m "shadow: record real V3.16 V5 full-DSS cycle $GITHUB_RUN_NUMBER [skip ci]"
           git push origin HEAD:"$V5_SHADOW_BRANCH"
 
       - name: Stop V5 cluster

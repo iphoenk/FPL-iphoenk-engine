@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "registry": "DSS_SOURCE_CAPABILITY_MAP_V1",
+  "policy": {
+    "source_availability_does_not_equal_dss_active": true,
+    "proxy_metrics_must_be_labelled_proxy": true,
+    "competition_ids_must_be_resolved_runtime_not_hardcoded": true,
+    "quota_limited_sources_require_persistent_cache": true,
+    "missing_callup_or_travel_data_must_not_be_fabricated": true
+  },
+  "mappings": [
+    {
+      "dss_id": "DSS-14",
+      "capability": "shots_box_location",
+      "sources": ["understat"],
+      "evidence_status": "PARTIAL_PROXY",
+      "note": "Understat shot x/y + xG can identify shots taken from penalty-box regions. This is a shot-location proxy, not actual box touches."
+    },
+    {
+      "dss_id": "DSS-15",
+      "capability": "key_passes_big_chances",
+      "sources": ["understat", "sportmonks"],
+      "evidence_status": "PARTIAL",
+      "note": "Understat can enrich key-pass/shot-creation context. Sportmonks exposes Key Passes and Big Chances statistics, but free-plan league coverage must be verified before use for Premier League players."
+    },
+    {
+      "dss_id": "DSS-30",
+      "capability": "european_congestion",
+      "sources": ["api_football"],
+      "evidence_status": "CONFIG_REQUIRED",
+      "note": "Resolve UCL/UEL/UECL competition IDs at runtime through league search; cache fixtures by competition/season."
+    },
+    {
+      "dss_id": "DSS-31",
+      "capability": "domestic_cup_congestion",
+      "sources": ["api_football"],
+      "evidence_status": "CONFIG_REQUIRED",
+      "note": "Resolve FA Cup and EFL Cup dynamically rather than hardcoding league IDs."
+    },
+    {
+      "dss_id": "DSS-32",
+      "capability": "international_load_travel",
+      "sources": ["api_football", "manual_international_callups"],
+      "evidence_status": "PARTIAL",
+      "note": "Fixtures and actual national-team minutes can be API-backed when coverage exists. Official call-ups and travel distance remain a separate manual/federation evidence stream."
+    },
+    {
+      "dss_id": "DSS-33",
+      "capability": "cross_competition_rest_days",
+      "sources": ["api_football", "official_fpl"],
+      "evidence_status": "CONFIG_REQUIRED",
+      "note": "Compute rest days from normalized kickoff timestamps after league/cup/Europe/international fixtures are merged."
+    },
+    {
+      "dss_id": "DSS-34",
+      "capability": "preseason",
+      "sources": ["api_football", "manual_preseason"],
+      "evidence_status": "PARTIAL",
+      "note": "Club Friendlies can provide fixtures/lineups where covered, but statistical depth is not assumed."
+    }
+  ]
+}

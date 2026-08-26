@@ -8,7 +8,8 @@ from typing import Any, Callable
 from fastapi import FastAPI, HTTPException
 
 from src.v5.service_contracts import ServiceResponse
-from src.v5.service_registry import get_service, registry, validate_registry
+from src.v5.service_health import local_service_health
+from src.v5.service_registry import get_service, registry
 
 SERVICE_ID = os.getenv("V5_SERVICE_ID", "orchestrator").strip() or "orchestrator"
 SPEC = get_service(SERVICE_ID)
@@ -31,12 +32,10 @@ app = FastAPI(title=f"FPL iphoenk V5 {SERVICE_ID} service", version=str(DEFAULTS
 
 @app.get(str(DEFAULTS["health_path"]))
 def health() -> dict[str, Any]:
-    errors = validate_registry()
+    readiness = local_service_health(SERVICE_ID)
     return {
-        "service_id": SERVICE_ID,
-        "status": "UP" if not errors else "DEGRADED",
+        **readiness,
         "contract_version": DEFAULTS["contract_version"],
-        "registry_errors": errors,
     }
 
 

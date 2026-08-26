@@ -18,6 +18,17 @@ def _cfg() -> dict[str, Any]:
     return data
 
 
+def _inputs(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    truth = payload.get("truth") if isinstance(payload.get("truth"), dict) else {}
+    prediction = payload.get("prediction") if isinstance(payload.get("prediction"), dict) else {}
+    price = payload.get("price") if isinstance(payload.get("price"), dict) else {}
+    rules = truth.get("rules") if isinstance(truth.get("rules"), dict) else {}
+    team = truth.get("team") if isinstance(truth.get("team"), dict) else {}
+    if not rules or not team or not prediction:
+        raise ValueError("decision service requires truth rules/team and prediction payload")
+    return truth, prediction, price, rules, team
+
+
 def _active_local_capabilities(packages: dict[str, Any], lineup: dict[str, Any]) -> list[str]:
     configured = {str(value) for value in _cfg().get("capabilities") or []}
     active: set[str] = set()
@@ -49,34 +60,36 @@ def _active_local_capabilities(packages: dict[str, Any], lineup: dict[str, Any])
     return sorted(active)
 
 
-def handle(operation: str, payload: dict[str, Any]) -> Any:
-    if operation == "status":
-        return {
-            "status": "ACTIVE",
-            "bridge_only": False,
-            "production_recommendation": False,
-            "model": _cfg().get("model_id"),
-            "capabilities": list(_cfg().get("capabilities") or []),
-        }
-    if operation != "build":
-        raise KeyError(f"unsupported decision operation: {operation}")
-
-    truth = payload.get("truth") if isinstance(payload.get("truth"), dict) else {}
-    prediction = payload.get("prediction") if isinstance(payload.get("prediction"), dict) else {}
-    price = payload.get("price") if isinstance(payload.get("price"), dict) else {}
-    rules = truth.get("rules") if isinstance(truth.get("rules"), dict) else {}
-    team = truth.get("team") if isinstance(truth.get("team"), dict) else {}
-    if not rules or not team or not prediction:
-        raise ValueError("decision service requires truth rules/team and prediction payload")
-
+def _prepare(payload: dict[str, Any]) -> dict[str, Any]:
+    truth, prediction, price, rules, team = _inputs(payload)
     packages = build_packages(prediction, team, rules)
     lineup = optimize_lineup(team, prediction, rules)
-    local_capabilities = _active_local_capabilities(packages, lineup)
+    capabilities = _active_local_capabilities(packages, lineup)
+    return {
+        "status": "READY" if packages.get("status") == "READY" and lineup.get("status") == "READY" else "BLOCKED",
+        "model": _cfg().get("model_id"),
+        "ruleset_id": rules.get("ruleset_id"),
+        "packages": packages,
+        "lineup": lineup,
+        "capabilities": capabilities,
+        "price_context": {"alert_count": len(((price.get("alerts") or {}).get("alerts") or []))},
+    }
+
+
+def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -> dict[str, Any]:
+    truth, prediction, price, rules, _ = _inputs(payload)
+    prepared = prepared if isinstance(prepared, dict) else _prepare(payload)
+    packages = prepared.get("packages") if isinstance(prepared.get("packages"), dict) else {}
+    lineup = prepared.get("lineup") if isinstance(prepared.get("lineup"), dict) else {}
+    local_capabilities = prepared.get("capabilities") if isinstance(prepared.get("capabilities"), list) else []
+    evaluation = payload.get("evaluation") if isinstance(payload.get("evaluation"), dict) else {}
+    evaluation_capabilities = evaluation.get("capabilities") if isinstance(evaluation.get("capabilities"), list) else []
     dss = evaluate_dss(
         truth,
         price,
         prediction,
         local_capabilities=local_capabilities,
+        external_capability_sources={"evaluation": evaluation_capabilities},
     )
 
     if packages.get("status") == "READY" and lineup.get("status") == "READY":
@@ -114,15 +127,34 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "dss": dss,
         "decision_trace": trace,
         "capabilities": local_capabilities,
-        "price_context": {
-            "alert_count": len(((price.get("alerts") or {}).get("alerts") or [])),
-        },
+        "price_context": prepared.get("price_context", {}),
         "governance": {
             **(packages.get("governance") or {}),
             "lineup_authority": lineup.get("authority"),
             "dss_evaluation_model": dss.get("evaluation_model"),
+            "evaluation_capabilities_consumed": sorted(str(x) for x in evaluation_capabilities),
             "decision_trace_required": True,
             "production_recommendation_enabled": bool((_cfg().get("trace") or {}).get("production_recommendation_enabled", False)),
         },
         "production_recommendation": None,
     }
+
+
+def handle(operation: str, payload: dict[str, Any]) -> Any:
+    if operation == "status":
+        return {
+            "status": "ACTIVE",
+            "bridge_only": False,
+            "production_recommendation": False,
+            "model": _cfg().get("model_id"),
+            "capabilities": list(_cfg().get("capabilities") or []),
+            "operations": ["prepare", "finalize", "build"],
+        }
+    if operation == "prepare":
+        return _prepare(payload)
+    if operation == "finalize":
+        return _finalize(payload, payload.get("prepared") if isinstance(payload.get("prepared"), dict) else None)
+    if operation == "build":
+        prepared = _prepare(payload)
+        return _finalize(payload, prepared)
+    raise KeyError(f"unsupported decision operation: {operation}")

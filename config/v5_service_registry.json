@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "architecture": "bounded-context-microservices",
+  "mandatory": true,
+  "policy": {
+    "monorepo_allowed": true,
+    "independent_process_required": true,
+    "independent_health_required": true,
+    "versioned_contract_required": true,
+    "business_authority_must_not_be_duplicated": true,
+    "shared_code_scope": ["contracts", "transport", "observability", "config loader"],
+    "prefer_fewer_domain_services_over_chatty_function_services": true,
+    "parallelize_independent_calls": true,
+    "service_timeouts_required": true,
+    "circuit_breaker_ready": true
+  },
+  "defaults": {
+    "contract_version": "v1",
+    "transport": "http-json",
+    "health_path": "/health",
+    "meta_path": "/meta",
+    "invoke_path": "/v1/invoke/{operation}",
+    "connect_timeout_ms": 400,
+    "read_timeout_ms": 5000
+  },
+  "services": {
+    "ingestion": {
+      "port": 8101,
+      "bounded_context": "official-public-and-authenticated-ingestion",
+      "handler": "src.v5.service_adapters:ingestion_adapter",
+      "owns_modules": ["public_api", "official_authenticated", "source_authority"],
+      "dependencies": [],
+      "status": "ACTIVE_ALPHA",
+      "critical": true
+    },
+    "truth": {
+      "port": 8102,
+      "bounded_context": "phase-identity-squad-finance-live-truth",
+      "handler": "src.v5.service_adapters:truth_adapter",
+      "owns_modules": ["event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
+      "dependencies": ["ingestion"],
+      "status": "ACTIVE_ALPHA",
+      "critical": true
+    },
+    "price": {
+      "port": 8103,
+      "bounded_context": "price-trajectory-intelligence",
+      "handler": "src.v5.service_adapters:price_adapter",
+      "owns_modules": ["price_trajectory", "price_service"],
+      "dependencies": ["ingestion", "truth"],
+      "status": "ACTIVE_ALPHA",
+      "critical": false
+    },
+    "prediction": {
+      "port": 8104,
+      "bounded_context": "projection-and-prediction-intelligence",
+      "handler": "src.v5.service_adapters:prediction_adapter",
+      "owns_modules": ["projection", "prediction_bridge"],
+      "dependencies": ["ingestion", "truth"],
+      "status": "ACTIVE_ALPHA",
+      "critical": true
+    },
+    "decision": {
+      "port": 8105,
+      "bounded_context": "dss-optimizer-governance-and-decision-trace",
+      "handler": "src.v5.service_adapters:decision_adapter",
+      "owns_modules": ["dss_core", "dss_extensions", "gate0"],
+      "dependencies": ["truth", "price", "prediction"],
+      "status": "ACTIVE_ALPHA_BRIDGE",
+      "critical": true
+    },
+    "snapshot": {
+      "port": 8106,
+      "bounded_context": "persistence-snapshot-and-history",
+      "handler": "src.v5.service_adapters:snapshot_adapter",
+      "owns_modules": ["persistence"],
+      "dependencies": [],
+      "status": "ACTIVE_ALPHA",
+      "critical": true
+    },
+    "orchestrator": {
+      "port": 8100,
+      "bounded_context": "workflow-orchestration-only",
+      "handler": "src.v5.service_adapters:orchestrator_adapter",
+      "owns_modules": ["runner", "performance"],
+      "dependencies": ["ingestion", "truth", "price", "prediction", "decision", "snapshot"],
+      "status": "ACTIVE_ALPHA",
+      "critical": true
+    }
+  }
+}

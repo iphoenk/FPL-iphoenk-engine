@@ -16,6 +16,8 @@ def test_architecture_principles_are_mandatory():
     cfg = _load("config/v5_architecture_principles.json")
     assert cfg["principles"]["avoid_hardcode"]["required"] is True
     assert cfg["principles"]["modular_authority"]["required"] is True
+    assert cfg["principles"]["microservices"]["required"] is True
+    assert cfg["principles"]["microservices"]["architecture"] == "BOUNDED_CONTEXT_MICROSERVICES"
     assert cfg["principles"]["performance_first"]["required"] is True
 
 

@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.13 microservices
+name: FPL iphoenk collector v3.14 microservices
 
 on:
   workflow_dispatch:
@@ -78,6 +78,8 @@ jobs:
         run: python -m src.runtime_v3.orchestrator --mode daily --stats
       - name: Validate decision and report contract
         run: python -m src.engines.production_contract_validate
+      - name: Validate full DSS watchlist contract
+        run: python -m src.engines.watchlist_contract_validate
       - name: Verify runtime budget
         run: |
           python - <<'PY'
@@ -140,6 +142,8 @@ jobs:
         run: python -m src.runtime_v3.orchestrator --mode daily --stats
       - name: Validate production contract
         run: python -m src.engines.production_contract_validate
+      - name: Validate full DSS watchlist contract
+        run: python -m src.engines.watchlist_contract_validate
       - name: Stamp runtime publication metadata
         run: |
           python - <<'PY'

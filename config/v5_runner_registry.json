@@ -1,6 +1,10 @@
 {
-  "version": 1,
+  "version": 2,
   "status": "ALPHA_NOT_PRODUCTION",
+  "snapshot": {
+    "schema_version": 50,
+    "production_promotion_allowed": false
+  },
   "pipeline": [
     "public_base_collection",
     "event_context",
@@ -32,6 +36,10 @@
     "price_trajectory": true,
     "v4_prediction_bridge": true,
     "persistence": true
+  },
+  "concurrency": {
+    "parallelize_dynamic_and_authenticated_collection": true,
+    "max_orchestration_workers": 2
   },
   "fail_closed": {
     "bootstrap_missing": true,

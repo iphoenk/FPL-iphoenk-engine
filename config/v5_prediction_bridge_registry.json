@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "upstream": {
+    "branch_role": "V4 prediction benchmark/R&D",
+    "entrypoint": "src.engines.v4_runner.build_predictions"
+  },
+  "contract": {
+    "preserve_upstream_model_version": true,
+    "add_v5_bridge_metadata": true,
+    "require_point_in_time_inputs": true,
+    "require_leakage_guard": true
+  },
+  "runtime": {
+    "enabled": true,
+    "projection_horizon_config": "config/engine.json",
+    "projection_horizon_key": "projection_horizon_gws",
+    "strategic_horizon_key": "strategic_horizon_gws"
+  }
+}

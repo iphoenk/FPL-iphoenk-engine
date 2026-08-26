@@ -18,6 +18,8 @@ def _watch_ids(positions: dict) -> list[int]:
 
 def run() -> dict:
     registry = _load(REGISTRY)
+    runtime_registry = _load(DATA / "report_artifact_registry.json")
+    assert runtime_registry == registry
     contract = registry["consumer_contract"]
     expected_owned = int(contract["owned_count"])
     expected_watch = int(contract["watchlist_total"])
@@ -60,8 +62,10 @@ def run() -> dict:
     assert files.get("decision_brief") == "data/decision_brief.json"
     assert files.get("deep_review_payload") == "data/deep_review_payload.json"
     assert files.get("dss_watchlist_summary") == "data/dss_watchlist_summary.json"
+    assert files.get("report_artifact_registry") == "data/report_artifact_registry.json"
     assert latest.get("report_serving", {}).get("owned_count") == expected_owned
     assert latest.get("report_serving", {}).get("watchlist_count") == expected_watch
+    assert latest.get("report_serving", {}).get("technical_lazy_load") is True
 
     sizes = {}
     for name, spec in (registry.get("artifacts") or {}).items():

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "policy": "Resolve each data domain through an explicit authority chain. Lower-priority sources may enrich or fill gaps but must not silently override a higher-priority authoritative source.",
+  "sources": {
+    "user_lock": {"tier": 0, "kind": "user_authority", "enabled": true},
+    "official_authenticated": {"tier": 1, "kind": "official_private_read_only", "enabled": true},
+    "official_public": {"tier": 1, "kind": "official_public", "enabled": true},
+    "core_insights": {"tier": 2, "kind": "community_enrichment", "enabled": true},
+    "vaastav": {"tier": 3, "kind": "historical_backbone", "enabled": true},
+    "understat": {"tier": 4, "kind": "optional_enrichment", "enabled": false}
+  },
+  "domains": {
+    "player_identity": ["official_public"],
+    "fixtures": ["official_public"],
+    "submitted_squad": ["official_public"],
+    "live_scoring": ["official_public"],
+    "authenticated_draft": ["official_authenticated"],
+    "exact_owned_finance": ["official_authenticated"],
+    "pre_deadline_locked_squad": ["user_lock", "official_authenticated"],
+    "advanced_player_stats": ["core_insights", "vaastav"],
+    "historical_priors": ["vaastav", "core_insights"]
+  }
+}

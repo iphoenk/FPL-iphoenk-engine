@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "routing": {
     "base_collection": {"service": "ingestion", "operation": "collect_base"},
     "event_context": {"service": "truth", "operation": "context"},
@@ -19,16 +19,18 @@
   },
   "parallel_groups": {
     "runtime_overlay": ["dynamic_collection", "authenticated_collection"],
-    "state_hydration": ["price_trajectory", "prediction_ledger", "challenger_observations"],
+    "state_hydration": ["price_trajectory", "historical_prior", "prediction_ledger", "challenger_observations"],
     "intelligence": ["price_build", "prediction_build"],
     "analysis_preflight": ["evaluation_build", "decision_prepare", "gate0_preflight"],
-    "artifact_persistence": ["prices","price_trajectory","price_alerts","predictions","team_strength","prediction_ledger","prediction_accuracy","challenger_scorecard","package_optimizer","framework_health"]
+    "artifact_persistence": ["prices","price_trajectory","price_alerts","historical_prior","predictions","prediction_quality","team_strength","prediction_ledger","prediction_accuracy","challenger_scorecard","package_optimizer","framework_health"]
   },
   "artifact_mapping": {
     "prices": "prices",
     "price_trajectory": "price_trajectory",
     "price_alerts": "price_alerts",
+    "historical_prior": "historical_prior",
     "predictions": "predictions",
+    "prediction_quality": "prediction_quality",
     "team_strength": "team_strength",
     "prediction_ledger": "prediction_ledger",
     "prediction_accuracy": "prediction_accuracy",

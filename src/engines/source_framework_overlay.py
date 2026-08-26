@@ -18,11 +18,19 @@ def run() -> dict:
         }
     else:
         rows = source_health.get("sources") or []
+        capabilities = source_health.get("capability_health") or []
         framework["external_sources"] = {
             "status": source_health.get("overall"),
             "decision_blocking": bool(source_health.get("decision_blocking")),
             "registry": source_health.get("registry"),
             "challenger_live": source_health.get("challenger_live") or [],
+            "structured_observations": {
+                "fresh": source_health.get("structured_observation_count", 0),
+                "cached_last_known_good": source_health.get("structured_cached_count", 0),
+                "stale": source_health.get("structured_stale_count", 0),
+                "disagreements": source_health.get("disagreement_count", 0),
+            },
+            "capability_health": capabilities,
             "sources": {
                 str(row.get("id")): {
                     "class": row.get("class"),
@@ -46,6 +54,7 @@ def run() -> dict:
         "status": (framework.get("external_sources") or {}).get("status"),
         "decision_blocking": (framework.get("external_sources") or {}).get("decision_blocking"),
         "challenger_live": (framework.get("external_sources") or {}).get("challenger_live", []),
+        "structured_observations": (framework.get("external_sources") or {}).get("structured_observations", {}),
     }
     atomic_json(DATA / "latest.json", latest)
     print(json.dumps(latest["source_health_summary"], ensure_ascii=False))

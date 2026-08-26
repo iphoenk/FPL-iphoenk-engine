@@ -1,30 +1,14 @@
 {
-  "version": 4,
-  "status": "ALPHA_NOT_PRODUCTION",
+  "version": 5,
+  "status": "ALPHA_MICROSERVICES_CONVERGENCE",
   "modes": ["daily", "deadline", "live"],
   "default_mode": "daily",
-  "snapshot": {
-    "schema_version": 50,
-    "production_promotion_allowed": false
-  },
-  "summary_limits": {
-    "price_rise_risk": 10,
-    "price_fall_risk": 10,
-    "price_alerts": 20
-  },
+  "snapshot": {"schema_version": 51, "production_promotion_allowed": false},
+  "summary_limits": {"price_rise_risk": 10,"price_fall_risk": 10,"price_alerts": 20,"packages": 20},
   "pipeline": [
-    "public_base_collection",
-    "event_context",
-    "authenticated_runtime_overlay",
-    "public_dynamic_collection",
-    "identity_resolution",
-    "squad_authority",
-    "finance_resolution",
-    "live_scoring",
-    "price_trajectory",
-    "prediction_bridge",
-    "decision_governance",
-    "persistence"
+    "public_base_collection","event_context","authenticated_runtime_overlay","public_dynamic_collection",
+    "truth_assembly","state_hydration","price_intelligence","native_p0_prediction","prediction_evaluation",
+    "dss_package_decision","framework_governance","persistence"
   ],
   "base_requests": {
     "bootstrap": {"route": "bootstrap", "params": {}},
@@ -41,17 +25,18 @@
   "feature_switches": {
     "authenticated_overlay": true,
     "price_trajectory": true,
-    "v4_prediction_bridge": true,
+    "native_p0_prediction": true,
+    "prediction_evaluation": true,
+    "challenger_scorecard": true,
+    "multi_horizon_package_optimizer": true,
+    "framework_governance": true,
+    "v4_prediction_bridge": false,
     "persistence": true
   },
-  "concurrency": {
-    "parallelize_dynamic_and_authenticated_collection": true,
-    "max_orchestration_workers": 2
-  },
+  "concurrency": {"parallelize_dynamic_and_authenticated_collection": true,"parallelize_price_and_prediction": true,"max_orchestration_workers": 3},
   "fail_closed": {
-    "bootstrap_missing": true,
-    "squad_unresolved": true,
-    "invalid_squad": true,
-    "owned_sell_value_unknown_for_affordability": true
+    "bootstrap_missing": true,"squad_unresolved": true,"invalid_squad": true,
+    "owned_sell_value_unknown_for_affordability": true,"rules_missing": true,
+    "gate0_fail": true,"critical_framework_failure": true
   }
 }

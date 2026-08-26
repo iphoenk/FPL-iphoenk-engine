@@ -11,6 +11,7 @@ from src.rules import (
     GOAL_POINTS,
     LINEUP_RULES,
     RULESET_ID,
+    RULESET_SEASON,
     SQUAD_RULES,
     build_chip_ledger,
 )
@@ -24,6 +25,7 @@ from src.v5.services.common import context_dict, locked_squad, parse_datetime
 def _rules_view() -> dict[str, Any]:
     return {
         "ruleset_id": RULESET_ID,
+        "season": RULESET_SEASON,
         "goal_points": {str(k): int(v) for k, v in GOAL_POINTS.items()},
         "assist_points": int(ASSIST_POINTS),
         "clean_sheet_points": {str(k): int(v) for k, v in CLEAN_SHEET_POINTS.items()},

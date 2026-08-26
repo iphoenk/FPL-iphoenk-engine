@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "routing": {
+    "base_collection": {"service": "ingestion", "operation": "collect_base"},
+    "event_context": {"service": "truth", "operation": "context"},
+    "dynamic_collection": {"service": "ingestion", "operation": "collect_dynamic"},
+    "authenticated_collection": {"service": "ingestion", "operation": "collect_authenticated"},
+    "truth_assembly": {"service": "truth", "operation": "assemble"},
+    "price_state_read": {"service": "snapshot", "operation": "read"},
+    "price_build": {"service": "price", "operation": "build"},
+    "prediction_build": {"service": "prediction", "operation": "build"},
+    "decision_build": {"service": "decision", "operation": "summarize"},
+    "artifact_write": {"service": "snapshot", "operation": "write"},
+    "snapshot_write": {"service": "snapshot", "operation": "snapshot"}
+  },
+  "parallel_groups": {
+    "runtime_overlay": ["dynamic_collection", "authenticated_collection"],
+    "intelligence": ["price_build", "prediction_build"],
+    "artifact_persistence": ["prices", "price_trajectory", "price_alerts", "predictions"]
+  },
+  "artifact_mapping": {
+    "prices": "prices",
+    "price_trajectory": "price_trajectory",
+    "price_alerts": "price_alerts",
+    "predictions": "predictions"
+  },
+  "observability": {
+    "record_service_compute_ms": true,
+    "record_round_trip_ms": true,
+    "record_transport_overhead_ms": true,
+    "propagate_correlation_id": true
+  }
+}

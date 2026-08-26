@@ -58,6 +58,35 @@ jobs:
       - name: Full engine test suite
         run: python -m pytest -q
 
+  integration:
+    needs: test
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      FPL_AUTH_MODE: disabled
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install runtime dependencies
+        run: pip install -r requirements.txt
+      - name: Run bounded microservices without publication
+        run: python -m src.runtime_v3.orchestrator --mode daily --stats
+      - name: Validate decision and report contract
+        run: python -m src.engines.production_contract_validate
+      - name: Verify runtime budget
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('data/runtime_performance.json'))
+          assert r.get('within_target_budget') is True, r
+          print({'runtime_ms': r.get('total_wall_ms'), 'services': {k:v.get('status') for k,v in r.get('services',{}).items()}})
+          PY
+
   collect:
     if: always() && github.event_name != 'pull_request' && needs.gate.outputs.should_collect == 'true' && (needs.test.result == 'success' || needs.test.result == 'skipped')
     needs: [gate, test]

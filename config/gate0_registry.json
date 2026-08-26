@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "registry": "HARD_CONSTRAINT_SOLVER_GATE_0",
+  "expected_count": 16,
   "description": "Fail-closed legality gate. Any critical failure blocks GO regardless of DSS score or projected gain.",
   "checks": [
     {"id":"G0-01","name":"Squad Size = 15","critical":true},

@@ -1154,14 +1154,14 @@
         "probe": "runtime_observability",
         "detail": {
           "timings": {
-            "load_shared_inputs_and_candidates_ms": 338.6,
-            "wc_decision_cpu_ms": 3403.6,
-            "package_audit_cpu_ms": 3017.9,
-            "wc_package_parallel_wall_ms": 3424.3,
-            "parallel_speedup_estimate": 1.875,
-            "lineup_ms": 2.4,
-            "evidence_sanity_ms": 3.2,
-            "total_pipeline_ms": 3818.5
+            "load_shared_inputs_and_candidates_ms": 333.1,
+            "wc_decision_cpu_ms": 3067.9,
+            "package_audit_cpu_ms": 2816.1,
+            "wc_package_parallel_wall_ms": 3089.7,
+            "parallel_speedup_estimate": 1.904,
+            "lineup_ms": 2.3,
+            "evidence_sanity_ms": 3.1,
+            "total_pipeline_ms": 3467.7
           }
         }
       }
@@ -1387,5 +1387,5 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 390.03
+  "performance_ms": 384.15
 }

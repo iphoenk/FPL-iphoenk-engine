@@ -1,10 +1,11 @@
 {
-  "version": 3,
+  "version": 4,
   "module_policy": {
-    "minimum_registered_modules": 29,
+    "minimum_registered_modules": 31,
     "required_truth_modules": ["rules","source_authority","public_api","official_authenticated","event_context","identity","phase_state","squad","finance","team_service","live_scoring"],
     "required_intelligence_modules": ["price_trajectory","xmins_v2","team_strength","projection","prediction_evaluation","calibration_store","challenger_scorecard","package_optimizer"],
-    "required_framework_modules": ["dss_core","dss_extensions","gate0","enhancement_layers","framework_health"],
+    "required_decision_modules": ["package_optimizer","lineup_optimizer","decision_trace","dss_core","dss_extensions"],
+    "required_framework_modules": ["gate0","enhancement_layers","framework_health"],
     "required_governance_modules": ["performance","persistence","runner","service_runtime"],
     "active_statuses": ["ACTIVE", "ACTIVE_ALPHA"]
   },
@@ -24,6 +25,9 @@
     "production_baseline": "v3.10.0",
     "p0_capabilities_required": ["P0-1_prediction_calibration_backtest","P0-2_xmins_role_v2","P0-3_team_strength_fixture_probability","P0-4_multi_horizon_package_optimizer","P0-5_external_challenger_scorecard"],
     "decision_bridge_only_forbidden": true,
+    "native_lineup_required": true,
+    "decision_trace_required": true,
+    "gate0_full_16_required": true,
     "v4_prediction_bridge_must_not_be_authority": true,
     "governance_service_must_block_go_until_postflight_gate0": true
   },

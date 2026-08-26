@@ -1,7 +1,7 @@
 {
-  "schema_version": 7,
+  "schema_version": 8,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.16-source-registry-fast-report-serving-15-owned-20-watchlist",
+  "production_contract": "v3.17-full-dss-operational-evidence-15-owned-20-watchlist",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,
@@ -28,14 +28,17 @@
     "source_registry_is_separate_infrastructure_layer": true,
     "official_fpl_remains_native_authority": true,
     "challenger_source_failure_does_not_block_decisions": true,
-    "missing_external_observations_are_never_fabricated": true
+    "missing_external_observations_are_never_fabricated": true,
+    "dss_module_health_is_separate_from_signal_availability": true,
+    "all_active_dss_requires_runtime_evidence_contract": true,
+    "strict_postflight_requires_50_core_16_extensions_and_8_enhancements_active": true
   },
   "runtime": {
     "max_parallel_services": 5,
     "service_timeout_seconds": 180,
     "http_cache_ttl_seconds": 180,
     "performance_budget_seconds": 45,
-    "performance_target": "preserve sub-45-second runtime while parallel-probing optional sources and materializing small report-serving artifacts"
+    "performance_target": "preserve sub-45-second runtime while validating full DSS operational evidence and materializing small report-serving artifacts"
   },
   "services": {
     "collector": {
@@ -172,7 +175,8 @@
         {"module": "src.engines.p0_framework_health_overlay", "args": []},
         {"module": "src.engines.lineup_framework_health_overlay", "args": []},
         {"module": "src.engines.decision_quality_overlay", "args": []},
-        {"module": "src.engines.source_framework_overlay", "args": []}
+        {"module": "src.engines.source_framework_overlay", "args": []},
+        {"module": "src.engines.dss_operationalization_overlay", "args": []}
       ]
     },
     "watchlist": {
@@ -200,7 +204,7 @@
       "inputs": [
         "latest.json", "team.json", "lineup_decision.json", "package_decision.json", "projections.json",
         "price_alerts.json", "prediction_quality.json", "framework_health.json", "challenger_scorecard.json",
-        "report_state.json", "dss_watchlist.json", "source_health.json"
+        "report_state.json", "dss_watchlist.json", "source_health.json", "dss_operational_evidence.json"
       ],
       "commands": [
         {"module": "src.engines.report_architecture", "args": []},

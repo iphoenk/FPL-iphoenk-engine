@@ -1,38 +1,25 @@
 name: V5 Unified Gate
-
 on:
-  push:
-    branches: [v5-unified-engine]
-  pull_request:
-    branches: [v5-unified-engine]
+  push: {branches: [v5-unified-engine]}
+  pull_request: {branches: [v5-unified-engine]}
   workflow_dispatch:
-
-permissions:
-  contents: read
-
+permissions: {contents: read}
 jobs:
   bootstrap-acceptance:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      PYTHONPATH: ${{ github.workspace }}
+    env: {PYTHONPATH: "${{ github.workspace }}"}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
+        with: {fetch-depth: 0}
       - name: Set up Python
         uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: pip
-
+        with: {python-version: '3.12', cache: pip}
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pytest
-
       - name: Production baseline drift gate
         run: |
           git fetch origin main --quiet
@@ -40,42 +27,31 @@ jobs:
           ACTUAL=$(git rev-parse origin/main)
           echo "accepted=$EXPECTED current=$ACTUAL"
           test "$EXPECTED" = "$ACTUAL"
-
       - name: V5 bootstrap acceptance
         run: python -m src.v5.acceptance
-
       - name: V5 bootstrap tests
         run: python -m pytest -q tests/test_v5_bootstrap.py
-
       - name: V5 architecture and performance gates
-        run: python -m pytest -q tests/test_v5_architecture_principles.py tests/test_v5_config_cache.py
-
+        run: python -m pytest -q tests/test_v5_architecture_principles.py tests/test_v5_config_cache.py tests/test_v5_reporting_watchlist_performance.py
       - name: V5 microservice topology and contract gates
         run: python -m pytest -q tests/test_v5_microservices.py
-
       - name: V5 service transport resilience
         run: python -m pytest -q tests/test_v5_service_transport.py
-
       - name: V5 Official API cache and singleflight
         run: python -m pytest -q tests/test_v5_public_api_cache.py
-
       - name: V5 degraded-mode governance
         run: python -m pytest -q tests/test_v5_degraded_mode.py
-
       - name: V5 cluster health diagnostics
         run: python -m pytest -q tests/test_v5_cluster_health.py
-
       - name: V5 V3.12 decision parity
         run: python -m pytest -q tests/test_v5_v312_decision_parity.py
-
-      - name: V5 V3.13 reporting and watchlist parity
+      - name: V5 V3.14 reporting and full DSS watchlist parity
         run: python -m pytest -q tests/test_v5_v313_reporting_watchlist.py
-
+      - name: V5 structural shadow parity
+        run: python -m pytest -q tests/test_v5_shadow_parity.py
       - name: V5 native decision and Gate0 governance
         run: python -m pytest -q tests/test_v5_decision_governance.py
-
       - name: V4 adopted-intelligence regression suite
         run: python -m pytest -q tests/test_v4_prediction.py tests/test_v4_lineup_optimizer.py tests/test_v4_validation.py tests/test_v4_recommendation_sanity.py tests/test_v4_wc_package_audit.py
-
       - name: V5 complete regression suite
         run: python -m pytest -q

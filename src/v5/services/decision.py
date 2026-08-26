@@ -12,6 +12,7 @@ from src.v5.decision.package_optimizer import build_packages
 
 CONFIG = "config/v5_decision_registry.json"
 PACKAGE_CONFIG = "config/intelligence/package_optimizer.json"
+DSS_POLICY = "config/v5_dss_policy_registry.json"
 
 
 def _cfg() -> dict[str, Any]:
@@ -25,6 +26,13 @@ def _package_cfg() -> dict[str, Any]:
     data = load_json_config(PACKAGE_CONFIG)
     if not isinstance(data.get("early_season_change_cap"), dict) or not isinstance(data.get("team_cluster_penalty"), dict):
         raise RuntimeError("package optimizer guardrail config is incomplete")
+    return data
+
+
+def _dss_policy() -> dict[str, Any]:
+    data = load_json_config(DSS_POLICY)
+    if not isinstance(data.get("registries"), dict) or not isinstance(data.get("governance"), dict):
+        raise RuntimeError("invalid V5 DSS policy registry")
     return data
 
 
@@ -218,14 +226,11 @@ def _blocked_trace(reason: str, gate0_preflight: dict[str, Any]) -> dict[str, An
 
 
 def _dss_full_active(dss: dict[str, Any]) -> bool:
-    policy = _cfg().get("strict_postflight") or {}
-    requirements = {
-        "core": bool(policy.get("require_all_dss_core_active", True)),
-        "extensions": bool(policy.get("require_all_dss_extensions_active", True)),
-    }
-    for section, required in requirements.items():
-        if not required:
-            continue
+    policy = _dss_policy()
+    strict = bool((policy.get("governance") or {}).get("all_modules_active_for_unqualified_go", True))
+    if not strict:
+        return True
+    for section in ("core", "extensions"):
         block = dss.get(section) if isinstance(dss.get(section), dict) else {}
         expected = int(block.get("expected") or 0)
         active = int((block.get("counts") or {}).get("ACTIVE") or 0)
@@ -254,9 +259,9 @@ def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -
     local_ready = packages.get("status") == "READY" and package_governance.get("status") == "READY" and lineup.get("status") == "READY"
     preflight_ready = bool(gate0_preflight.get("pass"))
     dss_full_active = _dss_full_active(dss)
-    strict_ready = bool(local_ready and preflight_ready and dss_full_active)
+    decision_ready = bool(local_ready and preflight_ready)
 
-    if local_ready and dss_full_active:
+    if local_ready:
         trace = build_trace(
             truth=truth,
             prediction=prediction,
@@ -268,15 +273,13 @@ def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -
             gate0_preflight=gate0_preflight,
         )
     else:
-        reason = (
-            "BLOCK decision output until all DSS core/extensions are ACTIVE"
-            if local_ready and not dss_full_active
-            else "BLOCK decision output until package, package-governance and lineup authorities are READY"
+        trace = _blocked_trace(
+            "BLOCK decision output until package, package-governance and lineup authorities are READY",
+            gate0_preflight,
         )
-        trace = _blocked_trace(reason, gate0_preflight)
 
     return {
-        "status": "READY" if strict_ready else "BLOCKED",
+        "status": "READY" if decision_ready else "BLOCKED",
         "model": _cfg().get("model_id"),
         "package_model": packages.get("model"),
         "package_governance_model": package_governance.get("model"),
@@ -306,7 +309,7 @@ def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -
             "dss_evaluation_model": dss.get("evaluation_model"),
             "evaluation_capabilities_consumed": sorted(str(value) for value in evaluation_capabilities),
             "gate0_preflight_model": gate0_preflight.get("model"),
-            "strict_postflight_requires_all_dss_active": True,
+            "strict_postflight_requires_all_dss_active": bool((_dss_policy().get("governance") or {}).get("all_modules_active_for_unqualified_go", True)),
             "strict_postflight_dss_active": dss_full_active,
             "decision_trace_required": True,
             "production_recommendation_enabled": bool((_cfg().get("trace") or {}).get("production_recommendation_enabled", False)),

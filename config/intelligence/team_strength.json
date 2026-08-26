@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "model_id": "team_strength_poisson_v1",
+  "prior_home_goals": 1.55,
+  "prior_away_goals": 1.25,
+  "official_strength_weight": 0.65,
+  "recent_form_weight_max": 0.35,
+  "recent_matches_for_full_weight": 6,
+  "recent_window_matches": 8,
+  "lambda_min": 0.2,
+  "lambda_max": 3.5,
+  "poisson_max_goals": 8,
+  "minimum_finished_matches_for_league_baseline": 10
+}

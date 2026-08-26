@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "model_id": "prediction_evaluation_v1",
+  "freeze_policy": "last_pre_deadline_snapshot",
+  "settle_only_finished_events": true,
+  "metrics": ["points_mae", "points_rmse", "xmins_mae", "starter_brier", "clean_sheet_brier", "spearman"],
+  "confidence_sample_thresholds": {"low_max": 49, "medium_max": 149},
+  "minimum_sample_for_dynamic_weight": 50,
+  "calibration_bins": 5
+}

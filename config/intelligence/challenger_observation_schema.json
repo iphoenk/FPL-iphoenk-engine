@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "description": "Point-in-time external challenger observations. No provider data is scraped automatically by the engine.",
+  "required_record_fields": ["provider", "gw", "element", "captured_at"],
+  "provider_ids": ["onefpl", "fffix", "ffhub"],
+  "optional_prediction_fields": ["xpts", "xmins", "start_probability", "price_direction"],
+  "price_direction_values": ["RISE", "FALL", "STABLE"],
+  "example": {
+    "provider": "fffix",
+    "gw": 2,
+    "element": 165,
+    "captured_at": "2026-08-28T16:00:00Z",
+    "xpts": 5.8,
+    "xmins": 82,
+    "start_probability": 0.91,
+    "price_direction": "RISE"
+  },
+  "governance": {
+    "capture_must_be_point_in_time": true,
+    "post_deadline_edits_must_not_replace_predeadline_observations": true,
+    "missing_metrics_remain_null": true
+  }
+}

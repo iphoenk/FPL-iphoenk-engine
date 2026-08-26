@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T21:54:25.661782+00:00",
+  "generated_at": "2026-08-26T22:41:37.519138+00:00",
   "schema_version": 513,
   "model_version": "player_projection_v5_historical_prior",
   "ruleset_id": "FPL_2026_27",
@@ -5261,7 +5261,7 @@
         "pass": true
       },
       "starter_xmins_dispersion": {
-        "value": 0.0517,
+        "value": 0.0529,
         "threshold": 0.035,
         "sample": 218,
         "minimum_sample": 40,
@@ -23874,7 +23874,7 @@
       "position": "MID",
       "now_cost": 70,
       "status": "d",
-      "ownership_pct": 3.1,
+      "ownership_pct": 3.0,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -66414,7 +66414,7 @@
       "position": "DEF",
       "now_cost": 46,
       "status": "a",
-      "ownership_pct": 6.6,
+      "ownership_pct": 6.7,
       "current_season": {
         "starts": 1,
         "minutes": 77
@@ -94605,7 +94605,7 @@
       "position": "DEF",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 9.4,
+      "ownership_pct": 9.5,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -136726,7 +136726,7 @@
       "team_id": 9,
       "position": "MID",
       "now_cost": 55,
-      "status": "a",
+      "status": "d",
       "ownership_pct": 0.3,
       "current_season": {
         "starts": 1,
@@ -136735,23 +136735,23 @@
       "historical_prior": null,
       "xmins": {
         "model": "xmins_v3_historical_prior",
-        "start_probability": 0.5662,
-        "bench_probability": 0.282,
-        "dnp_probability": 0.1518,
-        "expected_minutes": 46.5,
+        "start_probability": 0.4247,
+        "bench_probability": 0.2115,
+        "dnp_probability": 0.3639,
+        "expected_minutes": 34.9,
         "starter_minutes_if_start": 73.2,
         "bench_minutes_if_used": 18.0,
         "start_probability_interval": [
-          0.3262,
-          0.8062
+          0.1847,
+          0.6647
         ],
         "expected_minutes_interval": [
-          2.0,
-          90.0
+          0.0,
+          81.4
         ],
-        "minutes_std": 34.81,
-        "availability": 1.0,
-        "availability_source": "status:a",
+        "minutes_std": 36.37,
+        "availability": 0.75,
+        "availability_source": "official_chance",
         "rotation_risk": 0.45,
         "congestion_factor": 1.0,
         "small_sample_guard": true,
@@ -136798,8 +136798,8 @@
       "xpts_by_gw": [
         {
           "gw": 2,
-          "mean": 2.731,
-          "std": 2.815,
+          "mean": 1.989,
+          "std": 2.558,
           "clean_sheet_probability": 0.2352,
           "fixtures": [
             {
@@ -136808,17 +136808,17 @@
               "kickoff_time": "2026-08-29T14:00:00Z",
               "opponent": 3,
               "home": false,
-              "xpts": 2.731,
-              "mean": 2.731,
-              "std": 2.815,
+              "xpts": 1.989,
+              "mean": 1.989,
+              "std": 2.558,
               "clean_sheet_probability": 0.2352
             }
           ]
         },
         {
           "gw": 3,
-          "mean": 2.494,
-          "std": 2.716,
+          "mean": 1.811,
+          "std": 2.484,
           "clean_sheet_probability": 0.5913,
           "fixtures": [
             {
@@ -136827,17 +136827,17 @@
               "kickoff_time": "2026-09-06T13:00:00Z",
               "opponent": 16,
               "home": true,
-              "xpts": 2.494,
-              "mean": 2.494,
-              "std": 2.716,
+              "xpts": 1.811,
+              "mean": 1.811,
+              "std": 2.484,
               "clean_sheet_probability": 0.5913
             }
           ]
         },
         {
           "gw": 4,
-          "mean": 2.731,
-          "std": 2.815,
+          "mean": 1.989,
+          "std": 2.558,
           "clean_sheet_probability": 0.2358,
           "fixtures": [
             {
@@ -136846,17 +136846,17 @@
               "kickoff_time": "2026-09-12T16:30:00Z",
               "opponent": 19,
               "home": false,
-              "xpts": 2.731,
-              "mean": 2.731,
-              "std": 2.815,
+              "xpts": 1.989,
+              "mean": 1.989,
+              "std": 2.558,
               "clean_sheet_probability": 0.2358
             }
           ]
         },
         {
           "gw": 5,
-          "mean": 2.283,
-          "std": 2.627,
+          "mean": 1.653,
+          "std": 2.417,
           "clean_sheet_probability": 0.4493,
           "fixtures": [
             {
@@ -136865,17 +136865,17 @@
               "kickoff_time": "2026-09-19T14:00:00Z",
               "opponent": 12,
               "home": true,
-              "xpts": 2.283,
-              "mean": 2.283,
-              "std": 2.627,
+              "xpts": 1.653,
+              "mean": 1.653,
+              "std": 2.417,
               "clean_sheet_probability": 0.4493
             }
           ]
         },
         {
           "gw": 6,
-          "mean": 2.307,
-          "std": 2.637,
+          "mean": 1.671,
+          "std": 2.425,
           "clean_sheet_probability": 0.1841,
           "fixtures": [
             {
@@ -136884,17 +136884,17 @@
               "kickoff_time": "2026-10-11T13:00:00Z",
               "opponent": 11,
               "home": false,
-              "xpts": 2.307,
-              "mean": 2.307,
-              "std": 2.637,
+              "xpts": 1.671,
+              "mean": 1.671,
+              "std": 2.425,
               "clean_sheet_probability": 0.1841
             }
           ]
         },
         {
           "gw": 7,
-          "mean": 2.414,
-          "std": 2.682,
+          "mean": 1.751,
+          "std": 2.458,
           "clean_sheet_probability": 0.4493,
           "fixtures": [
             {
@@ -136903,17 +136903,17 @@
               "kickoff_time": "2026-10-17T11:30:00Z",
               "opponent": 6,
               "home": true,
-              "xpts": 2.414,
-              "mean": 2.414,
-              "std": 2.682,
+              "xpts": 1.751,
+              "mean": 1.751,
+              "std": 2.458,
               "clean_sheet_probability": 0.4493
             }
           ]
         },
         {
           "gw": 8,
-          "mean": 2.284,
-          "std": 2.628,
+          "mean": 1.654,
+          "std": 2.418,
           "clean_sheet_probability": 0.1441,
           "fixtures": [
             {
@@ -136922,17 +136922,17 @@
               "kickoff_time": "2026-10-24T14:00:00Z",
               "opponent": 1,
               "home": false,
-              "xpts": 2.284,
-              "mean": 2.284,
-              "std": 2.628,
+              "xpts": 1.654,
+              "mean": 1.654,
+              "std": 2.418,
               "clean_sheet_probability": 0.1441
             }
           ]
         },
         {
           "gw": 9,
-          "mean": 2.702,
-          "std": 2.803,
+          "mean": 1.967,
+          "std": 2.549,
           "clean_sheet_probability": 0.1841,
           "fixtures": [
             {
@@ -136941,17 +136941,17 @@
               "kickoff_time": "2026-11-02T20:00:00Z",
               "opponent": 17,
               "home": false,
-              "xpts": 2.702,
-              "mean": 2.702,
-              "std": 2.803,
+              "xpts": 1.967,
+              "mean": 1.967,
+              "std": 2.549,
               "clean_sheet_probability": 0.1841
             }
           ]
         },
         {
           "gw": 10,
-          "mean": 2.582,
-          "std": 2.753,
+          "mean": 1.877,
+          "std": 2.511,
           "clean_sheet_probability": 0.5913,
           "fixtures": [
             {
@@ -136960,17 +136960,17 @@
               "kickoff_time": "2026-11-07T15:00:00Z",
               "opponent": 7,
               "home": true,
-              "xpts": 2.582,
-              "mean": 2.582,
-              "std": 2.753,
+              "xpts": 1.877,
+              "mean": 1.877,
+              "std": 2.511,
               "clean_sheet_probability": 0.5913
             }
           ]
         },
         {
           "gw": 11,
-          "mean": 2.284,
-          "std": 2.628,
+          "mean": 1.654,
+          "std": 2.418,
           "clean_sheet_probability": 0.1441,
           "fixtures": [
             {
@@ -136979,17 +136979,17 @@
               "kickoff_time": "2026-11-21T15:00:00Z",
               "opponent": 4,
               "home": false,
-              "xpts": 2.284,
-              "mean": 2.284,
-              "std": 2.628,
+              "xpts": 1.654,
+              "mean": 1.654,
+              "std": 2.418,
               "clean_sheet_probability": 0.1441
             }
           ]
         },
         {
           "gw": 12,
-          "mean": 2.414,
-          "std": 2.682,
+          "mean": 1.751,
+          "std": 2.458,
           "clean_sheet_probability": 0.4493,
           "fixtures": [
             {
@@ -136998,17 +136998,17 @@
               "kickoff_time": "2026-11-28T15:00:00Z",
               "opponent": 14,
               "home": true,
-              "xpts": 2.414,
-              "mean": 2.414,
-              "std": 2.682,
+              "xpts": 1.751,
+              "mean": 1.751,
+              "std": 2.458,
               "clean_sheet_probability": 0.4493
             }
           ]
         },
         {
           "gw": 13,
-          "mean": 2.731,
-          "std": 2.815,
+          "mean": 1.989,
+          "std": 2.558,
           "clean_sheet_probability": 0.2358,
           "fixtures": [
             {
@@ -137017,17 +137017,17 @@
               "kickoff_time": "2026-12-02T20:00:00Z",
               "opponent": 2,
               "home": false,
-              "xpts": 2.731,
-              "mean": 2.731,
-              "std": 2.815,
+              "xpts": 1.989,
+              "mean": 1.989,
+              "std": 2.558,
               "clean_sheet_probability": 0.2358
             }
           ]
         },
         {
           "gw": 14,
-          "mean": 2.502,
-          "std": 2.719,
+          "mean": 1.817,
+          "std": 2.486,
           "clean_sheet_probability": 0.4493,
           "fixtures": [
             {
@@ -137036,17 +137036,17 @@
               "kickoff_time": "2026-12-05T15:00:00Z",
               "opponent": 10,
               "home": true,
-              "xpts": 2.502,
-              "mean": 2.502,
-              "std": 2.719,
+              "xpts": 1.817,
+              "mean": 1.817,
+              "std": 2.486,
               "clean_sheet_probability": 0.4493
             }
           ]
         },
         {
           "gw": 15,
-          "mean": 2.267,
-          "std": 2.62,
+          "mean": 1.64,
+          "std": 2.412,
           "clean_sheet_probability": 0.1127,
           "fixtures": [
             {
@@ -137055,17 +137055,17 @@
               "kickoff_time": "2026-12-12T15:00:00Z",
               "opponent": 5,
               "home": false,
-              "xpts": 2.267,
-              "mean": 2.267,
-              "std": 2.62,
+              "xpts": 1.64,
+              "mean": 1.64,
+              "std": 2.412,
               "clean_sheet_probability": 0.1127
             }
           ]
         },
         {
           "gw": 16,
-          "mean": 2.598,
-          "std": 2.76,
+          "mean": 1.889,
+          "std": 2.517,
           "clean_sheet_probability": 0.2358,
           "fixtures": [
             {
@@ -137074,9 +137074,9 @@
               "kickoff_time": "2026-12-19T15:00:00Z",
               "opponent": 18,
               "home": false,
-              "xpts": 2.598,
-              "mean": 2.598,
-              "std": 2.76,
+              "xpts": 1.889,
+              "mean": 1.889,
+              "std": 2.517,
               "clean_sheet_probability": 0.2358
             }
           ]
@@ -137084,87 +137084,87 @@
       ],
       "horizons": {
         "3": {
-          "mean": 7.956,
-          "std": 4.819
+          "mean": 5.789,
+          "std": 4.388
         },
         "5": {
-          "mean": 12.546,
-          "std": 6.089
+          "mean": 9.113,
+          "std": 5.566
         },
         "10": {
-          "mean": 24.812,
-          "std": 8.574
+          "mean": 18.016,
+          "std": 7.843
         },
         "15": {
-          "mean": 37.324,
-          "std": 10.513
+          "mean": 27.102,
+          "std": 9.614
         }
       },
-      "xpts_3": 7.956,
-      "xpts_5": 12.546,
-      "xpts_10": 24.812,
-      "xpts_15": 37.324,
-      "mean_xpts": 2.731,
-      "uncertainty": 2.815,
+      "xpts_3": 5.789,
+      "xpts_5": 9.113,
+      "xpts_10": 18.016,
+      "xpts_15": 27.102,
+      "mean_xpts": 1.989,
+      "uncertainty": 2.558,
       "fixtures": [
         {
           "event": 2,
-          "xpts": 2.731,
+          "xpts": 1.989,
           "lower80": 0.0,
-          "upper80": 6.334,
+          "upper80": 5.263,
           "xmins": {
-            "start_probability": 0.5662,
-            "bench_probability": 0.282,
-            "dnp_probability": 0.1518,
-            "expected_minutes": 46.5
+            "start_probability": 0.4247,
+            "bench_probability": 0.2115,
+            "dnp_probability": 0.3639,
+            "expected_minutes": 34.9
           }
         },
         {
           "event": 3,
-          "xpts": 2.494,
+          "xpts": 1.811,
           "lower80": 0.0,
-          "upper80": 5.971,
+          "upper80": 4.99,
           "xmins": {
-            "start_probability": 0.5662,
-            "bench_probability": 0.282,
-            "dnp_probability": 0.1518,
-            "expected_minutes": 46.5
+            "start_probability": 0.4247,
+            "bench_probability": 0.2115,
+            "dnp_probability": 0.3639,
+            "expected_minutes": 34.9
           }
         },
         {
           "event": 4,
-          "xpts": 2.731,
+          "xpts": 1.989,
           "lower80": 0.0,
-          "upper80": 6.335,
+          "upper80": 5.264,
           "xmins": {
-            "start_probability": 0.5662,
-            "bench_probability": 0.282,
-            "dnp_probability": 0.1518,
-            "expected_minutes": 46.5
+            "start_probability": 0.4247,
+            "bench_probability": 0.2115,
+            "dnp_probability": 0.3639,
+            "expected_minutes": 34.9
           }
         },
         {
           "event": 5,
-          "xpts": 2.283,
+          "xpts": 1.653,
           "lower80": 0.0,
-          "upper80": 5.645,
+          "upper80": 4.746,
           "xmins": {
-            "start_probability": 0.5662,
-            "bench_probability": 0.282,
-            "dnp_probability": 0.1518,
-            "expected_minutes": 46.5
+            "start_probability": 0.4247,
+            "bench_probability": 0.2115,
+            "dnp_probability": 0.3639,
+            "expected_minutes": 34.9
           }
         },
         {
           "event": 6,
-          "xpts": 2.307,
+          "xpts": 1.671,
           "lower80": 0.0,
-          "upper80": 5.683,
+          "upper80": 4.774,
           "xmins": {
-            "start_probability": 0.5662,
-            "bench_probability": 0.282,
-            "dnp_probability": 0.1518,
-            "expected_minutes": 46.5
+            "start_probability": 0.4247,
+            "bench_probability": 0.2115,
+            "dnp_probability": 0.3639,
+            "expected_minutes": 34.9
           }
         }
       ],
@@ -156869,7 +156869,7 @@
       "position": "MID",
       "now_cost": 45,
       "status": "a",
-      "ownership_pct": 3.6,
+      "ownership_pct": 3.7,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -227068,7 +227068,7 @@
       "position": "DEF",
       "now_cost": 50,
       "status": "a",
-      "ownership_pct": 2.6,
+      "ownership_pct": 2.5,
       "current_season": {
         "starts": 0,
         "minutes": 10
@@ -269234,7 +269234,7 @@
       "position": "DEF",
       "now_cost": 45,
       "status": "a",
-      "ownership_pct": 3.9,
+      "ownership_pct": 3.8,
       "current_season": {
         "starts": 1,
         "minutes": 90

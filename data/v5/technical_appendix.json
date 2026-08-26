@@ -1,5 +1,6 @@
 {
   "layer": "TECHNICAL_APPENDIX",
+  "request_context": {},
   "decision_trace": {
     "decision_type": "HOLD",
     "action": "HOLD authoritative manual LOCK; optimizer challenger is review evidence only",
@@ -1172,7 +1173,7 @@
         "pass": true
       },
       "starter_xmins_dispersion": {
-        "value": 0.0517,
+        "value": 0.0529,
         "threshold": 0.035,
         "sample": 218,
         "minimum_sample": 40,
@@ -1282,7 +1283,7 @@
   "gate0_preflight_pass": true,
   "governance": {
     "framework_schema": 8,
-    "generated_at": "2026-08-26T21:54:26.971137+00:00",
+    "generated_at": "2026-08-26T22:41:38.860163+00:00",
     "auditor": "v5-microservice-governance-v4",
     "overall": "GREEN",
     "decision_engine": "HEALTHY",
@@ -2810,9 +2811,9 @@
     "base_collection": {
       "service_id": "ingestion",
       "operation": "collect_base",
-      "service_compute_ms": 310.068,
-      "round_trip_ms": 361.327,
-      "transport_overhead_ms": 51.259,
+      "service_compute_ms": 240.652,
+      "round_trip_ms": 293.195,
+      "transport_overhead_ms": 52.543,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2825,9 +2826,9 @@
     "event_context": {
       "service_id": "truth",
       "operation": "context",
-      "service_compute_ms": 0.072,
-      "round_trip_ms": 35.944,
-      "transport_overhead_ms": 35.872,
+      "service_compute_ms": 0.067,
+      "round_trip_ms": 36.449,
+      "transport_overhead_ms": 36.382,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2841,9 +2842,9 @@
       "auth": {
         "service_id": "ingestion",
         "operation": "collect_authenticated",
-        "service_compute_ms": 0.044,
-        "round_trip_ms": 20.555,
-        "transport_overhead_ms": 20.511,
+        "service_compute_ms": 0.043,
+        "round_trip_ms": 19.968,
+        "transport_overhead_ms": 19.925,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2856,9 +2857,9 @@
       "enrichment": {
         "service_id": "ingestion",
         "operation": "collect_enrichment",
-        "service_compute_ms": 2.131,
-        "round_trip_ms": 40.469,
-        "transport_overhead_ms": 38.338,
+        "service_compute_ms": 2.048,
+        "round_trip_ms": 42.167,
+        "transport_overhead_ms": 40.119,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2871,9 +2872,9 @@
       "dynamic": {
         "service_id": "ingestion",
         "operation": "collect_dynamic",
-        "service_compute_ms": 69.16,
-        "round_trip_ms": 100.722,
-        "transport_overhead_ms": 31.562,
+        "service_compute_ms": 82.391,
+        "round_trip_ms": 114.43,
+        "transport_overhead_ms": 32.039,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2887,9 +2888,9 @@
     "truth_assembly": {
       "service_id": "truth",
       "operation": "assemble",
-      "service_compute_ms": 1.283,
-      "round_trip_ms": 75.673,
-      "transport_overhead_ms": 74.39,
+      "service_compute_ms": 1.412,
+      "round_trip_ms": 78.548,
+      "transport_overhead_ms": 77.136,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -2900,12 +2901,12 @@
       }
     },
     "state_hydration": {
-      "historical_prior": {
+      "challenger_observations": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 2.37,
-        "round_trip_ms": 11.576,
-        "transport_overhead_ms": 9.206,
+        "service_compute_ms": 0.075,
+        "round_trip_ms": 12.81,
+        "transport_overhead_ms": 12.735,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2918,24 +2919,9 @@
       "price_trajectory": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 2.246,
-        "round_trip_ms": 15.102,
-        "transport_overhead_ms": 12.856,
-        "transport_attempts": 1,
-        "transport_retry_policy": "idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "challenger_observations": {
-        "service_id": "snapshot",
-        "operation": "read",
-        "service_compute_ms": 0.074,
-        "round_trip_ms": 17.082,
-        "transport_overhead_ms": 17.008,
+        "service_compute_ms": 2.077,
+        "round_trip_ms": 16.284,
+        "transport_overhead_ms": 14.207,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2948,9 +2934,24 @@
       "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 10.342,
-        "round_trip_ms": 18.792,
-        "transport_overhead_ms": 8.45,
+        "service_compute_ms": 6.528,
+        "round_trip_ms": 16.353,
+        "transport_overhead_ms": 9.825,
+        "transport_attempts": 1,
+        "transport_retry_policy": "idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "historical_prior": {
+        "service_id": "snapshot",
+        "operation": "read",
+        "service_compute_ms": 9.387,
+        "round_trip_ms": 22.444,
+        "transport_overhead_ms": 13.057,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2965,9 +2966,9 @@
       "price": {
         "service_id": "price",
         "operation": "build",
-        "service_compute_ms": 19.356,
-        "round_trip_ms": 109.736,
-        "transport_overhead_ms": 90.38,
+        "service_compute_ms": 22.945,
+        "round_trip_ms": 116.028,
+        "transport_overhead_ms": 93.083,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2980,9 +2981,9 @@
       "prediction": {
         "service_id": "prediction",
         "operation": "build",
-        "service_compute_ms": 186.316,
-        "round_trip_ms": 426.407,
-        "transport_overhead_ms": 240.091,
+        "service_compute_ms": 196.999,
+        "round_trip_ms": 429.296,
+        "transport_overhead_ms": 232.297,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -2997,9 +2998,9 @@
       "gate0_preflight": {
         "service_id": "governance",
         "operation": "gate0_preflight",
-        "service_compute_ms": 1.088,
-        "round_trip_ms": 9.588,
-        "transport_overhead_ms": 8.5,
+        "service_compute_ms": 0.714,
+        "round_trip_ms": 7.244,
+        "transport_overhead_ms": 6.53,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -3012,9 +3013,9 @@
       "evaluation": {
         "service_id": "evaluation",
         "operation": "build",
-        "service_compute_ms": 3.113,
-        "round_trip_ms": 241.869,
-        "transport_overhead_ms": 238.756,
+        "service_compute_ms": 3.151,
+        "round_trip_ms": 244.558,
+        "transport_overhead_ms": 241.407,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -3027,9 +3028,9 @@
       "decision_prepare": {
         "service_id": "decision",
         "operation": "prepare",
-        "service_compute_ms": 535.984,
-        "round_trip_ms": 761.744,
-        "transport_overhead_ms": 225.76,
+        "service_compute_ms": 557.349,
+        "round_trip_ms": 715.5,
+        "transport_overhead_ms": 158.151,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -3043,9 +3044,9 @@
     "decision_finalize": {
       "service_id": "decision",
       "operation": "finalize",
-      "service_compute_ms": 0.851,
-      "round_trip_ms": 146.89,
-      "transport_overhead_ms": 146.039,
+      "service_compute_ms": 0.787,
+      "round_trip_ms": 152.002,
+      "transport_overhead_ms": 151.215,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -3058,9 +3059,9 @@
     "governance": {
       "service_id": "governance",
       "operation": "audit",
-      "service_compute_ms": 0.829,
-      "round_trip_ms": 148.847,
-      "transport_overhead_ms": 148.018,
+      "service_compute_ms": 0.877,
+      "round_trip_ms": 152.419,
+      "transport_overhead_ms": 151.542,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -3074,54 +3075,9 @@
       "prediction_quality": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 0.653,
-        "round_trip_ms": 46.114,
-        "transport_overhead_ms": 45.461,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "prediction_accuracy": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 1.237,
-        "round_trip_ms": 39.125,
-        "transport_overhead_ms": 37.888,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "source_fusion": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 10.779,
-        "round_trip_ms": 110.561,
-        "transport_overhead_ms": 99.782,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "framework_health": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 1.866,
-        "round_trip_ms": 34.592,
-        "transport_overhead_ms": 32.726,
+        "service_compute_ms": 10.633,
+        "round_trip_ms": 36.548,
+        "transport_overhead_ms": 25.915,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3134,9 +3090,9 @@
       "historical_prior": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 11.05,
-        "round_trip_ms": 109.707,
-        "transport_overhead_ms": 98.657,
+        "service_compute_ms": 11.102,
+        "round_trip_ms": 94.346,
+        "transport_overhead_ms": 83.244,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3146,12 +3102,27 @@
           "cooldown_seconds": 10.0
         }
       },
-      "team_strength": {
+      "source_fusion": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 18.31,
-        "round_trip_ms": 47.897,
-        "transport_overhead_ms": 29.587,
+        "service_compute_ms": 5.202,
+        "round_trip_ms": 96.646,
+        "transport_overhead_ms": 91.444,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "prediction_accuracy": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 0.63,
+        "round_trip_ms": 24.451,
+        "transport_overhead_ms": 23.821,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3164,9 +3135,9 @@
       "challenger_scorecard": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 0.269,
-        "round_trip_ms": 39.594,
-        "transport_overhead_ms": 39.325,
+        "service_compute_ms": 1.04,
+        "round_trip_ms": 37.902,
+        "transport_overhead_ms": 36.862,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3176,12 +3147,12 @@
           "cooldown_seconds": 10.0
         }
       },
-      "prediction_ledger": {
+      "team_strength": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 11.232,
-        "round_trip_ms": 44.66,
-        "transport_overhead_ms": 33.428,
+        "service_compute_ms": 9.628,
+        "round_trip_ms": 58.004,
+        "transport_overhead_ms": 48.376,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3194,9 +3165,24 @@
       "package_optimizer": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 4.723,
-        "round_trip_ms": 167.638,
-        "transport_overhead_ms": 162.915,
+        "service_compute_ms": 9.583,
+        "round_trip_ms": 44.453,
+        "transport_overhead_ms": 34.87,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "prediction_ledger": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 8.84,
+        "round_trip_ms": 67.416,
+        "transport_overhead_ms": 58.576,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3209,9 +3195,24 @@
       "price_trajectory": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 88.635,
-        "round_trip_ms": 136.811,
-        "transport_overhead_ms": 48.176,
+        "service_compute_ms": 8.232,
+        "round_trip_ms": 129.324,
+        "transport_overhead_ms": 121.092,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "framework_health": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 7.979,
+        "round_trip_ms": 139.372,
+        "transport_overhead_ms": 131.393,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3224,9 +3225,9 @@
       "price_alerts": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 50.5,
-        "round_trip_ms": 196.187,
-        "transport_overhead_ms": 145.687,
+        "service_compute_ms": 3.612,
+        "round_trip_ms": 137.168,
+        "transport_overhead_ms": 133.556,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3239,9 +3240,9 @@
       "prices": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 100.975,
-        "round_trip_ms": 264.183,
-        "transport_overhead_ms": 163.208,
+        "service_compute_ms": 142.693,
+        "round_trip_ms": 199.969,
+        "transport_overhead_ms": 57.276,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3254,9 +3255,9 @@
       "predictions": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 355.43,
-        "round_trip_ms": 563.998,
-        "transport_overhead_ms": 208.568,
+        "service_compute_ms": 343.553,
+        "round_trip_ms": 581.204,
+        "transport_overhead_ms": 237.651,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -3270,9 +3271,9 @@
     "snapshot_write": {
       "service_id": "snapshot",
       "operation": "snapshot",
-      "service_compute_ms": 16.896,
-      "round_trip_ms": 22.826,
-      "transport_overhead_ms": 5.93,
+      "service_compute_ms": 17.674,
+      "round_trip_ms": 23.344,
+      "transport_overhead_ms": 5.67,
       "transport_attempts": 1,
       "transport_retry_policy": "non_idempotent",
       "transport_circuit": {
@@ -3282,7 +3283,7 @@
         "cooldown_seconds": 10.0
       }
     },
-    "orchestrator_wall_ms": 2772.347
+    "orchestrator_wall_ms": 2789.992
   },
   "provenance": {
     "ruleset_id": "FPL_2026_27",

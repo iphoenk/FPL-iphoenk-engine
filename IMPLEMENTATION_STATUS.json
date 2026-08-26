@@ -1,5 +1,5 @@
 {
-  "version": "3.17.0",
+  "version": "3.17.1",
   "schema_version": 46,
   "release_metadata_source": "src/version.py",
   "P0": {
@@ -29,7 +29,8 @@
       "runtime-evidence DSS operationalization gate",
       "explicit safe fallback states without fabricated external observations",
       "team-cluster package penalty guardrail",
-      "early-season package-change cap guardrail"
+      "early-season package-change cap guardrail",
+      "canonical MASTER_TASK_LIST_V3.md roadmap and Definition-of-Done governance"
     ]
   },
   "P1": {

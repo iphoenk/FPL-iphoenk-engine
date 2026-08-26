@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.17.0 microservices
+name: FPL iphoenk collector v3.17.1 microservices
 
 on:
   workflow_dispatch:

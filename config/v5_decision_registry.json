@@ -1,6 +1,6 @@
 {
-  "schema_version": 4,
-  "model_id": "v5_native_decision_governance_v4",
+  "schema_version": 5,
+  "model_id": "v5_native_decision_governance_v5",
   "lineup": {
     "positions": ["GK", "DEF", "MID", "FWD"],
     "player_score": {
@@ -25,6 +25,18 @@
       "mean_weight": 1.0,
       "start_probability_weight": 0.25,
       "dnp_probability_penalty": 0.50
+    },
+    "captain_safety": {
+      "minimum_start_probability": 0.70,
+      "maximum_dnp_probability": 0.15,
+      "safe_pool_size": 5,
+      "minimum_pool_size": 2,
+      "fallback_to_all_starters": true
+    },
+    "alternatives": {
+      "enumerate_all_legal_xi_for_final_squad": true,
+      "publish_top_n": 3,
+      "close_margin_threshold": 0.75
     },
     "tie_breakers": ["mean", "start_probability", "lower_cost", "element_id"]
   },
@@ -53,6 +65,7 @@
     "gate0_pass_status": "PASS",
     "local_constraint_labels": {
       "package_ready": "decision:package_legality_and_affordability",
+      "package_governance_ready": "decision:package_manual_authority_governance",
       "lineup_ready": "decision:lineup_legality"
     },
     "production_recommendation_enabled": false
@@ -62,6 +75,7 @@
       "direct_challenger",
       "structural_fit",
       "governed_optimizer",
+      "manual_package_authority",
       "sell_cost_affordability",
       "package_churn_penalty",
       "package_structural",
@@ -71,6 +85,8 @@
     "lineup_ready": [
       "lineup_governance",
       "captaincy",
+      "captain_safe_pool",
+      "lineup_alternatives",
       "bench_utility",
       "lineup_robustness",
       "captain_dnp_guard",
@@ -80,12 +96,15 @@
   "capabilities": [
     "lineup_governance",
     "captaincy",
+    "captain_safe_pool",
+    "lineup_alternatives",
     "bench_utility",
     "lineup_robustness",
     "captain_dnp_guard",
     "direct_challenger",
     "structural_fit",
     "governed_optimizer",
+    "manual_package_authority",
     "sell_cost_affordability",
     "package_churn_penalty",
     "package_structural",

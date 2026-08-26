@@ -30,9 +30,7 @@ services:
     build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
     environment: {V5_SERVICE_ID: decision, V5_SERVICE_PORT: 8105}
     ports: ["8105:8105"]
-    depends_on:
-      price: {condition: service_healthy}
-      prediction: {condition: service_healthy}
+    depends_on: {price: {condition: service_healthy}, prediction: {condition: service_healthy}}
     healthcheck: *health
   snapshot:
     build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
@@ -44,31 +42,25 @@ services:
     build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
     environment: {V5_SERVICE_ID: evaluation, V5_SERVICE_PORT: 8107}
     ports: ["8107:8107"]
-    depends_on:
-      prediction: {condition: service_healthy}
-      snapshot: {condition: service_healthy}
+    depends_on: {prediction: {condition: service_healthy}, snapshot: {condition: service_healthy}}
     healthcheck: *health
   governance:
     build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
     environment: {V5_SERVICE_ID: governance, V5_SERVICE_PORT: 8108}
     ports: ["8108:8108"]
-    depends_on:
-      truth: {condition: service_healthy}
-      price: {condition: service_healthy}
-      prediction: {condition: service_healthy}
-      evaluation: {condition: service_healthy}
-      decision: {condition: service_healthy}
+    depends_on: {truth: {condition: service_healthy}, price: {condition: service_healthy}, prediction: {condition: service_healthy}, evaluation: {condition: service_healthy}, decision: {condition: service_healthy}}
     healthcheck: *health
   reporting:
     build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
     environment: {V5_SERVICE_ID: reporting, V5_SERVICE_PORT: 8109}
     ports: ["8109:8109"]
-    depends_on:
-      truth: {condition: service_healthy}
-      price: {condition: service_healthy}
-      prediction: {condition: service_healthy}
-      decision: {condition: service_healthy}
-      governance: {condition: service_healthy}
+    depends_on: {truth: {condition: service_healthy}, price: {condition: service_healthy}, prediction: {condition: service_healthy}, decision: {condition: service_healthy}, governance: {condition: service_healthy}, watchlist: {condition: service_healthy}}
+    healthcheck: *health
+  watchlist:
+    build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
+    environment: {V5_SERVICE_ID: watchlist, V5_SERVICE_PORT: 8110}
+    ports: ["8110:8110"]
+    depends_on: {truth: {condition: service_healthy}, price: {condition: service_healthy}, prediction: {condition: service_healthy}, decision: {condition: service_healthy}}
     healthcheck: *health
   orchestrator:
     build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
@@ -84,15 +76,7 @@ services:
       V5_SERVICE_EVALUATION_URL: http://evaluation:8107
       V5_SERVICE_GOVERNANCE_URL: http://governance:8108
       V5_SERVICE_REPORTING_URL: http://reporting:8109
+      V5_SERVICE_WATCHLIST_URL: http://watchlist:8110
     ports: ["8100:8100"]
-    depends_on:
-      ingestion: {condition: service_healthy}
-      truth: {condition: service_healthy}
-      price: {condition: service_healthy}
-      prediction: {condition: service_healthy}
-      decision: {condition: service_healthy}
-      snapshot: {condition: service_healthy}
-      evaluation: {condition: service_healthy}
-      governance: {condition: service_healthy}
-      reporting: {condition: service_healthy}
+    depends_on: {ingestion: {condition: service_healthy}, truth: {condition: service_healthy}, price: {condition: service_healthy}, prediction: {condition: service_healthy}, decision: {condition: service_healthy}, snapshot: {condition: service_healthy}, evaluation: {condition: service_healthy}, governance: {condition: service_healthy}, watchlist: {condition: service_healthy}, reporting: {condition: service_healthy}}
     healthcheck: *health

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T10:32:50.465100+00:00",
+  "generated_at": "2026-08-26T10:39:09.749661+00:00",
   "schema_version": 513,
   "model_version": "player_projection_v5_historical_prior",
   "ruleset_id": "FPL_2026_27",
@@ -162738,7 +162738,7 @@
       "position": "GK",
       "now_cost": 45,
       "status": "a",
-      "ownership_pct": 2.0,
+      "ownership_pct": 2.1,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -293299,6 +293299,7 @@
     "full_provenance_omitted": true
   },
   "capabilities": [
+    "advanced_stats_integration",
     "bonus_route",
     "clean_sheet_probability",
     "fixture_context",
@@ -293315,12 +293316,15 @@
     "prediction_quality_guard",
     "price_value",
     "projection_uncertainty",
+    "regression_risk",
     "rotation_competition",
     "set_piece_role",
     "small_sample_guard",
+    "sustainability",
     "system_fit",
     "tactical_role",
     "team_attacking_strength",
+    "team_defensive_risk",
     "team_defensive_strength",
     "xmins",
     "xmins_distribution"

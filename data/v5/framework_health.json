@@ -1,6 +1,6 @@
 {
   "framework_schema": 8,
-  "generated_at": "2026-08-26T10:32:51.807077+00:00",
+  "generated_at": "2026-08-26T10:39:10.670507+00:00",
   "auditor": "v5-microservice-governance-v4",
   "overall": "GREEN",
   "decision_engine": "HEALTHY",
@@ -355,10 +355,10 @@
     "unexpected_ids": [],
     "integrity_ok": true,
     "counts": {
-      "ACTIVE": 37,
-      "PARTIAL": 13
+      "ACTIVE": 42,
+      "PARTIAL": 8
     },
-    "coverage_ratio": 0.74,
+    "coverage_ratio": 0.84,
     "critical_partial": [],
     "items": [
       {
@@ -499,9 +499,11 @@
         "category": "underlying",
         "critical": false,
         "probe": "advanced_stats_integration",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-13",
@@ -509,9 +511,11 @@
         "category": "underlying",
         "critical": false,
         "probe": "advanced_stats_integration",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-14",
@@ -539,9 +543,11 @@
         "category": "underlying",
         "critical": false,
         "probe": "sustainability",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-17",
@@ -585,9 +591,11 @@
         "category": "team_strength",
         "critical": false,
         "probe": "team_defensive_risk",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-21",
@@ -787,9 +795,11 @@
         "category": "form",
         "critical": false,
         "probe": "regression_risk",
-        "status": "PARTIAL",
-        "evidence_services": [],
-        "detail": "registered capability has no active runtime evidence contract yet"
+        "status": "ACTIVE",
+        "evidence_services": [
+          "prediction"
+        ],
+        "detail": "capability advertised by bounded-context owner"
       },
       {
         "id": "DSS-39",
@@ -1277,6 +1287,9 @@
     "universe_registration": [
       "truth"
     ],
+    "advanced_stats_integration": [
+      "prediction"
+    ],
     "bonus_route": [
       "prediction"
     ],
@@ -1325,6 +1338,9 @@
     "projection_uncertainty": [
       "prediction"
     ],
+    "regression_risk": [
+      "prediction"
+    ],
     "rotation_competition": [
       "prediction"
     ],
@@ -1334,6 +1350,9 @@
     "small_sample_guard": [
       "prediction"
     ],
+    "sustainability": [
+      "prediction"
+    ],
     "system_fit": [
       "prediction"
     ],
@@ -1341,6 +1360,9 @@
       "prediction"
     ],
     "team_attacking_strength": [
+      "prediction"
+    ],
+    "team_defensive_risk": [
       "prediction"
     ],
     "team_defensive_strength": [

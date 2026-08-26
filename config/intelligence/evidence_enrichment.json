@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_full_core_evidence_enrichment_v1",
+  "advanced_stats": {
+    "shots_path": "data/stats/shots_gw1.json",
+    "player_match_stats_path": "data/stats/playermatchstats_gw1.json",
+    "required_shot_fields": ["player_id", "xg", "start_x", "start_y"],
+    "required_match_fields": ["player_id", "minutes_played", "total_shots", "touches_opposition_box", "chances_created", "xg", "xa"],
+    "source": "FPL-Core-Insights",
+    "missing_player_behavior": "UNAVAILABLE_NOT_ZERO"
+  },
+  "schedule": {
+    "official_fpl_rest_days": true,
+    "european_calendar": {
+      "source": "UEFA 2026/27 competition calendars",
+      "club_competitions": {
+        "champions_league": {
+          "english_clubs": ["Arsenal", "Aston Villa", "Liverpool", "Man City", "Man Utd"],
+          "match_windows": ["2026-09-08/2026-09-10", "2026-10-13/2026-10-14", "2026-10-20/2026-10-21", "2026-11-03/2026-11-04", "2026-11-24/2026-11-25", "2026-12-08/2026-12-09", "2027-01-19/2027-01-20", "2027-01-27/2027-01-27"]
+        },
+        "europa_league": {
+          "english_clubs": ["Bournemouth", "Crystal Palace", "Sunderland"],
+          "match_windows": ["2026-09-16/2026-09-17", "2026-10-15/2026-10-15", "2026-10-22/2026-10-22", "2026-11-05/2026-11-05", "2026-11-26/2026-11-26", "2026-12-10/2026-12-10", "2027-01-21/2027-01-21", "2027-01-28/2027-01-28"]
+        },
+        "conference_league": {
+          "english_clubs": ["Brighton"],
+          "participation_state": "playoff_as_of_2026-08-26",
+          "match_windows": ["2026-10-15/2026-10-15", "2026-10-22/2026-10-22", "2026-11-05/2026-11-05", "2026-11-26/2026-11-26", "2026-12-10/2026-12-10", "2026-12-17/2026-12-17"]
+        }
+      }
+    },
+    "domestic_cup": {
+      "source": "EFL 2026/27 calendar",
+      "competition": "Carabao Cup",
+      "calendar_capability": true,
+      "known_windows": ["2026-08-07/2026-08-09"],
+      "future_match_detail_behavior": "UNAVAILABLE_NOT_ZERO"
+    },
+    "international": {
+      "source": "FIFA Men's International Match Calendar 2025-2030",
+      "windows": [
+        {"label": "late_sep_early_oct_2026", "start": "2026-09-24", "end": "2026-10-06", "max_matches": 4},
+        {"label": "november_2026", "date_precision": "calendar_window", "max_matches": 2}
+      ],
+      "callup_detail_behavior": "UNAVAILABLE_NOT_ZERO"
+    }
+  },
+  "preseason": {
+    "module_enabled": true,
+    "source_policy": ["explicit_preseason_artifact", "historical_role_prior_fallback"],
+    "artifact_path": "data/stats/preseason_2026_27.json",
+    "missing_artifact_behavior": "ACTIVE_WITH_UNAVAILABLE_EVIDENCE",
+    "never_fabricate_minutes_or_roles": true
+  },
+  "current_form": {
+    "official_fields": ["form", "points_per_game", "total_points", "starts", "minutes", "expected_goals", "expected_assists", "threat", "creativity", "transfers_in_event", "transfers_out_event"],
+    "advanced_fields": ["total_shots", "touches_opposition_box", "chances_created", "xg", "xa"],
+    "minimum_minutes_for_rate": 1
+  }
+}

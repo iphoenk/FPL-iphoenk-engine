@@ -2,7 +2,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.rules import ASSIST_POINTS, CLEAN_SHEET_POINTS, GOAL_POINTS, LINEUP_RULES, RULESET_ID, SQUAD_RULES
+from src.rules import (
+    ASSIST_POINTS,
+    CHIP_API_NAMES,
+    CHIP_DISPLAY_NAMES,
+    CHIP_RULES,
+    CLEAN_SHEET_POINTS,
+    GOAL_POINTS,
+    LINEUP_RULES,
+    RULESET_ID,
+    SQUAD_RULES,
+    build_chip_ledger,
+)
 from src.v5.event_context import build_event_context
 from src.v5.identity import build_index, resolve_many
 from src.v5.live_scoring import personalized_live_score
@@ -18,8 +29,61 @@ def _rules_view() -> dict[str, Any]:
         "clean_sheet_points": {str(k): int(v) for k, v in CLEAN_SHEET_POINTS.items()},
         "squad": SQUAD_RULES,
         "lineup": LINEUP_RULES,
+        "chips": CHIP_RULES,
         "authority": "truth-service",
     }
+
+
+def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None, entry_history: dict[str, Any] | None) -> dict[str, Any]:
+    used = (entry_history or {}).get("chips") if isinstance((entry_history or {}).get("chips"), list) else []
+    ledger = build_chip_ledger(used, current_gw=context.planning_gw or context.current_gw or 1)
+    raw_active = submitted.get("active_chip") if isinstance(submitted, dict) else None
+    source = "submitted_picks" if raw_active else None
+    if raw_active is None and context.phase.value == "PRE_DEADLINE" and bool(lock.get("wildcard_active")):
+        raw_active = "wildcard"
+        source = "user_lock"
+    active_chip = CHIP_API_NAMES.get(str(raw_active), str(raw_active)) if raw_active else None
+    current_half = str(ledger.get("current_half") or 1)
+    available = set(((ledger.get("halves") or {}).get(current_half) or {}).get("available") or [])
+    known = active_chip is None or active_chip in CHIP_DISPLAY_NAMES
+    available_now = active_chip is None or active_chip in available
+    special_legal = True
+    gw = int(context.planning_gw or context.current_gw or 1)
+    if active_chip == "free_hit" and gw == 1 and not bool(CHIP_RULES.get("free_hit_gw1_allowed", False)):
+        special_legal = False
+    legal = known and available_now and special_legal
+    return {
+        "active_chip": active_chip,
+        "raw_active_chip": raw_active,
+        "source": source,
+        "planning_gw": gw,
+        "current_half": int(current_half),
+        "available_this_half": sorted(available),
+        "one_chip_per_gameweek": bool(CHIP_RULES.get("one_chip_per_gameweek", True)),
+        "active_chip_count": 1 if active_chip else 0,
+        "known_chip": known,
+        "available_now": available_now,
+        "special_rule_legal": special_legal,
+        "legal": legal,
+        "ledger": ledger,
+    }
+
+
+def _capabilities(team: dict[str, Any], chip_state: dict[str, Any]) -> list[str]:
+    capabilities = {
+        "universe_identity",
+        "universe_price_position",
+        "universe_registration",
+        "availability",
+        "manual_authority",
+    }
+    if bool((team.get("validation") or {}).get("passed")):
+        capabilities.add("structural_fit")
+    if bool((team.get("finance") or {}).get("sell_value_complete")):
+        capabilities.add("sell_cost_affordability")
+    if bool(chip_state.get("legal")):
+        capabilities.add("chip_context")
+    return sorted(capabilities)
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:
@@ -42,21 +106,36 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     auth_runtime = payload.get("auth_runtime") if isinstance(payload.get("auth_runtime"), dict) else {}
     dynamic = payload.get("dynamic") if isinstance(payload.get("dynamic"), dict) else {}
     base = payload.get("base") if isinstance(payload.get("base"), dict) else {}
+    submitted = dynamic.get("submitted_picks") if isinstance(dynamic.get("submitted_picks"), dict) else None
+    lock = payload.get("locked_squad") if isinstance(payload.get("locked_squad"), dict) else locked_squad()
     team = build_team_state(
         phase=context.phase,
         bootstrap=bootstrap,
         identity=identity,
-        locked_squad=payload.get("locked_squad") if isinstance(payload.get("locked_squad"), dict) else locked_squad(),
+        locked_squad=lock,
         authenticated_my_team=auth_runtime.get("my_team") if isinstance(auth_runtime.get("my_team"), dict) else None,
-        submitted_picks=dynamic.get("submitted_picks") if isinstance(dynamic.get("submitted_picks"), dict) else None,
+        submitted_picks=submitted,
         transfers=base.get("entry_transfers") if isinstance(base.get("entry_transfers"), list) else [],
         entry=base.get("entry") if isinstance(base.get("entry"), dict) else None,
     )
     live = personalized_live_score(
-        picks=dynamic.get("submitted_picks") if isinstance(dynamic.get("submitted_picks"), dict) else None,
+        picks=submitted,
         event_live=dynamic.get("event_live") if isinstance(dynamic.get("event_live"), dict) else None,
         identity=identity,
         scoring_gw=context.scoring_gw,
         is_live_event=context.is_live_event,
     )
-    return {"context": context_dict(context), "team": team, "live": live, "rules": _rules_view()}
+    chip_state = _chip_state(
+        context,
+        lock,
+        submitted,
+        base.get("entry_history") if isinstance(base.get("entry_history"), dict) else None,
+    )
+    return {
+        "context": context_dict(context),
+        "team": team,
+        "live": live,
+        "rules": _rules_view(),
+        "chip_state": chip_state,
+        "capabilities": _capabilities(team, chip_state),
+    }

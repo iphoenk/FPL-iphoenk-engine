@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "full-extension-v3.15-rerun",
-  "requested_at": "2026-08-26T10:31:30Z",
+  "requested_cycle": "expanded-core-v3.15-rerun",
+  "requested_at": "2026-08-26T10:37:30Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "v3.15-fast-report-serving",
   "v5_role": "shadow_only",

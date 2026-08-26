@@ -54,5 +54,8 @@ jobs:
       - name: V5 cluster health diagnostics
         run: python -m pytest -q tests/test_v5_cluster_health.py
 
+      - name: V5 V3.12 decision parity
+        run: python -m pytest -q tests/test_v5_v312_decision_parity.py
+
       - name: V5 native decision and Gate0 governance
         run: python -m pytest -q tests/test_v5_decision_governance.py

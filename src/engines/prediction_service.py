@@ -8,7 +8,6 @@ from src.models.historical_projection import build as build_player_projections
 from src.models.prediction_quality import evaluate as evaluate_prediction_quality
 from src.models.team_strength import build_team_strength
 from src.settings import STRATEGIC_HORIZON_GWS
-from src.sources.official_fpl import get_json
 from src.utils import DATA, atomic_json, read_json
 
 
@@ -17,13 +16,12 @@ def _now() -> str:
 
 
 def run() -> dict:
-    bootstrap, bootstrap_health = get_json("bootstrap-static/")
-    fixtures, fixtures_health = get_json("fixtures/")
+    official = read_json(DATA / "official_snapshot.json", {})
+    bootstrap = official.get("bootstrap") or {}
+    fixtures = official.get("fixtures") or []
+    health = official.get("endpoint_health") or {}
     if not bootstrap or not fixtures:
-        raise RuntimeError(
-            "Official FPL unavailable for prediction service: "
-            f"bootstrap={bootstrap_health.get('status')} fixtures={fixtures_health.get('status')}"
-        )
+        raise RuntimeError("official_snapshot unavailable or incomplete for prediction service")
 
     prior = read_json(DATA / "prior_season.json", {})
     if not prior.get("players"):
@@ -35,9 +33,10 @@ def run() -> dict:
     strength = build_team_strength(bootstrap, fixtures)
     strength["generated_at"] = _now()
     strength["source_health"] = {
-        "bootstrap": bootstrap_health.get("status"),
-        "fixtures": fixtures_health.get("status"),
+        "bootstrap": (health.get("bootstrap") or {}).get("status"),
+        "fixtures": (health.get("fixtures") or {}).get("status"),
     }
+    strength.setdefault("governance", {})["official_snapshot_reused"] = True
     atomic_json(DATA / "team_strength.json", strength)
 
     projections = build_player_projections(
@@ -48,6 +47,7 @@ def run() -> dict:
         horizon=STRATEGIC_HORIZON_GWS,
     )
     projections["generated_at"] = _now()
+    projections.setdefault("governance", {})["official_snapshot_reused"] = True
     atomic_json(DATA / "projections.json", projections)
 
     packages = build_package_optimizer(projections, read_json(DATA / "team.json", {}))

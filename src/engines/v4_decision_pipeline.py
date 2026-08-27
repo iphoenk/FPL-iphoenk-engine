@@ -6,8 +6,9 @@ from multiprocessing import get_context
 from time import perf_counter
 
 from src.utils import DATA, CONFIG, atomic_json, read_json
-from src.engines.v4_wc_optimizer import build_candidates, decision_report_from_candidates
-from src.engines.v4_wc_package_audit import audit_packages_from_candidates
+from src.engines.v4_wc_optimizer import build_candidates
+from src.engines.v4_wc_optimizer_fast import decision_report_from_candidates_fast
+from src.engines.v4_wc_package_audit_fast import audit_packages_from_candidates_fast
 from src.engines.v4_lineup_optimizer import optimize_lineup, MANUAL_FILE
 from src.engines.v4_recommendation_sanity import sanity_report
 
@@ -23,10 +24,11 @@ def _decision_worker(kind, conn):
         if not shared:
             raise RuntimeError("decision worker started without shared inputs")
         if kind == "wc":
-            out = decision_report_from_candidates(shared["candidates"], shared["locked"])
+            out = decision_report_from_candidates_fast(shared["candidates"], shared["locked"])
+            out["engine"] = "v4.9.2-wc-optimizer-truthful-health-exact-streaming"
             atomic_json(DATA / "wc_decision_v4.json", out)
         elif kind == "packages":
-            out = audit_packages_from_candidates(shared["candidates"], shared["locked"])
+            out = audit_packages_from_candidates_fast(shared["candidates"], shared["locked"])
             atomic_json(DATA / "wc_package_audit_v4.json", out)
         else:
             raise RuntimeError(f"unknown decision worker: {kind}")
@@ -43,8 +45,8 @@ def _run_parallel_wc_package(candidates, locked):
     ctx = get_context("fork")
     recv_wc, send_wc = ctx.Pipe(duplex=False)
     recv_pkg, send_pkg = ctx.Pipe(duplex=False)
-    p_wc = ctx.Process(target=_decision_worker, args=("wc", send_wc), name="v46-wc")
-    p_pkg = ctx.Process(target=_decision_worker, args=("packages", send_pkg), name="v46-packages")
+    p_wc = ctx.Process(target=_decision_worker, args=("wc", send_wc), name="v493-wc-fast")
+    p_pkg = ctx.Process(target=_decision_worker, args=("packages", send_pkg), name="v493-packages-fast")
     wall = perf_counter()
     p_wc.start()
     p_pkg.start()
@@ -118,6 +120,13 @@ def run():
             "wc_beam_unchanged": True,
             "package_frontier_beam_unchanged": True,
             "bounded_top_k_same_wc_beam": True,
+            "exact_streaming_wc_topk": bool((wc.get("performance") or {}).get("exact_streaming_topk")),
+            "stable_wc_tie_semantics": bool((wc.get("performance") or {}).get("stable_tie_semantics")),
+            "safe_wc_objective_bound": bool((wc.get("performance") or {}).get("safe_objective_bound")),
+            "fixed_position_finalist_scoring": bool((wc.get("performance") or {}).get("fixed_position_finalist_scoring")),
+            "compact_package_keep_profile": bool((packages.get("performance") or {}).get("compact_keep_profile")),
+            "package_scalar_delta_metrics": bool((packages.get("performance") or {}).get("scalar_delta_metrics")),
+            "package_position_value_reuse": bool((packages.get("performance") or {}).get("position_value_reuse")),
             "top_packages_only_payload_materialization": True,
             "checkpoint_action_deferred_until_postflight_health": True,
         },

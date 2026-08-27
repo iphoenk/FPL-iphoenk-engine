@@ -1,4 +1,4 @@
-name: FPL iphoenk V4.9.2 truthful-health service gate
+name: FPL iphoenk V4.9.3 validation-lifecycle service gate
 
 on:
   workflow_dispatch:
@@ -15,7 +15,6 @@ on:
   pull_request:
     branches:
       - v4-prediction-engine
-
 
 permissions:
   contents: write
@@ -46,7 +45,22 @@ jobs:
         run: python -m pytest -q
       - name: Run process-isolated V4 services
         run: python -m src.services.orchestrator daily --stats --deep-stats
-      - name: Centralized V4.9.2 service quality gate
+      - name: Advanced enrichment ablation observational gate
+        run: |
+          python -m src.engines.v4_advanced_ablation
+          python - <<'PY'
+          import json
+          a=json.load(open('data/advanced_ablation_v4.json'))
+          assert a['status']=='PASS', a
+          assert a['ablation']['advanced_removed_only'] is True, a
+          assert a['ablation']['same_official_snapshot'] is True, a
+          assert a['ablation']['same_last_season_priors'] is True, a
+          assert a['ablation']['same_quality_config'] is True, a
+          assert a['ablation']['same_optimizer_semantics'] is True, a
+          assert a['ablation']['full_shadow_parity']['ok'] is True, a
+          assert a['interpretation']['impact_is_diagnostic_not_health_threshold'] is True, a
+          PY
+      - name: Centralized V4.9.3 validation-lifecycle quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise acceptance summary
         run: |
@@ -58,6 +72,8 @@ jobs:
           pipeline=json.load(open('data/decision_pipeline_v4.json'))
           checkpoint=json.load(open('data/checkpoint_decision_v4.json'))
           orchestration=json.load(open('data/service_orchestration_v4.json'))
+          lifecycle=json.load(open('data/validation/lifecycle_v4.json'))
+          ablation=json.load(open('data/advanced_ablation_v4.json'))
           print({
               'pipeline_health': h['pipeline_health'],
               'prediction_health': h['prediction_health'],
@@ -70,9 +86,13 @@ jobs:
               'gate0': h['gate0']['counts'],
               'budget_tenths': w['budget_tenths'],
               'price_basis': w['affordability']['price_basis'],
+              'wc_exact_streaming': w.get('performance', {}).get('exact_streaming_topk'),
+              'wc_bound_pruned': w.get('performance', {}).get('objective_bound_pruned'),
               'refresh_ms': latest.get('performance', {}).get('engine_before_snapshot_write_ms'),
               'preflight_ms': json.load(open('data/framework_health_preflight_v4.json')).get('performance_ms'),
               'decision_pipeline_ms': pipeline.get('timings', {}).get('total_pipeline_ms'),
+              'wc_decision_cpu_ms': pipeline.get('timings', {}).get('wc_decision_cpu_ms'),
+              'package_audit_cpu_ms': pipeline.get('timings', {}).get('package_audit_cpu_ms'),
               'postflight_ms': h.get('performance_ms'),
               'checkpoint': checkpoint['checkpoint_context']['policy_id'],
               'action': checkpoint['action_state'],
@@ -80,6 +100,13 @@ jobs:
               'services': orchestration['summary']['services_passed'],
               'orchestration_ms': orchestration['duration_ms'],
               'deep_stats': orchestration['deep_stats_enabled'],
+              'validation_snapshot': lifecycle['snapshot'],
+              'validation_reconciliation': lifecycle['reconciliation'],
+              'eligible_calibration_samples': lifecycle['eligibility'].get('eligible_samples'),
+              'ablation_mean_abs_delta_xpts5': ablation['prediction_impact']['mean_abs_delta_xpts5'],
+              'ablation_max_rank_shift': ablation['prediction_impact']['max_abs_rank_shift'],
+              'ablation_decision_changed': ablation['decision_impact']['decision_changed'],
+              'ablation_ms': ablation.get('performance_ms'),
           })
           PY
       - name: Upload branch data only

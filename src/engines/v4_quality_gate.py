@@ -80,7 +80,7 @@ def _assert_framework_health() -> tuple[dict, dict]:
     assert governance.get("raw_optimizer_is_not_final_decision") is True
     assert governance.get("gate0_fail_blocks_go") is True
 
-    # V4.9.2 critical prediction capabilities must be backed by output evidence.
+    # Prediction capabilities must be backed by output evidence.
     core = {row["id"]: row for row in post["dss_core"]["items"]}
     for module_id in ("DSS-05", "DSS-35"):
         assert core[module_id]["status"] == "ACTIVE", core[module_id]
@@ -124,11 +124,12 @@ def run() -> dict:
     assert abs(component_total - service_performance["engine_before_snapshot_write_ms"]) < 0.02, service_performance
 
     orchestration = _load("service_orchestration_v4.json")
-    _assert_version(orchestration, "service orchestration", 492, "v4.9.2-service-orchestrator")
+    _assert_version(orchestration, "service orchestration", 492, "v4.9.3-service-orchestrator")
     assert orchestration.get("status") == "PASS", orchestration
     assert orchestration.get("stats_enabled") is True and orchestration.get("deep_stats_enabled") is True, orchestration
     services = orchestration.get("services") or []
-    assert len(services) == 8 and all(row.get("status") == "PASS" for row in services), services
+    assert len(services) == 9 and all(row.get("status") == "PASS" for row in services), services
+    assert [row.get("id") for row in services[:4]] == ["raw_snapshot", "enrichment", "prediction", "validation_lifecycle"], services
     assert all(row.get("boundary_state") == "INDEPENDENT" for row in services), services
     assert all(all(contract.get("valid") for contract in row.get("contracts") or []) for row in services), services
     assert orchestration.get("snapshot_identity", {}).get("sha256") == file_digest(DATA / "runtime/snapshot.v1.json"), orchestration
@@ -136,10 +137,27 @@ def run() -> dict:
     assert latest.get("lineage", {}).get("enrichment_sha256") == file_digest(DATA / "runtime/enrichment.v1.json")
     og = orchestration.get("guardrails") or {}
     assert og.get("official_fpl_api_authority") == "raw_snapshot_only" and og.get("services_may_not_refetch_snapshot")
+    assert og.get("validation_lifecycle_no_official_refetch") is True
+    assert og.get("deadline_snapshot_immutable") and og.get("retroactive_snapshot_rejected")
+    assert og.get("reconciliation_archive_immutable") and og.get("reconciliation_idempotent")
+    assert og.get("health_view_current_model_only") is True
     assert og.get("appearance_formula_regression_tested") and og.get("prediction_quality_inputs_consumed")
     assert og.get("truthful_competition_evidence") and og.get("critical_warmup_blocks_unqualified_go")
     assert og.get("optimizer_search_width_unchanged")
     assert og.get("gate0_checks_unchanged") == 16
+
+    lifecycle = _load("validation/lifecycle_v4.json")
+    _assert_version(lifecycle, "validation lifecycle", 493, "v4.9.3-validation-lifecycle")
+    assert lifecycle.get("status") == "PASS", lifecycle
+    lifecycle_guardrails = lifecycle.get("guardrails") or {}
+    assert lifecycle_guardrails.get("raw_snapshot_only") is True
+    assert lifecycle_guardrails.get("official_api_refetch") is False
+    assert lifecycle_guardrails.get("retroactive_snapshot_rejected") is True
+    assert lifecycle_guardrails.get("deadline_snapshot_immutable") is True
+    assert lifecycle_guardrails.get("reconciliation_archive_immutable") is True
+    assert lifecycle_guardrails.get("reconciliation_idempotent") is True
+    assert lifecycle_guardrails.get("health_view_current_model_only") is True
+    assert lifecycle_guardrails.get("simulation_never_mutates_store") is True
 
     compliance = _load("compliance_audit.json")
     assert compliance.get("overall") == "PASS", compliance
@@ -149,6 +167,18 @@ def run() -> dict:
     coverage = predictions.get("input_coverage", {})
     _assert_version(predictions, "predictions", 492, "v4.9.2-truthful-health", field="model_version")
     assert predictions.get("point_in_time") is True and len(players) >= 500, predictions
+    assert lifecycle.get("eligibility", {}).get("model_version") == predictions.get("model_version"), lifecycle
+    eligible_samples = lifecycle.get("eligibility", {}).get("eligible_samples")
+    if eligible_samples is not None:
+        eligible_samples = int(eligible_samples)
+        core = {row["id"]: row for row in health["dss_core"]["items"]}
+        extensions = {row["id"]: row for row in health["dss_extensions"]["items"]}
+        if eligible_samples == 0:
+            assert core["DSS-44"]["status"] == "WARMUP", core["DSS-44"]
+            assert extensions["DSS-X12"]["status"] == "WARMUP", extensions["DSS-X12"]
+        else:
+            assert core["DSS-44"]["status"] == "ACTIVE", core["DSS-44"]
+            assert extensions["DSS-X12"]["status"] == "ACTIVE", extensions["DSS-X12"]
     assert coverage.get("advanced_matched", 0) > 0 and coverage.get("last_season_matched", 0) > 0, coverage
     assert 0 <= coverage.get("advanced_materially_distinct", -1) <= coverage.get("advanced_matched", 0), coverage
     assert coverage.get("advanced_decision_used_ratio", 0) >= .25, coverage
@@ -299,10 +329,11 @@ def run() -> dict:
         "checkpoint": checkpoint["checkpoint_context"]["policy_id"],
         "action": checkpoint["action_state"],
         "services": len(services),
+        "eligible_calibration_samples": lifecycle.get("eligibility", {}).get("eligible_samples"),
         "orchestration_ms": orchestration.get("duration_ms"),
         "pipeline_ms": timings["total_pipeline_ms"],
     }
-    print("V4.9.2 TRUTHFUL-HEALTH SERVICE GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.9.3 VALIDATION-LIFECYCLE SERVICE GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

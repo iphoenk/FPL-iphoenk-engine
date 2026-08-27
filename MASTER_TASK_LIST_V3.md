@@ -2,9 +2,9 @@
 
 Canonical status: ACTIVE  
 Canonical roadmap owner: V3 operational stream  
-Current production release: **V3.22.0**  
-Current production schema: **49**  
-Production acceptance: **COMPLETE**  
+Current production release: V3.22.0  
+Current production schema: 49  
+Production acceptance: COMPLETE  
 FAST decision target: **<10 seconds**  
 Active microservices: **20**
 

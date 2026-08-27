@@ -5,7 +5,7 @@
     "production": "v3.22.0",
     "production_main_sha": "6639f899669daa6ae9f991009900437413057e86",
     "research_reference": "v4",
-    "candidate": "v5.0.0-beta.6"
+    "candidate": "5.0.0-beta.6"
   },
   "required_domains": [
     "phase_aware_truth",

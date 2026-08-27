@@ -58,6 +58,12 @@ def _assert_framework_health() -> tuple[dict, dict]:
     assert post["gate0"]["counts"].get("PASS", 0) == 16
     assert post.get("pipeline_health") == "GREEN"
     assert post.get("capability_coverage", {}).get("declared") == 74
+    plan_truth = post.get("gate0", {}).get("plan_authority_validation") or {}
+    assert (plan_truth.get("engine_plan") or {}).get("legal") is True
+    assert (plan_truth.get("effective_plan") or {}).get("legal") is True
+    assert plan_truth.get("both_required") is True
+    assert (post.get("governance") or {}).get("effective_plan_legality_enforced") is True
+    assert (post.get("governance") or {}).get("engine_and_effective_plan_legality_reported_separately") is True
     critical_warmup = list(post.get("critical_warmup") or [])
     if critical_warmup:
         assert post.get("prediction_health") == "AMBER"
@@ -80,6 +86,7 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
     assert len(services) == 11 and all(row.get("status") == "PASS" for row in services), services
     assert ids[:4] == ["raw_snapshot", "enrichment", "prediction", "validation_lifecycle"]
     assert ids.index("optimization") < ids.index("user_decision_overlay") < ids.index("personal_gw_scorecard")
+    assert ids.index("user_decision_overlay") < ids.index("framework_postflight")
     assert ids[-1] == "report_governance"
     assert all(row.get("boundary_state") == "INDEPENDENT" for row in services)
     assert all(all(contract.get("valid") for contract in row.get("contracts") or []) for row in services)
@@ -106,8 +113,15 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
         "planning_override_requires_target_gw",
         "stale_planning_override_rejected",
         "optimizer_search_width_unchanged",
+        "reconciliation_started_from_official_stats_starts",
+        "minutes_never_infer_started",
+        "missing_starts_excluded_from_brier",
+        "effective_plan_legality_enforced_post_overlay",
+        "engine_effective_plan_legality_reported_separately",
+        "decision_compute_slo_excludes_external_network_io",
     ):
         assert guardrails.get(key) is True, (key, guardrails.get(key))
+    assert guardrails.get("decision_compute_slo_ms") == 5000
     assert guardrails.get("official_fpl_api_authority") == "raw_snapshot_only"
     assert guardrails.get("gate0_checks_unchanged") == 16
     return orchestration, services
@@ -116,9 +130,13 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
 def _assert_prediction_and_validation(health: dict) -> tuple[dict, dict]:
     lifecycle = _load("validation/lifecycle_v4.json")
     predictions = _load("predictions_v4.json")
-    _assert_version(lifecycle, "validation lifecycle", 493, "v4.9.3-validation-lifecycle")
+    _assert_version(lifecycle, "validation lifecycle", 4943, "v4.9.3-validation-lifecycle")
     _assert_version(predictions, "predictions", 492, "v4.9.2-truthful-health", field="model_version")
     assert lifecycle.get("status") == "PASS"
+    lifecycle_guardrails = lifecycle.get("guardrails") or {}
+    assert lifecycle_guardrails.get("started_from_official_stats_starts_only") is True
+    assert lifecycle_guardrails.get("minutes_never_infer_started") is True
+    assert lifecycle_guardrails.get("missing_starts_excluded_from_start_brier") is True
     assert predictions.get("point_in_time") is True
     players = predictions.get("players") or []
     assert len(players) >= 500
@@ -162,6 +180,11 @@ def _assert_engine_advisory(latest: dict) -> tuple[dict, dict, dict, dict]:
     assert (lineup.get("governance") or {}).get("decision") == "OPTIMIZER_ONLY"
     assert pipeline.get("checkpoint_context") == latest.get("checkpoint_context")
     assert pipeline.get("decision_authority") == "ENGINE_ADVISORY_ONLY"
+    slo = pipeline.get("performance_slo") or {}
+    assert slo.get("scope") == "deterministic_decision_compute_excludes_external_source_network_io"
+    assert float(slo.get("limit_ms") or 0) == 5000.0
+    assert slo.get("status") == "PASS"
+    assert 0 <= float(slo.get("actual_ms") or 0) < float(slo.get("limit_ms") or 0)
     pg = pipeline.get("performance_guardrails") or {}
     assert pg.get("search_quality_reduction") is False
     assert pg.get("planning_squad_from_team_contract") is True
@@ -273,9 +296,12 @@ def run() -> dict:
     scorecard, checkpoint = _assert_scorecard_and_governance(latest, health, overlay, effective)
     sanity = _load("recommendation_sanity_v4.json")
     assert sanity.get("final_verdict") in {"KEEP_15", "OPTIONAL_IMPROVEMENT", "MATERIAL_UPGRADE"}
+    plan_truth = health.get("gate0", {}).get("plan_authority_validation") or {}
     out = {
         "health": health["overall"],
         "gate0": health["gate0"]["counts"],
+        "engine_plan_legal": (plan_truth.get("engine_plan") or {}).get("legal"),
+        "effective_plan_legal": (plan_truth.get("effective_plan") or {}).get("legal"),
         "recommendation": sanity["final_verdict"],
         "engine_formation": engine_lineup["formation"],
         "effective_authority": effective.get("authority"),
@@ -293,8 +319,9 @@ def run() -> dict:
         "eligible_calibration_samples": lifecycle.get("eligibility", {}).get("eligible_samples"),
         "orchestration_ms": orchestration.get("duration_ms"),
         "pipeline_ms": (pipeline.get("timings") or {}).get("total_pipeline_ms"),
+        "decision_slo": pipeline.get("performance_slo"),
     }
-    print("V4.9.4.1 HUMAN-IN-THE-LOOP MICROservice GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.9.4.3 RECONCILIATION-TRUTH RUNTIME GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "contract": "V5_RUNTIME_MATERIALIZATION_V1",
+  "schema_version": 2,
+  "contract": "V5_RUNTIME_MATERIALIZATION_V2",
   "enabled": true,
   "max_entries": 32,
   "eviction_policy": "lru",
@@ -10,7 +10,8 @@
     "price_trajectory": {"cache_on_write": true, "serve_from_memory": true},
     "historical_prior": {"cache_on_write": true, "serve_from_memory": true},
     "prediction_ledger": {"cache_on_write": true, "serve_from_memory": true},
-    "challenger_observations": {"cache_on_write": true, "serve_from_memory": true}
+    "challenger_observations": {"cache_on_write": true, "serve_from_memory": true},
+    "decision_hot_bundle": {"cache_on_write": true, "serve_from_memory": true}
   },
   "governance": {
     "durable_store_remains_authoritative": true,
@@ -18,6 +19,7 @@
     "cache_miss_falls_back_to_durable_store": true,
     "cache_never_persists_credentials": true,
     "cache_is_process_local_to_snapshot_service": true,
-    "cache_does_not_change_artifact_contract": true
+    "cache_does_not_change_artifact_contract": true,
+    "decision_hot_bundle_is_not_a_source_of_business_authority": true
   }
 }

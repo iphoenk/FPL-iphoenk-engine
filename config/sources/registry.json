@@ -16,7 +16,8 @@
     "stale_observations_are_never_silently_current": true,
     "challenger_observation_contract": "challenger_observation_v2",
     "source_network_locations_are_registry_owned": true,
-    "source_ingestion_timeouts_are_registry_owned": true
+    "source_ingestion_timeouts_are_registry_owned": true,
+    "active_artifact_aliases_must_not_embed_gameweek": true
   },
   "sources": [
     {
@@ -38,7 +39,7 @@
       "enabled": true,
       "critical": false,
       "adapter": "artifact",
-      "artifact_paths": ["stats/shots_gw1.json", "stats/playermatchstats_gw1.json"],
+      "artifact_paths": ["stats/shots_current.json", "stats/playermatchstats_current.json"],
       "ingestion": {
         "season": "2026-2027",
         "raw_base": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data",

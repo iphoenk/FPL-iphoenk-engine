@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T22:49:44.359961+00:00",
+  "generated_at": "2026-08-27T00:32:23.655483+00:00",
   "schema_version": 513,
   "model_version": "player_projection_v5_historical_prior",
   "ruleset_id": "FPL_2026_27",
@@ -14568,7 +14568,7 @@
       "name": "Calafiori",
       "team_id": 1,
       "position": "DEF",
-      "now_cost": 55,
+      "now_cost": 56,
       "status": "a",
       "ownership_pct": 41.4,
       "current_season": {
@@ -15508,7 +15508,7 @@
       "position": "DEF",
       "now_cost": 55,
       "status": "a",
-      "ownership_pct": 6.1,
+      "ownership_pct": 6.2,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -17853,7 +17853,7 @@
       "position": "MID",
       "now_cost": 65,
       "status": "a",
-      "ownership_pct": 11.0,
+      "ownership_pct": 11.1,
       "current_season": {
         "starts": 1,
         "minutes": 75
@@ -20196,7 +20196,7 @@
       "name": "Dowman",
       "team_id": 1,
       "position": "MID",
-      "now_cost": 55,
+      "now_cost": 54,
       "status": "a",
       "ownership_pct": 0.1,
       "current_season": {
@@ -21998,7 +21998,7 @@
       "position": "FWD",
       "now_cost": 74,
       "status": "a",
-      "ownership_pct": 7.4,
+      "ownership_pct": 7.3,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -35445,9 +35445,9 @@
       "name": "Watkins",
       "team_id": 2,
       "position": "FWD",
-      "now_cost": 80,
+      "now_cost": 79,
       "status": "a",
-      "ownership_pct": 8.7,
+      "ownership_pct": 8.6,
       "current_season": {
         "starts": 0,
         "minutes": 0
@@ -55308,7 +55308,7 @@
       "name": "Kayode",
       "team_id": 4,
       "position": "DEF",
-      "now_cost": 45,
+      "now_cost": 46,
       "status": "a",
       "ownership_pct": 6.7,
       "current_season": {
@@ -70109,7 +70109,7 @@
       "position": "MID",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 2.3,
+      "ownership_pct": 2.4,
       "current_season": {
         "starts": 1,
         "minutes": 63
@@ -87665,7 +87665,7 @@
       "position": "MID",
       "now_cost": 95,
       "status": "a",
-      "ownership_pct": 14.2,
+      "ownership_pct": 14.3,
       "current_season": {
         "starts": 1,
         "minutes": 82
@@ -91846,7 +91846,7 @@
       "name": "João Pedro",
       "team_id": 6,
       "position": "FWD",
-      "now_cost": 75,
+      "now_cost": 76,
       "status": "a",
       "ownership_pct": 66.9,
       "current_season": {
@@ -137646,7 +137646,7 @@
       "position": "FWD",
       "now_cost": 55,
       "status": "a",
-      "ownership_pct": 2.5,
+      "ownership_pct": 2.6,
       "current_season": {
         "starts": 1,
         "minutes": 78
@@ -201165,7 +201165,7 @@
       "position": "MID",
       "now_cost": 70,
       "status": "a",
-      "ownership_pct": 5.5,
+      "ownership_pct": 5.6,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -211293,7 +211293,7 @@
       "position": "DEF",
       "now_cost": 60,
       "status": "a",
-      "ownership_pct": 19.0,
+      "ownership_pct": 19.1,
       "current_season": {
         "starts": 1,
         "minutes": 90
@@ -233575,7 +233575,7 @@
       "name": "Amad",
       "team_id": 16,
       "position": "MID",
-      "now_cost": 60,
+      "now_cost": 59,
       "status": "d",
       "ownership_pct": 1.1,
       "current_season": {
@@ -266889,7 +266889,7 @@
       "position": "GK",
       "now_cost": 40,
       "status": "a",
-      "ownership_pct": 18.8,
+      "ownership_pct": 18.7,
       "current_season": {
         "starts": 0,
         "minutes": 0

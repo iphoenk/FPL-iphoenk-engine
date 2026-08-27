@@ -1,37 +1,23 @@
 {
   "schema_version": 1,
   "model": "v5_postvalidated_shadow_acceptance_v1",
-  "generated_at": "2026-08-26T22:49:46.951837+00:00",
-  "v5_version": "5.0.0-beta.2",
-  "production_baseline_version": "v3.17.1",
-  "production_main_sha": "6c09c8c602963a3511e0d455afc9aeab338d102e",
+  "generated_at": "2026-08-27T00:32:26.169562+00:00",
+  "v5_version": "5.0.0-beta.3",
+  "production_baseline_version": "v3.18.1",
+  "production_main_sha": "02d0ce597e111e9b7d464f88479d78d462b616eb",
   "required_validated_cycles": 3,
-  "validated_successful_cycles": 3,
-  "remaining_validated_cycles": 0,
-  "production_candidate_eligible": true,
+  "validated_successful_cycles": 1,
+  "remaining_validated_cycles": 2,
+  "production_candidate_eligible": false,
   "production_candidate_auto_promoted": false,
   "production_promotion_requires_explicit_manual_action": true,
   "validated_cycles": [
     {
-      "cycle_id": "20260826T224140.096802+0000",
-      "generated_at": "2026-08-26T22:41:40.096802+00:00",
-      "validated_at": "2026-08-26T22:41:40.235274+00:00",
-      "v3_engine_version": "3.17.1",
-      "v5_engine_version": "5.0.0-beta.2"
-    },
-    {
-      "cycle_id": "20260826T224542.418054+0000",
-      "generated_at": "2026-08-26T22:45:42.418054+00:00",
-      "validated_at": "2026-08-26T22:45:42.561322+00:00",
-      "v3_engine_version": "3.17.1",
-      "v5_engine_version": "5.0.0-beta.2"
-    },
-    {
-      "cycle_id": "20260826T224946.807736+0000",
-      "generated_at": "2026-08-26T22:49:46.807736+00:00",
-      "validated_at": "2026-08-26T22:49:46.951837+00:00",
-      "v3_engine_version": "3.17.1",
-      "v5_engine_version": "5.0.0-beta.2"
+      "cycle_id": "20260827T003226.049228+0000",
+      "generated_at": "2026-08-27T00:32:26.049228+00:00",
+      "validated_at": "2026-08-27T00:32:26.169562+00:00",
+      "v3_engine_version": "3.18.1",
+      "v5_engine_version": "5.0.0-beta.3"
     }
   ]
 }

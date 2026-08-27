@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "contract": "V5_EXECUTION_PLANE_V1",
+  "purpose": "Separate heavy evidence refresh from the user-facing subsecond decision path without reducing analytical breadth or duplicating business authority.",
+  "planes": {
+    "refresh": {
+      "sla_class": "BACKGROUND_EVIDENCE_REFRESH",
+      "latency_release_blocking": false,
+      "stages": [
+        "public_base_collection",
+        "authenticated_runtime_overlay",
+        "dynamic_collection",
+        "enrichment_collection",
+        "truth_assembly",
+        "price_intelligence",
+        "historical_prior_and_native_prediction",
+        "prediction_evaluation",
+        "decision_prepare",
+        "watchlist_screening",
+        "durable_materialization"
+      ],
+      "network_refresh_allowed": true,
+      "durable_write_required": true
+    },
+    "hot": {
+      "sla_class": "USER_FACING_DECISION",
+      "latency_release_blocking": true,
+      "hard_limit_ms": 950,
+      "network_refresh_allowed": false,
+      "stale_materialization_action": "FAIL_CLOSED",
+      "required_materialization": "decision_hot_bundle",
+      "allowed_stages": [
+        "materialization_read",
+        "freshness_validation",
+        "decision_finalize",
+        "governance_audit",
+        "decision_first_reporting"
+      ]
+    }
+  },
+  "materializations": {
+    "decision_hot_bundle": {
+      "owner": "orchestrator",
+      "durable_store_owner": "snapshot",
+      "schema_version": 1,
+      "required_fields": [
+        "generated_at",
+        "runtime_fingerprint",
+        "mode",
+        "phase",
+        "truth",
+        "price",
+        "prediction",
+        "evaluation",
+        "prepared_decision",
+        "watchlist"
+      ],
+      "freshness_seconds_by_mode": {
+        "daily": 300,
+        "deadline": 30,
+        "live": 15,
+        "on_demand": 60
+      },
+      "missing_field_action": "FAIL_CLOSED",
+      "missing_fingerprint_action": "FAIL_CLOSED",
+      "future_timestamp_action": "FAIL_CLOSED"
+    }
+  },
+  "governance": {
+    "quality_may_not_be_reduced_for_latency": true,
+    "refresh_and_hot_planes_must_share_the_same_business_authorities": true,
+    "hot_plane_must_not_call_external_data_providers": true,
+    "stale_data_must_not_trigger_hidden_synchronous_refresh": true,
+    "durable_materialization_required_before_hot_eligibility": true,
+    "runtime_fingerprint_must_match_current_release": true
+  }
+}

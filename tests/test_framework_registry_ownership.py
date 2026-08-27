@@ -3,6 +3,7 @@ import json
 from src.engines import framework_health_audit as audit_engine
 from src.engines.framework_health_service import activate_freshness_contract, activate_registry_contract
 from src.settings import NORMAL_STALE_MINUTES
+from src.utils import utcnow
 
 
 def test_framework_expected_counts_are_loaded_from_registries():
@@ -16,9 +17,18 @@ def test_framework_expected_counts_are_loaded_from_registries():
     assert set(declared) == {"dss_core", "dss_extensions", "enhancements", "gate0"}
 
 
-def test_active_framework_freshness_is_owned_by_engine_config():
+def test_active_framework_freshness_is_owned_by_engine_config(tmp_path, monkeypatch):
     configured = activate_freshness_contract()
     assert configured == NORMAL_STALE_MINUTES
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "latest.json").write_text(
+        json.dumps({"generated_at": utcnow().isoformat()}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(audit_engine, "DATA", data_dir)
+
     ok, detail = audit_engine._probe_freshness(max_age_minutes=NORMAL_STALE_MINUTES)
     assert detail["max_age_minutes"] == NORMAL_STALE_MINUTES
-    assert isinstance(ok, bool)
+    assert ok is True

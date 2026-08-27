@@ -102,6 +102,15 @@ def is_deep_stats_schedule(schedule_expr: str | None) -> bool:
     return (schedule_expr or "").strip() == str(schedules.get("deep_stats") or "").strip()
 
 
+def _report_checkpoint_schedules() -> set[str]:
+    schedules = load_policy().get("schedules") or {}
+    return {
+        str(value).strip()
+        for key, value in schedules.items()
+        if str(key).startswith("report_") and str(value).strip()
+    }
+
+
 def should_collect(
     event_name: str,
     schedule_expr: str | None,
@@ -126,6 +135,8 @@ def should_collect(
         return True, "hourly_primary"
     if schedule_expr == str(schedules.get("deep_stats") or "").strip():
         return True, "daily_deep_stats"
+    if schedule_expr in _report_checkpoint_schedules():
+        return True, "scheduled_report_checkpoint"
     if schedule_expr == str(schedules.get("adaptive") or "").strip():
         if deadline_intensive(now_utc, deadline_utc):
             return True, "adaptive_deadline_window"

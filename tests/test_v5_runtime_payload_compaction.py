@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from src.v5.runtime_payloads import compact_payload
 
@@ -119,3 +120,16 @@ def test_governance_transport_keeps_gate_and_dss_inputs_only():
 def test_unknown_transport_operation_is_unchanged():
     payload = {"a": {"b": [1, 2, 3]}}
     assert compact_payload("snapshot", "read", payload) is payload
+
+
+def test_payload_projection_is_registry_driven_without_operation_branches():
+    registry = json.loads(Path("config/v5_payload_contract_registry.json").read_text(encoding="utf-8"))
+    assert registry["contract"] == "V5_INTERNAL_PAYLOAD_PROJECTION_V1"
+    assert set(registry["contracts"]) >= {"evaluation.build", "decision.finalize", "governance.audit"}
+
+    source = Path("src/v5/runtime_payloads.py").read_text(encoding="utf-8")
+    assert 'service_id == "' not in source
+    assert 'operation == "' not in source
+    assert "_evaluation_prediction" not in source
+    assert "_decision_finalize_prediction" not in source
+    assert "_governance_truth" not in source

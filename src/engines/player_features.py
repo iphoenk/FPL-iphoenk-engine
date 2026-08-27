@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from src.rules import ELEMENT_TYPE_TO_POSITION
+from src.rules import DC_RULES, ELEMENT_TYPE_TO_POSITION, POSITION_TO_ELEMENT_TYPE
 from src.utils import DATA, ROOT, atomic_json, iso_now, read_json
 
 CONFIG_PATH = ROOT / "config" / "intelligence" / "player_features.json"
@@ -52,6 +52,20 @@ def _sample_quality(appearances: int, minutes: float) -> str:
     return "ESTABLISHED"
 
 
+def _row_defensive_count(row: dict[str, Any], position: str) -> float:
+    cbit = (
+        _f(row.get("clearances"))
+        + _f(row.get("blocks"))
+        + _f(row.get("interceptions"))
+        + _f(row.get("tackles"))
+    )
+    if position == "GK":
+        return 0.0
+    if position == "DEF":
+        return cbit
+    return cbit + _f(row.get("recoveries"))
+
+
 def _aggregate_advanced(rows: list[dict[str, Any]], position: str) -> dict[str, Any]:
     played = [row for row in rows if _f(row.get("minutes_played")) > 0]
     minutes = sum(_f(row.get("minutes_played")) for row in played)
@@ -77,6 +91,16 @@ def _aggregate_advanced(rows: list[dict[str, Any]], position: str) -> dict[str, 
     cbirt = cbit + totals["recoveries"]
     dc_reconstructed = 0.0 if position == "GK" else (cbit if position == "DEF" else cbirt)
 
+    element_type = POSITION_TO_ELEMENT_TYPE.get(position, 4)
+    rule = DC_RULES.get(element_type, DC_RULES[4])
+    eligible = bool(rule.get("eligible"))
+    threshold = rule.get("threshold")
+    row_counts = [_row_defensive_count(row, position) for row in played] if eligible else []
+    threshold_hits = (
+        sum(1 for value in row_counts if threshold is not None and value >= float(threshold))
+        if eligible else 0
+    )
+
     def per90(value: float) -> float | None:
         return round(value * 90.0 / minutes, 4) if minutes > 0 else None
 
@@ -88,6 +112,11 @@ def _aggregate_advanced(rows: list[dict[str, Any]], position: str) -> dict[str, 
         "totals": {key: round(value, 4) for key, value in totals.items()},
         "dc_reconstructed_total": round(dc_reconstructed, 4),
         "dc_reconstructed_per90": per90(dc_reconstructed),
+        "dc_rule_eligible": eligible,
+        "dc_threshold": int(threshold) if threshold is not None else None,
+        "dc_points_when_hit": int(rule.get("points") or 0),
+        "dc_threshold_hits": threshold_hits,
+        "dc_threshold_hit_rate": round(threshold_hits / appearances, 4) if eligible and appearances else None,
         "xg_per90": per90(totals["xg"]),
         "xa_per90": per90(totals["xa"]),
         "touches_opposition_box_per90": per90(totals["touches_opposition_box"]),
@@ -144,10 +173,10 @@ def build() -> dict[str, Any]:
 
     cfg = _config()
     return {
-        "schema_version": 1,
+        "schema_version": int(cfg.get("schema_version") or 1),
         "contract": cfg.get("contract"),
         "generated_at": iso_now(),
-        "decision_neutral": True,
+        "decision_neutral": bool((cfg.get("policy") or {}).get("decision_neutral_plumbing_only", False)),
         "official_player_count": len(elements),
         "advanced_row_count": len(rows),
         "advanced_player_coverage": advanced_covered,
@@ -163,7 +192,8 @@ def run() -> dict[str, Any]:
     sync = read_json(DATA / "advanced_stats_sync.json", {})
     sync["player_features"] = {
         "contract": payload.get("contract"),
-        "decision_neutral": True,
+        "decision_neutral": payload.get("decision_neutral"),
+        "model_opt_in": (payload.get("policy") or {}).get("model_opt_in"),
         "player_count": payload.get("official_player_count"),
         "advanced_player_coverage": payload.get("advanced_player_coverage"),
         "file": "data/player_features.json",

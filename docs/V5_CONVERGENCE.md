@@ -89,10 +89,15 @@ V5 must have exactly one authoritative implementation for rules, player identity
 | Watchlist 20 total / 5 per position | V5 | CONVERGED |
 | Decision-first reporting and on-demand full snapshot | V5 | CONVERGED |
 | Microservice topology and transport resilience | V5 | CONVERGED |
-| Production baseline drift gate | V5 | REQUIRED |
-| Three beta.3 postvalidated real-shadow cycles | V5 | REQUIRED, RESET TO 0/3 AFTER REBASELINE |
+| Production baseline drift gate | V5 | PASS |
+| Three beta.3 postvalidated real-shadow cycles | V5 | COMPLETE 3/3 |
+| Production-candidate eligibility | V5 | ELIGIBLE |
 | Production promotion | V5 | MANUAL AND LOCKED |
+
+## Acceptance result
+
+V5.0.0-beta.3 completed three successful postvalidated real-shadow cycles on exactly the accepted V3.18.1 production baseline SHA. The acceptance summary reports `production_candidate_eligible: true`, `production_candidate_auto_promoted: false`, and explicit manual promotion still required.
 
 ## Promotion rule
 
-A clean Unified Gate is necessary but not sufficient. Beta.3 must then complete three successful postvalidated real-shadow cycles on exactly V5.0.0-beta.3 and exactly the accepted V3.18.1 production baseline SHA. Core-only PASS, failed post-validation, older beta versions and old baseline SHAs do not count. Reaching 3/3 creates production-candidate eligibility only. Actual production promotion remains an explicit manual governance action.
+Production-candidate eligibility is not production cutover. Actual promotion remains a separate explicit governance action. Until that action is approved and executed, V3.18.1 remains the production and scheduled-task authority and V5 remains shadow-only / candidate-only.

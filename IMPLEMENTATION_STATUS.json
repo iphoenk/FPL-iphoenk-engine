@@ -6,7 +6,7 @@
     "main_sha": "02d0ce597e111e9b7d464f88479d78d462b616eb",
     "schema_version": 47
   },
-  "state": "REBASELINED_AWAITING_ACCEPTANCE_EVIDENCE",
+  "state": "PRODUCTION_CANDIDATE_ELIGIBLE_MANUAL_PROMOTION_PENDING",
   "completed": [
     "bounded-context microservice architecture",
     "V3 truth/rules/phase/finance convergence",
@@ -18,19 +18,23 @@
     "isolated on-demand full team reporting",
     "API-Football fail-neutral provider restriction handling",
     "V3.18.1 source reachability versus capability-health contract adoption",
-    "V3.18.1 LiveFPL and OneFPL structured-access registry contract adoption"
+    "V3.18.1 LiveFPL and OneFPL structured-access registry contract adoption",
+    "three successful beta.3 postvalidated real-shadow cycles on V3.18.1"
   ],
   "acceptance": {
-    "unified_gate": "REQUIRED_AFTER_REBASELINE_COMMIT",
+    "unified_gate": "PASS",
     "validated_real_shadow_cycles_required": 3,
-    "validated_real_shadow_cycles_current_baseline": 0,
+    "validated_real_shadow_cycles_current_baseline": 3,
+    "remaining_validated_real_shadow_cycles": 0,
+    "production_candidate_eligible": true,
     "old_beta2_cycles_count": false,
     "reason_old_cycles_do_not_count": "The accepted production baseline changed from V3.17.1 to V3.18.1, so old cycles are baseline-mismatched by policy."
   },
   "production": {
-    "candidate_eligible": false,
+    "candidate_eligible": true,
     "auto_promotion": false,
     "manual_promotion_required": true,
-    "current_authority": "V3.18.1"
+    "current_authority": "V3.18.1",
+    "promotion_state": "LOCKED_PENDING_EXPLICIT_MANUAL_ACTION"
   }
 }

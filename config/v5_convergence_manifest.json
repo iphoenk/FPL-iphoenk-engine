@@ -34,82 +34,16 @@
     "persistence": "snapshot service -> config/v5_persistence_registry.json",
     "orchestration": "orchestrator service"
   },
-  "microservices": [
-    "ingestion",
-    "truth",
-    "price",
-    "prediction",
-    "evaluation",
-    "decision",
-    "governance",
-    "watchlist",
-    "reporting",
-    "snapshot",
-    "orchestrator"
-  ],
+  "microservices": ["ingestion", "truth", "price", "prediction", "evaluation", "decision", "governance", "watchlist", "reporting", "snapshot", "orchestrator"],
   "planes": {
-    "truth": [
-      "Official FPL authority",
-      "authenticated read-only overlay",
-      "source authority registry",
-      "rules registry",
-      "phase-aware squad state",
-      "finance/sell value",
-      "live scoring"
-    ],
-    "intelligence": [
-      "price trajectory",
-      "historical priors",
-      "prediction quality guard",
-      "xMins v3",
-      "team strength",
-      "xPts and uncertainty",
-      "tactical/system-fit proxy evidence",
-      "full DSS core enrichment"
-    ],
-    "evaluation": [
-      "point-in-time leakage guard",
-      "freshness guard",
-      "evidence-fusion reliability",
-      "point-in-time ledger",
-      "prediction calibration",
-      "external challenger scorecard",
-      "V3/V5 shadow parity",
-      "learning loop"
-    ],
-    "decision": [
-      "DSS core 50",
-      "DSS extensions 16",
-      "multi-horizon package optimizer",
-      "early-season change cap",
-      "team-cluster penalty",
-      "strict all-DSS postflight",
-      "lineup and captaincy governance"
-    ],
-    "watchlist": [
-      "full DSS external universe screening",
-      "evidence-aware admission",
-      "exactly 5 per position / 20 total"
-    ],
-    "governance": [
-      "Gate0",
-      "enhancement layers 8",
-      "framework health",
-      "postvalidated shadow acceptance accounting",
-      "final GO/HOLD/WAIT/REJECT governance"
-    ],
-    "presentation": [
-      "decision-first user report",
-      "technical appendix",
-      "delta-first reporting",
-      "forced-full on-demand snapshot"
-    ],
-    "persistence": [
-      "runtime artifacts",
-      "source-fusion artifact",
-      "history",
-      "state hydration"
-    ]
+    "truth": ["Official FPL authority", "authenticated read-only overlay", "source authority registry", "rules registry", "phase-aware squad state", "finance/sell value", "live scoring"],
+    "intelligence": ["price trajectory", "historical priors", "prediction quality guard", "xMins v3", "team strength", "xPts and uncertainty", "tactical/system-fit proxy evidence", "full DSS core enrichment"],
+    "evaluation": ["point-in-time leakage guard", "freshness guard", "evidence-fusion reliability", "point-in-time ledger", "prediction calibration", "external challenger scorecard", "V3/V5 shadow parity", "learning loop"],
+    "decision": ["DSS core 50", "DSS extensions 16", "multi-horizon package optimizer", "early-season change cap", "team-cluster penalty", "strict all-DSS postflight", "lineup and captaincy governance"],
+    "watchlist": ["full DSS external universe screening", "evidence-aware admission", "exactly 5 per position / 20 total"],
+    "governance": ["Gate0", "enhancement layers 8", "framework health", "postvalidated shadow acceptance accounting", "final GO/HOLD/WAIT/REJECT governance"],
+    "presentation": ["decision-first user report", "technical appendix", "delta-first reporting", "forced-full on-demand snapshot"],
+    "persistence": ["runtime artifacts", "source-fusion artifact", "history", "state hydration"]
   },
   "p0_parity": {
     "P0-1_prediction_calibration_backtest": "evaluation",
@@ -151,7 +85,9 @@
   "production_promotion": {
     "allowed": false,
     "beta": true,
-    "production_candidate": false,
-    "reason": "Production remains V3.18.1. The V3.18.1 rebaseline changes the accepted production SHA, so prior beta.2 shadow cycles do not count. V5.0.0-beta.3 requires three new successful postvalidated real-shadow cycles on this exact V5 version and production baseline before production-candidate eligibility."
+    "production_candidate": true,
+    "validated_real_shadow_cycles": 3,
+    "required_real_shadow_cycles": 3,
+    "reason": "V5.0.0-beta.3 completed three successful postvalidated real-shadow cycles on the exact V3.18.1 production baseline. It is production-candidate eligible, but production remains V3.18.1 until an explicit manual promotion action is approved and executed."
   }
 }

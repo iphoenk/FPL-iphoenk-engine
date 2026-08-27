@@ -83,7 +83,7 @@ def _governance_inputs(simulated=False, age_minutes=0, health_overall="AMBER", m
         },
     }
     lineup = {"formation": "3-4-3", "captain": {"name": "A"}, "vice_captain": {"name": "B"}}
-    locked = {"wildcard_active": True, "players": [{"element": n} for n in range(15)]}
+    locked = {"wildcard_active": True, "target_gw": 2, "players": [{"element": n} for n in range(15)]}
     return now, latest, health, sanity, lineup, locked
 
 
@@ -120,3 +120,30 @@ def test_governance_holds_material_recommendation_during_critical_warmup():
     assert out["decision"]["execution_authorized"] is False
     assert out["readiness"]["critical_warmup"] == ["DSS-44", "DSS-X12"]
     assert "CRITICAL_PREDICTION_WARMUP" in out["readiness"]["reasons"]
+
+
+def test_governance_uses_scorecard_target_gw_authority_not_stale_wc_flag():
+    now, latest, health, sanity, lineup, locked = _governance_inputs(health_overall="GREEN")
+    latest["squad_authority"] = "OFFICIAL_SUBMITTED"
+    scorecard = {
+        "planning_gw": {
+            "status": "PROJECTION",
+            "gw": 3,
+            "active_chip": "NONE",
+            "squad_basis": {
+                "planning_gw": 3,
+                "baseline_gw": 2,
+                "override_applied": False,
+                "override_target_gw": 2,
+                "effective_authority": "OFFICIAL_SUBMITTED",
+                "authority_source": "OFFICIAL_FPL_PICKS",
+            },
+        }
+    }
+    out = govern_checkpoint(latest, health, sanity, lineup, locked, scorecard=scorecard, now=now)
+    assert out["squad"]["authority_ok"] is True
+    assert out["squad"]["expected_authority"] == "OFFICIAL_SUBMITTED"
+    assert out["squad"]["baseline_gw"] == 2
+    assert out["squad"]["wildcard_active"] is False
+    assert out["squad"]["composition_status"] == "SUBMITTED_OR_CURRENT"
+    assert "SQUAD_AUTHORITY_MISMATCH" not in out["readiness"]["reasons"]

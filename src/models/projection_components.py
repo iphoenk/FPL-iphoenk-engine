@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from functools import lru_cache
 from typing import Any
 
@@ -37,6 +38,41 @@ def _blended_rate(player: dict[str, Any], cumulative_field: str, prior: float, s
     return max(0.0, blended), source
 
 
+def poisson_threshold_probability(rate90: float, minutes: float, threshold: int) -> float:
+    if threshold <= 0:
+        return 1.0
+    lam = max(0.0, _f(rate90)) * clamp(_f(minutes), 0.0, 90.0) / 90.0
+    if lam <= 0:
+        return 0.0
+    term = math.exp(-lam)
+    cdf = term
+    for k in range(1, threshold):
+        term *= lam / k
+        cdf += term
+    return clamp(1.0 - cdf, 0.0, 1.0)
+
+
+def expected_defensive_contribution_points(
+    xmins: dict[str, Any],
+    dc_model: dict[str, Any],
+) -> tuple[float, float]:
+    if not dc_model or not bool(dc_model.get("eligible")):
+        return 0.0, 0.0
+    threshold = int(dc_model.get("threshold") or 0)
+    if threshold <= 0:
+        return 0.0, 0.0
+    rate90 = max(0.0, _f(dc_model.get("count_rate90")))
+    p_start = clamp(_f(xmins.get("start_probability")), 0.0, 1.0)
+    p_bench = clamp(_f(xmins.get("bench_probability")), 0.0, 1.0 - p_start)
+    starter_minutes = clamp(_f(xmins.get("starter_minutes_if_start"), 72.0), 0.0, 90.0)
+    bench_minutes = clamp(_f(xmins.get("bench_minutes_if_used"), 18.0), 0.0, 90.0)
+    p_hit_start = poisson_threshold_probability(rate90, starter_minutes, threshold)
+    p_hit_bench = poisson_threshold_probability(rate90, bench_minutes, threshold)
+    hit_probability = clamp(p_start * p_hit_start + p_bench * p_hit_bench, 0.0, 1.0)
+    points_when_hit = max(0.0, _f(dc_model.get("points_when_hit"), 2.0))
+    return points_when_hit * hit_probability, hit_probability
+
+
 def _p60(xmins: dict[str, Any], cfg: dict[str, Any]) -> float:
     trans = cfg.get("appearance_60_probability_transition") or {}
     low = _f(trans.get("start_minutes_low"), 55.0)
@@ -52,7 +88,7 @@ def _project_fixture(
     xmins: dict[str, Any],
     matchup: dict[str, Any],
     home: bool,
-    rate_bundle: dict[str, float],
+    rate_bundle: dict[str, Any],
     small_sample: bool,
 ) -> dict[str, Any]:
     cfg = load_projection_config()
@@ -77,13 +113,18 @@ def _project_fixture(
     # = p_start + p_bench + p60 under the xMins appearance model.
     appearance = p_start + p_bench + p60
     attack = (
-        rate_bundle["xg90"] * GOAL_POINTS.get(element_type, 4)
-        + rate_bundle["xa90"] * ASSIST_POINTS
+        _f(rate_bundle.get("xg90")) * GOAL_POINTS.get(element_type, 4)
+        + _f(rate_bundle.get("xa90")) * ASSIST_POINTS
     ) * share * attack_multiplier
     clean_sheet = CLEAN_SHEET_POINTS.get(element_type, 0) * cs_prob * p60
-    saves = (rate_bundle["saves90"] / 3.0) * share if position == "GK" else 0.0
-    dc = rate_bundle["dc90"] * share
-    bonus = rate_bundle["bonus90"] * share
+    saves = (_f(rate_bundle.get("saves90")) / 3.0) * share if position == "GK" else 0.0
+    if rate_bundle.get("dc_model"):
+        dc, dc_hit_probability = expected_defensive_contribution_points(xmins, rate_bundle["dc_model"])
+    else:
+        # Compatibility only for callers not yet carrying REC-01's explicit model bundle.
+        dc = _f(rate_bundle.get("dc90")) * share
+        dc_hit_probability = None
+    bonus = _f(rate_bundle.get("bonus90")) * share
     mean = max(0.0, appearance + attack + clean_sheet + saves + dc + bonus)
 
     unc = cfg.get("uncertainty") or {}
@@ -108,6 +149,7 @@ def _project_fixture(
             "clean_sheet": round(clean_sheet, 3),
             "saves": round(saves, 3),
             "defensive_contribution": round(dc, 3),
+            "defensive_contribution_hit_probability": round(dc_hit_probability, 4) if dc_hit_probability is not None else None,
             "bonus": round(bonus, 3),
         },
     }

@@ -1,7 +1,7 @@
 {
   "schema_version": 494,
   "engine": "v4.9.4-personal-gw-scorecard",
-  "generated_at": "2026-08-27T14:29:00.528894+00:00",
+  "generated_at": "2026-08-27T16:07:31.943524+00:00",
   "status": "PASS",
   "team_id": 3462711,
   "phase": {
@@ -14,8 +14,8 @@
     "deadline_time": "2026-08-28T17:30:00Z",
     "is_live_event": false
   },
-  "snapshot_sha256": "ec3b2b49e8d1c148e1c7d19532280ac4c78b2c927c5b9e39a7949efad56a6596",
-  "effective_plan_sha256": "ab7c4f9e7646de63651499757acbfab77b566f3ef789e80bdb83c16ba88f4d62",
+  "snapshot_sha256": "2bcdfd2c902d31533350990b0702bdd6605aaa69750a7504acfb29da2717ad64",
+  "effective_plan_sha256": "e96e23449f8b087d40133cea94fd0774595547221289216a67d248bffb406cc4",
   "previous_gw": {
     "schema_version": 494,
     "engine": "v4.9.4-personal-gw-result",
@@ -302,7 +302,7 @@
     "vice_captain": {
       "element": 411,
       "name": "Haaland",
-      "xpts": 4.895
+      "xpts": 4.896
     },
     "active_chip": "WILDCARD",
     "chip_short": "WC",
@@ -369,7 +369,7 @@
         "element": 411,
         "name": "Haaland",
         "position": "FWD",
-        "xpts": 4.895
+        "xpts": 4.896
       },
       {
         "element": 165,
@@ -484,5 +484,5 @@
     "projection_is_estimate_not_actual": true,
     "player_intervals_not_naively_summed": true
   },
-  "performance_ms": 46.69
+  "performance_ms": 28.01
 }

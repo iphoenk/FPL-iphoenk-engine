@@ -1,6 +1,7 @@
 {
-  "schema_version": 493,
-  "engine": "v4.9.3-validation-lifecycle",
+  "schema_version": 4943,
+  "engine": "v4.9.3-validation-lifecycle-v4.9.4.3-truthful-starts",
+  "release": "4.9.4.3",
   "status": "PASS",
   "simulated": false,
   "snapshot": {
@@ -34,6 +35,9 @@
     "reconciliation_archive_immutable": true,
     "reconciliation_idempotent": true,
     "health_view_current_model_only": true,
-    "simulation_never_mutates_store": true
+    "simulation_never_mutates_store": true,
+    "started_from_official_stats_starts_only": true,
+    "minutes_never_infer_started": true,
+    "missing_starts_excluded_from_start_brier": true
   }
 }

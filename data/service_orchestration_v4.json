@@ -1,20 +1,20 @@
 {
   "schema_version": 492,
   "engine": "v4.9.3-service-orchestrator",
-  "started_at": "2026-08-27T14:28:51.705716+00:00",
-  "completed_at": "2026-08-27T14:29:00.598717+00:00",
+  "started_at": "2026-08-27T16:07:26.003759+00:00",
+  "completed_at": "2026-08-27T16:07:32.474004+00:00",
   "status": "PASS",
   "mode": "daily",
   "simulated": false,
   "stats_enabled": true,
   "deep_stats_enabled": true,
-  "service_registry": "fpl_v4_9_4_2_microservice_registry_v5",
-  "contract_registry": "fpl_v4_9_4_service_contracts_v4",
+  "service_registry": "fpl_v4_9_4_3_microservice_registry_v6",
+  "contract_registry": "fpl_v4_9_4_3_service_contracts_v5",
   "execution_model": "process_isolated_single_host",
   "snapshot_identity": {
-    "sha256": "ec3b2b49e8d1c148e1c7d19532280ac4c78b2c927c5b9e39a7949efad56a6596",
-    "generated_at": "2026-08-27T14:28:52.300255+00:00",
-    "checkpoint_policy_id": "NIGHT_TACTICAL_PRICE_2130"
+    "sha256": "2bcdfd2c902d31533350990b0702bdd6605aaa69750a7504acfb29da2717ad64",
+    "generated_at": "2026-08-27T16:07:26.574339+00:00",
+    "checkpoint_policy_id": "REGULAR_MONITOR"
   },
   "services": [
     {
@@ -29,17 +29,17 @@
           "path": "data/runtime/snapshot.v1.json",
           "valid": true,
           "errors": [],
-          "sha256": "ec3b2b49e8d1c148e1c7d19532280ac4c78b2c927c5b9e39a7949efad56a6596",
-          "bytes": 3805188
+          "sha256": "2bcdfd2c902d31533350990b0702bdd6605aaa69750a7504acfb29da2717ad64",
+          "bytes": 3813391
         }
       ],
-      "duration_ms": 729.72,
+      "duration_ms": 656.36,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"raw_snapshot\", \"schema\": \"snapshot.v1\", \"duration_ms\": 469.03, \"planning_gw\": 2, \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"override_applied\": true}",
+      "stdout_tail": "{\"service\": \"raw_snapshot\", \"schema\": \"snapshot.v1\", \"duration_ms\": 452.2, \"planning_gw\": 2, \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"override_applied\": true}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/runtime/snapshot.v1.json",
-        "sha256": "ec3b2b49e8d1c148e1c7d19532280ac4c78b2c927c5b9e39a7949efad56a6596"
+        "sha256": "2bcdfd2c902d31533350990b0702bdd6605aaa69750a7504acfb29da2717ad64"
       }
     },
     {
@@ -56,17 +56,17 @@
           "path": "data/runtime/enrichment.v1.json",
           "valid": true,
           "errors": [],
-          "sha256": "0f7e1d4ffeee928a8073a783bfda352aaf8e8d8fee940896fec9df186c1bb413",
-          "bytes": 205696
+          "sha256": "e018ce2a75870a68c7cdc1180365e616eb70ff7897e0455198450f081c05a5ca",
+          "bytes": 206365
         }
       ],
-      "duration_ms": 858.33,
+      "duration_ms": 795.13,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"enrichment\", \"schema\": \"enrichment.v1\", \"duration_ms\": 709.35}",
+      "stdout_tail": "{\"service\": \"enrichment\", \"schema\": \"enrichment.v1\", \"duration_ms\": 544.44}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/runtime/enrichment.v1.json",
-        "sha256": "0f7e1d4ffeee928a8073a783bfda352aaf8e8d8fee940896fec9df186c1bb413"
+        "sha256": "e018ce2a75870a68c7cdc1180365e616eb70ff7897e0455198450f081c05a5ca"
       }
     },
     {
@@ -83,23 +83,23 @@
           "path": "data/latest.json",
           "valid": true,
           "errors": [],
-          "sha256": "26efc7bc950318915bcc49356c80969475002c995ea3ed2b391f406ec7e0f692",
-          "bytes": 575744
+          "sha256": "7b93674210d4d7c50f1973ecd56f6b9b53a06e3d9990c00c69409cf6e0e1d979",
+          "bytes": 575703
         },
         {
           "contract": "predictions",
           "path": "data/predictions_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "15b4c1184acfb6974288af61ee0bcb083a2dd790b9ba7ee0de71bd1f2fccab0a",
-          "bytes": 32480936
+          "sha256": "5731f657d59b6eef797dcf14577c88ee37c24a9a6aa5a6971759766dc89c87f1",
+          "bytes": 32582080
         },
         {
           "contract": "team_state",
           "path": "data/team.json",
           "valid": true,
           "errors": [],
-          "sha256": "e291903c865c98c285dbfe2e705aefb7a3db22c319e8364026a08ce6ca4432ff",
+          "sha256": "26243cc065a2ed34afef1685b4663e0024552314f14eda888aa95e7eb074f899",
           "bytes": 7243
         },
         {
@@ -107,25 +107,25 @@
           "path": "data/universe.json",
           "valid": true,
           "errors": [],
-          "sha256": "b490c4796165e71b4fcefea8c9937c95a70a2f50180a8d065b0785c57660a3ba",
-          "bytes": 204802
+          "sha256": "a789f4496c229694c6f4160f288c8917a1fa8d23cb8909d391ad0cfa2e21a274",
+          "bytes": 205471
         },
         {
           "contract": "source_health",
           "path": "data/health.json",
           "valid": true,
           "errors": [],
-          "sha256": "afe74dc1f4fa144522d11d1014dd183c424b0cdd67758cea49e2cf0e289b936b",
-          "bytes": 2014
+          "sha256": "27fc17fff3cc458cf121e16dfca2546c27ad95968dfd1abca541d93718d9594f",
+          "bytes": 2010
         }
       ],
-      "duration_ms": 1916.43,
+      "duration_ms": 1239.53,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"prediction\", \"engine\": \"4.9.2-independent-services\", \"players\": 614, \"duration_ms\": 1712.83}",
+      "stdout_tail": "{\"service\": \"prediction\", \"engine\": \"4.9.2-independent-services\", \"players\": 616, \"duration_ms\": 1104.04}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/latest.json",
-        "sha256": "26efc7bc950318915bcc49356c80969475002c995ea3ed2b391f406ec7e0f692"
+        "sha256": "7b93674210d4d7c50f1973ecd56f6b9b53a06e3d9990c00c69409cf6e0e1d979"
       }
     },
     {
@@ -142,13 +142,13 @@
           "path": "data/validation/lifecycle_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "1d0f1c4b334614b04a12d61b735c42bbb503824c99372eabc069788a7e107537",
-          "bytes": 1049
+          "sha256": "a9604405a56de129b2afcbecc3c4426827967cdeceb5d1f7e3c23a67a8808c30",
+          "bytes": 1247
         }
       ],
-      "duration_ms": 836.38,
+      "duration_ms": 607.7,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"validation_lifecycle\", \"snapshot\": \"PASS\", \"reconciliation\": \"SKIP\", \"eligible_samples\": 0, \"simulated\": false}\n{\n  \"schema_version\": 493,\n  \"engine\": \"v4.9.3-validation-lifecycle\",\n  \"status\": \"PASS\",\n  \"simulated\": false,\n  \"snapshot\": {\n    \"status\": \"PASS\",\n    \"action\": \"PRESERVED\",\n    \"gw\": 2,\n    \"deadline_time\": \"2026-08-28T17:30:00Z\",\n    \"players\": 614,\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"captured_at\": \"2026-08-27T10:45:41.952884+00:00\",\n    \"immutable\": true\n  },\n  \"reconciliation\": {\n    \"status\": \"SKIP\",\n    \"reason\": \"no_predeadline_snapshot\",\n    \"gw\": 1\n  },\n  \"eligibility\": {\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"eligible_samples\": 0,\n    \"eligible_gws\": [],\n    \"rejected_samples\": [],\n    \"archive_is_append_only\": true,\n    \"health_view_rebuilt\": true\n  },\n  \"guardrails\": {\n    \"raw_snapshot_only\": true,\n    \"official_api_refetch\": false,\n    \"retroactive_snapshot_rejected\": true,\n    \"deadline_snapshot_immutable\": true,\n    \"reconciliation_archive_immutable\": true,\n    \"reconciliation_idempotent\": true,\n    \"health_view_current_model_only\": true,\n    \"simulation_never_mutates_store\": true\n  }\n}",
+      "stdout_tail": "-validation-lifecycle-v4.9.4.3-truthful-starts\",\n  \"release\": \"4.9.4.3\",\n  \"status\": \"PASS\",\n  \"simulated\": false,\n  \"snapshot\": {\n    \"status\": \"PASS\",\n    \"action\": \"PRESERVED\",\n    \"gw\": 2,\n    \"deadline_time\": \"2026-08-28T17:30:00Z\",\n    \"players\": 614,\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"captured_at\": \"2026-08-27T10:45:41.952884+00:00\",\n    \"immutable\": true\n  },\n  \"reconciliation\": {\n    \"status\": \"SKIP\",\n    \"reason\": \"no_predeadline_snapshot\",\n    \"gw\": 1\n  },\n  \"eligibility\": {\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"eligible_samples\": 0,\n    \"eligible_gws\": [],\n    \"rejected_samples\": [],\n    \"archive_is_append_only\": true,\n    \"health_view_rebuilt\": true\n  },\n  \"guardrails\": {\n    \"raw_snapshot_only\": true,\n    \"official_api_refetch\": false,\n    \"retroactive_snapshot_rejected\": true,\n    \"deadline_snapshot_immutable\": true,\n    \"reconciliation_archive_immutable\": true,\n    \"reconciliation_idempotent\": true,\n    \"health_view_current_model_only\": true,\n    \"simulation_never_mutates_store\": true,\n    \"started_from_official_stats_starts_only\": true,\n    \"minutes_never_infer_started\": true,\n    \"missing_starts_excluded_from_start_brier\": true\n  }\n}",
       "stderr_tail": ""
     },
     {
@@ -169,7 +169,7 @@
           "bytes": 1833
         }
       ],
-      "duration_ms": 46.18,
+      "duration_ms": 25.48,
       "exit_code": 0,
       "stdout_tail": "PASS scoring_single_source {'goal_points': {'GK': 10, 'DEF': 6, 'MID': 5, 'FWD': 4}, 'assist': 3, 'clean_sheet': {'GK': 4, 'DEF': 4, 'MID': 1, 'FWD': 0}, 'appearance_under_60': 1, 'appearance_60_plus': 2, 'saves_per_point': 3, 'penalty_save': 5, 'bonus': [1, 2, 3], 'yellow_card': -1, 'red_card': -3, 'own_goal': -2, 'penalty_miss': -2, 'goals_conceded_per_minus_point': 2, 'defcon_points': 2}\nPASS defcon_gk_veto \nPASS defcon_def_cbit_10 \nPASS defcon_mid_cbirt_12 \nPASS defcon_fwd_cbirt_12 \nPASS recoveries_excluded_for_def \nPASS recoveries_included_mid_fwd \nPASS defcon_reward_capped_two \nPASS chip_halves \nPASS one_chip_per_gw_constant \nPASS free_hit_not_gw1 \nPASS free_hit_not_consecutive \nPASS chip_once_per_half \nPASS wc_fh_preserve_banked_ft \nPASS dgw_defcon_per_match [1.672, 1.672]\nOVERALL PASS",
       "stderr_tail": ""
@@ -188,13 +188,13 @@
           "path": "data/framework_health_preflight_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "c908804a5c1c65eba9cfe0cc28c7f66daecc4436283b53e0926aa54f581c7edd",
-          "bytes": 38527
+          "sha256": "089f6c13bfcb6141e1dd3b249da1e31181cc0b0dbe7ba333c97d7fac058b044d",
+          "bytes": 38560
         }
       ],
-      "duration_ms": 489.26,
+      "duration_ms": 366.39,
       "exit_code": 0,
-      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"preflight\", \"gate0\": {\"PASS\": 10, \"DEFERRED\": 6}, \"dss_core\": {\"ACTIVE\": 25, \"PARTIAL\": 16, \"DEFERRED\": 8, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 6, \"DEFERRED\": 9, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 4, \"DEFERRED\": 4}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 407.89}",
+      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"preflight\", \"gate0\": {\"PASS\": 10, \"DEFERRED\": 6}, \"dss_core\": {\"ACTIVE\": 25, \"PARTIAL\": 16, \"DEFERRED\": 8, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 6, \"DEFERRED\": 9, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 4, \"DEFERRED\": 4}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 292.76}",
       "stderr_tail": ""
     },
     {
@@ -211,45 +211,45 @@
           "path": "data/wc_decision_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "ead7fb58de1af922e9f8f255a1c2e0b1029b6887c3d4120e6634651a656d7f9b",
-          "bytes": 12897
+          "sha256": "b66144d541c64bbba8a555639e12387d18f51427c09ca059379194f5996e8fda",
+          "bytes": 12896
         },
         {
           "contract": "wc_package",
           "path": "data/wc_package_audit_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "a26d2d6446463423faac445ce54fcc4fb79657a1b43007e3059e87f978e93a11",
-          "bytes": 99785
+          "sha256": "7e909d0a5a181a79c7b41a2439298a2078efbd0bcf9bd6f5d974f0adf23b78c6",
+          "bytes": 99777
         },
         {
           "contract": "lineup",
           "path": "data/lineup_decision_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "8cd6f7b6b0012080a3bbbdf1266a74be3dc5ec6d39cc62b4245b241f2b917a07",
-          "bytes": 8555
+          "sha256": "172dfe369eff79c2b500ba385f8806d75b736a54bb9653f1a961963e24de7c21",
+          "bytes": 8557
         },
         {
           "contract": "recommendation_sanity",
           "path": "data/recommendation_sanity_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "4b3f0f81d63b5d11873f3ba7e59733a7a54cc951425317a596b8054a12808326",
-          "bytes": 27167
+          "sha256": "3d97794c2a87000087e0c99c4d0cac35e07f962d8eeed8f71fcf5731cc2dc752",
+          "bytes": 27154
         },
         {
           "contract": "decision_pipeline",
           "path": "data/decision_pipeline_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "7174f3779bbb0f4356a3b6adf5466ba217c6c34926673e8297cffd71fa98a3be",
-          "bytes": 2874
+          "sha256": "8e4b1edebbfad3e38f1d05846a1ed72f6a875a3c01c6b4d6985ba3ca86bed9b5",
+          "bytes": 3115
         }
       ],
-      "duration_ms": 2774.52,
+      "duration_ms": 1788.59,
       "exit_code": 0,
-      "stdout_tail": " \"results\": {\"wc_raw\": \"MATERIAL_UPGRADE\", \"package_raw\": \"MATERIAL_UPGRADE\", \"recommendation_final\": \"MATERIAL_UPGRADE\", \"recommended_replacements\": 2, \"lineup_governance\": \"OPTIMIZER_ONLY\", \"formation\": \"3-4-3\", \"captain\": \"B.Fernandes\"}, \"performance_guardrails\": {\"shared_json_loaded_once\": true, \"shared_candidates_built_once\": true, \"fork_copy_on_write\": true, \"parallel_wc_package\": true, \"fast_wc_finalist_scoring\": true, \"redundant_package_validation_removed\": true, \"concise_stdout\": true, \"search_quality_reduction\": false, \"wc_beam_unchanged\": true, \"package_frontier_beam_unchanged\": true, \"bounded_top_k_same_wc_beam\": true, \"exact_streaming_wc_topk\": true, \"stable_wc_tie_semantics\": true, \"safe_wc_objective_bound\": true, \"fixed_position_finalist_scoring\": true, \"compact_package_keep_profile\": true, \"package_scalar_delta_metrics\": true, \"package_position_value_reuse\": true, \"top_packages_only_payload_materialization\": true, \"checkpoint_action_deferred_until_postflight_health\": true, \"planning_squad_from_team_contract\": true, \"stale_lock_players_not_direct_optimizer_input\": true, \"engine_lineup_is_advisory_only\": true, \"manual_override_applied_in_separate_microservice\": true}}",
+      "stdout_tail": "al\": \"MATERIAL_UPGRADE\", \"recommended_replacements\": 2, \"lineup_governance\": \"OPTIMIZER_ONLY\", \"formation\": \"3-4-3\", \"captain\": \"B.Fernandes\"}, \"performance_guardrails\": {\"shared_json_loaded_once\": true, \"shared_candidates_built_once\": true, \"fork_copy_on_write\": true, \"parallel_wc_package\": true, \"fast_wc_finalist_scoring\": true, \"redundant_package_validation_removed\": true, \"concise_stdout\": true, \"search_quality_reduction\": false, \"wc_beam_unchanged\": true, \"package_frontier_beam_unchanged\": true, \"bounded_top_k_same_wc_beam\": true, \"exact_streaming_wc_topk\": true, \"stable_wc_tie_semantics\": true, \"safe_wc_objective_bound\": true, \"fixed_position_finalist_scoring\": true, \"compact_package_keep_profile\": true, \"package_scalar_delta_metrics\": true, \"package_position_value_reuse\": true, \"top_packages_only_payload_materialization\": true, \"checkpoint_action_deferred_until_postflight_health\": true, \"planning_squad_from_team_contract\": true, \"stale_lock_players_not_direct_optimizer_input\": true, \"engine_lineup_is_advisory_only\": true, \"manual_override_applied_in_separate_microservice\": true}}\n{\"service\": \"optimization\", \"status\": \"PASS\", \"decision_compute_ms\": 1709.7, \"limit_ms\": 5000.0}",
       "stderr_tail": ""
     },
     {
@@ -266,36 +266,13 @@
           "path": "data/effective_plan_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "ab7c4f9e7646de63651499757acbfab77b566f3ef789e80bdb83c16ba88f4d62",
-          "bytes": 18444
+          "sha256": "e96e23449f8b087d40133cea94fd0774595547221289216a67d248bffb406cc4",
+          "bytes": 18448
         }
       ],
-      "duration_ms": 42.99,
+      "duration_ms": 28.18,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"user_decision_overlay\", \"status\": \"PASS\", \"planning_gw\": 2, \"authority\": \"USER_OVERRIDE\", \"formation\": \"3-5-2\", \"captain\": \"B.Fernandes\", \"chip\": \"WILDCARD\", \"user_minus_engine_xpts\": -1.82, \"duration_ms\": 5.82}",
-      "stderr_tail": ""
-    },
-    {
-      "id": "framework_postflight",
-      "name": "Framework POST-FLIGHT Service",
-      "boundary_state": "INDEPENDENT",
-      "status": "PASS",
-      "depends_on": [
-        "optimization"
-      ],
-      "contracts": [
-        {
-          "contract": "framework_postflight",
-          "path": "data/framework_health_v4.json",
-          "valid": true,
-          "errors": [],
-          "sha256": "981717fa606e2983903c1f5db4a797de169d27008cce639fcf4dbf33cbd1ad65",
-          "bytes": 40110
-        }
-      ],
-      "duration_ms": 497.43,
-      "exit_code": 0,
-      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"postflight\", \"gate0\": {\"PASS\": 16}, \"dss_core\": {\"ACTIVE\": 33, \"PARTIAL\": 16, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 15, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 8}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 416.48}",
+      "stdout_tail": "{\"service\": \"user_decision_overlay\", \"status\": \"PASS\", \"planning_gw\": 2, \"authority\": \"USER_OVERRIDE\", \"formation\": \"3-5-2\", \"captain\": \"B.Fernandes\", \"chip\": \"WILDCARD\", \"user_minus_engine_xpts\": -1.82, \"duration_ms\": 4.14}",
       "stderr_tail": ""
     },
     {
@@ -312,13 +289,36 @@
           "path": "data/gw_scorecard_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "4a3edafb4b7835a06138f1ac0343c6bc53b212f6867c771055fe310e2ec72aa7",
+          "sha256": "3c825275ad87a2db38bc6b8cda19db091b69eb9771435522182162b73bd4aba3",
           "bytes": 11965
         }
       ],
-      "duration_ms": 85.43,
+      "duration_ms": 55.04,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"personal_gw_scorecard\", \"status\": \"PASS\", \"previous\": \"GW1 FINAL · 71 pts · BB\", \"planning\": \"GW2 PROJECTION · 44.2 xPts · WC · 3-5-2 · C B.Fernandes\", \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"decision_authority\": \"USER_OVERRIDE\", \"human_override_active\": true, \"archive_action\": \"PRESERVED\", \"duration_ms\": 46.69}",
+      "stdout_tail": "{\"service\": \"personal_gw_scorecard\", \"status\": \"PASS\", \"previous\": \"GW1 FINAL · 71 pts · BB\", \"planning\": \"GW2 PROJECTION · 44.2 xPts · WC · 3-5-2 · C B.Fernandes\", \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"decision_authority\": \"USER_OVERRIDE\", \"human_override_active\": true, \"archive_action\": \"PRESERVED\", \"duration_ms\": 28.01}",
+      "stderr_tail": ""
+    },
+    {
+      "id": "framework_postflight",
+      "name": "Framework POST-FLIGHT Truth Service",
+      "boundary_state": "INDEPENDENT",
+      "status": "PASS",
+      "depends_on": [
+        "user_decision_overlay"
+      ],
+      "contracts": [
+        {
+          "contract": "framework_postflight",
+          "path": "data/framework_health_v4.json",
+          "valid": true,
+          "errors": [],
+          "sha256": "e152213605b2ab13745ddc16e67027b27874fde24c0f2b62b851ed2120e99e01",
+          "bytes": 40800
+        }
+      ],
+      "duration_ms": 356.06,
+      "exit_code": 0,
+      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"postflight\", \"gate0\": {\"PASS\": 16}, \"dss_core\": {\"ACTIVE\": 33, \"PARTIAL\": 16, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 15, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 8}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 294.16}\n{\"service\": \"framework_postflight\", \"pipeline_health\": \"GREEN\", \"gate0\": {\"PASS\": 16}, \"engine_formation\": \"3-4-3\", \"effective_formation\": \"3-5-2\", \"both_legal\": true}",
       "stderr_tail": ""
     },
     {
@@ -336,13 +336,13 @@
           "path": "data/checkpoint_decision_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "f377aec083beb032688e4d178afcbe19ba87c608d3aab882fbfca7389518c614",
-          "bytes": 15781
+          "sha256": "f1985c2a885fe86aa1f78b12a2289c47d8310c631ed8c829ca482673663794aa",
+          "bytes": 15658
         }
       ],
-      "duration_ms": 46.75,
+      "duration_ms": 31.96,
       "exit_code": 0,
-      "stdout_tail": "{\"checkpoint\": \"NIGHT_TACTICAL_PRICE_2130\", \"action\": \"HOLD\", \"headline\": \"HOLD LOCK 15\", \"governed_verdict\": \"MATERIAL_UPGRADE\", \"decision_authority\": \"USER_OVERRIDE\", \"previous_gw\": \"GW1 FINAL · 71 pts · BB\", \"planning_gw\": \"GW2 PROJECTION · 44.2 xPts · WC · 3-5-2 · C B.Fernandes\", \"squad_basis\": \"USER_CAPTURED_WC_DRAFT\"}",
+      "stdout_tail": "{\"checkpoint\": \"REGULAR_MONITOR\", \"action\": \"HOLD\", \"headline\": \"HOLD LOCK 15\", \"governed_verdict\": \"MATERIAL_UPGRADE\", \"decision_authority\": \"USER_OVERRIDE\", \"previous_gw\": \"GW1 FINAL · 71 pts · BB\", \"planning_gw\": \"GW2 PROJECTION · 44.2 xPts · WC · 3-5-2 · C B.Fernandes\", \"squad_basis\": \"USER_CAPTURED_WC_DRAFT\"}",
       "stderr_tail": ""
     }
   ],
@@ -355,6 +355,9 @@
     "reconciliation_archive_immutable": true,
     "reconciliation_idempotent": true,
     "health_view_current_model_only": true,
+    "reconciliation_started_from_official_stats_starts": true,
+    "minutes_never_infer_started": true,
+    "missing_starts_excluded_from_brier": true,
     "personal_gw_scorecard_no_official_refetch": true,
     "finished_gw_archive_immutable": true,
     "scorecard_simulation_never_mutates_archive": true,
@@ -363,6 +366,8 @@
     "engine_is_advisory": true,
     "user_decision_is_final_authority": true,
     "engine_never_auto_overwrites_valid_user_override": true,
+    "effective_plan_legality_enforced_post_overlay": true,
+    "engine_effective_plan_legality_reported_separately": true,
     "projection_default_baseline_previous_submitted_gw": true,
     "planning_override_requires_target_gw": true,
     "stale_planning_override_rejected": true,
@@ -381,6 +386,8 @@
     "truthful_competition_evidence": true,
     "critical_warmup_blocks_unqualified_go": true,
     "optimizer_search_width_unchanged": true,
+    "decision_compute_slo_ms": 5000,
+    "decision_compute_slo_excludes_external_network_io": true,
     "gate0_checks_unchanged": 16,
     "registry_counts_unchanged": {
       "dss_core": 50,
@@ -388,15 +395,15 @@
       "enhancements": 8
     }
   },
-  "duration_ms": 8893.02,
+  "duration_ms": 6470.28,
   "summary": {
     "services_passed": 11,
     "services_total": 11,
     "fail_closed": true
   },
   "locked_artifacts": {
-    "data/runtime/snapshot.v1.json": "ec3b2b49e8d1c148e1c7d19532280ac4c78b2c927c5b9e39a7949efad56a6596",
-    "data/runtime/enrichment.v1.json": "0f7e1d4ffeee928a8073a783bfda352aaf8e8d8fee940896fec9df186c1bb413",
-    "data/latest.json": "26efc7bc950318915bcc49356c80969475002c995ea3ed2b391f406ec7e0f692"
+    "data/runtime/snapshot.v1.json": "2bcdfd2c902d31533350990b0702bdd6605aaa69750a7504acfb29da2717ad64",
+    "data/runtime/enrichment.v1.json": "e018ce2a75870a68c7cdc1180365e616eb70ff7897e0455198450f081c05a5ca",
+    "data/latest.json": "7b93674210d4d7c50f1973ecd56f6b9b53a06e3d9990c00c69409cf6e0e1d979"
   }
 }

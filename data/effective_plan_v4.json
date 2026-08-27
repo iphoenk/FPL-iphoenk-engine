@@ -1,7 +1,7 @@
 {
   "schema_version": 4941,
   "engine": "v4.9.4.1-user-decision-overlay",
-  "generated_at": "2026-08-27T14:28:59.934245+00:00",
+  "generated_at": "2026-08-27T16:07:31.887073+00:00",
   "status": "PASS",
   "planning_gw": 2,
   "team_authority": "LOCKED_PRE_DEADLINE",
@@ -87,15 +87,15 @@
         "team": "Man Utd",
         "xpts": 5.128,
         "lower80": 2.247,
-        "upper80": 8.01,
+        "upper80": 8.009,
         "start_probability": 0.9079,
         "bench_probability": 0.0092,
         "dnp_probability": 0.0829,
         "availability": 0.9171,
-        "captain_score": 5.3371,
+        "captain_score": 5.3369,
         "vice_score": 5.1104,
         "bench_score": 5.0731,
-        "interval_width": 5.763
+        "interval_width": 5.762
       },
       {
         "element": 40,
@@ -120,7 +120,7 @@
         "position": "MID",
         "team": "Brentford",
         "xpts": 2.939,
-        "lower80": 0.583,
+        "lower80": 0.584,
         "upper80": 5.295,
         "start_probability": 0.7991,
         "bench_probability": 0.0201,
@@ -129,7 +129,7 @@
         "captain_score": 2.9234,
         "vice_score": 2.6817,
         "bench_score": 2.8435,
-        "interval_width": 4.712
+        "interval_width": 4.711
       },
       {
         "element": 557,
@@ -153,16 +153,16 @@
         "name": "Haaland",
         "position": "FWD",
         "team": "Man City",
-        "xpts": 4.895,
-        "lower80": 2.066,
-        "upper80": 7.724,
+        "xpts": 4.896,
+        "lower80": 2.067,
+        "upper80": 7.725,
         "start_probability": 0.9014,
         "bench_probability": 0.0099,
         "dnp_probability": 0.0887,
         "availability": 0.9113,
-        "captain_score": 5.0881,
-        "vice_score": 4.8635,
-        "bench_score": 4.8369,
+        "captain_score": 5.0891,
+        "vice_score": 4.8645,
+        "bench_score": 4.8378,
         "interval_width": 5.658
       },
       {
@@ -207,31 +207,31 @@
       "team": "Man Utd",
       "xpts": 5.128,
       "lower80": 2.247,
-      "upper80": 8.01,
+      "upper80": 8.009,
       "start_probability": 0.9079,
       "bench_probability": 0.0092,
       "dnp_probability": 0.0829,
       "availability": 0.9171,
-      "captain_score": 5.3371,
+      "captain_score": 5.3369,
       "vice_score": 5.1104,
       "bench_score": 5.0731,
-      "interval_width": 5.763
+      "interval_width": 5.762
     },
     "vice_captain": {
       "element": 411,
       "name": "Haaland",
       "position": "FWD",
       "team": "Man City",
-      "xpts": 4.895,
-      "lower80": 2.066,
-      "upper80": 7.724,
+      "xpts": 4.896,
+      "lower80": 2.067,
+      "upper80": 7.725,
       "start_probability": 0.9014,
       "bench_probability": 0.0099,
       "dnp_probability": 0.0887,
       "availability": 0.9113,
-      "captain_score": 5.0881,
-      "vice_score": 4.8635,
-      "bench_score": 4.8369,
+      "captain_score": 5.0891,
+      "vice_score": 4.8645,
+      "bench_score": 4.8378,
       "interval_width": 5.658
     },
     "bench": {
@@ -408,15 +408,15 @@
         "team": "Man Utd",
         "xpts": 5.128,
         "lower80": 2.247,
-        "upper80": 8.01,
+        "upper80": 8.009,
         "start_probability": 0.9079,
         "bench_probability": 0.0092,
         "dnp_probability": 0.0829,
         "availability": 0.9171,
-        "captain_score": 5.3371,
+        "captain_score": 5.3369,
         "vice_score": 5.1104,
         "bench_score": 5.0731,
-        "interval_width": 5.763
+        "interval_width": 5.762
       },
       {
         "slot": 2,
@@ -476,7 +476,7 @@
         "position": "MID",
         "team": "Brentford",
         "xpts": 2.939,
-        "lower80": 0.583,
+        "lower80": 0.584,
         "upper80": 5.295,
         "start_probability": 0.7991,
         "bench_probability": 0.0201,
@@ -485,23 +485,23 @@
         "captain_score": 2.9234,
         "vice_score": 2.6817,
         "bench_score": 2.8435,
-        "interval_width": 4.712
+        "interval_width": 4.711
       },
       {
         "element": 411,
         "name": "Haaland",
         "position": "FWD",
         "team": "Man City",
-        "xpts": 4.895,
-        "lower80": 2.066,
-        "upper80": 7.724,
+        "xpts": 4.896,
+        "lower80": 2.067,
+        "upper80": 7.725,
         "start_probability": 0.9014,
         "bench_probability": 0.0099,
         "dnp_probability": 0.0887,
         "availability": 0.9113,
-        "captain_score": 5.0881,
-        "vice_score": 4.8635,
-        "bench_score": 4.8369,
+        "captain_score": 5.0891,
+        "vice_score": 4.8645,
+        "bench_score": 4.8378,
         "interval_width": 5.658
       },
       {
@@ -529,31 +529,31 @@
       "team": "Man Utd",
       "xpts": 5.128,
       "lower80": 2.247,
-      "upper80": 8.01,
+      "upper80": 8.009,
       "start_probability": 0.9079,
       "bench_probability": 0.0092,
       "dnp_probability": 0.0829,
       "availability": 0.9171,
-      "captain_score": 5.3371,
+      "captain_score": 5.3369,
       "vice_score": 5.1104,
       "bench_score": 5.0731,
-      "interval_width": 5.763
+      "interval_width": 5.762
     },
     "vice_captain": {
       "element": 411,
       "name": "Haaland",
       "position": "FWD",
       "team": "Man City",
-      "xpts": 4.895,
-      "lower80": 2.066,
-      "upper80": 7.724,
+      "xpts": 4.896,
+      "lower80": 2.067,
+      "upper80": 7.725,
       "start_probability": 0.9014,
       "bench_probability": 0.0099,
       "dnp_probability": 0.0887,
       "availability": 0.9113,
-      "captain_score": 5.0881,
-      "vice_score": 4.8635,
-      "bench_score": 4.8369,
+      "captain_score": 5.0891,
+      "vice_score": 4.8645,
+      "bench_score": 4.8378,
       "interval_width": 5.658
     },
     "bench": {
@@ -660,9 +660,9 @@
     "composition_from_effective_team_contract": true
   },
   "lineage": {
-    "engine_lineup_sha256": "8cd6f7b6b0012080a3bbbdf1266a74be3dc5ec6d39cc62b4245b241f2b917a07",
-    "team_sha256": "e291903c865c98c285dbfe2e705aefb7a3db22c319e8364026a08ce6ca4432ff",
-    "latest_sha256": "26efc7bc950318915bcc49356c80969475002c995ea3ed2b391f406ec7e0f692"
+    "engine_lineup_sha256": "172dfe369eff79c2b500ba385f8806d75b736a54bb9653f1a961963e24de7c21",
+    "team_sha256": "26243cc065a2ed34afef1685b4663e0024552314f14eda888aa95e7eb074f899",
+    "latest_sha256": "7b93674210d4d7c50f1973ecd56f6b9b53a06e3d9990c00c69409cf6e0e1d979"
   },
-  "performance_ms": 5.82
+  "performance_ms": 4.14
 }

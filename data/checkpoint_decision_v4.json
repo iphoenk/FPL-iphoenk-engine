@@ -1,32 +1,29 @@
 {
   "schema_version": 492,
   "engine": "v4.9.2-checkpoint-governance",
-  "evaluated_at": "2026-08-27T14:29:00.588225+00:00",
+  "evaluated_at": "2026-08-27T16:07:32.373622+00:00",
   "checkpoint_context": {
-    "policy_id": "NIGHT_TACTICAL_PRICE_2130",
-    "label": "21.30 Night Tactical + Price Monitor",
+    "policy_id": "REGULAR_MONITOR",
+    "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-27T14:28:52.061619+00:00",
-    "local_as_of": "2026-08-27T21:28:52.061619+07:00",
+    "as_of": "2026-08-27T16:07:26.419670+00:00",
+    "local_as_of": "2026-08-27T23:07:26.419670+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 1621.1,
+    "minutes_to_deadline": 1522.6,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
-    "max_snapshot_age_minutes": 60,
-    "recommended_refresh_minutes": 30,
+    "max_snapshot_age_minutes": 90,
+    "recommended_refresh_minutes": 180,
     "report_scope": [
       "personal_gw_scorecard",
       "gate0",
       "locked_15",
       "availability",
       "xmins",
-      "role",
-      "rotation",
       "price_radar",
-      "challengers",
-      "lineup_watch"
+      "challengers"
     ],
     "registry": "fpl_checkpoint_policy_v1",
     "registry_schema_version": 1
@@ -375,7 +372,7 @@
       "vice_captain": {
         "element": 411,
         "name": "Haaland",
-        "xpts": 4.895
+        "xpts": 4.896
       },
       "active_chip": "WILDCARD",
       "chip_short": "WC",
@@ -442,7 +439,7 @@
           "element": 411,
           "name": "Haaland",
           "position": "FWD",
-          "xpts": 4.895
+          "xpts": 4.896
         },
         {
           "element": 165,
@@ -556,8 +553,8 @@
     "health_go_allowed": false,
     "freshness": {
       "pass": true,
-      "age_minutes": 0.12,
-      "max_age_minutes": 60,
+      "age_minutes": 0.08,
+      "max_age_minutes": 90,
       "reason": null
     },
     "critical_partial": [],
@@ -575,11 +572,8 @@
     "locked_15",
     "availability",
     "xmins",
-    "role",
-    "rotation",
     "price_radar",
-    "challengers",
-    "lineup_watch"
+    "challengers"
   ],
   "guardrails": {
     "raw_optimizer_not_authoritative": true,

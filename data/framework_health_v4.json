@@ -3,30 +3,27 @@
   "engine": "v4.9.2-truthful-health",
   "phase": "postflight",
   "checkpoint_context": {
-    "policy_id": "NIGHT_TACTICAL_PRICE_2130",
-    "label": "21.30 Night Tactical + Price Monitor",
+    "policy_id": "REGULAR_MONITOR",
+    "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-27T14:28:52.061619+00:00",
-    "local_as_of": "2026-08-27T21:28:52.061619+07:00",
+    "as_of": "2026-08-27T16:07:26.419670+00:00",
+    "local_as_of": "2026-08-27T23:07:26.419670+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 1621.1,
+    "minutes_to_deadline": 1522.6,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
-    "max_snapshot_age_minutes": 60,
-    "recommended_refresh_minutes": 30,
+    "max_snapshot_age_minutes": 90,
+    "recommended_refresh_minutes": 180,
     "report_scope": [
       "personal_gw_scorecard",
       "gate0",
       "locked_15",
       "availability",
       "xmins",
-      "role",
-      "rotation",
       "price_radar",
-      "challengers",
-      "lineup_watch"
+      "challengers"
     ],
     "registry": "fpl_checkpoint_policy_v1",
     "registry_schema_version": 1
@@ -111,31 +108,31 @@
         "id": "G0-10",
         "name": "Legal XI Formation",
         "status": "PASS",
-        "detail": "formation=3-4-3,xi=11"
+        "detail": "engine[formation=3-4-3,xi=11];effective[formation=3-5-2,xi=11]"
       },
       {
         "id": "G0-11",
         "name": "Exactly 1 Starting Goalkeeper",
         "status": "PASS",
-        "detail": "starting GK"
+        "detail": "engine[starting GK];effective[starting GK]"
       },
       {
         "id": "G0-12",
         "name": "Captain and Vice in Starting XI and Distinct",
         "status": "PASS",
-        "detail": "captain=426,vice=411"
+        "detail": "engine[captain=426,vice=411];effective[captain=426,vice=411]"
       },
       {
         "id": "G0-13",
         "name": "Bench Structure = 1 GK + 3 Outfield",
         "status": "PASS",
-        "detail": "bench structure"
+        "detail": "engine[bench structure];effective[bench structure]"
       },
       {
         "id": "G0-14",
         "name": "Single-Chip Rule / Chip Legality",
         "status": "PASS",
-        "detail": "single_chip=True,rules=PASS"
+        "detail": "engine[single_chip=True,rules=PASS];effective[single_chip=True,rules=PASS]"
       },
       {
         "id": "G0-15",
@@ -156,6 +153,19 @@
       "declared": 16,
       "duplicate_ids": [],
       "integrity_ok": true
+    },
+    "plan_authority_validation": {
+      "engine_plan": {
+        "authority": "ENGINE_RECOMMENDATION",
+        "formation": "3-4-3",
+        "legal": true
+      },
+      "effective_plan": {
+        "authority": "USER_OVERRIDE",
+        "formation": "3-5-2",
+        "legal": true
+      },
+      "both_required": true
     }
   },
   "dss_core": {
@@ -180,9 +190,9 @@
         ],
         "probe": "universe_identity",
         "detail": {
-          "players": 614,
-          "valid": 614,
-          "unique_ids": 614
+          "players": 616,
+          "valid": 616,
+          "unique_ids": 616
         }
       },
       {
@@ -196,9 +206,9 @@
         ],
         "probe": "universe_price_position",
         "detail": {
-          "players": 614,
-          "valid": 614,
-          "unique_ids": 614
+          "players": 616,
+          "valid": 616,
+          "unique_ids": 616
         }
       },
       {
@@ -211,9 +221,9 @@
         ],
         "probe": "universe_registration",
         "detail": {
-          "players": 614,
-          "valid": 614,
-          "unique_ids": 614
+          "players": 616,
+          "valid": 616,
+          "unique_ids": 616
         }
       },
       {
@@ -227,7 +237,7 @@
         ],
         "probe": "availability",
         "detail": {
-          "players": 614,
+          "players": 616,
           "coverage": 1.0
         }
       },
@@ -241,11 +251,11 @@
         ],
         "probe": "xmins",
         "detail": {
-          "fixture_distributions_checked": 1842,
-          "enriched_prior_distributions": 1842,
+          "fixture_distributions_checked": 1848,
+          "enriched_prior_distributions": 1848,
           "strong_direct_evidence_players": 72,
           "strong_direct_evidence_min_pstart": 0.8207,
-          "no_evidence_players": 92,
+          "no_evidence_players": 90,
           "no_evidence_max_xmins": 7.0,
           "direct_evidence_sanity": true
         }
@@ -260,11 +270,11 @@
         ],
         "probe": "xmins_distribution",
         "detail": {
-          "fixture_distributions_checked": 1842,
-          "enriched_prior_distributions": 1842,
+          "fixture_distributions_checked": 1848,
+          "enriched_prior_distributions": 1848,
           "strong_direct_evidence_players": 72,
           "strong_direct_evidence_min_pstart": 0.8207,
-          "no_evidence_players": 92,
+          "no_evidence_players": 90,
           "no_evidence_max_xmins": 7.0,
           "direct_evidence_sanity": true
         }
@@ -279,10 +289,10 @@
         ],
         "probe": "tactical_role",
         "detail": {
-          "players": 614,
-          "role_covered": 614,
-          "source_covered": 614,
-          "competition_consumed": 583
+          "players": 616,
+          "role_covered": 616,
+          "source_covered": 616,
+          "competition_consumed": 585
         }
       },
       {
@@ -308,12 +318,12 @@
         ],
         "probe": "rotation_competition",
         "detail": {
-          "players": 614,
-          "covered": 614,
-          "role_matched_adjustments": 583,
+          "players": 616,
+          "covered": 616,
+          "role_matched_adjustments": 585,
           "unadjusted_players": 31,
           "distinct_competition_factors": 17,
-          "flag_factor_consistent": 614,
+          "flag_factor_consistent": 616,
           "broad_position_diagnostics": 0,
           "reason": null
         }
@@ -328,12 +338,12 @@
         ],
         "probe": "set_piece_role",
         "detail": {
-          "fixtures": 614,
-          "covered": 614,
-          "empirical_shares": 614,
-          "posterior_team_shares": 614,
-          "prior_reallocation": 614,
-          "adjusted_fixtures": 614,
+          "fixtures": 616,
+          "covered": 616,
+          "empirical_shares": 616,
+          "posterior_team_shares": 616,
+          "prior_reallocation": 616,
+          "adjusted_fixtures": 616,
           "reason": null
         }
       },
@@ -347,12 +357,12 @@
         ],
         "probe": "penalty_role",
         "detail": {
-          "fixtures": 614,
-          "covered": 614,
-          "empirical_shares": 614,
-          "posterior_team_shares": 614,
-          "prior_reallocation": 614,
-          "adjusted_fixtures": 614,
+          "fixtures": 616,
+          "covered": 616,
+          "empirical_shares": 616,
+          "posterior_team_shares": 616,
+          "prior_reallocation": 616,
+          "adjusted_fixtures": 616,
           "reason": null
         }
       },
@@ -370,13 +380,14 @@
           "prediction_sources": [
             "fpl_core_insights:players",
             "fpl_core_insights:players+fpl_core_insights:playermatchstats",
-            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
+            "official_fpl_current_state"
           ],
           "consumed_players": 614,
           "materially_distinct_players": 11,
           "materially_distinct_ratio": 0.0179,
           "decision_used_players": 310,
-          "decision_used_ratio": 0.5049,
+          "decision_used_ratio": 0.5032,
           "active_minimum_ratio": 0.25,
           "synced_but_not_consumed_broadly": false
         }
@@ -395,13 +406,14 @@
           "prediction_sources": [
             "fpl_core_insights:players",
             "fpl_core_insights:players+fpl_core_insights:playermatchstats",
-            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
+            "official_fpl_current_state"
           ],
           "consumed_players": 614,
           "materially_distinct_players": 11,
           "materially_distinct_ratio": 0.0179,
           "decision_used_players": 310,
-          "decision_used_ratio": 0.5049,
+          "decision_used_ratio": 0.5032,
           "active_minimum_ratio": 0.25,
           "synced_but_not_consumed_broadly": false
         }
@@ -554,9 +566,9 @@
         ],
         "probe": "opponent_defence_dynamic",
         "detail": {
-          "fixtures": 1842,
-          "covered": 1842,
-          "dynamic_defence": 1842,
+          "fixtures": 1848,
+          "covered": 1848,
+          "dynamic_defence": 1848,
           "neutral_overall_fallback": 0,
           "distinct_scoring_ratings": 18,
           "reason": null
@@ -573,8 +585,8 @@
         "probe": "horizon_3",
         "detail": {
           "field": "xpts_3",
-          "players": 614,
-          "covered": 614
+          "players": 616,
+          "covered": 616
         }
       },
       {
@@ -588,8 +600,8 @@
         "probe": "horizon_5",
         "detail": {
           "field": "xpts_5",
-          "players": 614,
-          "covered": 614
+          "players": 616,
+          "covered": 616
         }
       },
       {
@@ -603,8 +615,8 @@
         "probe": "horizon_10",
         "detail": {
           "field": "xpts_10",
-          "players": 614,
-          "covered": 614
+          "players": 616,
+          "covered": 616
         }
       },
       {
@@ -618,8 +630,8 @@
         "probe": "horizon_15",
         "detail": {
           "field": "xpts_15",
-          "players": 614,
-          "covered": 614
+          "players": 616,
+          "covered": 616
         }
       },
       {
@@ -768,8 +780,8 @@
         ],
         "probe": "price_value",
         "detail": {
-          "players": 614,
-          "value_covered": 614,
+          "players": 616,
+          "value_covered": 616,
           "optimizer_consumed": true
         }
       },
@@ -976,7 +988,7 @@
         ],
         "probe": "leakage_guard",
         "detail": {
-          "players": 614,
+          "players": 616,
           "provenance_samples": 50
         }
       },
@@ -1163,8 +1175,8 @@
         "probe": "data_freshness",
         "detail": {
           "age_minutes": 0.1,
-          "max_age_minutes": 60,
-          "checkpoint_policy_id": "NIGHT_TACTICAL_PRICE_2130"
+          "max_age_minutes": 90,
+          "checkpoint_policy_id": "REGULAR_MONITOR"
         }
       },
       {
@@ -1213,14 +1225,14 @@
         "probe": "runtime_observability",
         "detail": {
           "timings": {
-            "load_shared_inputs_and_candidates_ms": 358.5,
-            "wc_decision_cpu_ms": 477.9,
-            "package_audit_cpu_ms": 2246.6,
-            "wc_package_parallel_wall_ms": 2288.2,
-            "parallel_speedup_estimate": 1.191,
-            "lineup_ms": 2.3,
-            "evidence_sanity_ms": 3.1,
-            "total_pipeline_ms": 2671.8
+            "load_shared_inputs_and_candidates_ms": 258.1,
+            "wc_decision_cpu_ms": 311.6,
+            "package_audit_cpu_ms": 1344.7,
+            "wc_package_parallel_wall_ms": 1367.3,
+            "parallel_speedup_estimate": 1.211,
+            "lineup_ms": 1.7,
+            "evidence_sanity_ms": 1.8,
+            "total_pipeline_ms": 1709.7
           }
         }
       }
@@ -1261,13 +1273,14 @@
             "prediction_sources": [
               "fpl_core_insights:players",
               "fpl_core_insights:players+fpl_core_insights:playermatchstats",
-              "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
+              "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
+              "official_fpl_current_state"
             ],
             "consumed_players": 614,
             "materially_distinct_players": 11,
             "materially_distinct_ratio": 0.0179,
             "decision_used_players": 310,
-            "decision_used_ratio": 0.5049,
+            "decision_used_ratio": 0.5032,
             "active_minimum_ratio": 0.25,
             "synced_but_not_consumed_broadly": false
           }
@@ -1284,7 +1297,7 @@
         ],
         "probe": "leakage_guard",
         "detail": {
-          "players": 614,
+          "players": 616,
           "provenance_samples": 50
         }
       },
@@ -1316,8 +1329,8 @@
         "probe": "multi_horizon",
         "detail": {
           "field": "xpts_15",
-          "players": 614,
-          "covered": 614
+          "players": 616,
+          "covered": 616
         }
       },
       {
@@ -1412,8 +1425,8 @@
     "status": "PASS",
     "detail": {
       "age_minutes": 0.1,
-      "max_age_minutes": 60,
-      "checkpoint_policy_id": "NIGHT_TACTICAL_PRICE_2130"
+      "max_age_minutes": 90,
+      "checkpoint_policy_id": "REGULAR_MONITOR"
     }
   },
   "source_health": {
@@ -1445,12 +1458,15 @@
     "health_check_must_precede_recommendation": true,
     "raw_optimizer_is_not_final_decision": true,
     "preflight_defers_postflight_outputs": true,
-    "checkpoint_freshness_policy_enforced": true
+    "checkpoint_freshness_policy_enforced": true,
+    "effective_plan_legality_enforced": true,
+    "engine_and_effective_plan_legality_reported_separately": true
   },
   "performance": {
     "prediction_snapshot_reads": 1,
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 416.48
+  "performance_ms": 294.16,
+  "release": "4.9.4.3"
 }

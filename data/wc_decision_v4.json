@@ -119,16 +119,16 @@
     ],
     "fail_closed_on_missing_purchase_price": true
   },
-  "screened_players": 571,
+  "screened_players": 570,
   "current": {
     "cost": 995,
-    "objective": 52.9086,
+    "objective": 52.9097,
     "squad_xpts_3": 156.94,
-    "squad_xpts_5": 261.52,
-    "squad_xpts_10": 523.38,
+    "squad_xpts_5": 261.53,
+    "squad_xpts_10": 523.39,
     "squad_xpts_15": 784.95,
-    "best_xi_xpts_5": 205.59,
-    "bench_adjusted_utility_5": 212.3,
+    "best_xi_xpts_5": 205.6,
+    "bench_adjusted_utility_5": 212.31,
     "best_xi_by_gw": [
       {
         "gw_offset": 1,
@@ -183,7 +183,7 @@
       },
       {
         "gw_offset": 4,
-        "xpts": 40.95,
+        "xpts": 40.96,
         "elements": [
           109,
           115,
@@ -219,11 +219,11 @@
   },
   "optimized": {
     "cost": 1000,
-    "objective": 60.4038,
+    "objective": 60.4037,
     "squad_xpts_3": 181.24,
     "squad_xpts_5": 298.16,
     "squad_xpts_10": 593.92,
-    "squad_xpts_15": 890.86,
+    "squad_xpts_15": 890.85,
     "best_xi_xpts_5": 229.81,
     "bench_adjusted_utility_5": 238.01,
     "best_xi_by_gw": [
@@ -316,8 +316,8 @@
     "itb": 0
   },
   "delta": {
-    "best_xi_xpts_5": 24.22,
-    "bench_adjusted_utility_5": 25.71
+    "best_xi_xpts_5": 24.21,
+    "bench_adjusted_utility_5": 25.7
   },
   "classification": "MATERIAL_UPGRADE",
   "out": [
@@ -597,8 +597,8 @@
       "challenger_name": "Thiago",
       "position": "FWD",
       "cost_delta": -75,
-      "objective_delta": -0.5491,
-      "xpts5_delta": -3.06
+      "objective_delta": -0.5503,
+      "xpts5_delta": -3.07
     }
   ],
   "hard_constraints": {
@@ -627,8 +627,8 @@
     "safe_objective_bound": true,
     "fixed_position_finalist_scoring": true,
     "finalist_materialization_removed": true,
-    "generated_states": 188884,
-    "objective_bound_pruned": 1783002,
+    "generated_states": 188857,
+    "objective_bound_pruned": 1783004,
     "beam_size_unchanged": true,
     "direct_challenger_position_index": true,
     "value_term_consumed": true,

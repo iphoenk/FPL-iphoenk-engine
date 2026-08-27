@@ -3,7 +3,7 @@
   "dataset": "playermatchstats",
   "season": "2026-2027",
   "gw": 1,
-  "fetched_at": "2026-08-27T14:28:53.069043+00:00",
+  "fetched_at": "2026-08-27T16:07:27.361848+00:00",
   "source_url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/2026-2027/By%20Gameweek/GW1/playermatchstats.csv",
   "row_count": 400,
   "schema_columns": [

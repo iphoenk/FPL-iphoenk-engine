@@ -1,6 +1,6 @@
 {
-  "version": "3.20.2",
-  "schema_version": 48,
+  "version": "3.21.0",
+  "schema_version": 49,
   "release_metadata_source": "src/version.py",
   "P0": {
     "status": "IMPLEMENTED",
@@ -50,7 +50,7 @@
       "report serving artifacts carry report-time intelligence for fast and deep reports",
       "monolithic base collector replaced by artifact-owned Official/team/market/live/stats/snapshot services",
       "generic dependency-driven root-service scheduling",
-      "canonical SOURCE_REGISTRY_V3 ownership for source network locations and ingestion timeouts",
+      "canonical source-registry ownership for source network locations and ingestion timeouts",
       "legacy config/sources.json removed",
       "collector cadence and match/deadline windows registry-owned",
       "deep stats routed through production runtime-data publication instead of main",
@@ -69,7 +69,15 @@
       "runtime artifact contract registry for contract-specific validation",
       "challenger observation schema/contract validation at the microservice boundary",
       "valid empty external observations remain fail-soft while malformed artifacts fail integrity checks",
-      "latest.json sidecars are strict-JSON validated before isolated-service fan-in"
+      "latest.json sidecars are strict-JSON validated before isolated-service fan-in",
+      "Open-Meteo WEATHER_ENRICHMENT inside Source Layer without adding a microservice",
+      "registry-owned Premier League venue coordinates and weather thresholds/freshness/severity",
+      "persisted fixture weather observations with closest-to-kickoff post-match context",
+      "weather remains observational/advisory and cannot directly mutate xPts, captaincy, XI, transfer or watchlist decisions",
+      "all 15 owned report rows expose current-GW xPts, uncertainty, lineup status and OPEN/current choice state",
+      "projection-confidence calibration guard with GW5 review trigger",
+      "settled frozen-prediction validation status exposed in every serving report",
+      "report contract explicitly separates formula correctness from predictive accuracy"
     ]
   },
   "P1": {
@@ -81,7 +89,8 @@
       "advanced stats query CLI",
       "FastAPI live endpoints",
       "SSE live stream",
-      "team/universe split outputs"
+      "team/universe split outputs",
+      "weather-performance anomaly correlation framework awaiting settled-match calibration"
     ]
   },
   "P2": {
@@ -98,7 +107,8 @@
       "live EO population model",
       "production ML projection model",
       "full mini-league rival spy",
-      "literal heatmap renderer"
+      "literal heatmap renderer",
+      "causal weather-performance effect model"
     ]
   }
 }

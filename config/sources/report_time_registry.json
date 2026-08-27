@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "registry": "REPORT_TIME_SOURCE_REGISTRY_V1",
+  "policy": {
+    "official_fpl_remains_native_authority": true,
+    "report_time_sources_never_mutate_dss": true,
+    "report_time_sources_never_override_verified_facts": true,
+    "missing_evidence_is_not_fabricated": true,
+    "web_search_refresh_required_for_each_report": true,
+    "stale_evidence_may_be_shown_but_not_counted_as_current_consensus": true,
+    "community_signal_requires_crosscheck_before_fact_promotion": true,
+    "pundit_consensus_is_advisory_only": true,
+    "fixture_strategy_experts_do_not_vote_on_player_projection": true,
+    "onefpl_is_report_time_only": true
+  },
+  "consensus": {
+    "minimum_current_pundits": 2,
+    "strong_consensus_ratio": 0.75,
+    "simple_consensus_ratio": 0.5,
+    "maximum_single_source_weight": 1.0,
+    "freshness_hours": {
+      "MODEL_CHALLENGER": 12,
+      "FIXTURE_STRATEGY_EXPERT": 72,
+      "PUNDIT_CONSENSUS": 48,
+      "COMMUNITY_SIGNAL": 12,
+      "VERIFIED_NEWS": 12
+    }
+  },
+  "sources": [
+    {
+      "id": "onefpl",
+      "name": "OneFPL",
+      "class": "MODEL_CHALLENGER",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_WEB",
+      "domains": ["onefpl.com"],
+      "queries": ["OneFPL FPL prices", "OneFPL transfer trends", "OneFPL captaincy"],
+      "capabilities": ["price_prediction", "transfer_trends", "captaincy_context", "planner_context"],
+      "consensus_vote": false,
+      "authority_ceiling": "ADVISORY"
+    },
+    {
+      "id": "ben_crellin",
+      "name": "Ben Crellin",
+      "class": "FIXTURE_STRATEGY_EXPERT",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_WEB",
+      "domains": ["x.com", "fantasyfootballhub.co.uk"],
+      "queries": ["Ben Crellin FPL blank double fixtures", "Ben Crellin FPL calendar"],
+      "capabilities": ["blank_gameweek", "double_gameweek", "fixture_rearrangement", "schedule_probability", "chip_window"],
+      "consensus_vote": false,
+      "authority_ceiling": "STRATEGY_CONTEXT"
+    },
+    {
+      "id": "fpl_harry",
+      "name": "FPL Harry",
+      "class": "PUNDIT_CONSENSUS",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_WEB",
+      "domains": ["youtube.com", "x.com"],
+      "queries": ["FPL Harry Gameweek", "FPL Harry captain transfers"],
+      "capabilities": ["buy_sell", "captaincy", "chip_opinion", "role_opinion", "team_reveal"],
+      "consensus_vote": true,
+      "authority_ceiling": "ADVISORY"
+    },
+    {
+      "id": "fpl_focal",
+      "name": "FPL Focal",
+      "class": "PUNDIT_CONSENSUS",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_WEB",
+      "domains": ["youtube.com", "x.com"],
+      "queries": ["FPL Focal Gameweek", "FPL Focal captain transfers"],
+      "capabilities": ["buy_sell", "captaincy", "chip_opinion", "role_opinion", "team_reveal"],
+      "consensus_vote": true,
+      "authority_ceiling": "ADVISORY"
+    },
+    {
+      "id": "lets_talk_fpl",
+      "name": "Let's Talk FPL",
+      "class": "PUNDIT_CONSENSUS",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_WEB",
+      "domains": ["youtube.com", "x.com"],
+      "queries": ["Let's Talk FPL Gameweek", "Let's Talk FPL captain transfers"],
+      "capabilities": ["buy_sell", "captaincy", "chip_opinion", "role_opinion", "team_reveal"],
+      "consensus_vote": true,
+      "authority_ceiling": "ADVISORY"
+    },
+    {
+      "id": "bigmanbakar",
+      "name": "BigManBakar",
+      "class": "PUNDIT_CONSENSUS",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_WEB",
+      "domains": ["x.com", "fantasyfootballhub.co.uk"],
+      "queries": ["BigManBakar FPL Gameweek", "BigManBakar FPL captain transfers"],
+      "capabilities": ["buy_sell", "captaincy", "chip_opinion", "statistics_opinion", "team_reveal"],
+      "consensus_vote": true,
+      "authority_ceiling": "ADVISORY"
+    },
+    {
+      "id": "ffscout_editorial",
+      "name": "Fantasy Football Scout editorial",
+      "class": "PUNDIT_CONSENSUS",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_WEB",
+      "domains": ["fantasyfootballscout.co.uk"],
+      "queries": ["Fantasy Football Scout Gameweek team news", "Fantasy Football Scout captaincy"],
+      "capabilities": ["team_news_context", "predicted_lineups", "buy_sell", "captaincy", "role_opinion", "set_piece_context"],
+      "consensus_vote": true,
+      "authority_ceiling": "ADVISORY"
+    },
+    {
+      "id": "reddit_fantasypl",
+      "name": "Reddit r/FantasyPL",
+      "class": "COMMUNITY_SIGNAL",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_WEB",
+      "domains": ["reddit.com"],
+      "queries": ["site:reddit.com/r/FantasyPL How did play FPL", "site:reddit.com/r/FantasyPL captain poll FPL", "site:reddit.com/r/FantasyPL Gameweek discussion"],
+      "capabilities": ["eye_test", "captain_poll", "rotation_observation", "role_change_signal", "injury_observation", "sentiment"],
+      "consensus_vote": false,
+      "authority_ceiling": "LEAD_REQUIRES_CROSSCHECK"
+    },
+    {
+      "id": "premier_league_official_news",
+      "name": "Premier League / official club news",
+      "class": "VERIFIED_NEWS",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_WEB",
+      "domains": ["premierleague.com"],
+      "queries": ["Premier League team news injuries Gameweek", "official club injury team news Premier League"],
+      "capabilities": ["availability", "suspension", "fixture_confirmation", "manager_quote"],
+      "consensus_vote": false,
+      "authority_ceiling": "VERIFIED_CONTEXT"
+    }
+  ]
+}

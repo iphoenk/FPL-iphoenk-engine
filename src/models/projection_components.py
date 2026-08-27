@@ -38,6 +38,33 @@ def _blended_rate(player: dict[str, Any], cumulative_field: str, prior: float, s
     return max(0.0, blended), source
 
 
+def robust_attack_rate(player: dict[str, Any], cumulative_field: str, prior: float, config: dict[str, Any]) -> tuple[float, str, dict[str, Any]]:
+    minutes = max(0.0, _f(player.get("minutes")))
+    cumulative = max(0.0, _f(player.get(cumulative_field)))
+    if minutes <= 0:
+        return max(0.0, prior), "position_or_historical_prior", {"minutes": 0.0, "raw_observed90": None, "bounded_observed90": None, "cap_multiplier": None, "shrink_minutes": None, "winsorized": False}
+    tiers = list(config.get("tiers") or [])
+    if not tiers:
+        raise RuntimeError("REC-02 robust rate tiers missing")
+    selected = None
+    for tier in tiers:
+        max_minutes = tier.get("max_minutes")
+        if max_minutes is None or minutes <= float(max_minutes):
+            selected = tier
+            break
+    if selected is None:
+        selected = tiers[-1]
+    cap_multiplier = max(1.0, _f(selected.get("upper_prior_multiplier"), 6.0))
+    shrink_minutes = max(0.0, _f(selected.get("shrink_minutes"), 450.0))
+    raw_observed = cumulative * 90.0 / minutes
+    upper = max(prior * cap_multiplier, _f(config.get("absolute_upper_rate90"), 1.5))
+    bounded = clamp(raw_observed, 0.0, upper)
+    blended = (bounded * minutes + prior * shrink_minutes) / max(1e-6, minutes + shrink_minutes)
+    winsorized = abs(bounded - raw_observed) > 1e-12
+    source = "robust_observed_shrunk_to_prior" + ("_winsorized" if winsorized else "")
+    return max(0.0, blended), source, {"minutes": round(minutes, 1), "raw_observed90": round(raw_observed, 4), "bounded_observed90": round(bounded, 4), "cap_multiplier": cap_multiplier, "shrink_minutes": shrink_minutes, "winsorized": winsorized}
+
+
 def _poisson_tail_at_least(threshold: int, expected_count: float) -> float:
     if threshold <= 0:
         return 1.0
@@ -68,54 +95,28 @@ def _poisson_rate_for_tail(threshold: int, target_probability: float) -> float:
     return (low + high) / 2.0
 
 
-def defensive_contribution_rate_bundle(
-    player: dict[str, Any],
-    feature: dict[str, Any] | None,
-    prior_expected_points90: float,
-    shrink_minutes: float,
-) -> dict[str, Any]:
+def defensive_contribution_rate_bundle(player: dict[str, Any], feature: dict[str, Any] | None, prior_expected_points90: float, shrink_minutes: float) -> dict[str, Any]:
     element_type = int(player.get("element_type") or 4)
     rule = DC_RULES.get(element_type) or {}
     if not bool(rule.get("eligible")):
-        return {
-            "dc90": 0.0,
-            "dc_count90": 0.0,
-            "dc_threshold": None,
-            "dc_points": 0.0,
-            "dc_source": "ineligible_position",
-            "dc_evidence_minutes": 0.0,
-            "dc_sample_quality": "INELIGIBLE",
-        }
-
+        return {"dc90": 0.0, "dc_count90": 0.0, "dc_threshold": None, "dc_points": 0.0, "dc_source": "ineligible_position", "dc_evidence_minutes": 0.0, "dc_sample_quality": "INELIGIBLE"}
     threshold = int(rule.get("threshold") or 0)
     points = float(rule.get("points") or 0.0)
     prior_probability = clamp(prior_expected_points90 / max(points, 1e-6), 0.0, 0.999999)
     prior_count90 = _poisson_rate_for_tail(threshold, prior_probability)
-
     advanced = (feature or {}).get("advanced_current") or {}
     evidence_minutes = max(0.0, _f(advanced.get("minutes")))
     observed_count90_raw = advanced.get("dc_reconstructed_per90")
     has_observed = evidence_minutes > 0 and observed_count90_raw is not None
     observed_count90 = max(0.0, _f(observed_count90_raw, prior_count90))
     if has_observed:
-        count90 = (
-            observed_count90 * evidence_minutes + prior_count90 * shrink_minutes
-        ) / max(1e-6, evidence_minutes + shrink_minutes)
+        count90 = (observed_count90 * evidence_minutes + prior_count90 * shrink_minutes) / max(1e-6, evidence_minutes + shrink_minutes)
         source = "player_cbit_cbirt_shrunk_to_position_prior"
     else:
         count90 = prior_count90
         source = "position_prior_probability_calibrated"
-
     expected_points90 = points * _poisson_tail_at_least(threshold, count90)
-    return {
-        "dc90": max(0.0, expected_points90),
-        "dc_count90": max(0.0, count90),
-        "dc_threshold": threshold,
-        "dc_points": points,
-        "dc_source": source,
-        "dc_evidence_minutes": evidence_minutes,
-        "dc_sample_quality": advanced.get("sample_quality") or "NO_ADVANCED_EVIDENCE",
-    }
+    return {"dc90": max(0.0, expected_points90), "dc_count90": max(0.0, count90), "dc_threshold": threshold, "dc_points": points, "dc_source": source, "dc_evidence_minutes": evidence_minutes, "dc_sample_quality": advanced.get("sample_quality") or "NO_ADVANCED_EVIDENCE"}
 
 
 def _p60(xmins: dict[str, Any], cfg: dict[str, Any]) -> float:
@@ -127,14 +128,7 @@ def _p60(xmins: dict[str, Any], cfg: dict[str, Any]) -> float:
     return clamp(_f(xmins.get("start_probability")) * conditional, 0.0, 1.0)
 
 
-def _project_fixture(
-    player: dict[str, Any],
-    xmins: dict[str, Any],
-    matchup: dict[str, Any],
-    home: bool,
-    rate_bundle: dict[str, Any],
-    small_sample: bool,
-) -> dict[str, Any]:
+def _project_fixture(player: dict[str, Any], xmins: dict[str, Any], matchup: dict[str, Any], home: bool, rate_bundle: dict[str, Any], small_sample: bool) -> dict[str, Any]:
     cfg = load_projection_config()
     element_type = int(player.get("element_type") or 4)
     position = str(player.get("position") or ELEMENT_TYPE_TO_POSITION.get(element_type) or "FWD")
@@ -144,24 +138,14 @@ def _project_fixture(
     p_bench = clamp(_f(xmins.get("bench_probability")), 0.0, 1.0 - p_start)
     p_appearance = clamp(p_start + p_bench, 0.0, 1.0)
     p60 = _p60(xmins, cfg)
-
     team_xg = _f(matchup.get("home_expected_goals") if home else matchup.get("away_expected_goals"), 1.3)
     league_base = _f((read_json(TEAM_STRENGTH_OUT, {}).get("baseline") or {}).get("home_goals" if home else "away_goals"), 1.3)
-    attack_multiplier = clamp(
-        team_xg / max(0.2, league_base),
-        _f(cfg.get("attack_multiplier_min"), 0.55),
-        _f(cfg.get("attack_multiplier_max"), 1.75),
-    )
+    attack_multiplier = clamp(team_xg / max(0.2, league_base), _f(cfg.get("attack_multiplier_min"), 0.55), _f(cfg.get("attack_multiplier_max"), 1.75))
     cs_prob = clamp(_f(matchup.get("home_clean_sheet_probability") if home else matchup.get("away_clean_sheet_probability")), 0.0, 1.0)
-
     appearance = p_start + p_bench + p60
-    attack = (
-        _f(rate_bundle.get("xg90")) * GOAL_POINTS.get(element_type, 4)
-        + _f(rate_bundle.get("xa90")) * ASSIST_POINTS
-    ) * share * attack_multiplier
+    attack = (_f(rate_bundle.get("xg90")) * GOAL_POINTS.get(element_type, 4) + _f(rate_bundle.get("xa90")) * ASSIST_POINTS) * share * attack_multiplier
     clean_sheet = CLEAN_SHEET_POINTS.get(element_type, 0) * cs_prob * p60
     saves = (_f(rate_bundle.get("saves90")) / 3.0) * share if position == "GK" else 0.0
-
     dc_threshold = rate_bundle.get("dc_threshold")
     dc_count90 = rate_bundle.get("dc_count90")
     dc_points = _f(rate_bundle.get("dc_points"))
@@ -174,45 +158,8 @@ def _project_fixture(
         conditional_minutes = 0.0
         dc_threshold_probability = 0.0
         dc = 0.0
-
     bonus = _f(rate_bundle.get("bonus90")) * share
     mean = max(0.0, appearance + attack + clean_sheet + saves + dc + bonus)
-
     unc = cfg.get("uncertainty") or {}
-    std = max(
-        _f(unc.get("minimum_points_std"), 1.15),
-        mean * _f(unc.get("coefficient_of_variation"), 0.42)
-        + _f(xmins.get("minutes_std")) * _f(unc.get("xmins_std_points_multiplier"), 0.035)
-        + (_f(unc.get("small_sample_extra_std"), 0.45) if small_sample else 0.0),
-    )
-    return {
-        "event": matchup.get("event"),
-        "kickoff_time": matchup.get("kickoff_time"),
-        "opponent": matchup.get("team_a") if home else matchup.get("team_h"),
-        "home": home,
-        "team_expected_goals": round(team_xg, 4),
-        "clean_sheet_probability": round(cs_prob, 4),
-        "mean": round(mean, 3),
-        "std": round(std, 3),
-        "components": {
-            "appearance": round(appearance, 3),
-            "attack": round(attack, 3),
-            "clean_sheet": round(clean_sheet, 3),
-            "saves": round(saves, 3),
-            "defensive_contribution": round(dc, 3),
-            "bonus": round(bonus, 3),
-        },
-        "defensive_contribution_model": {
-            "model": "poisson_threshold_shrunk_rate_v1",
-            "eligible": position != "GK" and dc_threshold is not None,
-            "threshold": dc_threshold,
-            "points_on_threshold": dc_points,
-            "count_rate_per90": round(_f(dc_count90), 4),
-            "conditional_minutes": round(conditional_minutes, 2),
-            "threshold_probability_if_appears": round(dc_threshold_probability, 4),
-            "appearance_probability": round(p_appearance, 4),
-            "source": rate_bundle.get("dc_source"),
-            "evidence_minutes": round(_f(rate_bundle.get("dc_evidence_minutes")), 1),
-            "sample_quality": rate_bundle.get("dc_sample_quality"),
-        },
-    }
+    std = max(_f(unc.get("minimum_points_std"), 1.15), mean * _f(unc.get("coefficient_of_variation"), 0.42) + _f(xmins.get("minutes_std")) * _f(unc.get("xmins_std_points_multiplier"), 0.035) + (_f(unc.get("small_sample_extra_std"), 0.45) if small_sample else 0.0))
+    return {"event": matchup.get("event"), "kickoff_time": matchup.get("kickoff_time"), "opponent": matchup.get("team_a") if home else matchup.get("team_h"), "home": home, "team_expected_goals": round(team_xg, 4), "clean_sheet_probability": round(cs_prob, 4), "mean": round(mean, 3), "std": round(std, 3), "components": {"appearance": round(appearance, 3), "attack": round(attack, 3), "clean_sheet": round(clean_sheet, 3), "saves": round(saves, 3), "defensive_contribution": round(dc, 3), "bonus": round(bonus, 3)}, "defensive_contribution_model": {"model": "poisson_threshold_shrunk_rate_v1", "eligible": position != "GK" and dc_threshold is not None, "threshold": dc_threshold, "points_on_threshold": dc_points, "count_rate_per90": round(_f(dc_count90), 4), "conditional_minutes": round(conditional_minutes, 2), "threshold_probability_if_appears": round(dc_threshold_probability, 4), "appearance_probability": round(p_appearance, 4), "source": rate_bundle.get("dc_source"), "evidence_minutes": round(_f(rate_bundle.get("dc_evidence_minutes")), 1), "sample_quality": rate_bundle.get("dc_sample_quality")}}

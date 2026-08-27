@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "contract": "V5_INTERNAL_WIRE_V1",
+  "profile_env": "V5_INTERNAL_WIRE_PROFILE",
+  "default_profile": "json_compat",
+  "profiles": {
+    "json_compat": {
+      "codec": "json",
+      "invoke_path": "/v1/invoke/{operation}",
+      "content_type": "application/json",
+      "accept": "application/json"
+    },
+    "advanced_binary": {
+      "codec": "msgpack",
+      "invoke_path": "/v1/invoke-bin/{operation}",
+      "content_type": "application/msgpack",
+      "accept": "application/msgpack"
+    }
+  },
+  "allowed_codecs": ["json", "msgpack"],
+  "governance": {
+    "service_boundaries_remain_independent": true,
+    "business_authority_unchanged_by_codec": true,
+    "contract_version_required_for_all_profiles": true,
+    "json_compatibility_endpoint_remains_available": true,
+    "wire_profile_is_runtime_configuration_not_business_logic": true
+  }
+}

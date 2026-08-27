@@ -1,4299 +1,4299 @@
 {
-  "generated_at": "2026-08-27T04:06:41.090629+00:00",
+  "generated_at": "2026-08-27T04:11:25.554203+00:00",
   "players": {
     "1": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 8.8,
       "official_hourly_rate_pct": 0.16,
       "net_transfers": 20984
     },
     "2": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -50.4,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -771
     },
     "3": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -50.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -309
     },
     "4": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 80,
       "official_progress_pct": -5.2,
       "official_hourly_rate_pct": -0.71,
       "net_transfers": -43303
     },
     "5": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -41.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -2209
     },
     "6": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -37.9,
       "official_hourly_rate_pct": -0.09,
       "net_transfers": -4983
     },
     "7": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.9,
       "official_hourly_rate_pct": -0.09,
       "net_transfers": 716
     },
     "8": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 56,
       "official_progress_pct": 0.2,
       "official_hourly_rate_pct": 1.57,
       "net_transfers": 225951
     },
     "9": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -100.4,
       "official_hourly_rate_pct": -0.25,
       "net_transfers": -29005
     },
     "10": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 37.8,
       "official_hourly_rate_pct": 1.46,
       "net_transfers": 87832
     },
     "11": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -12.5,
       "official_hourly_rate_pct": -0.17,
       "net_transfers": -18385
     },
     "12": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 95,
       "official_progress_pct": 16.7,
       "official_hourly_rate_pct": 0.21,
       "net_transfers": 45264
     },
     "13": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 75,
       "official_progress_pct": -22.5,
       "official_hourly_rate_pct": -1.38,
       "net_transfers": -85634
     },
     "14": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -85.8,
       "official_hourly_rate_pct": -0.44,
       "net_transfers": -29098
     },
     "15": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": 99.0,
       "official_hourly_rate_pct": 3.2,
       "net_transfers": 199172
     },
     "16": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -88.1,
       "official_hourly_rate_pct": -0.11,
       "net_transfers": -5047
     },
     "17": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -89.8,
       "official_hourly_rate_pct": -0.14,
       "net_transfers": -10412
     },
     "18": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 64,
       "official_progress_pct": -8.0,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -4515
     },
     "19": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -73.4,
       "official_hourly_rate_pct": -0.3,
       "net_transfers": -14317
     },
     "20": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 54,
       "official_progress_pct": -0.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1598
     },
     "22": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -79.6,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -208
     },
     "23": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -61.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -114
     },
     "24": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -43.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -80
     },
     "25": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 74,
       "official_progress_pct": -8.3,
       "official_hourly_rate_pct": -2.16,
       "net_transfers": -163959
     },
     "26": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 75,
       "official_progress_pct": 60.3,
       "official_hourly_rate_pct": 1.51,
       "net_transfers": 118818
     },
     "27": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -66.8,
       "official_hourly_rate_pct": -0.09,
       "net_transfers": -4157
     },
     "31": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -70.1,
       "official_hourly_rate_pct": -1.69,
       "net_transfers": -144783
     },
     "452": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 70,
       "official_progress_pct": -95.4,
       "official_hourly_rate_pct": -1.88,
       "net_transfers": -94996
     },
     "557": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": 72.4,
       "official_hourly_rate_pct": 1.88,
       "net_transfers": 139861
     },
     "28": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -42.7,
       "official_hourly_rate_pct": -0.54,
       "net_transfers": -35392
     },
     "29": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -23
     },
     "30": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -4293
     },
     "32": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -27.8,
       "official_hourly_rate_pct": -1.06,
       "net_transfers": -52800
     },
     "33": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.3,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": 215
     },
     "34": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -20.3,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -2035
     },
     "35": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -7.3,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -189
     },
     "36": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -24.4,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -4262
     },
     "37": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -23.8,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -1489
     },
     "38": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -8.0,
       "official_hourly_rate_pct": -0.09,
       "net_transfers": -4682
     },
     "39": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -5713
     },
     "41": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -43.0,
       "official_hourly_rate_pct": -0.23,
       "net_transfers": -10722
     },
     "44": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -37.8,
       "official_hourly_rate_pct": -0.06,
       "net_transfers": -1193
     },
     "45": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -41.7,
       "official_hourly_rate_pct": -0.36,
       "net_transfers": -25375
     },
     "46": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -6.5,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -527
     },
     "47": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -17.0,
       "official_hourly_rate_pct": -0.06,
       "net_transfers": -1533
     },
     "48": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -27.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -317
     },
     "49": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -107
     },
     "50": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -11.8,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -2432
     },
     "51": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.8,
       "official_hourly_rate_pct": 0.04,
       "net_transfers": 1865
     },
     "52": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -12.8,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -167
     },
     "53": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -70.8,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -7220
     },
     "54": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1420
     },
     "55": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 79,
       "official_progress_pct": -1.4,
       "official_hourly_rate_pct": -6.11,
       "net_transfers": -163863
     },
     "56": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -38.2,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -1517
     },
     "160": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -51.8,
       "official_hourly_rate_pct": -0.14,
       "net_transfers": -5977
     },
     "582": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -2.1,
       "official_hourly_rate_pct": -0.09,
       "net_transfers": -5391
     },
     "596": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -48
     },
     "597": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1728
     },
     "606": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 911
     },
     "607": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 2478
     },
     "611": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 684
     },
     "57": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 2.9,
       "official_hourly_rate_pct": 0.38,
       "net_transfers": 7297
     },
     "58": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -0.6,
       "official_hourly_rate_pct": 0.04,
       "net_transfers": -805
     },
     "59": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.2,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": 401
     },
     "60": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 1.0,
       "official_hourly_rate_pct": 0.07,
       "net_transfers": 1355
     },
     "61": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -1.1,
       "official_hourly_rate_pct": 0.15,
       "net_transfers": -3845
     },
     "62": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.4,
       "official_hourly_rate_pct": 0.02,
       "net_transfers": 424
     },
     "63": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -31.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -177
     },
     "64": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.7,
       "official_hourly_rate_pct": 0.02,
       "net_transfers": 1192
     },
     "65": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -42.4,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -354
     },
     "66": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -20.3,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -1621
     },
     "67": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": 1.5,
       "official_hourly_rate_pct": 0.1,
       "net_transfers": 852
     },
     "68": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 19.7,
       "official_hourly_rate_pct": 1.17,
       "net_transfers": 42911
     },
     "69": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -8.1,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -3440
     },
     "70": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 2.2,
       "official_hourly_rate_pct": 0.22,
       "net_transfers": 3564
     },
     "71": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.6,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 998
     },
     "72": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -17.1,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -358
     },
     "73": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.02,
       "net_transfers": -180
     },
     "74": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -11.3,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -142
     },
     "75": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 226
     },
     "76": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -9.6,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -39
     },
     "77": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -62.1,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -776
     },
     "78": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 75,
       "official_progress_pct": -62.4,
       "official_hourly_rate_pct": -0.18,
       "net_transfers": -10496
     },
     "79": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 17.1,
       "official_hourly_rate_pct": 1.38,
       "net_transfers": 34377
     },
     "80": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -894
     },
     "81": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -8.4,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -222
     },
     "566": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 1.5,
       "official_hourly_rate_pct": 0.28,
       "net_transfers": 3006
     },
     "573": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -12.9,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -657
     },
     "608": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 1333
     },
     "82": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 15.9,
       "official_hourly_rate_pct": 0.48,
       "net_transfers": 41757
     },
     "83": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -7.3,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -144
     },
     "84": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 6.1,
       "official_hourly_rate_pct": 0.14,
       "net_transfers": 12461
     },
     "85": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -56.9,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -3268
     },
     "86": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 13.4,
       "official_hourly_rate_pct": 0.76,
       "net_transfers": 26874
     },
     "87": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 14.3,
       "official_hourly_rate_pct": 0.75,
       "net_transfers": 32984
     },
     "88": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 46,
       "official_progress_pct": 0.3,
       "official_hourly_rate_pct": 2.54,
       "net_transfers": 233098
     },
     "89": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -19.5,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -1100
     },
     "90": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.1,
       "official_hourly_rate_pct": 0.02,
       "net_transfers": 56
     },
     "91": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -19.9,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -371
     },
     "92": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -8.4,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -55
     },
     "93": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -18.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -743
     },
     "94": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 0.3,
       "official_hourly_rate_pct": 0.05,
       "net_transfers": -1850
     },
     "95": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -4.3,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -1918
     },
     "96": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -33.1,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -3875
     },
     "97": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.9,
       "official_hourly_rate_pct": 0.04,
       "net_transfers": 1661
     },
     "98": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 8.5,
       "official_hourly_rate_pct": 0.55,
       "net_transfers": 17492
     },
     "99": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -13.5,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -16
     },
     "100": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -44.4,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -141
     },
     "102": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -29.5,
       "official_hourly_rate_pct": -0.14,
       "net_transfers": -8681
     },
     "103": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -18.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -124
     },
     "105": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -5.2,
       "official_hourly_rate_pct": 0.04,
       "net_transfers": -310
     },
     "106": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 80,
       "official_progress_pct": -6.9,
       "official_hourly_rate_pct": -0.94,
       "net_transfers": -26144
     },
     "107": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.4,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -230
     },
     "108": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -0.9,
       "official_hourly_rate_pct": 0.04,
       "net_transfers": -425
     },
     "565": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 56,
       "official_progress_pct": 7.3,
       "official_hourly_rate_pct": 4.98,
       "net_transfers": 302128
     },
     "109": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 9.5,
       "official_hourly_rate_pct": 0.33,
       "net_transfers": 31476
     },
     "111": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -1.8,
       "official_hourly_rate_pct": -0.12,
       "net_transfers": -2353
     },
     "113": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -45.2,
       "official_hourly_rate_pct": -0.69,
       "net_transfers": -38922
     },
     "114": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.8,
       "official_hourly_rate_pct": 0.03,
       "net_transfers": 1627
     },
     "115": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 46,
       "official_progress_pct": 6.2,
       "official_hourly_rate_pct": 3.76,
       "net_transfers": 359989
     },
     "116": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 2.9,
       "official_hourly_rate_pct": 0.08,
       "net_transfers": 5738
     },
     "117": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -1.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -18
     },
     "118": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -12.2,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -263
     },
     "119": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 68
     },
     "120": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.1,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": 143
     },
     "121": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -40.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -866
     },
     "122": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -81.1,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -2760
     },
     "123": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 49.3,
       "official_hourly_rate_pct": 2.06,
       "net_transfers": 107983
     },
     "124": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -20.9,
       "official_hourly_rate_pct": -0.72,
       "net_transfers": -57627
     },
     "125": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 6.2,
       "official_hourly_rate_pct": -0.13,
       "net_transfers": 14299
     },
     "126": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -23.9,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -532
     },
     "127": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 2.3,
       "official_hourly_rate_pct": 0.03,
       "net_transfers": 3247
     },
     "128": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -147
     },
     "129": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -18.2,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -2889
     },
     "130": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 3.8,
       "official_hourly_rate_pct": 0.06,
       "net_transfers": 8302
     },
     "132": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -1280
     },
     "133": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -45
     },
     "134": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -7.7,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -727
     },
     "135": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -18.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -308
     },
     "137": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -25.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -121
     },
     "138": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -15.9,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -829
     },
     "139": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -14.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -256
     },
     "328": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -9.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -617
     },
     "504": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 4.6,
       "official_hourly_rate_pct": 0.04,
       "net_transfers": 9173
     },
     "594": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -754
     },
     "600": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 69
     },
     "605": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 2374
     },
     "614": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 317
     },
     "40": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 75,
       "official_progress_pct": 59.6,
       "official_hourly_rate_pct": 2.29,
       "net_transfers": 128170
     },
     "101": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -24.6,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -355
     },
     "136": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -87.9,
       "official_hourly_rate_pct": -0.3,
       "net_transfers": -16698
     },
     "140": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -12.0,
       "official_hourly_rate_pct": -0.18,
       "net_transfers": -7230
     },
     "141": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -443
     },
     "142": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -1.2,
       "official_hourly_rate_pct": -0.48,
       "net_transfers": -10390
     },
     "143": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -6785
     },
     "144": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 1.7,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": 1856
     },
     "145": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 353
     },
     "146": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.06,
       "net_transfers": -333
     },
     "147": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -29.5,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1272
     },
     "148": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.1,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -195
     },
     "149": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -8.5,
       "official_hourly_rate_pct": -0.17,
       "net_transfers": -4358
     },
     "150": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -20.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -387
     },
     "151": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 1.1,
       "official_hourly_rate_pct": 0.09,
       "net_transfers": 2507
     },
     "152": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -37.4,
       "official_hourly_rate_pct": -0.86,
       "net_transfers": -34247
     },
     "153": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -21.5,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -319
     },
     "154": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 95,
       "official_progress_pct": 81.0,
       "official_hourly_rate_pct": 4.86,
       "net_transfers": 215122
     },
     "155": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 70,
       "official_progress_pct": -44.2,
       "official_hourly_rate_pct": -1.26,
       "net_transfers": -43264
     },
     "156": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -40.2,
       "official_hourly_rate_pct": -0.23,
       "net_transfers": -10808
     },
     "157": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -54.9,
       "official_hourly_rate_pct": -0.37,
       "net_transfers": -13115
     },
     "158": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -47.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -338
     },
     "159": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -50.8,
       "official_hourly_rate_pct": -1.2,
       "net_transfers": -59012
     },
     "161": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 154
     },
     "163": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -22.6,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1191
     },
     "164": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -46.8,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -409
     },
     "165": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 76,
       "official_progress_pct": 0.7,
       "official_hourly_rate_pct": 5.27,
       "net_transfers": 256465
     },
     "166": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -53.8,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": -3340
     },
     "167": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -28.7,
       "official_hourly_rate_pct": 0.02,
       "net_transfers": -2557
     },
     "168": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -24.7,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -2739
     },
     "169": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -9.9,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -1154
     },
     "170": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -13.2,
       "official_hourly_rate_pct": -0.07,
       "net_transfers": -569
     },
     "200": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 6.6,
       "official_hourly_rate_pct": 0.25,
       "net_transfers": 14362
     },
     "560": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -18.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -276
     },
     "561": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -46.9,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -286
     },
     "568": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -32.9,
       "official_hourly_rate_pct": -0.05,
       "net_transfers": -944
     },
     "578": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -19.7,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -548
     },
     "583": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -1.8,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -888
     },
     "104": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.2,
       "official_hourly_rate_pct": 0.07,
       "net_transfers": 208
     },
     "110": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.9,
       "official_hourly_rate_pct": 0.3,
       "net_transfers": 1434
     },
     "171": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -6.3,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -2774
     },
     "172": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -22.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -2259
     },
     "173": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 4.1,
       "official_hourly_rate_pct": 0.47,
       "net_transfers": 7303
     },
     "174": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -18.4,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -2960
     },
     "175": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -1.8,
       "official_hourly_rate_pct": 0.18,
       "net_transfers": -14734
     },
     "176": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -1.6,
       "official_hourly_rate_pct": 0.1,
       "net_transfers": -921
     },
     "177": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -14.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -245
     },
     "178": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -1.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -132
     },
     "179": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -17.5,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": -197
     },
     "180": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -9.3,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": -479
     },
     "181": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -0.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -54
     },
     "182": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -2.2,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -1006
     },
     "183": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -6.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -307
     },
     "184": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.2,
       "official_hourly_rate_pct": 0.04,
       "net_transfers": 123
     },
     "185": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -43.2,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -953
     },
     "186": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -35.3,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -903
     },
     "187": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -45.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -136
     },
     "188": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -29.1,
       "official_hourly_rate_pct": 0.05,
       "net_transfers": -1086
     },
     "189": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -20.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1568
     },
     "190": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.3,
       "official_hourly_rate_pct": 0.15,
       "net_transfers": 374
     },
     "191": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -20.1,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": -917
     },
     "192": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -18.6,
       "official_hourly_rate_pct": -0.05,
       "net_transfers": -3315
     },
     "193": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -55.7,
       "official_hourly_rate_pct": -0.06,
       "net_transfers": -4267
     },
     "194": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 2.1,
       "official_hourly_rate_pct": 0.19,
       "net_transfers": 4014
     },
     "195": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 3.5,
       "official_hourly_rate_pct": 0.28,
       "net_transfers": 6755
     },
     "196": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -496
     },
     "197": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -668
     },
     "492": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -11.3,
       "official_hourly_rate_pct": 0.07,
       "net_transfers": -2239
     },
     "575": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -17.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1319
     },
     "584": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -1.4,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -747
     },
     "599": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 272
     },
     "42": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -13.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -153
     },
     "198": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -15.1,
       "official_hourly_rate_pct": -0.2,
       "net_transfers": -6035
     },
     "199": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -16.6,
       "official_hourly_rate_pct": -0.05,
       "net_transfers": -476
     },
     "201": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -40.6,
       "official_hourly_rate_pct": -1.4,
       "net_transfers": -74555
     },
     "202": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -5.0,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1113
     },
     "203": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -30.1,
       "official_hourly_rate_pct": -0.13,
       "net_transfers": -2037
     },
     "204": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -21.0,
       "official_hourly_rate_pct": -0.58,
       "net_transfers": -31078
     },
     "205": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -22.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -161
     },
     "206": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -72.4,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -1898
     },
     "207": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -51.0,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -787
     },
     "208": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -85.5,
       "official_hourly_rate_pct": -3.53,
       "net_transfers": -130186
     },
     "210": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -1.8,
       "official_hourly_rate_pct": -0.12,
       "net_transfers": -701
     },
     "211": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -37.8,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1481
     },
     "212": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -16.8,
       "official_hourly_rate_pct": -0.64,
       "net_transfers": -50310
     },
     "213": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -37.7,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -863
     },
     "214": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -11.6,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -836
     },
     "215": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -35.9,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -86
     },
     "216": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -28.4,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -274
     },
     "217": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -80.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -485
     },
     "218": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -43.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -586
     },
     "219": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -33.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -38
     },
     "220": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -54
     },
     "221": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -19.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -432
     },
     "222": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -38.2,
       "official_hourly_rate_pct": -0.12,
       "net_transfers": -4041
     },
     "223": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -26.6,
       "official_hourly_rate_pct": -0.83,
       "net_transfers": -30081
     },
     "224": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -16.1,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -1777
     },
     "225": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 0
     },
     "241": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -22.6,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -876
     },
     "555": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.2,
       "official_hourly_rate_pct": 0.08,
       "net_transfers": -333
     },
     "577": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -13.4,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -1189
     },
     "588": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -207
     },
     "595": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -36
     },
     "21": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -47.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -2163
     },
     "209": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -42.1,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1352
     },
     "226": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 11.1,
       "official_hourly_rate_pct": 0.17,
       "net_transfers": 30098
     },
     "227": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -12.6,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -86
     },
     "228": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -7.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -91
     },
     "229": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 4.3,
       "official_hourly_rate_pct": -0.29,
       "net_transfers": 10394
     },
     "230": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 4.3,
       "official_hourly_rate_pct": 0.14,
       "net_transfers": 8808
     },
     "231": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -47.7,
       "official_hourly_rate_pct": -0.2,
       "net_transfers": -14662
     },
     "232": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -40.8,
       "official_hourly_rate_pct": -0.12,
       "net_transfers": -3804
     },
     "233": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 3.8,
       "official_hourly_rate_pct": 0.08,
       "net_transfers": 9201
     },
     "234": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -16.1,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -125
     },
     "235": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -7.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -445
     },
     "236": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": 37.2,
       "official_hourly_rate_pct": 1.12,
       "net_transfers": 78097
     },
     "237": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 24.8,
       "official_hourly_rate_pct": 0.88,
       "net_transfers": 50714
     },
     "239": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -287
     },
     "240": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -42.0,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -256
     },
     "242": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -166
     },
     "243": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -7.6,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -224
     },
     "244": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 3.2,
       "official_hourly_rate_pct": 0.25,
       "net_transfers": 6778
     },
     "245": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -58.4,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -406
     },
     "246": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -1.7,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -75
     },
     "247": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -6.1,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -775
     },
     "248": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -43.1,
       "official_hourly_rate_pct": -0.72,
       "net_transfers": -22633
     },
     "249": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 30.8,
       "official_hourly_rate_pct": 3.46,
       "net_transfers": 69677
     },
     "250": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.6,
       "official_hourly_rate_pct": 0.02,
       "net_transfers": 95
     },
     "251": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -4.9,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -1643
     },
     "252": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 104
     },
     "253": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 943
     },
     "254": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 1.1,
       "official_hourly_rate_pct": 0.04,
       "net_transfers": 1222
     },
     "255": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.2,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": 353
     },
     "256": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -18.6,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -1156
     },
     "257": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 1.0,
       "official_hourly_rate_pct": 0.05,
       "net_transfers": 1195
     },
     "258": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 2.0,
       "official_hourly_rate_pct": 0.23,
       "net_transfers": 5472
     },
     "261": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -6.3,
       "official_hourly_rate_pct": -0.05,
       "net_transfers": -2213
     },
     "262": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -28.0,
       "official_hourly_rate_pct": -0.05,
       "net_transfers": -2343
     },
     "263": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -24.8,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": -292
     },
     "264": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.6,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 947
     },
     "265": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -11.0,
       "official_hourly_rate_pct": -0.05,
       "net_transfers": -1295
     },
     "266": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -41.9,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -84
     },
     "268": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 9.6,
       "official_hourly_rate_pct": 0.36,
       "net_transfers": 20328
     },
     "269": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -11.5,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -1271
     },
     "270": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -12.9,
       "official_hourly_rate_pct": -0.13,
       "net_transfers": -6012
     },
     "271": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -20.7,
       "official_hourly_rate_pct": -0.07,
       "net_transfers": -2729
     },
     "272": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -3.9,
       "official_hourly_rate_pct": -0.11,
       "net_transfers": -13554
     },
     "569": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 30.5,
       "official_hourly_rate_pct": 1.67,
       "net_transfers": 67209
     },
     "570": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -11.3,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -592
     },
     "580": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -5.4,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -276
     },
     "610": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 1763
     },
     "273": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -5.9,
       "official_hourly_rate_pct": -0.15,
       "net_transfers": -2514
     },
     "274": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -23.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1277
     },
     "275": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -98
     },
     "276": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -323
     },
     "277": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 11.3,
       "official_hourly_rate_pct": 0.46,
       "net_transfers": 27736
     },
     "278": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -30.1,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -1802
     },
     "279": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 15.6,
       "official_hourly_rate_pct": 0.32,
       "net_transfers": 34686
     },
     "280": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -10.2,
       "official_hourly_rate_pct": -0.11,
       "net_transfers": -2547
     },
     "281": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 574
     },
     "282": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 3.3,
       "official_hourly_rate_pct": 0.24,
       "net_transfers": 7534
     },
     "283": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -22.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -139
     },
     "284": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -6.4,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -186
     },
     "285": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.1,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": 40
     },
     "286": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 4.0,
       "official_hourly_rate_pct": 0.06,
       "net_transfers": 7251
     },
     "287": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -29.5,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -417
     },
     "288": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -16.9,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1796
     },
     "289": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 1.9,
       "official_hourly_rate_pct": 0.05,
       "net_transfers": 3203
     },
     "290": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 22.5,
       "official_hourly_rate_pct": 0.96,
       "net_transfers": 46870
     },
     "291": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -6.3,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -25
     },
     "292": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -26.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -111
     },
     "293": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -162
     },
     "294": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -23.0,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -1407
     },
     "295": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 21.9,
       "official_hourly_rate_pct": 1.07,
       "net_transfers": 46024
     },
     "296": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 28
     },
     "297": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -28.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -403
     },
     "298": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -7318
     },
     "299": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1023
     },
     "340": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -28.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -184
     },
     "556": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -10.1,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -6997
     },
     "563": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -220
     },
     "572": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 23.3,
       "official_hourly_rate_pct": 1.42,
       "net_transfers": 64157
     },
     "574": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -18.3,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -416
     },
     "576": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.2,
       "official_hourly_rate_pct": 0.02,
       "net_transfers": 574
     },
     "585": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -193
     },
     "586": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 88810
     },
     "589": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -103
     },
     "259": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -4.0,
       "official_hourly_rate_pct": -0.62,
       "net_transfers": -28810
     },
     "267": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.1,
       "official_hourly_rate_pct": -0.07,
       "net_transfers": 100
     },
     "300": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -26.0,
       "official_hourly_rate_pct": -0.12,
       "net_transfers": -2815
     },
     "301": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -4.5,
       "official_hourly_rate_pct": -0.14,
       "net_transfers": -6821
     },
     "302": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.1,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": 51
     },
     "303": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -20.1,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -3055
     },
     "304": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.5,
       "official_hourly_rate_pct": -0.15,
       "net_transfers": 2321
     },
     "305": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -5.4,
       "official_hourly_rate_pct": -0.29,
       "net_transfers": -9226
     },
     "306": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -6.0,
       "official_hourly_rate_pct": -0.11,
       "net_transfers": -2590
     },
     "307": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -15.9,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -441
     },
     "308": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -19.1,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -2804
     },
     "309": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.06,
       "net_transfers": 0
     },
     "310": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -42.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -84
     },
     "311": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -164
     },
     "312": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -27.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -637
     },
     "313": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.5,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": 899
     },
     "314": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -40.6,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -140
     },
     "315": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -29.8,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1461
     },
     "316": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 22.2,
       "official_hourly_rate_pct": 0.48,
       "net_transfers": 49494
     },
     "317": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.09,
       "net_transfers": -6839
     },
     "318": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -31.0,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -2350
     },
     "319": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -351
     },
     "320": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -2.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -841
     },
     "321": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 3.4,
       "official_hourly_rate_pct": 0.2,
       "net_transfers": 10699
     },
     "322": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -30.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -946
     },
     "323": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -9.3,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -4150
     },
     "324": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -40.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -455
     },
     "554": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -372
     },
     "562": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -24.7,
       "official_hourly_rate_pct": -0.1,
       "net_transfers": -2077
     },
     "564": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -7.1,
       "official_hourly_rate_pct": -0.14,
       "net_transfers": -1146
     },
     "571": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -24.6,
       "official_hourly_rate_pct": -0.06,
       "net_transfers": -1137
     },
     "591": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 8601
     },
     "592": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1790
     },
     "602": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 753
     },
     "260": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -19.3,
       "official_hourly_rate_pct": -0.8,
       "net_transfers": -27115
     },
     "326": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -27.8,
       "official_hourly_rate_pct": -0.16,
       "net_transfers": -3307
     },
     "327": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 11.6,
       "official_hourly_rate_pct": 0.18,
       "net_transfers": 26209
     },
     "329": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 1.8,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": 4893
     },
     "330": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 1.3,
       "official_hourly_rate_pct": -0.07,
       "net_transfers": 2655
     },
     "331": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -32.3,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -755
     },
     "332": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 7.8,
       "official_hourly_rate_pct": 0.28,
       "net_transfers": 21512
     },
     "333": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -139
     },
     "334": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 4.1,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": 8767
     },
     "335": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 19.1,
       "official_hourly_rate_pct": 0.6,
       "net_transfers": 42539
     },
     "336": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -56.3,
       "official_hourly_rate_pct": -0.16,
       "net_transfers": -5060
     },
     "337": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -17.1,
       "official_hourly_rate_pct": -0.14,
       "net_transfers": -3862
     },
     "338": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -10.0,
       "official_hourly_rate_pct": -0.09,
       "net_transfers": -3715
     },
     "339": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -25.1,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -749
     },
     "341": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -67.5,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -567
     },
     "342": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -33
     },
     "343": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -27.1,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -765
     },
     "344": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -50.3,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -100
     },
     "345": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -52.3,
       "official_hourly_rate_pct": -0.06,
       "net_transfers": -2450
     },
     "346": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -7.5,
       "official_hourly_rate_pct": -2.06,
       "net_transfers": -63428
     },
     "347": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -48.4,
       "official_hourly_rate_pct": -0.16,
       "net_transfers": -5296
     },
     "348": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -4472
     },
     "349": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -17.7,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -590
     },
     "385": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 13.4,
       "official_hourly_rate_pct": 0.45,
       "net_transfers": 36841
     },
     "598": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 57
     },
     "603": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 1027
     },
     "604": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 1810
     },
     "350": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.7,
       "official_hourly_rate_pct": 0.25,
       "net_transfers": 1951
     },
     "351": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -39.4,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1140
     },
     "352": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -5.8,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1906
     },
     "353": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -378
     },
     "354": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -2.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -27
     },
     "355": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -0.6,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -61
     },
     "356": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": 1.5,
       "official_hourly_rate_pct": 0.35,
       "net_transfers": -1773
     },
     "357": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -8.1,
       "official_hourly_rate_pct": -0.19,
       "net_transfers": -7468
     },
     "358": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -17.2,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -13979
     },
     "359": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -32.6,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -276
     },
     "360": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -22.8,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": -122
     },
     "361": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -10.6,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -382
     },
     "362": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 2.7,
       "official_hourly_rate_pct": 0.12,
       "net_transfers": 3477
     },
     "363": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -10.5,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -272
     },
     "364": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -29.3,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -468
     },
     "365": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.1,
       "net_transfers": -1343
     },
     "366": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 75,
       "official_progress_pct": -25.4,
       "official_hourly_rate_pct": -1.16,
       "net_transfers": -64865
     },
     "367": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 70,
       "official_progress_pct": 52.8,
       "official_hourly_rate_pct": 3.74,
       "net_transfers": 118998
     },
     "368": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 70,
       "official_progress_pct": 55.6,
       "official_hourly_rate_pct": 2.22,
       "net_transfers": 121162
     },
     "369": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -26.1,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -6493
     },
     "370": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -63.3,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -1620
     },
     "371": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 0.5,
       "official_hourly_rate_pct": 0.07,
       "net_transfers": -670
     },
     "372": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -30.3,
       "official_hourly_rate_pct": -0.22,
       "net_transfers": -11019
     },
     "373": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -65.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -879
     },
     "374": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -23.4,
       "official_hourly_rate_pct": 0.02,
       "net_transfers": -353
     },
     "375": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -51.9,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -406
     },
     "376": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -16.2,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": -17
     },
     "377": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": 0.4,
       "official_hourly_rate_pct": 0.03,
       "net_transfers": 471
     },
     "378": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -23.8,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -1507
     },
     "379": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 90,
       "official_progress_pct": -5.6,
       "official_hourly_rate_pct": 0.06,
       "net_transfers": -21892
     },
     "380": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 75,
       "official_progress_pct": -35.5,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -2581
     },
     "381": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -4.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -32
     },
     "382": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -9.3,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -201
     },
     "383": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -45.5,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -640
     },
     "579": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -5.3,
       "official_hourly_rate_pct": -0.23,
       "net_transfers": -4954
     },
     "238": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -13.8,
       "official_hourly_rate_pct": -0.06,
       "net_transfers": -677
     },
     "384": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -3.8,
       "official_hourly_rate_pct": -0.21,
       "net_transfers": -9186
     },
     "386": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -10.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -75
     },
     "387": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -4.7,
       "official_hourly_rate_pct": -0.25,
       "net_transfers": -25823
     },
     "388": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 42.9,
       "official_hourly_rate_pct": 1.35,
       "net_transfers": 107631
     },
     "389": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -15.7,
       "official_hourly_rate_pct": -0.11,
       "net_transfers": -5743
     },
     "390": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.06,
       "net_transfers": -1461
     },
     "391": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 55.5,
       "official_hourly_rate_pct": 1.65,
       "net_transfers": 135780
     },
     "392": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -57.8,
       "official_hourly_rate_pct": -0.17,
       "net_transfers": -9734
     },
     "393": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -13.8,
       "official_hourly_rate_pct": -0.14,
       "net_transfers": -5775
     },
     "394": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -298
     },
     "395": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.5,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 796
     },
     "396": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -16.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -90
     },
     "397": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 85,
       "official_progress_pct": -13.6,
       "official_hourly_rate_pct": -1.63,
       "net_transfers": -82577
     },
     "398": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 70,
       "official_progress_pct": -18.1,
       "official_hourly_rate_pct": -0.4,
       "net_transfers": -17044
     },
     "399": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 75,
       "official_progress_pct": 53.1,
       "official_hourly_rate_pct": 1.94,
       "net_transfers": 114790
     },
     "400": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 75,
       "official_progress_pct": -79.4,
       "official_hourly_rate_pct": -0.84,
       "net_transfers": -54390
     },
     "401": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 70,
       "official_progress_pct": -3.7,
       "official_hourly_rate_pct": 0.06,
       "net_transfers": 432
     },
     "402": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -721
     },
     "404": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -4842
     },
     "405": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -5.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -196
     },
     "406": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -15.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -325
     },
     "407": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -36.5,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -133
     },
     "408": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -260
     },
     "409": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -27.2,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -1128
     },
     "410": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -42.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -153
     },
     "411": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 155,
       "official_progress_pct": -1.8,
       "official_hourly_rate_pct": -0.43,
       "net_transfers": -23562
     },
     "481": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -54.1,
       "official_hourly_rate_pct": -2.35,
       "net_transfers": -119362
     },
     "587": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -86
     },
     "43": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -34.3,
       "official_hourly_rate_pct": -0.42,
       "net_transfers": -16955
     },
     "131": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -12.4,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1320
     },
     "162": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -25.8,
       "official_hourly_rate_pct": -0.12,
       "net_transfers": -5803
     },
     "325": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -0.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -3
     },
     "412": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -9.9,
       "official_hourly_rate_pct": -0.53,
       "net_transfers": -43643
     },
     "413": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -513
     },
     "414": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -13.3,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -687
     },
     "415": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -75.4,
       "official_hourly_rate_pct": -0.34,
       "net_transfers": -17122
     },
     "416": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -26.1,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -331
     },
     "417": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -29.9,
       "official_hourly_rate_pct": -0.4,
       "net_transfers": -16976
     },
     "418": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -8.7,
       "official_hourly_rate_pct": -0.99,
       "net_transfers": -39992
     },
     "419": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -30.8,
       "official_hourly_rate_pct": -0.22,
       "net_transfers": -8595
     },
     "420": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -51.0,
       "official_hourly_rate_pct": -0.1,
       "net_transfers": -6719
     },
     "421": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -7.6,
       "official_hourly_rate_pct": -0.05,
       "net_transfers": -753
     },
     "422": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.1,
       "official_hourly_rate_pct": 0.02,
       "net_transfers": -304
     },
     "423": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -11.5,
       "official_hourly_rate_pct": -1.08,
       "net_transfers": -58443
     },
     "424": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -15.6,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -840
     },
     "425": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -599
     },
     "426": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 120,
       "official_progress_pct": -11.1,
       "official_hourly_rate_pct": -2.3,
       "net_transfers": -130986
     },
     "427": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 80,
       "official_progress_pct": -11.9,
       "official_hourly_rate_pct": -1.85,
       "net_transfers": -97850
     },
     "428": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 80,
       "official_progress_pct": -23.3,
       "official_hourly_rate_pct": -0.93,
       "net_transfers": -48078
     },
     "429": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 70,
       "official_progress_pct": -13.2,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -5074
     },
     "430": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -32.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -551
     },
     "431": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 59,
       "official_progress_pct": -0.8,
       "official_hourly_rate_pct": -0.83,
       "net_transfers": -39517
     },
     "432": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -43.1,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -8175
     },
     "433": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -33.5,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -62
     },
     "434": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -39.0,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -97
     },
     "435": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -18.6,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -206
     },
     "436": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -39.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -136
     },
     "437": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -23.3,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1074
     },
     "438": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -25.8,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -2031
     },
     "439": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 70,
       "official_progress_pct": 4.9,
       "official_hourly_rate_pct": 0.3,
       "net_transfers": 9909
     },
     "440": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -73.9,
       "official_hourly_rate_pct": -0.16,
       "net_transfers": -7928
     },
     "441": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -14.4,
       "official_hourly_rate_pct": -0.08,
       "net_transfers": -4005
     },
     "442": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -24.9,
       "official_hourly_rate_pct": -0.14,
       "net_transfers": -6778
     },
     "443": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -5.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -51
     },
     "444": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -32.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -192
     },
     "445": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 3.1,
       "official_hourly_rate_pct": 0.23,
       "net_transfers": 6130
     },
     "446": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 182
     },
     "447": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 2.4,
       "official_hourly_rate_pct": 0.32,
       "net_transfers": 4329
     },
     "448": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -56.2,
       "official_hourly_rate_pct": -0.92,
       "net_transfers": -51657
     },
     "449": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 13.9,
       "official_hourly_rate_pct": 0.37,
       "net_transfers": 27552
     },
     "450": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -50.2,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": -929
     },
     "451": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -2845
     },
     "453": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 0.6,
       "official_hourly_rate_pct": 0.37,
       "net_transfers": 461
     },
     "454": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 26.4,
       "official_hourly_rate_pct": 1.51,
       "net_transfers": 55449
     },
     "456": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -24.9,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -2157
     },
     "457": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -38.6,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1303
     },
     "458": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -55.3,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -813
     },
     "459": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.3,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 557
     },
     "460": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 2.0,
       "official_hourly_rate_pct": 0.17,
       "net_transfers": 4230
     },
     "461": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -59.9,
       "official_hourly_rate_pct": -0.09,
       "net_transfers": -2682
     },
     "462": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -1.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -154
     },
     "463": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -53.3,
       "official_hourly_rate_pct": -0.26,
       "net_transfers": -16853
     },
     "464": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 36.6,
       "official_hourly_rate_pct": 2.5,
       "net_transfers": 81327
     },
     "465": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": 4.1,
       "official_hourly_rate_pct": -0.39,
       "net_transfers": 8234
     },
     "466": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -3.1,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1200
     },
     "559": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -19.3,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -669
     },
     "567": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.5,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": 1040
     },
     "593": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 3957
     },
     "609": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 2432
     },
     "467": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -13.6,
       "official_hourly_rate_pct": -0.21,
       "net_transfers": -5208
     },
     "468": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -14.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -217
     },
     "469": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -18.0,
       "official_hourly_rate_pct": -1.06,
       "net_transfers": -40965
     },
     "470": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -29.1,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -280
     },
     "471": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -20.6,
       "official_hourly_rate_pct": -0.15,
       "net_transfers": -8675
     },
     "472": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -0.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -816
     },
     "473": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -1.2,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1840
     },
     "474": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -16.7,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -865
     },
     "475": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 20
     },
     "476": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -17.6,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -1097
     },
     "477": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -10.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -855
     },
     "478": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -20.4,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -134
     },
     "479": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -14.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -747
     },
     "480": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 80,
       "official_progress_pct": -54.6,
       "official_hourly_rate_pct": -5.96,
       "net_transfers": -177666
     },
     "482": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -66.9,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -2999
     },
     "483": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -28.6,
       "official_hourly_rate_pct": 0.02,
       "net_transfers": -2598
     },
     "484": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -41.5,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1368
     },
     "485": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -47.4,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -147
     },
     "486": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 0.1,
       "official_hourly_rate_pct": 0.04,
       "net_transfers": 85
     },
     "487": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -34.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -615
     },
     "488": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -29.6,
       "official_hourly_rate_pct": -0.07,
       "net_transfers": -6145
     },
     "489": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -38.3,
       "official_hourly_rate_pct": -0.24,
       "net_transfers": -31204
     },
     "490": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -47.7,
       "official_hourly_rate_pct": -0.29,
       "net_transfers": -15685
     },
     "491": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -31.2,
       "official_hourly_rate_pct": -1.02,
       "net_transfers": -27322
     },
     "493": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -25.8,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -274
     },
     "558": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -27.3,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -640
     },
     "581": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -10.3,
       "official_hourly_rate_pct": -0.1,
       "net_transfers": -5839
     },
     "590": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 71
     },
     "112": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -15.6,
       "official_hourly_rate_pct": -0.67,
       "net_transfers": -41488
     },
     "403": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": 4.5,
       "official_hourly_rate_pct": 2.93,
       "net_transfers": 10242
     },
     "455": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -34.0,
       "official_hourly_rate_pct": -0.52,
       "net_transfers": -27944
     },
     "494": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.09,
       "net_transfers": -9835
     },
     "495": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -0.6,
       "official_hourly_rate_pct": 0.01,
       "net_transfers": -439
     },
     "496": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -4.6,
       "official_hourly_rate_pct": -0.07,
       "net_transfers": -35169
     },
     "497": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -3.4,
       "official_hourly_rate_pct": -0.16,
       "net_transfers": -20872
     },
     "498": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -18.4,
       "official_hourly_rate_pct": -0.33,
       "net_transfers": -32788
     },
     "499": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -0.4,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -269256
     },
     "500": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.17,
       "net_transfers": -9525
     },
     "501": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -23.6,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -985
     },
     "502": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.7,
       "official_hourly_rate_pct": 0.08,
       "net_transfers": -1014
     },
     "503": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -108254
     },
     "505": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.3,
       "net_transfers": -40830
     },
     "506": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -18.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -2103
     },
     "507": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -565
     },
     "508": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -15.7,
       "official_hourly_rate_pct": -0.05,
       "net_transfers": -4419
     },
     "509": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -8.7,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -166
     },
     "510": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -12.7,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -278
     },
     "511": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -14.9,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -1138
     },
     "512": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -63.2,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -1595
     },
     "513": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -32.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -230
     },
     "514": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -37.7,
       "official_hourly_rate_pct": 0.03,
       "net_transfers": -4073
     },
     "515": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -47.6,
       "official_hourly_rate_pct": -0.75,
       "net_transfers": -19031
     },
     "516": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -25.6,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -1048
     },
     "517": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -9.3,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -5
     },
     "518": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -95.3,
       "official_hourly_rate_pct": -0.19,
       "net_transfers": -8237
     },
     "519": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -43.3,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -2415
     },
     "520": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -24.7,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1115
     },
     "521": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 65,
       "official_progress_pct": -26.6,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -134
     },
     "522": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -9.5,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -633
     },
     "523": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -13.9,
       "official_hourly_rate_pct": 0.18,
       "net_transfers": -665
     },
     "524": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -26.9,
       "official_hourly_rate_pct": -0.09,
       "net_transfers": -5596
     },
     "525": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -59.8,
       "official_hourly_rate_pct": -0.3,
       "net_transfers": -20184
     },
     "526": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -40.6,
       "official_hourly_rate_pct": 0.2,
       "net_transfers": -10746
     },
     "527": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -25.0,
       "official_hourly_rate_pct": -0.46,
       "net_transfers": -16703
     },
     "528": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -4.2,
       "official_hourly_rate_pct": 0.02,
       "net_transfers": -3207
     },
     "601": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 1594
     },
     "529": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -14.1,
       "official_hourly_rate_pct": -0.61,
       "net_transfers": -16973
     },
     "530": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.06,
       "net_transfers": -2018
     },
     "531": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -22.3,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -456
     },
     "532": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -19.2,
       "official_hourly_rate_pct": -0.79,
       "net_transfers": -24784
     },
     "533": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -36.3,
       "official_hourly_rate_pct": -0.63,
       "net_transfers": -20779
     },
     "534": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -9.2,
       "official_hourly_rate_pct": -0.51,
       "net_transfers": -17779
     },
     "535": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -6.5,
       "official_hourly_rate_pct": -0.06,
       "net_transfers": -1229
     },
     "536": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -13.8,
       "official_hourly_rate_pct": -0.05,
       "net_transfers": -1650
     },
     "537": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -16.9,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -40
     },
     "538": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -833
     },
     "539": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": -7.4,
       "official_hourly_rate_pct": -0.14,
       "net_transfers": -8758
     },
     "540": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 40,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -4053
     },
     "541": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": -3.6,
       "official_hourly_rate_pct": -0.02,
       "net_transfers": -430
     },
     "542": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -36.5,
       "official_hourly_rate_pct": -1.66,
       "net_transfers": -71036
     },
     "543": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -40.2,
       "official_hourly_rate_pct": -0.01,
       "net_transfers": -602
     },
     "544": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": 8.0,
       "official_hourly_rate_pct": 0.28,
       "net_transfers": 15821
     },
     "545": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -19.6,
       "official_hourly_rate_pct": -0.04,
       "net_transfers": -1687
     },
     "546": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -79.4,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -2779
     },
     "547": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -48.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -91
     },
     "548": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -22.9,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -350
     },
     "549": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -37.1,
       "official_hourly_rate_pct": -0.03,
       "net_transfers": -1707
     },
     "550": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": -23.8,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": -30
     },
     "551": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 50,
       "official_progress_pct": 1.4,
       "official_hourly_rate_pct": 0.05,
       "net_transfers": 2837
     },
     "552": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 60,
       "official_progress_pct": -14.4,
       "official_hourly_rate_pct": -1.19,
       "net_transfers": -51188
     },
     "553": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 55,
       "official_progress_pct": -34.8,
       "official_hourly_rate_pct": -0.22,
       "net_transfers": -6934
     },
     "612": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,
       "net_transfers": 41
     },
     "613": {
-      "timestamp": "2026-08-27T04:06:41.090629+00:00",
+      "timestamp": "2026-08-27T04:11:25.554203+00:00",
       "now_cost": 45,
       "official_progress_pct": 0.0,
       "official_hourly_rate_pct": 0.0,

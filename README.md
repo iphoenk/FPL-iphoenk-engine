@@ -42,7 +42,7 @@ V3.23 makes the personal-team timeline explicit without replacing the DSS as an 
 ## Official FPL authority and Official-first contract
 Official FPL is the only native authority for Official fields and scoring. External sources remain enrichment/challenger evidence and may never overwrite Official-native truth.
 
-`config/sources/official_first_coverage.json` is the explicit coverage matrix for the REC stream. REC-39 is classified as PUBLIC_FIRST because personal historical/planning context depends on Official entry/history/picks/fixtures/native identity. REC-40 is NOT_APPLICABLE to football-data authority because it changes presentation and checkpoint scheduling only; it does not introduce a substitute data source. The source contract validates that matrix and closed fallback dispositions.
+`config/sources/official_first_coverage.json` is the explicit coverage matrix for the REC stream. REC-39 is classified as `PUBLIC_THEN_PRIVATE_AUTH`: finished-GW truth and submitted planning baselines use public Official entry history/picks first, while unpublished current-draft precision may use optional authorized `my-team` access. Explicit user locks remain a separate user authority, not a substitute public-data source. REC-40 is `NOT_APPLICABLE` to football-data authority because it changes presentation and checkpoint scheduling only; it does not introduce a substitute data source. The source contract validates that matrix and closed fallback dispositions.
 
 Fallback/proxy evidence is allowed only after an explicit disposition:
 - `OFFICIAL_UNAVAILABLE`

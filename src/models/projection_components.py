@@ -38,6 +38,53 @@ def _blended_rate(player: dict[str, Any], cumulative_field: str, prior: float, s
     return max(0.0, blended), source
 
 
+def robust_attack_rate(
+    player: dict[str, Any],
+    cumulative_field: str,
+    prior: float,
+    config: dict[str, Any],
+) -> tuple[float, str, dict[str, Any]]:
+    minutes = max(0.0, _f(player.get("minutes")))
+    cumulative = max(0.0, _f(player.get(cumulative_field)))
+    if minutes <= 0:
+        return max(0.0, prior), "position_or_historical_prior", {
+            "minutes": 0.0,
+            "raw_observed90": None,
+            "bounded_observed90": None,
+            "cap_multiplier": None,
+            "shrink_minutes": None,
+            "winsorized": False,
+        }
+
+    tiers = list(config.get("tiers") or [])
+    if not tiers:
+        raise RuntimeError("REC-02 robust rate tiers missing")
+    selected = None
+    for tier in tiers:
+        max_minutes = tier.get("max_minutes")
+        if max_minutes is None or minutes <= float(max_minutes):
+            selected = tier
+            break
+    if selected is None:
+        selected = tiers[-1]
+    cap_multiplier = max(1.0, _f(selected.get("upper_prior_multiplier"), 6.0))
+    shrink_minutes = max(0.0, _f(selected.get("shrink_minutes"), 450.0))
+    raw_observed = cumulative * 90.0 / minutes
+    upper = max(prior * cap_multiplier, _f(config.get("absolute_upper_rate90"), 1.5))
+    bounded = clamp(raw_observed, 0.0, upper)
+    blended = (bounded * minutes + prior * shrink_minutes) / max(1e-6, minutes + shrink_minutes)
+    winsorized = abs(bounded - raw_observed) > 1e-12
+    source = "robust_observed_shrunk_to_prior" + ("_winsorized" if winsorized else "")
+    return max(0.0, blended), source, {
+        "minutes": round(minutes, 1),
+        "raw_observed90": round(raw_observed, 4),
+        "bounded_observed90": round(bounded, 4),
+        "cap_multiplier": cap_multiplier,
+        "shrink_minutes": shrink_minutes,
+        "winsorized": winsorized,
+    }
+
+
 def _poisson_tail_at_least(threshold: int, expected_count: float) -> float:
     if threshold <= 0:
         return 1.0

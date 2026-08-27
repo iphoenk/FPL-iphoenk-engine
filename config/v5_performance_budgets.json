@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "mode": "advanced_beta",
   "policy": {
     "measure_wall_clock": true,
@@ -8,14 +8,17 @@
     "measure_service_compute": true,
     "measure_service_round_trip": true,
     "measure_transport_overhead": true,
-    "measure_full_beta_end_to_end": true,
+    "measure_refresh_plane_end_to_end": true,
+    "measure_hot_path_end_to_end": true,
     "block_unreviewed_regression": true,
     "single_pass_first": true,
     "hot_path_target_is_advisory_until_canary": false,
     "subsecond_runtime_is_release_blocking": true,
+    "subsecond_sla_applies_to_user_facing_hot_path": true,
+    "refresh_plane_is_precomputation_not_user_latency": true,
     "quality_may_not_be_reduced_to_meet_runtime": true,
     "optimizer_cold_and_steady_state_must_be_measured_separately": true,
-    "notes": "V5 production candidacy requires the complete decision/report path to remain below 1 second. The enforced hard limit is 0.95s to preserve operating margin. The 300ms package-optimizer target is retained for steady-state execution; cold synthetic initialization has a separate 450ms guard because shared CI runner startup noise is not the user-facing SLA. Budgets must not be loosened or analytical breadth reduced to hide real end-to-end regressions."
+    "notes": "V5 user-facing decision/report requests must complete below 1 second. The enforced hot-path hard limit is 0.95s with 0.05s operating margin. Heavy Official/provider refresh, full prediction, evaluation, optimizer and watchlist screening run on the governed refresh plane and materialize a fingerprinted decision bundle. Stale materialization fails closed and may never trigger hidden synchronous refresh. Analytical breadth and quality must not be reduced to meet the SLA."
   },
   "budgets": {
     "rules_registry_load_ms": 50,
@@ -34,7 +37,10 @@
     "decision_pipeline_soft_target_seconds": 0.85,
     "decision_pipeline_hard_limit_seconds": 0.95,
     "decision_pipeline_hot_target_seconds": 0.75,
-    "full_beta_end_to_end_hard_limit_seconds": 0.95,
+    "hot_path_hot_target_seconds": 0.75,
+    "hot_path_soft_target_seconds": 0.85,
+    "hot_path_hard_limit_seconds": 0.95,
+    "refresh_pipeline_observability_ceiling_seconds": 5.0,
     "internal_service_transport_overhead_soft_ms": 25,
     "internal_service_health_soft_ms": 75,
     "orchestrator_non_source_overhead_soft_ms": 450,

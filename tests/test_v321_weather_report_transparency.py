@@ -111,7 +111,7 @@ def test_owned_transparency_exposes_selection_score_and_close_gk_choice():
     ]
     lineup = {
         "squad_rows": squad_rows,
-        "starting_xi": [{"element": idx} for idx in range(1, 12)],
+        "starting_xi": [{"element": 1}, *[{"element": idx} for idx in range(3, 13)]],
         "main_starting_xi_battle": {"status": "CLEAR", "starter_side": [], "bench_side": []},
     }
     rows = _decorate_owned(owned, projections, lineup, 2)
@@ -120,7 +120,7 @@ def test_owned_transparency_exposes_selection_score_and_close_gk_choice():
     assert by_id[1]["choice_state"] == "OPEN"
     assert by_id[2]["choice_state"] == "OPEN"
     assert by_id[1]["lineup_status"] == "START"
-    assert by_id[2]["lineup_status"] == "START"
+    assert by_id[2]["lineup_status"] == "BENCH"
 
 
 def test_report_contract_requires_xpts_selection_weather_and_settled_validation():

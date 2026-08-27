@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "model_id": "player_projection_interpretable_v1",
-  "historical_model_id": "player_projection_historical_prior_v1",
+  "historical_model_id": "player_projection_historical_prior_v2_dc_probability",
   "published_horizons": [3, 5, 10, 15],
   "rate_shrinkage_minutes": 450.0,
   "position_priors": {

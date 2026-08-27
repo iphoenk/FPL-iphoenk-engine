@@ -76,6 +76,20 @@ def _canonical_worker_limit(cfg: dict[str, Any]) -> int:
     return max(1, int(policy.get("max_workers") or 1))
 
 
+def _aggregate_status(summaries: dict[str, dict[str, Any]], enabled_sources: list[str]) -> str:
+    rows = [summaries[source_id] for source_id in enabled_sources if source_id in summaries]
+    if any(str(row.get("status") or "") == "ACTIVE" for row in rows):
+        return "ACTIVE"
+    if any(str(row.get("status") or "") == "DEGRADED" for row in rows):
+        return "DEGRADED"
+    if rows and all(
+        str(row.get("status") or "") == "UNAVAILABLE" and row.get("fail_neutral") is True
+        for row in rows
+    ):
+        return "DEGRADED"
+    return "UNAVAILABLE"
+
+
 def collect(bootstrap: dict[str, Any]) -> dict[str, Any]:
     cfg = load_json_config(CONFIG)
     season = season_authority()
@@ -121,7 +135,13 @@ def collect(bootstrap: dict[str, Any]) -> dict[str, Any]:
     degraded_count = sum(status == "DEGRADED" for status in statuses)
     unavailable_count = sum(status in {"UNAVAILABLE", "DISABLED"} for status in statuses)
     plan_restricted_count = sum(str(row.get("availability_class") or "") == "PLAN_RESTRICTED" for row in summaries.values())
-    overall = "ACTIVE" if active_count else ("DEGRADED" if degraded_count else "UNAVAILABLE")
+    enabled_sources = sorted(jobs)
+    fail_neutral_unavailable_count = sum(
+        str(summaries[source_id].get("status") or "") == "UNAVAILABLE"
+        and summaries[source_id].get("fail_neutral") is True
+        for source_id in enabled_sources
+    )
+    overall = _aggregate_status(summaries, enabled_sources)
     return {
         "schema_version": 4,
         "model": cfg.get("model_id"),
@@ -133,7 +153,8 @@ def collect(bootstrap: dict[str, Any]) -> dict[str, Any]:
             "degraded_sources": degraded_count,
             "unavailable_sources": unavailable_count,
             "plan_restricted_sources": plan_restricted_count,
-            "enabled_sources": sorted(jobs),
+            "fail_neutral_unavailable_sources": fail_neutral_unavailable_count,
+            "enabled_sources": enabled_sources,
             "disabled_sources": sorted(source_id for source_id, row in source_cfgs.items() if not bool(row.get("enabled"))),
             "configured_max_workers": configured_workers,
             "workers_used": workers_used,
@@ -148,6 +169,8 @@ def collect(bootstrap: dict[str, Any]) -> dict[str, Any]:
             "fpl_core_insights_remains_primary_epl_advanced_stats": True,
             "challenger_failure_is_fail_neutral": True,
             "optional_source_plan_restriction_is_not_engine_failure": True,
+            "aggregate_degraded_when_only_enabled_sources_are_fail_neutral_unavailable": True,
+            "provider_unavailable_status_is_not_rewritten": True,
             "missing_enrichment_is_unavailable_not_zero": True,
             "network_fetch_owner": "ingestion",
             "source_enablement_authority": "config/sources/registry.json",

@@ -3,8 +3,8 @@
 Production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
-- Production baseline: `3.19.0` / schema `48` until V3.20 production acceptance completes.
-- Release candidate: `3.20.0` / schema `48`.
+- Production baseline: `3.20.0` / schema `48`.
+- Production acceptance: COMPLETE on 27 August 2026.
 - Release metadata source of truth: `src/version.py`.
 - Service Registry: schema `11`, contract `v3.20-architecture-hardening-15-owned-20-watchlist`.
 - Machine Source Registry: `SOURCE_REGISTRY_V3`.
@@ -79,7 +79,8 @@ Active model identity is independent of engine release numbering. Projection con
 - Service Registry schema: `11`.
 - Source Registry: `SOURCE_REGISTRY_V3`.
 
-V3.20 remains a release candidate until PR CI, bounded integration, all production contracts, merge, production collector and `runtime-data` framework verification are complete.
+### Production acceptance evidence
+V3.20.0 production acceptance completed on 27 August 2026. PR #34 merged to `main` as `edeaff7a5b1f8173392cb528f93e132836608ed5`. Production push workflow run `33032958368` passed architecture, runtime, source capability, production decision/report, full DSS watchlist, report serving, report-time intelligence and validated `runtime-data` publication. Production `runtime-data` reports engine `3.20.0` / schema `48`, framework GREEN, decision engine HEALTHY, recommendation allowed and GO allowed; Gate0 is 16/16 PASS, DSS Core 50/50 ACTIVE, DSS Extensions 16/16 ACTIVE and Enhancement Layers 8/8 ACTIVE. `SOURCE_REGISTRY_V3` is GREEN/non-blocking, OneFPL remains disabled in the unattended collector, and the ephemeral `official_snapshot.json` is not published to `runtime-data`.
 
 ## v3.19.0 Report-Time Intelligence
 V3.19 separates machine-ingested sources from report-time web intelligence. Sources useful for decision context but inappropriate or unreliable for unattended collector access are refreshed when a scheduled or on-demand report is prepared, then compared with DSS without silently mutating DSS.
@@ -131,7 +132,7 @@ Local reconstruction is an audit aid only and may not override Official FPL nati
 Third-party predictions and opinions are evidence, never native authority.
 
 ## Runtime architecture
-The active production/candidate runtime is a bounded-process dependency-aware microservice orchestrator driven by `config/v3_service_registry.json`.
+The active production runtime is a bounded-process dependency-aware microservice orchestrator driven by `config/v3_service_registry.json`.
 
 Key properties:
 - generic root DAG scheduling;
@@ -199,7 +200,7 @@ CI must fail on release metadata or architecture ownership drift. A version is n
 - v3.18.0: structured challenger ingestion and architecture/configuration hardening.
 - v3.18.1: OneFPL unattended-access reliability diagnosis.
 - v3.19.0: report-time intelligence, pundit consensus-vs-DSS and OneFPL report-time delegation.
-- v3.20.0 candidate: artifact-owned base-service decomposition, generic DAG, Source Registry V3, collector policy, current advanced-stat aliases and architecture anti-regression gate.
+- v3.20.0: production-accepted artifact-owned base-service decomposition, generic DAG, Source Registry V3, collector policy, current advanced-stat aliases and architecture anti-regression gate.
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.

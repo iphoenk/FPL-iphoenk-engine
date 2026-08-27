@@ -5,7 +5,7 @@
   "simulated": false,
   "snapshot": {
     "status": "PASS",
-    "action": "FROZEN",
+    "action": "PRESERVED",
     "gw": 2,
     "deadline_time": "2026-08-28T17:30:00Z",
     "players": 614,

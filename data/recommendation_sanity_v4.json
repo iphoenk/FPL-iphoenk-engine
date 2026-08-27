@@ -61,7 +61,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9349,
+            "market_support": 0.9354,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -201,7 +201,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9349,
+            "market_support": 0.9354,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -222,7 +222,7 @@
             "horizon_stability": 0.933,
             "rate_spike_risk": 0.0054,
             "current_season_weight": 0.0943,
-            "market_support": 0.8254,
+            "market_support": 0.8258,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -369,7 +369,7 @@
             "horizon_stability": 0.9416,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.6213,
+            "market_support": 0.6216,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -409,7 +409,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9349,
+            "market_support": 0.9354,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -421,12 +421,12 @@
             "name": "Calafiori",
             "team": "Arsenal",
             "position": "DEF",
-            "confidence": 0.7986,
+            "confidence": 0.7987,
             "grade": "HIGH",
             "start_probability_5": 0.8041,
             "dnp_probability_5": 0.1763,
             "uncertainty": 0.181,
-            "role_prior": 0.3503,
+            "role_prior": 0.351,
             "horizon_stability": 0.9035,
             "rate_spike_risk": 0.0738,
             "current_season_weight": 0.1,
@@ -449,7 +449,7 @@
             "horizon_stability": 0.933,
             "rate_spike_risk": 0.0054,
             "current_season_weight": 0.0943,
-            "market_support": 0.8254,
+            "market_support": 0.8258,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -476,7 +476,7 @@
           }
         ],
         "avg_incoming_confidence": 0.7593,
-        "avg_outgoing_confidence": 0.8048,
+        "avg_outgoing_confidence": 0.8049,
         "min_incoming_confidence": 0.6508,
         "severe_rate_spikes": 1,
         "team_cluster_excess": 0,
@@ -629,7 +629,7 @@
             "horizon_stability": 0.9416,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.6213,
+            "market_support": 0.6216,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -688,7 +688,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9349,
+            "market_support": 0.9354,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -700,12 +700,12 @@
             "name": "Calafiori",
             "team": "Arsenal",
             "position": "DEF",
-            "confidence": 0.7986,
+            "confidence": 0.7987,
             "grade": "HIGH",
             "start_probability_5": 0.8041,
             "dnp_probability_5": 0.1763,
             "uncertainty": 0.181,
-            "role_prior": 0.3503,
+            "role_prior": 0.351,
             "horizon_stability": 0.9035,
             "rate_spike_risk": 0.0738,
             "current_season_weight": 0.1,
@@ -749,7 +749,7 @@
             "horizon_stability": 0.933,
             "rate_spike_risk": 0.0054,
             "current_season_weight": 0.0943,
-            "market_support": 0.8254,
+            "market_support": 0.8258,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -893,7 +893,7 @@
           "horizon_stability": 0.9027,
           "rate_spike_risk": 0.5055,
           "current_season_weight": 0.1111,
-          "market_support": 0.9349,
+          "market_support": 0.9354,
           "flags": [
             "EARLY_SEASON_SAMPLE"
           ]
@@ -914,7 +914,7 @@
           "horizon_stability": 0.933,
           "rate_spike_risk": 0.0054,
           "current_season_weight": 0.0943,
-          "market_support": 0.8254,
+          "market_support": 0.8258,
           "flags": [
             "EARLY_SEASON_SAMPLE"
           ]

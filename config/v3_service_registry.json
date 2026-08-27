@@ -1,17 +1,18 @@
 {
-  "schema_version": 10,
+  "schema_version": 11,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.19-report-time-intelligence-15-owned-20-watchlist",
+  "production_contract": "v3.20-architecture-hardening-15-owned-20-watchlist",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,
+    "generic_root_service_scheduling": true,
+    "single_owner_for_standard_official_network_fetches": true,
     "single_run_shared_official_cache": true,
     "parallelize_independent_services": true,
     "service_data_isolation": true,
     "deterministic_fan_in": true,
-    "no_business_logic_rewrite_required": true,
     "fail_closed_on_critical_service_failure": true,
-    "latest_json_single_writer_during_fan_in": true,
+    "latest_json_single_writer_during_base_fan_in": true,
     "dependency_aware_scheduling": true,
     "raw_optimizer_is_not_final_decision": true,
     "postflight_gate0_requires_governed_lineup_and_package": true,
@@ -46,33 +47,114 @@
     "pundit_consensus_is_compared_with_dss": true,
     "community_signal_requires_crosscheck": true,
     "fixture_strategy_expert_does_not_vote_on_player_projection": true,
-    "report_time_web_refresh_is_chat_report_orchestration_owned": true
+    "report_time_web_refresh_is_chat_report_orchestration_owned": true,
+    "service_boundaries_follow_artifact_ownership_not_file_size": true,
+    "ephemeral_internal_snapshot_is_not_published": true
   },
   "runtime": {
     "max_parallel_services": 5,
     "service_timeout_seconds": 180,
     "http_cache_ttl_seconds": 180,
     "performance_budget_seconds": 45,
-    "performance_target": "preserve sub-45-second unattended runtime while report-time web intelligence stays outside collector I/O and full DSS operational evidence remains green"
+    "performance_target": "preserve sub-45-second runtime while replacing the monolithic base collector with explicit Official, team, market, live, stats and snapshot owners"
   },
   "services": {
-    "collector": {
-      "stage": "base",
+    "official_snapshot": {
+      "stage": "base-source",
       "depends_on": [],
       "critical": true,
+      "isolated": true,
+      "inputs": [],
+      "commands": [{"module": "src.engines.official_snapshot_service", "args": []}],
+      "artifacts": ["official_snapshot.json", "health.json"],
+      "ephemeral_artifacts": ["official_snapshot.json"],
+      "latest_keys": [],
+      "latest_file_keys": []
+    },
+    "rules": {
+      "stage": "base-governance",
+      "depends_on": [],
+      "critical": true,
+      "isolated": true,
+      "inputs": [],
+      "commands": [{"module": "src.engines.rules_compliance_audit", "args": []}],
+      "artifacts": ["rules_compliance.json"],
+      "latest_keys": [],
+      "latest_file_keys": []
+    },
+    "team_state": {
+      "stage": "base-domain",
+      "depends_on": ["official_snapshot"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["official_snapshot.json"],
+      "commands": [{"module": "src.engines.team_state_service", "args": []}],
+      "artifacts": ["team.json", "chips.json"],
+      "latest_keys": [],
+      "latest_file_keys": []
+    },
+    "market_state": {
+      "stage": "base-domain",
+      "depends_on": ["official_snapshot"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["official_snapshot.json", "price_cache.json"],
+      "commands": [{"module": "src.engines.market_state_service", "args": []}],
+      "artifacts": ["price_cache.json", "prices.json", "universe.json"],
+      "latest_keys": [],
+      "latest_file_keys": []
+    },
+    "live_state": {
+      "stage": "base-domain",
+      "depends_on": ["official_snapshot"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["official_snapshot.json"],
+      "commands": [{"module": "src.engines.live_state_service", "args": []}],
+      "artifacts": ["live.json"],
+      "latest_keys": [],
+      "latest_file_keys": []
+    },
+    "advanced_stats": {
+      "stage": "base-domain",
+      "depends_on": ["official_snapshot"],
+      "critical": true,
       "isolated": false,
-      "commands": [
-        {"module": "src.engine", "args": ["{mode}", "{stats}", "{deep_stats}"]},
-        {"module": "src.reliability_overlay", "args": []}
-      ]
+      "inputs": [],
+      "commands": [{"module": "src.engines.advanced_stats_service", "args": ["{stats}", "{deep_stats}"]}],
+      "artifacts": ["advanced_stats_sync.json"],
+      "latest_keys": [],
+      "latest_file_keys": []
+    },
+    "base_snapshot": {
+      "stage": "base-fan-in",
+      "depends_on": ["official_snapshot", "team_state", "market_state", "live_state", "advanced_stats"],
+      "critical": true,
+      "isolated": false,
+      "inputs": [],
+      "commands": [{"module": "src.engines.base_snapshot_service", "args": ["{mode}"]}],
+      "artifacts": ["latest.json", "native.json", "health.json", "team.json", "chips.json", "live.json", "prices.json", "universe.json", "advanced_stats_sync.json"],
+      "latest_keys": [],
+      "latest_file_keys": []
+    },
+    "historical_prior": {
+      "stage": "parallel",
+      "depends_on": ["base_snapshot", "official_snapshot"],
+      "critical": true,
+      "isolated": true,
+      "inputs": ["official_snapshot.json", "latest.json", "stats/vaastav_previous_season.json"],
+      "commands": [{"module": "src.engines.historical_prior_runtime", "args": []}],
+      "artifacts": ["prior_season.json", "stats/vaastav_previous_season.json"],
+      "latest_keys": ["historical_prior_summary"],
+      "latest_file_keys": ["prior_season", "vaastav_previous_season"]
     },
     "source_layer": {
       "stage": "parallel",
-      "depends_on": ["collector"],
+      "depends_on": ["base_snapshot", "historical_prior"],
       "critical": true,
       "isolated": true,
       "inputs": [
-        "latest.json", "health.json", "challenger_observations.json", "stats/shots_gw1.json", "stats/playermatchstats_gw1.json",
+        "latest.json", "health.json", "challenger_observations.json", "stats/shots_current.json", "stats/playermatchstats_current.json",
         "stats/vaastav_previous_season.json"
       ],
       "commands": [{"module": "src.engines.source_layer", "args": []}],
@@ -82,7 +164,7 @@
     },
     "price": {
       "stage": "parallel",
-      "depends_on": ["collector", "source_layer"],
+      "depends_on": ["base_snapshot", "source_layer"],
       "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "team.json", "prices.json", "price_trajectory.json", "challenger_observations.json"],
@@ -90,17 +172,6 @@
       "artifacts": ["prices.json", "price_trajectory.json", "price_alerts.json", "price_challenger_context.json"],
       "latest_keys": ["price_summary"],
       "latest_file_keys": ["price_trajectory", "price_alerts", "price_challenger_context"]
-    },
-    "historical_prior": {
-      "stage": "parallel",
-      "depends_on": ["collector"],
-      "critical": true,
-      "isolated": true,
-      "inputs": ["latest.json", "stats/vaastav_previous_season.json"],
-      "commands": [{"module": "src.engines.historical_prior_service", "args": []}],
-      "artifacts": ["prior_season.json", "stats/vaastav_previous_season.json"],
-      "latest_keys": ["historical_prior_summary"],
-      "latest_file_keys": ["prior_season", "vaastav_previous_season"]
     },
     "prediction": {
       "stage": "parallel",
@@ -115,7 +186,7 @@
     },
     "authenticated_official": {
       "stage": "parallel",
-      "depends_on": ["collector"],
+      "depends_on": ["base_snapshot"],
       "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "team.json"],
@@ -123,17 +194,6 @@
       "artifacts": ["auth.json"],
       "latest_keys": ["authenticated_official"],
       "latest_file_keys": ["auth"]
-    },
-    "rules": {
-      "stage": "parallel",
-      "depends_on": ["collector"],
-      "critical": true,
-      "isolated": true,
-      "inputs": [],
-      "commands": [{"module": "src.engines.rules_compliance_audit", "args": []}],
-      "artifacts": ["rules_compliance.json"],
-      "latest_keys": [],
-      "latest_file_keys": []
     },
     "official_detail": {
       "stage": "parallel",
@@ -199,10 +259,7 @@
       "depends_on": ["governance"],
       "critical": true,
       "isolated": true,
-      "inputs": [
-        "latest.json", "team.json", "projections.json", "package_optimizer.json", "prices.json",
-        "price_alerts.json", "framework_health.json", "dss_watchlist.json"
-      ],
+      "inputs": ["latest.json", "team.json", "projections.json", "package_optimizer.json", "prices.json", "price_alerts.json", "framework_health.json", "dss_watchlist.json"],
       "commands": [
         {"module": "src.engines.dss_watchlist", "args": []},
         {"module": "src.engines.watchlist_public_sanitize", "args": []}
@@ -217,9 +274,9 @@
       "critical": true,
       "isolated": true,
       "inputs": [
-        "latest.json", "team.json", "lineup_decision.json", "package_decision.json", "projections.json",
-        "price_alerts.json", "prediction_quality.json", "framework_health.json", "challenger_scorecard.json",
-        "report_state.json", "dss_watchlist.json", "source_health.json", "dss_operational_evidence.json"
+        "latest.json", "team.json", "lineup_decision.json", "package_decision.json", "projections.json", "price_alerts.json",
+        "prediction_quality.json", "framework_health.json", "challenger_scorecard.json", "report_state.json", "dss_watchlist.json",
+        "source_health.json", "dss_operational_evidence.json"
       ],
       "commands": [
         {"module": "src.engines.report_architecture", "args": []},
@@ -234,10 +291,7 @@
       "depends_on": ["reporting", "official_detail"],
       "critical": true,
       "isolated": true,
-      "inputs": [
-        "latest.json", "user_report.json", "technical_appendix.json", "team.json", "projections.json",
-        "dss_watchlist.json", "official_detail.json", "source_health.json"
-      ],
+      "inputs": ["latest.json", "user_report.json", "technical_appendix.json", "team.json", "projections.json", "dss_watchlist.json", "official_detail.json", "source_health.json"],
       "commands": [
         {"module": "src.engines.report_materializer", "args": []},
         {"module": "src.engines.report_serving_validate", "args": []}
@@ -247,10 +301,7 @@
         "official_detail_owned.json", "official_detail_watchlist.json", "report_artifact_registry.json"
       ],
       "latest_keys": ["report_serving"],
-      "latest_file_keys": [
-        "user_report", "decision_brief", "deep_review_payload", "dss_watchlist_summary",
-        "official_detail_owned", "official_detail_watchlist", "report_artifact_registry"
-      ]
+      "latest_file_keys": ["user_report", "decision_brief", "deep_review_payload", "dss_watchlist_summary", "official_detail_owned", "official_detail_watchlist", "report_artifact_registry"]
     }
   }
 }

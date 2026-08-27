@@ -23,16 +23,22 @@
       "runtime_snapshot_parent_count": 0
     },
     "current_operational_evidence": {
-      "source_commit": "da55f6a15909085799a9b6fcd187d01871038915",
-      "fast_runtime_ms": 5801.96,
-      "fast_peak_rss_kb": 87524,
-      "fast_child_peak_rss_kb": 114800,
+      "source_commit": "37f68510d531e57e5d8dbb997177d47a007a6870",
+      "full_run": 33077874024,
+      "full_runtime_ms": 8410.152,
+      "full_source_layer_ms": 1911.786,
+      "full_official_detail_ms": 2385.637,
+      "fast_runtime_ms": 4121.894,
+      "fast_peak_rss_kb": 87560,
+      "fast_child_peak_rss_kb": 114708,
+      "runtime_branch_commit": "14508e06c5cdd0bfe3039cb73128e20eb3c63ef8",
       "runtime_snapshot_file_count": 48,
-      "runtime_snapshot_bytes": 18498045,
+      "runtime_snapshot_bytes": 18685488,
       "within_fast_slo": true,
-      "rec35_compaction_effective": true,
-      "rec35_pre_compaction_snapshot_mb_approx": 24,
-      "rec35_post_compaction_snapshot_mb": 18.5
+      "official_first_integrity": true,
+      "official_first_covered_recommendations": 39,
+      "official_first_official_applicable": 16,
+      "rec35_compaction_effective": true
     }
   },
   "rec_status": {
@@ -69,12 +75,12 @@
     "REC-30": {"status": "DONE_PROD", "summary": "Runtime wall/RSS/resource regression guard is active."},
     "REC-31": {"status": "DONE_PROD", "summary": "Only profile-declared, complete, contract-valid REUSED services are accepted."},
     "REC-32": {"status": "DONE_PROD", "summary": "Registry-owned latest-state carry-forward preserves reusable canonical state through base fan-in."},
-    "REC-33": {"status": "DONE_ENGINEERING_MONITOR", "summary": "Weather FULL refresh uses freshness-aware reuse and bounded concurrency; CI FULL improved from 55.5s outlier to 17.068s and Source Layer to 3.043s; scheduled FULL latency remains monitored.", "pr": 52},
+    "REC-33": {"status": "DONE_ENGINEERING_MONITOR", "summary": "Weather FULL refresh uses freshness-aware reuse and bounded concurrency; scheduled FULL latency remains monitored.", "pr": 52},
     "REC-34": {"status": "DONE_PROD", "summary": "One-shot player-feature contract migration fence regenerated stale runtime artifact and restored normal 21600-second advanced-stats reuse TTL.", "prs": [66, 67]},
-    "REC-35": {"status": "DONE_PROD", "summary": "Duplicated per-fixture defensive-contribution provenance removed without formula/decision change; current snapshot is 18.50MB with FAST 5.802s and RSS 87.5/114.8MB.", "pr": 70},
+    "REC-35": {"status": "DONE_PROD", "summary": "Duplicated per-fixture defensive-contribution provenance removed without formula/decision change.", "pr": 70},
     "REC-36": {"status": "DONE_PROD", "summary": "Public Official entry history and historical picks reconcile submitted teams including GW1 as retrospective proxy only; private pre-deadline draft remains separate.", "pr": 73},
     "REC-37": {"status": "DONE_PROD", "summary": "One-shot Official-detail migration fence published REC-36 historical fields to runtime-data and normal 3600-second FAST/LIVE reuse TTL was restored.", "prs": [74, 75]},
-    "REC-38": {"status": "DONE_ENGINEERING_PENDING_PROD", "summary": "Official-first coverage matrix now classifies every REC, requires explicit fallback disposition and is wired into the source contract; production FULL acceptance remains required."}
+    "REC-38": {"status": "DONE_PROD", "summary": "Official-first coverage contract classifies every REC, closes fallback to explicit dispositions, is enforced by the production source contract, and passed FULL production acceptance with runtime-data publication.", "prs": [77, 78], "production_full_run": 33077874024}
   },
   "calibration_monitors": {
     "settled_prediction_validation": "MONITOR",

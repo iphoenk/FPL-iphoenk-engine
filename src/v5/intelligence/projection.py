@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from src.v5.config_cache import load_json_config
+from src.v5.intelligence.defensive_contribution import build_rate_bundle, project_fixture_points
 from src.v5.intelligence.role_intelligence import build_role_intelligence
 from src.v5.intelligence.team_strength import build_team_strength
 from src.v5.intelligence.xmins import estimate_xmins
@@ -65,6 +66,7 @@ def build_predictions(
     horizon: int = 15,
     *,
     historical_prior: dict[str, Any] | None = None,
+    full_enrichment: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cfg = load_json_config(CONFIG)
     strength = build_team_strength(bootstrap, fixtures)
@@ -86,6 +88,7 @@ def build_predictions(
     cs_points = {int(k): int(v) for k, v in (rules.get("clean_sheet_points") or {}).items()}
     assist_points = int(rules.get("assist_points") or 3)
     shrink = max(1.0, _f(cfg.get("rate_shrinkage_minutes"), 450.0))
+    dc_shrink = max(1.0, _f((cfg.get("defensive_contribution") or {}).get("rate_shrinkage_minutes"), 450.0))
     priors = cfg.get("position_priors") or {}
     historical_map = (
         historical_prior.get("players")
@@ -93,9 +96,13 @@ def build_predictions(
         else {}
     )
     historical_enabled = bool((cfg.get("historical_prior") or {}).get("enabled", True))
+    enrichment = full_enrichment if isinstance(full_enrichment, dict) else {}
+    advanced_stats = enrichment.get("advanced_stats") if isinstance(enrichment.get("advanced_stats"), dict) else {}
+    advanced_map = advanced_stats.get("players") if isinstance(advanced_stats.get("players"), dict) else {}
     league_baseline = strength.get("baseline") or {}
     players = []
     historical_used = 0
+    defensive_evidence_used = 0
 
     for player in bootstrap.get("elements") or []:
         element_id = int(player["id"])
@@ -116,7 +123,16 @@ def build_predictions(
         xa90, xa_source = _blended_rate(player, "expected_assists", xa_prior, shrink)
         bonus90, bonus_source = _blended_rate(player, "bonus", _f(position_prior.get("bonus90")), shrink)
         saves90, saves_source = _blended_rate(player, "saves", _f(position_prior.get("saves90")), shrink)
-        dc90 = _f(position_prior.get("dc90"))
+        advanced_player = advanced_map.get(str(element_id)) if isinstance(advanced_map, dict) else None
+        dc_bundle = build_rate_bundle(
+            element_type=element_type,
+            prior_expected_points90=_f(position_prior.get("dc90")),
+            advanced=advanced_player if isinstance(advanced_player, dict) else None,
+            rules=rules,
+            shrink_minutes=dc_shrink,
+        )
+        defensive_evidence_used += int(str(dc_bundle.get("source")) == "player_cbit_cbirt_shrunk_to_position_prior")
+        dc90 = _f(dc_bundle.get("expected_points90"))
         rates = {"xg90": xg90, "xa90": xa90, "bonus90": bonus90, "saves90": saves90, "dc90": dc90}
         team_id = int(player.get("team") or -1)
         role = role_rows.get(element_id) if isinstance(role_rows, dict) else None
@@ -138,7 +154,11 @@ def build_predictions(
             )
         xmins = estimate_xmins(player, xmins_context)
         p60 = _p60(xmins, cfg)
-        share = clamp(_f(xmins.get("expected_minutes")) / 90.0, 0.0, 1.0)
+        expected_minutes = max(0.0, _f(xmins.get("expected_minutes")))
+        share = clamp(expected_minutes / 90.0, 0.0, 1.0)
+        p_start = clamp(_f(xmins.get("start_probability")), 0.0, 1.0)
+        p_bench = clamp(_f(xmins.get("bench_probability")), 0.0, max(0.0, 1.0 - p_start))
+        p_appearance = clamp(p_start + p_bench, 0.0, 1.0)
         team_matchups = [
             m
             for m in matchups_by_team.get(team_id, [])
@@ -162,7 +182,7 @@ def build_predictions(
                     0.0,
                     1.0,
                 )
-                appearance = _f(xmins.get("start_probability")) * (1.0 + p60) + _f(xmins.get("bench_probability"))
+                appearance = p_start * (1.0 + p60) + p_bench
                 set_piece_multiplier = 1.0 + _f(role_adjustment.get("set_piece_assist_uplift"), 0.08) * _f(role.get("set_piece_share"))
                 penalty_multiplier = 1.0 + _f(role_adjustment.get("penalty_goal_uplift"), 0.18) * _f(role.get("penalty_share"))
                 attack = (
@@ -171,7 +191,9 @@ def build_predictions(
                 ) * share * attack_multiplier
                 clean = cs_points.get(element_type, 0) * cs_prob * p60
                 saves = (saves90 / 3.0) * share if position == "GK" else 0.0
-                mean = max(0.0, appearance + attack + clean + dc90 * share + bonus90 * share + saves)
+                dc_fixture = project_fixture_points(dc_bundle, expected_minutes, p_appearance)
+                dc = _f(dc_fixture.get("points"))
+                mean = max(0.0, appearance + attack + clean + dc + bonus90 * share + saves)
                 unc = cfg.get("uncertainty") or {}
                 std = max(
                     _f(unc.get("minimum_points_std"), 1.15),
@@ -189,6 +211,20 @@ def build_predictions(
                     "mean": round(mean, 3),
                     "std": round(std, 3),
                     "clean_sheet_probability": round(cs_prob, 4),
+                    "defensive_contribution": round(dc, 4),
+                    "defensive_contribution_model": {
+                        "model": dc_bundle.get("model"),
+                        "eligible": bool(dc_bundle.get("eligible")),
+                        "threshold": dc_bundle.get("threshold"),
+                        "points_on_threshold": dc_bundle.get("points_on_threshold"),
+                        "count_rate_per90": round(_f(dc_bundle.get("count_rate_per90")), 4),
+                        "conditional_minutes": round(_f(dc_fixture.get("conditional_minutes")), 2),
+                        "threshold_probability_if_appears": round(_f(dc_fixture.get("threshold_probability_if_appears")), 4),
+                        "appearance_probability": round(p_appearance, 4),
+                        "source": dc_bundle.get("source"),
+                        "evidence_minutes": round(_f(dc_bundle.get("evidence_minutes")), 1),
+                        "sample_quality": dc_bundle.get("sample_quality"),
+                    },
                 }
                 details.append(row)
                 if len(network_fixtures) < 5:
@@ -202,6 +238,7 @@ def build_predictions(
                                 key: xmins.get(key)
                                 for key in ("start_probability", "bench_probability", "dnp_probability", "expected_minutes")
                             },
+                            "defensive_contribution": row["defensive_contribution_model"],
                         }
                     )
             gw_mean = sum(_f(x.get("mean")) for x in details)
@@ -258,6 +295,13 @@ def build_predictions(
                     "penalty_share": role.get("penalty_share"),
                     "set_piece_source": role.get("source"),
                 },
+                "defensive_contribution": {
+                    **dc_bundle,
+                    "expected_points90": round(_f(dc_bundle.get("expected_points90")), 4),
+                    "count_rate_per90": round(_f(dc_bundle.get("count_rate_per90")), 4),
+                    "threshold_probability_90": round(_f(dc_bundle.get("threshold_probability_90")), 4),
+                    "evidence_minutes": round(_f(dc_bundle.get("evidence_minutes")), 1),
+                },
                 "rates": {
                     **{key: round(value, 4) for key, value in rates.items()},
                     "sources": {
@@ -265,7 +309,7 @@ def build_predictions(
                         "xa90": f"{xa_source}|prior={xa_prior_source}",
                         "bonus90": bonus_source,
                         "saves90": saves_source,
-                        "dc90": "position_prior",
+                        "dc90": str(dc_bundle.get("source") or "position_prior_probability_calibrated"),
                     },
                     "historical_attacking_prior_weight": round(attack_weight, 4),
                 },
@@ -274,8 +318,8 @@ def build_predictions(
         )
     return {
         "generated_at": _now(),
-        "schema_version": 513,
-        "model_version": str(cfg.get("model_id") or "player_projection_v5_historical_prior"),
+        "schema_version": 514,
+        "model_version": str(cfg.get("model_id") or "player_projection_v5_historical_prior_dc_probability"),
         "ruleset_id": rules.get("ruleset_id"),
         "planning_gw": planning_gw,
         "horizon_gws": horizon,
@@ -286,6 +330,12 @@ def build_predictions(
             "fetch_mode": historical_prior.get("fetch_mode") if isinstance(historical_prior, dict) else None,
             "coverage": historical_prior.get("coverage") if isinstance(historical_prior, dict) else None,
             "players_used": historical_used,
+        },
+        "defensive_contribution": {
+            "model": "poisson_threshold_shrunk_rate_v1",
+            "advanced_evidence_players_used": defensive_evidence_used,
+            "fallback": "position_prior_probability_calibrated",
+            "rules_authority": rules.get("authority"),
         },
         "team_strength": strength,
         "role_intelligence": {

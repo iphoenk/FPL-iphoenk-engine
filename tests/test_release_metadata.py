@@ -66,7 +66,9 @@ def test_master_task_governance_is_wired():
     production = f"Current production release: V{ENGINE_VERSION}" in master
     assert candidate != production, "roadmap must identify exactly one current release state"
     if candidate:
-        assert f"Current candidate schema: {SCHEMA_VERSION}" in master
+        separate_schema = f"Current candidate schema: {SCHEMA_VERSION}" in master
+        combined_schema = f"Current release candidate: V{ENGINE_VERSION} / schema {SCHEMA_VERSION}" in master
+        assert separate_schema or combined_schema
     else:
         assert f"Current production schema: {SCHEMA_VERSION}" in master
         assert "Production acceptance: COMPLETE" in master

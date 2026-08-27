@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from src.runtime_v3 import RUNTIME_ID
+from src.runtime_v3.artifact_contracts import validate_artifact, validate_latest_sidecar
 from src.utils import DATA, ROOT, atomic_json, read_json
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
@@ -83,14 +84,7 @@ def _expand_args(args: list[str], context: dict[str, str]) -> list[str]:
     return out
 
 
-def _run_command(
-    command: dict[str, Any],
-    *,
-    data_dir: Path,
-    cache_dir: Path,
-    context: dict[str, str],
-    timeout: int,
-) -> dict[str, Any]:
+def _run_command(command: dict[str, Any], *, data_dir: Path, cache_dir: Path, context: dict[str, str], timeout: int) -> dict[str, Any]:
     if command.get("copy"):
         source_name, target_name = [str(x) for x in command["copy"]]
         source = data_dir / source_name
@@ -100,37 +94,19 @@ def _run_command(
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
         return {"type": "copy", "source": source_name, "target": target_name, "elapsed_ms": 0.0}
-
     if not command.get("module"):
         raise RuntimeError(f"unsupported service command: {command}")
     cmd = [sys.executable, "-m", str(command["module"]), *_expand_args(list(command.get("args") or []), context)]
     descriptor = str(command["module"])
-
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT)
     env["FPL_DATA_DIR"] = str(data_dir)
     env["FPL_HTTP_CACHE_DIR"] = str(cache_dir)
     env["FPL_HTTP_CACHE_TTL_SECONDS"] = context["http_cache_ttl"]
     started = time.perf_counter()
-    proc = subprocess.run(
-        cmd,
-        cwd=ROOT,
-        env=env,
-        text=True,
-        capture_output=True,
-        timeout=timeout,
-        check=False,
-    )
+    proc = subprocess.run(cmd, cwd=ROOT, env=env, text=True, capture_output=True, timeout=timeout, check=False)
     elapsed_ms = round((time.perf_counter() - started) * 1000.0, 3)
-    result = {
-        "type": "process",
-        "descriptor": descriptor,
-        "argv": cmd[2:] if len(cmd) > 2 else cmd,
-        "returncode": proc.returncode,
-        "elapsed_ms": elapsed_ms,
-        "stdout_tail": _tail(proc.stdout or ""),
-        "stderr_tail": _tail(proc.stderr or ""),
-    }
+    result = {"type": "process", "descriptor": descriptor, "argv": cmd[2:] if len(cmd) > 2 else cmd, "returncode": proc.returncode, "elapsed_ms": elapsed_ms, "stdout_tail": _tail(proc.stdout or ""), "stderr_tail": _tail(proc.stderr or "")}
     if proc.returncode != 0:
         raise RuntimeError(json.dumps(result, ensure_ascii=False))
     return result
@@ -148,16 +124,7 @@ def _seed_service_data(service_name: str, spec: dict[str, Any], canonical: Path,
     return target
 
 
-def _run_service(
-    service_name: str,
-    spec: dict[str, Any],
-    *,
-    canonical: Path,
-    services_root: Path,
-    cache_dir: Path,
-    context: dict[str, str],
-    timeout: int,
-) -> dict[str, Any]:
+def _run_service(service_name: str, spec: dict[str, Any], *, canonical: Path, services_root: Path, cache_dir: Path, context: dict[str, str], timeout: int) -> dict[str, Any]:
     isolated = bool(spec.get("isolated", True))
     data_dir = _seed_service_data(service_name, spec, canonical, services_root) if isolated else canonical
     started = time.perf_counter()
@@ -165,24 +132,9 @@ def _run_service(
     try:
         for command in spec.get("commands") or []:
             commands.append(_run_command(command, data_dir=data_dir, cache_dir=cache_dir, context=context, timeout=timeout))
-        return {
-            "service": service_name,
-            "status": "SUCCESS",
-            "isolated": isolated,
-            "data_dir": str(data_dir),
-            "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3),
-            "commands": commands,
-        }
+        return {"service": service_name, "status": "SUCCESS", "isolated": isolated, "data_dir": str(data_dir), "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3), "commands": commands}
     except Exception as exc:
-        return {
-            "service": service_name,
-            "status": "FAILED",
-            "isolated": isolated,
-            "data_dir": str(data_dir),
-            "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3),
-            "commands": commands,
-            "error": f"{type(exc).__name__}: {exc}",
-        }
+        return {"service": service_name, "status": "FAILED", "isolated": isolated, "data_dir": str(data_dir), "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3), "commands": commands, "error": f"{type(exc).__name__}: {exc}"}
 
 
 def _merge_latest(canonical: Path, service_dir: Path, spec: dict[str, Any]) -> None:
@@ -202,6 +154,26 @@ def _merge_latest(canonical: Path, service_dir: Path, spec: dict[str, Any]) -> N
     atomic_json(canonical / "latest.json", current)
 
 
+def _validate_service_outputs(service_name: str, result: dict[str, Any], spec: dict[str, Any]) -> list[dict[str, Any]]:
+    data_dir = Path(str(result["data_dir"]))
+    validations: list[dict[str, Any]] = []
+    isolated = bool(result.get("isolated"))
+    for name in spec.get("artifacts") or []:
+        artifact = str(name)
+        path = data_dir / artifact
+        if not path.exists():
+            if isolated:
+                # Preserve the established promotion-stage classification for missing
+                # isolated artifacts. _promote() will raise below.
+                continue
+            raise RuntimeError(f"service {service_name} did not produce required artifact {artifact}")
+        validations.append(validate_artifact(path, artifact))
+    sidecar = validate_latest_sidecar(data_dir / "latest.json")
+    if sidecar:
+        validations.append(sidecar)
+    return validations
+
+
 def _promote(service_name: str, result: dict[str, Any], spec: dict[str, Any], canonical: Path) -> None:
     if not result.get("isolated"):
         return
@@ -218,8 +190,18 @@ def _promote(service_name: str, result: dict[str, Any], spec: dict[str, Any], ca
 
 def _attempt_promotion(service_name: str, result: dict[str, Any], spec: dict[str, Any], canonical: Path) -> dict[str, Any]:
     try:
+        validated = _validate_service_outputs(service_name, result, spec)
+    except Exception as exc:
+        failed = dict(result)
+        failed["status"] = "FAILED"
+        failed["failure_stage"] = "artifact_validation"
+        failed["error"] = f"{type(exc).__name__}: {exc}"
+        return failed
+    try:
         _promote(service_name, result, spec, canonical)
-        return result
+        accepted = dict(result)
+        accepted["artifact_validation"] = validated
+        return accepted
     except Exception as exc:
         failed = dict(result)
         failed["status"] = "FAILED"
@@ -240,7 +222,6 @@ def _clear_failed_service_outputs(canonical: Path, spec: dict[str, Any]) -> list
         if path.exists() and path.is_file():
             path.unlink()
             removed.append(artifact)
-
     latest_path = canonical / "latest.json"
     latest = read_json(latest_path, {})
     changed = False
@@ -270,43 +251,14 @@ def _cleanup_ephemeral(registry: dict[str, Any], canonical: Path) -> list[str]:
     return sorted(set(removed))
 
 
-def _write_runtime_metadata(
-    registry: dict[str, Any],
-    service_results: dict[str, dict[str, Any]],
-    total_ms: float,
-    cache_dir: Path,
-) -> dict[str, Any]:
+def _write_runtime_metadata(registry: dict[str, Any], service_results: dict[str, dict[str, Any]], total_ms: float, cache_dir: Path) -> dict[str, Any]:
     cache_entries = len(list(cache_dir.glob("*.json"))) if cache_dir.exists() else 0
     runtime = registry.get("runtime") or {}
     budget_ms = float(runtime.get("performance_budget_seconds") or 0) * 1000.0
-    performance = {
-        "runtime_id": RUNTIME_ID,
-        "architecture": registry.get("architecture"),
-        "production_contract": registry.get("production_contract"),
-        "engine_version": ENGINE_VERSION,
-        "schema_version": SCHEMA_VERSION,
-        "total_wall_ms": round(total_ms, 3),
-        "performance_budget_ms": round(budget_ms, 3) if budget_ms else None,
-        "within_target_budget": total_ms <= budget_ms if budget_ms else None,
-        "shared_official_cache_entries": cache_entries,
-        "services": service_results,
-        "policy": registry.get("policy") or {},
-    }
+    performance = {"runtime_id": RUNTIME_ID, "architecture": registry.get("architecture"), "production_contract": registry.get("production_contract"), "engine_version": ENGINE_VERSION, "schema_version": SCHEMA_VERSION, "total_wall_ms": round(total_ms, 3), "performance_budget_ms": round(budget_ms, 3) if budget_ms else None, "within_target_budget": total_ms <= budget_ms if budget_ms else None, "shared_official_cache_entries": cache_entries, "services": service_results, "policy": registry.get("policy") or {}}
     atomic_json(PERFORMANCE_PATH, performance)
     latest = read_json(DATA / "latest.json", {})
-    latest["runtime_architecture"] = {
-        "id": RUNTIME_ID,
-        "architecture": registry.get("architecture"),
-        "production_contract": registry.get("production_contract"),
-        "transport": registry.get("transport"),
-        "service_count": len(registry.get("services") or {}),
-        "dependency_aware_scheduling": True,
-        "generic_root_scheduling": True,
-        "shared_official_cache": True,
-        "total_wall_ms": round(total_ms, 3),
-        "performance_target_ms": round(budget_ms, 3) if budget_ms else None,
-        "within_target_budget": performance["within_target_budget"],
-    }
+    latest["runtime_architecture"] = {"id": RUNTIME_ID, "architecture": registry.get("architecture"), "production_contract": registry.get("production_contract"), "transport": registry.get("transport"), "service_count": len(registry.get("services") or {}), "dependency_aware_scheduling": True, "generic_root_scheduling": True, "shared_official_cache": True, "artifact_contract_validation": True, "total_wall_ms": round(total_ms, 3), "performance_target_ms": round(budget_ms, 3) if budget_ms else None, "within_target_budget": performance["within_target_budget"]}
     latest.setdefault("files", {})["runtime_performance"] = "data/runtime_performance.json"
     atomic_json(DATA / "latest.json", latest)
     return performance
@@ -320,12 +272,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False) -> di
     max_workers = max(1, int(runtime.get("max_parallel_services") or 1))
     timeout = max(1, int(runtime.get("service_timeout_seconds") or 1))
     cache_ttl = max(1, int(runtime.get("http_cache_ttl_seconds") or 1))
-    context = {
-        "mode": mode,
-        "stats": "--stats" if stats else "--no-stats",
-        "deep_stats": "--deep-stats" if deep_stats else "",
-        "http_cache_ttl": str(cache_ttl),
-    }
+    context = {"mode": mode, "stats": "--stats" if stats else "--no-stats", "deep_stats": "--deep-stats" if deep_stats else "", "http_cache_ttl": str(cache_ttl)}
     wall_started = time.perf_counter()
     service_results: dict[str, dict[str, Any]] = {}
     completed: set[str] = set()
@@ -336,39 +283,21 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False) -> di
         cache_dir = temp_root / "official-cache"
         services_root.mkdir(parents=True, exist_ok=True)
         cache_dir.mkdir(parents=True, exist_ok=True)
-
         pending = set(services)
         running: dict[Any, str] = {}
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             while pending or running:
-                ready = [
-                    name
-                    for name in sorted(pending)
-                    if set(str(dep) for dep in services[name].get("depends_on") or []).issubset(completed)
-                ]
+                ready = [name for name in sorted(pending) if set(str(dep) for dep in services[name].get("depends_on") or []).issubset(completed)]
                 for name in ready:
                     if len(running) >= max_workers:
                         break
                     pending.remove(name)
-                    running[
-                        pool.submit(
-                            _run_service,
-                            name,
-                            services[name],
-                            canonical=DATA,
-                            services_root=services_root,
-                            cache_dir=cache_dir,
-                            context=context,
-                            timeout=timeout,
-                        )
-                    ] = name
-
+                    running[pool.submit(_run_service, name, services[name], canonical=DATA, services_root=services_root, cache_dir=cache_dir, context=context, timeout=timeout)] = name
                 if not running:
                     if pending:
                         blocked = {name: services[name].get("depends_on") for name in pending}
                         raise RuntimeError(f"service DAG stalled: {blocked}")
                     break
-
                 done, _ = wait(tuple(running), return_when=FIRST_COMPLETED)
                 for future in done:
                     name = running.pop(future)
@@ -377,7 +306,6 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False) -> di
                     if result["status"] == "SUCCESS":
                         result = _attempt_promotion(name, result, spec, DATA)
                     service_results[name] = result
-
                     if result["status"] == "SUCCESS":
                         completed.add(name)
                     elif bool(spec.get("critical", True)):
@@ -385,8 +313,6 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False) -> di
                             pending_future.cancel()
                         raise RuntimeError(f"critical service {name} failed: {result.get('error')}")
                     else:
-                        # A noncritical service may fail soft, but stale output from a prior
-                        # run must not masquerade as current evidence.
                         result["discarded_stale_outputs"] = _clear_failed_service_outputs(DATA, spec)
                         service_results[name] = result
                         completed.add(name)
@@ -396,20 +322,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False) -> di
         performance["ephemeral_artifacts_removed"] = _cleanup_ephemeral(registry, DATA)
         atomic_json(PERFORMANCE_PATH, performance)
 
-    print(json.dumps({
-        "runtime": RUNTIME_ID,
-        "architecture": registry.get("architecture"),
-        "engine_version": ENGINE_VERSION,
-        "schema_version": SCHEMA_VERSION,
-        "total_wall_ms": performance["total_wall_ms"],
-        "within_target_budget": performance["within_target_budget"],
-        "services": {
-            name: {"status": row.get("status"), "elapsed_ms": row.get("elapsed_ms")}
-            for name, row in service_results.items()
-        },
-        "shared_official_cache_entries": performance["shared_official_cache_entries"],
-        "ephemeral_artifacts_removed": performance.get("ephemeral_artifacts_removed"),
-    }, ensure_ascii=False))
+    print(json.dumps({"runtime": RUNTIME_ID, "architecture": registry.get("architecture"), "engine_version": ENGINE_VERSION, "schema_version": SCHEMA_VERSION, "total_wall_ms": performance["total_wall_ms"], "within_target_budget": performance["within_target_budget"], "services": {name: {"status": row.get("status"), "elapsed_ms": row.get("elapsed_ms")} for name, row in service_results.items()}, "shared_official_cache_entries": performance["shared_official_cache_entries"], "ephemeral_artifacts_removed": performance.get("ephemeral_artifacts_removed")}, ensure_ascii=False))
     return performance
 
 

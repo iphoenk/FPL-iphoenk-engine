@@ -1,6 +1,6 @@
 {
-  "schema_version": 2,
-  "registry": "fpl_v4_9_2_service_contracts_v2",
+  "schema_version": 3,
+  "registry": "fpl_v4_9_3_service_contracts_v3",
   "contracts": {
     "raw_snapshot": {"path":"data/runtime/snapshot.v1.json","min_schema_version":491,"required_paths":["schema","generated_at","official.bootstrap","official.fixtures","team_value_ledger"],"equals":{"schema":"snapshot.v1"}},
     "enrichment": {"path":"data/runtime/enrichment.v1.json","min_schema_version":491,"required_paths":["schema","lineage.snapshot_sha256","universe"],"equals":{"schema":"enrichment.v1"},"min_lengths":{"universe":500}},
@@ -9,6 +9,7 @@
     "team_state": {"path": "data/team.json", "required_paths": ["generated_at", "squad_authority", "squad", "team_value_ledger", "totals.sell_value"], "min_lengths": {"squad": 15}},
     "universe": {"path": "data/universe.json", "required_paths": ["generated_at", "players"], "min_lengths": {"players": 500}},
     "source_health": {"path": "data/health.json", "required_paths": ["bootstrap.status", "fixtures.status", "entry.status", "history.status", "transfers.status"]},
+    "validation_lifecycle": {"path": "data/validation/lifecycle_v4.json", "min_schema_version": 493, "version_field": "engine", "version_prefix": "v4.9.3-validation-lifecycle", "required_paths": ["status", "snapshot.status", "reconciliation.status", "eligibility.model_version", "guardrails.raw_snapshot_only", "guardrails.official_api_refetch", "guardrails.retroactive_snapshot_rejected", "guardrails.deadline_snapshot_immutable", "guardrails.reconciliation_archive_immutable", "guardrails.reconciliation_idempotent", "guardrails.health_view_current_model_only", "guardrails.simulation_never_mutates_store"], "equals": {"status": "PASS", "guardrails.raw_snapshot_only": true, "guardrails.official_api_refetch": false, "guardrails.retroactive_snapshot_rejected": true, "guardrails.deadline_snapshot_immutable": true, "guardrails.reconciliation_archive_immutable": true, "guardrails.reconciliation_idempotent": true, "guardrails.health_view_current_model_only": true, "guardrails.simulation_never_mutates_store": true}},
     "compliance": {"path": "data/compliance_audit.json", "required_paths": ["overall"], "equals": {"overall": "PASS"}},
     "framework_preflight": {"path": "data/framework_health_preflight_v4.json", "min_schema_version": 492, "required_paths": ["phase", "overall", "pipeline_health", "prediction_health", "capability_health", "decision_engine", "critical_warmup", "gate0.pass", "checkpoint_context.policy_id"], "equals": {"phase": "preflight", "gate0.pass": true}},
     "wc_decision": {"path": "data/wc_decision_v4.json", "min_schema_version": 492, "required_paths": ["classification", "affordability.price_basis", "optimized_elements", "performance.value_term_consumed"], "min_lengths": {"optimized_elements": 15}},

@@ -22,15 +22,19 @@ def interval_coverage(rows):
 
 def minutes_metrics(rows):
     m=[r for r in rows if r.get('actual_minutes') is not None and r.get('predicted_minutes') is not None]
-    if not m:return {'n':0,'mae':None,'start_brier':None,'p60_brier':None}
+    if not m:return {'n':0,'mae':None,'start_n':0,'start_missing':0,'start_brier':None,'p60_brier':None}
     mmae=mean(abs(float(r['actual_minutes'])-float(r['predicted_minutes'])) for r in m)
-    sb=[];p6=[]
+    sb=[];p6=[];start_missing=0
     for r in m:
-        actual_start=1.0 if float(r['actual_minutes'])>0 and r.get('actual_started',float(r['actual_minutes'])>=45) else 0.0
-        if r.get('start_probability') is not None:sb.append((float(r['start_probability'])-actual_start)**2)
+        actual_started=r.get('actual_started')
+        if actual_started is None:
+            start_missing+=1
+        elif r.get('start_probability') is not None:
+            actual_start=1.0 if bool(actual_started) else 0.0
+            sb.append((float(r['start_probability'])-actual_start)**2)
         actual60=1.0 if float(r['actual_minutes'])>=60 else 0.0
         if r.get('p60') is not None:p6.append((float(r['p60'])-actual60)**2)
-    return {'n':len(m),'mae':round(mmae,4),'start_brier':round(mean(sb),4) if sb else None,'p60_brier':round(mean(p6),4) if p6 else None}
+    return {'n':len(m),'mae':round(mmae,4),'start_n':len(sb),'start_missing':start_missing,'start_brier':round(mean(sb),4) if sb else None,'p60_brier':round(mean(p6),4) if p6 else None}
 
 def ranking_metrics(rows,ks=(10,25,50)):
     if not rows:return {}

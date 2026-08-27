@@ -40,6 +40,40 @@ def run() -> dict:
     assert "fixture_strategy" in block
     assert "community_signal" in block
 
+    readiness = user.get("readiness") or {}
+    assert readiness.get("engine") in {"ENGINE_READY", "ENGINE_REVIEW_REQUIRED"}
+    assert readiness.get("final_report_evidence") in {
+        "FINAL_REPORT_EVIDENCE_READY",
+        "FINAL_REPORT_EVIDENCE_PENDING",
+    }
+    if output.get("status") == "READY":
+        assert readiness.get("final_report_evidence") == "FINAL_REPORT_EVIDENCE_READY"
+    else:
+        assert readiness.get("final_report_evidence") == "FINAL_REPORT_EVIDENCE_PENDING"
+
+    validation = readiness.get("predictive_validation") or {}
+    assert validation.get("model_derived_actionability") in {"ACTIVE", "GATED"}
+    model_active = validation.get("model_derived_actionability") == "ACTIVE"
+    action_rows = user.get("action_board") or []
+    assert action_rows
+    for row in action_rows:
+        action_class = row.get("action_class")
+        assert action_class in {"FACT_CONSTRAINT", "MODEL_DERIVED"}
+        if action_class == "FACT_CONSTRAINT":
+            assert row.get("actionability") == "ACTIONABLE"
+            assert row.get("calibration_gate_applies") is False
+        else:
+            expected = "ACTIONABLE" if model_active else "ADVISORY_UNTIL_SETTLED_VALIDATION"
+            assert row.get("actionability") == expected
+            assert row.get("calibration_gate_applies") is True
+
+    governance = technical.get("readiness_and_actionability") or {}
+    gov_policy = governance.get("policy") or {}
+    assert gov_policy.get("runtime_readiness_is_separate_from_final_report_evidence") is True
+    assert gov_policy.get("fact_constraint_actionability_is_not_blocked_by_model_sample_size") is True
+    assert gov_policy.get("model_derived_actionability_requires_prediction_evaluation_eligibility") is True
+    assert gov_policy.get("existing_decisions_are_annotated_not_rewritten") is True
+
     result = {
         "status": "PASS",
         "registry": health,
@@ -47,6 +81,9 @@ def run() -> dict:
         "onefpl_report_time_enabled": report["onefpl"].get("enabled"),
         "report_time_status": output.get("status"),
         "web_refresh_required": output.get("web_refresh_required", False),
+        "engine_readiness": readiness.get("engine"),
+        "final_report_evidence": readiness.get("final_report_evidence"),
+        "model_derived_actionability": validation.get("model_derived_actionability"),
     }
     print(json.dumps(result, ensure_ascii=False))
     return result

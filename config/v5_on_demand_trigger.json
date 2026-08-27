@@ -1,7 +1,7 @@
 {
-  "request_id": "smoke-20260827-0540-wib",
-  "requested_at": "2026-08-26T22:40:00Z",
+  "request_id": "smoke-20260827-0710-wib-isolated-runtime",
+  "requested_at": "2026-08-27T00:10:00Z",
   "requested_by": "chat",
-  "request_note": "Smoke-test fresh team snapshot after governed bench contract fix",
+  "request_note": "Smoke-test durable isolated on-demand team snapshot publication",
   "include_v5_beta_overlay": false
 }

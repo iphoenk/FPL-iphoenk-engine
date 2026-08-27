@@ -1,5 +1,5 @@
 {
-  "version": "3.19.0",
+  "version": "3.20.0",
   "schema_version": 48,
   "release_metadata_source": "src/version.py",
   "P0": {
@@ -47,7 +47,16 @@
       "Ben Crellin fixture-strategy evidence isolated from player-projection voting",
       "Reddit community signal requires independent cross-check before fact promotion",
       "report-time evidence freshness, provenance and advisory-authority contract",
-      "report serving artifacts carry report-time intelligence for fast and deep reports"
+      "report serving artifacts carry report-time intelligence for fast and deep reports",
+      "monolithic base collector replaced by artifact-owned Official/team/market/live/stats/snapshot services",
+      "generic dependency-driven root-service scheduling",
+      "canonical SOURCE_REGISTRY_V3 ownership for source network locations and ingestion timeouts",
+      "legacy config/sources.json removed",
+      "collector cadence and match/deadline windows registry-owned",
+      "deep stats routed through production runtime-data publication instead of main",
+      "current-alias advanced-stat artifacts remove fixed-GW production dependency",
+      "semantic active model identifiers decoupled from engine release numbers",
+      "architecture ownership and anti-monolith CI contract"
     ]
   },
   "P1": {

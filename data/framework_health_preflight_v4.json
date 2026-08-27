@@ -3,27 +3,30 @@
   "engine": "v4.9.2-truthful-health",
   "phase": "preflight",
   "checkpoint_context": {
-    "policy_id": "REGULAR_MONITOR",
-    "label": "Regular Tactical Monitor",
+    "policy_id": "NIGHT_TACTICAL_PRICE_2130",
+    "label": "21.30 Night Tactical + Price Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-27T13:40:34.953572+00:00",
-    "local_as_of": "2026-08-27T20:40:34.953572+07:00",
+    "as_of": "2026-08-27T14:28:52.061619+00:00",
+    "local_as_of": "2026-08-27T21:28:52.061619+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 1669.4,
+    "minutes_to_deadline": 1621.1,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
-    "max_snapshot_age_minutes": 90,
-    "recommended_refresh_minutes": 180,
+    "max_snapshot_age_minutes": 60,
+    "recommended_refresh_minutes": 30,
     "report_scope": [
       "personal_gw_scorecard",
       "gate0",
       "locked_15",
       "availability",
       "xmins",
+      "role",
+      "rotation",
       "price_radar",
-      "challengers"
+      "challengers",
+      "lineup_watch"
     ],
     "registry": "fpl_checkpoint_policy_v1",
     "registry_schema_version": 1
@@ -1114,8 +1117,8 @@
         "probe": "data_freshness",
         "detail": {
           "age_minutes": 0.1,
-          "max_age_minutes": 90,
-          "checkpoint_policy_id": "REGULAR_MONITOR"
+          "max_age_minutes": 60,
+          "checkpoint_policy_id": "NIGHT_TACTICAL_PRICE_2130"
         }
       },
       {
@@ -1336,8 +1339,8 @@
     "status": "PASS",
     "detail": {
       "age_minutes": 0.1,
-      "max_age_minutes": 90,
-      "checkpoint_policy_id": "REGULAR_MONITOR"
+      "max_age_minutes": 60,
+      "checkpoint_policy_id": "NIGHT_TACTICAL_PRICE_2130"
     }
   },
   "source_health": {
@@ -1376,5 +1379,5 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 415.95
+  "performance_ms": 407.89
 }

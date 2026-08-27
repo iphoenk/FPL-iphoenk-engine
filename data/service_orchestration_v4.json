@@ -1,20 +1,20 @@
 {
   "schema_version": 492,
   "engine": "v4.9.3-service-orchestrator",
-  "started_at": "2026-08-27T13:40:34.668673+00:00",
-  "completed_at": "2026-08-27T13:40:43.332295+00:00",
+  "started_at": "2026-08-27T14:28:51.705716+00:00",
+  "completed_at": "2026-08-27T14:29:00.598717+00:00",
   "status": "PASS",
   "mode": "daily",
   "simulated": false,
   "stats_enabled": true,
   "deep_stats_enabled": true,
-  "service_registry": "fpl_v4_9_4_microservice_registry_v4",
+  "service_registry": "fpl_v4_9_4_2_microservice_registry_v5",
   "contract_registry": "fpl_v4_9_4_service_contracts_v4",
   "execution_model": "process_isolated_single_host",
   "snapshot_identity": {
-    "sha256": "44ce77c1e5e8e6cf2c8a12272f72b9b73f032c37a2da6e5cdf1e05756f5aece8",
-    "generated_at": "2026-08-27T13:40:35.077209+00:00",
-    "checkpoint_policy_id": "REGULAR_MONITOR"
+    "sha256": "ec3b2b49e8d1c148e1c7d19532280ac4c78b2c927c5b9e39a7949efad56a6596",
+    "generated_at": "2026-08-27T14:28:52.300255+00:00",
+    "checkpoint_policy_id": "NIGHT_TACTICAL_PRICE_2130"
   },
   "services": [
     {
@@ -29,17 +29,17 @@
           "path": "data/runtime/snapshot.v1.json",
           "valid": true,
           "errors": [],
-          "sha256": "44ce77c1e5e8e6cf2c8a12272f72b9b73f032c37a2da6e5cdf1e05756f5aece8",
-          "bytes": 3805190
+          "sha256": "ec3b2b49e8d1c148e1c7d19532280ac4c78b2c927c5b9e39a7949efad56a6596",
+          "bytes": 3805188
         }
       ],
-      "duration_ms": 546.45,
+      "duration_ms": 729.72,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"raw_snapshot\", \"schema\": \"snapshot.v1\", \"duration_ms\": 278.03, \"planning_gw\": 2, \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"override_applied\": true}",
+      "stdout_tail": "{\"service\": \"raw_snapshot\", \"schema\": \"snapshot.v1\", \"duration_ms\": 469.03, \"planning_gw\": 2, \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"override_applied\": true}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/runtime/snapshot.v1.json",
-        "sha256": "44ce77c1e5e8e6cf2c8a12272f72b9b73f032c37a2da6e5cdf1e05756f5aece8"
+        "sha256": "ec3b2b49e8d1c148e1c7d19532280ac4c78b2c927c5b9e39a7949efad56a6596"
       }
     },
     {
@@ -56,17 +56,17 @@
           "path": "data/runtime/enrichment.v1.json",
           "valid": true,
           "errors": [],
-          "sha256": "253de90e2bcc29a36367f503239bcdcab7a4eb9b93a6fe43eebce55fdeb07ce9",
-          "bytes": 205692
+          "sha256": "0f7e1d4ffeee928a8073a783bfda352aaf8e8d8fee940896fec9df186c1bb413",
+          "bytes": 205696
         }
       ],
-      "duration_ms": 671.34,
+      "duration_ms": 858.33,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"enrichment\", \"schema\": \"enrichment.v1\", \"duration_ms\": 509.18}",
+      "stdout_tail": "{\"service\": \"enrichment\", \"schema\": \"enrichment.v1\", \"duration_ms\": 709.35}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/runtime/enrichment.v1.json",
-        "sha256": "253de90e2bcc29a36367f503239bcdcab7a4eb9b93a6fe43eebce55fdeb07ce9"
+        "sha256": "0f7e1d4ffeee928a8073a783bfda352aaf8e8d8fee940896fec9df186c1bb413"
       }
     },
     {
@@ -83,23 +83,23 @@
           "path": "data/latest.json",
           "valid": true,
           "errors": [],
-          "sha256": "f1da75769e45b4f91a73389839869fb96c1dccf174a0cd6b656e1a064966f448",
-          "bytes": 575664
+          "sha256": "26efc7bc950318915bcc49356c80969475002c995ea3ed2b391f406ec7e0f692",
+          "bytes": 575744
         },
         {
           "contract": "predictions",
           "path": "data/predictions_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "164c24ba5868697584adfa78a8def1930e9fb657d23667c274a34bab836a3af3",
-          "bytes": 32480889
+          "sha256": "15b4c1184acfb6974288af61ee0bcb083a2dd790b9ba7ee0de71bd1f2fccab0a",
+          "bytes": 32480936
         },
         {
           "contract": "team_state",
           "path": "data/team.json",
           "valid": true,
           "errors": [],
-          "sha256": "e43f2d36db1de88a615395225d816721cbdc97e793b33df4983dc7ded4d658d2",
+          "sha256": "e291903c865c98c285dbfe2e705aefb7a3db22c319e8364026a08ce6ca4432ff",
           "bytes": 7243
         },
         {
@@ -107,25 +107,25 @@
           "path": "data/universe.json",
           "valid": true,
           "errors": [],
-          "sha256": "9a921d6cba6f667078751702af617801f72a825e3843222159cc954c787ffb2e",
-          "bytes": 204798
+          "sha256": "b490c4796165e71b4fcefea8c9937c95a70a2f50180a8d065b0785c57660a3ba",
+          "bytes": 204802
         },
         {
           "contract": "source_health",
           "path": "data/health.json",
           "valid": true,
           "errors": [],
-          "sha256": "2c192f2b3e012bf1c5b27862972a54ad9d6cdcb27d3f492981c1ccf651fe9d87",
-          "bytes": 2008
+          "sha256": "afe74dc1f4fa144522d11d1014dd183c424b0cdd67758cea49e2cf0e289b936b",
+          "bytes": 2014
         }
       ],
-      "duration_ms": 1941.8,
+      "duration_ms": 1916.43,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"prediction\", \"engine\": \"4.9.2-independent-services\", \"players\": 614, \"duration_ms\": 1727.85}",
+      "stdout_tail": "{\"service\": \"prediction\", \"engine\": \"4.9.2-independent-services\", \"players\": 614, \"duration_ms\": 1712.83}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/latest.json",
-        "sha256": "f1da75769e45b4f91a73389839869fb96c1dccf174a0cd6b656e1a064966f448"
+        "sha256": "26efc7bc950318915bcc49356c80969475002c995ea3ed2b391f406ec7e0f692"
       }
     },
     {
@@ -146,7 +146,7 @@
           "bytes": 1049
         }
       ],
-      "duration_ms": 848.56,
+      "duration_ms": 836.38,
       "exit_code": 0,
       "stdout_tail": "{\"service\": \"validation_lifecycle\", \"snapshot\": \"PASS\", \"reconciliation\": \"SKIP\", \"eligible_samples\": 0, \"simulated\": false}\n{\n  \"schema_version\": 493,\n  \"engine\": \"v4.9.3-validation-lifecycle\",\n  \"status\": \"PASS\",\n  \"simulated\": false,\n  \"snapshot\": {\n    \"status\": \"PASS\",\n    \"action\": \"PRESERVED\",\n    \"gw\": 2,\n    \"deadline_time\": \"2026-08-28T17:30:00Z\",\n    \"players\": 614,\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"captured_at\": \"2026-08-27T10:45:41.952884+00:00\",\n    \"immutable\": true\n  },\n  \"reconciliation\": {\n    \"status\": \"SKIP\",\n    \"reason\": \"no_predeadline_snapshot\",\n    \"gw\": 1\n  },\n  \"eligibility\": {\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"eligible_samples\": 0,\n    \"eligible_gws\": [],\n    \"rejected_samples\": [],\n    \"archive_is_append_only\": true,\n    \"health_view_rebuilt\": true\n  },\n  \"guardrails\": {\n    \"raw_snapshot_only\": true,\n    \"official_api_refetch\": false,\n    \"retroactive_snapshot_rejected\": true,\n    \"deadline_snapshot_immutable\": true,\n    \"reconciliation_archive_immutable\": true,\n    \"reconciliation_idempotent\": true,\n    \"health_view_current_model_only\": true,\n    \"simulation_never_mutates_store\": true\n  }\n}",
       "stderr_tail": ""
@@ -169,7 +169,7 @@
           "bytes": 1833
         }
       ],
-      "duration_ms": 37.97,
+      "duration_ms": 46.18,
       "exit_code": 0,
       "stdout_tail": "PASS scoring_single_source {'goal_points': {'GK': 10, 'DEF': 6, 'MID': 5, 'FWD': 4}, 'assist': 3, 'clean_sheet': {'GK': 4, 'DEF': 4, 'MID': 1, 'FWD': 0}, 'appearance_under_60': 1, 'appearance_60_plus': 2, 'saves_per_point': 3, 'penalty_save': 5, 'bonus': [1, 2, 3], 'yellow_card': -1, 'red_card': -3, 'own_goal': -2, 'penalty_miss': -2, 'goals_conceded_per_minus_point': 2, 'defcon_points': 2}\nPASS defcon_gk_veto \nPASS defcon_def_cbit_10 \nPASS defcon_mid_cbirt_12 \nPASS defcon_fwd_cbirt_12 \nPASS recoveries_excluded_for_def \nPASS recoveries_included_mid_fwd \nPASS defcon_reward_capped_two \nPASS chip_halves \nPASS one_chip_per_gw_constant \nPASS free_hit_not_gw1 \nPASS free_hit_not_consecutive \nPASS chip_once_per_half \nPASS wc_fh_preserve_banked_ft \nPASS dgw_defcon_per_match [1.672, 1.672]\nOVERALL PASS",
       "stderr_tail": ""
@@ -188,13 +188,13 @@
           "path": "data/framework_health_preflight_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "612539eadc5d593d078d73c93ddc36cd229d5c27bfd87aecca5051a1a0b5e9a4",
-          "bytes": 38432
+          "sha256": "c908804a5c1c65eba9cfe0cc28c7f66daecc4436283b53e0926aa54f581c7edd",
+          "bytes": 38527
         }
       ],
-      "duration_ms": 503.99,
+      "duration_ms": 489.26,
       "exit_code": 0,
-      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"preflight\", \"gate0\": {\"PASS\": 10, \"DEFERRED\": 6}, \"dss_core\": {\"ACTIVE\": 25, \"PARTIAL\": 16, \"DEFERRED\": 8, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 6, \"DEFERRED\": 9, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 4, \"DEFERRED\": 4}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 415.95}",
+      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"preflight\", \"gate0\": {\"PASS\": 10, \"DEFERRED\": 6}, \"dss_core\": {\"ACTIVE\": 25, \"PARTIAL\": 16, \"DEFERRED\": 8, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 6, \"DEFERRED\": 9, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 4, \"DEFERRED\": 4}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 407.89}",
       "stderr_tail": ""
     },
     {
@@ -211,7 +211,7 @@
           "path": "data/wc_decision_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "af8179b367a9f239b5bce3b605fca742612743b96eda929529b51afccefd22b4",
+          "sha256": "ead7fb58de1af922e9f8f255a1c2e0b1029b6887c3d4120e6634651a656d7f9b",
           "bytes": 12897
         },
         {
@@ -235,19 +235,19 @@
           "path": "data/recommendation_sanity_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "c0a7414274e1c2400509e4ec3a200aac84cf7dd05b30d27b3200dbcb1d3f0e4a",
-          "bytes": 27165
+          "sha256": "4b3f0f81d63b5d11873f3ba7e59733a7a54cc951425317a596b8054a12808326",
+          "bytes": 27167
         },
         {
           "contract": "decision_pipeline",
           "path": "data/decision_pipeline_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "5b0ae7c52d20c5bb73c51c9be3e7f52a2edb15e8998ecc299e81b3f92c97a57a",
-          "bytes": 2799
+          "sha256": "7174f3779bbb0f4356a3b6adf5466ba217c6c34926673e8297cffd71fa98a3be",
+          "bytes": 2874
         }
       ],
-      "duration_ms": 2830.27,
+      "duration_ms": 2774.52,
       "exit_code": 0,
       "stdout_tail": " \"results\": {\"wc_raw\": \"MATERIAL_UPGRADE\", \"package_raw\": \"MATERIAL_UPGRADE\", \"recommendation_final\": \"MATERIAL_UPGRADE\", \"recommended_replacements\": 2, \"lineup_governance\": \"OPTIMIZER_ONLY\", \"formation\": \"3-4-3\", \"captain\": \"B.Fernandes\"}, \"performance_guardrails\": {\"shared_json_loaded_once\": true, \"shared_candidates_built_once\": true, \"fork_copy_on_write\": true, \"parallel_wc_package\": true, \"fast_wc_finalist_scoring\": true, \"redundant_package_validation_removed\": true, \"concise_stdout\": true, \"search_quality_reduction\": false, \"wc_beam_unchanged\": true, \"package_frontier_beam_unchanged\": true, \"bounded_top_k_same_wc_beam\": true, \"exact_streaming_wc_topk\": true, \"stable_wc_tie_semantics\": true, \"safe_wc_objective_bound\": true, \"fixed_position_finalist_scoring\": true, \"compact_package_keep_profile\": true, \"package_scalar_delta_metrics\": true, \"package_position_value_reuse\": true, \"top_packages_only_payload_materialization\": true, \"checkpoint_action_deferred_until_postflight_health\": true, \"planning_squad_from_team_contract\": true, \"stale_lock_players_not_direct_optimizer_input\": true, \"engine_lineup_is_advisory_only\": true, \"manual_override_applied_in_separate_microservice\": true}}",
       "stderr_tail": ""
@@ -266,13 +266,13 @@
           "path": "data/effective_plan_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "f68eca57c1a23feba53eec18912a4dd0d7449e7a11775f99dc1a0192837fec83",
+          "sha256": "ab7c4f9e7646de63651499757acbfab77b566f3ef789e80bdb83c16ba88f4d62",
           "bytes": 18444
         }
       ],
-      "duration_ms": 45.24,
+      "duration_ms": 42.99,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"user_decision_overlay\", \"status\": \"PASS\", \"planning_gw\": 2, \"authority\": \"USER_OVERRIDE\", \"formation\": \"3-5-2\", \"captain\": \"B.Fernandes\", \"chip\": \"WILDCARD\", \"user_minus_engine_xpts\": -1.82, \"duration_ms\": 5.94}",
+      "stdout_tail": "{\"service\": \"user_decision_overlay\", \"status\": \"PASS\", \"planning_gw\": 2, \"authority\": \"USER_OVERRIDE\", \"formation\": \"3-5-2\", \"captain\": \"B.Fernandes\", \"chip\": \"WILDCARD\", \"user_minus_engine_xpts\": -1.82, \"duration_ms\": 5.82}",
       "stderr_tail": ""
     },
     {
@@ -289,13 +289,13 @@
           "path": "data/framework_health_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "b3bbe4ea7bf8df7a07617f6189d317ce563f7d89e44d4fdf69284ba9557f9078",
-          "bytes": 40015
+          "sha256": "981717fa606e2983903c1f5db4a797de169d27008cce639fcf4dbf33cbd1ad65",
+          "bytes": 40110
         }
       ],
-      "duration_ms": 517.79,
+      "duration_ms": 497.43,
       "exit_code": 0,
-      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"postflight\", \"gate0\": {\"PASS\": 16}, \"dss_core\": {\"ACTIVE\": 33, \"PARTIAL\": 16, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 15, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 8}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 429.95}",
+      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"postflight\", \"gate0\": {\"PASS\": 16}, \"dss_core\": {\"ACTIVE\": 33, \"PARTIAL\": 16, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 15, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 8}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 416.48}",
       "stderr_tail": ""
     },
     {
@@ -312,13 +312,13 @@
           "path": "data/gw_scorecard_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "e9736d89c43dcc23c969cd999414324245ef40bfc783ba2c8c018c477574e299",
+          "sha256": "4a3edafb4b7835a06138f1ac0343c6bc53b212f6867c771055fe310e2ec72aa7",
           "bytes": 11965
         }
       ],
-      "duration_ms": 89.4,
+      "duration_ms": 85.43,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"personal_gw_scorecard\", \"status\": \"PASS\", \"previous\": \"GW1 FINAL · 71 pts · BB\", \"planning\": \"GW2 PROJECTION · 44.2 xPts · WC · 3-5-2 · C B.Fernandes\", \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"decision_authority\": \"USER_OVERRIDE\", \"human_override_active\": true, \"archive_action\": \"PRESERVED\", \"duration_ms\": 48.05}",
+      "stdout_tail": "{\"service\": \"personal_gw_scorecard\", \"status\": \"PASS\", \"previous\": \"GW1 FINAL · 71 pts · BB\", \"planning\": \"GW2 PROJECTION · 44.2 xPts · WC · 3-5-2 · C B.Fernandes\", \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"decision_authority\": \"USER_OVERRIDE\", \"human_override_active\": true, \"archive_action\": \"PRESERVED\", \"duration_ms\": 46.69}",
       "stderr_tail": ""
     },
     {
@@ -336,13 +336,13 @@
           "path": "data/checkpoint_decision_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "d61d39012d10de331e1b05d19897ed1eb3fc0fd40f623f7851ed9cb9f9c4b08c",
-          "bytes": 15658
+          "sha256": "f377aec083beb032688e4d178afcbe19ba87c608d3aab882fbfca7389518c614",
+          "bytes": 15781
         }
       ],
-      "duration_ms": 47.88,
+      "duration_ms": 46.75,
       "exit_code": 0,
-      "stdout_tail": "{\"checkpoint\": \"REGULAR_MONITOR\", \"action\": \"HOLD\", \"headline\": \"HOLD LOCK 15\", \"governed_verdict\": \"MATERIAL_UPGRADE\", \"decision_authority\": \"USER_OVERRIDE\", \"previous_gw\": \"GW1 FINAL · 71 pts · BB\", \"planning_gw\": \"GW2 PROJECTION · 44.2 xPts · WC · 3-5-2 · C B.Fernandes\", \"squad_basis\": \"USER_CAPTURED_WC_DRAFT\"}",
+      "stdout_tail": "{\"checkpoint\": \"NIGHT_TACTICAL_PRICE_2130\", \"action\": \"HOLD\", \"headline\": \"HOLD LOCK 15\", \"governed_verdict\": \"MATERIAL_UPGRADE\", \"decision_authority\": \"USER_OVERRIDE\", \"previous_gw\": \"GW1 FINAL · 71 pts · BB\", \"planning_gw\": \"GW2 PROJECTION · 44.2 xPts · WC · 3-5-2 · C B.Fernandes\", \"squad_basis\": \"USER_CAPTURED_WC_DRAFT\"}",
       "stderr_tail": ""
     }
   ],
@@ -369,6 +369,7 @@
     "advanced_ablation_observational_outside_decision_chain": true,
     "advanced_ablation_full_shadow_parity_required": true,
     "advanced_ablation_diagnostic_not_arbitrary_gate": true,
+    "advanced_ablation_failure_cannot_block_core_publish": true,
     "fail_closed_on_contract_failure": true,
     "lock_after_pass": [
       "raw_snapshot",
@@ -387,15 +388,15 @@
       "enhancements": 8
     }
   },
-  "duration_ms": 8663.64,
+  "duration_ms": 8893.02,
   "summary": {
     "services_passed": 11,
     "services_total": 11,
     "fail_closed": true
   },
   "locked_artifacts": {
-    "data/runtime/snapshot.v1.json": "44ce77c1e5e8e6cf2c8a12272f72b9b73f032c37a2da6e5cdf1e05756f5aece8",
-    "data/runtime/enrichment.v1.json": "253de90e2bcc29a36367f503239bcdcab7a4eb9b93a6fe43eebce55fdeb07ce9",
-    "data/latest.json": "f1da75769e45b4f91a73389839869fb96c1dccf174a0cd6b656e1a064966f448"
+    "data/runtime/snapshot.v1.json": "ec3b2b49e8d1c148e1c7d19532280ac4c78b2c927c5b9e39a7949efad56a6596",
+    "data/runtime/enrichment.v1.json": "0f7e1d4ffeee928a8073a783bfda352aaf8e8d8fee940896fec9df186c1bb413",
+    "data/latest.json": "26efc7bc950318915bcc49356c80969475002c995ea3ed2b391f406ec7e0f692"
   }
 }

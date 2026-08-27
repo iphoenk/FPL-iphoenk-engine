@@ -1,7 +1,7 @@
 {
   "schema_version": 4941,
   "engine": "v4.9.4.1-user-decision-overlay",
-  "generated_at": "2026-08-27T13:40:42.639746+00:00",
+  "generated_at": "2026-08-27T14:28:59.934245+00:00",
   "status": "PASS",
   "planning_gw": 2,
   "team_authority": "LOCKED_PRE_DEADLINE",
@@ -661,8 +661,8 @@
   },
   "lineage": {
     "engine_lineup_sha256": "8cd6f7b6b0012080a3bbbdf1266a74be3dc5ec6d39cc62b4245b241f2b917a07",
-    "team_sha256": "e43f2d36db1de88a615395225d816721cbdc97e793b33df4983dc7ded4d658d2",
-    "latest_sha256": "f1da75769e45b4f91a73389839869fb96c1dccf174a0cd6b656e1a064966f448"
+    "team_sha256": "e291903c865c98c285dbfe2e705aefb7a3db22c319e8364026a08ce6ca4432ff",
+    "latest_sha256": "26efc7bc950318915bcc49356c80969475002c995ea3ed2b391f406ec7e0f692"
   },
-  "performance_ms": 5.94
+  "performance_ms": 5.82
 }

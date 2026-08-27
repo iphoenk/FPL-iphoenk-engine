@@ -11,6 +11,7 @@ def test_source_registry_has_single_official_authority_and_named_challengers():
     registry = load_source_registry()
     integrity = registry_integrity()
     specs = source_specs()
+    assert registry["registry"] == "SOURCE_REGISTRY_V3"
     assert integrity["integrity_ok"] is True
     authorities = [s.source_id for s in specs if s.source_class == "AUTHORITATIVE"]
     assert authorities == ["official_fpl"]
@@ -18,6 +19,8 @@ def test_source_registry_has_single_official_authority_and_named_challengers():
     assert {"livefpl", "onefpl", "fffix", "ffhub"}.issubset(challengers)
     assert registry["policy"]["challengers_never_override_official_native_fields"] is True
     assert registry["policy"]["missing_challenger_data_is_never_fabricated"] is True
+    assert registry["policy"]["source_network_locations_are_registry_owned"] is True
+    assert registry["policy"]["source_ingestion_timeouts_are_registry_owned"] is True
 
 
 def test_source_manager_keeps_challenger_failure_non_blocking(tmp_path, monkeypatch):
@@ -25,7 +28,7 @@ def test_source_manager_keeps_challenger_failure_non_blocking(tmp_path, monkeypa
         name: {"status": "LIVE", "latency_ms": 10}
         for name in ("bootstrap", "fixtures", "entry", "history", "transfers")
     }), encoding="utf-8")
-    for rel in ("stats/shots_gw1.json", "stats/playermatchstats_gw1.json", "stats/vaastav_previous_season.json"):
+    for rel in ("stats/shots_current.json", "stats/playermatchstats_current.json", "stats/vaastav_previous_season.json"):
         path = tmp_path / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("{}", encoding="utf-8")

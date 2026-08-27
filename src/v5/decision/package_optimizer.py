@@ -85,17 +85,23 @@ def _build_scoring_context(
     rules: dict[str, Any],
     cfg: dict[str, Any],
 ) -> dict[str, Any]:
-    """Precompute immutable GW ranking/metric data once for package search.
+    """Precompute immutable ranking and rule data once for package search.
 
-    Player ranking keys are squad-independent. Ranking the universe once and
-    filtering it to a candidate squad is therefore exactly equivalent to
-    re-ranking the same squad for every package, while avoiding thousands of
-    repeated score calculations and sorts.
+    Ranking keys are squad-independent, so a universe rank can be filtered to
+    any candidate squad without changing selection semantics. Formation shapes
+    and scalar scoring weights are also immutable for the whole optimization
+    run and therefore belong in the scoring context rather than the inner loop.
     """
     lineup_rules = rules.get("lineup") if isinstance(rules.get("lineup"), dict) else {}
     positions = tuple(str(value) for value in cfg["positions"])
     horizons = sorted({int(value) for value in cfg["horizons"]})
     max_horizon = max(horizons)
+    formations = tuple(str(value) for value in lineup_rules.get("legal_formations") or ())
+    if not formations:
+        raise RuntimeError("Official rules contain no legal formations")
+    formation_counts = tuple((formation, _formation_counts(formation, lineup_rules)) for formation in formations)
+    starting_size = _required_int(lineup_rules, "starting_xi_size", "rules.lineup")
+
     metrics_by_gw: dict[int, dict[int, dict[str, float]]] = {}
     rank_by_gw: dict[int, dict[str, dict[int, int]]] = {}
     position_by_id = {
@@ -132,6 +138,14 @@ def _build_scoring_context(
     return {
         "planning_gw": int(planning_gw),
         "lineup_rules": lineup_rules,
+        "starting_size": starting_size,
+        "formation_counts": formation_counts,
+        "bench_weight": _f(cfg["bench_utility_weight"]),
+        "captain_weight": _f(cfg["captain_bonus_weight"]),
+        "horizons": horizons,
+        "horizon_weights": {str(k): _f(v) for k, v in cfg["horizon_weights"].items()},
+        "risk_aversion": _f(cfg["risk_aversion"]),
+        "change_penalty_points": _f(cfg["change_penalty_points"]),
         "metrics_by_gw": metrics_by_gw,
         "rank_by_gw": rank_by_gw,
         "position_by_id": position_by_id,
@@ -155,63 +169,67 @@ def _single_gw_score_from_context(
     cfg: dict[str, Any],
     scoring_context: dict[str, Any],
 ) -> tuple[bool, float, float]:
+    del lineup_rules, cfg
     metrics = (scoring_context.get("metrics_by_gw") or {}).get(int(gw))
     ranks = (scoring_context.get("rank_by_gw") or {}).get(int(gw))
     if not isinstance(metrics, dict) or not isinstance(ranks, dict):
         return False, 0.0, 0.0
 
-    starting_size = _required_int(lineup_rules, "starting_xi_size", "rules.lineup")
-    formations = tuple(str(value) for value in lineup_rules.get("legal_formations") or ())
-    if not formations:
+    starting_size = int(scoring_context["starting_size"])
+    formation_counts = scoring_context.get("formation_counts") or ()
+    if not formation_counts:
         raise RuntimeError("Official rules contain no legal formations")
 
-    selected: dict[str, Any] | None = None
-    for formation in formations:
-        counts = _formation_counts(formation, lineup_rules)
+    # The same candidate squad is evaluated against every legal formation in a
+    # GW. Rank each positional subset once, then slice those ranked lists for
+    # every formation. The previous implementation re-sorted each subset once
+    # per formation, producing identical order with repeated work.
+    ranked_by_position: dict[str, list[int]] = {}
+    all_ids: list[int] = []
+    for position, available in squad_by_position.items():
+        rank_map = ranks.get(position) if isinstance(ranks.get(position), dict) else {}
+        if any(element not in rank_map for element in available):
+            return False, 0.0, 0.0
+        ranked_by_position[position] = sorted(available, key=rank_map.__getitem__)
+        all_ids.extend(available)
+    if any(element not in metrics for element in all_ids):
+        return False, 0.0, 0.0
+
+    selected: tuple[float, float, float, list[int]] | None = None
+    for _formation, counts in formation_counts:
         starters: list[int] = []
         valid = True
         for position, count in counts.items():
-            available = squad_by_position.get(position, [])
-            rank_map = ranks.get(position) if isinstance(ranks.get(position), dict) else {}
-            if len(available) < count or any(element not in rank_map for element in available):
+            ranked = ranked_by_position.get(position, [])
+            if len(ranked) < count:
                 valid = False
                 break
-            ranked = sorted(available, key=rank_map.__getitem__)
             starters.extend(ranked[:count])
-        if not valid or len(starters) != starting_size or any(element not in metrics for element in starters):
+        if not valid or len(starters) != starting_size:
             continue
         starter_metrics = [metrics[element] for element in starters]
-        candidate = {
-            "formation": formation,
-            "starters": starters,
-            "selection_score": round(sum(item["score"] for item in starter_metrics), 4),
-            "mean": round(sum(item["mean"] for item in starter_metrics), 4),
-            "variance": round(sum(item["variance"] for item in starter_metrics), 4),
-        }
-        if selected is None or (candidate["selection_score"], candidate["mean"]) > (
-            selected["selection_score"],
-            selected["mean"],
-        ):
+        selection_score = round(sum(item["score"] for item in starter_metrics), 4)
+        mean = round(sum(item["mean"] for item in starter_metrics), 4)
+        variance = round(sum(item["variance"] for item in starter_metrics), 4)
+        candidate = (selection_score, mean, variance, starters)
+        if selected is None or (candidate[0], candidate[1]) > (selected[0], selected[1]):
             selected = candidate
 
     if selected is None:
         return False, 0.0, 0.0
 
-    all_ids = [element for rows in squad_by_position.values() for element in rows]
-    starter_ids = set(selected["starters"])
-    if any(element not in metrics for element in all_ids):
-        return False, 0.0, 0.0
+    starter_ids = set(selected[3])
     bench_ids = [element for element in all_ids if element not in starter_ids]
-    bench_weight = _f(cfg["bench_utility_weight"])
-    captain_weight = _f(cfg["captain_bonus_weight"])
+    bench_weight = float(scoring_context["bench_weight"])
+    captain_weight = float(scoring_context["captain_weight"])
     bench_mean = sum(metrics[element]["mean"] for element in bench_ids)
     bench_var = sum(metrics[element]["variance"] for element in bench_ids)
     captain = max(
-        ((metrics[element]["mean"], metrics[element]["std"]) for element in selected["starters"]),
+        ((metrics[element]["mean"], metrics[element]["std"]) for element in selected[3]),
         default=(0.0, 0.0),
     )
-    mean = float(selected["mean"]) + bench_weight * bench_mean + captain_weight * captain[0]
-    variance = float(selected["variance"]) + bench_weight**2 * bench_var + captain_weight**2 * captain[1] ** 2
+    mean = float(selected[1]) + bench_weight * bench_mean + captain_weight * captain[0]
+    variance = float(selected[2]) + bench_weight**2 * bench_var + captain_weight**2 * captain[1] ** 2
     return True, mean, variance
 
 
@@ -224,12 +242,12 @@ def score_package(
     scoring_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cfg = _cfg()
-    lineup_rules = rules.get("lineup") if isinstance(rules.get("lineup"), dict) else {}
-    horizons = sorted({int(value) for value in cfg["horizons"]})
+    indexed_players = players if scoring_context is not None else index_players(players)
+    context = scoring_context or _build_scoring_context(indexed_players, planning_gw, rules, cfg)
+    lineup_rules = context.get("lineup_rules") if isinstance(context.get("lineup_rules"), dict) else {}
+    horizons = [int(value) for value in context.get("horizons") or sorted({int(value) for value in cfg["horizons"]})]
     if not horizons or horizons[0] <= 0:
         raise RuntimeError("package optimizer horizons must contain positive integers")
-    indexed_players = index_players(players)
-    context = scoring_context or _build_scoring_context(indexed_players, planning_gw, rules, cfg)
     squad_by_position = _squad_ids_by_position(indexed_players)
     max_horizon = max(horizons)
     cumulative_mean: list[float] = []
@@ -262,18 +280,18 @@ def score_package(
             "std": round(math.sqrt(cumulative_variance[horizon - 1]), 3) if valid else None,
         }
 
-    weights = {str(k): _f(v) for k, v in cfg["horizon_weights"].items()}
+    weights = context.get("horizon_weights") if isinstance(context.get("horizon_weights"), dict) else {str(k): _f(v) for k, v in cfg["horizon_weights"].items()}
     missing_weights = [str(horizon) for horizon in horizons if str(horizon) not in weights]
     if missing_weights:
         raise RuntimeError(f"package optimizer horizon weights missing: {missing_weights}")
     available = [(horizon, results[str(horizon)]) for horizon in horizons if results[str(horizon)]["valid"]]
-    weight_sum = sum(weights[str(horizon)] for horizon, _ in available)
+    weight_sum = sum(float(weights[str(horizon)]) for horizon, _ in available)
     if not available or weight_sum <= 0:
         return {"valid": False, "horizons": results, "performance": {"gw_lineups_evaluated": valid_gws}}
-    mean = sum(weights[str(horizon)] * float(row["mean"]) for horizon, row in available) / weight_sum
-    variance = sum((weights[str(horizon)] / weight_sum) ** 2 * float(row["std"]) ** 2 for horizon, row in available)
+    mean = sum(float(weights[str(horizon)]) * float(row["mean"]) for horizon, row in available) / weight_sum
+    variance = sum((float(weights[str(horizon)]) / weight_sum) ** 2 * float(row["std"]) ** 2 for horizon, row in available)
     std = math.sqrt(variance)
-    robust = mean - _f(cfg["risk_aversion"]) * std - changes * _f(cfg["change_penalty_points"])
+    robust = mean - float(context.get("risk_aversion", _f(cfg["risk_aversion"]))) * std - changes * float(context.get("change_penalty_points", _f(cfg["change_penalty_points"])))
     return {
         "valid": True,
         "horizons": results,

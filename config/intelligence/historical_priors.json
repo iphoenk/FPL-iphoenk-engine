@@ -1,11 +1,10 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "model_id": "historical_player_priors_v1",
   "refresh_hours": 168,
   "source": {
-    "provider": "vaastav/Fantasy-Premier-League",
-    "filenames": ["players_raw.csv", "cleaned_players.csv"],
-    "timeout_seconds": 25
+    "source_id": "vaastav",
+    "dataset_role": "previous_season"
   },
   "starter_prior": {
     "minimum_minutes": 180,
@@ -38,6 +37,7 @@
     "unique_full_name_fallback": true,
     "never_fabricate_missing_prior": true,
     "current_official_data_remains_authority": true,
-    "historical_prior_is_shrinkage_evidence_not_override": true
+    "historical_prior_is_shrinkage_evidence_not_override": true,
+    "network_location_and_timeout_owned_by_source_registry": true
   }
 }

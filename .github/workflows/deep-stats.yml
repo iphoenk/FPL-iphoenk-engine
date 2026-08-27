@@ -25,7 +25,7 @@ jobs:
       - name: Deep stats refresh
         run: python -m src.services.orchestrator daily --stats --deep-stats
 
-      - name: V4.9.1 centralized quality gate
+      - name: V4.9.2 centralized quality gate
         run: python -m src.engines.v4_quality_gate
 
       - name: Commit safely

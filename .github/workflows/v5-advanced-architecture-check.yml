@@ -8,17 +8,20 @@ on:
       - 'deploy/v5/**'
       - 'config/v5_architecture_principles.json'
       - 'config/v5_module_registry.json'
+      - 'config/v5_payload_contract_registry.json'
       - 'config/v5_registry_catalog.json'
       - 'config/v5_release_integrity_registry.json'
       - 'config/v5_runtime_materialization_registry.json'
       - 'config/v5_service_registry.json'
       - 'config/v5_service_transport_registry.json'
       - 'config/v5_service_wire_registry.json'
+      - 'src/v5/runtime_payloads.py'
       - 'src/v5/service_client.py'
       - 'src/v5/service_host.py'
       - 'src/v5/service_transport.py'
       - 'src/v5/services/snapshot.py'
       - 'tests/test_v5_advanced_transport_materialization.py'
+      - 'tests/test_v5_runtime_payload_compaction.py'
       - '.github/workflows/v5-advanced-architecture-check.yml'
   pull_request:
     branches: [v5-beta6-roadmap]
@@ -26,9 +29,11 @@ on:
       - 'requirements.txt'
       - 'deploy/v5/**'
       - 'config/v5_*.json'
+      - 'src/v5/runtime_payloads.py'
       - 'src/v5/service_*.py'
       - 'src/v5/services/snapshot.py'
       - 'tests/test_v5_advanced_transport_materialization.py'
+      - 'tests/test_v5_runtime_payload_compaction.py'
   workflow_dispatch:
 
 permissions:
@@ -56,6 +61,7 @@ jobs:
         run: |
           python -m pytest -q \
             tests/test_v5_advanced_transport_materialization.py \
+            tests/test_v5_runtime_payload_compaction.py \
             tests/test_v5_microservices.py \
             tests/test_v5_architecture_principles.py \
             tests/test_v5_service_transport.py

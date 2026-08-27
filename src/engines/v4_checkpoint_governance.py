@@ -27,6 +27,36 @@ def _action_definition(action: str, actions: dict) -> dict:
     return row
 
 
+def _planning_authority(locked: dict, scorecard: dict) -> dict:
+    planning = scorecard.get("planning_gw") or {}
+    basis = planning.get("squad_basis") or {}
+    if basis.get("effective_authority"):
+        expected = str(basis["effective_authority"])
+        override_applied = bool(basis.get("override_applied"))
+        target_gw = basis.get("override_target_gw")
+        source = basis.get("authority_source")
+        baseline_gw = basis.get("baseline_gw")
+        planning_gw = basis.get("planning_gw")
+    else:
+        override_applied = bool(locked.get("wildcard_active"))
+        expected = "LOCKED_PRE_DEADLINE" if override_applied else "OFFICIAL_SUBMITTED"
+        target_gw = locked.get("target_gw")
+        source = locked.get("authority_source") if override_applied else "OFFICIAL_FPL_PICKS"
+        baseline_gw = None
+        planning_gw = None
+    active_chip = str(planning.get("active_chip") or "NONE").upper()
+    wildcard_for_planning = active_chip == "WILDCARD" or (override_applied and bool(locked.get("wildcard_active")))
+    return {
+        "expected_authority": expected,
+        "override_applied": override_applied,
+        "override_target_gw": target_gw,
+        "authority_source": source,
+        "baseline_gw": baseline_gw,
+        "planning_gw": planning_gw,
+        "wildcard_active": wildcard_for_planning,
+    }
+
+
 def govern_checkpoint(
     latest: dict,
     health: dict,
@@ -54,8 +84,9 @@ def govern_checkpoint(
     health_go = health.get("go_allowed") is True
     simulation = context.get("is_simulation") is True
     post_final = context.get("post_final_emergency_only") is True
-    wildcard_active = bool(locked.get("wildcard_active"))
-    expected_authority = "LOCKED_PRE_DEADLINE" if wildcard_active else "OFFICIAL_SUBMITTED"
+    authority = _planning_authority(locked, scorecard)
+    wildcard_active = authority["wildcard_active"]
+    expected_authority = authority["expected_authority"]
     authority_ok = latest.get("squad_authority") == expected_authority
     verdict = sanity.get("final_verdict") or "KEEP_15"
 
@@ -101,7 +132,11 @@ def govern_checkpoint(
     recommended = sanity.get("recommended_package") or {}
     critical_partial = list(health.get("critical_partial") or [])
     critical_warmup = list(health.get("critical_warmup") or [])
+    execution_authorized = action == "GO" and explicit_lineup_lock and not simulation
+    if action == "GO" and not explicit_lineup_lock:
+        reasons.append("USER_FINAL_LOCK_REQUIRED")
 
+    planning_scorecard = scorecard.get("planning_gw") or {}
     return {
         "schema_version": 492,
         "engine": "v4.9.2-checkpoint-governance",
@@ -113,10 +148,16 @@ def govern_checkpoint(
         "structure_action": action_definition.get("structure_action"),
         "squad": {
             "authority": latest.get("squad_authority"),
+            "expected_authority": expected_authority,
             "authority_ok": authority_ok,
+            "baseline_gw": authority.get("baseline_gw"),
+            "planning_gw": authority.get("planning_gw"),
+            "planning_override_applied": authority.get("override_applied"),
+            "planning_override_target_gw": authority.get("override_target_gw"),
+            "authority_source": authority.get("authority_source"),
             "wildcard_active": wildcard_active,
             "locked_players": len(locked.get("players") or []),
-            "composition_status": "LOCKED_15" if wildcard_active else "SUBMITTED_OR_CURRENT",
+            "composition_status": "LOCKED_15" if expected_authority == "LOCKED_PRE_DEADLINE" else "SUBMITTED_OR_CURRENT",
             "hit_recommendation": "NOT_APPLICABLE_WILDCARD_ACTIVE" if wildcard_active else "UNASSESSED",
         },
         "decision": {
@@ -126,20 +167,25 @@ def govern_checkpoint(
             "recommended_out": [row.get("name") for row in recommended.get("out", [])],
             "recommended_in": [row.get("name") for row in recommended.get("in", [])],
             "material_eligible": recommended.get("material_eligible"),
-            "execution_authorized": action == "GO",
+            "engine_is_advisory": True,
+            "user_decision_is_final_authority": True,
+            "execution_authorized": execution_authorized,
         },
         "lineup": {
             "status": lineup_state,
+            "decision_authority": lineup.get("authority") or lineup.get("decision_authority") or "ENGINE_RECOMMENDATION",
             "formation": lineup.get("formation"),
             "captain": (lineup.get("captain") or {}).get("name"),
             "vice_captain": (lineup.get("vice_captain") or {}).get("name"),
-            "governance": (lineup.get("governance") or {}).get("decision"),
+            "active_chip": (lineup.get("chip_context") or {}).get("active_chip"),
+            "human_override_active": bool(planning_scorecard.get("human_override_active")),
+            "engine_comparison": planning_scorecard.get("engine_comparison") or {},
             "requires_explicit_final_lock": not explicit_lineup_lock,
         },
         "personal_gw_scorecard": {
             "status": scorecard.get("status", "UNAVAILABLE"),
             "previous_gw": scorecard.get("previous_gw") or {"status": "UNAVAILABLE"},
-            "planning_gw": scorecard.get("planning_gw") or {"status": "UNAVAILABLE"},
+            "planning_gw": planning_scorecard or {"status": "UNAVAILABLE"},
             "headline": scorecard.get("headline") or {},
             "history": scorecard.get("history") or [],
         },
@@ -165,16 +211,25 @@ def govern_checkpoint(
             "locked_15_separate_from_lineup_lock": True,
             "wildcard_active_means_no_hit": True,
             "scorecard_is_reporting_only": True,
+            "planning_authority_target_gw_aware": True,
+            "stale_wildcard_flag_does_not_force_future_lock": True,
+            "engine_is_advisory": True,
+            "user_decision_is_final_authority": True,
+            "go_never_auto_executes_without_user_final_lock": True,
         },
     }
 
 
 def run(now: str | None = None) -> dict:
+    overlay = read_json(DATA / "effective_plan_v4.json", {})
+    effective_plan = overlay.get("effective_plan") or {}
+    if overlay.get("status") != "PASS" or not effective_plan:
+        raise RuntimeError("effective human planning contract required")
     out = govern_checkpoint(
         read_json(DATA / "latest.json", {}),
         read_json(DATA / "framework_health_v4.json", {}),
         read_json(DATA / "recommendation_sanity_v4.json", {}),
-        read_json(DATA / "lineup_decision_v4.json", {}),
+        effective_plan,
         read_json(CONFIG / "locked_squad.json", {}),
         scorecard=read_json(DATA / "gw_scorecard_v4.json", {}),
         now=now,
@@ -185,8 +240,10 @@ def run(now: str | None = None) -> dict:
         "action": out.get("action_state"),
         "headline": out.get("headline"),
         "governed_verdict": (out.get("decision") or {}).get("governed_verdict"),
+        "decision_authority": (out.get("lineup") or {}).get("decision_authority"),
         "previous_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("previous"),
         "planning_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("planning"),
+        "squad_basis": (out.get("squad") or {}).get("authority_source"),
     }, ensure_ascii=False))
     return out
 

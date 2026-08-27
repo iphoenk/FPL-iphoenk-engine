@@ -1,6 +1,13 @@
 from pathlib import Path
 
-from src.services.gw_scorecard_service import archive_finished_gw, build_actual_gw, build_planning_projection
+import pytest
+
+from src.services.gw_scorecard_service import (
+    archive_finished_gw,
+    attach_squad_basis,
+    build_actual_gw,
+    build_planning_projection,
+)
 
 
 def _raw_finished() -> dict:
@@ -91,6 +98,31 @@ def test_projection_applies_captain_and_chip_semantics_without_double_counting()
     assert triple_captain["estimated_points"] == 13.0
     assert triple_captain["captain"]["multiplier"] == 3
     assert triple_captain["uncertainty"]["player_intervals_not_naively_summed"] is True
+
+
+def test_projection_publishes_previous_gw_baseline_and_targeted_override():
+    projection = build_planning_projection(_lineup("WILDCARD"), 2)
+    raw = {
+        "projection_baseline": {
+            "planning_gw": 2,
+            "baseline_gw": 1,
+            "default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
+            "override_applied": True,
+            "override_target_gw": 2,
+            "effective_authority": "LOCKED_PRE_DEADLINE",
+            "authority_source": "USER_CAPTURED_WC_DRAFT",
+        }
+    }
+    scored = attach_squad_basis(projection, raw)
+    assert scored["squad_basis"]["baseline_gw"] == 1
+    assert scored["squad_basis"]["override_target_gw"] == 2
+    assert scored["squad_basis"]["authority_source"] == "USER_CAPTURED_WC_DRAFT"
+
+
+def test_projection_basis_must_match_planning_gw():
+    projection = build_planning_projection(_lineup("NONE"), 3)
+    with pytest.raises(RuntimeError, match="planning GW mismatch"):
+        attach_squad_basis(projection, {"projection_baseline": {"planning_gw": 2, "baseline_gw": 1}})
 
 
 def test_finished_archive_is_immutable_and_simulation_never_writes(tmp_path: Path):

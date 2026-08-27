@@ -1,4 +1,4 @@
-name: FPL iphoenk V4.9.4 personal GW scorecard service gate
+name: FPL iphoenk V4.9.4.1 human-in-the-loop microservice gate
 
 on:
   workflow_dispatch:
@@ -43,7 +43,7 @@ jobs:
         run: pip install --disable-pip-version-check -r requirements.txt pytest
       - name: Unit and acceptance tests
         run: python -m pytest -q
-      - name: Run process-isolated V4 services
+      - name: Run 11 process-isolated V4 services
         run: python -m src.services.orchestrator daily --stats --deep-stats
       - name: Advanced enrichment ablation observational gate
         run: |
@@ -60,7 +60,7 @@ jobs:
           assert a['ablation']['full_shadow_parity']['ok'] is True, a
           assert a['interpretation']['impact_is_diagnostic_not_health_threshold'] is True, a
           PY
-      - name: Centralized V4.9.4 personal-scorecard quality gate
+      - name: Centralized V4.9.4.1 human-authority quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise acceptance summary
         run: |
@@ -70,11 +70,14 @@ jobs:
           w=json.load(open('data/wc_decision_v4.json'))
           latest=json.load(open('data/latest.json'))
           pipeline=json.load(open('data/decision_pipeline_v4.json'))
+          overlay=json.load(open('data/effective_plan_v4.json'))
+          engine_lineup=json.load(open('data/lineup_decision_v4.json'))
           checkpoint=json.load(open('data/checkpoint_decision_v4.json'))
           orchestration=json.load(open('data/service_orchestration_v4.json'))
           lifecycle=json.load(open('data/validation/lifecycle_v4.json'))
           ablation=json.load(open('data/advanced_ablation_v4.json'))
           scorecard=json.load(open('data/gw_scorecard_v4.json'))
+          effective=overlay['effective_plan']
           print({
               'pipeline_health': h['pipeline_health'],
               'prediction_health': h['prediction_health'],
@@ -90,28 +93,30 @@ jobs:
               'wc_exact_streaming': w.get('performance', {}).get('exact_streaming_topk'),
               'wc_bound_pruned': w.get('performance', {}).get('objective_bound_pruned'),
               'refresh_ms': latest.get('performance', {}).get('engine_before_snapshot_write_ms'),
-              'preflight_ms': json.load(open('data/framework_health_preflight_v4.json')).get('performance_ms'),
               'decision_pipeline_ms': pipeline.get('timings', {}).get('total_pipeline_ms'),
-              'wc_decision_cpu_ms': pipeline.get('timings', {}).get('wc_decision_cpu_ms'),
-              'package_audit_cpu_ms': pipeline.get('timings', {}).get('package_audit_cpu_ms'),
-              'postflight_ms': h.get('performance_ms'),
               'checkpoint': checkpoint['checkpoint_context']['policy_id'],
               'action': checkpoint['action_state'],
-              'headline': checkpoint['headline'],
+              'execution_authorized': checkpoint['decision']['execution_authorized'],
               'services': orchestration['summary']['services_passed'],
               'orchestration_ms': orchestration['duration_ms'],
-              'deep_stats': orchestration['deep_stats_enabled'],
+              'projection_baseline': latest.get('projection_baseline'),
+              'engine_formation': engine_lineup.get('formation'),
+              'engine_captain': (engine_lineup.get('captain') or {}).get('name'),
+              'effective_authority': effective.get('authority'),
+              'human_override_active': overlay.get('user_override', {}).get('active'),
+              'effective_formation': effective.get('formation'),
+              'effective_captain': (effective.get('captain') or {}).get('name'),
+              'effective_chip': effective.get('chip_context', {}).get('active_chip'),
+              'user_minus_engine_xpts': overlay.get('comparison', {}).get('user_minus_engine_xpts'),
               'previous_gw': scorecard.get('headline', {}).get('previous'),
               'planning_gw': scorecard.get('headline', {}).get('planning'),
               'scorecard_archive': scorecard.get('archive'),
-              'scorecard_ms': scorecard.get('performance_ms'),
               'validation_snapshot': lifecycle['snapshot'],
               'validation_reconciliation': lifecycle['reconciliation'],
               'eligible_calibration_samples': lifecycle['eligibility'].get('eligible_samples'),
               'ablation_mean_abs_delta_xpts5': ablation['prediction_impact']['mean_abs_delta_xpts5'],
               'ablation_max_rank_shift': ablation['prediction_impact']['max_abs_rank_shift'],
               'ablation_decision_changed': ablation['decision_impact']['decision_changed'],
-              'ablation_ms': ablation.get('performance_ms'),
           })
           PY
       - name: Upload branch data only

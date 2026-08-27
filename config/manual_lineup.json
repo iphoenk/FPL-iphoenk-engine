@@ -2,11 +2,14 @@
   "phase": "pre_deadline_wc",
   "status": "MANUAL_DRAFT_ADJUSTABLE",
   "gw": 2,
+  "active_chip": "WILDCARD",
   "captain": 426,
   "vice_captain": 411,
   "starting_xi": [572,115,8,254,426,15,557,40,565,411,165],
   "bench_gk": 109,
   "bench_order": [346,88,473],
   "source": "latest_user_pick_team_screenshot",
-  "overwrite_policy": "recommend_only_until_explicit_final_lock"
+  "decision_authority": "USER_OVERRIDE",
+  "overwrite_policy": "ENGINE_RECOMMENDS_USER_DECIDES",
+  "expires_after_gw": 2
 }

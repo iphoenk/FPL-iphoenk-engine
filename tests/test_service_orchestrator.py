@@ -16,30 +16,39 @@ def test_registered_services_are_ordered_and_contract_complete():
     services = json.loads((ROOT / "config/service_registry.json").read_text())
     contracts = json.loads((ROOT / "config/service_contract_registry.json").read_text())
     ordered = _ordered_services(services)
-    assert len(ordered) == 10
+    ids = [row["id"] for row in ordered]
+    assert len(ordered) == 11
     assert ordered[0]["id"] == "raw_snapshot"
     assert ordered[-1]["id"] == "report_governance"
     assert all(row["boundary_state"] == "INDEPENDENT" for row in ordered)
-    assert [row["id"] for row in ordered[:4]] == ["raw_snapshot", "enrichment", "prediction", "validation_lifecycle"]
-    assert "personal_gw_scorecard" in [row["id"] for row in ordered]
+    assert ids[:4] == ["raw_snapshot", "enrichment", "prediction", "validation_lifecycle"]
+    assert ids.index("optimization") < ids.index("user_decision_overlay") < ids.index("personal_gw_scorecard")
     assert set(ordered[-1]["depends_on"]) == {"framework_postflight", "personal_gw_scorecard"}
     declared = contracts["contracts"]
     assert all(name in declared for service in ordered for name in service["produces"])
-    assert services["guardrails"]["gate0_checks_unchanged"] == 16
-    assert services["guardrails"]["validation_lifecycle_no_official_refetch"] is True
-    assert services["guardrails"]["deadline_snapshot_immutable"] is True
-    assert services["guardrails"]["retroactive_snapshot_rejected"] is True
-    assert services["guardrails"]["reconciliation_archive_immutable"] is True
-    assert services["guardrails"]["reconciliation_idempotent"] is True
-    assert services["guardrails"]["health_view_current_model_only"] is True
-    assert services["guardrails"]["personal_gw_scorecard_no_official_refetch"] is True
-    assert services["guardrails"]["finished_gw_archive_immutable"] is True
-    assert services["guardrails"]["scorecard_simulation_never_mutates_archive"] is True
-    assert services["guardrails"]["scorecard_projection_from_lineup_contract"] is True
-    assert services["guardrails"]["advanced_ablation_observational_outside_decision_chain"] is True
-    assert services["guardrails"]["advanced_ablation_full_shadow_parity_required"] is True
-    assert services["guardrails"]["advanced_ablation_diagnostic_not_arbitrary_gate"] is True
-    assert services["guardrails"]["registry_counts_unchanged"] == {
+    guardrails = services["guardrails"]
+    assert guardrails["gate0_checks_unchanged"] == 16
+    assert guardrails["validation_lifecycle_no_official_refetch"] is True
+    assert guardrails["deadline_snapshot_immutable"] is True
+    assert guardrails["retroactive_snapshot_rejected"] is True
+    assert guardrails["reconciliation_archive_immutable"] is True
+    assert guardrails["reconciliation_idempotent"] is True
+    assert guardrails["health_view_current_model_only"] is True
+    assert guardrails["personal_gw_scorecard_no_official_refetch"] is True
+    assert guardrails["finished_gw_archive_immutable"] is True
+    assert guardrails["scorecard_simulation_never_mutates_archive"] is True
+    assert guardrails["scorecard_projection_from_effective_plan_contract"] is True
+    assert guardrails["user_decision_overlay_process_isolated"] is True
+    assert guardrails["engine_is_advisory"] is True
+    assert guardrails["user_decision_is_final_authority"] is True
+    assert guardrails["engine_never_auto_overwrites_valid_user_override"] is True
+    assert guardrails["projection_default_baseline_previous_submitted_gw"] is True
+    assert guardrails["planning_override_requires_target_gw"] is True
+    assert guardrails["stale_planning_override_rejected"] is True
+    assert guardrails["advanced_ablation_observational_outside_decision_chain"] is True
+    assert guardrails["advanced_ablation_full_shadow_parity_required"] is True
+    assert guardrails["advanced_ablation_diagnostic_not_arbitrary_gate"] is True
+    assert guardrails["registry_counts_unchanged"] == {
         "dss_core": 50,
         "dss_extensions": 16,
         "enhancements": 8,
@@ -136,7 +145,10 @@ def test_only_raw_snapshot_service_imports_official_fpl_client():
     assert importers == {"raw_snapshot_service.py"}
 
 
-def test_v482_latest_contract_preserves_v480_file_pointers():
+def test_latest_contract_preserves_file_pointers_including_effective_plan():
     contracts = json.loads((ROOT / "config/service_contract_registry.json").read_text())
     required = set(contracts["contracts"]["latest_snapshot"]["required_paths"])
-    assert {f"files.{name}" for name in ("team", "live", "prices", "health", "universe", "chips", "predictions", "gw_scorecard", "checkpoint_decision", "service_orchestration")} <= required
+    assert {f"files.{name}" for name in (
+        "team", "live", "prices", "health", "universe", "chips", "predictions",
+        "effective_plan", "gw_scorecard", "checkpoint_decision", "service_orchestration",
+    )} <= required

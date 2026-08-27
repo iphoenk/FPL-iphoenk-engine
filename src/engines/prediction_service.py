@@ -27,6 +27,12 @@ def run() -> dict:
     if not prior.get("players"):
         raise RuntimeError("historical prior artifact unavailable for prediction service")
 
+    player_features = read_json(DATA / "player_features.json", {})
+    if player_features.get("contract") != "PLAYER_FEATURE_CONTRACT_V1" or not player_features.get("players"):
+        raise RuntimeError("REC-01 player feature contract unavailable or malformed for prediction service")
+    if (player_features.get("policy") or {}).get("model_opt_in") != "REC-01":
+        raise RuntimeError("player feature contract has not explicitly opted into REC-01 model behavior")
+
     latest = read_json(DATA / "latest.json", {})
     planning_gw = int((latest.get("phase") or {}).get("planning_gw") or 1)
 
@@ -45,9 +51,15 @@ def run() -> dict:
         planning_gw,
         prior,
         horizon=STRATEGIC_HORIZON_GWS,
+        player_features_payload=player_features,
     )
     projections["generated_at"] = _now()
-    projections.setdefault("governance", {})["official_snapshot_reused"] = True
+    projections.setdefault("governance", {}).update({
+        "official_snapshot_reused": True,
+        "player_feature_contract_consumed": player_features.get("contract"),
+        "defensive_contribution_model_opt_in": "REC-01",
+        "official_dc_threshold_rules_remain_authority": True,
+    })
     atomic_json(DATA / "projections.json", projections)
 
     packages = build_package_optimizer(projections, read_json(DATA / "team.json", {}))
@@ -80,6 +92,9 @@ def run() -> dict:
         "team_strength_teams": len(strength.get("teams") or []),
         "historical_prior_model": projections.get("historical_prior_model"),
         "historical_prior_players_used": projections.get("historical_prior_players_used"),
+        "player_feature_contract": projections.get("player_feature_contract"),
+        "player_dc_evidence_used": projections.get("player_dc_evidence_used"),
+        "defensive_contribution_model": projections.get("defensive_contribution_model"),
         "prediction_quality": quality.get("status"),
         "package_optimizer_status": packages.get("status"),
         "package_count": packages.get("package_count", 0),
@@ -105,6 +120,8 @@ if __name__ == "__main__":
     print(json.dumps({
         "projection_players": len(out["projections"].get("players") or []),
         "historical_prior_players": out["projections"].get("historical_prior_players_used"),
+        "player_dc_evidence_used": out["projections"].get("player_dc_evidence_used"),
+        "defensive_contribution_model": out["projections"].get("defensive_contribution_model"),
         "prediction_quality": out["quality"].get("status"),
         "package_count": out["packages"].get("package_count"),
         "best_package": (out["packages"].get("packages") or [{}])[0].get("id") if out["packages"].get("packages") else None,

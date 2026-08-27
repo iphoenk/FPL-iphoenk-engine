@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "purpose": "Catalog of V5 domains that must resolve through a shared module or registry instead of duplicated implementation logic.",
   "domains": {
     "official_rules": {"authority": "config/rules/registry.json", "status": "ACTIVE"},
@@ -10,9 +10,12 @@
     "gate0": {"authority": "config/gate0_registry.json", "status": "ACTIVE_FROM_V4_BASE"},
     "performance_budgets": {"authority": "config/v5_performance_budgets.json", "status": "ACTIVE"},
     "architecture_principles": {"authority": "config/v5_architecture_principles.json", "status": "ACTIVE"},
+    "service_wire": {"authority": "config/v5_service_wire_registry.json", "status": "ACTIVE_ALPHA"},
+    "runtime_materialization": {"authority": "config/v5_runtime_materialization_registry.json", "status": "ACTIVE_ALPHA"},
+    "service_transport_resilience": {"authority": "config/v5_service_transport_registry.json", "status": "ACTIVE_ALPHA"},
     "finance": {"authority": "src/v5/finance.py + config/v5_finance_registry.json", "status": "ACTIVE"},
     "phase_authority": {"authority": "src/v5/state.py + config/v5_phase_authority_registry.json", "status": "ACTIVE"},
-    "price_trajectory": {"authority": "planned migration from V3", "status": "PENDING_MIGRATION"},
-    "projection_weights": {"authority": "planned registry", "status": "PENDING_EXTERNALIZATION"}
+    "price_trajectory": {"authority": "src/v5/price_trajectory.py + config/v5_price_trajectory_registry.json", "status": "ACTIVE_ALPHA"},
+    "projection_weights": {"authority": "config/intelligence/projection.json", "status": "ACTIVE_ALPHA"}
   }
 }

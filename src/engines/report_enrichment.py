@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.engines.report_time_intelligence import run as run_report_time_intelligence
 from src.utils import DATA, atomic_json, read_json
 
 
@@ -60,7 +61,7 @@ _DATA_STATE_ID = {
     "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION": "situs terjangkau, tetapi data terstruktur belum tersedia",
     "SOURCE_REACHABLE_NOT_INGESTED": "situs terjangkau, tetapi capability ini belum di-ingest",
     "UNAVAILABLE": "tidak tersedia",
-    "DISABLED": "dinonaktifkan",
+    "DISABLED": "tidak dijalankan oleh collector",
 }
 
 
@@ -68,7 +69,7 @@ def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
     sources = {str(row.get("id")): row for row in source_health.get("sources") or []}
     capability_rows = source_health.get("capability_health") or []
     selected = []
-    for source_id in ("livefpl", "onefpl"):
+    for source_id in ("livefpl",):
         source = sources.get(source_id) or {}
         price = next(
             (row for row in capability_rows if row.get("source_id") == source_id and row.get("capability") == "price_prediction"),
@@ -86,8 +87,27 @@ def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
         })
     return {
         "otoritas": "Official FPL tetap menjadi sumber native resmi",
-        "challenger": selected,
-        "catatan": "Status situs dan ketersediaan data terstruktur adalah dua hal berbeda. Cache atau data kedaluwarsa tidak diperlakukan sebagai data saat ini.",
+        "collector_challenger": selected,
+        "report_time": {
+            "onefpl": "dicek melalui web saat report terjadwal atau on-demand dibuat",
+            "fixture_strategy": "Ben Crellin / schedule expert dicek saat report dibuat",
+            "pundit_consensus": "FPL Harry, FPL Focal, Let's Talk FPL, BigManBakar, dan Scout editorial dibandingkan dengan DSS",
+            "community": "Reddit r/FantasyPL dipakai sebagai sinyal komunitas yang wajib cross-check",
+        },
+        "catatan": "Source report-time tidak mengubah DSS. Consensus hanya menjadi evidence pembanding dan fakta tetap membutuhkan authority/cross-check yang sesuai.",
+    }
+
+
+def _report_time_user_block(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": payload.get("status"),
+        "web_refresh_required": bool(payload.get("web_refresh_required")),
+        "pundit_consensus_vs_dss": payload.get("pundit_consensus") or [],
+        "fixture_strategy": payload.get("fixture_strategy") or [],
+        "model_challenger": payload.get("model_challenger") or [],
+        "community_signal": payload.get("community_signal") or [],
+        "verified_news": payload.get("verified_news") or [],
+        "catatan": "Konsensus pundit bersifat advisory. Perbedaan dengan DSS harus ditampilkan, bukan disembunyikan atau otomatis mengubah keputusan model.",
     }
 
 
@@ -99,6 +119,7 @@ def run() -> dict[str, Any]:
     projections = read_json(DATA / "projections.json", {})
     watchlist = read_json(DATA / "dss_watchlist.json", {})
     source_health = read_json(DATA / "source_health.json", {})
+    report_time = run_report_time_intelligence()
 
     ledger = {int(row.get("element") or -1): row for row in team.get("team_value_ledger") or []}
     watch_rows = {
@@ -133,6 +154,7 @@ def run() -> dict[str, Any]:
     model_battle["main_reasons"] = _battle_reasons(leader, challenger) if leader and challenger else []
 
     user["source_availability"] = _source_availability(source_health)
+    user["report_time_intelligence"] = _report_time_user_block(report_time)
     tech["source_capability_health"] = {
         "source_overall": source_health.get("overall"),
         "capabilities": source_health.get("capability_health") or [],
@@ -141,6 +163,7 @@ def run() -> dict[str, Any]:
         "structured_stale_count": source_health.get("structured_stale_count", 0),
         "disagreement_count": source_health.get("disagreement_count", 0),
     }
+    tech["report_time_intelligence"] = report_time
     tech["runtime"] = {
         "current_run_ref": "data/runtime_performance.json",
         "embedded_during_report_stage": False,
@@ -149,6 +172,8 @@ def run() -> dict[str, Any]:
     tech.setdefault("audit", {})["price_radar_has_current_price_when_source_available"] = True
     tech["audit"]["starting_xi_battle_has_decision_evidence"] = True
     tech["audit"]["source_reachability_is_separate_from_structured_data"] = True
+    tech["audit"]["report_time_sources_do_not_mutate_dss"] = True
+    tech["audit"]["pundit_consensus_is_compared_with_dss"] = True
 
     atomic_json(DATA / "user_report.json", user)
     atomic_json(DATA / "technical_appendix.json", tech)

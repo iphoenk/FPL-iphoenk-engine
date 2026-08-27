@@ -1,0 +1,86 @@
+name: V5 Advanced Architecture Check
+
+on:
+  push:
+    branches: ['v5-*']
+    paths:
+      - 'requirements.txt'
+      - 'deploy/v5/**'
+      - 'config/v5_architecture_principles.json'
+      - 'config/v5_module_registry.json'
+      - 'config/v5_registry_catalog.json'
+      - 'config/v5_release_integrity_registry.json'
+      - 'config/v5_runtime_materialization_registry.json'
+      - 'config/v5_service_registry.json'
+      - 'config/v5_service_transport_registry.json'
+      - 'config/v5_service_wire_registry.json'
+      - 'src/v5/service_client.py'
+      - 'src/v5/service_host.py'
+      - 'src/v5/service_transport.py'
+      - 'src/v5/services/snapshot.py'
+      - 'tests/test_v5_advanced_transport_materialization.py'
+      - '.github/workflows/v5-advanced-architecture-check.yml'
+  pull_request:
+    branches: [v5-beta6-roadmap]
+    paths:
+      - 'requirements.txt'
+      - 'deploy/v5/**'
+      - 'config/v5_*.json'
+      - 'src/v5/service_*.py'
+      - 'src/v5/services/snapshot.py'
+      - 'tests/test_v5_advanced_transport_materialization.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  architecture-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: "${{ github.workspace }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+      - name: Registry and ownership contracts
+        run: |
+          python -m pytest -q \
+            tests/test_v5_advanced_transport_materialization.py \
+            tests/test_v5_microservices.py \
+            tests/test_v5_architecture_principles.py \
+            tests/test_v5_service_transport.py
+      - name: Fail on in-process bounded-context shortcut
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          guarded = [
+              Path('src/v5/service_client.py'),
+              Path('src/v5/services/orchestrator.py'),
+              Path('src/v5/services/orchestrator_beta.py'),
+          ]
+          forbidden = [
+              'from src.v5.services.prediction import',
+              'from src.v5.services.decision import',
+              'from src.v5.services.governance import',
+              'from src.v5.services.watchlist import',
+              'from src.v5.services.reporting import',
+          ]
+          violations = []
+          for path in guarded:
+              text = path.read_text(encoding='utf-8')
+              for token in forbidden:
+                  if token in text:
+                      violations.append(f'{path}: {token}')
+          assert not violations, f'in-process bounded-context shortcut detected: {violations}'
+          PY

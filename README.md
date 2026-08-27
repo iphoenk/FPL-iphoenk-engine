@@ -3,9 +3,8 @@
 Production-oriented personal FPL decision engine and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
-- Production baseline remains `3.20.1` / schema `48` until this candidate is production-accepted.
-- Current release candidate: `3.20.2` / schema `48`.
-- Candidate scope: runtime artifact contract hardening.
+- Current production release: `3.20.2` / schema `48`.
+- Production acceptance: COMPLETE on 27 August 2026.
 - Service Registry: schema `12`, contract `v3.20.2-artifact-contract-hardening-15-owned-20-watchlist`.
 - Runtime Artifact Contract Registry: `RUNTIME_ARTIFACT_CONTRACTS_V1`.
 - Machine Source Registry: `SOURCE_REGISTRY_V3`.
@@ -25,6 +24,8 @@ V3.20.2 closes the gap between fail-soft external-source availability and fail-c
 - Malformed JSON, wrong contract/schema, or invalid internal artifact shape becomes an artifact-integrity failure and follows the service criticality policy.
 - Critical service artifact corruption fails closed. Noncritical service failure still quarantines stale owned outputs rather than allowing old evidence to masquerade as current.
 - The global convenience helper `read_json()` remains fail-soft for optional reads; integrity enforcement happens at the microservice acceptance boundary where ownership is explicit.
+
+Production acceptance evidence: feature PR #41 merged at `85bca2d6204c56698286d5bfc10dd643c25c1dbd`; production run `33041098857` completed SUCCESS; validated `runtime-data` publication completed; runtime artifact validation active; `challenger_observations.json` passed `RUNTIME_ARTIFACT_CONTRACTS_V1`; framework GREEN, Decision Engine HEALTHY, GO allowed, Gate0 16/16 PASS, DSS Core 50/50 ACTIVE, Extensions 16/16 ACTIVE, Enhancements 8/8 ACTIVE; 20-service wall time about 7.18 seconds against a 45-second budget.
 
 ### Schema/version decision
 - Engine: `3.20.2`.

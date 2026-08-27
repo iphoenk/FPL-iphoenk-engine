@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "model_id": "official_price_radar_v2",
   "deadline_timezone": "Europe/London",
   "market_filter": {
@@ -26,6 +26,15 @@
     "actionable_progress_pct": 50,
     "alert_levels": ["CRITICAL", "HIGH"]
   },
+  "calibration": {
+    "max_events": 250,
+    "miss_grace_hours": 12,
+    "minimum_samples_for_calibrated_health": 20,
+    "healthy_direction_accuracy": 0.7,
+    "warning_direction_accuracy": 0.55,
+    "suspect_static_ratio_warning": 0.5,
+    "timing_error_warning_hours": 24
+  },
   "serving": {
     "market_watch_capacity": 50,
     "alert_summary_size": 20
@@ -33,6 +42,9 @@
   "governance": {
     "official_native_fields_are_authoritative": true,
     "price_signal_is_overlay": true,
-    "challenger_context_cannot_override_official_fields": true
+    "challenger_context_cannot_override_official_fields": true,
+    "direction_and_timing_health_are_separate": true,
+    "price_change_observation_time_is_not_exact_change_time": true,
+    "calibration_history_is_bounded": true
   }
 }

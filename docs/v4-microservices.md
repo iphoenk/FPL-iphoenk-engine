@@ -1,15 +1,15 @@
-# V4.9.1 service architecture
+# V4.9.2 service architecture
 
-V4.9.1 runs eight **independent**, process-isolated services on one host. The orchestrator owns dependency ordering, contract validation, immutable-artifact locks, and the final fail-closed state.
+V4.9.2 runs eight **independent**, process-isolated services on one host. The orchestrator owns dependency ordering, contract validation, immutable-artifact locks, and the final fail-closed state.
 
 1. `raw_snapshot` is the only service permitted to call the Official FPL API. It also conditionally fetches GW1 picks and reconstructs purchase prices before publishing `snapshot.v1`.
 2. `enrichment` reads the locked raw contract, optionally refreshes community statistics, and publishes `enrichment.v1` with the raw SHA-256 in its lineage.
-3. `prediction` reads both locked contracts and runs the V4.9.1 prediction-quality model. Its latest output records both SHA-256 digests.
+3. `prediction` reads both locked contracts and runs the V4.9.2 prediction-quality model. Its latest output records both SHA-256 digests.
 4. `rules_compliance` validates FPL rules.
 5. `framework_preflight` runs checkpoint-aware PRE-FLIGHT governance.
 6. `optimization` runs the sell-cost-correct optimizer with a bounded value term and the unified decision pipeline.
 7. `framework_postflight` runs the 16-check POST-FLIGHT gate.
-8. `report_governance` emits the checkpoint-aware V4.9.1 decision.
+8. `report_governance` emits the checkpoint-aware V4.9.2 decision.
 
 Every registry boundary is `INDEPENDENT`. A successful raw, enrichment, or prediction process is locked immediately; any later digest mismatch stops orchestration. Runtime contracts are written beneath `data/runtime/` and are intentionally excluded from Git.
 
@@ -19,8 +19,8 @@ The raw boundary validates the actual authoritative squad, whether locked or off
 
 Independent community enrichment requests are submitted together and then collected. Component timings remain visible as `raw_snapshot_ms`, `enrichment_ms`, and `prediction_ms`, while `engine_before_snapshot_write_ms` is preserved for workflow compatibility.
 
-The centralized V4.9.1 quality gate verifies 8/8 service evidence, lineage, decision equivalence, sell-cost correctness, Gate 0 (16), DSS Core (50), DSS Extension (16), and Enhancement Layers (8).
+The centralized V4.9.2 quality gate verifies 8/8 service evidence, lineage, decision equivalence, sell-cost correctness, Gate 0 (16), DSS Core (50), DSS Extension (16), and Enhancement Layers (8).
 
-Operational health and predictive readiness are separate contracts. `pipeline_health` covers source availability, freshness, registry integrity, rules, contracts, and Gate 0. `prediction_health` covers critical model capabilities. `capability_health` preserves the full registry view, including honest `PARTIAL` optional inputs and `WARMUP` calibration stores. V4.9.1 can therefore report GREEN pipeline and prediction health with a HEALTHY decision engine while capability health remains AMBER for explicitly unavailable optional evidence.
+Operational health and predictive readiness are separate contracts. `pipeline_health` covers source availability, freshness, registry integrity, rules, contracts, and Gate 0. `prediction_health` covers critical model capabilities. `capability_health` preserves the full registry view, including honest `PARTIAL` optional inputs and `WARMUP` calibration stores. A critical WARMUP produces AMBER prediction health and a PROVISIONAL decision engine: recommendations remain visible, but automatic GO is held until calibration has an eligible reconciled post-GW sample.
 
 The canonical service workflow runs at 04.30, 12.30, and 21.30 Asia/Jakarta. It uses the process-isolated orchestrator with deep statistics enabled and supersedes the old scheduled monolith. `live_service.py` also calls this orchestrator: refresh is token-protected and SSE clients consume one shared polling broadcaster.

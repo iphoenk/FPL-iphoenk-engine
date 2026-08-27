@@ -40,6 +40,22 @@
         "available_count": "integer",
         "material_count": "integer"
       }
+    },
+    "player_features.json": {
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "generated_at", "decision_neutral", "players", "policy"],
+      "equals": {
+        "schema_version": 1,
+        "contract": "PLAYER_FEATURE_CONTRACT_V1",
+        "decision_neutral": true
+      },
+      "types": {
+        "players": "object",
+        "policy": "object",
+        "official_player_count": "integer",
+        "advanced_row_count": "integer",
+        "advanced_player_coverage": "integer"
+      }
     }
   }
 }

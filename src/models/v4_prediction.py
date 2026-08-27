@@ -46,6 +46,25 @@ def workload_factor(ctx):
     )
 
 
+def competition_adjustment(ctx, current_start_rate=None):
+    """Return the canonical role-competition factor and uncertainty.
+
+    Priors and fixture projections share this helper so health evidence cannot
+    claim an adjustment that the prediction model did not actually apply.
+    """
+    ctx = ctx or {}
+    start_rate = clamp(f(current_start_rate, f(ctx.get("current_start_rate"))))
+    uncertainty = clamp(1 - 0.75 * start_rate, 0.25, 1)
+    factor = clamp(
+        1
+        - f(ctx.get("competition_start_weight"), 0.16) * f(ctx.get("competition_pressure")) * uncertainty
+        - f(ctx.get("squad_depth_weight"), 0.08) * f(ctx.get("squad_depth_pressure")),
+        0.72,
+        1,
+    )
+    return factor, uncertainty
+
+
 def lineup_distribution(player, ctx=None):
     """Estimate start, substitute and DNP probabilities from direct player evidence.
 
@@ -75,14 +94,7 @@ def lineup_distribution(player, ctx=None):
     # Proven current starts are direct evidence against a purely inferred peer
     # competition signal. Competition therefore has full force for unknown
     # players and is progressively attenuated for established starters.
-    competition_uncertainty = clamp(1 - 0.75 * current_start_rate, 0.25, 1)
-    competition_factor = clamp(
-        1
-        - f(ctx.get("competition_start_weight"), 0.16) * f(ctx.get("competition_pressure")) * competition_uncertainty
-        - f(ctx.get("squad_depth_weight"), 0.08) * f(ctx.get("squad_depth_pressure")),
-        0.72,
-        1,
-    )
+    competition_factor, competition_uncertainty = competition_adjustment(ctx, current_start_rate)
     start_probability = clamp(
         base_start
         * available
@@ -308,7 +320,7 @@ def project_fixture(player, fixture, ctx=None, advanced=None):
             "fixture_adjustment": round(fixture_factor, 4),
         },
         "provenance": {
-            "model": "v4.9.1-prediction-quality",
+            "model": "v4.9.2-truthful-health",
             "fixture_source": "official_fpl",
             "advanced_source": ctx.get("advanced_source", "official_fpl_current_state"),
             "advanced_identity_match": ctx.get("advanced_identity_match"),
@@ -348,5 +360,5 @@ def project_horizon(player, fixtures, ctx=None, advanced=None, n=15):
         "xpts_15": round(sum(expected_points[:15]), 2),
         "mean_xpts": round(mean(expected_points), 3) if expected_points else 0,
         "uncertainty": round(pstdev(expected_points), 3) if len(expected_points) > 1 else None,
-        "model": "v4.9.1-prediction-quality",
+        "model": "v4.9.2-truthful-health",
     }

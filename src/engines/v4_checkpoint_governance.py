@@ -70,6 +70,8 @@ def govern_checkpoint(
         reasons.append("SIMULATED_AS_OF")
     if health.get("critical_partial"):
         reasons.append("CRITICAL_FRAMEWORK_PARTIAL")
+    if health.get("critical_warmup"):
+        reasons.append("CRITICAL_PREDICTION_WARMUP")
     if verdict == "OPTIONAL_IMPROVEMENT":
         reasons.append("OPTIONAL_NOT_AUTOMATIC_GO")
 
@@ -96,10 +98,11 @@ def govern_checkpoint(
     lineup_state = "FINAL_LOCKED" if explicit_lineup_lock else "FINAL_REVIEW_REQUIRED" if final_review else "ADJUSTABLE"
     recommended = sanity.get("recommended_package") or {}
     critical_partial = list(health.get("critical_partial") or [])
+    critical_warmup = list(health.get("critical_warmup") or [])
 
     return {
-        "schema_version": 491,
-        "engine": "v4.9.1-checkpoint-governance",
+        "schema_version": 492,
+        "engine": "v4.9.2-checkpoint-governance",
         "evaluated_at": evaluated_at.isoformat(),
         "checkpoint_context": context,
         "action_state": action,
@@ -141,6 +144,7 @@ def govern_checkpoint(
             "health_go_allowed": health_go,
             "freshness": freshness,
             "critical_partial": critical_partial,
+            "critical_warmup": critical_warmup,
             "reasons": reasons,
         },
         "report_scope": list(context.get("report_scope") or []),

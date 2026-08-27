@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.9.1
+# FPL iphoenk Engine V4.9.2
 
 A production-oriented personal FPL data platform.
 
@@ -61,12 +61,14 @@ python fpl_daily_tasks.py stats-sync --gw 1
 python fpl_daily_tasks.py stats-sync --gw 1 --deep
 python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
 
-python -m src.services.orchestrator daily --stats
-python -m src.services.orchestrator deadline --stats --as-of "2026-08-28T21:30:00+07:00"
+python -m src.services.orchestrator daily --stats --deep-stats
+python -m src.services.orchestrator deadline --stats --deep-stats --as-of "2026-08-28T21:30:00+07:00"
 python -m src.engines.v4_quality_gate
 
 uvicorn live_service:app --host 0.0.0.0 --port 8000
 ```
+
+`--deep-stats` enables deep tactical-role, competition, and set-piece/penalty evidence. Omitting it is a faster fallback run and may use official-position proxies; the scheduled production workflow always enables it.
 
 ## Live endpoints
 - GET `/health`
@@ -155,3 +157,11 @@ See `docs/v4-microservices.md` for service ownership, failure semantics, and pre
 - Critical prediction probes are evidence-based. Calibration and learning stores report `WARMUP` until an eligible post-GW sample exists; optional unavailable capabilities remain `PARTIAL` rather than being painted green.
 - The process-isolated workflow is scheduled at 04.30, 12.30, and 21.30 Asia/Jakarta. The old monolith cron is removed; its manual compatibility workflow now delegates to the same orchestrator and quality gate.
 - Live refresh is authenticated and fail-closed, while all SSE clients share one orchestrated polling loop.
+
+## V4.9.2 truthful-health correctness hotfix
+
+- Competition evidence is calculated from the same canonical factor used by fixture projection; a player is marked adjusted only when the applied factor is materially below 1.
+- Rotation health requires truthful flag/factor consistency, adjusted and unadjusted players, legal bounds, and factor variation. File presence or a constant flag cannot make the module ACTIVE.
+- Critical calibration and learning modules in `WARMUP` make prediction health AMBER and the decision engine PROVISIONAL. Governed recommendations remain available, but automatic GO is held until an eligible reconciled post-GW sample exists.
+- Quality-gate version failures explain that artifacts are stale or incompatible and instruct operators to regenerate them through the orchestrator.
+- Advanced integration continues to report synchronization, consumption, and material distinction separately. A future ablation metric, rather than an arbitrary materiality threshold, will determine incremental prediction impact.

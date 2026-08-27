@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from src.services.orchestrator import orchestrate
 from src.utils import DATA, read_json
 
-app = FastAPI(title="FPL iphoenk Engine V4.9.1", version="4.9.1")
+app = FastAPI(title="FPL iphoenk Engine V4.9.2", version="4.9.2")
 POLL = int(os.getenv("FPL_LIVE_POLL_SECONDS", "60"))
 _subscribers: set[asyncio.Queue] = set()
 _broadcast_task: asyncio.Task | None = None

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from src.models.player_identity import build_identity_index
-from src.models.v4_prediction import XA_PRIOR, XG_PRIOR, clamp, project_horizon, team_strength
+from src.models.v4_prediction import XA_PRIOR, XG_PRIOR, clamp, competition_adjustment, project_horizon, team_strength
 from src.models.v4_prediction_inputs import load_prediction_enrichment
 from src.utils import CONFIG, read_json
 
@@ -322,7 +322,7 @@ def minutes_contexts(elements, last_season, finished_events, advanced=None, qual
             average_start_minutes = 0.3 * current_start_minutes + 0.7 * 72
         else:
             average_start_minutes = 68
-        contexts[player["id"]] = {
+        context = {
             "nailed_prior": clamp(nailed),
             "current_start_rate": current_rate,
             "current_minutes_rate": current_minutes_rate,
@@ -331,7 +331,6 @@ def minutes_contexts(elements, last_season, finished_events, advanced=None, qual
             "sub_appearance_signal": float(current_starts == 0 and current_minutes > 0),
             "competition_pressure": competition,
             "competition_source": "inferred_tactical_role_peer_group",
-            "competition_adjustment_applied": True,
             "competition_start_weight": f(competition_cfg.get("start_probability_weight"), 0.16),
             "squad_depth_weight": f(competition_cfg.get("squad_depth_weight"), 0.08),
             "tactical_role": role_name,
@@ -341,6 +340,11 @@ def minutes_contexts(elements, last_season, finished_events, advanced=None, qual
             "avg_minutes_when_start": average_start_minutes,
             "xmins_prior_source": source,
         }
+        competition_factor, competition_uncertainty = competition_adjustment(context, current_rate)
+        context["competition_factor"] = round(competition_factor, 4)
+        context["competition_uncertainty"] = round(competition_uncertainty, 4)
+        context["competition_adjustment_applied"] = context["competition_factor"] < 1
+        contexts[player["id"]] = context
     return contexts
 
 
@@ -422,8 +426,8 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
         rows.append(row)
     rows.sort(key=lambda row: row["xpts_5"], reverse=True)
     return {
-        "schema_version": 491,
-        "model_version": "v4.9.1-prediction-quality",
+        "schema_version": 492,
+        "model_version": "v4.9.2-truthful-health",
         "generated_at": generated_at,
         "point_in_time": True,
         "input_coverage": {
@@ -438,6 +442,9 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
         "capability_evidence": {
             "tactical_role_coverage": sum(bool((row.get("priors") or {}).get("tactical_role")) for row in rows),
             "role_competition_adjustments": sum(bool((row.get("priors") or {}).get("competition_adjustment_applied")) for row in rows),
+            "role_competition_factor_variants": len({
+                round(f((row.get("priors") or {}).get("competition_factor"), 1), 4) for row in rows
+            }),
             "dynamic_opponent_fixtures": sum(
                 (fixture.get("provenance") or {}).get("opponent_defence_scoring_mode") == "dynamic"
                 for row in rows for fixture in (row.get("fixtures") or [])[:3]

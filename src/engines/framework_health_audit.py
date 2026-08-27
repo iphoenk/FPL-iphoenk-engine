@@ -253,13 +253,32 @@ def _probe_rotation_competition() -> tuple[bool, dict]:
         for player in players
     )
     applied = sum(bool((player.get("priors") or {}).get("competition_adjustment_applied")) for player in players)
+    factors = [float((player.get("priors") or {}).get("competition_factor", 1)) for player in players]
+    consistent = sum(
+        bool((player.get("priors") or {}).get("competition_adjustment_applied"))
+        == (float((player.get("priors") or {}).get("competition_factor", 1)) < 1 - 1e-6)
+        for player in players
+    )
+    distinct_factors = len({round(value, 4) for value in factors})
     diagnostic = sum((player.get("priors") or {}).get("competition_source") == "broad_fpl_position_diagnostic_only" for player in players)
-    return bool(players) and covered == len(players) and applied > 0, {
+    ok = (
+        bool(players)
+        and covered == len(players)
+        and consistent == len(players)
+        and applied > 0
+        and applied < len(players)
+        and distinct_factors > 1
+        and all(0.72 <= value <= 1 for value in factors)
+    )
+    return ok, {
         "players": len(players),
         "covered": covered,
         "role_matched_adjustments": applied,
+        "unadjusted_players": len(players) - applied,
+        "distinct_competition_factors": distinct_factors,
+        "flag_factor_consistent": consistent,
         "broad_position_diagnostics": diagnostic,
-        "reason": "role-matched competition data unavailable; broad FPL position is not applied" if applied == 0 else None,
+        "reason": "role competition lacks truthful per-player factor variation" if not ok else None,
     }
 
 
@@ -562,6 +581,16 @@ def _audit_registry(name: str, obj: dict, phase: str) -> dict:
     return {**integrity, "registry": obj.get("registry"), "counts": dict(counts), "items": audited}
 
 
+def _prediction_readiness(critical_failed: list[str], critical_partial: list[str], critical_warmup: list[str]) -> tuple[str, str]:
+    if critical_failed:
+        return "RED", "BLOCKED"
+    if critical_partial:
+        return "AMBER", "DEGRADED"
+    if critical_warmup:
+        return "AMBER", "PROVISIONAL"
+    return "GREEN", "HEALTHY"
+
+
 def _gate0(phase: str, compliance: dict, lineup: dict, packages: dict) -> dict:
     locked = read_json(CONFIG / "locked_squad.json", {})
     universe = read_json(DATA / "universe.json", {})
@@ -661,12 +690,15 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
 
     critical_failed = []
     critical_partial = []
+    critical_warmup = []
     for group in health.values():
         for item in group["items"]:
             if item["critical"] and item["status"] == "FAILED":
                 critical_failed.append(item["id"])
             elif item["critical"] and item["status"] == "PARTIAL":
                 critical_partial.append(item["id"])
+            elif item["critical"] and item["status"] == "WARMUP":
+                critical_warmup.append(item["id"])
 
     source_ok, source_detail = _probe_source_health()
     freshness_ok, freshness_detail = _probe_freshness()
@@ -678,7 +710,7 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
     else:
         rules_ok = True
 
-    # V4.9.1 separates service/pipeline availability from predictive capability.
+    # V4.9.2 separates service/pipeline availability from predictive capability.
     # A truthful PARTIAL prediction module must restrict decision readiness, but
     # it must not make a healthy API, contract, freshness and Gate-0 pipeline look
     # operationally broken.
@@ -689,12 +721,9 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
     else:
         pipeline_health = "GREEN"
 
-    if critical_failed:
-        prediction_health = "RED"
-    elif critical_partial:
-        prediction_health = "AMBER"
-    else:
-        prediction_health = "GREEN"
+    prediction_health, decision_engine = _prediction_readiness(
+        critical_failed, critical_partial, critical_warmup
+    )
 
     all_items = [item for group in health.values() for item in group["items"]]
     active_count = sum(item["status"] == "ACTIVE" for item in all_items)
@@ -711,8 +740,8 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
     postflight_complete = phase == "preflight" or gate0["counts"].get("DEFERRED", 0) == 0
     go_allowed = pipeline_health == "GREEN" and prediction_health == "GREEN" and gate0["pass"] and postflight_complete
     out = {
-        "schema_version": 491,
-        "engine": "v4.9.1-health-separation",
+        "schema_version": 492,
+        "engine": "v4.9.2-truthful-health",
         "phase": phase,
         "checkpoint_context": read_json(DATA / "latest.json", {}).get("checkpoint_context") or {},
         "overall": overall,
@@ -727,7 +756,7 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
             "declared": len(all_items),
             "active_ratio": capability_coverage,
         },
-        "decision_engine": "HEALTHY" if prediction_health == "GREEN" else "DEGRADED" if prediction_health == "AMBER" else "BLOCKED",
+        "decision_engine": decision_engine,
         "recommendation_allowed": recommendation_allowed,
         "go_allowed": go_allowed,
         "registry_integrity": integrity_ok,
@@ -740,10 +769,12 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
         "source_health": {"status": "PASS" if source_ok else "FAIL", "detail": source_detail},
         "critical_failed": critical_failed,
         "critical_partial": critical_partial,
+        "critical_warmup": critical_warmup,
         "governance": {
             "gate0_fail_blocks_go": True,
             "critical_framework_fail_blocks_recommendation": True,
             "critical_partial_blocks_unqualified_go": True,
+            "critical_warmup_blocks_unqualified_go": True,
             "pipeline_health_separate_from_prediction_health": True,
             "noncritical_partial_is_reported_not_hidden": True,
             "file_exists_is_not_sufficient_for_active": True,

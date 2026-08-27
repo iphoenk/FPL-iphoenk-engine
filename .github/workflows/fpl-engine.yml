@@ -1,4 +1,4 @@
-name: FPL iphoenk V4.9.1 prediction and service gate
+name: FPL iphoenk V4.9.2 truthful-health service gate
 
 on:
   workflow_dispatch:
@@ -46,7 +46,7 @@ jobs:
         run: python -m pytest -q
       - name: Run process-isolated V4 services
         run: python -m src.services.orchestrator daily --stats --deep-stats
-      - name: Centralized V4.9.1 service quality gate
+      - name: Centralized V4.9.2 service quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise acceptance summary
         run: |
@@ -63,6 +63,7 @@ jobs:
               'prediction_health': h['prediction_health'],
               'capability_health': h['capability_health'],
               'decision_engine': h['decision_engine'],
+              'critical_warmup': h['critical_warmup'],
               'capability_coverage': h['capability_coverage'],
               'recommendation_allowed': h['recommendation_allowed'],
               'go_allowed': h['go_allowed'],
@@ -78,6 +79,7 @@ jobs:
               'headline': checkpoint['headline'],
               'services': orchestration['summary']['services_passed'],
               'orchestration_ms': orchestration['duration_ms'],
+              'deep_stats': orchestration['deep_stats_enabled'],
           })
           PY
       - name: Upload branch data only

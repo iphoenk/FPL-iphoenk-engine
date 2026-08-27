@@ -1,6 +1,6 @@
 {
-  "schema_version": 491,
-  "registry": "v4_9_1_prediction_quality",
+  "schema_version": 492,
+  "registry": "v4_9_2_truthful_health",
   "advanced": {
     "minimum_decision_coverage_ratio": 0.25,
     "attacking_prior_minutes": 720,

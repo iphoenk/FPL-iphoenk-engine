@@ -1,58 +1,62 @@
 {
-  "version": "4.7.1",
+  "version": "4.9.2",
+  "release_focus": "truthful competition evidence and provisional critical warmup health",
   "P0": {
     "status": "IMPLEMENTED",
     "items": [
-      "Official FPL API source authority",
-      "phase-aware planning/submitted/scoring GW",
+      "Official FPL API source authority isolated in raw_snapshot",
+      "phase-aware planning, submitted, live and scoring states",
       "pre-deadline locked squad authority",
-      "public purchase/sell-value reconstruction",
-      "endpoint health/retry/latency",
-      "expanded live player stats",
-      "price delta/momentum",
-      "FPL-Core-Insights GW sync",
-      "vaastav historical sync",
-      "data leakage guard module",
-      "atomic writes",
-      "fail-closed squad sanity",
-      "per-GW snapshots",
-      "safe workflow rebase"
+      "public purchase-price and sell-value reconstruction",
+      "endpoint health, retry, latency and freshness governance",
+      "process-isolated orchestration with immutable lineage locks",
+      "16-check Gate 0 and centralized quality gate",
+      "per-GW snapshots and append-only history",
+      "authenticated fail-closed live refresh and shared SSE broadcaster"
     ]
   },
   "P1": {
-    "status": "IMPLEMENTED AS WORKING BASE / NEEDS CALIBRATION",
+    "status": "IMPLEMENTED AS WORKING BASE / NEEDS EMPIRICAL CALIBRATION",
     "items": [
-      "optional shots.csv and playermatchstats.csv ingestion",
-      "fixture model using official FDR fallback",
-      "interpretable xPts/xMins projection scaffold",
+      "appearance scoring with unconditional p60 regression protection",
+      "deep shots and player-match metrics consumed by rates and tactical roles",
+      "role-matched competition with per-player factor evidence",
+      "Bayesian official-order plus observed-event set-piece and penalty team shares",
+      "Bayesian opponent-defence resistance from finished results with league-prior shrinkage",
       "last-season priors blended by stable player code",
-      "advanced xG/xA/DefCon stats consumed with material-enrichment coverage",
-      "official set-piece and penalty orders retained as non-scoring metadata",
-      "neutral opponent-defence fallback until dedicated splits are available",
-      "direct-evidence xMins with broad-position competition diagnostic only",
-      "advanced stats query CLI",
-      "FastAPI live endpoints",
-      "SSE live stream",
-      "team/universe split outputs"
+      "bounded value term consumed by the Wildcard objective",
+      "truthful pipeline, prediction and capability health separation",
+      "critical learning and calibration WARMUP reported as PROVISIONAL",
+      "advanced stats query CLI and deep-stats production mode"
+    ],
+    "known_partial": [
+      "system and formation fit",
+      "goal-involvement sustainability",
+      "bonus route modelling",
+      "team attack and defence strength decomposition",
+      "home-away and fixture-swing context",
+      "European, domestic-cup and international congestion",
+      "rest-day and recovery evidence",
+      "preseason, multi-season and regression priors",
+      "effective-ownership context"
     ]
   },
   "P2": {
-    "status": "IMPLEMENTED AS FRAMEWORK / REQUIRES SEASON DATA TO CALIBRATE",
+    "status": "IMPLEMENTED AS FRAMEWORK / REQUIRES RECONCILED SEASON DATA",
     "items": [
       "Monte Carlo points scenario engine",
-      "portfolio package legality/score engine",
-      "calibration metrics MAE/Brier/Spearman",
-      "model versioning hooks",
+      "portfolio package legality and score engine",
+      "calibration metrics MAE, Brier and Spearman",
+      "model-versioning and backtest-store hooks",
       "rank-simulation scaffold"
     ],
     "not_claimed_as_finished": [
-      "empirical set-piece and penalty event shares",
-      "role-matched positional competition data",
-      "dynamic opponent defence while official splits remain unavailable",
+      "advanced-feature ablation and incremental impact threshold",
+      "team-specific tactical role-slot calibration",
       "true overall-rank conversion model",
-      "live EO population model",
-      "production ML projection model",
-      "full mini-league rival spy",
+      "live effective-ownership population model",
+      "production machine-learning projection model",
+      "full mini-league rival intelligence",
       "literal heatmap renderer"
     ]
   }

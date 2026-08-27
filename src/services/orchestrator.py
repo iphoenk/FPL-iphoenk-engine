@@ -72,13 +72,15 @@ def orchestrate(
     services = _ordered_services(registry)
     started = time.perf_counter()
     report = {
-        "schema_version": 491,
-        "engine": "v4.9.1-service-orchestrator",
+        "schema_version": 492,
+        "engine": "v4.9.2-service-orchestrator",
         "started_at": iso_now(),
         "completed_at": None,
         "status": "RUNNING",
         "mode": mode,
         "simulated": as_of is not None,
+        "stats_enabled": stats,
+        "deep_stats_enabled": deep_stats,
         "service_registry": registry.get("registry"),
         "contract_registry": contracts.get("registry"),
         "execution_model": registry.get("execution_model"),
@@ -183,7 +185,7 @@ def orchestrate(
         atomic_json(outfile, report)
         report["locked_artifacts"] = {str(Path(path).relative_to(root)): digest for path, digest in locked_artifacts.items()}
         atomic_json(outfile, report)
-        print(json.dumps({"orchestrator": "PASS", "services": len(services), "duration_ms": report["duration_ms"], "snapshot": (report.get("snapshot_identity") or {}).get("sha256"), "simulated": report["simulated"]}, ensure_ascii=False))
+        print(json.dumps({"orchestrator": "PASS", "services": len(services), "duration_ms": report["duration_ms"], "snapshot": (report.get("snapshot_identity") or {}).get("sha256"), "simulated": report["simulated"], "stats": stats, "deep_stats": deep_stats}, ensure_ascii=False))
         return report
     except Exception as exc:
         report["status"] = "FAIL"

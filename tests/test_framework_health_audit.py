@@ -80,3 +80,39 @@ def test_registry_reuses_same_operational_probe_within_one_audit(monkeypatch):
         assert calls == [('same', 'preflight')]
     finally:
         audit._PROBE_CACHE = None
+
+
+def test_rotation_competition_probe_requires_truthful_factor_variation(monkeypatch):
+    import src.engines.framework_health_audit as audit
+
+    players = [
+        {"priors": {"nailed_prior": .8, "competition_pressure": .5, "competition_source": "inferred_tactical_role_peer_group", "squad_depth_pressure": 0, "xmins_prior_source": "evidence", "competition_factor": .96, "competition_adjustment_applied": True}},
+        {"priors": {"nailed_prior": .8, "competition_pressure": 0, "competition_source": "inferred_tactical_role_peer_group", "squad_depth_pressure": 0, "xmins_prior_source": "evidence", "competition_factor": 1, "competition_adjustment_applied": False}},
+    ]
+    monkeypatch.setattr(audit, '_predictions', lambda: players)
+    ok, detail = audit._probe_rotation_competition()
+    assert ok is True
+    assert detail['role_matched_adjustments'] == 1
+    assert detail['unadjusted_players'] == 1
+
+    players[1]['priors']['competition_adjustment_applied'] = True
+    ok, detail = audit._probe_rotation_competition()
+    assert ok is False
+    assert detail['flag_factor_consistent'] == 1
+
+
+def test_critical_warmup_is_provisional_and_blocks_unqualified_go():
+    from src.engines.framework_health_audit import _prediction_readiness
+
+    assert _prediction_readiness([], [], ['DSS-44']) == ('AMBER', 'PROVISIONAL')
+    assert _prediction_readiness([], ['DSS-09'], []) == ('AMBER', 'DEGRADED')
+    assert _prediction_readiness(['DSS-09'], [], []) == ('RED', 'BLOCKED')
+    assert _prediction_readiness([], [], []) == ('GREEN', 'HEALTHY')
+
+
+def test_quality_gate_stale_artifact_message_is_actionable():
+    import pytest
+    from src.engines.v4_quality_gate import _assert_version
+
+    with pytest.raises(AssertionError, match='Run `python -m src.services.orchestrator'):
+        _assert_version({'schema_version': 491, 'engine': 'v4.9.1-health-separation'}, 'health', 492, 'v4.9.2-truthful-health')

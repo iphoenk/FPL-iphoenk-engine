@@ -16,11 +16,12 @@ def test_registered_services_are_ordered_and_contract_complete():
     services = json.loads((ROOT / "config/service_registry.json").read_text())
     contracts = json.loads((ROOT / "config/service_contract_registry.json").read_text())
     ordered = _ordered_services(services)
-    assert len(ordered) == 9
+    assert len(ordered) == 10
     assert ordered[0]["id"] == "raw_snapshot"
     assert ordered[-1]["id"] == "report_governance"
     assert all(row["boundary_state"] == "INDEPENDENT" for row in ordered)
     assert [row["id"] for row in ordered[:4]] == ["raw_snapshot", "enrichment", "prediction", "validation_lifecycle"]
+    assert ordered[-3]["id"] == "advanced_ablation"
     declared = contracts["contracts"]
     assert all(name in declared for service in ordered for name in service["produces"])
     assert services["guardrails"]["gate0_checks_unchanged"] == 16
@@ -30,6 +31,9 @@ def test_registered_services_are_ordered_and_contract_complete():
     assert services["guardrails"]["reconciliation_archive_immutable"] is True
     assert services["guardrails"]["reconciliation_idempotent"] is True
     assert services["guardrails"]["health_view_current_model_only"] is True
+    assert services["guardrails"]["advanced_ablation_same_snapshot"] is True
+    assert services["guardrails"]["advanced_ablation_full_shadow_parity_required"] is True
+    assert services["guardrails"]["advanced_ablation_diagnostic_not_arbitrary_gate"] is True
     assert services["guardrails"]["registry_counts_unchanged"] == {
         "dss_core": 50,
         "dss_extensions": 16,

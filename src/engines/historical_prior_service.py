@@ -12,7 +12,8 @@ import requests
 
 from src.models.player_identity import norm_name
 from src.sources.official_fpl import get_json
-from src.utils import CONFIG, DATA, ROOT, atomic_json, parse_dt, read_json
+from src.sources.registry import load_source_registry, source_config, source_ingestion_config
+from src.utils import DATA, ROOT, atomic_json, parse_dt, read_json
 
 POLICY_PATH = ROOT / "config" / "intelligence" / "historical_priors.json"
 RAW_OUT = DATA / "stats" / "vaastav_previous_season.json"
@@ -39,21 +40,45 @@ def load_policy() -> dict[str, Any]:
     return json.loads(POLICY_PATH.read_text(encoding="utf-8"))
 
 
+def _source_id() -> str:
+    value = str((load_policy().get("source") or {}).get("source_id") or "").strip()
+    if not value:
+        raise RuntimeError("historical prior source_id missing from policy")
+    return value
+
+
+def _source_ingestion() -> dict[str, Any]:
+    return source_ingestion_config(_source_id())
+
+
 def _previous_season_label() -> str:
-    configured = str((read_json(CONFIG / "sources.json", {}) or {}).get("season") or "2026-2027")
-    try:
-        start = int(configured[:4]) - 1
-    except (TypeError, ValueError):
-        start = 2025
+    registry = load_source_registry()
+    configured = str(_source_ingestion().get("season") or registry.get("season") or "").strip()
+    if len(configured) < 4 or not configured[:4].isdigit():
+        raise RuntimeError("source registry season is invalid for previous-season derivation")
+    start = int(configured[:4]) - 1
     return f"{start}-{str(start + 1)[-2:]}"
 
 
 def _raw_base() -> str:
-    sources = read_json(CONFIG / "sources.json", {}) or {}
-    return str((sources.get("vaastav") or {}).get(
-        "raw_base",
-        "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data",
-    )).rstrip("/")
+    value = str(_source_ingestion().get("raw_base") or "").strip().rstrip("/")
+    if not value:
+        raise RuntimeError("historical prior source raw_base missing from source registry")
+    return value
+
+
+def _source_timeout() -> int:
+    value = int(_source_ingestion().get("request_timeout_seconds") or 0)
+    if value <= 0:
+        raise RuntimeError("historical prior source timeout must be positive")
+    return value
+
+
+def _previous_season_files() -> list[str]:
+    values = [str(x) for x in _source_ingestion().get("previous_season_files") or [] if str(x)]
+    if not values:
+        raise RuntimeError("historical prior previous_season_files missing from source registry")
+    return values
 
 
 def _fresh_cached_payload(payload: dict[str, Any]) -> bool:
@@ -72,12 +97,12 @@ def _fetch_previous_season() -> tuple[dict[str, Any], str]:
     if _fresh_cached_payload(cached):
         return cached, "PERSISTED_CACHE"
 
-    policy = load_policy()
-    source = policy.get("source") or {}
+    source_id = _source_id()
+    source = source_config(source_id)
     season = _previous_season_label()
-    timeout = int(source.get("timeout_seconds") or 25)
+    timeout = _source_timeout()
     last_error = None
-    for filename in source.get("filenames") or ["players_raw.csv", "cleaned_players.csv"]:
+    for filename in _previous_season_files():
         url = f"{_raw_base()}/{season}/{filename}"
         try:
             response = requests.get(url, timeout=timeout)
@@ -90,7 +115,8 @@ def _fetch_previous_season() -> tuple[dict[str, Any], str]:
             if not required.issubset(columns):
                 raise RuntimeError(f"schema missing required columns: {sorted(required - columns)}")
             payload = {
-                "source": source.get("provider") or "vaastav/Fantasy-Premier-League",
+                "source": source.get("name") or source_id,
+                "source_id": source_id,
                 "season": season,
                 "fetched_at": _now(),
                 "source_url": url,
@@ -161,11 +187,7 @@ def build_prior_index(elements: list[dict[str, Any]], payload: dict[str, Any]) -
         minutes_equivalent = max(starts, minutes / 90.0, 1.0)
         team_start_share = _clamp(starts / team_matches, 0.0, 1.0)
         conditional_start_share = _clamp(starts / minutes_equivalent, 0.0, 1.0)
-        start_probability = _clamp(
-            team_weight * team_start_share + conditional_weight * conditional_start_share,
-            floor,
-            ceiling,
-        )
+        start_probability = _clamp(team_weight * team_start_share + conditional_weight * conditional_start_share, floor, ceiling)
         avg_start_minutes = _clamp(minutes / max(1.0, starts), 45.0, 90.0) if starts > 0 else 60.0
 
         xg90 = _f(row.get("expected_goals_per_90"), -1.0)

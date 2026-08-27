@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.9.4
+# FPL iphoenk Engine V4.9.4.1
 
 A production-oriented personal FPL data platform.
 
@@ -11,11 +11,14 @@ Combine:
 - exact team-value logic
 - leakage-safe modelling
 - projection/calibration/portfolio frameworks
+- human-in-the-loop decision authority: engine recommends, user decides
 
 ## P0 Production Core
 Implemented:
 - phase-aware FPL state
-- locked pre-deadline squad authority
+- target-GW-aware pre-deadline squad authority
+- previous submitted GW as the default planning/projection baseline
+- user override layer for legal squad, XI/formation, captain/vice and chip decisions
 - exact sell-value logic
 - sell-cost-correct Wildcard affordability (owned sell cost, unowned current cost)
 - endpoint health/retry/latency
@@ -67,6 +70,7 @@ python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
 python -m src.services.orchestrator daily --stats --deep-stats
 python -m src.services.orchestrator deadline --stats --deep-stats --as-of "2026-08-28T21:30:00+07:00"
 python -m src.engines.v4_validation_cycle cycle
+python -m src.services.user_decision_overlay_service
 python -m src.services.gw_scorecard_service
 python -m src.engines.v4_advanced_ablation
 python -m src.engines.v4_quality_gate
@@ -88,11 +92,14 @@ uvicorn live_service:app --host 0.0.0.0 --port 8000
 `POST /refresh` is fail-closed and requires either `Authorization: Bearer $FPL_REFRESH_TOKEN` or `X-FPL-Refresh-Token`. SSE clients share one polling broadcaster, so additional clients do not multiply Official FPL refreshes.
 
 ## Source authority
-1. Official FPL API
-2. FPL-Core-Insights community enrichment
-3. vaastav historical dataset
-4. Understat/mirrors if explicitly enabled
-5. web/news/tactical overlays outside this repository
+1. Official FPL API for factual submitted/live/history state
+2. Explicit target-GW user planning override for the effective personal plan
+3. FPL-Core-Insights community enrichment
+4. vaastav historical dataset
+5. Understat/mirrors if explicitly enabled
+6. web/news/tactical overlays outside this repository
+
+Optimizer output is advisory. A valid user override may intentionally differ from the model; the engine must preserve the recommendation and comparison evidence but may not silently replace the user's effective plan.
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.
@@ -198,4 +205,16 @@ See `docs/v4-microservices.md` for service ownership, failure semantics, and pre
 - Planning GWs expose formation, XI, bench, captain, vice-captain, active chip and estimated team xPts. Captain, Triple Captain, and Bench Boost multipliers are applied explicitly once; Wildcard and Free Hit do not add scoring points.
 - Team xPts is an estimate, never labelled as an actual score. Player lower/upper intervals are deliberately not summed into a team range because correlated team-score uncertainty has not yet been calibrated.
 - `report_governance` depends on both post-flight health and the scorecard contract, and every checkpoint report scope includes `personal_gw_scorecard`.
-- The V4 production registry now contains ten independent microservices, with service contracts and the centralized quality gate failing closed on scorecard lineage or architecture violations.
+- The V4 production registry contains ten independent microservices at this release point.
+
+## V4.9.4.1 projection baseline authority and human decision overlay
+
+- Planning GW N defaults to the Official FPL submitted squad from GW N-1. A planning composition override is allowed only when it declares the exact `target_gw`; an expired Wildcard/draft flag cannot leak into the next GW.
+- GW2 is intentionally using the user-captured Wildcard draft because that override is explicitly scoped to GW2. After GW2 becomes the submitted baseline, GW3 automatically reverts to the official submitted GW2 squad unless a new GW3-specific override is supplied.
+- The production registry now has eleven process-isolated services. `user_decision_overlay` sits between advisory optimization and `personal_gw_scorecard`.
+- `optimization` produces a pure engine recommendation and no longer consumes `manual_lineup.json`. The overlay service is the only layer that applies a user decision to the effective plan.
+- A valid user decision may override legal squad composition, XI/formation, captain, vice-captain and chip. The engine retains its alternative and publishes the xPts/formation/captain/chip delta, but `engine_never_auto_overwrites_valid_user_override` is a release guardrail.
+- FPL legality remains fail-closed. Human authority cannot create an illegal 15-player structure, illegal formation, captain/vice outside the XI, duplicate picks, invalid chip, or a Wildcard-composition plan that claims a contradictory chip state.
+- Scorecard projection consumes `data/effective_plan_v4.json`, not the optimizer lineup directly. This means projected team points always describe the effective human plan while still exposing the model alternative for comparison.
+- `GO` is a recommendation state, not an automatic command. `execution_authorized` remains false until the effective plan has an explicit `FINAL_LOCKED` user status and all other governance gates pass.
+- The V4.9.4.1 quality gate requires all eleven service contracts, previous-GW baseline lineage, stale-override expiry, optimizer/advisory separation, effective-plan lineage, and human-final-authority semantics to pass before production publish.

@@ -1,7 +1,7 @@
 {
   "schema_version": 13,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.21-weather-report-transparency-15-owned-20-watchlist",
+  "production_contract": "v3.22-runtime-optimization-fast-under-10s",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,

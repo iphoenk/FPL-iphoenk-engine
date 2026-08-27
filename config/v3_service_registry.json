@@ -1,7 +1,7 @@
 {
-  "schema_version": 12,
+  "schema_version": 13,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.20.2-artifact-contract-hardening-15-owned-20-watchlist",
+  "production_contract": "v3.21-weather-report-transparency-15-owned-20-watchlist",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,
@@ -29,6 +29,9 @@
     "watchlist_requires_postflight_framework_state": true,
     "report_materializer_is_serving_only": true,
     "report_serving_requires_15_owned_and_20_external_watchlist": true,
+    "owned_report_rows_require_current_gw_xpts": true,
+    "settled_prediction_validation_is_exposed_to_reports": true,
+    "projection_confidence_calibration_guard_is_config_owned": true,
     "technical_and_full_source_artifacts_are_lazy_load": true,
     "source_registry_is_separate_infrastructure_layer": true,
     "official_fpl_remains_native_authority": true,
@@ -53,14 +56,17 @@
     "fixture_strategy_expert_does_not_vote_on_player_projection": true,
     "report_time_web_refresh_is_chat_report_orchestration_owned": true,
     "service_boundaries_follow_artifact_ownership_not_file_size": true,
-    "ephemeral_internal_snapshot_is_not_published": true
+    "ephemeral_internal_snapshot_is_not_published": true,
+    "weather_enrichment_lives_inside_source_layer_not_new_microservice": true,
+    "weather_is_observational_and_advisory_only": true,
+    "weather_never_directly_mutates_xpts_or_decisions": true
   },
   "runtime": {
     "max_parallel_services": 5,
     "service_timeout_seconds": 180,
     "http_cache_ttl_seconds": 180,
     "performance_budget_seconds": 45,
-    "performance_target": "preserve sub-45-second runtime while validating declared JSON artifacts and explicit critical contracts before canonical acceptance"
+    "performance_target": "preserve sub-45-second runtime while adding bounded fail-soft weather enrichment and transparent report metrics without increasing service count"
   },
   "services": {
     "official_snapshot": {"stage":"base-source","depends_on":[],"critical":true,"isolated":true,"inputs":[],"commands":[{"module":"src.engines.official_snapshot_service","args":[]}],"artifacts":["official_snapshot.json","health.json"],"ephemeral_artifacts":["official_snapshot.json"],"latest_keys":[],"latest_file_keys":[]},
@@ -71,7 +77,7 @@
     "advanced_stats": {"stage":"base-domain","depends_on":["official_snapshot"],"critical":true,"isolated":false,"inputs":[],"commands":[{"module":"src.engines.advanced_stats_service","args":["{stats}","{deep_stats}"]}],"artifacts":["advanced_stats_sync.json"],"latest_keys":[],"latest_file_keys":[]},
     "base_snapshot": {"stage":"base-fan-in","depends_on":["official_snapshot","team_state","market_state","live_state","advanced_stats"],"critical":true,"isolated":false,"inputs":[],"commands":[{"module":"src.engines.base_snapshot_service","args":["{mode}"]}],"artifacts":["latest.json","native.json","health.json","team.json","chips.json","live.json","prices.json","universe.json","advanced_stats_sync.json"],"latest_keys":[],"latest_file_keys":[]},
     "historical_prior": {"stage":"parallel","depends_on":["base_snapshot","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","latest.json","stats/vaastav_previous_season.json"],"commands":[{"module":"src.engines.historical_prior_runtime","args":[]}],"artifacts":["prior_season.json","stats/vaastav_previous_season.json"],"latest_keys":["historical_prior_summary"],"latest_file_keys":["prior_season","vaastav_previous_season"]},
-    "source_layer": {"stage":"parallel","depends_on":["base_snapshot","historical_prior"],"critical":true,"isolated":true,"inputs":["latest.json","health.json","challenger_observations.json","stats/shots_current.json","stats/playermatchstats_current.json","stats/vaastav_previous_season.json"],"commands":[{"module":"src.engines.source_layer","args":[]}],"artifacts":["source_health.json","source_registry_runtime.json","challenger_observations.json"],"latest_keys":["source_layer_summary"],"latest_file_keys":["source_health","source_registry_runtime","challenger_observations"]},
+    "source_layer": {"stage":"parallel","depends_on":["base_snapshot","historical_prior","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","latest.json","health.json","challenger_observations.json","fixture_weather.json","stats/shots_current.json","stats/playermatchstats_current.json","stats/vaastav_previous_season.json"],"commands":[{"module":"src.engines.source_layer","args":[]}],"artifacts":["source_health.json","source_registry_runtime.json","challenger_observations.json","fixture_weather.json"],"latest_keys":["source_layer_summary"],"latest_file_keys":["source_health","source_registry_runtime","challenger_observations","fixture_weather"]},
     "price": {"stage":"parallel","depends_on":["base_snapshot","source_layer"],"critical":true,"isolated":true,"inputs":["latest.json","team.json","prices.json","price_trajectory.json","challenger_observations.json"],"commands":[{"module":"src.engines.price_service","args":[]}],"artifacts":["prices.json","price_trajectory.json","price_alerts.json","price_challenger_context.json"],"latest_keys":["price_summary"],"latest_file_keys":["price_trajectory","price_alerts","price_challenger_context"]},
     "prediction": {"stage":"parallel","depends_on":["historical_prior","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","latest.json","team.json","prior_season.json"],"commands":[{"module":"src.engines.prediction_service","args":[]}],"artifacts":["team_strength.json","projections.json","package_optimizer.json","prediction_quality.json"],"latest_keys":["decision_intelligence","prediction_quality_summary"],"latest_file_keys":["team_strength","projections","package_optimizer","prediction_quality"]},
     "authenticated_official": {"stage":"parallel","depends_on":["base_snapshot"],"critical":true,"isolated":true,"inputs":["latest.json","team.json"],"commands":[{"module":"src.engines.authenticated_official","args":[]}],"artifacts":["auth.json"],"latest_keys":["authenticated_official"],"latest_file_keys":["auth"]},
@@ -82,6 +88,6 @@
     "governance": {"stage":"final","depends_on":["source_layer","price","prediction","authenticated_official","rules","official_detail","prediction_evaluation","lineup_governance","challenger"],"critical":true,"isolated":false,"commands":[{"module":"src.engines.framework_health_service","args":["--phase","preflight","--strict"]},{"module":"src.engines.framework_health_service","args":["--phase","postflight","--strict"]},{"module":"src.engines.p0_framework_health_overlay","args":[]},{"module":"src.engines.lineup_framework_health_overlay","args":[]},{"module":"src.engines.decision_quality_overlay","args":[]},{"module":"src.engines.source_framework_overlay","args":[]},{"module":"src.engines.dss_operationalization_overlay","args":[]}]},
     "watchlist": {"stage":"decision-output","depends_on":["governance"],"critical":true,"isolated":true,"inputs":["latest.json","team.json","projections.json","package_optimizer.json","prices.json","price_alerts.json","framework_health.json","dss_watchlist.json"],"commands":[{"module":"src.engines.dss_watchlist","args":[]},{"module":"src.engines.watchlist_public_sanitize","args":[]}],"artifacts":["dss_watchlist.json"],"latest_keys":["dss_watchlist_summary"],"latest_file_keys":["dss_watchlist"]},
     "reporting": {"stage":"decision-output","depends_on":["watchlist"],"critical":true,"isolated":true,"inputs":["latest.json","team.json","lineup_decision.json","package_decision.json","projections.json","price_alerts.json","prediction_quality.json","framework_health.json","challenger_scorecard.json","report_state.json","dss_watchlist.json","source_health.json","dss_operational_evidence.json"],"commands":[{"module":"src.engines.report_architecture","args":[]},{"module":"src.engines.report_enrichment","args":[]}],"artifacts":["user_report.json","technical_appendix.json","report_state.json"],"latest_keys":["report_summary"],"latest_file_keys":["user_report","technical_appendix","report_state"]},
-    "report_materializer": {"stage":"serving-output","depends_on":["reporting","official_detail"],"critical":true,"isolated":true,"inputs":["latest.json","user_report.json","technical_appendix.json","team.json","projections.json","dss_watchlist.json","official_detail.json","source_health.json"],"commands":[{"module":"src.engines.report_materializer","args":[]},{"module":"src.engines.report_serving_validate","args":[]}],"artifacts":["user_report.json","decision_brief.json","deep_review_payload.json","dss_watchlist_summary.json","official_detail_owned.json","official_detail_watchlist.json","report_artifact_registry.json"],"latest_keys":["report_serving"],"latest_file_keys":["user_report","decision_brief","deep_review_payload","dss_watchlist_summary","official_detail_owned","official_detail_watchlist","report_artifact_registry"]}
+    "report_materializer": {"stage":"serving-output","depends_on":["reporting","official_detail","source_layer","lineup_governance","prediction_evaluation"],"critical":true,"isolated":true,"inputs":["latest.json","user_report.json","technical_appendix.json","team.json","projections.json","lineup_decision.json","dss_watchlist.json","official_detail.json","source_health.json","fixture_weather.json"],"commands":[{"module":"src.engines.report_materializer","args":[]},{"module":"src.engines.report_transparency_overlay","args":[]},{"module":"src.engines.report_serving_validate","args":[]}],"artifacts":["user_report.json","decision_brief.json","deep_review_payload.json","dss_watchlist_summary.json","official_detail_owned.json","official_detail_watchlist.json","report_artifact_registry.json"],"latest_keys":["report_serving"],"latest_file_keys":["user_report","decision_brief","deep_review_payload","dss_watchlist_summary","official_detail_owned","official_detail_watchlist","report_artifact_registry"]}
   }
 }

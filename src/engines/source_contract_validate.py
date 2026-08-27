@@ -14,6 +14,7 @@ def run() -> dict:
     health = _load(DATA / "source_health.json")
     registry = _load(ROOT / "config" / "sources" / "registry.json")
     observations = _load(DATA / "challenger_observations.json")
+    weather = _load(DATA / "fixture_weather.json")
     report_time_registry = _load(ROOT / "config" / "sources" / "report_time_registry.json")
 
     registry_sources = {row["id"]: row for row in registry.get("sources") or []}
@@ -29,6 +30,18 @@ def run() -> dict:
     assert official.get("reachable") is True
     for state in (official.get("capabilities") or {}).values():
         assert state == "AUTHORITATIVE_NATIVE", state
+
+    weather_registry = registry_sources["open_meteo"]
+    weather_runtime = runtime_sources["open_meteo"]
+    assert weather_registry.get("class") == "ENRICHMENT"
+    assert weather_registry.get("critical") is False
+    assert weather_registry.get("adapter") == "weather_artifact"
+    assert weather.get("provider") == "open_meteo"
+    assert weather.get("model") == "weather_context_observational_v1"
+    assert (weather.get("governance") or {}).get("advisory_only") is True
+    assert weather_runtime.get("status") in {"LIVE", "PARTIAL"}
+    weather_states = set((weather_runtime.get("capabilities") or {}).values())
+    assert weather_states <= {"AVAILABLE", "NO_FORECAST_IN_WINDOW", "UNAVAILABLE"}, weather_states
 
     onefpl_registry = registry_sources["onefpl"]
     onefpl_runtime = runtime_sources["onefpl"]
@@ -61,6 +74,14 @@ def run() -> dict:
         "status": "PASS",
         "source_overall": health.get("overall"),
         "decision_blocking": health.get("decision_blocking"),
+        "weather": {
+            "status": weather_runtime.get("status"),
+            "capabilities": weather_runtime.get("capabilities"),
+            "fixture_count": weather.get("fixture_count"),
+            "available_count": weather.get("available_count"),
+            "material_count": weather.get("material_count"),
+            "advisory_only": (weather.get("governance") or {}).get("advisory_only"),
+        },
         "onefpl": {
             "collector_status": onefpl_runtime.get("status"),
             "collector_enabled": onefpl_registry.get("enabled"),

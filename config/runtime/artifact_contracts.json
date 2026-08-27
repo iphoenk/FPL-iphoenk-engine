@@ -1,12 +1,13 @@
 {
-  "schema_version": 1,
-  "registry": "RUNTIME_ARTIFACT_CONTRACTS_V1",
+  "schema_version": 2,
+  "registry": "RUNTIME_ARTIFACT_CONTRACTS_V2",
   "policy": {
     "validate_declared_json_before_acceptance": true,
     "validate_latest_sidecar_when_present": true,
     "unknown_json_contract": "PARSE_ONLY",
     "malformed_json_is_integrity_failure": true,
-    "valid_empty_external_observations_are_allowed": true
+    "valid_empty_external_observations_are_allowed": true,
+    "valid_empty_weather_window_is_allowed": true
   },
   "contracts": {
     "challenger_observations.json": {
@@ -21,6 +22,23 @@
         "counts": "object",
         "cross_source": "list",
         "policy": "object"
+      }
+    },
+    "fixture_weather.json": {
+      "root_type": "object",
+      "required_fields": ["schema_version", "model", "provider", "fixtures", "material_fixtures", "governance"],
+      "equals": {
+        "schema_version": 1,
+        "model": "weather_context_observational_v1",
+        "provider": "open_meteo"
+      },
+      "types": {
+        "fixtures": "list",
+        "material_fixtures": "list",
+        "governance": "object",
+        "fixture_count": "integer",
+        "available_count": "integer",
+        "material_count": "integer"
       }
     }
   }

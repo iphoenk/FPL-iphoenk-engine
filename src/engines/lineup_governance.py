@@ -89,13 +89,7 @@ def _lineup_candidates(players: list[dict[str, Any]]) -> list[dict[str, Any]]:
         score = sum(_f(p.get("selection_score")) for p in rows)
         mean = sum(_f(p.get("xpts_mean")) for p in rows)
         variance = sum(_f(p.get("xpts_std")) ** 2 for p in rows)
-        candidates.append({
-            "formation": form,
-            "score": round(score, 4),
-            "xpts_mean": round(mean, 3),
-            "xpts_std": round(variance ** 0.5, 3),
-            "element_ids": sorted(int(p["element"]) for p in rows),
-        })
+        candidates.append({"formation": form, "score": round(score, 4), "xpts_mean": round(mean, 3), "xpts_std": round(variance ** 0.5, 3), "element_ids": sorted(int(p["element"]) for p in rows)})
     candidates.sort(key=lambda row: (row["score"], row["xpts_mean"], row["formation"]), reverse=True)
     return candidates
 
@@ -104,10 +98,7 @@ def _safe_captain_pool(starters: list[dict[str, Any]], policy: dict[str, Any]) -
     cfg = policy.get("captaincy") or {}
     min_start = _f(cfg.get("minimum_start_probability"), 0.70)
     max_dnp = _f(cfg.get("maximum_dnp_probability"), 0.15)
-    pool = [
-        p for p in starters
-        if _f(p.get("start_probability")) >= min_start and _f(p.get("dnp_probability")) <= max_dnp
-    ]
+    pool = [p for p in starters if _f(p.get("start_probability")) >= min_start and _f(p.get("dnp_probability")) <= max_dnp]
     if len(pool) < 2:
         pool = list(starters)
     pool.sort(key=lambda p: (_f(p.get("captain_score")), _f(p.get("xpts_mean"))), reverse=True)
@@ -144,14 +135,7 @@ def _chip_context(lock: dict[str, Any], chips: dict[str, Any], planning_gw: int,
         if int(row.get("event") or -1) == planning_gw:
             used_this_gw.append(row.get("name"))
     active_count = len(used_this_gw) + (1 if active and active not in used_this_gw else 0)
-    return {
-        "planning_gw": planning_gw,
-        "active_chip": active,
-        "used_this_gw": used_this_gw,
-        "single_chip_rule_respected": active_count <= 1,
-        "auto_activate_chip": bool(chip_cfg.get("auto_activate_chip", False)),
-        "ruleset_id": RULESET_ID,
-    }
+    return {"planning_gw": planning_gw, "active_chip": active, "used_this_gw": used_this_gw, "single_chip_rule_respected": active_count <= 1, "auto_activate_chip": bool(chip_cfg.get("auto_activate_chip", False)), "ruleset_id": RULESET_ID}
 
 
 def build_lineup_decision(projections: dict[str, Any], lock: dict[str, Any], chips: dict[str, Any]) -> dict[str, Any]:
@@ -186,6 +170,7 @@ def build_lineup_decision(projections: dict[str, Any], lock: dict[str, Any], chi
 
     alt_n = max(2, int((policy.get("selection") or {}).get("publish_alternative_lineups") or 3))
     alternatives = candidates[:alt_n]
+    battle = _battle(best, candidates[1] if len(candidates) > 1 else None, pmap)
     decision = {
         "generated_at": _now(),
         "model": policy.get("model_id"),
@@ -193,16 +178,14 @@ def build_lineup_decision(projections: dict[str, Any], lock: dict[str, Any], chi
         "planning_gw": planning_gw,
         "squad_authority": lock.get("authoritative_phase"),
         "formation": best["formation"],
+        "squad_rows": sorted(players, key=lambda p: ({"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}.get(str(p.get("position")), 9), -_f(p.get("selection_score")))),
         "starting_xi": starters,
         "captain": {"element": captain["element"], "name": captain["name"], "captain_score": captain["captain_score"], "dnp_probability": captain["dnp_probability"]},
         "vice_captain": {"element": vice["element"], "name": vice["name"], "captain_score": vice["captain_score"], "dnp_probability": vice["dnp_probability"]},
         "captain_safe_pool": [{"element": p["element"], "name": p["name"], "captain_score": p["captain_score"], "start_probability": p["start_probability"], "dnp_probability": p["dnp_probability"]} for p in safe_pool],
-        "bench": {
-            "gk": {"element": bench_gk["element"], "name": bench_gk["name"], "position": bench_gk["position"], "bench_score": bench_gk["bench_score"]},
-            "order": [{"element": p["element"], "name": p["name"], "position": p["position"], "bench_score": p["bench_score"]} for p in outfield_bench],
-        },
+        "bench": {"gk": {"element": bench_gk["element"], "name": bench_gk["name"], "position": bench_gk["position"], "bench_score": bench_gk["bench_score"]}, "order": [{"element": p["element"], "name": p["name"], "position": p["position"], "bench_score": p["bench_score"]} for p in outfield_bench]},
         "lineup_score": {"robust": best["score"], "xpts_mean": best["xpts_mean"], "xpts_std": best["xpts_std"]},
-        "main_starting_xi_battle": _battle(best, candidates[1] if len(candidates) > 1 else None, pmap),
+        "main_starting_xi_battle": battle,
         "alternatives": alternatives,
         "chip_context": _chip_context(lock, chips, planning_gw, policy),
         "governance": {
@@ -211,6 +194,7 @@ def build_lineup_decision(projections: dict[str, Any], lock: dict[str, Any], chi
             "optimizer_does_not_mutate_locked_composition": True,
             "captain_dnp_guard_applied": True,
             "bench_order_is_model_output_not_manual_lock": True,
+            "squad_selection_scores_published_for_report_transparency": True,
         },
     }
     return decision
@@ -228,14 +212,7 @@ def build_package_decision(package_optimizer: dict[str, Any], projections: dict[
         if not proj:
             continue
         ledger = ledger_by_id.get(element) or {}
-        current.append({
-            "element": element,
-            "name": proj.get("name"),
-            "position": proj.get("position"),
-            "team_id": int(proj.get("team_id") or -1),
-            "now_cost": int(proj.get("now_cost") or 0),
-            "sell_cost": int(ledger.get("sell_cost") or proj.get("now_cost") or 0),
-        })
+        current.append({"element": element, "name": proj.get("name"), "position": proj.get("position"), "team_id": int(proj.get("team_id") or -1), "now_cost": int(proj.get("now_cost") or 0), "sell_cost": int(ledger.get("sell_cost") or proj.get("now_cost") or 0)})
     current_legal = legal_squad(current)
     authoritative = lock.get("authoritative_phase") in set(package_cfg.get("authoritative_phases") or [])
     freeze = bool(package_cfg.get("freeze_locked_composition_when_authoritative")) and authoritative
@@ -248,69 +225,36 @@ def build_package_decision(package_optimizer: dict[str, Any], projections: dict[
     selected_legal = bool(selected.get("legal")) and bool((selected.get("score") or {}).get("valid"))
     gate0_revalidated = current_legal and selected_legal and (selected_is_hold if freeze else True)
     return {
-        "generated_at": _now(),
-        "model": "package_governance_v1",
-        "ruleset_id": RULESET_ID,
-        "planning_gw": int(projections.get("planning_gw") or 1),
-        "selected_package": selected,
-        "selected_package_id": selected.get("id"),
-        "optimizer_best_candidate_id": (optimizer_best or {}).get("id"),
-        "manual_authority_override": freeze,
-        "current_squad_legal": current_legal,
-        "gate0_revalidated": gate0_revalidated,
-        "governance": {
-            "optimizer_is_candidate_generator_only": bool(package_cfg.get("optimizer_is_candidate_generator_only", True)),
-            "locked_composition_frozen": freeze,
-            "auto_accept_optimizer_package": bool(package_cfg.get("auto_accept_optimizer_package", False)),
-            "manual_lock_overrides_optimizer_candidate": bool((policy.get("governance") or {}).get("manual_lock_overrides_optimizer_candidate", True)),
-        },
+        "generated_at": _now(), "model": "package_governance_v1", "ruleset_id": RULESET_ID,
+        "planning_gw": int(projections.get("planning_gw") or 1), "selected_package": selected,
+        "selected_package_id": selected.get("id"), "optimizer_best_candidate_id": (optimizer_best or {}).get("id"),
+        "manual_authority_override": freeze, "current_squad_legal": current_legal, "gate0_revalidated": gate0_revalidated,
+        "governance": {"optimizer_is_candidate_generator_only": bool(package_cfg.get("optimizer_is_candidate_generator_only", True)), "locked_composition_preserved": freeze, "manual_authority_wins": True},
     }
 
 
 def run() -> dict[str, Any]:
     projections = read_json(DATA / "projections.json", {})
     package_optimizer = read_json(DATA / "package_optimizer.json", {})
-    lock = read_json(CONFIG / "locked_squad.json", {})
+    lock = json.loads((CONFIG / "locked_squad.json").read_text(encoding="utf-8"))
     chips = read_json(DATA / "chips.json", {})
     team = read_json(DATA / "team.json", {})
-    if not projections.get("players") or package_optimizer.get("status") != "READY":
-        raise RuntimeError("prediction/package artifacts unavailable for lineup governance")
-
     lineup = build_lineup_decision(projections, lock, chips)
     package = build_package_decision(package_optimizer, projections, lock, team)
+    if not lineup.get("formation") or len(lineup.get("starting_xi") or []) != int(LINEUP_RULES.get("starting_xi_size") or 11):
+        raise RuntimeError("lineup governance failed legal XI contract")
+    if not package.get("gate0_revalidated"):
+        raise RuntimeError("package governance failed post-optimizer Gate0 revalidation")
     atomic_json(LINEUP_OUT, lineup)
     atomic_json(PACKAGE_DECISION_OUT, package)
-
     latest = read_json(DATA / "latest.json", {})
-    latest.setdefault("files", {}).update({
-        "lineup_decision": "data/lineup_decision.json",
-        "package_decision": "data/package_decision.json",
-    })
-    latest["lineup_decision_summary"] = {
-        "model": lineup.get("model"),
-        "planning_gw": lineup.get("planning_gw"),
-        "formation": lineup.get("formation"),
-        "captain": lineup.get("captain"),
-        "vice_captain": lineup.get("vice_captain"),
-        "main_starting_xi_battle": lineup.get("main_starting_xi_battle"),
-        "chip_context": lineup.get("chip_context"),
-    }
-    latest["package_decision_summary"] = {
-        "selected_package_id": package.get("selected_package_id"),
-        "optimizer_best_candidate_id": package.get("optimizer_best_candidate_id"),
-        "manual_authority_override": package.get("manual_authority_override"),
-        "gate0_revalidated": package.get("gate0_revalidated"),
-    }
+    latest.setdefault("files", {}).update({"lineup_decision": "data/lineup_decision.json", "package_decision": "data/package_decision.json"})
+    latest["lineup_decision_summary"] = {"formation": lineup.get("formation"), "captain": (lineup.get("captain") or {}).get("name"), "vice_captain": (lineup.get("vice_captain") or {}).get("name"), "battle": (lineup.get("main_starting_xi_battle") or {}).get("status")}
+    latest["package_decision_summary"] = {"selected_package_id": package.get("selected_package_id"), "manual_authority_override": package.get("manual_authority_override"), "gate0_revalidated": package.get("gate0_revalidated")}
     atomic_json(DATA / "latest.json", latest)
+    print(json.dumps({"formation": lineup.get("formation"), "captain": lineup.get("captain"), "package": package.get("selected_package_id"), "manual_override": package.get("manual_authority_override")}, ensure_ascii=False))
     return {"lineup": lineup, "package": package}
 
 
 if __name__ == "__main__":
-    out = run()
-    print(json.dumps({
-        "formation": out["lineup"].get("formation"),
-        "captain": (out["lineup"].get("captain") or {}).get("name"),
-        "vice": (out["lineup"].get("vice_captain") or {}).get("name"),
-        "package": out["package"].get("selected_package_id"),
-        "gate0_revalidated": out["package"].get("gate0_revalidated"),
-    }, ensure_ascii=False))
+    run()

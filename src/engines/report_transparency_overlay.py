@@ -1,0 +1,150 @@
+from __future__ import annotations
+
+import json
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
+
+from src.utils import DATA, ROOT, atomic_json, read_json
+
+EVAL_CONFIG = ROOT / "config" / "intelligence" / "prediction_evaluation.json"
+
+
+def _f(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(default if value is None else value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+@lru_cache(maxsize=1)
+def _eval_config() -> dict[str, Any]:
+    return json.loads(EVAL_CONFIG.read_text(encoding="utf-8"))
+
+
+def _gw_row(player: dict[str, Any], gw: int) -> dict[str, Any]:
+    return next((dict(row) for row in player.get("xpts_by_gw") or [] if int(row.get("gw") or -1) == gw), {})
+
+
+def _decorate_owned(rows: list[dict[str, Any]], projections: dict[str, Any], lineup: dict[str, Any], gw: int) -> list[dict[str, Any]]:
+    pmap = {int(row["element"]): row for row in projections.get("players") or [] if row.get("element") is not None}
+    starter_ids = {int(row["element"]) for row in lineup.get("starting_xi") or [] if row.get("element") is not None}
+    battle = lineup.get("main_starting_xi_battle") or {}
+    open_ids: set[int] = set()
+    if battle.get("status") == "CLOSE":
+        for side in ("starter_side", "bench_side"):
+            open_ids.update(int(row["element"]) for row in battle.get(side) or [] if row.get("element") is not None)
+    out = []
+    for source in rows:
+        row = dict(source)
+        element = int(row.get("element") or -1)
+        proj = pmap.get(element) or {}
+        event = _gw_row(proj, gw)
+        if not event:
+            raise RuntimeError(f"owned report transparency missing GW{gw} projection for element={element}")
+        row["xpts_gw"] = round(_f(event.get("mean")), 3)
+        row["xpts_std"] = round(_f(event.get("std")), 3)
+        row["lineup_status"] = "START" if element in starter_ids else "BENCH"
+        row["choice_state"] = "OPEN" if element in open_ids else "CURRENT"
+        out.append(row)
+    if len(out) != 15:
+        raise RuntimeError(f"owned transparency contract requires 15 players, got {len(out)}")
+    return out
+
+
+def _confidence_calibration(rows: list[dict[str, Any]], gw: int) -> dict[str, Any]:
+    cfg = (_eval_config().get("projection_confidence_audit") or {})
+    review_from = int(cfg.get("review_from_gw") or 5)
+    minimum_high = int(cfg.get("minimum_high_count_after_review_gw") or 1)
+    counts = {"HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
+    for row in rows:
+        label = str(row.get("model_confidence") or "UNKNOWN").upper()
+        counts[label if label in counts else "UNKNOWN"] += 1
+    if gw < review_from and counts["HIGH"] < minimum_high:
+        state = "EARLY_SEASON_CONSERVATIVE"
+    elif counts["HIGH"] < minimum_high:
+        state = "CALIBRATION_REVIEW_REQUIRED"
+    else:
+        state = "CONFIDENCE_RANGE_PRESENT"
+    return {
+        "planning_gw": gw,
+        "state": state,
+        "counts": counts,
+        "review_from_gw": review_from,
+        "minimum_high_count_after_review_gw": minimum_high,
+        "governance": "monitor calibration; do not manufacture HIGH confidence",
+    }
+
+
+def _settled_validation(latest: dict[str, Any]) -> dict[str, Any]:
+    row = latest.get("prediction_evaluation") or {}
+    return {
+        "status": row.get("status") or "NO_SETTLED_SAMPLE",
+        "sample_size": int(row.get("sample_size") or 0),
+        "confidence": row.get("confidence"),
+        "settled_gameweeks": list(row.get("settled_gameweeks") or []),
+        "dynamic_weight_eligible": bool(row.get("dynamic_weight_eligible")),
+        "claim": "formula correctness is not predictive accuracy; accuracy requires settled frozen forecasts",
+    }
+
+
+def _weather_context(weather: dict[str, Any]) -> dict[str, Any]:
+    material = list(weather.get("material_fixtures") or [])
+    attribution = []
+    for row in weather.get("fixtures") or []:
+        closest = row.get("closest_to_kickoff") or {}
+        if not row.get("post_match_attribution_ready") or closest.get("severity") not in {"NOTABLE", "ADVERSE", "EXTREME"}:
+            continue
+        attribution.append({
+            "fixture_id": row.get("fixture_id"),
+            "home_team": row.get("home_team"),
+            "away_team": row.get("away_team"),
+            "kickoff_time": row.get("kickoff_time"),
+            "severity": closest.get("severity"),
+            "signals": closest.get("signals") or [],
+            "weather": closest.get("weather") or {},
+            "label": "POSSIBLE_CONTRIBUTING_FACTOR",
+        })
+    return {
+        "status": "AVAILABLE" if int(weather.get("available_count") or 0) > 0 else "NO_FORECAST_IN_WINDOW",
+        "provider": weather.get("provider"),
+        "generated_at": weather.get("generated_at"),
+        "advisory_only": bool((weather.get("governance") or {}).get("advisory_only")),
+        "material_fixtures": material,
+        "post_match_attribution_candidates": attribution,
+        "causality_guard": "weather correlation alone never proves causation",
+    }
+
+
+def run() -> dict[str, Any]:
+    latest = read_json(DATA / "latest.json", {})
+    projections = read_json(DATA / "projections.json", {})
+    lineup = read_json(DATA / "lineup_decision.json", {})
+    weather = read_json(DATA / "fixture_weather.json", {})
+    gw = int((latest.get("phase") or {}).get("planning_gw") or projections.get("planning_gw") or 0)
+    if gw <= 0:
+        raise RuntimeError("report transparency cannot determine planning GW")
+
+    paths = [DATA / "user_report.json", DATA / "decision_brief.json", DATA / "deep_review_payload.json"]
+    result = {}
+    for path in paths:
+        payload = read_json(path, {})
+        if path.name == "user_report.json":
+            owned = ((payload.get("owned_squad") or {}).get("facts") or [])
+            decorated = _decorate_owned(owned, projections, lineup, gw)
+            payload.setdefault("owned_squad", {})["facts"] = decorated
+        else:
+            decorated = _decorate_owned(list(payload.get("owned_15") or []), projections, lineup, gw)
+            payload["owned_15"] = decorated
+        payload["model_validation"] = {
+            "confidence_calibration": _confidence_calibration(decorated, gw),
+            "settled_prediction": _settled_validation(latest),
+        }
+        payload["weather_context"] = _weather_context(weather)
+        atomic_json(path, payload)
+        result[path.name] = {"owned": len(decorated), "weather": payload["weather_context"]["status"]}
+    return result
+
+
+if __name__ == "__main__":
+    print(json.dumps(run(), ensure_ascii=False))

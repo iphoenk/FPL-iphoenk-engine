@@ -16,6 +16,18 @@ def _watch_ids(positions: dict) -> list[int]:
     return [int(row["element"]) for rows in positions.values() for row in rows]
 
 
+def _validate_owned_transparency(name: str, rows: list[dict], expected: int, contract: dict) -> None:
+    assert len(rows) == expected, (name, len(rows), expected)
+    assert len({int(row["element"]) for row in rows}) == expected
+    if contract.get("owned_rows_require_current_gw_xpts"):
+        assert all(row.get("xpts_gw") is not None for row in rows), (name, "missing_xpts")
+        assert all(row.get("xpts_std") is not None for row in rows), (name, "missing_xpts_std")
+    if contract.get("owned_rows_require_lineup_status"):
+        assert all(row.get("lineup_status") in {"START", "BENCH"} for row in rows), (name, "invalid_lineup_status")
+    if contract.get("owned_rows_require_choice_state"):
+        assert all(row.get("choice_state") in {"OPEN", "CURRENT"} for row in rows), (name, "invalid_choice_state")
+
+
 def run() -> dict:
     registry = _load(REGISTRY)
     runtime_registry = _load(DATA / "report_artifact_registry.json")
@@ -33,9 +45,10 @@ def run() -> dict:
     latest = _load(DATA / "latest.json")
 
     owned = brief.get("owned_15") or []
-    assert len(owned) == expected_owned, ("brief_owned", len(owned), expected_owned)
+    _validate_owned_transparency("brief", owned, expected_owned, contract)
+    _validate_owned_transparency("deep", deep.get("owned_15") or [], expected_owned, contract)
+    _validate_owned_transparency("user", ((user.get("owned_squad") or {}).get("facts") or []), expected_owned, contract)
     owned_ids = {int(x["element"]) for x in owned}
-    assert len(owned_ids) == expected_owned
 
     for payload_name, watch_positions in (
         ("brief", brief.get("watchlist_20") or {}),
@@ -52,20 +65,29 @@ def run() -> dict:
         assert len(ids) == expected_watch and len(set(ids)) == expected_watch, (payload_name, len(ids), len(set(ids)))
         assert not (owned_ids & set(ids)), (payload_name, sorted(owned_ids & set(ids)))
 
-    assert len(((user.get("owned_squad") or {}).get("facts") or [])) == expected_owned
     assert (user.get("serving_contract") or {}).get("owned") == expected_owned
     assert (user.get("serving_contract") or {}).get("watchlist") == expected_watch
     assert (brief.get("serving_contract") or {}).get("owned") == expected_owned
     assert (brief.get("serving_contract") or {}).get("watchlist") == expected_watch
 
-    if contract.get("report_time_intelligence_required") is True:
-        for payload_name, payload in (("brief", brief), ("deep", deep), ("user", user)):
+    for payload_name, payload in (("brief", brief), ("deep", deep), ("user", user)):
+        if contract.get("report_time_intelligence_required") is True:
             report_time = payload.get("report_time_intelligence") or {}
             assert report_time.get("status") in {"REFRESH_REQUIRED", "READY", "INVALID_EVIDENCE_CONTRACT"}, (payload_name, report_time)
             assert "pundit_consensus_vs_dss" in report_time, payload_name
             assert "fixture_strategy" in report_time, payload_name
             assert "community_signal" in report_time, payload_name
-        assert deep.get("payload_type") == "DEEP_REVIEW_PAYLOAD_V2"
+        if contract.get("model_validation_required") is True:
+            validation = payload.get("model_validation") or {}
+            assert (validation.get("confidence_calibration") or {}).get("state") in {"EARLY_SEASON_CONSERVATIVE", "CALIBRATION_REVIEW_REQUIRED", "CONFIDENCE_RANGE_PRESENT"}, payload_name
+            settled = validation.get("settled_prediction") or {}
+            assert "sample_size" in settled and "status" in settled, payload_name
+        if contract.get("weather_context_required") is True:
+            weather = payload.get("weather_context") or {}
+            assert weather.get("status") in {"AVAILABLE", "NO_FORECAST_IN_WINDOW"}, (payload_name, weather)
+            assert weather.get("advisory_only") is True, payload_name
+            assert weather.get("causality_guard"), payload_name
+    assert deep.get("payload_type") == "DEEP_REVIEW_PAYLOAD_V2"
 
     files = latest.get("files") or {}
     assert files.get("decision_brief") == "data/decision_brief.json"
@@ -95,6 +117,9 @@ def run() -> dict:
         "owned": expected_owned,
         "watchlist": expected_watch,
         "per_position": expected_per,
+        "owned_transparency": True,
+        "model_validation": contract.get("model_validation_required"),
+        "weather_context": contract.get("weather_context_required"),
         "report_time_intelligence": contract.get("report_time_intelligence_required"),
         "sizes": sizes,
         "default_fast": latest.get("report_serving", {}).get("default_fast_artifact"),

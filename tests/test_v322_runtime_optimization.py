@@ -74,6 +74,17 @@ def test_performance_guard_transition_semantics():
     assert result["resource_observability_complete"] is True
 
 
+def test_rec20_player_features_remain_decision_neutral_until_explicit_activation():
+    services = json.loads((ROOT / "config/v3_service_registry.json").read_text())["services"]
+    prediction = services["prediction"]
+    advanced = services["advanced_stats"]
+    prediction_text = (ROOT / "src/engines/prediction_service.py").read_text()
+    assert "player_features.json" not in (prediction.get("inputs") or [])
+    assert "player_features" not in prediction_text
+    assert any(command.get("module") == "src.engines.player_features" for command in advanced.get("commands") or [])
+    assert "player_features.json" in (advanced.get("artifacts") or [])
+
+
 def test_workflows_are_split_shallow_and_runtime_data_is_rolling():
     legacy = (ROOT / ".github/workflows/fpl-engine.yml").read_text()
     ci = (ROOT / ".github/workflows/v3-ci.yml").read_text()

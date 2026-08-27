@@ -1,9 +1,9 @@
 {
-  "version": "5.0.0-alpha.3",
+  "version": "5.0.0-alpha.4",
   "principles": {
     "avoid_hardcode": {
       "required": true,
-      "policy": "Domain rules, thresholds, source authority, feature weights, phase policies, chip rules, finance rules, scoring constants, scheduler cadence, service boundaries, wire profiles, materialization policy and performance budgets must be config/registry driven unless a literal is structurally intrinsic to the implementation.",
+      "policy": "Domain rules, thresholds, source authority, feature weights, phase policies, chip rules, finance rules, scoring constants, scheduler cadence, service boundaries, wire profiles, payload projection contracts, materialization policy and performance budgets must be config/registry driven unless a literal is structurally intrinsic to the implementation.",
       "exceptions": "Any unavoidable hardcoded value must be documented with rationale, owner, and test coverage."
     },
     "modular_authority": {
@@ -20,6 +20,7 @@
       "service_registry": "config/v5_service_registry.json",
       "transport_registry": "config/v5_service_transport_registry.json",
       "wire_registry": "config/v5_service_wire_registry.json",
+      "payload_contract_registry": "config/v5_payload_contract_registry.json",
       "materialization_registry": "config/v5_runtime_materialization_registry.json",
       "requirements": [
         "independent process/container boundary",
@@ -30,6 +31,7 @@
         "registry-driven endpoint/timeout configuration",
         "registry-driven retry and circuit-breaker policy",
         "registry-driven internal wire codec profile",
+        "registry-driven semantics-preserving payload projections",
         "connection reuse for internal HTTP transport",
         "runtime materialization must preserve durable persistence authority",
         "non-idempotent persistence operations are never automatically retried",
@@ -38,7 +40,7 @@
         "parallel fan-out for independent service calls",
         "no raw credential persistence"
       ],
-      "performance_guard": "Use bounded contexts rather than per-function services. Avoid chatty service graphs, batch large reads, parallelize independent intelligence services, cache immutable registry data, reuse internal HTTP connections, use compact registry-selected wire codecs for large internal payloads, materialize same-run artifacts without bypassing durable writes, and measure cross-service latency including retry overhead."
+      "performance_guard": "Use bounded contexts rather than per-function services. Avoid chatty service graphs, batch large reads, parallelize independent intelligence services, cache immutable registry data, reuse internal HTTP connections, use compact registry-selected wire codecs and payload projections for large internal payloads, materialize same-run artifacts without bypassing durable writes, and measure cross-service latency including retry overhead."
     },
     "performance_first": {
       "required": true,

@@ -49,7 +49,7 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 | FAST runtime | <10s target | production SLO |
 | Runtime publication | rolling parentless snapshot | required |
 | Runtime source | `runtime-data` | authoritative current-state branch |
-| Official-first REC coverage | explicit matrix + closed fallback dispositions | required by REC-38 |
+| Official-first REC coverage | explicit matrix + closed fallback dispositions | production active via REC-38 |
 | Authenticated Official | optional/read-only/fail-soft | MONITOR |
 | Predictive calibration | settled frozen forecasts only | MONITOR |
 | Price calibration | realized price-change samples only | MONITOR |
@@ -112,16 +112,16 @@ FAST/LIVE/FULL/DEEP execution profiles, rolling runtime-data, shallow checkout, 
 | REC-35 | Compact projection diagnostics | **DONE PROD** | PR #70 removes duplicated per-fixture DC provenance without formula/decision change. |
 | REC-36 | Official historical reconciliation + GW1 proxy baseline | **DONE PROD** | PR #73; public Official entry history + historical picks reconcile submitted teams; GW1 retrospective proxy cannot count as pre-deadline predictive evidence. |
 | REC-37 | Official-detail migration fence closeout | **DONE PROD** | PR #74 forced fresh REC-36 Official-detail publication; PR #75 restored normal 3,600s FAST/LIVE reuse TTL. |
-| REC-38 | Official-First REC Coverage Contract | **DONE ENGINEERING / PENDING PROD** | Every REC-01..38 has explicit Official applicability/endpoints; fallback is closed to explicit dispositions; source contract now validates the matrix. FULL production acceptance still required before DONE PROD. |
+| REC-38 | Official-First REC Coverage Contract | **DONE PROD** | PR #77 implementation + PR #78 one-shot production proof; FULL run 33077874024 passed all contracts, matrix integrity 39/39, and rolling runtime-data publication succeeded. |
 
 ## Production evidence after REC-01/02 and runtime closeouts
 - REC-01 PR #63: architecture PASS, service count 20, 177/177 tests PASS, FULL 12.073s, FAST 6.060s.
 - REC-01 runtime contract migration completed successfully; migration fence forced one fresh `player_features.json` publication and normal 6-hour reuse TTL was restored.
 - REC-02 PR #65 merged as an isolated model change after REC-01.
-- REC-35 compaction reversed the post-REC-01/02 payload/RSS regression: production snapshot returned to about 18.50MB with FAST about 5.8s.
+- REC-35 compaction reversed the post-REC-01/02 payload/RSS regression.
 - REC-36 PR #73 is production merged; public Official historical submitted teams, including GW1 retrospective reconciliation, are available without private credentials.
 - REC-37 PRs #74/#75 completed the one-shot Official-detail migration and restored normal FAST/LIVE reuse TTL.
-- REC-38 is implemented on its release branch and must pass CI plus production FULL source-contract acceptance before closeout.
+- REC-38 production FULL run `33077874024` completed in **8.410s**, source layer **1.912s**, Official detail **2.386s**, all production contracts PASS, Gate0 16/16, framework GREEN, prediction quality HEALTHY, 15 OWNED + 20 WATCHLIST, and Official-first matrix integrity **39/39**. The following production FAST snapshot completed in **4.122s**, within the `<10s` SLO, and published a 48-file rolling snapshot of about 18.69MB.
 - Runtime schema remains **49** and active service count remains **20**.
 
 ## Calibration / operational monitors that must remain yellow honestly
@@ -164,8 +164,7 @@ FAST/LIVE/FULL/DEEP execution profiles, rolling runtime-data, shallow checkout, 
 A task is DONE only when implementation, deterministic tests, documentation and required production evidence agree. A file existing, a source being reachable, or a manually edited status label is not proof. Predictive accuracy, confidence quality, price accuracy and causal weather claims require genuine realized samples.
 
 ## Execution order from here
-1. Promote REC-38 through CI, merge and production FULL acceptance; only then mark it DONE PROD.
-2. Keep V3.22 production GREEN and FAST <10s.
-3. Accumulate settled-GW, confidence, price and weather calibration evidence without forcing status upgrades.
-4. Use public Official data first for every applicable REC; keep authenticated Official precision optional/fail-soft only where public Official cannot expose the required private state.
-5. Improve remaining P1 intelligence evidence only through attributable changes that preserve Official authority and production stability.
+1. Keep V3.22 production GREEN and FAST <10s with REC-38 Official-first governance active.
+2. Accumulate settled-GW, confidence, price and weather calibration evidence without forcing status upgrades.
+3. Use public Official data first for every applicable REC; keep authenticated Official precision optional/fail-soft only where public Official cannot expose the required private state.
+4. Improve remaining P1 intelligence evidence only through attributable changes that preserve Official authority and production stability.

@@ -2,6 +2,10 @@ name: V3 Refresh Full
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/rec38-full-trigger"
   schedule:
     - cron: "10 21 * * *"
 

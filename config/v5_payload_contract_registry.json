@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "contract": "V5_INTERNAL_PAYLOAD_PROJECTION_V1",
   "purpose": "Declarative semantics-preserving transport projections for bounded-context calls. Runtime projection code is generic and must not contain service/operation-specific branches.",
   "defaults": {
@@ -24,25 +24,47 @@
                   "type": "object",
                   "include": ["element", "name", "position", "current_season", "xmins", "xpts_by_gw"],
                   "fields": {
-                    "xmins": {
-                      "type": "object",
-                      "include": ["expected_minutes", "start_probability"]
-                    },
-                    "xpts_by_gw": {
-                      "type": "array",
-                      "item": {
-                        "type": "object",
-                        "include": ["gw", "mean", "std", "clean_sheet_probability"]
-                      }
-                    }
+                    "xmins": {"type": "object", "include": ["expected_minutes", "start_probability"]},
+                    "xpts_by_gw": {"type": "array", "item": {"type": "object", "include": ["gw", "mean", "std", "clean_sheet_probability"]}}
                   }
                 }
               }
             }
           },
-          "bootstrap": {
+          "bootstrap": {"type": "object", "include": ["events"]}
+        }
+      }
+    },
+    "decision.prepare": {
+      "owner": "decision",
+      "projection": {
+        "type": "object",
+        "include": ["truth", "price", "prediction"],
+        "fields": {
+          "truth": {
             "type": "object",
-            "include": ["events"]
+            "include": ["rules", "team", "context"]
+          },
+          "price": {
+            "type": "object",
+            "include": ["alerts", "capabilities", "degraded_context"]
+          },
+          "prediction": {
+            "type": "object",
+            "include": ["planning_gw", "ruleset_id", "model_version", "capabilities", "degraded_context", "players"],
+            "fields": {
+              "players": {
+                "type": "array",
+                "item": {
+                  "type": "object",
+                  "include": ["element", "name", "position", "team_id", "status", "now_cost", "horizons", "xmins", "xpts_by_gw"],
+                  "fields": {
+                    "xmins": {"type": "object", "include": ["expected_minutes", "start_probability", "dnp_probability"]},
+                    "xpts_by_gw": {"type": "array", "item": {"type": "object", "include": ["gw", "mean", "std"]}}
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -56,25 +78,11 @@
           "truth": {
             "type": "object",
             "include": ["rules", "team", "capabilities", "degraded_context"],
-            "fields": {
-              "team": {
-                "type": "object",
-                "include": ["authority"]
-              }
-            }
+            "fields": {"team": {"type": "object", "include": ["authority"]}}
           },
-          "prediction": {
-            "type": "object",
-            "include": ["model_version", "ruleset_id", "capabilities", "degraded_context"]
-          },
-          "price": {
-            "type": "object",
-            "include": ["alerts", "capabilities", "degraded_context"]
-          },
-          "evaluation": {
-            "type": "object",
-            "include": ["capabilities", "degraded_context"]
-          }
+          "prediction": {"type": "object", "include": ["model_version", "ruleset_id", "capabilities", "degraded_context"]},
+          "price": {"type": "object", "include": ["alerts", "capabilities", "degraded_context"]},
+          "evaluation": {"type": "object", "include": ["capabilities", "degraded_context"]}
         }
       }
     },
@@ -87,28 +95,64 @@
           "truth": {
             "type": "object",
             "include": ["rules", "team", "chip_state", "capabilities", "degraded_context"],
-            "fields": {
-              "team": {
-                "type": "object",
-                "include": ["squad", "validation", "finance", "authority"]
-              }
-            }
+            "fields": {"team": {"type": "object", "include": ["squad", "validation", "finance", "authority"]}}
           },
+          "prediction": {"type": "object", "include": ["capabilities", "degraded_context"]},
+          "price": {"type": "object", "include": ["capabilities", "degraded_context"]},
+          "evaluation": {"type": "object", "include": ["capabilities", "degraded_context"]},
+          "decision": {"type": "object", "include": ["status", "packages", "hold", "lineup", "dss", "decision_trace", "capabilities", "degraded_context", "production_recommendation"]}
+        }
+      }
+    },
+    "watchlist.build": {
+      "owner": "watchlist",
+      "projection": {
+        "type": "object",
+        "include": ["truth", "price", "prediction", "dss"],
+        "fields": {
+          "truth": {
+            "type": "object",
+            "include": ["team"],
+            "fields": {"team": {"type": "object", "include": ["team_value_ledger", "squad", "owned_ids", "authority"]}}
+          },
+          "price": {"type": "object", "include": ["alerts"]},
           "prediction": {
             "type": "object",
-            "include": ["capabilities", "degraded_context"]
-          },
-          "price": {
+            "include": ["model_version", "planning_gw", "ruleset_id", "players"],
+            "fields": {
+              "players": {
+                "type": "array",
+                "item": {
+                  "type": "object",
+                  "include": ["element", "name", "position", "team_id", "status", "now_cost", "ownership_pct", "projection_confidence", "xpts_5", "xpts_15", "xmins", "role", "current_season", "historical_prior", "penalty_share", "penalty_role", "set_piece_share", "set_piece_role"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "reporting.build": {
+      "owner": "reporting",
+      "projection": {
+        "type": "object",
+        "include": ["truth", "price", "prediction", "decision", "governance", "watchlist", "previous_report_state", "performance", "force_full_report", "report_request"],
+        "fields": {
+          "truth": {
             "type": "object",
-            "include": ["capabilities", "degraded_context"]
+            "include": ["team", "context"],
+            "fields": {"team": {"type": "object", "include": ["authority", "squad", "owned_ids"]}}
           },
-          "evaluation": {
+          "price": {"type": "object", "include": ["alerts"]},
+          "prediction": {
             "type": "object",
-            "include": ["capabilities", "degraded_context"]
-          },
-          "decision": {
-            "type": "object",
-            "include": ["status", "packages", "hold", "lineup", "dss", "decision_trace", "capabilities", "degraded_context", "production_recommendation"]
+            "include": ["model_version", "prediction_quality", "full_core_enrichment"],
+            "fields": {
+              "full_core_enrichment": {
+                "type": "object",
+                "include": ["source_fusion"]
+              }
+            }
           }
         }
       }

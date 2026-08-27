@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T22:22:46.653369+00:00",
+  "generated_at": "2026-08-27T05:00:49.360176+00:00",
   "team_id": 3462711,
   "squad_authority": "LOCKED_PRE_DEADLINE",
   "squad": [
@@ -152,7 +152,7 @@
       "team": "Arsenal",
       "position": "DEF",
       "purchase_cost": 55,
-      "now_cost": 55,
+      "now_cost": 56,
       "sell_cost": 55,
       "purchase_source": "locked_squad_element_id",
       "ownership": "41.4",
@@ -164,10 +164,10 @@
       "team": "Brentford",
       "position": "DEF",
       "purchase_cost": 45,
-      "now_cost": 45,
+      "now_cost": 46,
       "sell_cost": 45,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "6.7",
+      "ownership": "6.8",
       "status": "a"
     },
     {
@@ -203,7 +203,7 @@
       "now_cost": 120,
       "sell_cost": 120,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "49.0",
+      "ownership": "48.9",
       "status": "a"
     },
     {
@@ -215,7 +215,7 @@
       "now_cost": 65,
       "sell_cost": 65,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "11.0",
+      "ownership": "11.1",
       "status": "a"
     },
     {
@@ -251,7 +251,7 @@
       "now_cost": 56,
       "sell_cost": 55,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "7.3",
+      "ownership": "7.4",
       "status": "a"
     },
     {
@@ -263,7 +263,7 @@
       "now_cost": 155,
       "sell_cost": 155,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "68.2",
+      "ownership": "68.1",
       "status": "a"
     },
     {
@@ -272,10 +272,10 @@
       "team": "Chelsea",
       "position": "FWD",
       "purchase_cost": 75,
-      "now_cost": 75,
+      "now_cost": 76,
       "sell_cost": 75,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "66.9",
+      "ownership": "67.0",
       "status": "a"
     },
     {
@@ -292,7 +292,7 @@
     }
   ],
   "totals": {
-    "market_value": 997,
+    "market_value": 1000,
     "sell_value": 995,
     "itb": 5
   }

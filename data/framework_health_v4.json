@@ -1,16 +1,16 @@
 {
-  "schema_version": 473,
-  "engine": "v4.7.3-framework-health-checkpoint-aware",
+  "schema_version": 491,
+  "engine": "v4.9.1-health-separation",
   "phase": "postflight",
   "checkpoint_context": {
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-26T22:22:45.670458+00:00",
-    "local_as_of": "2026-08-27T05:22:45.670458+07:00",
+    "as_of": "2026-08-27T05:00:48.242429+00:00",
+    "local_as_of": "2026-08-27T12:00:48.242429+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 2587.2,
+    "minutes_to_deadline": 2189.2,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -27,10 +27,21 @@
     "registry": "fpl_checkpoint_policy_v1",
     "registry_schema_version": 1
   },
-  "overall": "AMBER",
-  "decision_engine": "DEGRADED",
+  "overall": "GREEN",
+  "pipeline_health": "GREEN",
+  "prediction_health": "GREEN",
+  "capability_health": "AMBER",
+  "capability_coverage": {
+    "active": 56,
+    "warmup": 2,
+    "partial": 16,
+    "failed": 0,
+    "declared": 74,
+    "active_ratio": 0.7838
+  },
+  "decision_engine": "HEALTHY",
   "recommendation_allowed": true,
-  "go_allowed": false,
+  "go_allowed": true,
   "registry_integrity": true,
   "gate0": {
     "phase": "postflight",
@@ -72,7 +83,7 @@
         "id": "G0-06",
         "name": "Budget / Affordability",
         "status": "PASS",
-        "detail": "{\"available_budget_tenths\": 1000, \"bank_tenths\": 5, \"formula_reconciled\": true, \"market_value_tenths\": 997, \"owned_players\": 15, \"sell_value_tenths\": 995}"
+        "detail": "{\"available_budget_tenths\": 1000, \"bank_tenths\": 5, \"formula_reconciled\": true, \"market_value_tenths\": 1000, \"owned_players\": 15, \"sell_value_tenths\": 995}"
       },
       {
         "id": "G0-07",
@@ -150,8 +161,9 @@
     "integrity_ok": true,
     "registry": "DSS_CORE_50",
     "counts": {
-      "ACTIVE": 25,
-      "PARTIAL": 25
+      "ACTIVE": 33,
+      "PARTIAL": 16,
+      "WARMUP": 1
     },
     "items": [
       {
@@ -228,9 +240,9 @@
           "fixture_distributions_checked": 1842,
           "enriched_prior_distributions": 1842,
           "strong_direct_evidence_players": 71,
-          "strong_direct_evidence_min_pstart": 0.8673,
+          "strong_direct_evidence_min_pstart": 0.8207,
           "no_evidence_players": 92,
-          "no_evidence_max_xmins": 8.1,
+          "no_evidence_max_xmins": 7.0,
           "direct_evidence_sanity": true
         }
       },
@@ -247,9 +259,9 @@
           "fixture_distributions_checked": 1842,
           "enriched_prior_distributions": 1842,
           "strong_direct_evidence_players": 71,
-          "strong_direct_evidence_min_pstart": 0.8673,
+          "strong_direct_evidence_min_pstart": 0.8207,
           "no_evidence_players": 92,
-          "no_evidence_max_xmins": 8.1,
+          "no_evidence_max_xmins": 7.0,
           "direct_evidence_sanity": true
         }
       },
@@ -257,13 +269,16 @@
         "id": "DSS-07",
         "name": "Manager Tactical Role",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
         "probe": "tactical_role",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "players": 614,
+          "role_covered": 614,
+          "source_covered": 614,
+          "competition_consumed": 614
         }
       },
       {
@@ -283,7 +298,7 @@
         "id": "DSS-09",
         "name": "Positional Competition & Rotation",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
@@ -291,16 +306,16 @@
         "detail": {
           "players": 614,
           "covered": 614,
-          "role_matched_adjustments": 0,
-          "broad_position_diagnostics": 614,
-          "reason": "role-matched competition data unavailable; broad FPL position is not applied"
+          "role_matched_adjustments": 614,
+          "broad_position_diagnostics": 0,
+          "reason": null
         }
       },
       {
         "id": "DSS-10",
         "name": "Set-Piece Role",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
@@ -308,17 +323,18 @@
         "detail": {
           "fixtures": 614,
           "covered": 614,
-          "empirical_shares": 0,
-          "inferred_order_metadata": 614,
-          "metadata_only_no_double_count": 614,
-          "reason": "official taker order is not an empirical event share"
+          "empirical_shares": 614,
+          "posterior_team_shares": 614,
+          "prior_reallocation": 614,
+          "adjusted_fixtures": 614,
+          "reason": null
         }
       },
       {
         "id": "DSS-11",
         "name": "Penalty Role",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
@@ -326,17 +342,18 @@
         "detail": {
           "fixtures": 614,
           "covered": 614,
-          "empirical_shares": 0,
-          "inferred_order_metadata": 614,
-          "metadata_only_no_double_count": 614,
-          "reason": "official taker order is not an empirical event share"
+          "empirical_shares": 614,
+          "posterior_team_shares": 614,
+          "prior_reallocation": 614,
+          "adjusted_fixtures": 614,
+          "reason": null
         }
       },
       {
         "id": "DSS-12",
         "name": "Expected Goals / Shot Threat",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json",
           "data/stats/shots_gw1.json"
@@ -351,15 +368,17 @@
           "consumed_players": 614,
           "materially_distinct_players": 11,
           "materially_distinct_ratio": 0.0179,
+          "decision_used_players": 310,
+          "decision_used_ratio": 0.5049,
           "active_minimum_ratio": 0.25,
-          "synced_but_weakly_enriched": true
+          "synced_but_not_consumed_broadly": false
         }
       },
       {
         "id": "DSS-13",
         "name": "Expected Assists / Chance Creation",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json",
           "data/stats/playermatchstats_gw1.json"
@@ -374,8 +393,10 @@
           "consumed_players": 614,
           "materially_distinct_players": 11,
           "materially_distinct_ratio": 0.0179,
+          "decision_used_players": 310,
+          "decision_used_ratio": 0.5049,
           "active_minimum_ratio": 0.25,
-          "synced_but_weakly_enriched": true
+          "synced_but_not_consumed_broadly": false
         }
       },
       {
@@ -520,7 +541,7 @@
         "id": "DSS-24",
         "name": "Opponent Strength / Fixture Difficulty",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
@@ -528,10 +549,10 @@
         "detail": {
           "fixtures": 1842,
           "covered": 1842,
-          "dynamic_defence": 0,
-          "neutral_overall_fallback": 1842,
-          "distinct_scoring_ratings": 1,
-          "reason": "official defence split unavailable; overall strength retained as diagnostic only"
+          "dynamic_defence": 1842,
+          "neutral_overall_fallback": 0,
+          "distinct_scoring_ratings": 18,
+          "reason": null
         }
       },
       {
@@ -733,14 +754,16 @@
         "id": "DSS-39",
         "name": "Price Value / Points per Million",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/universe.json",
           "data/predictions_v4.json"
         ],
         "probe": "price_value",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "players": 614,
+          "value_covered": 614,
+          "optimizer_consumed": true
         }
       },
       {
@@ -754,7 +777,7 @@
         "probe": "sell_cost_affordability",
         "detail": {
           "owned_players": 15,
-          "market_value_tenths": 997,
+          "market_value_tenths": 1000,
           "sell_value_tenths": 995,
           "bank_tenths": 5,
           "available_budget_tenths": 1000,
@@ -812,14 +835,14 @@
         "id": "DSS-44",
         "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "WARMUP",
         "required_files": [
           "src/engines/v4_validation.py",
           "src/engines/v4_backtest_store.py"
         ],
         "probe": "learning_loop",
         "detail": {
-          "reason": "validation framework exists; no reconciled post-GW sample yet",
+          "reason": "validation contracts are ready; no eligible reconciled post-GW sample exists yet",
           "samples": 0
         }
       },
@@ -932,7 +955,7 @@
     "registry": "DSS_EXTENSIONS",
     "counts": {
       "ACTIVE": 15,
-      "PARTIAL": 1
+      "WARMUP": 1
     },
     "items": [
       {
@@ -1108,14 +1131,15 @@
         "id": "DSS-X12",
         "name": "Calibration, Reconciliation & Backtest Store",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "WARMUP",
         "required_files": [
           "src/engines/v4_validation_cycle.py",
           "src/engines/v4_backtest_store.py"
         ],
         "probe": "calibration_store",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "reason": "validation contracts are ready; no eligible reconciled post-GW sample exists yet",
+          "samples": 0
         }
       },
       {
@@ -1182,14 +1206,14 @@
         "probe": "runtime_observability",
         "detail": {
           "timings": {
-            "load_shared_inputs_and_candidates_ms": 296.8,
-            "wc_decision_cpu_ms": 2807.0,
-            "package_audit_cpu_ms": 2626.4,
-            "wc_package_parallel_wall_ms": 2839.8,
-            "parallel_speedup_estimate": 1.913,
-            "lineup_ms": 2.3,
-            "evidence_sanity_ms": 2.9,
-            "total_pipeline_ms": 3161.0
+            "load_shared_inputs_and_candidates_ms": 359.1,
+            "wc_decision_cpu_ms": 3234.1,
+            "package_audit_cpu_ms": 2929.9,
+            "wc_package_parallel_wall_ms": 3255.7,
+            "parallel_speedup_estimate": 1.893,
+            "lineup_ms": 2.4,
+            "evidence_sanity_ms": 3.1,
+            "total_pipeline_ms": 3660.4
           }
         }
       }
@@ -1202,15 +1226,14 @@
     "integrity_ok": true,
     "registry": "ENHANCEMENT_LAYERS_8",
     "counts": {
-      "PARTIAL": 1,
-      "ACTIVE": 7
+      "ACTIVE": 8
     },
     "items": [
       {
         "id": "ENH-01",
         "name": "Data Reliability & Source Triangulation",
         "critical": true,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "config/sources.json",
           "src/engines/reliability.py",
@@ -1236,8 +1259,10 @@
             "consumed_players": 614,
             "materially_distinct_players": 11,
             "materially_distinct_ratio": 0.0179,
+            "decision_used_players": 310,
+            "decision_used_ratio": 0.5049,
             "active_minimum_ratio": 0.25,
-            "synced_but_weakly_enriched": true
+            "synced_but_not_consumed_broadly": false
           }
         }
       },
@@ -1397,19 +1422,13 @@
     }
   },
   "critical_failed": [],
-  "critical_partial": [
-    "DSS-07",
-    "DSS-09",
-    "DSS-24",
-    "DSS-39",
-    "DSS-44",
-    "DSS-X12",
-    "ENH-01"
-  ],
+  "critical_partial": [],
   "governance": {
     "gate0_fail_blocks_go": true,
     "critical_framework_fail_blocks_recommendation": true,
     "critical_partial_blocks_unqualified_go": true,
+    "pipeline_health_separate_from_prediction_health": true,
+    "noncritical_partial_is_reported_not_hidden": true,
     "file_exists_is_not_sufficient_for_active": true,
     "health_check_must_precede_recommendation": true,
     "raw_optimizer_is_not_final_decision": true,
@@ -1421,5 +1440,5 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 347.29
+  "performance_ms": 420.52
 }

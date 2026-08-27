@@ -9,6 +9,7 @@ from src.models.projection_components import (
     _project_fixture,
     defensive_contribution_rate_bundle,
     load_projection_config,
+    robust_attack_rate,
 )
 from src.models.xmins_v3 import estimate_xmins
 from src.rules import ELEMENT_TYPE_TO_POSITION, RULESET_ID
@@ -44,6 +45,9 @@ def build(
     model_id = str(cfg.get("historical_model_id") or "").strip()
     if not model_id:
         raise RuntimeError("projection historical_model_id missing from config")
+    robust_cfg = cfg.get("early_season_robust_rates") or {}
+    if robust_cfg.get("model") != "adaptive_shrinkage_winsor_v1":
+        raise RuntimeError("REC-02 robust attack rate model missing from projection config")
 
     feature_payload = player_features_payload or {}
     feature_map = feature_payload.get("players") or {}
@@ -70,6 +74,7 @@ def build(
     players = []
     historical_used = 0
     advanced_dc_used = 0
+    robust_winsorized_players = 0
     for player in bootstrap.get("elements") or []:
         element = int(player["id"])
         element_type = int(player.get("element_type") or 0)
@@ -83,8 +88,9 @@ def build(
         historical_used += int(bool(historical))
         xg_prior, xg_prior_source, attack_weight = _rate_prior(_f(base.get("xg90")), historical, "xg90")
         xa_prior, xa_prior_source, _ = _rate_prior(_f(base.get("xa90")), historical, "xa90")
-        xg90, xg_source = _blended_rate(player, "expected_goals", xg_prior, shrink)
-        xa90, xa_source = _blended_rate(player, "expected_assists", xa_prior, shrink)
+        xg90, xg_source, xg_robust = robust_attack_rate(player, "expected_goals", xg_prior, robust_cfg)
+        xa90, xa_source, xa_robust = robust_attack_rate(player, "expected_assists", xa_prior, robust_cfg)
+        robust_winsorized_players += int(bool(xg_robust.get("winsorized") or xa_robust.get("winsorized")))
         bonus90, bonus_source = _blended_rate(player, "bonus", _f(base.get("bonus90")), shrink)
         saves90, saves_source = _blended_rate(player, "saves", _f(base.get("saves90")), shrink)
         feature = feature_map.get(str(element)) or {}
@@ -119,36 +125,18 @@ def build(
         for gw in range(planning_gw, planning_gw + horizon):
             details = []
             for matchup in (row for row in fixtures if int(row.get("event") or -1) == gw):
-                details.append(
-                    _project_fixture(
-                        player,
-                        xmins,
-                        matchup,
-                        int(matchup["team_h"]) == team_id,
-                        rates,
-                        bool(xmins.get("small_sample_guard")),
-                    )
-                )
+                details.append(_project_fixture(player, xmins, matchup, int(matchup["team_h"]) == team_id, rates, bool(xmins.get("small_sample_guard"))))
             mean = sum(_f(row.get("mean")) for row in details)
             std = math.sqrt(sum(_f(row.get("std")) ** 2 for row in details)) if details else 0.0
             no_clean_sheet = 1.0
             for row in details:
                 no_clean_sheet *= 1.0 - _f(row.get("clean_sheet_probability"))
-            by_gw.append({
-                "gw": gw,
-                "mean": round(mean, 3),
-                "std": round(std, 3),
-                "clean_sheet_probability": round(1.0 - no_clean_sheet, 4) if details else 0.0,
-                "fixtures": details,
-            })
+            by_gw.append({"gw": gw, "mean": round(mean, 3), "std": round(std, 3), "clean_sheet_probability": round(1.0 - no_clean_sheet, 4) if details else 0.0, "fixtures": details})
 
         horizons = {}
         for published in published_horizons:
             subset = by_gw[:published]
-            horizons[str(published)] = {
-                "mean": round(sum(_f(row["mean"]) for row in subset), 3),
-                "std": round(math.sqrt(sum(_f(row["std"]) ** 2 for row in subset)), 3),
-            }
+            horizons[str(published)] = {"mean": round(sum(_f(row["mean"]) for row in subset), 3), "std": round(math.sqrt(sum(_f(row["std"]) ** 2 for row in subset)), 3)}
         players.append({
             "element": element,
             "name": player.get("web_name"),
@@ -173,6 +161,7 @@ def build(
                 "dc_points": dc_bundle.get("dc_points"),
                 "dc_evidence_minutes": round(_f(dc_bundle.get("dc_evidence_minutes")), 1),
                 "dc_sample_quality": dc_bundle.get("dc_sample_quality"),
+                "robust_rate_diagnostics": {"xg90": xg_robust, "xa90": xa_robust},
                 "sources": {
                     "xg90": f"{xg_source}|prior={xg_prior_source}",
                     "xa90": f"{xa_source}|prior={xa_prior_source}",
@@ -199,5 +188,7 @@ def build(
         "player_feature_model_opt_in": feature_payload.get("model_opt_in"),
         "defensive_contribution_model": dc_policy.get("model") or "poisson_threshold_shrunk_rate_v1",
         "advanced_defensive_evidence_players_used": advanced_dc_used,
+        "robust_attack_rate_model": robust_cfg.get("model"),
+        "robust_rate_winsorized_players": robust_winsorized_players,
         "players": players,
     }

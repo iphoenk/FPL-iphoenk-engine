@@ -1,4 +1,4 @@
-name: FPL iphoenk V4.9.2 truthful-health service gate
+name: FPL iphoenk V4.9.3 validation-lifecycle service gate
 
 on:
   workflow_dispatch:
@@ -46,7 +46,7 @@ jobs:
         run: python -m pytest -q
       - name: Run process-isolated V4 services
         run: python -m src.services.orchestrator daily --stats --deep-stats
-      - name: Centralized V4.9.2 service quality gate
+      - name: Centralized V4.9.3 validation-lifecycle quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise acceptance summary
         run: |
@@ -58,6 +58,7 @@ jobs:
           pipeline=json.load(open('data/decision_pipeline_v4.json'))
           checkpoint=json.load(open('data/checkpoint_decision_v4.json'))
           orchestration=json.load(open('data/service_orchestration_v4.json'))
+          lifecycle=json.load(open('data/validation/lifecycle_v4.json'))
           print({
               'pipeline_health': h['pipeline_health'],
               'prediction_health': h['prediction_health'],
@@ -80,6 +81,9 @@ jobs:
               'services': orchestration['summary']['services_passed'],
               'orchestration_ms': orchestration['duration_ms'],
               'deep_stats': orchestration['deep_stats_enabled'],
+              'validation_snapshot': lifecycle['snapshot'],
+              'validation_reconciliation': lifecycle['reconciliation'],
+              'eligible_calibration_samples': lifecycle['eligibility'].get('eligible_samples'),
           })
           PY
       - name: Upload branch data only

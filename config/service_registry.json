@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
-  "registry": "fpl_v4_9_4_microservice_registry_v4",
-  "architecture_version": "4.9.4.1",
+  "schema_version": 5,
+  "registry": "fpl_v4_9_4_2_microservice_registry_v5",
+  "architecture_version": "4.9.4.2",
   "execution_model": "process_isolated_single_host",
   "services": [
     {"id":"raw_snapshot","name":"Raw Snapshot Service","boundary_state":"INDEPENDENT","module":"src.services.raw_snapshot_service","command":["{python}","-m","src.services.raw_snapshot_service","{mode}"],"runtime_flags":{"as_of":"--as-of"},"timeout_seconds":90,"depends_on":[],"produces":["raw_snapshot"],"critical":true},
@@ -39,6 +39,7 @@
     "advanced_ablation_observational_outside_decision_chain": true,
     "advanced_ablation_full_shadow_parity_required": true,
     "advanced_ablation_diagnostic_not_arbitrary_gate": true,
+    "advanced_ablation_failure_cannot_block_core_publish": true,
     "fail_closed_on_contract_failure": true,
     "lock_after_pass": ["raw_snapshot", "enrichment", "prediction"],
     "appearance_formula_regression_tested": true,

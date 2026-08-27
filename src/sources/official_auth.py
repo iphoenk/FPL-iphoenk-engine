@@ -105,11 +105,28 @@ def _normalise_path(path: str) -> str:
     return path.strip().lstrip("/")
 
 
+def _health(status: str, http_status: int | None, start: float, attempts: int, url: str, error: str | None) -> dict:
+    return {
+        "status": status,
+        "http_status": http_status,
+        "latency_ms": round((time.perf_counter() - start) * 1000),
+        "attempts": attempts,
+        "fetched_at": iso_now(),
+        "error": error,
+        "url": url,
+    }
+
+
 def safe_get(path: str, material: AuthMaterial, retries: int = 1, backoff: float = 0.5) -> tuple[Any | None, dict]:
     """GET-only authenticated Official FPL client with an exact route allowlist.
 
-    Credentials are never returned in health metadata and response bodies are never
-    included in errors. There is deliberately no generic request(method=...) API.
+    Redirects are never followed. Any 3xx response is an explicit transport-policy
+    rejection rather than a generic HTTP failure, because an authenticated request
+    must never forward credentials to an unexpected redirect target.
+
+    Credentials are never returned in health metadata and response bodies/Location
+    headers are never included in errors. There is deliberately no generic
+    request(method=...) API.
     """
     path = _normalise_path(path)
     if path not in ALLOWED_API_PATHS:
@@ -129,37 +146,24 @@ def safe_get(path: str, material: AuthMaterial, retries: int = 1, backoff: float
                 allow_redirects=False,
             )
             status_code = response.status_code
+            if 300 <= status_code < 400:
+                return None, _health(
+                    "REDIRECT_REJECTED",
+                    status_code,
+                    start,
+                    attempt,
+                    url,
+                    "authenticated redirect rejected by policy",
+                )
             if status_code in (401, 403):
-                return None, {
-                    "status": "AUTH_REJECTED",
-                    "http_status": status_code,
-                    "latency_ms": round((time.perf_counter() - start) * 1000),
-                    "attempts": attempt,
-                    "fetched_at": iso_now(),
-                    "error": "authentication rejected",
-                    "url": url,
-                }
+                return None, _health(
+                    "AUTH_REJECTED", status_code, start, attempt, url, "authentication rejected"
+                )
             response.raise_for_status()
-            return response.json(), {
-                "status": "LIVE",
-                "http_status": status_code,
-                "latency_ms": round((time.perf_counter() - start) * 1000),
-                "attempts": attempt,
-                "fetched_at": iso_now(),
-                "error": None,
-                "url": url,
-            }
+            return response.json(), _health("LIVE", status_code, start, attempt, url, None)
         except Exception as exc:
             last_error = f"{type(exc).__name__}"
             if attempt < retries:
                 time.sleep(backoff * attempt)
 
-    return None, {
-        "status": "FAILED",
-        "http_status": status_code,
-        "latency_ms": round((time.perf_counter() - start) * 1000),
-        "attempts": retries,
-        "fetched_at": iso_now(),
-        "error": last_error,
-        "url": url,
-    }
+    return None, _health("FAILED", status_code, start, retries, url, last_error)

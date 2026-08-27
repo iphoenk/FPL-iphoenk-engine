@@ -2,12 +2,13 @@
 
 Canonical status: ACTIVE
 Canonical roadmap owner: V3 operational stream
-Current production release: V3.21.0
-Current production schema: 49
-Production acceptance: COMPLETE on 27 August 2026
-Production source commit: `da2be79045c0eb1015b75697eb24b030ffaa4abe`
-Production workflow run: `33047071671`
-Production scope: Weather Intelligence + Report Transparency + Calibration Visibility
+Current release candidate: V3.22.0
+Current candidate schema: 49
+Accepted production baseline: V3.21.0 / schema49
+Candidate production acceptance: PENDING_POST_MERGE_RUNTIME_VALIDATION
+Candidate PR: `#47`
+Candidate CI runs: `33055271837`, `33055599122`
+Candidate scope: Runtime Optimization Foundation, Fast <10s, Resource/Storage Governance, Decision-Neutral Player Features
 
 This file is the single human-readable master roadmap for the operational V3 stream. Every V3 feature, refactor, hardening change and release-governance change must update this file in the same pull request.
 
@@ -50,6 +51,9 @@ This file is the single human-readable master roadmap for the operational V3 str
 27. Every visible report must make all 15 OWNED selection evidence auditable with current-GW xPts, uncertainty, selection score and lineup/choice state.
 28. Formula correctness and predictive accuracy are separate claims; predictive accuracy requires settled frozen forecasts.
 29. Confidence labels must be monitored for calibration drift rather than forced to HIGH.
+30. FAST decision regeneration has a 10-second target and may reuse only complete, contract-valid, fresh artifacts.
+31. Runtime Git history is not a database; persistent domain history belongs in explicit compact ledgers.
+32. Runtime optimization may not silently opt normalized player features into model behavior.
 
 ## A. Production keep-green
 | ID | Task | Status | Acceptance |
@@ -60,8 +64,8 @@ This file is the single human-readable master roadmap for the operational V3 str
 | V3-OPS-004 | Enhancement health | DONE | 8/8 ACTIVE |
 | V3-OPS-005 | 15 OWNED + 20 WATCHLIST | ACTIVE | exact counts, 5/position, no overlap |
 | V3-OPS-006 | Official authority / fail-soft optional sources | ACTIVE | no external overwrite |
-| V3-OPS-007 | Isolated runtime-data publication | ACTIVE | validated bridge publication only |
-| V3-OPS-008 | Runtime performance | MONITOR | under 45s budget |
+| V3-OPS-007 | Isolated runtime-data publication | ACTIVE | validated rolling current-state publication only |
+| V3-OPS-008 | Runtime performance | MONITOR | FAST target <10s; FULL separate budget |
 | V3-OPS-009 | Config ownership / anti-hardcode | ACTIVE | mutable policy registry/config-owned |
 | V3-OPS-010 | Release/version/README consistency | ACTIVE | CI consistency gate |
 | V3-OPS-011 | Rules Registry integrity | ACTIVE | active ruleset valid |
@@ -123,16 +127,35 @@ Release objective: add weather as bounded explanatory context, make lineup choic
 | V3-WXR-619 | Architecture/source/report contract gates | DONE | all applicable validators PASS |
 | V3-WXR-620 | Full CI/integration/runtime budget | DONE | unit + bounded runtime + 16.606s <45s PASS |
 | V3-WXR-621 | Production acceptance | DONE | production run 33047071671; runtime-data source commit `da2be79045c0eb1015b75697eb24b030ffaa4abe`; 10/10 weather coverage; zero unresolved venue identity |
-| V3-WXR-622 | Master Monitor V3.21 sync | DONE | authoritative task now validates 3.21.0/schema49, SOURCE V4, selection score, weather context and model-validation fields |
-
-### V3.21 boundary decision
-Weather remains inside Source Layer because it is optional external context with shared fixture inputs and fail-soft semantics. Creating a separate process would add operational surface without reducing meaningful coupling or failure blast radius. Report transparency remains inside the serving-output boundary because it does not create a new football decision; it exposes governed projection/lineup evidence already produced upstream.
+| V3-WXR-622 | Master Monitor V3.21 sync | DONE | authoritative task validated 3.21.0/schema49, SOURCE V4, selection score, weather context and model-validation fields |
 
 ### V3.21 model-validation decision
-`prediction_evaluation.py` already freezes the last pre-deadline forecast and settles completed Gameweeks using points MAE/RMSE, xMins MAE, starter Brier, clean-sheet Brier and Spearman. V3.21 does not claim accuracy before settlement. It surfaces the settled-sample state and keeps dynamic weighting gated by configured sample size.
+`prediction_evaluation.py` freezes the last pre-deadline forecast and settles completed Gameweeks using points MAE/RMSE, xMins MAE, starter Brier, clean-sheet Brier and Spearman. Predictive accuracy claims require settled samples.
 
-### V3.21 production evidence
-Production run `33047071671` on merge source `da2be79045c0eb1015b75697eb24b030ffaa4abe` completed full tests and production collect through isolated `runtime-data` publication. Runtime metadata reported engine `3.21.0`, schema `49`, 20 services, 16.606s total wall time against a 45s target, all report-serving contracts valid, 15 OWNED + 20 WATCHLIST valid, fixture-weather `available_count=10/10`, venue `unresolved_count=0`, and V3.21 selection transparency present in the primary decision payload.
+## C2. V3.22 Runtime Optimization Foundation
+Release objective: make frequent decision regeneration fast and resource-aware without changing serving schema, model behavior, Official authority or the 20-service domain boundary.
+
+| REC | Work item | Candidate status | Pre-merge evidence |
+| --- | --- | --- | --- |
+| REC-15 | Runtime SLO + profiler/resource telemetry | DONE, acceptance pending | FAST target 10s; resource metrics complete |
+| REC-16 | FAST/LIVE/FULL/DEEP execution profiles | DONE, acceptance pending | profile registry + bounded worker limits |
+| REC-17 | Decouple heavy official detail from FAST via fresh reuse | PHASE-1 DONE | ~5.3-5.6s refresh becomes ~9ms reuse |
+| REC-18 | Source/weather freshness reuse | PHASE-1 DONE | ~7.8s refresh becomes <1ms reuse |
+| REC-19 | Persisted runtime-artifact reuse | PHASE-1 DONE | reusable state retained across FAST cycle |
+| REC-20 | Normalized player-feature contract | PHASE-1 DONE | prediction path unchanged; explicit decision-neutral regression |
+| REC-28 | Split CI / FAST / FULL-DEEP workflows | DONE | PR CI executes FULL then FAST on same runner |
+| REC-29 | Shallow checkout + whitelist + rolling runtime-data | DONE, production proof pending | `fetch-depth:1`, no raw history publication |
+| REC-30 | Runtime resource regression guard | DONE | parent/child RSS, temp/seed/promotion bytes visible |
+| REC-09a | Stop new mutable data tracking on main | PHASE-1 DONE | `/data/**` ignored; tracked legacy cleanup deferred until cold-start proof |
+
+Pre-merge acceptance evidence:
+- CI run `33055271837`: architecture PASS, 147 tests PASS, FULL 18.656s, FAST 5.160s.
+- CI run `33055599122`: architecture PASS, 148 tests PASS including REC-20 guard, FULL 18.151s, FAST 5.113s.
+- FAST resource peak is stable at roughly 85 MB parent RSS and 109 MB child RSS.
+- FULL contracts: framework GREEN, prediction quality HEALTHY, Gate0 16/16, owned/watchlist/report/source/report-time contracts PASS.
+- Report-time external intelligence can remain `REFRESH_REQUIRED`; that is a truthful report-time state and not a runtime-integrity failure.
+
+V3.22 does not implement REC-01 or REC-02 model changes. `player_features.json` remains plumbing-only until those recommendations are separately developed, tested and attributed.
 
 ## D. P1 intelligence quality
 | ID | Task | Status |
@@ -170,7 +193,7 @@ Production run `33047071671` on merge source `da2be79045c0eb1015b75697eb24b030ff
 | V3-RPT-314 | Settled-prediction/calibration status | ACTIVE |
 | V3-RPT-315 | Material weather context / anomaly caveat | ACTIVE |
 
-Every visible report must explicitly show recommended formation, exact XI, Captain, Vice-Captain, Bench 1/2/3 and GK Bench, all 15 OWNED, all 20 WATCHLIST, and the V3.21 owned transparency fields.
+Every visible report must explicitly show recommended formation, exact XI, Captain, Vice-Captain, Bench 1/2/3 and GK Bench, all 15 OWNED, all 20 WATCHLIST, and the V3.21+ owned transparency fields.
 
 ## F. P2 strategic capabilities
 | ID | Task | Status |
@@ -197,6 +220,8 @@ Every visible report must explicitly show recommended formation, exact XI, Capta
 | V3-ENG-508 | Historical version-reference hygiene | ACTIVE |
 | V3-ENG-509 | Runtime artifact contract integrity | ACTIVE |
 | V3-ENG-510 | Weather no-direct-decision regression | ACTIVE |
+| V3-ENG-511 | FAST <10s SLO and resource telemetry | ACTIVE |
+| V3-ENG-512 | Rolling runtime-data publication / storage hygiene | ACTIVE |
 
 ## Release checklist for every V3 change
 1. Branch from current production `main`.
@@ -215,11 +240,11 @@ Every visible report must explicitly show recommended formation, exact XI, Capta
 14. 15 OWNED + 20 WATCHLIST PASS.
 15. Report serving PASS.
 16. Report-time intelligence PASS.
-17. Runtime budget PASS.
+17. Runtime/resource budget PASS.
 18. Merge only when PR is mergeable and CI GREEN.
 19. Confirm production collector and `runtime-data` publication.
 20. Verify Gate0 16/16, Core50, Extensions16, Enhancements8, overall GREEN, HEALTHY and GO.
-21. Verify weather artifact/source state and all-15 report transparency in production.
+21. Verify rolling publication manifest, whitelist, shallow-fetch policy and no unwanted runtime-history artifact.
 22. Move candidate tasks to DONE only after production evidence exists.
 23. Update FPL Master Monitor version/schema only after production acceptance.
 
@@ -229,8 +254,8 @@ A task is DONE only when implementation, deterministic tests, documentation, ver
 For external evidence, missing values may never be synthesized merely to keep health GREEN. For weather, correlation alone may never be presented as causation. For runtime artifacts, malformed JSON or contract mismatch may never be downgraded to an ordinary no-observation state when the producing service declared that artifact as its output. For prediction quality, passing deterministic formula tests is not evidence of forecasting accuracy; settled frozen forecasts are required.
 
 ## Execution order
-1. Keep V3.21.0 production GREEN and preserve the 20-service artifact-owned architecture.
+1. Complete V3.22.0 post-merge rolling-publication and production acceptance while preserving V3.21 decision behavior.
 2. Accumulate settled Gameweeks for projection-confidence and weather-performance calibration.
-3. Improve P1 intelligence evidence without weakening Official authority or fail-closed internal integrity.
-4. Complete user-facing report UX items, especially natural Bahasa Indonesia rendering and scheduled-report completeness.
+3. Implement REC-01 and REC-02 as separate, attributable model changes after normalized player-feature plumbing is accepted.
+4. Improve remaining P1 intelligence evidence without weakening Official authority or fail-closed internal integrity.
 5. Pursue P2 capabilities only when production V3 remains stable and their evidence contracts are explicit.

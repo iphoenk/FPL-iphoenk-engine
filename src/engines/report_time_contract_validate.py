@@ -9,7 +9,8 @@ from src.utils import DATA, ROOT, read_json
 def run() -> dict:
     machine_registry = read_json(ROOT / "config" / "sources" / "registry.json", {})
     report_registry = read_json(ROOT / "config" / "sources" / "report_time_registry.json", {})
-    output = read_json(DATA / "report_time_intelligence.json", {})
+    technical = read_json(DATA / "technical_appendix.json", {})
+    output = technical.get("report_time_intelligence") or {}
     user = read_json(DATA / "user_report.json", {})
 
     machine = {row.get("id"): row for row in machine_registry.get("sources") or []}

@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.9.4.1
+# FPL iphoenk Engine V4.9.4.2
 
 A production-oriented personal FPL data platform.
 
@@ -218,3 +218,12 @@ See `docs/v4-microservices.md` for service ownership, failure semantics, and pre
 - Scorecard projection consumes `data/effective_plan_v4.json`, not the optimizer lineup directly. This means projected team points always describe the effective human plan while still exposing the model alternative for comparison.
 - `GO` is a recommendation state, not an automatic command. `execution_authorized` remains false until the effective plan has an explicit `FINAL_LOCKED` user status and all other governance gates pass.
 - The V4.9.4.1 quality gate requires all eleven service contracts, previous-GW baseline lineage, stale-override expiry, optimizer/advisory separation, effective-plan lineage, and human-final-authority semantics to pass before production publish.
+
+## V4.9.4.2 architecture hygiene and diagnostic isolation
+
+- Core daily data now passes unit tests, the eleven-service orchestrator, centralized quality gate, and core acceptance summary before it is persisted. Advanced-enrichment ablation runs afterward as a strict post-publish diagnostic.
+- Ablation parity remains fail-closed for the diagnostic itself; a broken full-shadow harness still makes the workflow visibly fail, but it can no longer prevent otherwise-valid price, prediction, health, effective-plan, and scorecard data from being published first.
+- Successful ablation output is persisted separately after its diagnostic assertions pass.
+- `snapshot.v1` is bumped to schema version 492 because projection-baseline authority became part of the contract; the service contract registry rejects older raw snapshots.
+- The redundant manually-maintained `IMPLEMENTATION_STATUS.json` is removed. README, service registries, runtime health artifacts, and CI assertions are the maintained sources of truth.
+- Regression tests lock the post-publish ablation ordering, forbid a silent `continue-on-error` downgrade, enforce raw-snapshot schema 492, and prevent the stale implementation-status file from being reintroduced.

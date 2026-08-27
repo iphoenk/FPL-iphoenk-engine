@@ -1,0 +1,39 @@
+{
+  "schema_version": 493,
+  "engine": "v4.9.3-validation-lifecycle",
+  "status": "PASS",
+  "simulated": false,
+  "snapshot": {
+    "status": "PASS",
+    "action": "FROZEN",
+    "gw": 2,
+    "deadline_time": "2026-08-28T17:30:00Z",
+    "players": 614,
+    "model_version": "v4.9.2-truthful-health",
+    "captured_at": "2026-08-27T10:45:41.952884+00:00",
+    "immutable": true
+  },
+  "reconciliation": {
+    "status": "SKIP",
+    "reason": "no_predeadline_snapshot",
+    "gw": 1
+  },
+  "eligibility": {
+    "model_version": "v4.9.2-truthful-health",
+    "eligible_samples": 0,
+    "eligible_gws": [],
+    "rejected_samples": [],
+    "archive_is_append_only": true,
+    "health_view_rebuilt": true
+  },
+  "guardrails": {
+    "raw_snapshot_only": true,
+    "official_api_refetch": false,
+    "retroactive_snapshot_rejected": true,
+    "deadline_snapshot_immutable": true,
+    "reconciliation_archive_immutable": true,
+    "reconciliation_idempotent": true,
+    "health_view_current_model_only": true,
+    "simulation_never_mutates_store": true
+  }
+}

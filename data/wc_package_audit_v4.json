@@ -1,6 +1,6 @@
 {
   "schema_version": 472,
-  "engine": "v4.7.2-wc-package-audit-performance-hotfix",
+  "engine": "v4.7.2-wc-package-audit-performance-hotfix-compact-profile",
   "wildcard_active": true,
   "affordability": {
     "price_basis": "owned_sell_cost_unowned_now_cost",
@@ -895,11 +895,11 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 1.3547,
+        "delta_objective": 1.3548,
         "delta_squad_xpts_3": 4.49,
         "delta_squad_xpts_5": 6.56,
         "delta_squad_xpts_10": 12.56,
-        "delta_squad_xpts_15": 19.18,
+        "delta_squad_xpts_15": 19.19,
         "delta_best_xi_xpts_5": 5.42,
         "delta_bench_adjusted_utility_5": 5.56,
         "risk_delta": 0.093,
@@ -934,9 +934,9 @@
             "xpts_3": 12.4,
             "xpts_5": 20.08,
             "xpts_10": 39.71,
-            "xpts_15": 59.81,
+            "xpts_15": 59.82,
             "uncertainty": 0.203,
-            "objective": 4.0768
+            "objective": 4.0769
           }
         ]
       },
@@ -949,7 +949,7 @@
         "delta_squad_xpts_3": 3.59,
         "delta_squad_xpts_5": 5.02,
         "delta_squad_xpts_10": 9.44,
-        "delta_squad_xpts_15": 14.53,
+        "delta_squad_xpts_15": 14.54,
         "delta_best_xi_xpts_5": 5.02,
         "delta_bench_adjusted_utility_5": 5.02,
         "risk_delta": 0.075,
@@ -984,9 +984,9 @@
             "xpts_3": 12.4,
             "xpts_5": 20.08,
             "xpts_10": 39.71,
-            "xpts_15": 59.81,
+            "xpts_15": 59.82,
             "uncertainty": 0.203,
-            "objective": 4.0768
+            "objective": 4.0769
           }
         ]
       }
@@ -1235,7 +1235,7 @@
         "delta_squad_xpts_3": 8.55,
         "delta_squad_xpts_5": 12.43,
         "delta_squad_xpts_10": 24.56,
-        "delta_squad_xpts_15": 37.04,
+        "delta_squad_xpts_15": 37.05,
         "delta_best_xi_xpts_5": 10.92,
         "delta_bench_adjusted_utility_5": 11.1,
         "risk_delta": 0.173,
@@ -1284,9 +1284,9 @@
             "xpts_3": 12.4,
             "xpts_5": 20.08,
             "xpts_10": 39.71,
-            "xpts_15": 59.81,
+            "xpts_15": 59.82,
             "uncertainty": 0.203,
-            "objective": 4.0768
+            "objective": 4.0769
           },
           {
             "element": 94,
@@ -1941,11 +1941,11 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 3.7855,
+        "delta_objective": 3.7856,
         "delta_squad_xpts_3": 12.29,
         "delta_squad_xpts_5": 18.2,
         "delta_squad_xpts_10": 36.83,
-        "delta_squad_xpts_15": 55.1,
+        "delta_squad_xpts_15": 55.11,
         "delta_best_xi_xpts_5": 16.7,
         "delta_bench_adjusted_utility_5": 16.88,
         "risk_delta": 0.415,
@@ -2022,9 +2022,9 @@
             "xpts_3": 12.4,
             "xpts_5": 20.08,
             "xpts_10": 39.71,
-            "xpts_15": 59.81,
+            "xpts_15": 59.82,
             "uncertainty": 0.203,
-            "objective": 4.0768
+            "objective": 4.0769
           },
           {
             "element": 94,
@@ -3277,11 +3277,11 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 4.2709,
+        "delta_objective": 4.271,
         "delta_squad_xpts_3": 14.02,
         "delta_squad_xpts_5": 20.45,
         "delta_squad_xpts_10": 40.79,
-        "delta_squad_xpts_15": 61.99,
+        "delta_squad_xpts_15": 62.0,
         "delta_best_xi_xpts_5": 18.95,
         "delta_bench_adjusted_utility_5": 19.13,
         "risk_delta": 0.408,
@@ -3372,9 +3372,9 @@
             "xpts_3": 12.4,
             "xpts_5": 20.08,
             "xpts_10": 39.71,
-            "xpts_15": 59.81,
+            "xpts_15": 59.82,
             "uncertainty": 0.203,
-            "objective": 4.0768
+            "objective": 4.0769
           },
           {
             "element": 94,
@@ -3679,7 +3679,9 @@
   },
   "performance": {
     "metrics_cache_entries": 34503,
+    "metrics_cache_hits": 0,
     "evaluated_packages": 34503,
+    "keep_profiles": 1940,
     "frontier_per_position": 7,
     "beam_size": 28,
     "single_pass_metrics": true,
@@ -3688,7 +3690,11 @@
     "redundant_target_validation_removed": true,
     "candidate_reuse_supported": true,
     "packed_club_signature": true,
-    "top_packages_only_payload_materialization": true
+    "top_packages_only_payload_materialization": true,
+    "compact_keep_profile": true,
+    "scalar_delta_metrics": true,
+    "position_value_reuse": true,
+    "search_quality_reduction": false
   },
   "guardrails": {
     "max_per_club": 3,
@@ -3703,7 +3709,7 @@
     "owned_price_basis": "sell_cost",
     "unowned_price_basis": "now_cost",
     "ranking_metric": "risk-adjusted best-XI plus bench-adjusted 5GW utility",
-    "search": "shortlisted k<=2, bounded beam k=3-4, score-only compact memoized metrics",
+    "search": "shortlisted k<=2, bounded beam k=3-4, compact keep-profile evaluator",
     "frontier_per_position": 7,
     "beam_size": 28,
     "risk_penalty_enabled": true,

@@ -45,7 +45,7 @@
       "position": "DEF",
       "team": "Brighton",
       "xpts": 3.494,
-      "lower80": 0.956,
+      "lower80": 0.957,
       "upper80": 6.032,
       "start_probability": 0.7789,
       "bench_probability": 0.0221,
@@ -54,7 +54,7 @@
       "captain_score": 3.4697,
       "vice_score": 3.1992,
       "bench_score": 3.3477,
-      "interval_width": 5.076
+      "interval_width": 5.075
     },
     {
       "element": 8,
@@ -181,7 +181,7 @@
       "position": "FWD",
       "team": "Leeds",
       "xpts": 3.511,
-      "lower80": 1.027,
+      "lower80": 1.026,
       "upper80": 5.995,
       "start_probability": 0.8668,
       "bench_probability": 0.0133,
@@ -190,7 +190,7 @@
       "captain_score": 3.6114,
       "vice_score": 3.4016,
       "bench_score": 3.4542,
-      "interval_width": 4.968
+      "interval_width": 4.969
     }
   ],
   "captain": {

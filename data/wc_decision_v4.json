@@ -1,6 +1,6 @@
 {
   "schema_version": 492,
-  "engine": "v4.9.2-wc-optimizer-truthful-health",
+  "engine": "v4.9.2-wc-optimizer-truthful-health-exact-streaming",
   "wildcard_active": true,
   "budget_tenths": 1000,
   "baseline_itb_tenths": 5,
@@ -183,7 +183,7 @@
       },
       {
         "gw_offset": 4,
-        "xpts": 40.96,
+        "xpts": 40.95,
         "elements": [
           109,
           115,
@@ -219,9 +219,9 @@
   },
   "optimized": {
     "cost": 1000,
-    "objective": 60.4024,
+    "objective": 60.4035,
     "squad_xpts_3": 181.24,
-    "squad_xpts_5": 298.15,
+    "squad_xpts_5": 298.16,
     "squad_xpts_10": 593.91,
     "squad_xpts_15": 890.84,
     "best_xi_xpts_5": 229.81,
@@ -622,8 +622,16 @@
     "counter_copy_eliminated": true,
     "precomputed_club_bits": true,
     "bounded_top_k_same_beam": true,
+    "exact_streaming_topk": true,
+    "stable_tie_semantics": true,
+    "safe_objective_bound": true,
+    "fixed_position_finalist_scoring": true,
+    "finalist_materialization_removed": true,
+    "generated_states": 188763,
+    "objective_bound_pruned": 1782988,
     "beam_size_unchanged": true,
     "direct_challenger_position_index": true,
-    "value_term_consumed": true
+    "value_term_consumed": true,
+    "search_quality_reduction": false
   }
 }

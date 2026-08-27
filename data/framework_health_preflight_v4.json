@@ -6,11 +6,11 @@
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-27T09:02:05.272140+00:00",
-    "local_as_of": "2026-08-27T16:02:05.272140+07:00",
+    "as_of": "2026-08-27T10:45:37.989356+00:00",
+    "local_as_of": "2026-08-27T17:45:37.989356+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 1947.9,
+    "minutes_to_deadline": 1844.4,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -241,7 +241,7 @@
         "detail": {
           "fixture_distributions_checked": 1842,
           "enriched_prior_distributions": 1842,
-          "strong_direct_evidence_players": 71,
+          "strong_direct_evidence_players": 72,
           "strong_direct_evidence_min_pstart": 0.8207,
           "no_evidence_players": 92,
           "no_evidence_max_xmins": 7.0,
@@ -260,7 +260,7 @@
         "detail": {
           "fixture_distributions_checked": 1842,
           "enriched_prior_distributions": 1842,
-          "strong_direct_evidence_players": 71,
+          "strong_direct_evidence_players": 72,
           "strong_direct_evidence_min_pstart": 0.8207,
           "no_evidence_players": 92,
           "no_evidence_max_xmins": 7.0,
@@ -1112,7 +1112,7 @@
         ],
         "probe": "data_freshness",
         "detail": {
-          "age_minutes": 0.0,
+          "age_minutes": 0.1,
           "max_age_minutes": 90,
           "checkpoint_policy_id": "REGULAR_MONITOR"
         }
@@ -1334,7 +1334,7 @@
   "data_freshness": {
     "status": "PASS",
     "detail": {
-      "age_minutes": 0.0,
+      "age_minutes": 0.1,
       "max_age_minutes": 90,
       "checkpoint_policy_id": "REGULAR_MONITOR"
     }
@@ -1375,5 +1375,5 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 370.61
+  "performance_ms": 411.13
 }

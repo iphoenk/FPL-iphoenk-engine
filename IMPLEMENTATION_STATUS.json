@@ -21,27 +21,37 @@
     "correlated_monte_carlo_shadow": true,
     "isolated_team_review": true,
     "v3_v4_capability_parity_registry": true,
-    "official_historical_submission_reconciliation": "ADOPTED"
+    "official_historical_submission_reconciliation": "ADOPTED",
+    "robust_early_season_attacking_rates": "ADOPTED_AND_EXTENDED"
   },
   "production_parity": {
     "explicit_rec_coverage": true,
+    "rec02_robust_rates": "ADOPTED_AND_EXTENDED",
     "rec36_historical_submitted_team": "ADOPTED",
-    "open_blockers": ["REC-02", "REC-05", "REC-22", "REC-38"],
-    "next_execution_order": ["REC-02", "REC-05", "REC-22", "REC-38_REBASELINE"]
+    "open_blockers": ["REC-05", "REC-22", "REC-38"],
+    "next_execution_order": ["SUBSECOND_RUNTIME", "REC-05", "REC-22", "REC-38_REBASELINE"]
   },
   "acceptance": {
     "fresh_exact_fingerprint_real_shadow_cycles": 0,
     "required_real_shadow_cycles": 3,
     "prediction_acceptance": "BLOCKED_PENDING_SETTLED_EVIDENCE_AND_FROZEN_BASELINE",
-    "operational_acceptance": "BLOCKED_PENDING_PRODUCTION_PARITY_REBASELINE",
+    "operational_acceptance": "BLOCKED_PENDING_PRODUCTION_PARITY_REBASELINE_AND_SUBSECOND_RUNTIME",
     "production_candidate_eligible": false,
     "production_promotion_allowed": false,
     "manual_production_promotion_required": true
   },
+  "runtime_requirement": {
+    "decision_pipeline_end_to_end_seconds": "<1.0",
+    "hard_release_requirement": true,
+    "latest_recorded_shadow_wall_ms": 2916.005,
+    "status": "OPTIMIZATION_REQUIRED"
+  },
   "notes": [
     "V3.22.0 remains production authority and has advanced through REC-38 without a schema-version change.",
     "The V5 adopted production baseline remains intentionally pinned to the earlier exact V3.22.0 SHA until open parity blockers are closed.",
+    "REC-02 robust early-season attacking rates are adopted with adaptive shrinkage/winsorization while preserving the V5 historical-player prior.",
     "REC-36 historical submitted-team reconciliation is adopted, decision-neutral, and never overrides current pre-deadline user/authenticated authority.",
+    "V5 production candidacy now requires end-to-end runtime below one second; the latest stored shadow evidence is 2916.005 ms and therefore not yet acceptable.",
     "Advanced prediction and correlated simulation remain shadow-only until empirical calibration and non-regression gates pass."
   ]
 }

@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.9.4.2
+# FPL iphoenk Engine V4.9.4.3
 
 A production-oriented personal FPL data platform.
 
@@ -227,3 +227,13 @@ See `docs/v4-microservices.md` for service ownership, failure semantics, and pre
 - `snapshot.v1` is bumped to schema version 492 because projection-baseline authority became part of the contract; the service contract registry rejects older raw snapshots.
 - The redundant manually-maintained `IMPLEMENTATION_STATUS.json` is removed. README, service registries, runtime health artifacts, and CI assertions are the maintained sources of truth.
 - Regression tests lock the post-publish ablation ordering, forbid a silent `continue-on-error` downgrade, enforce raw-snapshot schema 492, and prevent the stale implementation-status file from being reintroduced.
+
+## V4.9.4.3 reconciliation truthfulness and deterministic runtime SLO
+
+- Post-GW starter truth comes only from Official FPL `stats.starts`; minutes are never used to infer whether a player started.
+- If Official FPL does not provide starter evidence, `actual_started` remains unknown and that row is excluded from start-probability Brier scoring while remaining eligible for minutes-MAE and p60 evaluation.
+- POST-FLIGHT Gate 0 validates the advisory engine plan and the effective user plan separately. Both must be legal, while the effective user plan remains the authoritative personal decision.
+- The optimization microservice enforces a hard deterministic decision-compute SLO below 5,000 ms for candidate construction, WC optimization, package audit, lineup optimization, and recommendation sanity.
+- External Official/community network latency is measured separately and is explicitly outside the deterministic <5s SLO; the engine does not mislabel variable internet latency as compute performance.
+- The eleven process-isolated services, prediction formulas, optimizer search widths, sell-value logic, human-authority semantics, calibration lifecycle, and post-publish ablation architecture remain unchanged.
+- Production acceptance on GitHub Actions passed 135 tests, all 11 services, Gate 0 16/16, dual-plan legality, strict ablation, and a 1.71s deterministic decision compute on the merge verification run.

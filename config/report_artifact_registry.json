@@ -1,6 +1,6 @@
 {
-  "schema_version": 4,
-  "registry": "REPORT_ARTIFACT_REGISTRY_V4",
+  "schema_version": 3,
+  "registry": "REPORT_ARTIFACT_REGISTRY_V3",
   "consumer_contract": {
     "owned_count": 15,
     "watchlist_total": 20,

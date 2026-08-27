@@ -9,6 +9,7 @@ from src.utils import ROOT
 SERVICE_REGISTRY = ROOT / "config" / "v3_service_registry.json"
 SOURCE_REGISTRY = ROOT / "config" / "sources" / "registry.json"
 COLLECTOR_POLICY = ROOT / "config" / "runtime" / "collector_policy.json"
+ARTIFACT_CONTRACTS = ROOT / "config" / "runtime" / "artifact_contracts.json"
 PROJECTION_POLICY = ROOT / "config" / "intelligence" / "projection.json"
 LINEUP_POLICY = ROOT / "config" / "intelligence" / "lineup_governance.json"
 DSS_CORE = ROOT / "config" / "dss_core_registry.json"
@@ -62,6 +63,7 @@ def run() -> dict:
     services = _load(SERVICE_REGISTRY)
     sources = _load(SOURCE_REGISTRY)
     collector = _load(COLLECTOR_POLICY)
+    artifact_contracts = _load(ARTIFACT_CONTRACTS)
     projection = _load(PROJECTION_POLICY)
     lineup_policy = _load(LINEUP_POLICY)
     framework_registries = {
@@ -86,6 +88,25 @@ def run() -> dict:
             if re.search(r"_gw\d+\.json$", str(path)):
                 errors.append(f"active source artifact embeds fixed GW: {row.get('id')}:{path}")
 
+    if artifact_contracts.get("registry") != "RUNTIME_ARTIFACT_CONTRACTS_V1":
+        errors.append("runtime artifact contract registry must be RUNTIME_ARTIFACT_CONTRACTS_V1")
+    artifact_policy = artifact_contracts.get("policy") or {}
+    for key in (
+        "validate_declared_json_before_acceptance",
+        "validate_latest_sidecar_when_present",
+        "malformed_json_is_integrity_failure",
+        "valid_empty_external_observations_are_allowed",
+    ):
+        if artifact_policy.get(key) is not True:
+            errors.append(f"runtime artifact policy missing {key}=true")
+    challenger_contract = (artifact_contracts.get("contracts") or {}).get("challenger_observations.json") or {}
+    if (challenger_contract.get("equals") or {}).get("schema_version") != 2:
+        errors.append("challenger_observations artifact contract must require schema_version=2")
+    if (challenger_contract.get("equals") or {}).get("contract") != "challenger_observation_v2":
+        errors.append("challenger_observations artifact contract must require challenger_observation_v2")
+    if (challenger_contract.get("types") or {}).get("observations") != "list":
+        errors.append("challenger_observations artifact contract must require observations list")
+
     for name, registry in framework_registries.items():
         _audit_required_paths(errors, name, registry)
 
@@ -103,6 +124,14 @@ def run() -> dict:
         errors.append("service-boundary ownership policy missing")
     if policy.get("single_owner_for_standard_official_network_fetches") is not True:
         errors.append("single Official snapshot owner policy missing")
+    for key in (
+        "declared_json_artifacts_are_validated_before_acceptance",
+        "artifact_contract_registry_owned",
+        "malformed_internal_artifact_is_integrity_failure",
+        "valid_empty_external_observations_remain_fail_soft",
+    ):
+        if policy.get(key) is not True:
+            errors.append(f"service policy missing {key}=true")
 
     active_modules: list[str] = []
     for service_name, spec in service_map.items():
@@ -138,9 +167,6 @@ def run() -> dict:
         if forbidden in engine_text:
             errors.append(f"src.engine compatibility facade still owns business logic: {forbidden}")
 
-    # V3.20.1 correctness layering: projection math lives in a neutral model
-    # component, while decision_intelligence is package-optimizer-only and may
-    # not become an accidental second Official fetch/projection entrypoint.
     decision_text = (ROOT / "src" / "engines" / "decision_intelligence.py").read_text(encoding="utf-8")
     for forbidden in ("src.sources.official_fpl", "get_json(", "def build_player_projections(", "def run()"):
         if forbidden in decision_text:
@@ -165,6 +191,12 @@ def run() -> dict:
         errors.append("orchestrator promotion failures must enter service criticality handling")
     if "_clear_failed_service_outputs" not in orchestrator_text:
         errors.append("noncritical service failure must quarantine stale owned outputs")
+    for required in ("validate_artifact", "validate_latest_sidecar", "artifact_validation"):
+        if required not in orchestrator_text:
+            errors.append(f"orchestrator artifact acceptance missing {required}")
+    artifact_module_text = (ROOT / "src" / "runtime_v3" / "artifact_contracts.py").read_text(encoding="utf-8")
+    if "json.loads(path.read_text" not in artifact_module_text:
+        errors.append("runtime artifact validator must parse JSON strictly")
 
     published_horizons = projection.get("published_horizons") or []
     if not published_horizons:
@@ -200,6 +232,7 @@ def run() -> dict:
         "active_model_ids": _active_model_ids(),
         "source_registry": sources.get("registry"),
         "service_registry_schema": services.get("schema_version"),
+        "artifact_contract_registry": artifact_contracts.get("registry"),
     }
     print(json.dumps(result, ensure_ascii=False))
     if errors:

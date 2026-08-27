@@ -5,6 +5,7 @@
     "reuse_requires_all_declared_service_artifacts": true,
     "stale_or_missing_reuse_falls_back_to_refresh": true,
     "reused_service_counts_as_dependency_complete": true,
+    "reused_service_latest_state_is_carried_forward": true,
     "fast_profile_must_preserve_decision_and_artifact_contracts": true,
     "profile_does_not_change_football_model_formulas": true
   },

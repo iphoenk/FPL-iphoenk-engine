@@ -17,13 +17,24 @@ def _load(name: str) -> dict:
         return json.load(fh)
 
 
+def _assert_version(obj: dict, label: str, minimum: int, prefix: str, field: str = "engine") -> None:
+    actual_schema = int(obj.get("schema_version", 0))
+    actual_version = str(obj.get(field, ""))
+    if actual_schema < minimum or not actual_version.startswith(prefix):
+        raise AssertionError(
+            f"stale or incompatible {label}: schema={actual_schema}, {field}={actual_version!r}; "
+            f"expected schema>={minimum} and {field} prefix {prefix!r}. "
+            "Run `python -m src.services.orchestrator daily --stats --deep-stats` "
+            "before invoking the quality gate."
+        )
+
+
 def _assert_framework_health() -> tuple[dict, dict]:
     pre = _load("framework_health_preflight_v4.json")
     post = _load("framework_health_v4.json")
 
     for obj, phase in ((pre, "preflight"), (post, "postflight")):
-        assert int(obj.get("schema_version", 0)) >= 491, obj
-        assert str(obj.get("engine", "")).startswith("v4.9.1-health-separation"), obj
+        _assert_version(obj, f"{phase} framework health", 492, "v4.9.2-truthful-health")
         assert obj.get("phase") == phase, obj
         assert obj.get("registry_integrity") is True, obj
         assert obj.get("overall") == obj.get("pipeline_health"), obj
@@ -43,6 +54,7 @@ def _assert_framework_health() -> tuple[dict, dict]:
         governance = obj.get("governance", {})
         assert governance.get("file_exists_is_not_sufficient_for_active") is True
         assert governance.get("critical_partial_blocks_unqualified_go") is True
+        assert governance.get("critical_warmup_blocks_unqualified_go") is True
         assert governance.get("pipeline_health_separate_from_prediction_health") is True
         assert governance.get("noncritical_partial_is_reported_not_hidden") is True
         assert governance.get("checkpoint_freshness_policy_enforced") is True
@@ -68,7 +80,7 @@ def _assert_framework_health() -> tuple[dict, dict]:
     assert governance.get("raw_optimizer_is_not_final_decision") is True
     assert governance.get("gate0_fail_blocks_go") is True
 
-    # V4.9.1 critical prediction capabilities must be backed by output evidence.
+    # V4.9.2 critical prediction capabilities must be backed by output evidence.
     core = {row["id"]: row for row in post["dss_core"]["items"]}
     for module_id in ("DSS-05", "DSS-35"):
         assert core[module_id]["status"] == "ACTIVE", core[module_id]
@@ -79,10 +91,16 @@ def _assert_framework_health() -> tuple[dict, dict]:
     enhancements = {row["id"]: row for row in post["enhancements"]["items"]}
     assert enhancements["ENH-01"]["status"] == "ACTIVE", enhancements["ENH-01"]
     assert post.get("pipeline_health") == "GREEN", post
-    assert post.get("prediction_health") == "GREEN", post
-    assert post.get("decision_engine") == "HEALTHY", post
     assert post.get("capability_coverage", {}).get("declared") == 74, post
-    assert post.get("go_allowed") is True, post
+    critical_warmup = list(post.get("critical_warmup") or [])
+    if critical_warmup:
+        assert post.get("prediction_health") == "AMBER", post
+        assert post.get("decision_engine") == "PROVISIONAL", post
+        assert post.get("go_allowed") is False, post
+    else:
+        assert post.get("prediction_health") == "GREEN", post
+        assert post.get("decision_engine") == "HEALTHY", post
+        assert post.get("go_allowed") is True, post
 
     return pre, post
 
@@ -94,8 +112,7 @@ def run() -> dict:
     reliability = validate_snapshot(latest)
     assert reliability["ok"], reliability
     assert latest.get("schema_version", 0) >= 40
-    assert int(latest.get("schema_version", 0)) >= 491
-    assert str(latest.get("engine_version", "")).startswith("4.9.1-independent-services")
+    _assert_version(latest, "latest snapshot", 492, "4.9.2-independent-services", field="engine_version")
     assert latest.get("meta", {}).get("simulation_never_authorizes_action") is True
     assert latest.get("meta", {}).get("service_contract_compatible") is True
     assert latest.get("meta", {}).get("service_boundaries_registry_driven") is True
@@ -107,9 +124,9 @@ def run() -> dict:
     assert abs(component_total - service_performance["engine_before_snapshot_write_ms"]) < 0.02, service_performance
 
     orchestration = _load("service_orchestration_v4.json")
-    assert int(orchestration.get("schema_version", 0)) >= 491, orchestration
-    assert str(orchestration.get("engine", "")).startswith("v4.9.1-service-orchestrator"), orchestration
+    _assert_version(orchestration, "service orchestration", 492, "v4.9.2-service-orchestrator")
     assert orchestration.get("status") == "PASS", orchestration
+    assert orchestration.get("stats_enabled") is True and orchestration.get("deep_stats_enabled") is True, orchestration
     services = orchestration.get("services") or []
     assert len(services) == 8 and all(row.get("status") == "PASS" for row in services), services
     assert all(row.get("boundary_state") == "INDEPENDENT" for row in services), services
@@ -120,6 +137,7 @@ def run() -> dict:
     og = orchestration.get("guardrails") or {}
     assert og.get("official_fpl_api_authority") == "raw_snapshot_only" and og.get("services_may_not_refetch_snapshot")
     assert og.get("appearance_formula_regression_tested") and og.get("prediction_quality_inputs_consumed")
+    assert og.get("truthful_competition_evidence") and og.get("critical_warmup_blocks_unqualified_go")
     assert og.get("optimizer_search_width_unchanged")
     assert og.get("gate0_checks_unchanged") == 16
 
@@ -129,17 +147,18 @@ def run() -> dict:
     predictions = _load("predictions_v4.json")
     players = predictions.get("players", [])
     coverage = predictions.get("input_coverage", {})
-    assert int(predictions.get("schema_version", 0)) >= 491
-    assert str(predictions.get("model_version", "")).startswith("v4.9.1-prediction-quality")
+    _assert_version(predictions, "predictions", 492, "v4.9.2-truthful-health", field="model_version")
     assert predictions.get("point_in_time") is True and len(players) >= 500, predictions
     assert coverage.get("advanced_matched", 0) > 0 and coverage.get("last_season_matched", 0) > 0, coverage
     assert 0 <= coverage.get("advanced_materially_distinct", -1) <= coverage.get("advanced_matched", 0), coverage
     assert coverage.get("advanced_decision_used_ratio", 0) >= .25, coverage
     assert predictions.get("capability_evidence", {}).get("dynamic_opponent_fixtures", 0) > 0
+    competition_evidence = predictions.get("capability_evidence", {})
+    assert 0 < competition_evidence.get("role_competition_adjustments", 0) < len(players), competition_evidence
+    assert competition_evidence.get("role_competition_factor_variants", 0) > 1, competition_evidence
 
     wc = _load("wc_decision_v4.json")
-    assert int(wc.get("schema_version", 0)) >= 491, wc
-    assert str(wc.get("engine", "")).startswith("v4.9.1-wc-optimizer-prediction-quality"), wc
+    _assert_version(wc, "WC decision", 492, "v4.9.2-wc-optimizer-truthful-health")
     assert wc.get("screened_players", 0) >= 500 and len(wc.get("optimized_elements", [])) == 15
     assert wc.get("classification") in {"KEEP_15", "OPTIONAL_IMPROVEMENT", "MATERIAL_UPGRADE"}
     wp = wc.get("performance", {})
@@ -210,8 +229,7 @@ def run() -> dict:
     assert timings.get("total_pipeline_ms", 0) > 0
 
     checkpoint = _load("checkpoint_decision_v4.json")
-    assert int(checkpoint.get("schema_version", 0)) >= 491, checkpoint
-    assert str(checkpoint.get("engine", "")).startswith("v4.9.1-checkpoint-governance"), checkpoint
+    _assert_version(checkpoint, "checkpoint decision", 492, "v4.9.2-checkpoint-governance")
     assert checkpoint.get("checkpoint_context") == latest.get("checkpoint_context"), checkpoint
     action = checkpoint.get("action_state")
     assert action in {"HOLD", "REVIEW_REQUIRED", "GO", "EMERGENCY_UPDATE_ONLY", "REFRESH_REQUIRED", "BLOCKED", "SIMULATION_ONLY"}, checkpoint
@@ -284,7 +302,7 @@ def run() -> dict:
         "orchestration_ms": orchestration.get("duration_ms"),
         "pipeline_ms": timings["total_pipeline_ms"],
     }
-    print("V4.9.1 PREDICTION-QUALITY SERVICE GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.9.2 TRUTHFUL-HEALTH SERVICE GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

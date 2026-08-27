@@ -1,243 +1,205 @@
-# FPL iphoenk Engine v3.19.0
+# FPL iphoenk Engine v3.20.0
 
 Production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
-## Current release
-- Engine version: `3.19.0`
-- Schema version: `48`
-- Release metadata source of truth: `src/version.py`
-- Production runtime: bounded-process V3 microservices
-- Runtime state is published to `runtime-data`; `main/data/**` is historical/source-repository material only.
-- Official FPL remains the only native authority. Challenger/enrichment/report-time sources may not overwrite native Official fields.
-- Canonical V3 roadmap and release checklist: `MASTER_TASK_LIST_V3.md`.
+## Current release state
+- Production baseline: `3.19.0` / schema `48` until V3.20 production acceptance completes.
+- Release candidate: `3.20.0` / schema `48`.
+- Release metadata source of truth: `src/version.py`.
+- Service Registry: schema `11`, contract `v3.20-architecture-hardening-15-owned-20-watchlist`.
+- Machine Source Registry: `SOURCE_REGISTRY_V3`.
+- Runtime state publishes only to `runtime-data`; `main/data/**` is historical/source-repository material.
+- Official FPL remains the only native authority. Challenger, enrichment and report-time sources may not overwrite Official-native fields.
+- Canonical roadmap and Definition of Done: `MASTER_TASK_LIST_V3.md`.
+
+## v3.20.0 Architecture Hardening
+V3.20 removes the remaining active monolithic base collector and consolidates mutable infrastructure policy under explicit registry/config ownership. The user-facing report/serving contract remains schema 48, so this is an engine architecture release without a serving-schema bump.
+
+### Base runtime ownership
+The old active `collector -> src.engine` boundary is replaced by artifact-owned services:
+1. `official_snapshot`: single owner for standard Official public baseline fetches.
+2. `team_state`: authoritative squad identity, purchase/sell ledger, team value and chip state.
+3. `market_state`: universe, current-price cache and Official transfer-pressure baseline.
+4. `live_state`: personalized submitted-picks/live-event scoring state.
+5. `advanced_stats`: current enrichment sync and optional deep-stat refresh.
+6. `base_snapshot`: deterministic fan-in that assembles `latest.json`, `native.json` and history without doing new network fetches or football decisions.
+
+`src.engine` remains only as a compatibility/manual CLI facade. It is forbidden from the active production service registry.
+
+### Why these boundaries were split
+The former collector owned unrelated network, finance, market, live-scoring, statistics and snapshot responsibilities. Those domains have distinct artifacts and failure semantics, so separating them reduces coupling and clarifies ownership. Existing price, prediction, lineup, governance, watchlist, reporting and report-materializer services remain coarse-grained because they still have cohesive decision/artifact ownership. V3.20 explicitly rejects splitting services merely because a Python file is large.
+
+### Generic DAG orchestration
+`src/runtime_v3/orchestrator.py` no longer special-cases a service named `collector`. Any service with no dependency may be a root. The DAG validates unknown dependencies, self-dependencies, cycles, unsupported/inline commands and critical-service failures. Isolated services promote only declared artifacts and declared `latest.json` keys.
+
+`official_snapshot.json` is an internal ephemeral artifact. Downstream prediction and historical-prior services consume it during the run instead of refetching the same standard Official baseline, and the orchestrator removes the snapshot before publication.
+
+### Configuration and registry ownership
+- `src/version.py`: engine/schema/service title.
+- `config/engine.json`: mutable engine/user runtime settings such as team ID, retry/backoff/timeout, reconstruction baseline, horizons and stale windows.
+- `config/runtime/collector_policy.json`: collector timezone, primary/adaptive/deep-stats schedules, deadline-intensive window, match window and fixture-probe policy.
+- `config/sources/registry.json`: unattended source authority, network locations, source season/files, ingestion timeouts and adapters.
+- `config/sources/report_time_registry.json`: report-time OneFPL/fixture-strategy/pundit/community/verified-news classes and freshness policy.
+- `config/rules/registry.json` + active ruleset: FPL legality/scoring/chip/finance rules.
+- `config/v3_service_registry.json`: active service DAG, process isolation, inputs/outputs, performance budget and orchestration policy.
+- `config/intelligence/*.json`: projection, xMins, package, lineup, price, reporting and calibration policies.
+- `config/report_artifact_registry.json`: serving artifact contract.
+
+Legacy `config/sources.json` is removed. Source adapters are not allowed to carry a second mutable network/source policy in Python.
+
+### Current advanced-stat aliases
+Per-GW artifacts remain archives, but active current evidence uses:
+- `data/stats/shots_current.json`
+- `data/stats/playermatchstats_current.json`
+
+Active Source/DSS registries may not pin `_gw1.json` or any fixed Gameweek for evidence intended to mean current state.
+
+### Deep-stats workflow
+The standalone deep-stats workflow that committed `data/**` directly to `main` is removed. Deep stats now use the same production workflow and validated `runtime-data` publication path. The cadence is owned by `config/runtime/collector_policy.json`.
+
+### Semantic model IDs
+Active model identity is independent of engine release numbering. Projection configuration uses semantic model identifiers rather than labels such as `v310` or `v313`. Historical compatibility filenames/modules may remain for backward compatibility, but they are forbidden as active service entrypoints.
+
+### Architecture anti-regression gate
+`python -m src.engines.architecture_contract_validate` is a mandatory CI/integration/production gate. It rejects, among other things:
+- reintroduction of `config/sources.json`;
+- an active monolithic `collector` service;
+- active `src.engine`, `src.reliability_overlay` or old version-stamped service entrypoints;
+- inline Python commands in the Service Registry;
+- fixed-GW active source/DSS evidence paths;
+- stale engine-version model IDs;
+- missing collector-policy workflow schedules;
+- direct workflow pushes of runtime data to `main`;
+- reintroduction of the legacy deep-stats workflow;
+- prediction/historical-prior services that stop consuming the shared Official snapshot.
+
+### Schema decision
+- Engine: `3.20.0`.
+- Serving/runtime schema: `48`, unchanged because `decision_brief`, `deep_review_payload`, 15+20 roster contract and report-time evidence contract are unchanged.
+- Service Registry schema: `11`.
+- Source Registry: `SOURCE_REGISTRY_V3`.
+
+V3.20 remains a release candidate until PR CI, bounded integration, all production contracts, merge, production collector and `runtime-data` framework verification are complete.
 
 ## v3.19.0 Report-Time Intelligence
-V3.19 separates machine-ingested sources from report-time web intelligence. Sources that are useful for decision context but inappropriate or unreliable for unattended collector access are refreshed when a scheduled or on-demand report is prepared, then compared with DSS without mutating DSS state.
+V3.19 separates machine-ingested sources from report-time web intelligence. Sources useful for decision context but inappropriate or unreliable for unattended collector access are refreshed when a scheduled or on-demand report is prepared, then compared with DSS without silently mutating DSS.
 
 Report-time source classes:
-- `MODEL_CHALLENGER`: OneFPL price/transfer/captaincy/planner context. OneFPL is disabled in the automated collector and remains available through report-time web review.
-- `FIXTURE_STRATEGY_EXPERT`: Ben Crellin for blank/double Gameweeks, fixture rearrangements, schedule probabilities and chip-window context. Fixture strategy does not vote on player projection.
-- `PUNDIT_CONSENSUS`: FPL Harry, FPL Focal, Let's Talk FPL, BigManBakar and Fantasy Football Scout editorial views. Current opinions are aggregated and explicitly labelled `ALIGN`, `DIVERGE`, `REVIEW_DIVERGENCE` or `NEUTRAL` against DSS.
-- `COMMUNITY_SIGNAL`: Reddit r/FantasyPL eye-test, role/rotation/injury observations, captain polls and sentiment. Community signals require independent cross-check before fact promotion.
-- `VERIFIED_NEWS`: Premier League/official-club factual availability, suspension, fixture confirmation and manager-quote context.
+- `MODEL_CHALLENGER`: OneFPL price/transfer/captaincy/planner context through normal report-time web access.
+- `FIXTURE_STRATEGY_EXPERT`: Ben Crellin for blank/double Gameweeks, fixture rearrangements, schedule probabilities and chip-window context. This class does not vote on player projection.
+- `PUNDIT_CONSENSUS`: FPL Harry, FPL Focal, Let's Talk FPL, BigManBakar and Fantasy Football Scout editorial views.
+- `COMMUNITY_SIGNAL`: Reddit r/FantasyPL eye-test, role/rotation/injury leads, captain polls and sentiment. Community evidence requires corroboration before fact promotion.
+- `VERIFIED_NEWS`: Premier League/official-club factual availability, suspension, fixture confirmation and manager/team news.
 
-V3.19 governance:
-- Official FPL remains native authority and verified facts outrank opinion/community evidence.
-- report-time evidence never automatically changes DSS rankings, OWNED/WATCHLIST membership, captaincy or transfer decisions.
-- pundit consensus is advisory; disagreement with DSS must be surfaced rather than hidden.
-- stale pundit evidence is not counted as current consensus.
-- report-time evidence requires source URL, observation time, source class, topic, subject, stance and summary.
-- OneFPL automated GitHub Actions fetches are removed; no browser spoofing or access-control bypass is used.
-- `decision_brief`, `deep_review_payload` and `user_report` carry report-time intelligence state. Without a fresh web review they explicitly report `REFRESH_REQUIRED` rather than implying evidence was checked.
+Pundit consensus is explicitly compared with DSS as `ALIGN`, `DIVERGE`, `REVIEW_DIVERGENCE` or `NEUTRAL`; vote count is advisory and never becomes automatic DSS authority. A machine snapshot without a fresh visible-report web pass reports `REFRESH_REQUIRED` rather than pretending external evidence was checked.
 
-Schema is 48 because the report serving contract adds report-time intelligence and `DEEP_REVIEW_PAYLOAD_V2`.
+V3.19.0 production acceptance completed on 27 August 2026. PR #32 merged as `4b5f5f72146400a25c956e7628105b7680effe84`; production collector and `runtime-data` publication passed; framework was GREEN/HEALTHY/GO with Gate0 16/16, Core50, Extensions16 and Enhancements8.
 
-Production acceptance completed on 27 August 2026. PR #32 merged to `main` as `4b5f5f72146400a25c956e7628105b7680effe84`. Final PR workflow run `33028670999` passed the full regression suite, bounded microservices integration, source capability contract, production decision/report contract, 15 OWNED + 20 WATCHLIST contract, fast report-serving contract, report-time intelligence contract and runtime budget. Production push run `33028851447` then completed the collector, all production validators and validated publication to `runtime-data`. The published framework is GREEN/HEALTHY with GO allowed, Gate 0 16/16 PASS, DSS Core 50/50 ACTIVE, DSS Extensions 16/16 ACTIVE and Enhancement Layers 8/8 ACTIVE. OneFPL is DISABLED in the unattended collector with zero collector observations; the published `decision_brief` correctly emits `report_time_intelligence.status=REFRESH_REQUIRED` until the visible-report web pass is performed. The active FPL Master Monitor task is configured to perform that fresh report-time pass for every visible scheduled/on-demand/deadline report while keeping silent hourly internal checks bounded.
+## v3.18 Structured Challenger and configuration hardening
+V3.18 introduced normalized challenger observations, provenance/freshness, reachability-vs-capability health, TTL/LKG/stale/disagreement governance and non-authoritative Price Radar challenger context. V3.18 also established registry-owned framework expected counts, config-owned Price Radar/refresh/horizon policies and version-neutral active prediction/price service entrypoints.
 
-## v3.18.1 OneFPL Adapter Reliability Patch
-V3.18.1 fixed OneFPL source-health semantics and public structured-read resilience without changing the runtime artifact schema. It established explicit evidence that unattended server-side access can be restricted. V3.19 supersedes the automated OneFPL collector path by delegating OneFPL to report-time web intelligence.
+V3.18.1 diagnosed OneFPL unattended-access restrictions explicitly. V3.19 then delegated OneFPL to report-time web intelligence instead of attempting access-control workarounds.
 
-Patch changes:
-- OneFPL parser contract upgraded to `onefpl-price-v2`
-- source reachability probe separated from structured data retrieval
-- approved public structured fallback URL was registry-owned rather than hardcoded in Python
-- HTTP 401/402/403/429 on structured endpoints represented structured-access restriction
-- every structured endpoint attempt recorded with URL role, HTTP status, latency and error state
-- no browser/user-agent spoofing was used
-- Official FPL authority, fail-soft challenger behavior and no-fabrication guarantees remained unchanged
-
-## v3.18.0 Structured Challenger Ingestion + Architecture Hardening
-V3.18.0 introduced bounded normalized challenger observations with explicit provenance and capability health. Missing challenger values remain missing or explicit safe fallback; Official FPL remains native authority.
-
-Release changes:
-- normalized challenger observations with source/capability/status/value/payload, fetched/observed timestamps, provenance, confidence, stale state, TTL and parser/schema metadata
-- separate source reachability from capability-data health
-- last-known-good and stale governance without treating stale data as current
-- explicit cross-source disagreement state
-- non-authoritative challenger context in Price Radar
-- Price Radar thresholds/capacity and refresh cadence moved to config ownership
-- projection and strategic horizons moved to engine configuration ownership
-- DSS Core, Extension, Enhancement and Gate0 expected counts declared by their registries
-- production validators consume registry/config contracts rather than duplicating mutable values
-- active prediction and price service entrypoints are version-neutral
-- coarse-grained service boundaries retained where shared HTTP caching or serial artifact ownership makes further process splitting counterproductive
-
-Production acceptance completed on 26 August 2026. The published framework was GREEN/HEALTHY with GO allowed, Gate0 16/16 PASS, DSS Core 50/50 ACTIVE, DSS Extensions 16/16 ACTIVE and Enhancement Layers 8/8 ACTIVE.
-
-## v3.17.1 Master Task Governance
-V3.17.1 established `MASTER_TASK_LIST_V3.md` as the single human-readable master roadmap for the operational V3 stream.
-
-Every V3 feature, refactor, hardening change and release-governance change must update the master task list in the same pull request. A task is not DONE merely because code exists or a registry label is green; the applicable tests, documentation, release consistency and production evidence must agree.
-
-## v3.17 Full DSS operationalization
-V3.17 converts framework-only DSS capability states into explicit runtime evidence contracts. A module is ACTIVE only when its evaluator executes and produces evidence or an explicit safe-fallback state; unavailable external signals are never fabricated.
-
-Release acceptance requires:
-- Gate 0: 16/16 PASS
-- DSS Core: 50/50 ACTIVE
-- DSS Extensions: 16/16 ACTIVE
-- Enhancement Layers: 8/8 ACTIVE
-- overall framework GREEN and `go_allowed=true`
-
-## v3.16.1 Configuration ownership hardening
-Configuration ownership:
-- `src/version.py` owns engine/schema/service release metadata.
-- `config/engine.json` owns mutable runtime/user settings such as team ID, polling intervals, API retry/backoff/timeout, reconstruction baseline GW, projection horizons, and report list sizes.
-- `config/intelligence/price_radar.json` owns mutable Price Radar thresholds, urgency/timing policy, timezone and market-watch capacity.
-- `config/intelligence/refresh_policy.json` owns normal/deadline/match refresh cadence.
-- Environment variables may override explicitly supported runtime settings.
-- `config/rules/registry.json` + active ruleset own FPL squad, lineup, scoring, chip, finance, and BPS rules.
-- `config/v3_service_registry.json` owns service DAG/runtime orchestration settings.
-- `config/sources/registry.json` owns unattended machine-source authority and adapters.
-- `config/sources/report_time_registry.json` owns report-time source classes, domains, query intents, freshness and consensus policy.
-
-## v3.16 Source Registry + Adapter Layer
-V3.16 introduced dedicated source infrastructure with registry-driven authority classes, isolated adapters, parallel health probes, fail-soft challenger/enrichment sources, and LiveFPL as a first-class challenger.
-
-Important distinction: source reachability does not automatically mean structured data ingestion. Official FPL is native authority; challenger sources are independent evidence only.
-
-## Design goal
-Combine Official FPL API authority, a single authoritative FPL 2026/27 ruleset, persisted native team/event state, expanded Official detail surfaces, optional authenticated read-only Official data, community enrichments, live score/persistence, exact team-value logic, leakage-safe modelling, provenance/freshness, framework health, snapshot integrity, DSS-driven watchlist selection, decision-aware price monitoring, and report-time expert/community intelligence.
+## V3 operational invariants
+- Gate 0: 16/16 PASS for unqualified GO.
+- DSS Core: 50/50 ACTIVE.
+- DSS Extensions: 16/16 ACTIVE.
+- Enhancement Layers: 8/8 ACTIVE.
+- OWNED: exactly 15 authoritative players.
+- WATCHLIST: exactly 20 external players, exactly 5 GK + 5 DEF + 5 MID + 5 FWD, with no OWNED overlap.
+- Official FPL native fields and scoring always outrank third-party model/opinion evidence.
+- Missing external observations are never fabricated.
+- Critical services fail closed; optional external evidence fails soft.
+- Microservice boundaries follow data/artifact ownership and failure isolation, not line count.
 
 ## Rules authority
 `src/rules.py` loads the active ruleset from `config/rules/registry.json` and is the code-facing rules interface.
 
-Regression-tested 2026/27 rules include:
-- squad size/position composition and max three players per club
-- legal starting formations and captain/vice constraints
-- appearance points and goals: GK +10, DEF +6, MID +5, FWD +4
-- assists, clean sheets, saves, penalties, cards, own goals, bonus
-- defensive contribution thresholds and caps
-- Wildcard, Free Hit, Triple Captain and Bench Boost rules across both season halves
-- public purchase/sell-value reconstruction
+Regression-tested 2026/27 rules include squad composition, max three per club, legal starting formations, captain/vice constraints, appearance and position-specific scoring, assists, clean sheets, saves, penalties, cards, own goals, bonus, defensive contribution thresholds/caps, Wildcard, Free Hit, Triple Captain, Bench Boost and public purchase/sell-value reconstruction.
 
-Local reconstruction is an audit aid only. It must not override Official FPL native fields such as total points, bonus allocation, rank, current price, or confirmed scoring.
+Local reconstruction is an audit aid only and may not override Official FPL native scoring, rank, price or confirmed fields.
 
 ## Source authority
-1. Direct Official FPL native fields and Official scoring
-2. Authenticated Official FPL native account fields when valid and directly applicable
-3. Persisted Official-FPL-derived runtime bridge on `runtime-data`
-4. Official public detail/secondary surfaces and verified official team/news context
-5. Structured analytics such as FPL Core Insights and vaastav
-6. Registered model challengers such as LiveFPL when valid structured observations exist
-7. Report-time model/strategy/pundit/community intelligence under `REPORT_TIME_SOURCE_REGISTRY_V1`
+1. Direct Official FPL native fields and scoring.
+2. Authenticated Official FPL read-only account fields when valid and directly applicable.
+3. Persisted Official-derived runtime bridge on `runtime-data`.
+4. Verified official team/competition news and Official detail surfaces.
+5. Structured analytics such as FPL Core Insights and vaastav.
+6. Registered machine challengers such as LiveFPL when valid structured observations exist.
+7. Report-time model/strategy/pundit/community intelligence under `REPORT_TIME_SOURCE_REGISTRY_V1`.
 
-Third-party predictions and opinions are never native authority. Failed challenger/enrichment/report-time sources must fail soft and must not corrupt the Official baseline.
-
-## Report-time intelligence
-Scheduled and on-demand user reports perform a fresh web intelligence pass when applicable. The report-time registry defines which evidence to seek and its authority ceiling; it does not authorize scraping or bypassing access controls.
-
-The synthesis sequence is:
-1. Official and verified facts.
-2. DSS/data-model output.
-3. OneFPL/model-challenger context when available through normal report-time web access.
-4. Ben Crellin fixture/schedule context.
-5. Current pundit consensus and explicit comparison against DSS.
-6. Reddit/community signals as leads requiring cross-check.
-7. Final decision remains governed by DSS plus verified evidence, not by vote count.
+Third-party predictions and opinions are evidence, never native authority.
 
 ## Runtime architecture
-The V3 production runtime is a bounded-process microservice orchestrator driven by `config/v3_service_registry.json`.
+The active production/candidate runtime is a bounded-process dependency-aware microservice orchestrator driven by `config/v3_service_registry.json`.
 
 Key properties:
-- dependency-aware DAG scheduling
-- bounded parallelism and service timeouts
-- isolated service work directories
-- shared Official HTTP cache
-- fail-closed critical services
-- validated artifact promotion
-- runtime performance budget and metadata
-- production publication to isolated `runtime-data`
-- version-neutral active service entrypoints
-- coarse-grained process boundaries chosen by dependency/data ownership rather than file size
-- report-time web intelligence remains in the report boundary and is not a new collector microservice
+- generic root DAG scheduling;
+- bounded parallelism and per-service timeout;
+- isolated service work directories where appropriate;
+- a shared Official HTTP cache plus a single baseline Official snapshot owner;
+- declared inputs/artifacts and deterministic fan-in;
+- fail-closed critical services;
+- runtime performance budget and metadata;
+- validated publication to isolated `runtime-data`;
+- version-neutral active service entrypoints;
+- report-time web intelligence remains in the report boundary rather than becoming an unattended crawler service.
 
-## Framework governance
-- Gate 0 registry: 16 hard constraint checks
-- DSS Core registry: 50 modules
-- DSS Extension registry: 16 modules
-- Enhancement Layers registry: 8 layers
-- PRE-FLIGHT and POST-FLIGHT framework health
-- centralized production contract validation
+## Reporting contract
+Every visible operational report must remain decision-first and include all 15 OWNED plus all 20 governed external WATCHLIST players. The current Master Monitor additionally requires explicit recommended formation, exact Starting XI, Captain, Vice-Captain, Bench 1, Bench 2, Bench 3 and GK Bench on every visible report, even when unchanged.
 
-Registry presence alone is not sufficient for a module to be considered operational. Runtime evidence is required for ACTIVE health.
+Report-time intelligence is refreshed for visible scheduled/on-demand/deadline reports. Silent hourly internal checks remain bounded and do not perform a broad pundit/community sweep unless a material alert/deadline/emergency trigger requires it.
 
-## Watchlist contract
-Operational reports use:
-- OWNED: exactly 15 players from the authoritative squad baseline
-- WATCHLIST: exactly 20 external players total
-- maximum 5 watchlist players per position
-- OWNED players are excluded from WATCHLIST
-- candidates are screened through DSS, not selected only from latest-Gameweek haul
+## Collector and report cadence
+Machine collector cadence is controlled by `config/runtime/collector_policy.json` and is separate from user-visible report cadence.
 
-## Price Radar
-Official current price and confirmed changes are authority. Engine trajectory dates remain derived estimates.
-
-Price pressure is an overlay, not a football decision. HIGH/CRITICAL price signals should only become actionable when they intersect an owned player or DSS-approved external candidate and materially affect affordability, sell value, or a preferred multi-GW package. LiveFPL structured challenger context remains non-authoritative. OneFPL is checked at report time and compared as advisory context rather than fetched by the unattended collector.
-
-## Authenticated Official read-only layer
-Optional authenticated Official access is precision-only and may never become a dependency for the public core engine.
-
-Allowlisted resource routes:
-- `GET /api/me/`
-- `GET /api/my-team/{team_id}/`
-- `GET /api/entry/{team_id}/transfers-latest/`
-
-Credential material and raw private payloads must never be persisted to public runtime artifacts.
-
-## Collector and reporting cadence
-Collector cadence and user-visible reports are separate.
-
-Normal reports:
+Normal visible reports:
 - 04:30 WIB Deep Review
 - 12:30 WIB Midday Tactical Monitor
 - 21:30 WIB Night Tactical + Price Monitor
 
-At every scheduled report and on-demand report, report-time web intelligence is refreshed subject to availability and freshness policy. Match Mode runs approximately every 3 hours while relevant PL/FPL matches are active. Deadline review timing is handled by report governance.
+Deadline/Match modes are governed separately by the Master Monitor. Deep-stat machine refresh runs through the production workflow and `runtime-data`, not through a workflow that commits runtime data to `main`.
 
 ## Main commands
 ```bash
 pip install -r requirements.txt
-python fpl_daily_tasks.py daily --stats
+python -m src.engines.architecture_contract_validate
 python -m src.runtime_v3.orchestrator --mode daily --stats
-python -m src.engines.price_service
-python -m src.engines.official_expansion
-python -m src.engines.authenticated_official
-python -m src.engines.report_time_intelligence
+python -m src.runtime_v3.orchestrator --mode daily --stats --deep-stats
+python -m src.engines.source_contract_validate
+python -m src.engines.production_contract_validate
+python -m src.engines.watchlist_contract_validate
+python -m src.engines.report_serving_validate
 python -m src.engines.report_time_contract_validate
+python fpl_daily_tasks.py daily --stats
 python fpl_daily_tasks.py deadline --stats
-python fpl_daily_tasks.py live
 ```
 
 ## Release governance
-Every version-changing commit must keep these surfaces consistent:
+Every version-changing release must keep these surfaces consistent:
 - `src/version.py`
 - runtime metadata
 - `README.md`
 - `IMPLEMENTATION_STATUS.json`
 - `config/engine.json` schema metadata
 - workflow display name
+- Service/Source/Report registries as applicable
 - release regression tests
 - `MASTER_TASK_LIST_V3.md`
 
-CI must fail on release metadata drift. The master task list must be updated in the same PR for every V3 change. Production-acceptance-only documentation may keep the existing engine/schema when runtime behavior and contracts are unchanged, but README and the master task list must record the acceptance evidence together.
+CI must fail on release metadata or architecture ownership drift. A version is not production-complete merely because unit tests are green; merge, production collect, validated `runtime-data` publication and framework GREEN/HEALTHY/GO evidence are also required.
 
 ## Historical milestones
-- v3.4: reliability and native persistence
-- v3.4.1: Price Radar baseline/noise filtering
-- v3.5: Official 2026/27 rules compliance
-- v3.5.1: isolated runtime publication
-- v3.6: Official FPL P0/P1 expansion
-- v3.7/v3.7.1: authenticated read-only Official layer and runtime isolation
-- v3.8/v3.8.1: price trajectory and risk hotfix
-- v3.10-v3.15: decision intelligence, prediction performance, lineup governance, historical priors, full DSS watchlist, and fast report serving
-- v3.16: Source Registry + Adapter Layer
-- v3.16.1: configuration ownership hardening
-- v3.17: runtime-evidence DSS operationalization and optimizer guardrails
-- v3.17.1: canonical V3 master task governance and Definition of Done
-- v3.18.0: structured challenger observations, architecture/configuration hardening, and production acceptance
-- v3.18.1: OneFPL adapter reachability/structured-access reliability patch
-- v3.19.0: production-accepted report-time intelligence, OneFPL report-time delegation, Ben Crellin fixture strategy, pundit consensus-vs-DSS, Reddit/community governance
+- v3.4-v3.9: reliability, price, rules, runtime isolation and Official expansion.
+- v3.10-v3.15: decision intelligence, prediction performance, lineup governance, historical priors, full DSS watchlist and fast report serving.
+- v3.16: Source Registry + Adapter Layer.
+- v3.16.1: configuration ownership hardening.
+- v3.17: runtime-evidence DSS operationalization and optimizer guardrails.
+- v3.17.1: canonical V3 Master Task governance.
+- v3.18.0: structured challenger ingestion and architecture/configuration hardening.
+- v3.18.1: OneFPL unattended-access reliability diagnosis.
+- v3.19.0: report-time intelligence, pundit consensus-vs-DSS and OneFPL report-time delegation.
+- v3.20.0 candidate: artifact-owned base-service decomposition, generic DAG, Source Registry V3, collector policy, current advanced-stat aliases and architecture anti-regression gate.
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.

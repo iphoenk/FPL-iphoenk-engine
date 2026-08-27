@@ -14,7 +14,7 @@
       "description": "Interactive decision regeneration using fresh authoritative core plus bounded reuse of heavy enrichment artifacts.",
       "max_parallel_services": 4,
       "reuse_services": {
-        "advanced_stats": {"max_age_seconds": 1},
+        "advanced_stats": {"max_age_seconds": 21600},
         "historical_prior": {"max_age_seconds": 86400},
         "source_layer": {"max_age_seconds": 1800},
         "official_detail": {"max_age_seconds": 3600}
@@ -24,7 +24,7 @@
       "description": "Match/live decision path; reuse non-live enrichment and refresh authoritative/live decision services.",
       "max_parallel_services": 4,
       "reuse_services": {
-        "advanced_stats": {"max_age_seconds": 1},
+        "advanced_stats": {"max_age_seconds": 21600},
         "historical_prior": {"max_age_seconds": 86400},
         "source_layer": {"max_age_seconds": 1800},
         "official_detail": {"max_age_seconds": 3600}

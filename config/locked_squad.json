@@ -1,6 +1,8 @@
 {
   "team_id": 3462711,
   "authoritative_phase": "pre_deadline_wc",
+  "target_gw": 2,
+  "authority_source": "USER_CAPTURED_WC_DRAFT",
   "locked_at": "2026-08-25T03:44:30Z",
   "itb_tenths": 5,
   "wildcard_active": true,

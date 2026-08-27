@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "registry": "RUNTIME_PERFORMANCE_SLO_V1",
+  "policy": {
+    "interactive_target_is_engine_runtime_not_github_runner_startup": true,
+    "profile_specific_slo": true,
+    "resource_limits_begin_observe_only_until_baseline_is_collected": true,
+    "correctness_must_not_be_traded_for_latency": true
+  },
+  "profiles": {
+    "fast_decision": {
+      "target_wall_ms": 10000,
+      "warning_wall_ms": 8500,
+      "legacy_ceiling_ms": 45000,
+      "enforcement": "TARGET_WITH_LEGACY_CEILING"
+    },
+    "live": {
+      "target_wall_ms": 10000,
+      "warning_wall_ms": 8500,
+      "legacy_ceiling_ms": 45000,
+      "enforcement": "TARGET_WITH_LEGACY_CEILING"
+    },
+    "full_refresh": {
+      "target_wall_ms": 45000,
+      "warning_wall_ms": 35000,
+      "legacy_ceiling_ms": 60000,
+      "enforcement": "CEILING"
+    },
+    "deep_stats": {
+      "target_wall_ms": 60000,
+      "warning_wall_ms": 50000,
+      "legacy_ceiling_ms": 90000,
+      "enforcement": "CEILING"
+    }
+  },
+  "resource_observability": {
+    "metrics": [
+      "peak_rss_kb",
+      "child_peak_rss_kb",
+      "temporary_bytes",
+      "seed_input_bytes",
+      "promoted_output_bytes",
+      "published_snapshot_bytes",
+      "published_snapshot_files",
+      "shared_official_cache_entries"
+    ],
+    "memory_enforcement": "OBSERVE_ONLY",
+    "storage_enforcement": "OBSERVE_ONLY"
+  }
+}

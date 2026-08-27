@@ -57,6 +57,12 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 ### V3.20 Architecture Hardening
 Canonical Source Registry ownership, monolith removal, generic DAG scheduling, artifact-owned services, config ownership, architecture anti-regression and production contracts were established in the V3.20 line and remain non-negotiable foundations.
 
+### V3.20.1 Correctness Hardening
+Appearance probability, GK position/save routing, captain variance/covariance, promotion failure semantics, legacy direct-fetch removal and XI battle configuration were hardened and production accepted.
+
+### V3.20.2 Artifact Contract Hardening
+Strict JSON/artifact contracts, challenger observation validation, valid-empty fail-soft semantics, stale-output quarantine and canonical-promotion integrity were production accepted.
+
 ### V3.21 Weather Intelligence + Report Transparency
 Weather became advisory-only contextual evidence, all 15 OWNED became selection-auditable, and predictive accuracy was explicitly separated from deterministic formula correctness.
 

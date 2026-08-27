@@ -6,6 +6,7 @@
   "api": {
     "forecast_url": "https://api.open-meteo.com/v1/forecast",
     "request_timeout_seconds": 10,
+    "max_parallel_requests": 4,
     "hourly_fields": ["temperature_2m", "precipitation_probability", "precipitation", "wind_speed_10m", "wind_gusts_10m", "weather_code"]
   },
   "forecast_policy": {

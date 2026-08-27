@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -100,6 +102,27 @@ def _forecast_confidence(days_to_kickoff: float, cfg: dict[str, Any]) -> str:
     return str(mapping.get(str(bucket)) or "LOW")
 
 
+def _freshness_hours(kickoff: datetime, now: datetime, cfg: dict[str, Any]) -> float:
+    policy = cfg.get("forecast_policy") or {}
+    days_to = max(0.0, (kickoff - now).total_seconds() / 86400.0)
+    confidence = _forecast_confidence(days_to, cfg)
+    mapping = policy.get("freshness_hours") or {}
+    return max(0.0, float(mapping.get(confidence) or 0.0))
+
+
+def _observation_is_fresh(observation: dict[str, Any] | None, kickoff: datetime, now: datetime, cfg: dict[str, Any]) -> bool:
+    if not observation:
+        return False
+    fetched = _parse_dt(observation.get("fetched_at"))
+    forecast_for = _parse_dt(observation.get("forecast_for"))
+    if fetched is None or forecast_for is None:
+        return False
+    if abs((forecast_for - kickoff).total_seconds()) > 60:
+        return False
+    age_hours = max(0.0, (now - fetched).total_seconds() / 3600.0)
+    return age_hours <= _freshness_hours(kickoff, now, cfg)
+
+
 def _weather_for_kickoff(venue: dict[str, Any], kickoff: datetime, cfg: dict[str, Any]) -> dict[str, Any]:
     api = cfg.get("api") or {}
     tz_name = str(venue.get("timezone") or "Europe/London")
@@ -174,13 +197,30 @@ def _closest_to_kickoff(observations: list[dict[str, Any]], kickoff: datetime) -
     return dict(candidates[0][2])
 
 
+def _finalize_row(row: dict[str, Any], keep: int) -> dict[str, Any]:
+    observations = [dict(x) for x in row.pop("_observations", []) if isinstance(x, dict)]
+    observations.sort(key=lambda item: str(item.get("fetched_at") or ""))
+    observations = observations[-keep:]
+    kickoff = row.pop("_kickoff")
+    current = observations[-1] if observations else None
+    closest = _closest_to_kickoff(observations, kickoff)
+    row["current"] = current
+    row["closest_to_kickoff"] = closest
+    row["post_match_attribution_ready"] = bool((row.get("started") or row.get("finished")) and closest)
+    row["observations"] = observations
+    return row
+
+
 def collect_weather_context(data_dir: Path) -> dict[str, Any]:
+    started = time.perf_counter()
     cfg = load_config()
     governance = dict(cfg.get("governance") or {})
     forecast_policy = cfg.get("forecast_policy") or {}
+    api = cfg.get("api") or {}
     max_days = float(forecast_policy.get("max_horizon_days") or 7)
     keep = max(1, int(forecast_policy.get("retain_observations_per_fixture") or 8))
     post_hours = float(forecast_policy.get("post_match_retention_hours") or 48)
+    max_workers = max(1, min(8, int(api.get("max_parallel_requests") or 4)))
     official = read_json(data_dir / "official_snapshot.json", {})
     previous = read_json(data_dir / OUT_NAME, {"fixtures": []})
     prior_by_id = {str(row.get("fixture_id")): row for row in previous.get("fixtures") or []}
@@ -189,6 +229,8 @@ def collect_weather_context(data_dir: Path) -> dict[str, Any]:
     venues_by_id, venues_by_name = _venue_maps()
     now = datetime.now(timezone.utc)
     rows: list[dict[str, Any]] = []
+    pending: list[tuple[int, dict[str, Any], datetime]] = []
+    reused_fresh = 0
 
     for fixture in official.get("fixtures") or []:
         kickoff = _parse_dt(fixture.get("kickoff_time"))
@@ -206,26 +248,20 @@ def collect_weather_context(data_dir: Path) -> dict[str, Any]:
         venue, venue_error = _resolve_venue(home_id, home, venues_by_id, venues_by_name)
         prior = prior_by_id.get(fixture_id) or {}
         observations = [dict(x) for x in prior.get("observations") or [] if isinstance(x, dict)]
+        current_prior = observations[-1] if observations else None
         fetch_status = "NOT_ATTEMPTED"
         error = None
         if venue is None:
             fetch_status = venue_error or "VENUE_UNKNOWN"
-        elif kickoff >= now:
-            try:
-                observation = _weather_for_kickoff(venue, kickoff, cfg)
-                observations.append(observation)
-                fetch_status = "AVAILABLE"
-            except Exception as exc:
-                fetch_status = "UNAVAILABLE"
-                error = f"{type(exc).__name__}: {exc}"
-        else:
+        elif kickoff < now:
             fetch_status = "HISTORICAL_FROM_RETAINED_OBSERVATION"
+        elif _observation_is_fresh(current_prior, kickoff, now, cfg):
+            fetch_status = "REUSED_FRESH"
+            reused_fresh += 1
+        else:
+            fetch_status = "PENDING_REFRESH"
 
-        observations.sort(key=lambda row: str(row.get("fetched_at") or ""))
-        observations = observations[-keep:]
-        closest = _closest_to_kickoff(observations, kickoff)
-        current = observations[-1] if observations else None
-        rows.append({
+        row = {
             "fixture_id": int(fixture.get("id") or 0),
             "event": fixture.get("event"),
             "home_team_id": home_id,
@@ -238,12 +274,28 @@ def collect_weather_context(data_dir: Path) -> dict[str, Any]:
             "venue": (venue or {}).get("venue"),
             "fetch_status": fetch_status,
             "error": error,
-            "current": current,
-            "closest_to_kickoff": closest,
-            "post_match_attribution_ready": bool((fixture.get("started") or fixture.get("finished")) and closest),
-            "observations": observations,
-        })
+            "_observations": observations,
+            "_kickoff": kickoff,
+        }
+        rows.append(row)
+        if fetch_status == "PENDING_REFRESH" and venue is not None:
+            pending.append((len(rows) - 1, venue, kickoff))
 
+    if pending:
+        with ThreadPoolExecutor(max_workers=min(max_workers, len(pending))) as pool:
+            futures = {pool.submit(_weather_for_kickoff, venue, kickoff, cfg): idx for idx, venue, kickoff in pending}
+            for future in as_completed(futures):
+                idx = futures[future]
+                row = rows[idx]
+                try:
+                    row["_observations"].append(future.result())
+                    row["fetch_status"] = "AVAILABLE"
+                    row["error"] = None
+                except Exception as exc:
+                    row["fetch_status"] = "UNAVAILABLE"
+                    row["error"] = f"{type(exc).__name__}: {exc}"
+
+    rows = [_finalize_row(row, keep) for row in rows]
     material = [
         row for row in rows
         if ((row.get("current") or {}).get("severity") in {"NOTABLE", "ADVERSE", "EXTREME"})
@@ -256,6 +308,12 @@ def collect_weather_context(data_dir: Path) -> dict[str, Any]:
         "fixture_count": len(rows),
         "available_count": sum(1 for row in rows if row.get("current")),
         "material_count": len(material),
+        "fetch_metrics": {
+            "network_fetches": len(pending),
+            "reused_fresh": reused_fresh,
+            "max_parallel_requests": max_workers,
+            "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3),
+        },
         "venue_identity": {
             "registry": load_venues().get("registry"),
             "registry_schema": load_venues().get("schema_version"),

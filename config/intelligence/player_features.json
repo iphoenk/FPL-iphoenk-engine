@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "contract": "PLAYER_FEATURE_CONTRACT_V1",
+  "policy": {
+    "decision_neutral_plumbing_only": true,
+    "prediction_must_not_consume_this_artifact_until_a_separate_model_change": true,
+    "official_identity_is_authoritative": true,
+    "advanced_stats_are_enrichment": true,
+    "source_provenance_required": true,
+    "missing_advanced_evidence_is_explicit": true
+  },
+  "defensive_contribution": {
+    "def_threshold": 10,
+    "mid_fwd_threshold": 12,
+    "def_metrics": ["clearances", "blocks", "interceptions", "tackles"],
+    "mid_fwd_extra_metrics": ["recoveries"]
+  },
+  "sample_quality": {
+    "single_appearance_max": 1,
+    "limited_minutes_max": 269,
+    "developing_minutes_max": 449
+  }
+}

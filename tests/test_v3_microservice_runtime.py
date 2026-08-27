@@ -8,35 +8,32 @@ from src.sources import official_fpl
 def test_v3_runtime_registry_is_dependency_aware_and_artifact_owned():
     registry = _load_registry()
     _validate_dag(registry)
-    assert registry["schema_version"] >= 11
+    assert registry["schema_version"] >= 13
     assert registry["architecture"] == "V3_BOUNDED_PROCESS_MICROSERVICES"
     policy = registry["policy"]
-    assert policy["parallelize_independent_services"] is True
-    assert policy["generic_root_service_scheduling"] is True
-    assert policy["single_owner_for_standard_official_network_fetches"] is True
-    assert policy["latest_json_single_writer_during_base_fan_in"] is True
-    assert policy["service_boundaries_follow_artifact_ownership_not_file_size"] is True
-    assert policy["raw_optimizer_is_not_final_decision"] is True
-    assert policy["postflight_gate0_requires_governed_lineup_and_package"] is True
-    assert policy["mechanical_validity_is_not_prediction_quality"] is True
-    assert policy["two_layer_report_contract"] is True
-    assert policy["full_dss_watchlist_generator"] is True
-    assert policy["report_materializer_is_serving_only"] is True
-    assert policy["report_serving_requires_15_owned_and_20_external_watchlist"] is True
-    assert policy["source_registry_is_separate_infrastructure_layer"] is True
-    assert policy["official_fpl_remains_native_authority"] is True
-    assert policy["challenger_source_failure_does_not_block_decisions"] is True
-    assert policy["source_reachability_is_separate_from_capability_data_health"] is True
-    assert policy["version_neutral_service_entrypoints"] is True
+    for key in (
+        "parallelize_independent_services", "generic_root_service_scheduling", "single_owner_for_standard_official_network_fetches",
+        "latest_json_single_writer_during_base_fan_in", "service_boundaries_follow_artifact_ownership_not_file_size",
+        "raw_optimizer_is_not_final_decision", "postflight_gate0_requires_governed_lineup_and_package",
+        "mechanical_validity_is_not_prediction_quality", "two_layer_report_contract", "full_dss_watchlist_generator",
+        "report_materializer_is_serving_only", "report_serving_requires_15_owned_and_20_external_watchlist",
+        "source_registry_is_separate_infrastructure_layer", "official_fpl_remains_native_authority",
+        "challenger_source_failure_does_not_block_decisions", "source_reachability_is_separate_from_capability_data_health",
+        "version_neutral_service_entrypoints", "weather_enrichment_lives_inside_source_layer_not_new_microservice",
+        "weather_is_observational_and_advisory_only", "weather_never_directly_mutates_xpts_or_decisions",
+        "owned_report_rows_require_current_gw_xpts", "settled_prediction_validation_is_exposed_to_reports",
+    ):
+        assert policy[key] is True, key
 
     services = registry["services"]
+    assert len(services) == 20
     assert set(services) == {
         "official_snapshot", "rules", "team_state", "market_state", "live_state", "advanced_stats", "base_snapshot",
         "historical_prior", "source_layer", "price", "prediction", "authenticated_official", "official_detail",
-        "prediction_evaluation", "lineup_governance", "challenger", "governance", "watchlist", "reporting",
-        "report_materializer",
+        "prediction_evaluation", "lineup_governance", "challenger", "governance", "watchlist", "reporting", "report_materializer",
     }
     assert "collector" not in services
+    assert not any("weather" in name.lower() for name in services)
     assert services["official_snapshot"]["depends_on"] == []
     assert services["rules"]["depends_on"] == []
     assert services["team_state"]["depends_on"] == ["official_snapshot"]
@@ -47,27 +44,27 @@ def test_v3_runtime_registry_is_dependency_aware_and_artifact_owned():
     assert set(services["historical_prior"]["depends_on"]) == {"base_snapshot", "official_snapshot"}
     assert set(services["prediction"]["depends_on"]) == {"historical_prior", "official_snapshot"}
     assert "official_snapshot.json" in services["prediction"]["inputs"]
-    assert services["source_layer"]["depends_on"] == ["base_snapshot", "historical_prior"]
+    assert set(services["source_layer"]["depends_on"]) == {"base_snapshot", "historical_prior", "official_snapshot"}
+    assert "official_snapshot.json" in services["source_layer"]["inputs"]
+    assert "fixture_weather.json" in services["source_layer"]["artifacts"]
     assert services["price"]["depends_on"] == ["base_snapshot", "source_layer"]
     assert services["official_detail"]["depends_on"] == ["price"]
     assert services["prediction_evaluation"]["depends_on"] == ["prediction"]
     assert services["lineup_governance"]["depends_on"] == ["prediction"]
     assert set(services["challenger"]["depends_on"]) == {"prediction_evaluation", "source_layer"}
-    assert set(services["governance"]["depends_on"]) == {
-        "source_layer", "price", "prediction", "authenticated_official", "rules", "official_detail",
-        "prediction_evaluation", "lineup_governance", "challenger",
-    }
+    assert set(services["governance"]["depends_on"]) == {"source_layer", "price", "prediction", "authenticated_official", "rules", "official_detail", "prediction_evaluation", "lineup_governance", "challenger"}
     assert services["watchlist"]["depends_on"] == ["governance"]
     assert services["reporting"]["depends_on"] == ["watchlist"]
-    assert set(services["report_materializer"]["depends_on"]) == {"reporting", "official_detail"}
+    assert set(services["report_materializer"]["depends_on"]) == {"reporting", "official_detail", "source_layer", "lineup_governance", "prediction_evaluation"}
 
     assert services["official_snapshot"]["commands"] == [{"module": "src.engines.official_snapshot_service", "args": []}]
     assert services["source_layer"]["commands"] == [{"module": "src.engines.source_layer", "args": []}]
     assert services["price"]["commands"] == [{"module": "src.engines.price_service", "args": []}]
     assert services["prediction"]["commands"] == [{"module": "src.engines.prediction_service", "args": []}]
-    assert services["watchlist"]["commands"] == [
-        {"module": "src.engines.dss_watchlist", "args": []},
-        {"module": "src.engines.watchlist_public_sanitize", "args": []},
+    assert services["report_materializer"]["commands"] == [
+        {"module": "src.engines.report_materializer", "args": []},
+        {"module": "src.engines.report_transparency_overlay", "args": []},
+        {"module": "src.engines.report_serving_validate", "args": []},
     ]
     for service in services.values():
         for command in service.get("commands") or []:

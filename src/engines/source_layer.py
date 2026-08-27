@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from src.sources.manager import collect_sources
+from src.sources.registry import load_source_registry
 from src.utils import DATA, atomic_json, iso_now, read_json
 
 OUT = DATA / "source_health.json"
@@ -10,9 +11,57 @@ RUNTIME_OUT = DATA / "source_registry_runtime.json"
 OBSERVATION_OUT = DATA / "challenger_observations.json"
 
 
+def _collector_owned_observations(observations: dict, payload: dict) -> dict:
+    registry = load_source_registry()
+    enabled_ids = {
+        str(row.get("id"))
+        for row in registry.get("sources") or []
+        if row.get("enabled") is True
+    }
+    rows = []
+    for row in observations.get("observations") or []:
+        source_id = str(row.get("source_id") or row.get("provider") or "")
+        if source_id and source_id not in enabled_ids:
+            continue
+        rows.append(row)
+
+    cross_source = []
+    for row in observations.get("cross_source") or []:
+        providers = [str(value) for value in row.get("providers") or []]
+        active = [value for value in providers if value in enabled_ids]
+        if not active:
+            continue
+        item = dict(row)
+        item["providers"] = active
+        item["state"] = "SINGLE_SOURCE" if len(active) == 1 else item.get("state")
+        cross_source.append(item)
+
+    fresh = sum(1 for row in rows if row.get("status") == "AVAILABLE" and not row.get("stale"))
+    cached = sum(1 for row in rows if row.get("status") == "CACHED_LAST_KNOWN_GOOD")
+    stale = sum(1 for row in rows if row.get("status") == "STALE")
+    legacy = sum(1 for row in rows if row.get("contract") != observations.get("contract"))
+    disagreements = sum(1 for row in cross_source if row.get("state") == "DISAGREEMENT")
+
+    sanitized = dict(observations)
+    sanitized["observations"] = rows
+    sanitized["cross_source"] = cross_source
+    sanitized["counts"] = {
+        "fresh": fresh,
+        "cached_last_known_good": cached,
+        "stale": stale,
+        "legacy": legacy,
+    }
+    payload["structured_observation_count"] = fresh
+    payload["structured_cached_count"] = cached
+    payload["structured_stale_count"] = stale
+    payload["disagreement_count"] = disagreements
+    return sanitized
+
+
 def run() -> dict:
     payload = collect_sources(DATA)
     observations = payload.pop("challenger_observations_payload", {"schema_version": 2, "observations": []})
+    observations = _collector_owned_observations(observations, payload)
     payload["generated_at"] = iso_now()
     atomic_json(OUT, payload)
     atomic_json(OBSERVATION_OUT, observations)

@@ -4,10 +4,10 @@
   "codename": "Unified Decision Engine",
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
-    "production_truth": "v3.21.0",
-    "production_main_sha": "332ac84b396f28139725c7425dc8823f6b0a0d83",
+    "production_truth": "v3.22.0",
+    "production_main_sha": "6639f899669daa6ae9f991009900437413057e86",
     "production_schema_version": 49,
-    "prediction_intelligence": "v3.21.0-full-dss-plus-v4-research"
+    "prediction_intelligence": "v3.22.0-full-dss-plus-v4-research"
   },
   "operating_model": {
     "v3": "production and scheduled-task runtime until V5 acceptance cutover",
@@ -66,11 +66,14 @@
     "weather_never_directly_mutates_decision_or_xpts": true
   },
   "acceptance": {
-    "no_regression_vs_v3_21_0_truth": true,
-    "no_regression_vs_v3_21_0_configuration_ownership": true,
-    "no_regression_vs_v3_21_0_artifact_contracts": true,
-    "no_regression_vs_v3_21_0_weather_advisory_contract": true,
-    "no_regression_vs_v3_21_0_report_selection_transparency": true,
+    "no_regression_vs_v3_22_0_truth": true,
+    "no_regression_vs_v3_22_0_configuration_ownership": true,
+    "no_regression_vs_v3_22_0_artifact_contracts": true,
+    "no_regression_vs_v3_22_0_weather_advisory_contract": true,
+    "no_regression_vs_v3_22_0_report_selection_transparency": true,
+    "no_regression_vs_v3_22_0_runtime_performance_contract": true,
+    "no_regression_vs_v3_22_0_player_feature_plumbing": true,
+    "no_regression_vs_v3_22_0_runtime_publish_integrity": true,
     "no_regression_vs_v4_research_where_adopted": true,
     "no_duplicate_authority": true,
     "official_fpl_only_native_external_authority": true,
@@ -95,6 +98,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.6 is rebaselined to exact V3.21.0 production main SHA and must converge weather/report transparency plus P0 mathematical correctness. Fresh exact-fingerprint real-shadow cycles and settled empirical non-regression evidence are required before any production promotion."
+    "reason": "V5.0.0-beta.6 is rebaselined to exact V3.22.0 production main SHA. V3.22 runtime-optimization capabilities are explicitly mapped to V5 equivalents or superseding bounded-service contracts. Fresh exact-fingerprint real-shadow cycles and settled empirical non-regression evidence are required before any production promotion."
   }
 }

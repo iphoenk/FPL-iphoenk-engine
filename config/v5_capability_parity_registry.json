@@ -1,10 +1,11 @@
 {
-  "schema_version": 1,
-  "model": "v5_v3_v4_capability_parity_v1",
+  "schema_version": 2,
+  "model": "v5_v3_v4_capability_parity_v2",
   "authorities": {
-    "production": "v3.20.0",
+    "production": "v3.22.0",
+    "production_main_sha": "6639f899669daa6ae9f991009900437413057e86",
     "research_reference": "v4",
-    "candidate": "v5.0.0-beta.4"
+    "candidate": "v5.0.0-beta.6"
   },
   "required_domains": [
     "phase_aware_truth",
@@ -22,7 +23,12 @@
     "prediction_evaluation",
     "source_health",
     "reporting",
-    "degraded_mode"
+    "degraded_mode",
+    "runtime_performance_governance",
+    "execution_profile_equivalence",
+    "artifact_reuse_validation",
+    "normalized_player_feature_plumbing",
+    "runtime_publish_integrity"
   ],
   "advanced_candidate_domains": [
     "truthful_feature_bundle",
@@ -32,9 +38,63 @@
     "release_attestation",
     "isolated_team_review"
   ],
+  "v3_22_runtime_capability_map": [
+    {
+      "id": "REC-15_REC-30_runtime_slo_resource_guard",
+      "source_status": "PRODUCTION_ACCEPTED",
+      "v5_status": "ADOPTED",
+      "v5_owner": "governance",
+      "evidence": ["config/v5_performance_budgets.json", "tests/test_v5_runtime_performance_policy.py"],
+      "rationale": "V5 preserves hard runtime budgets and real-shadow wall-clock evidence instead of copying the V3 profiler implementation."
+    },
+    {
+      "id": "REC-16_execution_profiles",
+      "source_status": "PRODUCTION_ACCEPTED",
+      "v5_status": "SUPERSEDED",
+      "v5_owner": "orchestrator",
+      "evidence": ["config/v5_runner_registry.json", "config/v5_orchestrator_registry.json", ".github/workflows/v5-on-demand-report.yml", ".github/workflows/v5-shadow-cycle.yml"],
+      "rationale": "V5 uses bounded-service orchestration and separate on-demand/shadow execution contracts rather than importing V3 FAST/LIVE/FULL/DEEP mechanics literally."
+    },
+    {
+      "id": "REC-17_REC-18_REC-19_REC-31_REC-32_reuse_and_carry_forward",
+      "source_status": "PRODUCTION_ACCEPTED",
+      "v5_status": "SUPERSEDED",
+      "v5_owner": "snapshot",
+      "evidence": ["config/v5_persistence_registry.json", "config/v5_artifact_contract_registry.json", "src/v5/config_cache.py"],
+      "rationale": "V5 preserves freshness, contract validation and persistence boundaries while avoiding V3 monolithic latest-state carry-forward as a second authority."
+    },
+    {
+      "id": "REC-20_normalized_player_feature_plumbing",
+      "source_status": "PRODUCTION_ACCEPTED_DECISION_NEUTRAL",
+      "v5_status": "ADOPTED_AND_EXTENDED",
+      "v5_owner": "prediction",
+      "evidence": ["src/v5/intelligence/feature_bundle.py", "config/intelligence/advanced_prediction.json"],
+      "rationale": "V5 extends the decision-neutral normalized feature artifact into a truthful FeatureBundle where availability, execution and downstream consumption are tracked separately."
+    },
+    {
+      "id": "REC-28_workflow_split",
+      "source_status": "PRODUCTION_ACCEPTED",
+      "v5_status": "SUPERSEDED",
+      "v5_owner": "governance",
+      "evidence": [".github/workflows/v5-unified-gate.yml", ".github/workflows/v5-shadow-cycle.yml", ".github/workflows/v5-on-demand-report.yml"],
+      "rationale": "V5 separates bootstrap acceptance, exact-fingerprint real shadow and on-demand reporting rather than copying V3 workflow names."
+    },
+    {
+      "id": "REC-29_rolling_runtime_publication",
+      "source_status": "PRODUCTION_ACCEPTED",
+      "v5_status": "SUPERSEDED_UNTIL_CUTOVER",
+      "v5_owner": "snapshot",
+      "evidence": ["config/v5_persistence_registry.json", ".github/workflows/v5-shadow-cycle.yml"],
+      "rationale": "During beta, V5 publishes isolated shadow state to v5-shadow-runtime; V3 runtime-data remains production authority until explicit cutover."
+    }
+  ],
   "governance": {
     "v4_is_reference_not_authority": true,
+    "v3_22_model_behavior_changed": false,
+    "v3_22_schema_changed": false,
+    "v3_22_runtime_optimization_must_not_reduce_decision_quality": true,
     "missing_parity_evidence_blocks_promotion": true,
-    "new_advanced_domains_require_settled_evidence_before_authority": true
+    "new_advanced_domains_require_settled_evidence_before_authority": true,
+    "runtime_implementation_may_be_superseded_when_v5_preserves_or_strengthens_the_contract": true
   }
 }

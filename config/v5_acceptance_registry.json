@@ -23,8 +23,8 @@
     "require_deployment_manifest": "deploy/v5/docker-compose.yml"
   },
   "convergence": {
-    "production_baseline": "v3.21.0",
-    "production_main_sha": "332ac84b396f28139725c7425dc8823f6b0a0d83",
+    "production_baseline": "v3.22.0",
+    "production_main_sha": "6639f899669daa6ae9f991009900437413057e86",
     "production_schema_version": 49,
     "configuration_ownership_required": true,
     "p0_capabilities_required": ["P0-1_prediction_calibration_backtest", "P0-2_xmins_role_v2", "P0-3_team_strength_fixture_probability", "P0-4_multi_horizon_package_optimizer", "P0-5_external_challenger_scorecard"],

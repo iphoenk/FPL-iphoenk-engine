@@ -117,13 +117,16 @@ def _safe_captain_pool(starters: list[dict[str, Any]], policy: dict[str, Any]) -
 def _battle(best: dict[str, Any], second: dict[str, Any] | None, pmap: dict[int, dict[str, Any]]) -> dict[str, Any]:
     if not second:
         return {"status": "NO_ALTERNATIVE", "margin": None, "starter_side": [], "bench_side": []}
+    threshold = _f((load_policy().get("battle") or {}).get("close_margin_threshold"))
+    if threshold <= 0:
+        raise RuntimeError("lineup battle close_margin_threshold must be positive")
     best_ids = set(best.get("element_ids") or [])
     second_ids = set(second.get("element_ids") or [])
     starter_side = [pmap[e] for e in sorted(best_ids - second_ids) if e in pmap]
     bench_side = [pmap[e] for e in sorted(second_ids - best_ids) if e in pmap]
     margin = round(_f(best.get("score")) - _f(second.get("score")), 4)
     return {
-        "status": "CLOSE" if margin < 0.75 else "CLEAR",
+        "status": "CLOSE" if margin < threshold else "CLEAR",
         "margin": margin,
         "starter_side": [{"element": p["element"], "name": p["name"], "position": p["position"], "selection_score": p["selection_score"]} for p in starter_side],
         "bench_side": [{"element": p["element"], "name": p["name"], "position": p["position"], "selection_score": p["selection_score"]} for p in bench_side],

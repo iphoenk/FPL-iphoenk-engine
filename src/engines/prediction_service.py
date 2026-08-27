@@ -27,6 +27,12 @@ def run() -> dict:
     if not prior.get("players"):
         raise RuntimeError("historical prior artifact unavailable for prediction service")
 
+    player_features = read_json(DATA / "player_features.json", {})
+    if player_features.get("contract") != "PLAYER_FEATURE_CONTRACT_V1" or not player_features.get("players"):
+        raise RuntimeError("REC-01 player feature artifact unavailable or invalid for prediction service")
+    if player_features.get("decision_neutral") is not False or player_features.get("model_opt_in") != "REC-01":
+        raise RuntimeError("REC-01 player feature model opt-in is not active")
+
     latest = read_json(DATA / "latest.json", {})
     planning_gw = int((latest.get("phase") or {}).get("planning_gw") or 1)
 
@@ -45,9 +51,16 @@ def run() -> dict:
         planning_gw,
         prior,
         horizon=STRATEGIC_HORIZON_GWS,
+        player_features_payload=player_features,
     )
     projections["generated_at"] = _now()
-    projections.setdefault("governance", {})["official_snapshot_reused"] = True
+    projections.setdefault("governance", {}).update({
+        "official_snapshot_reused": True,
+        "rec01_player_feature_model_opt_in": True,
+        "player_feature_contract": player_features.get("contract"),
+        "defensive_contribution_model": projections.get("defensive_contribution_model"),
+        "advanced_defensive_evidence_players_used": projections.get("advanced_defensive_evidence_players_used"),
+    })
     atomic_json(DATA / "projections.json", projections)
 
     packages = build_package_optimizer(projections, read_json(DATA / "team.json", {}))
@@ -85,6 +98,12 @@ def run() -> dict:
         "package_count": packages.get("package_count", 0),
         "best_package": (packages.get("packages") or [{}])[0].get("id") if packages.get("packages") else None,
         "candidate_generation_only": True,
+        "player_feature_model": {
+            "contract": projections.get("player_feature_contract"),
+            "opt_in": projections.get("player_feature_model_opt_in"),
+            "defensive_contribution_model": projections.get("defensive_contribution_model"),
+            "advanced_defensive_evidence_players_used": projections.get("advanced_defensive_evidence_players_used"),
+        },
         "risk_guardrails": {
             "team_cluster_penalty_enabled": (packages.get("governance") or {}).get("team_cluster_penalty_enabled"),
             "early_season_change_cap_enabled": (packages.get("governance") or {}).get("early_season_change_cap_enabled"),
@@ -105,6 +124,8 @@ if __name__ == "__main__":
     print(json.dumps({
         "projection_players": len(out["projections"].get("players") or []),
         "historical_prior_players": out["projections"].get("historical_prior_players_used"),
+        "defensive_contribution_model": out["projections"].get("defensive_contribution_model"),
+        "advanced_defensive_evidence_players_used": out["projections"].get("advanced_defensive_evidence_players_used"),
         "prediction_quality": out["quality"].get("status"),
         "package_count": out["packages"].get("package_count"),
         "best_package": (out["packages"].get("packages") or [{}])[0].get("id") if out["packages"].get("packages") else None,

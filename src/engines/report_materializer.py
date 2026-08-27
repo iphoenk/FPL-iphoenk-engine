@@ -284,7 +284,7 @@ def run() -> dict[str, Any]:
     }
     deep = {
         **brief,
-        "payload_type": "DEEP_REVIEW_PAYLOAD_V3",
+        "payload_type": "DEEP_REVIEW_PAYLOAD_V2",
         "watchlist_20": watch_deep["positions"],
         "captaincy": _captain(user, deep=True),
         "starting_xi": user.get("starting_xi"),

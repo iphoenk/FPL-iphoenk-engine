@@ -18,7 +18,7 @@ env:
   PYTHONPATH: ${{ github.workspace }}
   PRODUCTION_SOURCE_BRANCH: main
   PRODUCTION_RUNTIME_BRANCH: runtime-data
-  REPORT_PUBLISH_BRANCH: runtime-data
+  REPORT_PUBLISH_BRANCH: v5-on-demand-runtime
 
 jobs:
   on-demand-report:

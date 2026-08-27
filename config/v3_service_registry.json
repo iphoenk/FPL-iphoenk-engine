@@ -153,10 +153,7 @@
       "depends_on": ["base_snapshot", "historical_prior"],
       "critical": true,
       "isolated": true,
-      "inputs": [
-        "latest.json", "health.json", "challenger_observations.json", "stats/shots_current.json", "stats/playermatchstats_current.json",
-        "stats/vaastav_previous_season.json"
-      ],
+      "inputs": ["latest.json", "health.json", "challenger_observations.json", "stats/shots_current.json", "stats/playermatchstats_current.json", "stats/vaastav_previous_season.json"],
       "commands": [{"module": "src.engines.source_layer", "args": []}],
       "artifacts": ["source_health.json", "source_registry_runtime.json", "challenger_observations.json"],
       "latest_keys": ["source_layer_summary"],
@@ -175,10 +172,10 @@
     },
     "prediction": {
       "stage": "parallel",
-      "depends_on": ["historical_prior"],
+      "depends_on": ["historical_prior", "official_snapshot"],
       "critical": true,
       "isolated": true,
-      "inputs": ["latest.json", "team.json", "prior_season.json"],
+      "inputs": ["official_snapshot.json", "latest.json", "team.json", "prior_season.json"],
       "commands": [{"module": "src.engines.prediction_service", "args": []}],
       "artifacts": ["team_strength.json", "projections.json", "package_optimizer.json", "prediction_quality.json"],
       "latest_keys": ["decision_intelligence", "prediction_quality_summary"],
@@ -260,10 +257,7 @@
       "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "team.json", "projections.json", "package_optimizer.json", "prices.json", "price_alerts.json", "framework_health.json", "dss_watchlist.json"],
-      "commands": [
-        {"module": "src.engines.dss_watchlist", "args": []},
-        {"module": "src.engines.watchlist_public_sanitize", "args": []}
-      ],
+      "commands": [{"module": "src.engines.dss_watchlist", "args": []}, {"module": "src.engines.watchlist_public_sanitize", "args": []}],
       "artifacts": ["dss_watchlist.json"],
       "latest_keys": ["dss_watchlist_summary"],
       "latest_file_keys": ["dss_watchlist"]
@@ -273,15 +267,8 @@
       "depends_on": ["watchlist"],
       "critical": true,
       "isolated": true,
-      "inputs": [
-        "latest.json", "team.json", "lineup_decision.json", "package_decision.json", "projections.json", "price_alerts.json",
-        "prediction_quality.json", "framework_health.json", "challenger_scorecard.json", "report_state.json", "dss_watchlist.json",
-        "source_health.json", "dss_operational_evidence.json"
-      ],
-      "commands": [
-        {"module": "src.engines.report_architecture", "args": []},
-        {"module": "src.engines.report_enrichment", "args": []}
-      ],
+      "inputs": ["latest.json", "team.json", "lineup_decision.json", "package_decision.json", "projections.json", "price_alerts.json", "prediction_quality.json", "framework_health.json", "challenger_scorecard.json", "report_state.json", "dss_watchlist.json", "source_health.json", "dss_operational_evidence.json"],
+      "commands": [{"module": "src.engines.report_architecture", "args": []}, {"module": "src.engines.report_enrichment", "args": []}],
       "artifacts": ["user_report.json", "technical_appendix.json", "report_state.json"],
       "latest_keys": ["report_summary"],
       "latest_file_keys": ["user_report", "technical_appendix", "report_state"]
@@ -292,14 +279,8 @@
       "critical": true,
       "isolated": true,
       "inputs": ["latest.json", "user_report.json", "technical_appendix.json", "team.json", "projections.json", "dss_watchlist.json", "official_detail.json", "source_health.json"],
-      "commands": [
-        {"module": "src.engines.report_materializer", "args": []},
-        {"module": "src.engines.report_serving_validate", "args": []}
-      ],
-      "artifacts": [
-        "user_report.json", "decision_brief.json", "deep_review_payload.json", "dss_watchlist_summary.json",
-        "official_detail_owned.json", "official_detail_watchlist.json", "report_artifact_registry.json"
-      ],
+      "commands": [{"module": "src.engines.report_materializer", "args": []}, {"module": "src.engines.report_serving_validate", "args": []}],
+      "artifacts": ["user_report.json", "decision_brief.json", "deep_review_payload.json", "dss_watchlist_summary.json", "official_detail_owned.json", "official_detail_watchlist.json", "report_artifact_registry.json"],
       "latest_keys": ["report_serving"],
       "latest_file_keys": ["user_report", "decision_brief", "deep_review_payload", "dss_watchlist_summary", "official_detail_owned", "official_detail_watchlist", "report_artifact_registry"]
     }

@@ -43,11 +43,12 @@
     },
     "player_features.json": {
       "root_type": "object",
-      "required_fields": ["schema_version", "contract", "generated_at", "decision_neutral", "players", "policy"],
+      "required_fields": ["schema_version", "contract", "generated_at", "decision_neutral", "model_opt_in", "players", "policy"],
       "equals": {
         "schema_version": 1,
         "contract": "PLAYER_FEATURE_CONTRACT_V1",
-        "decision_neutral": true
+        "decision_neutral": false,
+        "model_opt_in": "REC-01"
       },
       "types": {
         "players": "object",

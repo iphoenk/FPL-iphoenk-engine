@@ -3,7 +3,13 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from src.models.projection_components import _blended_rate, _f, _project_fixture, load_projection_config
+from src.models.projection_components import (
+    _blended_rate,
+    _f,
+    _project_fixture,
+    defensive_contribution_rate_bundle,
+    load_projection_config,
+)
 from src.models.xmins_v3 import estimate_xmins
 from src.rules import ELEMENT_TYPE_TO_POSITION, RULESET_ID
 
@@ -26,6 +32,7 @@ def build(
     planning_gw: int,
     prior_payload: dict[str, Any],
     horizon: int | None = None,
+    player_features_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cfg = load_projection_config()
     published_horizons = [int(value) for value in cfg.get("published_horizons") or []]
@@ -37,6 +44,13 @@ def build(
     model_id = str(cfg.get("historical_model_id") or "").strip()
     if not model_id:
         raise RuntimeError("projection historical_model_id missing from config")
+
+    feature_payload = player_features_payload or {}
+    feature_map = feature_payload.get("players") or {}
+    dc_policy = feature_payload.get("defensive_contribution_policy") or {}
+    dc_shrink = float(dc_policy.get("rate_shrinkage_minutes") or cfg.get("rate_shrinkage_minutes") or 0)
+    if dc_shrink <= 0:
+        raise RuntimeError("defensive contribution shrinkage minutes must be positive")
 
     teams = {int(team["id"]): team.get("name") for team in bootstrap.get("teams") or []}
     positions = dict(ELEMENT_TYPE_TO_POSITION)
@@ -55,7 +69,9 @@ def build(
     position_priors = cfg.get("position_priors") or {}
     players = []
     historical_used = 0
+    advanced_dc_used = 0
     for player in bootstrap.get("elements") or []:
+        element = int(player["id"])
         element_type = int(player.get("element_type") or 0)
         position = positions.get(element_type)
         if not position:
@@ -63,7 +79,7 @@ def build(
         base = position_priors.get(position)
         if not isinstance(base, dict):
             raise RuntimeError(f"projection prior missing for position {position}")
-        historical = historical_map.get(str(int(player["id"]))) or {}
+        historical = historical_map.get(str(element)) or {}
         historical_used += int(bool(historical))
         xg_prior, xg_prior_source, attack_weight = _rate_prior(_f(base.get("xg90")), historical, "xg90")
         xa_prior, xa_prior_source, _ = _rate_prior(_f(base.get("xa90")), historical, "xa90")
@@ -71,12 +87,15 @@ def build(
         xa90, xa_source = _blended_rate(player, "expected_assists", xa_prior, shrink)
         bonus90, bonus_source = _blended_rate(player, "bonus", _f(base.get("bonus90")), shrink)
         saves90, saves_source = _blended_rate(player, "saves", _f(base.get("saves90")), shrink)
-        rates = {
+        feature = feature_map.get(str(element)) or {}
+        dc_bundle = defensive_contribution_rate_bundle(player, feature, _f(base.get("dc90")), dc_shrink)
+        advanced_dc_used += int(_f(dc_bundle.get("dc_evidence_minutes")) > 0)
+        rates: dict[str, Any] = {
             "xg90": xg90,
             "xa90": xa90,
             "bonus90": bonus90,
             "saves90": saves90,
-            "dc90": _f(base.get("dc90")),
+            **dc_bundle,
         }
 
         team_id = int(player.get("team") or -1)
@@ -131,7 +150,7 @@ def build(
                 "std": round(math.sqrt(sum(_f(row["std"]) ** 2 for row in subset)), 3),
             }
         players.append({
-            "element": int(player["id"]),
+            "element": element,
             "name": player.get("web_name"),
             "team_id": team_id,
             "team": teams.get(team_id),
@@ -144,13 +163,22 @@ def build(
             "historical_prior": historical or None,
             "xmins": xmins,
             "rates": {
-                **{key: round(value, 4) for key, value in rates.items()},
+                "xg90": round(xg90, 4),
+                "xa90": round(xa90, 4),
+                "bonus90": round(bonus90, 4),
+                "saves90": round(saves90, 4),
+                "dc90": round(_f(dc_bundle.get("dc90")), 4),
+                "dc_count90": round(_f(dc_bundle.get("dc_count90")), 4),
+                "dc_threshold": dc_bundle.get("dc_threshold"),
+                "dc_points": dc_bundle.get("dc_points"),
+                "dc_evidence_minutes": round(_f(dc_bundle.get("dc_evidence_minutes")), 1),
+                "dc_sample_quality": dc_bundle.get("dc_sample_quality"),
                 "sources": {
                     "xg90": f"{xg_source}|prior={xg_prior_source}",
                     "xa90": f"{xa_source}|prior={xa_prior_source}",
                     "bonus90": bonus_source,
                     "saves90": saves_source,
-                    "dc90": "position_prior",
+                    "dc90": dc_bundle.get("dc_source"),
                 },
                 "historical_attacking_prior_weight": round(attack_weight, 4),
             },
@@ -167,5 +195,9 @@ def build(
         "historical_prior_model": prior_payload.get("model"),
         "historical_prior_season": prior_payload.get("season"),
         "historical_prior_players_used": historical_used,
+        "player_feature_contract": feature_payload.get("contract"),
+        "player_feature_model_opt_in": feature_payload.get("model_opt_in"),
+        "defensive_contribution_model": dc_policy.get("model") or "poisson_threshold_shrunk_rate_v1",
+        "advanced_defensive_evidence_players_used": advanced_dc_used,
         "players": players,
     }

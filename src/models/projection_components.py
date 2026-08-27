@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+import math
 from functools import lru_cache
 from typing import Any
 
-from src.rules import ASSIST_POINTS, CLEAN_SHEET_POINTS, ELEMENT_TYPE_TO_POSITION, GOAL_POINTS
+from src.rules import ASSIST_POINTS, CLEAN_SHEET_POINTS, DC_RULES, ELEMENT_TYPE_TO_POSITION, GOAL_POINTS
 from src.utils import DATA, ROOT, read_json
 
 CONFIG_DIR = ROOT / "config" / "intelligence"
@@ -37,13 +38,92 @@ def _blended_rate(player: dict[str, Any], cumulative_field: str, prior: float, s
     return max(0.0, blended), source
 
 
+def _poisson_tail_at_least(threshold: int, expected_count: float) -> float:
+    if threshold <= 0:
+        return 1.0
+    lam = max(0.0, float(expected_count))
+    if lam <= 0.0:
+        return 0.0
+    term = math.exp(-lam)
+    cumulative = term
+    for k in range(1, threshold):
+        term *= lam / k
+        cumulative += term
+    return clamp(1.0 - cumulative, 0.0, 1.0)
+
+
+def _poisson_rate_for_tail(threshold: int, target_probability: float) -> float:
+    target = clamp(target_probability, 0.0, 0.999999)
+    if target <= 0.0:
+        return 0.0
+    low, high = 0.0, max(1.0, float(threshold))
+    while _poisson_tail_at_least(threshold, high) < target and high < 256.0:
+        high *= 2.0
+    for _ in range(64):
+        mid = (low + high) / 2.0
+        if _poisson_tail_at_least(threshold, mid) < target:
+            low = mid
+        else:
+            high = mid
+    return (low + high) / 2.0
+
+
+def defensive_contribution_rate_bundle(
+    player: dict[str, Any],
+    feature: dict[str, Any] | None,
+    prior_expected_points90: float,
+    shrink_minutes: float,
+) -> dict[str, Any]:
+    element_type = int(player.get("element_type") or 4)
+    rule = DC_RULES.get(element_type) or {}
+    if not bool(rule.get("eligible")):
+        return {
+            "dc90": 0.0,
+            "dc_count90": 0.0,
+            "dc_threshold": None,
+            "dc_points": 0.0,
+            "dc_source": "ineligible_position",
+            "dc_evidence_minutes": 0.0,
+            "dc_sample_quality": "INELIGIBLE",
+        }
+
+    threshold = int(rule.get("threshold") or 0)
+    points = float(rule.get("points") or 0.0)
+    prior_probability = clamp(prior_expected_points90 / max(points, 1e-6), 0.0, 0.999999)
+    prior_count90 = _poisson_rate_for_tail(threshold, prior_probability)
+
+    advanced = (feature or {}).get("advanced_current") or {}
+    evidence_minutes = max(0.0, _f(advanced.get("minutes")))
+    observed_count90_raw = advanced.get("dc_reconstructed_per90")
+    has_observed = evidence_minutes > 0 and observed_count90_raw is not None
+    observed_count90 = max(0.0, _f(observed_count90_raw, prior_count90))
+    if has_observed:
+        count90 = (
+            observed_count90 * evidence_minutes + prior_count90 * shrink_minutes
+        ) / max(1e-6, evidence_minutes + shrink_minutes)
+        source = "player_cbit_cbirt_shrunk_to_position_prior"
+    else:
+        count90 = prior_count90
+        source = "position_prior_probability_calibrated"
+
+    expected_points90 = points * _poisson_tail_at_least(threshold, count90)
+    return {
+        "dc90": max(0.0, expected_points90),
+        "dc_count90": max(0.0, count90),
+        "dc_threshold": threshold,
+        "dc_points": points,
+        "dc_source": source,
+        "dc_evidence_minutes": evidence_minutes,
+        "dc_sample_quality": advanced.get("sample_quality") or "NO_ADVANCED_EVIDENCE",
+    }
+
+
 def _p60(xmins: dict[str, Any], cfg: dict[str, Any]) -> float:
     trans = cfg.get("appearance_60_probability_transition") or {}
     low = _f(trans.get("start_minutes_low"), 55.0)
     high = max(low + 1.0, _f(trans.get("start_minutes_high"), 70.0))
     starter_minutes = _f(xmins.get("starter_minutes_if_start"), 72.0)
     conditional = clamp((starter_minutes - low) / (high - low), 0.0, 1.0)
-    # Unconditional probability of reaching the 60-minute threshold.
     return clamp(_f(xmins.get("start_probability")) * conditional, 0.0, 1.0)
 
 
@@ -52,15 +132,17 @@ def _project_fixture(
     xmins: dict[str, Any],
     matchup: dict[str, Any],
     home: bool,
-    rate_bundle: dict[str, float],
+    rate_bundle: dict[str, Any],
     small_sample: bool,
 ) -> dict[str, Any]:
     cfg = load_projection_config()
     element_type = int(player.get("element_type") or 4)
     position = str(player.get("position") or ELEMENT_TYPE_TO_POSITION.get(element_type) or "FWD")
-    share = clamp(_f(xmins.get("expected_minutes")) / 90.0, 0.0, 1.0)
+    expected_minutes = max(0.0, _f(xmins.get("expected_minutes")))
+    share = clamp(expected_minutes / 90.0, 0.0, 1.0)
     p_start = clamp(_f(xmins.get("start_probability")), 0.0, 1.0)
     p_bench = clamp(_f(xmins.get("bench_probability")), 0.0, 1.0 - p_start)
+    p_appearance = clamp(p_start + p_bench, 0.0, 1.0)
     p60 = _p60(xmins, cfg)
 
     team_xg = _f(matchup.get("home_expected_goals") if home else matchup.get("away_expected_goals"), 1.3)
@@ -72,18 +154,28 @@ def _project_fixture(
     )
     cs_prob = clamp(_f(matchup.get("home_clean_sheet_probability") if home else matchup.get("away_clean_sheet_probability")), 0.0, 1.0)
 
-    # p60 is already unconditional. Expected appearance points are:
-    # 1 * P(plays but <60) + 2 * P(plays >=60)
-    # = p_start + p_bench + p60 under the xMins appearance model.
     appearance = p_start + p_bench + p60
     attack = (
-        rate_bundle["xg90"] * GOAL_POINTS.get(element_type, 4)
-        + rate_bundle["xa90"] * ASSIST_POINTS
+        _f(rate_bundle.get("xg90")) * GOAL_POINTS.get(element_type, 4)
+        + _f(rate_bundle.get("xa90")) * ASSIST_POINTS
     ) * share * attack_multiplier
     clean_sheet = CLEAN_SHEET_POINTS.get(element_type, 0) * cs_prob * p60
-    saves = (rate_bundle["saves90"] / 3.0) * share if position == "GK" else 0.0
-    dc = rate_bundle["dc90"] * share
-    bonus = rate_bundle["bonus90"] * share
+    saves = (_f(rate_bundle.get("saves90")) / 3.0) * share if position == "GK" else 0.0
+
+    dc_threshold = rate_bundle.get("dc_threshold")
+    dc_count90 = rate_bundle.get("dc_count90")
+    dc_points = _f(rate_bundle.get("dc_points"))
+    if position != "GK" and dc_threshold is not None and dc_count90 is not None and p_appearance > 0:
+        conditional_minutes = min(90.0, expected_minutes / max(p_appearance, 1e-6))
+        expected_count = _f(dc_count90) * conditional_minutes / 90.0
+        dc_threshold_probability = _poisson_tail_at_least(int(dc_threshold), expected_count)
+        dc = p_appearance * dc_points * dc_threshold_probability
+    else:
+        conditional_minutes = 0.0
+        dc_threshold_probability = 0.0
+        dc = 0.0
+
+    bonus = _f(rate_bundle.get("bonus90")) * share
     mean = max(0.0, appearance + attack + clean_sheet + saves + dc + bonus)
 
     unc = cfg.get("uncertainty") or {}
@@ -109,5 +201,18 @@ def _project_fixture(
             "saves": round(saves, 3),
             "defensive_contribution": round(dc, 3),
             "bonus": round(bonus, 3),
+        },
+        "defensive_contribution_model": {
+            "model": "poisson_threshold_shrunk_rate_v1",
+            "eligible": position != "GK" and dc_threshold is not None,
+            "threshold": dc_threshold,
+            "points_on_threshold": dc_points,
+            "count_rate_per90": round(_f(dc_count90), 4),
+            "conditional_minutes": round(conditional_minutes, 2),
+            "threshold_probability_if_appears": round(dc_threshold_probability, 4),
+            "appearance_probability": round(p_appearance, 4),
+            "source": rate_bundle.get("dc_source"),
+            "evidence_minutes": round(_f(rate_bundle.get("dc_evidence_minutes")), 1),
+            "sample_quality": rate_bundle.get("dc_sample_quality"),
         },
     }

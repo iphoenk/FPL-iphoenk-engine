@@ -143,11 +143,13 @@ def build() -> dict[str, Any]:
         }
 
     cfg = _config()
+    decision_neutral = bool((cfg.get("policy") or {}).get("decision_neutral_plumbing_only", True))
     return {
         "schema_version": 1,
         "contract": cfg.get("contract"),
         "generated_at": iso_now(),
-        "decision_neutral": True,
+        "decision_neutral": decision_neutral,
+        "model_opt_in": (cfg.get("policy") or {}).get("model_opt_in"),
         "official_player_count": len(elements),
         "advanced_row_count": len(rows),
         "advanced_player_coverage": advanced_covered,
@@ -163,7 +165,8 @@ def run() -> dict[str, Any]:
     sync = read_json(DATA / "advanced_stats_sync.json", {})
     sync["player_features"] = {
         "contract": payload.get("contract"),
-        "decision_neutral": True,
+        "decision_neutral": payload.get("decision_neutral"),
+        "model_opt_in": payload.get("model_opt_in"),
         "player_count": payload.get("official_player_count"),
         "advanced_player_coverage": payload.get("advanced_player_coverage"),
         "file": "data/player_features.json",

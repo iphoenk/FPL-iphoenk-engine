@@ -141,13 +141,18 @@ def test_performance_guard_transition_semantics():
     assert result["resource_observability_complete"] is True
 
 
-def test_rec20_player_features_remain_decision_neutral_until_explicit_activation():
-    services = json.loads((ROOT / "config/v3_service_registry.json").read_text())["services"]
+def test_rec20_player_features_are_consumed_only_after_explicit_rec01_activation():
+    registry = json.loads((ROOT / "config/v3_service_registry.json").read_text())
+    services = registry["services"]
     prediction = services["prediction"]
     advanced = services["advanced_stats"]
+    feature_cfg = json.loads((ROOT / "config/intelligence/player_features.json").read_text())
     prediction_text = (ROOT / "src/engines/prediction_service.py").read_text()
-    assert "player_features.json" not in (prediction.get("inputs") or [])
-    assert "player_features" not in prediction_text
+    assert registry["policy"]["player_feature_model_opt_in_rec01_active"] is True
+    assert "player_features.json" in (prediction.get("inputs") or [])
+    assert "player_features" in prediction_text
+    assert feature_cfg["policy"]["decision_neutral_plumbing_only"] is False
+    assert feature_cfg["policy"]["model_opt_in"] == "REC-01"
     assert any(command.get("module") == "src.engines.player_features" for command in advanced.get("commands") or [])
     assert "player_features.json" in (advanced.get("artifacts") or [])
 

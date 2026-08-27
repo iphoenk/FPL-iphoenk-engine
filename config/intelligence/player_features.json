@@ -1,19 +1,36 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "contract": "PLAYER_FEATURE_CONTRACT_V1",
   "policy": {
-    "decision_neutral_plumbing_only": true,
-    "prediction_must_not_consume_this_artifact_until_a_separate_model_change": true,
+    "decision_neutral_plumbing_only": false,
+    "prediction_consumes_this_artifact": true,
+    "model_opt_in": "REC-01",
     "official_identity_is_authoritative": true,
     "advanced_stats_are_enrichment": true,
     "source_provenance_required": true,
-    "missing_advanced_evidence_is_explicit": true
+    "missing_advanced_evidence_is_explicit": true,
+    "missing_advanced_evidence_uses_position_fallback": true
   },
   "defensive_contribution": {
+    "distribution": "poisson_count_threshold",
+    "shrinkage_minutes": 450.0,
     "def_threshold": 10,
     "mid_fwd_threshold": 12,
     "def_metrics": ["clearances", "blocks", "interceptions", "tackles"],
-    "mid_fwd_extra_metrics": ["recoveries"]
+    "mid_fwd_extra_metrics": ["recoveries"],
+    "position_count_rate90_prior": {
+      "GK": 0.0,
+      "DEF": 7.9322018071,
+      "MID": 8.4842783389,
+      "FWD": 7.5129254893
+    },
+    "legacy_expected_points90_reference": {
+      "GK": 0.0,
+      "DEF": 0.55,
+      "MID": 0.30,
+      "FWD": 0.16
+    },
+    "fallback_calibration": "position count-rate priors are calibrated so a certain 90-minute appearance reproduces the legacy positional expected defensive-contribution points under the Official threshold rule"
   },
   "sample_quality": {
     "single_appearance_max": 1,

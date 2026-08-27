@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.19.0 microservices
+name: FPL iphoenk collector v3.20.0 microservices
 
 on:
   workflow_dispatch:
@@ -10,6 +10,7 @@ on:
   schedule:
     - cron: "55 * * * *"
     - cron: "15 * * * *"
+    - cron: "10 21 * * *"
 
 permissions:
   contents: read
@@ -28,6 +29,7 @@ jobs:
     outputs:
       should_collect: ${{ steps.cadence.outputs.should_collect }}
       reason: ${{ steps.cadence.outputs.reason }}
+      deep_stats: ${{ steps.cadence.outputs.deep_stats }}
     steps:
       - uses: actions/checkout@v4
       - name: Decide collector cadence
@@ -54,6 +56,8 @@ jobs:
         run: pip install -r requirements.txt pytest
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
+      - name: Validate architecture ownership contract
+        run: python -m src.engines.architecture_contract_validate
       - name: Full engine test suite
         run: python -m pytest -q
 
@@ -73,6 +77,8 @@ jobs:
           cache: pip
       - name: Install runtime dependencies
         run: pip install -r requirements.txt
+      - name: Validate architecture ownership contract
+        run: python -m src.engines.architecture_contract_validate
       - name: Run bounded microservices without publication
         run: python -m src.runtime_v3.orchestrator --mode daily --stats
       - name: Validate source capability health contract
@@ -114,7 +120,9 @@ jobs:
       - name: Install runtime dependencies
         run: pip install -r requirements.txt
       - name: Collector mode
-        run: echo "Collector gate=${{ needs.gate.outputs.reason }} runtime_branch=${RUNTIME_BRANCH} architecture=V3_BOUNDED_PROCESS_MICROSERVICES"
+        run: echo "Collector gate=${{ needs.gate.outputs.reason }} deep_stats=${{ needs.gate.outputs.deep_stats }} runtime_branch=${RUNTIME_BRANCH} architecture=V3_BOUNDED_PROCESS_MICROSERVICES"
+      - name: Validate architecture ownership contract
+        run: python -m src.engines.architecture_contract_validate
       - name: Hydrate persisted state from runtime bridge
         shell: bash
         run: |
@@ -129,13 +137,16 @@ jobs:
             fi
           done
           mkdir -p data/stats
-          if git cat-file -e "origin/${RUNTIME_BRANCH}:data/stats/vaastav_previous_season.json" 2>/dev/null; then
-            git show "origin/${RUNTIME_BRANCH}:data/stats/vaastav_previous_season.json" > data/stats/vaastav_previous_season.json
-            echo "Hydrated previous-season prior source cache"
-          else
-            echo "No previous-season prior cache; network refresh permitted"
-          fi
+          for file in vaastav_previous_season.json shots_current.json playermatchstats_current.json; do
+            if git cat-file -e "origin/${RUNTIME_BRANCH}:data/stats/${file}" 2>/dev/null; then
+              git show "origin/${RUNTIME_BRANCH}:data/stats/${file}" > "data/stats/${file}"
+              echo "Hydrated data/stats/${file} from ${RUNTIME_BRANCH}"
+            else
+              echo "No prior data/stats/${file}; network/current refresh permitted"
+            fi
+          done
       - name: V3 bounded microservice runtime
+        shell: bash
         env:
           FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
           FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
@@ -144,7 +155,12 @@ jobs:
           FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
           FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
           FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
-        run: python -m src.runtime_v3.orchestrator --mode daily --stats
+        run: |
+          args=(--mode daily --stats)
+          if [ "${{ needs.gate.outputs.deep_stats }}" = "true" ]; then
+            args+=(--deep-stats)
+          fi
+          python -m src.runtime_v3.orchestrator "${args[@]}"
       - name: Validate source capability health contract
         run: python -m src.engines.source_contract_validate
       - name: Validate production contract

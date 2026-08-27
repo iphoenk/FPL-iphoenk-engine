@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "timezone": "Asia/Jakarta",
+  "schedules": {
+    "primary": "55 * * * *",
+    "adaptive": "15 * * * *",
+    "deep_stats": "10 21 * * *"
+  },
+  "deadline_intensive_hours": 24,
+  "match_window": {
+    "pre_kickoff_minutes": 15,
+    "post_kickoff_minutes": 195
+  },
+  "fixture_probe": {
+    "official_source_id": "official_fpl",
+    "endpoint_path": "fixtures/",
+    "timeout_seconds": 8
+  },
+  "event_policy": {
+    "push": "COLLECT",
+    "workflow_dispatch": "COLLECT",
+    "pull_request": "TEST_ONLY",
+    "unknown": "COLLECT"
+  },
+  "governance": {
+    "workflow_crons_must_match_this_policy": true,
+    "collector_gate_must_not_embed_release_version": true,
+    "official_network_location_is_source_registry_owned": true,
+    "deep_stats_publish_through_runtime_data_only": true
+  }
+}

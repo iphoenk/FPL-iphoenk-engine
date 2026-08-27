@@ -2,70 +2,76 @@ from __future__ import annotations
 
 import csv
 import io
+
 import requests
 
-from src.utils import DATA, CONFIG, iso_now, atomic_json, read_json
+from src.sources.registry import source_ingestion_config
+from src.utils import DATA, atomic_json, iso_now
 
 CACHE = DATA / "stats"
+SOURCE_ID = "vaastav"
 
 
-def _cfg():
-    return read_json(CONFIG / "sources.json", {})
+def _cfg() -> dict:
+    return source_ingestion_config(SOURCE_ID)
 
 
-def _season_candidates():
-    configured = _cfg().get("season", "2026-2027")
+def _season_candidates() -> list[str]:
+    configured = str(_cfg().get("season") or "").strip()
+    if not configured:
+        raise RuntimeError("vaastav ingestion season missing from source registry")
     short = configured
     if configured.startswith("20") and "-20" in configured:
-        # 2026-2027 -> 2026-27, which is vaastav's current convention.
         short = configured[:5] + configured[-2:]
-    candidates = [short, configured]
-    out = []
-    for s in candidates:
-        if s and s not in out:
-            out.append(s)
+    out: list[str] = []
+    for value in (short, configured):
+        if value and value not in out:
+            out.append(value)
     return out
 
 
-def _base():
-    return _cfg().get("vaastav", {}).get(
-        "raw_base",
-        "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data",
-    ).rstrip("/")
+def _base() -> str:
+    value = str(_cfg().get("raw_base") or "").strip().rstrip("/")
+    if not value:
+        raise RuntimeError("vaastav raw_base missing from source registry")
+    return value
 
 
-def _fetch_csv(url: str, timeout: int = 25):
-    r = requests.get(url, timeout=timeout)
+def _timeout() -> int:
+    value = int(_cfg().get("request_timeout_seconds") or 0)
+    if value <= 0:
+        raise RuntimeError("vaastav request timeout must be positive")
+    return value
+
+
+def _fetch_csv(url: str):
+    r = requests.get(url, timeout=_timeout())
     r.raise_for_status()
     return list(csv.DictReader(io.StringIO(r.text)))
 
 
 def sync_gw(gw: int):
-    """
-    Prefer a true GW-specific vaastav file when available.
-    For very early current seasons, vaastav may expose only season-level files.
-    In that case use cleaned_players.csv as a non-GW fallback and mark it clearly,
-    rather than treating the source as failed.
-    """
+    """Sync current-season vaastav data using only registry-owned candidate paths."""
     last_error = None
+    candidates = list(_cfg().get("current_season_candidates") or [])
+    if not candidates:
+        raise RuntimeError("vaastav current_season_candidates missing from source registry")
 
     for season in _season_candidates():
         base = f"{_base()}/{season}"
-        candidates = [
-            (f"{base}/gws/gw{gw}.csv", "GW_SPECIFIC"),
-            (f"{base}/gws/merged_gw.csv", "MERGED_GW_FALLBACK"),
-            (f"{base}/cleaned_players.csv", "SEASON_SNAPSHOT_FALLBACK"),
-            (f"{base}/players_raw.csv", "SEASON_RAW_FALLBACK"),
-        ]
-
-        for url, data_mode in candidates:
+        for candidate in candidates:
+            path = str((candidate or {}).get("path") or "").format(gw=gw)
+            data_mode = str((candidate or {}).get("data_mode") or "")
+            if not path or not data_mode:
+                continue
+            url = f"{base}/{path}"
             try:
                 rows = _fetch_csv(url)
                 if not rows:
                     raise RuntimeError("empty CSV")
-
                 payload = {
                     "source": "vaastav/Fantasy-Premier-League",
+                    "source_id": SOURCE_ID,
                     "gw": gw,
                     "season": season,
                     "fetched_at": iso_now(),
@@ -89,6 +95,7 @@ def sync_gw(gw: int):
 
     failure = {
         "source": "vaastav/Fantasy-Premier-League",
+        "source_id": SOURCE_ID,
         "gw": gw,
         "fetched_at": iso_now(),
         "status": "FAILED",

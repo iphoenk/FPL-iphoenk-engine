@@ -23,8 +23,22 @@ PERFORMANCE_PATH = DATA / "runtime_performance.json"
 def _load_registry() -> dict[str, Any]:
     payload = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
     services = payload.get("services")
-    if not isinstance(services, dict) or "collector" not in services or "governance" not in services:
-        raise RuntimeError("invalid V3 service registry")
+    if not isinstance(services, dict) or not services:
+        raise RuntimeError("invalid V3 service registry: services must be non-empty")
+    roots = [name for name, spec in services.items() if not (spec.get("depends_on") or [])]
+    if not roots:
+        raise RuntimeError("invalid V3 service registry: at least one root service is required")
+    for name, spec in services.items():
+        if not isinstance(spec, dict):
+            raise RuntimeError(f"invalid V3 service registry: service {name} must be an object")
+        commands = spec.get("commands") or []
+        if not commands:
+            raise RuntimeError(f"invalid V3 service registry: service {name} has no commands")
+        for command in commands:
+            if "code" in command:
+                raise RuntimeError(f"inline Python service command forbidden: {name}")
+            if not (command.get("module") or command.get("copy")):
+                raise RuntimeError(f"unsupported service command contract: {name}: {command}")
     return payload
 
 
@@ -69,24 +83,28 @@ def _expand_args(args: list[str], context: dict[str, str]) -> list[str]:
     return out
 
 
-def _run_command(command: dict[str, Any], *, data_dir: Path, cache_dir: Path, context: dict[str, str], timeout: int) -> dict[str, Any]:
+def _run_command(
+    command: dict[str, Any],
+    *,
+    data_dir: Path,
+    cache_dir: Path,
+    context: dict[str, str],
+    timeout: int,
+) -> dict[str, Any]:
     if command.get("copy"):
         source_name, target_name = [str(x) for x in command["copy"]]
         source = data_dir / source_name
         target = data_dir / target_name
         if not source.exists():
             raise RuntimeError(f"copy source missing: {source}")
+        target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
         return {"type": "copy", "source": source_name, "target": target_name, "elapsed_ms": 0.0}
 
-    if command.get("module"):
-        cmd = [sys.executable, "-m", str(command["module"]), *_expand_args(list(command.get("args") or []), context)]
-        descriptor = str(command["module"])
-    elif command.get("code"):
-        cmd = [sys.executable, "-c", str(command["code"])]
-        descriptor = "python-code"
-    else:
+    if not command.get("module"):
         raise RuntimeError(f"unsupported service command: {command}")
+    cmd = [sys.executable, "-m", str(command["module"]), *_expand_args(list(command.get("args") or []), context)]
+    descriptor = str(command["module"])
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT)
@@ -130,7 +148,16 @@ def _seed_service_data(service_name: str, spec: dict[str, Any], canonical: Path,
     return target
 
 
-def _run_service(service_name: str, spec: dict[str, Any], *, canonical: Path, services_root: Path, cache_dir: Path, context: dict[str, str], timeout: int) -> dict[str, Any]:
+def _run_service(
+    service_name: str,
+    spec: dict[str, Any],
+    *,
+    canonical: Path,
+    services_root: Path,
+    cache_dir: Path,
+    context: dict[str, str],
+    timeout: int,
+) -> dict[str, Any]:
     isolated = bool(spec.get("isolated", True))
     data_dir = _seed_service_data(service_name, spec, canonical, services_root) if isolated else canonical
     started = time.perf_counter()
@@ -189,13 +216,30 @@ def _promote(service_name: str, result: dict[str, Any], spec: dict[str, Any], ca
     _merge_latest(canonical, service_dir, spec)
 
 
-def _write_runtime_metadata(registry: dict[str, Any], service_results: dict[str, dict[str, Any]], total_ms: float, cache_dir: Path) -> dict[str, Any]:
+def _cleanup_ephemeral(registry: dict[str, Any], canonical: Path) -> list[str]:
+    removed: list[str] = []
+    for spec in (registry.get("services") or {}).values():
+        for name in spec.get("ephemeral_artifacts") or []:
+            path = canonical / str(name)
+            if path.exists() and path.is_file():
+                path.unlink()
+                removed.append(str(name))
+    return sorted(set(removed))
+
+
+def _write_runtime_metadata(
+    registry: dict[str, Any],
+    service_results: dict[str, dict[str, Any]],
+    total_ms: float,
+    cache_dir: Path,
+) -> dict[str, Any]:
     cache_entries = len(list(cache_dir.glob("*.json"))) if cache_dir.exists() else 0
     runtime = registry.get("runtime") or {}
     budget_ms = float(runtime.get("performance_budget_seconds") or 0) * 1000.0
     performance = {
         "runtime_id": RUNTIME_ID,
         "architecture": registry.get("architecture"),
+        "production_contract": registry.get("production_contract"),
         "engine_version": ENGINE_VERSION,
         "schema_version": SCHEMA_VERSION,
         "total_wall_ms": round(total_ms, 3),
@@ -210,9 +254,11 @@ def _write_runtime_metadata(registry: dict[str, Any], service_results: dict[str,
     latest["runtime_architecture"] = {
         "id": RUNTIME_ID,
         "architecture": registry.get("architecture"),
+        "production_contract": registry.get("production_contract"),
         "transport": registry.get("transport"),
         "service_count": len(registry.get("services") or {}),
         "dependency_aware_scheduling": True,
+        "generic_root_scheduling": True,
         "shared_official_cache": True,
         "total_wall_ms": round(total_ms, 3),
         "performance_target_ms": round(budget_ms, 3) if budget_ms else None,
@@ -228,13 +274,14 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False) -> di
     _validate_dag(registry)
     services = registry["services"]
     runtime = registry.get("runtime") or {}
-    max_workers = int(runtime.get("max_parallel_services") or 4)
-    timeout = int(runtime.get("service_timeout_seconds") or 180)
+    max_workers = max(1, int(runtime.get("max_parallel_services") or 1))
+    timeout = max(1, int(runtime.get("service_timeout_seconds") or 1))
+    cache_ttl = max(1, int(runtime.get("http_cache_ttl_seconds") or 1))
     context = {
         "mode": mode,
-        "stats": "--stats" if stats else "",
+        "stats": "--stats" if stats else "--no-stats",
         "deep_stats": "--deep-stats" if deep_stats else "",
-        "http_cache_ttl": str(int(runtime.get("http_cache_ttl_seconds") or 180)),
+        "http_cache_ttl": str(cache_ttl),
     }
     wall_started = time.perf_counter()
     service_results: dict[str, dict[str, Any]] = {}
@@ -247,35 +294,31 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False) -> di
         services_root.mkdir(parents=True, exist_ok=True)
         cache_dir.mkdir(parents=True, exist_ok=True)
 
-        collector = _run_service("collector", services["collector"], canonical=DATA, services_root=services_root, cache_dir=cache_dir, context=context, timeout=timeout)
-        service_results["collector"] = collector
-        if collector["status"] != "SUCCESS":
-            raise RuntimeError(f"critical collector service failed: {collector.get('error')}")
-        completed.add("collector")
-
-        pending = {name for name in services if name != "collector"}
+        pending = set(services)
         running: dict[Any, str] = {}
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             while pending or running:
                 ready = [
-                    name for name in sorted(pending)
-                    if set(str(x) for x in services[name].get("depends_on") or []).issubset(completed)
+                    name
+                    for name in sorted(pending)
+                    if set(str(dep) for dep in services[name].get("depends_on") or []).issubset(completed)
                 ]
                 for name in ready:
                     if len(running) >= max_workers:
                         break
                     pending.remove(name)
-                    future = pool.submit(
-                        _run_service,
-                        name,
-                        services[name],
-                        canonical=DATA,
-                        services_root=services_root,
-                        cache_dir=cache_dir,
-                        context=context,
-                        timeout=timeout,
-                    )
-                    running[future] = name
+                    running[
+                        pool.submit(
+                            _run_service,
+                            name,
+                            services[name],
+                            canonical=DATA,
+                            services_root=services_root,
+                            cache_dir=cache_dir,
+                            context=context,
+                            timeout=timeout,
+                        )
+                    ] = name
 
                 if not running:
                     if pending:
@@ -301,6 +344,8 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False) -> di
 
         total_ms = (time.perf_counter() - wall_started) * 1000.0
         performance = _write_runtime_metadata(registry, service_results, total_ms, cache_dir)
+        performance["ephemeral_artifacts_removed"] = _cleanup_ephemeral(registry, DATA)
+        atomic_json(PERFORMANCE_PATH, performance)
 
     print(json.dumps({
         "runtime": RUNTIME_ID,
@@ -309,8 +354,12 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False) -> di
         "schema_version": SCHEMA_VERSION,
         "total_wall_ms": performance["total_wall_ms"],
         "within_target_budget": performance["within_target_budget"],
-        "services": {name: {"status": row.get("status"), "elapsed_ms": row.get("elapsed_ms")} for name, row in service_results.items()},
+        "services": {
+            name: {"status": row.get("status"), "elapsed_ms": row.get("elapsed_ms")}
+            for name, row in service_results.items()
+        },
         "shared_official_cache_entries": performance["shared_official_cache_entries"],
+        "ephemeral_artifacts_removed": performance.get("ephemeral_artifacts_removed"),
     }, ensure_ascii=False))
     return performance
 

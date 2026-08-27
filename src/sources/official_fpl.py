@@ -1,13 +1,27 @@
 from __future__ import annotations
-import hashlib, json, os, time
+
+import hashlib
+import json
+import os
+import time
 from pathlib import Path
 
 import requests
 
 from src.settings import API_BACKOFF_SECONDS, API_RETRIES, API_TIMEOUT_SECONDS
+from src.sources.registry import source_config
 from src.utils import iso_now
+from src.version import ENGINE_VERSION
 
-BASE_URL = os.getenv("FPL_API_BASE", "https://fantasy.premierleague.com/api")
+
+def _base_url() -> str:
+    configured = str(source_config("official_fpl").get("api_base") or "").strip().rstrip("/")
+    value = str(os.getenv("FPL_API_BASE") or configured).strip().rstrip("/")
+    if not value:
+        raise RuntimeError("official_fpl api_base missing from source registry")
+    return value
+
+
 TIMEOUT = API_TIMEOUT_SECONDS
 
 
@@ -28,11 +42,21 @@ def _cache_paths(path: str):
     return root / f"{digest}.json", root / f"{digest}.lock"
 
 
+def _cache_ttl_seconds() -> float:
+    raw = os.getenv("FPL_HTTP_CACHE_TTL_SECONDS")
+    if raw in {None, ""}:
+        raise RuntimeError("FPL_HTTP_CACHE_TTL_SECONDS is required when shared HTTP cache is enabled")
+    value = float(raw)
+    if value <= 0:
+        raise RuntimeError("FPL_HTTP_CACHE_TTL_SECONDS must be positive")
+    return value
+
+
 def _read_cache(path: str):
     cache_path, _ = _cache_paths(path)
     if cache_path is None or not cache_path.exists():
         return None
-    ttl = float(os.getenv("FPL_HTTP_CACHE_TTL_SECONDS", "180"))
+    ttl = _cache_ttl_seconds()
     try:
         age = max(0.0, time.time() - cache_path.stat().st_mtime)
         if age > ttl:
@@ -41,7 +65,7 @@ def _read_cache(path: str):
         health = dict(cached.get("health") or {})
         health.update({"cache_hit": True, "cache_age_ms": round(age * 1000), "latency_ms": 0})
         return cached.get("payload"), health
-    except Exception:
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
         return None
 
 
@@ -100,21 +124,26 @@ def get_json(path: str, retries: int | None = None, backoff: float | None = None
                 if lock_fd is not None:
                     break
 
-    url = f"{BASE_URL}/{path.lstrip('/')}"
+    url = f"{_base_url()}/{path.lstrip('/')}"
     start = time.perf_counter()
     last_error = None
     status_code = None
+    headers = {"User-Agent": f"fpl-iphoenk-engine/{ENGINE_VERSION}"}
     try:
-        for attempt in range(1, retries+1):
+        for attempt in range(1, retries + 1):
             try:
-                r = requests.get(url, timeout=TIMEOUT)
+                r = requests.get(url, timeout=TIMEOUT, headers=headers)
                 status_code = r.status_code
                 r.raise_for_status()
                 health = {
-                    "status":"LIVE","http_status":status_code,
-                    "latency_ms":round((time.perf_counter()-start)*1000),
-                    "attempts":attempt,"fetched_at":iso_now(),"error":None,"url":url,
-                    "cache_hit":False,
+                    "status": "LIVE",
+                    "http_status": status_code,
+                    "latency_ms": round((time.perf_counter() - start) * 1000),
+                    "attempts": attempt,
+                    "fetched_at": iso_now(),
+                    "error": None,
+                    "url": url,
+                    "cache_hit": False,
                 }
                 payload = r.json()
                 _write_cache(path, payload, health)
@@ -122,12 +151,16 @@ def get_json(path: str, retries: int | None = None, backoff: float | None = None
             except Exception as exc:
                 last_error = f"{type(exc).__name__}: {exc}"
                 if attempt < retries:
-                    time.sleep(backoff*attempt)
+                    time.sleep(backoff * attempt)
         return None, {
-            "status":"FAILED","http_status":status_code,
-            "latency_ms":round((time.perf_counter()-start)*1000),
-            "attempts":retries,"fetched_at":iso_now(),"error":last_error,"url":url,
-            "cache_hit":False,
+            "status": "FAILED",
+            "http_status": status_code,
+            "latency_ms": round((time.perf_counter() - start) * 1000),
+            "attempts": retries,
+            "fetched_at": iso_now(),
+            "error": last_error,
+            "url": url,
+            "cache_hit": False,
         }
     finally:
         if cache_enabled and lock_fd is not None:

@@ -6,7 +6,10 @@ from src.settings import (
     API_BACKOFF_SECONDS,
     API_RETRIES,
     API_TIMEOUT_SECONDS,
+    DEADLINE_STALE_MINUTES,
     LIVE_POLL_SECONDS,
+    MATCHDAY_STALE_MINUTES,
+    NORMAL_STALE_MINUTES,
     PRICE_PRESSURE_LIST_SIZE,
     PRICE_SUMMARY_LIST_SIZE,
     PURCHASE_RECONSTRUCTION_BASELINE_GW,
@@ -20,6 +23,9 @@ def test_mutable_runtime_settings_are_owned_by_engine_config():
     config = json.loads((ROOT / "config" / "engine.json").read_text())
     assert TEAM_ID == int(config["team_id"])
     assert LIVE_POLL_SECONDS == int(config["live_poll_seconds"])
+    assert NORMAL_STALE_MINUTES == int(config["normal_stale_minutes"])
+    assert DEADLINE_STALE_MINUTES == int(config["deadline_stale_minutes"])
+    assert MATCHDAY_STALE_MINUTES == int(config["matchday_stale_minutes"])
     assert PURCHASE_RECONSTRUCTION_BASELINE_GW == int(config["purchase_reconstruction_baseline_gw"])
     assert PRICE_PRESSURE_LIST_SIZE == int(config["price_pressure_list_size"])
     assert PRICE_SUMMARY_LIST_SIZE == int(config["price_summary_list_size"])
@@ -71,3 +77,4 @@ def test_legacy_runtime_hardcodes_do_not_return():
     for snippet in forbidden:
         assert snippet not in engine
     assert "FPL_TEAM_ID:" not in workflow
+    assert not (ROOT / "config" / "sources.json").exists()

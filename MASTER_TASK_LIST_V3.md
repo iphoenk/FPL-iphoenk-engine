@@ -3,16 +3,16 @@
 Canonical status: ACTIVE
 Canonical roadmap owner: V3 operational stream
 Production baseline: V3.19.0 / schema 48
-Current production release: V3.19.0
-Current production schema: 48
-Production scope: Report-Time Intelligence + Pundit Consensus vs DSS
-Production acceptance: COMPLETE
+Current release candidate: V3.20.0
+Current candidate schema: 48
+Candidate scope: Architecture Hardening + Registry Ownership + Anti-Monolith Runtime
+Candidate acceptance: PENDING
 
 This file is the single human-readable master roadmap for the V3 operational engine. Every V3 feature, refactor, hardening change, operational improvement, and release-governance change must update this file in the same pull request.
 
 ## Status legend
 - DONE: implemented, tested, merged, and production-validated when runtime-impacting.
-- ACTIVE: continuously enforced operational requirement.
+- ACTIVE: continuously enforced operational requirement or release candidate under acceptance.
 - NEXT: highest-priority planned work.
 - OPEN: planned but not the immediate next release.
 - BLOCKED: cannot progress until a named dependency is resolved.
@@ -31,10 +31,15 @@ This file is the single human-readable master roadmap for the V3 operational eng
 9. Release metadata must remain consistent across source, README, implementation status, workflow naming, schema metadata, registries and tests.
 10. User-facing reports must never expose raw internal shorthand or falsely imply that reachability equals data availability or that a source was checked when it was not.
 11. V3 production remains stable while new work is developed on separate branches and merged only after full acceptance.
-12. Microservice boundaries are coarse-grained and evidence-driven. New process boundaries must reduce coupling, duplicate I/O, or failure blast radius; file size alone is not a reason to split a service.
+12. Microservice boundaries are coarse-grained and evidence-driven. New process boundaries must reduce coupling, duplicate I/O, unclear artifact ownership, or failure blast radius; file size alone is not a reason to split a service.
 13. Pundit consensus is advisory only. Consensus may challenge DSS, but may not silently mutate DSS.
 14. Community sentiment is a lead, not a fact. Fact promotion requires authoritative or independent corroboration.
 15. Fixture-strategy expertise is separate from player-projection voting.
+16. Standard Official public fetches have one runtime owner; downstream services consume promoted artifacts instead of independently refetching the same baseline.
+17. Active evidence paths must not pin a fixed Gameweek when the evidence is intended to represent the current Gameweek.
+18. Compatibility facades and historical version-stamped modules may exist only outside the active production service registry.
+19. Runtime data publishes to `runtime-data`, never directly to protected `main`.
+20. An architecture refactor is not accepted if it creates unnecessary process boundaries without a clear data owner or operational benefit.
 
 ## A. Production baseline and keep-green work
 | ID | Task | Status | Target | Acceptance |
@@ -72,11 +77,7 @@ This file is the single human-readable master roadmap for the V3 operational eng
 | V3-SRC-115 | V3.18 release governance | DONE | V3.18.0 | release surfaces + production collect consistent |
 | V3-SRC-116 | OneFPL automated-access reliability diagnosis | DONE | V3.18.1 | production confirmed explicit HTTP restriction state without spoofing/fabrication |
 
-V3.18.1 production acceptance completed 27 August 2026: engine 3.18.1/schema47, workflow/collector SUCCESS, source contract PASS, framework GREEN/HEALTHY/GO, Gate0 16/16, DSS Core 50/50, Extensions 16/16, Enhancements 8/8.
-
 ## C. V3.19 Report-Time Intelligence
-Release objective: add fresh report-time expert/model/community evidence while keeping unattended machine collection lean and keeping DSS independent.
-
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
 | V3-RTI-101 | Dedicated report-time source registry | DONE | V3.19.0 | source classes/domains/query intents/freshness/authority ceilings registry-owned |
@@ -85,42 +86,52 @@ Release objective: add fresh report-time expert/model/community evidence while k
 | V3-RTI-104 | Pundit consensus engine | DONE | V3.19.0 | current opinions aggregated only from eligible pundit class |
 | V3-RTI-105 | Pundit consensus vs DSS comparison | DONE | V3.19.0 | explicit ALIGN/DIVERGE/REVIEW_DIVERGENCE/NEUTRAL; DSS not mutated |
 | V3-RTI-106 | Ben Crellin fixture-strategy class | DONE | V3.19.0 | BGW/DGW/rearrangement/chip-window context; no player-projection vote |
-| V3-RTI-107 | Reddit r/FantasyPL community-signal class | DONE | V3.19.0 | eye-test/poll/role/rotation/injury/sentiment treated as cross-check-required leads |
+| V3-RTI-107 | Reddit r/FantasyPL community-signal class | DONE | V3.19.0 | community observations are cross-check-required leads |
 | V3-RTI-108 | Verified-news class | DONE | V3.19.0 | official availability/suspension/fixture/manager context may corroborate facts |
 | V3-RTI-109 | Report-time freshness governance | DONE | V3.19.0 | stale evidence visible but excluded from current consensus |
 | V3-RTI-110 | Report serving integration | DONE | V3.19.0 | user_report, decision_brief and deep_review contain report-time intelligence |
 | V3-RTI-111 | Explicit refresh-required state | DONE | V3.19.0 | collector snapshot says REFRESH_REQUIRED when no report-time web pass occurred |
 | V3-RTI-112 | Machine-cache ownership cleanup | DONE | V3.19.0 | delegated OneFPL LKG/stale observations purged from collector-owned artifacts |
-| V3-RTI-113 | Report-time contract validator | DONE | V3.19.0 | CI/integration checks registry, OneFPL delegation, advisory policy and serving output |
+| V3-RTI-113 | Report-time contract validator | DONE | V3.19.0 | CI/integration validates advisory-source governance |
 | V3-RTI-114 | Schema/serving contract v2 | DONE | V3.19.0 | schema48, REPORT_ARTIFACT_REGISTRY_V2, DEEP_REVIEW_PAYLOAD_V2 |
-| V3-RTI-115 | V3.19 release governance | DONE | V3.19.0 | version/README/task/workflow/tests/CI/production all consistent |
+| V3-RTI-115 | V3.19 release governance | DONE | V3.19.0 | version/README/task/workflow/tests/CI/production consistent |
 
-### V3.19 report-time source classes
-- `MODEL_CHALLENGER`: OneFPL. Advisory model/price/transfer/captaincy/planner context only.
-- `FIXTURE_STRATEGY_EXPERT`: Ben Crellin. Schedule and chip-window context only.
-- `PUNDIT_CONSENSUS`: FPL Harry, FPL Focal, Let's Talk FPL, BigManBakar, Fantasy Football Scout editorial.
-- `COMMUNITY_SIGNAL`: Reddit r/FantasyPL. Leads and sentiment; requires cross-check.
-- `VERIFIED_NEWS`: Premier League/official-club factual context.
+V3.19.0 production acceptance completed on 27 August 2026. PR #32 merged as `4b5f5f72146400a25c956e7628105b7680effe84`; production collector and runtime-data publication passed; framework GREEN/HEALTHY/GO; Gate0 16/16, Core50, Extensions16, Enhancements8.
 
-### V3.19 architectural boundary
-Report-time intelligence stays inside the existing report boundary. It is not a new unattended collector microservice. The collector publishes the machine/DSS baseline and marks report-time evidence `REFRESH_REQUIRED`; the chat/report orchestration performs normal web review for scheduled or on-demand reports and synthesizes the evidence under the same contract. This avoids duplicate unattended I/O and keeps source-policy restrictions outside the collector.
+## D. V3.20 Architecture Hardening
+Release objective: eliminate remaining active monolithic runtime ownership and duplicate mutable policy while preserving the serving schema and avoiding unnecessary microservice fragmentation.
 
-### V3.19 production acceptance evidence
-Production acceptance completed on 27 August 2026:
-- PR #32 merged to `main` as `4b5f5f72146400a25c956e7628105b7680effe84`
-- final PR workflow run `33028670999`: unit/regression, bounded microservices integration, source capability, production decision/report, 15 OWNED + 20 WATCHLIST, fast report serving, report-time intelligence contract and runtime budget all PASS
-- production push workflow run `33028851447`: collector SUCCESS and validated `runtime-data` publication SUCCESS
-- production engine/schema: `3.19.0` / `48`
-- framework: GREEN; decision engine HEALTHY; recommendation allowed; GO allowed
-- Gate 0: 16/16 PASS
-- DSS Core: 50/50 ACTIVE
-- DSS Extensions: 16/16 ACTIVE
-- Enhancement Layers: 8/8 ACTIVE
-- OneFPL machine source: DISABLED with zero collector observations; ownership delegated to report-time review
-- production `decision_brief` carries `report_time_intelligence.status=REFRESH_REQUIRED` and `web_refresh_required=true` until the visible-report web pass occurs
-- active FPL Master Monitor task updated to require V3.19 report-time web refresh for every visible scheduled/on-demand/deadline report, while silent hourly internal checks remain bounded
+| ID | Task | Status | Target | Acceptance |
+| --- | --- | --- | --- | --- |
+| V3-ARCH-201 | Canonical Source Registry V3 | ACTIVE | V3.20.0 | network locations, source season/files/timeouts have one registry owner |
+| V3-ARCH-202 | Remove legacy `config/sources.json` | ACTIVE | V3.20.0 | file absent and CI prevents reintroduction |
+| V3-ARCH-203 | Registry-owned collector cadence/window policy | ACTIVE | V3.20.0 | timezone, primary/adaptive/deep cron, deadline/match windows and probe timeout config-owned |
+| V3-ARCH-204 | Dynamic Official User-Agent/version | ACTIVE | V3.20.0 | no stale release string in active Official/collector HTTP path |
+| V3-ARCH-205 | Replace monolithic collector service | ACTIVE | V3.20.0 | no active `collector` service and no active `src.engine` command |
+| V3-ARCH-206 | Official snapshot single owner | ACTIVE | V3.20.0 | standard Official baseline fetched once, downstream consumes snapshot artifact |
+| V3-ARCH-207 | Team-state service boundary | ACTIVE | V3.20.0 | squad identity/finance/chips owned by team_state service |
+| V3-ARCH-208 | Market-state service boundary | ACTIVE | V3.20.0 | universe/current price cache/market pressure owned by market_state |
+| V3-ARCH-209 | Live-state service boundary | ACTIVE | V3.20.0 | personalized live scoring artifact owned by live_state |
+| V3-ARCH-210 | Advanced-stats service boundary | ACTIVE | V3.20.0 | current enrichment aliases and optional deep sync have one owner |
+| V3-ARCH-211 | Base snapshot deterministic fan-in | ACTIVE | V3.20.0 | latest/native/history snapshot assembled without network/business-decision duplication |
+| V3-ARCH-212 | Generic root DAG scheduling | ACTIVE | V3.20.0 | orchestrator has no collector-name special case and validates cycles/dependencies |
+| V3-ARCH-213 | Current advanced-stat aliases | ACTIVE | V3.20.0 | active source/DSS paths use `shots_current`/`playermatchstats_current`, GW files archive only |
+| V3-ARCH-214 | Semantic model IDs | ACTIVE | V3.20.0 | active model identity is independent of engine-release number |
+| V3-ARCH-215 | Deep-stats runtime-data publication | ACTIVE | V3.20.0 | legacy workflow removed, deep sync uses production workflow and runtime-data |
+| V3-ARCH-216 | Architecture anti-regression gate | ACTIVE | V3.20.0 | CI rejects monolithic collector, duplicate source config, fixed-GW current pins, inline code and active version-stamped services |
+| V3-ARCH-217 | Framework mutable-policy ownership audit | ACTIVE | V3.20.0 | active expected counts come from registries and active freshness policy is config-owned or explicitly compatibility-only |
+| V3-ARCH-218 | Microservice over-splitting review | ACTIVE | V3.20.0 | existing DSS/report/governance services stay grouped unless a clear owner/failure boundary justifies split |
+| V3-ARCH-219 | V3.20 release metadata consistency | ACTIVE | V3.20.0 | version 3.20.0/schema48 consistent across source, README, workflow, implementation, tests and roadmap |
+| V3-ARCH-220 | Full CI/integration acceptance | ACTIVE | V3.20.0 | compile, unit, architecture, source, production, watchlist, report, report-time and runtime-budget gates PASS |
+| V3-ARCH-221 | Production acceptance | ACTIVE | V3.20.0 | merge/push/runtime-data publication and GREEN/HEALTHY/GO evidence verified before DONE |
 
-## D. P1 Intelligence quality and calibration
+### V3.20 boundary decision
+The base collector was split because it owned unrelated network, squad/finance, market, live, statistics and snapshot responsibilities. The existing price, prediction, lineup, governance, watchlist, reporting and report-materializer services remain coarse-grained because their internal stages share one decision/artifact owner. They must not be split further solely to reduce file size.
+
+### V3.20 schema decision
+Engine version changes to `3.20.0`. Serving schema remains `48` because `decision_brief`, `deep_review_payload`, report-time intelligence and the 15+20 user contract do not change. Service Registry schema changes independently to `11`; Source Registry changes independently to `SOURCE_REGISTRY_V3`.
+
+## E. P1 Intelligence quality and calibration
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
 | V3-INT-201 | Real tactical-role evidence | OPEN | P1 | verified role evidence improves proxy without unsupported claims |
@@ -136,23 +147,24 @@ Production acceptance completed on 27 August 2026:
 | V3-INT-211 | Package optimizer sensitivity audit | OPEN | P1 | explainable sensitivity bounds |
 | V3-INT-212 | Price/value calibration | OPEN | P1 | pressure overlay separated from affordability/sell-value effects |
 
-## E. User-facing report and operational UX
+## F. User-facing report and operational UX
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
-| V3-RPT-301 | Natural Bahasa Indonesia renderer | OPEN | P1 | no raw HOLD/LOCK-style machine shorthand in user narrative |
+| V3-RPT-301 | Natural Bahasa Indonesia renderer | OPEN | P1 | no raw machine shorthand in user narrative |
 | V3-RPT-302 | Freshness/source-health block | ACTIVE | V3.19+ | authoritative + machine + report-time freshness visible |
 | V3-RPT-303 | Decision-first report layout | MONITOR | Continuous | recommendation first; technical detail separated |
-| V3-RPT-304 | Delta-first stable-report behavior | MONITOR | Continuous | unchanged analysis shrinks |
+| V3-RPT-304 | Delta-first stable-report behavior | MONITOR | Continuous | unchanged analysis shrinks without omitting mandatory roster |
 | V3-RPT-305 | Price Radar two-group contract | ACTIVE | Continuous | OWNED and WATCHLIST groups remain complete |
 | V3-RPT-306 | Scheduled-report completeness checks | OPEN | P1 | checkpoints cannot silently disappear |
-| V3-RPT-307 | Deadline-mode report governance | MONITOR | Continuous | timing/captain/XI/chip phase-aware |
+| V3-RPT-307 | Deadline-mode report governance | MONITOR | Continuous | timing/formasi/XI/bench/C/VC/chip phase-aware |
 | V3-RPT-308 | Match-mode report governance | MONITOR | Continuous | submitted picks + event-live authority |
 | V3-RPT-309 | Confidence-language standard | OPEN | P1 | FACT/MODEL/DECISION wording consistent |
 | V3-RPT-310 | Scheduled report-time web refresh | ACTIVE | V3.19+ | OneFPL/strategy/pundit/community/verified-news pass performed when report is generated |
-| V3-RPT-311 | On-demand report-time web refresh | ACTIVE | V3.19+ | same source pass when user requests a fresh report |
-| V3-RPT-312 | Consensus-vs-DSS explanation | ACTIVE | V3.19+ | disagreements surfaced with source/provenance, not silently averaged away |
+| V3-RPT-311 | On-demand report-time web refresh | ACTIVE | V3.19+ | same source pass for fresh user report |
+| V3-RPT-312 | Consensus-vs-DSS explanation | ACTIVE | V3.19+ | disagreement surfaced rather than silently averaged |
+| V3-RPT-313 | Formation/XI/C/VC/bench completeness | ACTIVE | Continuous | every visible report prints formation, exact XI, C, VC, Bench1/2/3 and GK Bench |
 
-## F. P2 strategic capabilities
+## G. P2 strategic capabilities
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
 | V3-STR-401 | True overall-rank conversion model | DEFERRED | P2 | validated points/EO-to-rank distribution |
@@ -163,7 +175,7 @@ Production acceptance completed on 27 August 2026:
 | V3-STR-406 | Advanced blank/double simulator | OPEN | P2 | schedule uncertainty + chips + squad structure |
 | V3-STR-407 | Long-horizon chip-window optimizer | OPEN | P2 | secondary to near-term quality/rule legality |
 
-## G. Maintenance and engineering hygiene
+## H. Maintenance and engineering hygiene
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
 | V3-ENG-501 | Central config ownership audit | ACTIVE | Every release | one owner for each mutable parameter |
@@ -174,44 +186,51 @@ Production acceptance completed on 27 August 2026:
 | V3-ENG-506 | Fail-closed critical / fail-soft optional | ACTIVE | Every release | optional evidence cannot corrupt baseline |
 | V3-ENG-507 | README/task synchronization | ACTIVE | Every release | roadmap/current release accurate |
 | V3-ENG-508 | Historical version-reference hygiene | ACTIVE | Every release | stale active labels forbidden |
+| V3-ENG-509 | Active artifact ownership audit | ACTIVE | Every release | each promoted artifact has one service owner or explicit serial overlay owner |
+| V3-ENG-510 | Microservice boundary audit | ACTIVE | Every release | no active monolith and no gratuitous process fragmentation |
 
-## H. Release checklist for every V3 change
+## I. Release checklist for every V3 change
 1. Create dedicated branch from current production `main`.
 2. Update this Master Task List in the same PR.
 3. Keep mutable values in the correct config/registry owner.
 4. Update `src/version.py` when version changes.
-5. Bump schema only for contract changes.
-6. Keep README, IMPLEMENTATION_STATUS, workflow, engine schema metadata, service/report registries and release tests consistent.
+5. Bump serving schema only for serving/runtime-output contract changes.
+6. Keep README, IMPLEMENTATION_STATUS, workflow, engine schema metadata, service/report/source registries and release tests consistent.
 7. Compile runtime modules.
-8. Full unit/regression suite PASS.
-9. Integration runtime PASS for runtime-impacting changes.
-10. Source capability contract PASS.
-11. Report-time intelligence contract PASS when applicable.
-12. Production decision contract PASS.
-13. 15 OWNED + 20 WATCHLIST contract PASS.
-14. Report-serving contract PASS.
-15. Runtime budget PASS.
-16. Merge only when PR is mergeable and all applicable CI GREEN.
-17. Confirm production push/collector.
-18. Confirm validated publication to `runtime-data`.
-19. Verify production framework: Gate0 16/16, Core50, Ext16, Enh8, overall GREEN, HEALTHY, GO.
-20. Move candidate tasks to DONE only after production evidence exists.
+8. Run architecture ownership contract PASS.
+9. Full unit/regression suite PASS.
+10. Integration runtime PASS for runtime-impacting changes.
+11. Source capability contract PASS.
+12. Report-time intelligence contract PASS when applicable.
+13. Production decision contract PASS.
+14. 15 OWNED + 20 WATCHLIST contract PASS.
+15. Report-serving contract PASS.
+16. Runtime budget PASS.
+17. Merge only when PR is mergeable and all applicable CI GREEN.
+18. Confirm production push/collector.
+19. Confirm validated publication to `runtime-data`.
+20. Verify production framework: Gate0 16/16, Core50, Ext16, Enh8, overall GREEN, HEALTHY, GO.
+21. Move candidate tasks to DONE only after production evidence exists.
 
 ## Definition of Done
-A V3 task is DONE only when implementation, tests, documentation, version governance, and production evidence agree. File existence, registry presence, source reachability, or a manually changed status label alone are insufficient.
+A V3 task is DONE only when implementation, tests, documentation, version governance, and production evidence agree. File existence, registry presence, source reachability, a manually changed status label, or a locally successful command alone are insufficient.
 
 For external evidence, missing values may never be synthesized solely to keep a module green. For report-time intelligence, a report that did not perform the web pass must explicitly state `REFRESH_REQUIRED`; it may not reuse stale evidence as if current.
 
+For architecture work, a file split is not DONE merely because code moved. The new boundary must have explicit inputs, outputs, ownership, failure semantics, DAG dependencies, tests, and no duplicate active authority.
+
 ## Execution order
-1. Keep V3.19.0 production GREEN and monitor report-serving/report-time behavior.
-2. Validate the first visible scheduled reports against the V3.19 report-time refresh contract and fix any orchestration/report-language issue without weakening DSS authority.
-3. Continue natural-language renderer and scheduled-report completeness hardening.
-4. Replace P1 proxies with richer evidence where reliable.
-5. Accumulate settled Gameweeks and calibrate prediction/weighting models.
-6. Pursue P2 only after P1 evidence is sufficient and without destabilizing V3.
+1. Keep V3.19.0 production GREEN while V3.20.0 candidate is tested.
+2. Finish remaining registry/hardcode/framework ownership cleanup.
+3. Pass architecture gate and full unit/regression suite.
+4. Pass full bounded microservice integration and all production contracts.
+5. Merge V3.20 only after all PR checks are GREEN.
+6. Verify production collector, runtime-data publication and framework GREEN/HEALTHY/GO.
+7. Update production acceptance evidence and then continue P1/report-language work.
 
 ## Change log
-- V3.19.0: production accepted report-time intelligence source registry; OneFPL delegated out of unattended collector; Ben Crellin fixture-strategy evidence; pundit consensus-vs-DSS; Reddit/community cross-check governance; verified-news class; report serving contract v2/schema48; active Master Monitor updated for fresh visible-report web passes.
+- V3.20.0 candidate: architecture hardening; artifact-owned base-service decomposition; generic root DAG; Source Registry V3; collector policy registry; current advanced-stat aliases; deep-stats runtime-data publication; semantic model IDs; architecture anti-monolith gate; serving schema remains 48.
+- V3.19.0: production accepted report-time intelligence source registry; OneFPL delegated out of unattended collector; Ben Crellin fixture strategy; pundit consensus-vs-DSS; Reddit/community cross-check governance; report serving contract v2/schema48.
 - V3.18.1: production accepted OneFPL automated-access reliability diagnosis and source capability contract.
 - V3.18.0: production accepted structured challenger observations, reachability/capability separation, TTL/LKG/stale/disagreement governance, Price Radar context integration and architecture hardening.
 - V3.17.1: canonical V3 master task governance and Definition of Done.

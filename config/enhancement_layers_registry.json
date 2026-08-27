@@ -4,7 +4,7 @@
   "expected_count": 8,
   "description": "Eight canonical cross-cutting layers. Layer count is immutable unless architecture is explicitly revised.",
   "layers": [
-    {"id":"ENH-01","name":"Data Reliability & Source Triangulation","critical":true,"capabilities":["official-feed priority","advanced-stats enrichment","source health","freshness checks"],"required_files":["config/sources.json","src/engines/reliability.py","data/health.json"],"operational_probe":"reliability_overlay"},
+    {"id":"ENH-01","name":"Data Reliability & Source Triangulation","critical":true,"capabilities":["official-feed priority","advanced-stats enrichment","source health","freshness checks"],"required_files":["config/sources/registry.json","src/engines/reliability.py","data/health.json"],"operational_probe":"reliability_overlay"},
     {"id":"ENH-02","name":"Point-in-Time Integrity & Leakage Safety","critical":true,"capabilities":["deadline snapshot","future-data exclusion","forward-valid reconciliation"],"required_files":["src/engines/leakage_guard.py"],"operational_probe":"leakage_guard"},
     {"id":"ENH-03","name":"Uncertainty, Calibration & Robustness","critical":true,"capabilities":["prediction intervals","uncertainty penalty","calibration","robustness margins"],"required_files":["src/models/projection.py","src/models/calibration.py"],"operational_probe":"uncertainty_robustness"},
     {"id":"ENH-04","name":"Multi-Horizon Strategic Optimization","critical":true,"capabilities":["3GW","5GW","10GW","15GW","best-XI utility","bench-adjusted utility"],"required_files":["src/models/optimizer.py"],"operational_probe":"multi_horizon"},

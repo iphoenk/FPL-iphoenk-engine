@@ -1,6 +1,8 @@
 {
-  "schema_version": 1,
-  "model_id": "player_projection_v310",
+  "schema_version": 2,
+  "model_id": "player_projection_interpretable_v1",
+  "historical_model_id": "player_projection_historical_prior_v1",
+  "published_horizons": [3, 5, 10, 15],
   "rate_shrinkage_minutes": 450.0,
   "position_priors": {
     "GK": {"xg90": 0.01, "xa90": 0.01, "bonus90": 0.20, "dc90": 0.00, "saves90": 3.0},

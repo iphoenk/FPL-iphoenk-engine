@@ -12,6 +12,9 @@ COLLECTOR_POLICY = ROOT / "config" / "runtime" / "collector_policy.json"
 ARTIFACT_CONTRACTS = ROOT / "config" / "runtime" / "artifact_contracts.json"
 PROJECTION_POLICY = ROOT / "config" / "intelligence" / "projection.json"
 LINEUP_POLICY = ROOT / "config" / "intelligence" / "lineup_governance.json"
+WEATHER_POLICY = ROOT / "config" / "intelligence" / "weather_context.json"
+VENUE_REGISTRY = ROOT / "config" / "venues" / "premier_league_2026_27.json"
+REPORT_REGISTRY = ROOT / "config" / "report_artifact_registry.json"
 DSS_CORE = ROOT / "config" / "dss_core_registry.json"
 DSS_EXT = ROOT / "config" / "dss_extension_registry.json"
 ENHANCEMENTS = ROOT / "config" / "enhancement_layers_registry.json"
@@ -66,46 +69,62 @@ def run() -> dict:
     artifact_contracts = _load(ARTIFACT_CONTRACTS)
     projection = _load(PROJECTION_POLICY)
     lineup_policy = _load(LINEUP_POLICY)
-    framework_registries = {
-        "dss_core": _load(DSS_CORE),
-        "dss_extensions": _load(DSS_EXT),
-        "enhancements": _load(ENHANCEMENTS),
-        "gate0": _load(GATE0),
-    }
+    weather_policy = _load(WEATHER_POLICY)
+    venues = _load(VENUE_REGISTRY)
+    report_registry = _load(REPORT_REGISTRY)
+    framework_registries = {"dss_core": _load(DSS_CORE), "dss_extensions": _load(DSS_EXT), "enhancements": _load(ENHANCEMENTS), "gate0": _load(GATE0)}
     workflow_text = WORKFLOW.read_text(encoding="utf-8")
 
     if (ROOT / "config" / "sources.json").exists():
         errors.append("legacy config/sources.json must not exist")
 
-    if sources.get("registry") != "SOURCE_REGISTRY_V3":
-        errors.append("canonical source registry must be SOURCE_REGISTRY_V3")
+    if sources.get("registry") != "SOURCE_REGISTRY_V4":
+        errors.append("canonical source registry must be SOURCE_REGISTRY_V4")
     source_policy = sources.get("policy") or {}
-    for key in ("source_network_locations_are_registry_owned", "source_ingestion_timeouts_are_registry_owned"):
+    for key in ("source_network_locations_are_registry_owned", "source_ingestion_timeouts_are_registry_owned", "weather_is_advisory_enrichment_only"):
         if source_policy.get(key) is not True:
             errors.append(f"source policy missing {key}=true")
+    source_rows = {str(row.get("id")): row for row in sources.get("sources") or []}
+    weather_source = source_rows.get("open_meteo") or {}
+    if weather_source.get("class") != "ENRICHMENT" or weather_source.get("critical") is not False or weather_source.get("adapter") != "weather_artifact":
+        errors.append("open_meteo must be noncritical WEATHER_ENRICHMENT via weather_artifact")
     for row in sources.get("sources") or []:
         for path in row.get("artifact_paths") or []:
             if re.search(r"_gw\d+\.json$", str(path)):
                 errors.append(f"active source artifact embeds fixed GW: {row.get('id')}:{path}")
 
-    if artifact_contracts.get("registry") != "RUNTIME_ARTIFACT_CONTRACTS_V1":
-        errors.append("runtime artifact contract registry must be RUNTIME_ARTIFACT_CONTRACTS_V1")
+    weather_governance = weather_policy.get("governance") or {}
+    if weather_governance.get("advisory_only") is not True:
+        errors.append("weather must remain advisory_only")
+    for key in ("may_directly_change_xpts", "may_directly_change_captaincy", "may_directly_change_starting_xi", "may_directly_change_transfer_decision", "may_directly_change_watchlist_membership"):
+        if weather_governance.get(key) is not False:
+            errors.append(f"weather decision mutation must remain false: {key}")
+    if weather_governance.get("rain_probability_is_not_rain_intensity") is not True:
+        errors.append("weather policy must distinguish rain probability from intensity")
+    venue_rows = venues.get("venues") or []
+    venue_names = [str(row.get("team_name") or "") for row in venue_rows]
+    if len(venue_rows) < 20 or len(venue_names) != len(set(venue_names)) or any(not name for name in venue_names):
+        errors.append("venue registry must contain unique current PL team names")
+
+    if artifact_contracts.get("registry") != "RUNTIME_ARTIFACT_CONTRACTS_V2":
+        errors.append("runtime artifact contract registry must be RUNTIME_ARTIFACT_CONTRACTS_V2")
     artifact_policy = artifact_contracts.get("policy") or {}
-    for key in (
-        "validate_declared_json_before_acceptance",
-        "validate_latest_sidecar_when_present",
-        "malformed_json_is_integrity_failure",
-        "valid_empty_external_observations_are_allowed",
-    ):
+    for key in ("validate_declared_json_before_acceptance", "validate_latest_sidecar_when_present", "malformed_json_is_integrity_failure", "valid_empty_external_observations_are_allowed", "valid_empty_weather_window_is_allowed"):
         if artifact_policy.get(key) is not True:
             errors.append(f"runtime artifact policy missing {key}=true")
     challenger_contract = (artifact_contracts.get("contracts") or {}).get("challenger_observations.json") or {}
-    if (challenger_contract.get("equals") or {}).get("schema_version") != 2:
-        errors.append("challenger_observations artifact contract must require schema_version=2")
-    if (challenger_contract.get("equals") or {}).get("contract") != "challenger_observation_v2":
-        errors.append("challenger_observations artifact contract must require challenger_observation_v2")
-    if (challenger_contract.get("types") or {}).get("observations") != "list":
-        errors.append("challenger_observations artifact contract must require observations list")
+    if (challenger_contract.get("equals") or {}).get("schema_version") != 2 or (challenger_contract.get("equals") or {}).get("contract") != "challenger_observation_v2" or (challenger_contract.get("types") or {}).get("observations") != "list":
+        errors.append("challenger_observations artifact contract drift")
+    weather_contract = (artifact_contracts.get("contracts") or {}).get("fixture_weather.json") or {}
+    if (weather_contract.get("equals") or {}).get("model") != "weather_context_observational_v1" or (weather_contract.get("types") or {}).get("fixtures") != "list":
+        errors.append("fixture_weather artifact contract missing or invalid")
+
+    report_contract = report_registry.get("consumer_contract") or {}
+    if report_registry.get("registry") != "REPORT_ARTIFACT_REGISTRY_V3":
+        errors.append("report artifact registry must be V3")
+    for key in ("owned_rows_require_current_gw_xpts", "owned_rows_require_lineup_status", "owned_rows_require_choice_state", "model_validation_required", "weather_context_required"):
+        if report_contract.get(key) is not True:
+            errors.append(f"report transparency contract missing {key}=true")
 
     for name, registry in framework_registries.items():
         _audit_required_paths(errors, name, registry)
@@ -117,21 +136,21 @@ def run() -> dict:
     missing_base = sorted(required_base - set(service_map))
     if missing_base:
         errors.append(f"missing owned base services: {missing_base}")
+    if any("weather" in name.lower() for name in service_map):
+        errors.append("weather must not create a standalone microservice")
     policy = services.get("policy") or {}
-    if policy.get("generic_root_service_scheduling") is not True:
-        errors.append("generic root scheduling policy must be enabled")
-    if policy.get("service_boundaries_follow_artifact_ownership_not_file_size") is not True:
-        errors.append("service-boundary ownership policy missing")
-    if policy.get("single_owner_for_standard_official_network_fetches") is not True:
-        errors.append("single Official snapshot owner policy missing")
-    for key in (
-        "declared_json_artifacts_are_validated_before_acceptance",
-        "artifact_contract_registry_owned",
-        "malformed_internal_artifact_is_integrity_failure",
-        "valid_empty_external_observations_remain_fail_soft",
-    ):
+    for key in ("generic_root_service_scheduling", "service_boundaries_follow_artifact_ownership_not_file_size", "single_owner_for_standard_official_network_fetches", "declared_json_artifacts_are_validated_before_acceptance", "artifact_contract_registry_owned", "malformed_internal_artifact_is_integrity_failure", "valid_empty_external_observations_remain_fail_soft", "weather_enrichment_lives_inside_source_layer_not_new_microservice", "weather_is_observational_and_advisory_only", "weather_never_directly_mutates_xpts_or_decisions"):
         if policy.get(key) is not True:
             errors.append(f"service policy missing {key}=true")
+
+    source_service = service_map.get("source_layer") or {}
+    if "official_snapshot.json" not in (source_service.get("inputs") or []) or "fixture_weather.json" not in (source_service.get("artifacts") or []):
+        errors.append("source_layer must own weather enrichment while consuming Official snapshot")
+    report_service = service_map.get("report_materializer") or {}
+    report_modules = [str(command.get("module")) for command in report_service.get("commands") or [] if command.get("module")]
+    expected_order = ["src.engines.report_materializer", "src.engines.report_transparency_overlay", "src.engines.report_serving_validate"]
+    if report_modules != expected_order:
+        errors.append(f"report materializer command order drift: {report_modules}")
 
     active_modules: list[str] = []
     for service_name, spec in service_map.items():
@@ -154,7 +173,6 @@ def run() -> dict:
         errors.append("official_snapshot must be owned by official_snapshot_service")
     if "official_snapshot.json" not in (official_service.get("ephemeral_artifacts") or []):
         errors.append("official_snapshot.json must be ephemeral")
-
     prediction = service_map.get("prediction") or {}
     if "official_snapshot.json" not in (prediction.get("inputs") or []):
         errors.append("prediction must consume official_snapshot.json rather than refetch standard Official data")
@@ -166,7 +184,6 @@ def run() -> dict:
     for forbidden in ("get_json(", "atomic_json(", "sell_cost("):
         if forbidden in engine_text:
             errors.append(f"src.engine compatibility facade still owns business logic: {forbidden}")
-
     decision_text = (ROOT / "src" / "engines" / "decision_intelligence.py").read_text(encoding="utf-8")
     for forbidden in ("src.sources.official_fpl", "get_json(", "def build_player_projections(", "def run()"):
         if forbidden in decision_text:
@@ -209,14 +226,12 @@ def run() -> dict:
     for name, expression in schedules.items():
         if f'cron: "{expression}"' not in workflow_text:
             errors.append(f"workflow missing collector-policy schedule {name}={expression}")
-    deep_workflow = ROOT / ".github" / "workflows" / "deep-stats.yml"
-    if deep_workflow.exists():
+    if (ROOT / ".github" / "workflows" / "deep-stats.yml").exists():
         errors.append("legacy deep-stats workflow must be removed; runtime publication belongs to main workflow")
     for path in (ROOT / ".github" / "workflows").glob("*.yml"):
         text = path.read_text(encoding="utf-8")
         if "git push origin main" in text:
             errors.append(f"workflow writes runtime data directly to main: {path.name}")
-
     if 'services["collector"]' in orchestrator_text or "critical collector service failed" in orchestrator_text:
         errors.append("orchestrator still special-cases collector")
 
@@ -233,6 +248,8 @@ def run() -> dict:
         "source_registry": sources.get("registry"),
         "service_registry_schema": services.get("schema_version"),
         "artifact_contract_registry": artifact_contracts.get("registry"),
+        "report_artifact_registry": report_registry.get("registry"),
+        "weather_source": weather_source.get("id"),
     }
     print(json.dumps(result, ensure_ascii=False))
     if errors:

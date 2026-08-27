@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "contract": "V5_RUNTIME_RELEASE_FINGERPRINT_V5",
+  "version": 6,
+  "contract": "V5_RUNTIME_RELEASE_FINGERPRINT_V6",
   "algorithm": "sha256",
   "include_roots": ["src/v5", "config/intelligence", "config/rules", "config/venues"],
   "include_files": [
@@ -17,6 +17,7 @@
     "config/v5_cluster_health_registry.json",
     "config/v5_decision_registry.json",
     "config/v5_dss_policy_registry.json",
+    "config/v5_execution_plane_registry.json",
     "config/v5_module_registry.json",
     "config/v5_orchestrator_registry.json",
     "config/v5_payload_contract_registry.json",
@@ -46,6 +47,7 @@
     "runtime_or_governance_code_change_resets_acceptance": true,
     "performance_budget_change_resets_acceptance": true,
     "wire_or_payload_or_materialization_policy_change_resets_acceptance": true,
+    "execution_plane_policy_change_resets_acceptance": true,
     "venue_authority_change_resets_acceptance": true,
     "production_baseline_is_bound_separately": true
   }

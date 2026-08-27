@@ -17,7 +17,7 @@
     {"id":"DSS-X11","name":"Captain Safe-Pool / DNP Guard","critical":true,"required_files":["src/models/projection.py"],"operational_probe":"captain_dnp_guard"},
     {"id":"DSS-X12","name":"Calibration, Reconciliation & Backtest Store","critical":true,"required_files":["src/models/calibration.py","src/models/model_registry.py"],"operational_probe":"calibration_store"},
     {"id":"DSS-X13","name":"Data Freshness & Refresh Policy","critical":true,"required_files":["src/engines/refresh_policy.py","data/health.json"],"operational_probe":"data_freshness"},
-    {"id":"DSS-X14","name":"Source / Enrichment Health","critical":false,"required_files":["config/sources.json","data/latest.json"],"operational_probe":"source_health"},
+    {"id":"DSS-X14","name":"Source / Enrichment Health","critical":false,"required_files":["config/sources/registry.json","data/latest.json"],"operational_probe":"source_health"},
     {"id":"DSS-X15","name":"Price Intelligence Reconciliation","critical":false,"required_files":["src/engines/price_radar.py","data/prices.json","data/price_cache.json"],"operational_probe":"price_intelligence"},
     {"id":"DSS-X16","name":"Runtime / Performance Observability","critical":false,"required_files":["data/health.json"],"operational_probe":"runtime_observability"}
   ]

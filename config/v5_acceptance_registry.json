@@ -1,5 +1,5 @@
 {
-  "version": 20,
+  "version": 21,
   "module_policy": {
     "minimum_registered_modules": 42,
     "required_truth_modules": ["rules", "source_authority", "public_api", "official_authenticated", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
@@ -23,8 +23,9 @@
     "require_deployment_manifest": "deploy/v5/docker-compose.yml"
   },
   "convergence": {
-    "production_baseline": "v3.20.2",
-    "production_main_sha": "85bca2d6204c56698286d5bfc10dd643c25c1dbd",
+    "production_baseline": "v3.21.0",
+    "production_main_sha": "332ac84b396f28139725c7425dc8823f6b0a0d83",
+    "production_schema_version": 49,
     "configuration_ownership_required": true,
     "p0_capabilities_required": ["P0-1_prediction_calibration_backtest", "P0-2_xmins_role_v2", "P0-3_team_strength_fixture_probability", "P0-4_multi_horizon_package_optimizer", "P0-5_external_challenger_scorecard"],
     "decision_bridge_only_forbidden": true,
@@ -56,9 +57,20 @@
     "source_network_locations_registry_owned_required": true,
     "source_ingestion_timeouts_registry_owned_required": true,
     "active_artifact_aliases_gameweek_free_required": true,
+    "source_registry_schema_required": 4,
     "onefpl_runtime_collector_disabled_required": true,
     "onefpl_report_time_delegation_required": "REPORT_TIME_SOURCE_REGISTRY_V1",
     "understat_direct_scrape_disabled_required": true,
+    "open_meteo_advisory_enrichment_required": true,
+    "weather_policy_ref_required": "config/intelligence/weather_context.json",
+    "weather_venue_registry_required": "config/venues/premier_league_2026_27.json",
+    "weather_may_directly_change_xpts": false,
+    "weather_may_directly_change_captaincy": false,
+    "weather_may_directly_change_starting_xi": false,
+    "weather_may_directly_change_transfer_decision": false,
+    "weather_may_directly_change_watchlist_membership": false,
+    "report_selection_transparency_required": true,
+    "owned_selection_transparency_count": 15,
     "runtime_release_fingerprint_required": true,
     "release_attestation_required": true,
     "runtime_feature_consumption_evidence_required": true,
@@ -87,7 +99,9 @@
     "finance_sell_value_vectors_required": true,
     "phase_authority_regression_required": true,
     "lineup_legality_regression_required": true,
-    "artifact_contract_validation_required": true
+    "artifact_contract_validation_required": true,
+    "weather_advisory_only_required": true,
+    "report_selection_transparency_required": true
   },
   "prediction_calibration_gate": {
     "required_for_production_promotion": true,

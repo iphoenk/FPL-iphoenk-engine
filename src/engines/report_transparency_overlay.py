@@ -8,6 +8,7 @@ from typing import Any
 from src.utils import DATA, ROOT, atomic_json, read_json
 
 EVAL_CONFIG = ROOT / "config" / "intelligence" / "prediction_evaluation.json"
+LINEUP_CONFIG = ROOT / "config" / "intelligence" / "lineup_governance.json"
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -22,28 +23,55 @@ def _eval_config() -> dict[str, Any]:
     return json.loads(EVAL_CONFIG.read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=1)
+def _lineup_config() -> dict[str, Any]:
+    return json.loads(LINEUP_CONFIG.read_text(encoding="utf-8"))
+
+
 def _gw_row(player: dict[str, Any], gw: int) -> dict[str, Any]:
     return next((dict(row) for row in player.get("xpts_by_gw") or [] if int(row.get("gw") or -1) == gw), {})
 
 
-def _decorate_owned(rows: list[dict[str, Any]], projections: dict[str, Any], lineup: dict[str, Any], gw: int) -> list[dict[str, Any]]:
-    pmap = {int(row["element"]): row for row in projections.get("players") or [] if row.get("element") is not None}
-    starter_ids = {int(row["element"]) for row in lineup.get("starting_xi") or [] if row.get("element") is not None}
-    battle = lineup.get("main_starting_xi_battle") or {}
+def _open_choice_ids(lineup: dict[str, Any]) -> set[int]:
     open_ids: set[int] = set()
+    battle = lineup.get("main_starting_xi_battle") or {}
     if battle.get("status") == "CLOSE":
         for side in ("starter_side", "bench_side"):
             open_ids.update(int(row["element"]) for row in battle.get(side) or [] if row.get("element") is not None)
+
+    threshold = _f((_lineup_config().get("battle") or {}).get("close_margin_threshold"))
+    if threshold <= 0:
+        raise RuntimeError("report transparency requires positive config-owned battle close_margin_threshold")
+    goalkeepers = [
+        row for row in lineup.get("squad_rows") or []
+        if row.get("position") == "GK" and row.get("element") is not None and row.get("selection_score") is not None
+    ]
+    if len(goalkeepers) == 2:
+        margin = abs(_f(goalkeepers[0].get("selection_score")) - _f(goalkeepers[1].get("selection_score")))
+        if margin < threshold:
+            open_ids.update(int(row["element"]) for row in goalkeepers)
+    return open_ids
+
+
+def _decorate_owned(rows: list[dict[str, Any]], projections: dict[str, Any], lineup: dict[str, Any], gw: int) -> list[dict[str, Any]]:
+    pmap = {int(row["element"]): row for row in projections.get("players") or [] if row.get("element") is not None}
+    squad_map = {int(row["element"]): row for row in lineup.get("squad_rows") or [] if row.get("element") is not None}
+    starter_ids = {int(row["element"]) for row in lineup.get("starting_xi") or [] if row.get("element") is not None}
+    open_ids = _open_choice_ids(lineup)
     out = []
     for source in rows:
         row = dict(source)
         element = int(row.get("element") or -1)
         proj = pmap.get(element) or {}
+        governed = squad_map.get(element)
         event = _gw_row(proj, gw)
         if not event:
             raise RuntimeError(f"owned report transparency missing GW{gw} projection for element={element}")
+        if governed is None or governed.get("selection_score") is None:
+            raise RuntimeError(f"owned report transparency missing governed selection_score for element={element}")
         row["xpts_gw"] = round(_f(event.get("mean")), 3)
         row["xpts_std"] = round(_f(event.get("std")), 3)
+        row["selection_score"] = round(_f(governed.get("selection_score")), 4)
         row["lineup_status"] = "START" if element in starter_ids else "BENCH"
         row["choice_state"] = "OPEN" if element in open_ids else "CURRENT"
         out.append(row)

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from src.engines.report_transparency_overlay import _confidence_calibration
+from src.engines.report_transparency_overlay import _confidence_calibration, _decorate_owned
 from src.sources.weather_open_meteo import _resolve_venue, _severity
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -97,11 +97,38 @@ def test_projection_confidence_guard_requires_review_from_gw5_if_no_high():
     assert state["state"] == "CALIBRATION_REVIEW_REQUIRED"
 
 
-def test_report_contract_requires_xpts_weather_and_settled_validation():
+def test_owned_transparency_exposes_selection_score_and_close_gk_choice():
+    owned = [{"element": idx, "name": f"P{idx}", "model_confidence": "MEDIUM"} for idx in range(1, 16)]
+    projections = {
+        "players": [
+            {"element": idx, "xpts_by_gw": [{"gw": 2, "mean": 3.0 + idx / 10.0, "std": 1.5}]}
+            for idx in range(1, 16)
+        ]
+    }
+    squad_rows = [
+        {"element": idx, "position": "GK" if idx <= 2 else "DEF", "selection_score": 4.0 - idx / 10.0}
+        for idx in range(1, 16)
+    ]
+    lineup = {
+        "squad_rows": squad_rows,
+        "starting_xi": [{"element": 1}, *[{"element": idx} for idx in range(3, 13)]],
+        "main_starting_xi_battle": {"status": "CLEAR", "starter_side": [], "bench_side": []},
+    }
+    rows = _decorate_owned(owned, projections, lineup, 2)
+    by_id = {int(row["element"]): row for row in rows}
+    assert all(row.get("selection_score") is not None for row in rows)
+    assert by_id[1]["choice_state"] == "OPEN"
+    assert by_id[2]["choice_state"] == "OPEN"
+    assert by_id[1]["lineup_status"] == "START"
+    assert by_id[2]["lineup_status"] == "BENCH"
+
+
+def test_report_contract_requires_xpts_selection_weather_and_settled_validation():
     report = _load("config/report_artifact_registry.json")
     contract = report["consumer_contract"]
     assert report["registry"] == "REPORT_ARTIFACT_REGISTRY_V3"
     assert contract["owned_rows_require_current_gw_xpts"] is True
+    assert contract["owned_rows_require_selection_score"] is True
     assert contract["owned_rows_require_lineup_status"] is True
     assert contract["owned_rows_require_choice_state"] is True
     assert contract["model_validation_required"] is True

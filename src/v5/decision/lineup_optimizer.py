@@ -7,6 +7,7 @@ from src.v5.config_cache import load_json_config
 from src.v5.decision.projection_index import gw_projection, index_player
 
 CONFIG = "config/v5_decision_registry.json"
+METRIC_CACHE_KEY = "_v5_lineup_metric_cache"
 
 
 def _cfg() -> dict[str, Any]:
@@ -50,15 +51,6 @@ def _score_from_metrics(
     )
 
 
-def player_score(player: dict[str, Any], gw: int, profile: str = "player_score") -> float:
-    policy = _cfg()["lineup"].get(profile)
-    if not isinstance(policy, dict):
-        raise KeyError(f"unknown V5 lineup score profile: {profile}")
-    projection = gw_projection(player, gw)
-    start_probability, dnp_probability = _minutes_probabilities(player)
-    return _score_from_metrics(policy, projection, start_probability, dnp_probability)
-
-
 def _tie_values(
     player: dict[str, Any],
     projection: Mapping[str, float],
@@ -80,21 +72,62 @@ def _tie_values(
     return tuple(values)
 
 
-def _rank(players: Iterable[dict[str, Any]], gw: int, profile: str) -> list[dict[str, Any]]:
-    lineup_cfg = _cfg()["lineup"]
-    policy = lineup_cfg.get(profile)
+def _cached_metrics(
+    player: dict[str, Any],
+    gw: int,
+    profile: str,
+    lineup_cfg: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Memoize immutable projection/minutes score inputs on the player object.
+
+    Package search reuses the same current/candidate dicts across hundreds of
+    legal squads. The cache changes no ranking semantics; it only avoids
+    repeating identical O(1) lookups and score arithmetic for every package.
+    """
+    row = index_player(player)
+    cache = row.get(METRIC_CACHE_KEY)
+    if not isinstance(cache, dict):
+        cache = {}
+        row[METRIC_CACHE_KEY] = cache
+    key = f"{int(gw)}:{profile}"
+    existing = cache.get(key)
+    if isinstance(existing, dict):
+        return existing
+
+    cfg = lineup_cfg if isinstance(lineup_cfg, Mapping) else _cfg()["lineup"]
+    policy = cfg.get(profile)
     if not isinstance(policy, dict):
         raise KeyError(f"unknown V5 lineup score profile: {profile}")
-    tie_breakers = tuple(str(value) for value in lineup_cfg.get("tie_breakers") or ())
+    tie_breakers = tuple(str(value) for value in cfg.get("tie_breakers") or ())
     if not tie_breakers:
         raise RuntimeError("V5 lineup tie_breakers registry is empty")
+    projection = gw_projection(row, gw)
+    start_probability, dnp_probability = _minutes_probabilities(row)
+    score = _score_from_metrics(policy, projection, start_probability, dnp_probability)
+    result = {
+        "score": score,
+        "mean": float(projection["mean"]),
+        "variance": float(projection["std"]) ** 2,
+        "std": float(projection["std"]),
+        "start_probability": start_probability,
+        "dnp_probability": dnp_probability,
+        "tie_values": _tie_values(row, projection, start_probability, tie_breakers),
+    }
+    cache[key] = result
+    return result
+
+
+def player_score(player: dict[str, Any], gw: int, profile: str = "player_score") -> float:
+    return float(_cached_metrics(player, gw, profile)["score"])
+
+
+def _rank(players: Iterable[dict[str, Any]], gw: int, profile: str) -> list[dict[str, Any]]:
+    lineup_cfg = _cfg()["lineup"]
     ranked = []
     for player in players:
         row = index_player(player)
-        projection = gw_projection(row, gw)
-        start_probability, dnp_probability = _minutes_probabilities(row)
-        score = _score_from_metrics(policy, projection, start_probability, dnp_probability)
-        ranked.append(((score, *_tie_values(row, projection, start_probability, tie_breakers)), row))
+        metrics = _cached_metrics(row, gw, profile, lineup_cfg)
+        ranked.append(((metrics["score"], *metrics["tie_values"]), row))
     ranked.sort(key=lambda item: item[0], reverse=True)
     return [item[1] for item in ranked]
 
@@ -110,12 +143,8 @@ def _selection_context(players: list[dict[str, Any]], gw: int) -> dict[str, Any]
     positions = tuple(str(value) for value in lineup_cfg.get("positions") or ())
     if not positions:
         raise RuntimeError("V5 lineup positions registry is empty")
-    policy = lineup_cfg.get("player_score")
-    if not isinstance(policy, dict):
+    if not isinstance(lineup_cfg.get("player_score"), dict):
         raise RuntimeError("V5 lineup player_score policy missing")
-    tie_breakers = tuple(str(value) for value in lineup_cfg.get("tie_breakers") or ())
-    if not tie_breakers:
-        raise RuntimeError("V5 lineup tie_breakers registry is empty")
 
     by_position: dict[str, list[tuple[tuple[float, ...], dict[str, Any]]]] = {position: [] for position in positions}
     metrics: dict[int, dict[str, float]] = {}
@@ -124,17 +153,15 @@ def _selection_context(players: list[dict[str, Any]], gw: int) -> dict[str, Any]
         row = index_player(player)
         indexed.append(row)
         element = int(row.get("element") or -1)
-        projection = gw_projection(row, gw)
-        start_probability, dnp_probability = _minutes_probabilities(row)
-        score = _score_from_metrics(policy, projection, start_probability, dnp_probability)
+        cached = _cached_metrics(row, gw, "player_score", lineup_cfg)
         metrics[element] = {
-            "score": score,
-            "mean": float(projection["mean"]),
-            "variance": float(projection["std"]) ** 2,
+            "score": float(cached["score"]),
+            "mean": float(cached["mean"]),
+            "variance": float(cached["variance"]),
         }
         position = str(row.get("position"))
         if position in by_position:
-            by_position[position].append(((score, *_tie_values(row, projection, start_probability, tie_breakers)), row))
+            by_position[position].append(((cached["score"], *cached["tie_values"]), row))
 
     ranked_by_position: dict[str, list[dict[str, Any]]] = {}
     for position, rows in by_position.items():
@@ -343,18 +370,17 @@ def optimize_lineup(team: dict[str, Any], prediction: dict[str, Any], rules: dic
     bench = reserve_outfield + reserve_gks
 
     def view(player: dict[str, Any], *, profile: str) -> dict[str, Any]:
-        projection = gw_projection(player, planning_gw)
-        start_probability, dnp_probability = _minutes_probabilities(player)
+        metrics = _cached_metrics(player, planning_gw, profile)
         return {
             "element": int(player["element"]),
             "name": player.get("name"),
             "position": player.get("position"),
             "team_id": player.get("team_id"),
-            "mean": round(projection["mean"], 3),
-            "std": round(projection["std"], 3),
-            "start_probability": round(start_probability, 4),
-            "dnp_probability": round(dnp_probability, 4),
-            "score": round(player_score(player, planning_gw, profile), 4),
+            "mean": round(float(metrics["mean"]), 3),
+            "std": round(float(metrics["std"]), 3),
+            "start_probability": round(float(metrics["start_probability"]), 4),
+            "dnp_probability": round(float(metrics["dnp_probability"]), 4),
+            "score": round(float(metrics["score"]), 4),
         }
 
     publish_top_n = max(1, int(alternatives_cfg.get("publish_top_n") or 1))
@@ -387,7 +413,7 @@ def optimize_lineup(team: dict[str, Any], prediction: dict[str, Any], rules: dic
         "authority": "v5_decision_lineup_optimizer",
         "performance": {
             "projection_lookup": "indexed_o1",
-            "package_scoring_formation_ranking": "single_rank_per_position_per_gw",
+            "package_scoring_formation_ranking": "memoized_exact_metrics+single_rank_per_position_per_gw",
             "final_lineup_enumeration": "all_legal_xi_once" if enumerate_all else "formation_rank_only",
             "legal_xi_candidates": len(candidates),
         },

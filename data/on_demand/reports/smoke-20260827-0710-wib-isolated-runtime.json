@@ -1,0 +1,2271 @@
+{
+  "schema_version": 1,
+  "report_type": "ON_DEMAND_TEAM_SNAPSHOT",
+  "model": "on_demand_report_router_v1",
+  "request": {
+    "request_id": "smoke-20260827-0710-wib-isolated-runtime",
+    "requested_at": "2026-08-27T00:10:00Z",
+    "requested_by": "chat",
+    "request_note": "Smoke-test durable isolated on-demand team snapshot publication"
+  },
+  "authority": {
+    "strategy": "CURRENT_PRODUCTION_MAIN",
+    "engine_track": "V3_PRODUCTION",
+    "engine_version": "3.18.1",
+    "source_branch": "main",
+    "source_sha": "02d0ce597e111e9b7d464f88479d78d462b616eb",
+    "production_authoritative": true,
+    "v5_beta_overlay_used": false
+  },
+  "freshness": {
+    "engine_generated_at": "2026-08-27T00:13:38.830420+00:00",
+    "packaged_at": "2026-08-27T00:13:45.725673+00:00",
+    "target_minutes": 5,
+    "fresh_run": true
+  },
+  "context": {
+    "phase": null,
+    "planning_gw": 2,
+    "scoring_gw": 1,
+    "deadline_time": "2026-08-28T17:30:00Z",
+    "squad_authority": "LOCKED_PRE_DEADLINE"
+  },
+  "quick_view": {
+    "overall": "REVIEW",
+    "squad_decision": "HOLD",
+    "xi_decision": "OPEN",
+    "captaincy_decision": "LEAN",
+    "chip_decision": "HOLD",
+    "price_decision": "HOLD",
+    "confidence": "LOW",
+    "owned_count": 15,
+    "formation": "4-4-2",
+    "starting_xi": [
+      "Tzolakis",
+      "De Cuyper",
+      "Kayode",
+      "Calafiori",
+      "Robinson",
+      "Rogers",
+      "Ødegaard",
+      "B.Fernandes",
+      "Tzolis",
+      "Haaland",
+      "João Pedro"
+    ],
+    "bench": [
+      "Verbruggen",
+      "M.Sangaré",
+      "Aina",
+      "Calvert-Lewin"
+    ],
+    "captain": "Haaland",
+    "vice_captain": "De Cuyper",
+    "captaincy_confidence": "MEDIUM",
+    "active_chip": "wildcard",
+    "owned_price_alerts": [
+      {
+        "element": 15,
+        "name": "Ødegaard",
+        "direction": "RISE",
+        "urgency": "CRITICAL",
+        "progress_pct": 98.3,
+        "estimated_change_time": "2026-08-27T23:00:00+00:00",
+        "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+        "action": "HOLD",
+        "price": 6.5
+      },
+      {
+        "element": 557,
+        "name": "Tzolis",
+        "direction": "RISE",
+        "urgency": "HIGH",
+        "progress_pct": 72.0,
+        "estimated_change_time": "2026-08-27T23:00:00+00:00",
+        "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+        "action": "HOLD",
+        "price": 6.5
+      },
+      {
+        "element": 40,
+        "name": "Rogers",
+        "direction": "RISE",
+        "urgency": "HIGH",
+        "progress_pct": 59.1,
+        "estimated_change_time": "2026-08-27T23:00:00+00:00",
+        "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+        "action": "HOLD",
+        "price": 7.5
+      },
+      {
+        "element": 565,
+        "name": "M.Sangaré",
+        "direction": "RISE",
+        "urgency": "HIGH",
+        "progress_pct": 6.9,
+        "estimated_change_time": "2026-08-27T23:00:00+00:00",
+        "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+        "action": "HOLD",
+        "price": 5.6
+      },
+      {
+        "element": 115,
+        "name": "De Cuyper",
+        "direction": "RISE",
+        "urgency": "HIGH",
+        "progress_pct": 5.9,
+        "estimated_change_time": "2026-08-27T23:00:00+00:00",
+        "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+        "action": "HOLD",
+        "price": 4.6
+      }
+    ],
+    "external_price_alerts": [
+      {
+        "element": 368,
+        "name": "Szoboszlai",
+        "direction": "RISE",
+        "urgency": "HIGH",
+        "progress_pct": 55.1,
+        "estimated_change_time": "2026-08-27T23:00:00+00:00",
+        "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+        "action": "WATCH",
+        "price": 7.0
+      },
+      {
+        "element": 367,
+        "name": "Gakpo",
+        "direction": "RISE",
+        "urgency": "HIGH",
+        "progress_pct": 52.0,
+        "estimated_change_time": "2026-08-27T23:00:00+00:00",
+        "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+        "action": "WATCH",
+        "price": 7.0
+      },
+      {
+        "element": 123,
+        "name": "Hinshelwood",
+        "direction": "RISE",
+        "urgency": "HIGH",
+        "progress_pct": 48.8,
+        "estimated_change_time": "2026-08-27T23:00:00+00:00",
+        "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+        "action": "WATCH",
+        "price": 6.0
+      },
+      {
+        "element": 249,
+        "name": "Barry",
+        "direction": "RISE",
+        "urgency": "HIGH",
+        "progress_pct": 29.9,
+        "estimated_change_time": "2026-08-27T23:00:00+00:00",
+        "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+        "action": "WATCH",
+        "price": 5.5
+      }
+    ],
+    "watchlist_count": 20,
+    "watchlist_status": "READY"
+  },
+  "user_report": {
+    "decision": {
+      "overall": "REVIEW",
+      "squad": "HOLD",
+      "starting_xi": "OPEN",
+      "captaincy": "LEAN",
+      "chip": "HOLD",
+      "price": "HOLD",
+      "confidence": "LOW"
+    },
+    "owned_squad": {
+      "count": 15,
+      "facts": [
+        {
+          "element": 572,
+          "name": "Tzolakis",
+          "position": "GK",
+          "price": 4.5,
+          "status": "a",
+          "xmins": 60.0,
+          "start_probability": 0.7566,
+          "model_confidence": "LOW"
+        },
+        {
+          "element": 109,
+          "name": "Verbruggen",
+          "position": "GK",
+          "price": 4.5,
+          "status": "a",
+          "xmins": 80.3,
+          "start_probability": 0.8766,
+          "model_confidence": "MEDIUM"
+        },
+        {
+          "element": 115,
+          "name": "De Cuyper",
+          "position": "DEF",
+          "price": 4.6,
+          "status": "a",
+          "xmins": 66.7,
+          "start_probability": 0.7752,
+          "model_confidence": "MEDIUM"
+        },
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "position": "DEF",
+          "price": 5.6,
+          "status": "a",
+          "xmins": 63.7,
+          "start_probability": 0.7947,
+          "model_confidence": "MEDIUM"
+        },
+        {
+          "element": 88,
+          "name": "Kayode",
+          "position": "DEF",
+          "price": 4.6,
+          "status": "a",
+          "xmins": 78.7,
+          "start_probability": 0.8766,
+          "model_confidence": "MEDIUM"
+        },
+        {
+          "element": 254,
+          "name": "Robinson",
+          "position": "DEF",
+          "price": 4.5,
+          "status": "a",
+          "xmins": 70.5,
+          "start_probability": 0.7752,
+          "model_confidence": "MEDIUM"
+        },
+        {
+          "element": 473,
+          "name": "Aina",
+          "position": "DEF",
+          "price": 4.5,
+          "status": "a",
+          "xmins": 71.3,
+          "start_probability": 0.7789,
+          "model_confidence": "MEDIUM"
+        },
+        {
+          "element": 426,
+          "name": "B.Fernandes",
+          "position": "MID",
+          "price": 12.0,
+          "status": "a",
+          "xmins": 78.2,
+          "start_probability": 0.8766,
+          "model_confidence": "MEDIUM"
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "position": "MID",
+          "price": 6.5,
+          "status": "a",
+          "xmins": 68.4,
+          "start_probability": 0.7716,
+          "model_confidence": "MEDIUM"
+        },
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "position": "MID",
+          "price": 6.5,
+          "status": "a",
+          "xmins": 57.8,
+          "start_probability": 0.7566,
+          "model_confidence": "LOW"
+        },
+        {
+          "element": 40,
+          "name": "Rogers",
+          "position": "MID",
+          "price": 7.5,
+          "status": "a",
+          "xmins": 79.1,
+          "start_probability": 0.8766,
+          "model_confidence": "MEDIUM"
+        },
+        {
+          "element": 565,
+          "name": "M.Sangaré",
+          "position": "MID",
+          "price": 5.6,
+          "status": "a",
+          "xmins": 57.8,
+          "start_probability": 0.7566,
+          "model_confidence": "LOW"
+        },
+        {
+          "element": 411,
+          "name": "Haaland",
+          "position": "FWD",
+          "price": 15.5,
+          "status": "a",
+          "xmins": 77.0,
+          "start_probability": 0.8683,
+          "model_confidence": "MEDIUM"
+        },
+        {
+          "element": 165,
+          "name": "João Pedro",
+          "position": "FWD",
+          "price": 7.6,
+          "status": "a",
+          "xmins": 74.1,
+          "start_probability": 0.8426,
+          "model_confidence": "MEDIUM"
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "position": "FWD",
+          "price": 6.0,
+          "status": "a",
+          "xmins": 76.9,
+          "start_probability": 0.8323,
+          "model_confidence": "MEDIUM"
+        }
+      ],
+      "compact_summary": null,
+      "decision": "REVIEW"
+    },
+    "changes_since_last_report": {
+      "initial_report": false,
+      "material_change": true,
+      "changed": [
+        "price"
+      ]
+    },
+    "starting_xi": {
+      "facts": {
+        "formation": "4-4-2",
+        "full_xi": null
+      },
+      "model": {
+        "battle": {
+          "starter": "Robinson",
+          "challenger": "M.Sangaré",
+          "margin": 0.0362,
+          "alternative_formation": "3-5-2",
+          "leader_metrics": {
+            "element": 254,
+            "name": "Robinson",
+            "xpts": 3.437,
+            "xmins": 70.5,
+            "start_probability": 0.7752,
+            "dnp_probability": 0.0787,
+            "model_confidence": "MEDIUM"
+          },
+          "challenger_metrics": {
+            "element": 565,
+            "name": "M.Sangaré",
+            "xpts": 3.415,
+            "xmins": 57.8,
+            "start_probability": 0.7566,
+            "dnp_probability": 0.0852,
+            "model_confidence": "LOW"
+          },
+          "main_reasons": [
+            "xMins +12.7"
+          ]
+        },
+        "confidence": "LOW"
+      },
+      "decision": "OPEN",
+      "reason": "battle masih terlalu dekat untuk dikunci"
+    },
+    "captaincy": {
+      "facts": {
+        "model_candidate": "Haaland",
+        "vice_candidate": "De Cuyper",
+        "fixture_count": 1
+      },
+      "model": {
+        "captain": {
+          "element": 411,
+          "name": "Haaland",
+          "xpts_mean": 5.968,
+          "floor80": 0.976,
+          "ceiling80": 10.96,
+          "xpts_std": 3.894,
+          "start_probability": 0.8683,
+          "expected_minutes": 77.0,
+          "dnp_probability": 0.0461,
+          "role_evidence": {},
+          "projection_confidence": "MEDIUM",
+          "fixture_count": 1
+        },
+        "vice": {
+          "element": 115,
+          "name": "De Cuyper",
+          "xpts_mean": 5.733,
+          "floor80": 0.718,
+          "ceiling80": 10.748,
+          "xpts_std": 3.912,
+          "start_probability": 0.7752,
+          "expected_minutes": 66.7,
+          "dnp_probability": 0.0787,
+          "role_evidence": {},
+          "projection_confidence": "MEDIUM",
+          "fixture_count": 1
+        },
+        "candidate_margin": 0.3672,
+        "checks": {
+          "start_probability": true,
+          "expected_minutes": true,
+          "dnp_risk": true,
+          "volatility": true,
+          "ranking_margin": false,
+          "role_evidence": false,
+          "fixture_context": true
+        }
+      },
+      "decision": "LEAN",
+      "confidence": "MEDIUM",
+      "reason": "kapten belum layak di-lock: ranking_margin, role_evidence"
+    },
+    "chip": {
+      "facts": {
+        "active_chip": "wildcard",
+        "used_this_gw": []
+      },
+      "model": null,
+      "decision": "HOLD",
+      "confidence": "HIGH"
+    },
+    "price_radar": {
+      "owned": [
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "direction": "RISE",
+          "urgency": "CRITICAL",
+          "progress_pct": 98.3,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "HOLD",
+          "price": 6.5
+        },
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 72.0,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "HOLD",
+          "price": 6.5
+        },
+        {
+          "element": 40,
+          "name": "Rogers",
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 59.1,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "HOLD",
+          "price": 7.5
+        },
+        {
+          "element": 565,
+          "name": "M.Sangaré",
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 6.9,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "HOLD",
+          "price": 5.6
+        },
+        {
+          "element": 115,
+          "name": "De Cuyper",
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 5.9,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "HOLD",
+          "price": 4.6
+        }
+      ],
+      "external_watchlist": [
+        {
+          "element": 368,
+          "name": "Szoboszlai",
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 55.1,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "WATCH",
+          "price": 7.0
+        },
+        {
+          "element": 367,
+          "name": "Gakpo",
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 52.0,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "WATCH",
+          "price": 7.0
+        },
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 48.8,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "WATCH",
+          "price": 6.0
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 29.9,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "WATCH",
+          "price": 5.5
+        }
+      ],
+      "external_status": "READY",
+      "decision": "HOLD"
+    },
+    "external_watchlist": {
+      "status": "READY",
+      "decision": "WATCH",
+      "count": 20,
+      "positions": {
+        "GK": [
+          {
+            "element": 226,
+            "rank": 1,
+            "lifecycle": "KEEP",
+            "name": "Pickford",
+            "team": "Everton",
+            "position": "GK",
+            "price": 5.5,
+            "xmins": 80.3,
+            "start_probability": 0.8766,
+            "xpts_5": 15.602,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 3-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "LOW",
+              "progress_pct": 11.0
+            }
+          },
+          {
+            "element": 82,
+            "rank": 2,
+            "lifecycle": "KEEP",
+            "name": "Kelleher",
+            "team": "Brentford",
+            "position": "GK",
+            "price": 5.0,
+            "xmins": 80.3,
+            "start_probability": 0.8766,
+            "xpts_5": 15.475,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 5-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "LOW",
+              "progress_pct": 15.8
+            }
+          },
+          {
+            "element": 1,
+            "rank": 3,
+            "lifecycle": "KEEP",
+            "name": "Raya",
+            "team": "Arsenal",
+            "position": "GK",
+            "price": 6.0,
+            "xmins": 80.3,
+            "start_probability": 0.8766,
+            "xpts_5": 14.908,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 5-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "LOW",
+              "progress_pct": 8.8
+            }
+          },
+          {
+            "element": 384,
+            "rank": 4,
+            "lifecycle": "KEEP",
+            "name": "Donnarumma",
+            "team": "Man City",
+            "position": "GK",
+            "price": 5.5,
+            "xmins": 79.7,
+            "start_probability": 0.8683,
+            "xpts_5": 14.809,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 5-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "FALL",
+              "urgency": "LOW",
+              "progress_pct": -3.8
+            }
+          },
+          {
+            "element": 250,
+            "rank": 5,
+            "lifecycle": "KEEP",
+            "name": "Leno",
+            "team": "Fulham",
+            "position": "GK",
+            "price": 4.5,
+            "xmins": 80.3,
+            "start_probability": 0.8766,
+            "xpts_5": 13.831,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "starter security / xMins kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "LOW",
+              "progress_pct": 0.6
+            }
+          }
+        ],
+        "DEF": [
+          {
+            "element": 388,
+            "rank": 1,
+            "lifecycle": "KEEP",
+            "name": "Guéhi",
+            "team": "Man City",
+            "position": "DEF",
+            "price": 6.0,
+            "xmins": 80.3,
+            "start_probability": 0.8766,
+            "xpts_5": 29.438,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 3-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "MEDIUM",
+              "progress_pct": 42.6
+            }
+          },
+          {
+            "element": 387,
+            "rank": 2,
+            "lifecycle": "KEEP",
+            "name": "O'Reilly",
+            "team": "Man City",
+            "position": "DEF",
+            "price": 6.5,
+            "xmins": 76.2,
+            "start_probability": 0.8244,
+            "xpts_5": 24.631,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 3-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "FALL",
+              "urgency": "LOW",
+              "progress_pct": -4.6
+            }
+          },
+          {
+            "element": 84,
+            "rank": 3,
+            "lifecycle": "KEEP",
+            "name": "Collins",
+            "team": "Brentford",
+            "position": "DEF",
+            "price": 5.5,
+            "xmins": 77.1,
+            "start_probability": 0.8347,
+            "xpts_5": 21.658,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "starter security / xMins kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "LOW",
+              "progress_pct": 6.1
+            }
+          },
+          {
+            "element": 356,
+            "rank": 4,
+            "lifecycle": "KEEP",
+            "name": "Virgil",
+            "team": "Liverpool",
+            "position": "DEF",
+            "price": 6.5,
+            "xmins": 80.3,
+            "start_probability": 0.8766,
+            "xpts_5": 20.926,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "starter security / xMins kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "FALL",
+              "urgency": "LOW",
+              "progress_pct": 1.5
+            }
+          },
+          {
+            "element": 229,
+            "rank": 5,
+            "lifecycle": "KEEP",
+            "name": "Tarkowski",
+            "team": "Everton",
+            "position": "DEF",
+            "price": 6.0,
+            "xmins": 80.3,
+            "start_probability": 0.8766,
+            "xpts_5": 20.973,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "starter security / xMins kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "FALL",
+              "urgency": "LOW",
+              "progress_pct": 4.3
+            }
+          }
+        ],
+        "MID": [
+          {
+            "element": 123,
+            "rank": 1,
+            "lifecycle": "KEEP",
+            "name": "Hinshelwood",
+            "team": "Brighton",
+            "position": "MID",
+            "price": 6.0,
+            "xmins": 70.8,
+            "start_probability": 0.7865,
+            "xpts_5": 27.155,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 3-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "HIGH",
+              "progress_pct": 48.8
+            }
+          },
+          {
+            "element": 94,
+            "rank": 2,
+            "lifecycle": "KEEP",
+            "name": "Schade",
+            "team": "Brentford",
+            "position": "MID",
+            "price": 6.0,
+            "xmins": 74.7,
+            "start_probability": 0.8501,
+            "xpts_5": 23.169,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 5-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "FALL",
+              "urgency": "LOW",
+              "progress_pct": 0.3
+            }
+          },
+          {
+            "element": 368,
+            "rank": 3,
+            "lifecycle": "KEEP",
+            "name": "Szoboszlai",
+            "team": "Liverpool",
+            "position": "MID",
+            "price": 7.0,
+            "xmins": 80.2,
+            "start_probability": 0.8766,
+            "xpts_5": 22.466,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "starter security / xMins kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "HIGH",
+              "progress_pct": 55.1
+            }
+          },
+          {
+            "element": 12,
+            "rank": 4,
+            "lifecycle": "KEEP",
+            "name": "Saka",
+            "team": "Arsenal",
+            "position": "MID",
+            "price": 9.5,
+            "xmins": 73.9,
+            "start_probability": 0.8082,
+            "xpts_5": 24.687,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 3-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "LOW",
+              "progress_pct": 16.6
+            }
+          },
+          {
+            "element": 367,
+            "rank": 5,
+            "lifecycle": "KEEP",
+            "name": "Gakpo",
+            "team": "Liverpool",
+            "position": "MID",
+            "price": 7.0,
+            "xmins": 74.4,
+            "start_probability": 0.8501,
+            "xpts_5": 21.913,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 5-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "HIGH",
+              "progress_pct": 52.0
+            }
+          }
+        ],
+        "FWD": [
+          {
+            "element": 106,
+            "rank": 1,
+            "lifecycle": "KEEP",
+            "name": "Thiago",
+            "team": "Brentford",
+            "position": "FWD",
+            "price": 8.0,
+            "xmins": 79.2,
+            "start_probability": 0.8766,
+            "xpts_5": 24.844,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 3-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "FALL",
+              "urgency": "LOW",
+              "progress_pct": -6.7
+            }
+          },
+          {
+            "element": 249,
+            "rank": 2,
+            "lifecycle": "KEEP",
+            "name": "Barry",
+            "team": "Everton",
+            "position": "FWD",
+            "price": 5.5,
+            "xmins": 73.5,
+            "start_probability": 0.7893,
+            "xpts_5": 19.277,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 3-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "HIGH",
+              "progress_pct": 29.9
+            }
+          },
+          {
+            "element": 316,
+            "rank": 3,
+            "lifecycle": "KEEP",
+            "name": "Emersonn",
+            "team": "Ipswich Town",
+            "position": "FWD",
+            "price": 5.5,
+            "xmins": 56.3,
+            "start_probability": 0.7566,
+            "xpts_5": 18.998,
+            "confidence": "LOW",
+            "action": "WATCH",
+            "main_reason": "proyeksi 3-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "RISE",
+              "urgency": "LOW",
+              "progress_pct": 22.1
+            }
+          },
+          {
+            "element": 223,
+            "rank": 4,
+            "lifecycle": "KEEP",
+            "name": "Mateta",
+            "team": "Crystal Palace",
+            "position": "FWD",
+            "price": 6.5,
+            "xmins": 73.7,
+            "start_probability": 0.8082,
+            "xpts_5": 17.319,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "starter security / xMins kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "FALL",
+              "urgency": "LOW",
+              "progress_pct": -26.2
+            }
+          },
+          {
+            "element": 25,
+            "rank": 5,
+            "lifecycle": "KEEP",
+            "name": "Gyökeres",
+            "team": "Arsenal",
+            "position": "FWD",
+            "price": 7.4,
+            "xmins": 66.7,
+            "start_probability": 0.7473,
+            "xpts_5": 18.655,
+            "confidence": "MEDIUM",
+            "action": "WATCH",
+            "main_reason": "proyeksi 3-GW kuat",
+            "main_risk": "evidence set-piece/penalty belum cukup",
+            "price_risk": {
+              "direction": "FALL",
+              "urgency": "MEDIUM",
+              "progress_pct": -7.8
+            }
+          }
+        ]
+      }
+    },
+    "engine_line": {
+      "text": "Engine: GREEN, data fresh, tidak ada critical failure.",
+      "critical": false,
+      "generated_at": "2026-08-27T00:13:38.830420+00:00"
+    },
+    "action_board": [
+      {
+        "action": "HOLD",
+        "subject": "Squad",
+        "trigger": "ubah hanya jika ada evidence baru yang material"
+      },
+      {
+        "action": "OPEN",
+        "subject": "Robinson vs M.Sangaré",
+        "trigger": "press conference, role, xMins, atau margin model berubah"
+      },
+      {
+        "action": "LEAN",
+        "subject": "Captain: Haaland",
+        "trigger": "kapten belum layak di-lock: ranking_margin, role_evidence"
+      },
+      {
+        "action": "HOLD",
+        "subject": "Chip",
+        "trigger": "ubah hanya jika konteks chip atau legality berubah"
+      },
+      {
+        "action": "HOLD",
+        "subject": "Price: Ødegaard",
+        "trigger": "RISE CRITICAL"
+      },
+      {
+        "action": "HOLD",
+        "subject": "Price: Tzolis",
+        "trigger": "RISE HIGH"
+      },
+      {
+        "action": "HOLD",
+        "subject": "Price: Rogers",
+        "trigger": "RISE HIGH"
+      },
+      {
+        "action": "HOLD",
+        "subject": "Price: M.Sangaré",
+        "trigger": "RISE HIGH"
+      }
+    ],
+    "report_mode": "FULL_OR_DELTA",
+    "generated_at": "2026-08-27T00:13:44.925163+00:00",
+    "planning_gw": 2,
+    "horizon_policy": {
+      "primary": [
+        3,
+        5
+      ],
+      "strategic": [
+        10,
+        15
+      ]
+    },
+    "source_availability": {
+      "otoritas": "Official FPL tetap menjadi sumber native resmi",
+      "challenger": [
+        {
+          "source": "LiveFPL",
+          "source_id": "livefpl",
+          "terjangkau": true,
+          "status_sumber": "LIVE",
+          "status_data_harga": "situs terjangkau, tetapi data terstruktur belum tersedia",
+          "structured_state": "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION",
+          "observasi_baru": 0
+        },
+        {
+          "source": "OneFPL",
+          "source_id": "onefpl",
+          "terjangkau": false,
+          "status_sumber": "UNAVAILABLE",
+          "status_data_harga": "tidak tersedia",
+          "structured_state": "UNAVAILABLE",
+          "observasi_baru": 0
+        }
+      ],
+      "catatan": "Status situs dan ketersediaan data terstruktur adalah dua hal berbeda. Cache atau data kedaluwarsa tidak diperlakukan sebagai data saat ini."
+    },
+    "serving_contract": {
+      "owned": 15,
+      "watchlist": 20,
+      "watchlist_per_position": 5
+    }
+  },
+  "lineup_decision": {
+    "generated_at": "2026-08-27T00:13:40.741602+00:00",
+    "model": "governed_lineup_v1",
+    "ruleset_id": "FPL_2026_27",
+    "planning_gw": 2,
+    "squad_authority": "pre_deadline_wc",
+    "formation": "4-4-2",
+    "starting_xi": [
+      {
+        "element": 572,
+        "name": "Tzolakis",
+        "position": "GK",
+        "team_id": 11,
+        "now_cost": 45,
+        "xpts_mean": 2.755,
+        "xpts_std": 2.681,
+        "selection_score": 2.2629,
+        "captain_score": 2.1461,
+        "bench_score": 2.3591,
+        "start_probability": 0.7566,
+        "bench_probability": 0.1582,
+        "dnp_probability": 0.0852,
+        "expected_minutes": 60.0,
+        "projection_confidence": "LOW"
+      },
+      {
+        "element": 115,
+        "name": "De Cuyper",
+        "position": "DEF",
+        "team_id": 5,
+        "now_cost": 46,
+        "xpts_mean": 5.733,
+        "xpts_std": 3.912,
+        "selection_score": 5.1062,
+        "captain_score": 5.027,
+        "bench_score": 5.2237,
+        "start_probability": 0.7752,
+        "bench_probability": 0.1461,
+        "dnp_probability": 0.0787,
+        "expected_minutes": 66.7,
+        "projection_confidence": "MEDIUM"
+      },
+      {
+        "element": 88,
+        "name": "Kayode",
+        "position": "DEF",
+        "team_id": 4,
+        "now_cost": 46,
+        "xpts_mean": 4.234,
+        "xpts_std": 3.153,
+        "selection_score": 3.7692,
+        "captain_score": 3.7459,
+        "bench_score": 3.8539,
+        "start_probability": 0.8766,
+        "bench_probability": 0.0802,
+        "dnp_probability": 0.0432,
+        "expected_minutes": 78.7,
+        "projection_confidence": "MEDIUM"
+      },
+      {
+        "element": 8,
+        "name": "Calafiori",
+        "position": "DEF",
+        "team_id": 1,
+        "now_cost": 56,
+        "xpts_mean": 3.928,
+        "xpts_std": 3.132,
+        "selection_score": 3.4084,
+        "captain_score": 3.3272,
+        "bench_score": 3.5069,
+        "start_probability": 0.7947,
+        "bench_probability": 0.1335,
+        "dnp_probability": 0.0719,
+        "expected_minutes": 63.7,
+        "projection_confidence": "MEDIUM"
+      },
+      {
+        "element": 254,
+        "name": "Robinson",
+        "position": "DEF",
+        "team_id": 10,
+        "now_cost": 45,
+        "xpts_mean": 3.437,
+        "xpts_std": 2.948,
+        "selection_score": 2.9258,
+        "captain_score": 2.8274,
+        "bench_score": 3.0241,
+        "start_probability": 0.7752,
+        "bench_probability": 0.1461,
+        "dnp_probability": 0.0787,
+        "expected_minutes": 70.5,
+        "projection_confidence": "MEDIUM"
+      },
+      {
+        "element": 40,
+        "name": "Rogers",
+        "position": "MID",
+        "team_id": 6,
+        "now_cost": 75,
+        "xpts_mean": 4.198,
+        "xpts_std": 3.138,
+        "selection_score": 3.735,
+        "captain_score": 3.7114,
+        "bench_score": 3.8194,
+        "start_probability": 0.8766,
+        "bench_probability": 0.0802,
+        "dnp_probability": 0.0432,
+        "expected_minutes": 79.1,
+        "projection_confidence": "MEDIUM"
+      },
+      {
+        "element": 15,
+        "name": "Ødegaard",
+        "position": "MID",
+        "team_id": 1,
+        "now_cost": 65,
+        "xpts_mean": 4.126,
+        "xpts_std": 3.241,
+        "selection_score": 3.5773,
+        "captain_score": 3.4823,
+        "bench_score": 3.6821,
+        "start_probability": 0.7716,
+        "bench_probability": 0.1485,
+        "dnp_probability": 0.0799,
+        "expected_minutes": 68.4,
+        "projection_confidence": "MEDIUM"
+      },
+      {
+        "element": 426,
+        "name": "B.Fernandes",
+        "position": "MID",
+        "team_id": 16,
+        "now_cost": 120,
+        "xpts_mean": 3.718,
+        "xpts_std": 2.937,
+        "selection_score": 3.2792,
+        "captain_score": 3.2515,
+        "bench_score": 3.3595,
+        "start_probability": 0.8766,
+        "bench_probability": 0.0802,
+        "dnp_probability": 0.0432,
+        "expected_minutes": 78.2,
+        "projection_confidence": "MEDIUM"
+      },
+      {
+        "element": 557,
+        "name": "Tzolis",
+        "position": "MID",
+        "team_id": 1,
+        "now_cost": 65,
+        "xpts_mean": 3.667,
+        "xpts_std": 3.064,
+        "selection_score": 3.1289,
+        "captain_score": 3.0198,
+        "bench_score": 3.2328,
+        "start_probability": 0.7566,
+        "bench_probability": 0.1582,
+        "dnp_probability": 0.0852,
+        "expected_minutes": 57.8,
+        "projection_confidence": "LOW"
+      },
+      {
+        "element": 411,
+        "name": "Haaland",
+        "position": "FWD",
+        "team_id": 15,
+        "now_cost": 155,
+        "xpts_mean": 5.968,
+        "xpts_std": 3.894,
+        "selection_score": 5.4085,
+        "captain_score": 5.3942,
+        "bench_score": 5.5095,
+        "start_probability": 0.8683,
+        "bench_probability": 0.0856,
+        "dnp_probability": 0.0461,
+        "expected_minutes": 77.0,
+        "projection_confidence": "MEDIUM"
+      },
+      {
+        "element": 165,
+        "name": "João Pedro",
+        "position": "FWD",
+        "team_id": 6,
+        "now_cost": 76,
+        "xpts_mean": 3.883,
+        "xpts_std": 3.054,
+        "selection_score": 3.4063,
+        "captain_score": 3.3572,
+        "bench_score": 3.4949,
+        "start_probability": 0.8426,
+        "bench_probability": 0.1023,
+        "dnp_probability": 0.0551,
+        "expected_minutes": 74.1,
+        "projection_confidence": "MEDIUM"
+      }
+    ],
+    "captain": {
+      "element": 411,
+      "name": "Haaland",
+      "captain_score": 5.3942,
+      "dnp_probability": 0.0461
+    },
+    "vice_captain": {
+      "element": 115,
+      "name": "De Cuyper",
+      "captain_score": 5.027,
+      "dnp_probability": 0.0787
+    },
+    "captain_safe_pool": [
+      {
+        "element": 411,
+        "name": "Haaland",
+        "captain_score": 5.3942,
+        "start_probability": 0.8683,
+        "dnp_probability": 0.0461
+      },
+      {
+        "element": 115,
+        "name": "De Cuyper",
+        "captain_score": 5.027,
+        "start_probability": 0.7752,
+        "dnp_probability": 0.0787
+      },
+      {
+        "element": 88,
+        "name": "Kayode",
+        "captain_score": 3.7459,
+        "start_probability": 0.8766,
+        "dnp_probability": 0.0432
+      },
+      {
+        "element": 40,
+        "name": "Rogers",
+        "captain_score": 3.7114,
+        "start_probability": 0.8766,
+        "dnp_probability": 0.0432
+      },
+      {
+        "element": 15,
+        "name": "Ødegaard",
+        "captain_score": 3.4823,
+        "start_probability": 0.7716,
+        "dnp_probability": 0.0799
+      }
+    ],
+    "bench": {
+      "gk": {
+        "element": 109,
+        "name": "Verbruggen",
+        "position": "GK",
+        "bench_score": 2.1122
+      },
+      "order": [
+        {
+          "element": 565,
+          "name": "M.Sangaré",
+          "position": "MID",
+          "bench_score": 2.9914
+        },
+        {
+          "element": 473,
+          "name": "Aina",
+          "position": "DEF",
+          "bench_score": 2.7162
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "position": "FWD",
+          "bench_score": 2.6577
+        }
+      ]
+    },
+    "lineup_score": {
+      "robust": 40.0077,
+      "xpts_mean": 45.647,
+      "xpts_std": 10.667
+    },
+    "main_starting_xi_battle": {
+      "status": "CLOSE",
+      "margin": 0.0362,
+      "starter_side": [
+        {
+          "element": 254,
+          "name": "Robinson",
+          "position": "DEF",
+          "selection_score": 2.9258
+        }
+      ],
+      "bench_side": [
+        {
+          "element": 565,
+          "name": "M.Sangaré",
+          "position": "MID",
+          "selection_score": 2.8896
+        }
+      ],
+      "alternative_formation": "3-5-2"
+    },
+    "alternatives": [
+      {
+        "formation": "4-4-2",
+        "score": 40.0077,
+        "xpts_mean": 45.647,
+        "xpts_std": 10.667,
+        "element_ids": [
+          8,
+          15,
+          40,
+          88,
+          115,
+          165,
+          254,
+          411,
+          426,
+          557,
+          572
+        ]
+      },
+      {
+        "formation": "3-5-2",
+        "score": 39.9715,
+        "xpts_mean": 45.625,
+        "xpts_std": 10.67,
+        "element_ids": [
+          8,
+          15,
+          40,
+          88,
+          115,
+          165,
+          411,
+          426,
+          557,
+          565,
+          572
+        ]
+      },
+      {
+        "formation": "4-4-2",
+        "score": 39.7876,
+        "xpts_mean": 45.308,
+        "xpts_std": 10.598,
+        "element_ids": [
+          8,
+          15,
+          40,
+          88,
+          109,
+          115,
+          165,
+          254,
+          411,
+          426,
+          557
+        ]
+      }
+    ],
+    "chip_context": {
+      "planning_gw": 2,
+      "active_chip": "wildcard",
+      "used_this_gw": [],
+      "single_chip_rule_respected": true,
+      "auto_activate_chip": false,
+      "ruleset_id": "FPL_2026_27"
+    },
+    "governance": {
+      "all_legal_xi_enumerated": true,
+      "manual_squad_authority_preserved": true,
+      "optimizer_does_not_mutate_locked_composition": true,
+      "captain_dnp_guard_applied": true,
+      "bench_order_is_model_output_not_manual_lock": true
+    }
+  },
+  "decision_brief": {
+    "decision": {
+      "overall": "REVIEW",
+      "squad": "HOLD",
+      "starting_xi": "OPEN",
+      "captaincy": "LEAN",
+      "chip": "HOLD",
+      "price": "HOLD",
+      "confidence": "LOW"
+    },
+    "generated_at": "2026-08-27T00:13:45.283619+00:00",
+    "planning_gw": 2,
+    "serving_contract": {
+      "owned": 15,
+      "watchlist": 20,
+      "watchlist_per_position": 5
+    },
+    "finance": {
+      "squad_market_value": 100.0,
+      "itb": 0.5,
+      "total_team_value": 100.5,
+      "squad_sell_value": 99.5,
+      "spendable_value": 100.0
+    },
+    "owned_15": [
+      {
+        "element": 572,
+        "name": "Tzolakis",
+        "position": "GK",
+        "price": 4.5,
+        "status": "a",
+        "xmins": 60.0,
+        "start_probability": 0.7566,
+        "model_confidence": "LOW"
+      },
+      {
+        "element": 109,
+        "name": "Verbruggen",
+        "position": "GK",
+        "price": 4.5,
+        "status": "a",
+        "xmins": 80.3,
+        "start_probability": 0.8766,
+        "model_confidence": "MEDIUM"
+      },
+      {
+        "element": 115,
+        "name": "De Cuyper",
+        "position": "DEF",
+        "price": 4.6,
+        "status": "a",
+        "xmins": 66.7,
+        "start_probability": 0.7752,
+        "model_confidence": "MEDIUM"
+      },
+      {
+        "element": 8,
+        "name": "Calafiori",
+        "position": "DEF",
+        "price": 5.6,
+        "status": "a",
+        "xmins": 63.7,
+        "start_probability": 0.7947,
+        "model_confidence": "MEDIUM"
+      },
+      {
+        "element": 88,
+        "name": "Kayode",
+        "position": "DEF",
+        "price": 4.6,
+        "status": "a",
+        "xmins": 78.7,
+        "start_probability": 0.8766,
+        "model_confidence": "MEDIUM"
+      },
+      {
+        "element": 254,
+        "name": "Robinson",
+        "position": "DEF",
+        "price": 4.5,
+        "status": "a",
+        "xmins": 70.5,
+        "start_probability": 0.7752,
+        "model_confidence": "MEDIUM"
+      },
+      {
+        "element": 473,
+        "name": "Aina",
+        "position": "DEF",
+        "price": 4.5,
+        "status": "a",
+        "xmins": 71.3,
+        "start_probability": 0.7789,
+        "model_confidence": "MEDIUM"
+      },
+      {
+        "element": 426,
+        "name": "B.Fernandes",
+        "position": "MID",
+        "price": 12.0,
+        "status": "a",
+        "xmins": 78.2,
+        "start_probability": 0.8766,
+        "model_confidence": "MEDIUM"
+      },
+      {
+        "element": 15,
+        "name": "Ødegaard",
+        "position": "MID",
+        "price": 6.5,
+        "status": "a",
+        "xmins": 68.4,
+        "start_probability": 0.7716,
+        "model_confidence": "MEDIUM"
+      },
+      {
+        "element": 557,
+        "name": "Tzolis",
+        "position": "MID",
+        "price": 6.5,
+        "status": "a",
+        "xmins": 57.8,
+        "start_probability": 0.7566,
+        "model_confidence": "LOW"
+      },
+      {
+        "element": 40,
+        "name": "Rogers",
+        "position": "MID",
+        "price": 7.5,
+        "status": "a",
+        "xmins": 79.1,
+        "start_probability": 0.8766,
+        "model_confidence": "MEDIUM"
+      },
+      {
+        "element": 565,
+        "name": "M.Sangaré",
+        "position": "MID",
+        "price": 5.6,
+        "status": "a",
+        "xmins": 57.8,
+        "start_probability": 0.7566,
+        "model_confidence": "LOW"
+      },
+      {
+        "element": 411,
+        "name": "Haaland",
+        "position": "FWD",
+        "price": 15.5,
+        "status": "a",
+        "xmins": 77.0,
+        "start_probability": 0.8683,
+        "model_confidence": "MEDIUM"
+      },
+      {
+        "element": 165,
+        "name": "João Pedro",
+        "position": "FWD",
+        "price": 7.6,
+        "status": "a",
+        "xmins": 74.1,
+        "start_probability": 0.8426,
+        "model_confidence": "MEDIUM"
+      },
+      {
+        "element": 346,
+        "name": "Calvert-Lewin",
+        "position": "FWD",
+        "price": 6.0,
+        "status": "a",
+        "xmins": 76.9,
+        "start_probability": 0.8323,
+        "model_confidence": "MEDIUM"
+      }
+    ],
+    "changes_since_last_report": {
+      "initial_report": false,
+      "material_change": true,
+      "changed": [
+        "price"
+      ]
+    },
+    "main_starting_xi_battle": {
+      "formation": "4-4-2",
+      "decision": "OPEN",
+      "confidence": "LOW",
+      "starter": "Robinson",
+      "challenger": "M.Sangaré",
+      "margin": 0.0362,
+      "main_reasons": [
+        "xMins +12.7"
+      ],
+      "leader_metrics": {
+        "element": 254,
+        "name": "Robinson",
+        "xpts": 3.437,
+        "xmins": 70.5,
+        "start_probability": 0.7752,
+        "dnp_probability": 0.0787,
+        "model_confidence": "MEDIUM"
+      },
+      "challenger_metrics": {
+        "element": 565,
+        "name": "M.Sangaré",
+        "xpts": 3.415,
+        "xmins": 57.8,
+        "start_probability": 0.7566,
+        "dnp_probability": 0.0852,
+        "model_confidence": "LOW"
+      }
+    },
+    "captaincy": {
+      "decision": "LEAN",
+      "confidence": "MEDIUM",
+      "captain": "Haaland",
+      "vice": "De Cuyper",
+      "reason": "kapten belum layak di-lock: ranking_margin, role_evidence"
+    },
+    "chip": {
+      "facts": {
+        "active_chip": "wildcard",
+        "used_this_gw": []
+      },
+      "model": null,
+      "decision": "HOLD",
+      "confidence": "HIGH"
+    },
+    "price_radar": {
+      "decision": "HOLD",
+      "owned": [
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "price": 6.5,
+          "direction": "RISE",
+          "urgency": "CRITICAL",
+          "progress_pct": 98.3,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "HOLD"
+        },
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "price": 6.5,
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 72.0,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "HOLD"
+        },
+        {
+          "element": 40,
+          "name": "Rogers",
+          "price": 7.5,
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 59.1,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "HOLD"
+        },
+        {
+          "element": 565,
+          "name": "M.Sangaré",
+          "price": 5.6,
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 6.9,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "HOLD"
+        },
+        {
+          "element": 115,
+          "name": "De Cuyper",
+          "price": 4.6,
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 5.9,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "HOLD"
+        }
+      ],
+      "external_watchlist": [
+        {
+          "element": 368,
+          "name": "Szoboszlai",
+          "price": 7.0,
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 55.1,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "WATCH"
+        },
+        {
+          "element": 367,
+          "name": "Gakpo",
+          "price": 7.0,
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 52.0,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "WATCH"
+        },
+        {
+          "element": 123,
+          "name": "Hinshelwood",
+          "price": 6.0,
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 48.8,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "WATCH"
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "price": 5.5,
+          "direction": "RISE",
+          "urgency": "HIGH",
+          "progress_pct": 29.9,
+          "estimated_change_time": "2026-08-27T23:00:00+00:00",
+          "confidence_note": "proyeksi waktu perubahan harga belum cukup yakin",
+          "action": "WATCH"
+        }
+      ]
+    },
+    "watchlist_20": {
+      "GK": [
+        {
+          "element": 226,
+          "rank": 1,
+          "lifecycle": "KEEP",
+          "name": "Pickford",
+          "team": "Everton",
+          "position": "GK",
+          "price": 5.5,
+          "xmins": 80.3,
+          "start_probability": 0.8766,
+          "xpts_5": 15.602,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 3-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "LOW",
+            "progress_pct": 11.0
+          }
+        },
+        {
+          "element": 82,
+          "rank": 2,
+          "lifecycle": "KEEP",
+          "name": "Kelleher",
+          "team": "Brentford",
+          "position": "GK",
+          "price": 5.0,
+          "xmins": 80.3,
+          "start_probability": 0.8766,
+          "xpts_5": 15.475,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 5-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "LOW",
+            "progress_pct": 15.8
+          }
+        },
+        {
+          "element": 1,
+          "rank": 3,
+          "lifecycle": "KEEP",
+          "name": "Raya",
+          "team": "Arsenal",
+          "position": "GK",
+          "price": 6.0,
+          "xmins": 80.3,
+          "start_probability": 0.8766,
+          "xpts_5": 14.908,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 5-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "LOW",
+            "progress_pct": 8.8
+          }
+        },
+        {
+          "element": 384,
+          "rank": 4,
+          "lifecycle": "KEEP",
+          "name": "Donnarumma",
+          "team": "Man City",
+          "position": "GK",
+          "price": 5.5,
+          "xmins": 79.7,
+          "start_probability": 0.8683,
+          "xpts_5": 14.809,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 5-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "FALL",
+            "urgency": "LOW",
+            "progress_pct": -3.8
+          }
+        },
+        {
+          "element": 250,
+          "rank": 5,
+          "lifecycle": "KEEP",
+          "name": "Leno",
+          "team": "Fulham",
+          "position": "GK",
+          "price": 4.5,
+          "xmins": 80.3,
+          "start_probability": 0.8766,
+          "xpts_5": 13.831,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "starter security / xMins kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "LOW",
+            "progress_pct": 0.6
+          }
+        }
+      ],
+      "DEF": [
+        {
+          "element": 388,
+          "rank": 1,
+          "lifecycle": "KEEP",
+          "name": "Guéhi",
+          "team": "Man City",
+          "position": "DEF",
+          "price": 6.0,
+          "xmins": 80.3,
+          "start_probability": 0.8766,
+          "xpts_5": 29.438,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 3-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "MEDIUM",
+            "progress_pct": 42.6
+          }
+        },
+        {
+          "element": 387,
+          "rank": 2,
+          "lifecycle": "KEEP",
+          "name": "O'Reilly",
+          "team": "Man City",
+          "position": "DEF",
+          "price": 6.5,
+          "xmins": 76.2,
+          "start_probability": 0.8244,
+          "xpts_5": 24.631,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 3-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "FALL",
+            "urgency": "LOW",
+            "progress_pct": -4.6
+          }
+        },
+        {
+          "element": 84,
+          "rank": 3,
+          "lifecycle": "KEEP",
+          "name": "Collins",
+          "team": "Brentford",
+          "position": "DEF",
+          "price": 5.5,
+          "xmins": 77.1,
+          "start_probability": 0.8347,
+          "xpts_5": 21.658,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "starter security / xMins kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "LOW",
+            "progress_pct": 6.1
+          }
+        },
+        {
+          "element": 356,
+          "rank": 4,
+          "lifecycle": "KEEP",
+          "name": "Virgil",
+          "team": "Liverpool",
+          "position": "DEF",
+          "price": 6.5,
+          "xmins": 80.3,
+          "start_probability": 0.8766,
+          "xpts_5": 20.926,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "starter security / xMins kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "FALL",
+            "urgency": "LOW",
+            "progress_pct": 1.5
+          }
+        },
+        {
+          "element": 229,
+          "rank": 5,
+          "lifecycle": "KEEP",
+          "name": "Tarkowski",
+          "team": "Everton",
+          "position": "DEF",
+          "price": 6.0,
+          "xmins": 80.3,
+          "start_probability": 0.8766,
+          "xpts_5": 20.973,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "starter security / xMins kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "FALL",
+            "urgency": "LOW",
+            "progress_pct": 4.3
+          }
+        }
+      ],
+      "MID": [
+        {
+          "element": 123,
+          "rank": 1,
+          "lifecycle": "KEEP",
+          "name": "Hinshelwood",
+          "team": "Brighton",
+          "position": "MID",
+          "price": 6.0,
+          "xmins": 70.8,
+          "start_probability": 0.7865,
+          "xpts_5": 27.155,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 3-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "HIGH",
+            "progress_pct": 48.8
+          }
+        },
+        {
+          "element": 94,
+          "rank": 2,
+          "lifecycle": "KEEP",
+          "name": "Schade",
+          "team": "Brentford",
+          "position": "MID",
+          "price": 6.0,
+          "xmins": 74.7,
+          "start_probability": 0.8501,
+          "xpts_5": 23.169,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 5-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "FALL",
+            "urgency": "LOW",
+            "progress_pct": 0.3
+          }
+        },
+        {
+          "element": 368,
+          "rank": 3,
+          "lifecycle": "KEEP",
+          "name": "Szoboszlai",
+          "team": "Liverpool",
+          "position": "MID",
+          "price": 7.0,
+          "xmins": 80.2,
+          "start_probability": 0.8766,
+          "xpts_5": 22.466,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "starter security / xMins kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "HIGH",
+            "progress_pct": 55.1
+          }
+        },
+        {
+          "element": 12,
+          "rank": 4,
+          "lifecycle": "KEEP",
+          "name": "Saka",
+          "team": "Arsenal",
+          "position": "MID",
+          "price": 9.5,
+          "xmins": 73.9,
+          "start_probability": 0.8082,
+          "xpts_5": 24.687,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 3-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "LOW",
+            "progress_pct": 16.6
+          }
+        },
+        {
+          "element": 367,
+          "rank": 5,
+          "lifecycle": "KEEP",
+          "name": "Gakpo",
+          "team": "Liverpool",
+          "position": "MID",
+          "price": 7.0,
+          "xmins": 74.4,
+          "start_probability": 0.8501,
+          "xpts_5": 21.913,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 5-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "HIGH",
+            "progress_pct": 52.0
+          }
+        }
+      ],
+      "FWD": [
+        {
+          "element": 106,
+          "rank": 1,
+          "lifecycle": "KEEP",
+          "name": "Thiago",
+          "team": "Brentford",
+          "position": "FWD",
+          "price": 8.0,
+          "xmins": 79.2,
+          "start_probability": 0.8766,
+          "xpts_5": 24.844,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 3-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "FALL",
+            "urgency": "LOW",
+            "progress_pct": -6.7
+          }
+        },
+        {
+          "element": 249,
+          "rank": 2,
+          "lifecycle": "KEEP",
+          "name": "Barry",
+          "team": "Everton",
+          "position": "FWD",
+          "price": 5.5,
+          "xmins": 73.5,
+          "start_probability": 0.7893,
+          "xpts_5": 19.277,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 3-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "HIGH",
+            "progress_pct": 29.9
+          }
+        },
+        {
+          "element": 316,
+          "rank": 3,
+          "lifecycle": "KEEP",
+          "name": "Emersonn",
+          "team": "Ipswich Town",
+          "position": "FWD",
+          "price": 5.5,
+          "xmins": 56.3,
+          "start_probability": 0.7566,
+          "xpts_5": 18.998,
+          "confidence": "LOW",
+          "action": "WATCH",
+          "main_reason": "proyeksi 3-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "RISE",
+            "urgency": "LOW",
+            "progress_pct": 22.1
+          }
+        },
+        {
+          "element": 223,
+          "rank": 4,
+          "lifecycle": "KEEP",
+          "name": "Mateta",
+          "team": "Crystal Palace",
+          "position": "FWD",
+          "price": 6.5,
+          "xmins": 73.7,
+          "start_probability": 0.8082,
+          "xpts_5": 17.319,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "starter security / xMins kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "FALL",
+            "urgency": "LOW",
+            "progress_pct": -26.2
+          }
+        },
+        {
+          "element": 25,
+          "rank": 5,
+          "lifecycle": "KEEP",
+          "name": "Gyökeres",
+          "team": "Arsenal",
+          "position": "FWD",
+          "price": 7.4,
+          "xmins": 66.7,
+          "start_probability": 0.7473,
+          "xpts_5": 18.655,
+          "confidence": "MEDIUM",
+          "action": "WATCH",
+          "main_reason": "proyeksi 3-GW kuat",
+          "main_risk": "evidence set-piece/penalty belum cukup",
+          "price_risk": {
+            "direction": "FALL",
+            "urgency": "MEDIUM",
+            "progress_pct": -7.8
+          }
+        }
+      ]
+    },
+    "engine": {
+      "text": "Engine: GREEN, data fresh, tidak ada critical failure.",
+      "critical": false,
+      "generated_at": "2026-08-27T00:13:38.830420+00:00"
+    },
+    "action_board": [
+      {
+        "action": "HOLD",
+        "subject": "Squad",
+        "trigger": "ubah hanya jika ada evidence baru yang material"
+      },
+      {
+        "action": "OPEN",
+        "subject": "Robinson vs M.Sangaré",
+        "trigger": "press conference, role, xMins, atau margin model berubah"
+      },
+      {
+        "action": "LEAN",
+        "subject": "Captain: Haaland",
+        "trigger": "kapten belum layak di-lock: ranking_margin, role_evidence"
+      },
+      {
+        "action": "HOLD",
+        "subject": "Chip",
+        "trigger": "ubah hanya jika konteks chip atau legality berubah"
+      },
+      {
+        "action": "HOLD",
+        "subject": "Price: Ødegaard",
+        "trigger": "RISE CRITICAL"
+      },
+      {
+        "action": "HOLD",
+        "subject": "Price: Tzolis",
+        "trigger": "RISE HIGH"
+      },
+      {
+        "action": "HOLD",
+        "subject": "Price: Rogers",
+        "trigger": "RISE HIGH"
+      },
+      {
+        "action": "HOLD",
+        "subject": "Price: M.Sangaré",
+        "trigger": "RISE HIGH"
+      }
+    ]
+  },
+  "framework_health_summary": {
+    "overall": "GREEN",
+    "go_allowed": true,
+    "recommendation_allowed": true
+  },
+  "governance": {
+    "read_only_report": true,
+    "auto_submit_fpl_changes": false,
+    "v5_auto_promotion": false
+  }
+}

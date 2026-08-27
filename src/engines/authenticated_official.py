@@ -144,6 +144,10 @@ def _persist(summary: dict):
     return summary
 
 
+def _transport_rejected(*health_rows: dict) -> bool:
+    return any(row.get("status") == "REDIRECT_REJECTED" for row in health_rows if isinstance(row, dict))
+
+
 def run() -> dict:
     checked_at = iso_now()
     authoritative = _authoritative_elements()
@@ -166,6 +170,8 @@ def run() -> dict:
         "policy": {
             "resource_methods": ["GET"],
             "allowed_endpoints": ["me", "my-team", "transfers-latest"],
+            "redirects_followed": False,
+            "redirects_rejected": True,
             "fail_soft": True,
         },
     }
@@ -192,6 +198,9 @@ def run() -> dict:
     if hm.get("status") == "AUTH_REJECTED":
         base["state"] = "EXPIRED_OR_REJECTED"
         return _persist(base)
+    if _transport_rejected(hm):
+        base["state"] = "REDIRECT_REJECTED"
+        return _persist(base)
     if not me:
         base["state"] = "UNAVAILABLE"
         return _persist(base)
@@ -207,7 +216,9 @@ def run() -> dict:
     latest, hl = safe_get(f"entry/{EXPECTED_TEAM_ID}/transfers-latest/", material)
     base["endpoint_health"]["transfers_latest"] = hl
 
-    if ht.get("status") == "AUTH_REJECTED" or hl.get("status") == "AUTH_REJECTED":
+    if _transport_rejected(ht, hl):
+        base["state"] = "PARTIAL_REDIRECT_REJECTED"
+    elif ht.get("status") == "AUTH_REJECTED" or hl.get("status") == "AUTH_REJECTED":
         base["state"] = "PARTIAL_AUTH_REJECTED"
     elif not my_team:
         base["state"] = "PARTIAL"

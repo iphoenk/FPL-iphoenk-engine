@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "contract": "V5_INTERNAL_PAYLOAD_PROJECTION_V1",
+  "purpose": "Declarative semantics-preserving transport projections for bounded-context calls. Runtime projection code is generic and must not contain service/operation-specific branches.",
+  "defaults": {
+    "unknown_contract_action": "PASSTHROUGH",
+    "missing_optional_field_action": "OMIT",
+    "invalid_projection_action": "FAIL_CLOSED"
+  },
+  "contracts": {
+    "evaluation.build": {
+      "owner": "evaluation",
+      "projection": {
+        "type": "object",
+        "include": "*",
+        "fields": {
+          "prediction": {
+            "type": "object",
+            "include": ["generated_at", "planning_gw", "horizon_gws", "ruleset_id", "prediction_quality", "capabilities", "degraded_context", "players"],
+            "fields": {
+              "players": {
+                "type": "array",
+                "item": {
+                  "type": "object",
+                  "include": ["element", "name", "position", "current_season", "xmins", "xpts_by_gw"],
+                  "fields": {
+                    "xmins": {
+                      "type": "object",
+                      "include": ["expected_minutes", "start_probability"]
+                    },
+                    "xpts_by_gw": {
+                      "type": "array",
+                      "item": {
+                        "type": "object",
+                        "include": ["gw", "mean", "std", "clean_sheet_probability"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "bootstrap": {
+            "type": "object",
+            "include": ["events"]
+          }
+        }
+      }
+    },
+    "decision.finalize": {
+      "owner": "decision",
+      "projection": {
+        "type": "object",
+        "include": "*",
+        "fields": {
+          "truth": {
+            "type": "object",
+            "include": ["rules", "team", "capabilities", "degraded_context"],
+            "fields": {
+              "team": {
+                "type": "object",
+                "include": ["authority"]
+              }
+            }
+          },
+          "prediction": {
+            "type": "object",
+            "include": ["model_version", "ruleset_id", "capabilities", "degraded_context"]
+          },
+          "price": {
+            "type": "object",
+            "include": ["alerts", "capabilities", "degraded_context"]
+          },
+          "evaluation": {
+            "type": "object",
+            "include": ["capabilities", "degraded_context"]
+          }
+        }
+      }
+    },
+    "governance.audit": {
+      "owner": "governance",
+      "projection": {
+        "type": "object",
+        "include": "*",
+        "fields": {
+          "truth": {
+            "type": "object",
+            "include": ["rules", "team", "chip_state", "capabilities", "degraded_context"],
+            "fields": {
+              "team": {
+                "type": "object",
+                "include": ["squad", "validation", "finance", "authority"]
+              }
+            }
+          },
+          "prediction": {
+            "type": "object",
+            "include": ["capabilities", "degraded_context"]
+          },
+          "price": {
+            "type": "object",
+            "include": ["capabilities", "degraded_context"]
+          },
+          "evaluation": {
+            "type": "object",
+            "include": ["capabilities", "degraded_context"]
+          },
+          "decision": {
+            "type": "object",
+            "include": ["status", "packages", "hold", "lineup", "dss", "decision_trace", "capabilities", "degraded_context", "production_recommendation"]
+          }
+        }
+      }
+    }
+  }
+}

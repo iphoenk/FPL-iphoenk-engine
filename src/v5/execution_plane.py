@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from functools import lru_cache
 from typing import Any
 
 from src.v5.config_cache import load_json_config
+from src.v5.release_integrity import runtime_fingerprint
 
 CONFIG = "config/v5_execution_plane_registry.json"
 
@@ -44,6 +46,66 @@ def freshness_budget_seconds(mode: str, name: str | None = None) -> int:
     if value <= 0:
         raise RuntimeError(f"invalid V5 materialization freshness budget for mode {mode}: {value}")
     return value
+
+
+@lru_cache(maxsize=1)
+def current_runtime_fingerprint() -> str:
+    """Return the immutable runtime fingerprint for this long-lived process.
+
+    Runtime/governance code changes require a process restart, so hashing once per
+    process avoids adding repository hashing to the user-facing hot-path budget.
+    """
+    value = runtime_fingerprint().get("fingerprint")
+    if not value:
+        raise RuntimeError("V5 runtime fingerprint unavailable")
+    return str(value)
+
+
+def reset_runtime_fingerprint_for_tests() -> None:
+    current_runtime_fingerprint.cache_clear()
+
+
+def build_hot_bundle(
+    snapshot: dict[str, Any],
+    watchlist: dict[str, Any],
+    report: dict[str, Any],
+    *,
+    generated_at: str | None = None,
+    runtime_fingerprint_value: str | None = None,
+) -> dict[str, Any]:
+    _, contract = materialization()
+    timestamp = generated_at or datetime.now(timezone.utc).isoformat()
+    fingerprint = runtime_fingerprint_value or current_runtime_fingerprint()
+    return {
+        "schema_version": int(contract.get("schema_version") or 1),
+        "contract": str(contract.get("contract") or ""),
+        "generated_at": timestamp,
+        "runtime_fingerprint": fingerprint,
+        "mode": str(snapshot.get("mode") or "daily"),
+        "phase": snapshot.get("phase") if isinstance(snapshot.get("phase"), dict) else {},
+        "team_id": int(snapshot.get("team_id") or 0),
+        "squad_authority": snapshot.get("squad_authority"),
+        "source_fusion_health": snapshot.get("source_fusion_health") if isinstance(snapshot.get("source_fusion_health"), dict) else {},
+        "prediction_summary": snapshot.get("prediction_summary") if isinstance(snapshot.get("prediction_summary"), dict) else {},
+        "evaluation_summary": snapshot.get("evaluation_summary") if isinstance(snapshot.get("evaluation_summary"), dict) else {},
+        "decision_summary": snapshot.get("decision_summary") if isinstance(snapshot.get("decision_summary"), dict) else {},
+        "framework_health": snapshot.get("framework_health") if isinstance(snapshot.get("framework_health"), dict) else {},
+        "watchlist_summary": {
+            "status": watchlist.get("status"),
+            "candidate_count": watchlist.get("candidate_count"),
+            "target_count": watchlist.get("target_count"),
+            "screening_contract": watchlist.get("screening_contract"),
+        },
+        "user_report": report.get("user_report") if isinstance(report.get("user_report"), dict) else {},
+        "technical_appendix": report.get("technical_appendix") if isinstance(report.get("technical_appendix"), dict) else {},
+        "report_state": report.get("report_state") if isinstance(report.get("report_state"), dict) else {},
+        "governance": {
+            "materialized_from_full_refresh": True,
+            "quality_reduction_for_latency": False,
+            "hidden_synchronous_refresh_allowed": False,
+            "durable_store_authoritative": True,
+        },
+    }
 
 
 def _parse_timestamp(value: Any) -> datetime | None:

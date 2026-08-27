@@ -3,6 +3,11 @@ name: FPL iphoenk collector v3.21.0 microservices
 on:
   workflow_dispatch:
 
+# Collector policy schedule ownership moved to split workflows:
+# primary -> v3-runtime-fast.yml  cron: "55 * * * *"
+# adaptive -> v3-runtime-fast.yml cron: "15 * * * *"
+# deep_stats -> v3-refresh-full.yml cron: "10 21 * * *"
+
 permissions:
   contents: read
 

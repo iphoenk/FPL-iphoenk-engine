@@ -1,5 +1,5 @@
 {
-  "version": 19,
+  "version": 20,
   "module_policy": {
     "minimum_registered_modules": 42,
     "required_truth_modules": ["rules", "source_authority", "public_api", "official_authenticated", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
@@ -23,8 +23,8 @@
     "require_deployment_manifest": "deploy/v5/docker-compose.yml"
   },
   "convergence": {
-    "production_baseline": "v3.20.0",
-    "production_main_sha": "15e75599045f901958753c2bcb275fceacc94d7c",
+    "production_baseline": "v3.20.2",
+    "production_main_sha": "85bca2d6204c56698286d5bfc10dd643c25c1dbd",
     "configuration_ownership_required": true,
     "p0_capabilities_required": ["P0-1_prediction_calibration_backtest", "P0-2_xmins_role_v2", "P0-3_team_strength_fixture_probability", "P0-4_multi_horizon_package_optimizer", "P0-5_external_challenger_scorecard"],
     "decision_bridge_only_forbidden": true,
@@ -38,6 +38,7 @@
     "technical_appendix_required": true,
     "delta_first_reporting_required": true,
     "decision_trace_required": true,
+    "decision_trace_schema_required": 2,
     "gate0_full_registry_required": true,
     "analysis_parallel_routes_required": ["evaluation_build", "decision_prepare", "gate0_preflight"],
     "v4_prediction_bridge_must_not_be_authority": true,
@@ -65,6 +66,7 @@
     "correlated_simulation_shadow_required": true,
     "team_review_isolated_context_required": true,
     "v3_v4_capability_parity_registry_required": true,
+    "artifact_contract_validation_required": true,
     "owned_target": 15,
     "watchlist_target_total": 20,
     "watchlist_target_per_position": 5,
@@ -77,6 +79,15 @@
     "orchestrator_artifacts_must_be_persistence_registered": true,
     "critical_dss_partial_allowed": false,
     "critical_enhancement_partial_allowed": false
+  },
+  "correctness_gate": {
+    "required_for_operational_acceptance": true,
+    "appearance_points_unconditional_p60": true,
+    "captain_variance_same_player_covariance": true,
+    "finance_sell_value_vectors_required": true,
+    "phase_authority_regression_required": true,
+    "lineup_legality_regression_required": true,
+    "artifact_contract_validation_required": true
   },
   "prediction_calibration_gate": {
     "required_for_production_promotion": true,

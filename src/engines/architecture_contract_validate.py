@@ -11,6 +11,9 @@ SOURCE_REGISTRY = ROOT / "config" / "sources" / "registry.json"
 COLLECTOR_POLICY = ROOT / "config" / "runtime" / "collector_policy.json"
 PROJECTION_POLICY = ROOT / "config" / "intelligence" / "projection.json"
 DSS_CORE = ROOT / "config" / "dss_core_registry.json"
+DSS_EXT = ROOT / "config" / "dss_extension_registry.json"
+ENHANCEMENTS = ROOT / "config" / "enhancement_layers_registry.json"
+GATE0 = ROOT / "config" / "gate0_registry.json"
 WORKFLOW = ROOT / ".github" / "workflows" / "fpl-engine.yml"
 
 
@@ -32,13 +35,39 @@ def _active_model_ids() -> dict[str, str]:
     return ids
 
 
+def _registry_rows(payload: dict) -> list[dict]:
+    for key in ("modules", "layers", "checks"):
+        if isinstance(payload.get(key), list):
+            return list(payload[key])
+    return []
+
+
+def _audit_required_paths(errors: list[str], name: str, payload: dict) -> None:
+    rows = _registry_rows(payload)
+    expected = int(payload.get("expected_count") or 0)
+    if expected and expected != len(rows):
+        errors.append(f"{name} expected_count={expected} but declared={len(rows)}")
+    for row in rows:
+        for required in row.get("required_files") or []:
+            text = str(required)
+            if text == "config/sources.json":
+                errors.append(f"{name} still requires removed legacy source config: {row.get('id')}")
+            if re.search(r"data/stats/.+_gw\d+\.json$", text):
+                errors.append(f"{name} active evidence path embeds fixed GW: {row.get('id')}:{text}")
+
+
 def run() -> dict:
     errors: list[str] = []
     services = _load(SERVICE_REGISTRY)
     sources = _load(SOURCE_REGISTRY)
     collector = _load(COLLECTOR_POLICY)
     projection = _load(PROJECTION_POLICY)
-    dss = _load(DSS_CORE)
+    framework_registries = {
+        "dss_core": _load(DSS_CORE),
+        "dss_extensions": _load(DSS_EXT),
+        "enhancements": _load(ENHANCEMENTS),
+        "gate0": _load(GATE0),
+    }
     workflow_text = WORKFLOW.read_text(encoding="utf-8")
 
     if (ROOT / "config" / "sources.json").exists():
@@ -55,6 +84,9 @@ def run() -> dict:
             if re.search(r"_gw\d+\.json$", str(path)):
                 errors.append(f"active source artifact embeds fixed GW: {row.get('id')}:{path}")
 
+    for name, registry in framework_registries.items():
+        _audit_required_paths(errors, name, registry)
+
     service_map = services.get("services") or {}
     if "collector" in service_map:
         errors.append("monolithic collector service is forbidden")
@@ -62,10 +94,13 @@ def run() -> dict:
     missing_base = sorted(required_base - set(service_map))
     if missing_base:
         errors.append(f"missing owned base services: {missing_base}")
-    if (services.get("policy") or {}).get("generic_root_service_scheduling") is not True:
+    policy = services.get("policy") or {}
+    if policy.get("generic_root_service_scheduling") is not True:
         errors.append("generic root scheduling policy must be enabled")
-    if (services.get("policy") or {}).get("service_boundaries_follow_artifact_ownership_not_file_size") is not True:
+    if policy.get("service_boundaries_follow_artifact_ownership_not_file_size") is not True:
         errors.append("service-boundary ownership policy missing")
+    if policy.get("single_owner_for_standard_official_network_fetches") is not True:
+        errors.append("single Official snapshot owner policy missing")
 
     active_modules: list[str] = []
     for service_name, spec in service_map.items():
@@ -75,7 +110,7 @@ def run() -> dict:
             module = command.get("module")
             if module:
                 active_modules.append(str(module))
-    forbidden_active = {"src.engine", "src.reliability_overlay", "src.engines.decision_intelligence_v313"}
+    forbidden_active = {"src.engine", "src.reliability_overlay", "src.engines.decision_intelligence_v313", "src.engines.framework_health_audit"}
     found_forbidden = sorted(forbidden_active & set(active_modules))
     if found_forbidden:
         errors.append(f"legacy/monolithic modules active in service registry: {found_forbidden}")
@@ -101,14 +136,6 @@ def run() -> dict:
         if forbidden in engine_text:
             errors.append(f"src.engine compatibility facade still owns business logic: {forbidden}")
 
-    dss_rows = dss.get("modules") or []
-    if int(dss.get("expected_count") or 0) != len(dss_rows):
-        errors.append("DSS core expected_count must match declared modules")
-    for row in dss_rows:
-        for required in row.get("required_files") or []:
-            if re.search(r"data/stats/.+_gw\d+\.json$", str(required)):
-                errors.append(f"DSS active evidence path embeds fixed GW: {row.get('id')}:{required}")
-
     published_horizons = projection.get("published_horizons") or []
     if not published_horizons:
         errors.append("projection published_horizons must be config-owned")
@@ -131,6 +158,10 @@ def run() -> dict:
     orchestrator_text = (ROOT / "src" / "runtime_v3" / "orchestrator.py").read_text(encoding="utf-8")
     if 'services["collector"]' in orchestrator_text or "critical collector service failed" in orchestrator_text:
         errors.append("orchestrator still special-cases collector")
+
+    framework_service_text = (ROOT / "src" / "engines" / "framework_health_service.py").read_text(encoding="utf-8")
+    if "expected_count" not in framework_service_text or "NORMAL_STALE_MINUTES" not in framework_service_text:
+        errors.append("active framework service must own registry-count and config-freshness activation")
 
     result = {
         "status": "PASS" if not errors else "FAIL",

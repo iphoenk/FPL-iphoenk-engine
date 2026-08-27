@@ -13,6 +13,7 @@ ARCHIVE_RECDIR = DATA / "validation" / "archive" / "reconciled"
 # Framework health intentionally reads this directory. It is an eligibility view,
 # rebuilt by the validation lifecycle from immutable archived reconciliations.
 RECDIR = DATA / "validation" / "reconciled"
+COMPACT_PROJECTION = "reconciliation_minimal_v1"
 
 
 def deadline_snapshot_path(gw: int) -> Path:
@@ -36,6 +37,56 @@ def _aware(value: datetime | None) -> bool:
     return value is not None and value.tzinfo is not None
 
 
+def deadline_player_projection(players: list[dict], gw: int) -> tuple[list[dict], int]:
+    """Keep only point-in-time fields consumed by post-GW reconciliation.
+
+    The full prediction artifact remains provenance-authoritative through
+    ``prediction_sha256`` on the snapshot. Every player is retained so snapshot
+    population semantics stay stable, but at most the target-GW fixture is
+    stored. This prevents 15-GW nested prediction payloads from being copied
+    into Git history for every deadline.
+    """
+    projected: list[dict] = []
+    target_fixture_rows = 0
+    for player in players:
+        if player.get("element") is None:
+            raise RuntimeError("prediction player missing element id")
+        fixture = next(
+            (
+                row
+                for row in (player.get("fixtures") or [])
+                if int(row.get("event") or -1) == int(gw)
+            ),
+            None,
+        )
+        fixtures: list[dict] = []
+        if fixture is not None:
+            xmins = fixture.get("xmins") or {}
+            fixtures.append(
+                {
+                    "event": int(gw),
+                    "xpts": fixture.get("xpts"),
+                    "lower80": fixture.get("lower80"),
+                    "upper80": fixture.get("upper80"),
+                    "xmins": {
+                        "expected_minutes": xmins.get("expected_minutes"),
+                        "start_probability": xmins.get("start_probability"),
+                        "p60": xmins.get("p60"),
+                    },
+                }
+            )
+            target_fixture_rows += 1
+        projected.append(
+            {
+                "element": int(player["element"]),
+                "name": player.get("name"),
+                "position": player.get("position"),
+                "fixtures": fixtures,
+            }
+        )
+    return projected, target_fixture_rows
+
+
 def snapshot_integrity(snapshot: dict, expected_gw: int | None = None) -> tuple[bool, str | None]:
     if not snapshot or snapshot.get("kind") != "deadline_prediction_snapshot":
         return False, "wrong_snapshot_kind"
@@ -53,6 +104,32 @@ def snapshot_integrity(snapshot: dict, expected_gw: int | None = None) -> tuple[
         return False, "snapshot_timestamps_invalid"
     if prediction_generated > deadline or captured > deadline:
         return False, "snapshot_created_after_deadline"
+
+    projection = snapshot.get("projection")
+    if projection is not None:
+        if projection != COMPACT_PROJECTION:
+            return False, "unknown_snapshot_projection"
+        gw = int(snapshot.get("gw") or -1)
+        fixture_rows = 0
+        for player in snapshot.get("players") or []:
+            fixtures = list(player.get("fixtures") or [])
+            if len(fixtures) > 1:
+                return False, "compact_snapshot_has_multiple_fixtures"
+            if fixtures:
+                fixture = fixtures[0]
+                if int(fixture.get("event") or -1) != gw:
+                    return False, "compact_snapshot_fixture_gw_mismatch"
+                xmins = fixture.get("xmins") or {}
+                if fixture.get("xpts") is None or any(
+                    xmins.get(field) is None
+                    for field in ("expected_minutes", "start_probability", "p60")
+                ):
+                    return False, "compact_snapshot_missing_reconciliation_fields"
+                fixture_rows += 1
+        if int(snapshot.get("source_players") or -1) != len(snapshot.get("players") or []):
+            return False, "compact_snapshot_source_player_count_mismatch"
+        if int(snapshot.get("target_fixture_rows") or -1) != fixture_rows:
+            return False, "compact_snapshot_fixture_count_mismatch"
     return True, None
 
 
@@ -67,7 +144,8 @@ def persist_deadline_snapshot(
 
     Existing valid snapshots are preserved byte-for-byte conceptually: they are
     read and returned, never regenerated from newer predictions. Creating a new
-    snapshot at or after the deadline is rejected fail-closed.
+    snapshot at or after the deadline is rejected fail-closed. New snapshots use
+    a compact reconciliation-only projection; legacy full snapshots remain valid.
     """
     path = deadline_snapshot_path(gw)
     existing = read_json(path, None)
@@ -95,10 +173,13 @@ def persist_deadline_snapshot(
     if prediction_generated > deadline:
         raise RuntimeError("prediction artifact was generated after deadline")
 
-    players = list(predictions.get("players") or [])
+    source_players = list(predictions.get("players") or [])
     model_version = predictions.get("model_version")
-    if not players or not model_version:
+    if not source_players or not model_version:
         raise RuntimeError("prediction snapshot missing model_version or players")
+    players, target_fixture_rows = deadline_player_projection(source_players, int(gw))
+    if target_fixture_rows <= 0:
+        raise RuntimeError("prediction snapshot has no target-GW fixtures")
 
     payload = {
         "schema_version": 493,
@@ -113,6 +194,9 @@ def persist_deadline_snapshot(
         "point_in_time": True,
         "immutable": True,
         "prediction_sha256": _digest(predictions),
+        "projection": COMPACT_PROJECTION,
+        "source_players": len(source_players),
+        "target_fixture_rows": target_fixture_rows,
         "players": players,
     }
     ok, reason = snapshot_integrity(payload, int(gw))

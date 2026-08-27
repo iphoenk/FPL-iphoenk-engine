@@ -1,6 +1,6 @@
 {
-  "version": "3.18.1",
-  "schema_version": 47,
+  "version": "3.19.0",
+  "schema_version": 48,
   "release_metadata_source": "src/version.py",
   "P0": {
     "status": "IMPLEMENTED",
@@ -33,7 +33,7 @@
       "canonical MASTER_TASK_LIST_V3.md roadmap and Definition-of-Done governance",
       "normalized structured challenger observation contract",
       "separate challenger reachability and capability-data health",
-      "LiveFPL and OneFPL bounded structured public ingestion",
+      "LiveFPL bounded structured public ingestion",
       "challenger TTL, last-known-good, stale and disagreement governance",
       "non-authoritative challenger Price Radar context overlay",
       "registry-owned Price Radar thresholds and refresh cadence",
@@ -41,7 +41,13 @@
       "registry-owned framework expected counts",
       "version-neutral active prediction and price service entrypoints",
       "registry-driven production validation contracts",
-      "OneFPL reachability/structured-access separation with registry-owned approved deployment fallback"
+      "OneFPL delegated from automated collector to report-time web intelligence",
+      "report-time source registry with model-challenger, fixture-strategy, pundit, community and verified-news classes",
+      "pundit consensus compared explicitly with DSS alignment/divergence without mutating DSS",
+      "Ben Crellin fixture-strategy evidence isolated from player-projection voting",
+      "Reddit community signal requires independent cross-check before fact promotion",
+      "report-time evidence freshness, provenance and advisory-authority contract",
+      "report serving artifacts carry report-time intelligence for fast and deep reports"
     ]
   },
   "P1": {

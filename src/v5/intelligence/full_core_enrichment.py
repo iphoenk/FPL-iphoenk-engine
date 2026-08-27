@@ -11,6 +11,7 @@ from src.v5.config_cache import load_json_config
 CONFIG = "config/intelligence/evidence_enrichment.json"
 CAPABILITIES = [
     "advanced_stats_sync",
+    "player_defensive_contribution_evidence",
     "european_congestion",
     "domestic_cup_congestion",
     "international_load",
@@ -55,6 +56,16 @@ def _load_artifact(path: str) -> dict[str, Any]:
     return data
 
 
+def _dc_sample_quality(minutes: float) -> str:
+    if minutes <= 0:
+        return "NO_ADVANCED_EVIDENCE"
+    if minutes < 270:
+        return "LIMITED"
+    if minutes < 450:
+        return "DEVELOPING"
+    return "ESTABLISHED"
+
+
 def _advanced_stats(bootstrap: dict[str, Any], source_fusion: dict[str, Any]) -> dict[str, Any]:
     cfg = load_json_config(CONFIG)["advanced_stats"]
     shots = _load_artifact(str(cfg["shots_path"]))
@@ -62,9 +73,31 @@ def _advanced_stats(bootstrap: dict[str, Any], source_fusion: dict[str, Any]) ->
     shot_rows = shots.get("rows") if isinstance(shots.get("rows"), list) else []
     match_rows = match.get("rows") if isinstance(match.get("rows"), list) else []
     players: dict[int, dict[str, float]] = {}
+    element_types = {
+        int(p["id"]): int(p.get("element_type") or 4)
+        for p in bootstrap.get("elements") or []
+        if isinstance(p, dict) and p.get("id") is not None
+    }
 
     def row(eid: int) -> dict[str, float]:
-        return players.setdefault(eid, {"shots": 0.0, "shot_xg": 0.0, "shots_on_target": 0.0, "box_touches": 0.0, "chances_created": 0.0, "xg": 0.0, "xa": 0.0, "minutes": 0.0})
+        return players.setdefault(
+            eid,
+            {
+                "shots": 0.0,
+                "shot_xg": 0.0,
+                "shots_on_target": 0.0,
+                "box_touches": 0.0,
+                "chances_created": 0.0,
+                "xg": 0.0,
+                "xa": 0.0,
+                "minutes": 0.0,
+                "clearances": 0.0,
+                "blocks": 0.0,
+                "interceptions": 0.0,
+                "tackles": 0.0,
+                "recoveries": 0.0,
+            },
+        )
 
     for item in shot_rows:
         if not isinstance(item, dict):
@@ -88,8 +121,32 @@ def _advanced_stats(bootstrap: dict[str, Any], source_fusion: dict[str, Any]) ->
         target["chances_created"] += _f(item.get("chances_created"))
         target["xg"] += _f(item.get("xg"))
         target["xa"] += _f(item.get("xa"))
+        target["clearances"] += _f(item.get("clearances"))
+        target["blocks"] += _f(item.get("blocks"))
+        target["interceptions"] += _f(item.get("interceptions"))
+        target["tackles"] += _f(item.get("tackles"))
+        target["recoveries"] += _f(item.get("recoveries"))
         if target["shots"] <= 0:
             target["shots"] += _f(item.get("total_shots"))
+
+    normalized_players: dict[str, dict[str, Any]] = {}
+    dc_covered = 0
+    for eid, values in players.items():
+        minutes = max(0.0, _f(values.get("minutes")))
+        element_type = int(element_types.get(eid, 4))
+        cbit = sum(_f(values.get(k)) for k in ("clearances", "blocks", "interceptions", "tackles"))
+        cbirt = cbit + _f(values.get("recoveries"))
+        dc_total = 0.0 if element_type == 1 else (cbit if element_type == 2 else cbirt)
+        dc_per90 = round(dc_total * 90.0 / minutes, 4) if minutes > 0 and element_type != 1 else None
+        dc_covered += int(dc_per90 is not None)
+        normalized_players[str(eid)] = {
+            **{name: round(value, 4) for name, value in values.items()},
+            "dc_reconstructed_total": round(dc_total, 4),
+            "dc_reconstructed_per90": dc_per90,
+            "dc_evidence_minutes": round(minutes, 1),
+            "dc_sample_quality": "INELIGIBLE" if element_type == 1 else _dc_sample_quality(minutes),
+            "dc_metric_family": "NONE" if element_type == 1 else ("CBIT" if element_type == 2 else "CBIRT"),
+        }
 
     sources = source_fusion.get("sources") if isinstance(source_fusion.get("sources"), dict) else {}
     understat = sources.get("understat") if isinstance(sources.get("understat"), dict) else {}
@@ -118,7 +175,8 @@ def _advanced_stats(bootstrap: dict[str, Any], source_fusion: dict[str, Any]) ->
         "shots_rows": len(shot_rows),
         "match_rows": len(match_rows),
         "coverage_players": len(players),
-        "players": {str(k): {name: round(value, 4) for name, value in values.items()} for k, values in players.items()},
+        "defensive_contribution_coverage_players": dc_covered,
+        "players": normalized_players,
         "missing_player_behavior": cfg.get("missing_player_behavior"),
         "understat_status": understat.get("status"),
         "understat_players": len(understat_rows),
@@ -128,6 +186,8 @@ def _advanced_stats(bootstrap: dict[str, Any], source_fusion: dict[str, Any]) ->
             "fpl_core_insights_primary": True,
             "understat_challenger_only": True,
             "shot_in_box_is_not_box_touch": True,
+            "defensive_contribution_metrics_follow_official_position_rules": True,
+            "missing_defensive_evidence_is_unavailable_not_zero": True,
         },
     }
 
@@ -294,7 +354,7 @@ def build_full_core_enrichment(bootstrap: dict[str, Any], fixtures: list[dict[st
     current_form = _current_form(bootstrap, advanced)
     capabilities = list(CAPABILITIES)
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "model": load_json_config(CONFIG).get("model_id"),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "status": "ACTIVE",

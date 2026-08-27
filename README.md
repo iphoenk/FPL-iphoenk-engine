@@ -1,16 +1,40 @@
-# FPL iphoenk Engine v3.20.0
+# FPL iphoenk Engine v3.20.1
 
 Production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
-- Production baseline: `3.20.0` / schema `48`.
-- Production acceptance: COMPLETE on 27 August 2026.
+- Production baseline: `3.20.0` / schema `48` until V3.20.1 production acceptance completes.
+- Release candidate: `3.20.1` / schema `48`.
 - Release metadata source of truth: `src/version.py`.
 - Service Registry: schema `11`, contract `v3.20-architecture-hardening-15-owned-20-watchlist`.
 - Machine Source Registry: `SOURCE_REGISTRY_V3`.
 - Runtime state publishes only to `runtime-data`; `main/data/**` is historical/source-repository material.
 - Official FPL remains the only native authority. Challenger, enrichment and report-time sources may not overwrite Official-native fields.
 - Canonical roadmap and Definition of Done: `MASTER_TASK_LIST_V3.md`.
+
+## v3.20.1 Correctness Hardening
+V3.20.1 is a patch release for numerical correctness and runtime fault handling. It does not change the serving/report schema, the 15 OWNED + 20 WATCHLIST contract, the report-time intelligence contract, or the 20-service production topology.
+
+### Correctness fixes
+- Appearance points now use the unconditional 60-minute probability exactly once: `P(start) + P(bench appearance) + P(60+)`.
+- Projection position is derived from Official `element_type` when a string position is absent, restoring the goalkeeper save-points route for native bootstrap rows.
+- Package captain variance now uses the same player selected by captain mean and includes the covariance created because the captain is already present once in lineup variance. Under the independent-player baseline, the extra captain variance is `((1+w)^2 - 1) * Var(X)`.
+- Artifact-promotion failures now enter the same critical/noncritical service-failure path as command failures. A noncritical failure also removes stale owned outputs and `latest.json` keys before downstream services continue.
+- The obsolete direct-fetch projection runner was removed from `decision_intelligence.py`; production projection components now live under `src/models/projection_components.py`, while `decision_intelligence.py` remains package-optimizer-only.
+- Starting-XI battle closeness is config-owned under `config/intelligence/lineup_governance.json` rather than hardcoded in Python.
+
+### Review decisions that were intentionally not applied verbatim
+`challenger_source_failure_does_not_block_decisions` refers to external challenger/source availability, which is normalized fail-soft before the internal challenger scorecard runs. The deterministic internal `challenger_scorecard` service remains critical because a code/artifact-integrity failure is different from an unavailable external source; silently accepting a broken internal scorecard could preserve stale evidence. V3.20.1 strengthens generic noncritical stale-output quarantine without weakening this integrity boundary.
+
+The package optimizer and final lineup governance also remain separate. The package optimizer evaluates candidate squad packages with a raw expected-points lineup approximation inside its package objective, while final lineup governance selects the actual XI with risk-adjusted selection score, DNP penalties, captain safety and bench governance. They share legality/rules contracts but intentionally do not share one selector because their objectives differ.
+
+### Schema decision
+- Engine: `3.20.1`.
+- Serving/runtime schema: `48`, unchanged because output structure and consumer contracts are unchanged.
+- Service Registry schema: `11`, unchanged because the service topology and artifact contract are unchanged.
+- Lineup-governance policy schema: `2`, because the mutable battle-margin threshold now has an explicit config owner.
+
+V3.20.1 remains a release candidate until PR CI, bounded integration, merge, production collector, validated `runtime-data` publication and framework GREEN/HEALTHY/GO verification complete.
 
 ## v3.20.0 Architecture Hardening
 V3.20 removes the remaining active monolithic base collector and consolidates mutable infrastructure policy under explicit registry/config ownership. The user-facing report/serving contract remains schema 48, so this is an engine architecture release without a serving-schema bump.
@@ -71,7 +95,10 @@ Active model identity is independent of engine release numbering. Projection con
 - missing collector-policy workflow schedules;
 - direct workflow pushes of runtime data to `main`;
 - reintroduction of the legacy deep-stats workflow;
-- prediction/historical-prior services that stop consuming the shared Official snapshot.
+- prediction/historical-prior services that stop consuming the shared Official snapshot;
+- a second direct-fetch projection entrypoint in `decision_intelligence.py`;
+- hardcoded XI battle threshold ownership;
+- promotion failures bypassing service criticality handling or stale-output quarantine.
 
 ### Schema decision
 - Engine: `3.20.0`.
@@ -132,7 +159,7 @@ Local reconstruction is an audit aid only and may not override Official FPL nati
 Third-party predictions and opinions are evidence, never native authority.
 
 ## Runtime architecture
-The active production runtime is a bounded-process dependency-aware microservice orchestrator driven by `config/v3_service_registry.json`.
+The active production/candidate runtime is a bounded-process dependency-aware microservice orchestrator driven by `config/v3_service_registry.json`.
 
 Key properties:
 - generic root DAG scheduling;
@@ -201,6 +228,7 @@ CI must fail on release metadata or architecture ownership drift. A version is n
 - v3.18.1: OneFPL unattended-access reliability diagnosis.
 - v3.19.0: report-time intelligence, pundit consensus-vs-DSS and OneFPL report-time delegation.
 - v3.20.0: production-accepted artifact-owned base-service decomposition, generic DAG, Source Registry V3, collector policy, current advanced-stat aliases and architecture anti-regression gate.
+- v3.20.1 candidate: projection/scoring correctness, promotion fault handling, legacy projection-path cleanup and config-owned XI battle threshold; serving schema remains 48.
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.

@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.8.1
+# FPL iphoenk Engine V4.9.1
 
 A production-oriented personal FPL data platform.
 
@@ -31,9 +31,9 @@ Implemented:
 Working base:
 - official-ID integration of Core Insights players, shots and player-match stats
 - dedicated prior-season vaastav snapshot with stable-code reconciliation
-- official set-piece and penalty orders as metadata, without double-counting xG/xA
-- neutral opponent-defence scoring fallback when dedicated defence splits are unavailable
-- direct-evidence xMins priors with broad-position competition retained as diagnostic only
+- Bayesian team shares from official set-piece/penalty orders plus observed deep events, used as a bounded zero-centred prior reallocation
+- Bayesian opponent-defence resistance from finished Official FPL results, shrunk to the league prior and combined with official diagnostics
+- direct-evidence xMins priors with inferred tactical-role competition and protection for proven starters
 - advanced-stat CLI
 - fixture model
 - interpretable xMins/xPts scaffold
@@ -76,6 +76,8 @@ uvicorn live_service:app --host 0.0.0.0 --port 8000
 - GET `/prices`
 - POST `/refresh`
 - GET `/stream` via Server-Sent Events
+
+`POST /refresh` is fail-closed and requires either `Authorization: Bearer $FPL_REFRESH_TOKEN` or `X-FPL-Refresh-Token`. SSE clients share one polling broadcaster, so additional clients do not multiply Official FPL refreshes.
 
 ## Source authority
 1. Official FPL API
@@ -120,7 +122,7 @@ GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy
 - Deterministic `--as-of` runs are labelled simulations and can never authorize a live action.
 - The final action is produced only after POST-FLIGHT health, while V4.7.1 predictions and V4.7.2 optimizer search widths remain unchanged.
 
-## V4.8.1 independent process-isolated services
+## V4.8.2 independent process-isolated services
 
 - Eight registry-driven services run as isolated Python processes under one fail-closed orchestrator.
 - Every service publishes versioned JSON contracts that are validated before its dependants may run.
@@ -135,3 +137,21 @@ GitHub Actions is persistence/archive, not true streaming infrastructure. Deploy
 - `data/service_orchestration_v4.json` provides service status, timings, contract hashes, and failure evidence.
 
 See `docs/v4-microservices.md` for service ownership, failure semantics, and preserved invariants.
+
+## V4.8.2 truthful health separation
+
+- `pipeline_health` reports API, freshness, registry, contract, rules, and Gate-0 operability.
+- `prediction_health` reports whether critical prediction capabilities have production evidence.
+- `capability_health` and `capability_coverage` expose all 74 DSS and enhancement states without hiding `PARTIAL` modules.
+- `decision_engine` follows prediction readiness, while the backward-compatible `overall` field now represents operational pipeline health.
+- A GREEN pipeline with AMBER prediction health may produce governed recommendations, but `go_allowed` remains false.
+
+## V4.9.1 prediction quality and operational hardening
+
+- Fixes appearance scoring so unconditional `p60` is not multiplied by start probability twice; an exact numeric regression test protects the formula.
+- Deep shot and match metrics feed rate estimation, tactical-role inference, role competition, and set-piece/penalty priors; decision coverage is measured separately from mere synchronization.
+- Finished Official FPL results drive opponent-defence resistance with explicit Bayesian shrinkage instead of a permanent neutral default.
+- Player value is published as points per million and consumed by the WC objective as a bounded secondary term; owned-player affordability still uses sell cost.
+- Critical prediction probes are evidence-based. Calibration and learning stores report `WARMUP` until an eligible post-GW sample exists; optional unavailable capabilities remain `PARTIAL` rather than being painted green.
+- The process-isolated workflow is scheduled at 04.30, 12.30, and 21.30 Asia/Jakarta. The old monolith cron is removed; its manual compatibility workflow now delegates to the same orchestrator and quality gate.
+- Live refresh is authenticated and fail-closed, while all SSE clients share one orchestrated polling loop.

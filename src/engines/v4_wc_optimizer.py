@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, replace
+from functools import lru_cache
 from heapq import nlargest
 from typing import Iterable
 
 from src.engines.team_value import sell_cost
+from src.utils import CONFIG, read_json
 
 POSITION_COUNTS = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
 BUDGET_TENTHS = 1000
@@ -36,13 +38,20 @@ def _f(v, default=0.0) -> float:
         return float(default)
 
 
+@lru_cache(maxsize=1)
+def _value_config() -> dict:
+    return (read_json(CONFIG / "prediction_quality_registry.json", {}).get("value") or {})
+
+
 def player_objective(pred: dict) -> float:
     x3 = _f(pred.get("xpts_3")) / 3.0
     x5 = _f(pred.get("xpts_5")) / 5.0
     x10 = _f(pred.get("xpts_10")) / 10.0
     x15 = _f(pred.get("xpts_15")) / 15.0
     unc = _f(pred.get("uncertainty"))
-    return 0.25*x3 + 0.50*x5 + 0.15*x10 + 0.10*x15 - 0.08*unc
+    value = _f((pred.get("value") or {}).get("xpts5_per_million"))
+    value_term = _f(_value_config().get("objective_weight"), 0.02) * min(6.0, value)
+    return 0.25*x3 + 0.50*x5 + 0.15*x10 + 0.10*x15 - 0.08*unc + value_term
 
 
 def build_candidates(predictions: dict, universe: dict) -> list[Candidate]:
@@ -263,4 +272,4 @@ def decision_report_from_candidates(candidates:list[Candidate],locked:dict,budge
             if c.cost<=owned.cost+baseline_itb:
                 direct.append({"owned":owned.element,"owned_name":owned.name,"challenger":c.element,"challenger_name":c.name,"position":owned.position,"cost_delta":c.cost-owned.cost,"objective_delta":round(c.objective-owned.objective,4),"xpts5_delta":round(c.x5-owned.x5,2)}); break
     direct.sort(key=lambda x:x["objective_delta"],reverse=True)
-    return {"schema_version":472,"engine":"v4.7.2-wc-optimizer-performance-hotfix","wildcard_active":bool(locked.get("wildcard_active")),"budget_tenths":budget,"baseline_itb_tenths":baseline_itb,"affordability":affordability,"screened_players":len(candidates),"current":current_m,"optimized":target_m|{"itb":optimized["itb"]},"delta":{"best_xi_xpts_5":round(dx,2),"bench_adjusted_utility_5":round(du,2)},"classification":classify_gain(du,dx),"out":[{"element":p.element,"name":p.name,"position":p.position,"sell_cost":p.cost} for p in outs],"in":[{"element":p.element,"name":p.name,"position":p.position,"now_cost":p.cost} for p in ins],"optimized_elements":[p.element for p in target],"direct_challengers":direct[:15],"hard_constraints":{"squad_size":15,"positions":POSITION_COUNTS,"budget_tenths":budget,"max_per_club":MAX_PER_CLUB,"legal_xi":True,"owned_price_basis":"sell_cost","unowned_price_basis":"now_cost"},"performance":optimized["performance"]|{"beam_size_unchanged":optimized["beam_size"]==6000,"direct_challenger_position_index":True}}
+    return {"schema_version":491,"engine":"v4.9.1-wc-optimizer-prediction-quality","wildcard_active":bool(locked.get("wildcard_active")),"budget_tenths":budget,"baseline_itb_tenths":baseline_itb,"affordability":affordability,"screened_players":len(candidates),"current":current_m,"optimized":target_m|{"itb":optimized["itb"]},"delta":{"best_xi_xpts_5":round(dx,2),"bench_adjusted_utility_5":round(du,2)},"classification":classify_gain(du,dx),"out":[{"element":p.element,"name":p.name,"position":p.position,"sell_cost":p.cost} for p in outs],"in":[{"element":p.element,"name":p.name,"position":p.position,"now_cost":p.cost} for p in ins],"optimized_elements":[p.element for p in target],"direct_challengers":direct[:15],"hard_constraints":{"squad_size":15,"positions":POSITION_COUNTS,"budget_tenths":budget,"max_per_club":MAX_PER_CLUB,"legal_xi":True,"owned_price_basis":"sell_cost","unowned_price_basis":"now_cost"},"performance":optimized["performance"]|{"beam_size_unchanged":optimized["beam_size"]==6000,"direct_challenger_position_index":True,"value_term_consumed":True}}

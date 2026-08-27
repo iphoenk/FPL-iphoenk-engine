@@ -4,7 +4,7 @@ from src.services.contracts import file_digest
 import src.services.prediction_service as service
 
 
-def test_prediction_preserves_v480_artifacts_and_archives(tmp_path, monkeypatch):
+def test_v482_prediction_preserves_compatibility_artifacts_and_archives(tmp_path, monkeypatch):
     data = tmp_path / "data"
     runtime = data / "runtime"
     runtime.mkdir(parents=True)

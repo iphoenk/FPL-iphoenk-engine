@@ -38,7 +38,12 @@ def aggregate_advanced(core_rows, shot_rows, match_rows):
             "identity_match": "official_element_id",
         }
 
-    deep = defaultdict(lambda: {"minutes": 0.0, "xg": 0.0, "xa": 0.0, "def": 0.0, "rows": 0})
+    deep = defaultdict(lambda: {
+        "minutes": 0.0, "xg": 0.0, "xa": 0.0, "def": 0.0, "rows": 0,
+        "starts": 0, "shots": 0.0, "chances": 0.0, "crosses": 0.0,
+        "box_touches": 0.0, "clearances": 0.0, "aerials": 0.0,
+        "tackles": 0.0, "recoveries": 0.0, "penalty_events": 0.0,
+    })
     for row in match_rows or []:
         element = _element_id(row.get("player_id"))
         if element is None:
@@ -48,13 +53,29 @@ def aggregate_advanced(core_rows, shot_rows, match_rows):
         d["xg"] += max(0.0, f(row.get("xg")))
         d["xa"] += max(0.0, f(row.get("xa")))
         d["def"] += max(0.0, f(row.get("defensive_contributions")))
+        d["starts"] += int(f(row.get("minutes_played")) >= 45)
+        d["shots"] += max(0.0, f(row.get("total_shots")))
+        d["chances"] += max(0.0, f(row.get("chances_created")))
+        d["crosses"] += max(0.0, f(row.get("accurate_crosses")))
+        d["box_touches"] += max(0.0, f(row.get("touches_opposition_box")))
+        d["clearances"] += max(0.0, f(row.get("clearances")))
+        d["aerials"] += max(0.0, f(row.get("aerial_duels_won")))
+        d["tackles"] += max(0.0, f(row.get("tackles"), f(row.get("tackles_won"))))
+        d["recoveries"] += max(0.0, f(row.get("recoveries")))
+        d["penalty_events"] += max(0.0, f(row.get("penalties_scored"))) + max(0.0, f(row.get("penalties_missed")))
         d["rows"] += 1
 
     shot_xg = defaultdict(float)
+    set_piece_xg = defaultdict(float)
     for row in shot_rows or []:
         element = _element_id(row.get("player_id"))
-        if element is not None:
-            shot_xg[element] += max(0.0, f(row.get("xg")))
+        if element is None:
+            continue
+        value = max(0.0, f(row.get("xg")))
+        shot_xg[element] += value
+        situation = str(row.get("situation") or "").casefold()
+        if any(token in situation for token in ("free-kick", "corner", "set-piece", "penalty")):
+            set_piece_xg[element] += value
 
     for element, d in deep.items():
         if d["minutes"] <= 0:
@@ -64,6 +85,18 @@ def aggregate_advanced(core_rows, shot_rows, match_rows):
         base["xa_per90"] = min(2.0, 90 * d["xa"] / d["minutes"])
         if d["def"] > 0:
             base["defensive_contribution_per90"] = min(40.0, 90 * d["def"] / d["minutes"])
+        for source, target, ceiling in (
+            ("shots", "shots_per90", 12.0), ("chances", "chances_created_per90", 10.0),
+            ("crosses", "accurate_crosses_per90", 10.0), ("box_touches", "box_touches_per90", 25.0),
+            ("clearances", "clearances_per90", 25.0), ("aerials", "aerials_won_per90", 20.0),
+            ("tackles", "tackles_per90", 20.0), ("recoveries", "recoveries_per90", 25.0),
+        ):
+            base[target] = min(ceiling, 90 * d[source] / d["minutes"])
+        base["deep_rows"] = d["rows"]
+        base["deep_starts"] = d["starts"]
+        base["set_piece_xg"] = set_piece_xg[element]
+        base["penalty_events"] = d["penalty_events"]
+        base["decision_metrics_used"] = True
         base["minutes"] = d["minutes"]
         base["sources"] = list(dict.fromkeys([*base.get("sources", []), "fpl_core_insights:playermatchstats"]))
         if shot_xg[element] > 0:

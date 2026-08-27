@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
-  "registry": "fpl_v4_8_1_microservice_registry_v2",
-  "architecture_version": "4.8.1",
+  "registry": "fpl_v4_9_1_microservice_registry_v2",
+  "architecture_version": "4.9.1",
   "execution_model": "process_isolated_single_host",
   "services": [
     {"id":"raw_snapshot","name":"Raw Snapshot Service","boundary_state":"INDEPENDENT","module":"src.services.raw_snapshot_service","command":["{python}","-m","src.services.raw_snapshot_service","{mode}"],"runtime_flags":{"as_of":"--as-of"},"timeout_seconds":90,"depends_on":[],"produces":["raw_snapshot"],"critical":true},
@@ -13,5 +13,5 @@
     {"id":"framework_postflight","name":"Framework POST-FLIGHT Service","boundary_state":"INDEPENDENT","module":"src.engines.framework_health_audit","command":["{python}","-m","src.engines.framework_health_audit","--phase","postflight","--strict"],"timeout_seconds":20,"depends_on":["optimization"],"produces":["framework_postflight"],"critical":true},
     {"id":"report_governance","name":"Checkpoint Report Governance Service","boundary_state":"INDEPENDENT","module":"src.engines.v4_checkpoint_governance","command":["{python}","-m","src.engines.v4_checkpoint_governance"],"timeout_seconds":20,"depends_on":["framework_postflight"],"produces":["checkpoint_decision"],"critical":true}
   ],
-  "guardrails":{"official_fpl_api_authority":"raw_snapshot_only","services_may_not_refetch_snapshot":true,"fail_closed_on_contract_failure":true,"lock_after_pass":["raw_snapshot","enrichment","prediction"],"prediction_formula_unchanged":true,"optimizer_search_width_unchanged":true,"gate0_checks_unchanged":16,"registry_counts_unchanged":{"dss_core":50,"dss_extensions":16,"enhancements":8}}
+  "guardrails":{"official_fpl_api_authority":"raw_snapshot_only","services_may_not_refetch_snapshot":true,"fail_closed_on_contract_failure":true,"lock_after_pass":["raw_snapshot","enrichment","prediction"],"appearance_formula_regression_tested":true,"prediction_quality_inputs_consumed":true,"optimizer_search_width_unchanged":true,"gate0_checks_unchanged":16,"registry_counts_unchanged":{"dss_core":50,"dss_extensions":16,"enhancements":8}}
 }

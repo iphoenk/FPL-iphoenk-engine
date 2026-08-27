@@ -5,6 +5,7 @@ from collections import defaultdict
 from src.models.player_identity import build_identity_index
 from src.models.v4_prediction import XA_PRIOR, XG_PRIOR, clamp, project_horizon, team_strength
 from src.models.v4_prediction_inputs import load_prediction_enrichment
+from src.utils import CONFIG, read_json
 
 
 def f(value, default=0.0):
@@ -22,7 +23,11 @@ def _strength_scale(value, values):
     return 0.5 if hi == lo else clamp(0.2 + 0.6 * (f(value) - lo) / (hi - lo), 0.2, 0.8)
 
 
-def opponent_defence_ratings(teams):
+def _quality_config():
+    return read_json(CONFIG / "prediction_quality_registry.json", {})
+
+
+def opponent_defence_ratings(teams, fixtures=None, quality=None):
     # Overall strength substantially overlaps official FDR. When the dedicated
     # defence split is zeroed, retain overall strength for diagnostics only and
     # use a neutral scoring value to avoid counting the same fixture signal twice.
@@ -38,6 +43,23 @@ def opponent_defence_ratings(teams):
         venue: [f(team.get(f"strength_overall_{venue}"), 3) for team in teams.values()]
         for venue in ("home", "away")
     }
+    quality = quality or _quality_config()
+    params = quality.get("opponent_defence") or {}
+    finished = [row for row in (fixtures or []) if row.get("finished") and row.get("team_h_score") is not None and row.get("team_a_score") is not None]
+    results = defaultdict(lambda: {"games": 0, "conceded": 0.0, "home_games": 0, "home_conceded": 0.0, "away_games": 0, "away_conceded": 0.0})
+    for fixture in finished:
+        home, away = int(fixture["team_h"]), int(fixture["team_a"])
+        home_score, away_score = f(fixture["team_h_score"]), f(fixture["team_a_score"])
+        results[home]["games"] += 1; results[home]["conceded"] += away_score
+        results[home]["home_games"] += 1; results[home]["home_conceded"] += away_score
+        results[away]["games"] += 1; results[away]["conceded"] += home_score
+        results[away]["away_games"] += 1; results[away]["away_conceded"] += home_score
+    league_conceded = sum(row["conceded"] for row in results.values()) / max(1, sum(row["games"] for row in results.values()))
+    result_weight = f(params.get("result_weight"), 0.7)
+    diagnostic_weight = f(params.get("official_diagnostic_weight"), 0.3)
+    prior_matches = max(1.0, f(params.get("prior_matches"), 5))
+    minimum = f(params.get("minimum_rating"), 0.2)
+    maximum = f(params.get("maximum_rating"), 0.8)
     ratings = {}
     for team_id, team in teams.items():
         row = {}
@@ -45,7 +67,20 @@ def opponent_defence_ratings(teams):
         for venue in ("home", "away"):
             raw_defence = f(team.get(f"strength_defence_{venue}"))
             raw_overall = f(team.get(f"strength_overall_{venue}"), 3)
-            if defence_ready[venue] and raw_defence > 0:
+            result_row = results.get(team_id) or {}
+            venue_games = int(result_row.get(f"{venue}_games") or 0)
+            games = venue_games or int(result_row.get("games") or 0)
+            venue_conceded = f(result_row.get(f"{venue}_conceded")) if venue_games else f(result_row.get("conceded"))
+            if finished:
+                # Shrink sparse venue/team results to the league mean. Teams
+                # without a result remain at the explicit league prior rather
+                # than an opaque hardcoded opponent default.
+                conceded_rate = (venue_conceded + prior_matches * league_conceded) / (games + prior_matches)
+                result_rating = clamp(0.5 + (league_conceded - conceded_rate) / 3.0, minimum, maximum)
+                diagnostic = _strength_scale(raw_overall, overall_values[venue])
+                row[venue] = clamp(result_weight * result_rating + diagnostic_weight * diagnostic, minimum, maximum)
+                modes.append("dynamic_bayesian_results")
+            elif defence_ready[venue] and raw_defence > 0:
                 row[venue] = _strength_scale(raw_defence, venue_values[venue])
                 modes.append("defence")
             else:
@@ -53,7 +88,12 @@ def opponent_defence_ratings(teams):
                 modes.append("overall_fallback_diagnostic_only")
             row[f"raw_{venue}"] = raw_defence if raw_defence > 0 else None
             row[f"diagnostic_{venue}"] = _strength_scale(raw_overall, overall_values[venue])
-        row["metric"] = "defence" if modes == ["defence", "defence"] else "overall_fallback_diagnostic_only"
+            row[f"result_games_{venue}"] = games
+        row["metric"] = (
+            "dynamic_bayesian_results" if all(mode == "dynamic_bayesian_results" for mode in modes)
+            else "defence" if modes == ["defence", "defence"]
+            else "overall_fallback_diagnostic_only"
+        )
         ratings[team_id] = row
     return ratings
 
@@ -78,7 +118,7 @@ def fixture_map(fixtures, team_id, defence_ratings=None, n=15):
             "opponent_defence_raw": rating.get(f"raw_{opponent_venue}"),
             "opponent_defence_diagnostic": rating.get(f"diagnostic_{opponent_venue}"),
             "opponent_defence_source": f"official_fpl_{rating.get('metric', 'unavailable')}",
-            "opponent_defence_scoring_mode": "dynamic" if rating.get("metric") == "defence" else "neutral_fallback",
+            "opponent_defence_scoring_mode": "dynamic" if rating.get("metric") in {"defence", "dynamic_bayesian_results"} else "neutral_fallback",
         })
     return out[:n]
 
@@ -106,6 +146,96 @@ def set_piece_priors(player):
         "source": "official_fpl_bootstrap_orders_inferred_metadata",
         "role_data_mode": "inferred_order_metadata_only",
     }
+
+
+def tactical_role(player, advanced=None):
+    """Infer a bounded tactical peer group from deep match evidence.
+
+    This is deliberately labelled as an inference. It is more specific than an
+    FPL position and is used only for competition and prior allocation.
+    """
+    advanced = advanced or {}
+    position = int(player.get("element_type", 3))
+    if position == 1:
+        return "goalkeeper", "official_position"
+    shots = f(advanced.get("shots_per90"))
+    chances = f(advanced.get("chances_created_per90"))
+    crosses = f(advanced.get("accurate_crosses_per90"))
+    box = f(advanced.get("box_touches_per90"))
+    clearances = f(advanced.get("clearances_per90"))
+    aerials = f(advanced.get("aerials_won_per90"))
+    tackles = f(advanced.get("tackles_per90"))
+    recoveries = f(advanced.get("recoveries_per90"))
+    attack_signal = shots + chances + crosses + 0.5 * box
+    defence_signal = clearances + aerials + tackles + 0.35 * recoveries
+    source = "deep_match_metrics" if advanced.get("decision_metrics_used") else "official_role_proxy"
+    if position == 2:
+        if attack_signal > max(1.0, 0.75 * defence_signal):
+            return "attacking_fullback", source
+        if defence_signal > max(1.0, 1.5 * attack_signal):
+            return "central_defender", source
+        return "hybrid_defender", source
+    if position == 3:
+        if shots + box > chances + crosses and shots + box > tackles + recoveries:
+            return "attacking_midfielder", source
+        if chances + crosses > shots + box and chances + crosses > tackles:
+            return "creator_midfielder", source
+        if tackles + recoveries > shots + chances + box:
+            return "holding_midfielder", source
+        return "balanced_midfielder", source
+    if chances + crosses > shots + box:
+        return "support_forward", source
+    return "striker", source
+
+
+def team_role_priors(elements, advanced, quality=None):
+    quality = quality or _quality_config()
+    params = quality.get("role_priors") or {}
+    official_weight = f(params.get("official_order_weight"), 0.65)
+    observed_weight = f(params.get("observed_event_weight"), 0.35)
+    by_team = defaultdict(list)
+    for player in elements:
+        role = set_piece_priors(player)
+        deep = advanced.get(player["id"], {})
+        by_team[player["team"]].append((player, role, deep))
+    result = {}
+    for rows in by_team.values():
+        team_sp = sum(f(deep.get("set_piece_xg")) for _, _, deep in rows)
+        team_pen = sum(f(deep.get("penalty_events")) for _, _, deep in rows)
+        sp_scores, pen_scores = {}, {}
+        for player, role, deep in rows:
+            sp_observed = f(deep.get("set_piece_xg")) / team_sp if team_sp > 0 else 0.0
+            pen_observed = f(deep.get("penalty_events")) / team_pen if team_pen > 0 else 0.0
+            sp_scores[player["id"]] = official_weight * f(role.get("set_piece_order_weight")) + observed_weight * sp_observed
+            pen_scores[player["id"]] = official_weight * f(role.get("penalty_order_weight")) + observed_weight * pen_observed
+        sp_total, pen_total = sum(sp_scores.values()), sum(pen_scores.values())
+        sp_shares = {key: value / sp_total if sp_total else 0.0 for key, value in sp_scores.items()}
+        pen_shares = {key: value / pen_total if pen_total else 0.0 for key, value in pen_scores.items()}
+        sp_centre = sum(sp_shares.values()) / max(1, len(rows))
+        pen_centre = sum(pen_shares.values()) / max(1, len(rows))
+        for player, role, deep in rows:
+            sp_share = sp_shares[player["id"]]
+            pen_share = pen_shares[player["id"]]
+            multiplier = clamp(
+                1
+                + f(params.get("set_piece_uplift"), 0.12) * (sp_share - sp_centre)
+                + f(params.get("penalty_uplift"), 0.18) * (pen_share - pen_centre),
+                0.9,
+                1.2,
+            )
+            result[player["id"]] = {
+                **role,
+                "set_piece_share": sp_share,
+                "penalty_share": pen_share,
+                "role_attack_multiplier": multiplier,
+                "role_prior_adjustment_applied": abs(multiplier - 1) > 1e-6,
+                "source": "bayesian_official_order_plus_deep_events",
+                "role_data_mode": "posterior_team_share",
+                "role_scoring_mode": "prior_reallocation_no_direct_double_count",
+                "observed_set_piece_xg": f(deep.get("set_piece_xg")),
+                "observed_penalty_events": f(deep.get("penalty_events")),
+            }
+    return result
 
 
 def player_priors(player, last_season=None):
@@ -138,10 +268,14 @@ def team_defence_prior(team):
     return clamp(0.30 + (strength - 1000) / 4000, 0.18, 0.48)
 
 
-def minutes_contexts(elements, last_season, finished_events):
+def minutes_contexts(elements, last_season, finished_events, advanced=None, quality=None):
+    advanced = advanced or {}
+    quality = quality or _quality_config()
+    competition_cfg = quality.get("competition") or {}
+    roles = {player["id"]: tactical_role(player, advanced.get(player["id"])) for player in elements}
     by_group = defaultdict(list)
     for player in elements:
-        by_group[(player.get("team"), player.get("element_type"))].append(player)
+        by_group[(player.get("team"), roles[player["id"]][0])].append(player)
 
     credible_by_team = defaultdict(int)
     for player in elements:
@@ -167,14 +301,16 @@ def minutes_contexts(elements, last_season, finished_events):
             nailed = 0.7 * current_rate + 0.3 * price_role
             source = "current_starts+weak_price_role_fallback"
 
-        group = by_group[(player.get("team"), player.get("element_type"))]
+        role_name, role_source = roles[player["id"]]
+        group = by_group[(player.get("team"), role_name)]
         credible_peers = sum(
             1 for peer in group if peer["id"] != player["id"] and (
                 f(last_season.get(peer["id"], {}).get("starts")) >= 8
                 or f(peer.get("starts")) / max(1, finished_events) >= 0.5
             )
         )
-        competition = clamp(max(0.0, credible_peers - (typical_slots[pos] - 1)) / max(1.0, typical_slots[pos]))
+        role_slots = f((competition_cfg.get("role_slots") or {}).get(role_name), typical_slots[pos])
+        competition = clamp(max(0.0, credible_peers - (role_slots - 1)) / max(1.0, role_slots))
         squad_depth = clamp(max(0.0, credible_by_team[player.get("team")] - 11) / 20, 0.0, 0.3)
         prior_start_minutes = f(previous.get("avg_minutes_when_start"), 0)
         current_start_minutes = current_minutes / current_starts if current_starts > 0 else 0
@@ -194,8 +330,12 @@ def minutes_contexts(elements, last_season, finished_events):
             "prior_season_available": bool(previous),
             "sub_appearance_signal": float(current_starts == 0 and current_minutes > 0),
             "competition_pressure": competition,
-            "competition_source": "broad_fpl_position_diagnostic_only",
-            "competition_adjustment_applied": False,
+            "competition_source": "inferred_tactical_role_peer_group",
+            "competition_adjustment_applied": True,
+            "competition_start_weight": f(competition_cfg.get("start_probability_weight"), 0.16),
+            "squad_depth_weight": f(competition_cfg.get("squad_depth_weight"), 0.08),
+            "tactical_role": role_name,
+            "tactical_role_source": role_source,
             "squad_depth_pressure": squad_depth,
             "squad_depth_source": "credible_squad_count_diagnostic_only",
             "avg_minutes_when_start": average_start_minutes,
@@ -226,17 +366,21 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
     enrichment = load_prediction_enrichment(elements, stats_gw)
     advanced = enrichment["advanced"]
     last_season = enrichment["last_season"]
+    quality = _quality_config()
     finished_events = sum(bool(event.get("finished")) for event in bootstrap.get("events", []))
-    xmins_context = minutes_contexts(elements, last_season, max(1, finished_events))
-    defence_ratings = opponent_defence_ratings(teams)
+    xmins_context = minutes_contexts(elements, last_season, max(1, finished_events), advanced, quality)
+    role_priors = team_role_priors(elements, advanced, quality)
+    defence_ratings = opponent_defence_ratings(teams, fixtures, quality)
     rows = []
     materially_distinct = 0
+    advanced_decision_used = 0
     for player in elements:
         priors = player_priors(player, last_season.get(player["id"]))
-        role = set_piece_priors(player)
+        role = role_priors[player["id"]]
         player_advanced = advanced.get(player["id"])
         material_advanced = advanced_materially_distinct(player, player_advanced)
         materially_distinct += int(material_advanced)
+        advanced_decision_used += int(bool((player_advanced or {}).get("decision_metrics_used")))
         fixtures_for_player = fixture_map(fixtures, player["team"], defence_ratings, 15)
         context = {
             "team_attack": strengths.get(player["team"], {}).get("attack", 1),
@@ -256,6 +400,9 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
             "set_piece_order_weight": role["set_piece_order_weight"],
             "penalty_order_weight": role["penalty_order_weight"],
             "set_piece_source": role["source"],
+            "role_attack_multiplier": role["role_attack_multiplier"],
+            "role_prior_adjustment_applied": role["role_prior_adjustment_applied"],
+            "role_scoring_mode": role["role_scoring_mode"],
             **xmins_context[player["id"]],
         }
         row = project_horizon(player, fixtures_for_player, context, player_advanced, n=15)
@@ -265,19 +412,38 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
             **role,
             **xmins_context[player["id"]],
         }
+        price_millions = max(0.1, f(player.get("now_cost")) / 10)
+        row["value"] = {
+            "price_millions": round(price_millions, 1),
+            "xpts5_per_million": round(row["xpts_5"] / price_millions, 4),
+            "xpts15_per_million": round(row["xpts_15"] / price_millions, 4),
+            "decision_usage": "optimizer_objective_bounded_value_term",
+        }
         rows.append(row)
     rows.sort(key=lambda row: row["xpts_5"], reverse=True)
     return {
-        "schema_version": 471,
-        "model_version": "v4.7.1-correctness-hotfix",
+        "schema_version": 491,
+        "model_version": "v4.9.1-prediction-quality",
         "generated_at": generated_at,
         "point_in_time": True,
         "input_coverage": {
             "players": len(elements),
             "advanced_matched": len(advanced),
             "advanced_materially_distinct": materially_distinct,
+            "advanced_decision_used": advanced_decision_used,
+            "advanced_decision_used_ratio": round(advanced_decision_used / max(1, len(elements)), 4),
             "last_season_matched": len(last_season),
             **enrichment["meta"],
+        },
+        "capability_evidence": {
+            "tactical_role_coverage": sum(bool((row.get("priors") or {}).get("tactical_role")) for row in rows),
+            "role_competition_adjustments": sum(bool((row.get("priors") or {}).get("competition_adjustment_applied")) for row in rows),
+            "dynamic_opponent_fixtures": sum(
+                (fixture.get("provenance") or {}).get("opponent_defence_scoring_mode") == "dynamic"
+                for row in rows for fixture in (row.get("fixtures") or [])[:3]
+            ),
+            "value_coverage": sum(bool(row.get("value")) for row in rows),
+            "advanced_decision_coverage": advanced_decision_used,
         },
         "players": rows,
     }

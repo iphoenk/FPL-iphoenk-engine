@@ -1,12 +1,20 @@
-name: FPL iphoenk V4.8.1 independent service gate
+name: FPL iphoenk V4.9.1 prediction and service gate
 
 on:
   workflow_dispatch:
+  schedule:
+    # 04:30, 12:30 and 21:30 Asia/Jakarta (UTC+7).
+    - cron: "30 21 * * *"
+    - cron: "30 5 * * *"
+    - cron: "30 14 * * *"
   push:
     branches:
       - v4-prediction-engine
     paths-ignore:
       - 'data/**'
+  pull_request:
+    branches:
+      - v4-prediction-engine
 
 
 permissions:
@@ -26,6 +34,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'schedule' && 'v4-prediction-engine' || github.ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -36,8 +45,8 @@ jobs:
       - name: Unit and acceptance tests
         run: python -m pytest -q
       - name: Run process-isolated V4 services
-        run: python -m src.services.orchestrator daily --stats
-      - name: Centralized V4.8.1 service quality gate
+        run: python -m src.services.orchestrator daily --stats --deep-stats
+      - name: Centralized V4.9.1 service quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise acceptance summary
         run: |
@@ -50,7 +59,11 @@ jobs:
           checkpoint=json.load(open('data/checkpoint_decision_v4.json'))
           orchestration=json.load(open('data/service_orchestration_v4.json'))
           print({
-              'health': h['overall'],
+              'pipeline_health': h['pipeline_health'],
+              'prediction_health': h['prediction_health'],
+              'capability_health': h['capability_health'],
+              'decision_engine': h['decision_engine'],
+              'capability_coverage': h['capability_coverage'],
               'recommendation_allowed': h['recommendation_allowed'],
               'go_allowed': h['go_allowed'],
               'gate0': h['gate0']['counts'],
@@ -68,6 +81,7 @@ jobs:
           })
           PY
       - name: Upload branch data only
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           git config user.name "fpl-iphoenk-bot"

@@ -1,7 +1,9 @@
+import src.models.v4_prediction as prediction_model
 from src.models.v4_prediction import lineup_distribution,project_fixture,project_horizon,workload_factor,defcon_expected_points,rates,fixture_adjustment
 from src.models.v4_calibration import eligible,backtest,champion_gate
-from src.engines.v4_runner import advanced_materially_distinct,minutes_contexts,opponent_defence_ratings,player_priors,set_piece_priors
+from src.engines.v4_runner import advanced_materially_distinct,minutes_contexts,opponent_defence_ratings,player_priors,set_piece_priors,team_role_priors
 from src.models.v4_prediction_inputs import aggregate_advanced,build_last_season_index
+from src.models.projection import project_points
 
 def player():return {"id":1,"web_name":"Test","status":"a","minutes":270,"starts":3,"element_type":3,"expected_goals":"0.9","expected_assists":"0.6","bps":45}
 def fixture(i=2):return {"event":i,"difficulty":3,"home":True}
@@ -10,6 +12,10 @@ def test_xmins_distribution_sums():
 def test_workload_penalty(): assert workload_factor({"rest_days":2,"cup_minutes_last7":180})<workload_factor({"rest_days":7})
 def test_projection_has_uncertainty_and_components():
  r=project_fixture(player(),fixture(),{"penalty_share":1}); assert r["xpts"]>=0 and r["upper80"]>=r["xpts"]>=r["lower80"]; assert "attack" in r["components"]
+def test_appearance_uses_unconditional_p60_without_double_rotation_penalty(monkeypatch):
+ monkeypatch.setattr(prediction_model,"lineup_distribution",lambda *_args,**_kwargs:{"start_probability":.6,"bench_probability":.1,"dnp_probability":.3,"expected_minutes":60,"p60":.6,"availability_probability":1,"workload_factor":1,"competition_factor":1,"competition_uncertainty":1})
+ r=prediction_model.project_fixture(player(),fixture())
+ assert r["components"]["appearance"]==1.3
 def test_defcon_is_threshold_points_not_raw_actions():
  assert 0 <= defcon_expected_points(100,90,2,1) <= 2.0
  assert defcon_expected_points(3,90,2,1) < defcon_expected_points(15,90,2,1)
@@ -53,7 +59,7 @@ def test_set_piece_and_penalty_orders_do_not_double_count_existing_xg_xa():
  metadata=project_fixture(player(),fixture(),role)
  assert metadata["components"]["attack"]==base["components"]["attack"]
  assert metadata["components"]["set_piece_penalty_adjustment"]==0
- assert metadata["provenance"]["role_scoring_mode"]=="metadata_only_no_double_count"
+ assert metadata["provenance"]["role_scoring_mode"]=="prior_reallocation_no_direct_double_count"
 
 def test_stronger_opponent_defence_reduces_attack_adjustment():
  weak=fixture_adjustment(fixture(),True,1,0.2)
@@ -67,15 +73,35 @@ def test_official_overall_strength_is_diagnostic_only_early_season_fallback():
  assert ratings[2]["diagnostic_home"]>ratings[1]["diagnostic_home"]
  assert ratings[2]["metric"]=="overall_fallback_diagnostic_only"
 
-def test_xmins_context_uses_direct_evidence_and_does_not_apply_broad_position_competition():
+def test_finished_results_create_shrunk_dynamic_opponent_defence_for_every_team():
+ teams={1:{"strength_defence_home":0,"strength_defence_away":0,"strength_overall_home":2,"strength_overall_away":2},2:{"strength_defence_home":0,"strength_defence_away":0,"strength_overall_home":5,"strength_overall_away":5},3:{"strength_defence_home":0,"strength_defence_away":0,"strength_overall_home":3,"strength_overall_away":3}}
+ fixtures=[{"finished":True,"team_h":1,"team_a":2,"team_h_score":0,"team_a_score":3}]
+ ratings=opponent_defence_ratings(teams,fixtures)
+ assert all(row["metric"]=="dynamic_bayesian_results" for row in ratings.values())
+ assert ratings[1]["home"]<ratings[2]["away"]
+ assert ratings[3]["result_games_home"]==0
+
+def test_role_prior_is_team_normalized_and_zero_centred():
+ players=[{"id":1,"team":1,"element_type":3,"corners_and_indirect_freekicks_order":1,"penalties_order":1},{"id":2,"team":1,"element_type":3}]
+ priors=team_role_priors(players,{1:{"set_piece_xg":.4,"penalty_events":1},2:{}})
+ assert round(sum(row["set_piece_share"] for row in priors.values()),6)==1
+ assert round(sum(row["penalty_share"] for row in priors.values()),6)==1
+ assert priors[1]["role_attack_multiplier"]>1>priors[2]["role_attack_multiplier"]
+
+def test_legacy_projection_uses_canonical_goalkeeper_goal_points():
+ p={"element_type":1,"status":"a","minutes":90,"starts":1}
+ result=project_points(p,{"start_probability":1,"xg_per90":1,"clean_sheet_probability":0,"saves_per90":0,"bonus_per90":0})
+ assert result["components"]["attack"]==10
+
+def test_xmins_context_uses_direct_evidence_and_tactical_role_competition():
  rows=[player()|{"id":i,"team":1,"element_type":4,"starts":1,"now_cost":80} for i in range(1,5)]
  previous={i:{"starts":30,"start_rate":.79,"avg_minutes_when_start":82} for i in range(1,5)}
  ctx=minutes_contexts(rows,previous,1)
  assert ctx[1]["xmins_prior_source"]=="current_starts+last_season_starts"
  assert ctx[1]["nailed_prior"]>.8 and ctx[1]["competition_pressure"]>0
- assert ctx[1]["competition_source"]=="broad_fpl_position_diagnostic_only"
- assert ctx[1]["competition_adjustment_applied"] is False
- assert lineup_distribution(rows[0],ctx[1])["start_probability"]>=.9
+ assert ctx[1]["competition_source"]=="inferred_tactical_role_peer_group"
+ assert ctx[1]["competition_adjustment_applied"] is True
+ assert 0<lineup_distribution(rows[0],ctx[1])["competition_factor"]<=1
 
 def test_xmins_no_evidence_has_no_mechanical_start_or_bench_floor():
  p={"id":10,"web_name":"Unknown","status":"a","minutes":0,"starts":0,"element_type":3,"now_cost":45}

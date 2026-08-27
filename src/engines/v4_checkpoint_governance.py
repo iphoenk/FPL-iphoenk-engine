@@ -98,8 +98,8 @@ def govern_checkpoint(
     critical_partial = list(health.get("critical_partial") or [])
 
     return {
-        "schema_version": 473,
-        "engine": "v4.7.3-checkpoint-governance",
+        "schema_version": 491,
+        "engine": "v4.9.1-checkpoint-governance",
         "evaluated_at": evaluated_at.isoformat(),
         "checkpoint_context": context,
         "action_state": action,
@@ -133,6 +133,10 @@ def govern_checkpoint(
         },
         "readiness": {
             "framework_health": health.get("overall"),
+            "pipeline_health": health.get("pipeline_health", health.get("overall")),
+            "prediction_health": health.get("prediction_health"),
+            "decision_engine": health.get("decision_engine"),
+            "capability_coverage": health.get("capability_coverage"),
             "gate0_pass": gate0_pass,
             "health_go_allowed": health_go,
             "freshness": freshness,

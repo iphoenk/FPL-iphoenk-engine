@@ -40,7 +40,7 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
     teams = {team["id"]: team["name"] for team in bootstrap.get("teams", [])}
     positions = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
     universe = [{"element": p["id"], "name": p["web_name"], "team": teams[p["team"]], "team_id": p["team"], "position": positions[p["element_type"]], "element_type": p["element_type"], "now_cost": p["now_cost"], "ownership": p.get("selected_by_percent"), "status": p.get("status"), "points": p.get("total_points"), "minutes": p.get("minutes"), "transfers_in_event": p.get("transfers_in_event"), "transfers_out_event": p.get("transfers_out_event")} for p in bootstrap.get("elements", [])]
-    out = {"schema": "enrichment.v1", "schema_version": 481, "generated_at": iso_now(), "lineage": {"snapshot_schema": "snapshot.v1", "snapshot_sha256": file_digest(SNAPSHOT)}, "stats_gw": stats_gw, "advanced_stats_sync": advanced, "universe": universe, "duration_ms": round((perf_counter() - started) * 1000, 2)}
+    out = {"schema": "enrichment.v1", "schema_version": 491, "generated_at": iso_now(), "lineage": {"snapshot_schema": "snapshot.v1", "snapshot_sha256": file_digest(SNAPSHOT)}, "stats_gw": stats_gw, "advanced_stats_sync": advanced, "universe": universe, "duration_ms": round((perf_counter() - started) * 1000, 2)}
     atomic_json(OUTFILE, out)
     print(json.dumps({"service": "enrichment", "schema": "enrichment.v1", "duration_ms": out["duration_ms"]}))
     return out

@@ -1,21 +1,33 @@
-# FPL iphoenk Engine v3.21.0
+# FPL iphoenk Engine v3.22.0
 
 Production-oriented personal FPL decision engine and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
-- Current production release: `3.21.0` / schema `49`.
-- Production acceptance: COMPLETE on 27 August 2026.
-- Production source commit: `da2be79045c0eb1015b75697eb24b030ffaa4abe`.
-- Production workflow run: `33047071671` (`FPL iphoenk collector v3.21.0 microservices`) completed through validated `runtime-data` publication.
-- Service Registry: schema `13`, contract `v3.21-weather-report-transparency-15-owned-20-watchlist`.
+- Current release candidate: `3.22.0` / schema `49`.
+- Current accepted production baseline remains `3.21.0` / schema `49` until V3.22 post-merge runtime publication is validated.
+- V3.22 PR acceptance: architecture PASS, 148 tests PASS, FULL integration PASS, FAST-after-FULL reproduced at 5.160s and 5.113s against the 10s target.
+- Service Registry: schema `13`, candidate contract `v3.22-runtime-optimization-fast-under-10s`.
 - Runtime Artifact Contract Registry: `RUNTIME_ARTIFACT_CONTRACTS_V2`.
 - Machine Source Registry: `SOURCE_REGISTRY_V4`.
 - Report Artifact Registry: `REPORT_ARTIFACT_REGISTRY_V3`.
 - Release metadata source of truth: `src/version.py`.
-- Runtime state publishes only to `runtime-data`; `main/data/**` is historical/source-repository material.
+- Runtime state publishes only to `runtime-data`; new mutable runtime output is ignored from `main`.
 - Canonical roadmap and Definition of Done: `MASTER_TASK_LIST_V3.md`.
 
-Production acceptance evidence for V3.21.0/schema49 includes full unit/regression and architecture checks, bounded 20-service integration, source/decision/watchlist/report/report-time contracts, production collect, validated `runtime-data` publication, 15 OWNED + 20 WATCHLIST contract, weather coverage 10/10 fixtures with zero unresolved venue identity, governed selection transparency for all 15 OWNED, and runtime wall time 16.606s against the 45s budget.
+## v3.22.0 Runtime Optimization Foundation
+V3.22 separates interactive decision regeneration from heavier enrichment refresh while preserving the 20-service artifact-owned architecture and schema49 serving contract.
+
+- FAST/LIVE/FULL/DEEP execution profiles are registry-owned.
+- FAST target is under 10 seconds with a temporary 45-second legacy ceiling during transition.
+- Heavy but reusable `advanced_stats`, `historical_prior`, `source_layer`, and `official_detail` artifacts can be reused only when complete, contract-valid and within profile-specific freshness windows.
+- CI, FAST runtime, and FULL/DEEP refresh are split into separate workflows; FAST cadence gate runs before dependency installation when a scheduled adaptive slot can be skipped.
+- Runtime checkout is shallow (`fetch-depth: 1`) instead of full-history.
+- Runtime publication is whitelist-based and designed as a rolling current-state snapshot rather than hourly Git history as a database.
+- Runtime telemetry now exposes wall time, queue wait, service timing, seed/promotion bytes, temp bytes, parent/child peak RSS, and cache entries.
+- `player_features.json` normalizes advanced-stat evidence and provenance but remains decision-neutral until REC-01/REC-02 explicitly opt the projection model in.
+- No new microservice is introduced for this optimization foundation.
+
+PR validation evidence before production acceptance: FULL wall 18.656s / 18.151s; FAST wall 5.160s / 5.113s; FAST peak RSS about 85 MB parent and 109 MB child; Gate0 16/16; framework GREEN; prediction quality HEALTHY; 15 OWNED + 20 WATCHLIST contracts PASS.
 
 ## v3.21.0 Weather Intelligence + Report Transparency
 V3.21 adds weather as a governed optional enrichment and makes the visible report expose the model evidence needed to audit lineup decisions quickly.
@@ -50,8 +62,8 @@ Early-season conservative confidence is allowed, but it is now auditable. `confi
 V3 already freezes the final pre-deadline forecast and settles it against finished-event actuals using points MAE/RMSE, xMins MAE, starter Brier, clean-sheet Brier and Spearman correlation. V3.21 exposes the settled-sample state in every serving report and explicitly states that formula/test correctness is not evidence of predictive accuracy. Predictive accuracy claims require settled frozen forecasts.
 
 ### Schema/version decision
-- Engine: `3.21.0`.
-- Serving/runtime schema: `49`, because all primary report-serving payloads gain required owned xPts/selection/choice-state, model-validation and weather-context fields.
+- Engine candidate: `3.22.0`; prior accepted production: `3.21.0` until post-merge acceptance closes.
+- Serving/runtime schema remains `49`; V3.22 changes runtime execution/publication, not the serving field contract.
 - Service Registry: schema `13`.
 - Source Registry: `SOURCE_REGISTRY_V4`.
 - Report Artifact Registry: `REPORT_ARTIFACT_REGISTRY_V3`.
@@ -72,7 +84,7 @@ V3.20.0 removed the active monolithic base collector and established artifact-ow
 2. `team_state` owns squad identity, finance and chip state.
 3. `market_state` owns universe/current-price/market state.
 4. `live_state` owns personalized live scoring state.
-5. `advanced_stats` owns current enrichment sync.
+5. `advanced_stats` owns current enrichment sync and normalized decision-neutral player-feature plumbing.
 6. `base_snapshot` performs deterministic base fan-in.
 
 `src.engine` is compatibility/manual CLI only and is forbidden as an active production service entrypoint. Prediction, price, lineup, governance, watchlist and reporting remain coarse-grained because their artifact/decision ownership is cohesive.
@@ -96,9 +108,9 @@ V3.20.0 removed the active monolithic base collector and established artifact-ow
 The active runtime is a dependency-aware bounded-process microservice DAG driven by `config/v3_service_registry.json`.
 
 Key properties:
-- exactly 20 active services for V3.21;
+- exactly 20 active services;
 - generic root-service scheduling;
-- bounded parallelism and per-service timeouts;
+- profile-specific bounded parallelism and per-service timeouts;
 - isolated service workspaces where appropriate;
 - one standard Official snapshot owner plus shared HTTP cache;
 - declared inputs/artifacts and deterministic fan-in;
@@ -108,19 +120,23 @@ Key properties:
 - stale-output quarantine for noncritical failures;
 - ephemeral `official_snapshot.json` removed before publication;
 - weather enrichment remains inside Source Layer;
-- production runtime budget below 45 seconds;
-- validated publication to isolated `runtime-data`.
+- FAST target below 10 seconds, FULL refresh on a separate budget;
+- whitelist-based rolling publication to isolated `runtime-data`.
 
 ## Configuration ownership
 - `src/version.py`: engine/schema/service release metadata.
 - `config/engine.json`: mutable runtime/user settings and stale windows.
 - `config/runtime/collector_policy.json`: collector timezone/cadence/deadline/match windows.
+- `config/runtime/execution_profiles.json`: FAST/LIVE/FULL/DEEP execution and reuse policy.
+- `config/runtime/performance_slo.json`: runtime and resource SLO/guardrails.
+- `config/runtime/runtime_publish_registry.json`: hydrate/publish whitelist and rolling-state policy.
 - `config/runtime/artifact_contracts.json`: runtime artifact integrity and contract-specific validation.
 - `config/v3_service_registry.json`: service DAG, criticality, inputs/artifacts, isolation and runtime policy.
 - `config/sources/registry.json`: unattended source authority/network/ingestion policy including Open-Meteo capability ownership.
 - `config/sources/report_time_registry.json`: report-time OneFPL, fixture-strategy, pundit, community and verified-news policy.
 - `config/venues/premier_league_2026_27.json`: venue identity and coordinates.
 - `config/intelligence/weather_context.json`: weather endpoint/fields/freshness/severity/attribution policy.
+- `config/intelligence/player_features.json`: normalized player-feature evidence/provenance policy, decision-neutral until explicit model opt-in.
 - `config/rules/registry.json` + active ruleset: FPL legality/scoring/chips/finance.
 - `config/intelligence/*.json`: xMins, projections, optimizer, lineup, price, reporting and calibration policy.
 - `config/report_artifact_registry.json`: fast/deep serving artifact contract.
@@ -157,13 +173,14 @@ Per-GW files remain archives. Active current evidence uses `data/stats/shots_cur
 ```bash
 pip install -r requirements.txt
 python -m src.engines.architecture_contract_validate
-python -m src.runtime_v3.orchestrator --mode daily --stats
-python -m src.runtime_v3.orchestrator --mode daily --stats --deep-stats
+python -m src.runtime_v3.orchestrator --mode daily --stats --profile fast_decision
+python -m src.runtime_v3.orchestrator --mode daily --stats --profile full_refresh
 python -m src.engines.source_contract_validate
 python -m src.engines.production_contract_validate
 python -m src.engines.watchlist_contract_validate
 python -m src.engines.report_serving_validate
 python -m src.engines.report_time_contract_validate
+python -m src.runtime_v3.performance_guard --profile fast_decision
 python -m pytest -q
 ```
 
@@ -179,3 +196,4 @@ Every release must keep `src/version.py`, README, IMPLEMENTATION_STATUS, workflo
 - V3.20.1: numerical correctness and promotion-failure hardening.
 - V3.20.2: runtime artifact contract and strict JSON acceptance hardening.
 - V3.21.0: weather intelligence, all-15 xPts/selection transparency, confidence calibration guard and settled-validation visibility; production accepted 27 August 2026.
+- V3.22.0 candidate: runtime profiles, <10s FAST target, resource telemetry, workflow split, rolling runtime publication and decision-neutral player-feature plumbing.

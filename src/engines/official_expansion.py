@@ -24,14 +24,32 @@ def _mini_league_config():
         return {}
 
 
-def _configured_league_ids(kind):
+def _discovered_private_league_ids(kind, entry):
+    cfg=_mini_league_config()
+    auto=cfg.get("auto_discovery") or {}
+    if not auto.get("enabled") or not isinstance(entry,dict): return []
+    rows=((entry.get("leagues") or {}).get(kind) or [])
+    limit=max(0,_i(auto.get("max_per_kind"),5))
+    signals=tuple(auto.get("private_signals") or ["entry_can_leave","entry_can_admin","entry_can_invite"])
+    out=[]
+    for row in rows:
+        if not isinstance(row,dict): continue
+        if auto.get("private_only",True) and not any(row.get(key) is True for key in signals): continue
+        lid=str(row.get("id") or "").strip()
+        if lid and lid not in out: out.append(lid)
+        if limit and len(out)>=limit: break
+    return out
+
+
+def _configured_league_ids(kind, entry=None):
     cfg=_mini_league_config()
     key=f"{kind}_league_ids"
     configured=[str(x).strip() for x in cfg.get(key,[]) if str(x).strip()]
     env_name=(cfg.get("environment_override") or {}).get(kind) or ("FPL_CLASSIC_LEAGUE_IDS" if kind=="classic" else "FPL_H2H_LEAGUE_IDS")
     env_ids=[x.strip() for x in os.getenv(str(env_name),"").split(",") if x.strip()]
+    discovered=_discovered_private_league_ids(kind,entry)
     out=[]
-    for lid in configured+env_ids:
+    for lid in configured+env_ids+discovered:
         if lid not in out: out.append(lid)
     return out
 
@@ -55,31 +73,20 @@ def _ids_from_state(bootstrap):
 
 def _compact_element_summary(payload):
     if not payload: return None
-    return {
-        "fixtures": payload.get("fixtures",[]),
-        "history": payload.get("history",[]),
-        "history_past": payload.get("history_past",[]),
-    }
+    return {"fixtures": payload.get("fixtures",[]),"history": payload.get("history",[]),"history_past": payload.get("history_past",[])}
 
 
 def _fixture_stats(fixtures, planning_gw):
     rows=[]
     for f in fixtures or []:
         if planning_gw and f.get("event") not in {planning_gw, planning_gw-1}: continue
-        rows.append({
-            "id":f.get("id"),"event":f.get("event"),"kickoff_time":f.get("kickoff_time"),
-            "team_h":f.get("team_h"),"team_a":f.get("team_a"),"team_h_score":f.get("team_h_score"),
-            "team_a_score":f.get("team_a_score"),"finished":f.get("finished"),"started":f.get("started"),
-            "stats":f.get("stats",[]),
-        })
+        rows.append({"id":f.get("id"),"event":f.get("event"),"kickoff_time":f.get("kickoff_time"),"team_h":f.get("team_h"),"team_a":f.get("team_a"),"team_h_score":f.get("team_h_score"),"team_a_score":f.get("team_a_score"),"finished":f.get("finished"),"started":f.get("started"),"stats":f.get("stats",[])})
     return rows
 
 
 def _live_rich(live):
     if not live: return {"elements":[]}
-    keys=("minutes","goals_scored","assists","clean_sheets","goals_conceded","own_goals",
-          "penalties_saved","penalties_missed","yellow_cards","red_cards","saves","bonus","bps",
-          "total_points","defensive_contribution")
+    keys=("minutes","goals_scored","assists","clean_sheets","goals_conceded","own_goals","penalties_saved","penalties_missed","yellow_cards","red_cards","saves","bonus","bps","total_points","defensive_contribution")
     out=[]
     for e in live.get("elements",[]):
         s=e.get("stats",{})
@@ -87,12 +94,12 @@ def _live_rich(live):
     return {"elements":out}
 
 
-def _optional_leagues(health):
+def _optional_leagues(health,entry):
     result={"classic":{},"h2h":{}}
-    for lid in _configured_league_ids("classic"):
+    for lid in _configured_league_ids("classic",entry):
         p,h=get_json(f"leagues-classic/{lid}/standings/",retries=1); health[f"league_classic_{lid}"]=h
         if p: result["classic"][lid]=p
-    for lid in _configured_league_ids("h2h"):
+    for lid in _configured_league_ids("h2h",entry):
         p,h=get_json(f"leagues-h2h/{lid}/standings/",retries=1); health[f"league_h2h_{lid}"]=h
         if p: result["h2h"][lid]=p
     return result
@@ -113,135 +120,70 @@ def _league_snapshot(kind,lid,payload,previous,current_gw_points):
     rows=_standing_rows(payload)
     user=next((row for row in rows if _i(row.get("entry"),-1)==TEAM_ID),None)
     league=payload.get("league") or {}
-    if not user:
-        return {
-            "kind":kind,"league_id":str(lid),"league_name":league.get("name"),
-            "status":"ENTRY_NOT_ON_FETCHED_PAGE","entry_id":TEAM_ID,
-        }
+    if not user: return {"kind":kind,"league_id":str(lid),"league_name":league.get("name"),"status":"ENTRY_NOT_ON_FETCHED_PAGE","entry_id":TEAM_ID}
     ordered=sorted(rows,key=lambda row:_i(row.get("rank"),10**9))
     idx=next((n for n,row in enumerate(ordered) if _i(row.get("entry"),-1)==TEAM_ID),-1)
     above=ordered[idx-1] if idx>0 else None
     below=ordered[idx+1] if 0<=idx<len(ordered)-1 else None
-    total=_i(user.get("total"))
-    rank=_i(user.get("rank"))
-    last_rank=_i(user.get("last_rank"),rank)
-    snap={
-        "generated_at":iso_now(),"kind":kind,"league_id":str(lid),"league_name":league.get("name"),
-        "status":"TRACKING","entry_id":TEAM_ID,"rank":rank,"last_rank":last_rank,
-        "rank_delta":last_rank-rank,"total_points":total,"current_gw_points":current_gw_points,
-        "above":None,"below":None,
-        "points_behind_above":None,"points_ahead_below":None,
-    }
+    total=_i(user.get("total")); rank=_i(user.get("rank")); last_rank=_i(user.get("last_rank"),rank)
+    snap={"generated_at":iso_now(),"kind":kind,"league_id":str(lid),"league_name":league.get("name"),"status":"TRACKING","entry_id":TEAM_ID,"rank":rank,"last_rank":last_rank,"rank_delta":last_rank-rank,"total_points":total,"current_gw_points":current_gw_points,"above":None,"below":None,"points_behind_above":None,"points_ahead_below":None}
     if above:
-        snap["above"]={"entry":above.get("entry"),"entry_name":above.get("entry_name"),"player_name":above.get("player_name"),"rank":above.get("rank"),"total":above.get("total")}
-        snap["points_behind_above"]=max(0,_i(above.get("total"))-total)
+        snap["above"]={"entry":above.get("entry"),"entry_name":above.get("entry_name"),"player_name":above.get("player_name"),"rank":above.get("rank"),"total":above.get("total")}; snap["points_behind_above"]=max(0,_i(above.get("total"))-total)
     if below:
-        snap["below"]={"entry":below.get("entry"),"entry_name":below.get("entry_name"),"player_name":below.get("player_name"),"rank":below.get("rank"),"total":below.get("total")}
-        snap["points_ahead_below"]=max(0,total-_i(below.get("total")))
+        snap["below"]={"entry":below.get("entry"),"entry_name":below.get("entry_name"),"player_name":below.get("player_name"),"rank":below.get("rank"),"total":below.get("total")}; snap["points_ahead_below"]=max(0,total-_i(below.get("total")))
     prev_current=(previous or {}).get("current") or {}
     if prev_current:
-        prior_total=_i(prev_current.get("total_points"),total)
-        snap["points_delta_since_last_refresh"]=total-prior_total
+        prior_total=_i(prev_current.get("total_points"),total); snap["points_delta_since_last_refresh"]=total-prior_total
         prior_gap=prev_current.get("points_behind_above")
-        if prior_gap is not None and snap["points_behind_above"] is not None:
-            snap["gap_to_above_delta"]=snap["points_behind_above"]-_i(prior_gap)
+        if prior_gap is not None and snap["points_behind_above"] is not None: snap["gap_to_above_delta"]=snap["points_behind_above"]-_i(prior_gap)
     return snap
 
 
-def _mini_league_tracking(leagues,previous_detail,latest):
-    cfg=_mini_league_config()
-    limit=max(1,_i(cfg.get("history_limit"),20))
+def _mini_league_tracking(leagues,previous_detail,entry):
+    cfg=_mini_league_config(); limit=max(1,_i(cfg.get("history_limit"),20))
     previous=((previous_detail or {}).get("mini_league_tracking") or {}).get("leagues") or {}
-    configured={"classic":_configured_league_ids("classic"),"h2h":_configured_league_ids("h2h")}
+    configured={"classic":_configured_league_ids("classic",entry),"h2h":_configured_league_ids("h2h",entry)}
+    discovery={"classic":_discovered_private_league_ids("classic",entry),"h2h":_discovered_private_league_ids("h2h",entry)}
     if not configured["classic"] and not configured["h2h"]:
-        return {
-            "status":"CONFIG_REQUIRED","model":cfg.get("model_id","mini_league_tracking_v1"),
-            "configured":configured,"leagues":{},
-            "note":"set numeric Classic/H2H league IDs in config or environment; no rival state is inferred without explicit league selection",
-        }
-    out={}
-    gw_points=((latest.get("entry") or {}).get("summary_event_points"))
+        return {"status":"NO_PRIVATE_LEAGUES_DISCOVERED","model":cfg.get("model_id","mini_league_tracking_v2_autodiscovery"),"configured":configured,"auto_discovered":discovery,"leagues":{},"note":"no explicit or auto-discovered private mini league is available from the Official entry payload"}
+    out={}; gw_points=(entry or {}).get("summary_event_points")
     for kind in ("classic","h2h"):
         for lid in configured[kind]:
-            key=f"{kind}:{lid}"
-            payload=(leagues.get(kind) or {}).get(str(lid))
-            prior=previous.get(key) or {}
+            key=f"{kind}:{lid}"; payload=(leagues.get(kind) or {}).get(str(lid)); prior=previous.get(key) or {}
             if not payload:
-                out[key]={"current":{"kind":kind,"league_id":str(lid),"status":"UNAVAILABLE"},"history":list(prior.get("history") or [])[-limit:]}
-                continue
-            current=_league_snapshot(kind,lid,payload,prior,gw_points)
-            history=list(prior.get("history") or [])
+                out[key]={"current":{"kind":kind,"league_id":str(lid),"status":"UNAVAILABLE"},"history":list(prior.get("history") or [])[-limit:]}; continue
+            current=_league_snapshot(kind,lid,payload,prior,gw_points); history=list(prior.get("history") or [])
             history.append({k:current.get(k) for k in ("generated_at","rank","total_points","points_behind_above","points_ahead_below")})
             out[key]={"current":current,"history":history[-limit:]}
     tracking_count=sum(1 for row in out.values() if (row.get("current") or {}).get("status")=="TRACKING")
-    return {
-        "status":"TRACKING" if tracking_count else "CONFIGURED_NO_LIVE_STANDINGS",
-        "model":cfg.get("model_id","mini_league_tracking_v1"),"configured":configured,
-        "tracking_count":tracking_count,"leagues":out,
-        "governance":cfg.get("governance") or {},
-    }
+    return {"status":"TRACKING" if tracking_count else "CONFIGURED_NO_LIVE_STANDINGS","model":cfg.get("model_id","mini_league_tracking_v2_autodiscovery"),"configured":configured,"auto_discovered":discovery,"tracking_count":tracking_count,"leagues":out,"governance":cfg.get("governance") or {}}
 
 
 def run():
-    previous_detail=_load("official_detail.json",{})
-    latest=_load("latest.json",{})
+    previous_detail=_load("official_detail.json",{}); latest=_load("latest.json",{})
     bootstrap,hb=get_json("bootstrap-static/")
     if not bootstrap: raise RuntimeError("Official bootstrap unavailable")
-    phase=latest.get("phase",{})
-    planning=phase.get("planning_gw")
-    scoring=phase.get("scoring_gw") or phase.get("current_gw")
+    phase=latest.get("phase",{}); planning=phase.get("planning_gw"); scoring=phase.get("scoring_gw") or phase.get("current_gw")
     health={"bootstrap":hb}
-
+    entry,h=get_json(f"entry/{TEAM_ID}/",retries=1); health["entry_detail"]=h
     fixtures,h=get_json("fixtures/"); health["fixtures_detail"]=h
     live=None
-    if scoring:
-        live,h=get_json(f"event/{scoring}/live/"); health["event_live_detail"]=h
-
+    if scoring: live,h=get_json(f"event/{scoring}/live/"); health["event_live_detail"]=h
     setpieces,h=get_json("team/set-piece-notes/",retries=1); health["set_piece_notes"]=h
     dream_all,h=get_json("dream-team/",retries=1); health["dream_team_season"]=h
-    dream_gw=None
-    dream_gw_id=phase.get("last_finished_gw") or scoring
-    if dream_gw_id:
-        dream_gw,h=get_json(f"dream-team/{dream_gw_id}/",retries=1); health["dream_team_gw"]=h
-
-    owned,detail_ids=_ids_from_state(bootstrap)
-    details={}
-    detail_health={}
+    dream_gw=None; dream_gw_id=phase.get("last_finished_gw") or scoring
+    if dream_gw_id: dream_gw,h=get_json(f"dream-team/{dream_gw_id}/",retries=1); health["dream_team_gw"]=h
+    owned,detail_ids=_ids_from_state(bootstrap); details={}; detail_health={}
     for eid in detail_ids:
-        payload,h=get_json(f"element-summary/{eid}/",retries=1)
-        detail_health[str(eid)]=h
+        payload,h=get_json(f"element-summary/{eid}/",retries=1); detail_health[str(eid)]=h
         if payload: details[str(eid)]=_compact_element_summary(payload)
-
     cup,h=get_json(f"entry/{TEAM_ID}/cup/",retries=1); health["entry_cup"]=h
-    leagues=_optional_leagues(health)
-    mini_league_tracking=_mini_league_tracking(leagues,previous_detail,latest)
-
+    leagues=_optional_leagues(health,entry); mini_league_tracking=_mini_league_tracking(leagues,previous_detail,entry)
     detail_ok=sum(1 for h in detail_health.values() if h.get("status")=="LIVE")
-    official_health={
-        "core":latest.get("endpoint_health",{}),
-        "detail":health,
-        "element_summary":{"requested":len(detail_ids),"live":detail_ok,"failed":len(detail_ids)-detail_ok},
-        "overall":"HEALTHY" if hb.get("status")=="LIVE" and detail_ok>=len(owned) else "DEGRADED",
-    }
-    payload={
-        "generated_at":iso_now(),"owned_element_ids":owned,"detail_element_ids":detail_ids,
-        "element_summaries":details,"set_piece_notes":setpieces,"fixture_stats":_fixture_stats(fixtures,planning),
-        "event_live_rich":_live_rich(live),"dream_team":{"season":dream_all,"gw":dream_gw,"gw_id":dream_gw_id},
-        "leagues":leagues,"mini_league_tracking":mini_league_tracking,"entry_cup":cup,"official_health":official_health,
-    }
+    official_health={"core":latest.get("endpoint_health",{}),"detail":health,"element_summary":{"requested":len(detail_ids),"live":detail_ok,"failed":len(detail_ids)-detail_ok},"overall":"HEALTHY" if hb.get("status")=="LIVE" and detail_ok>=len(owned) else "DEGRADED"}
+    payload={"generated_at":iso_now(),"owned_element_ids":owned,"detail_element_ids":detail_ids,"element_summaries":details,"set_piece_notes":setpieces,"fixture_stats":_fixture_stats(fixtures,planning),"event_live_rich":_live_rich(live),"dream_team":{"season":dream_all,"gw":dream_gw,"gw_id":dream_gw_id},"leagues":leagues,"mini_league_tracking":mini_league_tracking,"entry_cup":cup,"official_health":official_health}
     atomic_json(DATA/"official_detail.json",payload)
-    latest["official_detail_summary"]={
-        "generated_at":payload["generated_at"],"owned_detail_coverage":f"{sum(1 for x in owned if str(x) in details)}/{len(owned)}",
-        "detail_requested":len(detail_ids),"detail_live":detail_ok,
-        "set_piece_notes_status":health["set_piece_notes"].get("status"),
-        "dream_team_status":health["dream_team_season"].get("status"),
-        "entry_cup_status":health["entry_cup"].get("status"),
-        "mini_league_status":mini_league_tracking.get("status"),
-        "mini_leagues_tracking":mini_league_tracking.get("tracking_count",0),
-        "overall":official_health["overall"],"file":"data/official_detail.json",
-    }
-    latest["official_health_panel"]=official_health
-    atomic_json(DATA/"latest.json",latest)
-    return payload
+    latest["official_detail_summary"]={"generated_at":payload["generated_at"],"owned_detail_coverage":f"{sum(1 for x in owned if str(x) in details)}/{len(owned)}","detail_requested":len(detail_ids),"detail_live":detail_ok,"set_piece_notes_status":health["set_piece_notes"].get("status"),"dream_team_status":health["dream_team_season"].get("status"),"entry_cup_status":health["entry_cup"].get("status"),"mini_league_status":mini_league_tracking.get("status"),"mini_leagues_tracking":mini_league_tracking.get("tracking_count",0),"mini_leagues_auto_discovered":sum(len(v) for v in (mini_league_tracking.get("auto_discovered") or {}).values()),"overall":official_health["overall"],"file":"data/official_detail.json"}
+    latest["official_health_panel"]=official_health; atomic_json(DATA/"latest.json",latest); return payload
 
 if __name__ == "__main__": run()

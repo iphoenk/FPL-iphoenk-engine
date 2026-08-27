@@ -41,8 +41,8 @@
       ],
       "raw_classification": "MATERIAL_UPGRADE",
       "raw_adjusted_utility_gain_5": 8.06,
-      "evidence_confidence": 0.8364,
-      "sanity_gain_5": 6.741,
+      "evidence_confidence": 0.8368,
+      "sanity_gain_5": 6.745,
       "classification": "MATERIAL_UPGRADE",
       "material_eligible": true,
       "evidence": {
@@ -52,7 +52,7 @@
             "name": "Szoboszlai",
             "team": "Liverpool",
             "position": "MID",
-            "confidence": 0.8364,
+            "confidence": 0.8368,
             "grade": "HIGH",
             "start_probability_5": 0.9506,
             "dnp_probability_5": 0.0445,
@@ -61,7 +61,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9239,
+            "market_support": 0.9305,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -89,9 +89,9 @@
             ]
           }
         ],
-        "avg_incoming_confidence": 0.8364,
+        "avg_incoming_confidence": 0.8368,
         "avg_outgoing_confidence": 0.7721,
-        "min_incoming_confidence": 0.8364,
+        "min_incoming_confidence": 0.8368,
         "severe_rate_spikes": 0,
         "team_cluster_excess": 0,
         "early_season": true,
@@ -162,8 +162,8 @@
       ],
       "raw_classification": "MATERIAL_UPGRADE",
       "raw_adjusted_utility_gain_5": 13.37,
-      "evidence_confidence": 0.7632,
-      "sanity_gain_5": 10.205,
+      "evidence_confidence": 0.7634,
+      "sanity_gain_5": 10.207,
       "classification": "MATERIAL_UPGRADE",
       "material_eligible": true,
       "evidence": {
@@ -192,7 +192,7 @@
             "name": "Szoboszlai",
             "team": "Liverpool",
             "position": "MID",
-            "confidence": 0.8364,
+            "confidence": 0.8368,
             "grade": "HIGH",
             "start_probability_5": 0.9506,
             "dnp_probability_5": 0.0445,
@@ -201,7 +201,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9239,
+            "market_support": 0.9305,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -213,7 +213,7 @@
             "name": "Tzolis",
             "team": "Arsenal",
             "position": "MID",
-            "confidence": 0.8434,
+            "confidence": 0.8436,
             "grade": "HIGH",
             "start_probability_5": 0.8162,
             "dnp_probability_5": 0.1655,
@@ -222,7 +222,7 @@
             "horizon_stability": 0.933,
             "rate_spike_risk": 0.0054,
             "current_season_weight": 0.0943,
-            "market_support": 0.8174,
+            "market_support": 0.8223,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -248,8 +248,8 @@
             ]
           }
         ],
-        "avg_incoming_confidence": 0.8133,
-        "avg_outgoing_confidence": 0.8077,
+        "avg_incoming_confidence": 0.8135,
+        "avg_outgoing_confidence": 0.8078,
         "min_incoming_confidence": 0.7901,
         "severe_rate_spikes": 0,
         "team_cluster_excess": 0,
@@ -349,8 +349,8 @@
       ],
       "raw_classification": "MATERIAL_UPGRADE",
       "raw_adjusted_utility_gain_5": 18.87,
-      "evidence_confidence": 0.6572,
-      "sanity_gain_5": 12.401,
+      "evidence_confidence": 0.6574,
+      "sanity_gain_5": 12.405,
       "classification": "OPTIONAL_IMPROVEMENT",
       "material_eligible": false,
       "evidence": {
@@ -360,7 +360,7 @@
             "name": "Guéhi",
             "team": "Man City",
             "position": "DEF",
-            "confidence": 0.6505,
+            "confidence": 0.6507,
             "grade": "MEDIUM",
             "start_probability_5": 0.9079,
             "dnp_probability_5": 0.0829,
@@ -369,7 +369,7 @@
             "horizon_stability": 0.9416,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.615,
+            "market_support": 0.619,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -400,7 +400,7 @@
             "name": "Szoboszlai",
             "team": "Liverpool",
             "position": "MID",
-            "confidence": 0.8364,
+            "confidence": 0.8368,
             "grade": "HIGH",
             "start_probability_5": 0.9506,
             "dnp_probability_5": 0.0445,
@@ -409,7 +409,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9239,
+            "market_support": 0.9305,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -440,7 +440,7 @@
             "name": "Tzolis",
             "team": "Arsenal",
             "position": "MID",
-            "confidence": 0.8434,
+            "confidence": 0.8436,
             "grade": "HIGH",
             "start_probability_5": 0.8162,
             "dnp_probability_5": 0.1655,
@@ -449,7 +449,7 @@
             "horizon_stability": 0.933,
             "rate_spike_risk": 0.0054,
             "current_season_weight": 0.0943,
-            "market_support": 0.8174,
+            "market_support": 0.8223,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -475,9 +475,9 @@
             ]
           }
         ],
-        "avg_incoming_confidence": 0.759,
-        "avg_outgoing_confidence": 0.8047,
-        "min_incoming_confidence": 0.6505,
+        "avg_incoming_confidence": 0.7592,
+        "avg_outgoing_confidence": 0.8048,
+        "min_incoming_confidence": 0.6507,
         "severe_rate_spikes": 1,
         "team_cluster_excess": 0,
         "early_season": true,
@@ -609,8 +609,8 @@
       ],
       "raw_classification": "MATERIAL_UPGRADE",
       "raw_adjusted_utility_gain_5": 20.05,
-      "evidence_confidence": 0.6004,
-      "sanity_gain_5": 12.037,
+      "evidence_confidence": 0.6005,
+      "sanity_gain_5": 12.04,
       "classification": "OPTIONAL_IMPROVEMENT",
       "material_eligible": false,
       "evidence": {
@@ -620,7 +620,7 @@
             "name": "Guéhi",
             "team": "Man City",
             "position": "DEF",
-            "confidence": 0.6505,
+            "confidence": 0.6507,
             "grade": "MEDIUM",
             "start_probability_5": 0.9079,
             "dnp_probability_5": 0.0829,
@@ -629,7 +629,7 @@
             "horizon_stability": 0.9416,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.615,
+            "market_support": 0.619,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -679,7 +679,7 @@
             "name": "Szoboszlai",
             "team": "Liverpool",
             "position": "MID",
-            "confidence": 0.8364,
+            "confidence": 0.8368,
             "grade": "HIGH",
             "start_probability_5": 0.9506,
             "dnp_probability_5": 0.0445,
@@ -688,7 +688,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9239,
+            "market_support": 0.9305,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -728,7 +728,7 @@
             "horizon_stability": 0.9466,
             "rate_spike_risk": 0.1505,
             "current_season_weight": 0.1011,
-            "market_support": 0.0324,
+            "market_support": 0.0325,
             "flags": [
               "MINUTES_RISK",
               "LOW_ROLE_PRIOR",
@@ -740,7 +740,7 @@
             "name": "Tzolis",
             "team": "Arsenal",
             "position": "MID",
-            "confidence": 0.8434,
+            "confidence": 0.8436,
             "grade": "HIGH",
             "start_probability_5": 0.8162,
             "dnp_probability_5": 0.1655,
@@ -749,7 +749,7 @@
             "horizon_stability": 0.933,
             "rate_spike_risk": 0.0054,
             "current_season_weight": 0.0943,
-            "market_support": 0.8174,
+            "market_support": 0.8223,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -775,9 +775,9 @@
             ]
           }
         ],
-        "avg_incoming_confidence": 0.751,
+        "avg_incoming_confidence": 0.7512,
         "avg_outgoing_confidence": 0.7682,
-        "min_incoming_confidence": 0.6505,
+        "min_incoming_confidence": 0.6507,
         "severe_rate_spikes": 1,
         "team_cluster_excess": 0,
         "early_season": true,
@@ -854,8 +854,8 @@
     ],
     "raw_classification": "MATERIAL_UPGRADE",
     "raw_adjusted_utility_gain_5": 13.37,
-    "evidence_confidence": 0.7632,
-    "sanity_gain_5": 10.205,
+    "evidence_confidence": 0.7634,
+    "sanity_gain_5": 10.207,
     "classification": "MATERIAL_UPGRADE",
     "material_eligible": true,
     "evidence": {
@@ -884,7 +884,7 @@
           "name": "Szoboszlai",
           "team": "Liverpool",
           "position": "MID",
-          "confidence": 0.8364,
+          "confidence": 0.8368,
           "grade": "HIGH",
           "start_probability_5": 0.9506,
           "dnp_probability_5": 0.0445,
@@ -893,7 +893,7 @@
           "horizon_stability": 0.9027,
           "rate_spike_risk": 0.5055,
           "current_season_weight": 0.1111,
-          "market_support": 0.9239,
+          "market_support": 0.9305,
           "flags": [
             "EARLY_SEASON_SAMPLE"
           ]
@@ -905,7 +905,7 @@
           "name": "Tzolis",
           "team": "Arsenal",
           "position": "MID",
-          "confidence": 0.8434,
+          "confidence": 0.8436,
           "grade": "HIGH",
           "start_probability_5": 0.8162,
           "dnp_probability_5": 0.1655,
@@ -914,7 +914,7 @@
           "horizon_stability": 0.933,
           "rate_spike_risk": 0.0054,
           "current_season_weight": 0.0943,
-          "market_support": 0.8174,
+          "market_support": 0.8223,
           "flags": [
             "EARLY_SEASON_SAMPLE"
           ]
@@ -940,8 +940,8 @@
           ]
         }
       ],
-      "avg_incoming_confidence": 0.8133,
-      "avg_outgoing_confidence": 0.8077,
+      "avg_incoming_confidence": 0.8135,
+      "avg_outgoing_confidence": 0.8078,
       "min_incoming_confidence": 0.7901,
       "severe_rate_spikes": 0,
       "team_cluster_excess": 0,

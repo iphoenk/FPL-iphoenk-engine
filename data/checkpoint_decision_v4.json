@@ -1,16 +1,16 @@
 {
-  "schema_version": 491,
-  "engine": "v4.9.1-checkpoint-governance",
-  "evaluated_at": "2026-08-27T05:00:56.404286+00:00",
+  "schema_version": 492,
+  "engine": "v4.9.2-checkpoint-governance",
+  "evaluated_at": "2026-08-27T09:02:13.230733+00:00",
   "checkpoint_context": {
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-27T05:00:48.242429+00:00",
-    "local_as_of": "2026-08-27T12:00:48.242429+07:00",
+    "as_of": "2026-08-27T09:02:05.272140+00:00",
+    "local_as_of": "2026-08-27T16:02:05.272140+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 2189.2,
+    "minutes_to_deadline": 1947.9,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -27,10 +27,10 @@
     "registry": "fpl_checkpoint_policy_v1",
     "registry_schema_version": 1
   },
-  "action_state": "GO",
-  "headline": "GO",
-  "summary": "Seluruh gate, freshness, dan evidence governance mendukung eksekusi rekomendasi.",
-  "structure_action": "EXECUTE_GOVERNED_RECOMMENDATION",
+  "action_state": "HOLD",
+  "headline": "HOLD LOCK 15",
+  "summary": "Pertahankan komposisi 15 pemain. Rekomendasi masih dapat dipantau, tetapi belum cukup kuat untuk dieksekusi.",
+  "structure_action": "KEEP_LOCKED_15",
   "squad": {
     "authority": "LOCKED_PRE_DEADLINE",
     "authority_ok": true,
@@ -52,7 +52,7 @@
       "Szoboszlai"
     ],
     "material_eligible": true,
-    "execution_authorized": true
+    "execution_authorized": false
   },
   "lineup": {
     "status": "ADJUSTABLE",
@@ -65,8 +65,8 @@
   "readiness": {
     "framework_health": "GREEN",
     "pipeline_health": "GREEN",
-    "prediction_health": "GREEN",
-    "decision_engine": "HEALTHY",
+    "prediction_health": "AMBER",
+    "decision_engine": "PROVISIONAL",
     "capability_coverage": {
       "active": 56,
       "warmup": 2,
@@ -76,15 +76,21 @@
       "active_ratio": 0.7838
     },
     "gate0_pass": true,
-    "health_go_allowed": true,
+    "health_go_allowed": false,
     "freshness": {
       "pass": true,
-      "age_minutes": 0.12,
+      "age_minutes": 0.11,
       "max_age_minutes": 90,
       "reason": null
     },
     "critical_partial": [],
-    "reasons": []
+    "critical_warmup": [
+      "DSS-44",
+      "DSS-X12"
+    ],
+    "reasons": [
+      "CRITICAL_PREDICTION_WARMUP"
+    ]
   },
   "report_scope": [
     "gate0",

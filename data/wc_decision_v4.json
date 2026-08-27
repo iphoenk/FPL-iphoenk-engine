@@ -1,6 +1,6 @@
 {
-  "schema_version": 491,
-  "engine": "v4.9.1-wc-optimizer-prediction-quality",
+  "schema_version": 492,
+  "engine": "v4.9.2-wc-optimizer-truthful-health",
   "wildcard_active": true,
   "budget_tenths": 1000,
   "baseline_itb_tenths": 5,
@@ -122,11 +122,11 @@
   "screened_players": 571,
   "current": {
     "cost": 995,
-    "objective": 52.9083,
+    "objective": 52.9084,
     "squad_xpts_3": 156.94,
     "squad_xpts_5": 261.52,
     "squad_xpts_10": 523.38,
-    "squad_xpts_15": 784.92,
+    "squad_xpts_15": 784.93,
     "best_xi_xpts_5": 205.59,
     "bench_adjusted_utility_5": 212.3,
     "best_xi_by_gw": [
@@ -219,11 +219,11 @@
   },
   "optimized": {
     "cost": 1000,
-    "objective": 60.4025,
+    "objective": 60.4024,
     "squad_xpts_3": 181.24,
     "squad_xpts_5": 298.15,
-    "squad_xpts_10": 593.92,
-    "squad_xpts_15": 890.83,
+    "squad_xpts_10": 593.91,
+    "squad_xpts_15": 890.84,
     "best_xi_xpts_5": 229.81,
     "bench_adjusted_utility_5": 238.01,
     "best_xi_by_gw": [
@@ -477,7 +477,7 @@
       "challenger_name": "Schade",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.2379,
+      "objective_delta": 1.2378,
       "xpts5_delta": 6.07
     },
     {
@@ -517,7 +517,7 @@
       "challenger_name": "Thiago",
       "position": "FWD",
       "cost_delta": 5,
-      "objective_delta": 0.6505,
+      "objective_delta": 0.6504,
       "xpts5_delta": 3.04
     },
     {
@@ -597,7 +597,7 @@
       "challenger_name": "Thiago",
       "position": "FWD",
       "cost_delta": -75,
-      "objective_delta": -0.549,
+      "objective_delta": -0.5491,
       "xpts5_delta": -3.06
     }
   ],

@@ -1,16 +1,16 @@
 {
-  "schema_version": 491,
-  "engine": "v4.9.1-health-separation",
+  "schema_version": 492,
+  "engine": "v4.9.2-truthful-health",
   "phase": "postflight",
   "checkpoint_context": {
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-27T05:00:48.242429+00:00",
-    "local_as_of": "2026-08-27T12:00:48.242429+07:00",
+    "as_of": "2026-08-27T09:02:05.272140+00:00",
+    "local_as_of": "2026-08-27T16:02:05.272140+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 2189.2,
+    "minutes_to_deadline": 1947.9,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -29,7 +29,7 @@
   },
   "overall": "GREEN",
   "pipeline_health": "GREEN",
-  "prediction_health": "GREEN",
+  "prediction_health": "AMBER",
   "capability_health": "AMBER",
   "capability_coverage": {
     "active": 56,
@@ -39,9 +39,9 @@
     "declared": 74,
     "active_ratio": 0.7838
   },
-  "decision_engine": "HEALTHY",
+  "decision_engine": "PROVISIONAL",
   "recommendation_allowed": true,
-  "go_allowed": true,
+  "go_allowed": false,
   "registry_integrity": true,
   "gate0": {
     "phase": "postflight",
@@ -278,7 +278,7 @@
           "players": 614,
           "role_covered": 614,
           "source_covered": 614,
-          "competition_consumed": 614
+          "competition_consumed": 583
         }
       },
       {
@@ -306,7 +306,10 @@
         "detail": {
           "players": 614,
           "covered": 614,
-          "role_matched_adjustments": 614,
+          "role_matched_adjustments": 583,
+          "unadjusted_players": 31,
+          "distinct_competition_factors": 17,
+          "flag_factor_consistent": 614,
           "broad_position_diagnostics": 0,
           "reason": null
         }
@@ -1206,14 +1209,14 @@
         "probe": "runtime_observability",
         "detail": {
           "timings": {
-            "load_shared_inputs_and_candidates_ms": 359.1,
-            "wc_decision_cpu_ms": 3234.1,
-            "package_audit_cpu_ms": 2929.9,
-            "wc_package_parallel_wall_ms": 3255.7,
-            "parallel_speedup_estimate": 1.893,
-            "lineup_ms": 2.4,
-            "evidence_sanity_ms": 3.1,
-            "total_pipeline_ms": 3660.4
+            "load_shared_inputs_and_candidates_ms": 327.6,
+            "wc_decision_cpu_ms": 3302.5,
+            "package_audit_cpu_ms": 2469.1,
+            "wc_package_parallel_wall_ms": 3321.8,
+            "parallel_speedup_estimate": 1.737,
+            "lineup_ms": 2.3,
+            "evidence_sanity_ms": 2.8,
+            "total_pipeline_ms": 3703.2
           }
         }
       }
@@ -1423,10 +1426,15 @@
   },
   "critical_failed": [],
   "critical_partial": [],
+  "critical_warmup": [
+    "DSS-44",
+    "DSS-X12"
+  ],
   "governance": {
     "gate0_fail_blocks_go": true,
     "critical_framework_fail_blocks_recommendation": true,
     "critical_partial_blocks_unqualified_go": true,
+    "critical_warmup_blocks_unqualified_go": true,
     "pipeline_health_separate_from_prediction_health": true,
     "noncritical_partial_is_reported_not_hidden": true,
     "file_exists_is_not_sufficient_for_active": true,
@@ -1440,5 +1448,5 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 420.52
+  "performance_ms": 376.18
 }

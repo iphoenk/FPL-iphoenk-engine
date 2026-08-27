@@ -1,17 +1,17 @@
 {
-  "schema_version": 491,
-  "engine_version": "4.9.1-independent-services",
-  "generated_at": "2026-08-27T05:00:49.360176+00:00",
+  "schema_version": 492,
+  "engine_version": "4.9.2-independent-services",
+  "generated_at": "2026-08-27T09:02:06.487485+00:00",
   "mode": "daily",
   "checkpoint_context": {
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-27T05:00:48.242429+00:00",
-    "local_as_of": "2026-08-27T12:00:48.242429+07:00",
+    "as_of": "2026-08-27T09:02:05.272140+00:00",
+    "local_as_of": "2026-08-27T16:02:05.272140+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 2189.2,
+    "minutes_to_deadline": 1947.9,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -43,72 +43,72 @@
     "bootstrap": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 161,
+      "latency_ms": 303,
       "attempts": 1,
-      "fetched_at": "2026-08-27T05:00:48.240945+00:00",
+      "fetched_at": "2026-08-27T09:02:05.270845+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/bootstrap-static/"
     },
     "fixtures": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 80,
+      "latency_ms": 153,
       "attempts": 1,
-      "fetched_at": "2026-08-27T05:00:48.323061+00:00",
+      "fetched_at": "2026-08-27T09:02:05.425681+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/fixtures/"
     },
     "event_status": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 89,
+      "latency_ms": 155,
       "attempts": 1,
-      "fetched_at": "2026-08-27T05:00:48.333409+00:00",
+      "fetched_at": "2026-08-27T09:02:05.428479+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/event-status/"
     },
     "entry": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 99,
+      "latency_ms": 114,
       "attempts": 1,
-      "fetched_at": "2026-08-27T05:00:48.343914+00:00",
+      "fetched_at": "2026-08-27T09:02:05.388386+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/"
     },
     "history": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 96,
+      "latency_ms": 153,
       "attempts": 1,
-      "fetched_at": "2026-08-27T05:00:48.341761+00:00",
+      "fetched_at": "2026-08-27T09:02:05.428265+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/history/"
     },
     "transfers": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 83,
+      "latency_ms": 107,
       "attempts": 1,
-      "fetched_at": "2026-08-27T05:00:48.330205+00:00",
+      "fetched_at": "2026-08-27T09:02:05.383679+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/transfers/"
     },
     "picks": {
       "status": "LIVE",
       "http_status": 200,
-      "latency_ms": 95,
+      "latency_ms": 153,
       "attempts": 1,
-      "fetched_at": "2026-08-27T05:00:48.342932+00:00",
+      "fetched_at": "2026-08-27T09:02:05.430597+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/entry/3462711/event/1/picks/"
     },
     "event_live": {
       "status": "IDLE",
       "http_status": 200,
-      "latency_ms": 52,
+      "latency_ms": 63,
       "attempts": 1,
-      "fetched_at": "2026-08-27T05:00:48.376484+00:00",
+      "fetched_at": "2026-08-27T09:02:05.447505+00:00",
       "error": null,
       "url": "https://fantasy.premierleague.com/api/event/1/live/"
     }
@@ -141,7 +141,7 @@
     }
   },
   "prediction_summary": {
-    "model": "v4.9.1-prediction-quality",
+    "model": "v4.9.2-truthful-health",
     "players": 614,
     "top_5gw": [
       {
@@ -211,12 +211,12 @@
               "fixture_adjustment": 0.9119
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -297,12 +297,12 @@
               "fixture_adjustment": 1.1372
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -383,12 +383,12 @@
               "fixture_adjustment": 0.8084
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -469,12 +469,12 @@
               "fixture_adjustment": 1.1267
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -555,12 +555,12 @@
               "fixture_adjustment": 0.8084
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -641,12 +641,12 @@
               "fixture_adjustment": 1.129
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -727,12 +727,12 @@
               "fixture_adjustment": 0.8243
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -813,12 +813,12 @@
               "fixture_adjustment": 1.1185
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -899,12 +899,12 @@
               "fixture_adjustment": 0.9083
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -985,12 +985,12 @@
               "fixture_adjustment": 1.1308
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -1071,12 +1071,12 @@
               "fixture_adjustment": 0.706
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -1157,12 +1157,12 @@
               "fixture_adjustment": 1.1185
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -1243,12 +1243,12 @@
               "fixture_adjustment": 0.9046
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -1329,12 +1329,12 @@
               "fixture_adjustment": 0.9084
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -1415,12 +1415,12 @@
               "fixture_adjustment": 1.1248
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -1446,7 +1446,7 @@
         "xpts_15": 76.56,
         "mean_xpts": 5.104,
         "uncertainty": 0.47,
-        "model": "v4.9.1-prediction-quality",
+        "model": "v4.9.2-truthful-health",
         "stable_key": "2026-27:411",
         "priors": {
           "xg90_prior": 0.7175,
@@ -1479,7 +1479,6 @@
           "sub_appearance_signal": 0.0,
           "competition_pressure": 1.0,
           "competition_source": "inferred_tactical_role_peer_group",
-          "competition_adjustment_applied": true,
           "competition_start_weight": 0.16,
           "squad_depth_weight": 0.08,
           "tactical_role": "striker",
@@ -1487,7 +1486,10 @@
           "squad_depth_pressure": 0.3,
           "squad_depth_source": "credible_squad_count_diagnostic_only",
           "avg_minutes_when_start": 87.79705882352941,
-          "xmins_prior_source": "current_starts+last_season_starts"
+          "xmins_prior_source": "current_starts+last_season_starts",
+          "competition_factor": 0.936,
+          "competition_uncertainty": 0.25,
+          "competition_adjustment_applied": true
         },
         "value": {
           "price_millions": 15.5,
@@ -1563,12 +1565,12 @@
               "fixture_adjustment": 1.1049
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -1649,12 +1651,12 @@
               "fixture_adjustment": 0.883
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -1735,12 +1737,12 @@
               "fixture_adjustment": 0.8738
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -1821,12 +1823,12 @@
               "fixture_adjustment": 0.9026
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -1907,12 +1909,12 @@
               "fixture_adjustment": 1.0008
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -1993,12 +1995,12 @@
               "fixture_adjustment": 0.8915
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -2079,12 +2081,12 @@
               "fixture_adjustment": 0.9966
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -2165,12 +2167,12 @@
               "fixture_adjustment": 0.7868
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -2251,12 +2253,12 @@
               "fixture_adjustment": 0.9985
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -2337,12 +2339,12 @@
               "fixture_adjustment": 0.7868
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -2423,12 +2425,12 @@
               "fixture_adjustment": 0.9884
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -2509,12 +2511,12 @@
               "fixture_adjustment": 0.8989
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -2595,12 +2597,12 @@
               "fixture_adjustment": 1.1131
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -2681,12 +2683,12 @@
               "fixture_adjustment": 0.8904
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -2767,12 +2769,12 @@
               "fixture_adjustment": 0.6844
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -2798,7 +2800,7 @@
         "xpts_15": 68.92,
         "mean_xpts": 4.595,
         "uncertainty": 0.326,
-        "model": "v4.9.1-prediction-quality",
+        "model": "v4.9.2-truthful-health",
         "stable_key": "2026-27:426",
         "priors": {
           "xg90_prior": 0.3139,
@@ -2831,7 +2833,6 @@
           "sub_appearance_signal": 0.0,
           "competition_pressure": 1.0,
           "competition_source": "inferred_tactical_role_peer_group",
-          "competition_adjustment_applied": true,
           "competition_start_weight": 0.16,
           "squad_depth_weight": 0.08,
           "tactical_role": "attacking_midfielder",
@@ -2839,7 +2840,10 @@
           "squad_depth_pressure": 0.3,
           "squad_depth_source": "credible_squad_count_diagnostic_only",
           "avg_minutes_when_start": 88.3,
-          "xmins_prior_source": "current_starts+last_season_starts"
+          "xmins_prior_source": "current_starts+last_season_starts",
+          "competition_factor": 0.936,
+          "competition_uncertainty": 0.25,
+          "competition_adjustment_applied": true
         },
         "value": {
           "price_millions": 12.0,
@@ -2915,12 +2919,12 @@
               "fixture_adjustment": 1.0157
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3001,12 +3005,12 @@
               "fixture_adjustment": 1.011
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3087,12 +3091,12 @@
               "fixture_adjustment": 1.1299
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3173,12 +3177,12 @@
               "fixture_adjustment": 0.9111
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3259,12 +3263,12 @@
               "fixture_adjustment": 0.8969
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3345,12 +3349,12 @@
               "fixture_adjustment": 0.9037
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3431,12 +3435,12 @@
               "fixture_adjustment": 1.1175
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3517,12 +3521,12 @@
               "fixture_adjustment": 0.8928
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3603,12 +3607,12 @@
               "fixture_adjustment": 0.9111
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3689,12 +3693,12 @@
               "fixture_adjustment": 0.9074
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3775,12 +3779,12 @@
               "fixture_adjustment": 0.9037
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3861,12 +3865,12 @@
               "fixture_adjustment": 1.1258
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -3947,12 +3951,12 @@
               "fixture_adjustment": 0.8076
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -4033,12 +4037,12 @@
               "fixture_adjustment": 1.1175
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -4119,12 +4123,12 @@
               "fixture_adjustment": 1.0239
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -4150,7 +4154,7 @@
         "xpts_15": 67.36,
         "mean_xpts": 4.49,
         "uncertainty": 0.251,
-        "model": "v4.9.1-prediction-quality",
+        "model": "v4.9.2-truthful-health",
         "stable_key": "2026-27:368",
         "priors": {
           "xg90_prior": 0.1644,
@@ -4183,7 +4187,6 @@
           "sub_appearance_signal": 0.0,
           "competition_pressure": 0.0,
           "competition_source": "inferred_tactical_role_peer_group",
-          "competition_adjustment_applied": true,
           "competition_start_weight": 0.16,
           "squad_depth_weight": 0.08,
           "tactical_role": "creator_midfielder",
@@ -4191,7 +4194,10 @@
           "squad_depth_pressure": 0.25,
           "squad_depth_source": "credible_squad_count_diagnostic_only",
           "avg_minutes_when_start": 89.84444444444443,
-          "xmins_prior_source": "current_starts+last_season_starts"
+          "xmins_prior_source": "current_starts+last_season_starts",
+          "competition_factor": 0.98,
+          "competition_uncertainty": 0.25,
+          "competition_adjustment_applied": true
         },
         "value": {
           "price_millions": 7.0,
@@ -4231,7 +4237,7 @@
               "set_piece_penalty_adjustment": 0.284
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -4246,7 +4252,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -4267,12 +4273,12 @@
               "fixture_adjustment": 0.9705
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -4317,7 +4323,7 @@
               "set_piece_penalty_adjustment": 0.349
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -4332,7 +4338,7 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -4353,12 +4359,12 @@
               "fixture_adjustment": 1.1907
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -4403,7 +4409,7 @@
               "set_piece_penalty_adjustment": 0.284
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -4418,7 +4424,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -4439,12 +4445,12 @@
               "fixture_adjustment": 0.9693
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -4489,7 +4495,7 @@
               "set_piece_penalty_adjustment": 0.285
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -4504,7 +4510,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -4525,12 +4531,12 @@
               "fixture_adjustment": 0.9724
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -4575,7 +4581,7 @@
               "set_piece_penalty_adjustment": 0.258
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -4590,7 +4596,7 @@
             "calibration": {
               "clean_sheet_probability": 0.115,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -4611,12 +4617,12 @@
               "fixture_adjustment": 0.8817
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -4661,7 +4667,7 @@
               "set_piece_penalty_adjustment": 0.285
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -4676,7 +4682,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -4697,12 +4703,12 @@
               "fixture_adjustment": 0.9724
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -4723,7 +4729,7 @@
           },
           {
             "event": 8,
-            "xpts": 4.597,
+            "xpts": 4.596,
             "lower80": 1.848,
             "upper80": 7.345,
             "xmins": {
@@ -4747,7 +4753,7 @@
               "set_piece_penalty_adjustment": 0.312
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -4762,7 +4768,7 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -4783,12 +4789,12 @@
               "fixture_adjustment": 1.0655
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -4833,7 +4839,7 @@
               "set_piece_penalty_adjustment": 0.317
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -4848,7 +4854,7 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -4869,12 +4875,12 @@
               "fixture_adjustment": 1.0806
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -4919,7 +4925,7 @@
               "set_piece_penalty_adjustment": 0.284
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -4934,7 +4940,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -4955,12 +4961,12 @@
               "fixture_adjustment": 0.9705
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -5005,7 +5011,7 @@
               "set_piece_penalty_adjustment": 0.315
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -5020,7 +5026,7 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -5041,12 +5047,12 @@
               "fixture_adjustment": 1.0765
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -5091,7 +5097,7 @@
               "set_piece_penalty_adjustment": 0.254
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -5106,7 +5112,7 @@
             "calibration": {
               "clean_sheet_probability": 0.115,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -5127,12 +5133,12 @@
               "fixture_adjustment": 0.8658
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -5169,7 +5175,7 @@
             },
             "components": {
               "appearance": 1.825,
-              "attack": 2.334,
+              "attack": 2.333,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.055,
@@ -5177,7 +5183,7 @@
               "set_piece_penalty_adjustment": 0.281
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -5192,7 +5198,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -5213,12 +5219,12 @@
               "fixture_adjustment": 0.9578
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -5255,7 +5261,7 @@
             },
             "components": {
               "appearance": 1.825,
-              "attack": 2.344,
+              "attack": 2.343,
               "clean_sheet": 0.0,
               "saves": 0,
               "defcon": 0.055,
@@ -5263,7 +5269,7 @@
               "set_piece_penalty_adjustment": 0.282
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -5278,7 +5284,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -5299,12 +5305,12 @@
               "fixture_adjustment": 0.9619
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -5349,7 +5355,7 @@
               "set_piece_penalty_adjustment": 0.288
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -5364,7 +5370,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -5385,12 +5391,12 @@
               "fixture_adjustment": 0.9816
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -5435,7 +5441,7 @@
               "set_piece_penalty_adjustment": 0.349
             },
             "rates": {
-              "xg90": 0.5524,
+              "xg90": 0.5523,
               "xa90": 0.0785,
               "raw_xg90": 1.0843,
               "raw_xa90": 0.0867,
@@ -5450,7 +5456,7 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.2105,
-              "role_prior": 0.1687,
+              "role_prior": 0.168,
               "nailed_prior": 0.9829,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -5471,12 +5477,12 @@
               "fixture_adjustment": 1.1907
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -5498,17 +5504,17 @@
         ],
         "xpts_3": 13.63,
         "xpts_5": 22.15,
-        "xpts_10": 44.74,
+        "xpts_10": 44.73,
         "xpts_15": 66.82,
-        "mean_xpts": 4.455,
+        "mean_xpts": 4.454,
         "uncertainty": 0.225,
-        "model": "v4.9.1-prediction-quality",
+        "model": "v4.9.2-truthful-health",
         "stable_key": "2026-27:106",
         "priors": {
           "xg90_prior": 0.4918,
           "xa90_prior": 0.0776,
           "premium_prior": 0.2105,
-          "role_prior": 0.1687,
+          "role_prior": 0.168,
           "last_season_weight": 0.65,
           "last_season_minutes": 3282.0,
           "last_season_source": "vaastav:2025-26",
@@ -5535,7 +5541,6 @@
           "sub_appearance_signal": 0.0,
           "competition_pressure": 1.0,
           "competition_source": "inferred_tactical_role_peer_group",
-          "competition_adjustment_applied": true,
           "competition_start_weight": 0.16,
           "squad_depth_weight": 0.08,
           "tactical_role": "striker",
@@ -5543,7 +5548,10 @@
           "squad_depth_pressure": 0.3,
           "squad_depth_source": "credible_squad_count_diagnostic_only",
           "avg_minutes_when_start": 86.69189189189188,
-          "xmins_prior_source": "current_starts+last_season_starts"
+          "xmins_prior_source": "current_starts+last_season_starts",
+          "competition_factor": 0.936,
+          "competition_uncertainty": 0.25,
+          "competition_adjustment_applied": true
         },
         "value": {
           "price_millions": 8.0,
@@ -5619,12 +5627,12 @@
               "fixture_adjustment": 0.9119
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -5705,12 +5713,12 @@
               "fixture_adjustment": 1.1372
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -5791,12 +5799,12 @@
               "fixture_adjustment": 0.8084
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -5877,12 +5885,12 @@
               "fixture_adjustment": 1.1267
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -5963,12 +5971,12 @@
               "fixture_adjustment": 0.8084
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -6049,12 +6057,12 @@
               "fixture_adjustment": 1.129
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -6135,12 +6143,12 @@
               "fixture_adjustment": 0.8243
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -6221,12 +6229,12 @@
               "fixture_adjustment": 1.1185
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -6307,12 +6315,12 @@
               "fixture_adjustment": 0.9083
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -6393,12 +6401,12 @@
               "fixture_adjustment": 1.1308
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -6479,12 +6487,12 @@
               "fixture_adjustment": 0.706
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -6565,12 +6573,12 @@
               "fixture_adjustment": 1.1185
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -6651,12 +6659,12 @@
               "fixture_adjustment": 0.9046
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -6737,12 +6745,12 @@
               "fixture_adjustment": 0.9084
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -6823,12 +6831,12 @@
               "fixture_adjustment": 1.1248
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -6854,7 +6862,7 @@
         "xpts_15": 64.24,
         "mean_xpts": 4.283,
         "uncertainty": 0.423,
-        "model": "v4.9.1-prediction-quality",
+        "model": "v4.9.2-truthful-health",
         "stable_key": "2026-27:388",
         "priors": {
           "xg90_prior": 0.1013,
@@ -6887,7 +6895,6 @@
           "sub_appearance_signal": 0.0,
           "competition_pressure": 1.0,
           "competition_source": "inferred_tactical_role_peer_group",
-          "competition_adjustment_applied": true,
           "competition_start_weight": 0.16,
           "squad_depth_weight": 0.08,
           "tactical_role": "hybrid_defender",
@@ -6895,7 +6902,10 @@
           "squad_depth_pressure": 0.3,
           "squad_depth_source": "credible_squad_count_diagnostic_only",
           "avg_minutes_when_start": 90.0,
-          "xmins_prior_source": "current_starts+last_season_starts"
+          "xmins_prior_source": "current_starts+last_season_starts",
+          "competition_factor": 0.936,
+          "competition_uncertainty": 0.25,
+          "competition_adjustment_applied": true
         },
         "value": {
           "price_millions": 6.0,
@@ -6935,7 +6945,7 @@
               "set_piece_penalty_adjustment": 0.264
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -6950,7 +6960,7 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -6971,12 +6981,12 @@
               "fixture_adjustment": 1.0865
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7021,7 +7031,7 @@
               "set_piece_penalty_adjustment": 0.166
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7036,7 +7046,7 @@
             "calibration": {
               "clean_sheet_probability": 0.08,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -7057,12 +7067,12 @@
               "fixture_adjustment": 0.684
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7107,7 +7117,7 @@
               "set_piece_penalty_adjustment": 0.265
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7122,7 +7132,7 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -7143,12 +7153,12 @@
               "fixture_adjustment": 1.0929
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7193,7 +7203,7 @@
               "set_piece_penalty_adjustment": 0.213
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7208,7 +7218,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -7229,12 +7239,12 @@
               "fixture_adjustment": 0.8759
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7279,7 +7289,7 @@
               "set_piece_penalty_adjustment": 0.24
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7294,7 +7304,7 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -7315,12 +7325,12 @@
               "fixture_adjustment": 0.9888
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7365,7 +7375,7 @@
               "set_piece_penalty_adjustment": 0.213
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7380,7 +7390,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -7401,12 +7411,12 @@
               "fixture_adjustment": 0.8759
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7451,7 +7461,7 @@
               "set_piece_penalty_adjustment": 0.241
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7466,7 +7476,7 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -7487,12 +7497,12 @@
               "fixture_adjustment": 0.9929
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7513,7 +7523,7 @@
           },
           {
             "event": 9,
-            "xpts": 4.045,
+            "xpts": 4.046,
             "lower80": 1.394,
             "upper80": 6.697,
             "xmins": {
@@ -7537,7 +7547,7 @@
               "set_piece_penalty_adjustment": 0.213
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7552,7 +7562,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -7573,12 +7583,12 @@
               "fixture_adjustment": 0.8764
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7623,7 +7633,7 @@
               "set_piece_penalty_adjustment": 0.216
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7638,7 +7648,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -7659,12 +7669,12 @@
               "fixture_adjustment": 0.8919
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7709,7 +7719,7 @@
               "set_piece_penalty_adjustment": 0.264
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7724,7 +7734,7 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -7745,12 +7755,12 @@
               "fixture_adjustment": 1.0865
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7772,7 +7782,7 @@
           {
             "event": 12,
             "xpts": 4.052,
-            "lower80": 1.398,
+            "lower80": 1.399,
             "upper80": 6.706,
             "xmins": {
               "start_probability": 0.8411,
@@ -7795,7 +7805,7 @@
               "set_piece_penalty_adjustment": 0.213
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7810,7 +7820,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -7831,12 +7841,12 @@
               "fixture_adjustment": 0.8796
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7881,7 +7891,7 @@
               "set_piece_penalty_adjustment": 0.24
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7896,7 +7906,7 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -7917,12 +7927,12 @@
               "fixture_adjustment": 0.9888
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -7943,7 +7953,7 @@
           },
           {
             "event": 14,
-            "xpts": 4.045,
+            "xpts": 4.046,
             "lower80": 1.394,
             "upper80": 6.697,
             "xmins": {
@@ -7967,7 +7977,7 @@
               "set_piece_penalty_adjustment": 0.213
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -7982,7 +7992,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -8003,12 +8013,12 @@
               "fixture_adjustment": 0.8764
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -8053,7 +8063,7 @@
               "set_piece_penalty_adjustment": 0.166
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -8068,7 +8078,7 @@
             "calibration": {
               "clean_sheet_probability": 0.08,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -8089,12 +8099,12 @@
               "fixture_adjustment": 0.684
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -8139,7 +8149,7 @@
               "set_piece_penalty_adjustment": 0.24
             },
             "rates": {
-              "xg90": 0.3984,
+              "xg90": 0.3985,
               "xa90": 0.1545,
               "raw_xg90": 0.3036,
               "raw_xa90": 0.206,
@@ -8154,7 +8164,7 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.3684,
-              "role_prior": 0.469,
+              "role_prior": 0.4698,
               "nailed_prior": 0.7605,
               "current_start_rate": 1.0,
               "current_minutes_rate": 0.9111,
@@ -8175,12 +8185,12 @@
               "fixture_adjustment": 0.9907
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -8203,16 +8213,16 @@
         "xpts_3": 12.72,
         "xpts_5": 21.08,
         "xpts_10": 42.15,
-        "xpts_15": 62.46,
+        "xpts_15": 62.47,
         "mean_xpts": 4.164,
         "uncertainty": 0.304,
-        "model": "v4.9.1-prediction-quality",
+        "model": "v4.9.2-truthful-health",
         "stable_key": "2026-27:154",
         "priors": {
           "xg90_prior": 0.4093,
           "xa90_prior": 0.1486,
           "premium_prior": 0.3684,
-          "role_prior": 0.469,
+          "role_prior": 0.4698,
           "last_season_weight": 0.65,
           "last_season_minutes": 1954.0,
           "last_season_source": "vaastav:2025-26",
@@ -8239,7 +8249,6 @@
           "sub_appearance_signal": 0.0,
           "competition_pressure": 0.0,
           "competition_source": "inferred_tactical_role_peer_group",
-          "competition_adjustment_applied": true,
           "competition_start_weight": 0.16,
           "squad_depth_weight": 0.08,
           "tactical_role": "attacking_midfielder",
@@ -8247,12 +8256,15 @@
           "squad_depth_pressure": 0.3,
           "squad_depth_source": "credible_squad_count_diagnostic_only",
           "avg_minutes_when_start": 81.59166666666667,
-          "xmins_prior_source": "current_starts+last_season_starts"
+          "xmins_prior_source": "current_starts+last_season_starts",
+          "competition_factor": 0.976,
+          "competition_uncertainty": 0.25,
+          "competition_adjustment_applied": true
         },
         "value": {
           "price_millions": 9.5,
           "xpts5_per_million": 2.2189,
-          "xpts15_per_million": 6.5747,
+          "xpts15_per_million": 6.5758,
           "decision_usage": "optimizer_objective_bounded_value_term"
         }
       },
@@ -8264,7 +8276,7 @@
           {
             "event": 2,
             "xpts": 4.584,
-            "lower80": 1.815,
+            "lower80": 1.814,
             "upper80": 7.354,
             "xmins": {
               "start_probability": 0.8755,
@@ -8287,7 +8299,7 @@
               "set_piece_penalty_adjustment": 0.11
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -8302,7 +8314,7 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -8323,12 +8335,12 @@
               "fixture_adjustment": 1.1049
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -8350,7 +8362,7 @@
           {
             "event": 3,
             "xpts": 4.034,
-            "lower80": 1.41,
+            "lower80": 1.409,
             "upper80": 6.659,
             "xmins": {
               "start_probability": 0.8755,
@@ -8373,7 +8385,7 @@
               "set_piece_penalty_adjustment": 0.088
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -8388,7 +8400,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -8409,12 +8421,12 @@
               "fixture_adjustment": 0.883
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -8459,7 +8471,7 @@
               "set_piece_penalty_adjustment": 0.087
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -8474,7 +8486,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -8495,12 +8507,12 @@
               "fixture_adjustment": 0.8738
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -8545,7 +8557,7 @@
               "set_piece_penalty_adjustment": 0.09
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -8560,7 +8572,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -8581,12 +8593,12 @@
               "fixture_adjustment": 0.9026
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -8631,7 +8643,7 @@
               "set_piece_penalty_adjustment": 0.1
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -8646,7 +8658,7 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -8667,12 +8679,12 @@
               "fixture_adjustment": 1.0008
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -8709,7 +8721,7 @@
             },
             "components": {
               "appearance": 1.763,
-              "attack": 1.895,
+              "attack": 1.894,
               "clean_sheet": 0.14,
               "saves": 0,
               "defcon": 0.109,
@@ -8717,7 +8729,7 @@
               "set_piece_penalty_adjustment": 0.089
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -8732,7 +8744,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -8753,12 +8765,12 @@
               "fixture_adjustment": 0.8915
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -8803,7 +8815,7 @@
               "set_piece_penalty_adjustment": 0.099
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -8818,7 +8830,7 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -8839,12 +8851,12 @@
               "fixture_adjustment": 0.9966
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -8889,7 +8901,7 @@
               "set_piece_penalty_adjustment": 0.078
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -8904,7 +8916,7 @@
             "calibration": {
               "clean_sheet_probability": 0.115,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -8925,12 +8937,12 @@
               "fixture_adjustment": 0.7868
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -8975,7 +8987,7 @@
               "set_piece_penalty_adjustment": 0.099
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -8990,7 +9002,7 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -9011,12 +9023,12 @@
               "fixture_adjustment": 0.9985
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -9061,7 +9073,7 @@
               "set_piece_penalty_adjustment": 0.078
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -9076,7 +9088,7 @@
             "calibration": {
               "clean_sheet_probability": 0.115,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -9097,12 +9109,12 @@
               "fixture_adjustment": 0.7868
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -9123,9 +9135,9 @@
           },
           {
             "event": 12,
-            "xpts": 4.298,
+            "xpts": 4.297,
             "lower80": 1.602,
-            "upper80": 6.993,
+            "upper80": 6.992,
             "xmins": {
               "start_probability": 0.8755,
               "bench_probability": 0.0125,
@@ -9147,7 +9159,7 @@
               "set_piece_penalty_adjustment": 0.098
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -9162,7 +9174,7 @@
             "calibration": {
               "clean_sheet_probability": 0.205,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -9183,12 +9195,12 @@
               "fixture_adjustment": 0.9884
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -9233,7 +9245,7 @@
               "set_piece_penalty_adjustment": 0.089
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -9248,7 +9260,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -9269,12 +9281,12 @@
               "fixture_adjustment": 0.8989
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -9296,7 +9308,7 @@
           {
             "event": 14,
             "xpts": 4.602,
-            "lower80": 1.828,
+            "lower80": 1.827,
             "upper80": 7.376,
             "xmins": {
               "start_probability": 0.8755,
@@ -9319,7 +9331,7 @@
               "set_piece_penalty_adjustment": 0.111
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -9334,7 +9346,7 @@
             "calibration": {
               "clean_sheet_probability": 0.25,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -9355,12 +9367,12 @@
               "fixture_adjustment": 1.1131
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -9383,7 +9395,7 @@
             "event": 15,
             "xpts": 4.05,
             "lower80": 1.421,
-            "upper80": 6.679,
+            "upper80": 6.678,
             "xmins": {
               "start_probability": 0.8755,
               "bench_probability": 0.0125,
@@ -9405,7 +9417,7 @@
               "set_piece_penalty_adjustment": 0.089
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -9420,7 +9432,7 @@
             "calibration": {
               "clean_sheet_probability": 0.16,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -9441,12 +9453,12 @@
               "fixture_adjustment": 0.8904
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -9469,7 +9481,7 @@
             "event": 16,
             "xpts": 3.542,
             "lower80": 1.055,
-            "upper80": 6.03,
+            "upper80": 6.029,
             "xmins": {
               "start_probability": 0.8755,
               "bench_probability": 0.0125,
@@ -9491,7 +9503,7 @@
               "set_piece_penalty_adjustment": 0.068
             },
             "rates": {
-              "xg90": 0.3684,
+              "xg90": 0.3683,
               "xa90": 0.1909,
               "raw_xg90": 0.5,
               "raw_xa90": 0.23,
@@ -9506,7 +9518,7 @@
             "calibration": {
               "clean_sheet_probability": 0.08,
               "premium_prior": 0.2105,
-              "role_prior": 0.5648,
+              "role_prior": 0.5641,
               "nailed_prior": 0.8803,
               "current_start_rate": 1.0,
               "current_minutes_rate": 1.0,
@@ -9527,12 +9539,12 @@
               "fixture_adjustment": 0.6844
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -9558,13 +9570,13 @@
         "xpts_15": 61.86,
         "mean_xpts": 4.124,
         "uncertainty": 0.281,
-        "model": "v4.9.1-prediction-quality",
+        "model": "v4.9.2-truthful-health",
         "stable_key": "2026-27:427",
         "priors": {
           "xg90_prior": 0.3519,
           "xa90_prior": 0.186,
           "premium_prior": 0.2105,
-          "role_prior": 0.5648,
+          "role_prior": 0.5641,
           "last_season_weight": 0.65,
           "last_season_minutes": 2611.0,
           "last_season_source": "vaastav:2025-26",
@@ -9591,7 +9603,6 @@
           "sub_appearance_signal": 0.0,
           "competition_pressure": 1.0,
           "competition_source": "inferred_tactical_role_peer_group",
-          "competition_adjustment_applied": true,
           "competition_start_weight": 0.16,
           "squad_depth_weight": 0.08,
           "tactical_role": "attacking_midfielder",
@@ -9599,7 +9610,10 @@
           "squad_depth_pressure": 0.3,
           "squad_depth_source": "credible_squad_count_diagnostic_only",
           "avg_minutes_when_start": 85.95806451612901,
-          "xmins_prior_source": "current_starts+last_season_starts"
+          "xmins_prior_source": "current_starts+last_season_starts",
+          "competition_factor": 0.936,
+          "competition_uncertainty": 0.25,
+          "competition_adjustment_applied": true
         },
         "value": {
           "price_millions": 8.0,
@@ -9675,12 +9689,12 @@
               "fixture_adjustment": 0.9705
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -9761,12 +9775,12 @@
               "fixture_adjustment": 1.1907
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -9847,12 +9861,12 @@
               "fixture_adjustment": 0.9693
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -9933,12 +9947,12 @@
               "fixture_adjustment": 0.9724
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10019,12 +10033,12 @@
               "fixture_adjustment": 0.8817
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10105,12 +10119,12 @@
               "fixture_adjustment": 0.9724
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10191,12 +10205,12 @@
               "fixture_adjustment": 1.0655
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10277,12 +10291,12 @@
               "fixture_adjustment": 1.0806
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10363,12 +10377,12 @@
               "fixture_adjustment": 0.9705
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10449,12 +10463,12 @@
               "fixture_adjustment": 1.0765
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10535,12 +10549,12 @@
               "fixture_adjustment": 0.8658
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10621,12 +10635,12 @@
               "fixture_adjustment": 0.9578
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10707,12 +10721,12 @@
               "fixture_adjustment": 0.9619
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10793,12 +10807,12 @@
               "fixture_adjustment": 0.9816
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10879,12 +10893,12 @@
               "fixture_adjustment": 1.1907
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -10910,7 +10924,7 @@
         "xpts_15": 63.14,
         "mean_xpts": 4.21,
         "uncertainty": 0.208,
-        "model": "v4.9.1-prediction-quality",
+        "model": "v4.9.2-truthful-health",
         "stable_key": "2026-27:94",
         "priors": {
           "xg90_prior": 0.3302,
@@ -10943,7 +10957,6 @@
           "sub_appearance_signal": 0.0,
           "competition_pressure": 0.0,
           "competition_source": "inferred_tactical_role_peer_group",
-          "competition_adjustment_applied": true,
           "competition_start_weight": 0.16,
           "squad_depth_weight": 0.08,
           "tactical_role": "attacking_midfielder",
@@ -10951,7 +10964,10 @@
           "squad_depth_pressure": 0.3,
           "squad_depth_source": "credible_squad_count_diagnostic_only",
           "avg_minutes_when_start": 87.025,
-          "xmins_prior_source": "current_starts+last_season_starts"
+          "xmins_prior_source": "current_starts+last_season_starts",
+          "competition_factor": 0.976,
+          "competition_uncertainty": 0.25,
+          "competition_adjustment_applied": true
         },
         "value": {
           "price_millions": 6.0,
@@ -11027,12 +11043,12 @@
               "fixture_adjustment": 1.0865
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -11113,12 +11129,12 @@
               "fixture_adjustment": 0.684
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -11199,12 +11215,12 @@
               "fixture_adjustment": 1.0929
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -11285,12 +11301,12 @@
               "fixture_adjustment": 0.8759
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -11371,12 +11387,12 @@
               "fixture_adjustment": 0.9888
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -11457,12 +11473,12 @@
               "fixture_adjustment": 0.8759
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -11543,12 +11559,12 @@
               "fixture_adjustment": 0.9929
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -11629,12 +11645,12 @@
               "fixture_adjustment": 0.8764
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -11715,12 +11731,12 @@
               "fixture_adjustment": 0.8919
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -11801,12 +11817,12 @@
               "fixture_adjustment": 1.0865
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -11887,12 +11903,12 @@
               "fixture_adjustment": 0.8796
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -11973,12 +11989,12 @@
               "fixture_adjustment": 0.9888
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -12059,12 +12075,12 @@
               "fixture_adjustment": 0.8764
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -12145,12 +12161,12 @@
               "fixture_adjustment": 0.684
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -12231,12 +12247,12 @@
               "fixture_adjustment": 0.9907
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": true,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -12262,7 +12278,7 @@
         "xpts_15": 60.47,
         "mean_xpts": 4.031,
         "uncertainty": 0.258,
-        "model": "v4.9.1-prediction-quality",
+        "model": "v4.9.2-truthful-health",
         "stable_key": "2026-27:40",
         "priors": {
           "xg90_prior": 0.2044,
@@ -12295,7 +12311,6 @@
           "sub_appearance_signal": 0.0,
           "competition_pressure": 0.0,
           "competition_source": "inferred_tactical_role_peer_group",
-          "competition_adjustment_applied": true,
           "competition_start_weight": 0.16,
           "squad_depth_weight": 0.08,
           "tactical_role": "attacking_midfielder",
@@ -12303,7 +12318,10 @@
           "squad_depth_pressure": 0.3,
           "squad_depth_source": "credible_squad_count_diagnostic_only",
           "avg_minutes_when_start": 86.35405405405405,
-          "xmins_prior_source": "current_starts+last_season_starts"
+          "xmins_prior_source": "current_starts+last_season_starts",
+          "competition_factor": 0.976,
+          "competition_uncertainty": 0.25,
+          "competition_adjustment_applied": true
         },
         "value": {
           "price_millions": 7.5,
@@ -12379,12 +12397,12 @@
               "fixture_adjustment": 1.0157
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -12465,12 +12483,12 @@
               "fixture_adjustment": 1.011
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -12551,12 +12569,12 @@
               "fixture_adjustment": 1.1299
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -12637,12 +12655,12 @@
               "fixture_adjustment": 0.9111
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -12723,12 +12741,12 @@
               "fixture_adjustment": 0.8969
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -12809,12 +12827,12 @@
               "fixture_adjustment": 0.9037
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -12895,12 +12913,12 @@
               "fixture_adjustment": 1.1175
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -12981,12 +12999,12 @@
               "fixture_adjustment": 0.8928
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -13067,12 +13085,12 @@
               "fixture_adjustment": 0.9111
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -13153,12 +13171,12 @@
               "fixture_adjustment": 0.9074
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -13239,12 +13257,12 @@
               "fixture_adjustment": 0.9037
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -13325,12 +13343,12 @@
               "fixture_adjustment": 1.1258
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -13411,12 +13429,12 @@
               "fixture_adjustment": 0.8076
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -13497,12 +13515,12 @@
               "fixture_adjustment": 1.1175
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -13583,12 +13601,12 @@
               "fixture_adjustment": 1.0239
             },
             "provenance": {
-              "model": "v4.9.1-prediction-quality",
+              "model": "v4.9.2-truthful-health",
               "fixture_source": "official_fpl",
               "advanced_source": "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
               "advanced_identity_match": "official_element_id",
               "advanced_materially_distinct": false,
-              "point_in_time": "2026-08-27T05:00:49.360176+00:00",
+              "point_in_time": "2026-08-27T09:02:06.487485+00:00",
               "official_rules_source": "src.engines.fpl_rules_2026",
               "xmins_prior_source": "current_starts+last_season_starts",
               "competition_source": "inferred_tactical_role_peer_group",
@@ -13614,7 +13632,7 @@
         "xpts_15": 59.81,
         "mean_xpts": 3.988,
         "uncertainty": 0.203,
-        "model": "v4.9.1-prediction-quality",
+        "model": "v4.9.2-truthful-health",
         "stable_key": "2026-27:367",
         "priors": {
           "xg90_prior": 0.2503,
@@ -13647,7 +13665,6 @@
           "sub_appearance_signal": 0.0,
           "competition_pressure": 0.0,
           "competition_source": "inferred_tactical_role_peer_group",
-          "competition_adjustment_applied": true,
           "competition_start_weight": 0.16,
           "squad_depth_weight": 0.08,
           "tactical_role": "attacking_midfielder",
@@ -13655,7 +13672,10 @@
           "squad_depth_pressure": 0.25,
           "squad_depth_source": "credible_squad_count_diagnostic_only",
           "avg_minutes_when_start": 86.85,
-          "xmins_prior_source": "current_starts+last_season_starts"
+          "xmins_prior_source": "current_starts+last_season_starts",
+          "competition_factor": 0.98,
+          "competition_uncertainty": 0.25,
+          "competition_adjustment_applied": true
         },
         "value": {
           "price_millions": 7.0,
@@ -13677,126 +13697,83 @@
     "net_points": 71
   },
   "price_summary": {
-    "confirmed_changes": [
-      {
-        "element": 8,
-        "name": "Calafiori",
-        "previous": 55,
-        "current": 56,
-        "delta": 1
-      },
-      {
-        "element": 20,
-        "name": "Dowman",
-        "previous": 55,
-        "current": 54,
-        "delta": -1
-      },
-      {
-        "element": 55,
-        "name": "Watkins",
-        "previous": 80,
-        "current": 79,
-        "delta": -1
-      },
-      {
-        "element": 88,
-        "name": "Kayode",
-        "previous": 45,
-        "current": 46,
-        "delta": 1
-      },
-      {
-        "element": 165,
-        "name": "João Pedro",
-        "previous": 75,
-        "current": 76,
-        "delta": 1
-      },
-      {
-        "element": 431,
-        "name": "Amad",
-        "previous": 60,
-        "current": 59,
-        "delta": -1
-      }
-    ],
+    "confirmed_changes": [],
     "top_buy_pressure": [
       {
         "element": 608,
         "name": "Jebbison",
-        "net_transfers": 1338,
+        "net_transfers": 1388,
         "ownership_pct": 0.0,
-        "momentum": 1338.0
+        "momentum": 1388.0
       },
       {
         "element": 606,
         "name": "Rowe",
-        "net_transfers": 911,
+        "net_transfers": 925,
         "ownership_pct": 0.0,
-        "momentum": 911.0
+        "momentum": 925.0
       },
       {
         "element": 602,
         "name": "Humphreys",
-        "net_transfers": 755,
+        "net_transfers": 759,
         "ownership_pct": 0.0,
-        "momentum": 755.0
+        "momentum": 759.0
       },
       {
         "element": 611,
         "name": "Wan-Bissaka",
-        "net_transfers": 687,
+        "net_transfers": 726,
         "ownership_pct": 0.0,
-        "momentum": 687.0
+        "momentum": 726.0
       },
       {
         "element": 613,
         "name": "Ahoka",
-        "net_transfers": 404,
+        "net_transfers": 500,
         "ownership_pct": 0.0,
-        "momentum": 404.0
-      },
-      {
-        "element": 255,
-        "name": "J.Cuenca",
-        "net_transfers": 355,
-        "ownership_pct": 0.0,
-        "momentum": 355.0
+        "momentum": 500.0
       },
       {
         "element": 145,
         "name": "Fofana",
-        "net_transfers": 354,
+        "net_transfers": 369,
         "ownership_pct": 0.0,
-        "momentum": 354.0
+        "momentum": 369.0
+      },
+      {
+        "element": 255,
+        "name": "J.Cuenca",
+        "net_transfers": 369,
+        "ownership_pct": 0.0,
+        "momentum": 369.0
       },
       {
         "element": 614,
         "name": "Hadjam",
-        "net_transfers": 320,
+        "net_transfers": 339,
         "ownership_pct": 0.0,
-        "momentum": 320.0
+        "momentum": 339.0
       },
       {
         "element": 75,
         "name": "Christie",
-        "net_transfers": 227,
+        "net_transfers": 239,
         "ownership_pct": 0.0,
-        "momentum": 227.0
+        "momentum": 239.0
       },
       {
         "element": 600,
         "name": "Osman",
-        "net_transfers": 69,
+        "net_transfers": 71,
         "ownership_pct": 0.0,
-        "momentum": 69.0
+        "momentum": 71.0
       }
     ]
   },
   "lineage": {
-    "snapshot_sha256": "8854aa40885c012b4d3a89711b1364e803ac41bb2a7dd9b9e7212d6f4c226abe",
-    "enrichment_sha256": "b5cc39c8cc59bb5bbc463d06c03f7c7d71fc2682c973cd88a397c35fab60f42f"
+    "snapshot_sha256": "5a339e814ebf56c01a4707c417b3ac3129b39222e2271777f2f02b133ad3a31e",
+    "enrichment_sha256": "b05b59af10cca33f8be4ac331c6bb69af0b3cfcf44a1bfe232203dec3cb0634b"
   },
   "files": {
     "team": "data/team.json",
@@ -13810,10 +13787,10 @@
     "service_orchestration": "data/service_orchestration_v4.json"
   },
   "performance": {
-    "raw_snapshot_ms": 298.3,
-    "enrichment_ms": 406.06,
-    "prediction_ms": 1693.1,
-    "engine_before_snapshot_write_ms": 2397.46
+    "raw_snapshot_ms": 480.97,
+    "enrichment_ms": 490.1,
+    "prediction_ms": 1549.64,
+    "engine_before_snapshot_write_ms": 2520.71
   },
   "meta": {
     "direct_fpl_api_authority": false,

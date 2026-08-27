@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "purpose": "Catalog of V5 domains that must resolve through a shared module or registry instead of duplicated implementation logic.",
   "domains": {
     "official_rules": {"authority": "config/rules/registry.json", "status": "ACTIVE"},
@@ -13,6 +13,7 @@
     "service_wire": {"authority": "config/v5_service_wire_registry.json", "status": "ACTIVE_ALPHA"},
     "payload_contracts": {"authority": "config/v5_payload_contract_registry.json", "status": "ACTIVE_ALPHA"},
     "runtime_materialization": {"authority": "config/v5_runtime_materialization_registry.json", "status": "ACTIVE_ALPHA"},
+    "execution_plane": {"authority": "config/v5_execution_plane_registry.json", "status": "ACTIVE_ALPHA"},
     "service_transport_resilience": {"authority": "config/v5_service_transport_registry.json", "status": "ACTIVE_ALPHA"},
     "finance": {"authority": "src/v5/finance.py + config/v5_finance_registry.json", "status": "ACTIVE"},
     "phase_authority": {"authority": "src/v5/state.py + config/v5_phase_authority_registry.json", "status": "ACTIVE"},

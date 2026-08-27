@@ -188,8 +188,10 @@ def _captain(user: dict[str, Any], *, deep: bool = False) -> dict[str, Any]:
 def _price(user: dict[str, Any]) -> dict[str, Any]:
     section = user.get("price_radar") or {}
     keys = ("element", "name", "price", "direction", "urgency", "progress_pct", "estimated_change_time", "confidence_note", "action")
+
     def compact(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return [{key: row.get(key) for key in keys if row.get(key) is not None} for row in rows]
+
     return {"decision": section.get("decision"), "owned": compact(list(section.get("owned") or [])), "external_watchlist": compact(list(section.get("external_watchlist") or []))}
 
 
@@ -270,12 +272,13 @@ def run() -> dict[str, Any]:
         "chip": user.get("chip"),
         "price_radar": _price(user),
         "watchlist_20": watch_summary["positions"],
+        "report_time_intelligence": user.get("report_time_intelligence") or {},
         "engine": user.get("engine_line"),
         "action_board": user.get("action_board") or [],
     }
     deep = {
         **brief,
-        "payload_type": "DEEP_REVIEW_PAYLOAD_V1",
+        "payload_type": "DEEP_REVIEW_PAYLOAD_V2",
         "watchlist_20": watch_deep["positions"],
         "captaincy": _captain(user, deep=True),
         "starting_xi": user.get("starting_xi"),
@@ -314,6 +317,7 @@ def run() -> dict[str, Any]:
         "owned_count": len(owned),
         "watchlist_count": watch_summary["count"],
         "watchlist_per_position": watch_summary["per_position"],
+        "report_time_intelligence": True,
         "technical_lazy_load": True,
     }
     atomic_json(DATA / "latest.json", latest)

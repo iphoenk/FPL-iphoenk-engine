@@ -111,9 +111,71 @@ def _report_time_user_block(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _action_class(subject: str) -> str:
+    # Legality/active-chip state is an Official/constraint fact. The remaining
+    # action-board rows depend on model ranking, projection, price trajectory or DSS.
+    return "FACT_CONSTRAINT" if subject == "Chip" else "MODEL_DERIVED"
+
+
+def _apply_readiness_and_actionability(
+    user: dict[str, Any],
+    tech: dict[str, Any],
+    latest: dict[str, Any],
+    report_time: dict[str, Any],
+) -> None:
+    framework = tech.get("framework_health") or {}
+    prediction = latest.get("prediction_evaluation") or {}
+    sample_size = int(prediction.get("sample_size") or 0)
+    model_eligible = bool(prediction.get("dynamic_weight_eligible")) and sample_size > 0
+    engine_ready = (
+        str(framework.get("overall") or "") == "GREEN"
+        and framework.get("go_allowed") is True
+        and not list(framework.get("critical_failed") or [])
+    )
+    evidence_ready = str(report_time.get("status") or "") == "READY"
+
+    readiness = {
+        "engine": "ENGINE_READY" if engine_ready else "ENGINE_REVIEW_REQUIRED",
+        "final_report_evidence": "FINAL_REPORT_EVIDENCE_READY" if evidence_ready else "FINAL_REPORT_EVIDENCE_PENDING",
+        "report_time_status": report_time.get("status"),
+        "web_refresh_required": bool(report_time.get("web_refresh_required")),
+        "predictive_validation": {
+            "status": prediction.get("status"),
+            "sample_size": sample_size,
+            "settled_gameweeks": list(prediction.get("settled_gameweeks") or []),
+            "model_derived_actionability": "ACTIVE" if model_eligible else "GATED",
+        },
+    }
+    user["readiness"] = readiness
+
+    for item in user.get("action_board") or []:
+        subject = str(item.get("subject") or "")
+        action_class = _action_class(subject)
+        item["action_class"] = action_class
+        if action_class == "FACT_CONSTRAINT":
+            item["actionability"] = "ACTIONABLE"
+            item["calibration_gate_applies"] = False
+        else:
+            item["actionability"] = "ACTIONABLE" if model_eligible else "ADVISORY_UNTIL_SETTLED_VALIDATION"
+            item["calibration_gate_applies"] = True
+
+    tech["readiness_and_actionability"] = {
+        **readiness,
+        "policy": {
+            "runtime_readiness_is_separate_from_final_report_evidence": True,
+            "fact_constraint_actionability_is_not_blocked_by_model_sample_size": True,
+            "model_derived_actionability_requires_prediction_evaluation_eligibility": True,
+            "existing_decisions_are_annotated_not_rewritten": True,
+        },
+    }
+    tech.setdefault("audit", {})["runtime_and_report_evidence_readiness_are_separate"] = True
+    tech["audit"]["fact_and_model_actionability_are_separate"] = True
+
+
 def run() -> dict[str, Any]:
     user = read_json(DATA / "user_report.json", {})
     tech = read_json(DATA / "technical_appendix.json", {})
+    latest = read_json(DATA / "latest.json", {})
     team = read_json(DATA / "team.json", {})
     lineup = read_json(DATA / "lineup_decision.json", {})
     projections = read_json(DATA / "projections.json", {})
@@ -174,6 +236,7 @@ def run() -> dict[str, Any]:
     tech["audit"]["source_reachability_is_separate_from_structured_data"] = True
     tech["audit"]["report_time_sources_do_not_mutate_dss"] = True
     tech["audit"]["pundit_consensus_is_compared_with_dss"] = True
+    _apply_readiness_and_actionability(user, tech, latest, report_time)
 
     atomic_json(DATA / "user_report.json", user)
     atomic_json(DATA / "technical_appendix.json", tech)

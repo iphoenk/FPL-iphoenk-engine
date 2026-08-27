@@ -49,6 +49,9 @@ LIVE_POLL_SECONDS = max(
     _required_int(ENGINE_CONFIG, "live_poll_seconds", env="FPL_LIVE_POLL_SECONDS", minimum=1),
 )
 LIVE_STREAM_HEARTBEAT_SECONDS = _required_int(ENGINE_CONFIG, "live_stream_heartbeat_seconds", minimum=1)
+NORMAL_STALE_MINUTES = _required_int(ENGINE_CONFIG, "normal_stale_minutes", minimum=1)
+DEADLINE_STALE_MINUTES = _required_int(ENGINE_CONFIG, "deadline_stale_minutes", minimum=1)
+MATCHDAY_STALE_MINUTES = _required_int(ENGINE_CONFIG, "matchday_stale_minutes", minimum=1)
 PROJECTION_HORIZON_GWS = _required_int(ENGINE_CONFIG, "projection_horizon_gws", minimum=1)
 STRATEGIC_HORIZON_GWS = _required_int(ENGINE_CONFIG, "strategic_horizon_gws", minimum=PROJECTION_HORIZON_GWS)
 PURCHASE_RECONSTRUCTION_BASELINE_GW = _required_int(

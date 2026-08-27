@@ -50,6 +50,40 @@ def _normalize_endpoint_health(health: dict, payloads: dict, submitted_gw: int |
         health["event_live"]["status"] = "IDLE"
 
 
+def _projection_baseline_authority(lock: dict, phase: dict) -> dict:
+    """Resolve planning squad authority without allowing a stale draft to leak into later GWs.
+
+    Default rule: GW N projection starts from the most recent Official submitted squad
+    (normally GW N-1). A user planning override is valid only for its explicit target_gw.
+    """
+    planning_gw = int(phase.get("planning_gw") or 0) or None
+    submitted_gw = int(phase.get("submitted_gw") or 0) or None
+    override_requested = bool(lock.get("planning_override_active") or lock.get("wildcard_active"))
+    target_raw = lock.get("target_gw")
+    if override_requested and target_raw is None:
+        raise RuntimeError("FAIL CLOSED: active planning override missing target_gw")
+    target_gw = int(target_raw) if target_raw is not None else None
+    override_applied = bool(
+        override_requested
+        and planning_gw is not None
+        and target_gw == planning_gw
+        and planning_gw != submitted_gw
+    )
+    source = str(lock.get("authority_source") or "USER_PLANNING_OVERRIDE") if override_applied else "OFFICIAL_FPL_PICKS"
+    return {
+        "planning_gw": planning_gw,
+        "baseline_gw": submitted_gw,
+        "default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
+        "default_authority": "OFFICIAL_SUBMITTED",
+        "override_requested": override_requested,
+        "override_target_gw": target_gw,
+        "override_applied": override_applied,
+        "effective_authority": "LOCKED_PRE_DEADLINE" if override_applied else "OFFICIAL_SUBMITTED",
+        "authority_source": source,
+        "stale_override_rejected": bool(override_requested and not override_applied and target_gw != planning_gw),
+    }
+
+
 def run(mode: str = "daily", as_of: str | None = None) -> dict:
     """Acquire the sole official-FPL snapshot and finish price reconstruction."""
     started = perf_counter()
@@ -73,7 +107,8 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
     _normalize_endpoint_health(health, payloads, submitted_gw, scoring_gw, bool(phase.get("is_live_event")))
     teams, positions, by_id = maps(bootstrap)
     lock = read_json(CONFIG / "locked_squad.json", {})
-    use_lock = bool(lock.get("wildcard_active")) and phase["planning_gw"] != submitted_gw
+    projection_baseline = _projection_baseline_authority(lock, phase)
+    use_lock = projection_baseline["override_applied"]
     squad = []
     if use_lock:
         for row in lock.get("players", []):
@@ -106,9 +141,35 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         if selling is None and purchase is not None:
             selling = sell_cost(player["now_cost"], int(purchase))
         ledger.append({"element": player["id"], "name": player["web_name"], "team": teams[player["team"]], "position": positions[player["element_type"]], "purchase_cost": purchase, "now_cost": player["now_cost"], "sell_cost": selling, "purchase_source": source, "ownership": player.get("selected_by_percent"), "status": player.get("status")})
-    out = {"schema": "snapshot.v1", "schema_version": 491, "generated_at": iso_now(), "mode": mode, "as_of": as_of, "checkpoint_context": checkpoint, "phase": phase, "team_id": TEAM_ID, "official": {"bootstrap": bootstrap, **payloads}, "endpoint_health": health, "squad_authority": "LOCKED_PRE_DEADLINE" if use_lock else "OFFICIAL_SUBMITTED", "squad": squad, "team_value_ledger": ledger, "itb_tenths": lock.get("itb_tenths") if use_lock else (payloads.get("entry") or {}).get("last_deadline_bank"), "gw1_reconstruction_requested": need_gw1, "duration_ms": round((perf_counter() - started) * 1000, 2)}
+    out = {
+        "schema": "snapshot.v1",
+        "schema_version": 491,
+        "generated_at": iso_now(),
+        "mode": mode,
+        "as_of": as_of,
+        "checkpoint_context": checkpoint,
+        "phase": phase,
+        "team_id": TEAM_ID,
+        "official": {"bootstrap": bootstrap, **payloads},
+        "endpoint_health": health,
+        "squad_authority": projection_baseline["effective_authority"],
+        "projection_baseline": projection_baseline,
+        "squad": squad,
+        "team_value_ledger": ledger,
+        "itb_tenths": lock.get("itb_tenths") if use_lock else (payloads.get("entry") or {}).get("last_deadline_bank"),
+        "gw1_reconstruction_requested": need_gw1,
+        "duration_ms": round((perf_counter() - started) * 1000, 2),
+    }
     atomic_json(OUTFILE, out)
-    print(json.dumps({"service": "raw_snapshot", "schema": "snapshot.v1", "duration_ms": out["duration_ms"]}))
+    print(json.dumps({
+        "service": "raw_snapshot",
+        "schema": "snapshot.v1",
+        "duration_ms": out["duration_ms"],
+        "planning_gw": projection_baseline["planning_gw"],
+        "baseline_gw": projection_baseline["baseline_gw"],
+        "squad_authority": out["squad_authority"],
+        "override_applied": projection_baseline["override_applied"],
+    }))
     return out
 
 

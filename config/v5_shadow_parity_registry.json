@@ -1,25 +1,18 @@
 {
-  "schema_version": 2,
-  "model_id": "v5_shadow_parity_v2",
+  "schema_version": 3,
+  "model": "v5_shadow_parity_v3",
   "required_cycles_before_production_candidate": 3,
-  "critical_dimensions": ["squad_authority", "ruleset", "legality", "manual_lock", "starting_xi", "captaincy", "chip", "price_owned", "report_governance"],
-  "tolerances": {
-    "starting_xi_symmetric_difference_max": 2,
-    "captain_must_match_when_both_lock": true,
-    "critical_legality_mismatch_allowed": false,
-    "manual_lock_mismatch_allowed": false
-  },
   "acceptance_accounting": {
     "require_post_validation_pass": true,
     "require_same_v5_version": true,
     "require_same_production_baseline": true,
-    "require_unique_cycle_id": true,
-    "failed_or_pending_cycles_do_not_count": true
+    "require_same_release_fingerprint": true,
+    "require_prediction_acceptance_for_production_candidate": true
   },
-  "promotion": {
-    "beta_requires_ci_green": true,
-    "production_candidate_requires_real_shadow_cycles": true,
-    "production_requires_explicit_manual_promotion": true,
-    "auto_promotion_forbidden": true
+  "production_candidate_policy": {
+    "operational_acceptance": "three postvalidated REAL_SHADOW cycles on exact V5 version, production baseline and runtime release fingerprint",
+    "prediction_acceptance": "settled frozen forecasts satisfy config/v5_acceptance_registry.json prediction_calibration_gate",
+    "auto_promotion": false,
+    "explicit_manual_action_required": true
   }
 }

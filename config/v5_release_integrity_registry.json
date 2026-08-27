@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "contract": "v5_runtime_release_fingerprint_v1",
+  "include_roots": ["src/v5", "config/rules", "config/intelligence", "deploy/v5"],
+  "include_files": [
+    "requirements.txt",
+    "config/engine.json",
+    "config/sources/registry.json",
+    "config/sources/report_time_registry.json",
+    "config/v5_acceptance_registry.json",
+    "config/v5_module_registry.json",
+    "config/v5_service_registry.json",
+    "config/v5_shadow_parity_registry.json",
+    "config/v5_source_authority_registry.json",
+    "config/v5_reporting_registry.json",
+    "config/v5_release_integrity_registry.json"
+  ],
+  "exclude_paths": [
+    "config/v5_shadow_trigger.json",
+    "config/v5_on_demand_trigger.json",
+    "config/v5_convergence_manifest.json"
+  ],
+  "governance": {
+    "sorted_path_and_content_digest": true,
+    "trigger_only_changes_do_not_reset_acceptance": true,
+    "documentation_only_changes_do_not_reset_acceptance": true,
+    "runtime_code_config_rules_or_dependency_changes_reset_acceptance": true,
+    "production_baseline_sha_is_validated_separately": true
+  }
+}

@@ -75,6 +75,8 @@ jobs:
         run: pip install -r requirements.txt
       - name: Run bounded microservices without publication
         run: python -m src.runtime_v3.orchestrator --mode daily --stats
+      - name: Validate source capability health contract
+        run: python -m src.engines.source_contract_validate
       - name: Validate decision and report contract
         run: python -m src.engines.production_contract_validate
       - name: Validate full DSS watchlist contract
@@ -141,6 +143,8 @@ jobs:
           FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
           FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
         run: python -m src.runtime_v3.orchestrator --mode daily --stats
+      - name: Validate source capability health contract
+        run: python -m src.engines.source_contract_validate
       - name: Validate production contract
         run: python -m src.engines.production_contract_validate
       - name: Validate full DSS watchlist contract

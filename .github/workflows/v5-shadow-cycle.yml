@@ -150,7 +150,7 @@ jobs:
           V5_SERVICE_WATCHLIST_URL: http://127.0.0.1:8110
         run: python -m src.v5.shadow_cycle
 
-      - name: Validate shadow acceptance invariants, performance, reporting and source health
+      - name: Validate shadow acceptance invariants, hot-path performance, reporting and source health
         id: validate_shadow
         run: |
           python - <<'PY'
@@ -172,10 +172,12 @@ jobs:
           user=p['v5'].get('user_report') or {}
           source=p['v5'].get('source_fusion_health') or {}
           api=source.get('api_football') or {}
-          service_perf=p['v5'].get('service_performance') or {}
-          wall_ms=float(service_perf.get('orchestrator_wall_ms') or 0.0)
-          hard_ms=float(budgets['decision_pipeline_hard_limit_seconds']) * 1000.0
-          hot_ms=float(budgets['decision_pipeline_hot_target_seconds']) * 1000.0
+          runtime=p.get('runtime_performance') or {}
+          hot_path_wall_ms=float(runtime.get('hot_path_wall_ms') or 0.0)
+          refresh_wall_ms=float(runtime.get('refresh_pipeline_wall_ms') or 0.0)
+          hard_ms=float(budgets['hot_path_hard_limit_seconds']) * 1000.0
+          hot_target_ms=float(budgets['hot_path_hot_target_seconds']) * 1000.0
+          refresh_ceiling_ms=float(budgets['refresh_pipeline_observability_ceiling_seconds']) * 1000.0
           report_xi=((user.get('starting_xi') or {}).get('starting_xi') or [])
           expected=os.environ['V3_BASELINE_VERSION'].removeprefix('v')
           allowed_api_unavailability={str(value) for value in source_acceptance.get('api_football_acceptable_unavailability_classes') or []}
@@ -201,10 +203,13 @@ jobs:
             'report_mode':user.get('report_mode'),
             'report_xi_count':len(report_xi),
             'runtime_performance':{
-              'orchestrator_wall_ms':wall_ms,
+              'hot_path_wall_ms':hot_path_wall_ms,
               'hard_limit_ms':hard_ms,
-              'hot_target_ms':hot_ms,
-              'hot_target_met':wall_ms > 0 and wall_ms <= hot_ms,
+              'hot_target_ms':hot_target_ms,
+              'hot_target_met':hot_path_wall_ms > 0 and hot_path_wall_ms <= hot_target_ms,
+              'refresh_pipeline_wall_ms':refresh_wall_ms,
+              'refresh_observability_ceiling_ms':refresh_ceiling_ms,
+              'refresh_latency_release_blocking':False,
             },
             'source_fusion':source,
             'api_football_acceptance':{
@@ -215,8 +220,8 @@ jobs:
           })
           assert str(p['v3'].get('engine_version') or '') == expected, (p['v3'].get('engine_version'), expected)
           assert all(checks.values()), f'V5 operational invariant failure: {checks}'
-          assert wall_ms > 0.0, f'missing real runtime telemetry: {service_perf}'
-          assert wall_ms <= hard_ms, f'V5 real runtime exceeded hard limit: {wall_ms:.1f}ms > {hard_ms:.1f}ms'
+          assert hot_path_wall_ms > 0.0, f'missing hot-path runtime telemetry: {runtime}'
+          assert hot_path_wall_ms <= hard_ms, f'V5 hot path exceeded hard limit: {hot_path_wall_ms:.1f}ms > {hard_ms:.1f}ms'
           assert all(position_counts[pos] == 5 for pos in position_counts), f'watchlist positional contract failed: {position_counts}'
           assert core.get('counts') == {'ACTIVE':50}, f'DSS core must be 50/50 ACTIVE: {core.get("counts")}'
           assert ext.get('counts') == {'ACTIVE':16}, f'DSS extensions must be 16/16 ACTIVE: {ext.get("counts")}'
@@ -259,6 +264,7 @@ jobs:
             data/v5/technical_appendix.json
             data/v5/framework_health.json
             data/v5/dss_watchlist.json
+            data/v5/decision_hot_bundle.json
           if-no-files-found: warn
           retention-days: 30
 

@@ -59,14 +59,15 @@
     "ephemeral_internal_snapshot_is_not_published": true,
     "weather_enrichment_lives_inside_source_layer_not_new_microservice": true,
     "weather_is_observational_and_advisory_only": true,
-    "weather_never_directly_mutates_xpts_or_decisions": true
+    "weather_never_directly_mutates_xpts_or_decisions": true,
+    "normalized_player_features_are_decision_neutral_until_model_opt_in": true
   },
   "runtime": {
     "max_parallel_services": 5,
     "service_timeout_seconds": 180,
     "http_cache_ttl_seconds": 180,
     "performance_budget_seconds": 45,
-    "performance_target": "preserve sub-45-second runtime while adding bounded fail-soft weather enrichment and transparent report metrics without increasing service count"
+    "performance_target": "legacy full-refresh ceiling; profile-specific runtime SLO is owned by config/runtime/performance_slo.json"
   },
   "services": {
     "official_snapshot": {"stage":"base-source","depends_on":[],"critical":true,"isolated":true,"inputs":[],"commands":[{"module":"src.engines.official_snapshot_service","args":[]}],"artifacts":["official_snapshot.json","health.json"],"ephemeral_artifacts":["official_snapshot.json"],"latest_keys":[],"latest_file_keys":[]},
@@ -74,7 +75,7 @@
     "team_state": {"stage":"base-domain","depends_on":["official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json"],"commands":[{"module":"src.engines.team_state_service","args":[]}],"artifacts":["team.json","chips.json"],"latest_keys":[],"latest_file_keys":[]},
     "market_state": {"stage":"base-domain","depends_on":["official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","price_cache.json"],"commands":[{"module":"src.engines.market_state_service","args":[]}],"artifacts":["price_cache.json","prices.json","universe.json"],"latest_keys":[],"latest_file_keys":[]},
     "live_state": {"stage":"base-domain","depends_on":["official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json"],"commands":[{"module":"src.engines.live_state_service","args":[]}],"artifacts":["live.json"],"latest_keys":[],"latest_file_keys":[]},
-    "advanced_stats": {"stage":"base-domain","depends_on":["official_snapshot"],"critical":true,"isolated":false,"inputs":[],"commands":[{"module":"src.engines.advanced_stats_service","args":["{stats}","{deep_stats}"]}],"artifacts":["advanced_stats_sync.json"],"latest_keys":[],"latest_file_keys":[]},
+    "advanced_stats": {"stage":"base-domain","depends_on":["official_snapshot"],"critical":true,"isolated":false,"inputs":[],"commands":[{"module":"src.engines.advanced_stats_service","args":["{stats}","{deep_stats}"]},{"module":"src.engines.player_features","args":[]}],"artifacts":["advanced_stats_sync.json","player_features.json"],"latest_keys":[],"latest_file_keys":[]},
     "base_snapshot": {"stage":"base-fan-in","depends_on":["official_snapshot","team_state","market_state","live_state","advanced_stats"],"critical":true,"isolated":false,"inputs":[],"commands":[{"module":"src.engines.base_snapshot_service","args":["{mode}"]}],"artifacts":["latest.json","native.json","health.json","team.json","chips.json","live.json","prices.json","universe.json","advanced_stats_sync.json"],"latest_keys":[],"latest_file_keys":[]},
     "historical_prior": {"stage":"parallel","depends_on":["base_snapshot","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","latest.json","stats/vaastav_previous_season.json"],"commands":[{"module":"src.engines.historical_prior_runtime","args":[]}],"artifacts":["prior_season.json","stats/vaastav_previous_season.json"],"latest_keys":["historical_prior_summary"],"latest_file_keys":["prior_season","vaastav_previous_season"]},
     "source_layer": {"stage":"parallel","depends_on":["base_snapshot","historical_prior","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","latest.json","health.json","challenger_observations.json","fixture_weather.json","stats/shots_current.json","stats/playermatchstats_current.json","stats/vaastav_previous_season.json"],"commands":[{"module":"src.engines.source_layer","args":[]}],"artifacts":["source_health.json","source_registry_runtime.json","challenger_observations.json","fixture_weather.json"],"latest_keys":["source_layer_summary"],"latest_file_keys":["source_health","source_registry_runtime","challenger_observations","fixture_weather"]},

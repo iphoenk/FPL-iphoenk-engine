@@ -21,6 +21,7 @@ jobs:
     env:
       PYTHONPATH: ${{ github.workspace }}
       FPL_AUTH_MODE: disabled
+      RUNTIME_BRANCH: runtime-data
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,6 +38,26 @@ jobs:
         run: python -m src.engines.architecture_contract_validate
       - name: Full unit and regression suite
         run: python -m pytest -q
+      - name: Hydrate operational LKG for release acceptance
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}" || true
+          python - <<'PY' > "$RUNNER_TEMP/hydrate-paths.txt"
+          import json
+          cfg=json.load(open('config/runtime/runtime_publish_registry.json'))
+          for path in cfg.get('hydrate_paths', []):
+              print(path)
+          PY
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            if git cat-file -e "origin/${RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
+              mkdir -p "data/$(dirname "$file")"
+              git show "origin/${RUNTIME_BRANCH}:data/${file}" > "data/${file}"
+              echo "Hydrated data/${file}"
+            fi
+          done < "$RUNNER_TEMP/hydrate-paths.txt"
       - name: Composite FULL + FAST release acceptance
         if: github.event_name == 'pull_request'
         run: python -m src.runtime_v3.release_acceptance

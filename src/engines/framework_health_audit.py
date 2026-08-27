@@ -148,7 +148,7 @@ def _probe_freshness(max_age_minutes: int = 90) -> tuple[bool, dict]:
 
 
 def _probe_advanced() -> tuple[bool, dict]:
-    paths = ["data/stats/shots_gw1.json", "data/stats/playermatchstats_gw1.json"]
+    paths = ["data/stats/shots_current.json", "data/stats/playermatchstats_current.json"]
     states = {p: _json_nonempty(p) for p in paths}
     return all(states.values()), states
 

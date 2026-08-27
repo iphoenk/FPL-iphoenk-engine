@@ -1,40 +1,36 @@
 {
-  "version": "5.0.0-beta.3",
-  "track": "V5_UNIFIED_DECISION_ENGINE",
-  "production_baseline": {
-    "version": "v3.18.1",
-    "main_sha": "02d0ce597e111e9b7d464f88479d78d462b616eb",
-    "schema_version": 47
+  "engine": "FPL iphoenk Engine",
+  "v5_version": "5.0.0-beta.4",
+  "state": "ADVANCED_BETA4_IMPLEMENTATION_PUBLISHED_ACCEPTANCE_PENDING",
+  "production_authority": {
+    "version": "v3.20.0",
+    "main_sha": "15e75599045f901958753c2bcb275fceacc94d7c",
+    "schema_version": 48
   },
-  "state": "PRODUCTION_CANDIDATE_ELIGIBLE_MANUAL_PROMOTION_PENDING",
-  "completed": [
-    "bounded-context microservice architecture",
-    "V3 truth/rules/phase/finance convergence",
-    "V4 adopted prediction intelligence convergence",
-    "50 core plus 16 extension DSS strict postflight",
-    "15 owned plus 20 external watchlist contract",
-    "postvalidated real-shadow acceptance accounting",
-    "version-and-baseline-scoped acceptance counting",
-    "isolated on-demand full team reporting",
-    "API-Football fail-neutral provider restriction handling",
-    "V3.18.1 source reachability versus capability-health contract adoption",
-    "V3.18.1 LiveFPL and OneFPL structured-access registry contract adoption",
-    "three successful beta.3 postvalidated real-shadow cycles on V3.18.1"
-  ],
+  "advanced_beta4": {
+    "runtime_release_fingerprint": true,
+    "release_attestation": true,
+    "truthful_feature_bundle": true,
+    "probabilistic_prediction_overlay": true,
+    "temporal_backtest_guard": true,
+    "prediction_settlement": true,
+    "frozen_baseline_non_regression": true,
+    "correlated_monte_carlo_shadow": true,
+    "isolated_team_review": true,
+    "v3_v4_capability_parity_registry": true
+  },
   "acceptance": {
-    "unified_gate": "PASS",
-    "validated_real_shadow_cycles_required": 3,
-    "validated_real_shadow_cycles_current_baseline": 3,
-    "remaining_validated_real_shadow_cycles": 0,
-    "production_candidate_eligible": true,
-    "old_beta2_cycles_count": false,
-    "reason_old_cycles_do_not_count": "The accepted production baseline changed from V3.17.1 to V3.18.1, so old cycles are baseline-mismatched by policy."
+    "fresh_postvalidated_real_shadow_cycles": 0,
+    "required_postvalidated_real_shadow_cycles": 3,
+    "prediction_acceptance": "BLOCKED_PENDING_SETTLED_EVIDENCE_AND_FROZEN_BASELINE",
+    "production_candidate_eligible": false,
+    "production_promotion_allowed": false,
+    "manual_production_promotion_required": true
   },
-  "production": {
-    "candidate_eligible": true,
-    "auto_promotion": false,
-    "manual_promotion_required": true,
-    "current_authority": "V3.18.1",
-    "promotion_state": "LOCKED_PENDING_EXPLICIT_MANUAL_ACTION"
-  }
+  "notes": [
+    "Advanced prediction remains a shadow overlay and does not replace base authoritative xPts during beta.4.",
+    "Correlated simulation is implemented for shadow evidence and is not decision authority until calibrated.",
+    "Team review is isolated and read-only; it cannot mutate decision authority.",
+    "Production remains V3.20.0 until all operational and empirical prediction gates pass and a separate explicit manual promotion occurs."
+  ]
 }

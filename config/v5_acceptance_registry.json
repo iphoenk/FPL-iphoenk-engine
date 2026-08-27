@@ -1,5 +1,5 @@
 {
-  "version": 17,
+  "version": 19,
   "module_policy": {
     "minimum_registered_modules": 42,
     "required_truth_modules": ["rules", "source_authority", "public_api", "official_authenticated", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
@@ -8,7 +8,7 @@
     "required_framework_modules": ["gate0", "enhancement_layers", "framework_health"],
     "required_presentation_modules": ["reporting"],
     "required_governance_modules": ["performance", "persistence", "degraded_mode", "cluster_health", "runner", "service_runtime"],
-    "active_statuses": ["ACTIVE", "ACTIVE_ALPHA"]
+    "active_statuses": ["ACTIVE", "ACTIVE_ALPHA", "ACTIVE_BETA"]
   },
   "service_policy": {
     "mandatory": true,
@@ -23,8 +23,8 @@
     "require_deployment_manifest": "deploy/v5/docker-compose.yml"
   },
   "convergence": {
-    "production_baseline": "v3.18.1",
-    "production_main_sha": "02d0ce597e111e9b7d464f88479d78d462b616eb",
+    "production_baseline": "v3.20.0",
+    "production_main_sha": "15e75599045f901958753c2bcb275fceacc94d7c",
     "configuration_ownership_required": true,
     "p0_capabilities_required": ["P0-1_prediction_calibration_backtest", "P0-2_xmins_role_v2", "P0-3_team_strength_fixture_probability", "P0-4_multi_horizon_package_optimizer", "P0-5_external_challenger_scorecard"],
     "decision_bridge_only_forbidden": true,
@@ -52,8 +52,19 @@
     "source_reachability_separate_from_capability_health_required": true,
     "stale_observations_never_silently_current_required": true,
     "challenger_observation_contract_required": "challenger_observation_v2",
-    "onefpl_parser_contract_required": "onefpl-price-v2",
-    "livefpl_parser_contract_required": "livefpl-price-v1",
+    "source_network_locations_registry_owned_required": true,
+    "source_ingestion_timeouts_registry_owned_required": true,
+    "active_artifact_aliases_gameweek_free_required": true,
+    "onefpl_runtime_collector_disabled_required": true,
+    "onefpl_report_time_delegation_required": "REPORT_TIME_SOURCE_REGISTRY_V1",
+    "understat_direct_scrape_disabled_required": true,
+    "runtime_release_fingerprint_required": true,
+    "release_attestation_required": true,
+    "runtime_feature_consumption_evidence_required": true,
+    "temporal_backtest_required": true,
+    "correlated_simulation_shadow_required": true,
+    "team_review_isolated_context_required": true,
+    "v3_v4_capability_parity_registry_required": true,
     "owned_target": 15,
     "watchlist_target_total": 20,
     "watchlist_target_per_position": 5,
@@ -67,13 +78,25 @@
     "critical_dss_partial_allowed": false,
     "critical_enhancement_partial_allowed": false
   },
+  "prediction_calibration_gate": {
+    "required_for_production_promotion": true,
+    "minimum_settled_gameweeks": 4,
+    "minimum_player_gw_samples": 1000,
+    "minimum_starter_samples": 750,
+    "minimum_clean_sheet_samples": 300,
+    "require_temporal_guard_pass": true,
+    "require_non_regression_vs_frozen_baseline": true,
+    "required_metrics": ["points_mae", "xmins_mae", "starter_brier", "clean_sheet_brier", "spearman"]
+  },
   "production": {
-    "promotion_must_remain_locked_during_beta": true
+    "promotion_must_remain_locked_during_beta": true,
+    "operational_and_prediction_acceptance_both_required": true
   },
   "architecture": {
     "require_entrypoint": true,
     "require_config": true,
     "require_adjustment_surface": true,
-    "require_microservices": true
+    "require_microservices": true,
+    "maximum_services_without_explicit_new_bounded_context": 11
   }
 }

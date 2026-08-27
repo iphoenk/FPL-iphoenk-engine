@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_isolated_team_review_v1",
+  "bounded_context": "team_review",
+  "read_only": true,
+  "may_mutate_decision": false,
+  "may_override_truth": false,
+  "publish_to_user_report": false,
+  "inputs": ["truth.team", "prediction.players", "decision.lineup", "decision.packages", "watchlist"],
+  "outputs": ["squad_risk_summary", "horizon_exposure", "watchlist_pressure"],
+  "governance": {
+    "isolation_required": true,
+    "advisory_only_until_explicit_adoption": true
+  }
+}

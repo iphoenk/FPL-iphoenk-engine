@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_advanced_prediction_overlay_v1",
+  "mode": "SHADOW_OVERLAY",
+  "authoritative_xpts_replacement": false,
+  "xmins_distribution": {
+    "starter_minutes_floor": 45,
+    "starter_minutes_ceiling": 90,
+    "bench_minutes_floor": 1,
+    "bench_minutes_ceiling": 35
+  },
+  "sustainability": {
+    "small_sample_minutes": 450,
+    "shrinkage_floor": 0.78,
+    "shrinkage_ceiling": 1.08
+  },
+  "uncertainty": {
+    "model_share_of_variance": 0.4,
+    "minimum_aleatoric_std": 0.35
+  },
+  "governance": {
+    "feature_status_is_consumption_based": true,
+    "missing_evidence_is_unavailable_not_zero": true,
+    "defcon_requires_empirical_evidence": true,
+    "promotion_requires_settled_temporal_backtest": true
+  }
+}

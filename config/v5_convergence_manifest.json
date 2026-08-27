@@ -1,17 +1,18 @@
 {
   "engine": "FPL iphoenk Engine",
-  "version": "5.0.0-beta.3",
+  "version": "5.0.0-beta.4",
   "codename": "Unified Decision Engine",
-  "track": "microservices_convergence_beta",
+  "track": "advanced_microservices_convergence_beta",
   "baselines": {
-    "production_truth": "v3.18.1",
-    "production_main_sha": "02d0ce597e111e9b7d464f88479d78d462b616eb",
-    "prediction_intelligence": "v3.18.1-full-dss-plus-v4-research"
+    "production_truth": "v3.20.0",
+    "production_main_sha": "15e75599045f901958753c2bcb275fceacc94d7c",
+    "production_schema_version": 48,
+    "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
   },
   "operating_model": {
     "v3": "production and scheduled-task runtime until V5 acceptance cutover",
     "v4": "prediction R&D and calibration reference only",
-    "v5": "beta bounded-context microservices convergence and shadow-run candidate"
+    "v5": "advanced beta bounded-context microservices convergence and shadow-run candidate"
   },
   "single_authorities": {
     "rules": "truth service -> config/rules",
@@ -25,6 +26,9 @@
     "prediction_evaluation": "evaluation service",
     "shadow_parity": "evaluation service",
     "shadow_acceptance_accounting": "postvalidation finalizer -> config/v5_shadow_parity_registry.json",
+    "release_fingerprint": "governance contract -> config/v5_release_integrity_registry.json",
+    "release_attestation": "governance evidence -> config/v5_release_attestation_registry.json",
+    "feature_consumption": "prediction service -> FeatureBundle consumption ledger",
     "package_optimizer": "decision service -> config/intelligence/package_optimizer.json",
     "package_guardrails": "decision service -> config/intelligence/package_optimizer.json",
     "external_watchlist": "watchlist service",
@@ -35,59 +39,44 @@
     "orchestration": "orchestrator service"
   },
   "microservices": ["ingestion", "truth", "price", "prediction", "evaluation", "decision", "governance", "watchlist", "reporting", "snapshot", "orchestrator"],
-  "planes": {
-    "truth": ["Official FPL authority", "authenticated read-only overlay", "source authority registry", "rules registry", "phase-aware squad state", "finance/sell value", "live scoring"],
-    "intelligence": ["price trajectory", "historical priors", "prediction quality guard", "xMins v3", "team strength", "xPts and uncertainty", "tactical/system-fit proxy evidence", "full DSS core enrichment"],
-    "evaluation": ["point-in-time leakage guard", "freshness guard", "evidence-fusion reliability", "point-in-time ledger", "prediction calibration", "external challenger scorecard", "V3/V5 shadow parity", "learning loop"],
-    "decision": ["DSS core 50", "DSS extensions 16", "multi-horizon package optimizer", "early-season change cap", "team-cluster penalty", "strict all-DSS postflight", "lineup and captaincy governance"],
-    "watchlist": ["full DSS external universe screening", "evidence-aware admission", "exactly 5 per position / 20 total"],
-    "governance": ["Gate0", "enhancement layers 8", "framework health", "postvalidated shadow acceptance accounting", "final GO/HOLD/WAIT/REJECT governance"],
-    "presentation": ["decision-first user report", "technical appendix", "delta-first reporting", "forced-full on-demand snapshot"],
-    "persistence": ["runtime artifacts", "source-fusion artifact", "history", "state hydration"]
-  },
-  "p0_parity": {
-    "P0-1_prediction_calibration_backtest": "evaluation",
-    "P0-2_xmins_role_v2": "prediction",
-    "P0-3_team_strength_fixture_probability": "prediction",
-    "P0-4_multi_horizon_package_optimizer": "decision",
-    "P0-5_external_challenger_scorecard": "evaluation"
+  "advanced_v5": {
+    "truthful_feature_use_required": true,
+    "prediction_promotion_requires_settled_evidence": true,
+    "release_fingerprint_required": true,
+    "release_attestation_required": true,
+    "temporal_backtest_required": true,
+    "correlated_simulation_shadow_only": true,
+    "v3_v4_capability_parity_audit_required": true,
+    "no_additional_microservice_without_new_bounded_context": true,
+    "team_review_isolated_context_required": true
   },
   "acceptance": {
-    "no_regression_vs_v3_18_1_truth": true,
-    "no_regression_vs_v3_18_1_source_registry": true,
-    "no_regression_vs_v3_18_1_configuration_ownership": true,
-    "no_regression_vs_v3_18_1_dss_operationalization": true,
-    "no_regression_vs_v3_18_1_package_guardrails": true,
-    "no_regression_vs_v3_18_1_strict_postflight": true,
-    "no_regression_vs_v3_18_1_watchlist": true,
-    "no_regression_vs_v3_18_1_reporting": true,
+    "no_regression_vs_v3_20_0_truth": true,
+    "no_regression_vs_v3_20_0_configuration_ownership": true,
     "no_regression_vs_v4_research_where_adopted": true,
     "no_duplicate_authority": true,
     "official_fpl_only_native_external_authority": true,
     "missing_enrichment_never_fabricated": true,
-    "source_reachability_separate_from_capability_health": true,
-    "stale_observations_never_silently_current": true,
-    "challenger_observation_contract_v2": true,
-    "onefpl_structured_access_contract_required": true,
-    "rules_registry_required": true,
     "prediction_provenance_required": true,
     "decision_trace_required": true,
     "calibration_required_before_production_promotion": true,
+    "runtime_release_fingerprint_required": true,
+    "release_attestation_required": true,
     "all_business_capabilities_owned_by_exactly_one_service": true,
     "baseline_sha_must_match_main": true,
     "all_dss_core_active_required": true,
     "all_dss_extensions_active_required": true,
-    "no_critical_enhancement_partial": true,
-    "orchestrator_artifacts_must_be_persistence_registered": true,
     "real_shadow_cycle_counts_only_after_postvalidation": true,
     "on_demand_reporting_uses_current_production_authority": true
   },
   "production_promotion": {
     "allowed": false,
     "beta": true,
-    "production_candidate": true,
-    "validated_real_shadow_cycles": 3,
+    "production_candidate": false,
+    "validated_real_shadow_cycles": 0,
     "required_real_shadow_cycles": 3,
-    "reason": "V5.0.0-beta.3 completed three successful postvalidated real-shadow cycles on the exact V3.18.1 production baseline. It is production-candidate eligible, but production remains V3.18.1 until an explicit manual promotion action is approved and executed."
+    "operational_acceptance_complete": false,
+    "prediction_acceptance_complete": false,
+    "reason": "V5.0.0-beta.4 is rebaselined to exact V3.20.0 production closeout SHA and adds runtime fingerprint, release attestation, truthful feature-consumption evidence, temporal backtesting and empirical prediction-promotion gates. Fresh exact-fingerprint cycles and settled non-regression evidence are required."
   }
 }

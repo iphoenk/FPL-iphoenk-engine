@@ -1,6 +1,6 @@
 {
   "framework_schema": 8,
-  "generated_at": "2026-08-27T00:37:26.305780+00:00",
+  "generated_at": "2026-08-27T04:06:42.855650+00:00",
   "auditor": "v5-microservice-governance-v4",
   "overall": "GREEN",
   "decision_engine": "HEALTHY",
@@ -1368,6 +1368,9 @@
     "price_value": [
       "prediction"
     ],
+    "probabilistic_return_overlay": [
+      "prediction"
+    ],
     "projection_uncertainty": [
       "prediction"
     ],
@@ -1405,6 +1408,12 @@
       "prediction"
     ],
     "team_defensive_strength": [
+      "prediction"
+    ],
+    "truthful_feature_bundle": [
+      "prediction"
+    ],
+    "uncertainty_decomposition": [
       "prediction"
     ],
     "xmins": [
@@ -1491,6 +1500,9 @@
     "prediction_evaluation": [
       "evaluation"
     ],
+    "prediction_settlement": [
+      "evaluation"
+    ],
     "reliability_overlay": [
       "evaluation"
     ],
@@ -1498,6 +1510,9 @@
       "evaluation"
     ],
     "source_health": [
+      "evaluation"
+    ],
+    "temporal_backtest": [
       "evaluation"
     ],
     "uncertainty_robustness": [

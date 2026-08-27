@@ -4055,6 +4055,9 @@
       "price_value": [
         "prediction"
       ],
+      "probabilistic_return_overlay": [
+        "prediction"
+      ],
       "projection_uncertainty": [
         "prediction"
       ],
@@ -4092,6 +4095,12 @@
         "prediction"
       ],
       "team_defensive_strength": [
+        "prediction"
+      ],
+      "truthful_feature_bundle": [
+        "prediction"
+      ],
+      "uncertainty_decomposition": [
         "prediction"
       ],
       "xmins": [
@@ -4172,6 +4181,9 @@
       "prediction_evaluation": [
         "evaluation"
       ],
+      "prediction_settlement": [
+        "evaluation"
+      ],
       "reliability_overlay": [
         "evaluation"
       ],
@@ -4179,6 +4191,9 @@
         "evaluation"
       ],
       "source_health": [
+        "evaluation"
+      ],
+      "temporal_backtest": [
         "evaluation"
       ]
     },
@@ -4201,7 +4216,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 32 active price alerts"
+      "market timing context contains 24 active price alerts"
     ],
     "evidence": [
       {
@@ -4303,7 +4318,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 32
+    "alert_count": 24
   },
   "governance": {
     "candidate_generation_only": true,
@@ -4328,9 +4343,11 @@
       "leakage_guard",
       "learning_loop",
       "prediction_evaluation",
+      "prediction_settlement",
       "reliability_overlay",
       "shadow_parity",
-      "source_health"
+      "source_health",
+      "temporal_backtest"
     ],
     "gate0_preflight_model": "v5_gate0_registry_driven_v3",
     "strict_postflight_requires_all_dss_active": true,

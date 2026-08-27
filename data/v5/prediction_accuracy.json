@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-27T00:37:25.595180+00:00",
-  "model": "prediction_evaluation_v1",
-  "freeze_policy": "last_pre_deadline_snapshot",
+  "generated_at": "2026-08-27T04:06:41.945654+00:00",
+  "model": "v5_prediction_evaluation_v2",
+  "freeze_policy": "LATEST_PRE_DEADLINE_FORECAST_FROZEN_FOR_SETTLEMENT",
   "overall": {
     "sample_size": 0,
     "status": "NO_SETTLED_SAMPLE"
@@ -12,9 +12,21 @@
     2
   ],
   "dynamic_weight_eligible": false,
+  "temporal_guard": {
+    "status": "PASS",
+    "checked_frozen_gameweeks": 0,
+    "violations": [],
+    "time_travel_detected": false
+  },
+  "baseline_comparison": {
+    "status": "NO_FROZEN_BASELINE",
+    "non_regression_pass": false,
+    "checks": {}
+  },
   "governance": {
     "accuracy_claim_requires_settled_sample": true,
     "pre_deadline_forecast_is_frozen_before_scoring": true,
-    "post_deadline_information_cannot_rewrite_frozen_forecast": true
+    "post_deadline_information_cannot_rewrite_frozen_forecast": true,
+    "temporal_guard_required": true
   }
 }

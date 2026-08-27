@@ -1,37 +1,44 @@
 {
-  "schema_version": 1,
-  "model": "v5_postvalidated_shadow_acceptance_v1",
-  "generated_at": "2026-08-27T00:37:27.538254+00:00",
-  "v5_version": "5.0.0-beta.3",
-  "production_baseline_version": "v3.18.1",
-  "production_main_sha": "02d0ce597e111e9b7d464f88479d78d462b616eb",
+  "schema_version": 3,
+  "model": "v5_postvalidated_shadow_acceptance_v3",
+  "generated_at": "2026-08-27T04:06:44.497359+00:00",
+  "v5_version": "5.0.0-beta.4",
+  "release_fingerprint": "sha256:09e22fd578a3afbf12b27826bd82479d6262911c8a0ee4991f7f28a0f88298b2",
+  "production_baseline_version": "v3.20.0",
+  "production_main_sha": "15e75599045f901958753c2bcb275fceacc94d7c",
   "required_validated_cycles": 3,
-  "validated_successful_cycles": 3,
-  "remaining_validated_cycles": 0,
-  "production_candidate_eligible": true,
+  "validated_successful_cycles": 1,
+  "remaining_validated_cycles": 2,
+  "operational_candidate_eligible": false,
+  "prediction_candidate_eligible": false,
+  "prediction_acceptance": {
+    "eligible": false,
+    "status": "INSUFFICIENT_OR_UNPROVEN_SETTLED_EVIDENCE",
+    "path": "data/v5/prediction_accuracy.json",
+    "checks": {
+      "settled_gameweeks": false,
+      "player_gw_samples": false,
+      "starter_samples": false,
+      "clean_sheet_samples": false,
+      "required_metrics_present": false,
+      "temporal_guard_pass": true,
+      "frozen_baseline_non_regression": false
+    },
+    "settled_gameweeks": 0,
+    "sample_size": 0,
+    "confidence": "LOW"
+  },
+  "production_candidate_eligible": false,
   "production_candidate_auto_promoted": false,
   "production_promotion_requires_explicit_manual_action": true,
   "validated_cycles": [
     {
-      "cycle_id": "20260827T003226.049228+0000",
-      "generated_at": "2026-08-27T00:32:26.049228+00:00",
-      "validated_at": "2026-08-27T00:32:26.169562+00:00",
-      "v3_engine_version": "3.18.1",
-      "v5_engine_version": "5.0.0-beta.3"
-    },
-    {
-      "cycle_id": "20260827T003457.323605+0000",
-      "generated_at": "2026-08-27T00:34:57.323605+00:00",
-      "validated_at": "2026-08-27T00:34:57.468903+00:00",
-      "v3_engine_version": "3.18.1",
-      "v5_engine_version": "5.0.0-beta.3"
-    },
-    {
-      "cycle_id": "20260827T003727.412318+0000",
-      "generated_at": "2026-08-27T00:37:27.412318+00:00",
-      "validated_at": "2026-08-27T00:37:27.538254+00:00",
-      "v3_engine_version": "3.18.1",
-      "v5_engine_version": "5.0.0-beta.3"
+      "cycle_id": "20260827T040644.341701+0000",
+      "generated_at": "2026-08-27T04:06:44.341701+00:00",
+      "validated_at": "2026-08-27T04:06:44.497359+00:00",
+      "v3_engine_version": "3.20.0",
+      "v5_engine_version": "5.0.0-beta.4",
+      "release_fingerprint": "sha256:09e22fd578a3afbf12b27826bd82479d6262911c8a0ee4991f7f28a0f88298b2"
     }
   ]
 }

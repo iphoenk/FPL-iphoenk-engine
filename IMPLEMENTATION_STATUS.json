@@ -21,13 +21,13 @@
     "correlated_monte_carlo_shadow": true,
     "isolated_team_review": true,
     "v3_v4_capability_parity_registry": true,
-    "official_historical_submission_reconciliation": "IMPLEMENTED_PENDING_CI"
+    "official_historical_submission_reconciliation": "ADOPTED"
   },
   "production_parity": {
     "explicit_rec_coverage": true,
-    "rec36_historical_submitted_team": "IMPLEMENTED_PENDING_CI",
+    "rec36_historical_submitted_team": "ADOPTED",
     "open_blockers": ["REC-02", "REC-05", "REC-22", "REC-38"],
-    "next_execution_order": ["REC-36_CI", "REC-02", "REC-05", "REC-22", "REC-38_REBASELINE"]
+    "next_execution_order": ["REC-02", "REC-05", "REC-22", "REC-38_REBASELINE"]
   },
   "acceptance": {
     "fresh_exact_fingerprint_real_shadow_cycles": 0,
@@ -41,7 +41,7 @@
   "notes": [
     "V3.22.0 remains production authority and has advanced through REC-38 without a schema-version change.",
     "The V5 adopted production baseline remains intentionally pinned to the earlier exact V3.22.0 SHA until open parity blockers are closed.",
-    "REC-36 historical submitted-team reconciliation is decision-neutral and never overrides current pre-deadline user/authenticated authority.",
+    "REC-36 historical submitted-team reconciliation is adopted, decision-neutral, and never overrides current pre-deadline user/authenticated authority.",
     "Advanced prediction and correlated simulation remain shadow-only until empirical calibration and non-regression gates pass."
   ]
 }

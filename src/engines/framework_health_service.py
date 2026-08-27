@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 
 from src.engines import framework_health_audit as audit_engine
+from src.settings import NORMAL_STALE_MINUTES
 
 
 def activate_registry_contract() -> dict[str, int]:
-    """Make registry-declared counts authoritative for the legacy audit core."""
+    """Make registry-declared counts authoritative for the compatibility audit core."""
     expected: dict[str, int] = {}
     for name, path in audit_engine.REGISTRIES.items():
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -16,10 +17,27 @@ def activate_registry_contract() -> dict[str, int]:
         count = int(value)
         if count <= 0:
             raise RuntimeError(f"registry {name} expected_count must be positive")
+        rows_key = "modules" if name in {"dss_core", "dss_extensions"} else "layers" if name == "enhancements" else "checks"
+        declared = len(payload.get(rows_key) or [])
+        if declared != count:
+            raise RuntimeError(f"registry {name} declared {declared} rows but expected_count={count}")
         expected[name] = count
-    # Compatibility injection only. Active production truth is the registry.
+    # framework_health_audit retains old literals only as an inactive compatibility fallback.
+    # The active service always injects registry truth before invoking the audit core.
     audit_engine.EXPECTED_COUNTS = expected
     return expected
+
+
+def activate_freshness_contract() -> int:
+    """Make engine-config freshness the active default used by the compatibility audit core."""
+    configured = int(NORMAL_STALE_MINUTES)
+    original = audit_engine._probe_freshness
+
+    def configured_probe(max_age_minutes: int | None = None):
+        return original(configured if max_age_minutes is None else int(max_age_minutes))
+
+    audit_engine._probe_freshness = configured_probe
+    return configured
 
 
 def _publish_gate0_registry_contract(expected: dict[str, int]) -> None:
@@ -40,6 +58,7 @@ def _publish_gate0_registry_contract(expected: dict[str, int]) -> None:
 
 def run() -> None:
     expected = activate_registry_contract()
+    activate_freshness_contract()
     audit_engine.run()
     _publish_gate0_registry_contract(expected)
 

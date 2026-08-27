@@ -1,4 +1,4 @@
-name: FPL iphoenk V4.9.4.2 architecture-hygiene gate
+name: FPL iphoenk V4.9.4.3 reconciliation-truth runtime gate
 
 on:
   workflow_dispatch:
@@ -45,7 +45,7 @@ jobs:
         run: python -m pytest -q
       - name: Run 11 process-isolated V4 services
         run: python -m src.services.orchestrator daily --stats --deep-stats
-      - name: Centralized V4.9.4.2 core quality gate
+      - name: Centralized V4.9.4.3 core quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise core acceptance summary
         run: |
@@ -62,6 +62,7 @@ jobs:
           lifecycle=json.load(open('data/validation/lifecycle_v4.json'))
           scorecard=json.load(open('data/gw_scorecard_v4.json'))
           effective=overlay['effective_plan']
+          plan_truth=h.get('gate0', {}).get('plan_authority_validation', {})
           print({
               'pipeline_health': h['pipeline_health'],
               'prediction_health': h['prediction_health'],
@@ -72,12 +73,15 @@ jobs:
               'recommendation_allowed': h['recommendation_allowed'],
               'go_allowed': h['go_allowed'],
               'gate0': h['gate0']['counts'],
+              'engine_plan_legal': plan_truth.get('engine_plan', {}).get('legal'),
+              'effective_plan_legal': plan_truth.get('effective_plan', {}).get('legal'),
               'budget_tenths': w['budget_tenths'],
               'price_basis': w['affordability']['price_basis'],
               'wc_exact_streaming': w.get('performance', {}).get('exact_streaming_topk'),
               'wc_bound_pruned': w.get('performance', {}).get('objective_bound_pruned'),
               'refresh_ms': latest.get('performance', {}).get('engine_before_snapshot_write_ms'),
               'decision_pipeline_ms': pipeline.get('timings', {}).get('total_pipeline_ms'),
+              'decision_slo': pipeline.get('performance_slo'),
               'checkpoint': checkpoint['checkpoint_context']['policy_id'],
               'action': checkpoint['action_state'],
               'execution_authorized': checkpoint['decision']['execution_authorized'],

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "registry": "RUNTIME_EXECUTION_PROFILES_V1",
+  "policy": {
+    "reuse_requires_all_declared_service_artifacts": true,
+    "stale_or_missing_reuse_falls_back_to_refresh": true,
+    "reused_service_counts_as_dependency_complete": true,
+    "fast_profile_must_preserve_decision_and_artifact_contracts": true,
+    "profile_does_not_change_football_model_formulas": true
+  },
+  "profiles": {
+    "fast_decision": {
+      "description": "Interactive decision regeneration using fresh authoritative core plus bounded reuse of heavy enrichment artifacts.",
+      "max_parallel_services": 4,
+      "reuse_services": {
+        "advanced_stats": {"max_age_seconds": 21600},
+        "historical_prior": {"max_age_seconds": 86400},
+        "source_layer": {"max_age_seconds": 1800},
+        "official_detail": {"max_age_seconds": 3600}
+      }
+    },
+    "live": {
+      "description": "Match/live decision path; reuse non-live enrichment and refresh authoritative/live decision services.",
+      "max_parallel_services": 4,
+      "reuse_services": {
+        "advanced_stats": {"max_age_seconds": 21600},
+        "historical_prior": {"max_age_seconds": 86400},
+        "source_layer": {"max_age_seconds": 1800},
+        "official_detail": {"max_age_seconds": 3600}
+      }
+    },
+    "full_refresh": {
+      "description": "Complete source, enrichment, detail, model, governance and report refresh.",
+      "max_parallel_services": 3,
+      "reuse_services": {}
+    },
+    "deep_stats": {
+      "description": "Complete refresh including optional deep advanced-stat datasets.",
+      "max_parallel_services": 2,
+      "reuse_services": {}
+    }
+  }
+}

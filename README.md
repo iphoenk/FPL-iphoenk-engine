@@ -3,10 +3,10 @@
 Production-oriented personal FPL decision engine and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
-- Current release candidate: `3.23.0` / schema `49`.
-- Current accepted production release remains `3.22.0` / schema `49` until V3.23 is merged and production-published.
-- V3.23 CI candidate acceptance covers compile, architecture ownership, full unit/regression and composite FULL+FAST acceptance; production runtime publication remains a separate closeout step.
-- V3.22 production acceptance is COMPLETE and the interactive FAST target remains `<10s`.
+- Current accepted production release: `3.23.0` / schema `49`.
+- V3.23 production acceptance is COMPLETE.
+- PR #82 was merged as source commit `60e789aa31889bd9011c176f0ec43b542eb665a0` after final PR CI passed 199 tests plus composite FULL/FAST acceptance.
+- Production FAST run `33082344334` completed in 5.124s, within the `<10s` target, and published a 48-file rolling runtime snapshot to `runtime-data` commit `d72d13e`.
 - Active architecture remains 20 artifact-owned microservices.
 - Runtime state publishes only to the rolling parentless `runtime-data` snapshot; mutable runtime output is not stored on protected `main`.
 - Runtime Artifact Contract Registry: `RUNTIME_ARTIFACT_CONTRACTS_V2`.
@@ -31,7 +31,7 @@ V3.23 makes the personal-team timeline explicit without replacing the DSS as an 
 ## Official FPL authority and REC-38 Official-first contract
 Official FPL is the only native authority for Official fields and scoring. External sources remain enrichment/challenger evidence and may never overwrite Official-native truth.
 
-REC-38 adds `config/sources/official_first_coverage.json`, an explicit coverage matrix for every recommendation from REC-01 through REC-38, with REC-09a and REC-09b tracked separately. For every REC touching native or potentially native FPL facts, the matrix declares the Official endpoint families that must be considered first. Public Official data is preferred before authenticated private state when public data can answer the question.
+REC-38 adds `config/sources/official_first_coverage.json`, an explicit coverage matrix for every recommendation through REC-38, with REC-09a and REC-09b tracked separately. For every REC touching native or potentially native FPL facts, the matrix declares the Official endpoint families that must be considered first. Public Official data is preferred before authenticated private state when public data can answer the question.
 
 Fallback/proxy evidence is allowed only after an explicit disposition:
 - `OFFICIAL_UNAVAILABLE`
@@ -83,4 +83,4 @@ Open-Meteo is a noncritical `ENRICHMENT`, never an authority or model challenger
 - Service boundaries follow ownership/failure semantics, not a target service count.
 - Runtime and report readiness are separate from predictive/model evidence readiness.
 
-See `MASTER_TASK_LIST_V3.md` for the authoritative production status, candidate work, current monitors, production evidence and release checklist.
+See `MASTER_TASK_LIST_V3.md` for the authoritative production status, current monitors, deferred work, production evidence and release checklist.

@@ -2,16 +2,21 @@
   "schema_version": 1,
   "contract": "PLAYER_FEATURE_CONTRACT_V1",
   "policy": {
-    "decision_neutral_plumbing_only": true,
-    "prediction_must_not_consume_this_artifact_until_a_separate_model_change": true,
+    "decision_neutral_plumbing_only": false,
+    "prediction_must_not_consume_this_artifact_until_a_separate_model_change": false,
+    "model_opt_in": "REC-01",
     "official_identity_is_authoritative": true,
     "advanced_stats_are_enrichment": true,
     "source_provenance_required": true,
     "missing_advanced_evidence_is_explicit": true
   },
   "defensive_contribution": {
+    "model": "poisson_threshold_shrunk_rate_v1",
     "def_threshold": 10,
     "mid_fwd_threshold": 12,
+    "points_on_threshold": 2,
+    "rate_shrinkage_minutes": 450.0,
+    "position_prior_is_calibrated_from_existing_expected_points_per90": true,
     "def_metrics": ["clearances", "blocks", "interceptions", "tackles"],
     "mid_fwd_extra_metrics": ["recoveries"]
   },

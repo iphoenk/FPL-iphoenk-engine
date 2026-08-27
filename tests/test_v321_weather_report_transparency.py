@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from src.engines.report_transparency_overlay import _confidence_calibration
-from src.sources.weather_open_meteo import _severity
+from src.sources.weather_open_meteo import _resolve_venue, _severity
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -60,12 +60,26 @@ def test_weather_severity_uses_intensity_and_gusts_from_config():
 
 
 def test_venue_registry_has_current_unique_pl_coverage():
-    venues = _load("config/venues/premier_league_2026_27.json")["venues"]
+    registry = _load("config/venues/premier_league_2026_27.json")
+    venues = registry["venues"]
     names = [row["team_name"] for row in venues]
+    ids = [int(row["team_id"]) for row in venues]
+    assert registry["schema_version"] == 2
     assert len(venues) == 20
     assert len(set(names)) == 20
+    assert sorted(ids) == list(range(1, 21))
+    assert {"Coventry City", "Hull City", "Ipswich Town"}.issubset(set(names))
+    assert not ({"Burnley", "West Ham", "Wolves"} & set(names))
     assert all(-90 <= float(row["latitude"]) <= 90 for row in venues)
     assert all(-180 <= float(row["longitude"]) <= 180 for row in venues)
+
+
+def test_venue_identity_mismatch_fails_soft_instead_of_using_stale_stadium():
+    by_id = {7: {"team_id": 7, "team_name": "Old Team", "venue": "Wrong Stadium"}}
+    by_name = {"Coventry City": {"team_id": 99, "team_name": "Coventry City", "venue": "Wrong Stadium"}}
+    venue, state = _resolve_venue(7, "Coventry City", by_id, by_name)
+    assert venue is None
+    assert state == "VENUE_IDENTITY_MISMATCH"
 
 
 def _owned_rows(confidence="MEDIUM"):

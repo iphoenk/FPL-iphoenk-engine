@@ -40,14 +40,31 @@ def load_venues() -> dict[str, Any]:
     return payload
 
 
-def _venue_map() -> dict[str, dict[str, Any]]:
+def _venue_maps() -> tuple[dict[int, dict[str, Any]], dict[str, dict[str, Any]]]:
     registry = load_venues()
     default_tz = str(registry.get("default_timezone") or "Europe/London")
-    return {
-        str(row["team_name"]): {**row, "timezone": str(row.get("timezone") or default_tz)}
-        for row in registry.get("venues") or []
-        if row.get("team_name")
-    }
+    by_id: dict[int, dict[str, Any]] = {}
+    by_name: dict[str, dict[str, Any]] = {}
+    for raw in registry.get("venues") or []:
+        row = {**raw, "timezone": str(raw.get("timezone") or default_tz)}
+        if row.get("team_id") is not None:
+            by_id[int(row["team_id"])] = row
+        if row.get("team_name"):
+            by_name[str(row["team_name"])] = row
+    return by_id, by_name
+
+
+def _resolve_venue(team_id: int, team_name: str, by_id: dict[int, dict[str, Any]], by_name: dict[str, dict[str, Any]]) -> tuple[dict[str, Any] | None, str | None]:
+    """Resolve venue only when registry identity agrees with current Official identity."""
+    row = by_id.get(int(team_id))
+    if row is not None:
+        if str(row.get("team_name") or "") != str(team_name):
+            return None, "VENUE_IDENTITY_MISMATCH"
+        return row, None
+    row = by_name.get(str(team_name))
+    if row is not None and int(row.get("team_id") or -1) == int(team_id):
+        return row, None
+    return None, "VENUE_UNKNOWN"
 
 
 def _severity(weather: dict[str, Any], cfg: dict[str, Any]) -> tuple[str, list[str]]:
@@ -169,7 +186,7 @@ def collect_weather_context(data_dir: Path) -> dict[str, Any]:
     prior_by_id = {str(row.get("fixture_id")): row for row in previous.get("fixtures") or []}
     bootstrap = official.get("bootstrap") or {}
     teams = {int(row["id"]): str(row.get("name")) for row in bootstrap.get("teams") or [] if row.get("id") is not None}
-    venues = _venue_map()
+    venues_by_id, venues_by_name = _venue_maps()
     now = datetime.now(timezone.utc)
     rows: list[dict[str, Any]] = []
 
@@ -182,15 +199,17 @@ def collect_weather_context(data_dir: Path) -> dict[str, Any]:
         if days_to > max_days or age_hours > post_hours:
             continue
         fixture_id = str(fixture.get("id"))
-        home = teams.get(int(fixture.get("team_h") or -1), "Unknown")
-        away = teams.get(int(fixture.get("team_a") or -1), "Unknown")
-        venue = venues.get(home)
+        home_id = int(fixture.get("team_h") or -1)
+        away_id = int(fixture.get("team_a") or -1)
+        home = teams.get(home_id, "Unknown")
+        away = teams.get(away_id, "Unknown")
+        venue, venue_error = _resolve_venue(home_id, home, venues_by_id, venues_by_name)
         prior = prior_by_id.get(fixture_id) or {}
         observations = [dict(x) for x in prior.get("observations") or [] if isinstance(x, dict)]
         fetch_status = "NOT_ATTEMPTED"
         error = None
         if venue is None:
-            fetch_status = "VENUE_UNKNOWN"
+            fetch_status = venue_error or "VENUE_UNKNOWN"
         elif kickoff >= now:
             try:
                 observation = _weather_for_kickoff(venue, kickoff, cfg)
@@ -209,6 +228,8 @@ def collect_weather_context(data_dir: Path) -> dict[str, Any]:
         rows.append({
             "fixture_id": int(fixture.get("id") or 0),
             "event": fixture.get("event"),
+            "home_team_id": home_id,
+            "away_team_id": away_id,
             "home_team": home,
             "away_team": away,
             "kickoff_time": kickoff.isoformat(),
@@ -235,6 +256,12 @@ def collect_weather_context(data_dir: Path) -> dict[str, Any]:
         "fixture_count": len(rows),
         "available_count": sum(1 for row in rows if row.get("current")),
         "material_count": len(material),
+        "venue_identity": {
+            "registry": load_venues().get("registry"),
+            "registry_schema": load_venues().get("schema_version"),
+            "official_identity_required": True,
+            "unresolved_count": sum(1 for row in rows if row.get("fetch_status") in {"VENUE_UNKNOWN", "VENUE_IDENTITY_MISMATCH"}),
+        },
         "fixtures": rows,
         "material_fixtures": [
             {

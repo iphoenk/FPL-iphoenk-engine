@@ -37,21 +37,6 @@ jobs:
         run: python -m src.engines.architecture_contract_validate
       - name: Full unit and regression suite
         run: python -m pytest -q
-      - name: Full-refresh integration without publication
+      - name: Composite FULL + FAST release acceptance
         if: github.event_name == 'pull_request'
-        run: python -m src.runtime_v3.orchestrator --mode daily --stats --profile full_refresh
-      - name: Validate integration contracts
-        if: github.event_name == 'pull_request'
-        run: |
-          python -m src.engines.source_contract_validate
-          python -m src.engines.production_contract_validate
-          python -m src.engines.watchlist_contract_validate
-          python -m src.engines.report_serving_validate
-          python -m src.engines.report_time_contract_validate
-          python -m src.runtime_v3.performance_guard --profile full_refresh
-      - name: Fast-profile integration against fresh reusable state
-        if: github.event_name == 'pull_request'
-        run: python -m src.runtime_v3.orchestrator --mode daily --stats --profile fast_decision
-      - name: Report fast SLO and resource state
-        if: github.event_name == 'pull_request'
-        run: python -m src.runtime_v3.performance_guard --profile fast_decision
+        run: python -m src.runtime_v3.release_acceptance

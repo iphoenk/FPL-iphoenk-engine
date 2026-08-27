@@ -8,13 +8,14 @@ from typing import Any
 from src.utils import ROOT
 
 CONFIG_PATH = ROOT / "config" / "runtime" / "artifact_contracts.json"
+EXPECTED_REGISTRY = "RUNTIME_ARTIFACT_CONTRACTS_V2"
 
 
 @lru_cache(maxsize=1)
 def load_registry() -> dict[str, Any]:
     payload = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    if payload.get("registry") != "RUNTIME_ARTIFACT_CONTRACTS_V1":
-        raise RuntimeError("invalid runtime artifact contract registry")
+    if payload.get("registry") != EXPECTED_REGISTRY:
+        raise RuntimeError(f"invalid runtime artifact contract registry: {payload.get('registry')} != {EXPECTED_REGISTRY}")
     if not isinstance(payload.get("policy"), dict) or not isinstance(payload.get("contracts"), dict):
         raise RuntimeError("runtime artifact contract registry must define policy and contracts")
     return payload
@@ -73,9 +74,7 @@ def validate_artifact(path: Path, artifact_name: str) -> dict[str, Any]:
             raise RuntimeError(f"artifact {artifact_name} missing required field {field}")
     for field, expected in (contract.get("equals") or {}).items():
         if payload.get(field) != expected:
-            raise RuntimeError(
-                f"artifact {artifact_name} field {field} mismatch: {payload.get(field)!r} != {expected!r}"
-            )
+            raise RuntimeError(f"artifact {artifact_name} field {field} mismatch: {payload.get(field)!r} != {expected!r}")
     for field, expected_type in (contract.get("types") or {}).items():
         if field in payload and not _matches_type(payload.get(field), str(expected_type)):
             raise RuntimeError(f"artifact {artifact_name} field {field} must be {expected_type}")

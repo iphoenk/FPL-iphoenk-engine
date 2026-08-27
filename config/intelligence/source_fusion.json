@@ -1,88 +1,36 @@
 {
-  "schema_version": 3,
-  "model_id": "v5_dss_source_fusion_v3",
-  "season_authority": {
-    "registry_path": "config/rules/registry.json",
-    "season_field": "season"
+  "schema_version": 4,
+  "model_id": "v5_source_fusion_v4",
+  "source_registry": "config/sources/registry.json",
+  "concurrency": {
+    "max_workers_policy": "canonical_source_registry"
   },
-  "policy": {
-    "official_fpl_remains_native_authority": true,
-    "fpl_core_insights_primary_for_epl_advanced_stats": true,
-    "understat_is_challenger_not_box_touch_proxy": true,
-    "api_football_is_cross_competition_enrichment": true,
-    "optional_source_plan_restriction_is_not_engine_failure": true,
-    "missing_enrichment_is_unavailable_not_zero": true,
-    "network_fetch_owned_by_ingestion_service": true,
-    "prediction_network_fetch_forbidden": true
-  },
-  "shadow_acceptance": {
-    "api_football_acceptable_unavailability_classes": ["PLAN_RESTRICTED"],
-    "require_api_football_credential": true,
-    "require_competition_attempt": true,
-    "require_network_or_cache_evidence": true
-  },
-  "understat": {
-    "enabled": true,
-    "league": "EPL",
-    "timeout_seconds": 4.0,
-    "cache_ttl_seconds": 21600,
-    "cache_path_template": "data/v5/source_cache/understat_epl_{season}.json",
-    "capabilities": ["shots", "xg", "xa", "key_passes", "xg_chain", "xg_buildup"]
-  },
-  "api_football": {
-    "enabled": true,
-    "base_url": "https://v3.football.api-sports.io",
-    "api_key_env": "API_FOOTBALL_KEY",
-    "api_key_header": "x-apisports-key",
-    "timeout_seconds": 5.0,
-    "cache_ttl_seconds": 43200,
-    "availability_cache_ttl_seconds": 21600,
-    "cache_dir": "data/v5/source_cache/api_football",
-    "resolve_league_ids_dynamically": true,
-    "availability_classification": {
-      "PLAN_RESTRICTED": {
-        "contains_any": ["do not have access to this season", "subscription plan", "plan does not have access"]
-      },
-      "RATE_LIMITED": {
-        "contains_any": ["rate limit", "too many requests", "request limit"]
-      },
-      "AUTH_REJECTED": {
-        "contains_any": ["invalid api key", "invalid key", "unauthorized", "forbidden"]
-      }
+  "sources": {
+    "understat": {
+      "source_id": "understat",
+      "collector": "src.v5.sources.understat.collect",
+      "enablement_authority": "config/sources/registry.json"
     },
-    "cacheable_unavailability_classes": ["PLAN_RESTRICTED", "RATE_LIMITED"],
-    "team_matching": {
-      "minimum_similarity": 0.72,
-      "minimum_unique_margin": 0.08,
-      "include_official_short_name": true
+    "api_football": {
+      "source_id": "api_football",
+      "collector": "src.v5.sources.api_football.collect",
+      "enablement_authority": "config/sources/registry.json"
     },
-    "competitions": {
-      "uefa_champions_league": ["UEFA Champions League", "Champions League"],
-      "uefa_europa_league": ["UEFA Europa League", "Europa League"],
-      "uefa_conference_league": ["UEFA Conference League", "Conference League"],
-      "fa_cup": ["FA Cup"],
-      "efl_cup": ["League Cup", "EFL Cup", "Carabao Cup"],
-      "club_friendlies": ["Club Friendlies"]
-    },
-    "fixture_window_days_before": 14,
-    "fixture_window_days_after": 60,
-    "max_competition_requests_per_refresh": 6,
-    "rate_limit_headers": {
-      "remaining": ["x-ratelimit-requests-remaining", "x-ratelimit-remaining"],
-      "limit": ["x-ratelimit-requests-limit", "x-ratelimit-limit"]
-    },
-    "international": {
-      "enabled": true,
-      "player_minutes_requires_resolved_player_identity": true,
-      "callup_missing_behavior": "UNAVAILABLE_NOT_ZERO",
-      "travel_missing_behavior": "UNAVAILABLE_NOT_ZERO"
+    "open_meteo": {
+      "source_id": "open_meteo",
+      "collector": "src.v5.sources.weather_open_meteo.collect",
+      "enablement_authority": "config/sources/registry.json",
+      "policy_ref": "config/intelligence/weather_context.json",
+      "venue_registry_ref": "config/venues/premier_league_2026_27.json",
+      "cache_path": "data/v5/source_cache/weather_open_meteo.json"
     }
   },
-  "fusion": {
-    "advanced_stat_priority": ["fpl_core_insights", "understat", "official_fpl"],
-    "fixture_priority": ["official_fpl", "api_football"],
-    "understat_crosscheck_fields": ["shots", "xg", "xa", "key_passes"],
-    "api_football_fixture_classes": ["EUROPE", "DOMESTIC_CUP", "FRIENDLY", "INTERNATIONAL"],
-    "never_replace_official_fpl_identity_or_price": true
+  "governance": {
+    "canonical_source_enablement_only": true,
+    "local_source_enabled_flags_forbidden": true,
+    "weather_advisory_only": true,
+    "missing_enrichment_is_unavailable_not_zero": true,
+    "source_failure_is_fail_neutral_unless_critical": true,
+    "network_fetch_owner": "ingestion"
   }
 }

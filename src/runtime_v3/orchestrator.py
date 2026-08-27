@@ -216,6 +216,49 @@ def _promote(service_name: str, result: dict[str, Any], spec: dict[str, Any], ca
     _merge_latest(canonical, service_dir, spec)
 
 
+def _attempt_promotion(service_name: str, result: dict[str, Any], spec: dict[str, Any], canonical: Path) -> dict[str, Any]:
+    try:
+        _promote(service_name, result, spec, canonical)
+        return result
+    except Exception as exc:
+        failed = dict(result)
+        failed["status"] = "FAILED"
+        failed["failure_stage"] = "promotion"
+        failed["error"] = f"{type(exc).__name__}: {exc}"
+        return failed
+
+
+def _clear_failed_service_outputs(canonical: Path, spec: dict[str, Any]) -> list[str]:
+    """Remove stale owned outputs before a noncritical failed service is treated as completed."""
+    inputs = {str(name) for name in spec.get("inputs") or []}
+    removed: list[str] = []
+    for name in spec.get("artifacts") or []:
+        artifact = str(name)
+        if artifact in inputs:
+            continue
+        path = canonical / artifact
+        if path.exists() and path.is_file():
+            path.unlink()
+            removed.append(artifact)
+
+    latest_path = canonical / "latest.json"
+    latest = read_json(latest_path, {})
+    changed = False
+    for key in spec.get("latest_keys") or []:
+        if str(key) in latest:
+            latest.pop(str(key), None)
+            changed = True
+    files = latest.get("files") if isinstance(latest.get("files"), dict) else None
+    if files is not None:
+        for key in spec.get("latest_file_keys") or []:
+            if str(key) in files:
+                files.pop(str(key), None)
+                changed = True
+    if changed:
+        atomic_json(latest_path, latest)
+    return sorted(removed)
+
+
 def _cleanup_ephemeral(registry: dict[str, Any], canonical: Path) -> list[str]:
     removed: list[str] = []
     for spec in (registry.get("services") or {}).values():
@@ -330,16 +373,22 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False) -> di
                 for future in done:
                     name = running.pop(future)
                     result = future.result()
-                    service_results[name] = result
                     spec = services[name]
                     if result["status"] == "SUCCESS":
-                        _promote(name, result, spec, DATA)
+                        result = _attempt_promotion(name, result, spec, DATA)
+                    service_results[name] = result
+
+                    if result["status"] == "SUCCESS":
                         completed.add(name)
                     elif bool(spec.get("critical", True)):
                         for pending_future in running:
                             pending_future.cancel()
                         raise RuntimeError(f"critical service {name} failed: {result.get('error')}")
                     else:
+                        # A noncritical service may fail soft, but stale output from a prior
+                        # run must not masquerade as current evidence.
+                        result["discarded_stale_outputs"] = _clear_failed_service_outputs(DATA, spec)
+                        service_results[name] = result
                         completed.add(name)
 
         total_ms = (time.perf_counter() - wall_started) * 1000.0

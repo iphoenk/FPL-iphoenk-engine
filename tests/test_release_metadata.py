@@ -41,7 +41,7 @@ def test_release_metadata_surfaces_are_consistent():
     assert artifact_registry["consumer_contract"]["report_time_intelligence_required"] is True
     assert artifact_registry["consumer_contract"]["owned_rows_require_current_gw_xpts"] is True
     assert artifact_registry["consumer_contract"]["weather_context_required"] is True
-    assert service_registry["schema_version"] == 13
+    assert service_registry["schema_version"] == 14
     assert service_registry["production_contract"].startswith("v3.22-")
     assert len(service_registry["services"]) == 20
     assert source_registry["registry"] == "SOURCE_REGISTRY_V4"

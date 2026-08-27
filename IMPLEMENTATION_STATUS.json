@@ -1,5 +1,5 @@
 {
-  "version": "3.20.0",
+  "version": "3.20.1",
   "schema_version": 48,
   "release_metadata_source": "src/version.py",
   "P0": {
@@ -56,7 +56,15 @@
       "deep stats routed through production runtime-data publication instead of main",
       "current-alias advanced-stat artifacts remove fixed-GW production dependency",
       "semantic active model identifiers decoupled from engine release numbers",
-      "architecture ownership and anti-monolith CI contract"
+      "architecture ownership and anti-monolith CI contract",
+      "unconditional 60-minute appearance probability arithmetic regression",
+      "Official element-type goalkeeper projection and save-route regression",
+      "captain bonus variance/covariance correctness under independent-player baseline",
+      "artifact-promotion failure criticality and stale-output quarantine",
+      "legacy direct-fetch projection runner removed from decision intelligence",
+      "neutral shared projection component ownership under src/models",
+      "config-owned starting-XI battle closeness threshold",
+      "explicit separation of external challenger availability from internal scorecard integrity"
     ]
   },
   "P1": {

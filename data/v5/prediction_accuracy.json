@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-27T00:34:55.321431+00:00",
+  "generated_at": "2026-08-27T00:37:25.595180+00:00",
   "model": "prediction_evaluation_v1",
   "freeze_policy": "last_pre_deadline_snapshot",
   "overall": {

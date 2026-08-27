@@ -3,9 +3,15 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from src.models.projection_components import _blended_rate, _f, _project_fixture, load_projection_config
+from src.models.projection_components import (
+    _blended_rate,
+    _f,
+    _project_fixture,
+    load_projection_config,
+    poisson_threshold_probability,
+)
 from src.models.xmins_v3 import estimate_xmins
-from src.rules import ELEMENT_TYPE_TO_POSITION, RULESET_ID
+from src.rules import DC_RULES, ELEMENT_TYPE_TO_POSITION, RULESET_ID
 
 
 def _clamp(value: float, low: float, high: float) -> float:
@@ -20,12 +26,65 @@ def _rate_prior(position_prior: float, historical: dict[str, Any], field: str) -
     return position_prior * (1.0 - weight) + historical_rate * weight, "historical_player_prior+position_prior", weight
 
 
+def _defensive_contribution_model(
+    element_type: int,
+    position: str,
+    feature: dict[str, Any],
+    policy: dict[str, Any],
+) -> dict[str, Any]:
+    rule = dict(DC_RULES.get(element_type, DC_RULES[4]))
+    eligible = bool(rule.get("eligible"))
+    threshold = rule.get("threshold")
+    points_when_hit = int(rule.get("points") or 0)
+    prior_rates = policy.get("position_count_rate90_prior") or {}
+    prior_rate90 = max(0.0, _f(prior_rates.get(position), 0.0))
+    shrink_minutes = max(0.0, _f(policy.get("shrinkage_minutes"), 450.0))
+    advanced = feature.get("advanced_current") or {}
+    evidence_minutes = max(0.0, _f(advanced.get("minutes")))
+    observed_rate = advanced.get("dc_reconstructed_per90")
+
+    if not eligible or threshold is None:
+        count_rate90 = 0.0
+        source = "official_rule_ineligible"
+    elif observed_rate is not None and evidence_minutes > 0:
+        count_rate90 = (
+            max(0.0, _f(observed_rate)) * evidence_minutes + prior_rate90 * shrink_minutes
+        ) / max(1e-6, evidence_minutes + shrink_minutes)
+        source = "player_feature_shrunk_to_position_prior"
+    else:
+        count_rate90 = prior_rate90
+        source = "position_count_rate_prior_fallback"
+
+    expected_points90 = (
+        points_when_hit * poisson_threshold_probability(count_rate90, 90.0, int(threshold))
+        if eligible and threshold is not None else 0.0
+    )
+    return {
+        "model": "player_dc_poisson_threshold_v1",
+        "eligible": eligible,
+        "threshold": int(threshold) if threshold is not None else None,
+        "points_when_hit": points_when_hit,
+        "count_rate90": round(count_rate90, 6),
+        "prior_count_rate90": round(prior_rate90, 6),
+        "observed_count_rate90": round(_f(observed_rate), 6) if observed_rate is not None else None,
+        "evidence_minutes": round(evidence_minutes, 1),
+        "sample_quality": advanced.get("sample_quality"),
+        "observed_threshold_hits": advanced.get("dc_threshold_hits"),
+        "observed_threshold_hit_rate": advanced.get("dc_threshold_hit_rate"),
+        "expected_points90": round(expected_points90, 6),
+        "source": source,
+        "distribution": str(policy.get("distribution") or "poisson_count_threshold"),
+        "official_threshold_rule": True,
+    }
+
+
 def build(
     bootstrap: dict[str, Any],
     strength: dict[str, Any],
     planning_gw: int,
     prior_payload: dict[str, Any],
     horizon: int | None = None,
+    player_features_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cfg = load_projection_config()
     published_horizons = [int(value) for value in cfg.get("published_horizons") or []]
@@ -37,6 +96,10 @@ def build(
     model_id = str(cfg.get("historical_model_id") or "").strip()
     if not model_id:
         raise RuntimeError("projection historical_model_id missing from config")
+
+    player_features_payload = player_features_payload or {}
+    feature_map = player_features_payload.get("players") or {}
+    dc_policy = player_features_payload.get("defensive_contribution_policy") or {}
 
     teams = {int(team["id"]): team.get("name") for team in bootstrap.get("teams") or []}
     positions = dict(ELEMENT_TYPE_TO_POSITION)
@@ -55,7 +118,9 @@ def build(
     position_priors = cfg.get("position_priors") or {}
     players = []
     historical_used = 0
+    player_dc_evidence_used = 0
     for player in bootstrap.get("elements") or []:
+        element = int(player["id"])
         element_type = int(player.get("element_type") or 0)
         position = positions.get(element_type)
         if not position:
@@ -63,7 +128,7 @@ def build(
         base = position_priors.get(position)
         if not isinstance(base, dict):
             raise RuntimeError(f"projection prior missing for position {position}")
-        historical = historical_map.get(str(int(player["id"]))) or {}
+        historical = historical_map.get(str(element)) or {}
         historical_used += int(bool(historical))
         xg_prior, xg_prior_source, attack_weight = _rate_prior(_f(base.get("xg90")), historical, "xg90")
         xa_prior, xa_prior_source, _ = _rate_prior(_f(base.get("xa90")), historical, "xa90")
@@ -71,13 +136,22 @@ def build(
         xa90, xa_source = _blended_rate(player, "expected_assists", xa_prior, shrink)
         bonus90, bonus_source = _blended_rate(player, "bonus", _f(base.get("bonus90")), shrink)
         saves90, saves_source = _blended_rate(player, "saves", _f(base.get("saves90")), shrink)
+
+        feature = feature_map.get(str(element)) or {}
+        dc_model = _defensive_contribution_model(element_type, position, feature, dc_policy)
+        player_dc_evidence_used += int(
+            dc_model.get("eligible") is True
+            and _f(dc_model.get("evidence_minutes")) > 0
+            and dc_model.get("observed_count_rate90") is not None
+        )
         rates = {
             "xg90": xg90,
             "xa90": xa90,
             "bonus90": bonus90,
             "saves90": saves90,
-            "dc90": _f(base.get("dc90")),
+            "dc90": _f(dc_model.get("expected_points90")),
         }
+        fixture_rates: dict[str, Any] = {**rates, "dc_model": dc_model}
 
         team_id = int(player.get("team") or -1)
         matches_played = int((team_rows.get(team_id) or {}).get("matches_played") or 0)
@@ -106,7 +180,7 @@ def build(
                         xmins,
                         matchup,
                         int(matchup["team_h"]) == team_id,
-                        rates,
+                        fixture_rates,
                         bool(xmins.get("small_sample_guard")),
                     )
                 )
@@ -131,7 +205,7 @@ def build(
                 "std": round(math.sqrt(sum(_f(row["std"]) ** 2 for row in subset)), 3),
             }
         players.append({
-            "element": int(player["id"]),
+            "element": element,
             "name": player.get("web_name"),
             "team_id": team_id,
             "team": teams.get(team_id),
@@ -150,9 +224,10 @@ def build(
                     "xa90": f"{xa_source}|prior={xa_prior_source}",
                     "bonus90": bonus_source,
                     "saves90": saves_source,
-                    "dc90": "position_prior",
+                    "dc90": str(dc_model.get("source")),
                 },
                 "historical_attacking_prior_weight": round(attack_weight, 4),
+                "defensive_contribution_model": dc_model,
             },
             "xpts_by_gw": by_gw,
             "horizons": horizons,
@@ -167,5 +242,9 @@ def build(
         "historical_prior_model": prior_payload.get("model"),
         "historical_prior_season": prior_payload.get("season"),
         "historical_prior_players_used": historical_used,
+        "player_feature_contract": player_features_payload.get("contract"),
+        "player_feature_model_opt_in": (player_features_payload.get("policy") or {}).get("model_opt_in"),
+        "player_dc_evidence_used": player_dc_evidence_used,
+        "defensive_contribution_model": "player_dc_poisson_threshold_v1",
         "players": players,
     }

@@ -1,5 +1,5 @@
 {
-  "version": "3.20.1",
+  "version": "3.20.2",
   "schema_version": 48,
   "release_metadata_source": "src/version.py",
   "P0": {
@@ -64,7 +64,12 @@
       "legacy direct-fetch projection runner removed from decision intelligence",
       "neutral shared projection component ownership under src/models",
       "config-owned starting-XI battle closeness threshold",
-      "explicit separation of external challenger availability from internal scorecard integrity"
+      "explicit separation of external challenger availability from internal scorecard integrity",
+      "strict JSON validation for every declared runtime artifact before acceptance",
+      "runtime artifact contract registry for contract-specific validation",
+      "challenger observation schema/contract validation at the microservice boundary",
+      "valid empty external observations remain fail-soft while malformed artifacts fail integrity checks",
+      "latest.json sidecars are strict-JSON validated before isolated-service fan-in"
     ]
   },
   "P1": {

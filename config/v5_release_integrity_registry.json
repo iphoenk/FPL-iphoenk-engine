@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "contract": "V5_RUNTIME_RELEASE_FINGERPRINT_V3",
+  "version": 4,
+  "contract": "V5_RUNTIME_RELEASE_FINGERPRINT_V4",
   "algorithm": "sha256",
   "include_roots": ["src/v5", "config/intelligence", "config/rules", "config/venues"],
   "include_files": [
@@ -17,11 +17,16 @@
     "config/v5_cluster_health_registry.json",
     "config/v5_decision_registry.json",
     "config/v5_dss_policy_registry.json",
+    "config/v5_module_registry.json",
     "config/v5_orchestrator_registry.json",
     "config/v5_performance_budgets.json",
     "config/v5_persistence_registry.json",
+    "config/v5_registry_catalog.json",
     "config/v5_runner_registry.json",
+    "config/v5_runtime_materialization_registry.json",
     "config/v5_service_registry.json",
+    "config/v5_service_transport_registry.json",
+    "config/v5_service_wire_registry.json",
     "config/v5_shadow_parity_registry.json",
     "config/v5_source_authority_registry.json",
     "config/v5_capability_parity_registry.json",
@@ -39,6 +44,7 @@
     "trigger_and_status_metadata_do_not_reset_acceptance": true,
     "runtime_or_governance_code_change_resets_acceptance": true,
     "performance_budget_change_resets_acceptance": true,
+    "wire_or_materialization_policy_change_resets_acceptance": true,
     "venue_authority_change_resets_acceptance": true,
     "production_baseline_is_bound_separately": true
   }

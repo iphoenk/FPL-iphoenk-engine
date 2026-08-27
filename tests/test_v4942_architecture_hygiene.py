@@ -12,7 +12,7 @@ def test_snapshot_contract_version_and_release_registry_are_explicit():
 
     assert contracts["contracts"]["raw_snapshot"]["min_schema_version"] == 492
     assert '"schema_version": 492' in source
-    assert services["architecture_version"] == "4.9.4.2"
+    assert services["architecture_version"] == "4.9.4.3"
     assert services["guardrails"]["advanced_ablation_observational_outside_decision_chain"] is True
     assert services["guardrails"]["advanced_ablation_full_shadow_parity_required"] is True
     assert services["guardrails"]["advanced_ablation_failure_cannot_block_core_publish"] is True
@@ -25,7 +25,7 @@ def test_redundant_manual_implementation_status_is_removed():
 def test_core_data_publish_precedes_strict_ablation_diagnostic():
     workflow = (ROOT / ".github/workflows/fpl-engine.yml").read_text()
 
-    core_gate = workflow.index("Centralized V4.9.4.2 core quality gate")
+    core_gate = workflow.index("Centralized V4.9.4.3 core quality gate")
     core_summary = workflow.index("Concise core acceptance summary")
     core_publish = workflow.index("Publish core branch data")
     ablation = workflow.index("Advanced enrichment ablation post-publish diagnostic gate")

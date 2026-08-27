@@ -1,0 +1,149 @@
+name: V3 Runtime Fast
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'data/**'
+  schedule:
+    - cron: "55 * * * *"
+    - cron: "15 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v3-runtime-publication
+  cancel-in-progress: false
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+  RUNTIME_BRANCH: runtime-data
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Fetch only current runtime snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}" || true
+          mkdir -p data
+          if git cat-file -e "origin/${RUNTIME_BRANCH}:data/latest.json" 2>/dev/null; then
+            git show "origin/${RUNTIME_BRANCH}:data/latest.json" > data/latest.json
+          fi
+
+      - name: Decide collector cadence before heavy setup
+        id: cadence
+        env:
+          FPL_SCHEDULE_EXPR: ${{ github.event.schedule }}
+        run: python -m src.engines.collector_gate
+
+      - uses: actions/setup-python@v5
+        if: steps.cadence.outputs.should_collect == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install runtime dependencies
+        if: steps.cadence.outputs.should_collect == 'true'
+        run: pip install -r requirements.txt
+
+      - name: Hydrate declared reusable state only
+        if: steps.cadence.outputs.should_collect == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' > "$RUNNER_TEMP/hydrate-paths.txt"
+          import json
+          cfg=json.load(open('config/runtime/runtime_publish_registry.json'))
+          for path in cfg.get('hydrate_paths', []):
+              print(path)
+          PY
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            if git cat-file -e "origin/${RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
+              mkdir -p "data/$(dirname "$file")"
+              git show "origin/${RUNTIME_BRANCH}:data/${file}" > "data/${file}"
+              echo "Hydrated data/${file}"
+            fi
+          done < "$RUNNER_TEMP/hydrate-paths.txt"
+
+      - name: Validate architecture ownership contract
+        if: steps.cadence.outputs.should_collect == 'true'
+        run: python -m src.engines.architecture_contract_validate
+
+      - name: Run FAST or LIVE execution profile
+        if: steps.cadence.outputs.should_collect == 'true'
+        id: runtime
+        shell: bash
+        env:
+          FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
+          FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
+          FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
+          FPL_REFRESH_TOKEN: ${{ secrets.FPL_REFRESH_TOKEN }}
+          FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
+          FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
+          FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          profile="fast_decision"
+          mode="daily"
+          if [ "${{ steps.cadence.outputs.reason }}" = "adaptive_match_window" ]; then
+            profile="live"
+            mode="live"
+          fi
+          echo "profile=$profile" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          python -m src.runtime_v3.orchestrator --mode "$mode" --stats --profile "$profile"
+
+      - name: Validate production decision contracts
+        if: steps.cadence.outputs.should_collect == 'true'
+        run: |
+          python -m src.engines.source_contract_validate
+          python -m src.engines.production_contract_validate
+          python -m src.engines.watchlist_contract_validate
+          python -m src.engines.report_serving_validate
+          python -m src.engines.report_time_contract_validate
+
+      - name: Enforce transition ceiling and report 10-second target
+        if: steps.cadence.outputs.should_collect == 'true'
+        run: python -m src.runtime_v3.performance_guard --profile "${{ steps.runtime.outputs.profile }}"
+
+      - name: Materialize compact publication whitelist
+        if: steps.cadence.outputs.should_collect == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/runtime-publish"
+          python -m src.runtime_v3.publish_snapshot \
+            --source-data data \
+            --output-dir "$RUNNER_TEMP/runtime-publish" \
+            --profile "${{ steps.runtime.outputs.profile }}" \
+            --source-commit "$GITHUB_SHA"
+
+      - name: Publish rolling runtime snapshot
+        if: steps.cadence.outputs.should_collect == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          publish_tree="$RUNNER_TEMP/runtime-worktree"
+          rm -rf "$publish_tree"
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git worktree add --detach "$publish_tree" HEAD
+          cd "$publish_tree"
+          git checkout --orphan runtime-snapshot
+          git rm -rf . >/dev/null 2>&1 || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$RUNNER_TEMP/runtime-publish/data" ./data
+          git add -f data/
+          git commit -m "data: rolling FPL runtime snapshot [skip ci]"
+          git push --force origin HEAD:"$RUNTIME_BRANCH"

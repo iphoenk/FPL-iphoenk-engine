@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.9.2
+# FPL iphoenk Engine V4.9.3.1
 
 A production-oriented personal FPL data platform.
 
@@ -24,6 +24,7 @@ Implemented:
 - Core Insights + vaastav sync
 - leakage guard
 - fail-closed validation
+- immutable pre-deadline validation snapshots and idempotent post-GW reconciliation
 - persistent snapshots
 - safe GitHub workflow
 
@@ -34,6 +35,7 @@ Working base:
 - Bayesian team shares from official set-piece/penalty orders plus observed deep events, used as a bounded zero-centred prior reallocation
 - Bayesian opponent-defence resistance from finished Official FPL results, shrunk to the league prior and combined with official diagnostics
 - direct-evidence xMins priors with inferred tactical-role competition and protection for proven starters
+- advanced-enrichment full-vs-ablated observational evaluation with prediction and optimizer impact metrics
 - advanced-stat CLI
 - fixture model
 - interpretable xMins/xPts scaffold
@@ -63,6 +65,8 @@ python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
 
 python -m src.services.orchestrator daily --stats --deep-stats
 python -m src.services.orchestrator deadline --stats --deep-stats --as-of "2026-08-28T21:30:00+07:00"
+python -m src.engines.v4_validation_cycle cycle
+python -m src.engines.v4_advanced_ablation
 python -m src.engines.v4_quality_gate
 
 uvicorn live_service:app --host 0.0.0.0 --port 8000
@@ -164,4 +168,22 @@ See `docs/v4-microservices.md` for service ownership, failure semantics, and pre
 - Rotation health requires truthful flag/factor consistency, adjusted and unadjusted players, legal bounds, and factor variation. File presence or a constant flag cannot make the module ACTIVE.
 - Critical calibration and learning modules in `WARMUP` make prediction health AMBER and the decision engine PROVISIONAL. Governed recommendations remain available, but automatic GO is held until an eligible reconciled post-GW sample exists.
 - Quality-gate version failures explain that artifacts are stale or incompatible and instruct operators to regenerate them through the orchestrator.
-- Advanced integration continues to report synchronization, consumption, and material distinction separately. A future ablation metric, rather than an arbitrary materiality threshold, will determine incremental prediction impact.
+- Advanced integration reports synchronization, consumption, and material distinction separately; V4.9.3 adds a controlled ablation measurement for incremental impact.
+
+## V4.9.3 validation lifecycle and optimizer hardening
+
+- A ninth process-isolated validation lifecycle service freezes one genuine pre-deadline prediction snapshot per planning GW and reconciles it exactly once after the GW finishes.
+- Retroactive snapshot creation is rejected. GW1 is intentionally not backfilled because no genuine pre-deadline V4 snapshot exists; GW2 is the first clean calibration baseline.
+- Reconciliation archives are immutable and idempotent. Framework health consumes a rebuilt current-model-only eligibility view, so stale or malformed historical samples cannot keep calibration or learning falsely ACTIVE.
+- Simulation runs never mutate validation storage and the validation service does not refetch Official FPL data.
+- Advanced-enrichment ablation compares a full shadow model with the same model minus current-season community enrichment. Full-shadow numerical parity is mandatory before prediction/ranking/optimizer impact is interpreted.
+- Ablation effect size is diagnostic evidence, not an arbitrary health threshold. It reports xPts shifts, rank displacement, top-N overlap, optimized-squad changes, and decision flips.
+- WC optimization uses exact streaming top-k with objective-bound pruning while preserving search semantics. Package-audit parity tests protect output equivalence rather than accepting speed through reduced search quality.
+
+## V4.9.3.1 compact validation snapshot hotfix
+
+- Existing immutable deadline snapshots remain untouched and fully backward-compatible.
+- New deadline snapshots retain every prediction player but store at most the target-GW fixture and only reconciliation-required xPts interval and xMins fields.
+- The SHA-256 of the full prediction artifact remains attached to the compact snapshot for provenance, so storage reduction does not weaken point-in-time traceability.
+- Full-vs-compact reconciliation output must be exactly identical in regression tests.
+- Repeated snapshot attempts preserve the first frozen artifact, and a storage-budget regression test requires the compact projection to stay below 15% of an equivalent full synthetic prediction payload.

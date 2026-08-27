@@ -6,7 +6,7 @@ from typing import Any
 from src.engines.base_state import bootstrap_maps, native_entry_summary, resolve_locked_player
 from src.engines.team_value import build_transfer_spells, sell_cost
 from src.rules import SQUAD_RULES, build_chip_ledger, ruleset_metadata
-from src.settings import FAIL_CLOSED, TEAM_ID
+from src.settings import FAIL_CLOSED, PURCHASE_RECONSTRUCTION_BASELINE_GW, TEAM_ID
 from src.utils import CONFIG, DATA, atomic_json, iso_now, read_json
 
 OFFICIAL = DATA / "official_snapshot.json"
@@ -82,7 +82,7 @@ def run() -> dict[str, Any]:
 
     spells = build_transfer_spells(transfers)
     baseline = official.get("purchase_baseline") or {}
-    baseline_gw = int(baseline.get("gw") or 1)
+    baseline_gw = int(baseline.get("gw") or PURCHASE_RECONSTRUCTION_BASELINE_GW)
     baseline_ids = {int(row["element"]) for row in ((baseline.get("picks") or {}).get("picks") or [])}
     ledger: list[dict[str, Any]] = []
     for row in squad:
@@ -136,6 +136,7 @@ def run() -> dict[str, Any]:
             "ruleset_id": ruleset["id"],
             "sell_value_formula_owned_by_team_value_engine": True,
             "squad_identity_is_element_id_authoritative": True,
+            "purchase_reconstruction_baseline_gw": baseline_gw,
         },
     }
     chips = {

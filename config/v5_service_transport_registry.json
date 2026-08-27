@@ -1,9 +1,14 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "connection_pool": {
     "enabled": true,
     "pool_connections": 16,
     "pool_maxsize": 32
+  },
+  "client_worker_pool": {
+    "enabled": true,
+    "max_workers": 16,
+    "thread_name_prefix": "v5-service-client"
   },
   "retry": {
     "policies": {
@@ -36,6 +41,8 @@
   },
   "observability": {
     "include_attempt_count": true,
-    "include_circuit_state": true
+    "include_circuit_state": true,
+    "persistent_worker_pool": true,
+    "connection_reuse_across_parallel_stages": true
   }
 }

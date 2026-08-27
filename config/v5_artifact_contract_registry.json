@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "registry": "V5_ARTIFACT_CONTRACTS_V1",
   "owner": "snapshot",
   "policy": {
@@ -22,6 +22,28 @@
         "counts": "object",
         "cross_source": "list",
         "policy": "object"
+      }
+    },
+    "decision_hot_bundle": {
+      "filename": "decision_hot_bundle.json",
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "generated_at", "runtime_fingerprint", "mode", "phase", "team_id", "decision_summary", "framework_health", "watchlist_summary", "user_report", "technical_appendix", "report_state"],
+      "equals": {
+        "schema_version": 2,
+        "contract": "V5_DECISION_HOT_BUNDLE_V2"
+      },
+      "types": {
+        "generated_at": "string",
+        "runtime_fingerprint": "string",
+        "mode": "string",
+        "phase": "object",
+        "team_id": "integer",
+        "decision_summary": "object",
+        "framework_health": "object",
+        "watchlist_summary": "object",
+        "user_report": "object",
+        "technical_appendix": "object",
+        "report_state": "object"
       }
     }
   }

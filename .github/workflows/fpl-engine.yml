@@ -1,4 +1,4 @@
-name: FPL iphoenk V4.9.4.1 human-in-the-loop microservice gate
+name: FPL iphoenk V4.9.4.2 architecture-hygiene gate
 
 on:
   workflow_dispatch:
@@ -45,24 +45,9 @@ jobs:
         run: python -m pytest -q
       - name: Run 11 process-isolated V4 services
         run: python -m src.services.orchestrator daily --stats --deep-stats
-      - name: Advanced enrichment ablation observational gate
-        run: |
-          python -m src.engines.v4_advanced_ablation
-          python - <<'PY'
-          import json
-          a=json.load(open('data/advanced_ablation_v4.json'))
-          assert a['status']=='PASS', a
-          assert a['ablation']['advanced_removed_only'] is True, a
-          assert a['ablation']['same_official_snapshot'] is True, a
-          assert a['ablation']['same_last_season_priors'] is True, a
-          assert a['ablation']['same_quality_config'] is True, a
-          assert a['ablation']['same_optimizer_semantics'] is True, a
-          assert a['ablation']['full_shadow_parity']['ok'] is True, a
-          assert a['interpretation']['impact_is_diagnostic_not_health_threshold'] is True, a
-          PY
-      - name: Centralized V4.9.4.1 human-authority quality gate
+      - name: Centralized V4.9.4.2 core quality gate
         run: python -m src.engines.v4_quality_gate
-      - name: Concise acceptance summary
+      - name: Concise core acceptance summary
         run: |
           python - <<'PY'
           import json
@@ -75,7 +60,6 @@ jobs:
           checkpoint=json.load(open('data/checkpoint_decision_v4.json'))
           orchestration=json.load(open('data/service_orchestration_v4.json'))
           lifecycle=json.load(open('data/validation/lifecycle_v4.json'))
-          ablation=json.load(open('data/advanced_ablation_v4.json'))
           scorecard=json.load(open('data/gw_scorecard_v4.json'))
           effective=overlay['effective_plan']
           print({
@@ -114,20 +98,58 @@ jobs:
               'validation_snapshot': lifecycle['snapshot'],
               'validation_reconciliation': lifecycle['reconciliation'],
               'eligible_calibration_samples': lifecycle['eligibility'].get('eligible_samples'),
-              'ablation_mean_abs_delta_xpts5': ablation['prediction_impact']['mean_abs_delta_xpts5'],
-              'ablation_max_rank_shift': ablation['prediction_impact']['max_abs_rank_shift'],
-              'ablation_decision_changed': ablation['decision_impact']['decision_changed'],
           })
           PY
-      - name: Upload branch data only
+      - name: Publish core branch data
         if: github.event_name != 'pull_request'
         shell: bash
         run: |
           git config user.name "fpl-iphoenk-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/
-          if git diff --cached --quiet; then echo "No data changes"; exit 0; fi
+          if git diff --cached --quiet; then echo "No core data changes"; exit 0; fi
           git commit -m "data(v4): prediction acceptance snapshot"
+          git fetch origin v4-prediction-engine
+          git rebase origin/v4-prediction-engine
+          git push origin HEAD:v4-prediction-engine
+      - name: Advanced enrichment ablation post-publish diagnostic gate
+        run: |
+          python -m src.engines.v4_advanced_ablation
+          python - <<'PY'
+          import json
+          a=json.load(open('data/advanced_ablation_v4.json'))
+          assert a['status']=='PASS', a
+          assert a['ablation']['advanced_removed_only'] is True, a
+          assert a['ablation']['same_official_snapshot'] is True, a
+          assert a['ablation']['same_last_season_priors'] is True, a
+          assert a['ablation']['same_quality_config'] is True, a
+          assert a['ablation']['same_optimizer_semantics'] is True, a
+          assert a['ablation']['full_shadow_parity']['ok'] is True, a
+          assert a['interpretation']['impact_is_diagnostic_not_health_threshold'] is True, a
+          PY
+      - name: Concise ablation diagnostic summary
+        run: |
+          python - <<'PY'
+          import json
+          a=json.load(open('data/advanced_ablation_v4.json'))
+          print({
+              'status': a['status'],
+              'full_shadow_parity': a['ablation']['full_shadow_parity']['ok'],
+              'mean_abs_delta_xpts5': a['prediction_impact']['mean_abs_delta_xpts5'],
+              'max_rank_shift': a['prediction_impact']['max_abs_rank_shift'],
+              'decision_changed': a['decision_impact']['decision_changed'],
+              'observational_only': a['interpretation']['impact_is_diagnostic_not_health_threshold'],
+          })
+          PY
+      - name: Publish ablation diagnostic data
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/advanced_ablation_v4.json
+          if git diff --cached --quiet; then echo "No ablation data changes"; exit 0; fi
+          git commit -m "data(v4): advanced ablation diagnostic"
           git fetch origin v4-prediction-engine
           git rebase origin/v4-prediction-engine
           git push origin HEAD:v4-prediction-engine

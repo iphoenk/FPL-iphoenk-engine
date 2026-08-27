@@ -1,13 +1,38 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "model_id": "v3_dss_operational_evidence_v1",
   "policy": {
     "module_health_means_evaluator_executed": true,
     "signal_availability_is_separate_from_module_health": true,
+    "evidence_maturity_is_separate_from_module_health": true,
     "missing_external_evidence_is_never_fabricated": true,
     "safe_fallback_must_be_explicit": true,
     "active_requires_nonempty_evidence": true,
     "strict_postflight_requires_all_dss_active": true
+  },
+  "evidence_maturity": {
+    "tiers": ["NATIVE", "DERIVED", "PROXY", "SAFE_FALLBACK", "UNAVAILABLE"],
+    "evaluator_available_tier": {
+      "projection_role_proxy": "PROXY",
+      "optional_player_role": "DERIVED",
+      "projection_rates": "DERIVED",
+      "neutral_schedule_guard": "DERIVED",
+      "fixture_schedule": "NATIVE",
+      "optional_prior": "SAFE_FALLBACK",
+      "historical_context": "DERIVED",
+      "prediction_quality": "DERIVED",
+      "price_value": "DERIVED",
+      "ownership_context": "NATIVE",
+      "learning_loop": "DERIVED",
+      "lineup_output": "DERIVED",
+      "package_guardrail": "DERIVED"
+    },
+    "state_overrides": {
+      "AVAILABLE_PROXY": "PROXY",
+      "UNAVAILABLE_WITH_SAFE_FALLBACK": "SAFE_FALLBACK",
+      "ARMED_NO_SETTLED_SAMPLE": "SAFE_FALLBACK",
+      "INSUFFICIENT": "UNAVAILABLE"
+    }
   },
   "coverage": {
     "minimum_player_ratio": 0.95

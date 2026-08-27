@@ -247,7 +247,6 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 "fixtures": player.get("fixtures"),
                 "projection_confidence": player.get("projection_confidence"),
                 "defensive_contribution": player.get("defensive_contribution"),
-                "rates": player.get("rates"),
                 "advanced": player.get("advanced"),
             }
         )

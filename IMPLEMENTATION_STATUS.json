@@ -3,19 +3,31 @@
   "schema_version": 49,
   "release_metadata_source": "src/version.py",
   "production_acceptance": {
-    "status": "PENDING_POST_MERGE_RUNTIME_VALIDATION",
-    "candidate_pr": 47,
-    "candidate_ci_runs": [33055271837, 33055599122],
-    "accepted_baseline_version": "3.21.0",
-    "accepted_baseline_source_commit": "da2be79045c0eb1015b75697eb24b030ffaa4abe",
+    "status": "COMPLETE",
+    "accepted_version": "3.22.0",
+    "accepted_source_commit": "3f35c06f39869e594f6e1a127437a2272c0fc515",
+    "accepted_runtime_run": 33059540147,
+    "accepted_runtime_branch_commit": "5678fcb2f4f8e5934728ff6a8b955a401a42883d",
     "runtime_branch": "runtime-data",
-    "candidate_full_runtime_ms": [18655.833, 18151.291],
-    "candidate_fast_runtime_ms": [5160.113, 5112.717],
+    "accepted_fast_runtime_ms": 6418.862,
     "fast_target_ms": 10000,
+    "accepted_fast_peak_rss_kb": 85312,
+    "accepted_fast_child_peak_rss_kb": 109504,
+    "runtime_snapshot_file_count": 48,
+    "runtime_snapshot_bytes": 17835453,
+    "runtime_snapshot_parent_count": 0,
+    "rolling_runtime_data_proven": true,
+    "history_jsonl_published": false,
     "schema_changed": false,
     "model_behavior_changed": false,
     "rec20_decision_neutral": true,
-    "master_monitor_synced": false
+    "rec31_profile_aware_reuse_validation": true,
+    "rec32_reused_latest_state_carry_forward": true,
+    "master_monitor_synced": true,
+    "candidate_pr": 47,
+    "candidate_ci_runs": [33055271837, 33055599122],
+    "rec32_pr": 50,
+    "rec32_ci_run": 33059384073
   },
   "P0": {
     "status": "IMPLEMENTED",
@@ -102,7 +114,10 @@
       "REC-20 normalized player-feature plumbing with explicit decision-neutral guard",
       "REC-28 split CI, FAST runtime and FULL/DEEP refresh workflows",
       "REC-29 shallow checkout, publish whitelist and rolling runtime-data snapshot design",
-      "REC-30 runtime resource regression guard"
+      "REC-30 runtime resource regression guard",
+      "REC-31 profile-aware production validation for declared contract-valid REUSED services and complete source-layer hydration",
+      "REC-32 registry-owned reusable latest-state carry-forward across base fan-in",
+      "V3.22.0/schema49 production acceptance validated end-to-end with FAST 6.419s and parentless rolling runtime-data publication"
     ]
   },
   "P1": {
@@ -116,7 +131,8 @@
       "SSE live stream",
       "team/universe split outputs",
       "weather-performance anomaly correlation framework awaiting settled-match calibration",
-      "normalized player_features artifact awaiting explicit REC-01/REC-02 model opt-in"
+      "normalized player_features artifact awaiting explicit REC-01/REC-02 model opt-in",
+      "REC-33 FULL refresh Source Layer latency variance monitoring and optimization"
     ]
   },
   "P2": {

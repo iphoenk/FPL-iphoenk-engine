@@ -4,7 +4,9 @@
   "schedules": {
     "primary": "55 * * * *",
     "adaptive": "15 * * * *",
-    "deep_stats": "10 21 * * *"
+    "deep_stats": "30 21 * * *",
+    "report_midday": "30 5 * * *",
+    "report_evening": "30 14 * * *"
   },
   "deadline_intensive_hours": 24,
   "match_window": {
@@ -26,6 +28,7 @@
     "workflow_crons_must_match_this_policy": true,
     "collector_gate_must_not_embed_release_version": true,
     "official_network_location_is_source_registry_owned": true,
-    "deep_stats_publish_through_runtime_data_only": true
+    "deep_stats_publish_through_runtime_data_only": true,
+    "scheduled_report_checkpoints_must_collect": true
   }
 }

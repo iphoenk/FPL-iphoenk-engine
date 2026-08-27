@@ -5,6 +5,9 @@ Canonical roadmap owner: V3 operational stream
 Current production release: V3.23.0  
 Current production schema: 49  
 Production acceptance: COMPLETE  
+Current release candidate: V3.23.1  
+Current candidate schema: 49  
+Candidate acceptance: CI ACCEPTED / PRODUCTION PENDING  
 FAST decision target: **<10 seconds**  
 Active microservices: **20**
 
@@ -43,6 +46,8 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 22. Finished personal GWs are Official actual truth; planning-GW points are projections and must never be presented as actual scores.
 23. The previous Official submitted squad is the default planning baseline. WC/FH/user composition overrides must target the exact planning GW and may never leak into later GWs.
 24. Explicit user XI/C/VC/chip overrides may replace the effective planning decision while preserving the engine recommendation for comparison; the engine may warn but may not silently overwrite the user decision.
+25. Human-facing report surfaces use natural Bahasa Indonesia; raw decision enums remain machine/audit state and must not become the primary user narrative.
+26. Required scheduled report checkpoints are explicit, persisted and auditable. A due checkpoint that was not completed must surface as missed rather than silently appearing complete.
 
 ## Current production health contract
 | Area | Requirement | Current policy |
@@ -53,7 +58,7 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 | FAST runtime | <10s target | production SLO |
 | Runtime publication | rolling parentless snapshot | required |
 | Runtime source | `runtime-data` | authoritative current-state branch |
-| Official-first REC coverage | explicit matrix + closed fallback dispositions | production active via REC-38 |
+| Official-first REC coverage | explicit matrix + closed fallback dispositions | production active; matrix candidate extends through REC-40 |
 | Authenticated Official | optional/read-only/fail-soft | MONITOR |
 | Predictive calibration | settled frozen forecasts only | MONITOR |
 | Price calibration | realized price-change samples only | MONITOR |
@@ -61,6 +66,8 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 | Personal GW history | Official submitted/history actual truth | production active via REC-39 |
 | Planning team score | labelled estimated xPts, never actual | production active via REC-39 |
 | User decision override | explicit only; engine comparison retained | production active via REC-39 |
+| Natural user presentation | primary human-facing surface | V3.23.1 candidate via REC-40 |
+| Scheduled report checkpoints | 04:30 / 12:30 / 21:30 WIB, explicit missed state | V3.23.1 candidate via REC-40 |
 
 ## Historical release anchors
 ### V3.20 Architecture Hardening
@@ -81,71 +88,70 @@ FAST/LIVE/FULL/DEEP execution profiles, rolling runtime-data, shallow checkout, 
 ### V3.23 Personal Gameweek Context + User Decision Authority
 Production release adds Official actual finished-GW history, planning-GW estimated team points, exact-GW WC/FH/user baseline authority, and explicit user XI/C/VC/chip override while preserving engine comparison. It is additive to the existing report-serving boundary, keeps schema 49, retains `REPORT_ARTIFACT_REGISTRY_V3` / `DEEP_REVIEW_PAYLOAD_V2`, and does not add a microservice.
 
-## REC-01 through REC-39 canonical production status
+### V3.23.1 Report Completeness + Natural Presentation
+Release candidate REC-40 makes natural Bahasa Indonesia the primary human-facing presentation while preserving raw machine decisions for audit/API compatibility. It adds persistent checkpoint completeness for 04:30, 12:30 and 21:30 WIB, marks missed due checkpoints explicitly, stays inside the existing report-serving boundary, keeps schema 49 and retains 20 services. PR #85 CI run `33087549395` passed compile, architecture, **203 tests**, composite FULL/FAST acceptance, FULL 10.346s and FAST 3.804s. Production merge/publication is still required before DONE PROD.
+
+## REC-01 through REC-40 canonical status
 | REC | Work item | Status | Current evidence / disposition |
 | --- | --- | --- | --- |
-| REC-01 | Player-specific Defensive Contribution | **DONE PROD** | PR #63; DEF CBIT=10, MID/FWD CBIRT=12, GK ineligible; player evidence + shrinkage + Poisson threshold probability. |
-| REC-02 | Robust early-season attacking rates | **DONE PROD** | PR #65; adaptive evidence-minute xG/xA shrinkage, bounded extreme observations, breakout relaxation. |
-| REC-03 | Mini-league-aware captain risk mode | **DEFERRED** | Wait for enough rival/objective and settled evidence; Official entry/league state is first authority where exposed. |
-| REC-04 | Settled prediction validation | **MONITOR** | Freeze/settlement/evaluation lifecycle implemented; genuine settled GWs must accumulate naturally. Official live/history/picks own realized truth. |
-| REC-05 | Mini-league tracking | **DONE PROD** | PR #59 basic tracker + PR #69 Official entry private-league auto-discovery; bounded rank/gap/trend history. |
-| REC-06 | Report transparency | **DONE PROD** | All 15 OWNED expose current-GW xPts, uncertainty, xMins/start probability, selection score and lineup/choice state. |
-| REC-07 | Confidence calibration | **MONITOR** | Early-season conservative guard active; HIGH confidence is never forced without realized evidence. |
-| REC-08 | Authenticated 3xx handling | **DONE PROD** | PR #54; redirects explicitly rejected, never followed or persisted. |
-| REC-09a | Git/runtime-data hygiene | **DONE PROD** | PR #62 cold-start proof; mutable `data/**` removed from `main`; FULL rebuild and FAST continuation validated. |
-| REC-09b | Rewrite whole Git history | **DEFERRED / NOT REQUIRED** | Rolling runtime snapshot removed the operational need for ancestry rewrite. |
-| REC-10 | Delete `src/engine.py` | **DEFERRED** | Retained as compatibility facade until usage reaches zero. |
-| REC-11 | Composite release acceptance | **DONE PROD** | PR #61; compile/architecture/tests plus fail-closed FULL→contracts→resource guard→FAST→SLO acceptance. |
-| REC-12 | Runtime acceptance vs predictive validation terminology | **DONE FUNCTIONAL** | Runtime production acceptance and predictive accuracy/evidence are explicitly separate claims. |
-| REC-13 | Version-neutral test ownership | **DONE PROD** | PR #71; active runtime tests use domain-owned names; new version-stamped test modules are prohibited. |
-| REC-14 | Reduce 20 services to ~8 | **REJECTED AS WRITTEN** | 20-service architecture achieves FAST <10s; boundaries follow ownership/performance evidence. |
+| REC-01 | Player-specific Defensive Contribution | **DONE PROD** | PR #63; player-specific threshold probability with shrinkage and GK ineligibility. |
+| REC-02 | Robust early-season attacking rates | **DONE PROD** | PR #65; evidence-aware xG/xA shrinkage, bounded extremes and breakout relaxation. |
+| REC-03 | Mini-league-aware captain risk mode | **DEFERRED** | Wait for sufficient rival/objective and settled evidence. |
+| REC-04 | Settled prediction validation | **MONITOR** | Frozen forecast settlement exists; genuine completed pre-deadline samples must accumulate. |
+| REC-05 | Mini-league tracking | **DONE PROD** | Official-entry league discovery plus bounded rank/gap/trend tracking. |
+| REC-06 | Report transparency | **DONE PROD** | All 15 OWNED expose xPts, uncertainty, xMins, selection score and lineup/choice state. |
+| REC-07 | Confidence calibration | **MONITOR** | Early-season conservative guard active; confidence needs realized outcomes. |
+| REC-08 | Authenticated 3xx handling | **DONE PROD** | Redirects explicitly rejected and never persisted. |
+| REC-09a | Git/runtime-data hygiene | **DONE PROD** | Mutable runtime removed from main; rolling runtime-data active. |
+| REC-09b | Rewrite whole Git history | **DEFERRED / NOT REQUIRED** | Rolling runtime snapshot removed the operational need. |
+| REC-10 | Delete `src/engine.py` | **DEFERRED** | Compatibility facade retained until usage reaches zero. |
+| REC-11 | Composite release acceptance | **DONE PROD** | FULL + contracts + resource guard + FAST + SLO fail-closed runner. |
+| REC-12 | Runtime acceptance vs predictive validation terminology | **DONE FUNCTIONAL** | Claims explicitly separated. |
+| REC-13 | Version-neutral test ownership | **DONE PROD** | Domain-owned active tests; version-stamped runtime tests prohibited. |
+| REC-14 | Reduce 20 services to ~8 | **REJECTED AS WRITTEN** | Service count is not a KPI; ownership/performance evidence governs boundaries. |
 | REC-15 | Runtime SLO + profiler | **DONE PROD** | FAST target and wall/RSS/I/O telemetry active. |
-| REC-16 | FAST/LIVE/FULL/DEEP profiles | **DONE PROD** | Profile-specific bounded execution/reuse active. |
-| REC-17 | Remove `official_detail` from FAST blocking path | **DONE PROD CORE** | Fresh complete artifact can be safely reused; no longer dominant FAST cost. |
-| REC-18 | Source/weather freshness reuse | **DONE PROD CORE** | TTL-aware reuse active; weather layer strengthened by REC-33. |
-| REC-19 | Persistent runtime reuse/cache | **DONE PROD CORE** | Cross-run artifact reuse active; additional transport optimization only if profiler justifies it. |
-| REC-20 | Player Feature Contract | **DONE PROD + CONSUMED** | Normalized feature artifact production active and intentionally consumed by REC-01; Official-native fields remain authoritative. |
-| REC-21 | DSS evidence maturity semantics | **DONE PROD** | PR #55; NATIVE/DERIVED/PROXY/SAFE_FALLBACK/UNAVAILABLE independent of ACTIVE/UNRESOLVED. |
-| REC-22 | Price predictor health/calibration | **MONITOR** | PR #57; realized Official price/ownership/transfer movement is truth; direction/timing accuracy remains WARMUP. |
-| REC-23 | Authenticated Official bootstrap/hardening | **MONITOR** | Public Official history/submitted state is used first; unpublished private draft precision remains optional auth. |
-| REC-24 | Runtime manifest/publication hygiene | **DONE PROD** | Manifest, provenance, whitelist and rolling runtime-data publication production-proven. |
-| REC-25 | Final-report evidence readiness | **DONE PROD** | PR #56; ENGINE_READY separate from FINAL_REPORT_EVIDENCE_READY/PENDING; Official readiness checked first. |
-| REC-26 | Model-derived Actionability Gate | **MONITOR** | PR #56; FACT/CONSTRAINT actionable; MODEL_DERIVED advisory until settled calibration eligibility. |
-| REC-27 | Mini-League Strategy State microservice | **DEFERRED / CONDITIONAL** | No extra service until REC-05 grows into EO/rival attack-protect strategy; Official league facts remain first authority. |
-| REC-28 | Split CI / FAST / FULL-DEEP workflows | **DONE PROD** | Workload/cadence separated without per-service workflow explosion. |
-| REC-29 | Rolling runtime snapshot + shallow checkout | **DONE PROD** | Parentless rolling publication, whitelist and shallow fetch proven. |
+| REC-16 | FAST/LIVE/FULL/DEEP profiles | **DONE PROD** | Profile-specific execution/reuse active. |
+| REC-17 | Remove `official_detail` from FAST blocking path | **DONE PROD CORE** | Fresh complete artifact may be safely reused. |
+| REC-18 | Source/weather freshness reuse | **DONE PROD CORE** | TTL-aware reuse active. |
+| REC-19 | Persistent runtime reuse/cache | **DONE PROD CORE** | Cross-run artifact reuse active. |
+| REC-20 | Player Feature Contract | **DONE PROD + CONSUMED** | Normalized feature artifact is production active and consumed by REC-01. |
+| REC-21 | DSS evidence maturity semantics | **DONE PROD** | NATIVE/DERIVED/PROXY/SAFE_FALLBACK/UNAVAILABLE separated from module health. |
+| REC-22 | Price predictor health/calibration | **MONITOR** | Realized Official price movement is truth; timing/direction accuracy remains WARMUP. |
+| REC-23 | Authenticated Official bootstrap/hardening | **MONITOR** | Private precision remains optional; public Official first where sufficient. |
+| REC-24 | Runtime manifest/publication hygiene | **DONE PROD** | Provenance, whitelist and rolling publication production-proven. |
+| REC-25 | Final-report evidence readiness | **DONE PROD** | ENGINE_READY separated from final report evidence readiness. |
+| REC-26 | Model-derived Actionability Gate | **MONITOR** | MODEL_DERIVED actions remain gated until settled evidence eligibility. |
+| REC-27 | Mini-League Strategy State microservice | **DEFERRED / CONDITIONAL** | Add only when rival/EO strategy justifies a separate owner. |
+| REC-28 | Split CI / FAST / FULL-DEEP workflows | **DONE PROD** | Workload/cadence separated. |
+| REC-29 | Rolling runtime snapshot + shallow checkout | **DONE PROD** | Parentless rolling publication and shallow fetch proven. |
 | REC-30 | Runtime resource budget guard | **DONE PROD** | Wall/RSS/resource regression guard active. |
-| REC-31 | Profile-aware REUSED validation | **DONE PROD** | Only declared, complete and contract-valid reused services are accepted. |
-| REC-32 | Reused latest-state carry-forward | **DONE PROD** | Registry-owned canonical state survives base fan-in while unrelated stale state is not copied. |
-| REC-33 | FULL Source-Layer latency variance | **DONE ENGINEERING / MONITOR** | PR #52; weather refresh uses freshness-aware bounded concurrency; Official fixtures anchor fixture context. |
-| REC-34 | Player-feature contract migration fence | **DONE PROD** | PR #66 forced fresh contract publication; PR #67 restored normal 21,600s reuse TTL. |
-| REC-35 | Compact projection diagnostics | **DONE PROD** | PR #70 removes duplicated per-fixture DC provenance without formula/decision change. |
-| REC-36 | Official historical reconciliation + GW1 proxy baseline | **DONE PROD** | PR #73; public Official entry history + historical picks reconcile submitted teams; GW1 retrospective proxy cannot count as pre-deadline predictive evidence. |
-| REC-37 | Official-detail migration fence closeout | **DONE PROD** | PR #74 forced fresh REC-36 Official-detail publication; PR #75 restored normal 3,600s FAST/LIVE reuse TTL. |
-| REC-38 | Official-First REC Coverage Contract | **DONE PROD** | PR #77 implementation + PR #78 one-shot production proof; FULL run 33077874024 passed all contracts, matrix integrity 39/39, and rolling runtime-data publication succeeded. |
-| REC-39 | Personal Gameweek Context + User Decision Authority | **DONE PROD** | PR #82 merged as `60e789a`; final PR CI run `33082069327` passed 199 tests + composite FULL/FAST acceptance; push CI `33082344389` passed; production FAST run `33082344334` completed in 5.124s and published 48-file runtime snapshot `d72d13e`. GW1 now resolves as Official FINAL 71 points + Bench Boost, while GW2 is explicitly a projection from the target-scoped WC planning baseline. |
+| REC-31 | Profile-aware REUSED validation | **DONE PROD** | Only declared complete contract-valid reuse is accepted. |
+| REC-32 | Reused latest-state carry-forward | **DONE PROD** | Registry-owned canonical state survives base fan-in. |
+| REC-33 | FULL Source-Layer latency variance | **DONE ENGINEERING / MONITOR** | Bounded concurrency/freshness active; network/provider variance monitored. |
+| REC-34 | Player-feature contract migration fence | **DONE PROD** | Contract regenerated and normal reuse TTL restored. |
+| REC-35 | Compact projection diagnostics | **DONE PROD** | Duplicate diagnostics removed without formula/decision change. |
+| REC-36 | Official historical reconciliation + GW1 proxy baseline | **DONE PROD** | Official history/picks own historical submitted truth; retrospective proxy cannot count as old forecast. |
+| REC-37 | Official-detail migration fence closeout | **DONE PROD** | Migration published and normal FAST/LIVE reuse TTL restored. |
+| REC-38 | Official-First REC Coverage Contract | **DONE PROD** | Explicit closed matrix enforced by source contract. |
+| REC-39 | Personal Gameweek Context + User Decision Authority | **DONE PROD** | PR #82; final CI + production FAST publication proven. |
+| REC-40 | Report Completeness + Natural Presentation | **CANDIDATE** | PR #85; CI `33087549395` passed 203 tests + composite FULL/FAST; production merge/publication pending. |
 
-## Production evidence after REC-01/02 and runtime closeouts
-- REC-01 PR #63: architecture PASS, service count 20, 177/177 tests PASS, FULL 12.073s, FAST 6.060s.
-- REC-01 runtime contract migration completed successfully; migration fence forced one fresh `player_features.json` publication and normal 6-hour reuse TTL was restored.
-- REC-02 PR #65 merged as an isolated model change after REC-01.
-- REC-35 compaction reversed the post-REC-01/02 payload/RSS regression.
-- REC-36 PR #73 is production merged; public Official historical submitted teams, including GW1 retrospective reconciliation, are available without private credentials.
-- REC-37 PRs #74/#75 completed the one-shot Official-detail migration and restored normal FAST/LIVE reuse TTL.
-- REC-38 production FULL run `33077874024` completed in **8.410s**, source layer **1.912s**, Official detail **2.386s**, all production contracts PASS, Gate0 16/16, framework GREEN, prediction quality HEALTHY, 15 OWNED + 20 WATCHLIST, and Official-first matrix integrity **39/39**. The following production FAST snapshot completed in **4.122s**, within the `<10s` SLO, and published a 48-file rolling snapshot of about 18.69MB.
-- REC-39 PR #82 passed final PR CI `33082069327`: compile PASS, architecture PASS, **199 tests PASS**, composite FULL/FAST acceptance PASS. It was squash-merged as source commit `60e789aa31889bd9011c176f0ec43b542eb665a0`.
-- REC-39 production FAST run `33082344334` completed in **5.124s**, framework GREEN, prediction quality HEALTHY, Gate0 16/16, 15 OWNED + 20 WATCHLIST contract PASS, personal gameweek serving contract PASS, and published 48 files / 18,723,594 bytes to rolling `runtime-data` commit `d72d13e`.
+## Production and candidate evidence
+- REC-38 production FULL run `33077874024`: 8.410s, contracts PASS, Gate0 16/16, framework GREEN, prediction quality HEALTHY, 15 OWNED + 20 WATCHLIST, Official-first matrix integrity proven.
+- REC-39 PR #82 final CI `33082069327`: 199 tests PASS + composite FULL/FAST acceptance. Production FAST run `33082344334`: 5.124s and rolling runtime-data publication succeeded.
+- REC-40 PR #85 candidate CI `33087549395`: compile PASS, architecture PASS, **203 tests PASS**, FULL 10.346s, FAST **3.804s**, source/production/watchlist/report-serving/report-time contracts PASS, Gate0 16/16, framework GREEN and prediction quality HEALTHY.
+- REC-40 is not production-proven until PR #85 is merged and a production runtime publication from merged `main` succeeds.
 - Production schema remains **49** and active service count remains **20**.
 
 ## Calibration / operational monitors that must remain yellow honestly
 | Monitor | Why it cannot be forced green |
 | --- | --- |
-| REC-04 settled prediction validation | Needs genuine completed GWs that were frozen pre-deadline. Historical Official truth can settle forecasts but cannot recreate missing pre-deadline captures. |
+| REC-04 settled prediction validation | Needs genuine completed GWs that were frozen pre-deadline. |
 | REC-07 confidence calibration | Confidence distribution must be validated against realized Official outcomes. |
-| REC-22 price direction/timing calibration | Requires actual Official price movements after predictions; historical snapshots cannot fabricate timing samples that were not captured. |
-| REC-23 authenticated private precision | Only unpublished current pre-deadline draft state requires an authorized production credential; public historical/submitted state is already green. |
+| REC-22 price direction/timing calibration | Requires actual Official price movements after predictions. |
+| REC-23 authenticated private precision | Unpublished current pre-deadline draft requires authorized private access; public historical/submitted state is already green. |
 | REC-26 model actionability | Requires prediction evaluation to become dynamically eligible from settled evidence. |
-| REC-33 FULL latency | Provider/network variance remains an operational metric even after engineering fix. |
+| REC-33 FULL latency | Provider/network variance remains an operational metric after engineering fixes. |
 
 ## Engineering hygiene
 | Task | Status |
@@ -158,6 +164,8 @@ Production release adds Official actual finished-GW history, planning-GW estimat
 | FAST <10s + resource telemetry | ACTIVE |
 | Rolling runtime-data storage hygiene | ACTIVE |
 | Version-neutral active test ownership | ACTIVE |
+| Scheduled report completeness | ACTIVE |
+| Natural user-report language | ACTIVE |
 | README / Implementation Status / Master Task synchronization | ACTIVE |
 
 ## Composite release checklist for every V3 change
@@ -177,8 +185,8 @@ Production release adds Official actual finished-GW history, planning-GW estimat
 A task is DONE only when implementation, deterministic tests, documentation and required production evidence agree. A file existing, a source being reachable, or a manually edited status label is not proof. Predictive accuracy, confidence quality, price accuracy and causal weather claims require genuine realized samples.
 
 ## Execution order from here
-1. Keep V3.23 production GREEN and use REC-39 gameweek context as the authoritative user-facing historical/planning timeline.
-2. Accumulate settled-GW, confidence, price and weather calibration evidence without forcing status upgrades.
-3. Use public Official data first for every applicable REC; keep authenticated Official precision optional/fail-soft only where public Official cannot expose the required private state.
-4. Improve remaining P1 intelligence evidence only through attributable changes that preserve Official authority and production stability.
-5. Re-list the entire V3 roadmap from this canonical state before selecting the next implementation tranche.
+1. Close V3.23.1 REC-40 only after final CI, merge and production `runtime-data` publication prove the new report checkpoint contract on merged main.
+2. Keep V3 production GREEN and preserve REC-39 personal-gameweek authority while REC-40 changes presentation/completeness only.
+3. Accumulate settled-GW, confidence, price and weather calibration evidence without forcing status upgrades.
+4. Use public Official data first for every applicable REC; authenticated Official precision remains optional/fail-soft where public Official cannot expose private state.
+5. Improve remaining P1 intelligence only through attributable changes that preserve Official authority, report truthfulness and production stability.

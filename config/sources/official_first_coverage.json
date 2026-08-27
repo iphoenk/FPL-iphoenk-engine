@@ -70,6 +70,8 @@
     "REC-35": {"applicability":"NOT_APPLICABLE","endpoints":[],"purpose":"projection payload compaction"},
     "REC-36": {"applicability":"PUBLIC_FIRST","endpoints":["entry_history","entry_picks"],"purpose":"historical submitted-team and GW1 retrospective reconciliation"},
     "REC-37": {"applicability":"NOT_APPLICABLE","endpoints":[],"purpose":"Official-detail artifact migration fence and TTL restoration"},
-    "REC-38": {"applicability":"POLICY_ONLY","endpoints":[],"purpose":"enforce and audit Official-first coverage for every REC"}
+    "REC-38": {"applicability":"POLICY_ONLY","endpoints":[],"purpose":"enforce and audit Official-first coverage for every REC"},
+    "REC-39": {"applicability":"PUBLIC_THEN_PRIVATE_AUTH","endpoints":["entry_history","entry_picks","private_my_team"],"purpose":"finished-GW actual truth and submitted planning baseline use Official data first; unpublished current draft precision is private-auth optional while explicit user locks remain separate authority"},
+    "REC-40": {"applicability":"NOT_APPLICABLE","endpoints":[],"purpose":"human-facing report language, scheduled checkpoint completeness and workflow timing governance"}
   }
 }

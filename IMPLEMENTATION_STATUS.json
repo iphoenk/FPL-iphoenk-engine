@@ -1,5 +1,5 @@
 {
-  "version": "3.23.0",
+  "version": "3.23.1",
   "schema_version": 49,
   "release_metadata_source": "src/version.py",
   "production_acceptance": {
@@ -66,6 +66,26 @@
     "backward_compatible_deep_payload": "DEEP_REVIEW_PAYLOAD_V2",
     "active_service_count": 20
   },
+  "release_candidate": {
+    "version": "3.23.1",
+    "schema_version": 49,
+    "status": "CI_ACCEPTED_PRODUCTION_PENDING",
+    "pr": 85,
+    "branch": "v3.23.1-report-completeness-language",
+    "scope": "REC-40 Report Completeness + Natural Presentation",
+    "ci_run": 33087549395,
+    "compile_pass": true,
+    "architecture_pass": true,
+    "unit_regression_pass": true,
+    "unit_regression_count": 203,
+    "composite_full_fast_acceptance_pass": true,
+    "candidate_full_runtime_ms": 10346.385,
+    "candidate_fast_runtime_ms": 3804.383,
+    "production_merge_complete": false,
+    "runtime_publication_complete": false,
+    "schema_changed": false,
+    "active_service_count": 20
+  },
   "rec_status": {
     "REC-01": {"status": "DONE_PROD", "summary": "Player-specific defensive contribution model using DEF CBIT=10 and MID/FWD CBIRT=12 threshold probability with shrinkage and GK ineligibility.", "pr": 63},
     "REC-02": {"status": "DONE_PROD", "summary": "Robust early-season attacking-rate stabilization with evidence-aware shrinkage, bounded extreme observations and breakout relaxation.", "pr": 65},
@@ -106,7 +126,8 @@
     "REC-36": {"status": "DONE_PROD", "summary": "Public Official entry history and historical picks reconcile submitted teams including GW1 as retrospective proxy only; private pre-deadline draft remains separate.", "pr": 73},
     "REC-37": {"status": "DONE_PROD", "summary": "One-shot Official-detail migration fence published REC-36 historical fields to runtime-data and normal 3600-second FAST/LIVE reuse TTL was restored.", "prs": [74, 75]},
     "REC-38": {"status": "DONE_PROD", "summary": "Official-first coverage contract classifies every REC, closes fallback to explicit dispositions, is enforced by the production source contract, and passed FULL production acceptance with runtime-data publication.", "prs": [77, 78], "production_full_run": 33077874024},
-    "REC-39": {"status": "DONE_PROD", "summary": "Finished GWs expose Official actual squad/points/chip while planning GWs expose estimated team xPts. The previous Official submission is the default planning baseline; exact-GW WC/FH/user composition override is supported; explicit user XI/C/VC/chip override preserves the engine recommendation for comparison.", "pr": 82, "pr_ci_run": 33082069327, "main_ci_run": 33082344389, "runtime_run": 33082344334}
+    "REC-39": {"status": "DONE_PROD", "summary": "Finished GWs expose Official actual squad/points/chip while planning GWs expose estimated team xPts. The previous Official submission is the default planning baseline; exact-GW WC/FH/user composition override is supported; explicit user XI/C/VC/chip override preserves the engine recommendation for comparison.", "pr": 82, "pr_ci_run": 33082069327, "main_ci_run": 33082344389, "runtime_run": 33082344334},
+    "REC-40": {"status": "CANDIDATE", "summary": "Natural Indonesian presentation becomes the primary human-facing report surface while raw decision enums remain audit-compatible; 04:30/12:30/21:30 WIB checkpoints are scheduled, persisted and explicit when missed.", "pr": 85, "ci_run": 33087549395}
   },
   "calibration_monitors": {
     "settled_prediction_validation": "MONITOR",
@@ -123,6 +144,8 @@
     "external_evidence_non_authoritative": true,
     "personal_gameweek_context": true,
     "user_decision_override_preserves_engine_comparison": true,
+    "natural_user_presentation": true,
+    "scheduled_report_checkpoint_tracking": true,
     "fast_slo_ms": 10000,
     "runtime_data_branch": "runtime-data",
     "runtime_git_history_is_not_database": true

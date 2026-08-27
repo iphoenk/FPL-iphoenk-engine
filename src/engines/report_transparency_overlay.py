@@ -5,6 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from src.engines.report_user_presentation import run as run_user_presentation
 from src.utils import DATA, ROOT, atomic_json, read_json
 
 EVAL_CONFIG = ROOT / "config" / "intelligence" / "prediction_evaluation.json"
@@ -171,6 +172,12 @@ def run() -> dict[str, Any]:
         payload["weather_context"] = _weather_context(weather)
         atomic_json(path, payload)
         result[path.name] = {"owned": len(decorated), "weather": payload["weather_context"]["status"]}
+
+    presentation = run_user_presentation()
+    result["user_presentation"] = {
+        "checkpoint": ((presentation.get("checkpoint") or {}).get("current") or {}).get("id") or "ROUTINE",
+        "completeness": (presentation.get("checkpoint") or {}).get("completeness"),
+    }
     return result
 
 

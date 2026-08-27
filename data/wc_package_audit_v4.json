@@ -119,11 +119,11 @@
   },
   "baseline": {
     "cost": 995,
-    "objective": 52.9084,
+    "objective": 52.9086,
     "squad_xpts_3": 156.94,
     "squad_xpts_5": 261.52,
     "squad_xpts_10": 523.38,
-    "squad_xpts_15": 784.93,
+    "squad_xpts_15": 784.95,
     "best_xi_xpts_5": 205.59,
     "bench_adjusted_utility_5": 212.3,
     "best_xi_by_gw": [
@@ -180,7 +180,7 @@
       },
       {
         "gw_offset": 4,
-        "xpts": 40.96,
+        "xpts": 40.95,
         "elements": [
           109,
           115,
@@ -224,15 +224,15 @@
       "target_cost": 1000,
       "target_itb": 0,
       "delta_cost": 5,
-      "delta_objective": 1.8734,
+      "delta_objective": 1.8733,
       "delta_squad_xpts_3": 6.11,
       "delta_squad_xpts_5": 9.11,
       "delta_squad_xpts_10": 17.55,
       "delta_squad_xpts_15": 26.73,
       "delta_best_xi_xpts_5": 7.97,
       "delta_bench_adjusted_utility_5": 8.11,
-      "risk_delta": 0.141,
-      "risk_penalty": 0.049,
+      "risk_delta": 0.142,
+      "risk_penalty": 0.05,
       "adjusted_best_xi_gain_5": 7.92,
       "adjusted_utility_gain_5": 8.06,
       "classification": "MATERIAL_UPGRADE",
@@ -264,8 +264,8 @@
           "xpts_5": 22.63,
           "xpts_10": 44.7,
           "xpts_15": 67.36,
-          "uncertainty": 0.251,
-          "objective": 4.5955
+          "uncertainty": 0.252,
+          "objective": 4.5954
         }
       ]
     },
@@ -274,15 +274,15 @@
       "target_cost": 995,
       "target_itb": 5,
       "delta_cost": 0,
-      "delta_objective": 3.1148,
+      "delta_objective": 3.1147,
       "delta_squad_xpts_3": 10.17,
       "delta_squad_xpts_5": 14.98,
       "delta_squad_xpts_10": 29.55,
       "delta_squad_xpts_15": 44.59,
       "delta_best_xi_xpts_5": 13.47,
       "delta_bench_adjusted_utility_5": 13.65,
-      "risk_delta": 0.221,
-      "risk_penalty": 0.277,
+      "risk_delta": 0.222,
+      "risk_penalty": 0.278,
       "adjusted_best_xi_gain_5": 13.19,
       "adjusted_utility_gain_5": 13.37,
       "classification": "MATERIAL_UPGRADE",
@@ -342,8 +342,8 @@
           "xpts_5": 22.63,
           "xpts_10": 44.7,
           "xpts_15": 67.36,
-          "uncertainty": 0.251,
-          "objective": 4.5955
+          "uncertainty": 0.252,
+          "objective": 4.5954
         }
       ]
     },
@@ -357,11 +357,11 @@
       "delta_squad_xpts_5": 20.75,
       "delta_squad_xpts_10": 41.82,
       "delta_squad_xpts_15": 62.65,
-      "delta_best_xi_xpts_5": 19.25,
+      "delta_best_xi_xpts_5": 19.24,
       "delta_bench_adjusted_utility_5": 19.43,
-      "risk_delta": 0.463,
+      "risk_delta": 0.464,
       "risk_penalty": 0.562,
-      "adjusted_best_xi_gain_5": 18.69,
+      "adjusted_best_xi_gain_5": 18.68,
       "adjusted_utility_gain_5": 18.87,
       "classification": "MATERIAL_UPGRADE",
       "out": [
@@ -448,8 +448,8 @@
           "xpts_5": 22.63,
           "xpts_10": 44.7,
           "xpts_15": 67.36,
-          "uncertainty": 0.251,
-          "objective": 4.5955
+          "uncertainty": 0.252,
+          "objective": 4.5954
         }
       ]
     },
@@ -458,14 +458,14 @@
       "target_cost": 1000,
       "target_itb": 0,
       "delta_cost": 5,
-      "delta_objective": 5.106,
+      "delta_objective": 5.1059,
       "delta_squad_xpts_3": 16.48,
       "delta_squad_xpts_5": 24.64,
       "delta_squad_xpts_10": 49.29,
       "delta_squad_xpts_15": 73.76,
       "delta_best_xi_xpts_5": 20.31,
       "delta_bench_adjusted_utility_5": 20.83,
-      "risk_delta": 0.522,
+      "risk_delta": 0.523,
       "risk_penalty": 0.783,
       "adjusted_best_xi_gain_5": 19.53,
       "adjusted_utility_gain_5": 20.05,
@@ -582,8 +582,8 @@
           "xpts_5": 22.63,
           "xpts_10": 44.7,
           "xpts_15": 67.36,
-          "uncertainty": 0.251,
-          "objective": 4.5955
+          "uncertainty": 0.252,
+          "objective": 4.5954
         }
       ]
     }
@@ -595,15 +595,15 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 1.8734,
+        "delta_objective": 1.8733,
         "delta_squad_xpts_3": 6.11,
         "delta_squad_xpts_5": 9.11,
         "delta_squad_xpts_10": 17.55,
         "delta_squad_xpts_15": 26.73,
         "delta_best_xi_xpts_5": 7.97,
         "delta_bench_adjusted_utility_5": 8.11,
-        "risk_delta": 0.141,
-        "risk_penalty": 0.049,
+        "risk_delta": 0.142,
+        "risk_penalty": 0.05,
         "adjusted_best_xi_gain_5": 7.92,
         "adjusted_utility_gain_5": 8.06,
         "classification": "MATERIAL_UPGRADE",
@@ -635,8 +635,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -645,14 +645,14 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 1.5633,
+        "delta_objective": 1.5632,
         "delta_squad_xpts_3": 5.21,
         "delta_squad_xpts_5": 7.57,
         "delta_squad_xpts_10": 14.43,
         "delta_squad_xpts_15": 22.08,
         "delta_best_xi_xpts_5": 7.57,
         "delta_bench_adjusted_utility_5": 7.57,
-        "risk_delta": 0.123,
+        "risk_delta": 0.124,
         "risk_penalty": 0.043,
         "adjusted_best_xi_gain_5": 7.53,
         "adjusted_utility_gain_5": 7.53,
@@ -685,8 +685,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -745,16 +745,16 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 1.2378,
+        "delta_objective": 1.2377,
         "delta_squad_xpts_3": 3.77,
         "delta_squad_xpts_5": 6.07,
         "delta_squad_xpts_10": 12.31,
-        "delta_squad_xpts_15": 18.35,
-        "delta_best_xi_xpts_5": 5.92,
+        "delta_squad_xpts_15": 18.34,
+        "delta_best_xi_xpts_5": 5.91,
         "delta_bench_adjusted_utility_5": 5.94,
         "risk_delta": 0.088,
         "risk_penalty": 0.031,
-        "adjusted_best_xi_gain_5": 5.89,
+        "adjusted_best_xi_gain_5": 5.88,
         "adjusted_utility_gain_5": 5.91,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -768,9 +768,9 @@
             "xpts_3": 9.1,
             "xpts_5": 14.86,
             "xpts_10": 29.96,
-            "xpts_15": 44.79,
+            "xpts_15": 44.8,
             "uncertainty": 0.12,
-            "objective": 3.0358
+            "objective": 3.0359
           }
         ],
         "in": [
@@ -997,15 +997,15 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 3.1148,
+        "delta_objective": 3.1147,
         "delta_squad_xpts_3": 10.17,
         "delta_squad_xpts_5": 14.98,
         "delta_squad_xpts_10": 29.55,
         "delta_squad_xpts_15": 44.59,
         "delta_best_xi_xpts_5": 13.47,
         "delta_bench_adjusted_utility_5": 13.65,
-        "risk_delta": 0.221,
-        "risk_penalty": 0.277,
+        "risk_delta": 0.222,
+        "risk_penalty": 0.278,
         "adjusted_best_xi_gain_5": 13.19,
         "adjusted_utility_gain_5": 13.37,
         "classification": "MATERIAL_UPGRADE",
@@ -1065,8 +1065,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -1075,7 +1075,7 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 2.7408,
+        "delta_objective": 2.7409,
         "delta_squad_xpts_3": 8.7,
         "delta_squad_xpts_5": 13.18,
         "delta_squad_xpts_10": 27.39,
@@ -1153,7 +1153,7 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 2.4307,
+        "delta_objective": 2.4308,
         "delta_squad_xpts_3": 7.8,
         "delta_squad_xpts_5": 11.64,
         "delta_squad_xpts_10": 24.27,
@@ -1231,7 +1231,7 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 2.5962,
+        "delta_objective": 2.5963,
         "delta_squad_xpts_3": 8.55,
         "delta_squad_xpts_5": 12.43,
         "delta_squad_xpts_10": 24.56,
@@ -1316,7 +1316,7 @@
         "delta_squad_xpts_15": 34.11,
         "delta_best_xi_xpts_5": 10.73,
         "delta_bench_adjusted_utility_5": 10.87,
-        "risk_delta": 0.125,
+        "risk_delta": 0.126,
         "risk_penalty": 0.244,
         "adjusted_best_xi_gain_5": 10.49,
         "adjusted_utility_gain_5": 10.63,
@@ -1377,8 +1377,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -1394,7 +1394,7 @@
         "delta_squad_xpts_15": 37.84,
         "delta_best_xi_xpts_5": 10.38,
         "delta_bench_adjusted_utility_5": 10.7,
-        "risk_delta": 0.2,
+        "risk_delta": 0.201,
         "risk_penalty": 0.27,
         "adjusted_best_xi_gain_5": 10.11,
         "adjusted_utility_gain_5": 10.43,
@@ -1455,8 +1455,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -1472,7 +1472,7 @@
         "delta_squad_xpts_15": 38.08,
         "delta_best_xi_xpts_5": 10.38,
         "delta_bench_adjusted_utility_5": 10.71,
-        "risk_delta": 0.237,
+        "risk_delta": 0.238,
         "risk_penalty": 0.283,
         "adjusted_best_xi_gain_5": 10.1,
         "adjusted_utility_gain_5": 10.43,
@@ -1533,8 +1533,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -1550,7 +1550,7 @@
         "delta_squad_xpts_15": 33.19,
         "delta_best_xi_xpts_5": 10.24,
         "delta_bench_adjusted_utility_5": 10.39,
-        "risk_delta": 0.182,
+        "risk_delta": 0.183,
         "risk_penalty": 0.264,
         "adjusted_best_xi_gain_5": 9.98,
         "adjusted_utility_gain_5": 10.13,
@@ -1611,8 +1611,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       }
@@ -1628,11 +1628,11 @@
         "delta_squad_xpts_5": 20.75,
         "delta_squad_xpts_10": 41.82,
         "delta_squad_xpts_15": 62.65,
-        "delta_best_xi_xpts_5": 19.25,
+        "delta_best_xi_xpts_5": 19.24,
         "delta_bench_adjusted_utility_5": 19.43,
-        "risk_delta": 0.463,
+        "risk_delta": 0.464,
         "risk_penalty": 0.562,
-        "adjusted_best_xi_gain_5": 18.69,
+        "adjusted_best_xi_gain_5": 18.68,
         "adjusted_utility_gain_5": 18.87,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -1719,8 +1719,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -1736,8 +1736,8 @@
         "delta_squad_xpts_15": 57.27,
         "delta_best_xi_xpts_5": 16.54,
         "delta_bench_adjusted_utility_5": 16.91,
-        "risk_delta": 0.195,
-        "risk_penalty": 0.468,
+        "risk_delta": 0.196,
+        "risk_penalty": 0.469,
         "adjusted_best_xi_gain_5": 16.07,
         "adjusted_utility_gain_5": 16.44,
         "classification": "MATERIAL_UPGRADE",
@@ -1825,8 +1825,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -1842,8 +1842,8 @@
         "delta_squad_xpts_15": 57.51,
         "delta_best_xi_xpts_5": 16.54,
         "delta_bench_adjusted_utility_5": 16.92,
-        "risk_delta": 0.232,
-        "risk_penalty": 0.481,
+        "risk_delta": 0.233,
+        "risk_penalty": 0.482,
         "adjusted_best_xi_gain_5": 16.06,
         "adjusted_utility_gain_5": 16.44,
         "classification": "MATERIAL_UPGRADE",
@@ -1931,8 +1931,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -1946,11 +1946,11 @@
         "delta_squad_xpts_5": 18.2,
         "delta_squad_xpts_10": 36.83,
         "delta_squad_xpts_15": 55.11,
-        "delta_best_xi_xpts_5": 16.7,
+        "delta_best_xi_xpts_5": 16.69,
         "delta_bench_adjusted_utility_5": 16.88,
         "risk_delta": 0.415,
         "risk_penalty": 0.545,
-        "adjusted_best_xi_gain_5": 16.15,
+        "adjusted_best_xi_gain_5": 16.14,
         "adjusted_utility_gain_5": 16.33,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -2047,14 +2047,14 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 3.667,
+        "delta_objective": 3.6669,
         "delta_squad_xpts_3": 11.55,
         "delta_squad_xpts_5": 17.94,
         "delta_squad_xpts_10": 34.7,
-        "delta_squad_xpts_15": 52.46,
+        "delta_squad_xpts_15": 52.45,
         "delta_best_xi_xpts_5": 16.37,
         "delta_bench_adjusted_utility_5": 16.56,
-        "risk_delta": 0.213,
+        "risk_delta": 0.214,
         "risk_penalty": 0.475,
         "adjusted_best_xi_gain_5": 15.9,
         "adjusted_utility_gain_5": 16.09,
@@ -2084,9 +2084,9 @@
             "xpts_3": 9.1,
             "xpts_5": 14.86,
             "xpts_10": 29.96,
-            "xpts_15": 44.79,
+            "xpts_15": 44.8,
             "uncertainty": 0.12,
-            "objective": 3.0358
+            "objective": 3.0359
           },
           {
             "element": 15,
@@ -2143,8 +2143,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -2153,14 +2153,14 @@
         "target_cost": 990,
         "target_itb": 10,
         "delta_cost": -5,
-        "delta_objective": 3.6707,
+        "delta_objective": 3.6706,
         "delta_squad_xpts_3": 11.84,
         "delta_squad_xpts_5": 17.74,
         "delta_squad_xpts_10": 34.39,
         "delta_squad_xpts_15": 51.97,
         "delta_best_xi_xpts_5": 16.23,
         "delta_bench_adjusted_utility_5": 16.41,
-        "risk_delta": 0.205,
+        "risk_delta": 0.206,
         "risk_penalty": 0.472,
         "adjusted_best_xi_gain_5": 15.76,
         "adjusted_utility_gain_5": 15.94,
@@ -2249,8 +2249,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -2259,15 +2259,15 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 3.3569,
+        "delta_objective": 3.3568,
         "delta_squad_xpts_3": 10.65,
         "delta_squad_xpts_5": 16.4,
         "delta_squad_xpts_10": 31.58,
-        "delta_squad_xpts_15": 47.81,
+        "delta_squad_xpts_15": 47.8,
         "delta_best_xi_xpts_5": 16.23,
         "delta_bench_adjusted_utility_5": 16.25,
-        "risk_delta": 0.195,
-        "risk_penalty": 0.468,
+        "risk_delta": 0.196,
+        "risk_penalty": 0.469,
         "adjusted_best_xi_gain_5": 15.76,
         "adjusted_utility_gain_5": 15.78,
         "classification": "MATERIAL_UPGRADE",
@@ -2296,9 +2296,9 @@
             "xpts_3": 9.1,
             "xpts_5": 14.86,
             "xpts_10": 29.96,
-            "xpts_15": 44.79,
+            "xpts_15": 44.8,
             "uncertainty": 0.12,
-            "objective": 3.0358
+            "objective": 3.0359
           },
           {
             "element": 557,
@@ -2355,8 +2355,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -2365,16 +2365,16 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 3.9167,
+        "delta_objective": 3.9166,
         "delta_squad_xpts_3": 12.74,
         "delta_squad_xpts_5": 18.87,
         "delta_squad_xpts_10": 37.02,
         "delta_squad_xpts_15": 55.7,
-        "delta_best_xi_xpts_5": 15.85,
+        "delta_best_xi_xpts_5": 15.84,
         "delta_bench_adjusted_utility_5": 16.21,
-        "risk_delta": 0.28,
+        "risk_delta": 0.281,
         "risk_penalty": 0.498,
-        "adjusted_best_xi_gain_5": 15.35,
+        "adjusted_best_xi_gain_5": 15.34,
         "adjusted_utility_gain_5": 15.71,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -2461,8 +2461,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       }
@@ -2473,14 +2473,14 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 5.106,
+        "delta_objective": 5.1059,
         "delta_squad_xpts_3": 16.48,
         "delta_squad_xpts_5": 24.64,
         "delta_squad_xpts_10": 49.29,
         "delta_squad_xpts_15": 73.76,
         "delta_best_xi_xpts_5": 20.31,
         "delta_bench_adjusted_utility_5": 20.83,
-        "risk_delta": 0.522,
+        "risk_delta": 0.523,
         "risk_penalty": 0.783,
         "adjusted_best_xi_gain_5": 19.53,
         "adjusted_utility_gain_5": 20.05,
@@ -2597,8 +2597,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -2607,14 +2607,14 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 5.1401,
+        "delta_objective": 5.14,
         "delta_squad_xpts_3": 16.71,
         "delta_squad_xpts_5": 24.73,
         "delta_squad_xpts_10": 49.75,
         "delta_squad_xpts_15": 74.0,
         "delta_best_xi_xpts_5": 20.31,
         "delta_bench_adjusted_utility_5": 20.84,
-        "risk_delta": 0.559,
+        "risk_delta": 0.56,
         "risk_penalty": 0.796,
         "adjusted_best_xi_gain_5": 19.51,
         "adjusted_utility_gain_5": 20.04,
@@ -2731,8 +2731,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -2748,7 +2748,7 @@
         "delta_squad_xpts_15": 68.61,
         "delta_best_xi_xpts_5": 19.64,
         "delta_bench_adjusted_utility_5": 19.96,
-        "risk_delta": 0.493,
+        "risk_delta": 0.494,
         "risk_penalty": 0.773,
         "adjusted_best_xi_gain_5": 18.87,
         "adjusted_utility_gain_5": 19.19,
@@ -2865,8 +2865,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -2880,11 +2880,11 @@
         "delta_squad_xpts_5": 22.15,
         "delta_squad_xpts_10": 44.64,
         "delta_squad_xpts_15": 67.33,
-        "delta_best_xi_xpts_5": 19.57,
+        "delta_best_xi_xpts_5": 19.56,
         "delta_bench_adjusted_utility_5": 19.88,
-        "risk_delta": 0.463,
+        "risk_delta": 0.464,
         "risk_penalty": 0.762,
-        "adjusted_best_xi_gain_5": 18.81,
+        "adjusted_best_xi_gain_5": 18.8,
         "adjusted_utility_gain_5": 19.12,
         "classification": "MATERIAL_UPGRADE",
         "out": [
@@ -2999,8 +2999,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -3016,8 +3016,8 @@
         "delta_squad_xpts_15": 63.53,
         "delta_best_xi_xpts_5": 19.17,
         "delta_bench_adjusted_utility_5": 19.35,
-        "risk_delta": 0.478,
-        "risk_penalty": 0.767,
+        "risk_delta": 0.479,
+        "risk_penalty": 0.768,
         "adjusted_best_xi_gain_5": 18.4,
         "adjusted_utility_gain_5": 18.58,
         "classification": "MATERIAL_UPGRADE",
@@ -3133,8 +3133,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -3150,7 +3150,7 @@
         "delta_squad_xpts_15": 62.25,
         "delta_best_xi_xpts_5": 19.03,
         "delta_bench_adjusted_utility_5": 19.22,
-        "risk_delta": 0.448,
+        "risk_delta": 0.449,
         "risk_penalty": 0.757,
         "adjusted_best_xi_gain_5": 18.27,
         "adjusted_utility_gain_5": 18.46,
@@ -3267,8 +3267,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -3277,14 +3277,14 @@
         "target_cost": 995,
         "target_itb": 5,
         "delta_cost": 0,
-        "delta_objective": 4.271,
+        "delta_objective": 4.2709,
         "delta_squad_xpts_3": 14.02,
         "delta_squad_xpts_5": 20.45,
         "delta_squad_xpts_10": 40.79,
         "delta_squad_xpts_15": 62.0,
         "delta_best_xi_xpts_5": 18.95,
         "delta_bench_adjusted_utility_5": 19.13,
-        "risk_delta": 0.408,
+        "risk_delta": 0.409,
         "risk_penalty": 0.743,
         "adjusted_best_xi_gain_5": 18.21,
         "adjusted_utility_gain_5": 18.39,
@@ -3401,8 +3401,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       },
@@ -3411,17 +3411,17 @@
         "target_cost": 1000,
         "target_itb": 0,
         "delta_cost": 5,
-        "delta_objective": 4.2174,
+        "delta_objective": 4.2172,
         "delta_squad_xpts_3": 13.67,
         "delta_squad_xpts_5": 20.25,
         "delta_squad_xpts_10": 40.19,
-        "delta_squad_xpts_15": 60.97,
-        "delta_best_xi_xpts_5": 18.69,
-        "delta_bench_adjusted_utility_5": 18.88,
-        "risk_delta": 0.292,
-        "risk_penalty": 0.702,
-        "adjusted_best_xi_gain_5": 17.99,
-        "adjusted_utility_gain_5": 18.18,
+        "delta_squad_xpts_15": 60.96,
+        "delta_best_xi_xpts_5": 18.68,
+        "delta_bench_adjusted_utility_5": 18.87,
+        "risk_delta": 0.293,
+        "risk_penalty": 0.703,
+        "adjusted_best_xi_gain_5": 17.98,
+        "adjusted_utility_gain_5": 18.17,
         "classification": "MATERIAL_UPGRADE",
         "out": [
           {
@@ -3462,9 +3462,9 @@
             "xpts_3": 9.1,
             "xpts_5": 14.86,
             "xpts_10": 29.96,
-            "xpts_15": 44.79,
+            "xpts_15": 44.8,
             "uncertainty": 0.12,
-            "objective": 3.0358
+            "objective": 3.0359
           },
           {
             "element": 15,
@@ -3535,8 +3535,8 @@
             "xpts_5": 22.63,
             "xpts_10": 44.7,
             "xpts_15": 67.36,
-            "uncertainty": 0.251,
-            "objective": 4.5955
+            "uncertainty": 0.252,
+            "objective": 4.5954
           }
         ]
       }
@@ -3548,14 +3548,14 @@
     "target_cost": 1000,
     "target_itb": 0,
     "delta_cost": 5,
-    "delta_objective": 5.106,
+    "delta_objective": 5.1059,
     "delta_squad_xpts_3": 16.48,
     "delta_squad_xpts_5": 24.64,
     "delta_squad_xpts_10": 49.29,
     "delta_squad_xpts_15": 73.76,
     "delta_best_xi_xpts_5": 20.31,
     "delta_bench_adjusted_utility_5": 20.83,
-    "risk_delta": 0.522,
+    "risk_delta": 0.523,
     "risk_penalty": 0.783,
     "adjusted_best_xi_gain_5": 19.53,
     "adjusted_utility_gain_5": 20.05,
@@ -3672,8 +3672,8 @@
         "xpts_5": 22.63,
         "xpts_10": 44.7,
         "xpts_15": 67.36,
-        "uncertainty": 0.251,
-        "objective": 4.5955
+        "uncertainty": 0.252,
+        "objective": 4.5954
       }
     ]
   },

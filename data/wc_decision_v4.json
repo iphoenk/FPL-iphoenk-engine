@@ -122,11 +122,11 @@
   "screened_players": 571,
   "current": {
     "cost": 995,
-    "objective": 52.9084,
+    "objective": 52.9086,
     "squad_xpts_3": 156.94,
     "squad_xpts_5": 261.52,
     "squad_xpts_10": 523.38,
-    "squad_xpts_15": 784.93,
+    "squad_xpts_15": 784.95,
     "best_xi_xpts_5": 205.59,
     "bench_adjusted_utility_5": 212.3,
     "best_xi_by_gw": [
@@ -223,7 +223,7 @@
     "squad_xpts_3": 181.24,
     "squad_xpts_5": 298.16,
     "squad_xpts_10": 593.91,
-    "squad_xpts_15": 890.84,
+    "squad_xpts_15": 890.85,
     "best_xi_xpts_5": 229.81,
     "bench_adjusted_utility_5": 238.01,
     "best_xi_by_gw": [
@@ -457,7 +457,7 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.8734,
+      "objective_delta": 1.8733,
       "xpts5_delta": 9.11
     },
     {
@@ -467,7 +467,7 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.5633,
+      "objective_delta": 1.5632,
       "xpts5_delta": 7.57
     },
     {
@@ -477,7 +477,7 @@
       "challenger_name": "Schade",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.2378,
+      "objective_delta": 1.2377,
       "xpts5_delta": 6.07
     },
     {
@@ -527,7 +527,7 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": -5,
-      "objective_delta": 0.4854,
+      "objective_delta": 0.4853,
       "xpts5_delta": 2.25
     },
     {
@@ -567,7 +567,7 @@
       "challenger_name": "Thiaw",
       "position": "DEF",
       "cost_delta": 5,
-      "objective_delta": -0.0435,
+      "objective_delta": -0.0436,
       "xpts5_delta": 0.17
     },
     {
@@ -577,7 +577,7 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": -50,
-      "objective_delta": -0.0865,
+      "objective_delta": -0.0866,
       "xpts5_delta": -0.82
     },
     {
@@ -627,8 +627,8 @@
     "safe_objective_bound": true,
     "fixed_position_finalist_scoring": true,
     "finalist_materialization_removed": true,
-    "generated_states": 188763,
-    "objective_bound_pruned": 1782988,
+    "generated_states": 188768,
+    "objective_bound_pruned": 1782991,
     "beam_size_unchanged": true,
     "direct_challenger_position_index": true,
     "value_term_consumed": true,

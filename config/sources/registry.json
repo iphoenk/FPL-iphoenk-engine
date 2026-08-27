@@ -11,18 +11,138 @@
     "max_workers": 6,
     "raw_credentials_forbidden": true,
     "public_fetch_only_unless_explicit_authenticated_adapter": true,
-    "network_enrichment_owned_by_ingestion_service": true
+    "network_enrichment_owned_by_ingestion_service": true,
+    "source_reachability_is_separate_from_capability_health": true,
+    "stale_observations_are_never_silently_current": true,
+    "challenger_observation_contract": "challenger_observation_v2"
   },
   "sources": [
-    {"id":"official_fpl","name":"Official FPL","class":"AUTHORITATIVE","tier":1,"enabled":true,"critical":true,"adapter":"runtime_official","capabilities":["player_identity","prices","fixtures","entry","history","picks","live","rules_native_fields"]},
-    {"id":"fpl_core_insights","name":"FPL Core Insights","class":"ENRICHMENT","tier":2,"enabled":true,"critical":false,"adapter":"artifact","artifact_paths":["stats/shots_gw1.json","stats/playermatchstats_gw1.json"],"capabilities":["advanced_stats","shots","box_touches","chances_created","player_match_stats","xg","xa"]},
-    {"id":"understat","name":"Understat","class":"CHALLENGER","tier":3,"enabled":true,"critical":false,"adapter":"understatapi","capabilities":["shots","xg","xa","key_passes","xg_chain","xg_buildup"],"governance":{"never_used_as_box_touch_proxy":true,"never_overrides_fpl_core_insights_primary_fields":true}},
-    {"id":"api_football","name":"API-Football","class":"ENRICHMENT","tier":2,"enabled":true,"critical":false,"adapter":"api_football","credential_env":"API_FOOTBALL_KEY","capabilities":["european_fixtures","domestic_cup_fixtures","club_friendlies","cross_competition_rest_days","international_fixture_scaffold"],"governance":{"resolve_competition_ids_dynamically":true,"missing_credential_is_fail_neutral":true}},
-    {"id":"vaastav","name":"vaastav FPL Dataset","class":"ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"artifact","artifact_paths":["stats/vaastav_previous_season.json"],"capabilities":["historical_prior","previous_season_stats"]},
-    {"id":"livefpl","name":"LiveFPL","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"livefpl","probe_url":"https://www.livefpl.net/","capabilities":["price_prediction","effective_ownership","live_rank","bonus_crosscheck","defcon_crosscheck","autosub_crosscheck","rank_tier_context"]},
-    {"id":"onefpl","name":"OneFPL","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"onefpl","probe_url":"https://onefpl.com/","capabilities":["price_prediction","transfer_trends","captaincy_context","planner_context"]},
-    {"id":"fffix","name":"Fantasy Football Fix","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"fffix","probe_url":"https://www.fantasyfootballfix.com/","capabilities":["price_prediction","predicted_points","predicted_lineups","ownership_context"]},
-    {"id":"ffhub","name":"Fantasy Football Hub","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"ffhub","probe_url":"https://www.fantasyfootballhub.co.uk/","capabilities":["predicted_points","team_optimization","ownership_context","mini_league_context"]},
-    {"id":"ffscout","name":"Fantasy Football Scout","class":"ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"ffscout","probe_url":"https://www.fantasyfootballscout.co.uk/","capabilities":["team_news","predicted_lineups","role_context","set_piece_context","community_analysis"]}
+    {
+      "id": "official_fpl",
+      "name": "Official FPL",
+      "class": "AUTHORITATIVE",
+      "tier": 1,
+      "enabled": true,
+      "critical": true,
+      "adapter": "runtime_official",
+      "capabilities": ["player_identity", "prices", "fixtures", "entry", "history", "picks", "live", "rules_native_fields"]
+    },
+    {
+      "id": "fpl_core_insights",
+      "name": "FPL Core Insights",
+      "class": "ENRICHMENT",
+      "tier": 2,
+      "enabled": true,
+      "critical": false,
+      "adapter": "artifact",
+      "artifact_paths": ["stats/shots_gw1.json", "stats/playermatchstats_gw1.json"],
+      "capabilities": ["advanced_stats", "shots", "box_touches", "chances_created", "player_match_stats", "xg", "xa"]
+    },
+    {
+      "id": "understat",
+      "name": "Understat",
+      "class": "CHALLENGER",
+      "tier": 3,
+      "enabled": true,
+      "critical": false,
+      "adapter": "understatapi",
+      "capabilities": ["shots", "xg", "xa", "key_passes", "xg_chain", "xg_buildup"],
+      "governance": {
+        "never_used_as_box_touch_proxy": true,
+        "never_overrides_fpl_core_insights_primary_fields": true
+      }
+    },
+    {
+      "id": "api_football",
+      "name": "API-Football",
+      "class": "ENRICHMENT",
+      "tier": 2,
+      "enabled": true,
+      "critical": false,
+      "adapter": "api_football",
+      "credential_env": "API_FOOTBALL_KEY",
+      "capabilities": ["european_fixtures", "domestic_cup_fixtures", "club_friendlies", "cross_competition_rest_days", "international_fixture_scaffold"],
+      "governance": {
+        "resolve_competition_ids_dynamically": true,
+        "missing_credential_is_fail_neutral": true,
+        "provider_restriction_is_fail_neutral": true
+      }
+    },
+    {
+      "id": "vaastav",
+      "name": "vaastav FPL Dataset",
+      "class": "ENRICHMENT",
+      "tier": 3,
+      "enabled": true,
+      "critical": false,
+      "adapter": "artifact",
+      "artifact_paths": ["stats/vaastav_previous_season.json"],
+      "capabilities": ["historical_prior", "previous_season_stats"]
+    },
+    {
+      "id": "livefpl",
+      "name": "LiveFPL",
+      "class": "CHALLENGER",
+      "tier": 2,
+      "enabled": true,
+      "critical": false,
+      "adapter": "livefpl",
+      "probe_url": "https://www.livefpl.net/",
+      "structured_url": "https://www.livefpl.net/prices",
+      "observation_ttl_seconds": 1800,
+      "max_fetch_bytes": 1048576,
+      "parser_contract": "livefpl-price-v1",
+      "capabilities": ["price_prediction", "effective_ownership", "live_rank", "bonus_crosscheck", "defcon_crosscheck", "autosub_crosscheck", "rank_tier_context"]
+    },
+    {
+      "id": "onefpl",
+      "name": "OneFPL",
+      "class": "CHALLENGER",
+      "tier": 2,
+      "enabled": true,
+      "critical": false,
+      "adapter": "onefpl",
+      "probe_url": "https://onefpl.com/",
+      "structured_url": "https://onefpl.com/prices",
+      "fallback_structured_urls": ["https://onefpl.vercel.app/prices"],
+      "allowed_hosts": ["onefpl.com", "www.onefpl.com", "onefpl.vercel.app"],
+      "observation_ttl_seconds": 1800,
+      "max_fetch_bytes": 1048576,
+      "parser_contract": "onefpl-price-v2",
+      "capabilities": ["price_prediction", "transfer_trends", "captaincy_context", "planner_context"]
+    },
+    {
+      "id": "fffix",
+      "name": "Fantasy Football Fix",
+      "class": "CHALLENGER",
+      "tier": 2,
+      "enabled": true,
+      "critical": false,
+      "adapter": "fffix",
+      "probe_url": "https://www.fantasyfootballfix.com/",
+      "capabilities": ["price_prediction", "predicted_points", "predicted_lineups", "ownership_context"]
+    },
+    {
+      "id": "ffhub",
+      "name": "Fantasy Football Hub",
+      "class": "CHALLENGER",
+      "tier": 2,
+      "enabled": true,
+      "critical": false,
+      "adapter": "ffhub",
+      "probe_url": "https://www.fantasyfootballhub.co.uk/",
+      "capabilities": ["predicted_points", "team_optimization", "ownership_context", "mini_league_context"]
+    },
+    {
+      "id": "ffscout",
+      "name": "Fantasy Football Scout",
+      "class": "ENRICHMENT",
+      "tier": 3,
+      "enabled": true,
+      "critical": false,
+      "adapter": "ffscout",
+      "probe_url": "https://www.fantasyfootballscout.co.uk/",
+      "capabilities": ["team_news", "predicted_lineups", "role_context", "set_piece_context", "community_analysis"]
+    }
   ]
 }

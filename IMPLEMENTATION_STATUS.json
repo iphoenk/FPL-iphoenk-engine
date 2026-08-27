@@ -1,56 +1,36 @@
 {
-  "version": "4.7.0",
-  "P0": {
-    "status": "IMPLEMENTED",
-    "items": [
-      "Official FPL API source authority",
-      "phase-aware planning/submitted/scoring GW",
-      "pre-deadline locked squad authority",
-      "public purchase/sell-value reconstruction",
-      "endpoint health/retry/latency",
-      "expanded live player stats",
-      "price delta/momentum",
-      "FPL-Core-Insights GW sync",
-      "vaastav historical sync",
-      "data leakage guard module",
-      "atomic writes",
-      "fail-closed squad sanity",
-      "per-GW snapshots",
-      "safe workflow rebase"
-    ]
+  "version": "5.0.0-beta.3",
+  "track": "V5_UNIFIED_DECISION_ENGINE",
+  "production_baseline": {
+    "version": "v3.18.1",
+    "main_sha": "02d0ce597e111e9b7d464f88479d78d462b616eb",
+    "schema_version": 47
   },
-  "P1": {
-    "status": "IMPLEMENTED AS WORKING BASE / NEEDS CALIBRATION",
-    "items": [
-      "optional shots.csv and playermatchstats.csv ingestion",
-      "fixture model using official FDR fallback",
-      "interpretable xPts/xMins projection scaffold",
-      "last-season priors blended by stable player code",
-      "advanced xG/xA/DefCon stats consumed by prediction",
-      "official set-piece and penalty orders consumed as role shares",
-      "venue-normalized dynamic opponent defence",
-      "xMins starter, competition and rotation priors",
-      "advanced stats query CLI",
-      "FastAPI live endpoints",
-      "SSE live stream",
-      "team/universe split outputs"
-    ]
+  "state": "REBASELINED_AWAITING_ACCEPTANCE_EVIDENCE",
+  "completed": [
+    "bounded-context microservice architecture",
+    "V3 truth/rules/phase/finance convergence",
+    "V4 adopted prediction intelligence convergence",
+    "50 core plus 16 extension DSS strict postflight",
+    "15 owned plus 20 external watchlist contract",
+    "postvalidated real-shadow acceptance accounting",
+    "version-and-baseline-scoped acceptance counting",
+    "isolated on-demand full team reporting",
+    "API-Football fail-neutral provider restriction handling",
+    "V3.18.1 source reachability versus capability-health contract adoption",
+    "V3.18.1 LiveFPL and OneFPL structured-access registry contract adoption"
+  ],
+  "acceptance": {
+    "unified_gate": "REQUIRED_AFTER_REBASELINE_COMMIT",
+    "validated_real_shadow_cycles_required": 3,
+    "validated_real_shadow_cycles_current_baseline": 0,
+    "old_beta2_cycles_count": false,
+    "reason_old_cycles_do_not_count": "The accepted production baseline changed from V3.17.1 to V3.18.1, so old cycles are baseline-mismatched by policy."
   },
-  "P2": {
-    "status": "IMPLEMENTED AS FRAMEWORK / REQUIRES SEASON DATA TO CALIBRATE",
-    "items": [
-      "Monte Carlo points scenario engine",
-      "portfolio package legality/score engine",
-      "calibration metrics MAE/Brier/Spearman",
-      "model versioning hooks",
-      "rank-simulation scaffold"
-    ],
-    "not_claimed_as_finished": [
-      "true overall-rank conversion model",
-      "live EO population model",
-      "production ML projection model",
-      "full mini-league rival spy",
-      "literal heatmap renderer"
-    ]
+  "production": {
+    "candidate_eligible": false,
+    "auto_promotion": false,
+    "manual_promotion_required": true,
+    "current_authority": "V3.18.1"
   }
 }

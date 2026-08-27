@@ -1,12 +1,15 @@
 {
-  "version": 2,
-  "policy": "Official FPL remains the only native external authority. User LOCK remains authoritative where phase policy permits. Challenger and enrichment sources may add evidence or fill explicitly missing non-native fields, but never silently override Official FPL native fields and never fabricate missing data.",
+  "version": 3,
+  "policy": "Official FPL remains the only native external authority. User LOCK remains authoritative where phase policy permits. Challenger and enrichment sources may add evidence or fill explicitly missing non-native fields, but never silently override Official FPL native fields, never fabricate missing data, and never confuse source reachability with capability health.",
   "source_registry": "config/sources/registry.json",
   "governance": {
     "official_fpl_only_native_external_authority": true,
     "challenger_never_overrides_official_native": true,
     "missing_enrichment_never_fabricated": true,
-    "source_failure_isolated_by_default": true
+    "source_failure_isolated_by_default": true,
+    "source_reachability_is_separate_from_capability_health": true,
+    "stale_observations_are_never_silently_current": true,
+    "challenger_observation_contract": "challenger_observation_v2"
   },
   "sources": {
     "user_lock": {"tier": 0, "kind": "user_authority", "enabled": true},
@@ -17,9 +20,10 @@
     "onefpl": {"tier": 2, "kind": "challenger", "enabled": true},
     "fffix": {"tier": 2, "kind": "challenger", "enabled": true},
     "ffhub": {"tier": 2, "kind": "challenger", "enabled": true},
+    "api_football": {"tier": 2, "kind": "optional_enrichment", "enabled": true},
     "ffscout": {"tier": 3, "kind": "enrichment", "enabled": true},
     "vaastav": {"tier": 3, "kind": "historical_backbone", "enabled": true},
-    "understat": {"tier": 4, "kind": "optional_enrichment", "enabled": false}
+    "understat": {"tier": 4, "kind": "optional_enrichment", "enabled": true}
   },
   "domains": {
     "player_identity": ["official_public"],
@@ -29,11 +33,12 @@
     "authenticated_draft": ["official_authenticated"],
     "exact_owned_finance": ["official_authenticated"],
     "pre_deadline_locked_squad": ["user_lock", "official_authenticated"],
-    "advanced_player_stats": ["core_insights", "ffscout", "vaastav"],
+    "advanced_player_stats": ["core_insights", "ffscout", "vaastav", "understat"],
     "historical_priors": ["vaastav", "core_insights"],
     "price_prediction_challengers": ["livefpl", "onefpl", "fffix"],
     "predicted_points_challengers": ["fffix", "ffhub"],
     "role_and_team_news_enrichment": ["ffscout"],
-    "effective_ownership_challenger": ["livefpl", "ffhub"]
+    "effective_ownership_challenger": ["livefpl", "ffhub"],
+    "cross_competition_schedule_context": ["api_football"]
   }
 }

@@ -1,12 +1,14 @@
 {
-  "schema_version": 1,
-  "registry": "REPORT_ARTIFACT_REGISTRY_V1",
+  "schema_version": 2,
+  "registry": "REPORT_ARTIFACT_REGISTRY_V2",
   "consumer_contract": {
     "owned_count": 15,
     "watchlist_total": 20,
     "watchlist_per_position": 5,
     "watchlist_positions": ["GK", "DEF", "MID", "FWD"],
-    "owned_must_never_be_counted_as_watchlist": true
+    "owned_must_never_be_counted_as_watchlist": true,
+    "report_time_intelligence_required": true,
+    "pundit_consensus_must_include_dss_alignment": true
   },
   "artifacts": {
     "decision_brief": {
@@ -14,27 +16,30 @@
       "consumer": "chatgpt-fast",
       "priority": "P0",
       "lazy_load": false,
-      "max_bytes": 24000,
+      "max_bytes": 40000,
       "required_owned_count": 15,
-      "required_watchlist_count": 20
+      "required_watchlist_count": 20,
+      "required_sections": ["report_time_intelligence"]
     },
     "deep_review_payload": {
       "path": "data/deep_review_payload.json",
       "consumer": "chatgpt-deep-review",
       "priority": "P0",
       "lazy_load": false,
-      "max_bytes": 60000,
+      "max_bytes": 90000,
       "required_owned_count": 15,
-      "required_watchlist_count": 20
+      "required_watchlist_count": 20,
+      "required_sections": ["report_time_intelligence"]
     },
     "user_report": {
       "path": "data/user_report.json",
       "consumer": "human-report-contract",
       "priority": "P0",
       "lazy_load": false,
-      "max_bytes": 70000,
+      "max_bytes": 90000,
       "required_owned_count": 15,
-      "required_watchlist_count": 20
+      "required_watchlist_count": 20,
+      "required_sections": ["report_time_intelligence"]
     },
     "watchlist_summary": {
       "path": "data/dss_watchlist_summary.json",
@@ -81,6 +86,8 @@
     "report_materializer_may_reduce_fields_but_may_not_make_new_football_decisions": true,
     "technical_artifacts_are_lazy_loaded": true,
     "chatgpt_default_reads_decision_brief_or_deep_review_payload": true,
-    "payload_limits_are_fail_closed_for_p0_serving_artifacts": true
+    "payload_limits_are_fail_closed_for_p0_serving_artifacts": true,
+    "report_time_sources_are_refreshed_by_chat_report_orchestration_not_collector": true,
+    "pundit_consensus_is_advisory_and_never_mutates_dss": true
   }
 }

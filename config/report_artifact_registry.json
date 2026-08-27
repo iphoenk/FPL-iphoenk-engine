@@ -8,6 +8,7 @@
     "watchlist_positions": ["GK", "DEF", "MID", "FWD"],
     "owned_must_never_be_counted_as_watchlist": true,
     "owned_rows_require_current_gw_xpts": true,
+    "owned_rows_require_selection_score": true,
     "owned_rows_require_lineup_status": true,
     "owned_rows_require_choice_state": true,
     "model_validation_required": true,

@@ -101,7 +101,17 @@ def test_xmins_context_uses_direct_evidence_and_tactical_role_competition():
  assert ctx[1]["nailed_prior"]>.8 and ctx[1]["competition_pressure"]>0
  assert ctx[1]["competition_source"]=="inferred_tactical_role_peer_group"
  assert ctx[1]["competition_adjustment_applied"] is True
+ assert ctx[1]["competition_factor"]<1
  assert 0<lineup_distribution(rows[0],ctx[1])["competition_factor"]<=1
+
+def test_competition_flag_is_false_when_factor_is_neutral():
+ p={"id":10,"web_name":"Uncontested","status":"a","minutes":270,"starts":3,"team":1,"element_type":4,"now_cost":80}
+ ctx=minutes_contexts([p],{},1)[10]
+ assert ctx["competition_pressure"]==0
+ assert ctx["squad_depth_pressure"]==0
+ assert ctx["competition_factor"]==1
+ assert ctx["competition_adjustment_applied"] is False
+ assert lineup_distribution(p,ctx)["competition_factor"]==1
 
 def test_xmins_no_evidence_has_no_mechanical_start_or_bench_floor():
  p={"id":10,"web_name":"Unknown","status":"a","minutes":0,"starts":0,"element_type":3,"now_cost":45}

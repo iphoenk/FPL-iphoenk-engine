@@ -106,3 +106,17 @@ def test_governance_blocks_stale_and_only_goes_on_green_material_evidence():
     assert go["action_state"] == "GO"
     assert go["decision"]["execution_authorized"] is True
 
+
+def test_governance_holds_material_recommendation_during_critical_warmup():
+    now, latest, health, sanity, lineup, locked = _governance_inputs(health_overall="GREEN", material=True)
+    health.update({
+        "prediction_health": "AMBER",
+        "decision_engine": "PROVISIONAL",
+        "go_allowed": False,
+        "critical_warmup": ["DSS-44", "DSS-X12"],
+    })
+    out = govern_checkpoint(latest, health, sanity, lineup, locked, now=now)
+    assert out["action_state"] == "HOLD"
+    assert out["decision"]["execution_authorized"] is False
+    assert out["readiness"]["critical_warmup"] == ["DSS-44", "DSS-X12"]
+    assert "CRITICAL_PREDICTION_WARMUP" in out["readiness"]["reasons"]

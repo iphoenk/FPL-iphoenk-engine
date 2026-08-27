@@ -79,7 +79,12 @@ def test_workflows_are_split_shallow_and_runtime_data_is_rolling():
     ci = (ROOT / ".github/workflows/v3-ci.yml").read_text()
     fast = (ROOT / ".github/workflows/v3-runtime-fast.yml").read_text()
     full = (ROOT / ".github/workflows/v3-refresh-full.yml").read_text()
+    collector = json.loads((ROOT / "config/runtime/collector_policy.json").read_text())
+    schedules = collector["schedules"]
     assert "schedule:" not in legacy
+    assert f'cron: "{schedules["primary"]}"' in fast
+    assert f'cron: "{schedules["adaptive"]}"' in fast
+    assert f'cron: "{schedules["deep_stats"]}"' in full
     assert "fetch-depth: 0" not in ci + fast + full
     assert "fetch-depth: 1" in ci and "fetch-depth: 1" in fast and "fetch-depth: 1" in full
     assert "git push --force origin HEAD:\"$RUNTIME_BRANCH\"" in fast

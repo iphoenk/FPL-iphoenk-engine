@@ -6,6 +6,7 @@ from typing import Any
 
 from src.v5.config_cache import load_json_config
 from src.v5.intelligence.defensive_contribution import build_rate_bundle, project_fixture_points
+from src.v5.intelligence.robust_rates import robust_attack_rate, validate_config as validate_robust_rate_config
 from src.v5.intelligence.role_intelligence import build_role_intelligence
 from src.v5.intelligence.team_strength import build_team_strength
 from src.v5.intelligence.xmins import estimate_xmins
@@ -69,6 +70,8 @@ def build_predictions(
     full_enrichment: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cfg = load_json_config(CONFIG)
+    robust_cfg = cfg.get("early_season_robust_rates") if isinstance(cfg.get("early_season_robust_rates"), dict) else {}
+    validate_robust_rate_config(robust_cfg)
     strength = build_team_strength(bootstrap, fixtures)
     teams = {int(t["id"]): t.get("name") for t in bootstrap.get("teams") or []}
     positions = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
@@ -103,6 +106,7 @@ def build_predictions(
     players = []
     historical_used = 0
     defensive_evidence_used = 0
+    robust_winsorized_players = 0
 
     for player in bootstrap.get("elements") or []:
         element_id = int(player["id"])
@@ -119,8 +123,9 @@ def build_predictions(
         xa_prior, xa_prior_source, _ = _historical_rate_prior(
             _f(position_prior.get("xa90")), historical, "xa90"
         )
-        xg90, xg_source = _blended_rate(player, "expected_goals", xg_prior, shrink)
-        xa90, xa_source = _blended_rate(player, "expected_assists", xa_prior, shrink)
+        xg90, xg_source, xg_robust = robust_attack_rate(player, "expected_goals", xg_prior, robust_cfg)
+        xa90, xa_source, xa_robust = robust_attack_rate(player, "expected_assists", xa_prior, robust_cfg)
+        robust_winsorized_players += int(bool(xg_robust.get("winsorized") or xa_robust.get("winsorized")))
         bonus90, bonus_source = _blended_rate(player, "bonus", _f(position_prior.get("bonus90")), shrink)
         saves90, saves_source = _blended_rate(player, "saves", _f(position_prior.get("saves90")), shrink)
         advanced_player = advanced_map.get(str(element_id)) if isinstance(advanced_map, dict) else None
@@ -304,6 +309,7 @@ def build_predictions(
                 },
                 "rates": {
                     **{key: round(value, 4) for key, value in rates.items()},
+                    "robust_rate_diagnostics": {"xg90": xg_robust, "xa90": xa_robust},
                     "sources": {
                         "xg90": f"{xg_source}|prior={xg_prior_source}",
                         "xa90": f"{xa_source}|prior={xa_prior_source}",
@@ -318,8 +324,8 @@ def build_predictions(
         )
     return {
         "generated_at": _now(),
-        "schema_version": 514,
-        "model_version": str(cfg.get("model_id") or "player_projection_v5_historical_prior_dc_probability"),
+        "schema_version": 515,
+        "model_version": str(cfg.get("model_id") or "player_projection_v5_historical_prior_robust_rates_dc_probability"),
         "ruleset_id": rules.get("ruleset_id"),
         "planning_gw": planning_gw,
         "horizon_gws": horizon,
@@ -330,6 +336,12 @@ def build_predictions(
             "fetch_mode": historical_prior.get("fetch_mode") if isinstance(historical_prior, dict) else None,
             "coverage": historical_prior.get("coverage") if isinstance(historical_prior, dict) else None,
             "players_used": historical_used,
+        },
+        "robust_attack_rates": {
+            "model": robust_cfg.get("model"),
+            "winsorized_players": robust_winsorized_players,
+            "cap_relaxes_with_evidence": bool(robust_cfg.get("cap_relaxes_with_evidence")),
+            "breakout_protection": robust_cfg.get("breakout_protection"),
         },
         "defensive_contribution": {
             "model": "poisson_threshold_shrunk_rate_v1",

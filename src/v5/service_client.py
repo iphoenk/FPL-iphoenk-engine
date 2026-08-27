@@ -7,12 +7,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import perf_counter
 from typing import Any, Mapping
 
+import msgpack
+
 from src.v5.config_cache import load_json_config
 from src.v5.runtime_payloads import compact_payload
 from src.v5.service_registry import get_service, registry
-from src.v5.service_transport import post as transport_post, retry_policy
+from src.v5.service_transport import post as transport_post, post_bytes as transport_post_bytes, retry_policy
 
 TRANSPORT_CONFIG = "config/v5_service_transport_registry.json"
+WIRE_CONFIG = "config/v5_service_wire_registry.json"
 
 _executor_lock = threading.Lock()
 _executor: ThreadPoolExecutor | None = None
@@ -26,6 +29,22 @@ def service_url(service_id: str) -> str:
     spec = get_service(service_id)
     default = f"http://{service_id}:{spec.port}"
     return os.getenv(_env_name(service_id), default).rstrip("/")
+
+
+def _wire_profile() -> tuple[str, dict[str, Any]]:
+    cfg = load_json_config(WIRE_CONFIG)
+    env_name = str(cfg.get("profile_env") or "").strip()
+    default_name = str(cfg.get("default_profile") or "").strip()
+    name = str(os.getenv(env_name, default_name) if env_name else default_name).strip()
+    profiles = cfg.get("profiles") if isinstance(cfg.get("profiles"), dict) else {}
+    profile = profiles.get(name)
+    if not isinstance(profile, dict):
+        raise RuntimeError(f"unknown V5 internal wire profile: {name}")
+    codec = str(profile.get("codec") or "")
+    allowed = {str(value) for value in cfg.get("allowed_codecs") or []}
+    if codec not in allowed:
+        raise RuntimeError(f"V5 wire profile {name} uses disallowed codec: {codec}")
+    return name, profile
 
 
 def _shared_executor() -> ThreadPoolExecutor:
@@ -50,6 +69,18 @@ def reset_worker_pool_for_tests() -> None:
         executor.shutdown(wait=True, cancel_futures=True)
 
 
+def _decode_envelope(response: Any, codec: str) -> dict[str, Any]:
+    if codec == "json":
+        decoded = response.json()
+    elif codec == "msgpack":
+        decoded = msgpack.unpackb(response.content, raw=False, strict_map_key=False)
+    else:
+        raise RuntimeError(f"unsupported V5 internal wire codec: {codec}")
+    if not isinstance(decoded, dict):
+        raise RuntimeError("V5 service response envelope must be an object")
+    return decoded
+
+
 def invoke_envelope(
     service_id: str,
     operation: str,
@@ -68,19 +99,37 @@ def invoke_envelope(
     }
     connect = float(defaults["connect_timeout_ms"]) / 1000.0
     read = float(defaults["read_timeout_ms"]) / 1000.0
-    invoke_path = str(defaults["invoke_path"]).format(operation=operation)
+    profile_name, profile = _wire_profile()
+    codec = str(profile["codec"])
+    invoke_path = str(profile["invoke_path"]).format(operation=operation)
     policy = retry_policy(service_id, operation)
     started = perf_counter()
-    response, attempts, circuit = transport_post(
-        service_id,
-        operation,
-        f"{service_url(service_id)}{invoke_path}",
-        json_body=body,
-        timeout=(connect, read),
-    )
+    if codec == "json":
+        response, attempts, circuit = transport_post(
+            service_id,
+            operation,
+            f"{service_url(service_id)}{invoke_path}",
+            json_body=body,
+            timeout=(connect, read),
+        )
+    elif codec == "msgpack":
+        encoded = msgpack.packb(body, use_bin_type=True)
+        response, attempts, circuit = transport_post_bytes(
+            service_id,
+            operation,
+            f"{service_url(service_id)}{invoke_path}",
+            body=encoded,
+            headers={
+                "Content-Type": str(profile["content_type"]),
+                "Accept": str(profile["accept"]),
+            },
+            timeout=(connect, read),
+        )
+    else:
+        raise RuntimeError(f"unsupported V5 internal wire codec: {codec}")
     round_trip_ms = round((perf_counter() - started) * 1000.0, 3)
     response.raise_for_status()
-    envelope = response.json()
+    envelope = _decode_envelope(response, codec)
     if str(envelope.get("contract_version")) != contract_version:
         raise RuntimeError(
             f"{service_id}.{operation} response contract mismatch: "
@@ -93,6 +142,8 @@ def invoke_envelope(
     envelope["transport_attempts"] = int(attempts)
     envelope["transport_retry_policy"] = policy.name
     envelope["transport_circuit"] = circuit
+    envelope["transport_codec"] = codec
+    envelope["transport_profile"] = profile_name
     if not envelope.get("ok"):
         raise RuntimeError(f"{service_id}.{operation} failed: {envelope.get('error')}")
     return envelope

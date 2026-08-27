@@ -30,6 +30,30 @@ def _validate_owned_transparency(name: str, rows: list[dict], expected: int, con
         assert all(row.get("choice_state") in {"OPEN", "CURRENT"} for row in rows), (name, "invalid_choice_state")
 
 
+def _validate_personal_gameweek_context(payload_name: str, payload: dict) -> None:
+    context = payload.get("gameweek_context") or {}
+    assert context.get("schema") == "personal_gameweek_context.v1", (payload_name, context.get("schema"))
+    planning = context.get("planning") or {}
+    assert planning.get("status") == "PROJECTION", (payload_name, planning)
+    assert planning.get("estimated_points") is not None, payload_name
+    assert planning.get("decision_authority") in {"ENGINE_RECOMMENDATION", "USER_OVERRIDE"}, payload_name
+    assert (planning.get("scoring_guardrails") or {}).get("estimate_not_actual") is True, payload_name
+    baseline = planning.get("baseline") or {}
+    assert baseline.get("default_rule") == "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD", (payload_name, baseline)
+    if planning.get("user_override_active"):
+        assert planning.get("decision_authority") == "USER_OVERRIDE", payload_name
+        assert (planning.get("comparison") or {}).get("engine_can_warn_but_not_overwrite_user") is True, payload_name
+    for row in context.get("historical") or []:
+        assert row.get("status") == "FINAL", (payload_name, row)
+        assert row.get("authority") == "PUBLIC_OFFICIAL_POST_DEADLINE", (payload_name, row)
+        assert row.get("actual_points") is not None, (payload_name, row)
+        assert row.get("forecast_capture") == "NOT_RECONSTRUCTED", (payload_name, row)
+        assert len(row.get("submitted_squad") or []) == 15, (payload_name, row.get("gw"))
+    governance = context.get("governance") or {}
+    assert governance.get("historical_truth_never_reconstructed_as_old_forecast") is True, payload_name
+    assert governance.get("engine_recommendation_remains_visible_for_comparison") is True, payload_name
+
+
 def run() -> dict:
     registry = _load(REGISTRY)
     runtime_registry = _load(DATA / "report_artifact_registry.json")
@@ -89,6 +113,8 @@ def run() -> dict:
             assert weather.get("status") in {"AVAILABLE", "NO_FORECAST_IN_WINDOW"}, (payload_name, weather)
             assert weather.get("advisory_only") is True, payload_name
             assert weather.get("causality_guard"), payload_name
+        if contract.get("personal_gameweek_context_required") is True:
+            _validate_personal_gameweek_context(payload_name, payload)
     assert deep.get("payload_type") == "DEEP_REVIEW_PAYLOAD_V2"
 
     files = latest.get("files") or {}
@@ -98,6 +124,7 @@ def run() -> dict:
     assert files.get("report_artifact_registry") == "data/report_artifact_registry.json"
     assert latest.get("report_serving", {}).get("owned_count") == expected_owned
     assert latest.get("report_serving", {}).get("watchlist_count") == expected_watch
+    assert latest.get("report_serving", {}).get("personal_gameweek_context") is True
     assert latest.get("report_serving", {}).get("report_time_intelligence") is True
     assert latest.get("report_serving", {}).get("technical_lazy_load") is True
 
@@ -124,6 +151,7 @@ def run() -> dict:
         "model_validation": contract.get("model_validation_required"),
         "weather_context": contract.get("weather_context_required"),
         "report_time_intelligence": contract.get("report_time_intelligence_required"),
+        "personal_gameweek_context": contract.get("personal_gameweek_context_required"),
         "sizes": sizes,
         "default_fast": latest.get("report_serving", {}).get("default_fast_artifact"),
         "default_deep": latest.get("report_serving", {}).get("default_deep_review_artifact"),

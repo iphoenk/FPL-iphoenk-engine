@@ -1,17 +1,32 @@
-# FPL iphoenk Engine v3.22.0
+# FPL iphoenk Engine v3.23.0
 
 Production-oriented personal FPL decision engine and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
-- Current accepted production release: `3.22.0` / schema `49`.
+- Current release candidate: `3.23.0` / schema `49`.
+- Current accepted production release remains `3.22.0` / schema `49` until V3.23 is merged and production-published.
+- V3.23 CI candidate acceptance covers compile, architecture ownership, full unit/regression and composite FULL+FAST acceptance; production runtime publication remains a separate closeout step.
 - V3.22 production acceptance is COMPLETE and the interactive FAST target remains `<10s`.
 - Active architecture remains 20 artifact-owned microservices.
 - Runtime state publishes only to the rolling parentless `runtime-data` snapshot; mutable runtime output is not stored on protected `main`.
 - Runtime Artifact Contract Registry: `RUNTIME_ARTIFACT_CONTRACTS_V2`.
 - Machine Source Registry: `SOURCE_REGISTRY_V4`.
-- Report Artifact Registry: `REPORT_ARTIFACT_REGISTRY_V3`.
+- Report Artifact Registry remains backward-compatible `REPORT_ARTIFACT_REGISTRY_V3`.
 - Release metadata source of truth: `src/version.py`.
 - Canonical roadmap, REC status and Definition of Done: `MASTER_TASK_LIST_V3.md`.
+
+## V3.23 Personal Gameweek Context + Decision Authority
+V3.23 makes the personal-team timeline explicit without replacing the DSS as an advisory decision engine.
+
+- Finished GWs use public Official FPL submitted picks/history as immutable actual truth, including actual GW points, chip, bench points, captain/vice and submitted squad.
+- Historical actuals are never reconstructed or relabelled as old forecasts when no genuine pre-deadline forecast was frozen.
+- The planning GW exposes estimated team points from current xPts together with formation, XI, bench, captain, vice-captain and active chip. Estimated points are always labelled projection, never actual score.
+- Normal planning baseline is the previous Official submitted squad.
+- Wildcard, Free Hit or user-locked composition may replace that planning baseline only when the override explicitly targets the current planning GW. A stale override is rejected and post-deadline Official submitted picks reclaim authority.
+- The current GW2 Wildcard screenshot/locked squad is explicitly scoped to GW2 so it cannot leak into later planning GWs.
+- Formation, XI, bench, captain, vice-captain and chip may be explicitly overridden by the user. The engine recommendation remains visible for comparison and may warn about the xPts difference, but it does not silently overwrite the user's decision.
+- The manual override config is inactive by default; no user decision is invented.
+- This is implemented inside existing team-state/report-serving ownership, so the active microservice count remains 20.
 
 ## Official FPL authority and REC-38 Official-first contract
 Official FPL is the only native authority for Official fields and scoring. External sources remain enrichment/challenger evidence and may never overwrite Official-native truth.
@@ -68,4 +83,4 @@ Open-Meteo is a noncritical `ENRICHMENT`, never an authority or model challenger
 - Service boundaries follow ownership/failure semantics, not a target service count.
 - Runtime and report readiness are separate from predictive/model evidence readiness.
 
-See `MASTER_TASK_LIST_V3.md` for the authoritative REC-01 through REC-38 status, current monitors, production evidence and release checklist.
+See `MASTER_TASK_LIST_V3.md` for the authoritative production status, candidate work, current monitors, production evidence and release checklist.

@@ -1,5 +1,5 @@
 {
-  "version": "3.22.0",
+  "version": "3.23.0",
   "schema_version": 49,
   "release_metadata_source": "src/version.py",
   "production_acceptance": {
@@ -41,6 +41,24 @@
       "rec35_compaction_effective": true
     }
   },
+  "release_candidate": {
+    "version": "3.23.0",
+    "schema_version": 49,
+    "status": "CI_ACCEPTED_PRODUCTION_PENDING",
+    "pr": 82,
+    "branch": "v3.23-personal-gw-context",
+    "scope": "Personal Gameweek Context + User Decision Authority",
+    "ci_run": 33081627298,
+    "compile_pass": true,
+    "architecture_pass": true,
+    "unit_regression_pass": true,
+    "composite_full_fast_acceptance_pass": true,
+    "production_merge_complete": false,
+    "runtime_publication_complete": false,
+    "backward_compatible_report_registry": "REPORT_ARTIFACT_REGISTRY_V3",
+    "backward_compatible_deep_payload": "DEEP_REVIEW_PAYLOAD_V2",
+    "active_service_count": 20
+  },
   "rec_status": {
     "REC-01": {"status": "DONE_PROD", "summary": "Player-specific defensive contribution model using DEF CBIT=10 and MID/FWD CBIRT=12 threshold probability with shrinkage and GK ineligibility.", "pr": 63},
     "REC-02": {"status": "DONE_PROD", "summary": "Robust early-season attacking-rate stabilization with evidence-aware shrinkage, bounded extreme observations and breakout relaxation.", "pr": 65},
@@ -80,7 +98,8 @@
     "REC-35": {"status": "DONE_PROD", "summary": "Duplicated per-fixture defensive-contribution provenance removed without formula/decision change.", "pr": 70},
     "REC-36": {"status": "DONE_PROD", "summary": "Public Official entry history and historical picks reconcile submitted teams including GW1 as retrospective proxy only; private pre-deadline draft remains separate.", "pr": 73},
     "REC-37": {"status": "DONE_PROD", "summary": "One-shot Official-detail migration fence published REC-36 historical fields to runtime-data and normal 3600-second FAST/LIVE reuse TTL was restored.", "prs": [74, 75]},
-    "REC-38": {"status": "DONE_PROD", "summary": "Official-first coverage contract classifies every REC, closes fallback to explicit dispositions, is enforced by the production source contract, and passed FULL production acceptance with runtime-data publication.", "prs": [77, 78], "production_full_run": 33077874024}
+    "REC-38": {"status": "DONE_PROD", "summary": "Official-first coverage contract classifies every REC, closes fallback to explicit dispositions, is enforced by the production source contract, and passed FULL production acceptance with runtime-data publication.", "prs": [77, 78], "production_full_run": 33077874024},
+    "REC-39": {"status": "CANDIDATE", "summary": "Finished GWs expose Official actual squad/points/chip while the planning GW exposes estimated team xPts; previous Official submission is the default planning baseline, exact-GW WC/FH/user composition override is supported, and explicit user XI/C/VC/chip override preserves engine recommendation for comparison.", "pr": 82, "ci_run": 33081627298}
   },
   "calibration_monitors": {
     "settled_prediction_validation": "MONITOR",
@@ -95,6 +114,8 @@
     "official_fpl_native_authority": true,
     "official_first_rec_coverage": true,
     "external_evidence_non_authoritative": true,
+    "personal_gameweek_context": true,
+    "user_decision_override_preserves_engine_comparison": true,
     "fast_slo_ms": 10000,
     "runtime_data_branch": "runtime-data",
     "runtime_git_history_is_not_database": true

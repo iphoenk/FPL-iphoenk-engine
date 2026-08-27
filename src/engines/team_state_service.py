@@ -35,6 +35,53 @@ def _validate_squad(squad: list[dict[str, Any]], by_id: dict[int, dict[str, Any]
         raise RuntimeError(f"FAIL CLOSED: club limit exceeded {club_counts}; max={limit}")
 
 
+def projection_baseline_authority(lock: dict[str, Any], phase: dict[str, Any]) -> dict[str, Any]:
+    """Resolve which 15-player squad is authoritative for the planning GW.
+
+    The normal planning baseline is the most recently submitted Official squad.
+    WC/FH/manual composition overrides are valid only for an explicit target GW;
+    this prevents a stale pre-deadline draft from leaking into later gameweeks.
+    """
+    planning_gw = int(phase.get("planning_gw") or phase.get("current_gw") or 0) or None
+    submitted_gw = int(phase.get("submitted_gw") or 0) or None
+    wildcard = bool(lock.get("wildcard_active"))
+    free_hit = bool(lock.get("free_hit_active"))
+    manual = bool(lock.get("planning_override_active"))
+    override_requested = wildcard or free_hit or manual
+    target_raw = lock.get("target_gw")
+    if override_requested and target_raw is None:
+        raise RuntimeError("FAIL CLOSED: active planning squad override requires target_gw")
+    target_gw = int(target_raw) if target_raw is not None else None
+    override_applied = bool(
+        override_requested
+        and planning_gw is not None
+        and target_gw == planning_gw
+        and planning_gw != submitted_gw
+    )
+    if wildcard:
+        override_kind = "WILDCARD"
+    elif free_hit:
+        override_kind = "FREE_HIT"
+    elif manual:
+        override_kind = "USER_LOCK"
+    else:
+        override_kind = "NONE"
+    return {
+        "planning_gw": planning_gw,
+        "baseline_gw": submitted_gw,
+        "default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
+        "default_authority": "OFFICIAL_SUBMITTED",
+        "override_requested": override_requested,
+        "override_kind": override_kind,
+        "override_target_gw": target_gw,
+        "override_applied": override_applied,
+        "effective_authority": "LOCKED_PRE_DEADLINE" if override_applied else "OFFICIAL_SUBMITTED",
+        "authority_source": (lock.get("authority_source") or "USER_PLANNING_OVERRIDE") if override_applied else "OFFICIAL_FPL_PICKS",
+        "stale_override_rejected": bool(override_requested and not override_applied and target_gw != planning_gw),
+        "post_deadline_official_reclaims_authority": bool(override_requested and planning_gw == submitted_gw),
+    }
+
+
 def run() -> dict[str, Any]:
     official = read_json(OFFICIAL, {})
     bootstrap = official.get("bootstrap") or {}
@@ -49,7 +96,8 @@ def run() -> dict[str, Any]:
     health = official.get("endpoint_health") or {}
 
     lock = read_json(CONFIG / "locked_squad.json", {})
-    use_lock = bool(lock.get("wildcard_active")) and phase.get("planning_gw") != phase.get("submitted_gw")
+    projection_baseline = projection_baseline_authority(lock, phase)
+    use_lock = bool(projection_baseline.get("override_applied"))
     squad: list[dict[str, Any]] = []
     if use_lock:
         seen: set[int] = set()
@@ -122,13 +170,14 @@ def run() -> dict[str, Any]:
         "sell_value": sum(int(row["sell_cost"]) for row in ledger if row.get("sell_cost") is not None),
         "itb": itb,
     }
-    authority = "LOCKED_PRE_DEADLINE" if use_lock else "OFFICIAL_SUBMITTED"
+    authority = str(projection_baseline.get("effective_authority"))
     generated_at = iso_now()
     team = {
         "generated_at": generated_at,
         "team_id": TEAM_ID,
         "entry": entry_summary,
         "squad_authority": authority,
+        "projection_baseline": projection_baseline,
         "squad": squad,
         "team_value_ledger": ledger,
         "totals": totals,
@@ -137,6 +186,9 @@ def run() -> dict[str, Any]:
             "sell_value_formula_owned_by_team_value_engine": True,
             "squad_identity_is_element_id_authoritative": True,
             "purchase_reconstruction_baseline_gw": baseline_gw,
+            "planning_override_must_target_exact_gw": True,
+            "stale_planning_override_is_rejected": True,
+            "post_deadline_official_submission_reclaims_authority": True,
         },
     }
     chips = {
@@ -155,6 +207,7 @@ if __name__ == "__main__":
     print(json.dumps({
         "team_id": out.get("team_id"),
         "squad_authority": out.get("squad_authority"),
+        "projection_baseline": out.get("projection_baseline"),
         "players": len(out.get("team_value_ledger") or []),
         "totals": out.get("totals"),
     }, ensure_ascii=False))

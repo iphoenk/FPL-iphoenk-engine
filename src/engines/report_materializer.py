@@ -6,6 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from src.engines.personal_gameweek_context import build_personal_gameweek_context
 from src.utils import DATA, ROOT, atomic_json, read_json
 
 REGISTRY_PATH = ROOT / "config" / "report_artifact_registry.json"
@@ -245,25 +246,30 @@ def run() -> dict[str, Any]:
     watchlist = read_json(DATA / "dss_watchlist.json", {})
     team = read_json(DATA / "team.json", {})
     projections = read_json(DATA / "projections.json", {})
+    lineup = read_json(DATA / "lineup_decision.json", {})
     latest = read_json(DATA / "latest.json", {})
     official = read_json(DATA / "official_detail.json", {})
+    official_snapshot = read_json(DATA / "official_snapshot.json", {})
 
     owned = _owned_rows(user, team, projections)
     watch_summary = _watchlist_summary(watchlist, deep=False)
     watch_deep = _watchlist_summary(watchlist, deep=True)
+    gameweek_context = build_personal_gameweek_context(team, projections, lineup, official, official_snapshot)
 
     user.setdefault("owned_squad", {})["count"] = len(owned)
     user["owned_squad"]["facts"] = owned
     user["owned_squad"]["compact_summary"] = None
     user["external_watchlist"] = {"status": watch_summary["status"], "decision": "WATCH", "count": watch_summary["count"], "positions": watch_summary["positions"]}
-    user["serving_contract"] = {"owned": len(owned), "watchlist": watch_summary["count"], "watchlist_per_position": watch_summary["per_position"]}
+    user["gameweek_context"] = gameweek_context
+    user["serving_contract"] = {"owned": len(owned), "watchlist": watch_summary["count"], "watchlist_per_position": watch_summary["per_position"], "personal_gameweek_context": True}
     atomic_json(USER_OUT, user)
 
     brief = {
         "decision": user.get("decision"),
         "generated_at": _now(),
         "planning_gw": user.get("planning_gw"),
-        "serving_contract": {"owned": len(owned), "watchlist": watch_summary["count"], "watchlist_per_position": watch_summary["per_position"]},
+        "serving_contract": {"owned": len(owned), "watchlist": watch_summary["count"], "watchlist_per_position": watch_summary["per_position"], "personal_gameweek_context": True},
+        "gameweek_context": gameweek_context,
         "finance": _finance(team),
         "owned_15": owned,
         "changes_since_last_report": user.get("changes_since_last_report"),
@@ -317,18 +323,23 @@ def run() -> dict[str, Any]:
         "owned_count": len(owned),
         "watchlist_count": watch_summary["count"],
         "watchlist_per_position": watch_summary["per_position"],
+        "personal_gameweek_context": True,
         "report_time_intelligence": True,
         "technical_lazy_load": True,
     }
     atomic_json(DATA / "latest.json", latest)
     sizes = _enforce_sizes()
-    return {"decision_brief": brief, "deep_review_payload": deep, "watchlist_summary": watch_summary, "artifact_sizes": sizes}
+    return {"decision_brief": brief, "deep_review_payload": deep, "watchlist_summary": watch_summary, "gameweek_context": gameweek_context, "artifact_sizes": sizes}
 
 
 if __name__ == "__main__":
     out = run()
+    planning = (out.get("gameweek_context") or {}).get("planning") or {}
     print(json.dumps({
         "owned": out["decision_brief"]["serving_contract"]["owned"],
         "watchlist": out["decision_brief"]["serving_contract"]["watchlist"],
+        "planning_gw": planning.get("gw"),
+        "estimated_points": planning.get("estimated_points"),
+        "decision_authority": planning.get("decision_authority"),
         "artifact_sizes": out["artifact_sizes"],
     }, ensure_ascii=False))

@@ -32,6 +32,8 @@ V3.19 governance:
 
 Schema is 48 because the report serving contract adds report-time intelligence and `DEEP_REVIEW_PAYLOAD_V2`.
 
+Production acceptance completed on 27 August 2026. PR #32 merged to `main` as `4b5f5f72146400a25c956e7628105b7680effe84`. Final PR workflow run `33028670999` passed the full regression suite, bounded microservices integration, source capability contract, production decision/report contract, 15 OWNED + 20 WATCHLIST contract, fast report-serving contract, report-time intelligence contract and runtime budget. Production push run `33028851447` then completed the collector, all production validators and validated publication to `runtime-data`. The published framework is GREEN/HEALTHY with GO allowed, Gate 0 16/16 PASS, DSS Core 50/50 ACTIVE, DSS Extensions 16/16 ACTIVE and Enhancement Layers 8/8 ACTIVE. OneFPL is DISABLED in the unattended collector with zero collector observations; the published `decision_brief` correctly emits `report_time_intelligence.status=REFRESH_REQUIRED` until the visible-report web pass is performed. The active FPL Master Monitor task is configured to perform that fresh report-time pass for every visible scheduled/on-demand/deadline report while keeping silent hourly internal checks bounded.
+
 ## v3.18.1 OneFPL Adapter Reliability Patch
 V3.18.1 fixed OneFPL source-health semantics and public structured-read resilience without changing the runtime artifact schema. It established explicit evidence that unattended server-side access can be restricted. V3.19 supersedes the automated OneFPL collector path by delegating OneFPL to report-time web intelligence.
 
@@ -218,7 +220,7 @@ Every version-changing commit must keep these surfaces consistent:
 - release regression tests
 - `MASTER_TASK_LIST_V3.md`
 
-CI must fail on release metadata drift. The master task list must be updated in the same PR for every V3 change.
+CI must fail on release metadata drift. The master task list must be updated in the same PR for every V3 change. Production-acceptance-only documentation may keep the existing engine/schema when runtime behavior and contracts are unchanged, but README and the master task list must record the acceptance evidence together.
 
 ## Historical milestones
 - v3.4: reliability and native persistence
@@ -235,7 +237,7 @@ CI must fail on release metadata drift. The master task list must be updated in 
 - v3.17.1: canonical V3 master task governance and Definition of Done
 - v3.18.0: structured challenger observations, architecture/configuration hardening, and production acceptance
 - v3.18.1: OneFPL adapter reachability/structured-access reliability patch
-- v3.19.0: report-time intelligence, OneFPL report-time delegation, Ben Crellin fixture strategy, pundit consensus-vs-DSS, Reddit/community governance
+- v3.19.0: production-accepted report-time intelligence, OneFPL report-time delegation, Ben Crellin fixture strategy, pundit consensus-vs-DSS, Reddit/community governance
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.

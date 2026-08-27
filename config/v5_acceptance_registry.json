@@ -1,5 +1,5 @@
 {
-  "version": 21,
+  "version": 22,
   "module_policy": {
     "minimum_registered_modules": 42,
     "required_truth_modules": ["rules", "source_authority", "public_api", "official_authenticated", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
@@ -102,6 +102,23 @@
     "artifact_contract_validation_required": true,
     "weather_advisory_only_required": true,
     "report_selection_transparency_required": true
+  },
+  "source_shadow_acceptance": {
+    "api_football_acceptable_unavailability_classes": ["PLAN_RESTRICTED"],
+    "require_api_football_credential": true,
+    "require_competition_attempt": true,
+    "require_network_or_cache_evidence": true,
+    "weather_missing_is_fail_neutral": true,
+    "weather_advisory_only": true
+  },
+  "performance_gate": {
+    "required_for_operational_acceptance": true,
+    "budget_registry": "config/v5_performance_budgets.json",
+    "hard_metric": "decision_pipeline_hard_limit_seconds",
+    "hot_metric": "decision_pipeline_hot_target_seconds",
+    "hot_target_is_advisory": true,
+    "real_shadow_wall_clock_required": true,
+    "external_enrichment_must_not_disable_hard_limit": true
   },
   "prediction_calibration_gate": {
     "required_for_production_promotion": true,

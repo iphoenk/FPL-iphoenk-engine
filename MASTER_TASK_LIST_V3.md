@@ -2,12 +2,9 @@
 
 Canonical status: ACTIVE  
 Canonical roadmap owner: V3 operational stream  
-Current production release: V3.23.0  
+Current production release: V3.23.1  
 Current production schema: 49  
 Production acceptance: COMPLETE  
-Current release candidate: V3.23.1  
-Current candidate schema: 49  
-Candidate acceptance: CI ACCEPTED / PRODUCTION PENDING  
 FAST decision target: **<10 seconds**  
 Active microservices: **20**
 
@@ -58,7 +55,7 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 | FAST runtime | <10s target | production SLO |
 | Runtime publication | rolling parentless snapshot | required |
 | Runtime source | `runtime-data` | authoritative current-state branch |
-| Official-first REC coverage | explicit matrix + closed fallback dispositions | production active; matrix candidate extends through REC-40 |
+| Official-first REC coverage | explicit matrix + closed fallback dispositions | production active through REC-40 |
 | Authenticated Official | optional/read-only/fail-soft | MONITOR |
 | Predictive calibration | settled frozen forecasts only | MONITOR |
 | Price calibration | realized price-change samples only | MONITOR |
@@ -66,8 +63,8 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 | Personal GW history | Official submitted/history actual truth | production active via REC-39 |
 | Planning team score | labelled estimated xPts, never actual | production active via REC-39 |
 | User decision override | explicit only; engine comparison retained | production active via REC-39 |
-| Natural user presentation | primary human-facing surface | V3.23.1 candidate via REC-40 |
-| Scheduled report checkpoints | 04:30 / 12:30 / 21:30 WIB, explicit missed state | V3.23.1 candidate via REC-40 |
+| Natural user presentation | primary human-facing surface | production active via REC-40 |
+| Scheduled report checkpoints | 04:30 / 12:30 / 21:30 WIB, explicit missed state | production active via REC-40 |
 
 ## Historical release anchors
 ### V3.20 Architecture Hardening
@@ -89,7 +86,7 @@ FAST/LIVE/FULL/DEEP execution profiles, rolling runtime-data, shallow checkout, 
 Production release adds Official actual finished-GW history, planning-GW estimated team points, exact-GW WC/FH/user baseline authority, and explicit user XI/C/VC/chip override while preserving engine comparison. It is additive to the existing report-serving boundary, keeps schema 49, retains `REPORT_ARTIFACT_REGISTRY_V3` / `DEEP_REVIEW_PAYLOAD_V2`, and does not add a microservice.
 
 ### V3.23.1 Report Completeness + Natural Presentation
-Release candidate REC-40 makes natural Bahasa Indonesia the primary human-facing presentation while preserving raw machine decisions for audit/API compatibility. It adds persistent checkpoint completeness for 04:30, 12:30 and 21:30 WIB, marks missed due checkpoints explicitly, stays inside the existing report-serving boundary, keeps schema 49 and retains 20 services. PR #85 CI run `33087549395` passed compile, architecture, **203 tests**, composite FULL/FAST acceptance, FULL 10.346s and FAST 3.804s. Production merge/publication is still required before DONE PROD.
+REC-40 is production accepted. Natural Bahasa Indonesia is the primary human-facing presentation while raw machine decisions remain audit/API compatible. Persistent completeness covers the 04:30, 12:30 and 21:30 WIB checkpoints and missed due checkpoints are explicit. PR #85 final candidate CI `33091248132` passed compile, architecture, **203 tests** and composite FULL/FAST acceptance. It was squash-merged as `e30123f7a12634b770ca1ab501aa3914bd7506ae`; main CI `33091398189` passed 203 tests; production FAST run `33091398202` completed in **6.326s** and published a 48-file rolling snapshot to `runtime-data` commit `dd9e134`. Schema remains 49 and service count remains 20.
 
 ## REC-01 through REC-40 canonical status
 | REC | Work item | Status | Current evidence / disposition |
@@ -134,13 +131,14 @@ Release candidate REC-40 makes natural Bahasa Indonesia the primary human-facing
 | REC-37 | Official-detail migration fence closeout | **DONE PROD** | Migration published and normal FAST/LIVE reuse TTL restored. |
 | REC-38 | Official-First REC Coverage Contract | **DONE PROD** | Explicit closed matrix enforced by source contract. |
 | REC-39 | Personal Gameweek Context + User Decision Authority | **DONE PROD** | PR #82; final CI + production FAST publication proven. |
-| REC-40 | Report Completeness + Natural Presentation | **CANDIDATE** | PR #85; CI `33087549395` passed 203 tests + composite FULL/FAST; production merge/publication pending. |
+| REC-40 | Report Completeness + Natural Presentation | **DONE PROD** | PR #85; final candidate CI `33091248132`, main CI `33091398189`, production FAST `33091398202`; runtime-data `dd9e134`. |
 
-## Production and candidate evidence
+## Production evidence
 - REC-38 production FULL run `33077874024`: 8.410s, contracts PASS, Gate0 16/16, framework GREEN, prediction quality HEALTHY, 15 OWNED + 20 WATCHLIST, Official-first matrix integrity proven.
 - REC-39 PR #82 final CI `33082069327`: 199 tests PASS + composite FULL/FAST acceptance. Production FAST run `33082344334`: 5.124s and rolling runtime-data publication succeeded.
-- REC-40 PR #85 candidate CI `33087549395`: compile PASS, architecture PASS, **203 tests PASS**, FULL 10.346s, FAST **3.804s**, source/production/watchlist/report-serving/report-time contracts PASS, Gate0 16/16, framework GREEN and prediction quality HEALTHY.
-- REC-40 is not production-proven until PR #85 is merged and a production runtime publication from merged `main` succeeds.
+- REC-40 PR #85 final candidate CI `33091248132`: compile PASS, architecture PASS, **203 tests PASS**, composite FULL/FAST acceptance PASS.
+- REC-40 squash merge source `e30123f7a12634b770ca1ab501aa3914bd7506ae`; merged-main CI `33091398189` passed **203 tests**.
+- REC-40 production FAST run `33091398202`: **6.326s**, source/production/watchlist/report-serving/report-time contracts PASS, Gate0 16/16, framework GREEN, prediction quality HEALTHY, 15 OWNED + 20 WATCHLIST, Official-first matrix **41/41**, and 48 files / 18,759,921 bytes published to rolling `runtime-data` commit `dd9e134`.
 - Production schema remains **49** and active service count remains **20**.
 
 ## Calibration / operational monitors that must remain yellow honestly
@@ -185,8 +183,8 @@ Release candidate REC-40 makes natural Bahasa Indonesia the primary human-facing
 A task is DONE only when implementation, deterministic tests, documentation and required production evidence agree. A file existing, a source being reachable, or a manually edited status label is not proof. Predictive accuracy, confidence quality, price accuracy and causal weather claims require genuine realized samples.
 
 ## Execution order from here
-1. Close V3.23.1 REC-40 only after final CI, merge and production `runtime-data` publication prove the new report checkpoint contract on merged main.
-2. Keep V3 production GREEN and preserve REC-39 personal-gameweek authority while REC-40 changes presentation/completeness only.
+1. Keep V3.23.1 production GREEN and treat REC-40 natural presentation/checkpoint completeness as the production report-serving contract.
+2. Preserve REC-39 personal-gameweek authority while keeping report-time external evidence readiness separate from engine health.
 3. Accumulate settled-GW, confidence, price and weather calibration evidence without forcing status upgrades.
 4. Use public Official data first for every applicable REC; authenticated Official precision remains optional/fail-soft where public Official cannot expose private state.
 5. Improve remaining P1 intelligence only through attributable changes that preserve Official authority, report truthfulness and production stability.

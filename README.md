@@ -3,10 +3,13 @@
 Production-oriented personal FPL decision engine and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
-- Current accepted production release: `3.23.0` / schema `49`.
-- Current release candidate: `3.23.1` / schema `49`, REC-40 Report Completeness + Natural Presentation.
-- V3.23.1 candidate PR #85 has passed compile, architecture, 203 deterministic tests and composite FULL/FAST acceptance. Production merge and runtime publication are still required before it becomes the accepted production release.
-- Candidate FULL runtime: 10.346s. Candidate FAST runtime: 3.804s, below the `<10s` target.
+- Current accepted production release: `3.23.1` / schema `49`.
+- REC-40 Report Completeness + Natural Presentation is production accepted.
+- PR #85 final candidate CI `33091248132` passed compile, architecture, 203 deterministic tests and composite FULL/FAST acceptance.
+- PR #85 was squash-merged as source commit `e30123f7a12634b770ca1ab501aa3914bd7506ae`.
+- Merged-main CI `33091398189` passed 203 tests.
+- Production FAST run `33091398202` completed in 6.326s, within the `<10s` target, and published a 48-file / 18,759,921-byte rolling runtime snapshot to `runtime-data` commit `dd9e134`.
+- Production contracts passed with framework GREEN, prediction quality HEALTHY, Gate0 16/16, 15 OWNED, 20 WATCHLIST and Official-first coverage integrity 41/41.
 - Active architecture remains 20 artifact-owned microservices.
 - Runtime state publishes only to the rolling parentless `runtime-data` snapshot; mutable runtime output is not stored on protected `main`.
 - Runtime Artifact Contract Registry: `RUNTIME_ARTIFACT_CONTRACTS_V2`.
@@ -25,7 +28,7 @@ REC-40 hardens the human report surface without changing football projection for
 - Report-serving validation fails closed when the required presentation/checkpoint contract is missing.
 - Report-time intelligence, personal gameweek context, Official authority, user override authority and existing DSS decisions are preserved.
 - Schema remains 49 and active service count remains 20.
-- PR #85 candidate CI run `33087549395` passed 203 tests, FULL 10.346s and FAST 3.804s. This remains candidate evidence until merged-main runtime publication succeeds.
+- Production FAST proof is 6.326s from run `33091398202`, with all production decision contracts passing before publication to `runtime-data`.
 
 ## V3.23 Personal Gameweek Context + Decision Authority
 V3.23 makes the personal-team timeline explicit without replacing the DSS as an advisory decision engine.
@@ -42,7 +45,7 @@ V3.23 makes the personal-team timeline explicit without replacing the DSS as an 
 ## Official FPL authority and Official-first contract
 Official FPL is the only native authority for Official fields and scoring. External sources remain enrichment/challenger evidence and may never overwrite Official-native truth.
 
-`config/sources/official_first_coverage.json` is the explicit coverage matrix for the REC stream. REC-39 is classified as `PUBLIC_THEN_PRIVATE_AUTH`: finished-GW truth and submitted planning baselines use public Official entry history/picks first, while unpublished current-draft precision may use optional authorized `my-team` access. Explicit user locks remain a separate user authority, not a substitute public-data source. REC-40 is `NOT_APPLICABLE` to football-data authority because it changes presentation and checkpoint scheduling only; it does not introduce a substitute data source. The source contract validates that matrix and closed fallback dispositions.
+`config/sources/official_first_coverage.json` is the explicit coverage matrix through REC-40. REC-39 is `PUBLIC_THEN_PRIVATE_AUTH`: finished-GW truth and submitted planning baselines use public Official entry history/picks first, while unpublished current-draft precision may use optional authorized `my-team` access. Explicit user locks remain separate user authority. REC-40 is `NOT_APPLICABLE` to football-data authority because it changes presentation and checkpoint scheduling only. Production source validation confirms all 41 REC disposition entries are present and valid.
 
 Fallback/proxy evidence is allowed only after an explicit disposition:
 - `OFFICIAL_UNAVAILABLE`
@@ -79,6 +82,7 @@ V3.22 separates interactive decision regeneration from heavier enrichment refres
 - Early-season confidence remains conservative until realized calibration evidence supports stronger labels.
 - Price prediction remains calibration-gated; Official realized price/ownership/transfer movement is the settlement authority.
 - FACT/CONSTRAINT actions may remain actionable while MODEL_DERIVED actions are gated by settled evidence.
+- `ENGINE_READY` does not imply final report-time web evidence is already refreshed. `REFRESH_REQUIRED` / `FINAL_REPORT_EVIDENCE_PENDING` remains a truthful allowed state.
 
 ## Weather Intelligence
 Open-Meteo is a noncritical `ENRICHMENT`, never an authority or model challenger. Official fixture ownership remains in the Official snapshot and weather consumes fixture context without replacing it. Weather is observational/advisory only and may not directly change xPts, Starting XI, captaincy, transfers, watchlist membership or package rankings without future calibrated governance.
@@ -96,4 +100,4 @@ Open-Meteo is a noncritical `ENRICHMENT`, never an authority or model challenger
 - Human-facing report language must not make raw machine state the primary narrative.
 - Required scheduled report checkpoints must be auditable and missed checkpoints must be explicit.
 
-See `MASTER_TASK_LIST_V3.md` for the authoritative production/candidate status, monitors, deferred work, production evidence and release checklist.
+See `MASTER_TASK_LIST_V3.md` for the authoritative production status, monitors, deferred work, production evidence and release checklist.

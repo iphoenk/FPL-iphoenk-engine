@@ -9,7 +9,7 @@ from src.utils import DATA, CONFIG, atomic_json, read_json
 from src.engines.v4_wc_optimizer import build_candidates
 from src.engines.v4_wc_optimizer_fast import decision_report_from_candidates_fast
 from src.engines.v4_wc_package_audit_fast import audit_packages_from_candidates_fast
-from src.engines.v4_lineup_optimizer import optimize_lineup, MANUAL_FILE
+from src.engines.v4_lineup_optimizer import optimize_lineup
 from src.engines.v4_recommendation_sanity import sanity_report
 
 OUTFILE = DATA / "decision_pipeline_v4.json"
@@ -32,15 +32,15 @@ def effective_planning_squad(team: dict, configured_lock: dict, latest: dict) ->
         element = int(row.get("element") or 0)
         value = ledger.get(element) or {}
         purchase_cost = value.get("purchase_cost", row.get("purchase_cost"))
-        sell_cost = value.get("sell_cost")
-        if sell_cost is None and purchase_cost is None:
+        sell_cost_value = value.get("sell_cost")
+        if sell_cost_value is None and purchase_cost is None:
             raise RuntimeError(f"effective owned player {element} lacks price evidence")
         players.append({
             "element": element,
             "name": row.get("name") or value.get("name"),
             "position": row.get("position") or value.get("position"),
             "purchase_cost": purchase_cost,
-            "sell_cost": sell_cost,
+            "sell_cost": sell_cost_value,
         })
 
     planning_gw = int((latest.get("phase") or {}).get("planning_gw") or 0) or None
@@ -117,7 +117,6 @@ def run():
     universe = read_json(DATA / "universe.json", {})
     configured_lock = read_json(CONFIG / "locked_squad.json", {})
     team = read_json(DATA / "team.json", {})
-    manual = read_json(MANUAL_FILE, {})
     latest = read_json(DATA / "latest.json", {})
     locked = effective_planning_squad(team, configured_lock, latest)
     candidates = build_candidates(predictions, universe)
@@ -132,7 +131,9 @@ def run():
     packages = read_json(DATA / "wc_package_audit_v4.json", {})
 
     t = perf_counter()
-    lineup = optimize_lineup(predictions, universe, locked, manual=manual)
+    # Pure engine recommendation. User/manual authority is applied only by the
+    # independent user_decision_overlay service after this service completes.
+    lineup = optimize_lineup(predictions, universe, locked, manual=None)
     atomic_json(DATA / "lineup_decision_v4.json", lineup)
     timings["lineup_ms"] = round((perf_counter() - t) * 1000.0, 1)
 
@@ -146,6 +147,7 @@ def run():
         "schema_version": 473,
         "engine": "v4.7.3-unified-decision-pipeline-checkpoint-aware",
         "checkpoint_context": latest.get("checkpoint_context") or {},
+        "decision_authority": "ENGINE_ADVISORY_ONLY",
         "planning_squad": {
             "authority": locked.get("squad_authority"),
             "baseline_gw": locked.get("baseline_gw"),
@@ -188,6 +190,8 @@ def run():
             "checkpoint_action_deferred_until_postflight_health": True,
             "planning_squad_from_team_contract": True,
             "stale_lock_players_not_direct_optimizer_input": True,
+            "engine_lineup_is_advisory_only": True,
+            "manual_override_applied_in_separate_microservice": True,
         },
     }
     atomic_json(OUTFILE, out)

@@ -165,20 +165,20 @@ def should_count_failure(exc: BaseException | None = None, status_code: int | No
     return exc is not None and type(exc).__name__ in {str(value) for value in cfg.get("count_exception_names") or []}
 
 
-def post(
+def _post_request(
     service_id: str,
     operation: str,
     url: str,
     *,
-    json_body: dict[str, Any],
     timeout: tuple[float, float],
+    request_kwargs: dict[str, Any],
 ) -> tuple[requests.Response, int, dict[str, Any]]:
     policy = retry_policy(service_id, operation)
     last_exc: BaseException | None = None
     for attempt in range(1, policy.max_attempts + 1):
         before_call(service_id, operation)
         try:
-            response = _session().post(url, json=json_body, timeout=timeout)
+            response = _session().post(url, timeout=timeout, **request_kwargs)
             counted_failure = should_count_failure(status_code=response.status_code)
             if counted_failure:
                 record_failure(service_id, operation)
@@ -202,6 +202,41 @@ def post(
     if last_exc is not None:
         raise last_exc
     raise RuntimeError(f"V5 transport failed without response: {service_id}.{operation}")
+
+
+def post(
+    service_id: str,
+    operation: str,
+    url: str,
+    *,
+    json_body: dict[str, Any],
+    timeout: tuple[float, float],
+) -> tuple[requests.Response, int, dict[str, Any]]:
+    return _post_request(
+        service_id,
+        operation,
+        url,
+        timeout=timeout,
+        request_kwargs={"json": json_body},
+    )
+
+
+def post_bytes(
+    service_id: str,
+    operation: str,
+    url: str,
+    *,
+    body: bytes,
+    headers: dict[str, str],
+    timeout: tuple[float, float],
+) -> tuple[requests.Response, int, dict[str, Any]]:
+    return _post_request(
+        service_id,
+        operation,
+        url,
+        timeout=timeout,
+        request_kwargs={"data": body, "headers": headers},
+    )
 
 
 def diagnostic_get(url: str, *, timeout: tuple[float, float]) -> requests.Response:

@@ -25,10 +25,19 @@ def test_open_parity_is_fail_closed_and_blocks_rebaseline():
     coverage = cfg["production_rec_coverage"]
     blockers = sorted(key for key, row in coverage.items() if bool(row.get("blocking")))
     assert blockers == sorted(cfg["parity_drift"]["open_blockers"])
-    assert blockers == ["REC-02", "REC-05", "REC-22", "REC-38"]
+    assert blockers == ["REC-05", "REC-22", "REC-38"]
     assert cfg["parity_drift"]["promotion_blocked"] is True
     assert cfg["observed_production"]["rebaseline_complete"] is False
     assert cfg["governance"]["rebaseline_requires_zero_open_blockers"] is True
+
+
+def test_rec02_robust_rate_parity_has_real_evidence_files():
+    cfg = _registry()
+    rec02 = cfg["production_rec_coverage"]["REC-02"]
+    assert rec02["v5_status"] == "ADOPTED_AND_EXTENDED"
+    assert rec02["blocking"] is False
+    for relative in rec02["evidence"]:
+        assert (ROOT / relative).exists(), relative
 
 
 def test_rec36_historical_submission_parity_has_real_evidence_files():

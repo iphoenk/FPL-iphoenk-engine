@@ -11,16 +11,22 @@ def test_source_registry_has_single_official_authority_and_named_challengers():
     registry = load_source_registry()
     integrity = registry_integrity()
     specs = source_specs()
-    assert registry["registry"] == "SOURCE_REGISTRY_V3"
+    assert registry["registry"] == "SOURCE_REGISTRY_V4"
     assert integrity["integrity_ok"] is True
     authorities = [s.source_id for s in specs if s.source_class == "AUTHORITATIVE"]
     assert authorities == ["official_fpl"]
     challengers = {s.source_id for s in specs if s.source_class == "CHALLENGER"}
     assert {"livefpl", "onefpl", "fffix", "ffhub"}.issubset(challengers)
+    enrichments = {s.source_id for s in specs if s.source_class == "ENRICHMENT"}
+    assert "open_meteo" in enrichments
+    weather = next(s for s in specs if s.source_id == "open_meteo")
+    assert weather.critical is False
+    assert weather.adapter == "weather_artifact"
     assert registry["policy"]["challengers_never_override_official_native_fields"] is True
     assert registry["policy"]["missing_challenger_data_is_never_fabricated"] is True
     assert registry["policy"]["source_network_locations_are_registry_owned"] is True
     assert registry["policy"]["source_ingestion_timeouts_are_registry_owned"] is True
+    assert registry["policy"]["weather_is_advisory_enrichment_only"] is True
 
 
 def test_source_manager_keeps_challenger_failure_non_blocking(tmp_path, monkeypatch):
@@ -32,6 +38,17 @@ def test_source_manager_keeps_challenger_failure_non_blocking(tmp_path, monkeypa
         path = tmp_path / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("{}", encoding="utf-8")
+    (tmp_path / "fixture_weather.json").write_text(json.dumps({
+        "schema_version": 1,
+        "model": "weather_context_observational_v1",
+        "provider": "open_meteo",
+        "fixture_count": 0,
+        "available_count": 0,
+        "material_count": 0,
+        "fixtures": [],
+        "material_fixtures": [],
+        "governance": {"advisory_only": True},
+    }), encoding="utf-8")
 
     def fake_web(spec, timeout_seconds):
         if spec.source_id == "livefpl":
@@ -46,6 +63,9 @@ def test_source_manager_keeps_challenger_failure_non_blocking(tmp_path, monkeypa
     livefpl = next(row for row in payload["sources"] if row["id"] == "livefpl")
     assert livefpl["status"] == "UNAVAILABLE"
     assert livefpl["observation_count"] == 0
+    weather = next(row for row in payload["sources"] if row["id"] == "open_meteo")
+    assert weather["status"] == "LIVE"
+    assert set(weather["capabilities"].values()) == {"NO_FORECAST_IN_WINDOW"}
 
 
 def test_public_probe_contract_never_claims_observations_from_reachability():

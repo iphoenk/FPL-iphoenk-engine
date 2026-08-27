@@ -1,9 +1,7 @@
-name: FPL advanced stats deep sync
+name: FPL manual deep-stats compatibility run
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "10 21 * * *"
 
 permissions:
   contents: write
@@ -16,15 +14,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: v4-prediction-engine
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt pytest
 
       - name: Deep stats refresh
-        run: python -m src.engine daily --stats --deep-stats
+        run: python -m src.services.orchestrator daily --stats --deep-stats
+
+      - name: V4.9.1 centralized quality gate
+        run: python -m src.engines.v4_quality_gate
 
       - name: Commit safely
         run: |
@@ -37,6 +39,6 @@ jobs:
           fi
 
           git commit -m "data: deep stats refresh"
-          git fetch origin main
-          git rebase origin/main
-          git push origin main
+          git fetch origin v4-prediction-engine
+          git rebase origin/v4-prediction-engine
+          git push origin HEAD:v4-prediction-engine

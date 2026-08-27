@@ -22,13 +22,18 @@ def _assert_framework_health() -> tuple[dict, dict]:
     post = _load("framework_health_v4.json")
 
     for obj, phase in ((pre, "preflight"), (post, "postflight")):
-        assert int(obj.get("schema_version", 0)) >= 473, obj
-        assert str(obj.get("engine", "")).startswith("v4.7.3-framework-health-checkpoint-aware"), obj
+        assert int(obj.get("schema_version", 0)) >= 491, obj
+        assert str(obj.get("engine", "")).startswith("v4.9.1-health-separation"), obj
         assert obj.get("phase") == phase, obj
         assert obj.get("registry_integrity") is True, obj
-        assert obj.get("overall") in {"GREEN", "AMBER"}, obj
+        assert obj.get("overall") == obj.get("pipeline_health"), obj
+        assert obj.get("pipeline_health") in {"GREEN", "AMBER"}, obj
+        assert obj.get("prediction_health") in {"GREEN", "AMBER"}, obj
+        assert obj.get("capability_health") in {"GREEN", "AMBER"}, obj
         assert obj.get("recommendation_allowed") is True, obj
-        assert obj.get("go_allowed") is (obj.get("overall") == "GREEN"), obj
+        assert obj.get("go_allowed") is (
+            obj.get("pipeline_health") == "GREEN" and obj.get("prediction_health") == "GREEN"
+        ), obj
         assert obj.get("gate0", {}).get("pass") is True, obj.get("gate0")
         assert obj.get("gate0", {}).get("counts", {}).get("FAIL", 0) == 0, obj.get("gate0")
         assert obj.get("dss_core", {}).get("declared") == 50 and obj["dss_core"].get("integrity_ok") is True
@@ -38,6 +43,8 @@ def _assert_framework_health() -> tuple[dict, dict]:
         governance = obj.get("governance", {})
         assert governance.get("file_exists_is_not_sufficient_for_active") is True
         assert governance.get("critical_partial_blocks_unqualified_go") is True
+        assert governance.get("pipeline_health_separate_from_prediction_health") is True
+        assert governance.get("noncritical_partial_is_reported_not_hidden") is True
         assert governance.get("checkpoint_freshness_policy_enforced") is True
         checkpoint = obj.get("checkpoint_context", {})
         assert checkpoint.get("policy_id") and checkpoint.get("max_snapshot_age_minutes", 0) > 0, checkpoint
@@ -61,16 +68,21 @@ def _assert_framework_health() -> tuple[dict, dict]:
     assert governance.get("raw_optimizer_is_not_final_decision") is True
     assert governance.get("gate0_fail_blocks_go") is True
 
-    # V4.7.1 distinguishes implemented evidence from inferred or fallback data.
+    # V4.9.1 critical prediction capabilities must be backed by output evidence.
     core = {row["id"]: row for row in post["dss_core"]["items"]}
     for module_id in ("DSS-05", "DSS-35"):
         assert core[module_id]["status"] == "ACTIVE", core[module_id]
-    for module_id in ("DSS-09", "DSS-10", "DSS-11", "DSS-12", "DSS-13", "DSS-24"):
-        assert core[module_id]["status"] == "PARTIAL", core[module_id]
+    for module_id in ("DSS-07", "DSS-09", "DSS-10", "DSS-11", "DSS-12", "DSS-13", "DSS-24"):
+        assert core[module_id]["status"] == "ACTIVE", core[module_id]
+    extensions = {row["id"]: row for row in post["dss_extensions"]["items"]}
+    assert extensions["DSS-X12"]["status"] in {"WARMUP", "ACTIVE"}, extensions["DSS-X12"]
     enhancements = {row["id"]: row for row in post["enhancements"]["items"]}
-    assert enhancements["ENH-01"]["status"] == "PARTIAL", enhancements["ENH-01"]
-    assert post.get("overall") == "AMBER", post.get("overall")
-    assert post.get("go_allowed") is False, post
+    assert enhancements["ENH-01"]["status"] == "ACTIVE", enhancements["ENH-01"]
+    assert post.get("pipeline_health") == "GREEN", post
+    assert post.get("prediction_health") == "GREEN", post
+    assert post.get("decision_engine") == "HEALTHY", post
+    assert post.get("capability_coverage", {}).get("declared") == 74, post
+    assert post.get("go_allowed") is True, post
 
     return pre, post
 
@@ -82,8 +94,8 @@ def run() -> dict:
     reliability = validate_snapshot(latest)
     assert reliability["ok"], reliability
     assert latest.get("schema_version", 0) >= 40
-    assert int(latest.get("schema_version", 0)) >= 481
-    assert str(latest.get("engine_version", "")).startswith("4.8.1-independent-services")
+    assert int(latest.get("schema_version", 0)) >= 491
+    assert str(latest.get("engine_version", "")).startswith("4.9.1-independent-services")
     assert latest.get("meta", {}).get("simulation_never_authorizes_action") is True
     assert latest.get("meta", {}).get("service_contract_compatible") is True
     assert latest.get("meta", {}).get("service_boundaries_registry_driven") is True
@@ -95,8 +107,8 @@ def run() -> dict:
     assert abs(component_total - service_performance["engine_before_snapshot_write_ms"]) < 0.02, service_performance
 
     orchestration = _load("service_orchestration_v4.json")
-    assert int(orchestration.get("schema_version", 0)) >= 481, orchestration
-    assert str(orchestration.get("engine", "")).startswith("v4.8.1-service-orchestrator"), orchestration
+    assert int(orchestration.get("schema_version", 0)) >= 491, orchestration
+    assert str(orchestration.get("engine", "")).startswith("v4.9.1-service-orchestrator"), orchestration
     assert orchestration.get("status") == "PASS", orchestration
     services = orchestration.get("services") or []
     assert len(services) == 8 and all(row.get("status") == "PASS" for row in services), services
@@ -107,7 +119,8 @@ def run() -> dict:
     assert latest.get("lineage", {}).get("enrichment_sha256") == file_digest(DATA / "runtime/enrichment.v1.json")
     og = orchestration.get("guardrails") or {}
     assert og.get("official_fpl_api_authority") == "raw_snapshot_only" and og.get("services_may_not_refetch_snapshot")
-    assert og.get("prediction_formula_unchanged") and og.get("optimizer_search_width_unchanged")
+    assert og.get("appearance_formula_regression_tested") and og.get("prediction_quality_inputs_consumed")
+    assert og.get("optimizer_search_width_unchanged")
     assert og.get("gate0_checks_unchanged") == 16
 
     compliance = _load("compliance_audit.json")
@@ -116,21 +129,24 @@ def run() -> dict:
     predictions = _load("predictions_v4.json")
     players = predictions.get("players", [])
     coverage = predictions.get("input_coverage", {})
-    assert int(predictions.get("schema_version", 0)) >= 471
-    assert str(predictions.get("model_version", "")).startswith("v4.7.1-correctness-hotfix")
+    assert int(predictions.get("schema_version", 0)) >= 491
+    assert str(predictions.get("model_version", "")).startswith("v4.9.1-prediction-quality")
     assert predictions.get("point_in_time") is True and len(players) >= 500, predictions
     assert coverage.get("advanced_matched", 0) > 0 and coverage.get("last_season_matched", 0) > 0, coverage
     assert 0 <= coverage.get("advanced_materially_distinct", -1) <= coverage.get("advanced_matched", 0), coverage
+    assert coverage.get("advanced_decision_used_ratio", 0) >= .25, coverage
+    assert predictions.get("capability_evidence", {}).get("dynamic_opponent_fixtures", 0) > 0
 
     wc = _load("wc_decision_v4.json")
-    assert int(wc.get("schema_version", 0)) >= 472, wc
-    assert str(wc.get("engine", "")).startswith("v4.7.2-wc-optimizer-performance-hotfix"), wc
+    assert int(wc.get("schema_version", 0)) >= 491, wc
+    assert str(wc.get("engine", "")).startswith("v4.9.1-wc-optimizer-prediction-quality"), wc
     assert wc.get("screened_players", 0) >= 500 and len(wc.get("optimized_elements", [])) == 15
     assert wc.get("classification") in {"KEEP_15", "OPTIONAL_IMPROVEMENT", "MATERIAL_UPGRADE"}
     wp = wc.get("performance", {})
     assert wp.get("fast_finalist_scoring") and wp.get("winner_only_legality_check")
     assert wp.get("beam_size_unchanged") and wp.get("packed_club_signature") and wp.get("counter_copy_eliminated")
     assert wp.get("direct_challenger_position_index")
+    assert wp.get("value_term_consumed")
     assert wp.get("precomputed_club_bits") and wp.get("bounded_top_k_same_beam")
     wa = wc.get("affordability", {})
     assert wa.get("price_basis") == "owned_sell_cost_unowned_now_cost", wa
@@ -194,8 +210,8 @@ def run() -> dict:
     assert timings.get("total_pipeline_ms", 0) > 0
 
     checkpoint = _load("checkpoint_decision_v4.json")
-    assert int(checkpoint.get("schema_version", 0)) >= 473, checkpoint
-    assert str(checkpoint.get("engine", "")).startswith("v4.7.3-checkpoint-governance"), checkpoint
+    assert int(checkpoint.get("schema_version", 0)) >= 491, checkpoint
+    assert str(checkpoint.get("engine", "")).startswith("v4.9.1-checkpoint-governance"), checkpoint
     assert checkpoint.get("checkpoint_context") == latest.get("checkpoint_context"), checkpoint
     action = checkpoint.get("action_state")
     assert action in {"HOLD", "REVIEW_REQUIRED", "GO", "EMERGENCY_UPDATE_ONLY", "REFRESH_REQUIRED", "BLOCKED", "SIMULATION_ONLY"}, checkpoint
@@ -206,7 +222,7 @@ def run() -> dict:
     assert guardrails.get("locked_15_separate_from_lineup_lock") is True
     if latest.get("checkpoint_context", {}).get("is_simulation"):
         assert action == "SIMULATION_ONLY", checkpoint
-    if health.get("overall") == "AMBER" and not latest.get("checkpoint_context", {}).get("is_simulation"):
+    if health.get("prediction_health") == "AMBER" and not latest.get("checkpoint_context", {}).get("is_simulation"):
         assert action == "HOLD", checkpoint
 
     all_x: list[float] = []
@@ -227,9 +243,9 @@ def run() -> dict:
             for field in ("nailed_prior", "current_start_rate", "current_minutes_rate", "competition_pressure", "set_piece_order_weight", "penalty_order_weight", "last_season_weight", "opponent_defence_resistance"):
                 assert field in calibration, (row.get("element"), field)
             assert provenance.get("xmins_prior_source")
-            assert provenance.get("set_piece_source") == "official_fpl_bootstrap_orders_inferred_metadata"
-            assert provenance.get("role_scoring_mode") == "metadata_only_no_double_count"
-            assert fx["components"].get("set_piece_penalty_adjustment") == 0
+            assert provenance.get("set_piece_source") == "bayesian_official_order_plus_deep_events"
+            assert provenance.get("role_scoring_mode") == "prior_reallocation_no_direct_double_count"
+            assert calibration.get("set_piece_share") is not None and calibration.get("penalty_share") is not None
             assert str(provenance.get("opponent_defence_source", "")).startswith("official_fpl_")
             xm = fx["xmins"]
             assert abs(xm["start_probability"] + xm["bench_probability"] + xm["dnp_probability"] - 1) < 0.002
@@ -268,7 +284,7 @@ def run() -> dict:
         "orchestration_ms": orchestration.get("duration_ms"),
         "pipeline_ms": timings["total_pipeline_ms"],
     }
-    print("V4.8.1 SERVICE CONTRACT + DECISION-EQUIVALENCE QUALITY GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.9.1 PREDICTION-QUALITY SERVICE GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

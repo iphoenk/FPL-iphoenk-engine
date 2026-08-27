@@ -164,18 +164,23 @@ def _probe_advanced_integration() -> tuple[bool, dict]:
         and (fixture.get("provenance") or {}).get("advanced_identity_match") == "official_element_id"
         for fixture in fixtures
     )
-    material = int((obj.get("input_coverage") or {}).get("advanced_materially_distinct", 0))
-    material_ratio = material / max(1, len(players))
-    # ACTIVE requires broad independent enrichment, not merely a matching source
-    # label whose values mirror the official current-season fields.
-    active = consumed > 0 and material_ratio >= .25
+    coverage = obj.get("input_coverage") or {}
+    material = int(coverage.get("advanced_materially_distinct", 0))
+    decision_used = int(coverage.get("advanced_decision_used", 0))
+    decision_ratio = decision_used / max(1, len(players))
+    minimum = float((read_json(CONFIG / "prediction_quality_registry.json", {}).get("advanced") or {}).get("minimum_decision_coverage_ratio", .25))
+    # Decision integration is evidenced by the deep metrics consumed by rates,
+    # tactical roles and competition. Material distinction remains diagnostic.
+    active = consumed > 0 and decision_ratio >= minimum
     return active, {
         "prediction_sources": sorted(sources),
         "consumed_players": consumed,
         "materially_distinct_players": material,
-        "materially_distinct_ratio": round(material_ratio, 4),
-        "active_minimum_ratio": .25,
-        "synced_but_weakly_enriched": consumed > 0 and not active,
+        "materially_distinct_ratio": round(material / max(1, len(players)), 4),
+        "decision_used_players": decision_used,
+        "decision_used_ratio": round(decision_ratio, 4),
+        "active_minimum_ratio": minimum,
+        "synced_but_not_consumed_broadly": consumed > 0 and not active,
     }
 
 
@@ -183,17 +188,37 @@ def _probe_role_share(field: str, source_field: str = "set_piece_source") -> tup
     fixtures = [fixture for player in _predictions() for fixture in (player.get("fixtures") or [])[:1]]
     covered = sum(field in (fixture.get("calibration") or {}) for fixture in fixtures)
     empirical = sum((fixture.get("calibration") or {}).get(field) is not None for fixture in fixtures)
-    inferred = sum((fixture.get("provenance") or {}).get(source_field) == "official_fpl_bootstrap_orders_inferred_metadata" for fixture in fixtures)
-    metadata_only = sum((fixture.get("provenance") or {}).get("role_scoring_mode") == "metadata_only_no_double_count" for fixture in fixtures)
-    ok = bool(fixtures) and empirical == len(fixtures) and metadata_only == 0
+    posterior = sum((fixture.get("provenance") or {}).get(source_field) == "bayesian_official_order_plus_deep_events" for fixture in fixtures)
+    reallocated = sum((fixture.get("provenance") or {}).get("role_scoring_mode") == "prior_reallocation_no_direct_double_count" for fixture in fixtures)
+    adjusted = sum(bool((fixture.get("calibration") or {}).get("role_prior_adjustment_applied")) for fixture in fixtures)
+    ok = bool(fixtures) and empirical == len(fixtures) and posterior == len(fixtures) and reallocated == len(fixtures) and adjusted > 0
     return ok, {
         "fixtures": len(fixtures),
         "covered": covered,
         "empirical_shares": empirical,
-        "inferred_order_metadata": inferred,
-        "metadata_only_no_double_count": metadata_only,
-        "reason": "official taker order is not an empirical event share" if not ok else None,
+        "posterior_team_shares": posterior,
+        "prior_reallocation": reallocated,
+        "adjusted_fixtures": adjusted,
+        "reason": "role posterior is not yet consumed by prediction" if not ok else None,
     }
+
+
+def _probe_tactical_role() -> tuple[bool, dict]:
+    players = _predictions()
+    covered = sum(bool((player.get("priors") or {}).get("tactical_role")) for player in players)
+    sourced = sum((player.get("priors") or {}).get("tactical_role_source") in {"deep_match_metrics", "official_role_proxy", "official_position"} for player in players)
+    applied = sum(bool((player.get("priors") or {}).get("competition_adjustment_applied")) for player in players)
+    return bool(players) and covered == len(players) and sourced == len(players) and applied > 0, {
+        "players": len(players), "role_covered": covered, "source_covered": sourced, "competition_consumed": applied,
+    }
+
+
+def _probe_value() -> tuple[bool, dict]:
+    players = _predictions()
+    covered = sum(float((player.get("value") or {}).get("xpts5_per_million", 0)) >= 0 for player in players)
+    wc = read_json(DATA / "wc_decision_v4.json", {})
+    consumed = bool((wc.get("performance") or {}).get("value_term_consumed"))
+    return bool(players) and covered == len(players) and consumed, {"players": len(players), "value_covered": covered, "optimizer_consumed": consumed}
 
 
 def _probe_opponent_defence() -> tuple[bool, dict]:
@@ -398,7 +423,7 @@ def _probe_learning_loop() -> tuple[str, dict]:
     reconciled = DATA / "validation" / "reconciled"
     samples = list(reconciled.glob("gw*.json")) if reconciled.exists() else []
     if not samples:
-        return "PARTIAL", {"reason": "validation framework exists; no reconciled post-GW sample yet", "samples": 0}
+        return "WARMUP", {"reason": "validation contracts are ready; no eligible reconciled post-GW sample exists yet", "samples": 0}
     return "ACTIVE", {"reconciled_samples": len(samples)}
 
 
@@ -428,6 +453,7 @@ def _operational_probe(name: str | None, phase: str) -> tuple[str, dict]:
         "lineup_robustness": lambda: _bool_probe(_probe_lineup),
         "captain_dnp_guard": lambda: _bool_probe(_probe_lineup),
         "runtime_observability": lambda: _bool_probe(_probe_runtime),
+        "price_value": lambda: _bool_probe(_probe_value),
         "uncertainty_robustness": lambda: _bool_probe(_probe_lineup),
         "package_structural": lambda: _bool_probe(_probe_structural),
         "lineup_governance": lambda: _bool_probe(_probe_lineup),
@@ -446,6 +472,7 @@ def _operational_probe(name: str | None, phase: str) -> tuple[str, dict]:
         "xmins": _probe_xmins,
         "xmins_distribution": _probe_xmins,
         "rotation_competition": _probe_rotation_competition,
+        "tactical_role": _probe_tactical_role,
         "set_piece_role": lambda: _probe_role_share("set_piece_share"),
         "penalty_role": lambda: _probe_role_share("penalty_share"),
         "advanced_stats_sync": _probe_advanced_sync,
@@ -480,16 +507,16 @@ def _operational_probe(name: str | None, phase: str) -> tuple[str, dict]:
             "ACTIVE" if source_ok and advanced_ok else "PARTIAL",
             {"source_health": source_detail, "advanced_integration": advanced_detail},
         )
-    if name == "learning_loop":
+    if name in {"learning_loop", "calibration_store"}:
         return _probe_learning_loop()
 
     known_partial = {
-        "tactical_role", "system_fit",
+        "system_fit",
         "sustainability", "bonus_route", "team_defensive_risk", "team_attacking_strength",
         "team_defensive_strength", "fixture_context", "fixture_swing",
         "european_congestion", "domestic_cup_congestion", "international_load", "rest_days",
         "preseason_prior", "historical_prior", "regression_risk",
-        "price_value", "ownership_context", "calibration_store",
+        "ownership_context",
     }
     if name in known_partial:
         return "PARTIAL", {"reason": "capability is incomplete or lacks production decision-output evidence"}
@@ -651,22 +678,56 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
     else:
         rules_ok = True
 
-    if not integrity_ok or not gate0["pass"] or critical_failed or not source_ok or not rules_ok:
-        overall = "RED"
-    elif critical_partial or not freshness_ok or any(group["counts"].get("PARTIAL", 0) for group in health.values()):
-        overall = "AMBER"
+    # V4.9.1 separates service/pipeline availability from predictive capability.
+    # A truthful PARTIAL prediction module must restrict decision readiness, but
+    # it must not make a healthy API, contract, freshness and Gate-0 pipeline look
+    # operationally broken.
+    if not integrity_ok or not gate0["pass"] or not source_ok or not rules_ok:
+        pipeline_health = "RED"
+    elif not freshness_ok:
+        pipeline_health = "AMBER"
     else:
-        overall = "GREEN"
+        pipeline_health = "GREEN"
 
-    recommendation_allowed = overall != "RED" and gate0["pass"] and freshness_ok
-    go_allowed = overall == "GREEN" and gate0["pass"] and (phase == "preflight" or gate0["counts"].get("DEFERRED", 0) == 0)
+    if critical_failed:
+        prediction_health = "RED"
+    elif critical_partial:
+        prediction_health = "AMBER"
+    else:
+        prediction_health = "GREEN"
+
+    all_items = [item for group in health.values() for item in group["items"]]
+    active_count = sum(item["status"] == "ACTIVE" for item in all_items)
+    warmup_count = sum(item["status"] == "WARMUP" for item in all_items)
+    partial_count = sum(item["status"] == "PARTIAL" for item in all_items)
+    failed_count = sum(item["status"] == "FAILED" for item in all_items)
+    capability_health = "RED" if failed_count else "AMBER" if partial_count or warmup_count else "GREEN"
+    capability_coverage = round((active_count + warmup_count) / max(1, len(all_items)), 4)
+
+    # Backward-compatible `overall` now means operational framework health.
+    # Prediction readiness and capability coverage are explicit sibling fields.
+    overall = pipeline_health
+    recommendation_allowed = pipeline_health != "RED" and prediction_health != "RED" and gate0["pass"] and freshness_ok
+    postflight_complete = phase == "preflight" or gate0["counts"].get("DEFERRED", 0) == 0
+    go_allowed = pipeline_health == "GREEN" and prediction_health == "GREEN" and gate0["pass"] and postflight_complete
     out = {
-        "schema_version": 473,
-        "engine": "v4.7.3-framework-health-checkpoint-aware",
+        "schema_version": 491,
+        "engine": "v4.9.1-health-separation",
         "phase": phase,
         "checkpoint_context": read_json(DATA / "latest.json", {}).get("checkpoint_context") or {},
         "overall": overall,
-        "decision_engine": "HEALTHY" if overall == "GREEN" else "DEGRADED" if overall == "AMBER" else "BLOCKED",
+        "pipeline_health": pipeline_health,
+        "prediction_health": prediction_health,
+        "capability_health": capability_health,
+        "capability_coverage": {
+            "active": active_count,
+            "warmup": warmup_count,
+            "partial": partial_count,
+            "failed": failed_count,
+            "declared": len(all_items),
+            "active_ratio": capability_coverage,
+        },
+        "decision_engine": "HEALTHY" if prediction_health == "GREEN" else "DEGRADED" if prediction_health == "AMBER" else "BLOCKED",
         "recommendation_allowed": recommendation_allowed,
         "go_allowed": go_allowed,
         "registry_integrity": integrity_ok,
@@ -683,6 +744,8 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
             "gate0_fail_blocks_go": True,
             "critical_framework_fail_blocks_recommendation": True,
             "critical_partial_blocks_unqualified_go": True,
+            "pipeline_health_separate_from_prediction_health": True,
+            "noncritical_partial_is_reported_not_hidden": True,
             "file_exists_is_not_sufficient_for_active": True,
             "health_check_must_precede_recommendation": True,
             "raw_optimizer_is_not_final_decision": True,
@@ -699,6 +762,9 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
     atomic_json(PRE_OUT if phase == "preflight" else OUT, out)
     print(json.dumps({
         "framework_health": overall,
+        "pipeline_health": pipeline_health,
+        "prediction_health": prediction_health,
+        "capability_health": capability_health,
         "phase": phase,
         "gate0": gate0["counts"],
         "dss_core": health["dss_core"]["counts"],

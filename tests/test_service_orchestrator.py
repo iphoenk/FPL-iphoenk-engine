@@ -121,7 +121,7 @@ def test_only_raw_snapshot_service_imports_official_fpl_client():
     assert importers == {"raw_snapshot_service.py"}
 
 
-def test_v481_latest_contract_preserves_v480_file_pointers():
+def test_v482_latest_contract_preserves_v480_file_pointers():
     contracts = json.loads((ROOT / "config/service_contract_registry.json").read_text())
     required = set(contracts["contracts"]["latest_snapshot"]["required_paths"])
     assert {f"files.{name}" for name in ("team", "live", "prices", "health", "universe", "chips", "predictions", "checkpoint_decision", "service_orchestration")} <= required

@@ -72,8 +72,8 @@ def orchestrate(
     services = _ordered_services(registry)
     started = time.perf_counter()
     report = {
-        "schema_version": 481,
-        "engine": "v4.8.1-service-orchestrator",
+        "schema_version": 491,
+        "engine": "v4.9.1-service-orchestrator",
         "started_at": iso_now(),
         "completed_at": None,
         "status": "RUNNING",

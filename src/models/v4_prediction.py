@@ -72,11 +72,23 @@ def lineup_distribution(player, ctx=None):
         0.02,
         0.97,
     )
+    # Proven current starts are direct evidence against a purely inferred peer
+    # competition signal. Competition therefore has full force for unknown
+    # players and is progressively attenuated for established starters.
+    competition_uncertainty = clamp(1 - 0.75 * current_start_rate, 0.25, 1)
+    competition_factor = clamp(
+        1
+        - f(ctx.get("competition_start_weight"), 0.16) * f(ctx.get("competition_pressure")) * competition_uncertainty
+        - f(ctx.get("squad_depth_weight"), 0.08) * f(ctx.get("squad_depth_pressure")),
+        0.72,
+        1,
+    )
     start_probability = clamp(
         base_start
         * available
         * clamp(f(ctx.get("injury_return_ramp"), 1), 0.25, 1)
         * workload_factor(ctx)
+        * competition_factor
     )
 
     # Substitute probability requires substitute or prior evidence. It is no
@@ -104,6 +116,8 @@ def lineup_distribution(player, ctx=None):
         "p60": round(p60, 4),
         "availability_probability": round(available, 4),
         "workload_factor": round(workload_factor(ctx), 4),
+        "competition_factor": round(competition_factor, 4),
+        "competition_uncertainty": round(competition_uncertainty, 4),
     }
 
 
@@ -225,10 +239,14 @@ def project_fixture(player, fixture, ctx=None, advanced=None):
 
     # Current xG/xA already includes set pieces and penalties. Official taker
     # orders remain metadata until empirical event shares can be separated.
+    role_multiplier = clamp(f(ctx.get("role_attack_multiplier"), 1), 0.85, 1.25)
     attack = (
         rate["xg90"] * GOAL_PTS[position] + rate["xa90"] * 3
-    ) * minutes_share * fixture_factor
-    appearance = distribution["start_probability"] * (1 + distribution["p60"]) + distribution["bench_probability"]
+    ) * minutes_share * fixture_factor * role_multiplier
+    # p60 is already an unconditional probability (start_probability times the
+    # conditional chance of reaching 60 minutes). Multiplying it by the start
+    # probability again systematically undervalues rotation-risk players.
+    appearance = distribution["start_probability"] + distribution["p60"] + distribution["bench_probability"]
     clean_sheet_probability_value = clean_sheet_probability(fixture, ctx)
     clean_sheet = CS_PTS[position] * clean_sheet_probability_value * distribution["p60"]
     saves = goalkeeper_save_points(rate["saves90"], distribution["expected_minutes"]) if position == 1 else 0
@@ -251,7 +269,7 @@ def project_fixture(player, fixture, ctx=None, advanced=None):
             "saves": round(saves, 3),
             "defcon": round(defcon, 3),
             "bonus": round(bonus, 3),
-            "set_piece_penalty_adjustment": 0.0,
+            "set_piece_penalty_adjustment": round(attack - attack / role_multiplier, 3) if role_multiplier else 0.0,
         },
         "rates": {
             "xg90": round(rate["xg90"], 4),
@@ -275,17 +293,22 @@ def project_fixture(player, fixture, ctx=None, advanced=None):
             "current_minutes_rate": round(f(ctx.get("current_minutes_rate")), 4),
             "competition_pressure": round(f(ctx.get("competition_pressure")), 4),
             "squad_depth_pressure": round(f(ctx.get("squad_depth_pressure")), 4),
-            "competition_adjustment_applied": False,
+            "competition_adjustment_applied": bool(ctx.get("competition_adjustment_applied")),
+            "competition_factor": distribution.get("competition_factor"),
+            "tactical_role": ctx.get("tactical_role"),
+            "tactical_role_source": ctx.get("tactical_role_source"),
             "set_piece_share": ctx.get("set_piece_share"),
             "penalty_share": ctx.get("penalty_share"),
             "set_piece_order_weight": round(f(ctx.get("set_piece_order_weight")), 4),
             "penalty_order_weight": round(f(ctx.get("penalty_order_weight")), 4),
+            "role_attack_multiplier": round(role_multiplier, 4),
+            "role_prior_adjustment_applied": bool(ctx.get("role_prior_adjustment_applied")),
             "last_season_weight": round(f(ctx.get("last_season_weight")), 4),
             "opponent_defence_resistance": round(opponent_defence, 4),
             "fixture_adjustment": round(fixture_factor, 4),
         },
         "provenance": {
-            "model": "v4.7.1-correctness-hotfix",
+            "model": "v4.9.1-prediction-quality",
             "fixture_source": "official_fpl",
             "advanced_source": ctx.get("advanced_source", "official_fpl_current_state"),
             "advanced_identity_match": ctx.get("advanced_identity_match"),
@@ -296,7 +319,7 @@ def project_fixture(player, fixture, ctx=None, advanced=None):
             "competition_source": ctx.get("competition_source"),
             "last_season_source": ctx.get("last_season_source"),
             "set_piece_source": ctx.get("set_piece_source"),
-            "role_scoring_mode": "metadata_only_no_double_count",
+            "role_scoring_mode": ctx.get("role_scoring_mode", "prior_reallocation_no_direct_double_count"),
             "opponent_defence_source": fixture.get("opponent_defence_source"),
             "opponent_defence_scoring_mode": fixture.get("opponent_defence_scoring_mode"),
             "opponent_defence_raw": fixture.get("opponent_defence_raw"),
@@ -325,5 +348,5 @@ def project_horizon(player, fixtures, ctx=None, advanced=None, n=15):
         "xpts_15": round(sum(expected_points[:15]), 2),
         "mean_xpts": round(mean(expected_points), 3) if expected_points else 0,
         "uncertainty": round(pstdev(expected_points), 3) if len(expected_points) > 1 else None,
-        "model": "v4.7.1-correctness-hotfix",
+        "model": "v4.9.1-prediction-quality",
     }

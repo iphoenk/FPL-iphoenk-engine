@@ -1,0 +1,49 @@
+{
+  "schema_version": 491,
+  "registry": "v4_9_1_prediction_quality",
+  "advanced": {
+    "minimum_decision_coverage_ratio": 0.25,
+    "attacking_prior_minutes": 720,
+    "deep_metric_min_minutes": 1
+  },
+  "opponent_defence": {
+    "prior_matches": 5,
+    "minimum_rating": 0.2,
+    "maximum_rating": 0.8,
+    "result_weight": 0.7,
+    "official_diagnostic_weight": 0.3
+  },
+  "competition": {
+    "start_probability_weight": 0.16,
+    "squad_depth_weight": 0.08,
+    "credible_prior_starts": 8,
+    "credible_current_start_rate": 0.5,
+    "role_slots": {
+      "goalkeeper": 1.0,
+      "attacking_fullback": 1.0,
+      "central_defender": 2.0,
+      "hybrid_defender": 1.0,
+      "attacking_midfielder": 2.0,
+      "creator_midfielder": 1.0,
+      "holding_midfielder": 1.0,
+      "balanced_midfielder": 1.0,
+      "striker": 1.0,
+      "support_forward": 1.0
+    }
+  },
+  "role_priors": {
+    "official_order_weight": 0.65,
+    "observed_event_weight": 0.35,
+    "set_piece_xg_prior": 0.08,
+    "penalty_event_prior": 0.35,
+    "set_piece_uplift": 0.12,
+    "penalty_uplift": 0.18
+  },
+  "value": {
+    "objective_weight": 0.02,
+    "reference_price_millions": 5.0
+  },
+  "calibration": {
+    "warmup_min_reconciled_gameweeks": 1
+  }
+}

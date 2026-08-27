@@ -1,0 +1,37 @@
+name: V5 REC-01 Parity Check
+on:
+  push:
+    branches: [v5-beta6-roadmap]
+    paths:
+      - 'src/v5/intelligence/defensive_contribution.py'
+      - 'src/v5/intelligence/full_core_enrichment.py'
+      - 'src/v5/intelligence/projection.py'
+      - 'src/v5/intelligence/advanced_prediction.py'
+      - 'src/v5/services/prediction.py'
+      - 'config/intelligence/projection.json'
+      - 'tests/test_v5_defensive_contribution.py'
+      - 'tests/test_v5_advanced_prediction.py'
+      - '.github/workflows/v5-rec01-parity-check.yml'
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  rec01-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env: {PYTHONPATH: "${{ github.workspace }}"}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with: {python-version: '3.12', cache: pip}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+      - name: REC-01 focused regression
+        run: python -m pytest -q tests/test_v5_defensive_contribution.py tests/test_v5_advanced_prediction.py
+      - name: V5 prediction and service contracts
+        run: python -m pytest -q tests/test_v5_full_dss_core.py tests/test_v5_microservices.py tests/test_v5_feature_bundle.py
+      - name: Full regression suite
+        run: python -m pytest -q

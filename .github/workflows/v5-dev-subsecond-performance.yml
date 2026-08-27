@@ -18,22 +18,26 @@ env:
   PYTHONPATH: ${{ github.workspace }}
 
 jobs:
-  full-beta-performance:
+  hot-path-performance:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve team and hard runtime budget
+      - name: Resolve team and execution-plane runtime budgets
         shell: bash
         run: |
           set -euo pipefail
           TEAM_ID=$(python -c "import json; print(json.load(open('config/engine.json'))['team_id'])")
-          HARD_MS=$(python -c "import json; print(float(json.load(open('config/v5_performance_budgets.json'))['budgets']['full_beta_end_to_end_hard_limit_seconds'])*1000)")
+          HARD_MS=$(python -c "import json; print(float(json.load(open('config/v5_performance_budgets.json'))['budgets']['hot_path_hard_limit_seconds'])*1000)")
+          PLANE_HARD_MS=$(python -c "import json; print(float(json.load(open('config/v5_execution_plane_registry.json'))['planes']['hot']['hard_limit_ms']))")
+          REFRESH_CEILING_MS=$(python -c "import json; print(float(json.load(open('config/v5_performance_budgets.json'))['budgets']['refresh_pipeline_observability_ceiling_seconds'])*1000)")
+          test "$HARD_MS" = "$PLANE_HARD_MS"
           echo "FPL_TEAM_ID=$TEAM_ID" >> "$GITHUB_ENV"
-          echo "V5_FULL_BETA_HARD_MS=$HARD_MS" >> "$GITHUB_ENV"
-          echo "team_id=$TEAM_ID full_beta_hard_ms=$HARD_MS"
+          echo "V5_HOT_HARD_MS=$HARD_MS" >> "$GITHUB_ENV"
+          echo "V5_REFRESH_CEILING_MS=$REFRESH_CEILING_MS" >> "$GITHUB_ENV"
+          echo "team_id=$TEAM_ID hot_hard_ms=$HARD_MS refresh_observability_ceiling_ms=$REFRESH_CEILING_MS"
 
       - name: Start V5 bounded-context cluster
         env:
@@ -61,57 +65,88 @@ jobs:
           docker compose -f deploy/v5/docker-compose.yml ps
           exit 1
 
-      - name: Run isolated full-beta performance probe
+      - name: Warm full refresh then enforce isolated hot-path SLA
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           import json
           import os
+          import time
           import urllib.request
 
           team_id = int(os.environ['FPL_TEAM_ID'])
-          hard_ms = float(os.environ['V5_FULL_BETA_HARD_MS'])
-          body = json.dumps({
+          hard_ms = float(os.environ['V5_HOT_HARD_MS'])
+          refresh_ceiling_ms = float(os.environ['V5_REFRESH_CEILING_MS'])
+
+          def invoke(operation, payload, timeout=30):
+              body = json.dumps(payload).encode('utf-8')
+              req = urllib.request.Request(
+                  f'http://127.0.0.1:8100/v1/invoke/{operation}',
+                  data=body,
+                  headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                  method='POST',
+              )
+              started = time.perf_counter()
+              with urllib.request.urlopen(req, timeout=timeout) as response:
+                  envelope = json.load(response)
+              external_ms = (time.perf_counter() - started) * 1000.0
+              if not envelope.get('ok'):
+                  raise SystemExit(f"orchestrator {operation} failed: {envelope.get('error')}")
+              return envelope.get('data') or {}, external_ms
+
+          refresh, refresh_external_ms = invoke('run', {
               'mode': 'daily',
               'team_id': team_id,
               'persist': True,
-              'correlation_id': 'dev-subsecond-probe',
-          }).encode('utf-8')
-          req = urllib.request.Request(
-              'http://127.0.0.1:8100/v1/invoke/run',
-              data=body,
-              headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
-              method='POST',
-          )
-          with urllib.request.urlopen(req, timeout=30) as response:
-              envelope = json.load(response)
-          if not envelope.get('ok'):
-              raise SystemExit(f"orchestrator failed: {envelope.get('error')}")
-          snapshot = envelope.get('data') or {}
-          perf = snapshot.get('service_performance') or {}
-          core_ms = float(perf.get('orchestrator_wall_ms') or 0.0)
-          full_ms = float(perf.get('full_beta_end_to_end_ms') or 0.0)
-          beta = perf.get('beta_composition') or {}
+              'correlation_id': 'dev-refresh-warmup',
+          })
+          refresh_perf = refresh.get('service_performance') or {}
+          refresh_internal_ms = float(refresh_perf.get('full_beta_end_to_end_ms') or 0.0)
+          materialization = refresh.get('execution_plane') or {}
+          assert materialization.get('hot_materialization') == 'READY', materialization
+
+          hot, hot_external_ms = invoke('hot_run', {
+              'mode': 'daily',
+              'team_id': team_id,
+              'correlation_id': 'dev-hot-probe',
+          })
+          hot_perf = hot.get('service_performance') or {}
+          hot_internal_ms = float(hot_perf.get('hot_path_wall_ms') or 0.0)
+          freshness = ((hot.get('governance') or {}).get('freshness') or {})
+
           result = {
-              'core_orchestrator_wall_ms': core_ms,
-              'full_beta_end_to_end_ms': full_ms,
-              'hard_limit_ms': hard_ms,
-              'pass': full_ms > 0 and full_ms <= hard_ms,
-              'analysis_preflight': perf.get('analysis_preflight'),
-              'intelligence': perf.get('intelligence'),
-              'beta_composition': beta,
+              'refresh_plane': {
+                  'internal_ms': refresh_internal_ms,
+                  'external_ms': round(refresh_external_ms, 3),
+                  'observability_ceiling_ms': refresh_ceiling_ms,
+                  'within_observability_ceiling': refresh_external_ms <= refresh_ceiling_ms,
+                  'release_blocking': False,
+              },
+              'hot_path': {
+                  'internal_ms': hot_internal_ms,
+                  'external_ms': round(hot_external_ms, 3),
+                  'hard_limit_ms': hard_ms,
+                  'internal_pass': 0 < hot_internal_ms <= hard_ms,
+                  'external_pass': 0 < hot_external_ms <= hard_ms,
+                  'freshness': freshness,
+                  'materialization_read': hot_perf.get('materialization_read'),
+              },
           }
           print(json.dumps(result, indent=2, ensure_ascii=False))
-          assert full_ms > 0.0, f'missing full-beta runtime telemetry: {perf}'
-          assert full_ms <= hard_ms, f'V5 full beta runtime exceeded hard limit: {full_ms:.1f}ms > {hard_ms:.1f}ms'
+
+          assert freshness.get('eligible') is True, freshness
+          assert (hot.get('governance') or {}).get('hidden_synchronous_refresh') is False
+          assert hot_internal_ms > 0.0, f'missing hot-path runtime telemetry: {hot_perf}'
+          assert hot_internal_ms <= hard_ms, f'V5 hot internal runtime exceeded hard limit: {hot_internal_ms:.1f}ms > {hard_ms:.1f}ms'
+          assert hot_external_ms <= hard_ms, f'V5 user-facing hot round trip exceeded hard limit: {hot_external_ms:.1f}ms > {hard_ms:.1f}ms'
           PY
 
       - name: Show cluster diagnostics on failure
         if: failure()
         run: |
           docker compose -f deploy/v5/docker-compose.yml ps
-          docker compose -f deploy/v5/docker-compose.yml logs --tail=120 orchestrator decision prediction snapshot || true
+          docker compose -f deploy/v5/docker-compose.yml logs --tail=160 orchestrator decision prediction snapshot || true
 
       - name: Stop V5 cluster
         if: always()

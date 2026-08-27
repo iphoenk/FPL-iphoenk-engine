@@ -82,7 +82,14 @@ def _governance_inputs(simulated=False, age_minutes=0, health_overall="AMBER", m
             "in": [],
         },
     }
-    lineup = {"formation": "3-4-3", "captain": {"name": "A"}, "vice_captain": {"name": "B"}}
+    lineup = {
+        "authority": "USER_OVERRIDE",
+        "status": "MANUAL_DRAFT_ADJUSTABLE",
+        "formation": "3-4-3",
+        "captain": {"name": "A"},
+        "vice_captain": {"name": "B"},
+        "chip_context": {"active_chip": "WILDCARD"},
+    }
     locked = {"wildcard_active": True, "target_gw": 2, "players": [{"element": n} for n in range(15)]}
     return now, latest, health, sanity, lineup, locked
 
@@ -94,9 +101,11 @@ def test_governance_never_authorizes_simulation_and_keeps_lineup_open():
     assert out["decision"]["execution_authorized"] is False
     assert out["squad"]["composition_status"] == "LOCKED_15"
     assert out["lineup"]["status"] == "ADJUSTABLE"
+    assert out["decision"]["engine_is_advisory"] is True
+    assert out["decision"]["user_decision_is_final_authority"] is True
 
 
-def test_governance_blocks_stale_and_only_goes_on_green_material_evidence():
+def test_governance_blocks_stale_and_go_remains_advisory_until_user_final_lock():
     now, latest, health, sanity, lineup, locked = _governance_inputs(age_minutes=61)
     stale = govern_checkpoint(latest, health, sanity, lineup, locked, now=now)
     assert stale["action_state"] == "REFRESH_REQUIRED"
@@ -104,7 +113,14 @@ def test_governance_blocks_stale_and_only_goes_on_green_material_evidence():
     now, latest, health, sanity, lineup, locked = _governance_inputs(health_overall="GREEN", material=True)
     go = govern_checkpoint(latest, health, sanity, lineup, locked, now=now)
     assert go["action_state"] == "GO"
-    assert go["decision"]["execution_authorized"] is True
+    assert go["decision"]["execution_authorized"] is False
+    assert "USER_FINAL_LOCK_REQUIRED" in go["readiness"]["reasons"]
+
+    lineup["status"] = "FINAL_LOCKED"
+    final = govern_checkpoint(latest, health, sanity, lineup, locked, now=now)
+    assert final["action_state"] == "GO"
+    assert final["decision"]["execution_authorized"] is True
+    assert final["lineup"]["status"] == "FINAL_LOCKED"
 
 
 def test_governance_holds_material_recommendation_during_critical_warmup():
@@ -125,6 +141,7 @@ def test_governance_holds_material_recommendation_during_critical_warmup():
 def test_governance_uses_scorecard_target_gw_authority_not_stale_wc_flag():
     now, latest, health, sanity, lineup, locked = _governance_inputs(health_overall="GREEN")
     latest["squad_authority"] = "OFFICIAL_SUBMITTED"
+    lineup["chip_context"] = {"active_chip": "NONE"}
     scorecard = {
         "planning_gw": {
             "status": "PROJECTION",

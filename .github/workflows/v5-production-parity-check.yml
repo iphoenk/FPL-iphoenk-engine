@@ -1,6 +1,15 @@
 name: V5 Production Parity Check
 
 on:
+  push:
+    branches: ['v5-*']
+    paths:
+      - 'IMPLEMENTATION_STATUS.json'
+      - 'src/v5/**'
+      - 'config/v5_*.json'
+      - 'config/intelligence/**'
+      - 'tests/test_v5_*.py'
+      - '.github/workflows/v5-production-parity-check.yml'
   pull_request:
     branches: [v5-beta6-roadmap]
     paths:

@@ -1,0 +1,118 @@
+name: V5 Dev Subsecond Performance
+
+on:
+  push:
+    branches: [v5-rec02-robust-rates]
+    paths:
+      - 'src/v5/**'
+      - 'config/v5_*.json'
+      - 'config/intelligence/**'
+      - 'deploy/v5/**'
+      - '.github/workflows/v5-dev-subsecond-performance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+
+jobs:
+  full-beta-performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve team and hard runtime budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEAM_ID=$(python -c "import json; print(json.load(open('config/engine.json'))['team_id'])")
+          HARD_MS=$(python -c "import json; print(float(json.load(open('config/v5_performance_budgets.json'))['budgets']['full_beta_end_to_end_hard_limit_seconds'])*1000)")
+          echo "FPL_TEAM_ID=$TEAM_ID" >> "$GITHUB_ENV"
+          echo "V5_FULL_BETA_HARD_MS=$HARD_MS" >> "$GITHUB_ENV"
+          echo "team_id=$TEAM_ID full_beta_hard_ms=$HARD_MS"
+
+      - name: Start V5 bounded-context cluster
+        env:
+          FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
+          FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
+          FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
+          FPL_REFRESH_TOKEN: ${{ secrets.FPL_REFRESH_TOKEN }}
+          FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
+          FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
+          FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+        run: docker compose -f deploy/v5/docker-compose.yml up -d --build
+
+      - name: Wait for cluster health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8100/health >/dev/null; then
+              echo "V5 cluster healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f deploy/v5/docker-compose.yml ps
+          exit 1
+
+      - name: Run isolated full-beta performance probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          team_id = int(os.environ['FPL_TEAM_ID'])
+          hard_ms = float(os.environ['V5_FULL_BETA_HARD_MS'])
+          body = json.dumps({
+              'mode': 'daily',
+              'team_id': team_id,
+              'persist': True,
+              'correlation_id': 'dev-subsecond-probe',
+          }).encode('utf-8')
+          req = urllib.request.Request(
+              'http://127.0.0.1:8100/v1/invoke/run',
+              data=body,
+              headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+              method='POST',
+          )
+          with urllib.request.urlopen(req, timeout=30) as response:
+              envelope = json.load(response)
+          if not envelope.get('ok'):
+              raise SystemExit(f"orchestrator failed: {envelope.get('error')}")
+          snapshot = envelope.get('data') or {}
+          perf = snapshot.get('service_performance') or {}
+          core_ms = float(perf.get('orchestrator_wall_ms') or 0.0)
+          full_ms = float(perf.get('full_beta_end_to_end_ms') or 0.0)
+          beta = perf.get('beta_composition') or {}
+          result = {
+              'core_orchestrator_wall_ms': core_ms,
+              'full_beta_end_to_end_ms': full_ms,
+              'hard_limit_ms': hard_ms,
+              'pass': full_ms > 0 and full_ms <= hard_ms,
+              'analysis_preflight': perf.get('analysis_preflight'),
+              'intelligence': perf.get('intelligence'),
+              'beta_composition': beta,
+          }
+          print(json.dumps(result, indent=2, ensure_ascii=False))
+          assert full_ms > 0.0, f'missing full-beta runtime telemetry: {perf}'
+          assert full_ms <= hard_ms, f'V5 full beta runtime exceeded hard limit: {full_ms:.1f}ms > {hard_ms:.1f}ms'
+          PY
+
+      - name: Show cluster diagnostics on failure
+        if: failure()
+        run: |
+          docker compose -f deploy/v5/docker-compose.yml ps
+          docker compose -f deploy/v5/docker-compose.yml logs --tail=120 orchestrator decision prediction snapshot || true
+
+      - name: Stop V5 cluster
+        if: always()
+        run: docker compose -f deploy/v5/docker-compose.yml down -v

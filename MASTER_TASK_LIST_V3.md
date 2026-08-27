@@ -5,6 +5,10 @@ Canonical roadmap owner: V3 operational stream
 Current production release: V3.22.0  
 Current production schema: 49  
 Production acceptance: COMPLETE  
+Current release candidate: V3.23.0 / schema 49  
+Candidate scope: REC-39 Personal Gameweek Context + User Decision Authority  
+Candidate CI acceptance: PASS  
+Candidate production acceptance: PENDING MERGE + RUNTIME PUBLICATION  
 FAST decision target: **<10 seconds**  
 Active microservices: **20**
 
@@ -13,6 +17,7 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 ## Status legend
 - **DONE PROD**: implemented, tested, merged and production-proven when runtime-impacting.
 - **DONE FUNCTIONAL**: implementation is complete and does not require separate runtime activation.
+- **CANDIDATE**: implemented on a release branch and deterministic acceptance is green, but production merge/publication is not yet complete.
 - **MONITOR**: engineering is implemented but genuine season/runtime evidence must continue accumulating.
 - **DEFERRED**: intentionally postponed until its dependency is justified.
 - **REJECTED**: original recommendation is not adopted because a better architecture or control exists.
@@ -39,6 +44,9 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 19. Mutable runtime values belong to config/registry/environment owners, not scattered literals.
 20. Every V3 change must leave `main`, CI, runtime contracts and `runtime-data` mutually consistent.
 21. For every REC touching native or potentially native FPL facts, public Official FPL is attempted first; fallback requires an explicit `OFFICIAL_UNAVAILABLE`, `FIELD_NOT_EXPOSED`, or `PRIVATE_AUTH_REQUIRED` disposition. `OFFICIAL_NOT_APPLICABLE` is valid only for REC work that genuinely does not depend on Official data.
+22. Finished personal GWs are Official actual truth; planning-GW points are projections and must never be presented as actual scores.
+23. The previous Official submitted squad is the default planning baseline. WC/FH/user composition overrides must target the exact planning GW and may never leak into later GWs.
+24. Explicit user XI/C/VC/chip overrides may replace the effective planning decision while preserving the engine recommendation for comparison; the engine may warn but may not silently overwrite the user decision.
 
 ## Current production health contract
 | Area | Requirement | Current policy |
@@ -54,6 +62,9 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 | Predictive calibration | settled frozen forecasts only | MONITOR |
 | Price calibration | realized price-change samples only | MONITOR |
 | Report-time web evidence | READY/PENDING separate from engine health | required semantics |
+| Personal GW history | Official submitted/history actual truth | V3.23 candidate |
+| Planning team score | labelled estimated xPts, never actual | V3.23 candidate |
+| User decision override | explicit only; engine comparison retained | V3.23 candidate |
 
 ## Historical release anchors
 ### V3.20 Architecture Hardening
@@ -71,7 +82,10 @@ Weather became advisory-only contextual evidence, all 15 OWNED became selection-
 ### V3.22 Runtime Optimization Foundation
 FAST/LIVE/FULL/DEEP execution profiles, rolling runtime-data, shallow checkout, resource telemetry, safe reuse and <10s FAST decision regeneration became the production operating model.
 
-## REC-01 through REC-38 canonical status
+### V3.23 Personal Gameweek Context + User Decision Authority
+Release candidate adds Official actual finished-GW history, planning-GW estimated team points, exact-GW WC/FH/user baseline authority, and explicit user XI/C/VC/chip override while preserving engine comparison. It is additive to the existing report-serving boundary, keeps schema 49, retains `REPORT_ARTIFACT_REGISTRY_V3` / `DEEP_REVIEW_PAYLOAD_V2`, and does not add a microservice.
+
+## REC-01 through REC-38 canonical production status
 | REC | Work item | Status | Current evidence / disposition |
 | --- | --- | --- | --- |
 | REC-01 | Player-specific Defensive Contribution | **DONE PROD** | PR #63; DEF CBIT=10, MID/FWD CBIRT=12, GK ineligible; player evidence + shrinkage + Poisson threshold probability. |
@@ -114,6 +128,11 @@ FAST/LIVE/FULL/DEEP execution profiles, rolling runtime-data, shallow checkout, 
 | REC-37 | Official-detail migration fence closeout | **DONE PROD** | PR #74 forced fresh REC-36 Official-detail publication; PR #75 restored normal 3,600s FAST/LIVE reuse TTL. |
 | REC-38 | Official-First REC Coverage Contract | **DONE PROD** | PR #77 implementation + PR #78 one-shot production proof; FULL run 33077874024 passed all contracts, matrix integrity 39/39, and rolling runtime-data publication succeeded. |
 
+## REC-39 candidate status
+| REC | Work item | Status | Current evidence / disposition |
+| --- | --- | --- | --- |
+| REC-39 | Personal Gameweek Context + User Decision Authority | **CANDIDATE** | PR #82. Finished GWs surface Official actual points/chip/submitted squad; planning GW surfaces estimated team xPts + XI/bench/C/VC/chip; previous submitted squad is default baseline; GW2 WC screenshot lock is target-scoped; stale overrides are rejected; Official reclaims authority post-deadline; explicit user override is allowed while engine comparison remains visible. V3 CI run 33081627298 passed compile, architecture, full tests and composite FULL+FAST acceptance. Production merge/publication still required before DONE PROD. |
+
 ## Production evidence after REC-01/02 and runtime closeouts
 - REC-01 PR #63: architecture PASS, service count 20, 177/177 tests PASS, FULL 12.073s, FAST 6.060s.
 - REC-01 runtime contract migration completed successfully; migration fence forced one fresh `player_features.json` publication and normal 6-hour reuse TTL was restored.
@@ -122,7 +141,8 @@ FAST/LIVE/FULL/DEEP execution profiles, rolling runtime-data, shallow checkout, 
 - REC-36 PR #73 is production merged; public Official historical submitted teams, including GW1 retrospective reconciliation, are available without private credentials.
 - REC-37 PRs #74/#75 completed the one-shot Official-detail migration and restored normal FAST/LIVE reuse TTL.
 - REC-38 production FULL run `33077874024` completed in **8.410s**, source layer **1.912s**, Official detail **2.386s**, all production contracts PASS, Gate0 16/16, framework GREEN, prediction quality HEALTHY, 15 OWNED + 20 WATCHLIST, and Official-first matrix integrity **39/39**. The following production FAST snapshot completed in **4.122s**, within the `<10s` SLO, and published a 48-file rolling snapshot of about 18.69MB.
-- Runtime schema remains **49** and active service count remains **20**.
+- REC-39 candidate PR #82 passed V3 CI run `33081627298`: compile PASS, architecture ownership PASS, full unit/regression PASS and composite FULL+FAST release acceptance PASS. This is candidate evidence, not yet production runtime publication evidence.
+- Production schema remains **49** and active service count remains **20**.
 
 ## Calibration / operational monitors that must remain yellow honestly
 | Monitor | Why it cannot be forced green |
@@ -164,7 +184,8 @@ FAST/LIVE/FULL/DEEP execution profiles, rolling runtime-data, shallow checkout, 
 A task is DONE only when implementation, deterministic tests, documentation and required production evidence agree. A file existing, a source being reachable, or a manually edited status label is not proof. Predictive accuracy, confidence quality, price accuracy and causal weather claims require genuine realized samples.
 
 ## Execution order from here
-1. Keep V3.22 production GREEN and FAST <10s with REC-38 Official-first governance active.
-2. Accumulate settled-GW, confidence, price and weather calibration evidence without forcing status upgrades.
-3. Use public Official data first for every applicable REC; keep authenticated Official precision optional/fail-soft only where public Official cannot expose the required private state.
-4. Improve remaining P1 intelligence evidence only through attributable changes that preserve Official authority and production stability.
+1. Close REC-39 only after PR #82 remains green after governance sync, is merged, and its runtime-impacting outputs are production-published/validated.
+2. Keep V3.22 production GREEN until that cutover; do not treat candidate output as production authority early.
+3. Accumulate settled-GW, confidence, price and weather calibration evidence without forcing status upgrades.
+4. Use public Official data first for every applicable REC; keep authenticated Official precision optional/fail-soft only where public Official cannot expose the required private state.
+5. Improve remaining P1 intelligence evidence only through attributable changes that preserve Official authority and production stability.

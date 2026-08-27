@@ -68,6 +68,7 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     reporting_source = (ROOT / "src/v5/reporting.py").read_text()
     baseline = str(convergence.get("production_baseline") or "")
     baseline_sha = str(convergence.get("production_main_sha") or "")
+    expected_schema = int(convergence.get("production_schema_version") or 0)
     manifest_baselines = manifest.get("baselines") or {}
     source_policy = source_registry_cfg.get("policy") or {}
     source_rows = _source_rows(source_registry_cfg)
@@ -78,7 +79,7 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     checks = (
         AcceptanceCheck("v5_manifest", manifest.get("version") == V5_VERSION, Plane.GOVERNANCE, "package version matches convergence manifest"),
         AcceptanceCheck("production_baseline_declared", manifest_baselines.get("production_truth") == baseline and manifest_baselines.get("production_main_sha") == baseline_sha and bool(baseline_sha), Plane.TRUTH, "production baseline version and SHA are registry-driven and consistent"),
-        AcceptanceCheck("production_schema_48", int(manifest_baselines.get("production_schema_version") or 0) == 48, Plane.TRUTH, "V3.20 production schema 48 is explicit"),
+        AcceptanceCheck("production_schema_declared", expected_schema > 0 and int(manifest_baselines.get("production_schema_version") or 0) == expected_schema, Plane.TRUTH, f"accepted production schema {expected_schema} is explicit and registry-driven"),
         AcceptanceCheck("prediction_baseline_declared", baseline in str(manifest_baselines.get("prediction_intelligence") or ""), Plane.INTELLIGENCE, "prediction convergence references accepted production baseline"),
         AcceptanceCheck("rules_registry_active", RULESET_ID == "FPL_2026_27" and RULESET_SEASON == "2026/27", Plane.TRUTH, "verified season rules remain single authority"),
         AcceptanceCheck("goalkeeper_goal_rule", GOAL_POINTS.get(1) == 10, Plane.TRUTH, "goalkeeper goal scoring remains 10"),
@@ -87,7 +88,7 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
         AcceptanceCheck("native_decision", "build_packages" in decision_source and "optimize_lineup" in decision_source and "build_trace" in decision_source and "build_watchlist" not in decision_source, Plane.DECISION, "decision owns package/lineup/trace without importing watchlist authority"),
         AcceptanceCheck("native_watchlist_service", convergence.get("full_dss_watchlist_required") is True and "build_watchlist" in watchlist_source and "FULL_DSS" not in decision_source, Plane.DECISION, "full DSS external screening is an independent service"),
         AcceptanceCheck("native_reporting", convergence.get("decision_first_reporting_required") is True and "USER_REPORT" in reporting_source and "TECHNICAL_APPENDIX" in reporting_source and "COMPACT_DELTA" in reporting_source, Plane.GOVERNANCE, "reporting separates user, technical and delta layers"),
-        AcceptanceCheck("v320_source_policy", source_policy.get("source_network_locations_are_registry_owned") is True and source_policy.get("source_ingestion_timeouts_are_registry_owned") is True and source_policy.get("active_artifact_aliases_must_not_embed_gameweek") is True, Plane.INTELLIGENCE, "V3.20 source ownership semantics are preserved"),
+        AcceptanceCheck("source_registry_governance", source_policy.get("source_network_locations_are_registry_owned") is True and source_policy.get("source_ingestion_timeouts_are_registry_owned") is True and source_policy.get("active_artifact_aliases_must_not_embed_gameweek") is True, Plane.INTELLIGENCE, "production source ownership semantics are preserved"),
         AcceptanceCheck("onefpl_report_time_boundary", onefpl.get("enabled") is False and onefpl.get("adapter") == "disabled" and onefpl.get("delegated_to") == convergence.get("onefpl_report_time_delegation_required"), Plane.INTELLIGENCE, "OneFPL automated collector remains disabled and report-time delegated"),
         AcceptanceCheck("understat_scrape_disabled", understat.get("enabled") is False and understat.get("adapter") == "disabled", Plane.INTELLIGENCE, "Understat direct scrape stays disabled by production source policy"),
         AcceptanceCheck("release_attestation", attestation.get("contract") == "V5_RELEASE_ATTESTATION_V1" and bool(attestation.get("attestation")) and attestation.get("production_main_sha") == baseline_sha, Plane.GOVERNANCE, "candidate release attestation binds version, baseline and runtime fingerprint"),

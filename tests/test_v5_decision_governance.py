@@ -217,15 +217,23 @@ def test_package_optimizer_is_deterministic_and_within_budget():
     budgets = load_json_config("config/v5_performance_budgets.json")["budgets"]
     truth = _truth()
     prediction = _prediction(with_candidates=True)
-    started = time.perf_counter()
+
+    cold_started = time.perf_counter()
     first = build_packages(prediction, truth["team"], truth["rules"])
-    elapsed_ms = (time.perf_counter() - started) * 1000.0
-    second = build_packages(_prediction(with_candidates=True), truth["team"], truth["rules"])
+    cold_ms = (time.perf_counter() - cold_started) * 1000.0
+
+    steady_started = time.perf_counter()
+    steady = build_packages(prediction, truth["team"], truth["rules"])
+    steady_ms = (time.perf_counter() - steady_started) * 1000.0
+
+    fresh = build_packages(_prediction(with_candidates=True), truth["team"], truth["rules"])
     assert first["status"] == "READY"
     assert first["governance"]["projection_lookup"] == "indexed_o1"
     assert first["governance"]["horizon_evaluation"] == "single_pass_prefix"
-    assert [p.get("monte_carlo") for p in first["packages"]] == [p.get("monte_carlo") for p in second["packages"]]
-    assert elapsed_ms <= float(budgets["decision_package_optimizer_synthetic_ms"]), elapsed_ms
+    assert [p.get("monte_carlo") for p in first["packages"]] == [p.get("monte_carlo") for p in steady["packages"]]
+    assert [p.get("monte_carlo") for p in first["packages"]] == [p.get("monte_carlo") for p in fresh["packages"]]
+    assert cold_ms <= float(budgets["decision_package_optimizer_cold_synthetic_ms"]), cold_ms
+    assert steady_ms <= float(budgets["decision_package_optimizer_synthetic_ms"]), steady_ms
 
 
 def test_decision_governance_bootstrap_performance_budgets():

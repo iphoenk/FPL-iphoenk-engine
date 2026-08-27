@@ -33,6 +33,7 @@ def govern_checkpoint(
     sanity: dict,
     lineup: dict,
     locked: dict,
+    scorecard: dict | None = None,
     now: datetime | str | None = None,
     actions: dict | None = None,
 ) -> dict:
@@ -45,6 +46,7 @@ def govern_checkpoint(
         raise RuntimeError("checkpoint governance now must be timezone-aware")
 
     actions = actions or read_json(ACTIONS, {})
+    scorecard = scorecard or {}
     context = dict(latest.get("checkpoint_context") or {})
     freshness = _freshness(latest, evaluated_at)
     gate0_pass = (health.get("gate0") or {}).get("pass") is True
@@ -134,6 +136,13 @@ def govern_checkpoint(
             "governance": (lineup.get("governance") or {}).get("decision"),
             "requires_explicit_final_lock": not explicit_lineup_lock,
         },
+        "personal_gw_scorecard": {
+            "status": scorecard.get("status", "UNAVAILABLE"),
+            "previous_gw": scorecard.get("previous_gw") or {"status": "UNAVAILABLE"},
+            "planning_gw": scorecard.get("planning_gw") or {"status": "UNAVAILABLE"},
+            "headline": scorecard.get("headline") or {},
+            "history": scorecard.get("history") or [],
+        },
         "readiness": {
             "framework_health": health.get("overall"),
             "pipeline_health": health.get("pipeline_health", health.get("overall")),
@@ -155,6 +164,7 @@ def govern_checkpoint(
             "freshness_failure_blocks_action": True,
             "locked_15_separate_from_lineup_lock": True,
             "wildcard_active_means_no_hit": True,
+            "scorecard_is_reporting_only": True,
         },
     }
 
@@ -166,6 +176,7 @@ def run(now: str | None = None) -> dict:
         read_json(DATA / "recommendation_sanity_v4.json", {}),
         read_json(DATA / "lineup_decision_v4.json", {}),
         read_json(CONFIG / "locked_squad.json", {}),
+        scorecard=read_json(DATA / "gw_scorecard_v4.json", {}),
         now=now,
     )
     atomic_json(OUTFILE, out)
@@ -174,6 +185,8 @@ def run(now: str | None = None) -> dict:
         "action": out.get("action_state"),
         "headline": out.get("headline"),
         "governed_verdict": (out.get("decision") or {}).get("governed_verdict"),
+        "previous_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("previous"),
+        "planning_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("planning"),
     }, ensure_ascii=False))
     return out
 

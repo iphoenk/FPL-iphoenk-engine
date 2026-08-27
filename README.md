@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.9.3.1
+# FPL iphoenk Engine V4.9.4
 
 A production-oriented personal FPL data platform.
 
@@ -25,6 +25,7 @@ Implemented:
 - leakage guard
 - fail-closed validation
 - immutable pre-deadline validation snapshots and idempotent post-GW reconciliation
+- immutable finished-GW personal scorecards plus planning-GW projected team points
 - persistent snapshots
 - safe GitHub workflow
 
@@ -66,6 +67,7 @@ python fpl_daily_tasks.py advanced-stats --gw 1 --query "Haaland"
 python -m src.services.orchestrator daily --stats --deep-stats
 python -m src.services.orchestrator deadline --stats --deep-stats --as-of "2026-08-28T21:30:00+07:00"
 python -m src.engines.v4_validation_cycle cycle
+python -m src.services.gw_scorecard_service
 python -m src.engines.v4_advanced_ablation
 python -m src.engines.v4_quality_gate
 
@@ -187,3 +189,13 @@ See `docs/v4-microservices.md` for service ownership, failure semantics, and pre
 - The SHA-256 of the full prediction artifact remains attached to the compact snapshot for provenance, so storage reduction does not weaken point-in-time traceability.
 - Full-vs-compact reconciliation output must be exactly identical in regression tests.
 - Repeated snapshot attempts preserve the first frozen artifact, and a storage-budget regression test requires the compact projection to stay below 15% of an equivalent full synthetic prediction payload.
+
+## V4.9.4 personal GW scorecard and projection
+
+- A tenth process-isolated `personal_gw_scorecard` service consumes only existing runtime contracts and optimizer output. `raw_snapshot` remains the sole Official FPL API authority; the scorecard service performs zero Official FPL refetches.
+- Finished GWs are presented as actual results with squad-level and player-level scoring evidence, captain/vice multipliers, chip, gross points, transfer-hit cost, net points, and bench points.
+- Finished results are persisted under `data/gw_results/gwXX.json`. The first valid finished result is frozen; later runs preserve the archive instead of rewriting history. Simulated `--as-of` runs never create or modify this archive.
+- Planning GWs expose formation, XI, bench, captain, vice-captain, active chip and estimated team xPts. Captain, Triple Captain, and Bench Boost multipliers are applied explicitly once; Wildcard and Free Hit do not add scoring points.
+- Team xPts is an estimate, never labelled as an actual score. Player lower/upper intervals are deliberately not summed into a team range because correlated team-score uncertainty has not yet been calibrated.
+- `report_governance` depends on both post-flight health and the scorecard contract, and every checkpoint report scope includes `personal_gw_scorecard`.
+- The V4 production registry now contains ten independent microservices, with service contracts and the centralized quality gate failing closed on scorecard lineage or architecture violations.

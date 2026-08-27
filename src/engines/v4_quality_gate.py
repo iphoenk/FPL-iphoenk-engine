@@ -66,13 +66,10 @@ def _assert_framework_health() -> tuple[dict, dict]:
         assert performance.get("prediction_snapshot_reads") == 1
         assert performance.get("audit_scoped_cache") is True
 
-    # PRE-FLIGHT is intentionally incomplete. Post-flight-only outputs must be DEFERRED,
-    # never misclassified as failures.
     pre_counts = pre["gate0"]["counts"]
     assert pre_counts.get("PASS", 0) + pre_counts.get("DEFERRED", 0) == 16, pre_counts
     assert pre.get("governance", {}).get("preflight_defers_postflight_outputs") is True, pre
 
-    # POST-FLIGHT is final-decision readiness. Nothing may remain deferred.
     post_counts = post["gate0"]["counts"]
     assert post_counts.get("PASS", 0) == 16 and post_counts.get("DEFERRED", 0) == 0, post_counts
     governance = post.get("governance", {})
@@ -80,7 +77,6 @@ def _assert_framework_health() -> tuple[dict, dict]:
     assert governance.get("raw_optimizer_is_not_final_decision") is True
     assert governance.get("gate0_fail_blocks_go") is True
 
-    # Prediction capabilities must be backed by output evidence.
     core = {row["id"]: row for row in post["dss_core"]["items"]}
     for module_id in ("DSS-05", "DSS-35"):
         assert core[module_id]["status"] == "ACTIVE", core[module_id]
@@ -117,6 +113,7 @@ def run() -> dict:
     assert latest.get("meta", {}).get("service_contract_compatible") is True
     assert latest.get("meta", {}).get("service_boundaries_registry_driven") is True
     assert latest.get("checkpoint_context", {}).get("policy_id")
+    assert latest.get("files", {}).get("gw_scorecard") == "data/gw_scorecard_v4.json"
     service_performance = latest.get("performance") or {}
     for field in ("raw_snapshot_ms", "enrichment_ms", "prediction_ms", "engine_before_snapshot_write_ms"):
         assert service_performance.get(field, 0) > 0, service_performance
@@ -128,8 +125,9 @@ def run() -> dict:
     assert orchestration.get("status") == "PASS", orchestration
     assert orchestration.get("stats_enabled") is True and orchestration.get("deep_stats_enabled") is True, orchestration
     services = orchestration.get("services") or []
-    assert len(services) == 9 and all(row.get("status") == "PASS" for row in services), services
+    assert len(services) == 10 and all(row.get("status") == "PASS" for row in services), services
     assert [row.get("id") for row in services[:4]] == ["raw_snapshot", "enrichment", "prediction", "validation_lifecycle"], services
+    assert "personal_gw_scorecard" in [row.get("id") for row in services], services
     assert all(row.get("boundary_state") == "INDEPENDENT" for row in services), services
     assert all(all(contract.get("valid") for contract in row.get("contracts") or []) for row in services), services
     assert orchestration.get("snapshot_identity", {}).get("sha256") == file_digest(DATA / "runtime/snapshot.v1.json"), orchestration
@@ -141,6 +139,10 @@ def run() -> dict:
     assert og.get("deadline_snapshot_immutable") and og.get("retroactive_snapshot_rejected")
     assert og.get("reconciliation_archive_immutable") and og.get("reconciliation_idempotent")
     assert og.get("health_view_current_model_only") is True
+    assert og.get("personal_gw_scorecard_no_official_refetch") is True
+    assert og.get("finished_gw_archive_immutable") is True
+    assert og.get("scorecard_simulation_never_mutates_archive") is True
+    assert og.get("scorecard_projection_from_lineup_contract") is True
     assert og.get("appearance_formula_regression_tested") and og.get("prediction_quality_inputs_consumed")
     assert og.get("truthful_competition_evidence") and og.get("critical_warmup_blocks_unqualified_go")
     assert og.get("optimizer_search_width_unchanged")
@@ -234,6 +236,32 @@ def run() -> dict:
     assert lg.get("manual_draft_not_overwritten_without_margin") and lg.get("prediction_interval_robustness")
     assert lineup.get("governance", {}).get("decision") in {"OPTIMIZER_ONLY", "HOLD_MANUAL_DRAFT", "CHANGE_RECOMMENDED"}
 
+    scorecard = _load("gw_scorecard_v4.json")
+    _assert_version(scorecard, "personal GW scorecard", 494, "v4.9.4-personal-gw-scorecard")
+    assert scorecard.get("status") == "PASS", scorecard
+    assert scorecard.get("snapshot_sha256") == file_digest(DATA / "runtime/snapshot.v1.json"), scorecard
+    scg = scorecard.get("guardrails") or {}
+    assert scg.get("raw_snapshot_only") is True and scg.get("official_api_refetch") is False
+    assert scg.get("process_isolated_microservice") is True
+    assert scg.get("finished_gw_archive_immutable") is True
+    assert scg.get("simulation_never_mutates_archive") is True
+    assert scg.get("projection_from_lineup_contract") is True
+    assert scg.get("projection_is_estimate_not_actual") is True
+    assert scg.get("player_intervals_not_naively_summed") is True
+    assert (scorecard.get("archive") or {}).get("immutable") is True
+    last_finished = (latest.get("phase") or {}).get("last_finished_gw")
+    if last_finished and not latest.get("checkpoint_context", {}).get("is_simulation"):
+        previous = scorecard.get("previous_gw") or {}
+        assert previous.get("status") == "FINAL" and int(previous.get("gw") or 0) == int(last_finished), previous
+        assert previous.get("net_points") is not None and previous.get("chip") is not None, previous
+    planning_gw = (latest.get("phase") or {}).get("planning_gw")
+    if planning_gw:
+        planning = scorecard.get("planning_gw") or {}
+        assert planning.get("status") == "PROJECTION" and int(planning.get("gw") or 0) == int(planning_gw), planning
+        assert planning.get("estimated_points", 0) > 0 and planning.get("formation") == lineup.get("formation"), planning
+        assert (planning.get("captain") or {}).get("element") == lineup.get("captain", {}).get("element"), planning
+        assert (planning.get("uncertainty") or {}).get("player_intervals_not_naively_summed") is True, planning
+
     sanity = _load("recommendation_sanity_v4.json")
     assert int(sanity.get("schema_version", 0)) >= 460, sanity
     assert str(sanity.get("engine", "")).startswith("v4.6-evidence-fusion-sanity"), sanity
@@ -268,6 +296,11 @@ def run() -> dict:
     assert guardrails.get("simulation_never_authorizes_action") is True
     assert guardrails.get("freshness_failure_blocks_action") is True
     assert guardrails.get("locked_15_separate_from_lineup_lock") is True
+    assert guardrails.get("scorecard_is_reporting_only") is True
+    checkpoint_scorecard = checkpoint.get("personal_gw_scorecard") or {}
+    assert (checkpoint_scorecard.get("previous_gw") or {}).get("status") == (scorecard.get("previous_gw") or {}).get("status")
+    assert (checkpoint_scorecard.get("planning_gw") or {}).get("status") == (scorecard.get("planning_gw") or {}).get("status")
+    assert checkpoint_scorecard.get("headline") == scorecard.get("headline")
     if latest.get("checkpoint_context", {}).get("is_simulation"):
         assert action == "SIMULATION_ONLY", checkpoint
     if health.get("prediction_health") == "AMBER" and not latest.get("checkpoint_context", {}).get("is_simulation"):
@@ -326,6 +359,8 @@ def run() -> dict:
         "lineup_governance": lineup["governance"]["decision"],
         "formation": lineup["formation"],
         "captain": lineup["captain"]["name"],
+        "previous_gw": (scorecard.get("headline") or {}).get("previous"),
+        "planning_gw": (scorecard.get("headline") or {}).get("planning"),
         "checkpoint": checkpoint["checkpoint_context"]["policy_id"],
         "action": checkpoint["action_state"],
         "services": len(services),
@@ -333,7 +368,7 @@ def run() -> dict:
         "orchestration_ms": orchestration.get("duration_ms"),
         "pipeline_ms": timings["total_pipeline_ms"],
     }
-    print("V4.9.3 VALIDATION-LIFECYCLE SERVICE GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.9.4 PERSONAL-GW-SCORECARD SERVICE GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

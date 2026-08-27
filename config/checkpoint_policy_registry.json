@@ -9,51 +9,51 @@
       "local_time": "04:30",
       "max_snapshot_age_minutes": 90,
       "recommended_refresh_minutes": 60,
-      "report_scope": ["executive_pulse", "gate0", "locked_15", "full_universe", "watchlist", "price_radar", "multi_horizon", "lineup", "captaincy", "learning_loop"]
+      "report_scope": ["personal_gw_scorecard", "executive_pulse", "gate0", "locked_15", "full_universe", "watchlist", "price_radar", "multi_horizon", "lineup", "captaincy", "learning_loop"]
     },
     "MIDDAY_TACTICAL_1230": {
       "label": "12.30 Midday Tactical Monitor",
       "local_time": "12:30",
       "max_snapshot_age_minutes": 90,
       "recommended_refresh_minutes": 60,
-      "report_scope": ["gate0", "locked_15", "availability", "xmins", "role", "challengers", "price_radar", "lineup_watch"]
+      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "availability", "xmins", "role", "challengers", "price_radar", "lineup_watch"]
     },
     "NIGHT_TACTICAL_PRICE_2130": {
       "label": "21.30 Night Tactical + Price Monitor",
       "local_time": "21:30",
       "max_snapshot_age_minutes": 60,
       "recommended_refresh_minutes": 30,
-      "report_scope": ["gate0", "locked_15", "availability", "xmins", "role", "rotation", "price_radar", "challengers", "lineup_watch"]
+      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "availability", "xmins", "role", "rotation", "price_radar", "challengers", "lineup_watch"]
     },
     "REGULAR_MONITOR": {
       "label": "Regular Tactical Monitor",
       "max_snapshot_age_minutes": 90,
       "recommended_refresh_minutes": 180,
-      "report_scope": ["gate0", "locked_15", "availability", "xmins", "price_radar", "challengers"]
+      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "availability", "xmins", "price_radar", "challengers"]
     },
     "DEADLINE_MONITOR": {
       "label": "Deadline Day Monitor",
       "max_snapshot_age_minutes": 30,
       "recommended_refresh_minutes": 60,
-      "report_scope": ["gate0", "locked_15", "availability", "xmins", "role", "rotation", "price_radar", "challengers", "lineup", "captaincy"]
+      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "availability", "xmins", "role", "rotation", "price_radar", "challengers", "lineup", "captaincy"]
     },
     "FINAL_DEADLINE_REVIEW": {
       "label": "Final Deadline Review",
       "max_snapshot_age_minutes": 15,
       "recommended_refresh_minutes": 15,
-      "report_scope": ["gate0", "locked_15", "availability", "xmins", "role", "rotation", "price_radar", "full_universe", "wc_packages", "lineup", "bench", "captaincy", "chip", "final_action"]
+      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "availability", "xmins", "role", "rotation", "price_radar", "full_universe", "wc_packages", "lineup", "bench", "captaincy", "chip", "final_action"]
     },
     "POST_FINAL_EMERGENCY_ONLY": {
       "label": "Post-final Emergency Watch",
       "max_snapshot_age_minutes": 10,
       "recommended_refresh_minutes": 10,
-      "report_scope": ["material_news", "availability", "suspension", "lineup_emergency", "captain_emergency"]
+      "report_scope": ["personal_gw_scorecard", "material_news", "availability", "suspension", "lineup_emergency", "captain_emergency"]
     },
     "MATCHDAY_LIVE": {
       "label": "Matchday Live Monitor",
       "max_snapshot_age_minutes": 5,
       "recommended_refresh_minutes": 1,
-      "report_scope": ["official_picks", "event_live", "provisional_points", "autosubs", "captain", "reconciliation"]
+      "report_scope": ["personal_gw_scorecard", "official_picks", "event_live", "provisional_points", "autosubs", "captain", "reconciliation"]
     }
   },
   "final_review": {

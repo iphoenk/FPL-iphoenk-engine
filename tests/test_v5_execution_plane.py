@@ -3,13 +3,13 @@ from datetime import datetime, timedelta, timezone
 from src.v5.execution_plane import build_hot_bundle, evaluate_hot_materialization, freshness_budget_seconds, plane
 
 
-def _bundle(now: datetime, fingerprint: str = "fp1"):
+def _bundle(now: datetime, fingerprint: str = "fp1", mode: str = "deadline"):
     return {
         "schema_version": 2,
         "contract": "V5_DECISION_HOT_BUNDLE_V2",
         "generated_at": now.isoformat(),
         "runtime_fingerprint": fingerprint,
-        "mode": "deadline",
+        "mode": mode,
         "phase": {"phase": "PRE_DEADLINE"},
         "team_id": 1,
         "squad_authority": "user_lock",
@@ -67,6 +67,22 @@ def test_fresh_materialization_is_hot_eligible():
     assert result["hard_limit_ms"] == 950
 
 
+def test_mode_mismatch_fails_closed_even_when_timestamp_is_fresh():
+    now = datetime(2026, 8, 28, 0, 0, tzinfo=timezone.utc)
+    result = evaluate_hot_materialization(
+        _bundle(now - timedelta(seconds=1), mode="daily"),
+        mode="deadline",
+        current_runtime_fingerprint="fp1",
+        now=now,
+    )
+    assert result["status"] == "STALE"
+    assert result["eligible"] is False
+    assert result["reason"] == "MODE_MISMATCH"
+    assert result["materialized_mode"] == "daily"
+    assert result["requested_mode"] == "deadline"
+    assert result["action"] == "FAIL_CLOSED"
+
+
 def test_stale_materialization_fails_closed_without_hidden_refresh():
     now = datetime(2026, 8, 28, 0, 0, tzinfo=timezone.utc)
     budget = freshness_budget_seconds("deadline")
@@ -85,7 +101,7 @@ def test_stale_materialization_fails_closed_without_hidden_refresh():
 def test_runtime_fingerprint_mismatch_is_stale():
     now = datetime(2026, 8, 28, 0, 0, tzinfo=timezone.utc)
     result = evaluate_hot_materialization(
-        _bundle(now, fingerprint="old"),
+        _bundle(now, fingerprint="old", mode="daily"),
         mode="daily",
         current_runtime_fingerprint="new",
         now=now,
@@ -96,7 +112,7 @@ def test_runtime_fingerprint_mismatch_is_stale():
 
 def test_missing_required_field_fails_closed():
     now = datetime(2026, 8, 28, 0, 0, tzinfo=timezone.utc)
-    bundle = _bundle(now)
+    bundle = _bundle(now, mode="daily")
     del bundle["decision_summary"]
     result = evaluate_hot_materialization(
         bundle,

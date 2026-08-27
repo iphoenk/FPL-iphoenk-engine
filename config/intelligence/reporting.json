@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "model_id": "decision_first_report_v1",
+  "schema_version": 2,
+  "model_id": "decision_first_report_v2",
   "layers": ["USER_REPORT", "TECHNICAL_APPENDIX"],
   "decision_states": ["HOLD", "CHANGE", "REVIEW"],
   "confidence_labels": ["HIGH", "MEDIUM", "LOW"],
@@ -14,6 +14,7 @@
     "chip",
     "price_radar",
     "external_watchlist",
+    "report_time_intelligence",
     "engine_line",
     "action_board"
   ],
@@ -21,7 +22,7 @@
     "enabled": true,
     "compact_when_no_material_change": true,
     "normal_length_ratio_target": 0.35,
-    "material_delta_keys": ["squad", "starting_xi", "captain", "vice_captain", "chip", "price", "critical_health"]
+    "material_delta_keys": ["squad", "starting_xi", "captain", "vice_captain", "chip", "price", "critical_health", "report_time_intelligence"]
   },
   "starting_xi": {
     "lock_margin": 0.75,
@@ -65,6 +66,28 @@
       "squad_fit"
     ],
     "missing_or_incomplete_result": "INSUFFICIENT_EVIDENCE"
+  },
+  "report_time_intelligence": {
+    "enabled": true,
+    "registry": "config/sources/report_time_registry.json",
+    "evidence_contract": "report_time_evidence_v1",
+    "refresh_modes": ["SCHEDULED_REPORT", "ON_DEMAND_REPORT"],
+    "collector_fetch_forbidden": ["onefpl"],
+    "source_classes": [
+      "MODEL_CHALLENGER",
+      "FIXTURE_STRATEGY_EXPERT",
+      "PUNDIT_CONSENSUS",
+      "COMMUNITY_SIGNAL",
+      "VERIFIED_NEWS"
+    ],
+    "compare_pundit_consensus_with_dss": true,
+    "surface_alignment_and_divergence": true,
+    "pundit_consensus_is_advisory_only": true,
+    "community_signal_requires_crosscheck": true,
+    "fixture_strategy_expert_does_not_vote_on_player_projection": true,
+    "missing_web_refresh_result": "REFRESH_REQUIRED",
+    "never_mutate_dss": true,
+    "never_override_official_native_fields": true
   },
   "action_board": {
     "max_items": 8,

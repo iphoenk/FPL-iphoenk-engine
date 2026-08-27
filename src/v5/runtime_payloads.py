@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.v5.config_cache import load_json_config
+
+PAYLOAD_CONTRACT_CONFIG = "config/v5_payload_contract_registry.json"
+
 
 def _dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
@@ -11,132 +15,79 @@ def _list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
-def _pick(mapping: dict[str, Any], *keys: str) -> dict[str, Any]:
-    return {key: mapping.get(key) for key in keys if key in mapping}
+def _project(value: Any, spec: dict[str, Any]) -> Any:
+    kind = str(spec.get("type") or "passthrough").strip().lower()
 
+    if kind == "passthrough":
+        return value
 
-def _degraded_capability_view(payload: Any) -> dict[str, Any]:
-    row = _dict(payload)
-    return _pick(row, "capabilities", "degraded_context")
+    if kind == "object":
+        row = _dict(value)
+        include = spec.get("include", "*")
+        if include == "*":
+            result: dict[str, Any] = dict(row)
+        elif isinstance(include, list):
+            result = {str(key): row[str(key)] for key in include if str(key) in row}
+        else:
+            raise RuntimeError(f"invalid object projection include: {include!r}")
 
-
-def _evaluation_prediction(prediction: Any) -> dict[str, Any]:
-    row = _dict(prediction)
-    players = []
-    for player in _list(row.get("players")):
-        if not isinstance(player, dict):
-            continue
-        xmins = _dict(player.get("xmins"))
-        events = []
-        for event in _list(player.get("xpts_by_gw")):
-            if not isinstance(event, dict):
+        fields = spec.get("fields") or {}
+        if not isinstance(fields, dict):
+            raise RuntimeError("object projection fields must be an object")
+        for key, child_spec in fields.items():
+            if not isinstance(child_spec, dict):
+                raise RuntimeError(f"projection field {key} must be an object")
+            if key not in row:
+                if bool(child_spec.get("required")):
+                    raise RuntimeError(f"required payload projection field missing: {key}")
+                result.pop(key, None)
                 continue
-            events.append(_pick(event, "gw", "mean", "std", "clean_sheet_probability"))
-        players.append(
-            {
-                **_pick(player, "element", "name", "position", "current_season"),
-                "xmins": _pick(xmins, "expected_minutes", "start_probability"),
-                "xpts_by_gw": events,
-            }
-        )
-    return {
-        **_pick(
-            row,
-            "generated_at",
-            "planning_gw",
-            "horizon_gws",
-            "ruleset_id",
-            "prediction_quality",
-            "capabilities",
-            "degraded_context",
-        ),
-        "players": players,
-    }
+            result[key] = _project(row[key], child_spec)
+        return result
+
+    if kind == "array":
+        item_spec = spec.get("item") or {"type": "passthrough"}
+        if not isinstance(item_spec, dict):
+            raise RuntimeError("array projection item must be an object")
+        return [_project(item, item_spec) for item in _list(value)]
+
+    raise RuntimeError(f"unsupported payload projection type: {kind}")
 
 
-def _decision_finalize_prediction(prediction: Any) -> dict[str, Any]:
-    row = _dict(prediction)
-    return _pick(row, "model_version", "ruleset_id", "capabilities", "degraded_context")
-
-
-def _decision_finalize_truth(truth: Any) -> dict[str, Any]:
-    row = _dict(truth)
-    team = _dict(row.get("team"))
-    return {
-        "rules": _dict(row.get("rules")),
-        "team": _pick(team, "authority"),
-        **_pick(row, "capabilities", "degraded_context"),
-    }
-
-
-def _decision_finalize_price(price: Any) -> dict[str, Any]:
-    row = _dict(price)
-    return {
-        "alerts": _dict(row.get("alerts")),
-        **_pick(row, "capabilities", "degraded_context"),
-    }
-
-
-def _governance_truth(truth: Any) -> dict[str, Any]:
-    row = _dict(truth)
-    team = _dict(row.get("team"))
-    return {
-        "rules": _dict(row.get("rules")),
-        "team": _pick(team, "squad", "validation", "finance", "authority"),
-        "chip_state": _dict(row.get("chip_state")),
-        **_pick(row, "capabilities", "degraded_context"),
-    }
-
-
-def _governance_decision(decision: Any) -> dict[str, Any]:
-    row = _dict(decision)
-    return _pick(
-        row,
-        "status",
-        "packages",
-        "hold",
-        "lineup",
-        "dss",
-        "decision_trace",
-        "capabilities",
-        "degraded_context",
-        "production_recommendation",
-    )
+def _registry() -> dict[str, Any]:
+    cfg = load_json_config(PAYLOAD_CONTRACT_CONFIG)
+    if not isinstance(cfg, dict):
+        raise RuntimeError("V5 payload contract registry must be an object")
+    return cfg
 
 
 def compact_payload(service_id: str, operation: str, payload: dict[str, Any]) -> dict[str, Any]:
-    """Return the minimum semantics-preserving network contract for hot calls.
+    """Apply the registry-selected network projection for a service operation.
 
-    Compaction is deliberately operation-specific and fail-open to the original
-    payload for unknown calls. No analytical row is removed from its owning
-    service or persistence artifact; only unused inter-service transport fields
-    are omitted.
+    Projection mechanics are generic. Service/operation knowledge lives only in
+    config/v5_payload_contract_registry.json. Unknown operations follow the
+    registry default, preserving compatibility without hardcoded branches.
     """
-    if service_id == "evaluation" and operation == "build":
-        bootstrap = _dict(payload.get("bootstrap"))
-        return {
-            **payload,
-            "prediction": _evaluation_prediction(payload.get("prediction")),
-            "bootstrap": {"events": _list(bootstrap.get("events"))},
-        }
+    cfg = _registry()
+    contracts = cfg.get("contracts") or {}
+    if not isinstance(contracts, dict):
+        raise RuntimeError("V5 payload contract registry contracts must be an object")
 
-    if service_id == "decision" and operation == "finalize":
-        return {
-            **payload,
-            "truth": _decision_finalize_truth(payload.get("truth")),
-            "prediction": _decision_finalize_prediction(payload.get("prediction")),
-            "price": _decision_finalize_price(payload.get("price")),
-            "evaluation": _degraded_capability_view(payload.get("evaluation")),
-        }
+    key = f"{service_id}.{operation}"
+    contract = contracts.get(key)
+    if contract is None:
+        action = str((cfg.get("defaults") or {}).get("unknown_contract_action") or "PASSTHROUGH").upper()
+        if action == "PASSTHROUGH":
+            return payload
+        raise RuntimeError(f"no V5 payload projection contract registered for {key}")
 
-    if service_id == "governance" and operation == "audit":
-        return {
-            **payload,
-            "truth": _governance_truth(payload.get("truth")),
-            "prediction": _degraded_capability_view(payload.get("prediction")),
-            "price": _degraded_capability_view(payload.get("price")),
-            "evaluation": _degraded_capability_view(payload.get("evaluation")),
-            "decision": _governance_decision(payload.get("decision")),
-        }
+    if not isinstance(contract, dict):
+        raise RuntimeError(f"invalid V5 payload projection contract for {key}")
+    projection = contract.get("projection")
+    if not isinstance(projection, dict):
+        raise RuntimeError(f"V5 payload projection contract missing projection for {key}")
 
-    return payload
+    projected = _project(payload, projection)
+    if not isinstance(projected, dict):
+        raise RuntimeError(f"V5 payload projection root must remain an object for {key}")
+    return projected

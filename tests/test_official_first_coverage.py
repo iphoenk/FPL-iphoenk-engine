@@ -16,7 +16,7 @@ def test_every_rec_through_40_has_explicit_official_disposition():
     assert payload["recommendations"]["REC-23"]["applicability"] == "PUBLIC_THEN_PRIVATE_AUTH"
     assert payload["recommendations"]["REC-36"]["endpoints"] == ["entry_history", "entry_picks"]
     assert payload["recommendations"]["REC-38"]["applicability"] == "POLICY_ONLY"
-    assert payload["recommendations"]["REC-39"]["applicability"] == "PUBLIC_FIRST"
+    assert payload["recommendations"]["REC-39"]["applicability"] == "PUBLIC_THEN_PRIVATE_AUTH"
     assert payload["recommendations"]["REC-40"]["applicability"] == "NOT_APPLICABLE"
 
 
@@ -33,6 +33,7 @@ def test_fallback_is_closed_and_requires_explicit_official_reason():
     assert mod.fallback_allowed("REC-30", "OFFICIAL_UNAVAILABLE") is False
 
     assert mod.official_attempt_required("REC-39") is True
+    assert mod.fallback_allowed("REC-39", "PRIVATE_AUTH_REQUIRED") is True
     assert mod.official_attempt_required("REC-40") is False
     assert mod.fallback_allowed("REC-40", "OFFICIAL_NOT_APPLICABLE") is True
 

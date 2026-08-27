@@ -91,7 +91,6 @@ def reconcile_latest_finished(raw: dict | None = None, now: datetime | None = No
         }
 
     if not deadline_snapshot_path(int(gw)).exists():
-        # Important early-season behavior: never fabricate a retroactive baseline.
         return {"status": "SKIP", "reason": "no_predeadline_snapshot", "gw": int(gw)}
 
     scoring_gw = phase.get("scoring_gw")
@@ -141,14 +140,14 @@ def cycle(now: datetime | None = None) -> dict:
             "reason": "simulation_never_mutates_validation_store",
         }
     else:
-        # Reconcile the finished GW first, then freeze the current planning GW.
         reconciliation = reconcile_latest_finished(raw, now=now)
         snapshot = snapshot_current(raw, predictions, now=now)
         eligibility = refresh_eligible_view(predictions.get("model_version"))
 
     out = {
         "schema_version": 4943,
-        "engine": "v4.9.4.3-validation-lifecycle-truthful-starts",
+        "engine": "v4.9.3-validation-lifecycle-v4.9.4.3-truthful-starts",
+        "release": "4.9.4.3",
         "status": "PASS",
         "simulated": simulated,
         "snapshot": snapshot,
@@ -169,18 +168,7 @@ def cycle(now: datetime | None = None) -> dict:
         },
     }
     atomic_json(OUTFILE, out)
-    print(
-        json.dumps(
-            {
-                "service": "validation_lifecycle",
-                "snapshot": snapshot.get("status"),
-                "reconciliation": reconciliation.get("status"),
-                "eligible_samples": eligibility.get("eligible_samples"),
-                "simulated": simulated,
-            },
-            ensure_ascii=False,
-        )
-    )
+    print(json.dumps({"service": "validation_lifecycle", "snapshot": snapshot.get("status"), "reconciliation": reconciliation.get("status"), "eligible_samples": eligibility.get("eligible_samples"), "simulated": simulated}, ensure_ascii=False))
     return out
 
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from src.utils import append_jsonl, atomic_json, read_json
+from src.v5.artifact_contracts import contract_metadata, validate_payload
 from src.v5.config_cache import ROOT, load_json_config
 
 REGISTRY_CONFIG = "config/v5_persistence_registry.json"
@@ -33,16 +34,21 @@ def gameweek_path(gw: int) -> Path:
 
 
 def read_artifact(name: str, default=None):
-    return read_json(artifact_path(name), default)
+    payload = read_json(artifact_path(name), default)
+    if payload is not default:
+        validate_payload(name, payload)
+    return payload
 
 
 def write_artifact(name: str, payload: Any) -> Path:
+    validate_payload(name, payload)
     path = artifact_path(name)
     atomic_json(path, payload)
     return path
 
 
 def write_snapshot(snapshot: dict, *, gw: int | None = None) -> dict[str, str]:
+    validate_payload("latest", snapshot)
     paths = {"latest": str(write_artifact("latest", snapshot).relative_to(ROOT))}
     if gw is not None:
         path = gameweek_path(gw)
@@ -61,4 +67,5 @@ def persistence_metadata() -> dict[str, Any]:
         "data_root": str(data_root().relative_to(ROOT)),
         "separate_from_v3_v4_runtime_data": bool(cfg["write_policy"].get("separate_from_v3_v4_runtime_data", True)),
         "persist_raw_authenticated_payload": bool(cfg["write_policy"].get("persist_raw_authenticated_payload", False)),
+        "artifact_contracts": contract_metadata(),
     }

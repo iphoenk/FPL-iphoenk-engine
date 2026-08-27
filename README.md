@@ -3,9 +3,10 @@
 Production-oriented personal FPL decision engine and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
-- Production baseline while this candidate is under acceptance: `3.20.2` / schema `48`.
-- Current release candidate: `3.21.0` / schema `49`.
-- Candidate acceptance: PENDING.
+- Current production release: `3.21.0` / schema `49`.
+- Production acceptance: COMPLETE on 27 August 2026.
+- Production source commit: `da2be79045c0eb1015b75697eb24b030ffaa4abe`.
+- Production workflow run: `33047071671` (`FPL iphoenk collector v3.21.0 microservices`) completed through validated `runtime-data` publication.
 - Service Registry: schema `13`, contract `v3.21-weather-report-transparency-15-owned-20-watchlist`.
 - Runtime Artifact Contract Registry: `RUNTIME_ARTIFACT_CONTRACTS_V2`.
 - Machine Source Registry: `SOURCE_REGISTRY_V4`.
@@ -14,6 +15,8 @@ Production-oriented personal FPL decision engine and persisted Official-FPL-deri
 - Runtime state publishes only to `runtime-data`; `main/data/**` is historical/source-repository material.
 - Canonical roadmap and Definition of Done: `MASTER_TASK_LIST_V3.md`.
 
+Production acceptance evidence for V3.21.0/schema49 includes full unit/regression and architecture checks, bounded 20-service integration, source/decision/watchlist/report/report-time contracts, production collect, validated `runtime-data` publication, 15 OWNED + 20 WATCHLIST contract, weather coverage 10/10 fixtures with zero unresolved venue identity, governed selection transparency for all 15 OWNED, and runtime wall time 16.606s against the 45s budget.
+
 ## v3.21.0 Weather Intelligence + Report Transparency
 V3.21 adds weather as a governed optional enrichment and makes the visible report expose the model evidence needed to audit lineup decisions quickly.
 
@@ -21,7 +24,7 @@ V3.21 adds weather as a governed optional enrichment and makes the visible repor
 - Open-Meteo is registered as a noncritical `ENRICHMENT`, not an authority or model challenger.
 - Weather runs inside the existing Source Layer. No 21st microservice is created.
 - Official fixture ownership remains in `official_snapshot`; weather code consumes the already-fetched snapshot and never refetches standard Official FPL fixtures.
-- Premier League venue coordinates are owned by `config/venues/premier_league_2026_27.json`.
+- Premier League venue identity/coordinates are owned by `config/venues/premier_league_2026_27.json` and validated against Official team ID + name so stale-season mappings fail soft instead of being silently reused.
 - Forecast URL, timeout, fields, horizon, retention, freshness, confidence and severity thresholds are owned by `config/intelligence/weather_context.json`.
 - `fixture_weather.json` retains bounded observations per fixture and identifies the closest retained observation to kickoff for later anomaly review.
 - Weather tracks temperature, precipitation probability, precipitation amount/intensity, wind speed, wind gusts and weather code. Rain probability is never treated as rainfall intensity.
@@ -33,11 +36,12 @@ V3.21 adds weather as a governed optional enrichment and makes the visible repor
 Every serving payload now exposes for all 15 OWNED players:
 - current-Gameweek `xpts_gw`;
 - `xpts_std` uncertainty;
+- governed `selection_score`;
 - `lineup_status` = START/BENCH;
-- `choice_state` = OPEN for players involved in the current close XI battle, otherwise CURRENT;
+- `choice_state` = OPEN for players involved in a governed close choice, otherwise CURRENT;
 - existing xMins/start probability and model-confidence information.
 
-The report therefore no longer requires a reader to inspect a raw lineup artifact to understand why a goalkeeper or another player was selected.
+The report therefore no longer requires a reader to inspect a raw lineup artifact to understand why a goalkeeper or another player was selected. Close goalkeeper choices can expose both goalkeepers as OPEN while still providing one current starter recommendation.
 
 ### Confidence calibration guard
 Early-season conservative confidence is allowed, but it is now auditable. `config/intelligence/prediction_evaluation.json` owns the review rule. Before GW5, zero HIGH-confidence owned players is labelled `EARLY_SEASON_CONSERVATIVE`; at GW5 or later, if the configured minimum HIGH count is still not reached, reports expose `CALIBRATION_REVIEW_REQUIRED`. The engine does not manufacture HIGH confidence merely to satisfy the guard.
@@ -47,7 +51,7 @@ V3 already freezes the final pre-deadline forecast and settles it against finish
 
 ### Schema/version decision
 - Engine: `3.21.0`.
-- Serving/runtime schema: `49`, because all primary report-serving payloads gain required owned xPts/choice-state, model-validation and weather-context fields.
+- Serving/runtime schema: `49`, because all primary report-serving payloads gain required owned xPts/selection/choice-state, model-validation and weather-context fields.
 - Service Registry: schema `13`.
 - Source Registry: `SOURCE_REGISTRY_V4`.
 - Report Artifact Registry: `REPORT_ARTIFACT_REGISTRY_V3`.
@@ -133,7 +137,7 @@ Pundit consensus is compared with DSS using `ALIGN`, `DIVERGE`, `REVIEW_DIVERGEN
 
 ## Reporting contract
 Every visible operational report includes:
-- all 15 OWNED with xPts/current lineup status and choice state;
+- all 15 OWNED with current-GW xPts, uncertainty, selection score, lineup status and choice state;
 - all 20 governed external WATCHLIST players;
 - recommended formation;
 - exact Starting XI;
@@ -174,4 +178,4 @@ Every release must keep `src/version.py`, README, IMPLEMENTATION_STATUS, workflo
 - V3.20.0: artifact-owned microservice architecture hardening.
 - V3.20.1: numerical correctness and promotion-failure hardening.
 - V3.20.2: runtime artifact contract and strict JSON acceptance hardening.
-- V3.21.0: weather intelligence, owned-player xPts transparency, confidence calibration guard and settled-validation visibility.
+- V3.21.0: weather intelligence, all-15 xPts/selection transparency, confidence calibration guard and settled-validation visibility; production accepted 27 August 2026.

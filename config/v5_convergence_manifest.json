@@ -1,13 +1,13 @@
 {
   "engine": "FPL iphoenk Engine",
-  "version": "5.0.0-beta.5",
+  "version": "5.0.0-beta.6",
   "codename": "Unified Decision Engine",
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
-    "production_truth": "v3.20.2",
-    "production_main_sha": "85bca2d6204c56698286d5bfc10dd643c25c1dbd",
-    "production_schema_version": 48,
-    "prediction_intelligence": "v3.20.2-full-dss-plus-v4-research"
+    "production_truth": "v3.21.0",
+    "production_main_sha": "332ac84b396f28139725c7425dc8823f6b0a0d83",
+    "production_schema_version": 49,
+    "prediction_intelligence": "v3.21.0-full-dss-plus-v4-research"
   },
   "operating_model": {
     "v3": "production and scheduled-task runtime until V5 acceptance cutover",
@@ -24,6 +24,7 @@
     "price": "price service",
     "projection": "prediction service",
     "prediction_evaluation": "evaluation service",
+    "weather_context": "ingestion service -> Open-Meteo advisory enrichment -> config/intelligence/weather_context.json + config/venues",
     "shadow_parity": "evaluation service",
     "shadow_acceptance_accounting": "postvalidation finalizer -> config/v5_shadow_parity_registry.json",
     "release_fingerprint": "governance contract -> config/v5_release_integrity_registry.json",
@@ -35,6 +36,7 @@
     "external_watchlist": "watchlist service",
     "framework_governance": "governance service",
     "reporting": "reporting service",
+    "report_selection_transparency": "reporting service consumes prediction, evaluation, decision and advisory weather evidence",
     "on_demand_reporting": "current production authority router -> config/v5_on_demand_report_registry.json",
     "persistence": "snapshot service -> config/v5_persistence_registry.json",
     "orchestration": "orchestrator service"
@@ -49,6 +51,8 @@
     "correlated_simulation_shadow_only": true,
     "v3_v4_capability_parity_audit_required": true,
     "artifact_contract_validation_required": true,
+    "weather_advisory_only_required": true,
+    "owned_selection_transparency_required": true,
     "no_additional_microservice_without_new_bounded_context": true,
     "team_review_isolated_context_required": true
   },
@@ -58,12 +62,15 @@
     "finance_sell_value_arithmetic_exact": true,
     "phase_authority_regression_required": true,
     "lineup_legality_regression_required": true,
-    "declared_json_artifacts_validated_before_acceptance": true
+    "declared_json_artifacts_validated_before_acceptance": true,
+    "weather_never_directly_mutates_decision_or_xpts": true
   },
   "acceptance": {
-    "no_regression_vs_v3_20_2_truth": true,
-    "no_regression_vs_v3_20_2_configuration_ownership": true,
-    "no_regression_vs_v3_20_2_artifact_contracts": true,
+    "no_regression_vs_v3_21_0_truth": true,
+    "no_regression_vs_v3_21_0_configuration_ownership": true,
+    "no_regression_vs_v3_21_0_artifact_contracts": true,
+    "no_regression_vs_v3_21_0_weather_advisory_contract": true,
+    "no_regression_vs_v3_21_0_report_selection_transparency": true,
     "no_regression_vs_v4_research_where_adopted": true,
     "no_duplicate_authority": true,
     "official_fpl_only_native_external_authority": true,
@@ -88,6 +95,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.5 is rebaselined to exact V3.20.2 production main SHA and closes mathematical correctness plus artifact-contract parity before advanced prediction calibration. Fresh exact-fingerprint cycles and settled empirical non-regression evidence are required."
+    "reason": "V5.0.0-beta.6 is rebaselined to exact V3.21.0 production main SHA and must converge weather/report transparency plus P0 mathematical correctness. Fresh exact-fingerprint real-shadow cycles and settled empirical non-regression evidence are required before any production promotion."
   }
 }

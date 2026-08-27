@@ -7,10 +7,10 @@ from datetime import datetime
 from src.engines.v4_backtest_store import (
     deadline_snapshot_path,
     persist_deadline_snapshot,
-    reconcile_finished_gw,
     reconciled_path,
     refresh_eligible_view,
 )
+from src.engines.v4_reconciliation_truth import reconcile_finished_gw
 from src.utils import DATA, atomic_json, parse_dt, read_json, utcnow
 
 RAW_SNAPSHOT = DATA / "runtime" / "snapshot.v1.json"
@@ -91,7 +91,6 @@ def reconcile_latest_finished(raw: dict | None = None, now: datetime | None = No
         }
 
     if not deadline_snapshot_path(int(gw)).exists():
-        # Important early-season behavior: never fabricate a retroactive baseline.
         return {"status": "SKIP", "reason": "no_predeadline_snapshot", "gw": int(gw)}
 
     scoring_gw = phase.get("scoring_gw")
@@ -118,6 +117,7 @@ def reconcile_latest_finished(raw: dict | None = None, now: datetime | None = No
         "metrics": metrics,
         "model_version": result.get("model_version"),
         "actual_elements": result.get("actual_elements"),
+        "official_start_evidence_elements": result.get("official_start_evidence_elements"),
     }
 
 
@@ -140,14 +140,14 @@ def cycle(now: datetime | None = None) -> dict:
             "reason": "simulation_never_mutates_validation_store",
         }
     else:
-        # Reconcile the finished GW first, then freeze the current planning GW.
         reconciliation = reconcile_latest_finished(raw, now=now)
         snapshot = snapshot_current(raw, predictions, now=now)
         eligibility = refresh_eligible_view(predictions.get("model_version"))
 
     out = {
-        "schema_version": 493,
-        "engine": "v4.9.3-validation-lifecycle",
+        "schema_version": 4943,
+        "engine": "v4.9.3-validation-lifecycle-v4.9.4.3-truthful-starts",
+        "release": "4.9.4.3",
         "status": "PASS",
         "simulated": simulated,
         "snapshot": snapshot,
@@ -162,21 +162,13 @@ def cycle(now: datetime | None = None) -> dict:
             "reconciliation_idempotent": True,
             "health_view_current_model_only": True,
             "simulation_never_mutates_store": True,
+            "started_from_official_stats_starts_only": True,
+            "minutes_never_infer_started": True,
+            "missing_starts_excluded_from_start_brier": True,
         },
     }
     atomic_json(OUTFILE, out)
-    print(
-        json.dumps(
-            {
-                "service": "validation_lifecycle",
-                "snapshot": snapshot.get("status"),
-                "reconciliation": reconciliation.get("status"),
-                "eligible_samples": eligibility.get("eligible_samples"),
-                "simulated": simulated,
-            },
-            ensure_ascii=False,
-        )
-    )
+    print(json.dumps({"service": "validation_lifecycle", "snapshot": snapshot.get("status"), "reconciliation": reconciliation.get("status"), "eligible_samples": eligibility.get("eligible_samples"), "simulated": simulated}, ensure_ascii=False))
     return out
 
 

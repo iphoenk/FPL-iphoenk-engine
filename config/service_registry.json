@@ -11,8 +11,7 @@
     {"id":"rules_compliance","name":"Rules Compliance Service","boundary_state":"INDEPENDENT","module":"src.engines.compliance_audit","command":["{python}","-m","src.engines.compliance_audit"],"timeout_seconds":20,"depends_on":["validation_lifecycle"],"produces":["compliance"],"critical":true},
     {"id":"framework_preflight","name":"Framework PRE-FLIGHT Service","boundary_state":"INDEPENDENT","module":"src.engines.framework_health_audit","command":["{python}","-m","src.engines.framework_health_audit","--phase","preflight","--strict"],"timeout_seconds":20,"depends_on":["rules_compliance"],"produces":["framework_preflight"],"critical":true},
     {"id":"optimization","name":"Optimization & Decision Service","boundary_state":"INDEPENDENT","module":"src.engines.v4_decision_pipeline","command":["{python}","-m","src.engines.v4_decision_pipeline"],"timeout_seconds":45,"depends_on":["framework_preflight"],"produces":["wc_decision","wc_package","lineup","recommendation_sanity","decision_pipeline"],"critical":true},
-    {"id":"advanced_ablation","name":"Advanced Enrichment Ablation Service","boundary_state":"INDEPENDENT","module":"src.engines.v4_advanced_ablation","command":["{python}","-m","src.engines.v4_advanced_ablation"],"timeout_seconds":60,"depends_on":["optimization"],"produces":["advanced_ablation"],"critical":true},
-    {"id":"framework_postflight","name":"Framework POST-FLIGHT Service","boundary_state":"INDEPENDENT","module":"src.engines.framework_health_audit","command":["{python}","-m","src.engines.framework_health_audit","--phase","postflight","--strict"],"timeout_seconds":20,"depends_on":["advanced_ablation"],"produces":["framework_postflight"],"critical":true},
+    {"id":"framework_postflight","name":"Framework POST-FLIGHT Service","boundary_state":"INDEPENDENT","module":"src.engines.framework_health_audit","command":["{python}","-m","src.engines.framework_health_audit","--phase","postflight","--strict"],"timeout_seconds":20,"depends_on":["optimization"],"produces":["framework_postflight"],"critical":true},
     {"id":"report_governance","name":"Checkpoint Report Governance Service","boundary_state":"INDEPENDENT","module":"src.engines.v4_checkpoint_governance","command":["{python}","-m","src.engines.v4_checkpoint_governance"],"timeout_seconds":20,"depends_on":["framework_postflight"],"produces":["checkpoint_decision"],"critical":true}
   ],
   "guardrails": {
@@ -24,7 +23,7 @@
     "reconciliation_archive_immutable": true,
     "reconciliation_idempotent": true,
     "health_view_current_model_only": true,
-    "advanced_ablation_same_snapshot": true,
+    "advanced_ablation_observational_outside_decision_chain": true,
     "advanced_ablation_full_shadow_parity_required": true,
     "advanced_ablation_diagnostic_not_arbitrary_gate": true,
     "fail_closed_on_contract_failure": true,

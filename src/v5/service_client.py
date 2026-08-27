@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import perf_counter
 from typing import Any, Mapping
 
+from src.v5.runtime_payloads import compact_payload
 from src.v5.service_registry import get_service, registry
 from src.v5.service_transport import post as transport_post, retry_policy
 
@@ -30,8 +31,9 @@ def invoke_envelope(
     defaults = registry()["defaults"]
     contract_version = str(defaults["contract_version"])
     correlation = correlation_id or uuid.uuid4().hex
+    transport_payload = compact_payload(service_id, operation, payload or {})
     body = {
-        **(payload or {}),
+        **transport_payload,
         "_correlation_id": correlation,
         "_contract_version": contract_version,
     }

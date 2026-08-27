@@ -3,7 +3,7 @@ name: V3 Refresh Full
 on:
   workflow_dispatch:
   schedule:
-    - cron: "10 21 * * *"
+    - cron: "30 21 * * *"
 
 permissions:
   contents: write

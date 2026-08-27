@@ -9,7 +9,7 @@ from src.utils import DATA, atomic_json, iso_now, read_json
 
 RUNTIME = DATA / "runtime"
 SNAPSHOT = RUNTIME / "snapshot.v1.json"
-LINEUP = DATA / "lineup_decision_v4.json"
+EFFECTIVE_PLAN = DATA / "effective_plan_v4.json"
 OUTFILE = DATA / "gw_scorecard_v4.json"
 ARCHIVE_DIR = DATA / "gw_results"
 
@@ -153,8 +153,8 @@ def build_actual_gw(raw: dict, gw: int) -> dict | None:
     }
 
 
-def _bench_rows(lineup: dict) -> list[dict]:
-    bench = lineup.get("bench") or {}
+def _bench_rows(plan: dict) -> list[dict]:
+    bench = plan.get("bench") or {}
     rows: list[dict] = []
     if bench.get("gk"):
         rows.append(dict(bench["gk"], slot="GK"))
@@ -163,25 +163,25 @@ def _bench_rows(lineup: dict) -> list[dict]:
     return rows
 
 
-def build_planning_projection(lineup: dict, planning_gw: int | None) -> dict:
+def build_planning_projection(plan: dict, planning_gw: int | None) -> dict:
     if not planning_gw:
         return {"status": "NONE", "gw": None, "reason": "no_planning_gw"}
-    starting = list(lineup.get("starting_xi") or [])
-    if len(starting) != 11 or not lineup.get("captain") or not lineup.get("vice_captain"):
-        return {"status": "UNAVAILABLE", "gw": int(planning_gw), "reason": "lineup_contract_incomplete"}
+    starting = list(plan.get("starting_xi") or [])
+    if len(starting) != 11 or not plan.get("captain") or not plan.get("vice_captain"):
+        return {"status": "UNAVAILABLE", "gw": int(planning_gw), "reason": "effective_plan_contract_incomplete"}
 
     xi_sum = round(sum(float(row.get("xpts") or 0.0) for row in starting), 3)
-    published_xi = round(float(lineup.get("xi_xpts") or 0.0), 3)
+    published_xi = round(float(plan.get("xi_xpts") or 0.0), 3)
     if abs(xi_sum - published_xi) > 0.05:
-        raise RuntimeError(f"lineup xPts mismatch: sum={xi_sum} published={published_xi}")
+        raise RuntimeError(f"effective-plan xPts mismatch: sum={xi_sum} published={published_xi}")
 
-    captain = dict(lineup["captain"])
-    vice = dict(lineup["vice_captain"])
+    captain = dict(plan["captain"])
+    vice = dict(plan["vice_captain"])
     captain_xpts = float(captain.get("xpts") or 0.0)
-    active_chip = _normalize_chip((lineup.get("chip_context") or {}).get("active_chip"))
+    active_chip = _normalize_chip((plan.get("chip_context") or {}).get("active_chip"))
     captain_multiplier = 3 if active_chip == "TRIPLE_CAPTAIN" else 2
     captain_extra = captain_xpts * (captain_multiplier - 1)
-    bench_rows = _bench_rows(lineup)
+    bench_rows = _bench_rows(plan)
     bench_xpts = round(sum(float(row.get("xpts") or 0.0) for row in bench_rows), 3)
     bench_counted = bench_xpts if active_chip == "BENCH_BOOST" else 0.0
     standard_points = round(xi_sum + captain_xpts, 2)
@@ -190,7 +190,8 @@ def build_planning_projection(lineup: dict, planning_gw: int | None) -> dict:
     return {
         "status": "PROJECTION",
         "gw": int(planning_gw),
-        "formation": lineup.get("formation"),
+        "decision_authority": plan.get("authority") or plan.get("decision_authority") or "ENGINE_RECOMMENDATION",
+        "formation": plan.get("formation"),
         "xi_xpts": round(xi_sum, 2),
         "captain": {"element": captain.get("element"), "name": captain.get("name"), "xpts": round(captain_xpts, 3), "multiplier": captain_multiplier},
         "vice_captain": {"element": vice.get("element"), "name": vice.get("name"), "xpts": round(float(vice.get("xpts") or 0.0), 3)},
@@ -208,7 +209,7 @@ def build_planning_projection(lineup: dict, planning_gw: int | None) -> dict:
             "player_intervals_not_naively_summed": True,
         },
         "guardrails": {
-            "projection_from_lineup_contract": True,
+            "projection_from_effective_plan_contract": True,
             "captain_multiplier_applied_once": True,
             "bench_only_counted_for_bench_boost": True,
             "no_extra_official_api_fetch": True,
@@ -229,6 +230,25 @@ def attach_squad_basis(projection: dict, raw: dict) -> dict:
     if not basis.get("baseline_gw"):
         raise RuntimeError("projection baseline previous submitted GW missing")
     out["squad_basis"] = basis
+    return out
+
+
+def attach_decision_overlay(projection: dict, overlay: dict) -> dict:
+    out = dict(projection)
+    if out.get("status") != "PROJECTION":
+        return out
+    if int(overlay.get("planning_gw") or 0) != int(out.get("gw") or 0):
+        raise RuntimeError("decision overlay planning GW mismatch")
+    effective = overlay.get("effective_plan") or {}
+    out["decision_authority"] = effective.get("authority") or "ENGINE_RECOMMENDATION"
+    out["human_override_active"] = bool((overlay.get("user_override") or {}).get("active"))
+    out["engine_comparison"] = dict(overlay.get("comparison") or {})
+    out["engine_recommendation"] = {
+        "formation": (overlay.get("engine_recommendation") or {}).get("formation"),
+        "xi_xpts": (overlay.get("engine_recommendation") or {}).get("xi_xpts"),
+        "captain": ((overlay.get("engine_recommendation") or {}).get("captain") or {}).get("name"),
+        "active_chip": ((overlay.get("engine_recommendation") or {}).get("chip_context") or {}).get("active_chip"),
+    }
     return out
 
 
@@ -292,11 +312,12 @@ def _headline_projection(projection: dict) -> str | None:
 def run() -> dict:
     started = perf_counter()
     raw = read_json(SNAPSHOT, {})
-    lineup = read_json(LINEUP, {})
+    overlay = read_json(EFFECTIVE_PLAN, {})
+    plan = overlay.get("effective_plan") or {}
     if raw.get("schema") != "snapshot.v1":
         raise RuntimeError("snapshot.v1 required")
-    if not lineup:
-        raise RuntimeError("lineup decision required")
+    if not overlay or overlay.get("status") != "PASS" or not plan:
+        raise RuntimeError("human-effective planning contract required")
 
     phase = raw.get("phase") or {}
     last_finished = phase.get("last_finished_gw")
@@ -319,9 +340,12 @@ def run() -> dict:
             previous = {"status": "UNAVAILABLE", "gw": int(last_finished), "reason": "finished_gw_source_not_in_current_snapshot_and_archive_missing"}
             archive_action = "MISSING_SOURCE"
 
-    projection = attach_squad_basis(
-        build_planning_projection(lineup, int(planning_gw) if planning_gw else None),
-        raw,
+    projection = attach_decision_overlay(
+        attach_squad_basis(
+            build_planning_projection(plan, int(planning_gw) if planning_gw else None),
+            raw,
+        ),
+        overlay,
     )
     history = _archive_history(ARCHIVE_DIR)
     if previous.get("status") == "FINAL" and not any(int(row.get("gw") or 0) == int(previous.get("gw") or 0) for row in history):
@@ -340,6 +364,7 @@ def run() -> dict:
         "team_id": raw.get("team_id"),
         "phase": phase,
         "snapshot_sha256": file_digest(SNAPSHOT),
+        "effective_plan_sha256": file_digest(EFFECTIVE_PLAN),
         "previous_gw": previous,
         "planning_gw": projection,
         "history": history,
@@ -359,7 +384,8 @@ def run() -> dict:
             "process_isolated_microservice": True,
             "finished_gw_archive_immutable": True,
             "simulation_never_mutates_archive": True,
-            "projection_from_lineup_contract": True,
+            "projection_from_effective_plan_contract": True,
+            "engine_is_advisory_user_plan_is_effective": True,
             "previous_submitted_gw_is_default_projection_baseline": True,
             "planning_override_target_gw_required": True,
             "projection_is_estimate_not_actual": True,
@@ -375,6 +401,8 @@ def run() -> dict:
         "planning": out["headline"]["planning"],
         "baseline_gw": (projection.get("squad_basis") or {}).get("baseline_gw"),
         "squad_authority": (projection.get("squad_basis") or {}).get("effective_authority"),
+        "decision_authority": projection.get("decision_authority"),
+        "human_override_active": projection.get("human_override_active"),
         "archive_action": archive_action,
         "duration_ms": out["performance_ms"],
     }, ensure_ascii=False))

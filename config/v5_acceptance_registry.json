@@ -1,5 +1,5 @@
 {
-  "version": 22,
+  "version": 23,
   "module_policy": {
     "minimum_registered_modules": 42,
     "required_truth_modules": ["rules", "source_authority", "public_api", "official_authenticated", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
@@ -79,6 +79,7 @@
     "team_review_isolated_context_required": true,
     "v3_v4_capability_parity_registry_required": true,
     "artifact_contract_validation_required": true,
+    "subsecond_end_to_end_runtime_required": true,
     "owned_target": 15,
     "watchlist_target_total": 20,
     "watchlist_target_per_position": 5,
@@ -115,10 +116,14 @@
     "required_for_operational_acceptance": true,
     "budget_registry": "config/v5_performance_budgets.json",
     "hard_metric": "decision_pipeline_hard_limit_seconds",
+    "full_beta_hard_metric": "full_beta_end_to_end_hard_limit_seconds",
     "hot_metric": "decision_pipeline_hot_target_seconds",
-    "hot_target_is_advisory": true,
+    "hot_target_is_advisory": false,
+    "subsecond_required": true,
     "real_shadow_wall_clock_required": true,
-    "external_enrichment_must_not_disable_hard_limit": true
+    "full_beta_wall_clock_required": true,
+    "external_enrichment_must_not_disable_hard_limit": true,
+    "quality_reduction_for_speed_forbidden": true
   },
   "prediction_calibration_gate": {
     "required_for_production_promotion": true,

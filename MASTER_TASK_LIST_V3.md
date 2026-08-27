@@ -2,13 +2,15 @@
 
 Canonical status: ACTIVE
 Canonical roadmap owner: V3 operational stream
-Current release candidate: V3.22.0
-Current candidate schema: 49
-Accepted production baseline: V3.21.0 / schema49
-Candidate production acceptance: PENDING_POST_MERGE_RUNTIME_VALIDATION
-Candidate PR: `#47`
-Candidate CI runs: `33055271837`, `33055599122`
-Candidate scope: Runtime Optimization Foundation, Fast <10s, Resource/Storage Governance, Decision-Neutral Player Features
+Current production release: V3.22.0
+Current production schema: 49
+Accepted production baseline: V3.22.0 / schema49
+Production acceptance: COMPLETE
+Accepted source commit: `3f35c06f39869e594f6e1a127437a2272c0fc515`
+Accepted production run: `33059540147`
+Accepted runtime-data commit: `5678fcb2f4f8e5934728ff6a8b955a401a42883d`
+Accepted FAST runtime: 6.419s / target <10s
+Accepted scope: Runtime Optimization Foundation, Fast <10s, Resource/Storage Governance, Decision-Neutral Player Features, REC-31/REC-32 reuse correctness
 
 This file is the single human-readable master roadmap for the operational V3 stream. Every V3 feature, refactor, hardening change and release-governance change must update this file in the same pull request.
 
@@ -54,6 +56,7 @@ This file is the single human-readable master roadmap for the operational V3 str
 30. FAST decision regeneration has a 10-second target and may reuse only complete, contract-valid, fresh artifacts.
 31. Runtime Git history is not a database; persistent domain history belongs in explicit compact ledgers.
 32. Runtime optimization may not silently opt normalized player features into model behavior.
+33. A reused service must preserve only its registry-owned canonical latest state through base fan-in; unrelated prior state may not be carried forward.
 
 ## A. Production keep-green
 | ID | Task | Status | Acceptance |
@@ -135,25 +138,30 @@ Release objective: add weather as bounded explanatory context, make lineup choic
 ## C2. V3.22 Runtime Optimization Foundation
 Release objective: make frequent decision regeneration fast and resource-aware without changing serving schema, model behavior, Official authority or the 20-service domain boundary.
 
-| REC | Work item | Candidate status | Pre-merge evidence |
+| REC | Work item | Production status | Acceptance evidence |
 | --- | --- | --- | --- |
-| REC-15 | Runtime SLO + profiler/resource telemetry | DONE, acceptance pending | FAST target 10s; resource metrics complete |
-| REC-16 | FAST/LIVE/FULL/DEEP execution profiles | DONE, acceptance pending | profile registry + bounded worker limits |
-| REC-17 | Decouple heavy official detail from FAST via fresh reuse | PHASE-1 DONE | ~5.3-5.6s refresh becomes ~9ms reuse |
-| REC-18 | Source/weather freshness reuse | PHASE-1 DONE | ~7.8s refresh becomes <1ms reuse |
-| REC-19 | Persisted runtime-artifact reuse | PHASE-1 DONE | reusable state retained across FAST cycle |
-| REC-20 | Normalized player-feature contract | PHASE-1 DONE | prediction path unchanged; explicit decision-neutral regression |
-| REC-28 | Split CI / FAST / FULL-DEEP workflows | DONE | PR CI executes FULL then FAST on same runner |
-| REC-29 | Shallow checkout + whitelist + rolling runtime-data | DONE, production proof pending | `fetch-depth:1`, no raw history publication |
-| REC-30 | Runtime resource regression guard | DONE | parent/child RSS, temp/seed/promotion bytes visible |
+| REC-15 | Runtime SLO + profiler/resource telemetry | DONE | FAST target 10s; parent/child RSS and I/O telemetry production-proven |
+| REC-16 | FAST/LIVE/FULL/DEEP execution profiles | DONE | profile registry + bounded worker limits production-proven |
+| REC-17 | Decouple heavy official detail from FAST via fresh reuse | PHASE-1 DONE / ACCEPTED | `official_detail` reused in 7.8ms on accepted production run |
+| REC-18 | Source/weather freshness reuse | PHASE-1 DONE / ACCEPTED | `source_layer` reused in 0.76ms on accepted production run |
+| REC-19 | Persisted runtime-artifact reuse | PHASE-1 DONE / ACCEPTED | reusable state retained across production FAST cycle |
+| REC-20 | Normalized player-feature contract | PHASE-1 DONE / ACCEPTED | prediction path unchanged; decision-neutral regression retained |
+| REC-28 | Split CI / FAST / FULL-DEEP workflows | DONE | production FAST and background FULL ownership separated |
+| REC-29 | Shallow checkout + whitelist + rolling runtime-data | DONE / PRODUCTION-PROVEN | parentless root snapshot; 48 files / ~17.84MB; `history.jsonl` absent |
+| REC-30 | Runtime resource regression guard | DONE | accepted FAST 85.3MB parent / 109.5MB child peak RSS |
+| REC-31 | Profile-aware REUSED validation + complete source hydrate | DONE | only declared, artifact-validated REUSED states accepted |
+| REC-32 | Registry-owned reusable latest-state carry-forward | DONE | production contracts and publication PASS after FAST reuse |
 | REC-09a | Stop new mutable data tracking on main | PHASE-1 DONE | `/data/**` ignored; tracked legacy cleanup deferred until cold-start proof |
+| REC-33 | FULL Refresh Source-Layer latency variance | NEXT | one CI FULL run 55.522s with Source Layer 45.964s; non-blocking to FAST SLO |
 
-Pre-merge acceptance evidence:
-- CI run `33055271837`: architecture PASS, 147 tests PASS, FULL 18.656s, FAST 5.160s.
-- CI run `33055599122`: architecture PASS, 148 tests PASS including REC-20 guard, FULL 18.151s, FAST 5.113s.
-- FAST resource peak is stable at roughly 85 MB parent RSS and 109 MB child RSS.
-- FULL contracts: framework GREEN, prediction quality HEALTHY, Gate0 16/16, owned/watchlist/report/source/report-time contracts PASS.
-- Report-time external intelligence can remain `REFRESH_REQUIRED`; that is a truthful report-time state and not a runtime-integrity failure.
+Production acceptance evidence:
+- Foundation CI `33055271837`: architecture PASS, 147 tests PASS, FULL 18.656s, FAST 5.160s.
+- Foundation CI `33055599122`: architecture PASS, 148 tests PASS including REC-20 guard, FULL 18.151s, FAST 5.113s.
+- REC-32 CI `33059384073`: **150 tests PASS**, all integration contracts PASS, FAST **4.602s**.
+- Accepted production run `33059540147`: FAST **6.419s**, framework GREEN, prediction quality HEALTHY, Gate0 16/16, 15 OWNED + 20 WATCHLIST, source/report/report-time contracts PASS.
+- Accepted runtime-data commit `5678fcb2f4f8e5934728ff6a8b955a401a42883d` is a **root commit with zero parents**, proving rolling publication rather than runtime Git-history accumulation.
+- Accepted runtime manifest: V3.22.0/schema49, source commit `3f35c06f39869e594f6e1a127437a2272c0fc515`, 48 files, 17,835,453 bytes, no `history.jsonl` publication.
+- Report-time external intelligence may remain `REFRESH_REQUIRED`; that is a truthful report-time state and not a runtime-integrity failure.
 
 V3.22 does not implement REC-01 or REC-02 model changes. `player_features.json` remains plumbing-only until those recommendations are separately developed, tested and attributed.
 
@@ -222,6 +230,7 @@ Every visible report must explicitly show recommended formation, exact XI, Capta
 | V3-ENG-510 | Weather no-direct-decision regression | ACTIVE |
 | V3-ENG-511 | FAST <10s SLO and resource telemetry | ACTIVE |
 | V3-ENG-512 | Rolling runtime-data publication / storage hygiene | ACTIVE |
+| V3-ENG-513 | REC-33 FULL Source Layer latency variance | NEXT |
 
 ## Release checklist for every V3 change
 1. Branch from current production `main`.
@@ -254,7 +263,7 @@ A task is DONE only when implementation, deterministic tests, documentation, ver
 For external evidence, missing values may never be synthesized merely to keep health GREEN. For weather, correlation alone may never be presented as causation. For runtime artifacts, malformed JSON or contract mismatch may never be downgraded to an ordinary no-observation state when the producing service declared that artifact as its output. For prediction quality, passing deterministic formula tests is not evidence of forecasting accuracy; settled frozen forecasts are required.
 
 ## Execution order
-1. Complete V3.22.0 post-merge rolling-publication and production acceptance while preserving V3.21 decision behavior.
+1. Optimize REC-33 FULL Refresh Source-Layer latency variance without weakening the accepted FAST <10s path.
 2. Accumulate settled Gameweeks for projection-confidence and weather-performance calibration.
 3. Implement REC-01 and REC-02 as separate, attributable model changes after normalized player-feature plumbing is accepted.
 4. Improve remaining P1 intelligence evidence without weakening Official authority or fail-closed internal integrity.

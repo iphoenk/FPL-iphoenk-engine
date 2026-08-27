@@ -1,0 +1,57 @@
+name: V3 CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'data/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v3-ci-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      FPL_AUTH_MODE: disabled
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+      - name: Compile runtime modules
+        run: python -m compileall -q src live_service.py fpl_daily_tasks.py
+      - name: Validate architecture ownership contract
+        run: python -m src.engines.architecture_contract_validate
+      - name: Full unit and regression suite
+        run: python -m pytest -q
+      - name: Full-refresh integration without publication
+        if: github.event_name == 'pull_request'
+        run: python -m src.runtime_v3.orchestrator --mode daily --stats --profile full_refresh
+      - name: Validate integration contracts
+        if: github.event_name == 'pull_request'
+        run: |
+          python -m src.engines.source_contract_validate
+          python -m src.engines.production_contract_validate
+          python -m src.engines.watchlist_contract_validate
+          python -m src.engines.report_serving_validate
+          python -m src.engines.report_time_contract_validate
+          python -m src.runtime_v3.performance_guard --profile full_refresh
+      - name: Fast-profile integration against fresh reusable state
+        if: github.event_name == 'pull_request'
+        run: python -m src.runtime_v3.orchestrator --mode daily --stats --profile fast_decision
+      - name: Report fast SLO and resource state
+        if: github.event_name == 'pull_request'
+        run: python -m src.runtime_v3.performance_guard --profile fast_decision

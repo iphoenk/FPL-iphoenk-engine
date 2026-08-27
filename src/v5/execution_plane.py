@@ -143,6 +143,19 @@ def evaluate_hot_materialization(
             "action": contract.get("missing_field_action", "FAIL_CLOSED"),
         }
 
+    materialized_mode = str(value.get("mode") or "")
+    requested_mode = str(mode or "")
+    if materialized_mode != requested_mode:
+        return {
+            "status": "STALE",
+            "eligible": False,
+            "materialization": resolved_name,
+            "reason": "MODE_MISMATCH",
+            "materialized_mode": materialized_mode,
+            "requested_mode": requested_mode,
+            "action": hot.get("stale_materialization_action", "FAIL_CLOSED"),
+        }
+
     fingerprint = str(value.get("runtime_fingerprint") or "")
     if not fingerprint:
         return {
@@ -182,7 +195,7 @@ def evaluate_hot_materialization(
             "action": contract.get("future_timestamp_action", "FAIL_CLOSED"),
         }
 
-    budget = freshness_budget_seconds(mode, resolved_name)
+    budget = freshness_budget_seconds(requested_mode, resolved_name)
     if age_seconds > budget:
         return {
             "status": "STALE",
@@ -198,6 +211,7 @@ def evaluate_hot_materialization(
         "status": "READY",
         "eligible": True,
         "materialization": resolved_name,
+        "mode": requested_mode,
         "age_seconds": round(age_seconds, 3),
         "freshness_budget_seconds": budget,
         "hard_limit_ms": int(hot["hard_limit_ms"]),

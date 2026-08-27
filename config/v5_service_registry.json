@@ -1,5 +1,5 @@
 {
-  "version":18,"architecture":"bounded-context-microservices","mandatory":true,
+  "version":19,"architecture":"bounded-context-microservices","mandatory":true,
   "policy":{"monorepo_allowed":true,"independent_process_required":true,"independent_health_required":true,"versioned_contract_required":true,"business_authority_must_not_be_duplicated":true,"shared_code_scope":["contracts","transport","observability","config loader","wire codec"],"prefer_fewer_domain_services_over_chatty_function_services":true,"parallelize_independent_calls":true,"service_timeouts_required":true,"circuit_breaker_ready":true,"module_ownership":"exactly_one_service"},
   "defaults":{"contract_version":"v1","transport":"http-registry-codec","health_path":"/health","meta_path":"/meta","invoke_path":"/v1/invoke/{operation}","connect_timeout_ms":400,"read_timeout_ms":5000},
   "services":{
@@ -13,6 +13,6 @@
     "governance":{"port":8108,"bounded_context":"gate0-framework-health-enhancements-and-final-governance","handler":"src.v5.services.governance:handle","owns_modules":["gate0","enhancement_layers","framework_health"],"dependencies":["truth","price","prediction","evaluation","decision"],"status":"ACTIVE_ALPHA","critical":true},
     "reporting":{"port":8109,"bounded_context":"decision-first-user-report-and-technical-appendix","handler":"src.v5.services.reporting:handle","owns_modules":["reporting"],"dependencies":["truth","price","prediction","decision","governance","watchlist"],"status":"ACTIVE_ALPHA","critical":true},
     "watchlist":{"port":8110,"bounded_context":"full-dss-external-candidate-screening","handler":"src.v5.services.watchlist:handle","owns_modules":["watchlist"],"dependencies":["truth","price","prediction","decision"],"status":"ACTIVE_ALPHA","critical":true},
-    "orchestrator":{"port":8100,"bounded_context":"workflow-orchestration-observability-degraded-mode-cluster-health-beta-composition-and-wire-policy","handler":"src.v5.services.orchestrator_beta:handle","owns_modules":["runner","performance","degraded_mode","cluster_health","service_runtime","service_wire"],"dependencies":["ingestion","truth","price","prediction","evaluation","decision","governance","watchlist","reporting","snapshot"],"status":"ACTIVE_ALPHA","critical":true}
+    "orchestrator":{"port":8100,"bounded_context":"workflow-orchestration-observability-degraded-mode-cluster-health-beta-composition-wire-and-payload-policy","handler":"src.v5.services.orchestrator_beta:handle","owns_modules":["runner","performance","degraded_mode","cluster_health","service_runtime","service_wire","payload_contracts"],"dependencies":["ingestion","truth","price","prediction","evaluation","decision","governance","watchlist","reporting","snapshot"],"status":"ACTIVE_ALPHA","critical":true}
   }
 }

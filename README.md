@@ -3,8 +3,8 @@
 Production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
-- Production baseline: `3.20.0` / schema `48` until V3.20.1 production acceptance completes.
-- Release candidate: `3.20.1` / schema `48`.
+- Production baseline: `3.20.1` / schema `48`.
+- Production acceptance: COMPLETE on 27 August 2026.
 - Release metadata source of truth: `src/version.py`.
 - Service Registry: schema `11`, contract `v3.20-architecture-hardening-15-owned-20-watchlist`.
 - Machine Source Registry: `SOURCE_REGISTRY_V3`.
@@ -34,7 +34,8 @@ The package optimizer and final lineup governance also remain separate. The pack
 - Service Registry schema: `11`, unchanged because the service topology and artifact contract are unchanged.
 - Lineup-governance policy schema: `2`, because the mutable battle-margin threshold now has an explicit config owner.
 
-V3.20.1 remains a release candidate until PR CI, bounded integration, merge, production collector, validated `runtime-data` publication and framework GREEN/HEALTHY/GO verification complete.
+### Production acceptance evidence
+V3.20.1 production acceptance completed on 27 August 2026. PR #39 merged to `main` as `8a4e090fa4d8e702da54b85ecda3477990390039`. Production push workflow run `33038620362` passed the full test suite, architecture validation, bounded 20-service runtime, source capability, production decision/report, full DSS watchlist, report serving and report-time contracts, then published validated runtime artifacts to `runtime-data` as commit `6b34381`. Production runtime reports engine `3.20.1` / schema `48`, total wall time `6652.56 ms` within the `45000 ms` budget, framework GREEN, decision engine HEALTHY, recommendation allowed and GO allowed; Gate0 is 16/16 PASS, DSS Core 50/50 ACTIVE, DSS Extensions 16/16 ACTIVE and Enhancement Layers 8/8 ACTIVE. Source health is GREEN/non-blocking and the 15 OWNED + 20 WATCHLIST serving contract passes.
 
 ## v3.20.0 Architecture Hardening
 V3.20 removes the remaining active monolithic base collector and consolidates mutable infrastructure policy under explicit registry/config ownership. The user-facing report/serving contract remains schema 48, so this is an engine architecture release without a serving-schema bump.
@@ -159,7 +160,7 @@ Local reconstruction is an audit aid only and may not override Official FPL nati
 Third-party predictions and opinions are evidence, never native authority.
 
 ## Runtime architecture
-The active production/candidate runtime is a bounded-process dependency-aware microservice orchestrator driven by `config/v3_service_registry.json`.
+The active production runtime is a bounded-process dependency-aware microservice orchestrator driven by `config/v3_service_registry.json`.
 
 Key properties:
 - generic root DAG scheduling;
@@ -228,7 +229,7 @@ CI must fail on release metadata or architecture ownership drift. A version is n
 - v3.18.1: OneFPL unattended-access reliability diagnosis.
 - v3.19.0: report-time intelligence, pundit consensus-vs-DSS and OneFPL report-time delegation.
 - v3.20.0: production-accepted artifact-owned base-service decomposition, generic DAG, Source Registry V3, collector policy, current advanced-stat aliases and architecture anti-regression gate.
-- v3.20.1 candidate: projection/scoring correctness, promotion fault handling, legacy projection-path cleanup and config-owned XI battle threshold; serving schema remains 48.
+- v3.20.1: production-accepted projection/scoring correctness, promotion fault handling, legacy projection-path cleanup and config-owned XI battle threshold; serving schema remains 48.
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.

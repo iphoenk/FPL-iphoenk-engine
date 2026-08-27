@@ -1,7 +1,7 @@
 {
   "schema_version": 494,
   "engine": "v4.9.4-personal-gw-scorecard",
-  "generated_at": "2026-08-27T12:21:21.480147+00:00",
+  "generated_at": "2026-08-27T13:34:29.210682+00:00",
   "status": "PASS",
   "team_id": 3462711,
   "phase": {
@@ -14,7 +14,8 @@
     "deadline_time": "2026-08-28T17:30:00Z",
     "is_live_event": false
   },
-  "snapshot_sha256": "82740aebf49d4447e14739b2090787f8c50fb60391b684fb6e3a78691982d4c8",
+  "snapshot_sha256": "69397f75701bbaef24f982120422d52c187ba05a4d3f379e36af4178a917fa33",
+  "effective_plan_sha256": "1292f825262cb3b17fbafe56b97762b17fb74275ad008a34f03ac9d2a11affae",
   "previous_gw": {
     "schema_version": 494,
     "engine": "v4.9.4-personal-gw-result",
@@ -289,8 +290,9 @@
   "planning_gw": {
     "status": "PROJECTION",
     "gw": 2,
-    "formation": "3-4-3",
-    "xi_xpts": 40.87,
+    "decision_authority": "USER_OVERRIDE",
+    "formation": "3-5-2",
+    "xi_xpts": 39.05,
     "captain": {
       "element": 426,
       "name": "B.Fernandes",
@@ -304,22 +306,16 @@
     },
     "active_chip": "WILDCARD",
     "chip_short": "WC",
-    "bench_xpts": 10.91,
+    "bench_xpts": 12.73,
     "bench_counted_xpts": 0.0,
-    "standard_captain_team_xpts": 46.0,
-    "estimated_points": 46.0,
+    "standard_captain_team_xpts": 44.18,
+    "estimated_points": 44.18,
     "starting_xi": [
       {
         "element": 572,
         "name": "Tzolakis",
         "position": "GK",
         "xpts": 3.243
-      },
-      {
-        "element": 88,
-        "name": "Kayode",
-        "position": "DEF",
-        "xpts": 3.534
       },
       {
         "element": 115,
@@ -334,10 +330,28 @@
         "xpts": 2.82
       },
       {
+        "element": 254,
+        "name": "Robinson",
+        "position": "DEF",
+        "xpts": 2.664
+      },
+      {
         "element": 426,
         "name": "B.Fernandes",
         "position": "MID",
         "xpts": 5.128
+      },
+      {
+        "element": 15,
+        "name": "Ødegaard",
+        "position": "MID",
+        "xpts": 2.56
+      },
+      {
+        "element": 557,
+        "name": "Tzolis",
+        "position": "MID",
+        "xpts": 2.846
       },
       {
         "element": 40,
@@ -352,12 +366,6 @@
         "xpts": 2.939
       },
       {
-        "element": 557,
-        "name": "Tzolis",
-        "position": "MID",
-        "xpts": 2.846
-      },
-      {
         "element": 411,
         "name": "Haaland",
         "position": "FWD",
@@ -368,12 +376,6 @@
         "name": "João Pedro",
         "position": "FWD",
         "xpts": 4.087
-      },
-      {
-        "element": 346,
-        "name": "Calvert-Lewin",
-        "position": "FWD",
-        "xpts": 3.511
       }
     ],
     "bench": [
@@ -386,17 +388,17 @@
       },
       {
         "slot": 1,
-        "element": 254,
-        "name": "Robinson",
-        "position": "DEF",
-        "xpts": 2.664
+        "element": 346,
+        "name": "Calvert-Lewin",
+        "position": "FWD",
+        "xpts": 3.511
       },
       {
         "slot": 2,
-        "element": 15,
-        "name": "Ødegaard",
-        "position": "MID",
-        "xpts": 2.56
+        "element": 88,
+        "name": "Kayode",
+        "position": "DEF",
+        "xpts": 3.534
       },
       {
         "slot": 3,
@@ -412,10 +414,40 @@
       "player_intervals_not_naively_summed": true
     },
     "guardrails": {
-      "projection_from_lineup_contract": true,
+      "projection_from_effective_plan_contract": true,
       "captain_multiplier_applied_once": true,
       "bench_only_counted_for_bench_boost": true,
       "no_extra_official_api_fetch": true
+    },
+    "squad_basis": {
+      "planning_gw": 2,
+      "baseline_gw": 1,
+      "default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
+      "default_authority": "OFFICIAL_SUBMITTED",
+      "override_requested": true,
+      "override_target_gw": 2,
+      "override_applied": true,
+      "effective_authority": "LOCKED_PRE_DEADLINE",
+      "authority_source": "USER_CAPTURED_WC_DRAFT",
+      "stale_override_rejected": false
+    },
+    "human_override_active": true,
+    "engine_comparison": {
+      "changed_xi_slots_vs_engine": 2,
+      "user_xi_xpts": 39.05,
+      "engine_xi_xpts": 40.87,
+      "user_minus_engine_xpts": -1.82,
+      "formation_changed": true,
+      "captain_changed": false,
+      "vice_changed": false,
+      "chip_changed": false,
+      "engine_can_warn_but_not_overwrite": true
+    },
+    "engine_recommendation": {
+      "formation": "3-4-3",
+      "xi_xpts": 40.87,
+      "captain": "B.Fernandes",
+      "active_chip": "WILDCARD"
     }
   },
   "history": [
@@ -431,10 +463,10 @@
   ],
   "headline": {
     "previous": "GW1 FINAL · 71 pts · BB",
-    "planning": "GW2 PROJECTION · 46.0 xPts · WC · 3-4-3 · C B.Fernandes"
+    "planning": "GW2 PROJECTION · 44.2 xPts · WC · 3-5-2 · C B.Fernandes"
   },
   "archive": {
-    "action": "CREATED",
+    "action": "PRESERVED",
     "consistent_with_current_source": true,
     "directory": "data/gw_results",
     "immutable": true
@@ -445,9 +477,12 @@
     "process_isolated_microservice": true,
     "finished_gw_archive_immutable": true,
     "simulation_never_mutates_archive": true,
-    "projection_from_lineup_contract": true,
+    "projection_from_effective_plan_contract": true,
+    "engine_is_advisory_user_plan_is_effective": true,
+    "previous_submitted_gw_is_default_projection_baseline": true,
+    "planning_override_target_gw_required": true,
     "projection_is_estimate_not_actual": true,
     "player_intervals_not_naively_summed": true
   },
-  "performance_ms": 53.24
+  "performance_ms": 46.42
 }

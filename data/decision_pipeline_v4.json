@@ -5,11 +5,11 @@
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-27T12:21:12.911823+00:00",
-    "local_as_of": "2026-08-27T19:21:12.911823+07:00",
+    "as_of": "2026-08-27T13:34:20.921493+00:00",
+    "local_as_of": "2026-08-27T20:34:20.921493+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 1748.8,
+    "minutes_to_deadline": 1675.7,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -27,22 +27,32 @@
     "registry": "fpl_checkpoint_policy_v1",
     "registry_schema_version": 1
   },
+  "decision_authority": "ENGINE_ADVISORY_ONLY",
+  "planning_squad": {
+    "authority": "LOCKED_PRE_DEADLINE",
+    "baseline_gw": 1,
+    "planning_gw": 2,
+    "override_active": true,
+    "target_gw": 2,
+    "authority_source": "USER_CAPTURED_WC_DRAFT",
+    "wildcard_active": true
+  },
   "timings": {
-    "load_shared_inputs_and_candidates_ms": 386.8,
-    "wc_decision_cpu_ms": 554.7,
-    "package_audit_cpu_ms": 2471.6,
-    "wc_package_parallel_wall_ms": 2526.7,
-    "parallel_speedup_estimate": 1.198,
-    "lineup_ms": 2.8,
-    "evidence_sanity_ms": 3.5,
-    "total_pipeline_ms": 2963.7
+    "load_shared_inputs_and_candidates_ms": 362.5,
+    "wc_decision_cpu_ms": 495.0,
+    "package_audit_cpu_ms": 2239.8,
+    "wc_package_parallel_wall_ms": 2251.4,
+    "parallel_speedup_estimate": 1.215,
+    "lineup_ms": 2.4,
+    "evidence_sanity_ms": 3.2,
+    "total_pipeline_ms": 2640.2
   },
   "results": {
     "wc_raw": "MATERIAL_UPGRADE",
     "package_raw": "MATERIAL_UPGRADE",
     "recommendation_final": "MATERIAL_UPGRADE",
     "recommended_replacements": 2,
-    "lineup_governance": "CHANGE_RECOMMENDED",
+    "lineup_governance": "OPTIMIZER_ONLY",
     "formation": "3-4-3",
     "captain": "B.Fernandes"
   },
@@ -66,6 +76,10 @@
     "package_scalar_delta_metrics": true,
     "package_position_value_reuse": true,
     "top_packages_only_payload_materialization": true,
-    "checkpoint_action_deferred_until_postflight_health": true
+    "checkpoint_action_deferred_until_postflight_health": true,
+    "planning_squad_from_team_contract": true,
+    "stale_lock_players_not_direct_optimizer_input": true,
+    "engine_lineup_is_advisory_only": true,
+    "manual_override_applied_in_separate_microservice": true
   }
 }

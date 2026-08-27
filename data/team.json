@@ -1,7 +1,19 @@
 {
-  "generated_at": "2026-08-27T12:21:14.342810+00:00",
+  "generated_at": "2026-08-27T13:34:22.307678+00:00",
   "team_id": 3462711,
   "squad_authority": "LOCKED_PRE_DEADLINE",
+  "projection_baseline": {
+    "planning_gw": 2,
+    "baseline_gw": 1,
+    "default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
+    "default_authority": "OFFICIAL_SUBMITTED",
+    "override_requested": true,
+    "override_target_gw": 2,
+    "override_applied": true,
+    "effective_authority": "LOCKED_PRE_DEADLINE",
+    "authority_source": "USER_CAPTURED_WC_DRAFT",
+    "stale_override_rejected": false
+  },
   "squad": [
     {
       "element": 572,
@@ -239,7 +251,7 @@
       "now_cost": 75,
       "sell_cost": 75,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "25.8",
+      "ownership": "25.9",
       "status": "a"
     },
     {
@@ -275,7 +287,7 @@
       "now_cost": 76,
       "sell_cost": 75,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "67.1",
+      "ownership": "67.2",
       "status": "a"
     },
     {

@@ -321,33 +321,10 @@
     "captain": 426,
     "vice_captain": 411
   },
-  "manual_draft": {
-    "formation": "3-5-2",
-    "xi_xpts": 39.05,
-    "starting_ids": [
-      572,
-      115,
-      8,
-      254,
-      426,
-      15,
-      557,
-      40,
-      565,
-      411,
-      165
-    ],
-    "captain": 426,
-    "vice_captain": 411,
-    "status": "MANUAL_DRAFT_ADJUSTABLE"
-  },
+  "manual_draft": null,
   "governance": {
-    "manual_draft_available": true,
-    "changed_slots": 2,
-    "raw_gain": 1.821,
-    "required_margin": 1.262,
-    "decision": "CHANGE_RECOMMENDED",
-    "robust_enough": true,
+    "manual_draft_available": false,
+    "decision": "OPTIMIZER_ONLY",
     "captain_decision": "OPTIMIZER"
   },
   "chip_context": {

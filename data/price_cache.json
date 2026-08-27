@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-27T12:21:14.342810+00:00",
+  "generated_at": "2026-08-27T13:34:22.307678+00:00",
   "players": {
     "1": {
       "now_cost": 60,
@@ -95,7 +95,7 @@
     },
     "25": {
       "now_cost": 74,
-      "ownership": "7.3"
+      "ownership": "7.2"
     },
     "26": {
       "now_cost": 75,
@@ -211,7 +211,7 @@
     },
     "55": {
       "now_cost": 79,
-      "ownership": "8.5"
+      "ownership": "8.4"
     },
     "56": {
       "now_cost": 55,
@@ -595,7 +595,7 @@
     },
     "40": {
       "now_cost": 75,
-      "ownership": "25.8"
+      "ownership": "25.9"
     },
     "101": {
       "now_cost": 50,
@@ -655,7 +655,7 @@
     },
     "152": {
       "now_cost": 55,
-      "ownership": "2.5"
+      "ownership": "2.4"
     },
     "153": {
       "now_cost": 45,
@@ -699,7 +699,7 @@
     },
     "165": {
       "now_cost": 76,
-      "ownership": "67.1"
+      "ownership": "67.2"
     },
     "166": {
       "now_cost": 65,
@@ -1055,7 +1055,7 @@
     },
     "236": {
       "now_cost": 65,
-      "ownership": "4.4"
+      "ownership": "4.5"
     },
     "237": {
       "now_cost": 60,
@@ -1099,7 +1099,7 @@
     },
     "249": {
       "now_cost": 55,
-      "ownership": "2.7"
+      "ownership": "2.8"
     },
     "250": {
       "now_cost": 45,
@@ -1335,7 +1335,7 @@
     },
     "586": {
       "now_cost": 40,
-      "ownership": "3.0"
+      "ownership": "3.1"
     },
     "589": {
       "now_cost": 50,
@@ -1459,7 +1459,7 @@
     },
     "564": {
       "now_cost": 45,
-      "ownership": "0.7"
+      "ownership": "0.6"
     },
     "571": {
       "now_cost": 50,
@@ -1571,7 +1571,7 @@
     },
     "385": {
       "now_cost": 50,
-      "ownership": "4.0"
+      "ownership": "4.1"
     },
     "598": {
       "now_cost": 45,
@@ -1703,7 +1703,7 @@
     },
     "379": {
       "now_cost": 90,
-      "ownership": "16.6"
+      "ownership": "16.5"
     },
     "380": {
       "now_cost": 75,
@@ -1743,7 +1743,7 @@
     },
     "388": {
       "now_cost": 60,
-      "ownership": "19.1"
+      "ownership": "19.2"
     },
     "389": {
       "now_cost": 60,

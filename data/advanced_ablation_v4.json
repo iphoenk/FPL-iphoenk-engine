@@ -2,9 +2,9 @@
   "schema_version": 493,
   "engine": "v4.9.3-advanced-ablation",
   "status": "PASS",
-  "generated_at": "2026-08-27T12:21:14.342810+00:00",
-  "snapshot_sha256": "82740aebf49d4447e14739b2090787f8c50fb60391b684fb6e3a78691982d4c8",
-  "enrichment_sha256": "a5ac2461f35daac53ec76dcbefa6f15614fb08b01ae7df93be4fbb4d96e5d317",
+  "generated_at": "2026-08-27T13:34:22.307678+00:00",
+  "snapshot_sha256": "69397f75701bbaef24f982120422d52c187ba05a4d3f379e36af4178a917fa33",
+  "enrichment_sha256": "cb896f17860db447dc989baf32f1a518226e5dfb0870ee080bafd4d72d2f9eac",
   "model_version": "v4.9.2-truthful-health",
   "ablation": {
     "treatment": "community_advanced_current_season_enrichment",
@@ -29,7 +29,7 @@
     "mean_abs_delta_xpts5": 0.0633,
     "median_abs_delta_xpts5": 0.0,
     "max_abs_delta_xpts5": 1.58,
-    "mean_abs_rank_shift": 3.2736,
+    "mean_abs_rank_shift": 3.2573,
     "max_abs_rank_shift": 41,
     "players_abs_delta_ge": {
       "0.05": 102,
@@ -117,8 +117,8 @@
         "delta_xpts5": 0.87,
         "abs_delta_xpts5": 0.87,
         "full_rank": 244,
-        "no_advanced_rank": 271,
-        "rank_shift": 27
+        "no_advanced_rank": 270,
+        "rank_shift": 26
       },
       {
         "element": 154,
@@ -508,5 +508,5 @@
     "decision_flip_is_reported_not_forced": true,
     "future_empirical_value_requires_reconciled_samples": true
   },
-  "performance_ms": 6103.1
+  "performance_ms": 5537.31
 }

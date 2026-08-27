@@ -21,15 +21,15 @@ def _load(name: str) -> dict:
 
 
 def _assert_version(obj: dict, label: str, minimum: int, prefix: str, field: str = "engine") -> None:
-    schema = int(obj.get("schema_version", 0))
-    version = str(obj.get(field, ""))
-    assert schema >= minimum and version.startswith(prefix), (
-        label,
-        schema,
-        version,
-        minimum,
-        prefix,
-    )
+    actual_schema = int(obj.get("schema_version", 0))
+    actual_version = str(obj.get(field, ""))
+    if actual_schema < minimum or not actual_version.startswith(prefix):
+        raise AssertionError(
+            f"stale or incompatible {label}: schema={actual_schema}, {field}={actual_version!r}; "
+            f"expected schema>={minimum} and {field} prefix {prefix!r}. "
+            "Run `python -m src.services.orchestrator daily --stats --deep-stats` "
+            "before invoking the quality gate."
+        )
 
 
 def _assert_framework_health() -> tuple[dict, dict]:

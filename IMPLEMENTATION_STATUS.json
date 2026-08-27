@@ -1,5 +1,5 @@
 {
-  "version": "3.18.0",
+  "version": "3.18.1",
   "schema_version": 47,
   "release_metadata_source": "src/version.py",
   "P0": {
@@ -40,7 +40,8 @@
       "config-owned projection and strategic horizons",
       "registry-owned framework expected counts",
       "version-neutral active prediction and price service entrypoints",
-      "registry-driven production validation contracts"
+      "registry-driven production validation contracts",
+      "OneFPL reachability/structured-access separation with registry-owned approved deployment fallback"
     ]
   },
   "P1": {

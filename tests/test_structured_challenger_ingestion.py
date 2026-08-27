@@ -5,11 +5,13 @@ from datetime import datetime, timezone
 import pytest
 
 import src.sources.manager as manager
+import src.sources.onefpl as onefpl
 from src.sources.base import SourceResult, SourceSpec
 from src.sources.livefpl import parse_price_observations as parse_livefpl
 from src.sources.manager import _disagreement_states, _reconcile_observations
 from src.sources.observations import ChallengerObservation, OBSERVATION_CONTRACT
 from src.sources.onefpl import parse_price_observations as parse_onefpl
+from src.sources.structured_web import FetchedDocument
 
 NOW = "2026-08-26T21:00:00+00:00"
 
@@ -37,6 +39,85 @@ def test_onefpl_price_parser_and_loading_page_no_fabrication():
     assert rows[0]["value"]["direction"] == "FALL"
     assert rows[0]["value"]["pressure_pct"] == pytest.approx(1.3)
     assert parse_onefpl("<html><body>Loading FPL tool...</body></html>", source_url="https://onefpl.com/prices", fetched_at=NOW, ttl_seconds=1800) == []
+
+
+def test_onefpl_probe_separates_site_reachability_and_uses_approved_fallback(monkeypatch):
+    spec = SourceSpec(
+        "onefpl",
+        "OneFPL",
+        "CHALLENGER",
+        2,
+        True,
+        False,
+        "onefpl",
+        ("price_prediction", "transfer_trends"),
+        {
+            "probe_url": "https://onefpl.com/",
+            "structured_url": "https://onefpl.com/prices",
+            "fallback_structured_urls": ["https://onefpl.vercel.app/prices"],
+            "allowed_hosts": ["onefpl.com", "onefpl.vercel.app"],
+            "observation_ttl_seconds": 1800,
+            "max_fetch_bytes": 1048576,
+        },
+    )
+
+    def fake_fetch(url, timeout_seconds, *, max_bytes, user_agent="FPL-iphoenk-engine structured-public-readonly"):
+        if url == "https://onefpl.com/":
+            return FetchedDocument(url, 200, "text/html", "OneFPL", True, 10.0)
+        if url == "https://onefpl.com/prices":
+            return FetchedDocument(url, 402, None, "", False, 20.0, "HTTPError")
+        if url == "https://onefpl.vercel.app/prices":
+            return FetchedDocument(url, 200, "text/html", "<html><body>SilvaDEF BOU BOU£5.0m 1.3%Drop risk</body></html>", True, 30.0)
+        raise AssertionError(url)
+
+    monkeypatch.setattr(onefpl, "fetch_public_document", fake_fetch)
+    result = onefpl.probe(spec, 0.1)
+    assert result.status == "LIVE"
+    assert result.reachable is True
+    assert result.observation_count == 1
+    assert result.capabilities["price_prediction"] == "AVAILABLE"
+    assert result.detail["structured_fallback_used"] is True
+    assert result.detail["selected_structured_url"] == "https://onefpl.vercel.app/prices"
+    assert result.detail["primary_structured_http_status"] == 402
+    assert result.detail["structured_http_status"] == 200
+    assert result.observations[0]["source_url"] == "https://onefpl.vercel.app/prices"
+
+
+def test_onefpl_reachable_site_with_restricted_structured_endpoint_is_not_source_outage(monkeypatch):
+    spec = SourceSpec(
+        "onefpl",
+        "OneFPL",
+        "CHALLENGER",
+        2,
+        True,
+        False,
+        "onefpl",
+        ("price_prediction",),
+        {
+            "probe_url": "https://onefpl.com/",
+            "structured_url": "https://onefpl.com/prices",
+            "fallback_structured_urls": [],
+            "allowed_hosts": ["onefpl.com"],
+            "observation_ttl_seconds": 1800,
+            "max_fetch_bytes": 1048576,
+        },
+    )
+
+    def fake_fetch(url, timeout_seconds, *, max_bytes, user_agent="FPL-iphoenk-engine structured-public-readonly"):
+        if url == "https://onefpl.com/":
+            return FetchedDocument(url, 200, "text/html", "OneFPL", True, 10.0)
+        return FetchedDocument(url, 402, None, "", False, 20.0, "HTTPError")
+
+    monkeypatch.setattr(onefpl, "fetch_public_document", fake_fetch)
+    result = onefpl.probe(spec, 0.1)
+    assert result.status == "LIVE"
+    assert result.reachable is True
+    assert result.observation_count == 0
+    assert result.capabilities["price_prediction"] == "SOURCE_REACHABLE_STRUCTURED_ACCESS_RESTRICTED"
+    assert result.detail["structured_access_restricted"] is True
+    assert result.detail["primary_structured_http_status"] == 402
+    assert result.detail["structured_http_status"] == 402
+    assert result.detail["http_status"] == 200
 
 
 def test_available_observation_cannot_have_missing_value():

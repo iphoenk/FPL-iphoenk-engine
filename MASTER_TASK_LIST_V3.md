@@ -2,16 +2,17 @@
 
 Canonical status: ACTIVE
 Canonical roadmap owner: V3 operational stream
-Current production release: V3.18.0
-Current production schema: 47
-Production scope: Structured Challenger Ingestion + architecture hardening
-Production acceptance: COMPLETE on 26 August 2026
+Production baseline: V3.18.0 / schema 47
+Current release candidate: V3.18.1
+Current candidate schema: 47
+Candidate scope: OneFPL adapter reachability and structured-access reliability
+Candidate acceptance: PENDING
 
 This file is the single human-readable master roadmap for the V3 operational engine. Every V3 feature, refactor, hardening change, operational improvement, and release-governance change must update this file in the same pull request.
 
 ## Status legend
 - DONE: implemented, tested, merged, production-validated when runtime-impacting.
-- ACTIVE: continuously enforced operational requirement.
+- ACTIVE: continuously enforced operational requirement or release candidate under acceptance.
 - NEXT: highest-priority planned work.
 - OPEN: planned but not the immediate next release.
 - BLOCKED: cannot progress until a named dependency is resolved.
@@ -68,6 +69,7 @@ Release objective: convert selected challenger sources from probe-only reachabil
 | V3-SRC-113 | Structured-ingestion performance budget | DONE | V3.18.0 | bounded parallel ingestion remains inside production runtime budget |
 | V3-SRC-114 | Parser/contract drift handling | DONE | V3.18.0 | unexpected source shape degrades capability safely instead of corrupting output |
 | V3-SRC-115 | V3.18 release governance | DONE | V3.18.0 | version/schema, README, implementation status, workflow, tests, CI and production collect all consistent |
+| V3-SRC-116 | OneFPL reachability / structured-access reliability | ACTIVE | V3.18.1 | homepage reachability separated from structured endpoint restriction; approved public fallback owned by registry; no UA spoofing; no fabrication; CI/integration/production evidence required |
 
 ### V3.18 architecture-hardening scope
 - Version-neutral runtime entrypoints replace version-stamped active service names; historical compatibility modules may remain as shims only.
@@ -177,12 +179,14 @@ A V3 task is DONE only when implementation, tests, documentation, version govern
 For external evidence tasks, DONE means the adapter/evaluator can explicitly distinguish at least AVAILABLE, UNAVAILABLE/SAFE_FALLBACK, STALE, and ERROR states where applicable. Missing values may never be synthesized solely to keep a module green.
 
 ## Execution order
-1. Keep V3.18.0 production GREEN and operational.
-2. Report-source availability and natural-language rendering hardening.
-3. Replace P1 proxies with richer evidence where reliable.
-4. Accumulate settled Gameweeks and calibrate prediction/weighting models.
-5. Pursue P2 capabilities only after P1 calibration has enough evidence and without destabilizing V3 operations.
+1. Keep V3.18.0 production GREEN while V3.18.1 is under acceptance.
+2. Complete V3.18.1 OneFPL adapter CI, integration and production verification.
+3. Report-source availability and natural-language rendering hardening.
+4. Replace P1 proxies with richer evidence where reliable.
+5. Accumulate settled Gameweeks and calibrate prediction/weighting models.
+6. Pursue P2 capabilities only after P1 calibration has enough evidence and without destabilizing V3 operations.
 
 ## Change log
+- V3.18.1 candidate: OneFPL reachability/structured-access separation, registry-owned approved fallback deployment, parser v2, endpoint-attempt evidence, no spoofing, no fabrication. Remains ACTIVE until production acceptance.
 - V3.18.0: production accepted. Structured LiveFPL/OneFPL observations, reachability/capability separation, TTL/LKG/stale and disagreement governance, Price Radar context integration, registry-driven mutable policy, version-neutral service entrypoints, validator/microservice boundary hardening, full production validation and runtime-data publication completed.
 - V3.17.1: established this canonical master task list, release checklist, Definition of Done, execution order, and mandatory roadmap synchronization rule.

@@ -34,6 +34,21 @@ def test_squad_constraints_are_owned_by_active_ruleset():
     assert int(SQUAD_RULES["max_players_per_club"]) > 0
 
 
+def test_onefpl_endpoints_and_fallbacks_are_registry_owned():
+    registry = json.loads((ROOT / "config" / "sources" / "registry.json").read_text())
+    onefpl = next(row for row in registry["sources"] if row["id"] == "onefpl")
+    adapter = (ROOT / "src" / "sources" / "onefpl.py").read_text()
+
+    assert onefpl["probe_url"].startswith("https://")
+    assert onefpl["structured_url"].startswith("https://")
+    assert onefpl["fallback_structured_urls"]
+    assert onefpl["allowed_hosts"]
+    for url in onefpl["fallback_structured_urls"]:
+        assert url not in adapter
+    for host in onefpl["allowed_hosts"]:
+        assert host not in adapter
+
+
 def test_legacy_runtime_hardcodes_do_not_return():
     engine = (ROOT / "src" / "engine.py").read_text()
     workflow = (ROOT / ".github" / "workflows" / "fpl-engine.yml").read_text()

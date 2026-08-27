@@ -1,15 +1,30 @@
-# FPL iphoenk Engine v3.18.0
+# FPL iphoenk Engine v3.18.1
 
 Production-oriented personal FPL data platform and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release
-- Engine version: `3.18.0`
+- Engine version: `3.18.1`
 - Schema version: `47`
 - Release metadata source of truth: `src/version.py`
 - Production runtime: bounded-process V3 microservices
 - Runtime state is published to `runtime-data`; `main/data/**` is historical/source-repository material only.
 - Official FPL remains the only native authority. Challenger/enrichment sources are fail-soft and may not overwrite native Official fields.
 - Canonical V3 roadmap and release checklist: `MASTER_TASK_LIST_V3.md`.
+
+## v3.18.1 OneFPL Adapter Reliability Patch
+V3.18.1 fixes OneFPL source-health semantics and public structured-read resilience without changing the runtime artifact schema. Site reachability is probed separately from structured capability access, so a public OneFPL site that is reachable while `/prices` is restricted is no longer misreported as a total source outage.
+
+Patch changes:
+- OneFPL parser contract upgraded to `onefpl-price-v2`
+- source reachability probe separated from structured data retrieval
+- approved public structured fallback URL is registry-owned rather than hardcoded in Python
+- fallback host allow-list is registry-owned
+- HTTP 401/402/403/429 on structured endpoints is represented as structured-access restriction when the site itself remains reachable
+- every structured endpoint attempt is recorded with URL role, HTTP status, latency and error state
+- no browser/user-agent spoofing is used; requests remain bounded public GETs
+- Official FPL authority, fail-soft challenger behavior and no-fabrication guarantees are unchanged
+
+Schema remains 47 because the normalized challenger observation and runtime publication contracts are unchanged.
 
 ## v3.18.0 Structured Challenger Ingestion + Architecture Hardening
 V3.18.0 converts selected challenger capabilities from probe-only reachability into bounded, normalized observations with explicit provenance and capability health. LiveFPL and OneFPL may contribute structured public observations only when a parser produces a valid normalized observation. Missing challenger values remain missing or explicit safe fallback; Official FPL remains native authority.
@@ -66,7 +81,7 @@ Configuration ownership:
 - Environment variables may override explicitly supported runtime settings such as `FPL_TEAM_ID`, `FPL_LIVE_POLL_SECONDS`, and `FPL_TIMEOUT`.
 - `config/rules/registry.json` + the active ruleset own FPL squad, lineup, scoring, chip, finance, and BPS rules.
 - `config/v3_service_registry.json` owns service DAG/runtime orchestration settings.
-- `config/sources/registry.json` owns source authority, capability, and adapter policy.
+- `config/sources/registry.json` owns source authority, capability, adapter policy, public endpoints and approved fallback hosts.
 
 Hardening changes:
 - removed duplicate Team ID from workflow and engine code
@@ -205,6 +220,7 @@ CI must fail on release metadata drift. The master task list must be updated in 
 - v3.17: runtime-evidence DSS operationalization and optimizer guardrails
 - v3.17.1: canonical V3 master task governance and Definition of Done
 - v3.18.0: structured challenger observations, architecture/configuration hardening, and production acceptance
+- v3.18.1: OneFPL adapter reachability/structured-access reliability patch
 
 ## Leakage guard
 Post-match and post-GW fields must not be used to reconstruct pre-deadline same-GW predictions.

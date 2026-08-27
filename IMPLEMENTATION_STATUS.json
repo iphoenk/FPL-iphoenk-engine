@@ -71,7 +71,10 @@
     "REC-32": {"status": "DONE_PROD", "summary": "Registry-owned latest-state carry-forward preserves reusable canonical state through base fan-in."},
     "REC-33": {"status": "DONE_ENGINEERING_MONITOR", "summary": "Weather FULL refresh uses freshness-aware reuse and bounded concurrency; CI FULL improved from 55.5s outlier to 17.068s and Source Layer to 3.043s; scheduled FULL latency remains monitored.", "pr": 52},
     "REC-34": {"status": "DONE_PROD", "summary": "One-shot player-feature contract migration fence regenerated stale runtime artifact and restored normal 21600-second advanced-stats reuse TTL.", "prs": [66, 67]},
-    "REC-35": {"status": "DONE_PROD", "summary": "Duplicated per-fixture defensive-contribution provenance removed without formula/decision change; current snapshot is 18.50MB with FAST 5.802s and RSS 87.5/114.8MB.", "pr": 70}
+    "REC-35": {"status": "DONE_PROD", "summary": "Duplicated per-fixture defensive-contribution provenance removed without formula/decision change; current snapshot is 18.50MB with FAST 5.802s and RSS 87.5/114.8MB.", "pr": 70},
+    "REC-36": {"status": "DONE_PROD", "summary": "Public Official entry history and historical picks reconcile submitted teams including GW1 as retrospective proxy only; private pre-deadline draft remains separate.", "pr": 73},
+    "REC-37": {"status": "DONE_PROD", "summary": "One-shot Official-detail migration fence published REC-36 historical fields to runtime-data and normal 3600-second FAST/LIVE reuse TTL was restored.", "prs": [74, 75]},
+    "REC-38": {"status": "DONE_ENGINEERING_PENDING_PROD", "summary": "Official-first coverage matrix now classifies every REC, requires explicit fallback disposition and is wired into the source contract; production FULL acceptance remains required."}
   },
   "calibration_monitors": {
     "settled_prediction_validation": "MONITOR",
@@ -84,6 +87,7 @@
   "architecture": {
     "active_service_count": 20,
     "official_fpl_native_authority": true,
+    "official_first_rec_coverage": true,
     "external_evidence_non_authoritative": true,
     "fast_slo_ms": 10000,
     "runtime_data_branch": "runtime-data",

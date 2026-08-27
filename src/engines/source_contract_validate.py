@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from src.engines.report_time_intelligence import validate_registry as validate_report_time_registry
+from src.sources.official_first import load_official_first_coverage, validate_official_first_coverage
 from src.utils import DATA, ROOT
 
 
@@ -24,6 +25,14 @@ def run() -> dict:
     assert (health.get("registry") or {}).get("integrity_ok") is True
     assert enabled <= set(runtime_sources), ("missing_runtime_sources", sorted(enabled - set(runtime_sources)))
     assert health.get("critical_failed") == [], health.get("critical_failed")
+
+    source_policy = registry.get("policy") or {}
+    assert source_policy.get("official_fpl_is_native_authority") is True
+    assert source_policy.get("official_first_rec_coverage_required") is True
+    assert source_policy.get("official_first_rec_coverage_ref") == "config/sources/official_first_coverage.json"
+    assert source_policy.get("fallback_requires_explicit_official_disposition") is True
+    official_first_health = validate_official_first_coverage(load_official_first_coverage())
+    assert official_first_health.get("integrity_ok") is True
 
     official = runtime_sources["official_fpl"]
     assert official.get("status") == "LIVE"
@@ -74,6 +83,7 @@ def run() -> dict:
         "status": "PASS",
         "source_overall": health.get("overall"),
         "decision_blocking": health.get("decision_blocking"),
+        "official_first": official_first_health,
         "weather": {
             "status": weather_runtime.get("status"),
             "capabilities": weather_runtime.get("capabilities"),

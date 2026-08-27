@@ -4,6 +4,9 @@
   "season": "2026-2027",
   "policy": {
     "official_fpl_is_native_authority": true,
+    "official_first_rec_coverage_required": true,
+    "official_first_rec_coverage_ref": "config/sources/official_first_coverage.json",
+    "fallback_requires_explicit_official_disposition": true,
     "challengers_never_override_official_native_fields": true,
     "missing_challenger_data_is_never_fabricated": true,
     "source_failure_isolated_by_default": true,
@@ -21,7 +24,7 @@
     "weather_is_advisory_enrichment_only": true
   },
   "sources": [
-    {"id":"official_fpl","name":"Official FPL","class":"AUTHORITATIVE","tier":1,"enabled":true,"critical":true,"adapter":"runtime_official","api_base":"https://fantasy.premierleague.com/api","capabilities":["player_identity","prices","fixtures","entry","history","picks","live","rules_native_fields"]},
+    {"id":"official_fpl","name":"Official FPL","class":"AUTHORITATIVE","tier":1,"enabled":true,"critical":true,"adapter":"runtime_official","api_base":"https://fantasy.premierleague.com/api","capabilities":["player_identity","prices","fixtures","entry","entry_history","entry_picks","entry_transfers","league_standings","element_summary","event_live","event_status","dream_team","set_piece_notes","history","picks","live","rules_native_fields"]},
     {"id":"fpl_core_insights","name":"FPL Core Insights","class":"ENRICHMENT","tier":2,"enabled":true,"critical":false,"adapter":"artifact","artifact_paths":["stats/shots_current.json","stats/playermatchstats_current.json"],"ingestion":{"season":"2026-2027","raw_base":"https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data","request_timeout_seconds":20,"gameweek_player_files":["players.csv","playerstats.csv","playergameweekstats.csv"],"deep_files":{"shots":["shots.csv"],"playermatchstats":["playermatchstats.csv"]}},"capabilities":["advanced_stats","shots","player_match_stats"]},
     {"id":"vaastav","name":"vaastav FPL Dataset","class":"ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"artifact","artifact_paths":["stats/vaastav_previous_season.json"],"ingestion":{"season":"2026-2027","raw_base":"https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data","request_timeout_seconds":25,"current_season_candidates":[{"path":"gws/gw{gw}.csv","data_mode":"GW_SPECIFIC"},{"path":"gws/merged_gw.csv","data_mode":"MERGED_GW_FALLBACK"},{"path":"cleaned_players.csv","data_mode":"SEASON_SNAPSHOT_FALLBACK"},{"path":"players_raw.csv","data_mode":"SEASON_RAW_FALLBACK"}],"previous_season_files":["players_raw.csv","cleaned_players.csv"]},"capabilities":["historical_prior","previous_season_stats"]},
     {"id":"open_meteo","name":"Open-Meteo","class":"ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"weather_artifact","artifact_paths":["fixture_weather.json"],"policy_ref":"config/intelligence/weather_context.json","capabilities":["fixture_weather","weather_anomaly_context"]},

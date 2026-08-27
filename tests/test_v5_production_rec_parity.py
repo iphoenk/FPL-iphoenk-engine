@@ -34,7 +34,7 @@ def test_open_parity_is_fail_closed_and_blocks_rebaseline():
 def test_rec36_historical_submission_parity_has_real_evidence_files():
     cfg = _registry()
     rec36 = cfg["production_rec_coverage"]["REC-36"]
-    assert rec36["v5_status"] == "ADOPTED_PENDING_CI"
+    assert rec36["v5_status"] == "ADOPTED"
     for relative in rec36["evidence"]:
         assert (ROOT / relative).exists(), relative
 

@@ -78,7 +78,7 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
     }
 
 
-def _capabilities(team: dict[str, Any], chip_state: dict[str, Any]) -> list[str]:
+def _capabilities(team: dict[str, Any], chip_state: dict[str, Any], historical_entry: dict[str, Any] | None = None) -> list[str]:
     capabilities = {
         "universe_identity",
         "universe_price_position",
@@ -93,6 +93,9 @@ def _capabilities(team: dict[str, Any], chip_state: dict[str, Any]) -> list[str]
         capabilities.add("sell_cost_affordability")
     if bool(chip_state.get("legal")):
         capabilities.add("chip_context")
+    coverage = (historical_entry or {}).get("coverage") if isinstance((historical_entry or {}).get("coverage"), dict) else {}
+    if int(coverage.get("available") or 0) > 0:
+        capabilities.add("historical_submitted_team")
     return sorted(capabilities)
 
 
@@ -113,6 +116,9 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     auth_runtime = payload.get("auth_runtime") if isinstance(payload.get("auth_runtime"), dict) else {}
     dynamic = payload.get("dynamic") if isinstance(payload.get("dynamic"), dict) else {}
     base = payload.get("base") if isinstance(payload.get("base"), dict) else {}
+    historical_entry = payload.get("historical_entry") if isinstance(payload.get("historical_entry"), dict) else None
+    if historical_entry is None:
+        historical_entry = dynamic.get("historical_entry") if isinstance(dynamic.get("historical_entry"), dict) else {}
     submitted = dynamic.get("submitted_picks") if isinstance(dynamic.get("submitted_picks"), dict) else None
     lock = payload.get("locked_squad") if isinstance(payload.get("locked_squad"), dict) else locked_squad()
     team = build_team_state(
@@ -125,6 +131,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         transfers=base.get("entry_transfers") if isinstance(base.get("entry_transfers"), list) else [],
         entry=base.get("entry") if isinstance(base.get("entry"), dict) else None,
     )
+    team["historical_entry"] = historical_entry
     live = personalized_live_score(
         picks=submitted,
         event_live=dynamic.get("event_live") if isinstance(dynamic.get("event_live"), dict) else None,
@@ -139,5 +146,6 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "live": live,
         "rules": _rules_view(),
         "chip_state": chip_state,
-        "capabilities": _capabilities(team, chip_state),
+        "historical_entry": historical_entry,
+        "capabilities": _capabilities(team, chip_state, historical_entry),
     }

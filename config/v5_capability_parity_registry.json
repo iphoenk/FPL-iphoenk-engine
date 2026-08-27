@@ -1,11 +1,18 @@
 {
-  "schema_version": 2,
-  "model": "v5_v3_v4_capability_parity_v2",
+  "schema_version": 3,
+  "model": "v5_v3_v4_capability_parity_v3",
   "authorities": {
     "production": "v3.22.0",
     "production_main_sha": "6639f899669daa6ae9f991009900437413057e86",
     "research_reference": "v4",
     "candidate": "5.0.0-beta.6"
+  },
+  "observed_production": {
+    "version": "v3.22.0",
+    "schema_version": 49,
+    "main_sha": "0a93717de07ff971823da8d415d16faa1f0645be",
+    "through_rec": "REC-38",
+    "rebaseline_complete": false
   },
   "required_domains": [
     "phase_aware_truth",
@@ -28,7 +35,8 @@
     "execution_profile_equivalence",
     "artifact_reuse_validation",
     "normalized_player_feature_plumbing",
-    "runtime_publish_integrity"
+    "runtime_publish_integrity",
+    "historical_submitted_team"
   ],
   "advanced_candidate_domains": [
     "truthful_feature_bundle",
@@ -88,12 +96,61 @@
       "rationale": "During beta, V5 publishes isolated shadow state to v5-shadow-runtime; V3 runtime-data remains production authority until explicit cutover."
     }
   ],
+  "production_rec_coverage": {
+    "REC-01": {"production_status":"DONE_PROD","v5_status":"ADOPTED_AND_EXTENDED","blocking":false,"evidence":["src/v5/intelligence/defensive_contribution.py","tests/test_v5_defensive_contribution.py"]},
+    "REC-02": {"production_status":"DONE_PROD","v5_status":"OPEN_BLOCKER","blocking":true,"reason":"V5 base attacking-rate blend does not yet carry V3 robust extreme-observation bounds and breakout relaxation."},
+    "REC-03": {"production_status":"DEFERRED","v5_status":"NOT_REQUIRED_UNTIL_SETTLED_OBJECTIVE_EVIDENCE","blocking":false},
+    "REC-04": {"production_status":"MONITOR","v5_status":"ADOPTED_MONITOR","blocking":false,"evidence":["src/v5/evaluation/prediction_settlement.py","src/v5/evaluation/temporal_backtest.py"]},
+    "REC-05": {"production_status":"DONE_PROD","v5_status":"OPEN_BLOCKER","blocking":true,"reason":"No V5 mini-league rank/gap/trend tracking bounded context is registered yet."},
+    "REC-06": {"production_status":"DONE_PROD","v5_status":"ADOPTED","blocking":false,"evidence":["config/v5_acceptance_registry.json","src/v5/reporting.py"]},
+    "REC-07": {"production_status":"MONITOR","v5_status":"ADOPTED_MONITOR","blocking":false,"evidence":["src/v5/intelligence/prediction_quality.py"]},
+    "REC-08": {"production_status":"DONE_PROD","v5_status":"ADOPTED","blocking":false,"evidence":["config/v5_auth_policy_registry.json","src/v5/official_auth.py"]},
+    "REC-09a": {"production_status":"DONE_PROD","v5_status":"SUPERSEDED","blocking":false,"evidence":["config/v5_persistence_registry.json"]},
+    "REC-09b": {"production_status":"DEFERRED_NOT_REQUIRED","v5_status":"NOT_REQUIRED","blocking":false},
+    "REC-10": {"production_status":"DEFERRED","v5_status":"SUPERSEDED_BY_NATIVE_V5_ENTRYPOINTS","blocking":false},
+    "REC-11": {"production_status":"DONE_PROD","v5_status":"ADOPTED_AND_EXTENDED","blocking":false,"evidence":["src/v5/acceptance.py",".github/workflows/v5-unified-gate.yml"]},
+    "REC-12": {"production_status":"DONE_FUNCTIONAL","v5_status":"ADOPTED","blocking":false,"evidence":["config/v5_acceptance_registry.json"]},
+    "REC-13": {"production_status":"DONE_PROD","v5_status":"SUPERSEDED_BY_ISOLATED_BETA_TEST_NAMESPACE","blocking":false},
+    "REC-14": {"production_status":"REJECTED_AS_WRITTEN","v5_status":"NOT_APPLICABLE","blocking":false},
+    "REC-15": {"production_status":"DONE_PROD","v5_status":"ADOPTED","blocking":false,"evidence":["config/v5_performance_budgets.json"]},
+    "REC-16": {"production_status":"DONE_PROD","v5_status":"SUPERSEDED","blocking":false,"evidence":["config/v5_runner_registry.json"]},
+    "REC-17": {"production_status":"DONE_PROD_CORE","v5_status":"SUPERSEDED","blocking":false,"evidence":["config/v5_persistence_registry.json"]},
+    "REC-18": {"production_status":"DONE_PROD_CORE","v5_status":"SUPERSEDED","blocking":false,"evidence":["src/v5/config_cache.py","config/sources/registry.json"]},
+    "REC-19": {"production_status":"DONE_PROD_CORE","v5_status":"SUPERSEDED","blocking":false,"evidence":["config/v5_persistence_registry.json"]},
+    "REC-20": {"production_status":"DONE_PROD_CONSUMED","v5_status":"ADOPTED_AND_EXTENDED","blocking":false,"evidence":["src/v5/intelligence/feature_bundle.py"]},
+    "REC-21": {"production_status":"DONE_PROD","v5_status":"ADOPTED_AND_EXTENDED","blocking":false,"evidence":["src/v5/intelligence/feature_bundle.py","src/v5/sources/fusion.py"]},
+    "REC-22": {"production_status":"MONITOR","v5_status":"OPEN_BLOCKER","blocking":true,"reason":"V5 has price trajectory health but no realized direction/timing calibration ledger equivalent to production REC-22."},
+    "REC-23": {"production_status":"MONITOR","v5_status":"ADOPTED_MONITOR","blocking":false,"evidence":["src/v5/authenticated_official.py","config/v5_auth_policy_registry.json"]},
+    "REC-24": {"production_status":"DONE_PROD","v5_status":"ADOPTED_AND_EXTENDED","blocking":false,"evidence":["config/v5_release_integrity_registry.json","config/v5_persistence_registry.json"]},
+    "REC-25": {"production_status":"DONE_PROD","v5_status":"ADOPTED","blocking":false,"evidence":["src/v5/framework_health.py","src/v5/sources/fusion.py"]},
+    "REC-26": {"production_status":"MONITOR","v5_status":"ADOPTED_MONITOR","blocking":false,"evidence":["config/v5_acceptance_registry.json","src/v5/services/governance.py"]},
+    "REC-27": {"production_status":"DEFERRED_CONDITIONAL","v5_status":"NOT_REQUIRED_UNTIL_NEW_BOUNDED_CONTEXT","blocking":false},
+    "REC-28": {"production_status":"DONE_PROD","v5_status":"SUPERSEDED","blocking":false,"evidence":[".github/workflows/v5-unified-gate.yml",".github/workflows/v5-shadow-cycle.yml"]},
+    "REC-29": {"production_status":"DONE_PROD","v5_status":"SUPERSEDED_UNTIL_CUTOVER","blocking":false,"evidence":["config/v5_persistence_registry.json"]},
+    "REC-30": {"production_status":"DONE_PROD","v5_status":"ADOPTED","blocking":false,"evidence":["config/v5_performance_budgets.json","tests/test_v5_runtime_performance_policy.py"]},
+    "REC-31": {"production_status":"DONE_PROD","v5_status":"SUPERSEDED","blocking":false,"evidence":["config/v5_artifact_contract_registry.json"]},
+    "REC-32": {"production_status":"DONE_PROD","v5_status":"SUPERSEDED","blocking":false,"evidence":["config/v5_persistence_registry.json","src/v5/config_cache.py"]},
+    "REC-33": {"production_status":"DONE_ENGINEERING_MONITOR","v5_status":"ADOPTED_AND_EXTENDED","blocking":false,"evidence":["config/intelligence/weather_context.json","src/v5/sources/fusion.py","config/v5_performance_budgets.json"]},
+    "REC-34": {"production_status":"DONE_PROD","v5_status":"SUPERSEDED_BY_VERSIONED_FEATURE_BUNDLE","blocking":false,"evidence":["src/v5/intelligence/feature_bundle.py","config/v5_artifact_contract_registry.json"]},
+    "REC-35": {"production_status":"DONE_PROD","v5_status":"ADOPTED_EQUIVALENT_NETWORK_CONTRACT","blocking":false,"evidence":["src/v5/intelligence/projection.py"]},
+    "REC-36": {"production_status":"DONE_PROD","v5_status":"ADOPTED","blocking":false,"evidence":["src/v5/official_history.py","src/v5/services/ingestion.py","src/v5/services/truth.py","tests/test_v5_official_history.py"]},
+    "REC-37": {"production_status":"DONE_PROD","v5_status":"SUPERSEDED_BY_DIRECT_INGESTION_AND_V5_SNAPSHOT_SCHEMA","blocking":false,"evidence":["config/v5_runner_registry.json","config/v5_persistence_registry.json"]},
+    "REC-38": {"production_status":"DONE_PROD","v5_status":"PARTIAL_BLOCKED_BY_OPEN_PARITY","blocking":true,"reason":"Explicit REC coverage now exists, but V5 cannot rebaseline to current main until REC-02, REC-05 and REC-22 are closed with evidence."}
+  },
+  "parity_drift": {
+    "open_blockers": ["REC-02", "REC-05", "REC-22", "REC-38"],
+    "promotion_blocked": true,
+    "next_execution_order": ["REC-02", "REC-05", "REC-22", "REC-38_REBASELINE"]
+  },
   "governance": {
     "v4_is_reference_not_authority": true,
-    "v3_22_model_behavior_changed": false,
+    "v3_22_model_behavior_changed": true,
     "v3_22_schema_changed": false,
     "v3_22_runtime_optimization_must_not_reduce_decision_quality": true,
     "missing_parity_evidence_blocks_promotion": true,
+    "production_rec_coverage_must_be_explicit": true,
+    "observed_production_may_advance_ahead_of_adopted_baseline": true,
+    "rebaseline_requires_zero_open_blockers": true,
     "new_advanced_domains_require_settled_evidence_before_authority": true,
     "runtime_implementation_may_be_superseded_when_v5_preserves_or_strengthens_the_contract": true
   }

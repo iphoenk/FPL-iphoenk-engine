@@ -29,8 +29,9 @@ def test_full_core_enrichment_uses_real_advanced_stats_and_fail_neutral_missing_
     result = build_full_core_enrichment(bootstrap, fixtures)
     assert result["status"] == "ACTIVE"
     assert set(result["capabilities"]) == {
-        "advanced_stats_sync", "european_congestion", "domestic_cup_congestion", "international_load",
-        "rest_days", "preseason_prior", "current_form", "source_fusion",
+        "advanced_stats_sync", "player_defensive_contribution_evidence", "european_congestion",
+        "domestic_cup_congestion", "international_load", "rest_days", "preseason_prior",
+        "current_form", "source_fusion",
     }
     assert result["governance"]["missing_external_evidence_is_unavailable_not_zero"] is True
     assert result["governance"]["official_fpl_identity_price_rules_never_overridden"] is True

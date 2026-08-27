@@ -1,0 +1,53 @@
+name: V5 Production Parity Check
+
+on:
+  push:
+    branches: ['v5-*']
+    paths:
+      - 'IMPLEMENTATION_STATUS.json'
+      - 'src/v5/**'
+      - 'config/v5_*.json'
+      - 'config/intelligence/**'
+      - 'tests/test_v5_*.py'
+      - '.github/workflows/v5-production-parity-check.yml'
+  pull_request:
+    branches: [v5-beta6-roadmap]
+    paths:
+      - 'IMPLEMENTATION_STATUS.json'
+      - 'src/v5/**'
+      - 'config/v5_*.json'
+      - 'config/intelligence/**'
+      - 'tests/test_v5_*.py'
+      - '.github/workflows/v5-production-parity-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: "${{ github.workspace }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+      - name: Production parity regressions
+        run: |
+          python -m pytest -q \
+            tests/test_v5_official_history.py \
+            tests/test_v5_production_rec_parity.py \
+            tests/test_v5_v3181_convergence.py \
+            tests/test_v5_microservices.py
+      - name: Full regression suite
+        run: python -m pytest -q

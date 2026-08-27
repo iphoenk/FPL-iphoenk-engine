@@ -1,13 +1,16 @@
 {
   "engine": "FPL iphoenk Engine",
-  "v5_version": "5.0.0-beta.4",
-  "state": "ADVANCED_BETA4_IMPLEMENTATION_PUBLISHED_ACCEPTANCE_PENDING",
+  "v5_version": "5.0.0-beta.6",
+  "state": "BETA6_PRODUCTION_PARITY_RECONCILIATION_IN_PROGRESS",
   "production_authority": {
-    "version": "v3.20.0",
-    "main_sha": "15e75599045f901958753c2bcb275fceacc94d7c",
-    "schema_version": 48
+    "version": "v3.22.0",
+    "schema_version": 49,
+    "adopted_baseline_sha": "6639f899669daa6ae9f991009900437413057e86",
+    "observed_main_sha": "0a93717de07ff971823da8d415d16faa1f0645be",
+    "observed_through_rec": "REC-38",
+    "rebaseline_complete": false
   },
-  "advanced_beta4": {
+  "advanced_beta6": {
     "runtime_release_fingerprint": true,
     "release_attestation": true,
     "truthful_feature_bundle": true,
@@ -17,20 +20,28 @@
     "frozen_baseline_non_regression": true,
     "correlated_monte_carlo_shadow": true,
     "isolated_team_review": true,
-    "v3_v4_capability_parity_registry": true
+    "v3_v4_capability_parity_registry": true,
+    "official_historical_submission_reconciliation": "ADOPTED"
+  },
+  "production_parity": {
+    "explicit_rec_coverage": true,
+    "rec36_historical_submitted_team": "ADOPTED",
+    "open_blockers": ["REC-02", "REC-05", "REC-22", "REC-38"],
+    "next_execution_order": ["REC-02", "REC-05", "REC-22", "REC-38_REBASELINE"]
   },
   "acceptance": {
-    "fresh_postvalidated_real_shadow_cycles": 0,
-    "required_postvalidated_real_shadow_cycles": 3,
+    "fresh_exact_fingerprint_real_shadow_cycles": 0,
+    "required_real_shadow_cycles": 3,
     "prediction_acceptance": "BLOCKED_PENDING_SETTLED_EVIDENCE_AND_FROZEN_BASELINE",
+    "operational_acceptance": "BLOCKED_PENDING_PRODUCTION_PARITY_REBASELINE",
     "production_candidate_eligible": false,
     "production_promotion_allowed": false,
     "manual_production_promotion_required": true
   },
   "notes": [
-    "Advanced prediction remains a shadow overlay and does not replace base authoritative xPts during beta.4.",
-    "Correlated simulation is implemented for shadow evidence and is not decision authority until calibrated.",
-    "Team review is isolated and read-only; it cannot mutate decision authority.",
-    "Production remains V3.20.0 until all operational and empirical prediction gates pass and a separate explicit manual promotion occurs."
+    "V3.22.0 remains production authority and has advanced through REC-38 without a schema-version change.",
+    "The V5 adopted production baseline remains intentionally pinned to the earlier exact V3.22.0 SHA until open parity blockers are closed.",
+    "REC-36 historical submitted-team reconciliation is adopted, decision-neutral, and never overrides current pre-deadline user/authenticated authority.",
+    "Advanced prediction and correlated simulation remain shadow-only until empirical calibration and non-regression gates pass."
   ]
 }

@@ -3,7 +3,7 @@ name: V5 Real Shadow Cycle
 on:
   workflow_dispatch:
   push:
-    branches: [v5-unified-engine]
+    branches: [v5-unified-engine, v5-beta6-roadmap]
     paths:
       - 'config/v5_shadow_trigger.json'
 
@@ -150,7 +150,7 @@ jobs:
           V5_SERVICE_WATCHLIST_URL: http://127.0.0.1:8110
         run: python -m src.v5.shadow_cycle
 
-      - name: Validate shadow acceptance invariants, reporting and source health
+      - name: Validate shadow acceptance invariants, performance, reporting and source health
         id: validate_shadow
         run: |
           python - <<'PY'
@@ -159,8 +159,10 @@ jobs:
           w=json.load(open('data/v5/dss_watchlist.json'))
           f=json.load(open('data/v5/framework_health.json'))
           trigger=json.load(open('config/v5_shadow_trigger.json'))
-          source_cfg=json.load(open('config/intelligence/source_fusion.json'))
-          source_acceptance=source_cfg.get('shadow_acceptance') or {}
+          acceptance_cfg=json.load(open('config/v5_acceptance_registry.json'))
+          perf_cfg=json.load(open('config/v5_performance_budgets.json'))
+          source_acceptance=acceptance_cfg.get('source_shadow_acceptance') or {}
+          budgets=perf_cfg.get('budgets') or {}
           checks=p['operational_invariants']['checks']
           positions=w.get('positions') or {}
           position_counts={pos:len(positions.get(pos) or []) for pos in ('GK','DEF','MID','FWD')}
@@ -170,6 +172,10 @@ jobs:
           user=p['v5'].get('user_report') or {}
           source=p['v5'].get('source_fusion_health') or {}
           api=source.get('api_football') or {}
+          service_perf=p['v5'].get('service_performance') or {}
+          wall_ms=float(service_perf.get('orchestrator_wall_ms') or 0.0)
+          hard_ms=float(budgets['decision_pipeline_hard_limit_seconds']) * 1000.0
+          hot_ms=float(budgets['decision_pipeline_hot_target_seconds']) * 1000.0
           report_xi=((user.get('starting_xi') or {}).get('starting_xi') or [])
           expected=os.environ['V3_BASELINE_VERSION'].removeprefix('v')
           allowed_api_unavailability={str(value) for value in source_acceptance.get('api_football_acceptable_unavailability_classes') or []}
@@ -194,6 +200,12 @@ jobs:
             'report_owned_count':(user.get('owned_squad') or {}).get('count'),
             'report_mode':user.get('report_mode'),
             'report_xi_count':len(report_xi),
+            'runtime_performance':{
+              'orchestrator_wall_ms':wall_ms,
+              'hard_limit_ms':hard_ms,
+              'hot_target_ms':hot_ms,
+              'hot_target_met':wall_ms > 0 and wall_ms <= hot_ms,
+            },
             'source_fusion':source,
             'api_football_acceptance':{
               'status':api_status,
@@ -203,6 +215,8 @@ jobs:
           })
           assert str(p['v3'].get('engine_version') or '') == expected, (p['v3'].get('engine_version'), expected)
           assert all(checks.values()), f'V5 operational invariant failure: {checks}'
+          assert wall_ms > 0.0, f'missing real runtime telemetry: {service_perf}'
+          assert wall_ms <= hard_ms, f'V5 real runtime exceeded hard limit: {wall_ms:.1f}ms > {hard_ms:.1f}ms'
           assert all(position_counts[pos] == 5 for pos in position_counts), f'watchlist positional contract failed: {position_counts}'
           assert core.get('counts') == {'ACTIVE':50}, f'DSS core must be 50/50 ACTIVE: {core.get("counts")}'
           assert ext.get('counts') == {'ACTIVE':16}, f'DSS extensions must be 16/16 ACTIVE: {ext.get("counts")}'

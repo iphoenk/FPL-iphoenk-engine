@@ -27,6 +27,37 @@ def _action_definition(action: str, actions: dict) -> dict:
     return row
 
 
+def _planning_authority(locked: dict, scorecard: dict) -> dict:
+    planning = scorecard.get("planning_gw") or {}
+    basis = planning.get("squad_basis") or {}
+    if basis.get("effective_authority"):
+        expected = str(basis["effective_authority"])
+        override_applied = bool(basis.get("override_applied"))
+        target_gw = basis.get("override_target_gw")
+        source = basis.get("authority_source")
+        baseline_gw = basis.get("baseline_gw")
+        planning_gw = basis.get("planning_gw")
+    else:
+        # Backward-compatible fallback for unit callers without a scorecard.
+        override_applied = bool(locked.get("wildcard_active"))
+        expected = "LOCKED_PRE_DEADLINE" if override_applied else "OFFICIAL_SUBMITTED"
+        target_gw = locked.get("target_gw")
+        source = locked.get("authority_source") if override_applied else "OFFICIAL_FPL_PICKS"
+        baseline_gw = None
+        planning_gw = None
+    active_chip = str(planning.get("active_chip") or "NONE").upper()
+    wildcard_for_planning = active_chip == "WILDCARD" or (override_applied and bool(locked.get("wildcard_active")))
+    return {
+        "expected_authority": expected,
+        "override_applied": override_applied,
+        "override_target_gw": target_gw,
+        "authority_source": source,
+        "baseline_gw": baseline_gw,
+        "planning_gw": planning_gw,
+        "wildcard_active": wildcard_for_planning,
+    }
+
+
 def govern_checkpoint(
     latest: dict,
     health: dict,
@@ -54,8 +85,9 @@ def govern_checkpoint(
     health_go = health.get("go_allowed") is True
     simulation = context.get("is_simulation") is True
     post_final = context.get("post_final_emergency_only") is True
-    wildcard_active = bool(locked.get("wildcard_active"))
-    expected_authority = "LOCKED_PRE_DEADLINE" if wildcard_active else "OFFICIAL_SUBMITTED"
+    authority = _planning_authority(locked, scorecard)
+    wildcard_active = authority["wildcard_active"]
+    expected_authority = authority["expected_authority"]
     authority_ok = latest.get("squad_authority") == expected_authority
     verdict = sanity.get("final_verdict") or "KEEP_15"
 
@@ -113,10 +145,16 @@ def govern_checkpoint(
         "structure_action": action_definition.get("structure_action"),
         "squad": {
             "authority": latest.get("squad_authority"),
+            "expected_authority": expected_authority,
             "authority_ok": authority_ok,
+            "baseline_gw": authority.get("baseline_gw"),
+            "planning_gw": authority.get("planning_gw"),
+            "planning_override_applied": authority.get("override_applied"),
+            "planning_override_target_gw": authority.get("override_target_gw"),
+            "authority_source": authority.get("authority_source"),
             "wildcard_active": wildcard_active,
             "locked_players": len(locked.get("players") or []),
-            "composition_status": "LOCKED_15" if wildcard_active else "SUBMITTED_OR_CURRENT",
+            "composition_status": "LOCKED_15" if expected_authority == "LOCKED_PRE_DEADLINE" else "SUBMITTED_OR_CURRENT",
             "hit_recommendation": "NOT_APPLICABLE_WILDCARD_ACTIVE" if wildcard_active else "UNASSESSED",
         },
         "decision": {
@@ -165,6 +203,8 @@ def govern_checkpoint(
             "locked_15_separate_from_lineup_lock": True,
             "wildcard_active_means_no_hit": True,
             "scorecard_is_reporting_only": True,
+            "planning_authority_target_gw_aware": True,
+            "stale_wildcard_flag_does_not_force_future_lock": True,
         },
     }
 
@@ -187,6 +227,7 @@ def run(now: str | None = None) -> dict:
         "governed_verdict": (out.get("decision") or {}).get("governed_verdict"),
         "previous_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("previous"),
         "planning_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("planning"),
+        "squad_basis": (out.get("squad") or {}).get("authority_source"),
     }, ensure_ascii=False))
     return out
 

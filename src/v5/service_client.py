@@ -1,14 +1,21 @@
 from __future__ import annotations
 
 import os
+import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import perf_counter
 from typing import Any, Mapping
 
+from src.v5.config_cache import load_json_config
 from src.v5.runtime_payloads import compact_payload
 from src.v5.service_registry import get_service, registry
 from src.v5.service_transport import post as transport_post, retry_policy
+
+TRANSPORT_CONFIG = "config/v5_service_transport_registry.json"
+
+_executor_lock = threading.Lock()
+_executor: ThreadPoolExecutor | None = None
 
 
 def _env_name(service_id: str) -> str:
@@ -19,6 +26,28 @@ def service_url(service_id: str) -> str:
     spec = get_service(service_id)
     default = f"http://{service_id}:{spec.port}"
     return os.getenv(_env_name(service_id), default).rstrip("/")
+
+
+def _shared_executor() -> ThreadPoolExecutor:
+    global _executor
+    if _executor is not None:
+        return _executor
+    with _executor_lock:
+        if _executor is None:
+            cfg = load_json_config(TRANSPORT_CONFIG).get("client_worker_pool") or {}
+            workers = max(1, int(cfg.get("max_workers") or 16))
+            prefix = str(cfg.get("thread_name_prefix") or "v5-service-client")
+            _executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix=prefix)
+    return _executor
+
+
+def reset_worker_pool_for_tests() -> None:
+    global _executor
+    with _executor_lock:
+        executor = _executor
+        _executor = None
+    if executor is not None:
+        executor.shutdown(wait=True, cancel_futures=True)
 
 
 def invoke_envelope(
@@ -89,8 +118,8 @@ def _parallel_futures(
     *,
     correlation_id: str,
 ):
-    pool = ThreadPoolExecutor(max_workers=len(calls))
-    futures = {
+    pool = _shared_executor()
+    return {
         pool.submit(
             invoke_envelope,
             service_id,
@@ -100,7 +129,6 @@ def _parallel_futures(
         ): name
         for name, (service_id, operation, payload) in calls.items()
     }
-    return pool, futures
 
 
 def invoke_parallel_envelopes(
@@ -112,12 +140,9 @@ def invoke_parallel_envelopes(
         return {}
     correlation = correlation_id or uuid.uuid4().hex
     results: dict[str, dict[str, Any]] = {}
-    pool, futures = _parallel_futures(calls, correlation_id=correlation)
-    try:
-        for future in as_completed(futures):
-            results[futures[future]] = future.result()
-    finally:
-        pool.shutdown(wait=True)
+    futures = _parallel_futures(calls, correlation_id=correlation)
+    for future in as_completed(futures):
+        results[futures[future]] = future.result()
     return results
 
 
@@ -135,33 +160,30 @@ def invoke_parallel_outcomes(
         return {}
     correlation = correlation_id or uuid.uuid4().hex
     results: dict[str, dict[str, Any]] = {}
-    pool, futures = _parallel_futures(calls, correlation_id=correlation)
-    try:
-        for future in as_completed(futures):
-            name = futures[future]
-            try:
-                envelope = future.result()
-            except Exception as exc:
-                service_id, operation, _ = calls[name]
-                results[name] = {
-                    "ok": False,
-                    "service_id": service_id,
-                    "operation": operation,
-                    "envelope": None,
-                    "error_type": type(exc).__name__,
-                    "error": str(exc),
-                }
-            else:
-                results[name] = {
-                    "ok": True,
-                    "service_id": envelope.get("service_id"),
-                    "operation": envelope.get("operation"),
-                    "envelope": envelope,
-                    "error_type": None,
-                    "error": None,
-                }
-    finally:
-        pool.shutdown(wait=True)
+    futures = _parallel_futures(calls, correlation_id=correlation)
+    for future in as_completed(futures):
+        name = futures[future]
+        try:
+            envelope = future.result()
+        except Exception as exc:
+            service_id, operation, _ = calls[name]
+            results[name] = {
+                "ok": False,
+                "service_id": service_id,
+                "operation": operation,
+                "envelope": None,
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            }
+        else:
+            results[name] = {
+                "ok": True,
+                "service_id": envelope.get("service_id"),
+                "operation": envelope.get("operation"),
+                "envelope": envelope,
+                "error_type": None,
+                "error": None,
+            }
     return results
 
 

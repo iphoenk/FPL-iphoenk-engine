@@ -1,18 +1,21 @@
 {
-  "version": "3.21.0",
+  "version": "3.22.0",
   "schema_version": 49,
   "release_metadata_source": "src/version.py",
   "production_acceptance": {
-    "status": "COMPLETE",
-    "accepted_at": "2026-08-27",
-    "source_commit": "da2be79045c0eb1015b75697eb24b030ffaa4abe",
-    "workflow_run_id": 33047071671,
+    "status": "PENDING_POST_MERGE_RUNTIME_VALIDATION",
+    "candidate_pr": 47,
+    "candidate_ci_runs": [33055271837, 33055599122],
+    "accepted_baseline_version": "3.21.0",
+    "accepted_baseline_source_commit": "da2be79045c0eb1015b75697eb24b030ffaa4abe",
     "runtime_branch": "runtime-data",
-    "runtime_wall_ms": 16605.775,
-    "performance_target_ms": 45000,
-    "weather_available_fixtures": 10,
-    "weather_unresolved_venues": 0,
-    "master_monitor_synced": true
+    "candidate_full_runtime_ms": [18655.833, 18151.291],
+    "candidate_fast_runtime_ms": [5160.113, 5112.717],
+    "fast_target_ms": 10000,
+    "schema_changed": false,
+    "model_behavior_changed": false,
+    "rec20_decision_neutral": true,
+    "master_monitor_synced": false
   },
   "P0": {
     "status": "IMPLEMENTED",
@@ -90,7 +93,16 @@
       "projection-confidence calibration guard with GW5 review trigger",
       "settled frozen-prediction validation status exposed in every serving report",
       "report contract explicitly separates formula correctness from predictive accuracy",
-      "V3.21.0/schema49 production acceptance validated on runtime-data and FPL Master Monitor synchronized to the accepted contract"
+      "V3.21.0/schema49 production acceptance validated on runtime-data and FPL Master Monitor synchronized to the accepted contract",
+      "REC-15 profile-specific runtime SLO and resource profiler",
+      "REC-16 FAST/LIVE/FULL/DEEP execution profiles",
+      "REC-17 phase-1 official-detail fresh-artifact reuse",
+      "REC-18 phase-1 source/weather freshness reuse",
+      "REC-19 phase-1 persisted runtime-artifact reuse",
+      "REC-20 normalized player-feature plumbing with explicit decision-neutral guard",
+      "REC-28 split CI, FAST runtime and FULL/DEEP refresh workflows",
+      "REC-29 shallow checkout, publish whitelist and rolling runtime-data snapshot design",
+      "REC-30 runtime resource regression guard"
     ]
   },
   "P1": {
@@ -103,7 +115,8 @@
       "FastAPI live endpoints",
       "SSE live stream",
       "team/universe split outputs",
-      "weather-performance anomaly correlation framework awaiting settled-match calibration"
+      "weather-performance anomaly correlation framework awaiting settled-match calibration",
+      "normalized player_features artifact awaiting explicit REC-01/REC-02 model opt-in"
     ]
   },
   "P2": {

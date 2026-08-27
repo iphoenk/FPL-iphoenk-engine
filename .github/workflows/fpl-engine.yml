@@ -1,4 +1,4 @@
-name: FPL iphoenk collector v3.20.2 microservices
+name: FPL iphoenk collector v3.21.0 microservices
 
 on:
   workflow_dispatch:
@@ -128,7 +128,7 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin "$RUNTIME_BRANCH"
-          for file in price_cache.json price_trajectory.json rules_source_state.json prediction_ledger.json challenger_observations.json report_state.json dss_watchlist.json; do
+          for file in price_cache.json price_trajectory.json rules_source_state.json prediction_ledger.json challenger_observations.json fixture_weather.json report_state.json dss_watchlist.json; do
             if git cat-file -e "origin/${RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
               git show "origin/${RUNTIME_BRANCH}:data/${file}" > "data/${file}"
               echo "Hydrated data/${file} from ${RUNTIME_BRANCH}"
@@ -193,7 +193,6 @@ jobs:
           publish_tree="$(mktemp -d)"
           trap 'git worktree remove --force "$publish_tree" >/dev/null 2>&1 || true; rm -rf "$runtime_tmp" "$publish_tree"' EXIT
           cp -a data/. "$runtime_tmp/"
-
           git config user.name "fpl-iphoenk-bot"
           git config user.email "actions@users.noreply.github.com"
           git fetch origin "$RUNTIME_BRANCH"
@@ -201,7 +200,6 @@ jobs:
             echo "ERROR: runtime branch $RUNTIME_BRANCH does not exist"
             exit 2
           fi
-
           git worktree add --detach "$publish_tree" "origin/$RUNTIME_BRANCH"
           cd "$publish_tree"
           for attempt in 1 2 3; do
@@ -211,18 +209,15 @@ jobs:
             mkdir -p data
             cp -a "$runtime_tmp/." data/
             git add data/
-
             if git diff --cached --quiet; then
               echo "No runtime data changes"
               exit 0
             fi
-
             git commit -m "data: refresh FPL runtime snapshot [skip ci]"
             if git push origin HEAD:"$RUNTIME_BRANCH"; then
               echo "Runtime bridge published successfully"
               exit 0
             fi
-
             echo "Runtime publish race detected, retrying attempt $((attempt + 1))/3"
             sleep $((attempt * 2))
           done

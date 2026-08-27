@@ -1,7 +1,7 @@
 {
   "schema_version": 4,
   "registry": "fpl_v4_9_4_microservice_registry_v4",
-  "architecture_version": "4.9.4",
+  "architecture_version": "4.9.4.1",
   "execution_model": "process_isolated_single_host",
   "services": [
     {"id":"raw_snapshot","name":"Raw Snapshot Service","boundary_state":"INDEPENDENT","module":"src.services.raw_snapshot_service","command":["{python}","-m","src.services.raw_snapshot_service","{mode}"],"runtime_flags":{"as_of":"--as-of"},"timeout_seconds":90,"depends_on":[],"produces":["raw_snapshot"],"critical":true},
@@ -28,6 +28,9 @@
     "finished_gw_archive_immutable": true,
     "scorecard_simulation_never_mutates_archive": true,
     "scorecard_projection_from_lineup_contract": true,
+    "projection_default_baseline_previous_submitted_gw": true,
+    "planning_override_requires_target_gw": true,
+    "stale_planning_override_rejected": true,
     "advanced_ablation_observational_outside_decision_chain": true,
     "advanced_ablation_full_shadow_parity_required": true,
     "advanced_ablation_diagnostic_not_arbitrary_gate": true,

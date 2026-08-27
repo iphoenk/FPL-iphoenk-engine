@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 
 from src.engines.snapshot_meta import age_minutes, changes, snapshot_id, source_meta
 from src.rules import ruleset_metadata
 from src.settings import FAIL_CLOSED, PRICE_SUMMARY_LIST_SIZE, TEAM_ID
-from src.utils import DATA, append_jsonl, atomic_json, iso_now, read_json
+from src.utils import DATA, ROOT, append_jsonl, atomic_json, iso_now, read_json
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 ENTRY_FIELDS = [
@@ -18,6 +19,51 @@ ENTRY_FIELDS = [
     "last_deadline_value",
     "last_deadline_total_transfers",
 ]
+
+
+def _reusable_state_from_previous(previous: dict) -> tuple[dict, dict, dict]:
+    """Carry only registry-declared state owned by services reusable in the active profile.
+
+    FAST/LIVE hydrate a previously accepted latest.json before base fan-in. The base snapshot
+    is rebuilt from fresh authoritative core data, but reusable downstream services may be
+    skipped later. Their declared latest keys therefore need to survive until either the
+    reused artifact is accepted or a fresh service promotion overwrites them.
+    """
+    profile_name = os.getenv("FPL_EXECUTION_PROFILE", "").strip()
+    if not profile_name or not previous:
+        return {}, {}, {}
+    profiles = read_json(ROOT / "config" / "runtime" / "execution_profiles.json", {})
+    services = read_json(ROOT / "config" / "v3_service_registry.json", {})
+    profile = ((profiles.get("profiles") or {}).get(profile_name) or {})
+    reusable = set((profile.get("reuse_services") or {}).keys())
+    if not reusable:
+        return {}, {}, {}
+
+    service_map = services.get("services") or {}
+    previous_files = previous.get("files") if isinstance(previous.get("files"), dict) else {}
+    carried: dict = {}
+    carried_files: dict = {}
+    audit: dict = {}
+    for service_name in sorted(reusable):
+        spec = service_map.get(service_name) or {}
+        owned_keys = []
+        owned_file_keys = []
+        for key in spec.get("latest_keys") or []:
+            key = str(key)
+            if key in previous:
+                carried[key] = previous[key]
+                owned_keys.append(key)
+        for key in spec.get("latest_file_keys") or []:
+            key = str(key)
+            if key in previous_files:
+                carried_files[key] = previous_files[key]
+                owned_file_keys.append(key)
+        if owned_keys or owned_file_keys:
+            audit[service_name] = {
+                "latest_keys": owned_keys,
+                "latest_file_keys": owned_file_keys,
+            }
+    return carried, carried_files, audit
 
 
 def run(mode: str = "daily") -> dict:
@@ -78,6 +124,7 @@ def run(mode: str = "daily") -> dict:
     delta = changes(previous.get("entry") or {}, entry_summary, ENTRY_FIELDS)
     totals = team.get("totals") or {}
     generated_at = iso_now()
+    carried_state, carried_files, carry_audit = _reusable_state_from_previous(previous)
     snapshot = {
         "schema_version": SCHEMA_VERSION,
         "engine_version": ENGINE_VERSION,
@@ -119,6 +166,8 @@ def run(mode: str = "daily") -> dict:
             "advanced_stats_are_community_enrichment": True,
             "leakage_guard_required_for_predictive_training": True,
             "base_snapshot_is_fan_in_only": True,
+            "reused_latest_state_profile": os.getenv("FPL_EXECUTION_PROFILE", "").strip() or None,
+            "reused_latest_state_carried_forward": carry_audit,
         },
         "native": native,
         "provenance": provenance,
@@ -128,6 +177,8 @@ def run(mode: str = "daily") -> dict:
         "ruleset": ruleset,
         "chip_ledger": chips.get("ledger") or {},
     }
+    snapshot.update(carried_state)
+    snapshot["files"].update(carried_files)
     atomic_json(DATA / "latest.json", snapshot)
     atomic_json(DATA / "native.json", {"generated_at": generated_at, "snapshot_id": snapshot["snapshot_id"], **native})
     archive_gw = phase.get("submitted_gw") or phase.get("planning_gw")
@@ -148,6 +199,7 @@ def main() -> int:
         "schema_version": out.get("schema_version"),
         "planning_gw": (out.get("phase") or {}).get("planning_gw"),
         "snapshot_id": out.get("snapshot_id"),
+        "reused_latest_state_carried_forward": (out.get("meta") or {}).get("reused_latest_state_carried_forward"),
     }, ensure_ascii=False))
     return 0
 

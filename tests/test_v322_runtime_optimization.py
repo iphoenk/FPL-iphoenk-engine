@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from src.engines.base_snapshot_service import _reusable_state_from_previous
 from src.engines.production_contract_validate import _validate_runtime_service_states
 from src.runtime_v3 import orchestrator
 from src.runtime_v3.performance_guard import evaluate
@@ -19,6 +20,7 @@ def test_fast_profile_and_slo_are_registry_owned():
     fast = profiles["profiles"]["fast_decision"]
     assert fast["max_parallel_services"] <= 4
     assert set(fast["reuse_services"]) >= {"advanced_stats", "historical_prior", "source_layer", "official_detail"}
+    assert profiles["policy"]["reused_service_latest_state_is_carried_forward"] is True
     assert slo["profiles"]["fast_decision"]["target_wall_ms"] == 10000
     assert slo["profiles"]["fast_decision"]["legacy_ceiling_ms"] == 45000
 
@@ -54,6 +56,49 @@ def test_profile_aware_production_contract_accepts_only_validated_declared_reuse
     undeclared["profile_config"]["reuse_services"] = {}
     with pytest.raises(AssertionError):
         _validate_runtime_service_states(undeclared)
+
+
+def test_rec32_carries_only_registry_owned_reusable_latest_state(monkeypatch):
+    monkeypatch.setenv("FPL_EXECUTION_PROFILE", "fast_decision")
+    previous = {
+        "official_detail_summary": {"detail_requested": 40},
+        "official_health_panel": {"overall": "HEALTHY"},
+        "historical_prior_summary": {"model": "historical_player_priors_v1"},
+        "source_layer_summary": {"overall": "GREEN"},
+        "price_summary": {"must_not_be_carried": True},
+        "arbitrary_stale_state": {"must_not_be_carried": True},
+        "files": {
+            "prior_season": "data/prior_season.json",
+            "vaastav_previous_season": "data/stats/vaastav_previous_season.json",
+            "source_health": "data/source_health.json",
+            "source_registry_runtime": "data/source_registry_runtime.json",
+            "challenger_observations": "data/challenger_observations.json",
+            "fixture_weather": "data/fixture_weather.json",
+            "price_alerts": "data/price_alerts.json",
+        },
+    }
+    state, files, audit = _reusable_state_from_previous(previous)
+    assert set(state) == {
+        "official_detail_summary",
+        "official_health_panel",
+        "historical_prior_summary",
+        "source_layer_summary",
+    }
+    assert set(files) == {
+        "prior_season",
+        "vaastav_previous_season",
+        "source_health",
+        "source_registry_runtime",
+        "challenger_observations",
+        "fixture_weather",
+    }
+    assert "price_summary" not in state and "arbitrary_stale_state" not in state
+    assert "price_alerts" not in files
+    assert set(audit) == {"historical_prior", "source_layer", "official_detail"}
+
+    monkeypatch.setenv("FPL_EXECUTION_PROFILE", "full_refresh")
+    state, files, audit = _reusable_state_from_previous(previous)
+    assert state == {} and files == {} and audit == {}
 
 
 def test_publish_snapshot_is_whitelist_only_and_generates_manifest(tmp_path):

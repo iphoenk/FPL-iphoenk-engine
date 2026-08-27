@@ -2,11 +2,9 @@
 
 Canonical status: ACTIVE
 Canonical roadmap owner: V3 operational stream
-Production baseline: V3.19.0 / schema 48
-Current release candidate: V3.20.0
-Current candidate schema: 48
-Candidate scope: Architecture Hardening + Registry Ownership + Anti-Monolith Runtime
-Candidate acceptance: PENDING
+Current production release: V3.20.0
+Current production schema: 48
+Production acceptance: COMPLETE on 27 August 2026
 
 This file is the single human-readable master roadmap for the V3 operational engine. Every V3 feature, refactor, hardening change, operational improvement, and release-governance change must update this file in the same pull request.
 
@@ -103,33 +101,36 @@ Release objective: eliminate remaining active monolithic runtime ownership and d
 
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
-| V3-ARCH-201 | Canonical Source Registry V3 | ACTIVE | V3.20.0 | network locations, source season/files/timeouts have one registry owner |
-| V3-ARCH-202 | Remove legacy `config/sources.json` | ACTIVE | V3.20.0 | file absent and CI prevents reintroduction |
-| V3-ARCH-203 | Registry-owned collector cadence/window policy | ACTIVE | V3.20.0 | timezone, primary/adaptive/deep cron, deadline/match windows and probe timeout config-owned |
-| V3-ARCH-204 | Dynamic Official User-Agent/version | ACTIVE | V3.20.0 | no stale release string in active Official/collector HTTP path |
-| V3-ARCH-205 | Replace monolithic collector service | ACTIVE | V3.20.0 | no active `collector` service and no active `src.engine` command |
-| V3-ARCH-206 | Official snapshot single owner | ACTIVE | V3.20.0 | standard Official baseline fetched once, downstream consumes snapshot artifact |
-| V3-ARCH-207 | Team-state service boundary | ACTIVE | V3.20.0 | squad identity/finance/chips owned by team_state service |
-| V3-ARCH-208 | Market-state service boundary | ACTIVE | V3.20.0 | universe/current price cache/market pressure owned by market_state |
-| V3-ARCH-209 | Live-state service boundary | ACTIVE | V3.20.0 | personalized live scoring artifact owned by live_state |
-| V3-ARCH-210 | Advanced-stats service boundary | ACTIVE | V3.20.0 | current enrichment aliases and optional deep sync have one owner |
-| V3-ARCH-211 | Base snapshot deterministic fan-in | ACTIVE | V3.20.0 | latest/native/history snapshot assembled without network/business-decision duplication |
-| V3-ARCH-212 | Generic root DAG scheduling | ACTIVE | V3.20.0 | orchestrator has no collector-name special case and validates cycles/dependencies |
-| V3-ARCH-213 | Current advanced-stat aliases | ACTIVE | V3.20.0 | active source/DSS paths use `shots_current`/`playermatchstats_current`, GW files archive only |
-| V3-ARCH-214 | Semantic model IDs | ACTIVE | V3.20.0 | active model identity is independent of engine-release number |
-| V3-ARCH-215 | Deep-stats runtime-data publication | ACTIVE | V3.20.0 | legacy workflow removed, deep sync uses production workflow and runtime-data |
-| V3-ARCH-216 | Architecture anti-regression gate | ACTIVE | V3.20.0 | CI rejects monolithic collector, duplicate source config, fixed-GW current pins, inline code and active version-stamped services |
-| V3-ARCH-217 | Framework mutable-policy ownership audit | ACTIVE | V3.20.0 | active expected counts come from registries and active freshness policy is config-owned or explicitly compatibility-only |
-| V3-ARCH-218 | Microservice over-splitting review | ACTIVE | V3.20.0 | existing DSS/report/governance services stay grouped unless a clear owner/failure boundary justifies split |
-| V3-ARCH-219 | V3.20 release metadata consistency | ACTIVE | V3.20.0 | version 3.20.0/schema48 consistent across source, README, workflow, implementation, tests and roadmap |
-| V3-ARCH-220 | Full CI/integration acceptance | ACTIVE | V3.20.0 | compile, unit, architecture, source, production, watchlist, report, report-time and runtime-budget gates PASS |
-| V3-ARCH-221 | Production acceptance | ACTIVE | V3.20.0 | merge/push/runtime-data publication and GREEN/HEALTHY/GO evidence verified before DONE |
+| V3-ARCH-201 | Canonical Source Registry V3 | DONE | V3.20.0 | network locations, source season/files/timeouts have one registry owner |
+| V3-ARCH-202 | Remove legacy `config/sources.json` | DONE | V3.20.0 | file absent and CI prevents reintroduction |
+| V3-ARCH-203 | Registry-owned collector cadence/window policy | DONE | V3.20.0 | timezone, primary/adaptive/deep cron, deadline/match windows and probe timeout config-owned |
+| V3-ARCH-204 | Dynamic Official User-Agent/version | DONE | V3.20.0 | no stale release string in active Official/collector HTTP path |
+| V3-ARCH-205 | Replace monolithic collector service | DONE | V3.20.0 | no active `collector` service and no active `src.engine` command |
+| V3-ARCH-206 | Official snapshot single owner | DONE | V3.20.0 | standard Official baseline fetched once, downstream consumes snapshot artifact |
+| V3-ARCH-207 | Team-state service boundary | DONE | V3.20.0 | squad identity/finance/chips owned by team_state service |
+| V3-ARCH-208 | Market-state service boundary | DONE | V3.20.0 | universe/current price cache/market pressure owned by market_state |
+| V3-ARCH-209 | Live-state service boundary | DONE | V3.20.0 | personalized live scoring artifact owned by live_state |
+| V3-ARCH-210 | Advanced-stats service boundary | DONE | V3.20.0 | current enrichment aliases and optional deep sync have one owner |
+| V3-ARCH-211 | Base snapshot deterministic fan-in | DONE | V3.20.0 | latest/native/history snapshot assembled without network/business-decision duplication |
+| V3-ARCH-212 | Generic root DAG scheduling | DONE | V3.20.0 | orchestrator has no collector-name special case and validates cycles/dependencies |
+| V3-ARCH-213 | Current advanced-stat aliases | DONE | V3.20.0 | active source/DSS paths use `shots_current`/`playermatchstats_current`, GW files archive only |
+| V3-ARCH-214 | Semantic model IDs | DONE | V3.20.0 | active model identity is independent of engine-release number |
+| V3-ARCH-215 | Deep-stats runtime-data publication | DONE | V3.20.0 | legacy workflow removed, deep sync uses production workflow and runtime-data |
+| V3-ARCH-216 | Architecture anti-regression gate | DONE | V3.20.0 | CI rejects monolithic collector, duplicate source config, fixed-GW current pins, inline code and active version-stamped services |
+| V3-ARCH-217 | Framework mutable-policy ownership audit | DONE | V3.20.0 | active expected counts come from registries and active freshness policy is config-owned or explicitly compatibility-only |
+| V3-ARCH-218 | Microservice over-splitting review | DONE | V3.20.0 | existing DSS/report/governance services stay grouped unless a clear owner/failure boundary justifies split |
+| V3-ARCH-219 | V3.20 release metadata consistency | DONE | V3.20.0 | version 3.20.0/schema48 consistent across source, README, workflow, implementation, tests and roadmap |
+| V3-ARCH-220 | Full CI/integration acceptance | DONE | V3.20.0 | compile, unit, architecture, source, production, watchlist, report, report-time and runtime-budget gates PASS |
+| V3-ARCH-221 | Production acceptance | DONE | V3.20.0 | merge/push/runtime-data publication and GREEN/HEALTHY/GO evidence verified before DONE |
 
 ### V3.20 boundary decision
 The base collector was split because it owned unrelated network, squad/finance, market, live, statistics and snapshot responsibilities. The existing price, prediction, lineup, governance, watchlist, reporting and report-materializer services remain coarse-grained because their internal stages share one decision/artifact owner. They must not be split further solely to reduce file size.
 
 ### V3.20 schema decision
 Engine version changes to `3.20.0`. Serving schema remains `48` because `decision_brief`, `deep_review_payload`, report-time intelligence and the 15+20 user contract do not change. Service Registry schema changes independently to `11`; Source Registry changes independently to `SOURCE_REGISTRY_V3`.
+
+### V3.20 production acceptance evidence
+Production acceptance completed on 27 August 2026. PR #34 merged to `main` as `edeaff7a5b1f8173392cb528f93e132836608ed5`. Production push run `33032958368` passed and published validated artifacts to `runtime-data`. Runtime evidence confirms engine `3.20.0` / schema `48`, overall GREEN, decision engine HEALTHY, recommendation allowed, GO allowed, Gate0 16/16 PASS, Core 50/50 ACTIVE, Extensions 16/16 ACTIVE and Enhancements 8/8 ACTIVE. Source health uses `SOURCE_REGISTRY_V3`, is GREEN/non-blocking, OneFPL is disabled in unattended machine ingestion, and the ephemeral `official_snapshot.json` is absent from `runtime-data`.
 
 ## E. P1 Intelligence quality and calibration
 | ID | Task | Status | Target | Acceptance |
@@ -220,16 +221,15 @@ For external evidence, missing values may never be synthesized solely to keep a 
 For architecture work, a file split is not DONE merely because code moved. The new boundary must have explicit inputs, outputs, ownership, failure semantics, DAG dependencies, tests, and no duplicate active authority.
 
 ## Execution order
-1. Keep V3.19.0 production GREEN while V3.20.0 candidate is tested.
-2. Finish remaining registry/hardcode/framework ownership cleanup.
-3. Pass architecture gate and full unit/regression suite.
-4. Pass full bounded microservice integration and all production contracts.
-5. Merge V3.20 only after all PR checks are GREEN.
-6. Verify production collector, runtime-data publication and framework GREEN/HEALTHY/GO.
-7. Update production acceptance evidence and then continue P1/report-language work.
+1. Keep V3.20.0 production GREEN and monitor the new artifact-owned base-service runtime.
+2. Continue V3-RPT-301 natural Bahasa Indonesia renderer and V3-RPT-306 scheduled-report completeness hardening.
+3. Replace P1 proxy evidence with verified tactical-role, formation, rotation, set-piece, penalty and international-duty evidence where reliable.
+4. Accumulate settled Gameweeks for calibration, model drift and challenger scorecard work.
+5. Keep architecture/configuration ownership gates active on every release.
+6. Pursue P2 only after P1 evidence quality is sufficient and without destabilizing V3 production.
 
 ## Change log
-- V3.20.0 candidate: architecture hardening; artifact-owned base-service decomposition; generic root DAG; Source Registry V3; collector policy registry; current advanced-stat aliases; deep-stats runtime-data publication; semantic model IDs; architecture anti-monolith gate; serving schema remains 48.
+- V3.20.0: production accepted architecture hardening; artifact-owned base-service decomposition; generic root DAG; Source Registry V3; collector policy registry; current advanced-stat aliases; deep-stats runtime-data publication; semantic model IDs; architecture anti-monolith gate; serving schema remains 48.
 - V3.19.0: production accepted report-time intelligence source registry; OneFPL delegated out of unattended collector; Ben Crellin fixture strategy; pundit consensus-vs-DSS; Reddit/community cross-check governance; report serving contract v2/schema48.
 - V3.18.1: production accepted OneFPL automated-access reliability diagnosis and source capability contract.
 - V3.18.0: production accepted structured challenger observations, reachability/capability separation, TTL/LKG/stale/disagreement governance, Price Radar context integration and architecture hardening.

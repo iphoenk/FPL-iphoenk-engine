@@ -10,6 +10,7 @@ SERVICE_REGISTRY = ROOT / "config" / "v3_service_registry.json"
 SOURCE_REGISTRY = ROOT / "config" / "sources" / "registry.json"
 COLLECTOR_POLICY = ROOT / "config" / "runtime" / "collector_policy.json"
 PROJECTION_POLICY = ROOT / "config" / "intelligence" / "projection.json"
+LINEUP_POLICY = ROOT / "config" / "intelligence" / "lineup_governance.json"
 DSS_CORE = ROOT / "config" / "dss_core_registry.json"
 DSS_EXT = ROOT / "config" / "dss_extension_registry.json"
 ENHANCEMENTS = ROOT / "config" / "enhancement_layers_registry.json"
@@ -62,6 +63,7 @@ def run() -> dict:
     sources = _load(SOURCE_REGISTRY)
     collector = _load(COLLECTOR_POLICY)
     projection = _load(PROJECTION_POLICY)
+    lineup_policy = _load(LINEUP_POLICY)
     framework_registries = {
         "dss_core": _load(DSS_CORE),
         "dss_extensions": _load(DSS_EXT),
@@ -136,6 +138,34 @@ def run() -> dict:
         if forbidden in engine_text:
             errors.append(f"src.engine compatibility facade still owns business logic: {forbidden}")
 
+    # V3.20.1 correctness layering: projection math lives in a neutral model
+    # component, while decision_intelligence is package-optimizer-only and may
+    # not become an accidental second Official fetch/projection entrypoint.
+    decision_text = (ROOT / "src" / "engines" / "decision_intelligence.py").read_text(encoding="utf-8")
+    for forbidden in ("src.sources.official_fpl", "get_json(", "def build_player_projections(", "def run()"):
+        if forbidden in decision_text:
+            errors.append(f"legacy projection/direct-fetch path reintroduced in decision_intelligence: {forbidden}")
+    historical_text = (ROOT / "src" / "models" / "historical_projection.py").read_text(encoding="utf-8")
+    if "from src.models.projection_components import" not in historical_text:
+        errors.append("historical projection must consume neutral projection_components")
+
+    battle_threshold = ((lineup_policy.get("battle") or {}).get("close_margin_threshold"))
+    try:
+        battle_threshold_value = float(battle_threshold)
+    except (TypeError, ValueError):
+        battle_threshold_value = 0.0
+    if battle_threshold_value <= 0:
+        errors.append("lineup battle close_margin_threshold must be positive and config-owned")
+    lineup_text = (ROOT / "src" / "engines" / "lineup_governance.py").read_text(encoding="utf-8")
+    if 'margin < 0.75' in lineup_text:
+        errors.append("lineup battle threshold is hardcoded instead of config-owned")
+
+    orchestrator_text = (ROOT / "src" / "runtime_v3" / "orchestrator.py").read_text(encoding="utf-8")
+    if "_attempt_promotion" not in orchestrator_text or "failure_stage\"] = \"promotion\"" not in orchestrator_text:
+        errors.append("orchestrator promotion failures must enter service criticality handling")
+    if "_clear_failed_service_outputs" not in orchestrator_text:
+        errors.append("noncritical service failure must quarantine stale owned outputs")
+
     published_horizons = projection.get("published_horizons") or []
     if not published_horizons:
         errors.append("projection published_horizons must be config-owned")
@@ -155,7 +185,6 @@ def run() -> dict:
         if "git push origin main" in text:
             errors.append(f"workflow writes runtime data directly to main: {path.name}")
 
-    orchestrator_text = (ROOT / "src" / "runtime_v3" / "orchestrator.py").read_text(encoding="utf-8")
     if 'services["collector"]' in orchestrator_text or "critical collector service failed" in orchestrator_text:
         errors.append("orchestrator still special-cases collector")
 

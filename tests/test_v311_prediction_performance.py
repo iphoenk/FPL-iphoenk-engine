@@ -42,10 +42,16 @@ def _reference_score(players, planning_gw, changes=0):
             bench = [p for p in players if int(p["element"]) not in starter_ids]
             bench_mean = sum(_f(_gw_row(p, gw).get("mean")) for p in bench)
             bench_var = sum(_f(_gw_row(p, gw).get("std")) ** 2 for p in bench)
-            captain_mean = max((_f(_gw_row(p, gw).get("mean")) for p in players if int(p["element"]) in starter_ids), default=0.0)
-            captain_std = max((_f(_gw_row(p, gw).get("std")) for p in players if int(p["element"]) in starter_ids), default=0.0)
+            starter_rows = [_gw_row(p, gw) for p in players if int(p["element"]) in starter_ids]
+            captain_row = max(starter_rows, key=lambda row: _f(row.get("mean")), default={})
+            captain_mean = _f(captain_row.get("mean"))
+            captain_var = _f(captain_row.get("std")) ** 2
             total_mean += lineup["mean"] + bench_weight * bench_mean + captain_weight * captain_mean
-            total_var += lineup["variance"] + (bench_weight ** 2) * bench_var + (captain_weight ** 2) * captain_std ** 2
+            total_var += (
+                lineup["variance"]
+                + (bench_weight ** 2) * bench_var
+                + ((1.0 + captain_weight) ** 2 - 1.0) * captain_var
+            )
         horizon_results[str(horizon)] = {
             "valid": valid,
             "mean": round(total_mean, 3) if valid else None,

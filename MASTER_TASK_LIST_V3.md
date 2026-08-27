@@ -2,9 +2,11 @@
 
 Canonical status: ACTIVE
 Canonical roadmap owner: V3 operational stream
-Current production release: V3.20.0
-Current production schema: 48
-Production acceptance: COMPLETE on 27 August 2026
+Production baseline: V3.20.0 / schema 48
+Current release candidate: V3.20.1
+Current candidate schema: 48
+Candidate scope: Projection Correctness + Runtime Promotion Safety + Layering Cleanup
+Candidate acceptance: PENDING
 
 This file is the single human-readable master roadmap for the V3 operational engine. Every V3 feature, refactor, hardening change, operational improvement, and release-governance change must update this file in the same pull request.
 
@@ -38,6 +40,8 @@ This file is the single human-readable master roadmap for the V3 operational eng
 18. Compatibility facades and historical version-stamped modules may exist only outside the active production service registry.
 19. Runtime data publishes to `runtime-data`, never directly to protected `main`.
 20. An architecture refactor is not accepted if it creates unnecessary process boundaries without a clear data owner or operational benefit.
+21. Numerical projection/scoring formulas that affect decisions require deterministic unit regressions, not only end-to-end health checks.
+22. External-source unavailability and internal artifact-integrity failure are separate failure classes; fail-soft source policy must not conceal broken internal computation or stale evidence.
 
 ## A. Production baseline and keep-green work
 | ID | Task | Status | Target | Acceptance |
@@ -132,7 +136,29 @@ Engine version changes to `3.20.0`. Serving schema remains `48` because `decisio
 ### V3.20 production acceptance evidence
 Production acceptance completed on 27 August 2026. PR #34 merged to `main` as `edeaff7a5b1f8173392cb528f93e132836608ed5`. Production push run `33032958368` passed and published validated artifacts to `runtime-data`. Runtime evidence confirms engine `3.20.0` / schema `48`, overall GREEN, decision engine HEALTHY, recommendation allowed, GO allowed, Gate0 16/16 PASS, Core 50/50 ACTIVE, Extensions 16/16 ACTIVE and Enhancements 8/8 ACTIVE. Source health uses `SOURCE_REGISTRY_V3`, is GREEN/non-blocking, OneFPL is disabled in unattended machine ingestion, and the ephemeral `official_snapshot.json` is absent from `runtime-data`.
 
-## E. P1 Intelligence quality and calibration
+## E. V3.20.1 Correctness Hardening
+Release objective: fix verified numerical and orchestration correctness defects without changing the serving schema or over-splitting the V3 service topology.
+
+| ID | Task | Status | Target | Acceptance |
+| --- | --- | --- | --- | --- |
+| V3-COR-231 | Appearance probability arithmetic | ACTIVE | V3.20.1 | unconditional p60 used exactly once; deterministic numeric regression passes |
+| V3-COR-232 | Goalkeeper save-route position derivation | ACTIVE | V3.20.1 | Official element_type=GK produces GK save component without requiring synthetic position string |
+| V3-COR-233 | Captain variance/covariance correctness | ACTIVE | V3.20.1 | captain mean/std come from same row and double-points variance includes covariance |
+| V3-COR-234 | Artifact-promotion failure semantics | ACTIVE | V3.20.1 | promotion failure obeys service criticality and noncritical failures quarantine stale owned outputs |
+| V3-COR-235 | Remove legacy direct-fetch projection path | ACTIVE | V3.20.1 | decision_intelligence has no alternate Official fetch/projection runner; production projection components have neutral model ownership |
+| V3-COR-236 | Config-owned XI battle threshold | ACTIVE | V3.20.1 | positive close-margin threshold owned by lineup_governance config and architecture gate |
+| V3-COR-237 | Challenger failure-class contract | ACTIVE | V3.20.1 | external source outage remains fail-soft while internal scorecard-integrity failure remains fail-closed |
+| V3-COR-238 | Preserve distinct package vs final-XI objectives | ACTIVE | V3.20.1 | no forced selector unification; raw package mean and risk/DNP-aware final lineup remain explicit separate objectives |
+| V3-COR-239 | Correctness anti-regression coverage | ACTIVE | V3.20.1 | appearance, GK saves, captain variance, promotion failure, layering and threshold tests PASS |
+| V3-COR-240 | Full CI/integration and production acceptance | ACTIVE | V3.20.1 | all existing gates + production runtime-data + framework GREEN/HEALTHY/GO verified before DONE |
+
+### V3.20.1 review adjudication
+The external review findings for appearance arithmetic, promotion handling, legacy direct-fetch projection code, captain variance and hardcoded battle threshold were confirmed. The review recommendation to make the internal `challenger` scorecard noncritical was not applied verbatim because external-source availability is already normalized fail-soft upstream, while an internal code/artifact failure is an integrity failure. The recommendation to unify the package optimizer and final lineup selector was also not applied because their objectives are intentionally different.
+
+### V3.20.1 schema decision
+Engine patch version changes to `3.20.1`. Serving/runtime schema remains `48` because the artifact shapes and report consumer contracts do not change. The lineup-governance policy schema moves to `2` to own `battle.close_margin_threshold`; the Service Registry remains schema `11` because topology/transport/artifact contracts are unchanged.
+
+## F. P1 Intelligence quality and calibration
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
 | V3-INT-201 | Real tactical-role evidence | OPEN | P1 | verified role evidence improves proxy without unsupported claims |
@@ -148,7 +174,7 @@ Production acceptance completed on 27 August 2026. PR #34 merged to `main` as `e
 | V3-INT-211 | Package optimizer sensitivity audit | OPEN | P1 | explainable sensitivity bounds |
 | V3-INT-212 | Price/value calibration | OPEN | P1 | pressure overlay separated from affordability/sell-value effects |
 
-## F. User-facing report and operational UX
+## G. User-facing report and operational UX
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
 | V3-RPT-301 | Natural Bahasa Indonesia renderer | OPEN | P1 | no raw machine shorthand in user narrative |
@@ -165,7 +191,7 @@ Production acceptance completed on 27 August 2026. PR #34 merged to `main` as `e
 | V3-RPT-312 | Consensus-vs-DSS explanation | ACTIVE | V3.19+ | disagreement surfaced rather than silently averaged |
 | V3-RPT-313 | Formation/XI/C/VC/bench completeness | ACTIVE | Continuous | every visible report prints formation, exact XI, C, VC, Bench1/2/3 and GK Bench |
 
-## G. P2 strategic capabilities
+## H. P2 strategic capabilities
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
 | V3-STR-401 | True overall-rank conversion model | DEFERRED | P2 | validated points/EO-to-rank distribution |
@@ -176,7 +202,7 @@ Production acceptance completed on 27 August 2026. PR #34 merged to `main` as `e
 | V3-STR-406 | Advanced blank/double simulator | OPEN | P2 | schedule uncertainty + chips + squad structure |
 | V3-STR-407 | Long-horizon chip-window optimizer | OPEN | P2 | secondary to near-term quality/rule legality |
 
-## H. Maintenance and engineering hygiene
+## I. Maintenance and engineering hygiene
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
 | V3-ENG-501 | Central config ownership audit | ACTIVE | Every release | one owner for each mutable parameter |
@@ -190,7 +216,7 @@ Production acceptance completed on 27 August 2026. PR #34 merged to `main` as `e
 | V3-ENG-509 | Active artifact ownership audit | ACTIVE | Every release | each promoted artifact has one service owner or explicit serial overlay owner |
 | V3-ENG-510 | Microservice boundary audit | ACTIVE | Every release | no active monolith and no gratuitous process fragmentation |
 
-## I. Release checklist for every V3 change
+## J. Release checklist for every V3 change
 1. Create dedicated branch from current production `main`.
 2. Update this Master Task List in the same PR.
 3. Keep mutable values in the correct config/registry owner.
@@ -220,15 +246,19 @@ For external evidence, missing values may never be synthesized solely to keep a 
 
 For architecture work, a file split is not DONE merely because code moved. The new boundary must have explicit inputs, outputs, ownership, failure semantics, DAG dependencies, tests, and no duplicate active authority.
 
+For numerical correctness work, a formula change is not DONE until a deterministic example demonstrates the intended arithmetic and the production integration path consumes that same implementation.
+
 ## Execution order
-1. Keep V3.20.0 production GREEN and monitor the new artifact-owned base-service runtime.
-2. Continue V3-RPT-301 natural Bahasa Indonesia renderer and V3-RPT-306 scheduled-report completeness hardening.
-3. Replace P1 proxy evidence with verified tactical-role, formation, rotation, set-piece, penalty and international-duty evidence where reliable.
-4. Accumulate settled Gameweeks for calibration, model drift and challenger scorecard work.
-5. Keep architecture/configuration ownership gates active on every release.
-6. Pursue P2 only after P1 evidence quality is sufficient and without destabilizing V3 production.
+1. Keep V3.20.0 production GREEN while V3.20.1 candidate is tested.
+2. Pass deterministic correctness regressions for appearance points, goalkeeper saves, captain variance and promotion failures.
+3. Pass architecture gate and full unit/regression suite.
+4. Pass bounded 20-service integration plus source, production, watchlist, report and report-time contracts.
+5. Merge V3.20.1 only after PR checks are GREEN.
+6. Verify production collector, `runtime-data` publication and framework GREEN/HEALTHY/GO on the merged SHA.
+7. Close V3-COR-231..240 only after production evidence; then resume P1/report-language work.
 
 ## Change log
+- V3.20.1 candidate: appearance/p60 arithmetic correction; goalkeeper position/save-route correction; captain variance/covariance correction; promotion-failure criticality/stale-output quarantine; legacy direct-fetch projection cleanup; config-owned XI battle threshold; serving schema remains 48.
 - V3.20.0: production accepted architecture hardening; artifact-owned base-service decomposition; generic root DAG; Source Registry V3; collector policy registry; current advanced-stat aliases; deep-stats runtime-data publication; semantic model IDs; architecture anti-monolith gate; serving schema remains 48.
 - V3.19.0: production accepted report-time intelligence source registry; OneFPL delegated out of unattended collector; Ben Crellin fixture strategy; pundit consensus-vs-DSS; Reddit/community cross-check governance; report serving contract v2/schema48.
 - V3.18.1: production accepted OneFPL automated-access reliability diagnosis and source capability contract.

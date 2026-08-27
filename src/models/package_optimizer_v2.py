@@ -178,10 +178,16 @@ def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int 
             bench_mean = sum(_f(_indexed_row(index, p, gw).get("mean")) for p in bench)
             bench_var = sum(_f(_indexed_row(index, p, gw).get("std")) ** 2 for p in bench)
             starter_rows = [_indexed_row(index, p, gw) for p in players if int(p["element"]) in starter_ids]
-            captain_mean = max((_f(row.get("mean")) for row in starter_rows), default=0.0)
-            captain_std = max((_f(row.get("std")) for row in starter_rows), default=0.0)
+            captain_row = max(starter_rows, key=lambda row: _f(row.get("mean")), default={})
+            captain_mean = _f(captain_row.get("mean"))
+            captain_std = _f(captain_row.get("std"))
+            captain_var = captain_std ** 2
             total_mean += lineup["mean"] + bench_weight * bench_mean + captain_weight * captain_mean
-            total_var += lineup["variance"] + (bench_weight ** 2) * bench_var + (captain_weight ** 2) * captain_std ** 2
+            # lineup variance already contains one copy of the captain random variable.
+            # Adding captain_weight * X therefore adds both its own variance and
+            # covariance with the existing captain component: ((1+w)^2 - 1) Var(X).
+            captain_extra_var = ((1.0 + captain_weight) ** 2 - 1.0) * captain_var
+            total_var += lineup["variance"] + (bench_weight ** 2) * bench_var + captain_extra_var
 
         elapsed = offset + 1
         if elapsed in horizon_set:

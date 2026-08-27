@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_release_metadata_single_source_of_truth():
-    assert ENGINE_VERSION == "3.20.0"
+    assert ENGINE_VERSION == "3.20.1"
     assert SCHEMA_VERSION == 48
     assert ENGINE_RUNTIME_VERSION == ENGINE_VERSION
     assert ENGINE_RUNTIME_SCHEMA == SCHEMA_VERSION
@@ -50,6 +50,7 @@ def test_master_task_governance_is_wired():
     readme = (ROOT / "README.md").read_text()
     assert "# FPL iphoenk Engine V3 Master Task List" in master
     assert "V3.20 Architecture Hardening" in master
+    assert "V3.20.1 Correctness Hardening" in master
 
     candidate = f"Current release candidate: V{ENGINE_VERSION}" in master
     production = f"Current production release: V{ENGINE_VERSION}" in master

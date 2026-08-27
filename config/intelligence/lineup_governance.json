@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "model_id": "governed_lineup_v1",
   "selection": {
     "risk_aversion_std": 0.12,
@@ -17,6 +17,9 @@
   "bench": {
     "risk_aversion_std": 0.10,
     "dnp_penalty_points": 1.5
+  },
+  "battle": {
+    "close_margin_threshold": 0.75
   },
   "package_governance": {
     "freeze_locked_composition_when_authoritative": true,

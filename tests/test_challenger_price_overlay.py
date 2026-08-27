@@ -53,20 +53,22 @@ def test_price_overlay_ignores_stale_observation():
     assert summary["fresh_observation_count"] == 0
 
 
-def test_user_source_availability_distinguishes_reachable_from_data_available():
+def test_user_source_availability_separates_collector_and_report_time_sources():
     source_health = {
         "sources": [
             {"id": "livefpl", "name": "LiveFPL", "status": "LIVE", "reachable": True},
-            {"id": "onefpl", "name": "OneFPL", "status": "LIVE", "reachable": True},
+            {"id": "onefpl", "name": "OneFPL", "status": "DISABLED", "reachable": False},
         ],
         "capability_health": [
             {"source_id": "livefpl", "capability": "price_prediction", "data_state": "AVAILABLE", "fresh_observations": 5},
-            {"source_id": "onefpl", "capability": "price_prediction", "data_state": "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION", "fresh_observations": 0},
+            {"source_id": "onefpl", "capability": "price_prediction", "data_state": "DISABLED", "fresh_observations": 0},
         ],
     }
     rendered = _source_availability(source_health)
-    livefpl, onefpl = rendered["challenger"]
+    assert len(rendered["collector_challenger"]) == 1
+    livefpl = rendered["collector_challenger"][0]
+    assert livefpl["source_id"] == "livefpl"
     assert livefpl["terjangkau"] is True
     assert "tersedia" in livefpl["status_data_harga"]
-    assert onefpl["terjangkau"] is True
-    assert "belum tersedia" in onefpl["status_data_harga"]
+    assert "onefpl" in rendered["report_time"]
+    assert "on-demand" in rendered["report_time"]["onefpl"]

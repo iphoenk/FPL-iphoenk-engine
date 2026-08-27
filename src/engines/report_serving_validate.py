@@ -22,6 +22,8 @@ def _validate_owned_transparency(name: str, rows: list[dict], expected: int, con
     if contract.get("owned_rows_require_current_gw_xpts"):
         assert all(row.get("xpts_gw") is not None for row in rows), (name, "missing_xpts")
         assert all(row.get("xpts_std") is not None for row in rows), (name, "missing_xpts_std")
+    if contract.get("owned_rows_require_selection_score"):
+        assert all(row.get("selection_score") is not None for row in rows), (name, "missing_selection_score")
     if contract.get("owned_rows_require_lineup_status"):
         assert all(row.get("lineup_status") in {"START", "BENCH"} for row in rows), (name, "invalid_lineup_status")
     if contract.get("owned_rows_require_choice_state"):
@@ -118,6 +120,7 @@ def run() -> dict:
         "watchlist": expected_watch,
         "per_position": expected_per,
         "owned_transparency": True,
+        "selection_score": contract.get("owned_rows_require_selection_score"),
         "model_validation": contract.get("model_validation_required"),
         "weather_context": contract.get("weather_context_required"),
         "report_time_intelligence": contract.get("report_time_intelligence_required"),

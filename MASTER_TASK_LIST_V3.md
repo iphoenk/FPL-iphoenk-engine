@@ -2,18 +2,15 @@
 
 Canonical status: ACTIVE
 Canonical roadmap owner: V3 operational stream
-Current production release: V3.20.1
+Current production release: V3.20.2
 Current production schema: 48
-Current release candidate: V3.20.2
-Current candidate schema: 48
-Candidate scope: Artifact Contract Hardening
-Candidate acceptance: PENDING
+Production acceptance: COMPLETE on 27 August 2026
 
 This file is the single human-readable master roadmap for the operational V3 stream. Every V3 feature, refactor, hardening change and release-governance change must update this file in the same pull request.
 
 ## Status legend
 - DONE: implemented, tested, merged and production-validated when runtime-impacting.
-- ACTIVE: continuously enforced operational requirement or candidate under acceptance.
+- ACTIVE: continuously enforced operational requirement.
 - NEXT: highest-priority planned work.
 - OPEN: planned but not immediate.
 - BLOCKED: dependency prevents progress.
@@ -116,25 +113,27 @@ Release objective: prevent malformed or wrong-contract internal artifacts from b
 
 | ID | Task | Status | Acceptance |
 | --- | --- | --- | --- |
-| V3-ART-241 | Runtime Artifact Contract Registry | ACTIVE | `RUNTIME_ARTIFACT_CONTRACTS_V1` owns validation policy |
-| V3-ART-242 | Generic declared-JSON parse validation | ACTIVE | every declared `.json` artifact parses before acceptance |
-| V3-ART-243 | latest.json sidecar validation | ACTIVE | isolated latest sidecar must parse as object before merge |
-| V3-ART-244 | Challenger observation explicit contract | ACTIVE | schema2 + `challenger_observation_v2` + observations list |
-| V3-ART-245 | Valid-empty external state preservation | ACTIVE | empty observations accepted as legitimate fail-soft state |
-| V3-ART-246 | Malformed artifact fail-closed semantics | ACTIVE | critical producer corruption blocks run |
-| V3-ART-247 | Noncritical corruption stale-output quarantine | ACTIVE | old outputs cannot masquerade as current |
-| V3-ART-248 | Non-isolated output integrity validation | ACTIVE | direct-canonical services are validated too |
-| V3-ART-249 | Artifact-validation runtime metadata | ACTIVE | service result records acceptance validation state |
-| V3-ART-250 | Deterministic artifact regression suite | ACTIVE | malformed JSON/wrong contract/valid-empty/nonisolated cases covered |
-| V3-ART-251 | V3.20.2 release consistency | ACTIVE | version/readme/workflow/implementation/registries/tests/master aligned |
-| V3-ART-252 | Full CI/integration acceptance | ACTIVE | compile/unit/architecture/source/decision/watchlist/report/report-time/runtime budget PASS |
-| V3-ART-253 | Production acceptance | ACTIVE | merge + production collect + runtime-data + GREEN/HEALTHY/GO verified |
+| V3-ART-241 | Runtime Artifact Contract Registry | DONE | `RUNTIME_ARTIFACT_CONTRACTS_V1` owns validation policy |
+| V3-ART-242 | Generic declared-JSON parse validation | DONE | every declared `.json` artifact parses before acceptance |
+| V3-ART-243 | latest.json sidecar validation | DONE | isolated latest sidecar must parse as object before merge |
+| V3-ART-244 | Challenger observation explicit contract | DONE | schema2 + `challenger_observation_v2` + observations list |
+| V3-ART-245 | Valid-empty external state preservation | DONE | empty observations accepted as legitimate fail-soft state |
+| V3-ART-246 | Malformed artifact fail-closed semantics | DONE | critical producer corruption blocks run |
+| V3-ART-247 | Noncritical corruption stale-output quarantine | DONE | old outputs cannot masquerade as current |
+| V3-ART-248 | Non-isolated output integrity validation | DONE | direct-canonical services are validated too |
+| V3-ART-249 | Artifact-validation runtime metadata | DONE | service result records acceptance validation state |
+| V3-ART-250 | Deterministic artifact regression suite | DONE | malformed JSON/wrong contract/valid-empty/nonisolated cases covered |
+| V3-ART-251 | V3.20.2 release consistency | DONE | version/readme/workflow/implementation/registries/tests/master aligned |
+| V3-ART-252 | Full CI/integration acceptance | DONE | 132 tests + architecture/source/decision/watchlist/report/report-time/runtime budget PASS |
+| V3-ART-253 | Production acceptance | DONE | PR #41 + production run 33041098857 + runtime-data + GREEN/HEALTHY/GO verified |
+
+Production acceptance evidence: feature merge `85bca2d6204c56698286d5bfc10dd643c25c1dbd`; production workflow run `33041098857` SUCCESS; `runtime-data` publication succeeded; engine 3.20.2/schema48; Service Registry schema12; artifact validation active; `challenger_observations.json` passed `RUNTIME_ARTIFACT_CONTRACTS_V1`; framework GREEN, Decision Engine HEALTHY, recommendation allowed, GO allowed, Gate0 16/16 PASS, DSS Core 50/50 ACTIVE, Extensions 16/16 ACTIVE, Enhancements 8/8 ACTIVE; 20-service wall time 7179.688 ms against 45000 ms budget.
 
 ### V3.20.2 boundary decision
 `read_json()` remains a convenience fail-soft reader for optional consumers. Integrity enforcement belongs at the service output acceptance boundary because that is where producer ownership, declared artifacts and criticality are known. This avoids making every optional read globally fail-closed while still preventing corrupt service outputs from becoming canonical truth.
 
 ### V3.20.2 schema decision
-- Candidate engine: `3.20.2`.
+- Production engine: `3.20.2`.
 - Serving/runtime schema: `48`, unchanged because user/report output structure does not change.
 - Service Registry schema: `12`, because artifact acceptance semantics change.
 - Runtime Artifact Contract Registry: `RUNTIME_ARTIFACT_CONTRACTS_V1`.
@@ -226,9 +225,8 @@ A task is DONE only when implementation, deterministic tests, documentation, ver
 For external evidence, missing values may never be synthesized merely to keep health GREEN. For runtime artifacts, malformed JSON or contract mismatch may never be downgraded to an ordinary `NO_OBSERVATION` state when the producing service declared that artifact as its output.
 
 ## Execution order
-1. Keep V3.20.1 production GREEN while V3.20.2 is under acceptance.
-2. Complete artifact-contract coding and deterministic regressions.
-3. Full PR CI/integration.
-4. Merge and production-validate V3.20.2/schema48.
-5. Update production acceptance state and active Master Monitor baseline.
-6. Continue P1 calibration and report UX work without destabilizing V3.
+1. Keep V3.20.2 production GREEN.
+2. Continue natural-language report UX and scheduled-report completeness hardening.
+3. Replace remaining P1 proxies with richer verified evidence where reliable.
+4. Accumulate settled Gameweeks and calibrate prediction/weighting models.
+5. Pursue P2 only after P1 evidence is sufficient and without destabilizing V3.

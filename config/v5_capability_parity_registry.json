@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "model": "v5_v3_v4_capability_parity_v1",
+  "authorities": {
+    "production": "v3.20.0",
+    "research_reference": "v4",
+    "candidate": "v5.0.0-beta.4"
+  },
+  "required_domains": [
+    "phase_aware_truth",
+    "official_fpl_authority",
+    "finance_sell_value",
+    "price_radar",
+    "xmins_role",
+    "team_strength",
+    "multi_horizon_projection",
+    "package_optimizer",
+    "lineup_optimizer",
+    "watchlist_full_dss",
+    "captaincy",
+    "decision_trace",
+    "prediction_evaluation",
+    "source_health",
+    "reporting",
+    "degraded_mode"
+  ],
+  "advanced_candidate_domains": [
+    "truthful_feature_bundle",
+    "temporal_backtest",
+    "prediction_settlement",
+    "correlated_simulation_shadow",
+    "release_attestation",
+    "isolated_team_review"
+  ],
+  "governance": {
+    "v4_is_reference_not_authority": true,
+    "missing_parity_evidence_blocks_promotion": true,
+    "new_advanced_domains_require_settled_evidence_before_authority": true
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "contract": "V5_RELEASE_ATTESTATION_V1",
+  "algorithm": "sha256",
+  "bind": ["v5_version", "production_baseline_version", "production_main_sha", "runtime_release_fingerprint"],
+  "governance": {
+    "cached_per_process": true,
+    "promotion_authority": false,
+    "acceptance_evidence_only": true
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "model_id": "player_projection_v5_historical_prior",
   "rate_shrinkage_minutes": 450.0,
   "position_priors": {
@@ -22,5 +22,10 @@
     "coefficient_of_variation": 0.42,
     "xmins_std_points_multiplier": 0.035,
     "small_sample_extra_std": 0.45
+  },
+  "advanced_overlay": {
+    "enabled": true,
+    "config": "config/intelligence/advanced_prediction.json",
+    "authoritative_xpts_replacement": false
   }
 }

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_correlated_package_simulation_v1",
+  "mode": "SHADOW_ONLY",
+  "seed": 20260827,
+  "minimum_draws": 2000,
+  "batch_draws": 1000,
+  "maximum_draws": 20000,
+  "adaptive_stop_probability_se": 0.0075,
+  "team_common_shock_rho": 0.18,
+  "opponent_common_shock_rho": 0.10,
+  "minimum_std": 0.25,
+  "governance": {
+    "deterministic_replay_required": true,
+    "decision_authority": false,
+    "calibration_required_before_authority": true
+  }
+}

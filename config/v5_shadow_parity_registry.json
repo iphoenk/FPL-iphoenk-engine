@@ -1,7 +1,13 @@
 {
-  "schema_version": 3,
-  "model": "v5_shadow_parity_v3",
+  "schema_version": 4,
+  "model_id": "v5_shadow_parity_v4",
   "required_cycles_before_production_candidate": 3,
+  "tolerances": {
+    "starting_xi_symmetric_difference_max": 2,
+    "captain_must_match_when_both_lock": true
+  },
+  "critical_dimensions": ["starting_xi", "captaincy", "ruleset", "manual_lock", "legality"],
+  "missing_critical_evidence_fails_closed": true,
   "acceptance_accounting": {
     "require_post_validation_pass": true,
     "require_same_v5_version": true,
@@ -11,7 +17,7 @@
   },
   "production_candidate_policy": {
     "operational_acceptance": "three postvalidated REAL_SHADOW cycles on exact V5 version, production baseline and runtime release fingerprint",
-    "prediction_acceptance": "settled frozen forecasts satisfy config/v5_acceptance_registry.json prediction_calibration_gate",
+    "prediction_acceptance": "settled frozen forecasts pass temporal guard, sample thresholds and frozen-baseline non-regression",
     "auto_promotion": false,
     "explicit_manual_action_required": true
   }

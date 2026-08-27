@@ -2,6 +2,18 @@
   "version": "3.21.0",
   "schema_version": 49,
   "release_metadata_source": "src/version.py",
+  "production_acceptance": {
+    "status": "COMPLETE",
+    "accepted_at": "2026-08-27",
+    "source_commit": "da2be79045c0eb1015b75697eb24b030ffaa4abe",
+    "workflow_run_id": 33047071671,
+    "runtime_branch": "runtime-data",
+    "runtime_wall_ms": 16605.775,
+    "performance_target_ms": 45000,
+    "weather_available_fixtures": 10,
+    "weather_unresolved_venues": 0,
+    "master_monitor_synced": true
+  },
   "P0": {
     "status": "IMPLEMENTED",
     "items": [
@@ -74,10 +86,11 @@
       "registry-owned Premier League venue coordinates and weather thresholds/freshness/severity",
       "persisted fixture weather observations with closest-to-kickoff post-match context",
       "weather remains observational/advisory and cannot directly mutate xPts, captaincy, XI, transfer or watchlist decisions",
-      "all 15 owned report rows expose current-GW xPts, uncertainty, lineup status and OPEN/current choice state",
+      "all 15 owned report rows expose current-GW xPts, uncertainty, selection score, lineup status and OPEN/current choice state",
       "projection-confidence calibration guard with GW5 review trigger",
       "settled frozen-prediction validation status exposed in every serving report",
-      "report contract explicitly separates formula correctness from predictive accuracy"
+      "report contract explicitly separates formula correctness from predictive accuracy",
+      "V3.21.0/schema49 production acceptance validated on runtime-data and FPL Master Monitor synchronized to the accepted contract"
     ]
   },
   "P1": {

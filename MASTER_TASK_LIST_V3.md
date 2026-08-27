@@ -2,11 +2,12 @@
 
 Canonical status: ACTIVE
 Canonical roadmap owner: V3 operational stream
-Production baseline: V3.20.2 / schema 48
-Current release candidate: V3.21.0
-Current candidate schema: 49
-Candidate scope: Weather Intelligence + Report Transparency + Calibration Visibility
-Candidate acceptance: PENDING
+Current production release: V3.21.0
+Current production schema: 49
+Production acceptance: COMPLETE on 27 August 2026
+Production source commit: `da2be79045c0eb1015b75697eb24b030ffaa4abe`
+Production workflow run: `33047071671`
+Production scope: Weather Intelligence + Report Transparency + Calibration Visibility
 
 This file is the single human-readable master roadmap for the operational V3 stream. Every V3 feature, refactor, hardening change and release-governance change must update this file in the same pull request.
 
@@ -46,7 +47,7 @@ This file is the single human-readable master roadmap for the operational V3 str
 24. Valid empty external observations remain fail-soft; malformed internal artifacts never masquerade as empty external evidence.
 25. Weather is observational/advisory context and may not directly mutate xPts, XI, C/VC, transfers, watchlist or packages until calibrated governance explicitly permits it.
 26. Rain probability is not rainfall intensity.
-27. Every visible report must make all 15 OWNED selection evidence auditable with current-GW xPts and lineup/choice state.
+27. Every visible report must make all 15 OWNED selection evidence auditable with current-GW xPts, uncertainty, selection score and lineup/choice state.
 28. Formula correctness and predictive accuracy are separate claims; predictive accuracy requires settled frozen forecasts.
 29. Confidence labels must be monitored for calibration drift rather than forced to HIGH.
 
@@ -94,41 +95,44 @@ Dedicated report-time registry, OneFPL delegation, Ben Crellin fixture strategy,
 Appearance probability, GK `element_type`/save route, captain variance/covariance, promotion failure semantics, obsolete direct-fetch projection removal, config-owned XI battle threshold, challenger failure-class semantics and package-vs-final-XI boundary are DONE and production accepted.
 
 ### V3.20.2 Artifact Contract Hardening
-Strict JSON validation, latest sidecar validation, challenger observation contract, valid-empty fail-soft handling, stale-output quarantine, non-isolated validation and production artifact-validation metadata are DONE and production accepted. Production baseline before V3.21 remains V3.20.2/schema48.
+Strict JSON validation, latest sidecar validation, challenger observation contract, valid-empty fail-soft handling, stale-output quarantine, non-isolated validation and production artifact-validation metadata are DONE and production accepted.
 
 ## C. V3.21 Weather Intelligence + Report Transparency
 Release objective: add weather as bounded explanatory context, make lineup choices transparent for every owned player, and expose calibration/settled-validation state without overclaiming predictive accuracy.
 
 | ID | Task | Status | Acceptance |
 | --- | --- | --- | --- |
-| V3-WXR-601 | Open-Meteo Source Registry capability | ACTIVE | noncritical ENRICHMENT; no authority/challenger role |
-| V3-WXR-602 | No new weather microservice | ACTIVE | active service count stays 20; Source Layer owns weather |
-| V3-WXR-603 | Reuse Official fixture snapshot | ACTIVE | no standard Official fixture refetch from weather code |
-| V3-WXR-604 | Venue Registry | ACTIVE | 20 current PL team venues; unique registry-owned coordinates |
-| V3-WXR-605 | Weather policy config ownership | ACTIVE | endpoint/timeout/fields/horizon/freshness/severity outside Python |
-| V3-WXR-606 | Weather variables | ACTIVE | temp, precip probability, precip intensity, wind speed/gusts, weather code |
-| V3-WXR-607 | Forecast retention / closest kickoff observation | ACTIVE | bounded observations; post-match context uses closest retained evidence |
-| V3-WXR-608 | Weather fail-soft semantics | ACTIVE | provider/venue/window gaps do not block Official/DSS baseline |
-| V3-WXR-609 | Weather decision-authority guard | ACTIVE | cannot directly mutate xPts/XI/C/VC/transfer/watchlist/package |
-| V3-WXR-610 | Post-match anomaly attribution guard | ACTIVE | only `POSSIBLE_CONTRIBUTING_FACTOR`; alternatives required |
-| V3-WXR-611 | Weather artifact contract | ACTIVE | `fixture_weather.json` contract-validated before promotion |
-| V3-WXR-612 | Owned 15 xPts transparency | ACTIVE | all 15 report rows expose current-GW xPts + uncertainty |
-| V3-WXR-613 | Owned lineup/choice transparency | ACTIVE | all 15 expose START/BENCH and OPEN/CURRENT state |
-| V3-WXR-614 | Confidence calibration monitor | ACTIVE | zero HIGH before GW5 allowed; GW5+ triggers review if still absent |
-| V3-WXR-615 | Settled prediction validation visibility | ACTIVE | serving reports expose sample/status and accuracy-governance disclaimer |
-| V3-WXR-616 | Source/Report/Runtime registry bumps | ACTIVE | SOURCE V4, REPORT V3, RUNTIME ARTIFACT V2 consistent |
-| V3-WXR-617 | V3.21 schema change | ACTIVE | schema49 because required serving fields changed |
-| V3-WXR-618 | Deterministic weather/transparency tests | ACTIVE | severity, registry, no-service, confidence and report contracts covered |
-| V3-WXR-619 | Architecture/source/report contract gates | ACTIVE | all applicable validators PASS |
-| V3-WXR-620 | Full CI/integration/runtime budget | ACTIVE | unit + bounded runtime + <45s PASS |
-| V3-WXR-621 | Production acceptance | ACTIVE | merge + production collect + runtime-data + GREEN/HEALTHY/GO |
-| V3-WXR-622 | Master Monitor V3.21 sync | ACTIVE | task validates 3.21.0/schema49 and renders new transparency fields |
+| V3-WXR-601 | Open-Meteo Source Registry capability | DONE | noncritical ENRICHMENT; no authority/challenger role |
+| V3-WXR-602 | No new weather microservice | DONE | active service count stays 20; Source Layer owns weather |
+| V3-WXR-603 | Reuse Official fixture snapshot | DONE | no standard Official fixture refetch from weather code |
+| V3-WXR-604 | Venue Registry | DONE | 20 current PL team venues; Official team ID + name identity; unique registry-owned coordinates |
+| V3-WXR-605 | Weather policy config ownership | DONE | endpoint/timeout/fields/horizon/freshness/severity outside Python |
+| V3-WXR-606 | Weather variables | DONE | temp, precip probability, precip intensity, wind speed/gusts, weather code |
+| V3-WXR-607 | Forecast retention / closest kickoff observation | DONE | bounded observations; post-match context uses closest retained evidence |
+| V3-WXR-608 | Weather fail-soft semantics | DONE | provider/venue/window gaps do not block Official/DSS baseline |
+| V3-WXR-609 | Weather decision-authority guard | DONE | cannot directly mutate xPts/XI/C/VC/transfer/watchlist/package |
+| V3-WXR-610 | Post-match anomaly attribution guard | DONE | only `POSSIBLE_CONTRIBUTING_FACTOR`; alternatives required |
+| V3-WXR-611 | Weather artifact contract | DONE | `fixture_weather.json` contract-validated before promotion |
+| V3-WXR-612 | Owned 15 xPts transparency | DONE | all 15 report rows expose current-GW xPts + uncertainty |
+| V3-WXR-613 | Owned lineup/choice transparency | DONE | all 15 expose selection score, START/BENCH and OPEN/CURRENT state |
+| V3-WXR-614 | Confidence calibration monitor | DONE | zero HIGH before GW5 allowed; GW5+ triggers review if still absent |
+| V3-WXR-615 | Settled prediction validation visibility | DONE | serving reports expose sample/status and accuracy-governance disclaimer |
+| V3-WXR-616 | Source/Report/Runtime registry bumps | DONE | SOURCE V4, REPORT V3, RUNTIME ARTIFACT V2 consistent |
+| V3-WXR-617 | V3.21 schema change | DONE | schema49 because required serving fields changed |
+| V3-WXR-618 | Deterministic weather/transparency tests | DONE | severity, registry, no-service, confidence, selection and report contracts covered |
+| V3-WXR-619 | Architecture/source/report contract gates | DONE | all applicable validators PASS |
+| V3-WXR-620 | Full CI/integration/runtime budget | DONE | unit + bounded runtime + 16.606s <45s PASS |
+| V3-WXR-621 | Production acceptance | DONE | production run 33047071671; runtime-data source commit `da2be79045c0eb1015b75697eb24b030ffaa4abe`; 10/10 weather coverage; zero unresolved venue identity |
+| V3-WXR-622 | Master Monitor V3.21 sync | DONE | authoritative task now validates 3.21.0/schema49, SOURCE V4, selection score, weather context and model-validation fields |
 
 ### V3.21 boundary decision
 Weather remains inside Source Layer because it is optional external context with shared fixture inputs and fail-soft semantics. Creating a separate process would add operational surface without reducing meaningful coupling or failure blast radius. Report transparency remains inside the serving-output boundary because it does not create a new football decision; it exposes governed projection/lineup evidence already produced upstream.
 
 ### V3.21 model-validation decision
 `prediction_evaluation.py` already freezes the last pre-deadline forecast and settles completed Gameweeks using points MAE/RMSE, xMins MAE, starter Brier, clean-sheet Brier and Spearman. V3.21 does not claim accuracy before settlement. It surfaces the settled-sample state and keeps dynamic weighting gated by configured sample size.
+
+### V3.21 production evidence
+Production run `33047071671` on merge source `da2be79045c0eb1015b75697eb24b030ffaa4abe` completed full tests and production collect through isolated `runtime-data` publication. Runtime metadata reported engine `3.21.0`, schema `49`, 20 services, 16.606s total wall time against a 45s target, all report-serving contracts valid, 15 OWNED + 20 WATCHLIST valid, fixture-weather `available_count=10/10`, venue `unresolved_count=0`, and V3.21 selection transparency present in the primary decision payload.
 
 ## D. P1 intelligence quality
 | ID | Task | Status |
@@ -162,7 +166,7 @@ Weather remains inside Source Layer because it is optional external context with
 | V3-RPT-310 | Scheduled report-time web refresh | ACTIVE |
 | V3-RPT-311 | On-demand report-time web refresh | ACTIVE |
 | V3-RPT-312 | Consensus-vs-DSS explanation | ACTIVE |
-| V3-RPT-313 | All-15 xPts/choice transparency | ACTIVE |
+| V3-RPT-313 | All-15 xPts/selection/choice transparency | ACTIVE |
 | V3-RPT-314 | Settled-prediction/calibration status | ACTIVE |
 | V3-RPT-315 | Material weather context / anomaly caveat | ACTIVE |
 
@@ -225,10 +229,8 @@ A task is DONE only when implementation, deterministic tests, documentation, ver
 For external evidence, missing values may never be synthesized merely to keep health GREEN. For weather, correlation alone may never be presented as causation. For runtime artifacts, malformed JSON or contract mismatch may never be downgraded to an ordinary no-observation state when the producing service declared that artifact as its output. For prediction quality, passing deterministic formula tests is not evidence of forecasting accuracy; settled frozen forecasts are required.
 
 ## Execution order
-1. Keep V3.20.2 production GREEN while V3.21 is under acceptance.
-2. Complete V3.21 deterministic tests and architecture/source/report contracts.
-3. Merge only after full bounded integration is GREEN.
-4. Production-publish V3.21 and verify weather/report transparency/framework evidence.
-5. Close acceptance and sync FPL Master Monitor to V3.21.0/schema49.
-6. Accumulate settled Gameweeks for projection and weather calibration.
-7. Pursue further P1/P2 only without destabilizing production V3.
+1. Keep V3.21.0 production GREEN and preserve the 20-service artifact-owned architecture.
+2. Accumulate settled Gameweeks for projection-confidence and weather-performance calibration.
+3. Improve P1 intelligence evidence without weakening Official authority or fail-closed internal integrity.
+4. Complete user-facing report UX items, especially natural Bahasa Indonesia rendering and scheduled-report completeness.
+5. Pursue P2 capabilities only when production V3 remains stable and their evidence contracts are explicit.

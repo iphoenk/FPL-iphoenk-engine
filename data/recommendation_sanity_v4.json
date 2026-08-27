@@ -61,7 +61,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9419,
+            "market_support": 0.9424,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -201,7 +201,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9419,
+            "market_support": 0.9424,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -222,7 +222,7 @@
             "horizon_stability": 0.933,
             "rate_spike_risk": 0.0054,
             "current_season_weight": 0.0943,
-            "market_support": 0.8308,
+            "market_support": 0.8313,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -369,7 +369,7 @@
             "horizon_stability": 0.9415,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.6274,
+            "market_support": 0.6278,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -409,7 +409,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9419,
+            "market_support": 0.9424,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -449,7 +449,7 @@
             "horizon_stability": 0.933,
             "rate_spike_risk": 0.0054,
             "current_season_weight": 0.0943,
-            "market_support": 0.8308,
+            "market_support": 0.8313,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -629,7 +629,7 @@
             "horizon_stability": 0.9415,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.6274,
+            "market_support": 0.6278,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -688,7 +688,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5055,
             "current_season_weight": 0.1111,
-            "market_support": 0.9419,
+            "market_support": 0.9424,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -749,7 +749,7 @@
             "horizon_stability": 0.933,
             "rate_spike_risk": 0.0054,
             "current_season_weight": 0.0943,
-            "market_support": 0.8308,
+            "market_support": 0.8313,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -893,7 +893,7 @@
           "horizon_stability": 0.9027,
           "rate_spike_risk": 0.5055,
           "current_season_weight": 0.1111,
-          "market_support": 0.9419,
+          "market_support": 0.9424,
           "flags": [
             "EARLY_SEASON_SAMPLE"
           ]
@@ -914,7 +914,7 @@
           "horizon_stability": 0.933,
           "rate_spike_risk": 0.0054,
           "current_season_weight": 0.0943,
-          "market_support": 0.8308,
+          "market_support": 0.8313,
           "flags": [
             "EARLY_SEASON_SAMPLE"
           ]

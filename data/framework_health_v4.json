@@ -6,11 +6,11 @@
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-27T13:34:20.921493+00:00",
-    "local_as_of": "2026-08-27T20:34:20.921493+07:00",
+    "as_of": "2026-08-27T13:40:34.953572+00:00",
+    "local_as_of": "2026-08-27T20:40:34.953572+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 1675.7,
+    "minutes_to_deadline": 1669.4,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -1210,14 +1210,14 @@
         "probe": "runtime_observability",
         "detail": {
           "timings": {
-            "load_shared_inputs_and_candidates_ms": 362.5,
-            "wc_decision_cpu_ms": 495.0,
-            "package_audit_cpu_ms": 2239.8,
-            "wc_package_parallel_wall_ms": 2251.4,
-            "parallel_speedup_estimate": 1.215,
+            "load_shared_inputs_and_candidates_ms": 368.6,
+            "wc_decision_cpu_ms": 575.0,
+            "package_audit_cpu_ms": 2279.1,
+            "wc_package_parallel_wall_ms": 2304.4,
+            "parallel_speedup_estimate": 1.239,
             "lineup_ms": 2.4,
-            "evidence_sanity_ms": 3.2,
-            "total_pipeline_ms": 2640.2
+            "evidence_sanity_ms": 3.1,
+            "total_pipeline_ms": 2724.4
           }
         }
       }
@@ -1449,5 +1449,5 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 415.15
+  "performance_ms": 429.95
 }

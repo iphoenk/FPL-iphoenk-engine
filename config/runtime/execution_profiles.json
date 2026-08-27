@@ -17,7 +17,7 @@
         "advanced_stats": {"max_age_seconds": 21600},
         "historical_prior": {"max_age_seconds": 86400},
         "source_layer": {"max_age_seconds": 1800},
-        "official_detail": {"max_age_seconds": 3600}
+        "official_detail": {"max_age_seconds": 1}
       }
     },
     "live": {
@@ -27,7 +27,7 @@
         "advanced_stats": {"max_age_seconds": 21600},
         "historical_prior": {"max_age_seconds": 86400},
         "source_layer": {"max_age_seconds": 1800},
-        "official_detail": {"max_age_seconds": 3600}
+        "official_detail": {"max_age_seconds": 1}
       }
     },
     "full_refresh": {

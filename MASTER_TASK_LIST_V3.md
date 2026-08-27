@@ -2,17 +2,17 @@
 
 Canonical status: ACTIVE
 Canonical roadmap owner: V3 operational stream
-Production baseline: V3.18.1 / schema 47
-Current release candidate: V3.19.0
-Current candidate schema: 48
-Candidate scope: Report-Time Intelligence + Pundit Consensus vs DSS
-Candidate acceptance: PENDING
+Production baseline: V3.19.0 / schema 48
+Current production release: V3.19.0
+Current production schema: 48
+Production scope: Report-Time Intelligence + Pundit Consensus vs DSS
+Production acceptance: COMPLETE
 
 This file is the single human-readable master roadmap for the V3 operational engine. Every V3 feature, refactor, hardening change, operational improvement, and release-governance change must update this file in the same pull request.
 
 ## Status legend
 - DONE: implemented, tested, merged, and production-validated when runtime-impacting.
-- ACTIVE: continuously enforced operational requirement or release candidate under acceptance.
+- ACTIVE: continuously enforced operational requirement.
 - NEXT: highest-priority planned work.
 - OPEN: planned but not the immediate next release.
 - BLOCKED: cannot progress until a named dependency is resolved.
@@ -79,21 +79,21 @@ Release objective: add fresh report-time expert/model/community evidence while k
 
 | ID | Task | Status | Target | Acceptance |
 | --- | --- | --- | --- | --- |
-| V3-RTI-101 | Dedicated report-time source registry | ACTIVE | V3.19.0 | source classes/domains/query intents/freshness/authority ceilings registry-owned |
-| V3-RTI-102 | OneFPL collector-to-report-time delegation | ACTIVE | V3.19.0 | machine registry disabled; report-time registry enabled; no collector HTTP attempts |
-| V3-RTI-103 | Report-time evidence contract | ACTIVE | V3.19.0 | source/class/topic/subject/stance/time/URL/summary required |
-| V3-RTI-104 | Pundit consensus engine | ACTIVE | V3.19.0 | current opinions aggregated only from eligible pundit class |
-| V3-RTI-105 | Pundit consensus vs DSS comparison | ACTIVE | V3.19.0 | explicit ALIGN/DIVERGE/REVIEW_DIVERGENCE/NEUTRAL; DSS not mutated |
-| V3-RTI-106 | Ben Crellin fixture-strategy class | ACTIVE | V3.19.0 | BGW/DGW/rearrangement/chip-window context; no player-projection vote |
-| V3-RTI-107 | Reddit r/FantasyPL community-signal class | ACTIVE | V3.19.0 | eye-test/poll/role/rotation/injury/sentiment treated as cross-check-required leads |
-| V3-RTI-108 | Verified-news class | ACTIVE | V3.19.0 | official availability/suspension/fixture/manager context may corroborate facts |
-| V3-RTI-109 | Report-time freshness governance | ACTIVE | V3.19.0 | stale evidence visible but excluded from current consensus |
-| V3-RTI-110 | Report serving integration | ACTIVE | V3.19.0 | user_report, decision_brief and deep_review contain report-time intelligence |
-| V3-RTI-111 | Explicit refresh-required state | ACTIVE | V3.19.0 | collector snapshot says REFRESH_REQUIRED when no report-time web pass occurred |
-| V3-RTI-112 | Machine-cache ownership cleanup | ACTIVE | V3.19.0 | delegated OneFPL LKG/stale observations purged from collector-owned artifacts |
-| V3-RTI-113 | Report-time contract validator | ACTIVE | V3.19.0 | CI/integration checks registry, OneFPL delegation, advisory policy and serving output |
-| V3-RTI-114 | Schema/serving contract v2 | ACTIVE | V3.19.0 | schema48, REPORT_ARTIFACT_REGISTRY_V2, DEEP_REVIEW_PAYLOAD_V2 |
-| V3-RTI-115 | V3.19 release governance | ACTIVE | V3.19.0 | version/README/task/workflow/tests/CI/production all consistent |
+| V3-RTI-101 | Dedicated report-time source registry | DONE | V3.19.0 | source classes/domains/query intents/freshness/authority ceilings registry-owned |
+| V3-RTI-102 | OneFPL collector-to-report-time delegation | DONE | V3.19.0 | machine registry disabled; report-time registry enabled; no collector HTTP attempts |
+| V3-RTI-103 | Report-time evidence contract | DONE | V3.19.0 | source/class/topic/subject/stance/time/URL/summary required |
+| V3-RTI-104 | Pundit consensus engine | DONE | V3.19.0 | current opinions aggregated only from eligible pundit class |
+| V3-RTI-105 | Pundit consensus vs DSS comparison | DONE | V3.19.0 | explicit ALIGN/DIVERGE/REVIEW_DIVERGENCE/NEUTRAL; DSS not mutated |
+| V3-RTI-106 | Ben Crellin fixture-strategy class | DONE | V3.19.0 | BGW/DGW/rearrangement/chip-window context; no player-projection vote |
+| V3-RTI-107 | Reddit r/FantasyPL community-signal class | DONE | V3.19.0 | eye-test/poll/role/rotation/injury/sentiment treated as cross-check-required leads |
+| V3-RTI-108 | Verified-news class | DONE | V3.19.0 | official availability/suspension/fixture/manager context may corroborate facts |
+| V3-RTI-109 | Report-time freshness governance | DONE | V3.19.0 | stale evidence visible but excluded from current consensus |
+| V3-RTI-110 | Report serving integration | DONE | V3.19.0 | user_report, decision_brief and deep_review contain report-time intelligence |
+| V3-RTI-111 | Explicit refresh-required state | DONE | V3.19.0 | collector snapshot says REFRESH_REQUIRED when no report-time web pass occurred |
+| V3-RTI-112 | Machine-cache ownership cleanup | DONE | V3.19.0 | delegated OneFPL LKG/stale observations purged from collector-owned artifacts |
+| V3-RTI-113 | Report-time contract validator | DONE | V3.19.0 | CI/integration checks registry, OneFPL delegation, advisory policy and serving output |
+| V3-RTI-114 | Schema/serving contract v2 | DONE | V3.19.0 | schema48, REPORT_ARTIFACT_REGISTRY_V2, DEEP_REVIEW_PAYLOAD_V2 |
+| V3-RTI-115 | V3.19 release governance | DONE | V3.19.0 | version/README/task/workflow/tests/CI/production all consistent |
 
 ### V3.19 report-time source classes
 - `MODEL_CHALLENGER`: OneFPL. Advisory model/price/transfer/captaincy/planner context only.
@@ -104,6 +104,21 @@ Release objective: add fresh report-time expert/model/community evidence while k
 
 ### V3.19 architectural boundary
 Report-time intelligence stays inside the existing report boundary. It is not a new unattended collector microservice. The collector publishes the machine/DSS baseline and marks report-time evidence `REFRESH_REQUIRED`; the chat/report orchestration performs normal web review for scheduled or on-demand reports and synthesizes the evidence under the same contract. This avoids duplicate unattended I/O and keeps source-policy restrictions outside the collector.
+
+### V3.19 production acceptance evidence
+Production acceptance completed on 27 August 2026:
+- PR #32 merged to `main` as `4b5f5f72146400a25c956e7628105b7680effe84`
+- final PR workflow run `33028670999`: unit/regression, bounded microservices integration, source capability, production decision/report, 15 OWNED + 20 WATCHLIST, fast report serving, report-time intelligence contract and runtime budget all PASS
+- production push workflow run `33028851447`: collector SUCCESS and validated `runtime-data` publication SUCCESS
+- production engine/schema: `3.19.0` / `48`
+- framework: GREEN; decision engine HEALTHY; recommendation allowed; GO allowed
+- Gate 0: 16/16 PASS
+- DSS Core: 50/50 ACTIVE
+- DSS Extensions: 16/16 ACTIVE
+- Enhancement Layers: 8/8 ACTIVE
+- OneFPL machine source: DISABLED with zero collector observations; ownership delegated to report-time review
+- production `decision_brief` carries `report_time_intelligence.status=REFRESH_REQUIRED` and `web_refresh_required=true` until the visible-report web pass occurs
+- active FPL Master Monitor task updated to require V3.19 report-time web refresh for every visible scheduled/on-demand/deadline report, while silent hourly internal checks remain bounded
 
 ## D. P1 Intelligence quality and calibration
 | ID | Task | Status | Target | Acceptance |
@@ -188,16 +203,15 @@ A V3 task is DONE only when implementation, tests, documentation, version govern
 For external evidence, missing values may never be synthesized solely to keep a module green. For report-time intelligence, a report that did not perform the web pass must explicitly state `REFRESH_REQUIRED`; it may not reuse stale evidence as if current.
 
 ## Execution order
-1. Keep V3.18.1 production GREEN while V3.19.0 is under acceptance.
-2. Complete V3.19 unit/integration/report-time contract and serving-contract validation.
-3. Merge and production-validate V3.19.0/schema48.
-4. Continue natural-language renderer and scheduled-report completeness hardening.
-5. Replace P1 proxies with richer evidence where reliable.
-6. Accumulate settled Gameweeks and calibrate prediction/weighting models.
-7. Pursue P2 only after P1 evidence is sufficient and without destabilizing V3.
+1. Keep V3.19.0 production GREEN and monitor report-serving/report-time behavior.
+2. Validate the first visible scheduled reports against the V3.19 report-time refresh contract and fix any orchestration/report-language issue without weakening DSS authority.
+3. Continue natural-language renderer and scheduled-report completeness hardening.
+4. Replace P1 proxies with richer evidence where reliable.
+5. Accumulate settled Gameweeks and calibrate prediction/weighting models.
+6. Pursue P2 only after P1 evidence is sufficient and without destabilizing V3.
 
 ## Change log
-- V3.19.0 candidate: report-time intelligence source registry; OneFPL delegated out of unattended collector; Ben Crellin fixture-strategy evidence; pundit consensus-vs-DSS; Reddit/community cross-check governance; verified-news class; report serving contract v2/schema48.
+- V3.19.0: production accepted report-time intelligence source registry; OneFPL delegated out of unattended collector; Ben Crellin fixture-strategy evidence; pundit consensus-vs-DSS; Reddit/community cross-check governance; verified-news class; report serving contract v2/schema48; active Master Monitor updated for fresh visible-report web passes.
 - V3.18.1: production accepted OneFPL automated-access reliability diagnosis and source capability contract.
 - V3.18.0: production accepted structured challenger observations, reachability/capability separation, TTL/LKG/stale/disagreement governance, Price Radar context integration and architecture hardening.
 - V3.17.1: canonical V3 master task governance and Definition of Done.

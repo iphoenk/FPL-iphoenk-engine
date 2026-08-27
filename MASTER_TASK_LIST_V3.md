@@ -53,6 +53,16 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 | Price calibration | realized price-change samples only | MONITOR |
 | Report-time web evidence | READY/PENDING separate from engine health | required semantics |
 
+## Historical release anchors
+### V3.20 Architecture Hardening
+Canonical Source Registry ownership, monolith removal, generic DAG scheduling, artifact-owned services, config ownership, architecture anti-regression and production contracts were established in the V3.20 line and remain non-negotiable foundations.
+
+### V3.21 Weather Intelligence + Report Transparency
+Weather became advisory-only contextual evidence, all 15 OWNED became selection-auditable, and predictive accuracy was explicitly separated from deterministic formula correctness.
+
+### V3.22 Runtime Optimization Foundation
+FAST/LIVE/FULL/DEEP execution profiles, rolling runtime-data, shallow checkout, resource telemetry, safe reuse and <10s FAST decision regeneration became the production operating model.
+
 ## REC-01 through REC-35 canonical status
 | REC | Work item | Status | Current evidence / disposition |
 | --- | --- | --- | --- |

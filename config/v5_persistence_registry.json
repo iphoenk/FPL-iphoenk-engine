@@ -1,5 +1,5 @@
 {
-  "version":4,
+  "version":5,
   "data_root":"data/v5",
   "artifacts":{
     "latest":"latest.json",
@@ -25,6 +25,7 @@
     "user_report":"user_report.json",
     "technical_appendix":"technical_appendix.json",
     "report_state":"report_state.json",
+    "decision_hot_bundle":"decision_hot_bundle.json",
     "history":"history.jsonl"
   },
   "gameweek":{"directory":"gw","filename_template":"{gw:02d}.json"},
@@ -33,6 +34,7 @@
     "append_history":true,
     "persist_raw_authenticated_payload":false,
     "separate_from_v3_v4_runtime_data":true,
-    "do_not_overwrite_healthy_price_state_with_degraded_fallback":true
+    "do_not_overwrite_healthy_price_state_with_degraded_fallback":true,
+    "decision_hot_bundle_requires_durable_write_before_memory_publish":true
   }
 }

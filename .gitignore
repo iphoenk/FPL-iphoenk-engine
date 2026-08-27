@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local/runtime caches and temporary state
+.runtime-cache/
+.runtime-publish/
+*.tmp
+
+# Mutable runtime outputs belong to the runtime-data publication bridge.
+# Existing historical files already tracked on main are intentionally left untouched
+# in this PR; new generated runtime artifacts must not be added to main.
+/data/**
+!/data/.gitkeep
+
+# Local diagnostics
+coverage.xml
+htmlcov/

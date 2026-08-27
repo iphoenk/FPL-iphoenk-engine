@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_release_metadata_single_source_of_truth():
-    assert ENGINE_VERSION == "3.18.1"
-    assert SCHEMA_VERSION == 47
+    assert ENGINE_VERSION == "3.19.0"
+    assert SCHEMA_VERSION == 48
     assert ENGINE_RUNTIME_VERSION == ENGINE_VERSION
     assert ENGINE_RUNTIME_SCHEMA == SCHEMA_VERSION
     assert app.version == ENGINE_VERSION
@@ -24,6 +24,8 @@ def test_release_metadata_surfaces_are_consistent():
     engine_config = json.loads((ROOT / "config" / "engine.json").read_text())
     readme = (ROOT / "README.md").read_text().splitlines()
     workflow = (ROOT / ".github" / "workflows" / "fpl-engine.yml").read_text().splitlines()
+    reporting = json.loads((ROOT / "config" / "intelligence" / "reporting.json").read_text())
+    artifact_registry = json.loads((ROOT / "config" / "report_artifact_registry.json").read_text())
 
     assert implementation["version"] == ENGINE_VERSION
     assert implementation["schema_version"] == SCHEMA_VERSION
@@ -31,6 +33,9 @@ def test_release_metadata_surfaces_are_consistent():
     assert engine_config["schema_version"] == SCHEMA_VERSION
     assert readme[0] == f"# FPL iphoenk Engine v{ENGINE_VERSION}"
     assert workflow[0] == f"name: FPL iphoenk collector v{ENGINE_VERSION} microservices"
+    assert reporting["model_id"] == "decision_first_report_v2"
+    assert artifact_registry["registry"] == "REPORT_ARTIFACT_REGISTRY_V2"
+    assert artifact_registry["consumer_contract"]["report_time_intelligence_required"] is True
 
 
 def test_master_task_governance_is_wired():
@@ -39,7 +44,7 @@ def test_master_task_governance_is_wired():
     master = master_path.read_text()
     readme = (ROOT / "README.md").read_text()
     assert "# FPL iphoenk Engine V3 Master Task List" in master
-    assert "V3.18 Structured Challenger Ingestion" in master
+    assert "V3.19 Report-Time Intelligence" in master
 
     candidate = f"Current release candidate: V{ENGINE_VERSION}" in master
     production = f"Current production release: V{ENGINE_VERSION}" in master

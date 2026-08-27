@@ -68,17 +68,12 @@
       "name": "OneFPL",
       "class": "CHALLENGER",
       "tier": 2,
-      "enabled": true,
+      "enabled": false,
       "critical": false,
-      "adapter": "onefpl",
-      "probe_url": "https://onefpl.com/",
-      "structured_url": "https://onefpl.com/prices",
-      "fallback_structured_urls": ["https://onefpl.vercel.app/prices"],
-      "allowed_hosts": ["onefpl.com", "www.onefpl.com", "onefpl.vercel.app"],
-      "observation_ttl_seconds": 1800,
-      "max_fetch_bytes": 1048576,
-      "parser_contract": "onefpl-price-v2",
-      "capabilities": ["price_prediction", "transfer_trends", "captaincy_context", "planner_context"]
+      "adapter": "disabled",
+      "capabilities": ["price_prediction", "transfer_trends", "captaincy_context", "planner_context"],
+      "delegated_to": "REPORT_TIME_SOURCE_REGISTRY_V1",
+      "note": "Automated collector access disabled. OneFPL is refreshed at scheduled or on-demand report time through normal web access and remains advisory only."
     },
     {
       "id": "fffix",

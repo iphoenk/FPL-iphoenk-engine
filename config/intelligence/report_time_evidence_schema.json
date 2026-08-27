@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "contract": "report_time_evidence_v1",
+  "required_signal_fields": [
+    "source_id",
+    "source_class",
+    "topic",
+    "subject",
+    "stance",
+    "observed_at",
+    "source_url",
+    "summary"
+  ],
+  "allowed_source_classes": [
+    "MODEL_CHALLENGER",
+    "FIXTURE_STRATEGY_EXPERT",
+    "PUNDIT_CONSENSUS",
+    "COMMUNITY_SIGNAL",
+    "VERIFIED_NEWS"
+  ],
+  "allowed_stances": [
+    "BUY",
+    "SELL",
+    "HOLD",
+    "WATCH",
+    "CAPTAIN",
+    "AVOID_CAPTAIN",
+    "START",
+    "BENCH",
+    "CHIP_NOW",
+    "CHIP_WAIT",
+    "FIXTURE_ALERT",
+    "ROLE_POSITIVE",
+    "ROLE_NEGATIVE",
+    "INJURY_RISK",
+    "NEUTRAL"
+  ],
+  "policy": {
+    "facts_require_verified_source_or_independent_crosscheck": true,
+    "pundit_votes_are_advisory": true,
+    "community_signal_does_not_become_fact_by_vote_count": true,
+    "fixture_expert_signals_do_not_vote_in_player_consensus": true,
+    "onefpl_signals_are_model_challenger_context": true,
+    "signals_without_source_url_are_rejected": true
+  }
+}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from src.engines.report_time_intelligence import validate_registry as validate_report_time_registry
 from src.utils import DATA, ROOT
 
 
@@ -13,6 +14,7 @@ def run() -> dict:
     health = _load(DATA / "source_health.json")
     registry = _load(ROOT / "config" / "sources" / "registry.json")
     observations = _load(DATA / "challenger_observations.json")
+    report_time_registry = _load(ROOT / "config" / "sources" / "report_time_registry.json")
 
     registry_sources = {row["id"]: row for row in registry.get("sources") or []}
     runtime_sources = {row["id"]: row for row in health.get("sources") or []}
@@ -28,36 +30,28 @@ def run() -> dict:
     for state in (official.get("capabilities") or {}).values():
         assert state == "AUTHORITATIVE_NATIVE", state
 
-    onefpl = runtime_sources["onefpl"]
-    onefpl_detail = onefpl.get("detail") or {}
-    onefpl_price = (onefpl.get("capabilities") or {}).get("price_prediction")
-    assert onefpl_detail.get("parser_version") == "onefpl-price-v2"
-    assert onefpl_detail.get("no_fabrication") is True
-    assert onefpl_detail.get("source_reachability_separate") is True
-    assert isinstance(onefpl_detail.get("attempts"), list)
-    assert any(row.get("role") == "reachability_probe" for row in onefpl_detail["attempts"])
-    assert any(str(row.get("role", "")).startswith("structured_") for row in onefpl_detail["attempts"])
+    onefpl_registry = registry_sources["onefpl"]
+    onefpl_runtime = runtime_sources["onefpl"]
+    assert onefpl_registry.get("enabled") is False
+    assert onefpl_registry.get("adapter") == "disabled"
+    assert onefpl_registry.get("delegated_to") == "REPORT_TIME_SOURCE_REGISTRY_V1"
+    assert onefpl_runtime.get("status") == "DISABLED"
+    assert onefpl_runtime.get("reachable") is False
+    assert all(state == "DISABLED" for state in (onefpl_runtime.get("capabilities") or {}).values())
 
-    if onefpl.get("reachable") is True:
-        assert onefpl.get("status") == "LIVE"
-        if int(onefpl.get("observation_count") or 0) > 0:
-            assert onefpl_price == "AVAILABLE"
-            assert onefpl_detail.get("data_values_ingested") is True
-            assert onefpl_detail.get("selected_structured_url")
-        else:
-            assert onefpl_price in {
-                "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION",
-                "SOURCE_REACHABLE_STRUCTURED_ACCESS_RESTRICTED",
-            }, onefpl_price
-            assert onefpl_detail.get("data_values_ingested") is False
-    else:
-        assert onefpl.get("status") == "UNAVAILABLE"
-        assert onefpl_price == "UNAVAILABLE"
+    report_time_health = validate_report_time_registry(report_time_registry)
+    assert report_time_health.get("integrity_ok") is True, report_time_health
+    report_sources = {row["id"]: row for row in report_time_registry.get("sources") or []}
+    assert report_sources["onefpl"].get("enabled") is True
+    assert report_sources["onefpl"].get("retrieval") == "REPORT_TIME_WEB"
+    assert report_sources["onefpl"].get("class") == "MODEL_CHALLENGER"
 
     rows = observations.get("observations") or []
     for row in rows:
         assert row.get("contract") == "challenger_observation_v2"
-        assert row.get("provider") in {"livefpl", "onefpl"}
+        provider = row.get("provider") or row.get("source_id")
+        assert provider in enabled, ("collector_observation_from_disabled_source", provider)
+        assert provider != "onefpl"
         assert row.get("value") is not None
         assert row.get("source_url")
         assert row.get("fetched_at")
@@ -68,15 +62,13 @@ def run() -> dict:
         "source_overall": health.get("overall"),
         "decision_blocking": health.get("decision_blocking"),
         "onefpl": {
-            "status": onefpl.get("status"),
-            "reachable": onefpl.get("reachable"),
-            "price_data_state": onefpl_price,
-            "observations": onefpl.get("observation_count"),
-            "primary_structured_http_status": onefpl_detail.get("primary_structured_http_status"),
-            "structured_http_status": onefpl_detail.get("structured_http_status"),
-            "selected_structured_url": onefpl_detail.get("selected_structured_url"),
-            "fallback_used": onefpl_detail.get("structured_fallback_used"),
+            "collector_status": onefpl_runtime.get("status"),
+            "collector_enabled": onefpl_registry.get("enabled"),
+            "delegated_to": onefpl_registry.get("delegated_to"),
+            "report_time_enabled": report_sources["onefpl"].get("enabled"),
+            "retrieval": report_sources["onefpl"].get("retrieval"),
         },
+        "report_time_registry": report_time_health,
         "challenger_observations": len(rows),
     }
     print(json.dumps(result, ensure_ascii=False))

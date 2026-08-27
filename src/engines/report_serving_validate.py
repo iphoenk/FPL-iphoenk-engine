@@ -58,6 +58,15 @@ def run() -> dict:
     assert (brief.get("serving_contract") or {}).get("owned") == expected_owned
     assert (brief.get("serving_contract") or {}).get("watchlist") == expected_watch
 
+    if contract.get("report_time_intelligence_required") is True:
+        for payload_name, payload in (("brief", brief), ("deep", deep), ("user", user)):
+            report_time = payload.get("report_time_intelligence") or {}
+            assert report_time.get("status") in {"REFRESH_REQUIRED", "READY", "INVALID_EVIDENCE_CONTRACT"}, (payload_name, report_time)
+            assert "pundit_consensus_vs_dss" in report_time, payload_name
+            assert "fixture_strategy" in report_time, payload_name
+            assert "community_signal" in report_time, payload_name
+        assert deep.get("payload_type") == "DEEP_REVIEW_PAYLOAD_V2"
+
     files = latest.get("files") or {}
     assert files.get("decision_brief") == "data/decision_brief.json"
     assert files.get("deep_review_payload") == "data/deep_review_payload.json"
@@ -65,6 +74,7 @@ def run() -> dict:
     assert files.get("report_artifact_registry") == "data/report_artifact_registry.json"
     assert latest.get("report_serving", {}).get("owned_count") == expected_owned
     assert latest.get("report_serving", {}).get("watchlist_count") == expected_watch
+    assert latest.get("report_serving", {}).get("report_time_intelligence") is True
     assert latest.get("report_serving", {}).get("technical_lazy_load") is True
 
     sizes = {}
@@ -81,9 +91,11 @@ def run() -> dict:
 
     result = {
         "status": "PASS",
+        "registry": registry.get("registry"),
         "owned": expected_owned,
         "watchlist": expected_watch,
         "per_position": expected_per,
+        "report_time_intelligence": contract.get("report_time_intelligence_required"),
         "sizes": sizes,
         "default_fast": latest.get("report_serving", {}).get("default_fast_artifact"),
         "default_deep": latest.get("report_serving", {}).get("default_deep_review_artifact"),

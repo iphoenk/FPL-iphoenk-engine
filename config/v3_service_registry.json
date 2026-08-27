@@ -1,7 +1,7 @@
 {
-  "schema_version": 9,
+  "schema_version": 10,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.18-structured-challenger-ingestion-15-owned-20-watchlist",
+  "production_contract": "v3.19-report-time-intelligence-15-owned-20-watchlist",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,
@@ -38,14 +38,22 @@
     "stale_challenger_observations_are_not_current": true,
     "version_neutral_service_entrypoints": true,
     "inline_python_service_commands_forbidden": true,
-    "framework_expected_counts_are_registry_owned": true
+    "framework_expected_counts_are_registry_owned": true,
+    "report_time_source_registry_is_separate_from_machine_source_registry": true,
+    "onefpl_unattended_collector_fetch_is_disabled": true,
+    "report_time_sources_never_mutate_dss": true,
+    "pundit_consensus_is_advisory_only": true,
+    "pundit_consensus_is_compared_with_dss": true,
+    "community_signal_requires_crosscheck": true,
+    "fixture_strategy_expert_does_not_vote_on_player_projection": true,
+    "report_time_web_refresh_is_chat_report_orchestration_owned": true
   },
   "runtime": {
     "max_parallel_services": 5,
     "service_timeout_seconds": 180,
     "http_cache_ttl_seconds": 180,
     "performance_budget_seconds": 45,
-    "performance_target": "preserve sub-45-second runtime while adding bounded structured challenger ingestion and keeping full DSS operational evidence green"
+    "performance_target": "preserve sub-45-second unattended runtime while report-time web intelligence stays outside collector I/O and full DSS operational evidence remains green"
   },
   "services": {
     "collector": {

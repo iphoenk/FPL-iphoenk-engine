@@ -1,5 +1,10 @@
+import json
+from pathlib import Path
+
 from src.engines.personal_gameweek_context import build_history_context, build_planning_context
 from src.engines.team_state_service import projection_baseline_authority
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _team():
@@ -8,6 +13,7 @@ def _team():
         "projection_baseline": {
             "planning_gw": 2,
             "baseline_gw": 1,
+            "default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
             "effective_authority": "LOCKED_PRE_DEADLINE",
             "authority_source": "USER_LOCKED_SCREENSHOT_WC_DRAFT",
         },
@@ -100,6 +106,10 @@ def test_user_override_is_effective_but_engine_recommendation_remains_visible():
 
 
 def test_finished_gw_history_keeps_actual_truth_separate_from_forecast():
+    starting = [1, 3, 4, 5, 8, 9, 10, 11, 13, 14, 15]
+    bench = [2, 6, 7, 12]
+    order = starting + bench
+    positions = {element: index + 1 for index, element in enumerate(order)}
     official_detail = {
         "historical_entry": {
             "gameweeks": {
@@ -110,7 +120,13 @@ def test_finished_gw_history_keeps_actual_truth_separate_from_forecast():
                     "submitted": {
                         "active_chip": "bboost",
                         "picks": [
-                            {"element": i, "position": i, "multiplier": 1 if i <= 11 else 0, "is_captain": i == 15, "is_vice_captain": i == 14}
+                            {
+                                "element": i,
+                                "position": positions[i],
+                                "multiplier": 1 if i in starting else 0,
+                                "is_captain": i == 15,
+                                "is_vice_captain": i == 14,
+                            }
                             for i in range(1, 16)
                         ],
                     },
@@ -118,7 +134,7 @@ def test_finished_gw_history_keeps_actual_truth_separate_from_forecast():
             }
         }
     }
-    element_types = [1, 2] + [2] * 5 + [3] * 5 + [4] * 3
+    element_types = [1, 1] + [2] * 5 + [3] * 5 + [4] * 3
     snapshot = {
         "bootstrap": {
             "elements": [
@@ -132,5 +148,20 @@ def test_finished_gw_history_keeps_actual_truth_separate_from_forecast():
     assert rows[0]["gw"] == 1
     assert rows[0]["actual_points"] == 71
     assert rows[0]["chip"] == "BENCH_BOOST"
+    assert rows[0]["formation"] == "3-4-3"
+    assert rows[0]["captain"]["name"] == "P15"
     assert len(rows[0]["submitted_squad"]) == 15
     assert rows[0]["forecast_capture"] == "NOT_RECONSTRUCTED"
+
+
+def test_report_materializer_declares_official_snapshot_as_input():
+    registry = json.loads((ROOT / "config" / "v3_service_registry.json").read_text(encoding="utf-8"))
+    report_inputs = ((registry.get("services") or {}).get("report_materializer") or {}).get("inputs") or []
+    assert "official_snapshot.json" in report_inputs
+
+
+def test_wc_screenshot_lock_is_scoped_to_gw2():
+    lock = json.loads((ROOT / "config" / "locked_squad.json").read_text(encoding="utf-8"))
+    assert lock.get("target_gw") == 2
+    assert lock.get("authority_source") == "USER_LOCKED_SCREENSHOT_WC_DRAFT"
+    assert lock.get("planning_override_active") is True

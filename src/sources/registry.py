@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from src.sources.base import SourceSpec
 from src.utils import ROOT
@@ -11,7 +12,7 @@ REGISTRY_PATH = ROOT / "config" / "sources" / "registry.json"
 
 
 @lru_cache(maxsize=1)
-def load_source_registry() -> dict:
+def load_source_registry() -> dict[str, Any]:
     payload = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
     rows = payload.get("sources")
     if not isinstance(rows, list) or not rows:
@@ -22,6 +23,22 @@ def load_source_registry() -> dict:
     if not any(row.get("id") == "official_fpl" and row.get("class") == "AUTHORITATIVE" for row in rows):
         raise RuntimeError("official_fpl authoritative source is required")
     return payload
+
+
+def source_config(source_id: str) -> dict[str, Any]:
+    source_id = str(source_id)
+    for row in load_source_registry()["sources"]:
+        if str(row.get("id")) == source_id:
+            return dict(row)
+    raise KeyError(f"source not found in registry: {source_id}")
+
+
+def source_ingestion_config(source_id: str) -> dict[str, Any]:
+    row = source_config(source_id)
+    cfg = row.get("ingestion") or {}
+    if not isinstance(cfg, dict):
+        raise RuntimeError(f"source ingestion config must be an object: {source_id}")
+    return dict(cfg)
 
 
 def source_specs() -> tuple[SourceSpec, ...]:
@@ -42,7 +59,7 @@ def source_specs() -> tuple[SourceSpec, ...]:
     return tuple(specs)
 
 
-def registry_integrity() -> dict:
+def registry_integrity() -> dict[str, Any]:
     payload = load_source_registry()
     specs = source_specs()
     return {

@@ -39,14 +39,17 @@ def test_runtime_fingerprint_covers_performance_and_weather_venue_authority():
     assert "config/v5_performance_budgets.json" in set(integrity["include_files"])
 
 
-def test_existing_workflows_cover_beta6_without_new_workflow_family():
+def test_existing_workflows_and_shadow_cycle_enforce_beta6_runtime_contract():
     unified = Path(".github/workflows/v5-unified-gate.yml").read_text(encoding="utf-8")
     shadow = Path(".github/workflows/v5-shadow-cycle.yml").read_text(encoding="utf-8")
+    shadow_cycle = Path("src/v5/shadow_cycle.py").read_text(encoding="utf-8")
+    beta = Path("src/v5/services/orchestrator_beta.py").read_text(encoding="utf-8")
 
     assert "v5-beta6-roadmap" in unified
     assert "tests/test_v5_runtime_performance_policy.py" in unified
     assert "v5-beta6-roadmap" in shadow
     assert "decision_pipeline_hard_limit_seconds" in shadow
-    assert "full_beta_end_to_end_hard_limit_seconds" in shadow
-    assert "full_beta_end_to_end_ms" in shadow
     assert "orchestrator_wall_ms" in shadow
+    assert "full_beta_end_to_end_hard_limit_seconds" in shadow_cycle
+    assert "full_beta_end_to_end_under_one_second" in shadow_cycle
+    assert "full_beta_end_to_end_ms" in beta

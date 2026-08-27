@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "contract": "V5_EXECUTION_PLANE_V1",
   "purpose": "Separate heavy evidence refresh from the user-facing subsecond decision path without reducing analytical breadth or duplicating business authority.",
   "planes": {
@@ -16,7 +16,10 @@
         "historical_prior_and_native_prediction",
         "prediction_evaluation",
         "decision_prepare",
+        "decision_finalize",
+        "governance_audit",
         "watchlist_screening",
+        "decision_first_reporting",
         "durable_materialization"
       ],
       "network_refresh_allowed": true,
@@ -32,9 +35,7 @@
       "allowed_stages": [
         "materialization_read",
         "freshness_validation",
-        "decision_finalize",
-        "governance_audit",
-        "decision_first_reporting"
+        "response_projection"
       ]
     }
   },
@@ -42,18 +43,23 @@
     "decision_hot_bundle": {
       "owner": "orchestrator",
       "durable_store_owner": "snapshot",
-      "schema_version": 1,
+      "schema_version": 2,
+      "contract": "V5_DECISION_HOT_BUNDLE_V2",
       "required_fields": [
+        "schema_version",
+        "contract",
         "generated_at",
         "runtime_fingerprint",
         "mode",
         "phase",
-        "truth",
-        "price",
-        "prediction",
-        "evaluation",
-        "prepared_decision",
-        "watchlist"
+        "team_id",
+        "squad_authority",
+        "decision_summary",
+        "framework_health",
+        "watchlist_summary",
+        "user_report",
+        "technical_appendix",
+        "report_state"
       ],
       "freshness_seconds_by_mode": {
         "daily": 300,
@@ -70,8 +76,10 @@
     "quality_may_not_be_reduced_for_latency": true,
     "refresh_and_hot_planes_must_share_the_same_business_authorities": true,
     "hot_plane_must_not_call_external_data_providers": true,
+    "hot_plane_must_not_recompute_prediction_or_optimizer": true,
     "stale_data_must_not_trigger_hidden_synchronous_refresh": true,
     "durable_materialization_required_before_hot_eligibility": true,
-    "runtime_fingerprint_must_match_current_release": true
+    "runtime_fingerprint_must_match_current_release": true,
+    "materialized_response_must_be_stripped_of_internal_only_fields": true
   }
 }

@@ -115,7 +115,7 @@ def run() -> dict:
             assert weather.get("causality_guard"), payload_name
         if contract.get("personal_gameweek_context_required") is True:
             _validate_personal_gameweek_context(payload_name, payload)
-    assert deep.get("payload_type") == "DEEP_REVIEW_PAYLOAD_V3"
+    assert deep.get("payload_type") == "DEEP_REVIEW_PAYLOAD_V2"
 
     files = latest.get("files") or {}
     assert files.get("decision_brief") == "data/decision_brief.json"

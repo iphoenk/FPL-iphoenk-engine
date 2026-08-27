@@ -38,52 +38,29 @@ def _aware(value: datetime | None) -> bool:
 
 
 def deadline_player_projection(players: list[dict], gw: int) -> tuple[list[dict], int]:
-    """Keep only point-in-time fields consumed by post-GW reconciliation.
-
-    The full prediction artifact remains provenance-authoritative through
-    ``prediction_sha256`` on the snapshot. Every player is retained so snapshot
-    population semantics stay stable, but at most the target-GW fixture is
-    stored. This prevents 15-GW nested prediction payloads from being copied
-    into Git history for every deadline.
-    """
+    """Keep only point-in-time fields consumed by post-GW reconciliation."""
     projected: list[dict] = []
     target_fixture_rows = 0
     for player in players:
         if player.get("element") is None:
             raise RuntimeError("prediction player missing element id")
-        fixture = next(
-            (
-                row
-                for row in (player.get("fixtures") or [])
-                if int(row.get("event") or -1) == int(gw)
-            ),
-            None,
-        )
+        fixture = next((row for row in (player.get("fixtures") or []) if int(row.get("event") or -1) == int(gw)), None)
         fixtures: list[dict] = []
         if fixture is not None:
             xmins = fixture.get("xmins") or {}
-            fixtures.append(
-                {
-                    "event": int(gw),
-                    "xpts": fixture.get("xpts"),
-                    "lower80": fixture.get("lower80"),
-                    "upper80": fixture.get("upper80"),
-                    "xmins": {
-                        "expected_minutes": xmins.get("expected_minutes"),
-                        "start_probability": xmins.get("start_probability"),
-                        "p60": xmins.get("p60"),
-                    },
-                }
-            )
+            fixtures.append({
+                "event": int(gw),
+                "xpts": fixture.get("xpts"),
+                "lower80": fixture.get("lower80"),
+                "upper80": fixture.get("upper80"),
+                "xmins": {
+                    "expected_minutes": xmins.get("expected_minutes"),
+                    "start_probability": xmins.get("start_probability"),
+                    "p60": xmins.get("p60"),
+                },
+            })
             target_fixture_rows += 1
-        projected.append(
-            {
-                "element": int(player["element"]),
-                "name": player.get("name"),
-                "position": player.get("position"),
-                "fixtures": fixtures,
-            }
-        )
+        projected.append({"element": int(player["element"]), "name": player.get("name"), "position": player.get("position"), "fixtures": fixtures})
     return projected, target_fixture_rows
 
 
@@ -96,7 +73,6 @@ def snapshot_integrity(snapshot: dict, expected_gw: int | None = None) -> tuple[
         return False, "snapshot_gw_mismatch"
     if not snapshot.get("model_version") or not list(snapshot.get("players") or []):
         return False, "snapshot_missing_model_or_players"
-
     deadline = parse_dt(snapshot.get("deadline_time"))
     prediction_generated = parse_dt(snapshot.get("prediction_generated_at") or snapshot.get("generated_at"))
     captured = parse_dt(snapshot.get("captured_at"))
@@ -104,7 +80,6 @@ def snapshot_integrity(snapshot: dict, expected_gw: int | None = None) -> tuple[
         return False, "snapshot_timestamps_invalid"
     if prediction_generated > deadline or captured > deadline:
         return False, "snapshot_created_after_deadline"
-
     projection = snapshot.get("projection")
     if projection is not None:
         if projection != COMPACT_PROJECTION:
@@ -120,10 +95,7 @@ def snapshot_integrity(snapshot: dict, expected_gw: int | None = None) -> tuple[
                 if int(fixture.get("event") or -1) != gw:
                     return False, "compact_snapshot_fixture_gw_mismatch"
                 xmins = fixture.get("xmins") or {}
-                if fixture.get("xpts") is None or any(
-                    xmins.get(field) is None
-                    for field in ("expected_minutes", "start_probability", "p60")
-                ):
+                if fixture.get("xpts") is None or any(xmins.get(field) is None for field in ("expected_minutes", "start_probability", "p60")):
                     return False, "compact_snapshot_missing_reconciliation_fields"
                 fixture_rows += 1
         if int(snapshot.get("source_players") or -1) != len(snapshot.get("players") or []):
@@ -133,20 +105,7 @@ def snapshot_integrity(snapshot: dict, expected_gw: int | None = None) -> tuple[
     return True, None
 
 
-def persist_deadline_snapshot(
-    gw: int,
-    deadline_time: str | None,
-    predictions: dict,
-    generated_at: str | None = None,
-    now: datetime | None = None,
-) -> dict:
-    """Freeze one pre-deadline prediction snapshot per GW.
-
-    Existing valid snapshots are preserved byte-for-byte conceptually: they are
-    read and returned, never regenerated from newer predictions. Creating a new
-    snapshot at or after the deadline is rejected fail-closed. New snapshots use
-    a compact reconciliation-only projection; legacy full snapshots remain valid.
-    """
+def persist_deadline_snapshot(gw: int, deadline_time: str | None, predictions: dict, generated_at: str | None = None, now: datetime | None = None) -> dict:
     path = deadline_snapshot_path(gw)
     existing = read_json(path, None)
     if existing:
@@ -158,21 +117,18 @@ def persist_deadline_snapshot(
         if not requested_deadline or existing_deadline != requested_deadline:
             raise RuntimeError("existing deadline snapshot deadline mismatch")
         return existing
-
     deadline = parse_dt(deadline_time)
     current = now or utcnow()
     if not (_aware(deadline) and _aware(current)):
         raise RuntimeError("deadline snapshot requires timezone-aware timestamps")
     if current >= deadline:
         raise RuntimeError("retroactive deadline snapshot rejected")
-
     prediction_generated_at = generated_at or predictions.get("generated_at")
     prediction_generated = parse_dt(prediction_generated_at)
     if not _aware(prediction_generated):
         raise RuntimeError("prediction generated_at missing or timezone-naive")
     if prediction_generated > deadline:
         raise RuntimeError("prediction artifact was generated after deadline")
-
     source_players = list(predictions.get("players") or [])
     model_version = predictions.get("model_version")
     if not source_players or not model_version:
@@ -180,13 +136,11 @@ def persist_deadline_snapshot(
     players, target_fixture_rows = deadline_player_projection(source_players, int(gw))
     if target_fixture_rows <= 0:
         raise RuntimeError("prediction snapshot has no target-GW fixtures")
-
     payload = {
         "schema_version": 493,
         "kind": "deadline_prediction_snapshot",
         "gw": int(gw),
         "deadline_time": deadline_time,
-        # generated_at remains the model artifact time for validation compatibility.
         "generated_at": prediction_generated_at,
         "prediction_generated_at": prediction_generated_at,
         "captured_at": current.isoformat(),
@@ -207,13 +161,24 @@ def persist_deadline_snapshot(
 
 
 def actual_by_element(live: dict) -> dict[int, dict]:
+    """Legacy-compatible truthful actual mapping; never infer starts from minutes."""
     out: dict[int, dict] = {}
     for item in (live or {}).get("elements", []):
-        stats = item.get("stats", {})
-        out[int(item.get("id"))] = {
+        if item.get("id") is None:
+            continue
+        stats = item.get("stats") or {}
+        starts = stats.get("starts")
+        if starts is None:
+            started = None
+        else:
+            try:
+                started = bool(int(starts))
+            except (TypeError, ValueError) as exc:
+                raise RuntimeError(f"invalid Official stats.starts for element {item.get('id')}: {starts!r}") from exc
+        out[int(item["id"])] = {
             "total_points": float(stats.get("total_points", 0) or 0),
             "minutes": float(stats.get("minutes", 0) or 0),
-            "started": bool((stats.get("minutes", 0) or 0) >= 45),
+            "started": started,
         }
     return out
 
@@ -230,7 +195,6 @@ def reconciled_integrity(sample: dict, model_version: str | None = None) -> tupl
         return False, "reconciliation_metrics_not_passed"
     if int(metrics.get("leakage_rejected") or 0) != 0:
         return False, "reconciliation_contains_leakage_rejections"
-
     gw = int(sample.get("gw") or -1)
     snapshot = read_json(deadline_snapshot_path(gw), None)
     ok, reason = snapshot_integrity(snapshot, gw)
@@ -244,7 +208,6 @@ def reconciled_integrity(sample: dict, model_version: str | None = None) -> tupl
 
 
 def reconcile_finished_gw(gw: int, live: dict, now: datetime | None = None) -> dict | None:
-    """Reconcile exactly once against the immutable pre-deadline snapshot."""
     path = reconciled_path(gw)
     existing = read_json(path, None)
     if existing:
@@ -252,29 +215,26 @@ def reconcile_finished_gw(gw: int, live: dict, now: datetime | None = None) -> d
         if not ok:
             raise RuntimeError(f"existing reconciliation failed integrity: {reason}")
         return existing
-
     snapshot = read_json(deadline_snapshot_path(gw), None)
     if not snapshot:
         return None
     ok, reason = snapshot_integrity(snapshot, int(gw))
     if not ok:
         raise RuntimeError(f"deadline snapshot is not eligible for reconciliation: {reason}")
-
     actual = actual_by_element(live)
     if not actual:
         raise RuntimeError("finished GW live payload has no player actuals")
     report = reconcile_prediction_snapshot(snapshot, actual, event=int(gw), deadline=snapshot.get("deadline_time"))
-    metrics = (report.get("metrics") or {})
+    metrics = report.get("metrics") or {}
     if metrics.get("status") != "PASS" or int(metrics.get("n") or 0) <= 0:
         raise RuntimeError(f"reconciliation produced no safe sample: {metrics}")
     if int(metrics.get("leakage_rejected") or 0) != 0:
         raise RuntimeError("reconciliation rejected leakage rows; snapshot is not safe")
-
     current = now or utcnow()
     if not _aware(current):
         raise RuntimeError("reconciliation timestamp must be timezone-aware")
     out = {
-        "schema_version": 493,
+        "schema_version": 4943,
         "kind": "post_gw_reconciliation",
         "gw": int(gw),
         "generated_at": current.isoformat(),
@@ -285,22 +245,16 @@ def reconcile_finished_gw(gw: int, live: dict, now: datetime | None = None) -> d
         "sample_eligible": True,
         "actual_elements": len(actual),
         "report": report,
+        "guardrails": {"started_from_official_stats_starts_only": True, "minutes_never_infer_started": True, "missing_starts_remain_unknown": True},
     }
     atomic_json(path, out)
     return out
 
 
 def refresh_eligible_view(model_version: str | None) -> dict:
-    """Materialize only validated current-model samples for framework health.
-
-    The immutable archive is never deleted. The health-facing directory is a
-    derived view and is rebuilt every production cycle, preventing stale model
-    samples or malformed files from keeping learning/calibration falsely ACTIVE.
-    """
     RECDIR.mkdir(parents=True, exist_ok=True)
     for path in RECDIR.glob("gw*.json"):
         path.unlink()
-
     eligible: list[int] = []
     rejected: list[dict] = []
     if ARCHIVE_RECDIR.exists():
@@ -313,11 +267,4 @@ def refresh_eligible_view(model_version: str | None) -> dict:
             gw = int(sample.get("gw"))
             atomic_json(eligible_reconciled_path(gw), sample)
             eligible.append(gw)
-    return {
-        "model_version": model_version,
-        "eligible_samples": len(eligible),
-        "eligible_gws": eligible,
-        "rejected_samples": rejected,
-        "archive_is_append_only": True,
-        "health_view_rebuilt": True,
-    }
+    return {"model_version": model_version, "eligible_samples": len(eligible), "eligible_gws": eligible, "rejected_samples": rejected, "archive_is_append_only": True, "health_view_rebuilt": True}

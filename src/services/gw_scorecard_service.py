@@ -216,6 +216,22 @@ def build_planning_projection(lineup: dict, planning_gw: int | None) -> dict:
     }
 
 
+def attach_squad_basis(projection: dict, raw: dict) -> dict:
+    """Attach and validate the baseline/override authority used to build planning XI."""
+    out = dict(projection)
+    if out.get("status") != "PROJECTION":
+        return out
+    basis = dict(raw.get("projection_baseline") or {})
+    if not basis:
+        raise RuntimeError("projection baseline authority missing from raw snapshot")
+    if int(basis.get("planning_gw") or 0) != int(out.get("gw") or 0):
+        raise RuntimeError("projection baseline planning GW mismatch")
+    if not basis.get("baseline_gw"):
+        raise RuntimeError("projection baseline previous submitted GW missing")
+    out["squad_basis"] = basis
+    return out
+
+
 def _archive_path(directory: Path, gw: int) -> Path:
     return directory / f"gw{int(gw):02d}.json"
 
@@ -303,7 +319,10 @@ def run() -> dict:
             previous = {"status": "UNAVAILABLE", "gw": int(last_finished), "reason": "finished_gw_source_not_in_current_snapshot_and_archive_missing"}
             archive_action = "MISSING_SOURCE"
 
-    projection = build_planning_projection(lineup, int(planning_gw) if planning_gw else None)
+    projection = attach_squad_basis(
+        build_planning_projection(lineup, int(planning_gw) if planning_gw else None),
+        raw,
+    )
     history = _archive_history(ARCHIVE_DIR)
     if previous.get("status") == "FINAL" and not any(int(row.get("gw") or 0) == int(previous.get("gw") or 0) for row in history):
         history.append({
@@ -341,6 +360,8 @@ def run() -> dict:
             "finished_gw_archive_immutable": True,
             "simulation_never_mutates_archive": True,
             "projection_from_lineup_contract": True,
+            "previous_submitted_gw_is_default_projection_baseline": True,
+            "planning_override_target_gw_required": True,
             "projection_is_estimate_not_actual": True,
             "player_intervals_not_naively_summed": True,
         },
@@ -352,6 +373,8 @@ def run() -> dict:
         "status": out["status"],
         "previous": out["headline"]["previous"],
         "planning": out["headline"]["planning"],
+        "baseline_gw": (projection.get("squad_basis") or {}).get("baseline_gw"),
+        "squad_authority": (projection.get("squad_basis") or {}).get("effective_authority"),
         "archive_action": archive_action,
         "duration_ms": out["performance_ms"],
     }, ensure_ascii=False))

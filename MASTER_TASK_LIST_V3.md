@@ -69,7 +69,7 @@ Normalized challenger observations, provenance/freshness, reachability-vs-capabi
 ### V3.19 Report-Time Intelligence
 Dedicated report-time registry, OneFPL delegation, Ben Crellin fixture strategy, pundit consensus-vs-DSS, Reddit/community governance, verified news, freshness, report serving and explicit `REFRESH_REQUIRED` state are DONE.
 
-### V3.20.0 Architecture Hardening
+### V3.20 Architecture Hardening
 | ID | Task | Status |
 | --- | --- | --- |
 | V3-ARCH-201 | Canonical Source Registry V3 | DONE |

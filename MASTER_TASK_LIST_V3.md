@@ -57,6 +57,7 @@ This file is the single human-readable master roadmap for the operational V3 str
 31. Runtime Git history is not a database; persistent domain history belongs in explicit compact ledgers.
 32. Runtime optimization may not silently opt normalized player features into model behavior.
 33. A reused service must preserve only its registry-owned canonical latest state through base fan-in; unrelated prior state may not be carried forward.
+34. Weather refresh must reuse confidence-appropriate fresh observations and bound concurrent provider requests; FULL latency may not be reduced by unbounded worker fan-out.
 
 ## A. Production keep-green
 | ID | Task | Status | Acceptance |
@@ -152,7 +153,7 @@ Release objective: make frequent decision regeneration fast and resource-aware w
 | REC-31 | Profile-aware REUSED validation + complete source hydrate | DONE | only declared, artifact-validated REUSED states accepted |
 | REC-32 | Registry-owned reusable latest-state carry-forward | DONE | production contracts and publication PASS after FAST reuse |
 | REC-09a | Stop new mutable data tracking on main | PHASE-1 DONE | `/data/**` ignored; tracked legacy cleanup deferred until cold-start proof |
-| REC-33 | FULL Refresh Source-Layer latency variance | NEXT | one CI FULL run 55.522s with Source Layer 45.964s; non-blocking to FAST SLO |
+| REC-33 | FULL Refresh Source-Layer latency variance | IMPLEMENTED / CI-PROVEN | CI `33061348137`: 154 tests PASS; FULL 17.068s; Source Layer 3.043s; FAST 5.268s; production proof pending |
 
 Production acceptance evidence:
 - Foundation CI `33055271837`: architecture PASS, 147 tests PASS, FULL 18.656s, FAST 5.160s.
@@ -161,6 +162,7 @@ Production acceptance evidence:
 - Accepted production run `33059540147`: FAST **6.419s**, framework GREEN, prediction quality HEALTHY, Gate0 16/16, 15 OWNED + 20 WATCHLIST, source/report/report-time contracts PASS.
 - Accepted runtime-data commit `5678fcb2f4f8e5934728ff6a8b955a401a42883d` is a **root commit with zero parents**, proving rolling publication rather than runtime Git-history accumulation.
 - Accepted runtime manifest: V3.22.0/schema49, source commit `3f35c06f39869e594f6e1a127437a2272c0fc515`, 48 files, 17,835,453 bytes, no `history.jsonl` publication.
+- REC-33 CI `33061348137`: FULL **17.068s**, `source_layer` **3.043s**, FAST **5.268s**, with bounded weather concurrency and confidence-aware fresh observation reuse.
 - Report-time external intelligence may remain `REFRESH_REQUIRED`; that is a truthful report-time state and not a runtime-integrity failure.
 
 V3.22 does not implement REC-01 or REC-02 model changes. `player_features.json` remains plumbing-only until those recommendations are separately developed, tested and attributed.
@@ -230,7 +232,7 @@ Every visible report must explicitly show recommended formation, exact XI, Capta
 | V3-ENG-510 | Weather no-direct-decision regression | ACTIVE |
 | V3-ENG-511 | FAST <10s SLO and resource telemetry | ACTIVE |
 | V3-ENG-512 | Rolling runtime-data publication / storage hygiene | ACTIVE |
-| V3-ENG-513 | REC-33 FULL Source Layer latency variance | NEXT |
+| V3-ENG-513 | REC-33 FULL Source Layer latency variance | ACTIVE / ACCEPTANCE PENDING |
 
 ## Release checklist for every V3 change
 1. Branch from current production `main`.
@@ -263,7 +265,7 @@ A task is DONE only when implementation, deterministic tests, documentation, ver
 For external evidence, missing values may never be synthesized merely to keep health GREEN. For weather, correlation alone may never be presented as causation. For runtime artifacts, malformed JSON or contract mismatch may never be downgraded to an ordinary no-observation state when the producing service declared that artifact as its output. For prediction quality, passing deterministic formula tests is not evidence of forecasting accuracy; settled frozen forecasts are required.
 
 ## Execution order
-1. Optimize REC-33 FULL Refresh Source-Layer latency variance without weakening the accepted FAST <10s path.
+1. Complete REC-33 production proof without weakening the accepted FAST <10s path.
 2. Accumulate settled Gameweeks for projection-confidence and weather-performance calibration.
 3. Implement REC-01 and REC-02 as separate, attributable model changes after normalized player-feature plumbing is accepted.
 4. Improve remaining P1 intelligence evidence without weakening Official authority or fail-closed internal integrity.

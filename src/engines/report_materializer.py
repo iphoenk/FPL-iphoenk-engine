@@ -311,7 +311,7 @@ def run() -> dict[str, Any]:
         "report_artifact_registry": "data/report_artifact_registry.json",
     })
     latest["report_serving"] = {
-        "registry": "REPORT_ARTIFACT_REGISTRY_V1",
+        "registry": load_registry().get("registry"),
         "default_fast_artifact": "data/decision_brief.json",
         "default_deep_review_artifact": "data/deep_review_payload.json",
         "owned_count": len(owned),

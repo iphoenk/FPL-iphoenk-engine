@@ -1,8 +1,14 @@
 {
-  "schema_version": 1,
-  "model_id": "mini_league_tracking_v1",
+  "schema_version": 2,
+  "model_id": "mini_league_tracking_v2_autodiscovery",
   "classic_league_ids": [],
   "h2h_league_ids": [],
+  "auto_discovery": {
+    "enabled": true,
+    "private_only": true,
+    "max_per_kind": 5,
+    "private_signals": ["entry_can_leave", "entry_can_admin", "entry_can_invite"]
+  },
   "environment_override": {
     "classic": "FPL_CLASSIC_LEAGUE_IDS",
     "h2h": "FPL_H2H_LEAGUE_IDS"
@@ -14,6 +20,7 @@
     "full_rival_picks_not_collected": true,
     "tracking_is_noncritical": true,
     "fast_profile_may_reuse_official_detail": true,
-    "strategy_mode_not_inferred_without_evidence": true
+    "strategy_mode_not_inferred_without_evidence": true,
+    "system_leagues_are_not_auto_tracked": true
   }
 }

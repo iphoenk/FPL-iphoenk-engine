@@ -143,7 +143,7 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         ledger.append({"element": player["id"], "name": player["web_name"], "team": teams[player["team"]], "position": positions[player["element_type"]], "purchase_cost": purchase, "now_cost": player["now_cost"], "sell_cost": selling, "purchase_source": source, "ownership": player.get("selected_by_percent"), "status": player.get("status")})
     out = {
         "schema": "snapshot.v1",
-        "schema_version": 491,
+        "schema_version": 492,
         "generated_at": iso_now(),
         "mode": mode,
         "as_of": as_of,

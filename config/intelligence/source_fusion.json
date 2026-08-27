@@ -2,8 +2,19 @@
   "schema_version": 4,
   "model_id": "v5_source_fusion_v4",
   "source_registry": "config/sources/registry.json",
+  "season_authority": {
+    "registry_path": "config/rules/registry.json",
+    "season_field": "season"
+  },
+  "source_runtime_projection": {
+    "registry_path": "config/sources/registry.json",
+    "runtime_field": "ingestion",
+    "source_ids": ["understat", "api_football"],
+    "credential_env_alias": "api_key_env"
+  },
   "concurrency": {
-    "max_workers_policy": "canonical_source_registry"
+    "max_workers_policy": "canonical_source_registry",
+    "max_workers_field": "policy.max_workers"
   },
   "sources": {
     "understat": {
@@ -27,6 +38,7 @@
   },
   "governance": {
     "canonical_source_enablement_only": true,
+    "runtime_configuration_is_projected_from_canonical_registry": true,
     "local_source_enabled_flags_forbidden": true,
     "weather_advisory_only": true,
     "missing_enrichment_is_unavailable_not_zero": true,

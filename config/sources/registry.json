@@ -17,21 +17,213 @@
     "challenger_observation_contract": "challenger_observation_v2",
     "source_network_locations_are_registry_owned": true,
     "source_ingestion_timeouts_are_registry_owned": true,
+    "source_runtime_configuration_is_registry_owned": true,
     "active_artifact_aliases_must_not_embed_gameweek": true,
     "weather_is_advisory_enrichment_only": true,
     "source_enablement_is_canonical_here": true
   },
   "sources": [
-    {"id":"official_fpl","name":"Official FPL","class":"AUTHORITATIVE","tier":1,"enabled":true,"critical":true,"adapter":"runtime_official","api_base":"https://fantasy.premierleague.com/api","capabilities":["player_identity","prices","fixtures","entry","history","picks","live","rules_native_fields"]},
-    {"id":"fpl_core_insights","name":"FPL Core Insights","class":"ENRICHMENT","tier":2,"enabled":true,"critical":false,"adapter":"artifact","artifact_paths":["stats/shots_current.json","stats/playermatchstats_current.json"],"ingestion":{"season":"2026-2027","raw_base":"https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data","request_timeout_seconds":20,"gameweek_player_files":["players.csv","playerstats.csv","playergameweekstats.csv"],"deep_files":{"shots":["shots.csv"],"playermatchstats":["playermatchstats.csv"]}},"capabilities":["advanced_stats","shots","player_match_stats"]},
-    {"id":"vaastav","name":"vaastav FPL Dataset","class":"ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"artifact","artifact_paths":["stats/vaastav_previous_season.json"],"ingestion":{"season":"2026-2027","raw_base":"https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data","request_timeout_seconds":25,"current_season_candidates":[{"path":"gws/gw{gw}.csv","data_mode":"GW_SPECIFIC"},{"path":"gws/merged_gw.csv","data_mode":"MERGED_GW_FALLBACK"},{"path":"cleaned_players.csv","data_mode":"SEASON_SNAPSHOT_FALLBACK"},{"path":"players_raw.csv","data_mode":"SEASON_RAW_FALLBACK"}],"previous_season_files":["players_raw.csv","cleaned_players.csv"]},"capabilities":["historical_prior","previous_season_stats"]},
-    {"id":"open_meteo","name":"Open-Meteo","class":"ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"weather_open_meteo","artifact_paths":["source_cache/weather_open_meteo.json"],"policy_ref":"config/intelligence/weather_context.json","capabilities":["fixture_weather","weather_anomaly_context"]},
-    {"id":"livefpl","name":"LiveFPL","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"livefpl","probe_url":"https://www.livefpl.net/","structured_url":"https://www.livefpl.net/prices","observation_ttl_seconds":1800,"max_fetch_bytes":1048576,"parser_contract":"livefpl-price-v1","capabilities":["price_prediction","effective_ownership","live_rank","bonus_crosscheck","defcon_crosscheck","autosub_crosscheck","rank_tier_context"]},
-    {"id":"onefpl","name":"OneFPL","class":"CHALLENGER","tier":2,"enabled":false,"critical":false,"adapter":"disabled","capabilities":["price_prediction","transfer_trends","captaincy_context","planner_context"],"delegated_to":"REPORT_TIME_SOURCE_REGISTRY_V1","note":"Automated collector access disabled. OneFPL is refreshed at scheduled or on-demand report time through normal web access and remains advisory only."},
-    {"id":"fffix","name":"Fantasy Football Fix","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"fffix","probe_url":"https://www.fantasyfootballfix.com/","capabilities":["price_prediction","predicted_points","predicted_lineups","ownership_context"]},
-    {"id":"ffhub","name":"Fantasy Football Hub","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"ffhub","probe_url":"https://www.fantasyfootballhub.co.uk/","capabilities":["predicted_points","team_optimization","ownership_context","mini_league_context"]},
-    {"id":"ffscout","name":"Fantasy Football Scout","class":"ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"ffscout","probe_url":"https://www.fantasyfootballscout.co.uk/","capabilities":["team_news","predicted_lineups","role_context","set_piece_context","community_analysis"]},
-    {"id":"api_football","name":"API-Football","class":"OPTIONAL_ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"api_football","credential_env":"API_FOOTBALL_KEY","capabilities":["cross_competition_schedule_context","international_schedule_context"]},
-    {"id":"understat","name":"Understat","class":"ENRICHMENT","tier":4,"enabled":false,"critical":false,"adapter":"disabled","capabilities":["xg","xa"],"note":"Direct scraping remains disabled by default and cannot be re-enabled by source-fusion local config."}
+    {
+      "id": "official_fpl",
+      "name": "Official FPL",
+      "class": "AUTHORITATIVE",
+      "tier": 1,
+      "enabled": true,
+      "critical": true,
+      "adapter": "runtime_official",
+      "api_base": "https://fantasy.premierleague.com/api",
+      "capabilities": ["player_identity", "prices", "fixtures", "entry", "history", "picks", "live", "rules_native_fields"]
+    },
+    {
+      "id": "fpl_core_insights",
+      "name": "FPL Core Insights",
+      "class": "ENRICHMENT",
+      "tier": 2,
+      "enabled": true,
+      "critical": false,
+      "adapter": "artifact",
+      "artifact_paths": ["stats/shots_current.json", "stats/playermatchstats_current.json"],
+      "ingestion": {
+        "season": "2026-2027",
+        "raw_base": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data",
+        "request_timeout_seconds": 20,
+        "gameweek_player_files": ["players.csv", "playerstats.csv", "playergameweekstats.csv"],
+        "deep_files": {
+          "shots": ["shots.csv"],
+          "playermatchstats": ["playermatchstats.csv"]
+        }
+      },
+      "capabilities": ["advanced_stats", "shots", "player_match_stats"]
+    },
+    {
+      "id": "vaastav",
+      "name": "vaastav FPL Dataset",
+      "class": "ENRICHMENT",
+      "tier": 3,
+      "enabled": true,
+      "critical": false,
+      "adapter": "artifact",
+      "artifact_paths": ["stats/vaastav_previous_season.json"],
+      "ingestion": {
+        "season": "2026-2027",
+        "raw_base": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data",
+        "request_timeout_seconds": 25,
+        "current_season_candidates": [
+          {"path": "gws/gw{gw}.csv", "data_mode": "GW_SPECIFIC"},
+          {"path": "gws/merged_gw.csv", "data_mode": "MERGED_GW_FALLBACK"},
+          {"path": "cleaned_players.csv", "data_mode": "SEASON_SNAPSHOT_FALLBACK"},
+          {"path": "players_raw.csv", "data_mode": "SEASON_RAW_FALLBACK"}
+        ],
+        "previous_season_files": ["players_raw.csv", "cleaned_players.csv"]
+      },
+      "capabilities": ["historical_prior", "previous_season_stats"]
+    },
+    {
+      "id": "open_meteo",
+      "name": "Open-Meteo",
+      "class": "ENRICHMENT",
+      "tier": 3,
+      "enabled": true,
+      "critical": false,
+      "adapter": "weather_open_meteo",
+      "artifact_paths": ["source_cache/weather_open_meteo.json"],
+      "policy_ref": "config/intelligence/weather_context.json",
+      "capabilities": ["fixture_weather", "weather_anomaly_context"]
+    },
+    {
+      "id": "livefpl",
+      "name": "LiveFPL",
+      "class": "CHALLENGER",
+      "tier": 2,
+      "enabled": true,
+      "critical": false,
+      "adapter": "livefpl",
+      "probe_url": "https://www.livefpl.net/",
+      "structured_url": "https://www.livefpl.net/prices",
+      "observation_ttl_seconds": 1800,
+      "max_fetch_bytes": 1048576,
+      "parser_contract": "livefpl-price-v1",
+      "capabilities": ["price_prediction", "effective_ownership", "live_rank", "bonus_crosscheck", "defcon_crosscheck", "autosub_crosscheck", "rank_tier_context"]
+    },
+    {
+      "id": "onefpl",
+      "name": "OneFPL",
+      "class": "CHALLENGER",
+      "tier": 2,
+      "enabled": false,
+      "critical": false,
+      "adapter": "disabled",
+      "capabilities": ["price_prediction", "transfer_trends", "captaincy_context", "planner_context"],
+      "delegated_to": "REPORT_TIME_SOURCE_REGISTRY_V1",
+      "note": "Automated collector access disabled. OneFPL is refreshed at scheduled or on-demand report time through normal web access and remains advisory only."
+    },
+    {
+      "id": "fffix",
+      "name": "Fantasy Football Fix",
+      "class": "CHALLENGER",
+      "tier": 2,
+      "enabled": true,
+      "critical": false,
+      "adapter": "fffix",
+      "probe_url": "https://www.fantasyfootballfix.com/",
+      "capabilities": ["price_prediction", "predicted_points", "predicted_lineups", "ownership_context"]
+    },
+    {
+      "id": "ffhub",
+      "name": "Fantasy Football Hub",
+      "class": "CHALLENGER",
+      "tier": 2,
+      "enabled": true,
+      "critical": false,
+      "adapter": "ffhub",
+      "probe_url": "https://www.fantasyfootballhub.co.uk/",
+      "capabilities": ["predicted_points", "team_optimization", "ownership_context", "mini_league_context"]
+    },
+    {
+      "id": "ffscout",
+      "name": "Fantasy Football Scout",
+      "class": "ENRICHMENT",
+      "tier": 3,
+      "enabled": true,
+      "critical": false,
+      "adapter": "ffscout",
+      "probe_url": "https://www.fantasyfootballscout.co.uk/",
+      "capabilities": ["team_news", "predicted_lineups", "role_context", "set_piece_context", "community_analysis"]
+    },
+    {
+      "id": "api_football",
+      "name": "API-Football",
+      "class": "OPTIONAL_ENRICHMENT",
+      "tier": 3,
+      "enabled": true,
+      "critical": false,
+      "adapter": "api_football",
+      "credential_env": "API_FOOTBALL_KEY",
+      "ingestion": {
+        "base_url": "https://v3.football.api-sports.io",
+        "api_key_header": "x-apisports-key",
+        "timeout_seconds": 5.0,
+        "cache_ttl_seconds": 43200,
+        "availability_cache_ttl_seconds": 21600,
+        "cache_dir": "data/v5/source_cache/api_football",
+        "resolve_league_ids_dynamically": true,
+        "availability_classification": {
+          "PLAN_RESTRICTED": {
+            "contains_any": ["do not have access to this season", "subscription plan", "plan does not have access"]
+          },
+          "RATE_LIMITED": {
+            "contains_any": ["rate limit", "too many requests", "request limit"]
+          },
+          "AUTH_REJECTED": {
+            "contains_any": ["invalid api key", "invalid key", "unauthorized", "forbidden"]
+          }
+        },
+        "cacheable_unavailability_classes": ["PLAN_RESTRICTED", "RATE_LIMITED"],
+        "team_matching": {
+          "minimum_similarity": 0.72,
+          "minimum_unique_margin": 0.08,
+          "include_official_short_name": true
+        },
+        "competitions": {
+          "uefa_champions_league": ["UEFA Champions League", "Champions League"],
+          "uefa_europa_league": ["UEFA Europa League", "Europa League"],
+          "uefa_conference_league": ["UEFA Conference League", "Conference League"],
+          "fa_cup": ["FA Cup"],
+          "efl_cup": ["League Cup", "EFL Cup", "Carabao Cup"],
+          "club_friendlies": ["Club Friendlies"]
+        },
+        "fixture_window_days_before": 14,
+        "fixture_window_days_after": 60,
+        "max_competition_requests_per_refresh": 6,
+        "rate_limit_headers": {
+          "remaining": ["x-ratelimit-requests-remaining", "x-ratelimit-remaining"],
+          "limit": ["x-ratelimit-requests-limit", "x-ratelimit-limit"]
+        },
+        "international": {
+          "enabled": true,
+          "player_minutes_requires_resolved_player_identity": true,
+          "callup_missing_behavior": "UNAVAILABLE_NOT_ZERO",
+          "travel_missing_behavior": "UNAVAILABLE_NOT_ZERO"
+        }
+      },
+      "capabilities": ["cross_competition_schedule_context", "international_schedule_context"]
+    },
+    {
+      "id": "understat",
+      "name": "Understat",
+      "class": "ENRICHMENT",
+      "tier": 4,
+      "enabled": false,
+      "critical": false,
+      "adapter": "disabled",
+      "ingestion": {
+        "league": "EPL",
+        "timeout_seconds": 4.0,
+        "cache_ttl_seconds": 21600,
+        "cache_path_template": "data/v5/source_cache/understat_epl_{season}.json"
+      },
+      "capabilities": ["shots", "xg", "xa", "key_passes", "xg_chain", "xg_buildup"],
+      "note": "Direct scraping remains disabled by default and cannot be re-enabled by source-fusion local config."
+    }
   ]
 }

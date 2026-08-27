@@ -3,6 +3,9 @@ import os
 import time
 from pathlib import Path
 
+import pytest
+
+from src.engines.production_contract_validate import _validate_runtime_service_states
 from src.runtime_v3 import orchestrator
 from src.runtime_v3.performance_guard import evaluate
 from src.runtime_v3.publish_snapshot import materialize
@@ -32,6 +35,25 @@ def test_reuse_service_requires_fresh_complete_artifacts(monkeypatch, tmp_path):
     old = time.time() - 120
     os.utime(tmp_path / "a.json", (old, old))
     assert orchestrator._reuse_service("heavy", spec, tmp_path, profile) is None
+
+
+def test_profile_aware_production_contract_accepts_only_validated_declared_reuse():
+    payload = {
+        "profile_config": {"reuse_services": {"source_layer": {"max_age_seconds": 60}}},
+        "services": {
+            "official_snapshot": {"status": "SUCCESS"},
+            "source_layer": {"status": "REUSED", "artifact_validation": [{"artifact": "source_health.json", "validation": "PARSE_ONLY"}]},
+        },
+    }
+    _validate_runtime_service_states(payload)
+    bad = json.loads(json.dumps(payload))
+    bad["services"]["source_layer"]["artifact_validation"] = []
+    with pytest.raises(AssertionError):
+        _validate_runtime_service_states(bad)
+    undeclared = json.loads(json.dumps(payload))
+    undeclared["profile_config"]["reuse_services"] = {}
+    with pytest.raises(AssertionError):
+        _validate_runtime_service_states(undeclared)
 
 
 def test_publish_snapshot_is_whitelist_only_and_generates_manifest(tmp_path):
@@ -91,7 +113,10 @@ def test_workflows_are_split_shallow_and_runtime_data_is_rolling():
     fast = (ROOT / ".github/workflows/v3-runtime-fast.yml").read_text()
     full = (ROOT / ".github/workflows/v3-refresh-full.yml").read_text()
     collector = json.loads((ROOT / "config/runtime/collector_policy.json").read_text())
+    publish = json.loads((ROOT / "config/runtime/runtime_publish_registry.json").read_text())
     schedules = collector["schedules"]
+    hydrate = set(publish["hydrate_paths"])
+    assert {"source_health.json", "source_registry_runtime.json", "challenger_observations.json", "fixture_weather.json"}.issubset(hydrate)
     assert "schedule:" not in legacy
     assert f'cron: "{schedules["primary"]}"' in fast
     assert f'cron: "{schedules["adaptive"]}"' in fast

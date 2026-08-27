@@ -17,6 +17,20 @@ def load_config(path: str):
     return json.loads((ROOT / path).read_text(encoding="utf-8"))
 
 
+def _validate_runtime_service_states(runtime_performance: dict) -> None:
+    services = runtime_performance.get("services", {})
+    reusable = set(((runtime_performance.get("profile_config") or {}).get("reuse_services") or {}).keys())
+    for name, row in services.items():
+        status = row.get("status")
+        if status == "SUCCESS":
+            continue
+        if status == "REUSED":
+            assert name in reusable, {"service": name, "reason": "reuse_not_declared_by_profile", "runtime": runtime_performance}
+            assert row.get("artifact_validation"), {"service": name, "reason": "reused_without_artifact_validation", "runtime": runtime_performance}
+            continue
+        raise AssertionError({"service": name, "status": status, "runtime": runtime_performance})
+
+
 def run() -> dict:
     s = load("latest.json")
     p = load("prices.json")
@@ -61,7 +75,7 @@ def run() -> dict:
     assert s.get("files", {}).get("runtime_performance") == "data/runtime_performance.json"
     assert rp.get("architecture") == "V3_BOUNDED_PROCESS_MICROSERVICES"
     assert rp.get("shared_official_cache_entries", 0) > 0
-    assert all(x.get("status") == "SUCCESS" for x in rp.get("services", {}).values()), rp
+    _validate_runtime_service_states(rp)
 
     assert s.get("snapshot_id")
     assert s.get("native", {}).get("entry")

@@ -7,8 +7,8 @@ from statistics import NormalDist
 from typing import Any, Mapping
 
 from src.v5.config_cache import load_json_config
-from src.v5.decision.lineup_optimizer import best_lineup
-from src.v5.decision.projection_index import gw_projection, index_player, index_players
+from src.v5.decision.lineup_optimizer import _cached_metrics, _formation_counts
+from src.v5.decision.projection_index import index_player, index_players
 
 CONFIG = "config/intelligence/package_optimizer.json"
 
@@ -79,41 +79,158 @@ def legal_squad(players: list[dict[str, Any]], squad_rules: dict[str, Any]) -> b
     return counts == expected and max(clubs.values(), default=0) <= club_limit
 
 
-def _single_gw_score(
-    players: list[dict[str, Any]],
+def _build_scoring_context(
+    universe: list[dict[str, Any]],
+    planning_gw: int,
+    rules: dict[str, Any],
+    cfg: dict[str, Any],
+) -> dict[str, Any]:
+    """Precompute immutable GW ranking/metric data once for package search.
+
+    Player ranking keys are squad-independent. Ranking the universe once and
+    filtering it to a candidate squad is therefore exactly equivalent to
+    re-ranking the same squad for every package, while avoiding thousands of
+    repeated score calculations and sorts.
+    """
+    lineup_rules = rules.get("lineup") if isinstance(rules.get("lineup"), dict) else {}
+    positions = tuple(str(value) for value in cfg["positions"])
+    horizons = sorted({int(value) for value in cfg["horizons"]})
+    max_horizon = max(horizons)
+    metrics_by_gw: dict[int, dict[int, dict[str, float]]] = {}
+    rank_by_gw: dict[int, dict[str, dict[int, int]]] = {}
+    position_by_id = {
+        int(player["element"]): str(player.get("position"))
+        for player in universe
+        if isinstance(player, dict) and player.get("element") is not None
+    }
+
+    for offset in range(max_horizon):
+        gw = int(planning_gw + offset)
+        rows_by_position: dict[str, list[tuple[tuple[float, ...], int]]] = {position: [] for position in positions}
+        metrics: dict[int, dict[str, float]] = {}
+        for player in universe:
+            if not isinstance(player, dict) or player.get("element") is None:
+                continue
+            element = int(player["element"])
+            cached = _cached_metrics(player, gw, "player_score")
+            metrics[element] = {
+                "score": float(cached["score"]),
+                "mean": float(cached["mean"]),
+                "std": float(cached["std"]),
+                "variance": float(cached["variance"]),
+            }
+            position = str(player.get("position"))
+            if position in rows_by_position:
+                rows_by_position[position].append(((float(cached["score"]), *cached["tie_values"]), element))
+        ranks: dict[str, dict[int, int]] = {}
+        for position, rows in rows_by_position.items():
+            rows.sort(key=lambda item: item[0], reverse=True)
+            ranks[position] = {element: rank for rank, (_key, element) in enumerate(rows)}
+        metrics_by_gw[gw] = metrics
+        rank_by_gw[gw] = ranks
+
+    return {
+        "planning_gw": int(planning_gw),
+        "lineup_rules": lineup_rules,
+        "metrics_by_gw": metrics_by_gw,
+        "rank_by_gw": rank_by_gw,
+        "position_by_id": position_by_id,
+        "model": "precomputed_global_rank_filter_exact_v1",
+    }
+
+
+def _squad_ids_by_position(players: list[dict[str, Any]]) -> dict[str, list[int]]:
+    grouped: dict[str, list[int]] = {}
+    for player in players:
+        if not isinstance(player, dict) or player.get("element") is None:
+            continue
+        grouped.setdefault(str(player.get("position")), []).append(int(player["element"]))
+    return grouped
+
+
+def _single_gw_score_from_context(
+    squad_by_position: dict[str, list[int]],
     gw: int,
     lineup_rules: dict[str, Any],
     cfg: dict[str, Any],
+    scoring_context: dict[str, Any],
 ) -> tuple[bool, float, float]:
-    lineup = best_lineup(players, gw, lineup_rules)
-    if not lineup["valid"]:
+    metrics = (scoring_context.get("metrics_by_gw") or {}).get(int(gw))
+    ranks = (scoring_context.get("rank_by_gw") or {}).get(int(gw))
+    if not isinstance(metrics, dict) or not isinstance(ranks, dict):
         return False, 0.0, 0.0
-    starter_ids = set(lineup["starters"])
-    bench = [player for player in players if int(player["element"]) not in starter_ids]
+
+    starting_size = _required_int(lineup_rules, "starting_xi_size", "rules.lineup")
+    formations = tuple(str(value) for value in lineup_rules.get("legal_formations") or ())
+    if not formations:
+        raise RuntimeError("Official rules contain no legal formations")
+
+    selected: dict[str, Any] | None = None
+    for formation in formations:
+        counts = _formation_counts(formation, lineup_rules)
+        starters: list[int] = []
+        valid = True
+        for position, count in counts.items():
+            available = squad_by_position.get(position, [])
+            rank_map = ranks.get(position) if isinstance(ranks.get(position), dict) else {}
+            if len(available) < count or any(element not in rank_map for element in available):
+                valid = False
+                break
+            ranked = sorted(available, key=rank_map.__getitem__)
+            starters.extend(ranked[:count])
+        if not valid or len(starters) != starting_size or any(element not in metrics for element in starters):
+            continue
+        starter_metrics = [metrics[element] for element in starters]
+        candidate = {
+            "formation": formation,
+            "starters": starters,
+            "selection_score": round(sum(item["score"] for item in starter_metrics), 4),
+            "mean": round(sum(item["mean"] for item in starter_metrics), 4),
+            "variance": round(sum(item["variance"] for item in starter_metrics), 4),
+        }
+        if selected is None or (candidate["selection_score"], candidate["mean"]) > (
+            selected["selection_score"],
+            selected["mean"],
+        ):
+            selected = candidate
+
+    if selected is None:
+        return False, 0.0, 0.0
+
+    all_ids = [element for rows in squad_by_position.values() for element in rows]
+    starter_ids = set(selected["starters"])
+    if any(element not in metrics for element in all_ids):
+        return False, 0.0, 0.0
+    bench_ids = [element for element in all_ids if element not in starter_ids]
     bench_weight = _f(cfg["bench_utility_weight"])
     captain_weight = _f(cfg["captain_bonus_weight"])
-    bench_mean = sum(gw_projection(player, gw)["mean"] for player in bench)
-    bench_var = sum(gw_projection(player, gw)["std"] ** 2 for player in bench)
+    bench_mean = sum(metrics[element]["mean"] for element in bench_ids)
+    bench_var = sum(metrics[element]["variance"] for element in bench_ids)
     captain = max(
-        (
-            (gw_projection(player, gw)["mean"], gw_projection(player, gw)["std"])
-            for player in players
-            if int(player["element"]) in starter_ids
-        ),
+        ((metrics[element]["mean"], metrics[element]["std"]) for element in selected["starters"]),
         default=(0.0, 0.0),
     )
-    mean = lineup["mean"] + bench_weight * bench_mean + captain_weight * captain[0]
-    variance = lineup["variance"] + bench_weight**2 * bench_var + captain_weight**2 * captain[1] ** 2
+    mean = float(selected["mean"]) + bench_weight * bench_mean + captain_weight * captain[0]
+    variance = float(selected["variance"]) + bench_weight**2 * bench_var + captain_weight**2 * captain[1] ** 2
     return True, mean, variance
 
 
-def score_package(players: list[dict[str, Any]], planning_gw: int, rules: dict[str, Any], changes: int = 0) -> dict[str, Any]:
+def score_package(
+    players: list[dict[str, Any]],
+    planning_gw: int,
+    rules: dict[str, Any],
+    changes: int = 0,
+    *,
+    scoring_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     cfg = _cfg()
     lineup_rules = rules.get("lineup") if isinstance(rules.get("lineup"), dict) else {}
     horizons = sorted({int(value) for value in cfg["horizons"]})
     if not horizons or horizons[0] <= 0:
         raise RuntimeError("package optimizer horizons must contain positive integers")
     indexed_players = index_players(players)
+    context = scoring_context or _build_scoring_context(indexed_players, planning_gw, rules, cfg)
+    squad_by_position = _squad_ids_by_position(indexed_players)
     max_horizon = max(horizons)
     cumulative_mean: list[float] = []
     cumulative_variance: list[float] = []
@@ -121,7 +238,13 @@ def score_package(players: list[dict[str, Any]], planning_gw: int, rules: dict[s
     total_variance = 0.0
     valid_gws = 0
     for offset in range(max_horizon):
-        valid, gw_mean, gw_variance = _single_gw_score(indexed_players, planning_gw + offset, lineup_rules, cfg)
+        valid, gw_mean, gw_variance = _single_gw_score_from_context(
+            squad_by_position,
+            planning_gw + offset,
+            lineup_rules,
+            cfg,
+            context,
+        )
         if not valid:
             break
         total_mean += gw_mean
@@ -160,6 +283,7 @@ def score_package(players: list[dict[str, Any]], planning_gw: int, rules: dict[s
         "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
+            "package_lineup_ranking": str(context.get("model") or "precomputed_global_rank_filter_exact_v1"),
             "gw_lineups_evaluated": valid_gws,
         },
     }
@@ -262,7 +386,8 @@ def build_packages(prediction: dict[str, Any], team: dict[str, Any], rules: dict
         rows.sort(key=lambda item: (item["candidate_score"], -int(item.get("now_cost") or 0)), reverse=True)
         pools[position] = rows[:max_candidates]
 
-    hold_score = score_package(current, planning_gw, rules, changes=0)
+    scoring_context = _build_scoring_context(players, planning_gw, rules, cfg)
+    hold_score = score_package(current, planning_gw, rules, changes=0, scoring_context=scoring_context)
     packages: list[dict[str, Any]] = [
         {
             "id": "HOLD",
@@ -282,7 +407,7 @@ def build_packages(prediction: dict[str, Any], team: dict[str, Any], rules: dict
             candidate = [player for player in current if int(player["element"]) != int(outgoing["element"])] + [incoming]
             if not ok or not legal_squad(candidate, squad_rules):
                 continue
-            score = score_package(candidate, planning_gw, rules, changes=1)
+            score = score_package(candidate, planning_gw, rules, changes=1, scoring_context=scoring_context)
             singles.append((outgoing, incoming, candidate, money, score))
             packages.append(
                 {
@@ -317,7 +442,7 @@ def build_packages(prediction: dict[str, Any], team: dict[str, Any], rules: dict
                 candidate = [player for player in current if int(player["element"]) not in out_ids] + ins
                 if not ok or not legal_squad(candidate, squad_rules):
                     continue
-                score = score_package(candidate, planning_gw, rules, changes=2)
+                score = score_package(candidate, planning_gw, rules, changes=2, scoring_context=scoring_context)
                 packages.append(
                     {
                         "id": f"2:{outs[0]['element']},{outs[1]['element']}->{ins[0]['element']},{ins[1]['element']}",
@@ -398,6 +523,7 @@ def build_packages(prediction: dict[str, Any], team: dict[str, Any], rules: dict
             "lineup_authority": "src.v5.decision.lineup_optimizer",
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
+            "package_lineup_ranking": "precomputed_global_rank_filter_exact_v1",
             "monte_carlo_seed": "stable_sha256_policy",
         },
     }

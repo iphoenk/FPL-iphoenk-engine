@@ -32,10 +32,10 @@
       "retire_old_club_starter_prior_after_team_matches": 0
     },
     "PRIOR_TEAM_UNKNOWN": {
-      "starter_prior_retention": 0.80,
-      "starter_minutes_retention": 0.85,
+      "starter_prior_retention": 0.70,
+      "starter_minutes_retention": 0.75,
       "attacking_prior_retention": 0.90,
-      "prior_evidence_retention": 0.85,
+      "prior_evidence_retention": 0.50,
       "confidence_ceiling": "MEDIUM",
       "current_starts_to_unlock_confidence": 3,
       "retire_old_club_starter_prior_after_team_matches": 5

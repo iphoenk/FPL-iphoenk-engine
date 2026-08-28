@@ -1,0 +1,86 @@
+name: V4.9.6 one-shot consolidation
+
+on:
+  push:
+    branches:
+      - codex/v4.9.6-architecture-consolidation
+    paths:
+      - .github/workflows/v496-one-shot-consolidation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  consolidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v4.9.6-architecture-consolidation
+          fetch-depth: 0
+      - name: Apply exact ownership consolidation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"{path}: expected exactly one replacement target, found {count}: {old!r}")
+              p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          replace_once(
+              "src/services/gw_scorecard_service.py",
+              "from src.services.contracts import file_digest\nfrom src.utils import DATA, atomic_json, iso_now, read_json\n",
+              "from src.engines.fpl_rules_2026 import POSITION_BY_TYPE\nfrom src.services.contracts import file_digest\nfrom src.utils import DATA, atomic_json, iso_now, read_json\n",
+          )
+          replace_once(
+              "src/services/gw_scorecard_service.py",
+              "POSITION_BY_TYPE = {1: \"GK\", 2: \"DEF\", 3: \"MID\", 4: \"FWD\"}\n",
+              "",
+          )
+
+          replace_once(
+              "src/engines/v4_runner.py",
+              "from src.models.v4_prediction import XA_PRIOR, XG_PRIOR, clamp, competition_adjustment, project_horizon, team_strength\n",
+              "from src.models.v4_prediction import XA_PRIOR, XG_PRIOR, clamp, competition_adjustment, f, project_horizon, team_strength\n",
+          )
+          replace_once(
+              "src/engines/v4_runner.py",
+              "def f(value, default=0.0):\n    try:\n        return float(value if value is not None else default)\n    except (TypeError, ValueError):\n        return float(default)\n\n\n",
+              "",
+          )
+
+          replace_once(
+              "src/engines/v4_wc_optimizer_fast.py",
+              "from src.engines import v4_wc_optimizer as base\nfrom src.engines.v4_wc_optimizer import Candidate, MAX_PER_CLUB, POSITION_COUNTS\n",
+              "from src.engines import v4_wc_optimizer as base\nfrom src.engines.v4_optimizer_primitives import gw_value as _gw_value\nfrom src.engines.v4_wc_optimizer import Candidate, MAX_PER_CLUB, POSITION_COUNTS\n",
+          )
+          replace_once(
+              "src/engines/v4_wc_optimizer_fast.py",
+              "def _gw_value(player: Candidate, index: int) -> float:\n    return player.gw_xpts[index] if index < len(player.gw_xpts) else 0.0\n\n\n",
+              "",
+          )
+
+          replace_once(
+              "src/engines/v4_wc_package_audit_fast.py",
+              "from src.engines import v4_wc_package_audit as base\nfrom src.engines.v4_wc_optimizer import MAX_PER_CLUB, POSITION_COUNTS, reconcile_owned_costs, validate_squad\n",
+              "from src.engines import v4_wc_package_audit as base\nfrom src.engines.v4_optimizer_primitives import gw_value as _gw_value\nfrom src.engines.v4_wc_optimizer import MAX_PER_CLUB, POSITION_COUNTS, reconcile_owned_costs, validate_squad\n",
+          )
+          replace_once(
+              "src/engines/v4_wc_package_audit_fast.py",
+              "def _gw_value(player, index: int) -> float:\n    return player.gw_xpts[index] if index < len(player.gw_xpts) else 0.0\n\n\n",
+              "",
+          )
+          PY
+      - name: Remove one-shot workflow and commit
+        run: |
+          rm .github/workflows/v496-one-shot-consolidation.yml
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "refactor(v4.9.6): finish shared primitive consolidation"
+          git push origin HEAD:codex/v4.9.6-architecture-consolidation

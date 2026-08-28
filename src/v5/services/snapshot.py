@@ -99,5 +99,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         snapshot = payload.get("snapshot")
         if not isinstance(snapshot, dict):
             raise ValueError("snapshot service requires snapshot object")
-        return {key: str(value) for key, value in write_snapshot(snapshot).items()}
+        gw_raw = payload.get("gw")
+        gw = int(gw_raw) if gw_raw is not None else None
+        return {key: str(value) for key, value in write_snapshot(snapshot, gw=gw).items()}
     raise KeyError(f"unsupported snapshot operation: {operation}")

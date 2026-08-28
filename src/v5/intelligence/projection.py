@@ -6,6 +6,7 @@ from typing import Any
 
 from src.v5.config_cache import load_json_config
 from src.v5.intelligence.defensive_contribution import build_rate_bundle, project_fixture_points
+from src.v5.intelligence.feature_fusion import fuse_advanced_attack
 from src.v5.intelligence.robust_rates import robust_attack_rate, validate_config as validate_robust_rate_config
 from src.v5.intelligence.role_intelligence import build_role_intelligence
 from src.v5.intelligence.team_strength import build_team_strength
@@ -72,6 +73,11 @@ def build_predictions(
     cfg = load_json_config(CONFIG)
     robust_cfg = cfg.get("early_season_robust_rates") if isinstance(cfg.get("early_season_robust_rates"), dict) else {}
     validate_robust_rate_config(robust_cfg)
+    feature_fusion_cfg = (
+        cfg.get("authoritative_feature_fusion")
+        if isinstance(cfg.get("authoritative_feature_fusion"), dict)
+        else {}
+    )
     strength = build_team_strength(bootstrap, fixtures)
     teams = {int(t["id"]): t.get("name") for t in bootstrap.get("teams") or []}
     positions = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
@@ -102,11 +108,19 @@ def build_predictions(
     enrichment = full_enrichment if isinstance(full_enrichment, dict) else {}
     advanced_stats = enrichment.get("advanced_stats") if isinstance(enrichment.get("advanced_stats"), dict) else {}
     advanced_map = advanced_stats.get("players") if isinstance(advanced_stats.get("players"), dict) else {}
+    current_form = enrichment.get("current_form") if isinstance(enrichment.get("current_form"), dict) else {}
+    current_form_map = current_form.get("players") if isinstance(current_form.get("players"), dict) else {}
+    current_form_policy = (
+        feature_fusion_cfg.get("current_form")
+        if isinstance(feature_fusion_cfg.get("current_form"), dict)
+        else {}
+    )
     league_baseline = strength.get("baseline") or {}
     players = []
     historical_used = 0
     defensive_evidence_used = 0
     robust_winsorized_players = 0
+    advanced_attack_fusion_used = 0
 
     for player in bootstrap.get("elements") or []:
         element_id = int(player["id"])
@@ -129,6 +143,27 @@ def build_predictions(
         bonus90, bonus_source = _blended_rate(player, "bonus", _f(position_prior.get("bonus90")), shrink)
         saves90, saves_source = _blended_rate(player, "saves", _f(position_prior.get("saves90")), shrink)
         advanced_player = advanced_map.get(str(element_id)) if isinstance(advanced_map, dict) else None
+        advanced_attack_fusion = fuse_advanced_attack(
+            position=position,
+            native_xg90=xg90,
+            native_xa90=xa90,
+            position_xg_prior=xg_prior,
+            position_xa_prior=xa_prior,
+            advanced=advanced_player if isinstance(advanced_player, dict) else None,
+            config=feature_fusion_cfg,
+        )
+        native_pre_fusion_rates = {"xg90": xg90, "xa90": xa90}
+        if bool(advanced_attack_fusion.get("applied")):
+            xg90 = max(0.0, _f(advanced_attack_fusion.get("xg90_final"), xg90))
+            xa90 = max(0.0, _f(advanced_attack_fusion.get("xa90_final"), xa90))
+            advanced_attack_fusion_used += 1
+        current_form_player = current_form_map.get(str(element_id)) if isinstance(current_form_map, dict) else None
+        current_form_fusion = {
+            "status": "AVAILABLE_NOT_APPLIED" if isinstance(current_form_player, dict) else "UNAVAILABLE",
+            "authoritative": False,
+            "reason": current_form_policy.get("reason") or "current-form mean adjustment disabled",
+            "source": current_form.get("source"),
+        }
         dc_bundle = build_rate_bundle(
             element_type=element_type,
             prior_expected_points90=_f(position_prior.get("dc90")),
@@ -307,12 +342,20 @@ def build_predictions(
                     "threshold_probability_90": round(_f(dc_bundle.get("threshold_probability_90")), 4),
                     "evidence_minutes": round(_f(dc_bundle.get("evidence_minutes")), 1),
                 },
+                "authoritative_feature_fusion": {
+                    "model": feature_fusion_cfg.get("model"),
+                    "advanced_attacking": advanced_attack_fusion,
+                    "current_form": current_form_fusion,
+                },
                 "rates": {
                     **{key: round(value, 4) for key, value in rates.items()},
+                    "native_pre_feature_fusion": {
+                        key: round(value, 4) for key, value in native_pre_fusion_rates.items()
+                    },
                     "robust_rate_diagnostics": {"xg90": xg_robust, "xa90": xa_robust},
                     "sources": {
-                        "xg90": f"{xg_source}|prior={xg_prior_source}",
-                        "xa90": f"{xa_source}|prior={xa_prior_source}",
+                        "xg90": f"{xg_source}|prior={xg_prior_source}|advanced_fusion={advanced_attack_fusion.get('status')}",
+                        "xa90": f"{xa_source}|prior={xa_prior_source}|advanced_fusion={advanced_attack_fusion.get('status')}",
                         "bonus90": bonus_source,
                         "saves90": saves_source,
                         "dc90": str(dc_bundle.get("source") or "position_prior_probability_calibrated"),
@@ -324,8 +367,8 @@ def build_predictions(
         )
     return {
         "generated_at": _now(),
-        "schema_version": 515,
-        "model_version": str(cfg.get("model_id") or "player_projection_v5_historical_prior_robust_rates_dc_probability"),
+        "schema_version": 516,
+        "model_version": str(cfg.get("model_id") or "player_projection_v5_authoritative_feature_fusion_v1"),
         "ruleset_id": rules.get("ruleset_id"),
         "planning_gw": planning_gw,
         "horizon_gws": horizon,
@@ -342,6 +385,16 @@ def build_predictions(
             "winsorized_players": robust_winsorized_players,
             "cap_relaxes_with_evidence": bool(robust_cfg.get("cap_relaxes_with_evidence")),
             "breakout_protection": robust_cfg.get("breakout_protection"),
+        },
+        "authoritative_feature_fusion": {
+            "model": feature_fusion_cfg.get("model"),
+            "advanced_attacking_players_applied": advanced_attack_fusion_used,
+            "advanced_attacking_source": advanced_stats.get("source"),
+            "advanced_attacking_used_fields": ((feature_fusion_cfg.get("advanced_attacking") or {}).get("used_fields") or []),
+            "current_form_authoritative": bool(current_form_policy.get("authoritative", False)),
+            "current_form_reason": current_form_policy.get("reason"),
+            "rest_congestion_authoritative": bool(((feature_fusion_cfg.get("rest_congestion") or {}).get("authoritative", False))),
+            "preseason_authoritative": bool(((feature_fusion_cfg.get("preseason") or {}).get("authoritative", False))),
         },
         "defensive_contribution": {
             "model": "poisson_threshold_shrunk_rate_v1",

@@ -7,8 +7,10 @@ from typing import Any
 from src.v5 import V5_VERSION
 from src.v5.cluster_health import cluster_health
 from src.v5.config_cache import load_json_config
+from src.v5.decision.decision_trace import bind_execution_fingerprint
 from src.v5.degraded_mode import fallback_for
 from src.v5.official_auth import expected_team_id
+from src.v5.replay_capture import build_replay_capture, finalize_replay_bundle, snapshot_fingerprint_summary
 from src.v5.service_client import invoke_envelope, invoke_parallel_envelopes, invoke_parallel_outcomes
 from src.v5.service_registry import registry as service_registry
 
@@ -189,6 +191,21 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     )
     performance["state_hydration"] = {key: _metric(value) for key, value in states.items()}
 
+    replay_capture = build_replay_capture(
+        correlation_id=correlation_id,
+        team_id=team_id,
+        mode=mode,
+        bootstrap=bootstrap,
+        fixtures=base.get("fixtures") or [],
+        truth=truth,
+        event_live=(dynamic_result.get("payloads") or {}).get("event_live"),
+        source_fusion=source_fusion,
+        states=states,
+        runner_cfg=runner_cfg,
+        feature_switches=feature_switches,
+    )
+    execution_fingerprint = snapshot_fingerprint_summary(replay_capture)
+
     price_service, price_operation = _route("price_build")
     prediction_service, prediction_operation = _route("prediction_build")
     prediction_horizon = int(runner_cfg["prediction_horizon_gws"])
@@ -292,6 +309,9 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         correlation_id,
     )
     decision = finalize_env["data"]
+    decision_trace = decision.get("decision_trace") if isinstance(decision.get("decision_trace"), dict) else None
+    if decision_trace is not None:
+        decision["decision_trace"] = bind_execution_fingerprint(decision_trace, execution_fingerprint)
     performance["decision_finalize"] = _metric(finalize_env)
 
     governance_env = _call(
@@ -315,6 +335,16 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     else:
         decision["final_state"] = "GO_ELIGIBLE_NOT_AUTO_SUBMITTED"
 
+    replay_bundle = finalize_replay_bundle(
+        replay_capture,
+        price=price_bundle,
+        prediction=prediction,
+        evaluation=evaluation,
+        decision=decision,
+        framework=framework,
+    )
+    execution_fingerprint = snapshot_fingerprint_summary(replay_bundle)
+
     limits = runner_cfg["summary_limits"]
     price_rows = price_bundle.get("prices") if isinstance(price_bundle.get("prices"), dict) else {}
     alerts = price_bundle.get("alerts") if isinstance(price_bundle.get("alerts"), dict) else {}
@@ -331,6 +361,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "runner_status": runner_cfg["status"],
         "mode": mode,
         "correlation_id": correlation_id,
+        "execution_fingerprint": execution_fingerprint,
         "team_id": team_id,
         "phase": truth.get("context"),
         "squad_authority": (truth.get("team") or {}).get("authority"),
@@ -393,6 +424,12 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "prediction_quality_status": prediction_quality.get("status"),
             "microservices_required": True,
             "raw_authenticated_payload_persisted": False,
+            "point_in_time_replay_captured": True,
+            "replay_fingerprint_complete": bool(
+                execution_fingerprint.get("replay_fingerprint") and execution_fingerprint.get("execution_fingerprint")
+            ),
+            "promotion_fingerprint_complete": bool(execution_fingerprint.get("promotion_fingerprint_complete")),
+            "exact_execution_fingerprint_scoring_input": False,
         },
     }
 
@@ -410,6 +447,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "challenger_scorecard": scorecard,
             "package_optimizer": decision,
             "framework_health": framework,
+            "replay_bundle": replay_bundle,
         }
         if not isinstance(price_bundle.get("degraded_context"), dict):
             artifact_payloads.update(

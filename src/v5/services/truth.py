@@ -19,6 +19,7 @@ from src.rules import (
 from src.v5.event_context import build_event_context
 from src.v5.identity import build_index, resolve_many
 from src.v5.live_scoring import personalized_live_score
+from src.v5.mini_league import build_tracking
 from src.v5.team_service import build_team_state
 from src.v5.services.common import context_dict, locked_squad, parse_datetime
 
@@ -78,7 +79,12 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
     }
 
 
-def _capabilities(team: dict[str, Any], chip_state: dict[str, Any], historical_entry: dict[str, Any] | None = None) -> list[str]:
+def _capabilities(
+    team: dict[str, Any],
+    chip_state: dict[str, Any],
+    historical_entry: dict[str, Any] | None = None,
+    mini_league_tracking: dict[str, Any] | None = None,
+) -> list[str]:
     capabilities = {
         "universe_identity",
         "universe_price_position",
@@ -86,6 +92,7 @@ def _capabilities(team: dict[str, Any], chip_state: dict[str, Any], historical_e
         "availability",
         "manual_authority",
         "defcon_rules",
+        "mini_league_tracking_state",
     }
     if bool((team.get("validation") or {}).get("passed")):
         capabilities.add("structural_fit")
@@ -96,6 +103,8 @@ def _capabilities(team: dict[str, Any], chip_state: dict[str, Any], historical_e
     coverage = (historical_entry or {}).get("coverage") if isinstance((historical_entry or {}).get("coverage"), dict) else {}
     if int(coverage.get("available") or 0) > 0:
         capabilities.add("historical_submitted_team")
+    if (mini_league_tracking or {}).get("status") == "TRACKING":
+        capabilities.add("mini_league_rank_gap_trend")
     return sorted(capabilities)
 
 
@@ -132,6 +141,17 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         entry=base.get("entry") if isinstance(base.get("entry"), dict) else None,
     )
     team["historical_entry"] = historical_entry
+    mini_league_collection = payload.get("mini_league_collection") if isinstance(payload.get("mini_league_collection"), dict) else {}
+    previous_mini_league = payload.get("previous_mini_league") if isinstance(payload.get("previous_mini_league"), dict) else {}
+    entry = base.get("entry") if isinstance(base.get("entry"), dict) else {}
+    team_id = int(payload.get("team_id") or entry.get("id") or 0)
+    mini_league_tracking = build_tracking(
+        team_id=team_id,
+        entry=entry,
+        collection=mini_league_collection,
+        previous_state=previous_mini_league,
+    )
+    team["mini_league_tracking"] = mini_league_tracking
     live = personalized_live_score(
         picks=submitted,
         event_live=dynamic.get("event_live") if isinstance(dynamic.get("event_live"), dict) else None,
@@ -147,5 +167,6 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "rules": _rules_view(),
         "chip_state": chip_state,
         "historical_entry": historical_entry,
-        "capabilities": _capabilities(team, chip_state, historical_entry),
+        "mini_league_tracking": mini_league_tracking,
+        "capabilities": _capabilities(team, chip_state, historical_entry, mini_league_tracking),
     }

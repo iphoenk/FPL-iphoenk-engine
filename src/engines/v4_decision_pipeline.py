@@ -76,6 +76,9 @@ def _decision_worker(kind, conn):
         elif kind == "packages":
             out = audit_packages_from_candidates_fast(shared["candidates"], shared["locked"])
             atomic_json(DATA / "wc_package_audit_v4.json", out)
+        elif kind == "lineup":
+            out = optimize_lineup(shared["predictions"], shared["universe"], shared["locked"], manual=None)
+            atomic_json(DATA / "lineup_decision_v4.json", out)
         else:
             raise RuntimeError(f"unknown decision worker: {kind}")
         conn.send({"ok": True, "ms": round((perf_counter() - t) * 1000.0, 1)})
@@ -85,30 +88,33 @@ def _decision_worker(kind, conn):
         conn.close()
 
 
-def _run_parallel_wc_package(candidates, locked):
+def _run_parallel_decisions(candidates, locked, predictions, universe):
     global _SHARED
-    _SHARED = {"candidates": candidates, "locked": locked}
+    _SHARED = {
+        "candidates": candidates,
+        "locked": locked,
+        "predictions": predictions,
+        "universe": universe,
+    }
     ctx = get_context("fork")
-    recv_wc, send_wc = ctx.Pipe(duplex=False)
-    recv_pkg, send_pkg = ctx.Pipe(duplex=False)
-    p_wc = ctx.Process(target=_decision_worker, args=("wc", send_wc), name="v493-wc-fast")
-    p_pkg = ctx.Process(target=_decision_worker, args=("packages", send_pkg), name="v493-packages-fast")
+    workers = {}
     wall = perf_counter()
-    p_wc.start()
-    p_pkg.start()
-    send_wc.close()
-    send_pkg.close()
-    wc_status = recv_wc.recv()
-    pkg_status = recv_pkg.recv()
-    p_wc.join()
-    p_pkg.join()
+    for kind, name in (("wc", "v495-wc-fast"), ("packages", "v495-packages-fast"), ("lineup", "v495-lineup")):
+        recv, send = ctx.Pipe(duplex=False)
+        process = ctx.Process(target=_decision_worker, args=(kind, send), name=name)
+        process.start()
+        send.close()
+        workers[kind] = (recv, process)
+
+    statuses = {}
+    for kind, (recv, process) in workers.items():
+        statuses[kind] = recv.recv()
+        process.join()
+        if not statuses[kind].get("ok") or process.exitcode != 0:
+            raise RuntimeError(f"parallel {kind} worker failed:\n" + str(statuses[kind].get("error") or process.exitcode))
     wall_ms = round((perf_counter() - wall) * 1000.0, 1)
     _SHARED = None
-    if not wc_status.get("ok") or p_wc.exitcode != 0:
-        raise RuntimeError("parallel WC worker failed:\n" + str(wc_status.get("error") or p_wc.exitcode))
-    if not pkg_status.get("ok") or p_pkg.exitcode != 0:
-        raise RuntimeError("parallel package worker failed:\n" + str(pkg_status.get("error") or p_pkg.exitcode))
-    return wc_status, pkg_status, wall_ms
+    return statuses, wall_ms
 
 
 def run():
@@ -122,20 +128,17 @@ def run():
     candidates = build_candidates(predictions, universe)
     timings = {"load_shared_inputs_and_candidates_ms": round((perf_counter() - t0) * 1000.0, 1)}
 
-    wc_status, pkg_status, parallel_wall = _run_parallel_wc_package(candidates, locked)
-    timings["wc_decision_cpu_ms"] = wc_status["ms"]
-    timings["package_audit_cpu_ms"] = pkg_status["ms"]
-    timings["wc_package_parallel_wall_ms"] = parallel_wall
-    timings["parallel_speedup_estimate"] = round((wc_status["ms"] + pkg_status["ms"]) / max(1.0, parallel_wall), 3)
+    statuses, parallel_wall = _run_parallel_decisions(candidates, locked, predictions, universe)
+    timings["wc_decision_cpu_ms"] = statuses["wc"]["ms"]
+    timings["package_audit_cpu_ms"] = statuses["packages"]["ms"]
+    timings["lineup_cpu_ms"] = statuses["lineup"]["ms"]
+    timings["decision_parallel_wall_ms"] = parallel_wall
+    timings["parallel_speedup_estimate"] = round(
+        (statuses["wc"]["ms"] + statuses["packages"]["ms"] + statuses["lineup"]["ms"]) / max(1.0, parallel_wall), 3
+    )
     wc = read_json(DATA / "wc_decision_v4.json", {})
     packages = read_json(DATA / "wc_package_audit_v4.json", {})
-
-    t = perf_counter()
-    # Pure engine recommendation. User/manual authority is applied only by the
-    # independent user_decision_overlay service after this service completes.
-    lineup = optimize_lineup(predictions, universe, locked, manual=None)
-    atomic_json(DATA / "lineup_decision_v4.json", lineup)
-    timings["lineup_ms"] = round((perf_counter() - t) * 1000.0, 1)
+    lineup = read_json(DATA / "lineup_decision_v4.json", {})
 
     t = perf_counter()
     sanity = sanity_report(predictions, universe, packages, latest)
@@ -172,6 +175,7 @@ def run():
             "shared_candidates_built_once": True,
             "fork_copy_on_write": True,
             "parallel_wc_package": True,
+            "parallel_lineup_with_wc_package": True,
             "fast_wc_finalist_scoring": True,
             "redundant_package_validation_removed": True,
             "concise_stdout": True,
@@ -186,6 +190,7 @@ def run():
             "compact_package_keep_profile": bool((packages.get("performance") or {}).get("compact_keep_profile")),
             "package_scalar_delta_metrics": bool((packages.get("performance") or {}).get("scalar_delta_metrics")),
             "package_position_value_reuse": bool((packages.get("performance") or {}).get("position_value_reuse")),
+            "exact_streaming_top_packages": bool((packages.get("performance") or {}).get("exact_streaming_top_packages")),
             "top_packages_only_payload_materialization": True,
             "checkpoint_action_deferred_until_postflight_health": True,
             "planning_squad_from_team_contract": True,

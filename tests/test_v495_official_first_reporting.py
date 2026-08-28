@@ -107,6 +107,7 @@ def test_official_fpl_fields_are_preserved_without_downstream_refetch():
     prediction = (ROOT / "src/services/prediction_service.py").read_text()
     postflight = (ROOT / "src/services/framework_postflight_truth_service.py").read_text()
     raw = (ROOT / "src/services/raw_snapshot_service.py").read_text()
+    engine_config = json.loads((ROOT / "config/engine.json").read_text())
     for field in (
         "selected_by_percent", "expected_goals", "expected_assists", "expected_goal_involvements",
         "expected_goals_conceded", "bps", "bonus", "form", "starts",
@@ -116,7 +117,9 @@ def test_official_fpl_fields_are_preserved_without_downstream_refetch():
     assert '"effective_ownership_available_from_official_fpl": False' in prediction
     assert "src.sources.official_fpl" not in enrichment
     assert "src.sources.official_fpl" not in prediction
-    assert '("bootstrap", "bootstrap-static/", 3)' in raw
+    assert '"bootstrap-static/"' in raw
+    assert "API_RETRIES" in raw
+    assert engine_config["api_retries"] > 0
     assert "bootstrap_overlapped_with_independent_official_endpoints" in raw
     for module_id in ("DSS-18", "DSS-20", "DSS-21", "DSS-22", "DSS-23", "DSS-38"):
         assert f'"{module_id}"' in postflight
@@ -136,12 +139,14 @@ def test_dag_parallelization_only_groups_dependency_independent_services():
     registry = json.loads((ROOT / "config/service_registry.json").read_text())
     levels = _service_levels(registry)
     assert registry["execution_model"] == "process_isolated_dag_parallel_single_host"
+    assert {row["id"] for row in levels[0]} == {"architecture_guard", "raw_snapshot"}
     assert any({row["id"] for row in level} == {"validation_lifecycle", "rules_compliance", "optimization"} for level in levels)
     assert any({row["id"] for row in level} == {"framework_preflight", "user_decision_overlay"} for level in levels)
     assert any({row["id"] for row in level} == {"personal_gw_scorecard", "framework_postflight"} for level in levels)
     by_id = {row["id"]: row for row in registry["services"]}
     assert by_id["optimization"]["depends_on"] == ["prediction"]
     assert set(by_id["framework_postflight"]["depends_on"]) == {"framework_preflight", "user_decision_overlay"}
+    assert "architecture_guard" in by_id["framework_preflight"]["depends_on"]
     assert registry["guardrails"]["optimizer_may_parallelize_with_validation_before_preflight"] is True
     assert registry["guardrails"]["postflight_requires_preflight_and_effective_plan"] is True
     for level in levels:
@@ -150,15 +155,16 @@ def test_dag_parallelization_only_groups_dependency_independent_services():
             assert not (set(row.get("depends_on") or []) & ids)
 
 
-def test_recovery_workflow_covers_all_three_checkpoints_and_skips_fresh_data():
+def test_recovery_workflow_covers_all_three_checkpoints_and_is_config_driven():
     workflow = (ROOT / ".github/workflows/fpl-engine-recovery.yml").read_text()
+    config = json.loads((ROOT / "config/engine.json").read_text())
     assert 'cron: "45 21 * * *"' in workflow
     assert 'cron: "45 5 * * *"' in workflow
     assert 'cron: "45 14 * * *"' in workflow
-    assert "age_minutes <= 45" in workflow
-    assert "Recover 11-service production snapshot" in workflow
-    assert "Centralized production quality gate" in workflow
-    assert "recover missed scheduled checkpoint" in workflow
+    assert "checkpoint_recovery_fresh_minutes" in workflow
+    assert config["checkpoint_recovery_fresh_minutes"] > 0
+    assert "uses: ./.github/workflows/fpl-engine-core.yml" in workflow
+    assert "src.services.orchestrator" not in workflow
 
 
 def test_contracts_make_v495_behaviour_mandatory():

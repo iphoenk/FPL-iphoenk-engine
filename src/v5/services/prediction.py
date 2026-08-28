@@ -4,6 +4,7 @@ from typing import Any
 
 from src.v5.config_cache import load_json_config
 from src.v5.intelligence.advanced_prediction import enrich_prediction
+from src.v5.intelligence.fixture_congestion_overlay import build_fixture_congestion_overlay
 from src.v5.intelligence.full_core_enrichment import build_full_core_enrichment
 from src.v5.intelligence.historical_prior import resolve_prior
 from src.v5.intelligence.native_feature_trace import build_native_feature_trace
@@ -41,6 +42,7 @@ BASE_CAPABILITIES = [
     "probabilistic_return_overlay",
     "truthful_feature_bundle",
     "native_authoritative_feature_trace",
+    "fixture_specific_congestion_shadow",
 ]
 
 
@@ -209,6 +211,16 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         historical_prior=prior,
         full_enrichment=enrichment,
     )
+
+    congestion_overlay = build_fixture_congestion_overlay(base, bootstrap, fixtures, enrichment)
+    player_congestion = congestion_overlay.get("players") if isinstance(congestion_overlay.get("players"), dict) else {}
+    for player in base.get("players") or []:
+        if isinstance(player, dict) and player.get("element") is not None:
+            player["fixture_congestion_overlay"] = player_congestion.get(str(int(player["element"])))
+    base["fixture_congestion_overlay"] = {
+        key: value for key, value in congestion_overlay.items() if key != "players"
+    }
+
     native_feature_trace = build_native_feature_trace(base, enrichment)
     player_feature_trace = native_feature_trace.get("players") if isinstance(native_feature_trace.get("players"), dict) else {}
     for player in base.get("players") or []:
@@ -258,6 +270,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 "fixtures": player.get("fixtures"),
                 "projection_confidence": player.get("projection_confidence"),
                 "defensive_contribution": player.get("defensive_contribution"),
+                "fixture_congestion_overlay": player.get("fixture_congestion_overlay"),
                 "feature_use": player.get("feature_use"),
                 "advanced": player.get("advanced"),
             }
@@ -277,6 +290,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "team_strength": result.get("team_strength"),
         "role_intelligence": result.get("role_intelligence"),
         "players": compact,
+        "fixture_congestion_overlay": result.get("fixture_congestion_overlay"),
         "native_feature_use": result.get("native_feature_use"),
         "advanced_prediction": result.get("advanced_prediction"),
         "full_core_enrichment": _compact_enrichment(enrichment),

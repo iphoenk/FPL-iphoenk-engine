@@ -4,6 +4,9 @@
   "locked_at": "2026-08-25T03:44:30Z",
   "itb_tenths": 5,
   "wildcard_active": true,
+  "planning_override_active": true,
+  "target_gw": 2,
+  "authority_source": "USER_LOCKED_SCREENSHOT_WC_DRAFT",
   "players": [
     {
       "name": "Tzolakis",
@@ -127,5 +130,5 @@
     }
   ],
   "identity_authority": "official_fpl_element_id",
-  "identity_schema_version": 2
+  "identity_schema_version": 3
 }

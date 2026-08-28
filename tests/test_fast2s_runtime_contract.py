@@ -51,9 +51,34 @@ def test_semantic_field_selector_ignores_unselected_health_metadata(tmp_path):
     assert fast_entrypoint._input_signature("prediction", cfg, tmp_path) != first
 
 
+def test_semantic_list_field_selector_ignores_irrelevant_dynamic_fields(tmp_path):
+    cfg = {
+        "signature_inputs": [{
+            "path": "official.json",
+            "include_list_fields": {"bootstrap.elements": ["id", "now_cost", "status"]},
+        }],
+        "signature_config_files": [],
+    }
+    payload = {"bootstrap": {"elements": [{"id": 1, "now_cost": 100, "status": "a", "transfers_in_event": 10}]}}
+    _write(tmp_path / "official.json", payload)
+    first = fast_entrypoint._input_signature("prediction", cfg, tmp_path)
+    payload["bootstrap"]["elements"][0]["transfers_in_event"] = 999
+    _write(tmp_path / "official.json", payload)
+    assert fast_entrypoint._input_signature("prediction", cfg, tmp_path) == first
+    payload["bootstrap"]["elements"][0]["now_cost"] = 101
+    _write(tmp_path / "official.json", payload)
+    assert fast_entrypoint._input_signature("prediction", cfg, tmp_path) != first
+
+
 def test_semantic_field_selector_fails_closed_on_missing_field(tmp_path):
     cfg = {"signature_inputs": [{"path": "a.json", "include_paths": ["phase.planning_gw"]}], "signature_config_files": []}
     _write(tmp_path / "a.json", {"phase": {}})
+    assert fast_entrypoint._input_signature("prediction", cfg, tmp_path) is None
+
+
+def test_semantic_list_field_selector_fails_closed_on_missing_row_field(tmp_path):
+    cfg = {"signature_inputs": [{"path": "a.json", "include_list_fields": {"players": ["id", "price"]}}], "signature_config_files": []}
+    _write(tmp_path / "a.json", {"players": [{"id": 1}]})
     assert fast_entrypoint._input_signature("prediction", cfg, tmp_path) is None
 
 
@@ -71,6 +96,7 @@ def test_fast_profile_closes_rec41_fence_and_declares_state_safe_semantic_reuse(
     assert profiles["policy"]["rec41_player_feature_migration_fence_active"] is False
     assert profiles["policy"]["semantic_reuse_manifest_is_separate_from_performance_telemetry"] is True
     assert profiles["policy"]["semantic_signature_fields_are_config_owned"] is True
+    assert profiles["policy"]["semantic_signature_list_fields_are_config_owned"] is True
     assert profiles["policy"]["time_dependent_or_state_transition_services_are_not_reused_without_explicit_time_contract"] is True
     assert fast["reuse_services"]["advanced_stats"]["max_age_seconds"] == 21600
     assert fast["reuse_services"]["prediction"]["mode"] == "semantic_signature"
@@ -80,6 +106,12 @@ def test_fast_profile_closes_rec41_fence_and_declares_state_safe_semantic_reuse(
     assert "reporting" not in fast["reuse_services"] and "report_materializer" not in fast["reuse_services"]
     prediction_inputs = fast["reuse_services"]["prediction"]["signature_inputs"]
     assert any(isinstance(row, dict) and row.get("path") == "latest.json" and "phase.planning_gw" in row.get("include_paths", []) for row in prediction_inputs)
+    official_selector = next(row for row in prediction_inputs if isinstance(row, dict) and row.get("path") == "official_snapshot.json")
+    assert "bootstrap.elements" in official_selector["include_list_fields"]
+    assert "transfers_in_event" not in official_selector["include_list_fields"]["bootstrap.elements"]
+    team_selector = next(row for row in prediction_inputs if isinstance(row, dict) and row.get("path") == "team.json")
+    assert team_selector["include_paths"] == ["totals.itb"]
+    assert team_selector["include_list_fields"]["team_value_ledger"] == ["element", "sell_cost"]
     assert set(fast["command_bundles"]) == {"governance", "watchlist", "reporting", "report_materializer"}
 
 

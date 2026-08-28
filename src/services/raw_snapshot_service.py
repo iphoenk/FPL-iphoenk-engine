@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 from time import perf_counter
 
 from src.engines.checkpoint_policy import resolve_checkpoint
@@ -34,27 +35,56 @@ def _parallel_official_get(specs: list[tuple[str, str, int]]) -> dict:
         return dict(pool.map(fetch, specs))
 
 
-def detect_phase(bootstrap: dict, as_of=None) -> dict:
+def detect_phase(bootstrap: dict, fixtures: list[dict] | None = None, as_of=None) -> dict:
+    """Resolve FPL phase and actual current-GW live-match state.
+
+    Match Mode must be based on at least one fixture that Official FPL marks started and
+    not finished. A merely active Gameweek is not sufficient.
+    """
     now = as_of or utcnow()
+    fixtures = fixtures or []
     events = bootstrap.get("events", [])
     current = next((event for event in events if event.get("is_current")), None)
     nxt = next((event for event in events if event.get("is_next")), None)
     finished = [event for event in events if event.get("finished")]
     last = max(finished, key=lambda event: event["id"]) if finished else None
+
+    current_deadline = parse_dt(current.get("deadline_time")) if current else None
     if current:
-        deadline = parse_dt(current.get("deadline_time"))
-        planning = current if deadline and deadline > now else (nxt or current)
+        planning = current if current_deadline and current_deadline > now else (nxt or current)
     else:
         planning = nxt
+
+    current_gw = current["id"] if current else None
+    live_fixtures = [
+        fixture
+        for fixture in fixtures
+        if current_gw
+        and int(fixture.get("event") or 0) == int(current_gw)
+        and fixture.get("started") is True
+        and fixture.get("finished") is not True
+    ]
+    just_passed_current_deadline = bool(
+        current
+        and current_deadline
+        and current_deadline <= now <= current_deadline + timedelta(hours=2)
+        and not current.get("finished")
+    )
+
     return {
-        "current_gw": current["id"] if current else None,
+        "current_gw": current_gw,
         "next_gw": nxt["id"] if nxt else None,
         "last_finished_gw": last["id"] if last else None,
         "planning_gw": planning["id"] if planning else None,
         "submitted_gw": (current or last or {}).get("id"),
-        "scoring_gw": current["id"] if current else None,
+        "scoring_gw": current_gw,
         "deadline_time": planning.get("deadline_time") if planning else None,
-        "is_live_event": bool(current and not current.get("finished")),
+        "current_deadline_time": current.get("deadline_time") if current else None,
+        "post_deadline_reconciliation": just_passed_current_deadline,
+        "active_live_fixture_count": len(live_fixtures),
+        "active_live_fixture_ids": [fixture.get("id") for fixture in live_fixtures],
+        "is_live_match": bool(live_fixtures),
+        "is_live_event": bool(live_fixtures),
     }
 
 
@@ -154,11 +184,19 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
     initial = _parallel_official_get(initial_specs)
     initial_wave_ms = round((perf_counter() - wave_started) * 1000, 2)
     bootstrap = (initial.get("bootstrap") or (None, {}))[0]
+    fixtures = (initial.get("fixtures") or (None, []))[0] or []
     if not bootstrap:
         raise RuntimeError("bootstrap unavailable")
 
-    phase = detect_phase(bootstrap, report_as_of or utcnow())
-    checkpoint = resolve_checkpoint(mode, phase.get("deadline_time"), phase.get("is_live_event", False), as_of=report_as_of, simulated=report_as_of is not None)
+    phase = detect_phase(bootstrap, fixtures, report_as_of or utcnow())
+    checkpoint = resolve_checkpoint(
+        mode,
+        phase.get("deadline_time"),
+        phase.get("is_live_match", False),
+        as_of=report_as_of,
+        simulated=report_as_of is not None,
+        post_deadline_reconciliation=bool(phase.get("post_deadline_reconciliation")),
+    )
     submitted_gw, scoring_gw = phase["submitted_gw"], phase["scoring_gw"]
 
     dependent_specs = []
@@ -173,7 +211,7 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
     fetched = {**initial, **dependent}
     payloads = {key: pair[0] for key, pair in fetched.items()}
     health = {key: pair[1] for key, pair in fetched.items()}
-    _normalize_endpoint_health(health, payloads, submitted_gw, scoring_gw, bool(phase.get("is_live_event")))
+    _normalize_endpoint_health(health, payloads, submitted_gw, scoring_gw, bool(phase.get("is_live_match")))
 
     teams, positions, by_id = maps(bootstrap)
     lock = read_json(CONFIG / "locked_squad.json", {})
@@ -246,7 +284,7 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
     total_ms = round((perf_counter() - started) * 1000, 2)
     out = {
         "schema": "snapshot.v1",
-        "schema_version": 492,
+        "schema_version": 496,
         "generated_at": iso_now(),
         "mode": mode,
         "as_of": as_of,
@@ -268,6 +306,7 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
             "initial_requests": len(initial_specs),
             "dependent_requests": len(dependent_specs),
             "bootstrap_overlapped_with_independent_official_endpoints": True,
+            "official_snapshot_refreshed_this_run": True,
         },
         "duration_ms": total_ms,
     }
@@ -282,6 +321,9 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         "baseline_gw": projection_baseline["baseline_gw"],
         "squad_authority": out["squad_authority"],
         "override_applied": projection_baseline["override_applied"],
+        "checkpoint_policy": checkpoint.get("policy_id"),
+        "visible_output_authorized": checkpoint.get("visible_output_authorized"),
+        "active_live_fixture_count": phase.get("active_live_fixture_count"),
     }))
     return out
 

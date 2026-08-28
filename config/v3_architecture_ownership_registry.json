@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "registry": "V3_ARCHITECTURE_OWNERSHIP_V1",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "inspired_by": [
@@ -24,6 +24,7 @@
     "interactive_microservices_may_not_duplicate_projection_or_legality_formulas": true,
     "warm_decision_regeneration_is_separate_from_source_refresh": true,
     "tactical_context_has_single_bounded_materialization_owner": true,
+    "observed_tactical_event_aggregation_is_tactical_context_owned": true,
     "missing_tactical_evidence_must_remain_partial_or_unavailable": true
   },
   "responsibilities": [
@@ -57,6 +58,7 @@
     {"id":"FPL_RULES_CONSTANTS","owner":"rules","implementation":"src.rules","consumers":["Gate0","prediction","package_optimizer","lineup_governance","reporting","decision_hotpath"]},
     {"id":"XMINS_DISTRIBUTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-05","DSS-06","DSS-07","DSS-08","DSS-09","DSS-X10","DSS-X11"]},
     {"id":"ADVANCED_ATTACKING_EVIDENCE","owner":"advanced_stats","implementation":"src.engines.player_features","consumers":["DSS-12","DSS-13","DSS-14","DSS-15","DSS-16","DSS-38","tactical_context"]},
+    {"id":"OBSERVED_TACTICAL_EVENT_AGGREGATION","owner":"tactical_context","implementation":"src.models.observed_tactical_context","consumers":["tactical_context"]},
     {"id":"TACTICAL_MATCHUP_CONTEXT","owner":"tactical_context","implementation":"src.engines.tactical_context_service","consumers":["prediction","reporting","watchlist"]},
     {"id":"TEAM_STRENGTH_AND_FIXTURE_PROBABILITY","owner":"prediction","implementation":"src.models.team_strength","consumers":["DSS-19","DSS-20","DSS-21","DSS-22","DSS-23","DSS-24","DSS-29"]},
     {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-25","DSS-26","DSS-27","DSS-28","ENH-04","decision_hotpath"]},
@@ -96,7 +98,7 @@
     "official_endpoint_ownership": "Network purpose ownership is canonical in config/sources/official_endpoint_ownership.json. Core bootstrap/fixtures/entry/current-live data must be consumed from official_snapshot downstream.",
     "prediction_evaluation_official_fetch": "Only historical finished-GW event-live settlement not represented by the current core snapshot is network-owned by prediction_evaluation.",
     "package_optimization_owner": "Canonical optimizer remains prediction-owned. decision_hotpath consumes its artifact and canonical lineup/package governance builders; it does not own or duplicate football formulas.",
-    "tactical_context_owner": "tactical_context materializes observed internal role/shape evidence once. Prediction consumes it; prediction may not recreate tactical source artifacts.",
+    "tactical_context_owner": "tactical_context owns observed tactical event aggregation and final tactical artifacts once. Prediction consumes them and may not recreate source evidence.",
     "interactive_lane": "decision_hotpath and instant_gateway are separate bounded interactive microservices outside the background refresh DAG."
   }
 }

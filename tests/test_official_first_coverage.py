@@ -6,11 +6,11 @@ from src.sources import official_first as mod
 from src.utils import ROOT
 
 
-def test_every_rec_through_40_has_explicit_official_disposition():
+def test_every_rec_through_41_has_explicit_official_disposition():
     payload = mod.load_official_first_coverage()
     health = mod.validate_official_first_coverage(payload)
     assert health["integrity_ok"] is True
-    assert health["covered_recommendations"] == 41  # REC-09a and REC-09b are separate dispositions.
+    assert health["covered_recommendations"] == 42  # REC-09a and REC-09b are separate dispositions.
     assert set(payload["recommendations"]) == set(mod.EXPECTED_RECS)
     assert payload["recommendations"]["REC-01"]["applicability"] == "PUBLIC_FIRST"
     assert payload["recommendations"]["REC-23"]["applicability"] == "PUBLIC_THEN_PRIVATE_AUTH"
@@ -18,6 +18,7 @@ def test_every_rec_through_40_has_explicit_official_disposition():
     assert payload["recommendations"]["REC-38"]["applicability"] == "POLICY_ONLY"
     assert payload["recommendations"]["REC-39"]["applicability"] == "PUBLIC_THEN_PRIVATE_AUTH"
     assert payload["recommendations"]["REC-40"]["applicability"] == "NOT_APPLICABLE"
+    assert payload["recommendations"]["REC-41"]["applicability"] == "PUBLIC_FIRST_WITH_ENRICHMENT"
 
 
 def test_fallback_is_closed_and_requires_explicit_official_reason():
@@ -36,6 +37,10 @@ def test_fallback_is_closed_and_requires_explicit_official_reason():
     assert mod.fallback_allowed("REC-39", "PRIVATE_AUTH_REQUIRED") is True
     assert mod.official_attempt_required("REC-40") is False
     assert mod.fallback_allowed("REC-40", "OFFICIAL_NOT_APPLICABLE") is True
+
+    assert mod.official_attempt_required("REC-41") is True
+    assert mod.fallback_allowed("REC-41", "FIELD_NOT_EXPOSED") is True
+    assert mod.fallback_allowed("REC-41", "OFFICIAL_NOT_APPLICABLE") is False
 
 
 def test_invalid_or_incomplete_matrix_fails_closed():

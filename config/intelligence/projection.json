@@ -1,6 +1,6 @@
 {
-  "schema_version": 5,
-  "model_id": "player_projection_v5_historical_prior_robust_rates_dc_probability",
+  "schema_version": 6,
+  "model_id": "player_projection_v5_authoritative_feature_fusion_v1",
   "rate_shrinkage_minutes": 450.0,
   "early_season_robust_rates": {
     "model": "adaptive_shrinkage_winsor_v1",
@@ -32,6 +32,33 @@
     "starter_prior_to_xmins": true,
     "attacking_prior_before_current_season_shrinkage": true,
     "current_season_observation_remains_primary_evidence": true
+  },
+  "authoritative_feature_fusion": {
+    "model": "authoritative_feature_fusion_v1",
+    "advanced_attacking": {
+      "enabled": true,
+      "eligible_positions": ["DEF", "MID", "FWD"],
+      "minimum_evidence_minutes": 45.0,
+      "evidence_shrinkage_minutes": 540.0,
+      "maximum_weight": 0.25,
+      "candidate_lower_multiplier": 0.70,
+      "candidate_upper_multiplier": 1.30,
+      "absolute_upper_rate90": 1.50,
+      "current_native_rate_remains_primary": true,
+      "used_fields": ["minutes", "xg", "xa"]
+    },
+    "current_form": {
+      "authoritative": false,
+      "reason": "no settled point-in-time rolling recency window yet; current-season official evidence must not be double-counted"
+    },
+    "rest_congestion": {
+      "authoritative": false,
+      "reason": "fixture-specific congestion remains shadow until settled calibration supports promotion"
+    },
+    "preseason": {
+      "authoritative": false,
+      "reason": "current enrichment lacks player-attributed preseason minutes and roles"
+    }
   },
   "attack_multiplier_min": 0.55,
   "attack_multiplier_max": 1.75,

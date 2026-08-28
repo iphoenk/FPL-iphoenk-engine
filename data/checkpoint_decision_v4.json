@@ -1,31 +1,29 @@
 {
   "schema_version": 495,
   "engine": "v4.9.5-checkpoint-governance-human-report",
-  "evaluated_at": "2026-08-28T05:21:46.824346+00:00",
+  "evaluated_at": "2026-08-28T06:20:20.527478+00:00",
   "checkpoint_context": {
-    "policy_id": "MIDDAY_TACTICAL_1230",
-    "label": "12.30 Midday Tactical Monitor",
+    "policy_id": "REGULAR_MONITOR",
+    "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-28T05:21:42.640484+00:00",
-    "local_as_of": "2026-08-28T12:21:42.640484+07:00",
+    "as_of": "2026-08-28T06:20:16.328712+00:00",
+    "local_as_of": "2026-08-28T13:20:16.328712+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 728.3,
+    "minutes_to_deadline": 669.7,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
     "max_snapshot_age_minutes": 90,
-    "recommended_refresh_minutes": 60,
+    "recommended_refresh_minutes": 180,
     "report_scope": [
       "personal_gw_scorecard",
       "gate0",
       "locked_15",
       "availability",
       "xmins",
-      "role",
-      "challengers",
       "price_radar",
-      "lineup_watch"
+      "challengers"
     ],
     "registry": "fpl_checkpoint_policy_v1",
     "registry_schema_version": 1
@@ -595,10 +593,8 @@
     "locked_15",
     "availability",
     "xmins",
-    "role",
-    "challengers",
     "price_radar",
-    "lineup_watch"
+    "challengers"
   ],
   "guardrails": {
     "raw_optimizer_not_authoritative": true,

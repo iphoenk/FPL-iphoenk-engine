@@ -1,0 +1,72 @@
+{
+  "schema_version": 4961,
+  "release": "4.9.6",
+  "service": "reconciliation_readiness",
+  "status": "PASS",
+  "target_gw": 2,
+  "stage": "PREDEADLINE_READY",
+  "ready_for_reconciliation_now": false,
+  "checks": {
+    "snapshot_integrity": {
+      "pass": true,
+      "reason": null,
+      "players": 614
+    },
+    "validation_lifecycle": {
+      "pass": true,
+      "snapshot_status": "PASS"
+    },
+    "ownership_chain": {
+      "pass": true,
+      "owners": {
+        "official_fpl_acquisition": true,
+        "validation_store": true,
+        "reconciliation_truth": true,
+        "validation_lifecycle": true,
+        "reconciliation_readiness": true
+      }
+    },
+    "submitted_picks": {
+      "pass": false,
+      "submitted_gw": 1,
+      "picks": 0,
+      "expected_gw": 2
+    },
+    "finished_gw": {
+      "pass": false,
+      "last_finished_gw": 1,
+      "expected_gw": 2
+    },
+    "official_actuals": {
+      "pass": false,
+      "scoring_gw": 1,
+      "elements": 0,
+      "expected_gw": 2
+    },
+    "reconciliation_archive": {
+      "pass": false,
+      "exists": false,
+      "reason": null
+    },
+    "calibration_entry": {
+      "pass": false,
+      "eligible_gws": []
+    }
+  },
+  "blockers": [],
+  "pending": [
+    "gw_finish",
+    "official_event_live_actuals",
+    "official_submitted_picks_after_deadline",
+    "post_gw_reconciliation"
+  ],
+  "guardrails": {
+    "read_only_audit": true,
+    "official_api_refetch": false,
+    "deadline_snapshot_integrity_reused_from_validation_store": true,
+    "reconciliation_integrity_reused_from_validation_store": true,
+    "reconciliation_truth_not_reimplemented": true,
+    "official_fpl_single_acquisition_owner": true,
+    "expected_future_state_is_pending_not_failure": true
+  }
+}

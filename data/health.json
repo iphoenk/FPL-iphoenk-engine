@@ -2,72 +2,72 @@
   "bootstrap": {
     "status": "LIVE",
     "http_status": 200,
-    "latency_ms": 261,
+    "latency_ms": 525,
     "attempts": 1,
-    "fetched_at": "2026-08-28T05:21:42.638264+00:00",
+    "fetched_at": "2026-08-28T06:20:16.326632+00:00",
     "error": null,
     "url": "https://fantasy.premierleague.com/api/bootstrap-static/"
   },
   "fixtures": {
     "status": "LIVE",
     "http_status": 200,
-    "latency_ms": 190,
+    "latency_ms": 427,
     "attempts": 1,
-    "fetched_at": "2026-08-28T05:21:42.567050+00:00",
+    "fetched_at": "2026-08-28T06:20:16.229588+00:00",
     "error": null,
     "url": "https://fantasy.premierleague.com/api/fixtures/"
   },
   "event_status": {
     "status": "LIVE",
     "http_status": 200,
-    "latency_ms": 185,
+    "latency_ms": 446,
     "attempts": 1,
-    "fetched_at": "2026-08-28T05:21:42.563151+00:00",
+    "fetched_at": "2026-08-28T06:20:16.250350+00:00",
     "error": null,
     "url": "https://fantasy.premierleague.com/api/event-status/"
   },
   "entry": {
     "status": "LIVE",
     "http_status": 200,
-    "latency_ms": 163,
+    "latency_ms": 449,
     "attempts": 1,
-    "fetched_at": "2026-08-28T05:21:42.542765+00:00",
+    "fetched_at": "2026-08-28T06:20:16.254434+00:00",
     "error": null,
     "url": "https://fantasy.premierleague.com/api/entry/3462711/"
   },
   "history": {
     "status": "LIVE",
     "http_status": 200,
-    "latency_ms": 180,
+    "latency_ms": 449,
     "attempts": 1,
-    "fetched_at": "2026-08-28T05:21:42.561146+00:00",
+    "fetched_at": "2026-08-28T06:20:16.255371+00:00",
     "error": null,
     "url": "https://fantasy.premierleague.com/api/entry/3462711/history/"
   },
   "transfers": {
     "status": "LIVE",
     "http_status": 200,
-    "latency_ms": 161,
+    "latency_ms": 450,
     "attempts": 1,
-    "fetched_at": "2026-08-28T05:21:42.543771+00:00",
+    "fetched_at": "2026-08-28T06:20:16.256910+00:00",
     "error": null,
     "url": "https://fantasy.premierleague.com/api/entry/3462711/transfers/"
   },
   "picks": {
     "status": "LIVE",
     "http_status": 200,
-    "latency_ms": 62,
+    "latency_ms": 113,
     "attempts": 1,
-    "fetched_at": "2026-08-28T05:21:42.702651+00:00",
+    "fetched_at": "2026-08-28T06:20:16.441868+00:00",
     "error": null,
     "url": "https://fantasy.premierleague.com/api/entry/3462711/event/1/picks/"
   },
   "event_live": {
     "status": "IDLE",
     "http_status": 200,
-    "latency_ms": 68,
+    "latency_ms": 111,
     "attempts": 1,
-    "fetched_at": "2026-08-28T05:21:42.709439+00:00",
+    "fetched_at": "2026-08-28T06:20:16.441620+00:00",
     "error": null,
     "url": "https://fantasy.premierleague.com/api/event/1/live/"
   }

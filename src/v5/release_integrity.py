@@ -197,8 +197,43 @@ def build_exact_execution_fingerprint(
     }
 
 
-def verify_replay_outputs(expected_hashes: dict[str, str], outputs: dict[str, Any]) -> dict[str, Any]:
-    actual = {name: payload_fingerprint(outputs.get(name)) for name in sorted(expected_hashes)}
+def _normalize_output(value: Any, volatile_fields: set[str]) -> Any:
+    if isinstance(value, dict):
+        return {
+            str(key): _normalize_output(item, volatile_fields)
+            for key, item in sorted(value.items(), key=lambda row: str(row[0]))
+            if str(key) not in volatile_fields
+        }
+    if isinstance(value, list):
+        return [_normalize_output(item, volatile_fields) for item in value]
+    if isinstance(value, tuple):
+        return [_normalize_output(item, volatile_fields) for item in value]
+    return value
+
+
+def replay_output_fingerprint(
+    payload: Any,
+    *,
+    repo_root: str | Path | None = None,
+    registry_path: str | Path = REGISTRY,
+) -> str:
+    _, cfg = _root_and_cfg(repo_root, registry_path)
+    exact = cfg.get("exact_execution") if isinstance(cfg.get("exact_execution"), dict) else {}
+    volatile = {str(value) for value in exact.get("replay_output_volatile_fields") or []}
+    return payload_fingerprint(_normalize_output(payload, volatile))
+
+
+def verify_replay_outputs(
+    expected_hashes: dict[str, str],
+    outputs: dict[str, Any],
+    *,
+    repo_root: str | Path | None = None,
+    registry_path: str | Path = REGISTRY,
+) -> dict[str, Any]:
+    actual = {
+        name: replay_output_fingerprint(outputs.get(name), repo_root=repo_root, registry_path=registry_path)
+        for name in sorted(expected_hashes)
+    }
     mismatches = {
         name: {"expected": expected_hashes[name], "actual": actual[name]}
         for name in sorted(expected_hashes)

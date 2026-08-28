@@ -192,7 +192,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         raise RuntimeError("V5 microservice FAIL CLOSED: truth rules unavailable")
 
     read_service, read_operation = _route("artifact_read")
-    states = invoke_parallel_envelopes(
+    mini_service, mini_operation = _route("mini_league_collection")
+    hydration = invoke_parallel_envelopes(
         {
             "price_trajectory": (read_service, read_operation, {"name": "price_trajectory", "default": {}}),
             "historical_prior": (read_service, read_operation, {"name": "historical_prior", "default": {}}),
@@ -206,10 +207,39 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 read_operation,
                 {"name": "challenger_observations", "default": {"schema_version": 1, "observations": []}},
             ),
+            "mini_league_tracking": (
+                read_service,
+                read_operation,
+                {"name": "mini_league_tracking", "default": {}},
+            ),
+            "mini_league_collection": (
+                mini_service,
+                mini_operation,
+                {"team_id": team_id, "entry": base.get("entry") if isinstance(base.get("entry"), dict) else {}},
+            ),
         },
         correlation_id=correlation_id,
     )
+    mini_league_env = hydration.pop("mini_league_collection")
+    mini_league_collection = mini_league_env["data"] if isinstance(mini_league_env.get("data"), dict) else {}
+    states = hydration
     performance["state_hydration"] = {key: _metric(value) for key, value in states.items()}
+    performance["mini_league_collection"] = _metric(mini_league_env)
+
+    mini_truth_env = _call(
+        "mini_league_enrich",
+        {
+            "bootstrap": bootstrap,
+            "truth": truth,
+            "team_id": team_id,
+            "entry": base.get("entry") if isinstance(base.get("entry"), dict) else {},
+            "mini_league_collection": mini_league_collection,
+            "previous_mini_league": states["mini_league_tracking"]["data"] or {},
+        },
+        correlation_id,
+    )
+    truth = mini_truth_env["data"]
+    performance["mini_league_truth"] = _metric(mini_truth_env)
     settlement_gws = _unresolved_finished_settlement_gws(states["prediction_ledger"]["data"], bootstrap)
 
     prior_env = _call(
@@ -405,6 +435,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     scorecard = evaluation.get("challenger_scorecard") if isinstance(evaluation.get("challenger_scorecard"), dict) else {}
     prediction_quality = prediction.get("prediction_quality") if isinstance(prediction.get("prediction_quality"), dict) else {}
     historical_prior = prediction.get("historical_prior_artifact") if isinstance(prediction.get("historical_prior_artifact"), dict) else {}
+    mini_league_tracking = truth.get("mini_league_tracking") if isinstance(truth.get("mini_league_tracking"), dict) else {}
     degraded_context_rows = framework.get("degraded_contexts") if isinstance(framework.get("degraded_contexts"), list) else []
     snapshot = {
         "schema_version": int(runner_cfg["snapshot"]["schema_version"]),
@@ -419,6 +450,12 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "squad_authority": (truth.get("team") or {}).get("authority"),
         "team_summary": truth.get("team"),
         "live_summary": truth.get("live"),
+        "mini_league_summary": {
+            "status": mini_league_tracking.get("status"),
+            "tracking_count": mini_league_tracking.get("tracking_count", 0),
+            "configured": mini_league_tracking.get("configured", {}),
+            "auto_discovered": mini_league_tracking.get("auto_discovered", {}),
+        },
         "source_fusion_health": _source_fusion_summary(source_fusion),
         "price_summary": {
             "status": price_bundle.get("status", "READY"),
@@ -426,6 +463,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "top_rise_risk": price_rows.get("top_rise_risk", [])[: int(limits["price_rise_risk"])],
             "top_fall_risk": price_rows.get("top_fall_risk", [])[: int(limits["price_fall_risk"])],
             "alerts": alerts.get("alerts", [])[: int(limits["price_alerts"])],
+            "model_health": price_rows.get("model_health"),
             "degraded_context": price_bundle.get("degraded_context"),
         },
         "prediction_summary": {
@@ -462,6 +500,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "endpoint_health": {
             "base": base_result.get("health", {}),
             "dynamic": dynamic_result.get("health", {}),
+            "mini_leagues": mini_league_collection.get("health", {}),
             "settlement_actuals": settlement_actuals.get("health", {}),
         },
         "authenticated_official": {
@@ -489,6 +528,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "post_capture_network_refresh_forbidden": True,
             "settlement_actuals_collected_after_prediction_boundary": True,
             "settlement_actuals_decision_input": False,
+            "mini_league_tracking_decision_neutral": True,
         },
     }
 
@@ -497,6 +537,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         artifact_mapping = _cfg()["artifact_mapping"]
         artifact_payloads = {
             "source_fusion": source_fusion,
+            "mini_league_tracking": mini_league_tracking,
             "historical_prior": historical_prior,
             "predictions": prediction,
             "prediction_quality": prediction_quality,

@@ -69,7 +69,7 @@ def _tail(value: str, limit: int = 1200) -> str:
 def _assert_locked_artifacts(locked_artifacts: dict[str, str], stage: str) -> None:
     for locked_path, digest in locked_artifacts.items():
         if file_digest(Path(locked_path)) != digest:
-            raise RuntimeError(f"immutable artifact changed {stage}: {locked_path}")
+            raise RuntimeError(f"immutable snapshot changed {stage}: {locked_path}")
 
 
 def _service_env(root: Path, locked_artifacts: dict[str, str]) -> dict:

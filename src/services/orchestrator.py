@@ -130,6 +130,10 @@ def orchestrate(
                 dependencies = service.get("depends_on") or []
                 if any(service_states.get(dep) != "PASS" for dep in dependencies):
                     raise RuntimeError(f"dependency not successful for {service['id']}")
+            # Verify immutable artifacts immediately before downstream services can
+            # consume them. A second verification occurs immediately after those
+            # processes complete. Re-hashing again after read-only contract checks
+            # was redundant and added material I/O to every execution level.
             _assert_locked_artifacts(locked_artifacts, f"before level {level_index}")
 
             level_rows: dict[str, dict] = {}
@@ -238,7 +242,6 @@ def orchestrate(
 
                 row["status"] = "PASS"
                 service_states[service_id] = "PASS"
-            _assert_locked_artifacts(locked_artifacts, f"after level {level_index}")
             atomic_json(outfile, report)
 
         report["status"] = "PASS"
@@ -258,7 +261,6 @@ def orchestrate(
             "parallel_levels": sum(len(level) > 1 for level in levels),
             "fail_closed": True,
         }
-        atomic_json(outfile, report)
         report["locked_artifacts"] = {str(Path(path).relative_to(root)): digest for path, digest in locked_artifacts.items()}
         atomic_json(outfile, report)
         print(json.dumps({

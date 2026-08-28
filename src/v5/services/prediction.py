@@ -35,6 +35,7 @@ BASE_CAPABILITIES = [
     "ownership_context",
     "bonus_route",
     "advanced_stats_integration",
+    "authoritative_advanced_attack_fusion",
     "player_specific_defcon_probability",
     "sustainability",
     "team_defensive_risk",
@@ -167,7 +168,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation == "status":
         return {
             "status": "ACTIVE",
-            "model_family": "P0_NATIVE_V5_HISTORICAL_PRIOR_ADVANCED_OVERLAY",
+            "model_family": "P0_NATIVE_V5_AUTHORITATIVE_FEATURE_FUSION",
             "bridge_only": False,
             "capabilities": _capabilities(
                 {
@@ -286,6 +287,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 "fixtures": player.get("fixtures"),
                 "projection_confidence": player.get("projection_confidence"),
                 "defensive_contribution": player.get("defensive_contribution"),
+                "authoritative_feature_fusion": player.get("authoritative_feature_fusion"),
                 "fixture_congestion_overlay": player.get("fixture_congestion_overlay"),
                 "feature_use": player.get("feature_use"),
                 "advanced": player.get("advanced"),
@@ -302,6 +304,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "historical_prior_artifact": prior,
         "prediction_quality": quality,
         **({"degraded_context": degraded_context} if degraded_context else {}),
+        "authoritative_feature_fusion": result.get("authoritative_feature_fusion"),
         "defensive_contribution": result.get("defensive_contribution"),
         "team_strength": result.get("team_strength"),
         "role_intelligence": result.get("role_intelligence"),

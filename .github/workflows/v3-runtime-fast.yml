@@ -7,10 +7,10 @@ on:
     paths-ignore:
       - 'data/**'
   schedule:
-    - cron: "55 * * * *"
-    - cron: "*/15 * * * *"
-    - cron: "30 5 * * *"
-    - cron: "30 14 * * *"
+    # Master hourly evaluation at :30 WIB. UTC has the same minute offset.
+    - cron: "30 * * * *"
+    # Adaptive freshness/final-review support without duplicating the :30 master checkpoint.
+    - cron: "0,15,45 * * * *"
 
 permissions:
   contents: write
@@ -82,7 +82,7 @@ jobs:
         if: steps.cadence.outputs.should_collect == 'true'
         run: python -m src.engines.architecture_contract_validate
 
-      - name: Run FAST or LIVE execution profile
+      - name: Run governed FAST/LIVE/DEADLINE execution profile
         if: steps.cadence.outputs.should_collect == 'true'
         id: runtime
         shell: bash
@@ -98,12 +98,18 @@ jobs:
           set -euo pipefail
           profile="fast_decision"
           mode="daily"
-          if [ "${{ steps.cadence.outputs.reason }}" = "adaptive_match_window" ]; then
+
+          if [ "${{ steps.cadence.outputs.deadline_intensive }}" = "true" ]; then
+            mode="deadline"
+          elif [ "${{ steps.cadence.outputs.match_window }}" = "true" ]; then
             profile="live"
             mode="live"
           fi
+
           echo "profile=$profile" >> "$GITHUB_OUTPUT"
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "visible_report=${{ steps.cadence.outputs.visible_report }}"
+          echo "visible_mode=${{ steps.cadence.outputs.visible_mode }}"
           python -m src.runtime_v3.orchestrator --mode "$mode" --stats --profile "$profile"
 
       - name: Validate production decision contracts

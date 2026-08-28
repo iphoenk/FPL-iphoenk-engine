@@ -3,7 +3,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from src.runtime_v3 import fast_entrypoint
+from src.runtime_v3 import fast_entrypoint, release_acceptance, reuse_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -17,7 +17,7 @@ def test_fast_reuse_uses_logical_time_not_hydration_mtime(tmp_path):
     old = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
     path = tmp_path / "artifact.json"
     _write(path, {"generated_at": old, "value": 1})
-    os.utime(path, None)  # simulate `git show > file` hydration now
+    os.utime(path, None)
     logical = fast_entrypoint._logical_generated_at(path)
     assert logical is not None
     assert (datetime.now(timezone.utc) - logical).total_seconds() > 7000
@@ -35,37 +35,69 @@ def test_semantic_signature_ignores_runtime_metadata_but_not_decision_data(tmp_p
     assert third != second
 
 
-def test_fast_profile_closes_rec41_fence_and_declares_semantic_reuse():
+def test_output_hash_detects_mutated_reused_artifact(tmp_path):
+    path = tmp_path / "out.json"
+    _write(path, {"generated_at": "2026-01-01T00:00:00+00:00", "value": 1})
+    first = reuse_manifest.file_sha256(path)
+    _write(path, {"generated_at": "2026-01-01T00:00:00+00:00", "value": 2})
+    assert reuse_manifest.file_sha256(path) != first
+
+
+def test_fast_profile_closes_rec41_fence_and_declares_safe_semantic_reuse():
     profiles = json.loads((ROOT / "config/runtime/execution_profiles.json").read_text())
     fast = profiles["profiles"]["fast_decision"]
     assert profiles["policy"]["rec41_player_feature_migration_fence_active"] is False
+    assert profiles["policy"]["semantic_reuse_manifest_is_separate_from_performance_telemetry"] is True
+    assert profiles["policy"]["cross_service_mutated_artifacts_are_not_semantically_reused_until_ownership_is_single"] is True
     assert fast["reuse_services"]["advanced_stats"]["max_age_seconds"] == 21600
     assert fast["reuse_services"]["prediction"]["mode"] == "semantic_signature"
-    assert {"prediction", "lineup_governance", "challenger", "governance", "watchlist"}.issubset(fast["reuse_services"])
+    assert fast["reuse_services"]["prediction_evaluation"]["mode"] == "semantic_signature"
+    assert {"prediction", "prediction_evaluation", "lineup_governance", "challenger", "governance", "watchlist"}.issubset(fast["reuse_services"])
+    assert "reporting" not in fast["reuse_services"] and "report_materializer" not in fast["reuse_services"]
     assert set(fast["command_bundles"]) == {"governance", "watchlist", "reporting", "report_materializer"}
 
 
-def test_fast_hydrates_previous_validated_decision_outputs_and_metadata():
+def test_fast_hydrates_validated_reuse_manifest_and_decision_outputs():
     publish = json.loads((ROOT / "config/runtime/runtime_publish_registry.json").read_text())
     hydrate = set(publish["hydrate_paths"])
-    assert {"runtime_performance.json", "projections.json", "package_optimizer.json", "prediction_quality.json", "lineup_decision.json", "package_decision.json", "framework_health.json", "dss_operational_evidence.json", "dss_watchlist.json"}.issubset(hydrate)
+    published = set(publish["publish_paths"])
+    required = {"runtime_reuse_manifest.json", "projections.json", "package_optimizer.json", "prediction_quality.json", "prediction_ledger.json", "prediction_accuracy.json", "lineup_decision.json", "package_decision.json", "framework_health.json", "dss_operational_evidence.json", "dss_watchlist.json"}
+    assert required.issubset(hydrate)
+    assert "runtime_reuse_manifest.json" in published
+    assert publish["policy"]["semantic_reuse_state_is_separate_from_performance_telemetry"] is True
 
 
-def test_capability_master_registry_is_deduplicated_and_explicit():
+def test_capability_master_registry_has_exact_single_primitive_ownership():
     registry = json.loads((ROOT / "config/intelligence/capability_master_registry.json").read_text())
+    core = json.loads((ROOT / "config/dss_core_registry.json").read_text())
+    ext = json.loads((ROOT / "config/dss_extension_registry.json").read_text())
     rows = registry["capabilities"]
     ids = [row["id"] for row in rows]
     assert registry["expected_count"] == 30 == len(rows)
     assert len(ids) == len(set(ids))
-    assert registry["policy"]["enhancements_are_rollups_not_extra_capabilities"] is True
-    assert registry["policy"]["rec_items_are_delivery_milestones_not_extra_capabilities"] is True
-    assert registry["policy"]["safe_fallback_is_not_feature_completion"] is True
+    dss_owned = [value for row in rows for value in (row.get("owns") or {}).get("dss", [])]
+    ext_owned = [value for row in rows for value in (row.get("owns") or {}).get("extensions", [])]
+    assert len(dss_owned) == len(set(dss_owned)) == 50
+    assert len(ext_owned) == len(set(ext_owned)) == 16
+    assert set(dss_owned) == {row["id"] for row in core["modules"]}
+    assert set(ext_owned) == {row["id"] for row in ext["modules"]}
     tactical = next(row for row in rows if row["id"] == "CAP-06")
-    assert "DSS-07" in tactical["maps"]["dss"] and "REC-41" in tactical["maps"]["rec"]
+    assert tactical["owns"]["dss"] == ["DSS-07"] and "REC-41" in tactical["references"]["rec"]
     calibration = next(row for row in rows if row["id"] == "CAP-20")
-    assert set(calibration["maps"]["rec"]) == {"REC-04", "REC-07", "REC-26"}
+    assert calibration["owns"]["dss"] == ["DSS-44"]
+    assert set(calibration["references"]["rec"]) == {"REC-04", "REC-07", "REC-26"}
 
 
-def test_fast_workflow_uses_low_latency_adapter():
+def test_fast_release_acceptance_uses_validated_manifest_warmup_then_measurement():
+    gates = {gate.name: gate.command for gate in release_acceptance.integration_gates()}
+    assert "src.runtime_v3.fast_entrypoint" in gates["fast_semantic_warmup"]
+    assert "src.runtime_v3.reuse_manifest" in gates["capture_reuse_manifest"]
+    assert "src.runtime_v3.fast_entrypoint" in gates["fast_runtime"]
+    assert "src.runtime_v3.orchestrator" not in gates["fast_runtime"]
+
+
+def test_fast_workflow_uses_low_latency_adapter_and_post_validation_manifest_capture():
     workflow = (ROOT / ".github/workflows/v3-runtime-fast.yml").read_text()
     assert "python -m src.runtime_v3.fast_entrypoint" in workflow
+    assert "python -m src.runtime_v3.reuse_manifest --profile fast_decision" in workflow
+    assert workflow.index("Validate production decision contracts") < workflow.index("Capture validated FAST semantic reuse manifest")

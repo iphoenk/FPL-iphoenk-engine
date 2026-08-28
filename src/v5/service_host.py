@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import os
+from contextlib import asynccontextmanager
 from time import perf_counter
 from typing import Any, Callable
 
@@ -9,6 +10,7 @@ import msgpack
 from fastapi import FastAPI, HTTPException, Request, Response
 
 from src.v5.config_cache import load_json_config
+from src.v5.refresh_worker import RefreshWorker, start_refresh_worker
 from src.v5.service_contracts import ServiceResponse
 from src.v5.service_health import local_service_health
 from src.v5.service_registry import get_service, registry
@@ -19,6 +21,7 @@ REGISTRY = registry()
 DEFAULTS = REGISTRY["defaults"]
 WIRE_CONFIG = "config/v5_service_wire_registry.json"
 WIRE = load_json_config(WIRE_CONFIG)
+_REFRESH_WORKER: RefreshWorker | None = None
 
 
 def _load_handler(path: str) -> Callable[[str, dict[str, Any]], Any]:
@@ -77,23 +80,59 @@ def _execute(operation: str, payload: dict[str, Any], correlation_id: str | None
 
 
 HANDLER = _load_handler(SPEC.handler)
-app = FastAPI(title=f"FPL iphoenk V5 {SERVICE_ID} service", version=str(DEFAULTS["contract_version"]))
 JSON_PROFILE = _wire_profile("json")
 MSGPACK_PROFILE = _wire_profile("msgpack")
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    global _REFRESH_WORKER
+    _REFRESH_WORKER = start_refresh_worker(service_id=SERVICE_ID, handler=HANDLER)
+    try:
+        yield
+    finally:
+        worker = _REFRESH_WORKER
+        if worker is not None:
+            worker.stop(timeout_seconds=10.0)
+        _REFRESH_WORKER = None
+
+
+app = FastAPI(
+    title=f"FPL iphoenk V5 {SERVICE_ID} service",
+    version=str(DEFAULTS["contract_version"]),
+    lifespan=_lifespan,
+)
+
+
+def _refresh_worker_status() -> dict[str, Any] | None:
+    if SERVICE_ID != "orchestrator":
+        return None
+    worker = _REFRESH_WORKER
+    if worker is None:
+        return {
+            "enabled": False,
+            "running": False,
+            "default_off": True,
+        }
+    return worker.status()
 
 
 @app.get(str(DEFAULTS["health_path"]))
 def health() -> dict[str, Any]:
     readiness = local_service_health(SERVICE_ID)
-    return {
+    response = {
         **readiness,
         "contract_version": DEFAULTS["contract_version"],
     }
+    worker = _refresh_worker_status()
+    if worker is not None:
+        response["refresh_worker"] = worker
+    return response
 
 
 @app.get(str(DEFAULTS["meta_path"]))
 def meta() -> dict[str, Any]:
-    return {
+    response = {
         "service_id": SPEC.service_id,
         "bounded_context": SPEC.bounded_context,
         "owns_modules": list(SPEC.owns_modules),
@@ -104,6 +143,10 @@ def meta() -> dict[str, Any]:
         "contract_version": DEFAULTS["contract_version"],
         "wire_codecs": list(WIRE.get("allowed_codecs") or []),
     }
+    worker = _refresh_worker_status()
+    if worker is not None:
+        response["refresh_worker"] = worker
+    return response
 
 
 @app.post(str(JSON_PROFILE["invoke_path"]))

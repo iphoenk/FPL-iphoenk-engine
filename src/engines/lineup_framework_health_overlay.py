@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from src.engines.p0_framework_health_overlay import _recount, _set_probe_status
+from src.engines.tactical_decision_consumption import apply_lineup_overlay
 from src.rules import LINEUP_RULES
 from src.utils import DATA, atomic_json, read_json
 
@@ -46,6 +47,7 @@ def _lineup_probe() -> tuple[bool, dict[str, Any]]:
         and battle.get("status") in {"CLOSE", "CLEAR", "NO_ALTERNATIVE"}
         and (lineup.get("chip_context") or {}).get("single_chip_rule_respected") is True
     )
+    governance = lineup.get("governance") or {}
     return ok, {
         "model": lineup.get("model"),
         "planning_gw": lineup.get("planning_gw"),
@@ -56,6 +58,10 @@ def _lineup_probe() -> tuple[bool, dict[str, Any]]:
         "safe_pool": len(safe_pool),
         "battle_status": battle.get("status"),
         "battle_margin": battle.get("margin"),
+        "tactical_xi_tiebreak_applied": bool(governance.get("tactical_xi_tiebreak_applied")),
+        "tactical_captain_tiebreak_applied": bool(governance.get("tactical_captain_tiebreak_applied")),
+        "tactical_vice_tiebreak_applied": bool(governance.get("tactical_vice_tiebreak_applied")),
+        "tactical_direct_xpts_mutation": bool(governance.get("tactical_direct_xpts_mutation")),
         "single_chip_rule_respected": (lineup.get("chip_context") or {}).get("single_chip_rule_respected"),
     }
 
@@ -86,6 +92,10 @@ def _package_decision_probe() -> tuple[bool, dict[str, Any]]:
 
 
 def run() -> dict[str, Any]:
+    # Tactical evidence is consumed here, after the canonical lineup model has
+    # produced legal candidates and before the final lineup health probe. The
+    # overlay can only resolve configured close calls; it never changes xPts.
+    tactical_lineup = apply_lineup_overlay()
     health = read_json(HEALTH_PATH, {})
     if not health:
         raise RuntimeError("framework_health.json missing before lineup governance overlay")
@@ -113,7 +123,16 @@ def run() -> dict[str, Any]:
         "captain_and_vice_use_dnp_guard": True,
         "manual_lock_precedes_optimizer_candidate": True,
         "postflight_gate0_consumes_lineup_and_package_decisions": True,
+        "tactical_close_call_consumption_enabled": True,
+        "tactical_direct_xpts_mutation": False,
+        "tactical_consumption_contract": "TACTICAL_DECISION_CONSUMPTION_V1",
     })
+    health["tactical_lineup_consumption"] = {
+        "xi_tiebreak_applied": bool((tactical_lineup.get("governance") or {}).get("tactical_xi_tiebreak_applied")),
+        "captain_tiebreak_applied": bool((tactical_lineup.get("governance") or {}).get("tactical_captain_tiebreak_applied")),
+        "vice_tiebreak_applied": bool((tactical_lineup.get("governance") or {}).get("tactical_vice_tiebreak_applied")),
+        "xpts_mutated": False,
+    }
     health["lineup_overlay_generated_at"] = _now()
     _recount(health)
     atomic_json(HEALTH_PATH, health)
@@ -123,6 +142,7 @@ def run() -> dict[str, Any]:
         "gate0": (health.get("gate0") or {}).get("counts"),
         "lineup": health["lineup_governance"]["status"],
         "package": health["lineup_governance"]["package"]["status"],
+        "tactical": health.get("tactical_lineup_consumption"),
         "extensions": (health.get("dss_extensions") or {}).get("counts"),
         "enhancements": (health.get("enhancements") or {}).get("counts"),
         "go_allowed": health.get("go_allowed"),

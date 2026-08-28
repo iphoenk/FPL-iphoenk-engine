@@ -64,6 +64,36 @@ def test_watchlist_ranking_primitives_are_config_owned_and_fpl_scoring_is_rule_o
     assert "_f(rates.get(\"saves90\")) / 3.0" not in implementation
 
 
+def test_public_official_transport_imports_are_explicitly_owned_even_in_helper_modules():
+    ownership = json.loads((ROOT / "config" / "runtime" / "logic_ownership.json").read_text())
+    allowed = ownership["approved_engine_official_fetch_modules"]
+    found = {}
+    for path in sorted((ROOT / "src" / "engines").rglob("*.py")):
+        text = path.read_text()
+        if "src.sources.official_fpl" not in text:
+            continue
+        module = ".".join(path.relative_to(ROOT).with_suffix("").parts)
+        found[module] = allowed.get(module)
+    assert set(found) == set(allowed)
+    assert all(found.values())
+    assert "src.engines.price_radar" not in found
+
+
+def test_price_artifacts_have_raw_market_intermediate_and_one_canonical_writer():
+    services = json.loads((ROOT / "config" / "v3_service_registry.json").read_text())["services"]
+    flow = json.loads((ROOT / "config" / "runtime" / "artifact_flow_registry.json").read_text())
+    assert "market_prices.json" in services["market_state"]["artifacts"]
+    assert "prices.json" not in services["market_state"]["artifacts"]
+    assert "market_prices.json" in services["base_snapshot"]["artifacts"]
+    assert "prices.json" not in services["base_snapshot"]["artifacts"]
+    assert "market_prices.json" in services["price"]["inputs"]
+    assert "official_snapshot.json" in services["price"]["inputs"]
+    assert "prices.json" in services["price"]["artifacts"]
+    assert flow["canonical_final_owners"]["market_prices.json"] == "market_state"
+    assert flow["canonical_final_owners"]["prices.json"] == "price"
+    assert "prices.json" not in flow["staged_mutation_chains"]
+
+
 def test_onefpl_report_time_queries_and_domains_are_registry_owned():
     machine_registry = json.loads((ROOT / "config" / "sources" / "registry.json").read_text())
     report_registry = json.loads((ROOT / "config" / "sources" / "report_time_registry.json").read_text())

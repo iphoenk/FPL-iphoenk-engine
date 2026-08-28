@@ -7,12 +7,25 @@ from typing import Any
 from src.utils import ROOT
 
 COVERAGE_PATH = ROOT / "config" / "sources" / "official_first_coverage.json"
+REC_REGISTRY_PATH = ROOT / "config" / "rec_registry.json"
 
-EXPECTED_RECS = tuple(
-    [f"REC-{n:02d}" for n in range(1, 9)]
-    + ["REC-09a", "REC-09b"]
-    + [f"REC-{n:02d}" for n in range(10, 42)]
-)
+
+def _canonical_rec_ids() -> tuple[str, ...]:
+    payload = json.loads(REC_REGISTRY_PATH.read_text(encoding="utf-8"))
+    if payload.get("registry") != "V3_REC_REGISTRY_V1":
+        raise RuntimeError("unexpected canonical REC registry")
+    rows = payload.get("records") or []
+    ids = tuple(str(row.get("id") or "") for row in rows)
+    if not ids or any(not value for value in ids) or len(ids) != len(set(ids)):
+        raise RuntimeError("canonical REC registry contains missing or duplicate ids")
+    expected = int(payload.get("expected_count") or 0)
+    if expected != len(ids):
+        raise RuntimeError(f"canonical REC registry expected_count={expected} declared={len(ids)}")
+    return ids
+
+
+# Backward-compatible read-only projection. Authority is config/rec_registry.json.
+EXPECTED_RECS = _canonical_rec_ids()
 
 APPLICABILITY = {
     "PUBLIC_FIRST",
@@ -41,6 +54,8 @@ def validate_official_first_coverage(payload: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("Official-first policy must be enabled")
     if policy.get("fallback_requires_explicit_disposition") is not True:
         raise RuntimeError("fallback must require explicit Official disposition")
+    if policy.get("rec_registry_is_canonical_rec_set") is not True:
+        raise RuntimeError("Official-first coverage must declare canonical REC registry ownership")
 
     allowed_fallbacks = set(policy.get("allowed_fallback_dispositions") or [])
     required_fallbacks = {
@@ -54,9 +69,10 @@ def validate_official_first_coverage(payload: dict[str, Any]) -> dict[str, Any]:
 
     catalog = payload.get("endpoint_catalog") or {}
     rows = payload.get("recommendations") or {}
-    if set(rows) != set(EXPECTED_RECS):
-        missing = sorted(set(EXPECTED_RECS) - set(rows))
-        extra = sorted(set(rows) - set(EXPECTED_RECS))
+    expected_recs = set(_canonical_rec_ids())
+    if set(rows) != expected_recs:
+        missing = sorted(expected_recs - set(rows))
+        extra = sorted(set(rows) - expected_recs)
         raise RuntimeError(f"Official-first REC coverage mismatch missing={missing} extra={extra}")
 
     for rec_id, row in rows.items():
@@ -86,6 +102,7 @@ def validate_official_first_coverage(payload: dict[str, Any]) -> dict[str, Any]:
         "not_applicable": sum(1 for row in rows.values() if row.get("applicability") == "NOT_APPLICABLE"),
         "policy_only": sum(1 for row in rows.values() if row.get("applicability") == "POLICY_ONLY"),
         "integrity_ok": True,
+        "canonical_rec_registry": "V3_REC_REGISTRY_V1",
     }
 
 

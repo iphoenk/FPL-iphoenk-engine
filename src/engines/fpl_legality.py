@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from collections import Counter
 from collections.abc import Iterable
+
 from src.engines.fpl_rules_2026 import LEGAL_FORMATIONS, MAX_PER_CLUB, POSITION_COUNTS, SQUAD_SIZE
 
 
@@ -11,15 +13,29 @@ def formation_from_rows(rows: Iterable[dict]) -> str | None:
     return formation if formation in LEGAL_FORMATIONS else None
 
 
-def squad_shape_is_legal(players: Iterable[dict]) -> bool:
+def squad_legality_checks(players: Iterable[dict]) -> dict[str, tuple[bool, str]]:
+    """Canonical squad-shape checks shared by snapshot, optimizer and health layers.
+
+    This function owns structural FPL squad legality. Callers may add source-specific
+    identity checks (for example bootstrap element/position reconciliation), but must
+    not reimplement size, positional-composition, duplicate-element or max-club rules.
+    """
     rows = list(players)
-    if len(rows) != SQUAD_SIZE:
-        return False
+    elements = [row.get("element") for row in rows if row.get("element") is not None]
     position_counts = Counter(str(row.get("position") or "") for row in rows)
-    if any(position_counts.get(position, 0) != expected for position, expected in POSITION_COUNTS.items()):
-        return False
-    clubs = Counter(row.get("team_id", row.get("team")) for row in rows)
-    return bool(clubs) and max(clubs.values(), default=0) <= MAX_PER_CLUB
+    clubs = Counter(row.get("team_id", row.get("team")) for row in rows if row.get("team_id", row.get("team")) is not None)
+    expected_positions = dict(POSITION_COUNTS)
+    actual_positions = {position: position_counts.get(position, 0) for position in POSITION_COUNTS}
+    return {
+        "squad_size": (len(rows) == SQUAD_SIZE, f"actual={len(rows)},expected={SQUAD_SIZE}"),
+        "unique_elements": (len(elements) == len(set(elements)) == len(rows), f"elements={len(elements)},unique={len(set(elements))}"),
+        "position_counts": (actual_positions == expected_positions, f"actual={actual_positions},expected={expected_positions}"),
+        "max_per_club": (bool(rows) and max(clubs.values(), default=0) <= MAX_PER_CLUB, f"max={max(clubs.values(), default=0)},limit={MAX_PER_CLUB}"),
+    }
+
+
+def squad_shape_is_legal(players: Iterable[dict]) -> bool:
+    return all(passed for passed, _ in squad_legality_checks(players).values())
 
 
 def plan_legality_checks(plan: dict, compliance: dict | None = None) -> dict[str, tuple[bool, str]]:

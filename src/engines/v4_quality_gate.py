@@ -108,9 +108,12 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
     assert all(all(contract.get("valid") for contract in row.get("contracts") or []) for row in services)
     levels = orchestration.get("execution_levels") or []
     assert levels and set(levels[0]) == {"architecture_guard", "raw_snapshot"}
-    assert any(set(level) == {"validation_lifecycle", "rules_compliance", "optimization"} for level in levels)
-    assert any(set(level) == {"framework_preflight", "user_decision_overlay"} for level in levels)
-    assert any(set(level) == {"personal_gw_scorecard", "framework_postflight"} for level in levels)
+    level_index = {service_id: idx for idx, level in enumerate(levels) for service_id in level}
+    for row in registry.get("services") or []:
+        for dependency in row.get("depends_on") or []:
+            assert level_index[dependency] < level_index[row["id"]], (dependency, row["id"], levels)
+    assert level_index["reconciliation_readiness"] > level_index["validation_lifecycle"]
+    assert level_index["framework_preflight"] > level_index["reconciliation_readiness"]
     assert (orchestration.get("summary") or {}).get("parallel_levels", 0) >= 4
     assert orchestration.get("snapshot_identity", {}).get("sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
     assert latest.get("lineage", {}).get("snapshot_sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
@@ -165,7 +168,15 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
 
 def _assert_prediction_and_validation(health: dict) -> tuple[dict, dict]:
     lifecycle = _load("validation/lifecycle_v4.json")
+    readiness = _load("validation/reconciliation_readiness_v4.json")
     predictions = _load("predictions_v4.json")
+    assert readiness.get("status") == "PASS"
+    assert readiness.get("blockers") == []
+    assert (readiness.get("checks") or {}).get("snapshot_integrity", {}).get("pass") is True
+    assert (readiness.get("checks") or {}).get("ownership_chain", {}).get("pass") is True
+    assert (readiness.get("guardrails") or {}).get("read_only_audit") is True
+    assert (readiness.get("guardrails") or {}).get("official_api_refetch") is False
+    assert (readiness.get("guardrails") or {}).get("reconciliation_truth_not_reimplemented") is True
     _assert_version(lifecycle, "validation lifecycle", 4943, "v4.9.3-validation-lifecycle")
     _assert_version(predictions, "predictions", 492, "v4.9.2-truthful-health", field="model_version")
     assert lifecycle.get("status") == "PASS"

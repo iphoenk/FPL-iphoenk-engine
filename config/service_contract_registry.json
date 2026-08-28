@@ -1,6 +1,6 @@
 {
-  "schema_version": 7,
-  "registry": "fpl_v4_9_6_service_contracts_v7",
+  "schema_version": 8,
+  "registry": "fpl_v4_9_6_service_contracts_v8",
   "contracts": {
     "raw_snapshot": {
       "path": "data/runtime/snapshot.v1.json",
@@ -511,6 +511,35 @@
         "checks.no_exact_nontrivial_function_clones.pass": true,
         "checks.single_reusable_production_workflow.pass": true,
         "checks.release_single_source_coherent.pass": true
+      }
+    },
+    "reconciliation_readiness": {
+      "path": "data/validation/reconciliation_readiness_v4.json",
+      "min_schema_version": 4961,
+      "version_field": "release",
+      "version_prefix": "4.9.6",
+      "required_paths": [
+        "status",
+        "target_gw",
+        "stage",
+        "ready_for_reconciliation_now",
+        "checks.snapshot_integrity.pass",
+        "checks.validation_lifecycle.pass",
+        "checks.ownership_chain.pass",
+        "blockers",
+        "pending",
+        "guardrails.read_only_audit",
+        "guardrails.official_api_refetch",
+        "guardrails.reconciliation_truth_not_reimplemented"
+      ],
+      "equals": {
+        "status": "PASS",
+        "checks.snapshot_integrity.pass": true,
+        "checks.validation_lifecycle.pass": true,
+        "checks.ownership_chain.pass": true,
+        "guardrails.read_only_audit": true,
+        "guardrails.official_api_refetch": false,
+        "guardrails.reconciliation_truth_not_reimplemented": true
       }
     }
   }

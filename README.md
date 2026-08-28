@@ -245,3 +245,12 @@ See `docs/v4-microservices.md` for service ownership, failure semantics, and pre
 - Main and recovery schedules call one reusable production workflow.
 - Shared DSS evidence is explicitly reused as a primitive rather than recomputed by parallel modules.
 - Release metadata is sourced from `config/release_manifest.json` and verified by the architecture guard.
+
+
+## V4.9.6 GW2 reconciliation readiness closeout
+
+- A thirteenth process-isolated `reconciliation_readiness` service audits the frozen deadline snapshot → Official submitted-picks → finished-GW actuals → immutable reconciliation → calibration-entry chain without performing reconciliation itself.
+- The readiness audit is read-only and performs zero Official FPL refetches; Official acquisition remains owned only by `raw_snapshot`.
+- Snapshot and reconciliation integrity are reused from the canonical validation-store primitives rather than reimplemented.
+- Expected future states are reported as pending (`PREDEADLINE_READY`, `WAITING_SUBMITTED_PICKS`, `WAITING_GW_FINISH`) rather than falsely treated as failures; structural integrity/ownership failures remain fail-closed.
+- `READY_TO_RECONCILE` is emitted only when a valid frozen target-GW snapshot and the target GW's Official event-live actuals are simultaneously present; `RECONCILED` requires the immutable reconciliation archive.

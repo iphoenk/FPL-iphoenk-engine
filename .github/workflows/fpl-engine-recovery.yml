@@ -20,6 +20,7 @@ jobs:
     outputs:
       needs_recovery: ${{ steps.check.outputs.needs_recovery }}
       age_minutes: ${{ steps.check.outputs.age_minutes }}
+      threshold_minutes: ${{ steps.check.outputs.threshold_minutes }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,15 +32,19 @@ jobs:
           import json
           from datetime import datetime, timezone
           from pathlib import Path
+
+          config=json.loads(Path('config/engine.json').read_text())
+          threshold=float(config['checkpoint_recovery_fresh_minutes'])
           path=Path('data/latest.json'); fresh=False; age=None
           if path.exists():
               raw=json.loads(path.read_text()).get('generated_at')
               if raw:
                   generated=datetime.fromisoformat(raw.replace('Z','+00:00'))
                   age=max(0.0,(datetime.now(timezone.utc)-generated).total_seconds()/60.0)
-                  fresh=age<=45
+                  fresh=age<=threshold
           print(f"needs_recovery={'false' if fresh else 'true'}")
           print(f"age_minutes={'' if age is None else round(age,2)}")
+          print(f"threshold_minutes={threshold:g}")
           PY
   recover:
     needs: freshness
@@ -55,4 +60,4 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: echo "needs_recovery=${{ needs.freshness.outputs.needs_recovery }} age_minutes=${{ needs.freshness.outputs.age_minutes }}"
+      - run: echo "needs_recovery=${{ needs.freshness.outputs.needs_recovery }} age_minutes=${{ needs.freshness.outputs.age_minutes }} threshold_minutes=${{ needs.freshness.outputs.threshold_minutes }}"

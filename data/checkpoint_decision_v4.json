@@ -1,16 +1,16 @@
 {
   "schema_version": 495,
   "engine": "v4.9.5-checkpoint-governance-human-report",
-  "evaluated_at": "2026-08-28T04:01:11.527205+00:00",
+  "evaluated_at": "2026-08-28T05:10:03.086673+00:00",
   "checkpoint_context": {
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-28T04:01:08.169328+00:00",
-    "local_as_of": "2026-08-28T11:01:08.169328+07:00",
+    "as_of": "2026-08-28T05:09:58.633861+00:00",
+    "local_as_of": "2026-08-28T12:09:58.633861+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 808.9,
+    "minutes_to_deadline": 740.0,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -574,7 +574,7 @@
     "health_go_allowed": false,
     "freshness": {
       "pass": true,
-      "age_minutes": 0.05,
+      "age_minutes": 0.06,
       "max_age_minutes": 90,
       "reason": null
     },

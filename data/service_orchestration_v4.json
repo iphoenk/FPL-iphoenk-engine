@@ -1,19 +1,20 @@
 {
   "schema_version": 495,
   "engine": "v4.9.5-service-orchestrator-dag-parallel",
-  "started_at": "2026-08-28T04:01:07.854812+00:00",
-  "completed_at": "2026-08-28T04:01:11.627643+00:00",
+  "started_at": "2026-08-28T05:09:58.154318+00:00",
+  "completed_at": "2026-08-28T05:10:03.100914+00:00",
   "status": "PASS",
   "mode": "daily",
   "simulated": false,
   "stats_enabled": true,
   "deep_stats_enabled": true,
-  "service_registry": "fpl_v4_9_5_microservice_registry_v8",
-  "contract_registry": "fpl_v4_9_5_service_contracts_v6",
+  "service_registry": "fpl_v4_9_6_microservice_registry_v9",
+  "contract_registry": "fpl_v4_9_6_service_contracts_v7",
   "execution_model": "process_isolated_dag_parallel_single_host",
   "scheduler": "dependency_ready_no_level_barrier",
   "execution_levels": [
     [
+      "architecture_guard",
       "raw_snapshot"
     ],
     [
@@ -40,6 +41,7 @@
     ]
   ],
   "launch_order": [
+    "architecture_guard",
     "raw_snapshot",
     "enrichment",
     "prediction",
@@ -54,6 +56,7 @@
   ],
   "completion_order": [
     "raw_snapshot",
+    "architecture_guard",
     "enrichment",
     "prediction",
     "rules_compliance",
@@ -66,11 +69,33 @@
     "report_governance"
   ],
   "snapshot_identity": {
-    "sha256": "475adbaa5c17a6a6ab2c07843be2f651ea5a9e21d5b3354714eb4c3f1368422e",
-    "generated_at": "2026-08-28T04:01:08.218867+00:00",
+    "sha256": "1c66c47fe4b504eeaec45fcb44e9e9a9af10dcf542d1e1ff1de509be2fee7568",
+    "generated_at": "2026-08-28T05:09:58.691375+00:00",
     "checkpoint_policy_id": "REGULAR_MONITOR"
   },
   "services": [
+    {
+      "id": "architecture_guard",
+      "name": "Architecture Ownership Guard Service",
+      "boundary_state": "INDEPENDENT",
+      "status": "PASS",
+      "depends_on": [],
+      "contracts": [
+        {
+          "contract": "architecture_guard",
+          "path": "data/architecture_ownership_v4.json",
+          "valid": true,
+          "errors": [],
+          "sha256": "aefb1835a739be6603030492b56efb4fbc4a5616b86523eb8d8e2f990c5a5fbc",
+          "bytes": 1810
+        }
+      ],
+      "execution_level": 0,
+      "duration_ms": 823.24,
+      "exit_code": 0,
+      "stdout_tail": "{\"service\": \"architecture_guard\", \"status\": \"PASS\", \"checks\": {\"unique_service_ids\": true, \"unique_contract_producers\": true, \"contract_paths_complete\": true, \"unique_contract_paths\": true, \"unique_registry_ids\": true, \"unique_responsibility_ids\": true, \"unique_shared_primitive_ids\": true, \"all_responsibilities_have_one_owner\": true, \"canonical_rule_definitions_single_owner\": true, \"official_fpl_fetch_single_owner\": true, \"no_exact_nontrivial_function_clones\": true, \"legacy_engine_is_thin_adapter\": true, \"reconciliation_truth_single_owner\": true, \"raw_snapshot_reuses_canonical_legality\": true, \"single_reusable_production_workflow\": true, \"release_single_source_coherent\": true}, \"failed_detail\": {}}",
+      "stderr_tail": ""
+    },
     {
       "id": "raw_snapshot",
       "name": "Raw Snapshot Service",
@@ -83,18 +108,18 @@
           "path": "data/runtime/snapshot.v1.json",
           "valid": true,
           "errors": [],
-          "sha256": "475adbaa5c17a6a6ab2c07843be2f651ea5a9e21d5b3354714eb4c3f1368422e",
-          "bytes": 3813654
+          "sha256": "1c66c47fe4b504eeaec45fcb44e9e9a9af10dcf542d1e1ff1de509be2fee7568",
+          "bytes": 3814359
         }
       ],
       "execution_level": 0,
-      "duration_ms": 389.54,
+      "duration_ms": 566.76,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"raw_snapshot\", \"schema\": \"snapshot.v1\", \"duration_ms\": 262.48, \"initial_parallel_ms\": 212.68, \"dependent_parallel_ms\": 49.23, \"planning_gw\": 2, \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"override_applied\": true}",
+      "stdout_tail": "{\"service\": \"raw_snapshot\", \"schema\": \"snapshot.v1\", \"duration_ms\": 383.93, \"initial_parallel_ms\": 326.11, \"dependent_parallel_ms\": 56.79, \"planning_gw\": 2, \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"override_applied\": true}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/runtime/snapshot.v1.json",
-        "sha256": "475adbaa5c17a6a6ab2c07843be2f651ea5a9e21d5b3354714eb4c3f1368422e"
+        "sha256": "1c66c47fe4b504eeaec45fcb44e9e9a9af10dcf542d1e1ff1de509be2fee7568"
       }
     },
     {
@@ -111,18 +136,18 @@
           "path": "data/runtime/enrichment.v1.json",
           "valid": true,
           "errors": [],
-          "sha256": "2acb5abcca74447ccf36c4bdcd13d9d078dbfab83fac6a499ff541a7939074dd",
-          "bytes": 644224
+          "sha256": "90462f103958b3e9e4f4fe365947c125aefa0a016dc70d62d60fc5eabb15a21b",
+          "bytes": 644225
         }
       ],
       "execution_level": 1,
-      "duration_ms": 337.07,
+      "duration_ms": 638.66,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"enrichment\", \"schema\": \"enrichment.v1\", \"duration_ms\": 213.11, \"official_players\": 616}",
+      "stdout_tail": "{\"service\": \"enrichment\", \"schema\": \"enrichment.v1\", \"duration_ms\": 483.89, \"official_players\": 616}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/runtime/enrichment.v1.json",
-        "sha256": "2acb5abcca74447ccf36c4bdcd13d9d078dbfab83fac6a499ff541a7939074dd"
+        "sha256": "90462f103958b3e9e4f4fe365947c125aefa0a016dc70d62d60fc5eabb15a21b"
       }
     },
     {
@@ -139,7 +164,7 @@
           "path": "data/latest.json",
           "valid": true,
           "errors": [],
-          "sha256": "66c17acb5d18dd56692dd5786d4a6c3684129667197903a8adf2f4dcefb54c5e",
+          "sha256": "2a8e0dc76d758692233eb5e6d7d608edb20a5fc4fa65e87e83675d1b16e75bf0",
           "bytes": 576465
         },
         {
@@ -147,42 +172,42 @@
           "path": "data/predictions_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "7d214576f824a837617bff47f6ba70ccdb0319f84340da675a157bcd3ba0f743",
-          "bytes": 32582036
+          "sha256": "92019b710a9248193af7f290ef621d2a677fca8e632c7cc07ae588c41866bc11",
+          "bytes": 32582006
         },
         {
           "contract": "team_state",
           "path": "data/team.json",
           "valid": true,
           "errors": [],
-          "sha256": "78bd6e3eb81e35b4f1a48b35c2205c8f42d57d65bf49df547df2c24b4518eb27",
-          "bytes": 7243
+          "sha256": "edf6d46f896b41339d1ded9c86265cfd7638067009031d6071a8f9d29a5972e2",
+          "bytes": 7855
         },
         {
           "contract": "universe",
           "path": "data/universe.json",
           "valid": true,
           "errors": [],
-          "sha256": "734c2717da6b4731e9ecd337a893b61c1f62f116f9750940160f7038fdef18e5",
-          "bytes": 643103
+          "sha256": "99a654f9cc20c5b693f966ba26b0f5b526d149ff31715e31184d18c9f69fc21b",
+          "bytes": 643104
         },
         {
           "contract": "source_health",
           "path": "data/health.json",
           "valid": true,
           "errors": [],
-          "sha256": "f6b9f6d38381c2f8554ff5468e1a3a4a691ca263f2756581f36d7e66ac9768e0",
+          "sha256": "de9597ebfabf3749a3a79ec715c2859ba77c184bcaf8cba6be9dc777fbb63266",
           "bytes": 2013
         }
       ],
       "execution_level": 2,
-      "duration_ms": 782.75,
+      "duration_ms": 844.11,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"prediction\", \"engine\": \"4.9.5-official-first-reporting\", \"players\": 616, \"official_context\": {\"source\": \"raw_snapshot.official.bootstrap+fixtures\", \"official_fpl_first\": true, \"teams\": 20, \"team_strength_rows_complete\": 20, \"upcoming_fixture_rows\": 370, \"fixture_context_rows_complete\": 370, \"player_rows\": 616, \"player_field_coverage\": {\"ownership\": 616, \"expected_goals\": 616, \"expected_assists\": 616, \"expected_goal_involvements\": 616, \"expected_goals_conceded\": 616, \"bps\": 616, \"bonus\": 616, \"form\": 616, \"starts\": 616}, \"effective_ownership_available_from_official_fpl\": false, \"external_schedule_scope\": \"premier_league_only\"}, \"duration_ms\": 637.67}",
+      "stdout_tail": "{\"service\": \"prediction\", \"engine\": \"4.9.5-official-first-reporting\", \"players\": 616, \"official_context\": {\"source\": \"raw_snapshot.official.bootstrap+fixtures\", \"official_fpl_first\": true, \"teams\": 20, \"team_strength_rows_complete\": 20, \"upcoming_fixture_rows\": 370, \"fixture_context_rows_complete\": 370, \"player_rows\": 616, \"player_field_coverage\": {\"ownership\": 616, \"expected_goals\": 616, \"expected_assists\": 616, \"expected_goal_involvements\": 616, \"expected_goals_conceded\": 616, \"bps\": 616, \"bonus\": 616, \"form\": 616, \"starts\": 616}, \"effective_ownership_available_from_official_fpl\": false, \"external_schedule_scope\": \"premier_league_only\"}, \"duration_ms\": 752.25}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/latest.json",
-        "sha256": "66c17acb5d18dd56692dd5786d4a6c3684129667197903a8adf2f4dcefb54c5e"
+        "sha256": "2a8e0dc76d758692233eb5e6d7d608edb20a5fc4fa65e87e83675d1b16e75bf0"
       }
     },
     {
@@ -199,14 +224,14 @@
           "path": "data/validation/lifecycle_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "a9604405a56de129b2afcbecc3c4426827967cdeceb5d1f7e3c23a67a8808c30",
-          "bytes": 1247
+          "sha256": "0609e836dc56dd3ff093e08c91aff752e0bfe0725ba1cd246f33bef7e5843724",
+          "bytes": 1245
         }
       ],
       "execution_level": 3,
-      "duration_ms": 349.75,
+      "duration_ms": 413.92,
       "exit_code": 0,
-      "stdout_tail": "-validation-lifecycle-v4.9.4.3-truthful-starts\",\n  \"release\": \"4.9.4.3\",\n  \"status\": \"PASS\",\n  \"simulated\": false,\n  \"snapshot\": {\n    \"status\": \"PASS\",\n    \"action\": \"PRESERVED\",\n    \"gw\": 2,\n    \"deadline_time\": \"2026-08-28T17:30:00Z\",\n    \"players\": 614,\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"captured_at\": \"2026-08-27T10:45:41.952884+00:00\",\n    \"immutable\": true\n  },\n  \"reconciliation\": {\n    \"status\": \"SKIP\",\n    \"reason\": \"no_predeadline_snapshot\",\n    \"gw\": 1\n  },\n  \"eligibility\": {\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"eligible_samples\": 0,\n    \"eligible_gws\": [],\n    \"rejected_samples\": [],\n    \"archive_is_append_only\": true,\n    \"health_view_rebuilt\": true\n  },\n  \"guardrails\": {\n    \"raw_snapshot_only\": true,\n    \"official_api_refetch\": false,\n    \"retroactive_snapshot_rejected\": true,\n    \"deadline_snapshot_immutable\": true,\n    \"reconciliation_archive_immutable\": true,\n    \"reconciliation_idempotent\": true,\n    \"health_view_current_model_only\": true,\n    \"simulation_never_mutates_store\": true,\n    \"started_from_official_stats_starts_only\": true,\n    \"minutes_never_infer_started\": true,\n    \"missing_starts_excluded_from_start_brier\": true\n  }\n}",
+      "stdout_tail": ".3-validation-lifecycle-v4.9.4.3-truthful-starts\",\n  \"release\": \"4.9.6\",\n  \"status\": \"PASS\",\n  \"simulated\": false,\n  \"snapshot\": {\n    \"status\": \"PASS\",\n    \"action\": \"PRESERVED\",\n    \"gw\": 2,\n    \"deadline_time\": \"2026-08-28T17:30:00Z\",\n    \"players\": 614,\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"captured_at\": \"2026-08-27T10:45:41.952884+00:00\",\n    \"immutable\": true\n  },\n  \"reconciliation\": {\n    \"status\": \"SKIP\",\n    \"reason\": \"no_predeadline_snapshot\",\n    \"gw\": 1\n  },\n  \"eligibility\": {\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"eligible_samples\": 0,\n    \"eligible_gws\": [],\n    \"rejected_samples\": [],\n    \"archive_is_append_only\": true,\n    \"health_view_rebuilt\": true\n  },\n  \"guardrails\": {\n    \"raw_snapshot_only\": true,\n    \"official_api_refetch\": false,\n    \"retroactive_snapshot_rejected\": true,\n    \"deadline_snapshot_immutable\": true,\n    \"reconciliation_archive_immutable\": true,\n    \"reconciliation_idempotent\": true,\n    \"health_view_current_model_only\": true,\n    \"simulation_never_mutates_store\": true,\n    \"started_from_official_stats_starts_only\": true,\n    \"minutes_never_infer_started\": true,\n    \"missing_starts_excluded_from_start_brier\": true\n  }\n}",
       "stderr_tail": ""
     },
     {
@@ -223,14 +248,14 @@
           "path": "data/compliance_audit.json",
           "valid": true,
           "errors": [],
-          "sha256": "8f9e57ae2ca79a7e88ed639b5c3a6f09e355a43c622e647a29ed05a0eec4e41e",
-          "bytes": 1833
+          "sha256": "841d3f58cae9138a78944d593af995e9347ab9814ac7017cdf58b260e1dc2e42",
+          "bytes": 1569
         }
       ],
       "execution_level": 3,
-      "duration_ms": 42.41,
+      "duration_ms": 86.78,
       "exit_code": 0,
-      "stdout_tail": "PASS scoring_single_source {'goal_points': {'GK': 10, 'DEF': 6, 'MID': 5, 'FWD': 4}, 'assist': 3, 'clean_sheet': {'GK': 4, 'DEF': 4, 'MID': 1, 'FWD': 0}, 'appearance_under_60': 1, 'appearance_60_plus': 2, 'saves_per_point': 3, 'penalty_save': 5, 'bonus': [1, 2, 3], 'yellow_card': -1, 'red_card': -3, 'own_goal': -2, 'penalty_miss': -2, 'goals_conceded_per_minus_point': 2, 'defcon_points': 2}\nPASS defcon_gk_veto \nPASS defcon_def_cbit_10 \nPASS defcon_mid_cbirt_12 \nPASS defcon_fwd_cbirt_12 \nPASS recoveries_excluded_for_def \nPASS recoveries_included_mid_fwd \nPASS defcon_reward_capped_two \nPASS chip_halves \nPASS one_chip_per_gw_constant \nPASS free_hit_not_gw1 \nPASS free_hit_not_consecutive \nPASS chip_once_per_half \nPASS wc_fh_preserve_banked_ft \nPASS dgw_defcon_per_match [1.672, 1.672]\nOVERALL PASS",
+      "stdout_tail": "PASS rules_registry_identity \nPASS scoring_registry_loaded \nPASS defcon_gk_veto \nPASS defcon_def_cbit_10 \nPASS defcon_mid_cbirt_12 \nPASS defcon_fwd_cbirt_12 \nPASS recoveries_excluded_for_def \nPASS recoveries_included_mid_fwd \nPASS defcon_reward_capped_two \nPASS one_chip_per_gw_constant \nPASS chip_half_boundary \nPASS free_hit_not_gw1 \nPASS free_hit_not_consecutive \nPASS chip_once_per_half \nPASS wc_fh_preserve_banked_ft \nPASS dgw_defcon_per_match [1.672, 1.672]\nOVERALL PASS",
       "stderr_tail": ""
     },
     {
@@ -247,16 +272,16 @@
           "path": "data/wc_decision_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "e6f479903f4ebee338193683a22b8383cca4fcb06807cf83b51636d9ae216710",
-          "bytes": 12896
+          "sha256": "5ea95ed70760a08f0584918c9063a3d04c12a3c63dea1f2d24d0003bb4d8fbe7",
+          "bytes": 12895
         },
         {
           "contract": "wc_package",
           "path": "data/wc_package_audit_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "5ff87019ed6939be4f8345f9c43c4dec7f156a5533750313839775b9b2f908e8",
-          "bytes": 100338
+          "sha256": "3ef2e4b452751ef9e4efd633a4c97aa32b993f4cd8811b09725392e4697bcb07",
+          "bytes": 100336
         },
         {
           "contract": "lineup",
@@ -271,22 +296,22 @@
           "path": "data/recommendation_sanity_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "aff72d9fe38cedb9e45db45edd7c05cd2ccc53171beb41578a79049592a3d153",
-          "bytes": 27166
+          "sha256": "306a98b48e37e73dfca5b18973d05e52be2855cc67c893737f2163ef1fcb55c8",
+          "bytes": 27168
         },
         {
           "contract": "decision_pipeline",
           "path": "data/decision_pipeline_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "4b02d484d05e70908ca72b17640ddc49f86b507855f88bb43911ad16e746d36d",
-          "bytes": 3202
+          "sha256": "36cf4a3d16e0d3307238f24f4c07c2033b0bc423ad8d3b9c330d533d3170717b",
+          "bytes": 3203
         }
       ],
       "execution_level": 3,
-      "duration_ms": 1544.98,
+      "duration_ms": 2168.78,
       "exit_code": 0,
-      "stdout_tail": "PTIMIZER_ONLY\", \"formation\": \"3-4-3\", \"captain\": \"B.Fernandes\"}, \"performance_guardrails\": {\"shared_json_loaded_once\": true, \"shared_candidates_built_once\": true, \"fork_copy_on_write\": true, \"parallel_wc_package\": true, \"parallel_lineup_with_wc_package\": true, \"fast_wc_finalist_scoring\": true, \"redundant_package_validation_removed\": true, \"concise_stdout\": true, \"search_quality_reduction\": false, \"wc_beam_unchanged\": true, \"package_frontier_beam_unchanged\": true, \"bounded_top_k_same_wc_beam\": true, \"exact_streaming_wc_topk\": true, \"stable_wc_tie_semantics\": true, \"safe_wc_objective_bound\": true, \"fixed_position_finalist_scoring\": true, \"compact_package_keep_profile\": true, \"package_scalar_delta_metrics\": true, \"package_position_value_reuse\": true, \"exact_streaming_top_packages\": true, \"top_packages_only_payload_materialization\": true, \"checkpoint_action_deferred_until_postflight_health\": true, \"planning_squad_from_team_contract\": true, \"stale_lock_players_not_direct_optimizer_input\": true, \"engine_lineup_is_advisory_only\": true, \"manual_override_applied_in_separate_microservice\": true}}\n{\"service\": \"optimization\", \"status\": \"PASS\", \"decision_compute_ms\": 1444.5, \"limit_ms\": 5000.0}",
+      "stdout_tail": "PTIMIZER_ONLY\", \"formation\": \"3-4-3\", \"captain\": \"B.Fernandes\"}, \"performance_guardrails\": {\"shared_json_loaded_once\": true, \"shared_candidates_built_once\": true, \"fork_copy_on_write\": true, \"parallel_wc_package\": true, \"parallel_lineup_with_wc_package\": true, \"fast_wc_finalist_scoring\": true, \"redundant_package_validation_removed\": true, \"concise_stdout\": true, \"search_quality_reduction\": false, \"wc_beam_unchanged\": true, \"package_frontier_beam_unchanged\": true, \"bounded_top_k_same_wc_beam\": true, \"exact_streaming_wc_topk\": true, \"stable_wc_tie_semantics\": true, \"safe_wc_objective_bound\": true, \"fixed_position_finalist_scoring\": true, \"compact_package_keep_profile\": true, \"package_scalar_delta_metrics\": true, \"package_position_value_reuse\": true, \"exact_streaming_top_packages\": true, \"top_packages_only_payload_materialization\": true, \"checkpoint_action_deferred_until_postflight_health\": true, \"planning_squad_from_team_contract\": true, \"stale_lock_players_not_direct_optimizer_input\": true, \"engine_lineup_is_advisory_only\": true, \"manual_override_applied_in_separate_microservice\": true}}\n{\"service\": \"optimization\", \"status\": \"PASS\", \"decision_compute_ms\": 2046.9, \"limit_ms\": 5000.0}",
       "stderr_tail": ""
     },
     {
@@ -296,7 +321,8 @@
       "status": "PASS",
       "depends_on": [
         "validation_lifecycle",
-        "rules_compliance"
+        "rules_compliance",
+        "architecture_guard"
       ],
       "contracts": [
         {
@@ -304,14 +330,14 @@
           "path": "data/framework_health_preflight_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "dac94b301ae89ac53ffb0fd275a2a8ecc9253d2976239b65a7a81dc5716f0253",
+          "sha256": "4b471731b3b6e250403bd78f3aa18e51d9911345a3d80b8438c26b3284beb5bd",
           "bytes": 38431
         }
       ],
       "execution_level": 4,
-      "duration_ms": 286.38,
+      "duration_ms": 374.17,
       "exit_code": 0,
-      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"preflight\", \"gate0\": {\"PASS\": 10, \"DEFERRED\": 6}, \"dss_core\": {\"ACTIVE\": 25, \"PARTIAL\": 16, \"DEFERRED\": 8, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 6, \"DEFERRED\": 9, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 4, \"DEFERRED\": 4}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 179.92}",
+      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"preflight\", \"gate0\": {\"PASS\": 10, \"DEFERRED\": 6}, \"dss_core\": {\"ACTIVE\": 25, \"PARTIAL\": 16, \"DEFERRED\": 8, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 6, \"DEFERRED\": 9, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 4, \"DEFERRED\": 4}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 247.58}",
       "stderr_tail": ""
     },
     {
@@ -328,14 +354,14 @@
           "path": "data/effective_plan_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "3993b65cb584d206752eefc06bed2196eb27e345c40955fd7bc5766366801786",
+          "sha256": "dedf2bbf361f81e7733381b9314724d4aa0803c03eecfbd6273760dae544ec22",
           "bytes": 18433
         }
       ],
       "execution_level": 4,
-      "duration_ms": 43.64,
+      "duration_ms": 55.92,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"user_decision_overlay\", \"status\": \"PASS\", \"planning_gw\": 2, \"authority\": \"USER_OVERRIDE\", \"formation\": \"3-5-2\", \"captain\": \"B.Fernandes\", \"chip\": \"WILDCARD\", \"user_minus_engine_xpts\": -0.94, \"duration_ms\": 2.89}",
+      "stdout_tail": "{\"service\": \"user_decision_overlay\", \"status\": \"PASS\", \"planning_gw\": 2, \"authority\": \"USER_OVERRIDE\", \"formation\": \"3-5-2\", \"captain\": \"B.Fernandes\", \"chip\": \"WILDCARD\", \"user_minus_engine_xpts\": -0.94, \"duration_ms\": 3.52}",
       "stderr_tail": ""
     },
     {
@@ -352,14 +378,14 @@
           "path": "data/gw_scorecard_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "54202d397e650ed9b4a58739ec1c0ba3e05ee033cbca1f8025dac18807296371",
+          "sha256": "d227752e2f9a399ca08ac99de055d1fcf6308a5cb14b5c053a0bcd9af8472c9d",
           "bytes": 11964
         }
       ],
       "execution_level": 5,
-      "duration_ms": 60.07,
+      "duration_ms": 75.52,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"personal_gw_scorecard\", \"status\": \"PASS\", \"previous\": \"GW1 FINAL · 71 pts · BB\", \"planning\": \"GW2 PROJECTION · 45.0 xPts · WC · 3-5-2 · C B.Fernandes\", \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"decision_authority\": \"USER_OVERRIDE\", \"human_override_active\": true, \"archive_action\": \"PRESERVED\", \"duration_ms\": 15.69}",
+      "stdout_tail": "{\"service\": \"personal_gw_scorecard\", \"status\": \"PASS\", \"previous\": \"GW1 FINAL · 71 pts · BB\", \"planning\": \"GW2 PROJECTION · 45.0 xPts · WC · 3-5-2 · C B.Fernandes\", \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"decision_authority\": \"USER_OVERRIDE\", \"human_override_active\": true, \"archive_action\": \"PRESERVED\", \"duration_ms\": 19.11}",
       "stderr_tail": ""
     },
     {
@@ -377,14 +403,14 @@
           "path": "data/framework_health_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "d63bdddc1becab8e0715ed3c5917f5262fe3534450a72155a0b0a5d720d13e5c",
-          "bytes": 42498
+          "sha256": "551526acf0d493b4599c0fdf4c8dc5c9ddb1f85ec93b173b8300f98523f942fb",
+          "bytes": 42807
         }
       ],
       "execution_level": 5,
-      "duration_ms": 338.45,
+      "duration_ms": 369.0,
       "exit_code": 0,
-      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"postflight\", \"gate0\": {\"PASS\": 16}, \"dss_core\": {\"ACTIVE\": 33, \"PARTIAL\": 16, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 15, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 8}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 122.71}\n{\"service\": \"framework_postflight\", \"pipeline_health\": \"GREEN\", \"gate0\": {\"PASS\": 16}, \"engine_formation\": \"3-4-3\", \"effective_formation\": \"3-5-2\", \"both_legal\": true, \"official_promoted\": [\"DSS-18\", \"DSS-20\", \"DSS-21\", \"DSS-22\", \"DSS-23\", \"DSS-38\"], \"capability_coverage\": {\"active\": 62, \"warmup\": 2, \"partial\": 10, \"failed\": 0, \"declared\": 74, \"active_ratio\": 0.8378}}",
+      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"postflight\", \"gate0\": {\"PASS\": 16}, \"dss_core\": {\"ACTIVE\": 33, \"PARTIAL\": 16, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 15, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 8}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 152.12}\n{\"service\": \"framework_postflight\", \"pipeline_health\": \"GREEN\", \"gate0\": {\"PASS\": 16}, \"engine_formation\": \"3-4-3\", \"effective_formation\": \"3-5-2\", \"both_legal\": true, \"official_promoted\": [\"DSS-18\", \"DSS-20\", \"DSS-21\", \"DSS-22\", \"DSS-23\", \"DSS-38\"], \"capability_coverage\": {\"active\": 62, \"warmup\": 2, \"partial\": 10, \"failed\": 0, \"declared\": 74, \"active_ratio\": 0.8378}}",
       "stderr_tail": ""
     },
     {
@@ -402,12 +428,12 @@
           "path": "data/checkpoint_decision_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "3e50f518ca5b435cfbfc52825ffa0fe2ab4f2bef81a9f86f8b2003a7fc1fb814",
+          "sha256": "152292e7739d14485e9d18aa442e748876e6de8b170ddd68b58ee4901446ef09",
           "bytes": 17050
         }
       ],
       "execution_level": 6,
-      "duration_ms": 138.03,
+      "duration_ms": 61.31,
       "exit_code": 0,
       "stdout_tail": "{\"checkpoint\": \"REGULAR_MONITOR\", \"action\": \"HOLD\", \"headline\": \"HOLD\", \"governed_verdict\": \"MATERIAL_UPGRADE\", \"decision_authority\": \"USER_OVERRIDE\", \"previous_gw\": \"GW1 FINAL · 71 pts · BB\", \"planning_gw\": \"GW2 PROJECTION · 45.0 xPts · WC · 3-5-2 · C B.Fernandes\", \"squad_basis\": \"USER_CAPTURED_WC_DRAFT\", \"human_reason_count\": 5}",
       "stderr_tail": ""
@@ -468,28 +494,39 @@
       "dss_core": 50,
       "dss_extensions": 16,
       "enhancements": 8
-    }
+    },
+    "architecture_ownership_guard_process_isolated": true,
+    "duplicate_service_ids_rejected": true,
+    "duplicate_contract_producers_rejected": true,
+    "duplicate_contract_paths_rejected": true,
+    "duplicate_registry_ids_rejected": true,
+    "canonical_rules_single_owner": true,
+    "canonical_legality_single_implementation": true,
+    "exact_nontrivial_function_clones_rejected": true,
+    "reusable_production_workflow_single_owner": true,
+    "release_manifest_single_source": true,
+    "service_count": 12
   },
-  "duration_ms": 3772.85,
+  "duration_ms": 4946.62,
   "runtime_target": {
     "target_ms": 5000.0,
-    "actual_ms": 3772.85,
+    "actual_ms": 4946.62,
     "status": "PASS",
     "hard_gate": false,
     "reason": "full orchestration includes Official/community network latency; deterministic decision compute remains the hard <5s gate"
   },
   "summary": {
-    "services_passed": 11,
-    "services_total": 11,
+    "services_passed": 12,
+    "services_total": 12,
     "levels": 7,
-    "parallel_levels": 3,
+    "parallel_levels": 4,
     "max_workers": 3,
     "scheduler_barrier_free": true,
     "fail_closed": true
   },
   "locked_artifacts": {
-    "data/runtime/snapshot.v1.json": "475adbaa5c17a6a6ab2c07843be2f651ea5a9e21d5b3354714eb4c3f1368422e",
-    "data/runtime/enrichment.v1.json": "2acb5abcca74447ccf36c4bdcd13d9d078dbfab83fac6a499ff541a7939074dd",
-    "data/latest.json": "66c17acb5d18dd56692dd5786d4a6c3684129667197903a8adf2f4dcefb54c5e"
+    "data/runtime/snapshot.v1.json": "1c66c47fe4b504eeaec45fcb44e9e9a9af10dcf542d1e1ff1de509be2fee7568",
+    "data/runtime/enrichment.v1.json": "90462f103958b3e9e4f4fe365947c125aefa0a016dc70d62d60fc5eabb15a21b",
+    "data/latest.json": "2a8e0dc76d758692233eb5e6d7d608edb20a5fc4fa65e87e83675d1b16e75bf0"
   }
 }

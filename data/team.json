@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-28T04:01:08.734223+00:00",
+  "generated_at": "2026-08-28T05:09:59.476668+00:00",
   "team_id": 3462711,
   "squad_authority": "LOCKED_PRE_DEADLINE",
   "projection_baseline": {
@@ -18,6 +18,7 @@
     {
       "element": 572,
       "name": "Tzolakis",
+      "team_id": 11,
       "position": "GK",
       "purchase_cost": 45,
       "source": "locked_squad_element_id"
@@ -25,6 +26,7 @@
     {
       "element": 109,
       "name": "Verbruggen",
+      "team_id": 5,
       "position": "GK",
       "purchase_cost": 45,
       "source": "locked_squad_element_id"
@@ -32,6 +34,7 @@
     {
       "element": 115,
       "name": "De Cuyper",
+      "team_id": 5,
       "position": "DEF",
       "purchase_cost": 45,
       "source": "locked_squad_element_id"
@@ -39,6 +42,7 @@
     {
       "element": 8,
       "name": "Calafiori",
+      "team_id": 1,
       "position": "DEF",
       "purchase_cost": 55,
       "source": "locked_squad_element_id"
@@ -46,6 +50,7 @@
     {
       "element": 88,
       "name": "Kayode",
+      "team_id": 4,
       "position": "DEF",
       "purchase_cost": 45,
       "source": "locked_squad_element_id"
@@ -53,6 +58,7 @@
     {
       "element": 254,
       "name": "Robinson",
+      "team_id": 10,
       "position": "DEF",
       "purchase_cost": 45,
       "source": "locked_squad_element_id"
@@ -60,6 +66,7 @@
     {
       "element": 473,
       "name": "Aina",
+      "team_id": 18,
       "position": "DEF",
       "purchase_cost": 45,
       "source": "locked_squad_element_id"
@@ -67,6 +74,7 @@
     {
       "element": 426,
       "name": "B.Fernandes",
+      "team_id": 16,
       "position": "MID",
       "purchase_cost": 120,
       "source": "locked_squad_element_id"
@@ -74,6 +82,7 @@
     {
       "element": 15,
       "name": "Ødegaard",
+      "team_id": 1,
       "position": "MID",
       "purchase_cost": 65,
       "source": "locked_squad_element_id"
@@ -81,6 +90,7 @@
     {
       "element": 557,
       "name": "Tzolis",
+      "team_id": 1,
       "position": "MID",
       "purchase_cost": 65,
       "source": "locked_squad_element_id"
@@ -88,6 +98,7 @@
     {
       "element": 40,
       "name": "Rogers",
+      "team_id": 6,
       "position": "MID",
       "purchase_cost": 75,
       "source": "locked_squad_element_id"
@@ -95,6 +106,7 @@
     {
       "element": 565,
       "name": "M.Sangaré",
+      "team_id": 4,
       "position": "MID",
       "purchase_cost": 55,
       "source": "locked_squad_element_id"
@@ -102,6 +114,7 @@
     {
       "element": 411,
       "name": "Haaland",
+      "team_id": 15,
       "position": "FWD",
       "purchase_cost": 155,
       "source": "locked_squad_element_id"
@@ -109,6 +122,7 @@
     {
       "element": 165,
       "name": "João Pedro",
+      "team_id": 6,
       "position": "FWD",
       "purchase_cost": 75,
       "source": "locked_squad_element_id"
@@ -116,6 +130,7 @@
     {
       "element": 346,
       "name": "Calvert-Lewin",
+      "team_id": 13,
       "position": "FWD",
       "purchase_cost": 60,
       "source": "locked_squad_element_id"
@@ -126,6 +141,7 @@
       "element": 572,
       "name": "Tzolakis",
       "team": "Hull City",
+      "team_id": 11,
       "position": "GK",
       "purchase_cost": 45,
       "now_cost": 45,
@@ -138,6 +154,7 @@
       "element": 109,
       "name": "Verbruggen",
       "team": "Brighton",
+      "team_id": 5,
       "position": "GK",
       "purchase_cost": 45,
       "now_cost": 45,
@@ -150,6 +167,7 @@
       "element": 115,
       "name": "De Cuyper",
       "team": "Brighton",
+      "team_id": 5,
       "position": "DEF",
       "purchase_cost": 45,
       "now_cost": 46,
@@ -162,6 +180,7 @@
       "element": 8,
       "name": "Calafiori",
       "team": "Arsenal",
+      "team_id": 1,
       "position": "DEF",
       "purchase_cost": 55,
       "now_cost": 56,
@@ -174,6 +193,7 @@
       "element": 88,
       "name": "Kayode",
       "team": "Brentford",
+      "team_id": 4,
       "position": "DEF",
       "purchase_cost": 45,
       "now_cost": 46,
@@ -186,6 +206,7 @@
       "element": 254,
       "name": "Robinson",
       "team": "Fulham",
+      "team_id": 10,
       "position": "DEF",
       "purchase_cost": 45,
       "now_cost": 45,
@@ -198,6 +219,7 @@
       "element": 473,
       "name": "Aina",
       "team": "Nott'm Forest",
+      "team_id": 18,
       "position": "DEF",
       "purchase_cost": 45,
       "now_cost": 45,
@@ -210,18 +232,20 @@
       "element": 426,
       "name": "B.Fernandes",
       "team": "Man Utd",
+      "team_id": 16,
       "position": "MID",
       "purchase_cost": 120,
       "now_cost": 120,
       "sell_cost": 120,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "48.6",
+      "ownership": "48.5",
       "status": "a"
     },
     {
       "element": 15,
       "name": "Ødegaard",
       "team": "Arsenal",
+      "team_id": 1,
       "position": "MID",
       "purchase_cost": 65,
       "now_cost": 66,
@@ -234,6 +258,7 @@
       "element": 557,
       "name": "Tzolis",
       "team": "Arsenal",
+      "team_id": 1,
       "position": "MID",
       "purchase_cost": 65,
       "now_cost": 65,
@@ -246,6 +271,7 @@
       "element": 40,
       "name": "Rogers",
       "team": "Chelsea",
+      "team_id": 6,
       "position": "MID",
       "purchase_cost": 75,
       "now_cost": 75,
@@ -258,18 +284,20 @@
       "element": 565,
       "name": "M.Sangaré",
       "team": "Brentford",
+      "team_id": 4,
       "position": "MID",
       "purchase_cost": 55,
       "now_cost": 56,
       "sell_cost": 55,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "8.0",
+      "ownership": "8.1",
       "status": "a"
     },
     {
       "element": 411,
       "name": "Haaland",
       "team": "Man City",
+      "team_id": 15,
       "position": "FWD",
       "purchase_cost": 155,
       "now_cost": 155,
@@ -282,6 +310,7 @@
       "element": 165,
       "name": "João Pedro",
       "team": "Chelsea",
+      "team_id": 6,
       "position": "FWD",
       "purchase_cost": 75,
       "now_cost": 76,
@@ -294,6 +323,7 @@
       "element": 346,
       "name": "Calvert-Lewin",
       "team": "Leeds",
+      "team_id": 13,
       "position": "FWD",
       "purchase_cost": 60,
       "now_cost": 60,

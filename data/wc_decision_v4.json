@@ -122,11 +122,11 @@
   "screened_players": 570,
   "current": {
     "cost": 995,
-    "objective": 52.9132,
+    "objective": 52.913,
     "squad_xpts_3": 156.95,
     "squad_xpts_5": 261.55,
     "squad_xpts_10": 523.44,
-    "squad_xpts_15": 785.02,
+    "squad_xpts_15": 785.01,
     "best_xi_xpts_5": 205.61,
     "bench_adjusted_utility_5": 212.32,
     "best_xi_by_gw": [
@@ -219,11 +219,11 @@
   },
   "optimized": {
     "cost": 1000,
-    "objective": 60.4038,
+    "objective": 60.4036,
     "squad_xpts_3": 181.24,
     "squad_xpts_5": 298.16,
     "squad_xpts_10": 593.92,
-    "squad_xpts_15": 890.86,
+    "squad_xpts_15": 890.84,
     "best_xi_xpts_5": 229.81,
     "bench_adjusted_utility_5": 238.01,
     "best_xi_by_gw": [
@@ -577,7 +577,7 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": -50,
-      "objective_delta": -0.0864,
+      "objective_delta": -0.0862,
       "xpts5_delta": -0.82
     },
     {
@@ -627,8 +627,8 @@
     "safe_objective_bound": true,
     "fixed_position_finalist_scoring": true,
     "finalist_materialization_removed": true,
-    "generated_states": 189018,
-    "objective_bound_pruned": 1782780,
+    "generated_states": 189021,
+    "objective_bound_pruned": 1782776,
     "beam_size_unchanged": true,
     "direct_challenger_position_index": true,
     "value_term_consumed": true,

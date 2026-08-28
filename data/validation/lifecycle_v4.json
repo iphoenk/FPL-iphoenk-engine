@@ -1,7 +1,7 @@
 {
   "schema_version": 4943,
   "engine": "v4.9.3-validation-lifecycle-v4.9.4.3-truthful-starts",
-  "release": "4.9.4.3",
+  "release": "4.9.6",
   "status": "PASS",
   "simulated": false,
   "snapshot": {

@@ -1,0 +1,81 @@
+{
+  "schema_version": 496,
+  "release": "4.9.6",
+  "service": "architecture_guard",
+  "status": "PASS",
+  "checks": {
+    "unique_service_ids": {
+      "pass": true,
+      "detail": []
+    },
+    "unique_contract_producers": {
+      "pass": true,
+      "detail": []
+    },
+    "contract_paths_complete": {
+      "pass": true,
+      "detail": []
+    },
+    "unique_contract_paths": {
+      "pass": true,
+      "detail": []
+    },
+    "unique_registry_ids": {
+      "pass": true,
+      "detail": []
+    },
+    "unique_responsibility_ids": {
+      "pass": true,
+      "detail": []
+    },
+    "unique_shared_primitive_ids": {
+      "pass": true,
+      "detail": []
+    },
+    "all_responsibilities_have_one_owner": {
+      "pass": true,
+      "detail": []
+    },
+    "canonical_rule_definitions_single_owner": {
+      "pass": true,
+      "detail": []
+    },
+    "official_fpl_fetch_single_owner": {
+      "pass": true,
+      "detail": []
+    },
+    "no_exact_nontrivial_function_clones": {
+      "pass": true,
+      "detail": []
+    },
+    "legacy_engine_is_thin_adapter": {
+      "pass": true,
+      "detail": []
+    },
+    "reconciliation_truth_single_owner": {
+      "pass": true,
+      "detail": []
+    },
+    "raw_snapshot_reuses_canonical_legality": {
+      "pass": true,
+      "detail": []
+    },
+    "single_reusable_production_workflow": {
+      "pass": true,
+      "detail": []
+    },
+    "release_single_source_coherent": {
+      "pass": true,
+      "detail": []
+    }
+  },
+  "guardrails": {
+    "one_owner_per_artifact": true,
+    "one_owner_per_rule": true,
+    "shared_primitives_reused_not_reimplemented": true,
+    "official_fpl_single_acquisition_owner": true,
+    "reconciliation_single_owner": true,
+    "legacy_entrypoint_adapter_only": true,
+    "reusable_workflow_single_pipeline": true
+  }
+}

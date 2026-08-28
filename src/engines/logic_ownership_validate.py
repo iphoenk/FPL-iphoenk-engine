@@ -51,6 +51,7 @@ def run() -> dict[str, Any]:
     for key in (
         "service_command_module_has_single_runtime_owner",
         "standard_official_network_fetch_has_explicit_owner",
+        "official_fetch_authority_is_logical_service_owned_not_file_owned",
         "decision_and_evaluation_layers_consume_artifacts_not_standard_official_network",
         "bundle_modules_are_orchestration_only",
         "bundle_modules_must_not_duplicate_business_formulas",
@@ -91,25 +92,33 @@ def run() -> dict[str, Any]:
     if duplicate_module_owners:
         errors.append(f"active service command modules have multiple owners: {duplicate_module_owners}")
 
-    approved_fetch = set(str(x) for x in policy_payload.get("approved_direct_official_fetch_modules") or [])
-    forbidden_fetch_stages = set(str(x) for x in policy_payload.get("forbidden_direct_official_fetch_service_stages") or [])
+    approved_fetch_services = set(str(x) for x in policy_payload.get("approved_direct_official_fetch_services") or [])
+    forbidden_fetch_stages = set(str(x) for x in policy_payload.get("forbidden_direct_official_fetch_service_stages_for_unapproved_services") or [])
+    invalid_approved_services = sorted(approved_fetch_services - set(services))
+    if invalid_approved_services:
+        errors.append(f"approved Official fetch services are not runtime services: {invalid_approved_services}")
+
     direct_fetch_modules: list[str] = []
+    direct_fetch_services: set[str] = set()
     for module in sorted(set(active_modules)):
         path = _module_path(module)
         if path is None:
             continue
         text = path.read_text(encoding="utf-8")
-        direct = "src.sources.official_fpl" in text
-        if direct:
-            direct_fetch_modules.append(module)
-            approved = module in approved_fetch
-            if not approved:
-                errors.append(f"unapproved direct Official public fetch owner: {module}")
-                if module_stage.get(module) in forbidden_fetch_stages:
-                    errors.append(f"decision/downstream stage directly fetches Official public API: {module_stage.get(module)}:{module}")
-    unexpected_approved = sorted(approved_fetch - set(active_modules))
-    if unexpected_approved:
-        errors.append(f"approved Official fetch modules are not active runtime commands: {unexpected_approved}")
+        if "src.sources.official_fpl" not in text:
+            continue
+        direct_fetch_modules.append(module)
+        owners = set(module_owners.get(module) or [])
+        direct_fetch_services.update(owners)
+        if len(owners) != 1:
+            errors.append(f"direct Official fetch module must have one logical service owner: {module}:{sorted(owners)}")
+            continue
+        owner = next(iter(owners))
+        approved = owner in approved_fetch_services
+        if not approved:
+            errors.append(f"unapproved direct Official public fetch service: {owner}:{module}")
+            if module_stage.get(module) in forbidden_fetch_stages:
+                errors.append(f"decision/downstream stage directly fetches Official public API: {module_stage.get(module)}:{owner}:{module}")
 
     bundle_owners: dict[str, list[str]] = defaultdict(list)
     forbidden_bundle_tokens = [str(x) for x in policy_payload.get("bundle_forbidden_tokens") or []]
@@ -150,11 +159,13 @@ def run() -> dict[str, Any]:
         "bundle_modules": len(bundle_owners),
         "duplicate_bundle_owners": duplicate_bundle_owners,
         "direct_official_fetch_modules": direct_fetch_modules,
+        "direct_official_fetch_services": sorted(direct_fetch_services),
+        "approved_official_fetch_services": sorted(approved_fetch_services),
         "active_model_ids": len(model_ids),
         "duplicate_model_ids": duplicate_model_ids,
         "policy": {
             "microservice_architecture_preserved": len(services) >= 10 and "collector" not in services,
-            "standard_official_fetch_is_explicitly_owned": set(direct_fetch_modules).issubset(approved_fetch),
+            "standard_official_fetch_is_logical_service_owned": direct_fetch_services.issubset(approved_fetch_services),
             "bundles_are_orchestration_only": not any("bundle contains forbidden" in error for error in errors),
         },
     }

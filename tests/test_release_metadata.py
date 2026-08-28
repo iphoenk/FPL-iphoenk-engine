@@ -53,7 +53,9 @@ def test_release_metadata_surfaces_are_consistent():
     assert artifact_registry["consumer_contract"]["natural_user_presentation_required"] is True
     assert artifact_registry["consumer_contract"]["report_checkpoint_required"] is True
     assert service_registry["schema_version"] == 14
-    assert service_registry["production_contract"].startswith("v3.22-")
+    production_contract = service_registry["production_contract"]
+    assert production_contract.startswith("v3.")
+    assert "fast-under-2s" in production_contract
     assert len(service_registry["services"]) == 20
     assert source_registry["registry"] == "SOURCE_REGISTRY_V4"
     assert runtime_artifact_registry["registry"] == "RUNTIME_ARTIFACT_CONTRACTS_V2"

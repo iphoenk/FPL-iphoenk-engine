@@ -54,14 +54,16 @@ def test_release_metadata_surfaces_are_consistent():
     assert artifact_registry["consumer_contract"]["personal_gameweek_context_required"] is True
     assert artifact_registry["consumer_contract"]["natural_user_presentation_required"] is True
     assert artifact_registry["consumer_contract"]["report_checkpoint_required"] is True
-    assert service_registry["schema_version"] == 15
+    assert service_registry["schema_version"] == 16
     assert service_registry["production_contract"].startswith("v3.22-")
     assert "tactical_context" in service_registry["services"]
     assert service_registry["policy"]["service_boundaries_follow_artifact_ownership_not_file_size"] is True
+    assert service_registry["policy"]["owned_challenger_comparator_is_watchlist_bounded_orchestration"] is True
     assert interactive_registry["registry"] == "V3_INTERACTIVE_SERVICES_V1"
     assert len(interactive_registry["services"]) == 2
     assert source_registry["registry"] == "SOURCE_REGISTRY_V4"
     assert runtime_artifact_registry["registry"] == "RUNTIME_ARTIFACT_CONTRACTS_V2"
+    assert runtime_artifact_registry["contracts"]["owned_challenger_comparator.json"]["equals"]["capability_status"] == "ADVISORY_ONLY"
 
 
 def test_master_task_governance_is_wired():

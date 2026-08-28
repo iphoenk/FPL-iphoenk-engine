@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "registry": "V3_ARTIFACT_FLOW_OWNERSHIP_V1",
+  "policy": {
+    "one_final_owner_per_artifact": true,
+    "fan_in_passthrough_is_not_ownership": true,
+    "staged_mutation_requires_explicit_order": true,
+    "undeclared_multi_writer_is_forbidden": true,
+    "latest_sidecar_merge_is_transport_not_business_ownership": true
+  },
+  "fan_in_passthrough": {
+    "base_snapshot": [
+      "health.json",
+      "team.json",
+      "chips.json",
+      "live.json",
+      "prices.json",
+      "universe.json",
+      "advanced_stats_sync.json"
+    ]
+  },
+  "staged_mutation_chains": {
+    "prices.json": {
+      "writers": ["market_state", "price"],
+      "final_owner": "price",
+      "reason": "market_state materializes current Official market facts; price adds trajectory/calibration/challenger context to the same public price contract"
+    },
+    "user_report.json": {
+      "writers": ["reporting", "report_materializer"],
+      "final_owner": "report_materializer",
+      "reason": "reporting constructs the decision narrative; materializer adds serving-only owned/watchlist/personal-GW fields before final publication"
+    }
+  },
+  "canonical_final_owners": {
+    "latest.json": "base_snapshot",
+    "native.json": "base_snapshot",
+    "health.json": "official_snapshot",
+    "team.json": "team_state",
+    "chips.json": "team_state",
+    "live.json": "live_state",
+    "prices.json": "price",
+    "universe.json": "market_state",
+    "advanced_stats_sync.json": "advanced_stats",
+    "player_features.json": "advanced_stats",
+    "prior_season.json": "historical_prior",
+    "projections.json": "prediction",
+    "package_optimizer.json": "prediction",
+    "prediction_accuracy.json": "prediction_evaluation",
+    "lineup_decision.json": "lineup_governance",
+    "package_decision.json": "lineup_governance",
+    "challenger_scorecard.json": "challenger",
+    "framework_health.json": "governance",
+    "dss_operational_evidence.json": "governance",
+    "dss_watchlist.json": "watchlist",
+    "user_report.json": "report_materializer",
+    "technical_appendix.json": "reporting",
+    "report_state.json": "reporting",
+    "decision_brief.json": "report_materializer",
+    "deep_review_payload.json": "report_materializer"
+  }
+}

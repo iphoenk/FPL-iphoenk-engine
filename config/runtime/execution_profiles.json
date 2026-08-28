@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "registry": "RUNTIME_EXECUTION_PROFILES_V1",
   "policy": {
     "reuse_requires_all_declared_service_artifacts": true,
@@ -8,38 +8,54 @@
     "reused_service_latest_state_is_carried_forward": true,
     "fast_profile_must_preserve_decision_and_artifact_contracts": true,
     "profile_does_not_change_football_model_formulas": true,
-    "rec41_player_feature_migration_fence_active": true
+    "reuse_freshness_uses_logical_artifact_time_not_hydration_mtime": true,
+    "fast_command_bundles_preserve_logical_service_artifact_contracts": true,
+    "rec41_player_feature_migration_fence_active": false
   },
   "profiles": {
     "fast_decision": {
-      "description": "Interactive decision regeneration. REC-41 migration fence temporarily disables advanced_stats reuse so player_features is regenerated with tactical-role evidence.",
+      "description": "Low-latency decision regeneration. Fresh Official truth remains mandatory; stable enrichment/detail artifacts may be reused using logical artifact timestamps. Multi-step governance and serving stages are bundled into one process per logical service without changing football formulas or artifact contracts.",
       "max_parallel_services": 4,
       "reuse_services": {
-        "advanced_stats": {"max_age_seconds": 0},
+        "advanced_stats": {"max_age_seconds": 21600},
         "historical_prior": {"max_age_seconds": 86400},
         "source_layer": {"max_age_seconds": 1800},
         "official_detail": {"max_age_seconds": 3600}
+      },
+      "command_bundles": {
+        "governance": "src.engines.governance_bundle",
+        "watchlist": "src.engines.watchlist_bundle",
+        "reporting": "src.engines.reporting_bundle",
+        "report_materializer": "src.engines.report_serving_bundle"
       }
     },
     "live": {
-      "description": "Match/live decision path. REC-41 migration fence temporarily disables advanced_stats reuse so player_features is regenerated with tactical-role evidence.",
+      "description": "Low-latency live decision path with the same correctness-preserving reuse and bundled logical-service execution as FAST.",
       "max_parallel_services": 4,
       "reuse_services": {
-        "advanced_stats": {"max_age_seconds": 0},
+        "advanced_stats": {"max_age_seconds": 21600},
         "historical_prior": {"max_age_seconds": 86400},
         "source_layer": {"max_age_seconds": 1800},
         "official_detail": {"max_age_seconds": 3600}
+      },
+      "command_bundles": {
+        "governance": "src.engines.governance_bundle",
+        "watchlist": "src.engines.watchlist_bundle",
+        "reporting": "src.engines.reporting_bundle",
+        "report_materializer": "src.engines.report_serving_bundle"
       }
     },
     "full_refresh": {
-      "description": "Complete source, enrichment, detail, model, governance and report refresh.",
+      "description": "Complete source, enrichment, detail, model, governance and report refresh using the conservative unbundled acceptance path.",
       "max_parallel_services": 3,
-      "reuse_services": {}
+      "reuse_services": {},
+      "command_bundles": {}
     },
     "deep_stats": {
-      "description": "Complete refresh including optional deep advanced-stat datasets.",
+      "description": "Complete refresh including optional deep advanced-stat datasets using the conservative unbundled acceptance path.",
       "max_parallel_services": 2,
-      "reuse_services": {}
+      "reuse_services": {},
+      "command_bundles": {}
     }
   }
 }

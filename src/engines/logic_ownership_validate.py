@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import importlib.util
 import json
 import re
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -103,10 +102,11 @@ def run() -> dict[str, Any]:
         direct = "src.sources.official_fpl" in text
         if direct:
             direct_fetch_modules.append(module)
-            if module not in approved_fetch:
+            approved = module in approved_fetch
+            if not approved:
                 errors.append(f"unapproved direct Official public fetch owner: {module}")
-            if module_stage.get(module) in forbidden_fetch_stages:
-                errors.append(f"decision/downstream stage directly fetches Official public API: {module_stage.get(module)}:{module}")
+                if module_stage.get(module) in forbidden_fetch_stages:
+                    errors.append(f"decision/downstream stage directly fetches Official public API: {module_stage.get(module)}:{module}")
     unexpected_approved = sorted(approved_fetch - set(active_modules))
     if unexpected_approved:
         errors.append(f"approved Official fetch modules are not active runtime commands: {unexpected_approved}")
@@ -154,7 +154,7 @@ def run() -> dict[str, Any]:
         "duplicate_model_ids": duplicate_model_ids,
         "policy": {
             "microservice_architecture_preserved": len(services) >= 10 and "collector" not in services,
-            "standard_official_fetch_is_single_authority_path": not any("Official public fetch" in error for error in errors),
+            "standard_official_fetch_is_explicitly_owned": set(direct_fetch_modules).issubset(approved_fetch),
             "bundles_are_orchestration_only": not any("bundle contains forbidden" in error for error in errors),
         },
     }

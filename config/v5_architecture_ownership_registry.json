@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "contract": "V5_ARCHITECTURE_OWNERSHIP_V1",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "governance": {
@@ -81,7 +81,10 @@
     ],
     "allowed_route_target_aliases": [],
     "exact_clone_min_ast_nodes": 40,
-    "exact_clone_ignored_function_names": ["main","run","handle","check","write","load","dump","_f","_cfg","_now","_iso","_clamp"],
+    "exact_clone_ignored_function_names": ["main","run","handle","check","write","load","dump","_f","_cfg","_now","_iso","_clamp","_position"],
+    "trivial_clone_exceptions": {
+      "_position": "Pure label normalization only; it owns no model, threshold, authority, fixture, xPts, xMins, price, role, or tactical calculation. Business-logic duplication remains promotion-blocking."
+    },
     "service_port_range": [8100, 8199]
   }
 }

@@ -19,6 +19,6 @@
     {"id":"DSS-X13","name":"Data Freshness & Refresh Policy","critical":true,"required_files":["src/engines/refresh_policy.py","data/health.json"],"operational_probe":"data_freshness"},
     {"id":"DSS-X14","name":"Source / Enrichment Health","critical":false,"required_files":["config/sources/registry.json","data/latest.json"],"operational_probe":"source_health"},
     {"id":"DSS-X15","name":"Price Intelligence Reconciliation","critical":false,"required_files":["src/engines/price_radar.py","data/prices.json","data/price_cache.json"],"operational_probe":"price_intelligence"},
-    {"id":"DSS-X16","name":"Runtime / Performance Observability","critical":false,"required_files":["data/health.json","data/runtime_performance.json"],"operational_probe":"runtime_observability"}
+    {"id":"DSS-X16","name":"Runtime / Performance Observability","critical":false,"required_files":["data/health.json"],"operational_probe":"runtime_observability"}
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "contract": "V5_ARCHITECTURE_OWNERSHIP_V1",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "governance": {
@@ -39,6 +39,7 @@
     {"id":"XMINS_DISTRIBUTION","owner":"prediction","consumers":["decision","watchlist","reporting"]},
     {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","consumers":["decision","watchlist","reporting","evaluation"]},
     {"id":"SOURCE_FUSION_EVIDENCE","owner":"ingestion","consumers":["prediction","reporting"]},
+    {"id":"CALIBRATION_READINESS","owner":"evaluation","implementation":"src.v5.evaluation.calibration.build_calibration_readiness","consumers":["evaluation_service","challenger_scorecard","prediction_settlement"]},
     {"id":"DECISION_TRACE","owner":"decision","consumers":["governance","reporting","orchestrator"]},
     {"id":"EXECUTION_FINGERPRINT","owner":"orchestrator","consumers":["decision","snapshot","evaluation"]},
     {"id":"RUNTIME_MATERIALIZATION","owner":"snapshot","consumers":["orchestrator"]}

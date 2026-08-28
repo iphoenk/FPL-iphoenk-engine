@@ -94,9 +94,72 @@ def validate_squad(squad: Iterable[dict]) -> dict[str, Any]:
     return result
 
 
-def select_squad(*, phase, bootstrap: dict, locked_squad=None, authenticated_my_team=None, submitted_picks=None):
+def projection_baseline_authority(
+    lock: dict | None,
+    *,
+    planning_gw: int | None,
+    submitted_gw: int | None,
+) -> dict[str, Any]:
+    lock = lock if isinstance(lock, dict) else {}
+    policy = _cfg().get("planning_override") or {}
+    wildcard = bool(lock.get("wildcard_active"))
+    free_hit = bool(lock.get("free_hit_active"))
+    manual = bool(lock.get("planning_override_active"))
+    override_requested = bool(policy.get("enabled", True)) and (wildcard or free_hit or manual)
+    target_raw = lock.get("target_gw")
+    if override_requested and bool(policy.get("target_gw_required", True)) and target_raw is None:
+        raise RuntimeError("V5 squad FAIL CLOSED: active planning override requires target_gw")
+    target_gw = int(target_raw) if target_raw is not None else None
+    planning = int(planning_gw) if planning_gw is not None else None
+    submitted = int(submitted_gw) if submitted_gw is not None else None
+    target_matches = bool(override_requested and planning is not None and target_gw == planning)
+    post_deadline_reclaimed = bool(target_matches and submitted is not None and planning == submitted)
+    override_applied = bool(target_matches and not post_deadline_reclaimed)
+    if wildcard:
+        override_kind = "WILDCARD"
+    elif free_hit:
+        override_kind = "FREE_HIT"
+    elif manual:
+        override_kind = "USER_LOCK"
+    else:
+        override_kind = "NONE"
+    return {
+        "planning_gw": planning,
+        "submitted_gw": submitted,
+        "override_requested": override_requested,
+        "override_kind": override_kind,
+        "override_target_gw": target_gw,
+        "override_applied": override_applied,
+        "stale_override_rejected": bool(override_requested and planning is not None and target_gw != planning),
+        "post_deadline_official_reclaims_authority": post_deadline_reclaimed,
+        "authority_source": (lock.get("authority_source") or "USER_PLANNING_OVERRIDE") if override_applied else None,
+        "governance": {
+            "target_gw_required": bool(policy.get("target_gw_required", True)),
+            "stale_target_behavior": policy.get("stale_target_behavior"),
+            "post_deadline_official_submission_reclaims_authority": bool(
+                policy.get("post_deadline_official_submission_reclaims_authority", True)
+            ),
+        },
+    }
+
+
+def select_squad(
+    *,
+    phase,
+    bootstrap: dict,
+    planning_gw: int | None = None,
+    submitted_gw: int | None = None,
+    locked_squad=None,
+    authenticated_my_team=None,
+    submitted_picks=None,
+):
+    baseline = projection_baseline_authority(
+        locked_squad,
+        planning_gw=planning_gw,
+        submitted_gw=submitted_gw,
+    )
     for authority in phase_authority_chain(phase, "squad"):
-        if authority == "user_lock" and locked_squad:
+        if authority == "user_lock" and locked_squad and baseline.get("override_applied"):
             squad = resolve_locked_squad(locked_squad, bootstrap)
         elif authority == "official_authenticated" and authenticated_my_team:
             squad = resolve_authenticated_draft(authenticated_my_team, bootstrap)
@@ -105,7 +168,15 @@ def select_squad(*, phase, bootstrap: dict, locked_squad=None, authenticated_my_
         else:
             continue
         if squad:
-            return {"authority": authority, "squad": squad, "validation": validate_squad(squad)}
+            return {
+                "authority": authority,
+                "squad": squad,
+                "validation": validate_squad(squad),
+                "projection_baseline": {
+                    **baseline,
+                    "effective_authority": authority,
+                },
+            }
     raise RuntimeError(f"no usable V5 squad authority for phase {phase}")
 
 

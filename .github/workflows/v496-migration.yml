@@ -1,0 +1,35 @@
+name: V4.9.6 one-time architecture consolidation
+
+on:
+  push:
+    branches:
+      - codex/v4.9.6-architecture-consolidation
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v496-architecture-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: ${{ github.actor != 'fpl-iphoenk-bot' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v4.9.6-architecture-consolidation
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply architecture consolidation
+        run: python tools/v496_apply.py
+      - name: Commit consolidated architecture
+        run: |
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "refactor(v4.9.6): consolidate architecture ownership and remove duplicate logic"
+          git push origin HEAD:codex/v4.9.6-architecture-consolidation

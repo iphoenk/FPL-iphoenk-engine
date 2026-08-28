@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from src.engines.checkpoint_policy import resolve_checkpoint
 from src.engines.v4_checkpoint_governance import govern_checkpoint
+from src.services.raw_snapshot_service import detect_phase
 
 
 DEADLINE_0030_WIB = "2026-08-28T17:30:00Z"
@@ -17,12 +18,24 @@ def test_scheduled_checkpoints_are_registry_driven():
         context = resolve_checkpoint("daily", "2026-09-12T10:00:00Z", as_of=as_of, simulated=True)
         assert context["policy_id"] == expected
         assert context["is_simulation"] is True
+        assert context["visible_output_authorized"] is True
         assert context["report_scope"]
+
+
+def test_non_visible_hourly_checkpoint_is_internal_only():
+    context = resolve_checkpoint(
+        "daily",
+        "2026-09-12T10:00:00Z",
+        as_of="2026-08-26T10:30:00+07:00",
+    )
+    assert context["policy_id"] == "INTERNAL_HOURLY_SILENT"
+    assert context["visible_output_authorized"] is False
+    assert context["is_master_hourly_checkpoint"] is True
 
 
 def test_2130_is_final_review_for_early_morning_deadline():
     context = resolve_checkpoint(
-        "deadline",
+        "daily",
         DEADLINE_0030_WIB,
         as_of="2026-08-28T21:30:00+07:00",
         simulated=True,
@@ -31,25 +44,97 @@ def test_2130_is_final_review_for_early_morning_deadline():
     assert context["is_final_review"] is True
     assert context["minutes_to_deadline"] == 180
     assert context["max_snapshot_age_minutes"] == 15
+    assert context["full_visible_report_required"] is True
+    assert context["deadline_report_continues_after_final_review"] is True
 
 
-def test_post_final_and_live_take_precedence():
+def test_deadline_day_continues_after_final_review_and_overrides_match_mode():
     post_final = resolve_checkpoint(
-        "deadline",
-        DEADLINE_0030_WIB,
-        as_of="2026-08-28T22:00:00+07:00",
-    )
-    assert post_final["policy_id"] == "POST_FINAL_EMERGENCY_ONLY"
-    assert post_final["post_final_emergency_only"] is True
-
-    live = resolve_checkpoint(
-        "live",
+        "daily",
         DEADLINE_0030_WIB,
         is_live=True,
-        as_of="2026-08-28T21:30:00+07:00",
+        as_of="2026-08-28T22:30:00+07:00",
+    )
+    assert post_final["policy_id"] == "DEADLINE_MONITOR"
+    assert post_final["post_final_emergency_only"] is False
+    assert post_final["deadline_day_active"] is True
+    assert post_final["visible_output_authorized"] is True
+    assert post_final["no_material_change_must_still_report"] is True
+
+
+def test_live_mode_requires_explicit_actual_live_state_outside_deadline_day():
+    not_live = resolve_checkpoint(
+        "daily",
+        "2026-09-12T10:00:00Z",
+        is_live=False,
+        as_of="2026-08-29T19:30:00+07:00",
+    )
+    assert not_live["policy_id"] == "INTERNAL_HOURLY_SILENT"
+
+    live = resolve_checkpoint(
+        "daily",
+        "2026-09-12T10:00:00Z",
+        is_live=True,
+        as_of="2026-08-29T19:30:00+07:00",
     )
     assert live["policy_id"] == "MATCHDAY_LIVE"
     assert live["recommended_refresh_minutes"] == 1
+    assert live["visible_output_authorized"] is True
+
+
+def test_post_deadline_reconciliation_has_top_transition_authority():
+    context = resolve_checkpoint(
+        "daily",
+        "2026-09-05T10:00:00Z",
+        is_live=True,
+        as_of="2026-08-29T00:31:00+07:00",
+        post_deadline_reconciliation=True,
+    )
+    assert context["policy_id"] == "POST_DEADLINE_RECONCILIATION"
+    assert context["post_deadline_reconciliation"] is True
+    assert context["visible_output_authorized"] is False
+
+
+def test_detect_phase_requires_started_unfinished_fixture_for_match_mode():
+    bootstrap = {
+        "events": [
+            {
+                "id": 2,
+                "is_current": True,
+                "is_next": False,
+                "finished": False,
+                "deadline_time": "2026-08-28T17:30:00Z",
+            },
+            {
+                "id": 3,
+                "is_current": False,
+                "is_next": True,
+                "finished": False,
+                "deadline_time": "2026-09-05T10:00:00Z",
+            },
+        ]
+    }
+    now = datetime(2026, 8, 29, 13, 30, tzinfo=timezone.utc)
+    idle = detect_phase(
+        bootstrap,
+        [{"id": 20, "event": 2, "started": True, "finished": True}],
+        now,
+    )
+    assert idle["is_live_match"] is False
+    assert idle["active_live_fixture_count"] == 0
+
+    live = detect_phase(
+        bootstrap,
+        [
+            {"id": 20, "event": 2, "started": True, "finished": True},
+            {"id": 21, "event": 2, "started": True, "finished": False},
+            {"id": 31, "event": 3, "started": True, "finished": False},
+        ],
+        now,
+    )
+    assert live["is_live_match"] is True
+    assert live["active_live_fixture_count"] == 1
+    assert live["active_live_fixture_ids"] == [21]
 
 
 def _governance_inputs(simulated=False, age_minutes=0, health_overall="AMBER", material=False):

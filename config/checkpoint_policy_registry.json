@@ -1,73 +1,177 @@
 {
-  "schema_version": 1,
-  "registry": "fpl_checkpoint_policy_v1",
+  "schema_version": 2,
+  "registry": "fpl_checkpoint_policy_v2_time_schedule_governance",
   "timezone": "Asia/Jakarta",
+  "master_hourly_minute": 30,
+  "master_checkpoint_window_minutes": 20,
   "scheduled_window_minutes": 20,
+  "normal_visible_times": ["04:30", "12:30", "21:30"],
+  "visible_modes": [
+    "NORMAL_SCHEDULED",
+    "DEADLINE_DAY",
+    "DEADLINE_DAY_FINAL_REVIEW",
+    "MATCH_MODE",
+    "CRITICAL_PRICE_ALERT",
+    "PERMITTED_EMERGENCY"
+  ],
+  "mode_priority": [
+    "DEADLINE_DAY_FINAL_REVIEW",
+    "DEADLINE_DAY",
+    "MATCH_MODE",
+    "DEEP_REVIEW_0430",
+    "MIDDAY_TACTICAL_1230",
+    "NIGHT_TACTICAL_PRICE_2130",
+    "CRITICAL_PRICE_OR_EMERGENCY"
+  ],
   "policies": {
     "DEEP_REVIEW_0430": {
-      "label": "04.30 Deep Review",
+      "label": "04.30 Daily Deep Review",
+      "operating_mode": "NORMAL_SCHEDULED",
       "local_time": "04:30",
+      "visible_output": true,
+      "payload": "data/deep_review_payload.json",
       "max_snapshot_age_minutes": 90,
       "recommended_refresh_minutes": 60,
-      "report_scope": ["personal_gw_scorecard", "executive_pulse", "gate0", "locked_15", "full_universe", "watchlist", "price_radar", "multi_horizon", "lineup", "captaincy", "learning_loop"]
+      "price_radar_required": true,
+      "roster_contract": {"owned": 15, "watchlist": 20},
+      "report_scope": ["personal_gw_scorecard", "executive_pulse", "gate0", "locked_15", "full_universe", "watchlist", "price_radar", "multi_horizon", "fixture_by_fixture", "tactical_opponent", "rest_congestion", "competitive_load", "xpts", "xmins", "start_security", "lineup", "bench", "captaincy", "chip", "transfer_challenger", "price_value", "model_validation", "source_health", "learning_loop"]
     },
     "MIDDAY_TACTICAL_1230": {
       "label": "12.30 Midday Tactical Monitor",
+      "operating_mode": "NORMAL_SCHEDULED",
       "local_time": "12:30",
+      "visible_output": true,
+      "payload": "data/decision_brief.json",
       "max_snapshot_age_minutes": 90,
       "recommended_refresh_minutes": 60,
-      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "availability", "xmins", "role", "challengers", "price_radar", "lineup_watch"]
+      "price_radar_required": true,
+      "roster_contract": {"owned": 15, "watchlist": 20},
+      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "watchlist", "availability", "team_news", "training_press_conference", "tactical_matchup", "xmins", "start_security", "challengers", "fixture_rest_congestion", "captaincy", "price_radar", "consensus_divergence", "lineup_watch"]
     },
     "NIGHT_TACTICAL_PRICE_2130": {
       "label": "21.30 Night Tactical + Price Monitor",
+      "operating_mode": "NORMAL_SCHEDULED",
       "local_time": "21:30",
+      "visible_output": true,
+      "payload": "data/decision_brief.json",
       "max_snapshot_age_minutes": 60,
       "recommended_refresh_minutes": 30,
-      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "availability", "xmins", "role", "rotation", "price_radar", "challengers", "lineup_watch"]
+      "price_radar_required": true,
+      "roster_contract": {"owned": 15, "watchlist": 20},
+      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "watchlist", "availability", "team_news", "xmins", "role", "rotation", "tactical_matchup", "price_radar", "challengers", "competitive_load", "next_day_risk", "captaincy", "squad_structure", "lineup_watch"]
     },
-    "REGULAR_MONITOR": {
-      "label": "Regular Tactical Monitor",
+    "INTERNAL_HOURLY_SILENT": {
+      "label": "Hourly Internal Evaluation",
+      "operating_mode": "INTERNAL_ONLY",
+      "visible_output": false,
       "max_snapshot_age_minutes": 90,
-      "recommended_refresh_minutes": 180,
-      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "availability", "xmins", "price_radar", "challengers"]
+      "recommended_refresh_minutes": 60,
+      "report_scope": ["phase", "official_deadline", "runtime_state", "live_match_state", "source_freshness", "squad_decision_changes", "challenger_triggers", "price_urgency", "visibility_authorization"]
     },
     "DEADLINE_MONITOR": {
-      "label": "Deadline Day Monitor",
+      "label": "Deadline Day Full Hourly Report",
+      "operating_mode": "DEADLINE_DAY",
+      "visible_output": true,
+      "full_report_required": true,
+      "no_material_change_must_still_report": true,
+      "fresh_source_sweep_required": true,
+      "direct_official_refresh_max_age_minutes": 30,
+      "price_radar_required": true,
       "max_snapshot_age_minutes": 30,
-      "recommended_refresh_minutes": 60,
-      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "availability", "xmins", "role", "rotation", "price_radar", "challengers", "lineup", "captaincy"]
+      "recommended_refresh_minutes": 30,
+      "roster_contract": {"owned": 15, "watchlist": 20},
+      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "watchlist", "availability", "injury_news", "training_press_conference", "xmins", "start_security", "role", "rotation", "tactical_matchup", "fixture_rest_congestion", "competitive_load", "price_radar", "challengers", "multi_horizon_comparator", "lineup", "bench", "captaincy", "chip", "affordability", "source_health", "source_divergence", "emergency_risks"]
     },
     "FINAL_DEADLINE_REVIEW": {
-      "label": "Final Deadline Review",
+      "label": "Deadline Day Final Review",
+      "operating_mode": "DEADLINE_DAY_FINAL_REVIEW",
+      "visible_output": true,
+      "full_report_required": true,
+      "fresh_source_sweep_required": true,
+      "direct_official_refresh_max_age_minutes": 30,
+      "price_radar_required": true,
       "max_snapshot_age_minutes": 15,
       "recommended_refresh_minutes": 15,
-      "report_scope": ["personal_gw_scorecard", "gate0", "locked_15", "availability", "xmins", "role", "rotation", "price_radar", "full_universe", "wc_packages", "lineup", "bench", "captaincy", "chip", "final_action"]
+      "roster_contract": {"owned": 15, "watchlist": 20},
+      "report_scope": ["personal_gw_scorecard", "gate0", "submitted_latest_user_baseline", "locked_15", "squad_legality", "injury_news", "xmins", "start_probability", "lineup_leaks", "tactical_matchup", "fixture_rest_congestion", "captaincy", "vice_captaincy", "lineup", "bench", "chip", "affordability", "price_radar", "transfer_watchlist_comparison", "source_divergence", "emergency_risks", "full_universe", "final_action"]
     },
-    "POST_FINAL_EMERGENCY_ONLY": {
-      "label": "Post-final Emergency Watch",
+    "POST_DEADLINE_RECONCILIATION": {
+      "label": "Post Deadline Reconciliation",
+      "operating_mode": "POST_DEADLINE_RECONCILIATION",
+      "visible_output": false,
       "max_snapshot_age_minutes": 10,
-      "recommended_refresh_minutes": 10,
-      "report_scope": ["personal_gw_scorecard", "material_news", "availability", "suspension", "lineup_emergency", "captain_emergency"]
+      "recommended_refresh_minutes": 5,
+      "report_scope": ["official_submitted_picks", "baseline_reconciliation", "squad_15", "starting_xi", "bench", "captain", "vice_captain", "chip", "canonical_submitted_state", "historical_immutability"]
     },
     "MATCHDAY_LIVE": {
-      "label": "Matchday Live Monitor",
+      "label": "Consolidated Match Mode",
+      "operating_mode": "MATCH_MODE",
+      "visible_output": true,
       "max_snapshot_age_minutes": 5,
       "recommended_refresh_minutes": 1,
-      "report_scope": ["personal_gw_scorecard", "official_picks", "event_live", "provisional_points", "autosubs", "captain", "reconciliation"]
+      "report_scope": ["personal_gw_scorecard", "official_picks", "event_live", "owned_playing", "captain", "vice_captain", "goals", "assists", "clean_sheets", "cards", "bonus_bps", "defcon", "minutes", "starter_sub_state", "dnp", "autosubs", "captaincy_transfer", "injuries", "tactical_role", "watchlist_performance", "emerging_challenger", "next_gw_implications", "fact_vs_model_separation"]
     }
+  },
+  "deadline_day": {
+    "lead_minutes": 1440,
+    "hourly_visible_checkpoint_minute": 30,
+    "continue_after_final_review": true,
+    "stop_at_official_deadline": true,
+    "nothing_changed_text": "NO MATERIAL CHANGE SINCE PREVIOUS CHECKPOINT",
+    "official_deadline_authority": "OFFICIAL_FPL_TIER_1"
   },
   "final_review": {
     "early_morning_deadline_start": "00:00",
     "early_morning_deadline_end": "01:59",
     "early_morning_lead_minutes": 180,
     "default_lead_minutes": 90,
-    "window_minutes": 20
+    "window_minutes": 20,
+    "terminates_deadline_day": false
+  },
+  "match_mode": {
+    "requires_current_scoring_gw": true,
+    "requires_at_least_one_live_pl_fixture": true,
+    "one_consolidated_report": true,
+    "single_live_haul_cannot_auto_buy_sell": true,
+    "emerging_challenger_is_discovery_only": true
+  },
+  "price_monitor": {
+    "mandatory_policy_ids": ["DEEP_REVIEW_0430", "MIDDAY_TACTICAL_1230", "NIGHT_TACTICAL_PRICE_2130", "DEADLINE_MONITOR", "FINAL_DEADLINE_REVIEW"],
+    "official_change_is_fact": true,
+    "predicted_change_is_model": true,
+    "out_of_schedule_visible_only_if_actionable": true
+  },
+  "source_sweep": {
+    "deadline_day_required": true,
+    "tiers": {
+      "1": ["official_fpl_native", "official_fpl_website", "premier_league_official", "official_clubs", "official_manager_team_communications"],
+      "2": ["reliable_beat_reporters", "verified_press_conference_reporting", "reliable_injury_lineup_reporters"],
+      "3": ["fpl_live_livefpl", "onefpl", "fffix", "ffhub", "ffscout"],
+      "4": ["ben_crellin_fixture_chip_context"],
+      "5": ["x_twitter", "reddit"]
+    },
+    "allowed_statuses": ["AVAILABLE", "PARTIAL", "STALE", "UNAVAILABLE", "NO MATERIAL UPDATE"],
+    "fabrication_forbidden": true
+  },
+  "comparator": {
+    "horizons_gw": [1, 2, 3, 5],
+    "strategic_horizon_gw": [10, 15],
+    "triggers": ["watchlist_publication", "material_live_performance", "xmins_change", "start_security_change", "injury", "suspension", "role_change", "manager_tactical_change", "european_cup_schedule_confirmation", "international_callup", "significant_international_minutes", "price_change", "fixture_rearrangement", "owned_deterioration", "challenger_improvement", "deep_review_0430", "deadline_day_checkpoint"]
+  },
+  "competitive_load": {
+    "competitions": ["Premier League", "Champions League", "Europa League", "Conference League", "Carabao Cup", "FA Cup", "International", "Other competitive"],
+    "fields": ["match_date", "kickoff", "location", "travel", "actual_minutes", "started", "benched", "substitution_minute", "extra_time", "days_rest_before_next_pl"]
   },
   "governance": {
     "locked_15_authority_pre_deadline_wc": true,
     "starting_xi_bench_captain_vice_remain_adjustable_until_explicit_lock": true,
-    "post_final_only_material_emergency_updates": true,
+    "deadline_reports_continue_after_final_review": true,
     "freshness_failure_blocks_recommendation": true,
-    "simulation_never_authorizes_action": true
+    "simulation_never_authorizes_action": true,
+    "routine_hourly_run_is_silent_without_visible_mode": true,
+    "deadline_day_never_suppresses_hourly_visible_report": true,
+    "match_mode_requires_actual_live_current_gw_fixture": true,
+    "duplicate_reports_forbidden": true,
+    "all_operational_times_use_wib": true
   }
 }

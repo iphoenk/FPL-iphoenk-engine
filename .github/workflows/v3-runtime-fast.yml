@@ -104,7 +104,7 @@ jobs:
           fi
           echo "profile=$profile" >> "$GITHUB_OUTPUT"
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
-          python -m src.runtime_v3.orchestrator --mode "$mode" --stats --profile "$profile"
+          python -m src.runtime_v3.fast_entrypoint --mode "$mode" --stats --profile "$profile"
 
       - name: Validate production decision contracts
         if: steps.cadence.outputs.should_collect == 'true'
@@ -115,7 +115,7 @@ jobs:
           python -m src.engines.report_serving_validate
           python -m src.engines.report_time_contract_validate
 
-      - name: Enforce transition ceiling and report 10-second target
+      - name: Enforce transition ceiling and report FAST target
         if: steps.cadence.outputs.should_collect == 'true'
         run: python -m src.runtime_v3.performance_guard --profile "${{ steps.runtime.outputs.profile }}"
 

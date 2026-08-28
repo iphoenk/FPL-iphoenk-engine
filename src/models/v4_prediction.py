@@ -346,6 +346,48 @@ def project_fixture(player, fixture, ctx=None, advanced=None):
     }
 
 
+def fixture_run_summary(rows, window=5):
+    """Summarize the canonical fixture-adjustment path without re-scoring fixtures."""
+    adjustments = [f((row.get("calibration") or {}).get("fixture_adjustment"), 1.0) for row in rows]
+    windows = []
+    for start in range(0, len(adjustments), window):
+        chunk = adjustments[start:start + window]
+        if not chunk:
+            continue
+        windows.append({
+            "start_offset": start + 1,
+            "end_offset": start + len(chunk),
+            "average_adjustment": round(mean(chunk), 4),
+        })
+    first = windows[0]["average_adjustment"] if windows else None
+    second = windows[1]["average_adjustment"] if len(windows) > 1 else None
+    final = windows[2]["average_adjustment"] if len(windows) > 2 else (windows[-1]["average_adjustment"] if windows else None)
+    delta = round(second - first, 4) if first is not None and second is not None else None
+    if delta is None:
+        direction = "UNKNOWN"
+    elif delta >= 0.03:
+        direction = "IMPROVING"
+    elif delta <= -0.03:
+        direction = "WORSENING"
+    else:
+        direction = "STABLE"
+    best = max(windows, key=lambda row: row["average_adjustment"]) if windows else None
+    worst = min(windows, key=lambda row: row["average_adjustment"]) if windows else None
+    return {
+        "source": "official_fpl_fixture_adjustment",
+        "window_size": window,
+        "windows": windows,
+        "first5_average_adjustment": first,
+        "next5_average_adjustment": second,
+        "final5_average_adjustment": final,
+        "swing_next5_vs_first5": delta,
+        "direction": direction,
+        "best_window": best,
+        "worst_window": worst,
+        "decision_usage": "multi_horizon_projection_context",
+    }
+
+
 def project_horizon(player, fixtures, ctx=None, advanced=None, n=15):
     rows = [project_fixture(player, fixture, ctx, advanced) for fixture in fixtures[:n]]
     expected_points = [row["xpts"] for row in rows]
@@ -354,6 +396,7 @@ def project_horizon(player, fixtures, ctx=None, advanced=None, n=15):
         "name": player.get("web_name"),
         "position": POS.get(player.get("element_type")),
         "fixtures": rows,
+        "fixture_run": fixture_run_summary(rows),
         "xpts_3": round(sum(expected_points[:3]), 2),
         "xpts_5": round(sum(expected_points[:5]), 2),
         "xpts_10": round(sum(expected_points[:10]), 2),

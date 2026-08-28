@@ -254,3 +254,11 @@ See `docs/v4-microservices.md` for service ownership, failure semantics, and pre
 - Snapshot and reconciliation integrity are reused from the canonical validation-store primitives rather than reimplemented.
 - Expected future states are reported as pending (`PREDEADLINE_READY`, `WAITING_SUBMITTED_PICKS`, `WAITING_GW_FINISH`) rather than falsely treated as failures; structural integrity/ownership failures remain fail-closed.
 - `READY_TO_RECONCILE` is emitted only when a valid frozen target-GW snapshot and the target GW's Official event-live actuals are simultaneously present; `RECONCILED` requires the immutable reconciliation archive.
+
+
+## V4.9.6 internal evidence closeout
+
+- DSS-16 Goal Involvement Sustainability is ACTIVE only when production prediction proves raw-vs-shrunk attacking rates, bounded current/last-season weights, and canonical attacking-rate shrinkage provenance.
+- DSS-29 Fixture Swing is ACTIVE through a prediction-owned `fixture_run` summary derived from the already canonical Official-FPL fixture-adjustment path; health/reporting do not rescore fixtures.
+- Ownership registry explicitly assigns rate-shrinkage sustainability and fixture-run summarization to the prediction model so future services must reuse rather than reimplement them.
+- DSS-08 System/Formation Fit and DSS-36 Multi-Season Prior remain PARTIAL until genuinely stronger evidence exists; they are not promoted by proxy.

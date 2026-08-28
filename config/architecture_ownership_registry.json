@@ -162,6 +162,27 @@
         "reconciliation_truth",
         "reconciliation_readiness"
       ]
+    },
+    {
+      "id": "RATE_SHRINKAGE_SUSTAINABILITY",
+      "owner": "prediction_model",
+      "implementation": "src.models.v4_prediction.rates",
+      "consumers": [
+        "DSS-16",
+        "DSS-38"
+      ]
+    },
+    {
+      "id": "FIXTURE_RUN_SUMMARY",
+      "owner": "prediction_model",
+      "implementation": "src.models.v4_prediction.fixture_run_summary",
+      "consumers": [
+        "DSS-25",
+        "DSS-26",
+        "DSS-27",
+        "DSS-28",
+        "DSS-29"
+      ]
     }
   ]
 }

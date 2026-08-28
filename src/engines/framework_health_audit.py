@@ -317,6 +317,70 @@ def _probe_uncertainty() -> tuple[bool, dict]:
     return bool(fixtures) and good == len(fixtures), {"fixtures": len(fixtures), "valid_intervals": good}
 
 
+def _probe_sustainability(players=None) -> tuple[bool, dict]:
+    players = list(players if players is not None else _predictions())
+    fixtures = [(player.get("fixtures") or [None])[0] for player in players]
+    fixtures = [fixture for fixture in fixtures if fixture]
+    covered = 0
+    material_shrinkage = 0
+    valid_weights = 0
+    for fixture in fixtures:
+        rate = fixture.get("rates") or {}
+        calibration = fixture.get("calibration") or {}
+        provenance = fixture.get("provenance") or {}
+        required = ("xg90", "xa90", "raw_xg90", "raw_xa90", "current_season_weight")
+        if all(key in rate for key in required) and "last_season_weight" in calibration and provenance.get("attacking_rate_shrinkage") is True:
+            covered += 1
+        current_weight = float(rate.get("current_season_weight") or 0)
+        last_weight = float(calibration.get("last_season_weight") or 0)
+        valid_weights += int(0 <= current_weight <= 1 and 0 <= last_weight <= 1)
+        material_shrinkage += int(
+            abs(float(rate.get("raw_xg90") or 0) - float(rate.get("xg90") or 0)) > 0.01
+            or abs(float(rate.get("raw_xa90") or 0) - float(rate.get("xa90") or 0)) > 0.01
+        )
+    ok = bool(fixtures) and covered == len(fixtures) and valid_weights == len(fixtures) and material_shrinkage > 0
+    return ok, {
+        "players": len(players),
+        "fixtures_checked": len(fixtures),
+        "shrinkage_evidence_covered": covered,
+        "valid_weight_rows": valid_weights,
+        "material_shrinkage_players": material_shrinkage,
+        "canonical_owner": "src.models.v4_prediction.rates",
+    }
+
+
+def _probe_fixture_swing(players=None) -> tuple[bool, dict]:
+    players = list(players if players is not None else _predictions())
+    summaries = [player.get("fixture_run") or {} for player in players]
+    complete = 0
+    swings = []
+    directions = Counter()
+    for summary in summaries:
+        windows = list(summary.get("windows") or [])
+        swing = summary.get("swing_next5_vs_first5")
+        valid = (
+            summary.get("source") == "official_fpl_fixture_adjustment"
+            and summary.get("decision_usage") == "multi_horizon_projection_context"
+            and len(windows) >= 3
+            and summary.get("best_window") is not None
+            and summary.get("worst_window") is not None
+            and swing is not None
+        )
+        complete += int(valid)
+        if swing is not None:
+            swings.append(round(float(swing), 4))
+        directions[str(summary.get("direction"))] += 1
+    distinct_swings = len(set(swings))
+    ok = bool(players) and complete == len(players) and distinct_swings > 1
+    return ok, {
+        "players": len(players),
+        "fixture_run_covered": complete,
+        "distinct_swing_values": distinct_swings,
+        "directions": dict(directions),
+        "canonical_owner": "src.models.v4_prediction.fixture_run_summary",
+    }
+
+
 def _probe_source_health() -> tuple[bool, dict]:
     health = read_json(DATA / "health.json", {})
     critical = ["bootstrap", "fixtures", "entry", "history", "transfers"]
@@ -506,6 +570,8 @@ def _operational_probe(name: str | None, phase: str) -> tuple[str, dict]:
         "set_piece_role": lambda: _probe_role_share("set_piece_share"),
         "penalty_role": lambda: _probe_role_share("penalty_share"),
         "advanced_stats_sync": _probe_advanced_sync,
+        "sustainability": _probe_sustainability,
+        "fixture_swing": _probe_fixture_swing,
         "opponent_defence_dynamic": _probe_opponent_defence,
         "last_season_integration": _probe_last_season,
         "defcon_rules": _probe_defcon,
@@ -542,8 +608,8 @@ def _operational_probe(name: str | None, phase: str) -> tuple[str, dict]:
 
     known_partial = {
         "system_fit",
-        "sustainability", "bonus_route", "team_defensive_risk", "team_attacking_strength",
-        "team_defensive_strength", "fixture_context", "fixture_swing",
+        "bonus_route", "team_defensive_risk", "team_attacking_strength",
+        "team_defensive_strength", "fixture_context",
         "european_congestion", "domestic_cup_congestion", "international_load", "rest_days",
         "preseason_prior", "historical_prior", "regression_risk",
         "ownership_context",

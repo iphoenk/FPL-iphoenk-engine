@@ -15,6 +15,7 @@
     "config/v5_architecture_ownership_registry.json",
     "config/v5_artifact_contract_registry.json",
     "config/v5_auth_policy_registry.json",
+    "config/v5_challenger_comparator_registry.json",
     "config/v5_cluster_health_registry.json",
     "config/v5_decision_registry.json",
     "config/v5_dss_policy_registry.json",

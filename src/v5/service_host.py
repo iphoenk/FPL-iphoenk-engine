@@ -8,6 +8,7 @@ from typing import Any, Callable
 
 import msgpack
 from fastapi import FastAPI, HTTPException, Request, Response
+from starlette.concurrency import run_in_threadpool
 
 from src.v5.config_cache import load_json_config
 from src.v5.refresh_worker import RefreshWorker, start_refresh_worker
@@ -167,6 +168,10 @@ async def invoke_binary(operation: str, request: Request) -> Response:
         raise HTTPException(status_code=400, detail="msgpack request payload must be an object")
     payload = dict(decoded)
     correlation_id = payload.pop("_correlation_id", None)
-    envelope = _execute(operation, payload, correlation_id)
+    # MsgPack is an async route because request-body decoding is async, but the
+    # bounded-context handlers are synchronous. Dispatch them through Starlette's
+    # worker pool so concurrent calls to the same service (notably snapshot
+    # persistence/hydration) do not serialize on the event loop.
+    envelope = await run_in_threadpool(_execute, operation, payload, correlation_id)
     encoded = msgpack.packb(envelope, use_bin_type=True)
     return Response(content=encoded, media_type=str(MSGPACK_PROFILE["content_type"]))

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "registry": "fpl_human_report_language_v1",
+  "audience": "FPL_MANAGER",
+  "principle": "ENGINE_TECHNICAL_BEHIND_REPORT_DECISION_ORIENTED_IN_FRONT",
+  "decision_reasoning_must_use": [
+    "team_structure",
+    "projected_points_difference",
+    "starter_security",
+    "availability_and_team_news",
+    "fixture_horizon",
+    "price_and_market_risk",
+    "lineup_captain_chip_context",
+    "time_to_deadline"
+  ],
+  "technical_terms_forbidden_in_primary_reasoning": [
+    "DSS-",
+    "WARMUP",
+    "schema",
+    "contract",
+    "microservice",
+    "eligible calibration",
+    "prediction health",
+    "capability health"
+  ],
+  "technical_state_location": "readiness_or_technical_appendix_only",
+  "cross_engine_scope": ["V3", "V4", "V5"],
+  "guardrails": {
+    "technical_reason_codes_preserved_separately": true,
+    "primary_reasoning_plain_fpl_language": true,
+    "stale_data_must_be_disclosed": true,
+    "engine_recommendation_never_presented_as_user_execution": true
+  }
+}

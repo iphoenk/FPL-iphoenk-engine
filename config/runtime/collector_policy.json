@@ -5,7 +5,7 @@
   "visible_checkpoint_minute": 30,
   "schedules": {
     "primary": "30 * * * *",
-    "adaptive": "*/15 * * * *",
+    "adaptive": "0,15,45 * * * *",
     "deep_stats": "30 21 * * *"
   },
   "normal_reports": {

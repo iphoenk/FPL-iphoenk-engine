@@ -28,13 +28,16 @@ def test_full_core_enrichment_uses_real_advanced_stats_and_fail_neutral_missing_
     ]
     result = build_full_core_enrichment(bootstrap, fixtures)
     assert result["status"] == "ACTIVE"
+    assert result["schema_version"] == 4
     assert set(result["capabilities"]) == {
-        "advanced_stats_sync", "player_defensive_contribution_evidence", "european_congestion",
+        "advanced_stats_sync", "advanced_stats_point_in_time_freshness",
+        "player_defensive_contribution_evidence", "european_congestion",
         "domestic_cup_congestion", "international_load", "rest_days", "preseason_prior",
         "current_form", "source_fusion",
     }
     assert result["governance"]["missing_external_evidence_is_unavailable_not_zero"] is True
     assert result["governance"]["official_fpl_identity_price_rules_never_overridden"] is True
+    assert result["governance"]["authoritative_advanced_evidence_requires_point_in_time_freshness"] is True
     advanced = result["advanced_stats"]
     assert advanced["status"] == "ACTIVE"
     assert advanced["shots_rows"] > 0
@@ -44,6 +47,8 @@ def test_full_core_enrichment_uses_real_advanced_stats_and_fail_neutral_missing_
     assert advanced["governance"]["fpl_core_insights_primary"] is True
     assert advanced["governance"]["understat_challenger_only"] is True
     assert advanced["governance"]["shot_in_box_is_not_box_touch"] is True
+    assert advanced["authoritative_eligible"] is False
+    assert advanced["freshness"]["status"] == "UNKNOWN_NO_PLANNING_GW"
     schedule = result["schedule"]
     assert schedule["status"] == "ACTIVE"
     assert schedule["league_rest_days"]["1"]["minimum_pl_rest_days"] == 7.0

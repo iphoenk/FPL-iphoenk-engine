@@ -7,8 +7,7 @@ from pathlib import Path
 from typing import Iterable
 from zoneinfo import ZoneInfo
 
-from src.settings import API_RETRIES, PRICE_PRESSURE_LIST_SIZE, PRICE_SUMMARY_LIST_SIZE
-from src.sources.official_fpl import get_json
+from src.settings import PRICE_PRESSURE_LIST_SIZE, PRICE_SUMMARY_LIST_SIZE
 from src.utils import ROOT
 
 CONFIG_PATH = ROOT / "config" / "intelligence" / "price_radar.json"
@@ -51,10 +50,6 @@ MEDIUM_HOURS = float(_URGENCY["medium_hours"])
 ACTIONABLE_PROGRESS = float(_URGENCY["actionable_progress_pct"])
 ALERT_LEVELS = frozenset(str(x) for x in _URGENCY["alert_levels"])
 
-# The API currently exposes a signed ordinal likelihood code. Only +/-5 is
-# safely interpreted here as threshold-crossing / very-likely because observed
-# projections with that code are beyond +/-100%. Intermediate levels are kept
-# neutral instead of inventing undocumented Official wording.
 LIKELIHOOD_LABELS = {
     -5: "VERY_LIKELY_DROP",
     -4: "DROP_SIGNAL_LEVEL_4",
@@ -379,41 +374,50 @@ def apply_to_payload(prices: dict) -> dict:
 
 def patch_files(data_dir: str | Path = "data") -> None:
     root = Path(data_dir)
+    market_prices_path = root / "market_prices.json"
+    official_path = root / "official_snapshot.json"
     prices_path = root / "prices.json"
     latest_path = root / "latest.json"
     trajectory_path = root / "price_trajectory.json"
     alerts_path = root / "price_alerts.json"
 
-    prices = json.loads(prices_path.read_text(encoding="utf-8"))
-    bootstrap, official_health = get_json("bootstrap-static/", retries=API_RETRIES)
+    if not market_prices_path.exists():
+        raise RuntimeError("market_prices.json missing for canonical price materialization")
+    if not official_path.exists():
+        raise RuntimeError("official_snapshot.json missing for canonical price materialization")
+    prices = json.loads(market_prices_path.read_text(encoding="utf-8"))
+    official = json.loads(official_path.read_text(encoding="utf-8"))
+    bootstrap = official.get("bootstrap") or {}
+    if not bootstrap:
+        raise RuntimeError("official_snapshot bootstrap missing for price radar")
+    official_health = (official.get("endpoint_health") or {}).get("bootstrap") or {}
     now = datetime.now(timezone.utc)
 
-    enriched = []
     trajectory_state = json.loads(trajectory_path.read_text(encoding="utf-8")) if trajectory_path.exists() else {}
-    new_state = trajectory_state
-    if bootstrap:
-        total_players = int(bootstrap.get("total_players") or 0)
-        raw_rows = [_price_row(p, total_players) for p in bootstrap.get("elements", [])]
-        enriched, new_state = build_trajectory(raw_rows, trajectory_state, now)
+    total_players = int(bootstrap.get("total_players") or 0)
+    raw_rows = [_price_row(p, total_players) for p in bootstrap.get("elements", [])]
+    enriched, new_state = build_trajectory(raw_rows, trajectory_state, now)
 
-        rising = sorted((r for r in enriched if r.get("risk_direction") == "RISE"), key=_risk_sort, reverse=True)
-        falling = sorted((r for r in enriched if r.get("risk_direction") == "FALL"), key=_risk_sort, reverse=True)
-        by_momentum = sorted(enriched, key=lambda r: float(r.get("momentum") or 0), reverse=True)
-        prices.update({
-            "players": enriched,
-            "top_buy_pressure": by_momentum[:PRICE_PRESSURE_LIST_SIZE],
-            "top_sell_pressure": list(reversed(by_momentum[-PRICE_PRESSURE_LIST_SIZE:])),
-            "top_rise_risk": rising[:PRICE_PRESSURE_LIST_SIZE],
-            "top_fall_risk": falling[:PRICE_PRESSURE_LIST_SIZE],
-            "official_price_predictor_health": official_health,
-            "official_price_fields": {
-                "progress": "price_change_percent",
-                "hourly_rate": "price_change_hourly_rate / 100",
-                "projections": "price_change_projections",
-                "price_deadline": f"00:00 {DEADLINE_TIMEZONE}",
-                "authority": "Official FPL bootstrap native fields",
-            },
-        })
+    rising = sorted((r for r in enriched if r.get("risk_direction") == "RISE"), key=_risk_sort, reverse=True)
+    falling = sorted((r for r in enriched if r.get("risk_direction") == "FALL"), key=_risk_sort, reverse=True)
+    by_momentum = sorted(enriched, key=lambda r: float(r.get("momentum") or 0), reverse=True)
+    prices.update({
+        "contract": "CANONICAL_PRICE_RADAR_V1",
+        "authority": "Official FPL snapshot",
+        "players": enriched,
+        "top_buy_pressure": by_momentum[:PRICE_PRESSURE_LIST_SIZE],
+        "top_sell_pressure": list(reversed(by_momentum[-PRICE_PRESSURE_LIST_SIZE:])),
+        "top_rise_risk": rising[:PRICE_PRESSURE_LIST_SIZE],
+        "top_fall_risk": falling[:PRICE_PRESSURE_LIST_SIZE],
+        "official_price_predictor_health": official_health,
+        "official_price_fields": {
+            "progress": "price_change_percent",
+            "hourly_rate": "price_change_hourly_rate / 100",
+            "projections": "price_change_projections",
+            "price_deadline": f"00:00 {DEADLINE_TIMEZONE}",
+            "authority": "Official FPL bootstrap native fields from official_snapshot.json",
+        },
+    })
 
     filtered = apply_to_payload(prices)
     prices_path.write_text(json.dumps(filtered, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -468,6 +472,7 @@ def patch_files(data_dir: str | Path = "data") -> None:
                 "market_watch_capacity": MAX_MARKET_WATCH,
             },
         }
+        latest.setdefault("files", {})["prices"] = "data/prices.json"
         latest.setdefault("files", {})["price_trajectory"] = "data/price_trajectory.json"
         latest.setdefault("files", {})["price_alerts"] = "data/price_alerts.json"
         latest_path.write_text(json.dumps(latest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

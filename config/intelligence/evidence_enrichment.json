@@ -1,6 +1,6 @@
 {
-  "schema_version": 3,
-  "model_id": "v5_full_core_evidence_enrichment_v3",
+  "schema_version": 4,
+  "model_id": "v5_full_core_evidence_enrichment_v4",
   "advanced_stats": {
     "shots_path": "data/stats/shots_gw1.json",
     "player_match_stats_path": "data/stats/playermatchstats_gw1.json",
@@ -68,8 +68,18 @@
     "never_fabricate_minutes_or_roles": true
   },
   "current_form": {
+    "model": "recency_weighted_playermatchstats_v1",
+    "artifact_path_template": "data/stats/playermatchstats_gw{gw}.json",
+    "expected_completed_gw_offset_from_planning_gw": -1,
+    "window_gameweeks": 4,
+    "minimum_completed_gameweeks": 2,
+    "minimum_player_gameweeks_with_minutes": 2,
+    "minimum_evidence_minutes": 90.0,
+    "decay_per_gw": 0.72,
+    "authoritative_attack_precedence": "ROLLING_FORM_THEN_LATEST_GW_ADVANCED",
+    "missing_or_developing_behavior": "AVAILABLE_NOT_AUTHORITATIVE",
     "official_fields": ["form", "points_per_game", "total_points", "starts", "minutes", "expected_goals", "expected_assists", "threat", "creativity", "transfers_in_event", "transfers_out_event"],
-    "advanced_fields": ["total_shots", "touches_opposition_box", "chances_created", "xg", "xa"],
-    "minimum_minutes_for_rate": 1
+    "official_fields_are_context_not_second_attack_overlay": true,
+    "advanced_fields": ["total_shots", "touches_opposition_box", "chances_created", "xg", "xa"]
   }
 }

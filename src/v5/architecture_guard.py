@@ -3,15 +3,16 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
 from src.v5.config_cache import ROOT, load_json_config
 from src.v5.module_registry import module_specs
-from src.v5.service_registry import service_specs, validate_registry
+from src.v5.service_registry import module_owners, service_specs, validate_registry
 
 CONFIG = "config/v5_architecture_ownership_registry.json"
+_SELF = Path(__file__).resolve()
 
 
 def _cfg() -> dict[str, Any]:
@@ -19,6 +20,10 @@ def _cfg() -> dict[str, Any]:
     if data.get("contract") != "V5_ARCHITECTURE_OWNERSHIP_V1":
         raise RuntimeError("invalid V5 architecture ownership contract")
     return data
+
+
+def _runtime_python_files() -> list[Path]:
+    return [path for path in sorted((ROOT / "src/v5").rglob("*.py")) if path.resolve() != _SELF]
 
 
 def _unique(values: list[Any]) -> tuple[bool, list[str]]:
@@ -69,7 +74,7 @@ def _assignment_names(path: Path) -> set[str]:
 def _canonical_rule_redefinitions(scope: dict[str, Any]) -> list[dict[str, Any]]:
     canonical = {str(value) for value in scope.get("canonical_rule_symbols") or []}
     rows: list[dict[str, Any]] = []
-    for path in sorted((ROOT / "src/v5").rglob("*.py")):
+    for path in _runtime_python_files():
         overlap = sorted(_assignment_names(path) & canonical)
         if overlap:
             rows.append({"file": str(path.relative_to(ROOT)), "symbols": overlap})
@@ -81,7 +86,7 @@ def _function_clones(scope: dict[str, Any]) -> list[dict[str, str]]:
     ignored = {str(value) for value in scope.get("exact_clone_ignored_function_names") or []}
     seen: dict[str, str] = {}
     duplicates: list[dict[str, str]] = []
-    for path in sorted((ROOT / "src/v5").rglob("*.py")):
+    for path in _runtime_python_files():
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in tree.body:
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or node.name in ignored:
@@ -106,7 +111,7 @@ def _official_fpl_fetch_violations(scope: dict[str, Any]) -> list[dict[str, str]
     auth_callers = {str(value) for value in scope.get("official_authenticated_fetch_callers") or []}
     violations: list[dict[str, str]] = []
 
-    for path in sorted((ROOT / "src/v5").rglob("*.py")):
+    for path in _runtime_python_files():
         relative = str(path.relative_to(ROOT))
         text = path.read_text(encoding="utf-8")
         if "fantasy.premierleague.com/api" in text and relative not in {public_owner, auth_owner}:
@@ -155,9 +160,7 @@ def _hardcoded_service_topology(scope: dict[str, Any]) -> list[dict[str, Any]]:
     bounds = scope.get("service_port_range") or [8100, 8199]
     low, high = int(bounds[0]), int(bounds[1])
     violations: list[dict[str, Any]] = []
-    for path in sorted((ROOT / "src/v5").rglob("*.py")):
-        if path.name == "architecture_guard.py":
-            continue
+    for path in _runtime_python_files():
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.Constant) and isinstance(node.value, int) and low <= node.value <= high:
@@ -183,6 +186,25 @@ def _dss_registry_ids() -> tuple[list[str], dict[str, list[str]]]:
     return all_ids, by_registry
 
 
+def _module_entrypoint_cross_owner_conflicts() -> list[dict[str, Any]]:
+    owners = module_owners()
+    entrypoints: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for spec in module_specs():
+        entrypoints[str(spec.entrypoint)].append((spec.name, owners.get(spec.name, "")))
+    conflicts: list[dict[str, Any]] = []
+    for entrypoint, rows in sorted(entrypoints.items()):
+        service_owners = sorted({owner for _module, owner in rows if owner})
+        if len(service_owners) > 1:
+            conflicts.append(
+                {
+                    "entrypoint": entrypoint,
+                    "owners": service_owners,
+                    "modules": sorted(module for module, _owner in rows),
+                }
+            )
+    return conflicts
+
+
 def run_audit() -> dict[str, Any]:
     cfg = _cfg()
     scope = cfg.get("guard_scope") if isinstance(cfg.get("guard_scope"), dict) else {}
@@ -190,7 +212,8 @@ def run_audit() -> dict[str, Any]:
 
     service_rows = list(service_specs())
     service_ids = [row.service_id for row in service_rows]
-    checks["service_registry_valid"] = (not validate_registry(), validate_registry())
+    registry_errors = validate_registry()
+    checks["service_registry_valid"] = (not registry_errors, registry_errors)
     checks["unique_service_ids"] = _unique(service_ids)
     checks["unique_service_ports"] = _unique([row.port for row in service_rows])
     checks["unique_bounded_contexts"] = _unique([row.bounded_context for row in service_rows])
@@ -198,10 +221,8 @@ def run_audit() -> dict[str, Any]:
 
     modules = list(module_specs())
     checks["unique_module_ids"] = _unique([row.name for row in modules])
-    checks["unique_module_entrypoints"] = (
-        True,
-        [],
-    )
+    entrypoint_conflicts = _module_entrypoint_cross_owner_conflicts()
+    checks["module_entrypoints_do_not_cross_owners"] = (not entrypoint_conflicts, entrypoint_conflicts)
 
     ownership = cfg.get("responsibilities") or []
     primitives = cfg.get("shared_primitives") or []
@@ -224,9 +245,9 @@ def run_audit() -> dict[str, Any]:
     checks["routes_reference_registered_services"] = (not unknown_route_services, unknown_route_services)
     targets = [f"{row.get('service')}.{row.get('operation')}" for row in routes.values() if isinstance(row, dict)]
     allowed_aliases = {str(value) for value in scope.get("allowed_route_target_aliases") or []}
-    target_ok, target_dupes = _unique(targets)
+    _target_ok, target_dupes = _unique(targets)
     target_dupes = [value for value in target_dupes if value not in allowed_aliases]
-    checks["unique_route_targets"] = (target_ok or not target_dupes, target_dupes)
+    checks["unique_route_targets"] = (not target_dupes, target_dupes)
 
     artifact_mapping = orchestrator.get("artifact_mapping") if isinstance(orchestrator.get("artifact_mapping"), dict) else {}
     checks["unique_orchestrator_artifact_targets"] = _unique(list(artifact_mapping.values()))
@@ -274,7 +295,7 @@ def run_audit() -> dict[str, Any]:
     }
     passed = all(row["pass"] for row in normalized.values())
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "contract": cfg.get("contract"),
         "service": "architecture_guard",
         "status": "PASS" if passed else "FAIL",

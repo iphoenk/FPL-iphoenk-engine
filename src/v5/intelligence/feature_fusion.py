@@ -77,6 +77,7 @@ def fuse_advanced_attack(
     position_xa_prior: float,
     advanced: dict[str, Any] | None,
     config: dict[str, Any] | None,
+    source_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cfg = config if isinstance(config, dict) else {}
     validate_feature_fusion_config(cfg)
@@ -86,6 +87,8 @@ def fuse_advanced_attack(
     native_xg = max(0.0, _f(native_xg90))
     native_xa = max(0.0, _f(native_xa90))
     used_fields = [str(value) for value in advanced_cfg.get("used_fields") or ("minutes", "xg", "xa")]
+    source = source_context if isinstance(source_context, dict) else {}
+    freshness = source.get("freshness") if isinstance(source.get("freshness"), dict) else {}
     base = {
         "model": str(cfg.get("model") or "authoritative_feature_fusion_v1"),
         "feature": "advanced_attacking_stats",
@@ -97,6 +100,7 @@ def fuse_advanced_attack(
         "xg90_final": round(native_xg, 6),
         "xa90_final": round(native_xa, 6),
         "applied": False,
+        "source_freshness": freshness or None,
     }
     if not enabled:
         return {**base, "status": "DISABLED", "reason": "advanced attacking feature fusion disabled by registry"}
@@ -105,6 +109,14 @@ def fuse_advanced_attack(
     evidence = advanced if isinstance(advanced, dict) else {}
     if not evidence:
         return {**base, "status": "UNAVAILABLE", "reason": "advanced attacking evidence unavailable"}
+    if source and source.get("authoritative_eligible") is not True:
+        return {
+            **base,
+            "status": "AVAILABLE_NOT_APPLIED",
+            "reason": str(freshness.get("reason") or "advanced evidence is not authoritative for this planning gameweek"),
+            "evidence_minutes": round(max(0.0, _f(evidence.get("minutes"))), 1),
+            "source_authoritative_eligible": False,
+        }
 
     minutes = max(0.0, _f(evidence.get("minutes")))
     minimum_minutes = _f(advanced_cfg.get("minimum_evidence_minutes"), 45.0)
@@ -115,6 +127,7 @@ def fuse_advanced_attack(
             "reason": "advanced attacking evidence below configured minimum minutes",
             "evidence_minutes": round(minutes, 1),
             "minimum_evidence_minutes": round(minimum_minutes, 1),
+            "source_authoritative_eligible": True if source else None,
         }
 
     shrink_minutes = _f(advanced_cfg.get("evidence_shrinkage_minutes"), 540.0)
@@ -127,6 +140,7 @@ def fuse_advanced_attack(
             "status": "AVAILABLE_NOT_APPLIED",
             "reason": "configured evidence weight is zero",
             "evidence_minutes": round(minutes, 1),
+            "source_authoritative_eligible": True if source else None,
         }
 
     xg90_advanced = max(0.0, _f(evidence.get("xg"))) * 90.0 / minutes
@@ -156,6 +170,7 @@ def fuse_advanced_attack(
         **base,
         "status": "APPLIED",
         "applied": True,
+        "source_authoritative_eligible": True if source else None,
         "evidence_minutes": round(minutes, 1),
         "minimum_evidence_minutes": round(minimum_minutes, 1),
         "evidence_shrinkage_minutes": round(shrink_minutes, 1),
@@ -172,6 +187,7 @@ def fuse_advanced_attack(
             "advanced_evidence_is_secondary_to_native_official_rate": True,
             "weight_is_evidence_minutes_shrunk_and_capped": True,
             "candidate_rate_is_registry_bounded": True,
+            "point_in_time_source_freshness_required_when_context_supplied": True,
             "rest_congestion_not_promoted_by_this_fusion": True,
             "preseason_not_promoted_by_this_fusion": True,
             "current_form_not_double_counted": True,

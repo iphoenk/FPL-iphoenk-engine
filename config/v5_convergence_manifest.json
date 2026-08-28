@@ -5,7 +5,7 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "15e75599045f901958753c2bcb275fceacc94d7c",
+    "production_main_sha": "4a5df23d403f77e9dcb7b87e0e2a4c41765d4792",
     "production_schema_version": 48,
     "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
   },
@@ -77,6 +77,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is rebaselined to exact V3.20.0 production closeout SHA and adds runtime fingerprint, release attestation, truthful feature-consumption evidence, temporal backtesting and empirical prediction-promotion gates. Fresh exact-fingerprint cycles and settled non-regression evidence are required."
+    "reason": "V5.0.0-beta.4 is anchored to the current production main commit while preserving the settled V3.20 football-truth baseline. The current production line includes later architecture/runtime hardening without changing football scoring formulas. Fresh exact-fingerprint cycles and settled non-regression evidence are required before promotion."
   }
 }

@@ -188,10 +188,12 @@ def _assert_prediction_and_validation(health: dict) -> tuple[dict, dict]:
     players = predictions.get("players") or []
     assert len(players) >= 500
     assert lifecycle.get("eligibility", {}).get("model_version") == predictions.get("model_version")
+    core = {row["id"]: row for row in health["dss_core"]["items"]}
+    extensions = {row["id"]: row for row in health["dss_extensions"]["items"]}
+    assert core["DSS-16"]["status"] == "ACTIVE", core["DSS-16"]
+    assert core["DSS-29"]["status"] == "ACTIVE", core["DSS-29"]
     eligible = lifecycle.get("eligibility", {}).get("eligible_samples")
     if eligible is not None:
-        core = {row["id"]: row for row in health["dss_core"]["items"]}
-        extensions = {row["id"]: row for row in health["dss_extensions"]["items"]}
         if int(eligible) == 0:
             assert core["DSS-44"]["status"] == "WARMUP"
             assert extensions["DSS-X12"]["status"] == "WARMUP"
@@ -206,6 +208,12 @@ def _assert_prediction_and_validation(health: dict) -> tuple[dict, dict]:
     assert evidence.get("dynamic_opponent_fixtures", 0) > 0
     assert 0 < evidence.get("role_competition_adjustments", 0) < len(players)
     assert evidence.get("role_competition_factor_variants", 0) > 1
+    fixture_run_complete = sum(
+        (row.get("fixture_run") or {}).get("source") == "official_fpl_fixture_adjustment"
+        and (row.get("fixture_run") or {}).get("decision_usage") == "multi_horizon_projection_context"
+        for row in players
+    )
+    assert fixture_run_complete == len(players)
     all_x = [fx["xpts"] for row in players for fx in row.get("fixtures", [])]
     assert all_x and statistics.median(all_x) < 8
     assert sum(x > 15 for x in all_x) / len(all_x) < 0.03

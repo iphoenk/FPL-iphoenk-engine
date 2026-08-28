@@ -6,6 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from src.models.tactical_role_context import build_team_system_context, classify_role, load_config as load_tactical_role_config
 from src.rules import ELEMENT_TYPE_TO_POSITION
 from src.utils import DATA, ROOT, atomic_json, iso_now, read_json
 
@@ -96,6 +97,19 @@ def _aggregate_advanced(rows: list[dict[str, Any]], position: str) -> dict[str, 
     }
 
 
+def _system_summary(team_system: dict[str, Any] | None) -> dict[str, Any]:
+    row = team_system or {}
+    return {
+        "label": row.get("label") or "FPL_POSITION_SHAPE",
+        "dominant_shape": row.get("dominant_shape"),
+        "shape_consistency": row.get("shape_consistency", 0.0),
+        "valid_matches": row.get("valid_matches", 0),
+        "observed_matches": row.get("observed_matches", 0),
+        "confidence": row.get("confidence") or "NONE",
+        "decision_influence": "ADVISORY_ONLY",
+    }
+
+
 def build() -> dict[str, Any]:
     official = read_json(DATA / "official_snapshot.json", {})
     bootstrap = official.get("bootstrap") or {}
@@ -108,18 +122,24 @@ def build() -> dict[str, Any]:
         if player_id > 0:
             grouped[player_id].append(row)
 
+    role_cfg = load_tactical_role_config()
+    team_system_context = build_team_system_context(elements, rows, role_cfg)
     players: dict[str, dict[str, Any]] = {}
     advanced_covered = 0
+    tactical_role_covered = 0
     for player in elements:
         element = int(player["id"])
         element_type = int(player.get("element_type") or 0)
         position = str(ELEMENT_TYPE_TO_POSITION.get(element_type) or "UNKNOWN")
+        team_id = int(player.get("team") or -1)
         advanced = _aggregate_advanced(grouped.get(element, []), position)
+        tactical_role = classify_role(position, advanced, role_cfg)
         advanced_covered += int(advanced["minutes"] > 0)
+        tactical_role_covered += int(tactical_role.get("profile") != "UNASSESSED")
         players[str(element)] = {
             "element": element,
             "name": player.get("web_name"),
-            "team_id": int(player.get("team") or -1),
+            "team_id": team_id,
             "position": position,
             "official_current": {
                 "minutes": int(player.get("minutes") or 0),
@@ -132,6 +152,8 @@ def build() -> dict[str, Any]:
                 "selected_by_percent": _f(player.get("selected_by_percent")),
             },
             "advanced_current": advanced,
+            "tactical_role": tactical_role,
+            "system_context": _system_summary(team_system_context.get(str(team_id))),
             "provenance": {
                 "identity": "Official FPL bootstrap-static via official_snapshot",
                 "official_current": "Official FPL bootstrap-static via official_snapshot",
@@ -139,6 +161,8 @@ def build() -> dict[str, Any]:
                 "advanced_dataset": stats.get("dataset") if advanced["minutes"] > 0 else None,
                 "advanced_gw": stats.get("gw") if advanced["minutes"] > 0 else None,
                 "advanced_fetched_at": stats.get("fetched_at") if advanced["minutes"] > 0 else None,
+                "tactical_role": stats.get("source") if tactical_role.get("profile") != "UNASSESSED" else None,
+                "team_system_context": stats.get("source") if team_system_context.get(str(team_id)) else None,
             },
         }
 
@@ -153,8 +177,16 @@ def build() -> dict[str, Any]:
         "official_player_count": len(elements),
         "advanced_row_count": len(rows),
         "advanced_player_coverage": advanced_covered,
+        "tactical_role_player_coverage": tactical_role_covered,
+        "team_system_coverage": len(team_system_context),
         "policy": cfg.get("policy") or {},
         "defensive_contribution_policy": cfg.get("defensive_contribution") or {},
+        "tactical_role_policy": {
+            "contract": role_cfg.get("contract"),
+            "model_id": role_cfg.get("model_id"),
+            **(role_cfg.get("policy") or {}),
+        },
+        "team_system_context": team_system_context,
         "players": players,
     }
 
@@ -169,6 +201,9 @@ def run() -> dict[str, Any]:
         "model_opt_in": payload.get("model_opt_in"),
         "player_count": payload.get("official_player_count"),
         "advanced_player_coverage": payload.get("advanced_player_coverage"),
+        "tactical_role_player_coverage": payload.get("tactical_role_player_coverage"),
+        "team_system_coverage": payload.get("team_system_coverage"),
+        "tactical_role_decision_influence": (payload.get("tactical_role_policy") or {}).get("decision_influence"),
         "file": "data/player_features.json",
     }
     atomic_json(DATA / "advanced_stats_sync.json", sync)

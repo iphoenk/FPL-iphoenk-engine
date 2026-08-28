@@ -1,16 +1,13 @@
-# FPL iphoenk Engine v3.23.1
+# FPL iphoenk Engine v3.24.0
 
 Production-oriented personal FPL decision engine and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
 - Current accepted production release: `3.23.1` / schema `49`.
-- REC-40 Report Completeness + Natural Presentation is production accepted.
-- PR #85 final candidate CI `33091248132` passed compile, architecture, 203 deterministic tests and composite FULL/FAST acceptance.
-- PR #85 was squash-merged as source commit `e30123f7a12634b770ca1ab501aa3914bd7506ae`.
-- Merged-main CI `33091398189` passed 203 tests.
-- Production FAST run `33091398202` completed in 6.326s, within the `<10s` target, and published a 48-file / 18,759,921-byte rolling runtime snapshot to `runtime-data` commit `dd9e134`.
-- Production contracts passed with framework GREEN, prediction quality HEALTHY, Gate0 16/16, 15 OWNED, 20 WATCHLIST and Official-first coverage integrity 41/41.
-- Active architecture remains 20 artifact-owned microservices.
+- Current release candidate: `3.24.0` / schema `49`, REC-41 Tactical Role & System Evidence Contract.
+- REC-41 feature acceptance on PR #89 run `33129623527` passed compile, architecture, **208 deterministic tests**, composite FULL/FAST acceptance, FULL 17.020s and FAST **4.711s**.
+- REC-41 remains candidate until final release CI, merge to `main`, and merged-main `runtime-data` publication succeed.
+- Active architecture remains 20 artifact-owned microservices; REC-41 adds no service and no new runtime artifact.
 - Runtime state publishes only to the rolling parentless `runtime-data` snapshot; mutable runtime output is not stored on protected `main`.
 - Runtime Artifact Contract Registry: `RUNTIME_ARTIFACT_CONTRACTS_V2`.
 - Machine Source Registry: `SOURCE_REGISTRY_V4`.
@@ -18,34 +15,35 @@ Production-oriented personal FPL decision engine and persisted Official-FPL-deri
 - Release metadata source of truth: `src/version.py`.
 - Canonical roadmap, REC status and Definition of Done: `MASTER_TASK_LIST_V3.md`.
 
-## V3.23.1 Report Completeness + Natural Presentation
-REC-40 hardens the human report surface without changing football projection formulas or adding a microservice.
+## V3.24 Tactical Role & System Evidence
+REC-41 adds evidence before model influence. It does not change xMins or xPts in this release.
 
-- Natural Bahasa Indonesia is the primary human-facing presentation. Raw states such as `HOLD`, `LOCK`, `LEAN`, `OPEN` and `REVIEW` remain available for audit/API compatibility but are not the primary narrative.
-- Required report checkpoints are explicit at 04:30, 12:30 and 21:30 WIB.
-- Checkpoint completion is persisted across runs. A due checkpoint that was not completed is surfaced explicitly instead of silently appearing complete.
-- `user_report.json`, `decision_brief.json` and `deep_review_payload.json` carry natural presentation and report-checkpoint metadata.
-- Report-serving validation fails closed when the required presentation/checkpoint contract is missing.
-- Report-time intelligence, personal gameweek context, Official authority, user override authority and existing DSS decisions are preserved.
-- Schema remains 49 and active service count remains 20.
-- Production FAST proof is 6.326s from run `33091398202`, with all production decision contracts passing before publication to `runtime-data`.
+- Current advanced player-match evidence is converted into observed attacking-role profiles such as attacking defender, creator, advanced runner/shooter, hybrid attacking midfielder and focal shooter.
+- Team starter structure is reconstructed from Official player identity/FPL position plus observed starter rows and is explicitly labelled `FPL_POSITION_SHAPE`.
+- `FPL_POSITION_SHAPE` is **not** presented as the club's true tactical formation. It only describes the FPL-position composition of the observed starting XI.
+- Role evidence carries sample quality, confidence, evidence minutes, metrics, reason and provenance.
+- System evidence carries dominant observed FPL-position shape, consistency, valid-match count and confidence.
+- Missing evidence is explicit (`UNASSESSED` / `NONE`), never guessed.
+- Official FPL identity, team and position remain authoritative. Advanced role/system evidence is enrichment only.
+- REC-41 is `ADVISORY_ONLY`: `xmins_adjustment_enabled=false`, `xpts_rate_adjustment_enabled=false`, and projections explicitly report `rec41_tactical_adjustment_applied=false`.
+- Evidence is published through the existing `PLAYER_FEATURE_CONTRACT_V1` and existing projection artifact, avoiding a parallel feature bus.
+- A future model opt-in requires a separate calibrated change after sufficient multi-match evidence exists.
+
+## V3.23.1 Report Completeness + Natural Presentation
+REC-40 is production accepted. Natural Bahasa Indonesia is the primary human-facing presentation, while raw states such as `HOLD`, `LOCK`, `LEAN`, `OPEN` and `REVIEW` remain audit/API state. Required checkpoints are explicit at 04:30, 12:30 and 21:30 WIB, checkpoint completion is persisted, and missed due checkpoints are surfaced explicitly. Production FAST proof is 6.326s from run `33091398202`.
 
 ## V3.23 Personal Gameweek Context + Decision Authority
-V3.23 makes the personal-team timeline explicit without replacing the DSS as an advisory decision engine.
-
 - Finished GWs use public Official FPL submitted picks/history as immutable actual truth, including actual GW points, chip, bench points, captain/vice and submitted squad.
 - Historical actuals are never reconstructed or relabelled as old forecasts when no genuine pre-deadline forecast was frozen.
-- The planning GW exposes estimated team points from current xPts together with formation, XI, bench, captain, vice-captain and active chip. Estimated points are always labelled projection, never actual score.
+- Planning-GW points are labelled estimated xPts, never actual score.
 - Normal planning baseline is the previous Official submitted squad.
-- Wildcard, Free Hit or user-locked composition may replace that planning baseline only when the override explicitly targets the current planning GW. A stale override is rejected and post-deadline Official submitted picks reclaim authority.
-- Formation, XI, bench, captain, vice-captain and chip may be explicitly overridden by the user. The engine recommendation remains visible for comparison and may warn about the xPts difference, but it does not silently overwrite the user's decision.
-- The manual override config is inactive by default; no user decision is invented.
-- This is implemented inside existing team-state/report-serving ownership, so the active microservice count remains 20.
+- WC/FH/user-locked composition may replace the planning baseline only for the exact target GW; stale overrides are rejected and post-deadline Official picks reclaim authority.
+- Explicit user XI/C/VC/chip overrides may become effective while preserving the engine recommendation for comparison; the engine may warn but may not silently overwrite the user decision.
 
 ## Official FPL authority and Official-first contract
 Official FPL is the only native authority for Official fields and scoring. External sources remain enrichment/challenger evidence and may never overwrite Official-native truth.
 
-`config/sources/official_first_coverage.json` is the explicit coverage matrix through REC-40. REC-39 is `PUBLIC_THEN_PRIVATE_AUTH`: finished-GW truth and submitted planning baselines use public Official entry history/picks first, while unpublished current-draft precision may use optional authorized `my-team` access. Explicit user locks remain separate user authority. REC-40 is `NOT_APPLICABLE` to football-data authority because it changes presentation and checkpoint scheduling only. Production source validation confirms all 41 REC disposition entries are present and valid.
+`config/sources/official_first_coverage.json` is the explicit REC coverage matrix. The V3.24 candidate extends it through REC-41, producing 42 disposition entries because REC-09a and REC-09b are separate. REC-41 is `PUBLIC_FIRST_WITH_ENRICHMENT`: Official identity, FPL position and fixture context remain authoritative; tactical role and observed FPL-position-shape evidence are enrichment-only and advisory until a separately calibrated model opt-in.
 
 Fallback/proxy evidence is allowed only after an explicit disposition:
 - `OFFICIAL_UNAVAILABLE`
@@ -55,37 +53,15 @@ Fallback/proxy evidence is allowed only after an explicit disposition:
 
 Broad/expensive Official expansion belongs to FULL refresh; FAST may reuse only fresh, complete and contract-valid Official artifacts, preserving the `<10s` decision path.
 
-## REC-36 and REC-37 historical Official reconciliation
-REC-36 uses public Official entry history and historical picks as the authority for post-deadline submitted teams. GW1 can therefore be reconstructed as a retrospective Official baseline without private credentials. It is deliberately labelled retrospective proxy evidence and cannot be counted as a verified pre-deadline forecast for predictive accuracy or dynamic model weighting.
-
-REC-37 completed the one-shot migration of those historical fields into production `runtime-data`, then restored the normal 3,600-second FAST/LIVE `official_detail` reuse TTL.
-
-## V3.22 Runtime Optimization Foundation
-V3.22 separates interactive decision regeneration from heavier enrichment refresh while preserving the 20-service artifact-owned architecture and schema-49 serving contract.
-
-- FAST/LIVE/FULL/DEEP execution profiles are registry-owned.
-- Heavy but reusable `advanced_stats`, `historical_prior`, `source_layer`, and `official_detail` artifacts may be reused only when complete, contract-valid and within profile-specific freshness windows.
-- REC-31 makes production validation profile-aware: `REUSED` is accepted only for a service declared reusable by the active profile and carrying artifact-validation evidence.
-- REC-32 preserves only registry-owned `latest_keys`/`latest_file_keys` for reusable services through base fan-in.
-- CI, FAST runtime and FULL/DEEP refresh are separate workflows.
-- Runtime checkout is shallow and publication is whitelist-based rather than using Git history as a database.
-- Runtime telemetry exposes wall time, service timing, I/O and RSS/resource evidence.
-- REC-33 bounds weather refresh concurrency/freshness while retaining weather as advisory-only evidence.
-- REC-34 safely migrated the player-feature contract and restored normal advanced-stats reuse TTL.
-- REC-35 compacted duplicated projection diagnostics without changing formulas or decisions.
-
 ## Prediction and decision governance
 - REC-01 player-specific Defensive Contribution and REC-02 robust early-season attacking rates are production active.
-- `player_features.json` normalizes advanced-stat evidence and provenance while Official-native fields remain authoritative.
-- All 15 OWNED players expose current-GW xPts, uncertainty, xMins/start probability, selection score and lineup/choice state.
+- `player_features.json` is the normalized feature/provenance bus; Official-native fields remain authoritative.
+- REC-41 tactical/system evidence is visible in that feature bus but intentionally has no decision adjustment yet.
+- All 15 OWNED expose current-GW xPts, uncertainty, xMins/start probability, selection score and lineup/choice state.
 - Prediction formula correctness and predictive accuracy are separate claims. Accuracy requires genuinely frozen pre-deadline forecasts settled against Official realized outcomes.
-- Early-season confidence remains conservative until realized calibration evidence supports stronger labels.
-- Price prediction remains calibration-gated; Official realized price/ownership/transfer movement is the settlement authority.
-- FACT/CONSTRAINT actions may remain actionable while MODEL_DERIVED actions are gated by settled evidence.
-- `ENGINE_READY` does not imply final report-time web evidence is already refreshed. `REFRESH_REQUIRED` / `FINAL_REPORT_EVIDENCE_PENDING` remains a truthful allowed state.
-
-## Weather Intelligence
-Open-Meteo is a noncritical `ENRICHMENT`, never an authority or model challenger. Official fixture ownership remains in the Official snapshot and weather consumes fixture context without replacing it. Weather is observational/advisory only and may not directly change xPts, Starting XI, captaincy, transfers, watchlist membership or package rankings without future calibrated governance.
+- Early-season confidence and model-derived actionability remain calibration-gated.
+- Price prediction remains calibration-gated; Official realized price/ownership/transfer movement is settlement authority.
+- `ENGINE_READY` does not imply final report-time web evidence is already refreshed.
 
 ## Runtime and source invariants
 - Gate0 must remain 16/16 PASS for unqualified GO.
@@ -95,9 +71,12 @@ Open-Meteo is a noncritical `ENRICHMENT`, never an authority or model challenger
 - Critical internal artifact failure is fail-closed; optional external-source unavailability is fail-soft.
 - Missing evidence is explicit and is never fabricated to keep health GREEN.
 - Numerical formulas affecting decisions require deterministic regression tests.
+- FAST decision regeneration targets <10s.
 - Service boundaries follow ownership/failure semantics, not a target service count.
-- Runtime and report readiness are separate from predictive/model evidence readiness.
+- Runtime/report readiness and model evidence readiness are separate states.
+- Weather remains advisory and may not directly mutate xPts/XI/C/VC/transfers/watchlist/packages without calibrated governance.
 - Human-facing report language must not make raw machine state the primary narrative.
-- Required scheduled report checkpoints must be auditable and missed checkpoints must be explicit.
+- Required scheduled report checkpoints must be auditable and missed checkpoints explicit.
+- Tactical role/system evidence must remain advisory in V3.24.0; no xMins/xPts mutation is permitted without a later calibrated REC.
 
-See `MASTER_TASK_LIST_V3.md` for the authoritative production status, monitors, deferred work, production evidence and release checklist.
+See `MASTER_TASK_LIST_V3.md` for authoritative production/candidate status, calibration monitors, deferred work and release checklist.

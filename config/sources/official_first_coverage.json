@@ -72,6 +72,7 @@
     "REC-37": {"applicability":"NOT_APPLICABLE","endpoints":[],"purpose":"Official-detail artifact migration fence and TTL restoration"},
     "REC-38": {"applicability":"POLICY_ONLY","endpoints":[],"purpose":"enforce and audit Official-first coverage for every REC"},
     "REC-39": {"applicability":"PUBLIC_THEN_PRIVATE_AUTH","endpoints":["entry_history","entry_picks","private_my_team"],"purpose":"finished-GW actual truth and submitted planning baseline use Official data first; unpublished current draft precision is private-auth optional while explicit user locks remain separate authority"},
-    "REC-40": {"applicability":"NOT_APPLICABLE","endpoints":[],"purpose":"human-facing report language, scheduled checkpoint completeness and workflow timing governance"}
+    "REC-40": {"applicability":"NOT_APPLICABLE","endpoints":[],"purpose":"human-facing report language, scheduled checkpoint completeness and workflow timing governance"},
+    "REC-41": {"applicability":"PUBLIC_FIRST_WITH_ENRICHMENT","endpoints":["bootstrap","fixtures","element_summary"],"purpose":"Official identity, position and fixture context remain authoritative while tactical role and observed FPL-position-shape evidence are enrichment-only and advisory until calibrated opt-in"}
   }
 }

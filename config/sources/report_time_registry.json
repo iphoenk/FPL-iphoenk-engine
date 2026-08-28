@@ -11,7 +11,10 @@
     "community_signal_requires_crosscheck_before_fact_promotion": true,
     "pundit_consensus_is_advisory_only": true,
     "fixture_strategy_experts_do_not_vote_on_player_projection": true,
-    "onefpl_is_report_time_only": true
+    "onefpl_is_report_time_only": true,
+    "press_conference_sweep_required": true,
+    "last_competitive_match_sweep_required": true,
+    "recent_competitive_load_policy_ref": "config/intelligence/recent_competitive_load.json"
   },
   "consensus": {
     "minimum_current_pundits": 2,
@@ -130,8 +133,20 @@
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
       "domains": ["premierleague.com"],
-      "queries": ["Premier League team news injuries Gameweek", "official club injury team news Premier League"],
-      "capabilities": ["availability", "suspension", "fixture_confirmation", "manager_quote"],
+      "queries": ["Premier League team news injuries Gameweek", "official club injury team news Premier League", "Premier League press conference manager quotes Gameweek"],
+      "capabilities": ["availability", "suspension", "fixture_confirmation", "manager_quote", "press_conference", "official_team_news"],
+      "consensus_vote": false,
+      "authority_ceiling": "VERIFIED_CONTEXT"
+    },
+    {
+      "id": "official_competitive_match_news",
+      "name": "Official club / competition match centres",
+      "class": "VERIFIED_NEWS",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_WEB",
+      "domains": ["premierleague.com", "uefa.com", "efl.com", "thefa.com"],
+      "queries": ["official club latest match report lineup Carabao Cup", "official club latest match report UEFA", "official club latest competitive match lineup minutes"],
+      "capabilities": ["recent_competitive_match", "starting_lineup", "minutes_load", "substitution_timing", "role_observation", "knock_or_injury", "extra_time", "travel_rest_context"],
       "consensus_vote": false,
       "authority_ceiling": "VERIFIED_CONTEXT"
     }

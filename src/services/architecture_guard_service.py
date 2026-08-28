@@ -30,7 +30,30 @@ OFFICIAL_CLIENT_MODULE = ROOT / "src/sources/official_fpl.py"
 BACKTEST_STORE_MODULE = ROOT / "src/engines/v4_backtest_store.py"
 RECONCILIATION_MODULE = ROOT / "src/engines/v4_reconciliation_truth.py"
 LEGACY_ENGINE_MODULE = ROOT / "src/engine.py"
+CANONICAL_METRICS_MODULE = ROOT / "src/models/v4_metrics.py"
+PROJECTION_COMPAT_MODULE = ROOT / "src/models/projection.py"
+GENERIC_OPTIMIZER_MODULE = ROOT / "src/models/optimizer.py"
+WC_OPTIMIZER_BASE_MODULE = ROOT / "src/engines/v4_wc_optimizer.py"
+WC_OPTIMIZER_OWNER_MODULE = ROOT / "src/engines/v4_wc_optimizer_fast.py"
+PACKAGE_AUDIT_BASE_MODULE = ROOT / "src/engines/v4_wc_package_audit.py"
+PACKAGE_AUDIT_OWNER_MODULE = ROOT / "src/engines/v4_wc_package_audit_fast.py"
 SKIP_DUP_FN_NAMES = {"main", "run", "cli", "_f", "check", "write", "load", "dump"}
+GENERIC_METRIC_FUNCTION_NAMES = {
+    "mae",
+    "mae_values",
+    "mae_rows",
+    "brier",
+    "brier_values",
+    "spearman",
+    "spearman_values",
+    "spearman_rows",
+    "spearman_rank",
+    "calibration_error",
+    "calibration_error_values",
+    "calibration_error_rows",
+    "rank",
+    "rank_values",
+}
 
 
 def _unique(values):
@@ -110,6 +133,85 @@ def _official_fetch_violations() -> list[str]:
     return violations
 
 
+def _metric_owner_violations() -> list[dict]:
+    violations: list[dict] = []
+    canonical = CANONICAL_METRICS_MODULE.resolve()
+    for path in sorted((ROOT / "src").rglob("*.py")):
+        if path.resolve() in {canonical, GUARD_PATH}:
+            continue
+        overlap = sorted(_top_level_functions(path) & GENERIC_METRIC_FUNCTION_NAMES)
+        if overlap:
+            violations.append({"file": str(path.relative_to(ROOT)), "functions": overlap})
+    return violations
+
+
+def _adapter_contracts() -> dict[str, tuple[bool, list | str]]:
+    checks: dict[str, tuple[bool, list | str]] = {}
+
+    projection_text = PROJECTION_COMPAT_MODULE.read_text(encoding="utf-8")
+    projection_functions = _top_level_functions(PROJECTION_COMPAT_MODULE)
+    projection_allowed = {"_compat_context", "xmins_distribution", "simple_xmins", "project_points"}
+    projection_ok = (
+        projection_functions <= projection_allowed
+        and "from src.models.v4_prediction import" in projection_text
+        and "project_fixture(" in projection_text
+        and "GOAL_PTS =" not in projection_text
+        and "CS_PTS =" not in projection_text
+        and "interpretable_projection" not in projection_text
+    )
+    checks["legacy_projection_is_canonical_adapter"] = (
+        projection_ok,
+        [] if projection_ok else [{"functions": sorted(projection_functions), "allowed": sorted(projection_allowed)}],
+    )
+
+    generic_optimizer_text = GENERIC_OPTIMIZER_MODULE.read_text(encoding="utf-8")
+    generic_optimizer_functions = _top_level_functions(GENERIC_OPTIMIZER_MODULE)
+    optimizer_allowed = {"legal_counts", "score_squad", "evaluate_package"}
+    generic_optimizer_ok = (
+        generic_optimizer_functions <= optimizer_allowed
+        and "squad_shape_is_legal" in generic_optimizer_text
+        and "legacy score_squad is non-authoritative" in generic_optimizer_text
+        and "legacy evaluate_package is non-authoritative" in generic_optimizer_text
+        and "xpts_by_gw" not in generic_optimizer_text
+        and "net_gain" not in generic_optimizer_text
+    )
+    checks["legacy_generic_optimizer_has_no_decision_authority"] = (
+        generic_optimizer_ok,
+        [] if generic_optimizer_ok else [{"functions": sorted(generic_optimizer_functions)}],
+    )
+
+    wc_base = WC_OPTIMIZER_BASE_MODULE.read_text(encoding="utf-8")
+    wc_owner = WC_OPTIMIZER_OWNER_MODULE.read_text(encoding="utf-8")
+    wc_ok = (
+        "from src.engines.v4_wc_optimizer_fast import optimize_squad_fast" in wc_base
+        and "return optimize_squad_fast(" in wc_base
+        and "from src.engines.v4_wc_optimizer_fast import decision_report_from_candidates_fast" in wc_base
+        and "nlargest" not in wc_base
+        and "heappush" not in wc_base
+        and "def optimize_squad_fast(" in wc_owner
+    )
+    checks["wc_optimizer_search_single_owner"] = (
+        wc_ok,
+        [] if wc_ok else ["base optimizer must delegate; exact-fast module must own search"],
+    )
+
+    package_base = PACKAGE_AUDIT_BASE_MODULE.read_text(encoding="utf-8")
+    package_owner = PACKAGE_AUDIT_OWNER_MODULE.read_text(encoding="utf-8")
+    package_ok = (
+        "from src.engines.v4_wc_package_audit_fast import audit_packages_from_candidates_fast" in package_base
+        and "return audit_packages_from_candidates_fast(" in package_base
+        and "from itertools import combinations" not in package_base
+        and "def _bounded_ins_states" not in package_base
+        and "def _candidate_states" not in package_base
+        and "def audit_packages_from_candidates_fast(" in package_owner
+    )
+    checks["package_audit_search_single_owner"] = (
+        package_ok,
+        [] if package_ok else ["base package audit must delegate; exact-fast module must own search"],
+    )
+    return checks
+
+
 def run() -> dict:
     services = read_json(CONFIG / "service_registry.json", {})
     contracts = read_json(CONFIG / "service_contract_registry.json", {})
@@ -163,6 +265,10 @@ def run() -> dict:
     duplicate_functions = _duplicate_functions()
     checks["no_exact_nontrivial_function_clones"] = (not duplicate_functions, duplicate_functions)
 
+    metric_violations = _metric_owner_violations()
+    checks["generic_validation_metrics_single_owner"] = (not metric_violations, metric_violations)
+    checks.update(_adapter_contracts())
+
     engine_functions = _top_level_functions(LEGACY_ENGINE_MODULE)
     engine_imports = _imports(LEGACY_ENGINE_MODULE)
     prohibited_engine_imports = sorted(module for module in engine_imports if module in {
@@ -187,8 +293,7 @@ def run() -> dict:
     )
 
     raw_text = RAW_SNAPSHOT_MODULE.read_text(encoding="utf-8")
-    raw_uses_canonical_legality = "squad_legality_checks" in raw_text and not ({"POSITION_COUNTS", "MAX_PER_CLUB", "SQUAD_SIZE"} & _imports(RAW_SNAPSHOT_MODULE))
-    # Imports are module names, so assignment scan is the reliable check for redefined rule constants.
+    raw_uses_canonical_legality = "squad_legality_checks" in raw_text
     raw_redefined_rules = sorted(_assignment_names(RAW_SNAPSHOT_MODULE) & {"POSITION_COUNTS", "MAX_PER_CLUB", "SQUAD_SIZE"})
     raw_uses_canonical_legality = raw_uses_canonical_legality and not raw_redefined_rules
     checks["raw_snapshot_reuses_canonical_legality"] = (
@@ -217,7 +322,7 @@ def run() -> dict:
     normalized = {name: {"pass": bool(value[0]), "detail": value[1]} for name, value in checks.items()}
     passed = all(row["pass"] for row in normalized.values())
     out = {
-        "schema_version": 496,
+        "schema_version": 4962,
         "release": RELEASE_VERSION,
         "service": "architecture_guard",
         "status": "PASS" if passed else "FAIL",
@@ -226,6 +331,11 @@ def run() -> dict:
             "one_owner_per_artifact": True,
             "one_owner_per_rule": True,
             "shared_primitives_reused_not_reimplemented": True,
+            "semantic_duplicate_business_logic_blocked": True,
+            "compatibility_adapters_have_no_business_authority": True,
+            "validation_metrics_single_owner": True,
+            "optimizer_search_single_owner": True,
+            "package_audit_search_single_owner": True,
             "official_fpl_single_acquisition_owner": True,
             "reconciliation_single_owner": True,
             "legacy_entrypoint_adapter_only": True,

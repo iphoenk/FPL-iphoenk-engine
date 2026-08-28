@@ -22,6 +22,8 @@ def test_v3_runtime_registry_is_dependency_aware_and_artifact_owned():
         "version_neutral_service_entrypoints", "weather_enrichment_lives_inside_source_layer_not_new_microservice",
         "weather_is_observational_and_advisory_only", "weather_never_directly_mutates_xpts_or_decisions",
         "owned_report_rows_require_current_gw_xpts", "settled_prediction_validation_is_exposed_to_reports",
+        "rules_legality_ownership_primitives_are_single_source", "architecture_guard_is_ci_release_gate_not_runtime_service",
+        "shared_evidence_is_computed_once_and_referenced", "scheduler_and_recovery_share_production_workflow",
     ):
         assert policy[key] is True, key
 
@@ -33,6 +35,7 @@ def test_v3_runtime_registry_is_dependency_aware_and_artifact_owned():
         "prediction_evaluation", "lineup_governance", "challenger", "governance", "watchlist", "reporting", "report_materializer",
     }
     assert "collector" not in services
+    assert "architecture_guard" not in services
     assert not any("weather" in name.lower() for name in services)
     assert services["official_snapshot"]["depends_on"] == []
     assert services["rules"]["depends_on"] == []
@@ -48,8 +51,10 @@ def test_v3_runtime_registry_is_dependency_aware_and_artifact_owned():
     assert "official_snapshot.json" in services["source_layer"]["inputs"]
     assert "fixture_weather.json" in services["source_layer"]["artifacts"]
     assert services["price"]["depends_on"] == ["base_snapshot", "source_layer"]
-    assert services["official_detail"]["depends_on"] == ["price"]
-    assert services["prediction_evaluation"]["depends_on"] == ["prediction"]
+    assert set(services["official_detail"]["depends_on"]) == {"price", "official_snapshot"}
+    assert "official_snapshot.json" in services["official_detail"]["inputs"]
+    assert set(services["prediction_evaluation"]["depends_on"]) == {"prediction", "official_snapshot"}
+    assert "official_snapshot.json" in services["prediction_evaluation"]["inputs"]
     assert services["lineup_governance"]["depends_on"] == ["prediction"]
     assert set(services["challenger"]["depends_on"]) == {"prediction_evaluation", "source_layer"}
     assert set(services["governance"]["depends_on"]) == {"source_layer", "price", "prediction", "authenticated_official", "rules", "official_detail", "prediction_evaluation", "lineup_governance", "challenger"}

@@ -1,5 +1,5 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "registry": "V3_ARCHITECTURE_OWNERSHIP_V1",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "inspired_by": [
@@ -28,7 +28,11 @@
     "tactical_decision_consumption_is_shared_governance_primitive": true,
     "tactical_consumers_may_not_recompute_tactical_source_evidence": true,
     "tactical_close_call_consumption_may_not_mutate_xpts": true,
-    "missing_tactical_evidence_must_remain_partial_or_unavailable": true
+    "missing_tactical_evidence_must_remain_partial_or_unavailable": true,
+    "owned_challenger_comparison_is_watchlist_bounded_orchestration": true,
+    "owned_challenger_comparison_may_not_duplicate_projection_xmins_fixture_tactical_price_or_package_engines": true,
+    "emerging_performance_signal_is_discovery_only_until_governed_comparison": true,
+    "owned_challenger_comparison_is_advisory_only_until_validated": true
   },
   "responsibilities": [
     {"id":"OFFICIAL_FPL_ACQUISITION","owner_service":"official_snapshot","implementation":"src.engines.official_snapshot_service"},
@@ -51,6 +55,7 @@
     {"id":"CHALLENGER_SCORECARD","owner_service":"challenger","implementation":"src.engines.challenger_scorecard"},
     {"id":"FRAMEWORK_POSTFLIGHT_GOVERNANCE","owner_service":"governance","implementation":"src.engines.framework_health_service"},
     {"id":"EXTERNAL_DSS_WATCHLIST","owner_service":"watchlist","implementation":"src.engines.dss_watchlist"},
+    {"id":"OWNED_CHALLENGER_COMPARISON","owner_service":"watchlist","implementation":"src.engines.owned_challenger_comparator"},
     {"id":"REPORT_CORE","owner_service":"reporting","implementation":"src.engines.report_architecture"},
     {"id":"REPORT_FINAL_SERVING","owner_service":"report_materializer","implementation":"src.engines.report_materializer"},
     {"id":"INTERACTIVE_DECISION_REGENERATION","owner_service":"decision_hotpath","implementation":"src.engines.decision_hotpath_service"},
@@ -59,16 +64,16 @@
   "shared_primitives": [
     {"id":"OFFICIAL_CORE_SNAPSHOT_CONSUMPTION","owner":"official_snapshot","implementation":"src.engines.official_snapshot_primitives","consumers":["team_state","market_state","live_state","historical_prior","source_layer","prediction","official_detail","prediction_evaluation","tactical_context"]},
     {"id":"FPL_RULES_CONSTANTS","owner":"rules","implementation":"src.rules","consumers":["Gate0","prediction","package_optimizer","lineup_governance","reporting","decision_hotpath"]},
-    {"id":"XMINS_DISTRIBUTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-05","DSS-06","DSS-07","DSS-08","DSS-09","DSS-X10","DSS-X11"]},
-    {"id":"ADVANCED_ATTACKING_EVIDENCE","owner":"advanced_stats","implementation":"src.engines.player_features","consumers":["DSS-12","DSS-13","DSS-14","DSS-15","DSS-16","DSS-38","tactical_context"]},
+    {"id":"XMINS_DISTRIBUTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-05","DSS-06","DSS-07","DSS-08","DSS-09","DSS-X10","DSS-X11","watchlist"]},
+    {"id":"ADVANCED_ATTACKING_EVIDENCE","owner":"advanced_stats","implementation":"src.engines.player_features","consumers":["DSS-12","DSS-13","DSS-14","DSS-15","DSS-16","DSS-38","tactical_context","watchlist"]},
     {"id":"OBSERVED_TACTICAL_EVENT_AGGREGATION","owner":"tactical_context","implementation":"src.models.observed_tactical_context","consumers":["tactical_context"]},
     {"id":"TACTICAL_MATCHUP_CONTEXT","owner":"tactical_context","implementation":"src.engines.tactical_context_service","consumers":["prediction","governance","lineup_governance","reporting","watchlist","report_materializer"]},
     {"id":"TACTICAL_DECISION_CONSUMPTION","owner":"governance","implementation":"src.engines.tactical_decision_consumption","consumers":["governance","watchlist","report_materializer"]},
-    {"id":"TEAM_STRENGTH_AND_FIXTURE_PROBABILITY","owner":"prediction","implementation":"src.models.team_strength","consumers":["DSS-19","DSS-20","DSS-21","DSS-22","DSS-23","DSS-24","DSS-29"]},
-    {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-25","DSS-26","DSS-27","DSS-28","ENH-04","decision_hotpath"]},
-    {"id":"PACKAGE_SCORING_AND_LEGALITY_PRECHECK","owner":"prediction","implementation":"src.models.package_optimizer_v2","consumers":["DSS-40","DSS-45","DSS-46","DSS-X05","DSS-X06","DSS-X07","DSS-X08","ENH-06","lineup_governance","decision_hotpath"]},
-    {"id":"GOVERNED_LINEUP_PACKAGE_BUILDERS","owner":"lineup_governance","implementation":"src.engines.lineup_governance","consumers":["governance","reporting","decision_hotpath"]},
-    {"id":"PRICE_MARKET_EVIDENCE","owner":"price","implementation":"src.engines.price_radar","consumers":["DSS-39","DSS-41","DSS-42","DSS-43","DSS-X15","ENH-05"]},
+    {"id":"TEAM_STRENGTH_AND_FIXTURE_PROBABILITY","owner":"prediction","implementation":"src.models.team_strength","consumers":["DSS-19","DSS-20","DSS-21","DSS-22","DSS-23","DSS-24","DSS-29","watchlist"]},
+    {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-25","DSS-26","DSS-27","DSS-28","ENH-04","decision_hotpath","watchlist"]},
+    {"id":"PACKAGE_SCORING_AND_LEGALITY_PRECHECK","owner":"prediction","implementation":"src.models.package_optimizer_v2","consumers":["DSS-40","DSS-45","DSS-46","DSS-X05","DSS-X06","DSS-X07","DSS-X08","ENH-06","lineup_governance","decision_hotpath","watchlist"]},
+    {"id":"GOVERNED_LINEUP_PACKAGE_BUILDERS","owner":"lineup_governance","implementation":"src.engines.lineup_governance","consumers":["governance","reporting","decision_hotpath","watchlist"]},
+    {"id":"PRICE_MARKET_EVIDENCE","owner":"price","implementation":"src.engines.price_radar","consumers":["DSS-39","DSS-41","DSS-42","DSS-43","DSS-X15","ENH-05","watchlist"]},
     {"id":"RECONCILIATION_AND_CALIBRATION_EVIDENCE","owner":"prediction_evaluation","implementation":"src.engines.prediction_evaluation","consumers":["DSS-44","DSS-X12","ENH-03","REC-04","REC-07","REC-26"]},
     {"id":"USER_DECISION_AUTHORITY","owner":"report_materializer","implementation":"src.engines.personal_gameweek_context","consumers":["DSS-X09","ENH-07","REC-39","REC-40"]},
     {"id":"INTERACTIVE_FRESHNESS_AND_SERVING_CONTRACT","owner":"instant_gateway","implementation":"src.runtime_v3.instant_serving","consumers":["instant_gateway","decision_hotpath"]}
@@ -104,6 +109,7 @@
     "package_optimization_owner": "Canonical optimizer remains prediction-owned. decision_hotpath consumes its artifact and canonical lineup/package governance builders; it does not own or duplicate football formulas.",
     "tactical_context_owner": "tactical_context owns observed tactical event aggregation and final tactical artifacts once. Prediction consumes them and may not recreate source evidence.",
     "tactical_decision_consumption": "governance owns the single close-call consumption primitive. Lineup, watchlist and report reuse projection tactical_matchup; no consumer may recalculate source evidence or mutate xPts.",
+    "owned_challenger_comparator": "watchlist bounded context owns generic OWNED-vs-WATCHLIST/emerging comparison orchestration. It consumes canonical projection/xMins/tactical/package/price evidence and must not reimplement those engines or mutate canonical decisions while ADVISORY_ONLY.",
     "interactive_lane": "decision_hotpath and instant_gateway are separate bounded interactive microservices outside the background refresh DAG."
   }
 }

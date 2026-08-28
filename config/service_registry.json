@@ -1,6 +1,6 @@
 {
-  "schema_version": 9,
-  "registry": "fpl_v4_9_6_microservice_registry_v9",
+  "schema_version": 10,
+  "registry": "fpl_v4_9_6_microservice_registry_v10",
   "architecture_version": "4.9.6",
   "execution_model": "process_isolated_dag_parallel_single_host",
   "services": [
@@ -109,6 +109,26 @@
       "critical": true
     },
     {
+      "id": "reconciliation_readiness",
+      "name": "GW Reconciliation Readiness Audit Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.services.reconciliation_readiness_service",
+      "command": [
+        "{python}",
+        "-m",
+        "src.services.reconciliation_readiness_service"
+      ],
+      "timeout_seconds": 20,
+      "depends_on": [
+        "validation_lifecycle",
+        "architecture_guard"
+      ],
+      "produces": [
+        "reconciliation_readiness"
+      ],
+      "critical": true
+    },
+    {
       "id": "rules_compliance",
       "name": "Rules Compliance Service",
       "boundary_state": "INDEPENDENT",
@@ -144,7 +164,8 @@
       "depends_on": [
         "validation_lifecycle",
         "rules_compliance",
-        "architecture_guard"
+        "architecture_guard",
+        "reconciliation_readiness"
       ],
       "produces": [
         "framework_preflight"
@@ -319,6 +340,10 @@
     "exact_nontrivial_function_clones_rejected": true,
     "reusable_production_workflow_single_owner": true,
     "release_manifest_single_source": true,
-    "service_count": 12
+    "service_count": 13,
+    "reconciliation_readiness_process_isolated": true,
+    "reconciliation_readiness_read_only": true,
+    "reconciliation_readiness_no_official_refetch": true,
+    "reconciliation_readiness_reuses_validation_integrity": true
   }
 }

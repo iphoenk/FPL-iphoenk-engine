@@ -65,9 +65,12 @@ def test_effective_plan_legality_is_independently_testable_through_canonical_own
 def test_runtime_architecture_preserves_hard_5s_compute_slo_and_adds_independent_guard():
     registry = json.loads((ROOT / "config" / "service_registry.json").read_text())
     services = registry["services"]
-    assert len(services) == 12
+    declared_count = int(registry["guardrails"]["service_count"])
+    ids = [row["id"] for row in services]
+    assert len(services) == declared_count == len(set(ids))
     by_id = {row["id"]: row for row in services}
     assert by_id["architecture_guard"]["module"] == "src.services.architecture_guard_service"
+    assert by_id["reconciliation_readiness"]["module"] == "src.services.reconciliation_readiness_service"
     assert by_id["optimization"]["module"] == "src.services.optimization_slo_service"
     assert by_id["framework_postflight"]["module"] == "src.services.framework_postflight_truth_service"
     assert "user_decision_overlay" in by_id["framework_postflight"]["depends_on"]
@@ -77,6 +80,7 @@ def test_runtime_architecture_preserves_hard_5s_compute_slo_and_adds_independent
     assert registry["guardrails"]["decision_compute_slo_excludes_external_network_io"] is True
     assert registry["guardrails"]["reconciliation_started_from_official_stats_starts"] is True
     assert registry["guardrails"]["engine_effective_plan_legality_reported_separately"] is True
+    assert registry["guardrails"]["reconciliation_readiness_read_only"] is True
 
 
 def test_reconciliation_truth_has_one_owner_and_no_minutes_threshold():

@@ -1,6 +1,6 @@
 {
-  "schema_version": 3,
-  "registry": "fpl_v4_9_6_architecture_ownership_v3",
+  "schema_version": 4,
+  "registry": "fpl_v4_9_6_architecture_ownership_v4",
   "release": "4.9.6",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "responsibilities": [
@@ -63,51 +63,105 @@
       "id": "HUMAN_REPORT_DECISION",
       "owner": "report_governance",
       "implementation": "src.engines.v4_checkpoint_governance"
+    },
+    {
+      "id": "RECONCILIATION_READINESS",
+      "owner": "reconciliation_readiness",
+      "implementation": "src.services.reconciliation_readiness_service"
     }
   ],
   "shared_primitives": [
     {
       "id": "XMINS_DISTRIBUTION",
       "owner": "prediction",
-      "consumers": ["DSS-05", "DSS-06", "DSS-X10", "DSS-X11"]
+      "consumers": [
+        "DSS-05",
+        "DSS-06",
+        "DSS-X10",
+        "DSS-X11"
+      ]
     },
     {
       "id": "ADVANCED_ATTACKING_EVIDENCE",
       "owner": "prediction",
-      "consumers": ["DSS-12", "DSS-13", "DSS-14", "DSS-15", "DSS-16", "DSS-38"]
+      "consumers": [
+        "DSS-12",
+        "DSS-13",
+        "DSS-14",
+        "DSS-15",
+        "DSS-16",
+        "DSS-38"
+      ]
     },
     {
       "id": "MULTI_HORIZON_PROJECTION",
       "owner": "prediction",
-      "consumers": ["DSS-25", "DSS-26", "DSS-27", "DSS-28", "ENH-04"]
+      "consumers": [
+        "DSS-25",
+        "DSS-26",
+        "DSS-27",
+        "DSS-28",
+        "ENH-04"
+      ]
     },
     {
       "id": "PRICE_MARKET_EVIDENCE",
       "owner": "prediction",
-      "consumers": ["DSS-39", "DSS-40", "DSS-41", "DSS-42", "DSS-43", "DSS-X15", "ENH-05"]
+      "consumers": [
+        "DSS-39",
+        "DSS-40",
+        "DSS-41",
+        "DSS-42",
+        "DSS-43",
+        "DSS-X15",
+        "ENH-05"
+      ]
     },
     {
       "id": "RECONCILIATION_EVIDENCE",
       "owner": "reconciliation_truth",
-      "consumers": ["DSS-44", "DSS-X12", "ENH-03"]
+      "consumers": [
+        "DSS-44",
+        "DSS-X12",
+        "ENH-03"
+      ]
     },
     {
       "id": "OPTIMIZER_GW_VALUE",
       "owner": "optimizer_primitives",
       "implementation": "src.engines.v4_optimizer_primitives.gw_value",
-      "consumers": ["v4_wc_optimizer_fast", "v4_wc_package_audit_fast"]
+      "consumers": [
+        "v4_wc_optimizer_fast",
+        "v4_wc_package_audit_fast"
+      ]
     },
     {
       "id": "CSV_HTTP_FETCH",
       "owner": "source_transport",
       "implementation": "src.sources.csv_fetch.fetch_csv",
-      "consumers": ["core_insights", "vaastav"]
+      "consumers": [
+        "core_insights",
+        "vaastav"
+      ]
     },
     {
       "id": "NUMERIC_COERCION",
       "owner": "prediction_model",
       "implementation": "src.models.v4_prediction.f",
-      "consumers": ["v4_prediction", "v4_runner"]
+      "consumers": [
+        "v4_prediction",
+        "v4_runner"
+      ]
+    },
+    {
+      "id": "VALIDATION_INTEGRITY",
+      "owner": "validation_store",
+      "implementation": "src.engines.v4_backtest_store.snapshot_integrity+reconciled_integrity",
+      "consumers": [
+        "validation_lifecycle",
+        "reconciliation_truth",
+        "reconciliation_readiness"
+      ]
     }
   ]
 }

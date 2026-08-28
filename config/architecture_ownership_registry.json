@@ -1,6 +1,6 @@
 {
-  "schema_version": 4,
-  "registry": "fpl_v4_9_6_architecture_ownership_v4",
+  "schema_version": 5,
+  "registry": "fpl_v4_9_6_architecture_ownership_v5",
   "release": "4.9.6",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "responsibilities": [
@@ -45,6 +45,16 @@
       "implementation": "src.services.optimization_slo_service"
     },
     {
+      "id": "WC_OPTIMIZER_SEARCH",
+      "owner": "optimization",
+      "implementation": "src.engines.v4_wc_optimizer_fast.optimize_squad_fast"
+    },
+    {
+      "id": "PACKAGE_AUDIT_SEARCH",
+      "owner": "optimization",
+      "implementation": "src.engines.v4_wc_package_audit_fast.audit_packages_from_candidates_fast"
+    },
+    {
       "id": "EFFECTIVE_USER_PLAN",
       "owner": "user_decision_overlay",
       "implementation": "src.services.user_decision_overlay_service"
@@ -70,6 +80,12 @@
       "id": "XMINS_DISTRIBUTION",
       "owner": "prediction",
       "consumers": ["DSS-05", "DSS-06", "DSS-X10", "DSS-X11"]
+    },
+    {
+      "id": "PLAYER_PROJECTION_MODEL",
+      "owner": "prediction_model",
+      "implementation": "src.models.v4_prediction.project_fixture",
+      "consumers": ["prediction_service", "projection_compat"]
     },
     {
       "id": "ADVANCED_ATTACKING_EVIDENCE",
@@ -101,7 +117,13 @@
       "id": "OPTIMIZER_GW_VALUE",
       "owner": "optimizer_primitives",
       "implementation": "src.engines.v4_optimizer_primitives.gw_value",
-      "consumers": ["v4_wc_optimizer_fast", "v4_wc_package_audit_fast"]
+      "consumers": ["v4_wc_optimizer", "v4_wc_optimizer_fast", "v4_wc_package_audit", "v4_wc_package_audit_fast"]
+    },
+    {
+      "id": "PACKAGE_AUDIT_METRICS",
+      "owner": "package_audit_primitives",
+      "implementation": "src.engines.v4_wc_package_audit._fast_metrics",
+      "consumers": ["v4_wc_package_audit_fast", "package_audit_tests"]
     },
     {
       "id": "CSV_HTTP_FETCH",

@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "contract": "V5_EXECUTION_PLANE_V1",
   "purpose": "Separate heavy evidence refresh from the user-facing subsecond decision path without reducing analytical breadth or duplicating business authority.",
   "planes": {
@@ -70,6 +70,45 @@
       "missing_field_action": "FAIL_CLOSED",
       "missing_fingerprint_action": "FAIL_CLOSED",
       "future_timestamp_action": "FAIL_CLOSED"
+    }
+  },
+  "refresh_scheduling": {
+    "contract": "V5_REFRESH_SCHEDULER_V1",
+    "owner": "orchestrator",
+    "modes": {
+      "daily": {
+        "strategy": "PERIODIC",
+        "activation": "ALWAYS",
+        "target_interval_seconds": 240,
+        "scheduler_class": "COARSE_ALLOWED"
+      },
+      "deadline": {
+        "strategy": "ACTIVE_WINDOW_PERIODIC",
+        "activation": "DEADLINE_WINDOW",
+        "target_interval_seconds": 20,
+        "scheduler_class": "SUBMINUTE_WORKER_REQUIRED"
+      },
+      "live": {
+        "strategy": "ACTIVE_WINDOW_PERIODIC",
+        "activation": "EVENT_LIVE",
+        "target_interval_seconds": 10,
+        "scheduler_class": "SUBMINUTE_WORKER_REQUIRED"
+      },
+      "on_demand": {
+        "strategy": "PREWARM_WINDOW",
+        "activation": "EXPLICIT_PREWARM",
+        "target_interval_seconds": 45,
+        "scheduler_class": "EXPLICIT_PREWARM_REQUIRED"
+      }
+    },
+    "governance": {
+      "target_interval_must_be_less_than_freshness_budget": true,
+      "github_actions_must_not_be_authoritative_for_subminute_modes": true,
+      "hidden_request_time_refresh_forbidden": true,
+      "single_refresh_owner_required": true,
+      "overlapping_refreshes_forbidden": true,
+      "refresh_failure_must_not_publish_partial_materialization": true,
+      "worker_enablement_requires_explicit_deployment_config": true
     }
   },
   "governance": {

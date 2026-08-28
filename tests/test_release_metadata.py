@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_release_metadata_single_source_of_truth():
-    assert ENGINE_VERSION == "3.23.1"
+    assert ENGINE_VERSION == "3.24.0"
     assert SCHEMA_VERSION == 49
     assert ENGINE_RUNTIME_VERSION == ENGINE_VERSION
     assert ENGINE_RUNTIME_SCHEMA == SCHEMA_VERSION
@@ -25,6 +25,7 @@ def test_release_metadata_surfaces_are_consistent():
     readme = (ROOT / "README.md").read_text().splitlines()
     workflow = (ROOT / ".github" / "workflows" / "fpl-engine.yml").read_text().splitlines()
     reporting = json.loads((ROOT / "config" / "intelligence" / "reporting.json").read_text())
+    tactical = json.loads((ROOT / "config" / "intelligence" / "tactical_role_context.json").read_text())
     artifact_registry = json.loads((ROOT / "config" / "report_artifact_registry.json").read_text())
     service_registry = json.loads((ROOT / "config" / "v3_service_registry.json").read_text())
     source_registry = json.loads((ROOT / "config" / "sources" / "registry.json").read_text())
@@ -39,6 +40,11 @@ def test_release_metadata_surfaces_are_consistent():
     assert reporting["model_id"] == "decision_first_report_v2"
     assert reporting["language"]["presentation_is_primary_human_surface"] is True
     assert reporting["governance"]["scheduled_checkpoint_miss_is_explicit"] is True
+    assert tactical["contract"] == "TACTICAL_ROLE_CONTEXT_V1"
+    assert tactical["policy"]["decision_influence"] == "ADVISORY_ONLY"
+    assert tactical["policy"]["xmins_adjustment_enabled"] is False
+    assert tactical["policy"]["xpts_rate_adjustment_enabled"] is False
+    assert tactical["policy"]["fpl_position_shape_is_not_claimed_as_true_tactical_formation"] is True
     assert artifact_registry["registry"] == "REPORT_ARTIFACT_REGISTRY_V3"
     assert artifact_registry["consumer_contract"]["report_time_intelligence_required"] is True
     assert artifact_registry["consumer_contract"]["owned_rows_require_current_gw_xpts"] is True
@@ -66,6 +72,7 @@ def test_master_task_governance_is_wired():
     assert "V3.22 Runtime Optimization Foundation" in master
     assert "V3.23 Personal Gameweek Context + User Decision Authority" in master
     assert "V3.23.1 Report Completeness + Natural Presentation" in master
+    assert "V3.24 Tactical Role & System Evidence" in master
 
     candidate = f"Current release candidate: V{ENGINE_VERSION}" in master
     production = f"Current production release: V{ENGINE_VERSION}" in master

@@ -1,6 +1,6 @@
 {
-  "version": 8,
-  "contract": "V5_RUNTIME_RELEASE_FINGERPRINT_V8",
+  "version": 9,
+  "contract": "V5_RUNTIME_RELEASE_FINGERPRINT_V9",
   "algorithm": "sha256",
   "include_roots": ["src/v5", "config/intelligence", "config/rules", "config/venues"],
   "include_files": [
@@ -12,6 +12,7 @@
     "config/sources/registry.json",
     "config/v5_acceptance_registry.json",
     "config/v5_architecture_principles.json",
+    "config/v5_architecture_ownership_registry.json",
     "config/v5_artifact_contract_registry.json",
     "config/v5_auth_policy_registry.json",
     "config/v5_cluster_health_registry.json",
@@ -78,6 +79,8 @@
     "performance_budget_change_resets_acceptance": true,
     "wire_or_payload_or_materialization_policy_change_resets_acceptance": true,
     "execution_plane_policy_change_resets_acceptance": true,
+    "architecture_ownership_policy_change_resets_acceptance": true,
+    "no_duplicate_gate_must_pass_for_promotion": true,
     "venue_authority_change_resets_acceptance": true,
     "production_baseline_is_bound_separately": true,
     "same_replay_fingerprint_must_represent_same_canonical_inputs": true,

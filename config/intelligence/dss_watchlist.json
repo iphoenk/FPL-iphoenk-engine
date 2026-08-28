@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "model_id": "full_dss_watchlist_v1",
   "screening_contract": "FULL_DSS_SCREEN_V1",
   "owned_target": 15,
@@ -38,6 +38,47 @@
     "value": 0.08,
     "squad_fit": 0.12,
     "market_overlay": 0.04
+  },
+  "ranking_primitives": {
+    "role_security": {
+      "start_probability_weight": 0.55,
+      "expected_minutes_share_weight": 0.25,
+      "historical_start_probability_weight": 0.20
+    },
+    "xmins_security": {
+      "base_weight": 0.55,
+      "expected_minutes_share_weight": 0.45,
+      "dnp_penalty": 0.65
+    },
+    "price_floor_millions": 3.5,
+    "replacement_delta_weight": 0.25,
+    "normalisation": {
+      "flat_value": 0.5,
+      "epsilon": 1e-09
+    },
+    "evidence_factor": {
+      "base": 0.85,
+      "coverage_weight": 0.15
+    },
+    "score_scale": 100.0,
+    "material_dnp_risk_threshold": 0.20,
+    "market_overlay_scores": {
+      "RISE": {
+        "CRITICAL": 1.0,
+        "HIGH": 0.85,
+        "MEDIUM": 0.70,
+        "LOW": 0.60,
+        "DEFAULT": 0.60
+      },
+      "FALL": {
+        "CRITICAL": 0.0,
+        "HIGH": 0.15,
+        "MEDIUM": 0.30,
+        "LOW": 0.40,
+        "DEFAULT": 0.40
+      },
+      "NEUTRAL": 0.50
+    }
   },
   "confidence_multiplier": {
     "HIGH": 1.00,

@@ -2,10 +2,14 @@ from __future__ import annotations
 
 """FAST/LIVE governance bundle.
 
-Runs the existing governance stages in-process so the logical `governance`
-service keeps exactly the same artifact ownership and ordering without paying
-seven extra Python interpreter startups. FULL/DEEP continue to use the
-unbundled service registry commands as the conservative acceptance path.
+FAST/LIVE run one complete postflight audit after all governed inputs exist.
+The legacy preflight+postflight pair is retained by FULL/DEEP as a conservative
+reference path, but running a so-called preflight only after the complete final
+DAG has already materialized is temporally redundant in FAST and duplicates the
+same registry/probe work.
+
+All P0, lineup, decision-quality, source, DSS operationalization and evidence
+maturity overlays remain unchanged. Gate0 still must finish 16/16 before GO.
 """
 
 import json
@@ -24,8 +28,6 @@ def run() -> dict:
     expected = framework_health_service.activate_registry_contract()
     framework_health_service.activate_freshness_contract()
 
-    audit_engine.audit("preflight", strict=True)
-    framework_health_service._publish_gate0_registry_contract(expected)
     audit_engine.audit("postflight", strict=True)
     framework_health_service._publish_gate0_registry_contract(expected)
 
@@ -43,5 +45,7 @@ if __name__ == "__main__":
     print(json.dumps({
         "status": "PASS",
         "bundle": "governance",
+        "audit_phases": ["postflight"],
+        "duplicate_late_preflight_removed": True,
         "evidence_maturity": out.get("evidence_maturity"),
     }, ensure_ascii=False))

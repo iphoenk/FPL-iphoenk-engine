@@ -1,7 +1,7 @@
 {
   "schema_version": 494,
   "engine": "v4.9.4-personal-gw-scorecard",
-  "generated_at": "2026-08-28T02:03:57.941002+00:00",
+  "generated_at": "2026-08-28T03:20:41.315958+00:00",
   "status": "PASS",
   "team_id": 3462711,
   "phase": {
@@ -14,8 +14,8 @@
     "deadline_time": "2026-08-28T17:30:00Z",
     "is_live_event": false
   },
-  "snapshot_sha256": "afe4f89a20a89088a7799039bc6bf2df5f989eac18ec46736f7bf4cc84432cae",
-  "effective_plan_sha256": "b39c7ece0bb168ba7d6c7fb427eb1330555060fc76b8fcf1702918d69554d2a0",
+  "snapshot_sha256": "f207309eb1277055e393f66966b5261976add0514737e34e28dbefdcd263c3e6",
+  "effective_plan_sha256": "fbc394ac32677f26ca2b331de1cdc089245c1d0a87c48070cd6b2d7eee1c5a07",
   "previous_gw": {
     "schema_version": 494,
     "engine": "v4.9.4-personal-gw-result",
@@ -484,5 +484,5 @@
     "projection_is_estimate_not_actual": true,
     "player_intervals_not_naively_summed": true
   },
-  "performance_ms": 18.96
+  "performance_ms": 17.86
 }

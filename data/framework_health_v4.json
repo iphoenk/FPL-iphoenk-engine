@@ -6,11 +6,11 @@
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-28T02:03:53.240315+00:00",
-    "local_as_of": "2026-08-28T09:03:53.240315+07:00",
+    "as_of": "2026-08-28T03:20:37.526352+00:00",
+    "local_as_of": "2026-08-28T10:20:37.526352+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 926.1,
+    "minutes_to_deadline": 849.4,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -1245,14 +1245,14 @@
         "probe": "runtime_observability",
         "detail": {
           "timings": {
-            "load_shared_inputs_and_candidates_ms": 108.6,
-            "wc_decision_cpu_ms": 501.9,
-            "package_audit_cpu_ms": 1915.0,
-            "lineup_cpu_ms": 6.1,
-            "decision_parallel_wall_ms": 1969.1,
-            "parallel_speedup_estimate": 1.231,
-            "evidence_sanity_ms": 3.4,
-            "total_pipeline_ms": 2082.5
+            "load_shared_inputs_and_candidates_ms": 102.8,
+            "wc_decision_cpu_ms": 499.9,
+            "package_audit_cpu_ms": 1723.2,
+            "lineup_cpu_ms": 5.8,
+            "decision_parallel_wall_ms": 1801.7,
+            "parallel_speedup_estimate": 1.237,
+            "evidence_sanity_ms": 3.3,
+            "total_pipeline_ms": 1909.0
           }
         }
       }
@@ -1487,7 +1487,7 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 151.15,
+  "performance_ms": 148.78,
   "official_fpl_first": {
     "status": "PASS",
     "source": "raw_snapshot.official.bootstrap+fixtures",

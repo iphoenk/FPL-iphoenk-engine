@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "registry": "V5_ARTIFACT_CONTRACTS_V1",
   "owner": "snapshot",
   "policy": {
@@ -40,6 +40,26 @@
         "auto_discovered": "object",
         "tracking_count": "integer",
         "leagues": "object",
+        "governance": "object"
+      }
+    },
+    "challenger_comparator": {
+      "filename": "challenger_comparator.json",
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "model", "status", "operating_status", "planning_gw", "horizons", "challenger_summaries", "emerging_screening", "comparisons", "governance"],
+      "equals": {
+        "schema_version": 1,
+        "contract": "V5_OWNED_CHALLENGER_COMPARATOR_V1"
+      },
+      "types": {
+        "model": "string",
+        "status": "string",
+        "operating_status": "string",
+        "planning_gw": "integer",
+        "horizons": "list",
+        "challenger_summaries": "list",
+        "emerging_screening": "list",
+        "comparisons": "list",
         "governance": "object"
       }
     },

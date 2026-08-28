@@ -8,6 +8,7 @@ on:
       - 'config/v5_*.json'
       - 'config/intelligence/**'
       - 'deploy/v5/**'
+      - 'tests/test_v5_runtime_performance_policy.py'
       - '.github/workflows/v5-dev-subsecond-performance.yml'
   workflow_dispatch:
 

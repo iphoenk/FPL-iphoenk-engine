@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import math
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
 from src.v5.config_cache import load_json_config
 from src.v5.evaluation.temporal_backtest import compare_to_frozen_baseline, validate_frozen_ledger
+from src.v5.runtime_normalization import parse_utc_timestamp
 
 EVAL_CONFIG = "config/intelligence/prediction_evaluation.json"
 CHALLENGER_CONFIG = "config/intelligence/challenger_registry.json"
@@ -160,6 +162,62 @@ def _actual_payloads_by_gw(
     return result
 
 
+def _freeze_expired_forecasts(
+    records: dict[str, Any],
+    *,
+    now: datetime,
+) -> tuple[dict[str, Any], dict[str, list[int]]]:
+    """Freeze every stored pre-deadline forecast whose deadline has passed.
+
+    The freeze source is exclusively the already-persisted pre-deadline snapshot.
+    Actual/live payloads are deliberately absent from this function so settlement
+    cannot contaminate or rewrite the prediction baseline.
+    """
+    normalized = dict(records)
+    attempted: list[int] = []
+    completed: list[int] = []
+    missing_deadline: list[int] = []
+    missing_forecast: list[int] = []
+
+    for key, raw_record in list(normalized.items()):
+        if not isinstance(raw_record, dict) or raw_record.get("status") == "SETTLED":
+            continue
+        try:
+            gw = int(raw_record.get("gw") or key)
+        except (TypeError, ValueError):
+            continue
+        if raw_record.get("frozen_forecast"):
+            continue
+
+        deadline = parse_utc_timestamp(raw_record.get("deadline_time"))
+        if deadline is None:
+            if raw_record.get("latest_pre_deadline_forecast"):
+                missing_deadline.append(gw)
+            continue
+        if now < deadline:
+            continue
+
+        attempted.append(gw)
+        latest = raw_record.get("latest_pre_deadline_forecast")
+        if not isinstance(latest, dict) or not isinstance(latest.get("players"), list):
+            missing_forecast.append(gw)
+            continue
+
+        record = dict(raw_record)
+        record["frozen_forecast"] = deepcopy(latest)
+        record["frozen_at"] = now.isoformat()
+        record["status"] = "FROZEN_AWAITING_SETTLEMENT"
+        normalized[key] = record
+        completed.append(gw)
+
+    return normalized, {
+        "attempted_gameweeks": sorted(set(attempted)),
+        "completed_gameweeks": sorted(set(completed)),
+        "missing_deadline_gameweeks": sorted(set(missing_deadline)),
+        "missing_forecast_gameweeks": sorted(set(missing_forecast)),
+    }
+
+
 def evaluate(
     prediction: dict[str, Any],
     context: dict[str, Any],
@@ -173,11 +231,7 @@ def evaluate(
     records = dict(ledger.get("records") or {})
     planning_gw = int(context.get("planning_gw") or prediction.get("planning_gw") or 0)
     deadline_text = context.get("deadline_time")
-    deadline = (
-        datetime.fromisoformat(str(deadline_text).replace("Z", "+00:00"))
-        if deadline_text
-        else None
-    )
+    deadline = parse_utc_timestamp(deadline_text)
     now = datetime.now(timezone.utc)
 
     if planning_gw > 0:
@@ -194,15 +248,9 @@ def evaluate(
                     "status": "COLLECTING",
                 }
             )
-        elif not record.get("frozen_forecast") and record.get("latest_pre_deadline_forecast"):
-            record.update(
-                {
-                    "frozen_forecast": record["latest_pre_deadline_forecast"],
-                    "frozen_at": _now(),
-                    "status": "FROZEN_AWAITING_SETTLEMENT",
-                }
-            )
         records[str(planning_gw)] = record
+
+    records, freeze_lifecycle = _freeze_expired_forecasts(records, now=now)
 
     events = {int(e["id"]): e for e in bootstrap.get("events") or [] if isinstance(e, dict) and e.get("id") is not None}
     live_gw = int(context.get("scoring_gw") or 0)
@@ -282,6 +330,7 @@ def evaluate(
         "dynamic_weight_eligible": sample >= int(cfg.get("minimum_sample_for_dynamic_weight") or 50),
         "temporal_guard": temporal,
         "baseline_comparison": baseline,
+        "freeze_lifecycle": freeze_lifecycle,
         "settlement": {
             "attempted_finished_gameweeks": sorted(set(settlement_attempted)),
             "completed_gameweeks": sorted(set(settlement_completed)),
@@ -291,6 +340,7 @@ def evaluate(
         "governance": {
             "accuracy_claim_requires_settled_sample": True,
             "pre_deadline_forecast_is_frozen_before_scoring": True,
+            "expired_pre_deadline_records_freeze_independent_of_active_planning_gw": True,
             "post_deadline_information_cannot_rewrite_frozen_forecast": True,
             "temporal_guard_required": True,
             "catch_up_settlement_uses_official_event_live_by_gameweek": True,

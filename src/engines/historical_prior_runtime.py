@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from src.engines.historical_prior_service import _fetch_previous_season, build_prior_index
-from src.models.new_signing_adaptation import annotate_prior_team_context
+from src.models.new_signing_adaptation import annotate_prior_team_context, apply_adaptation_to_prior
 from src.utils import DATA, atomic_json, read_json
 
 OFFICIAL = DATA / "official_snapshot.json"
@@ -19,6 +19,8 @@ def run() -> dict:
     elements = list(bootstrap.get("elements") or [])
     prior = build_prior_index(elements, payload)
     prior = annotate_prior_team_context(prior, elements, payload)
+    team_matches_played = sum(1 for event in bootstrap.get("events") or [] if event.get("finished"))
+    prior = apply_adaptation_to_prior(prior, elements, team_matches_played)
     prior["fetch_mode"] = fetch_mode
     prior["source_health"] = ((official.get("endpoint_health") or {}).get("bootstrap") or {}).get("status")
     prior.setdefault("governance", {})["official_snapshot_reused"] = True
@@ -35,6 +37,7 @@ def run() -> dict:
         "fetch_mode": fetch_mode,
         "coverage": prior.get("coverage"),
         "transfer_context": prior.get("transfer_context_summary"),
+        "new_signing_adaptation": prior.get("new_signing_adaptation_summary"),
     }
     atomic_json(DATA / "latest.json", latest)
     return prior
@@ -48,4 +51,5 @@ if __name__ == "__main__":
         "fetch_mode": out.get("fetch_mode"),
         "coverage": out.get("coverage"),
         "transfer_context": out.get("transfer_context_summary"),
+        "new_signing_adaptation": out.get("new_signing_adaptation_summary"),
     }, ensure_ascii=False))

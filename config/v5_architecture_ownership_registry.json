@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "contract": "V5_ARCHITECTURE_OWNERSHIP_V1",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "governance": {
@@ -28,6 +28,7 @@
     {"id":"PLAYER_PREDICTION","owner":"prediction","implementation":"src.v5.intelligence.projection"},
     {"id":"PREDICTION_EVALUATION","owner":"evaluation","implementation":"src.v5.evaluation.core"},
     {"id":"ENGINE_DECISION","owner":"decision","implementation":"src.v5.services.decision"},
+    {"id":"OWNED_CHALLENGER_COMPARISON","owner":"decision","implementation":"src.v5.decision.challenger_comparator"},
     {"id":"WATCHLIST_SCREENING","owner":"watchlist","implementation":"src.v5.services.watchlist"},
     {"id":"FINAL_GOVERNANCE","owner":"governance","implementation":"src.v5.services.governance"},
     {"id":"HUMAN_REPORTING","owner":"reporting","implementation":"src.v5.reporting"},
@@ -39,8 +40,8 @@
     {"id":"SOURCE_JSON_CACHE","owner":"ingestion","implementation":"src.v5.sources.cache","consumers":["api_football","understat"]},
     {"id":"RUNTIME_NORMALIZATION","owner":"orchestrator","implementation":"src.v5.runtime_normalization","consumers":["prediction","execution_plane"]},
     {"id":"UTC_DATETIME_NORMALIZATION","owner":"orchestrator","implementation":"src.v5.time_utils.parse_iso_datetime","consumers":["truth","price"]},
-    {"id":"XMINS_DISTRIBUTION","owner":"prediction","consumers":["decision","watchlist","reporting"]},
-    {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","consumers":["decision","watchlist","reporting","evaluation"]},
+    {"id":"XMINS_DISTRIBUTION","owner":"prediction","consumers":["decision","watchlist","challenger_comparator","reporting"]},
+    {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","consumers":["decision","watchlist","challenger_comparator","reporting","evaluation"]},
     {"id":"SOURCE_FUSION_EVIDENCE","owner":"ingestion","consumers":["prediction","reporting"]},
     {"id":"CALIBRATION_READINESS","owner":"evaluation","implementation":"src.v5.evaluation.calibration.build_calibration_readiness","consumers":["evaluation_service","challenger_scorecard","prediction_settlement"]},
     {"id":"DECISION_TRACE","owner":"decision","consumers":["governance","reporting","orchestrator"]},

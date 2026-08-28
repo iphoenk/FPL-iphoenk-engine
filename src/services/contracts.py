@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 from typing import Any
 
-from src.utils import ROOT
+from src.utils import ROOT, _loads
 
 MISSING = object()
 
@@ -20,22 +19,34 @@ def value_at(payload: Any, dotted_path: str) -> Any:
 
 
 def file_digest(path: Path) -> str:
-    digest = hashlib.sha256()
+    """SHA-256 a file with a large-buffer fallback for older runtimes."""
     with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(65536), b""):
+        if hasattr(hashlib, "file_digest"):
+            return hashlib.file_digest(handle, "sha256").hexdigest()
+        digest = hashlib.sha256()
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
-    return digest.hexdigest()
+        return digest.hexdigest()
 
 
 def validate_contract(name: str, spec: dict, root: Path = ROOT) -> dict:
     path = root / str(spec.get("path") or "")
     errors: list[str] = []
     payload: dict = {}
+    artifact_sha = None
+    artifact_bytes = None
     if not path.is_file():
         errors.append("artifact_missing")
     else:
         try:
-            loaded = json.loads(path.read_text(encoding="utf-8"))
+            # Contract validation previously read large artifacts twice and used
+            # stdlib JSON even when the runtime fast codec was available. Read
+            # once, hash the exact bytes, then parse those same bytes. This does
+            # not alter the artifact or contract semantics.
+            raw = path.read_bytes()
+            artifact_bytes = len(raw)
+            artifact_sha = hashlib.sha256(raw).hexdigest()
+            loaded = _loads(raw)
             if not isinstance(loaded, dict):
                 errors.append("artifact_not_object")
             else:
@@ -71,8 +82,8 @@ def validate_contract(name: str, spec: dict, root: Path = ROOT) -> dict:
         "path": str(spec.get("path")),
         "valid": not errors,
         "errors": errors,
-        "sha256": file_digest(path) if path.is_file() else None,
-        "bytes": path.stat().st_size if path.is_file() else None,
+        "sha256": artifact_sha,
+        "bytes": artifact_bytes,
     }
 
 

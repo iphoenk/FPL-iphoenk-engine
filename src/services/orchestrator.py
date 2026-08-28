@@ -6,7 +6,7 @@ import os
 import subprocess
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from pathlib import Path
 from typing import Callable
 
@@ -96,6 +96,12 @@ def orchestrate(
     contracts = contract_registry or read_json(CONTRACT_REGISTRY, {})
     levels = _service_levels(registry)
     services = [service for level in levels for service in level]
+    level_by_id = {
+        service["id"]: level_index
+        for level_index, level in enumerate(levels)
+        for service in level
+    }
+    order_index = {service["id"]: index for index, service in enumerate(services)}
     started = time.perf_counter()
     report = {
         "schema_version": 495,
@@ -110,12 +116,16 @@ def orchestrate(
         "service_registry": registry.get("registry"),
         "contract_registry": contracts.get("registry"),
         "execution_model": registry.get("execution_model"),
+        "scheduler": "dependency_ready_no_level_barrier",
         "execution_levels": [[service["id"] for service in level] for level in levels],
+        "launch_order": [],
+        "completion_order": [],
         "snapshot_identity": None,
         "services": [],
         "guardrails": dict(registry.get("guardrails") or {}),
     }
     atomic_json(outfile, report)
+
     locked_artifacts: dict[str, str] = {}
     lock_targets = {
         "raw_snapshot": root / "data/runtime/snapshot.v1.json",
@@ -123,58 +133,68 @@ def orchestrate(
         "prediction": root / "data/latest.json",
     }
     service_states: dict[str, str] = {}
+    pending = {service["id"]: service for service in services}
+    max_workers = max(1, max(len(level) for level in levels))
 
     try:
-        for level_index, level in enumerate(levels):
-            for service in level:
-                dependencies = service.get("depends_on") or []
-                if any(service_states.get(dep) != "PASS" for dep in dependencies):
-                    raise RuntimeError(f"dependency not successful for {service['id']}")
-            _assert_locked_artifacts(locked_artifacts, f"before level {level_index}")
-
-            level_rows: dict[str, dict] = {}
-            commands: dict[str, list[str]] = {}
-            started_by_service: dict[str, float] = {}
-            env = _service_env(root, locked_artifacts)
-            for service in level:
-                service_id = service["id"]
-                row = {
-                    "id": service_id,
-                    "name": service.get("name"),
-                    "boundary_state": service.get("boundary_state"),
-                    "status": "RUNNING",
-                    "depends_on": service.get("depends_on") or [],
-                    "contracts": [],
-                    "execution_level": level_index,
-                }
-                report["services"].append(row)
-                level_rows[service_id] = row
-                commands[service_id] = _render_command(service, mode, stats, deep_stats, as_of)
-            atomic_json(outfile, report)
-
-            with ThreadPoolExecutor(max_workers=max(1, len(level)), thread_name_prefix=f"v4-level-{level_index}") as pool:
-                futures = {}
-                for service in level:
+        with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="v4-dag") as pool:
+            running: dict[Future, tuple[dict, dict, float]] = {}
+            while pending or running:
+                launched = False
+                for service in services:
                     service_id = service["id"]
-                    started_by_service[service_id] = time.perf_counter()
-                    futures[service_id] = pool.submit(
+                    if service_id not in pending:
+                        continue
+                    dependencies = service.get("depends_on") or []
+                    failed_dependencies = [dep for dep in dependencies if service_states.get(dep) == "FAIL"]
+                    if failed_dependencies:
+                        raise RuntimeError(f"dependency not successful for {service_id}: {failed_dependencies}")
+                    if not all(service_states.get(dep) == "PASS" for dep in dependencies):
+                        continue
+
+                    _assert_locked_artifacts(locked_artifacts, f"before service {service_id}")
+                    row = {
+                        "id": service_id,
+                        "name": service.get("name"),
+                        "boundary_state": service.get("boundary_state"),
+                        "status": "RUNNING",
+                        "depends_on": dependencies,
+                        "contracts": [],
+                        "execution_level": level_by_id[service_id],
+                    }
+                    report["services"].append(row)
+                    report["launch_order"].append(service_id)
+                    command = _render_command(service, mode, stats, deep_stats, as_of)
+                    service_started = time.perf_counter()
+                    future = pool.submit(
                         runner,
-                        commands[service_id],
+                        command,
                         cwd=root,
-                        env=env.copy(),
+                        env=_service_env(root, locked_artifacts),
                         capture_output=True,
                         text=True,
                         timeout=int(service.get("timeout_seconds") or 60),
                         check=False,
                     )
+                    running[future] = (service, row, service_started)
+                    del pending[service_id]
+                    launched = True
 
-                level_error: Exception | None = None
-                for service in level:
+                if not running:
+                    if pending:
+                        unresolved = sorted(pending)
+                        raise RuntimeError(f"no dependency-ready services: {unresolved}")
+                    break
+
+                done, _ = wait(tuple(running), return_when=FIRST_COMPLETED)
+                for future in sorted(done, key=lambda item: order_index[running[item][0]["id"]]):
+                    service, row, service_started = running.pop(future)
                     service_id = service["id"]
-                    row = level_rows[service_id]
+                    row["duration_ms"] = round((time.perf_counter() - service_started) * 1000, 2)
                     try:
-                        result = futures[service_id].result()
+                        result = future.result()
                     except subprocess.TimeoutExpired as exc:
+                        _assert_locked_artifacts(locked_artifacts, f"after timed-out service {service_id}")
                         row.update({
                             "status": "FAIL",
                             "error": "timeout",
@@ -182,64 +202,55 @@ def orchestrate(
                             "stderr_tail": _tail(exc.stderr or ""),
                         })
                         service_states[service_id] = "FAIL"
-                        level_error = level_error or RuntimeError(f"service timeout: {service_id}")
-                        continue
+                        raise RuntimeError(f"service timeout: {service_id}")
                     except Exception as exc:
+                        _assert_locked_artifacts(locked_artifacts, f"after failed service {service_id}")
                         row.update({"status": "FAIL", "error": str(exc)})
                         service_states[service_id] = "FAIL"
-                        level_error = level_error or RuntimeError(f"service runner failed: {service_id}: {exc}")
-                        continue
+                        raise RuntimeError(f"service runner failed: {service_id}: {exc}") from exc
 
-                    row["duration_ms"] = round((time.perf_counter() - started_by_service[service_id]) * 1000, 2)
                     row["exit_code"] = result.returncode
                     row["stdout_tail"] = _tail(result.stdout)
                     row["stderr_tail"] = _tail(result.stderr)
+                    _assert_locked_artifacts(locked_artifacts, f"after service {service_id}")
                     if result.returncode != 0:
                         row["status"] = "FAIL"
                         service_states[service_id] = "FAIL"
-                        level_error = level_error or RuntimeError(f"service failed: {service_id} exit={result.returncode}")
-                    else:
-                        row["status"] = "PROCESS_PASS"
+                        raise RuntimeError(f"service failed: {service_id} exit={result.returncode}")
 
-            _assert_locked_artifacts(locked_artifacts, f"during level {level_index}")
-            if level_error:
-                atomic_json(outfile, report)
-                raise level_error
+                    row["status"] = "PROCESS_PASS"
+                    validation = validate_contracts(list(service.get("produces") or []), contracts, root=root)
+                    row["contracts"] = validation
+                    if not all(item.get("valid") for item in validation):
+                        row["status"] = "FAIL"
+                        service_states[service_id] = "FAIL"
+                        raise RuntimeError(f"contract validation failed: {service_id}")
 
-            for service in level:
-                service_id = service["id"]
-                row = level_rows[service_id]
-                validation = validate_contracts(list(service.get("produces") or []), contracts, root=root)
-                row["contracts"] = validation
-                if not all(item.get("valid") for item in validation):
-                    row["status"] = "FAIL"
-                    service_states[service_id] = "FAIL"
-                    atomic_json(outfile, report)
-                    raise RuntimeError(f"contract validation failed: {service_id}")
+                    if not locked_artifacts and "latest" in (service.get("produces") or []):
+                        target = root / "data/latest.json"
+                        digest = file_digest(target)
+                        locked_artifacts[str(target)] = digest
+                        report["snapshot_identity"] = {
+                            "sha256": digest,
+                            "generated_at": read_json(target, {}).get("generated_at"),
+                        }
 
-                if not locked_artifacts and "latest" in (service.get("produces") or []):
-                    target = root / "data/latest.json"
-                    digest = file_digest(target)
-                    locked_artifacts[str(target)] = digest
-                    report["snapshot_identity"] = {"sha256": digest, "generated_at": read_json(target, {}).get("generated_at")}
+                    if service_id in lock_targets:
+                        target = lock_targets[service_id]
+                        digest = file_digest(target)
+                        locked_artifacts[str(target)] = digest
+                        row["locked_artifact"] = {"path": str(target.relative_to(root)), "sha256": digest}
+                    if service_id == "raw_snapshot":
+                        latest = read_json(lock_targets[service_id], {})
+                        report["snapshot_identity"] = {
+                            "sha256": locked_artifacts[str(lock_targets[service_id])],
+                            "generated_at": latest.get("generated_at"),
+                            "checkpoint_policy_id": (latest.get("checkpoint_context") or {}).get("policy_id"),
+                        }
 
-                if service_id in lock_targets:
-                    target = lock_targets[service_id]
-                    digest = file_digest(target)
-                    locked_artifacts[str(target)] = digest
-                    row["locked_artifact"] = {"path": str(target.relative_to(root)), "sha256": digest}
-                if service_id == "raw_snapshot":
-                    latest = read_json(lock_targets[service_id], {})
-                    report["snapshot_identity"] = {
-                        "sha256": locked_artifacts[str(lock_targets[service_id])],
-                        "generated_at": latest.get("generated_at"),
-                        "checkpoint_policy_id": (latest.get("checkpoint_context") or {}).get("policy_id"),
-                    }
-
-                row["status"] = "PASS"
-                service_states[service_id] = "PASS"
-            _assert_locked_artifacts(locked_artifacts, f"after level {level_index}")
-            atomic_json(outfile, report)
+                    row["status"] = "PASS"
+                    service_states[service_id] = "PASS"
+                    report["completion_order"].append(service_id)
 
         report["status"] = "PASS"
         report["completed_at"] = iso_now()
@@ -256,16 +267,20 @@ def orchestrate(
             "services_total": len(services),
             "levels": len(levels),
             "parallel_levels": sum(len(level) > 1 for level in levels),
+            "max_workers": max_workers,
+            "scheduler_barrier_free": True,
             "fail_closed": True,
         }
-        atomic_json(outfile, report)
-        report["locked_artifacts"] = {str(Path(path).relative_to(root)): digest for path, digest in locked_artifacts.items()}
+        report["locked_artifacts"] = {
+            str(Path(path).relative_to(root)): digest for path, digest in locked_artifacts.items()
+        }
         atomic_json(outfile, report)
         print(json.dumps({
             "orchestrator": "PASS",
             "services": len(services),
             "levels": len(levels),
             "parallel_levels": report["summary"]["parallel_levels"],
+            "scheduler": report["scheduler"],
             "duration_ms": report["duration_ms"],
             "runtime_target": report["runtime_target"]["status"],
             "snapshot": (report.get("snapshot_identity") or {}).get("sha256"),
@@ -283,6 +298,7 @@ def orchestrate(
             "services_passed": sum(state == "PASS" for state in service_states.values()),
             "services_total": len(services),
             "levels": len(levels),
+            "scheduler_barrier_free": True,
             "fail_closed": True,
         }
         atomic_json(outfile, report)

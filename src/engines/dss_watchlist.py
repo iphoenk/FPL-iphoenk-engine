@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from typing import Any
 
-from src.rules import ASSIST_POINTS, GOAL_POINTS
+from src.rules import ASSIST_POINTS, GOAL_POINTS, SAVE_INTERVAL, SAVE_POINTS_PER_INTERVAL
 from src.utils import DATA, ROOT, atomic_json, read_json
 
 POLICY_PATH = ROOT / "config" / "intelligence" / "dss_watchlist.json"
@@ -30,6 +30,27 @@ def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
     return max(low, min(high, value))
 
 
+def _required_number(mapping: dict[str, Any], key: str, context: str) -> float:
+    if key not in mapping:
+        raise RuntimeError(f"watchlist policy missing {context}.{key}")
+    try:
+        return float(mapping[key])
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(f"watchlist policy {context}.{key} must be numeric") from exc
+
+
+def _required_int(mapping: dict[str, Any], key: str, context: str, minimum: int = 1) -> int:
+    if key not in mapping:
+        raise RuntimeError(f"watchlist policy missing {context}.{key}")
+    try:
+        value = int(mapping[key])
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(f"watchlist policy {context}.{key} must be integer") from exc
+    if value < minimum:
+        raise RuntimeError(f"watchlist policy {context}.{key} must be >= {minimum}")
+    return value
+
+
 @lru_cache(maxsize=1)
 def load_policy() -> dict[str, Any]:
     return json.loads(POLICY_PATH.read_text(encoding="utf-8"))
@@ -43,6 +64,13 @@ def load_core_registry() -> dict[str, Any]:
 @lru_cache(maxsize=1)
 def load_extension_registry() -> dict[str, Any]:
     return json.loads(EXT_REGISTRY_PATH.read_text(encoding="utf-8"))
+
+
+def _ranking_primitives() -> dict[str, Any]:
+    primitives = load_policy().get("ranking_primitives")
+    if not isinstance(primitives, dict):
+        raise RuntimeError("watchlist policy missing ranking_primitives")
+    return primitives
 
 
 def _registry_audit(framework: dict[str, Any], key: str, registry: dict[str, Any]) -> dict[str, Any]:
@@ -215,13 +243,20 @@ def _coverage(dimensions: dict[str, dict[str, Any]]) -> tuple[float, float]:
 
 
 def _market_score(price: dict[str, Any]) -> float:
+    primitives = _ranking_primitives()
+    scores = primitives.get("market_overlay_scores")
+    if not isinstance(scores, dict):
+        raise RuntimeError("watchlist policy missing ranking_primitives.market_overlay_scores")
     direction = str(price.get("risk_direction") or "").upper()
     urgency = str(price.get("urgency") or "").upper()
-    if direction == "RISE":
-        return {"CRITICAL": 1.0, "HIGH": 0.85, "MEDIUM": 0.70, "LOW": 0.60}.get(urgency, 0.60)
-    if direction == "FALL":
-        return {"CRITICAL": 0.0, "HIGH": 0.15, "MEDIUM": 0.30, "LOW": 0.40}.get(urgency, 0.40)
-    return 0.50
+    if direction in {"RISE", "FALL"}:
+        direction_scores = scores.get(direction)
+        if not isinstance(direction_scores, dict):
+            raise RuntimeError(f"watchlist policy missing market overlay scores for {direction}")
+        if urgency in direction_scores:
+            return _f(direction_scores[urgency])
+        return _required_number(direction_scores, "DEFAULT", f"ranking_primitives.market_overlay_scores.{direction}")
+    return _required_number(scores, "NEUTRAL", "ranking_primitives.market_overlay_scores")
 
 
 def _raw_candidate(
@@ -231,6 +266,9 @@ def _raw_candidate(
     price: dict[str, Any],
     framework_core: dict[str, str],
 ) -> dict[str, Any]:
+    primitives = _ranking_primitives()
+    role_cfg = primitives.get("role_security") or {}
+    xmins_cfg = primitives.get("xmins_security") or {}
     xmins = proj.get("xmins") or {}
     rates = proj.get("rates") or {}
     historical = proj.get("historical_prior") or {}
@@ -238,18 +276,28 @@ def _raw_candidate(
     dnp = _clamp(_f(xmins.get("dnp_probability")))
     minutes = _clamp(_f(xmins.get("expected_minutes")) / 90.0)
     prior_start = _clamp(_f(historical.get("start_probability"), start)) if historical else start
-    role_security = 0.55 * start + 0.25 * minutes + 0.20 * prior_start
-    xmins_security = start * (0.55 + 0.45 * minutes) * (1.0 - 0.65 * dnp)
-    goal_points = _f(GOAL_POINTS.get(int(proj.get("element_type") or 4), 4), 4)
+    role_security = (
+        _required_number(role_cfg, "start_probability_weight", "ranking_primitives.role_security") * start
+        + _required_number(role_cfg, "expected_minutes_share_weight", "ranking_primitives.role_security") * minutes
+        + _required_number(role_cfg, "historical_start_probability_weight", "ranking_primitives.role_security") * prior_start
+    )
+    xmins_security = start * (
+        _required_number(xmins_cfg, "base_weight", "ranking_primitives.xmins_security")
+        + _required_number(xmins_cfg, "expected_minutes_share_weight", "ranking_primitives.xmins_security") * minutes
+    ) * (1.0 - _required_number(xmins_cfg, "dnp_penalty", "ranking_primitives.xmins_security") * dnp)
+    element_type = int(proj.get("element_type") or 0)
+    if element_type not in GOAL_POINTS:
+        raise RuntimeError(f"unsupported watchlist element_type: {element_type}")
     underlying = (
-        _f(rates.get("xg90")) * goal_points
-        + _f(rates.get("xa90")) * _f(ASSIST_POINTS, 3.0)
+        _f(rates.get("xg90")) * float(GOAL_POINTS[element_type])
+        + _f(rates.get("xa90")) * float(ASSIST_POINTS)
         + _f(rates.get("bonus90"))
         + _f(rates.get("dc90"))
-        + _f(rates.get("saves90")) / 3.0
+        + (_f(rates.get("saves90")) / float(SAVE_INTERVAL)) * float(SAVE_POINTS_PER_INTERVAL)
     )
     h3, h5, h10, h15 = (_horizon(proj, h) for h in (3, 5, 10, 15))
-    price_m = max(3.5, _f(proj.get("now_cost")) / 10.0)
+    price_floor = _required_number(primitives, "price_floor_millions", "ranking_primitives")
+    price_m = max(price_floor, _f(proj.get("now_cost")) / 10.0)
     weakest = owned_position[0] if owned_position else None
     replacement_delta = h5 - _f((weakest or {}).get("h5")) if weakest else 0.0
     package_gain = _f((package_context or {}).get("robust_gain_vs_hold"))
@@ -302,7 +350,7 @@ def _raw_candidate(
             "role_security": role_security,
             "underlying": underlying,
             "value": h5 / price_m,
-            "squad_fit": package_gain + max(0.0, replacement_delta) * 0.25,
+            "squad_fit": package_gain + max(0.0, replacement_delta) * _required_number(primitives, "replacement_delta_weight", "ranking_primitives"),
             "market_overlay": _market_score(price),
         },
     }
@@ -311,21 +359,32 @@ def _raw_candidate(
 def _normalise(rows: list[dict[str, Any]]) -> None:
     if not rows:
         return
+    policy = load_policy()
+    primitives = _ranking_primitives()
+    normalisation = primitives.get("normalisation") or {}
+    evidence_cfg = primitives.get("evidence_factor") or {}
+    flat_value = _required_number(normalisation, "flat_value", "ranking_primitives.normalisation")
+    epsilon = _required_number(normalisation, "epsilon", "ranking_primitives.normalisation")
+    evidence_base = _required_number(evidence_cfg, "base", "ranking_primitives.evidence_factor")
+    evidence_weight = _required_number(evidence_cfg, "coverage_weight", "ranking_primitives.evidence_factor")
+    score_scale = _required_number(primitives, "score_scale", "ranking_primitives")
     metric_names = list((rows[0].get("raw_metrics") or {}).keys())
-    weights = load_policy().get("ranking_weights") or {}
-    confidence_mult = load_policy().get("confidence_multiplier") or {}
+    weights = policy.get("ranking_weights") or {}
+    confidence_mult = policy.get("confidence_multiplier") or {}
+    if "UNKNOWN" not in confidence_mult:
+        raise RuntimeError("watchlist policy confidence_multiplier.UNKNOWN is required")
     for metric in metric_names:
         values = [_f((row.get("raw_metrics") or {}).get(metric)) for row in rows]
         low, high = min(values), max(values)
         for row, value in zip(rows, values):
-            norm = 0.5 if high <= low + 1e-9 else (value - low) / (high - low)
+            norm = flat_value if high <= low + epsilon else (value - low) / (high - low)
             row.setdefault("normalised_metrics", {})[metric] = round(_clamp(norm), 4)
     for row in rows:
         weighted = sum(_f(weights.get(metric)) * _f((row.get("normalised_metrics") or {}).get(metric)) for metric in metric_names)
         confidence = str(row.get("projection_confidence") or "UNKNOWN")
-        conf_factor = _f(confidence_mult.get(confidence), _f(confidence_mult.get("UNKNOWN"), 0.88))
-        evidence_factor = 0.85 + 0.15 * _f(row.get("evidence_coverage"))
-        row["dss_score"] = round(100.0 * weighted * conf_factor * evidence_factor, 2)
+        conf_factor = _f(confidence_mult.get(confidence), _f(confidence_mult["UNKNOWN"]))
+        evidence_factor = evidence_base + evidence_weight * _f(row.get("evidence_coverage"))
+        row["dss_score"] = round(score_scale * weighted * conf_factor * evidence_factor, 2)
 
 
 def _admitted(row: dict[str, Any], blocked: bool) -> tuple[bool, list[str]]:
@@ -335,18 +394,23 @@ def _admitted(row: dict[str, Any], blocked: bool) -> tuple[bool, list[str]]:
         reasons.append("critical DSS framework failure")
     if str(row.get("status")) not in set(load_policy().get("allowed_statuses") or []):
         reasons.append("availability status outside watchlist policy")
-    if _f((row.get("xmins") or {}).get("start_probability")) < _f(cfg.get("minimum_start_probability"), 0.45):
+    if _f((row.get("xmins") or {}).get("start_probability")) < _required_number(cfg, "minimum_start_probability", "admission"):
         reasons.append("starter probability below admission floor")
-    if _f((row.get("xmins") or {}).get("dnp_probability")) > _f(cfg.get("maximum_dnp_probability"), 0.35):
+    if _f((row.get("xmins") or {}).get("dnp_probability")) > _required_number(cfg, "maximum_dnp_probability", "admission"):
         reasons.append("DNP risk above admission ceiling")
-    if _f(row.get("evidence_coverage")) < _f(cfg.get("minimum_dimension_coverage"), 0.70):
+    if _f(row.get("evidence_coverage")) < _required_number(cfg, "minimum_dimension_coverage", "admission"):
         reasons.append("required evidence coverage insufficient")
-    if _f(row.get("critical_dimension_score")) < _f(cfg.get("minimum_critical_dimension_score"), 0.60):
+    if _f(row.get("critical_dimension_score")) < _required_number(cfg, "minimum_critical_dimension_score", "admission"):
         reasons.append("critical evidence dimension insufficient")
     return not reasons, reasons
 
 
 def _reasons(row: dict[str, Any]) -> tuple[list[str], list[str]]:
+    primitives = _ranking_primitives()
+    limits = primitives.get("explanation_limits") or {}
+    reason_limit = _required_int(limits, "reasons", "ranking_primitives.explanation_limits")
+    risk_limit = _required_int(limits, "risks", "ranking_primitives.explanation_limits")
+    dnp_threshold = _required_number(primitives, "material_dnp_risk_threshold", "ranking_primitives")
     labels = {
         "short_horizon": "proyeksi 3-GW kuat",
         "primary_horizon": "proyeksi 5-GW kuat",
@@ -363,7 +427,7 @@ def _reasons(row: dict[str, Any]) -> tuple[list[str], list[str]]:
     for metric, norm in (row.get("normalised_metrics") or {}).items():
         contributions.append((_f(norm) * _f(weights.get(metric)), metric))
     contributions.sort(reverse=True)
-    why = [labels[metric] for _, metric in contributions[:3] if metric in labels]
+    why = [labels[metric] for _, metric in contributions[:reason_limit] if metric in labels]
     risks = []
     dims = row.get("dimensions") or {}
     if (dims.get("set_piece_penalty") or {}).get("status") == "MISSING":
@@ -372,9 +436,9 @@ def _reasons(row: dict[str, Any]) -> tuple[list[str], list[str]]:
         risks.append("role/competition masih memakai proxy, bukan bukti taktis penuh")
     if str(row.get("projection_confidence")) == "LOW":
         risks.append("projection confidence LOW")
-    if _f((row.get("xmins") or {}).get("dnp_probability")) >= 0.20:
+    if _f((row.get("xmins") or {}).get("dnp_probability")) >= dnp_threshold:
         risks.append("DNP/rotation risk masih material")
-    return why[:3], risks[:3]
+    return why[:reason_limit], risks[:risk_limit]
 
 
 def _previous_ranks(previous: dict[str, Any]) -> dict[int, tuple[str, int]]:
@@ -418,7 +482,10 @@ def build() -> dict[str, Any]:
     package_by_in = _package_map(package_optimizer)
     price_by_id = _price_map(prices, price_alerts)
     previous_rank = _previous_ranks(previous)
-    allowed_positions = set(cfg.get("positions") or ["GK", "DEF", "MID", "FWD"])
+    configured_positions = cfg.get("positions")
+    if not isinstance(configured_positions, list) or not configured_positions:
+        raise RuntimeError("watchlist policy positions must be a non-empty list")
+    allowed_positions = {str(position) for position in configured_positions}
 
     pools: dict[str, list[dict[str, Any]]] = {position: [] for position in allowed_positions}
     rejected: Counter[str] = Counter()
@@ -449,8 +516,9 @@ def build() -> dict[str, Any]:
                 rejected[reason] += 1
 
     positions: dict[str, list[dict[str, Any]]] = {}
-    max_per = int(cfg.get("max_per_position") or 5)
-    for position in cfg.get("positions") or ["GK", "DEF", "MID", "FWD"]:
+    max_per = _required_int(cfg, "max_per_position", "root")
+    for position in configured_positions:
+        position = str(position)
         rows = pools.get(position) or []
         _normalise(rows)
         rows.sort(key=lambda row: (row.get("dss_score", 0), _horizon(row, 5) if "horizons" in row else 0, -int(row.get("now_cost") or 0)), reverse=True)
@@ -481,6 +549,10 @@ def build() -> dict[str, Any]:
     else:
         status = "READY"
     confidence_cap = "MEDIUM" if core_audit.get("critical_partial") and (cfg.get("admission") or {}).get("cap_confidence_when_critical_dss_partial", True) else "HIGH"
+    full_registry_traversal = (
+        core_audit.get("traversed") == core_audit.get("declared")
+        and ext_audit.get("traversed") == ext_audit.get("declared")
+    )
     payload = {
         "generated_at": _now(),
         "model": cfg.get("model_id"),
@@ -503,7 +575,7 @@ def build() -> dict[str, Any]:
             "dss_core": core_audit,
             "dss_extensions": ext_audit,
             "required_dimensions": list((cfg.get("dimension_weights") or {}).keys()),
-            "full_registry_traversal": core_audit.get("traversed") == 50 and ext_audit.get("traversed") == 16,
+            "full_registry_traversal": full_registry_traversal,
             "critical_framework_failure_blocks_publication": block,
         },
         "governance": cfg.get("governance") or {},

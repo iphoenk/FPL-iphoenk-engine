@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 
 from src.engines.fpl_legality import plan_legality_checks
-from src.engines.v4_backtest_store import actual_by_element as legacy_actual_by_element
 from src.engines.v4_reconciliation_truth import actual_by_element
 from src.engines.v4_validation import minutes_metrics
 from src.services.optimization_slo_service import DECISION_COMPUTE_SLO_MS
@@ -23,11 +22,10 @@ def _live():
 
 
 def test_official_starts_is_only_start_truth():
-    for mapper in (actual_by_element, legacy_actual_by_element):
-        actual = mapper(_live())
-        assert actual[1]["started"] is True
-        assert actual[2]["started"] is False
-        assert actual[3]["started"] is None
+    actual = actual_by_element(_live())
+    assert actual[1]["started"] is True
+    assert actual[2]["started"] is False
+    assert actual[3]["started"] is None
 
 
 def test_missing_start_is_excluded_from_start_brier_not_inferred():
@@ -45,7 +43,7 @@ def test_missing_start_is_excluded_from_start_brier_not_inferred():
 
 
 def _plan(formation="3-5-2"):
-    xi = [{"element": i, "position": "GK" if i == 1 else "DEF" if i in (2,3,4) else "MID" if i in (5,6,7,8,9) else "FWD"} for i in range(1, 12)]
+    xi = [{"element": i, "position": "GK" if i == 1 else "DEF" if i in (2, 3, 4) else "MID" if i in (5, 6, 7, 8, 9) else "FWD"} for i in range(1, 12)]
     return {
         "formation": formation,
         "starting_xi": xi,
@@ -81,8 +79,14 @@ def test_runtime_architecture_preserves_hard_5s_compute_slo_and_adds_independent
     assert registry["guardrails"]["engine_effective_plan_legality_reported_separately"] is True
 
 
-def test_no_minutes_threshold_remains_in_reconciliation_or_validation_sources():
-    for rel in ("src/engines/v4_backtest_store.py", "src/engines/v4_reconciliation_truth.py", "src/engines/v4_validation.py"):
-        text = (ROOT / rel).read_text()
+def test_reconciliation_truth_has_one_owner_and_no_minutes_threshold():
+    store = (ROOT / "src/engines/v4_backtest_store.py").read_text()
+    truth = (ROOT / "src/engines/v4_reconciliation_truth.py").read_text()
+    validation = (ROOT / "src/engines/v4_validation.py").read_text()
+    assert "def actual_by_element" not in store
+    assert "def reconcile_finished_gw" not in store
+    assert "def actual_by_element" in truth
+    assert "def reconcile_finished_gw" in truth
+    for text in (store, truth, validation):
         assert "minutes\", 0) or 0) >= 45" not in text
         assert "actual_minutes'])>=45" not in text

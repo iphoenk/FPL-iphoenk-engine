@@ -1,0 +1,34 @@
+name: V4.9.6.3 multi-season prior one-shot migration
+
+on:
+  push:
+    branches:
+      - codex/v4.9.6.3-multiseason-prior
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v4.9.6.3-multiseason-prior
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply staged multi-season migration
+        run: python tools/v4963_multiseason_prior_migrate.py
+      - name: Commit generated changes
+        run: |
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src config tests
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+            exit 1
+          fi
+          git commit -m "feat(v4): add bounded multi-season historical prior"
+          git push origin HEAD:codex/v4.9.6.3-multiseason-prior

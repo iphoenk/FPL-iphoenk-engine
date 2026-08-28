@@ -24,7 +24,7 @@
   },
   "convergence": {
     "production_baseline": "v3.20.0",
-    "production_main_sha": "4a5df23d403f77e9dcb7b87e0e2a4c41765d4792",
+    "production_main_sha": "64475fa6b04a697e9b1265fa3b9e3d903d5087a6",
     "configuration_ownership_required": true,
     "p0_capabilities_required": ["P0-1_prediction_calibration_backtest", "P0-2_xmins_role_v2", "P0-3_team_strength_fixture_probability", "P0-4_multi_horizon_package_optimizer", "P0-5_external_challenger_scorecard"],
     "decision_bridge_only_forbidden": true,

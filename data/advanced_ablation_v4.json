@@ -2,9 +2,9 @@
   "schema_version": 493,
   "engine": "v4.9.3-advanced-ablation",
   "status": "PASS",
-  "generated_at": "2026-08-27T16:15:54.171311+00:00",
-  "snapshot_sha256": "b43c6b1788e235ff30fe3ce703d0efed05ba90509bda2b77002fa987a25230b5",
-  "enrichment_sha256": "5898af5f63bb965012dcba9d831cf3569e6d6bbe73d93778b13030402e8bfa34",
+  "generated_at": "2026-08-28T02:03:54.314578+00:00",
+  "snapshot_sha256": "afe4f89a20a89088a7799039bc6bf2df5f989eac18ec46736f7bf4cc84432cae",
+  "enrichment_sha256": "5abfb195059371ff5d59d383ed37c0c0a7593813b0a486fc417dcd8fe95bb0f6",
   "model_version": "v4.9.2-truthful-health",
   "ablation": {
     "treatment": "community_advanced_current_season_enrichment",
@@ -20,22 +20,22 @@
       "players": 616,
       "shadow_players": 616,
       "max_horizon_delta": 0.0,
-      "tolerance": 1e-06,
+      "tolerance": 1e-6,
       "mismatches": []
     }
   },
   "prediction_impact": {
     "players": 616,
-    "mean_abs_delta_xpts5": 0.0627,
+    "mean_abs_delta_xpts5": 0.0624,
     "median_abs_delta_xpts5": 0.0,
     "max_abs_delta_xpts5": 1.58,
-    "mean_abs_rank_shift": 3.1494,
-    "max_abs_rank_shift": 42,
+    "mean_abs_rank_shift": 3.1623,
+    "max_abs_rank_shift": 43,
     "players_abs_delta_ge": {
-      "0.05": 100,
+      "0.05": 101,
       "0.10": 79,
       "0.25": 55,
-      "0.50": 34
+      "0.50": 33
     },
     "top_overlap": {
       "10": {
@@ -56,19 +56,15 @@
           366
         ],
         "no_advanced_only": [
-          198,
-          200
+          200,
+          140
         ]
       },
       "50": {
-        "overlap": 49,
-        "overlap_ratio": 0.98,
-        "full_only": [
-          4
-        ],
-        "no_advanced_only": [
-          86
-        ]
+        "overlap": 50,
+        "overlap_ratio": 1.0,
+        "full_only": [],
+        "no_advanced_only": []
       }
     },
     "largest_impacts": [
@@ -80,9 +76,9 @@
         "no_advanced_xpts5": 11.99,
         "delta_xpts5": 1.58,
         "abs_delta_xpts5": 1.58,
-        "full_rank": 146,
+        "full_rank": 145,
         "no_advanced_rank": 188,
-        "rank_shift": 42
+        "rank_shift": 43
       },
       {
         "element": 155,
@@ -117,8 +113,8 @@
         "delta_xpts5": 0.87,
         "abs_delta_xpts5": 0.87,
         "full_rank": 244,
-        "no_advanced_rank": 271,
-        "rank_shift": 27
+        "no_advanced_rank": 272,
+        "rank_shift": 28
       },
       {
         "element": 154,
@@ -176,8 +172,8 @@
         "no_advanced_xpts5": 16.57,
         "delta_xpts5": 0.8,
         "abs_delta_xpts5": 0.8,
-        "full_rank": 33,
-        "no_advanced_rank": 47,
+        "full_rank": 32,
+        "no_advanced_rank": 46,
         "rank_shift": 14
       },
       {
@@ -224,8 +220,8 @@
         "no_advanced_xpts5": 14.66,
         "delta_xpts5": 0.71,
         "abs_delta_xpts5": 0.71,
-        "full_rank": 74,
-        "no_advanced_rank": 97,
+        "full_rank": 73,
+        "no_advanced_rank": 96,
         "rank_shift": 23
       },
       {
@@ -236,8 +232,8 @@
         "no_advanced_xpts5": 14.17,
         "delta_xpts5": 0.7,
         "abs_delta_xpts5": 0.7,
-        "full_rank": 93,
-        "no_advanced_rank": 119,
+        "full_rank": 92,
+        "no_advanced_rank": 118,
         "rank_shift": 26
       },
       {
@@ -248,8 +244,8 @@
         "no_advanced_xpts5": 16.79,
         "delta_xpts5": 0.7,
         "abs_delta_xpts5": 0.7,
-        "full_rank": 28,
-        "no_advanced_rank": 43,
+        "full_rank": 27,
+        "no_advanced_rank": 42,
         "rank_shift": 15
       },
       {
@@ -260,21 +256,21 @@
         "no_advanced_xpts5": 16.83,
         "delta_xpts5": 0.7,
         "abs_delta_xpts5": 0.7,
-        "full_rank": 27,
-        "no_advanced_rank": 42,
+        "full_rank": 26,
+        "no_advanced_rank": 41,
         "rank_shift": 15
       },
       {
-        "element": 123,
-        "name": "Hinshelwood",
+        "element": 399,
+        "name": "Cherki",
         "position": "MID",
-        "full_xpts5": 18.21,
-        "no_advanced_xpts5": 17.52,
+        "full_xpts5": 9.42,
+        "no_advanced_xpts5": 8.73,
         "delta_xpts5": 0.69,
         "abs_delta_xpts5": 0.69,
-        "full_rank": 17,
-        "no_advanced_rank": 24,
-        "rank_shift": 7
+        "full_rank": 218,
+        "no_advanced_rank": 218,
+        "rank_shift": 0
       },
       {
         "element": 95,
@@ -284,21 +280,9 @@
         "no_advanced_xpts5": 16.57,
         "delta_xpts5": 0.68,
         "abs_delta_xpts5": 0.68,
-        "full_rank": 37,
-        "no_advanced_rank": 45,
+        "full_rank": 36,
+        "no_advanced_rank": 44,
         "rank_shift": 8
-      },
-      {
-        "element": 399,
-        "name": "Cherki",
-        "position": "MID",
-        "full_xpts5": 9.41,
-        "no_advanced_xpts5": 8.73,
-        "delta_xpts5": 0.68,
-        "abs_delta_xpts5": 0.68,
-        "full_rank": 218,
-        "no_advanced_rank": 218,
-        "rank_shift": 0
       },
       {
         "element": 366,
@@ -308,8 +292,8 @@
         "no_advanced_xpts5": 16.88,
         "delta_xpts5": 0.66,
         "abs_delta_xpts5": 0.66,
-        "full_rank": 25,
-        "no_advanced_rank": 40,
+        "full_rank": 24,
+        "no_advanced_rank": 39,
         "rank_shift": 15
       },
       {
@@ -320,8 +304,8 @@
         "no_advanced_xpts5": 13.86,
         "delta_xpts5": 0.62,
         "abs_delta_xpts5": 0.62,
-        "full_rank": 110,
-        "no_advanced_rank": 133,
+        "full_rank": 109,
+        "no_advanced_rank": 132,
         "rank_shift": 23
       },
       {
@@ -332,8 +316,8 @@
         "no_advanced_xpts5": 14.37,
         "delta_xpts5": 0.59,
         "abs_delta_xpts5": 0.59,
-        "full_rank": 87,
-        "no_advanced_rank": 111,
+        "full_rank": 86,
+        "no_advanced_rank": 110,
         "rank_shift": 24
       },
       {
@@ -344,8 +328,8 @@
         "no_advanced_xpts5": 13.24,
         "delta_xpts5": 0.59,
         "abs_delta_xpts5": 0.59,
-        "full_rank": 136,
-        "no_advanced_rank": 152,
+        "full_rank": 135,
+        "no_advanced_rank": 151,
         "rank_shift": 16
       },
       {
@@ -356,8 +340,8 @@
         "no_advanced_xpts5": 13.18,
         "delta_xpts5": 0.59,
         "abs_delta_xpts5": 0.59,
-        "full_rank": 139,
-        "no_advanced_rank": 155,
+        "full_rank": 138,
+        "no_advanced_rank": 154,
         "rank_shift": 16
       },
       {
@@ -368,8 +352,8 @@
         "no_advanced_xpts5": 15.25,
         "delta_xpts5": 0.58,
         "abs_delta_xpts5": 0.58,
-        "full_rank": 62,
-        "no_advanced_rank": 77,
+        "full_rank": 61,
+        "no_advanced_rank": 76,
         "rank_shift": 15
       },
       {
@@ -380,8 +364,8 @@
         "no_advanced_xpts5": 13.73,
         "delta_xpts5": 0.57,
         "abs_delta_xpts5": 0.57,
-        "full_rank": 118,
-        "no_advanced_rank": 141,
+        "full_rank": 117,
+        "no_advanced_rank": 140,
         "rank_shift": 23
       },
       {
@@ -404,8 +388,8 @@
         "no_advanced_xpts5": 14.45,
         "delta_xpts5": 0.56,
         "abs_delta_xpts5": 0.56,
-        "full_rank": 86,
-        "no_advanced_rank": 107,
+        "full_rank": 85,
+        "no_advanced_rank": 106,
         "rank_shift": 21
       },
       {
@@ -416,8 +400,8 @@
         "no_advanced_xpts5": 14.18,
         "delta_xpts5": 0.56,
         "abs_delta_xpts5": 0.56,
-        "full_rank": 99,
-        "no_advanced_rank": 118,
+        "full_rank": 98,
+        "no_advanced_rank": 117,
         "rank_shift": 19
       },
       {
@@ -428,9 +412,21 @@
         "no_advanced_xpts5": 13.2,
         "delta_xpts5": 0.56,
         "abs_delta_xpts5": 0.56,
-        "full_rank": 140,
-        "no_advanced_rank": 153,
+        "full_rank": 139,
+        "no_advanced_rank": 152,
         "rank_shift": 13
+      },
+      {
+        "element": 255,
+        "name": "J.Cuenca",
+        "position": "DEF",
+        "full_xpts5": 12.51,
+        "no_advanced_xpts5": 11.96,
+        "delta_xpts5": 0.55,
+        "abs_delta_xpts5": 0.55,
+        "full_rank": 177,
+        "no_advanced_rank": 191,
+        "rank_shift": 14
       }
     ]
   },
@@ -496,10 +492,10 @@
       427,
       445
     ],
-    "delta_best_xi_xpts_5_full": 24.21,
-    "delta_best_xi_xpts_5_no_advanced": 22.51,
-    "delta_bench_adjusted_utility_5_full": 25.7,
-    "delta_bench_adjusted_utility_5_no_advanced": 23.94,
+    "delta_best_xi_xpts_5_full": 24.2,
+    "delta_best_xi_xpts_5_no_advanced": 22.5,
+    "delta_bench_adjusted_utility_5_full": 25.69,
+    "delta_bench_adjusted_utility_5_no_advanced": 23.93,
     "decision_changed": true
   },
   "interpretation": {
@@ -508,5 +504,5 @@
     "decision_flip_is_reported_not_forced": true,
     "future_empirical_value_requires_reconciled_samples": true
   },
-  "performance_ms": 4638.78
+  "performance_ms": 5156.95
 }

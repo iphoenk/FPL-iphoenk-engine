@@ -1,20 +1,16 @@
-name: FPL iphoenk V4.9.5 official-first human-report gate
+name: FPL V4 production gate
 
 on:
   workflow_dispatch:
   schedule:
-    # 04:30, 12:30 and 21:30 Asia/Jakarta (UTC+7).
     - cron: "30 21 * * *"
     - cron: "30 5 * * *"
     - cron: "30 14 * * *"
   push:
-    branches:
-      - v4-prediction-engine
-    paths-ignore:
-      - 'data/**'
+    branches: [v4-prediction-engine]
+    paths-ignore: ['data/**']
   pull_request:
-    branches:
-      - v4-prediction-engine
+    branches: [v4-prediction-engine]
 
 permissions:
   contents: write
@@ -24,137 +20,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate-v4:
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    env:
-      PYTHONPATH: ${{ github.workspace }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event_name == 'schedule' && 'v4-prediction-engine' || github.ref }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: requirements.txt
-      - name: Install cached dependencies
-        run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Unit and acceptance tests
-        run: python -m pytest -q
-      - name: Run 11 process-isolated DAG-parallel V4 services
-        run: python -m src.services.orchestrator daily --stats --deep-stats
-      - name: Centralized V4.9.5 core quality gate
-        run: python -m src.engines.v4_quality_gate
-      - name: Concise core acceptance summary
-        run: |
-          python - <<'PY'
-          import json
-          h=json.load(open('data/framework_health_v4.json'))
-          w=json.load(open('data/wc_decision_v4.json'))
-          latest=json.load(open('data/latest.json'))
-          pipeline=json.load(open('data/decision_pipeline_v4.json'))
-          overlay=json.load(open('data/effective_plan_v4.json'))
-          engine_lineup=json.load(open('data/lineup_decision_v4.json'))
-          checkpoint=json.load(open('data/checkpoint_decision_v4.json'))
-          orchestration=json.load(open('data/service_orchestration_v4.json'))
-          lifecycle=json.load(open('data/validation/lifecycle_v4.json'))
-          scorecard=json.load(open('data/gw_scorecard_v4.json'))
-          effective=overlay['effective_plan']
-          plan_truth=h.get('gate0', {}).get('plan_authority_validation', {})
-          print({
-              'pipeline_health': h['pipeline_health'],
-              'prediction_health': h['prediction_health'],
-              'capability_health': h['capability_health'],
-              'decision_engine': h['decision_engine'],
-              'critical_warmup': h['critical_warmup'],
-              'capability_coverage': h['capability_coverage'],
-              'official_fpl_first': h.get('official_fpl_first'),
-              'recommendation_allowed': h['recommendation_allowed'],
-              'go_allowed': h['go_allowed'],
-              'gate0': h['gate0']['counts'],
-              'engine_plan_legal': plan_truth.get('engine_plan', {}).get('legal'),
-              'effective_plan_legal': plan_truth.get('effective_plan', {}).get('legal'),
-              'budget_tenths': w['budget_tenths'],
-              'price_basis': w['affordability']['price_basis'],
-              'refresh_ms': latest.get('performance', {}).get('engine_before_snapshot_write_ms'),
-              'decision_pipeline_ms': pipeline.get('timings', {}).get('total_pipeline_ms'),
-              'decision_slo': pipeline.get('performance_slo'),
-              'checkpoint': checkpoint['checkpoint_context']['policy_id'],
-              'action': checkpoint['action_state'],
-              'human_report': checkpoint.get('human_report'),
-              'execution_authorized': checkpoint['decision']['execution_authorized'],
-              'services': orchestration['summary']['services_passed'],
-              'orchestration_levels': orchestration.get('execution_levels'),
-              'orchestration_ms': orchestration['duration_ms'],
-              'orchestration_target': orchestration.get('runtime_target'),
-              'projection_baseline': latest.get('projection_baseline'),
-              'engine_formation': engine_lineup.get('formation'),
-              'engine_captain': (engine_lineup.get('captain') or {}).get('name'),
-              'effective_authority': effective.get('authority'),
-              'human_override_active': overlay.get('user_override', {}).get('active'),
-              'effective_formation': effective.get('formation'),
-              'effective_captain': (effective.get('captain') or {}).get('name'),
-              'effective_chip': effective.get('chip_context', {}).get('active_chip'),
-              'user_minus_engine_xpts': overlay.get('comparison', {}).get('user_minus_engine_xpts'),
-              'previous_gw': scorecard.get('headline', {}).get('previous'),
-              'planning_gw': scorecard.get('headline', {}).get('planning'),
-              'validation_snapshot': lifecycle['snapshot'],
-              'validation_reconciliation': lifecycle['reconciliation'],
-              'eligible_calibration_samples': lifecycle['eligibility'].get('eligible_samples'),
-          })
-          PY
-      - name: Publish core branch data
-        if: github.event_name != 'pull_request'
-        shell: bash
-        run: |
-          git config user.name "fpl-iphoenk-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/
-          if git diff --cached --quiet; then echo "No core data changes"; exit 0; fi
-          git commit -m "data(v4): prediction acceptance snapshot"
-          git fetch origin v4-prediction-engine
-          git rebase origin/v4-prediction-engine
-          git push origin HEAD:v4-prediction-engine
-      - name: Advanced enrichment ablation post-publish diagnostic gate
-        run: |
-          python -m src.engines.v4_advanced_ablation
-          python - <<'PY'
-          import json
-          a=json.load(open('data/advanced_ablation_v4.json'))
-          assert a['status']=='PASS', a
-          assert a['ablation']['advanced_removed_only'] is True, a
-          assert a['ablation']['same_official_snapshot'] is True, a
-          assert a['ablation']['same_last_season_priors'] is True, a
-          assert a['ablation']['same_quality_config'] is True, a
-          assert a['ablation']['same_optimizer_semantics'] is True, a
-          assert a['ablation']['full_shadow_parity']['ok'] is True, a
-          assert a['interpretation']['impact_is_diagnostic_not_health_threshold'] is True, a
-          PY
-      - name: Concise ablation diagnostic summary
-        run: |
-          python - <<'PY'
-          import json
-          a=json.load(open('data/advanced_ablation_v4.json'))
-          print({
-              'status': a['status'],
-              'full_shadow_parity': a['ablation']['full_shadow_parity']['ok'],
-              'mean_abs_delta_xpts5': a['prediction_impact']['mean_abs_delta_xpts5'],
-              'max_rank_shift': a['prediction_impact']['max_abs_rank_shift'],
-              'decision_changed': a['decision_impact']['decision_changed'],
-              'observational_only': a['interpretation']['impact_is_diagnostic_not_health_threshold'],
-          })
-          PY
-      - name: Publish ablation diagnostic data
-        if: github.event_name != 'pull_request'
-        shell: bash
-        run: |
-          git config user.name "fpl-iphoenk-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/advanced_ablation_v4.json
-          if git diff --cached --quiet; then echo "No ablation data changes"; exit 0; fi
-          git commit -m "data(v4): advanced ablation diagnostic"
-          git fetch origin v4-prediction-engine
-          git rebase origin/v4-prediction-engine
-          git push origin HEAD:v4-prediction-engine
+  core:
+    uses: ./.github/workflows/fpl-engine-core.yml
+    permissions:
+      contents: write
+    with:
+      ref: ${{ github.event_name == 'schedule' && 'v4-prediction-engine' || github.sha }}
+      publish: ${{ github.event_name != 'pull_request' }}

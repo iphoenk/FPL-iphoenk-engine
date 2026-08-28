@@ -106,6 +106,7 @@ def test_official_fpl_fields_are_preserved_without_downstream_refetch():
     enrichment = (ROOT / "src/services/enrichment_service.py").read_text()
     prediction = (ROOT / "src/services/prediction_service.py").read_text()
     postflight = (ROOT / "src/services/framework_postflight_truth_service.py").read_text()
+    raw = (ROOT / "src/services/raw_snapshot_service.py").read_text()
     for field in (
         "selected_by_percent", "expected_goals", "expected_assists", "expected_goal_involvements",
         "expected_goals_conceded", "bps", "bonus", "form", "starts",
@@ -115,6 +116,8 @@ def test_official_fpl_fields_are_preserved_without_downstream_refetch():
     assert '"effective_ownership_available_from_official_fpl": False' in prediction
     assert "src.sources.official_fpl" not in enrichment
     assert "src.sources.official_fpl" not in prediction
+    assert '("bootstrap", "bootstrap-static/", 3)' in raw
+    assert "bootstrap_overlapped_with_independent_official_endpoints" in raw
     for module_id in ("DSS-18", "DSS-20", "DSS-21", "DSS-22", "DSS-23", "DSS-38"):
         assert f'"{module_id}"' in postflight
     assert "DSS-41" in postflight
@@ -133,8 +136,14 @@ def test_dag_parallelization_only_groups_dependency_independent_services():
     registry = json.loads((ROOT / "config/service_registry.json").read_text())
     levels = _service_levels(registry)
     assert registry["execution_model"] == "process_isolated_dag_parallel_single_host"
-    assert any({row["id"] for row in level} == {"validation_lifecycle", "rules_compliance"} for level in levels)
+    assert any({row["id"] for row in level} == {"validation_lifecycle", "rules_compliance", "optimization"} for level in levels)
+    assert any({row["id"] for row in level} == {"framework_preflight", "user_decision_overlay"} for level in levels)
     assert any({row["id"] for row in level} == {"personal_gw_scorecard", "framework_postflight"} for level in levels)
+    by_id = {row["id"]: row for row in registry["services"]}
+    assert by_id["optimization"]["depends_on"] == ["prediction"]
+    assert set(by_id["framework_postflight"]["depends_on"]) == {"framework_preflight", "user_decision_overlay"}
+    assert registry["guardrails"]["optimizer_may_parallelize_with_validation_before_preflight"] is True
+    assert registry["guardrails"]["postflight_requires_preflight_and_effective_plan"] is True
     for level in levels:
         ids = {row["id"] for row in level}
         for row in level:

@@ -8,7 +8,7 @@ from src.utils import DATA, atomic_json, iso_now, read_json
 
 OFFICIAL = DATA / "official_snapshot.json"
 CACHE_OUT = DATA / "price_cache.json"
-PRICES_OUT = DATA / "prices.json"
+MARKET_PRICES_OUT = DATA / "market_prices.json"
 UNIVERSE_OUT = DATA / "universe.json"
 
 
@@ -66,20 +66,22 @@ def run() -> dict:
 
     momentum.sort(key=lambda row: float(row["momentum"]), reverse=True)
     generated_at = iso_now()
-    prices = {
+    market_prices = {
         "generated_at": generated_at,
+        "contract": "MARKET_PRICE_FACTS_V1",
+        "authority": "Official FPL snapshot",
         "confirmed_changes": confirmed,
         "top_buy_pressure": momentum[:PRICE_PRESSURE_LIST_SIZE],
         "top_sell_pressure": list(reversed(momentum[-PRICE_PRESSURE_LIST_SIZE:])),
     }
     atomic_json(CACHE_OUT, {"generated_at": generated_at, "players": current})
-    atomic_json(PRICES_OUT, prices)
+    atomic_json(MARKET_PRICES_OUT, market_prices)
     atomic_json(UNIVERSE_OUT, {"generated_at": generated_at, "players": universe})
     return {
         "generated_at": generated_at,
         "confirmed_changes": len(confirmed),
         "universe_players": len(universe),
-        "top_buy_pressure": len(prices["top_buy_pressure"]),
+        "top_buy_pressure": len(market_prices["top_buy_pressure"]),
     }
 
 

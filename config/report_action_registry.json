@@ -1,40 +1,40 @@
 {
-  "schema_version": 1,
-  "registry": "fpl_report_actions_v1",
+  "schema_version": 2,
+  "registry": "fpl_report_actions_v2",
   "actions": {
     "HOLD": {
-      "headline": "HOLD LOCK 15",
-      "summary": "Pertahankan komposisi 15 pemain. Rekomendasi masih dapat dipantau, tetapi belum cukup kuat untuk dieksekusi.",
-      "structure_action": "KEEP_LOCKED_15"
+      "headline": "HOLD",
+      "summary": "Pertahankan struktur saat ini sambil menunggu informasi yang cukup kuat untuk membenarkan perubahan.",
+      "structure_action": "KEEP_CURRENT_STRUCTURE"
     },
     "REVIEW_REQUIRED": {
       "headline": "REVIEW REQUIRED",
-      "summary": "Ada kandidat perubahan yang layak ditinjau, tetapi keputusan memerlukan pemeriksaan final sebelum eksekusi.",
+      "summary": "Ada alternatif yang layak dibandingkan kembali sebelum keputusan final, tetapi belum perlu langsung dijalankan.",
       "structure_action": "REVIEW_PROPOSED_CHANGES"
     },
     "GO": {
       "headline": "GO",
-      "summary": "Seluruh gate, freshness, dan evidence governance mendukung eksekusi rekomendasi.",
+      "summary": "Perbandingan terbaru menunjukkan perubahan yang cukup kuat untuk dipertimbangkan sebagai pilihan utama, tetap menunggu final lock dari user.",
       "structure_action": "EXECUTE_GOVERNED_RECOMMENDATION"
     },
     "EMERGENCY_UPDATE_ONLY": {
       "headline": "EMERGENCY UPDATE ONLY",
-      "summary": "Final review telah lewat. Perubahan hanya boleh dilakukan bila ada berita material yang memengaruhi kelayakan pemain.",
+      "summary": "Final review telah lewat. Ubah tim hanya bila muncul kabar material yang memengaruhi kelayakan pemain.",
       "structure_action": "KEEP_FINAL_STRUCTURE_UNLESS_MATERIAL_EMERGENCY"
     },
     "REFRESH_REQUIRED": {
       "headline": "REFRESH REQUIRED",
-      "summary": "Data melewati batas freshness checkpoint. Jangan mengambil keputusan sebelum snapshot diperbarui.",
+      "summary": "Data terakhir sudah terlalu lama untuk dijadikan dasar keputusan saat ini. Perbarui data sebelum mengubah tim.",
       "structure_action": "NO_ACTION_UNTIL_REFRESH"
     },
     "BLOCKED": {
       "headline": "BLOCKED",
-      "summary": "Hard constraint atau framework health gagal. Rekomendasi tidak boleh digunakan.",
+      "summary": "Data atau struktur tim belum konsisten untuk menghasilkan keputusan yang aman. Jangan lakukan perubahan sampai masalahnya diperbaiki.",
       "structure_action": "NO_ACTION"
     },
     "SIMULATION_ONLY": {
       "headline": "SIMULATION ONLY",
-      "summary": "Hasil ini menguji perilaku checkpoint dengan waktu simulasi dan tidak mengotorisasi perubahan tim.",
+      "summary": "Hasil ini hanya simulasi waktu dan tidak digunakan sebagai instruksi perubahan tim nyata.",
       "structure_action": "NO_LIVE_ACTION"
     }
   }

@@ -1,5 +1,5 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "registry": "V3_ARCHITECTURE_OWNERSHIP_V1",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "inspired_by": [
@@ -25,6 +25,9 @@
     "warm_decision_regeneration_is_separate_from_source_refresh": true,
     "tactical_context_has_single_bounded_materialization_owner": true,
     "observed_tactical_event_aggregation_is_tactical_context_owned": true,
+    "tactical_decision_consumption_is_shared_governance_primitive": true,
+    "tactical_consumers_may_not_recompute_tactical_source_evidence": true,
+    "tactical_close_call_consumption_may_not_mutate_xpts": true,
     "missing_tactical_evidence_must_remain_partial_or_unavailable": true
   },
   "responsibilities": [
@@ -59,7 +62,8 @@
     {"id":"XMINS_DISTRIBUTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-05","DSS-06","DSS-07","DSS-08","DSS-09","DSS-X10","DSS-X11"]},
     {"id":"ADVANCED_ATTACKING_EVIDENCE","owner":"advanced_stats","implementation":"src.engines.player_features","consumers":["DSS-12","DSS-13","DSS-14","DSS-15","DSS-16","DSS-38","tactical_context"]},
     {"id":"OBSERVED_TACTICAL_EVENT_AGGREGATION","owner":"tactical_context","implementation":"src.models.observed_tactical_context","consumers":["tactical_context"]},
-    {"id":"TACTICAL_MATCHUP_CONTEXT","owner":"tactical_context","implementation":"src.engines.tactical_context_service","consumers":["prediction","reporting","watchlist"]},
+    {"id":"TACTICAL_MATCHUP_CONTEXT","owner":"tactical_context","implementation":"src.engines.tactical_context_service","consumers":["prediction","governance","lineup_governance","reporting","watchlist","report_materializer"]},
+    {"id":"TACTICAL_DECISION_CONSUMPTION","owner":"governance","implementation":"src.engines.tactical_decision_consumption","consumers":["governance","watchlist","report_materializer"]},
     {"id":"TEAM_STRENGTH_AND_FIXTURE_PROBABILITY","owner":"prediction","implementation":"src.models.team_strength","consumers":["DSS-19","DSS-20","DSS-21","DSS-22","DSS-23","DSS-24","DSS-29"]},
     {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-25","DSS-26","DSS-27","DSS-28","ENH-04","decision_hotpath"]},
     {"id":"PACKAGE_SCORING_AND_LEGALITY_PRECHECK","owner":"prediction","implementation":"src.models.package_optimizer_v2","consumers":["DSS-40","DSS-45","DSS-46","DSS-X05","DSS-X06","DSS-X07","DSS-X08","ENH-06","lineup_governance","decision_hotpath"]},
@@ -99,6 +103,7 @@
     "prediction_evaluation_official_fetch": "Only historical finished-GW event-live settlement not represented by the current core snapshot is network-owned by prediction_evaluation.",
     "package_optimization_owner": "Canonical optimizer remains prediction-owned. decision_hotpath consumes its artifact and canonical lineup/package governance builders; it does not own or duplicate football formulas.",
     "tactical_context_owner": "tactical_context owns observed tactical event aggregation and final tactical artifacts once. Prediction consumes them and may not recreate source evidence.",
+    "tactical_decision_consumption": "governance owns the single close-call consumption primitive. Lineup, watchlist and report reuse projection tactical_matchup; no consumer may recalculate source evidence or mutate xPts.",
     "interactive_lane": "decision_hotpath and instant_gateway are separate bounded interactive microservices outside the background refresh DAG."
   }
 }

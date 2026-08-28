@@ -6,13 +6,10 @@ The manifest is deliberately separate from runtime_performance.json. Performance
 telemetry is observational and may be overwritten by FULL runs; reuse state is a
 correctness contract.
 
-Semantic inputs may be declared either as a whole JSON artifact (legacy string
-form) or as a field-selective object::
-
-    {"path": "official_snapshot.json", "include_paths": ["bootstrap.elements", "fixtures"]}
-
-Field selectors are config-owned so runtime code does not accumulate ad-hoc lists
-of decision-irrelevant metadata. Missing selected fields fail closed.
+Semantic inputs may be declared as a whole JSON artifact, selected object paths,
+or selected fields from every row of a list. Field selectors are config-owned so
+runtime code does not accumulate ad-hoc knowledge of model dependencies.
+Missing selected paths/fields fail closed.
 """
 
 import argparse
@@ -107,38 +104,70 @@ def _select_path(payload: Any, dotted_path: str) -> Any:
     return current
 
 
-def semantic_file_bytes(path: Path, include_paths: list[str] | None = None) -> bytes | None:
+def _select_list_fields(payload: Any, dotted_path: str, fields: list[str]) -> Any:
+    rows = _select_path(payload, dotted_path)
+    if rows is _MISSING or not isinstance(rows, list):
+        return _MISSING
+    selected_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            return _MISSING
+        selected: dict[str, Any] = {}
+        for field in fields:
+            if field not in row:
+                return _MISSING
+            selected[field] = row[field]
+        selected_rows.append(selected)
+    return selected_rows
+
+
+def semantic_file_bytes(
+    path: Path,
+    include_paths: list[str] | None = None,
+    include_list_fields: dict[str, list[str]] | None = None,
+) -> bytes | None:
     if not path.exists() or not path.is_file():
         return None
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        if include_paths:
+        if include_paths or include_list_fields:
             return None
         return path.read_bytes()
 
-    if include_paths:
+    if include_paths or include_list_fields:
         selected: dict[str, Any] = {}
-        for dotted in include_paths:
+        for dotted in include_paths or []:
             value = _select_path(payload, dotted)
             if value is _MISSING:
                 return None
             selected[str(dotted)] = value
+        for dotted, fields in sorted((include_list_fields or {}).items()):
+            value = _select_list_fields(payload, dotted, fields)
+            if value is _MISSING:
+                return None
+            selected[f"{dotted}[]"] = value
         payload = selected
     normalized = canonicalize(payload)
     return json.dumps(normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
-def _input_spec(value: Any) -> tuple[str, list[str] | None] | None:
+def _input_spec(value: Any) -> tuple[str, list[str] | None, dict[str, list[str]] | None] | None:
     if isinstance(value, str) and value:
-        return value, None
+        return value, None, None
     if not isinstance(value, dict):
         return None
     path = str(value.get("path") or "").strip()
     include = [str(item).strip() for item in value.get("include_paths") or [] if str(item).strip()]
-    if not path or not include:
+    list_fields: dict[str, list[str]] = {}
+    for dotted, fields in (value.get("include_list_fields") or {}).items():
+        dotted = str(dotted).strip()
+        cleaned = [str(field).strip() for field in fields or [] if str(field).strip()]
+        if dotted and cleaned:
+            list_fields[dotted] = cleaned
+    if not path or (not include and not list_fields):
         return None
-    return path, include
+    return path, include or None, list_fields or None
 
 
 def input_signature(service_name: str, reuse_cfg: dict[str, Any], canonical: Path) -> str | None:
@@ -152,15 +181,23 @@ def input_signature(service_name: str, reuse_cfg: dict[str, Any], canonical: Pat
         parsed = _input_spec(value)
         if parsed is None:
             return None
-        rel, include = parsed
-        raw = semantic_file_bytes(canonical / rel, include)
+        rel, include, list_fields = parsed
+        raw = semantic_file_bytes(canonical / rel, include, list_fields)
         if raw is None:
             return None
         digest.update(b"\nINPUT:")
         digest.update(rel.encode("utf-8"))
         if include:
-            digest.update(b"[")
+            digest.update(b"[PATHS:")
             digest.update("|".join(include).encode("utf-8"))
+            digest.update(b"]")
+        if list_fields:
+            digest.update(b"[LIST_FIELDS:")
+            for dotted, fields in sorted(list_fields.items()):
+                digest.update(dotted.encode("utf-8"))
+                digest.update(b"=")
+                digest.update("|".join(fields).encode("utf-8"))
+                digest.update(b";")
             digest.update(b"]")
         digest.update(b"\n")
         digest.update(raw)
@@ -240,7 +277,7 @@ def capture(profile_name: str = "fast_decision") -> dict[str, Any]:
         raise RuntimeError(f"semantic reuse manifest capture missing validated service signatures: {sorted(missing)}")
 
     manifest = {
-        "schema_version": 2,
+        "schema_version": 3,
         "registry": "RUNTIME_REUSE_MANIFEST_V1",
         "engine_version": ENGINE_VERSION,
         "engine_schema_version": SCHEMA_VERSION,
@@ -251,6 +288,7 @@ def capture(profile_name: str = "fast_decision") -> dict[str, Any]:
             "separate_from_performance_telemetry": True,
             "input_signature_captured_while_ephemeral_inputs_exist": True,
             "semantic_field_selection_is_config_owned": True,
+            "semantic_list_field_selection_is_config_owned": True,
             "missing_selected_semantic_field_fails_closed": True,
             "artifact_hash_must_match_before_reuse": True,
             "artifact_contract_validation_required": True,

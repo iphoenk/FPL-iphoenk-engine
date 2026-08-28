@@ -167,6 +167,7 @@ jobs:
           team_id = int(os.environ['FPL_TEAM_ID'])
           deadline = time.monotonic() + 45.0
           worker = {}
+          startup_errors = []
           while time.monotonic() < deadline:
               try:
                   with urllib.request.urlopen('http://127.0.0.1:8100/health', timeout=3) as response:
@@ -174,11 +175,17 @@ jobs:
                   worker = health.get('refresh_worker') or {}
                   if worker.get('enabled') is True and worker.get('running') is True and int(worker.get('successes') or 0) >= 1:
                       break
-              except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
-                  pass
+              except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
+                  # Container recreate can briefly reset/refuse the connection before
+                  # uvicorn has completed startup. Treat only this bounded startup
+                  # window as retryable; worker success is still required below.
+                  startup_errors.append(type(exc).__name__)
               time.sleep(0.5)
           else:
-              raise SystemExit(f'refresh worker did not produce a successful materialization: {worker}')
+              raise SystemExit(
+                  f'refresh worker did not produce a successful materialization: '
+                  f'worker={worker} startup_errors={startup_errors[-10:]}'
+              )
 
           assert worker.get('mode') == 'deadline', worker
           assert int(worker.get('interval_seconds') or 0) == 20, worker
@@ -208,6 +215,7 @@ jobs:
           internal_ms = float(perf.get('hot_path_wall_ms') or 0.0)
           result = {
               'worker': worker,
+              'startup_transient_errors': startup_errors,
               'hot_path_with_worker_enabled': {
                   'internal_ms': internal_ms,
                   'external_ms': round(external_ms, 3),

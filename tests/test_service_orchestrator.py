@@ -96,6 +96,25 @@ def test_orchestrator_fails_closed_when_downstream_mutates_snapshot(tmp_path):
     assert report["summary"]["fail_closed"] is True
 
 
+def test_orchestrator_surfaces_bounded_service_stderr_on_nonzero_exit(tmp_path):
+    services, contracts = _mini_registries()
+    data = tmp_path / "data"
+    data.mkdir()
+
+    def runner(command, **kwargs):
+        if command[-1] == "snapshot":
+            (data / "latest.json").write_text(json.dumps({"generated_at": "original"}))
+            return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
+        return subprocess.CompletedProcess(command, 7, stdout="service stdout", stderr="POSTFLIGHT_TRACE_MARKER")
+
+    with pytest.raises(RuntimeError, match="decision exit=7: POSTFLIGHT_TRACE_MARKER"):
+        orchestrate(service_registry=services, contract_registry=contracts, runner=runner, root=tmp_path, outfile=data / "orchestration.json")
+    report = json.loads((data / "orchestration.json").read_text())
+    failed = next(row for row in report["services"] if row["id"] == "decision")
+    assert failed["status"] == "FAIL"
+    assert failed["stderr_tail"] == "POSTFLIGHT_TRACE_MARKER"
+
+
 def test_runtime_flags_only_reach_services_that_declare_them():
     service = {"command": ["{python}", "-m", "service", "{mode}"], "runtime_flags": {"stats": "--stats", "as_of": "--as-of"}}
     command = _render_command(service, "deadline", True, False, "2026-08-28T21:30:00+07:00")

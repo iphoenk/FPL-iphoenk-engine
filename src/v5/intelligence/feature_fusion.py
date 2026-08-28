@@ -14,6 +14,31 @@ def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
+def validate_feature_fusion_config(config: dict[str, Any] | None) -> None:
+    cfg = config if isinstance(config, dict) else {}
+    advanced = cfg.get("advanced_attacking") if isinstance(cfg.get("advanced_attacking"), dict) else {}
+    if not advanced:
+        raise RuntimeError("authoritative feature fusion requires advanced_attacking registry section")
+    minimum_minutes = _f(advanced.get("minimum_evidence_minutes"), -1.0)
+    shrink_minutes = _f(advanced.get("evidence_shrinkage_minutes"), 0.0)
+    maximum_weight = _f(advanced.get("maximum_weight"), -1.0)
+    lower = _f(advanced.get("candidate_lower_multiplier"), -1.0)
+    upper = _f(advanced.get("candidate_upper_multiplier"), -1.0)
+    absolute_upper = _f(advanced.get("absolute_upper_rate90"), 0.0)
+    if minimum_minutes < 0:
+        raise RuntimeError("advanced attacking minimum_evidence_minutes must be >= 0")
+    if shrink_minutes <= 0:
+        raise RuntimeError("advanced attacking evidence_shrinkage_minutes must be > 0")
+    if not 0.0 <= maximum_weight <= 1.0:
+        raise RuntimeError("advanced attacking maximum_weight must be within [0, 1]")
+    if lower < 0 or upper < 0 or lower > upper:
+        raise RuntimeError("advanced attacking candidate multipliers require 0 <= lower <= upper")
+    if absolute_upper <= 0:
+        raise RuntimeError("advanced attacking absolute_upper_rate90 must be > 0")
+    if not bool(advanced.get("current_native_rate_remains_primary", True)):
+        raise RuntimeError("authoritative advanced attack fusion must keep current native rate primary")
+
+
 def _fuse_rate(
     native_rate: float,
     candidate_rate: float,
@@ -27,10 +52,8 @@ def _fuse_rate(
     native = max(0.0, float(native_rate))
     prior = max(0.0, float(prior_rate))
     anchor = max(native, prior, 0.01)
-    lower = max(0.0, anchor * max(0.0, lower_multiplier))
-    upper = min(max(lower, absolute_upper_rate90), anchor * max(lower_multiplier, upper_multiplier))
-    if upper < lower:
-        upper = lower
+    lower = max(0.0, anchor * lower_multiplier)
+    upper = max(lower, min(absolute_upper_rate90, anchor * upper_multiplier))
     bounded = _clamp(max(0.0, candidate_rate), lower, upper)
     final = native * (1.0 - weight) + bounded * weight
     return {
@@ -56,17 +79,19 @@ def fuse_advanced_attack(
     config: dict[str, Any] | None,
 ) -> dict[str, Any]:
     cfg = config if isinstance(config, dict) else {}
-    advanced_cfg = cfg.get("advanced_attacking") if isinstance(cfg.get("advanced_attacking"), dict) else {}
+    validate_feature_fusion_config(cfg)
+    advanced_cfg = cfg["advanced_attacking"]
     enabled = bool(advanced_cfg.get("enabled", False))
     eligible = {str(value) for value in advanced_cfg.get("eligible_positions") or ("DEF", "MID", "FWD")}
     native_xg = max(0.0, _f(native_xg90))
     native_xa = max(0.0, _f(native_xa90))
+    used_fields = [str(value) for value in advanced_cfg.get("used_fields") or ("minutes", "xg", "xa")]
     base = {
         "model": str(cfg.get("model") or "authoritative_feature_fusion_v1"),
         "feature": "advanced_attacking_stats",
         "authoritative_scope": "AUTHORITATIVE_XPTS",
-        "used_fields": ["minutes", "xg", "xa"],
-        "current_native_rate_remains_primary": bool(advanced_cfg.get("current_native_rate_remains_primary", True)),
+        "used_fields": used_fields,
+        "current_native_rate_remains_primary": True,
         "xg90_native": round(native_xg, 6),
         "xa90_native": round(native_xa, 6),
         "xg90_final": round(native_xg, 6),
@@ -82,7 +107,7 @@ def fuse_advanced_attack(
         return {**base, "status": "UNAVAILABLE", "reason": "advanced attacking evidence unavailable"}
 
     minutes = max(0.0, _f(evidence.get("minutes")))
-    minimum_minutes = max(0.0, _f(advanced_cfg.get("minimum_evidence_minutes"), 45.0))
+    minimum_minutes = _f(advanced_cfg.get("minimum_evidence_minutes"), 45.0)
     if minutes < minimum_minutes:
         return {
             **base,
@@ -92,8 +117,8 @@ def fuse_advanced_attack(
             "minimum_evidence_minutes": round(minimum_minutes, 1),
         }
 
-    shrink_minutes = max(1.0, _f(advanced_cfg.get("evidence_shrinkage_minutes"), 540.0))
-    maximum_weight = _clamp(_f(advanced_cfg.get("maximum_weight"), 0.25), 0.0, 1.0)
+    shrink_minutes = _f(advanced_cfg.get("evidence_shrinkage_minutes"), 540.0)
+    maximum_weight = _f(advanced_cfg.get("maximum_weight"), 0.25)
     evidence_fraction = minutes / (minutes + shrink_minutes)
     weight = _clamp(maximum_weight * evidence_fraction, 0.0, maximum_weight)
     if weight <= 0.0:
@@ -106,9 +131,9 @@ def fuse_advanced_attack(
 
     xg90_advanced = max(0.0, _f(evidence.get("xg"))) * 90.0 / minutes
     xa90_advanced = max(0.0, _f(evidence.get("xa"))) * 90.0 / minutes
-    lower_multiplier = max(0.0, _f(advanced_cfg.get("candidate_lower_multiplier"), 0.70))
-    upper_multiplier = max(lower_multiplier, _f(advanced_cfg.get("candidate_upper_multiplier"), 1.30))
-    absolute_upper = max(0.01, _f(advanced_cfg.get("absolute_upper_rate90"), 1.50))
+    lower_multiplier = _f(advanced_cfg.get("candidate_lower_multiplier"), 0.70)
+    upper_multiplier = _f(advanced_cfg.get("candidate_upper_multiplier"), 1.30)
+    absolute_upper = _f(advanced_cfg.get("absolute_upper_rate90"), 1.50)
     xg = _fuse_rate(
         native_xg,
         xg90_advanced,

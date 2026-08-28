@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "timezone": "Europe/London",
   "threshold_percent": 100.0,
   "filters": {
@@ -32,6 +32,25 @@
     "medium_hours": 48.0,
     "actionable_levels": ["CRITICAL", "HIGH", "MEDIUM"],
     "alert_levels": ["CRITICAL", "HIGH"]
+  },
+  "calibration": {
+    "owner": "price",
+    "mode": "MONITOR",
+    "model_id": "v5_price_predictor_health_v1",
+    "max_events": 250,
+    "miss_grace_hours": 12.0,
+    "minimum_samples_for_calibrated_health": 20,
+    "healthy_direction_accuracy": 0.70,
+    "warning_direction_accuracy": 0.55,
+    "suspect_static_ratio_warning": 0.50,
+    "timing_error_warning_hours": 24.0,
+    "governance": {
+      "direction_and_timing_are_separate": true,
+      "change_time_is_observation_bound_not_exact": true,
+      "no_accuracy_claim_before_minimum_sample": true,
+      "price_calibration_does_not_own_prediction_calibration": true,
+      "monitoring_may_not_mutate_price_prediction_rules_automatically": true
+    }
   },
   "likelihood_labels": {
     "-5": "VERY_LIKELY_DROP",

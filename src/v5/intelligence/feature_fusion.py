@@ -87,7 +87,9 @@ def fuse_advanced_attack(
     native_xg = max(0.0, _f(native_xg90))
     native_xa = max(0.0, _f(native_xa90))
     used_fields = [str(value) for value in advanced_cfg.get("used_fields") or ("minutes", "xg", "xa")]
-    source = source_context if isinstance(source_context, dict) else {}
+    evidence = advanced if isinstance(advanced, dict) else {}
+    embedded_source = evidence.get("_source_context") if isinstance(evidence.get("_source_context"), dict) else {}
+    source = source_context if isinstance(source_context, dict) else embedded_source
     freshness = source.get("freshness") if isinstance(source.get("freshness"), dict) else {}
     base = {
         "model": str(cfg.get("model") or "authoritative_feature_fusion_v1"),
@@ -106,7 +108,6 @@ def fuse_advanced_attack(
         return {**base, "status": "DISABLED", "reason": "advanced attacking feature fusion disabled by registry"}
     if str(position) not in eligible:
         return {**base, "status": "POSITION_INELIGIBLE", "reason": f"position {position} is not configured for attacking fusion"}
-    evidence = advanced if isinstance(advanced, dict) else {}
     if not evidence:
         return {**base, "status": "UNAVAILABLE", "reason": "advanced attacking evidence unavailable"}
     if source and source.get("authoritative_eligible") is not True:

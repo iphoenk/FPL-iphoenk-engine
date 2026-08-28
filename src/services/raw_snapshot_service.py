@@ -3,24 +3,85 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 
-from src.engine import TEAM_ID, _parallel_official_get, detect_phase, maps, resolve_locked_player
 from src.engines.checkpoint_policy import resolve_checkpoint
+from src.engines.fpl_rules_2026 import MAX_PER_CLUB, POSITION_BY_TYPE, POSITION_COUNTS, SQUAD_SIZE
 from src.engines.team_value import build_transfer_spells, sell_cost
 from src.sources.official_fpl import get_json
 from src.utils import CONFIG, DATA, atomic_json, iso_now, parse_dt, read_json, utcnow
 
 RUNTIME = DATA / "runtime"
 OUTFILE = RUNTIME / "snapshot.v1.json"
-POSITION_BY_TYPE = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
-POSITION_COUNTS = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
+_ENGINE_CONFIG = read_json(CONFIG / "engine.json", {})
+TEAM_ID = int(_ENGINE_CONFIG.get("team_id") or 0)
+API_RETRIES = int(_ENGINE_CONFIG.get("api_retries") or 0)
+if TEAM_ID <= 0 or API_RETRIES <= 0:
+    raise RuntimeError("engine config must provide positive team_id and api_retries")
+
+
+def _parallel_official_get(specs: list[tuple[str, str, int]]) -> dict:
+    """Fetch one point-in-time Official FPL wave concurrently."""
+    if not specs:
+        return {}
+
+    def fetch(item):
+        key, path, retries = item
+        return key, get_json(path, retries=retries)
+
+    with ThreadPoolExecutor(max_workers=min(6, len(specs)), thread_name_prefix="fpl-api") as pool:
+        return dict(pool.map(fetch, specs))
+
+
+def detect_phase(bootstrap: dict, as_of=None) -> dict:
+    now = as_of or utcnow()
+    events = bootstrap.get("events", [])
+    current = next((event for event in events if event.get("is_current")), None)
+    nxt = next((event for event in events if event.get("is_next")), None)
+    finished = [event for event in events if event.get("finished")]
+    last = max(finished, key=lambda event: event["id"]) if finished else None
+    if current:
+        deadline = parse_dt(current.get("deadline_time"))
+        planning = current if deadline and deadline > now else (nxt or current)
+    else:
+        planning = nxt
+    return {
+        "current_gw": current["id"] if current else None,
+        "next_gw": nxt["id"] if nxt else None,
+        "last_finished_gw": last["id"] if last else None,
+        "planning_gw": planning["id"] if planning else None,
+        "submitted_gw": (current or last or {}).get("id"),
+        "scoring_gw": current["id"] if current else None,
+        "deadline_time": planning.get("deadline_time") if planning else None,
+        "is_live_event": bool(current and not current.get("finished")),
+    }
+
+
+def maps(bootstrap: dict) -> tuple[dict, dict, dict]:
+    teams = {team["id"]: team["name"] for team in bootstrap["teams"]}
+    by_id = {player["id"]: player for player in bootstrap["elements"]}
+    return teams, POSITION_BY_TYPE, by_id
+
+
+def resolve_locked_player(row: dict, by_id: dict, teams: dict, positions: dict) -> dict:
+    element = row.get("element")
+    player = by_id.get(int(element)) if element is not None else None
+    if not player:
+        raise RuntimeError(f"FAIL CLOSED: locked element {element} missing")
+    if row.get("position") and positions.get(player.get("element_type")) != row["position"]:
+        raise RuntimeError(f"FAIL CLOSED: position mismatch {element}")
+    if row.get("expected_web_name") and player.get("web_name") != row["expected_web_name"]:
+        raise RuntimeError(f"FAIL CLOSED: name mismatch {element}")
+    if row.get("expected_team") and teams.get(player.get("team")) != row["expected_team"]:
+        raise RuntimeError(f"FAIL CLOSED: team mismatch {element}")
+    return player
 
 
 def _validate_authoritative_squad(squad: list[dict], by_id: dict[int, dict]) -> None:
     if not squad:
         return
-    if len(squad) != 15:
+    if len(squad) != SQUAD_SIZE:
         raise RuntimeError(f"FAIL CLOSED: squad count {len(squad)}")
     element_ids = [int(row.get("element") or -1) for row in squad]
     if len(element_ids) != len(set(element_ids)):
@@ -37,9 +98,9 @@ def _validate_authoritative_squad(squad: list[dict], by_id: dict[int, dict]) -> 
             raise RuntimeError(f"FAIL CLOSED: position mismatch {element}")
         positions[actual_position] += 1
         clubs[int(player.get("team") or 0)] += 1
-    if dict(positions) != POSITION_COUNTS:
+    if any(positions.get(position, 0) != expected for position, expected in POSITION_COUNTS.items()):
         raise RuntimeError(f"FAIL CLOSED: positions {dict(positions)}")
-    if max(clubs.values(), default=0) > 3:
+    if max(clubs.values(), default=0) > MAX_PER_CLUB:
         raise RuntimeError(f"FAIL CLOSED: club limit {dict(clubs)}")
 
 
@@ -51,11 +112,7 @@ def _normalize_endpoint_health(health: dict, payloads: dict, submitted_gw: int |
 
 
 def _projection_baseline_authority(lock: dict, phase: dict) -> dict:
-    """Resolve planning squad authority without allowing a stale draft to leak into later GWs.
-
-    Default rule: GW N projection starts from the most recent Official submitted squad
-    (normally GW N-1). A user planning override is valid only for its explicit target_gw.
-    """
+    """Resolve planning squad authority without allowing a stale draft into later GWs."""
     planning_gw = int(phase.get("planning_gw") or 0) or None
     submitted_gw = int(phase.get("submitted_gw") or 0) or None
     override_requested = bool(lock.get("planning_override_active") or lock.get("wildcard_active"))
@@ -63,12 +120,7 @@ def _projection_baseline_authority(lock: dict, phase: dict) -> dict:
     if override_requested and target_raw is None:
         raise RuntimeError("FAIL CLOSED: active planning override missing target_gw")
     target_gw = int(target_raw) if target_raw is not None else None
-    override_applied = bool(
-        override_requested
-        and planning_gw is not None
-        and target_gw == planning_gw
-        and planning_gw != submitted_gw
-    )
+    override_applied = bool(override_requested and planning_gw is not None and target_gw == planning_gw and planning_gw != submitted_gw)
     source = str(lock.get("authority_source") or "USER_PLANNING_OVERRIDE") if override_applied else "OFFICIAL_FPL_PICKS"
     return {
         "planning_gw": planning_gw,
@@ -85,25 +137,19 @@ def _projection_baseline_authority(lock: dict, phase: dict) -> dict:
 
 
 def run(mode: str = "daily", as_of: str | None = None) -> dict:
-    """Acquire the sole official-FPL snapshot and finish price reconstruction.
-
-    Fixed Official endpoints are fetched in the same initial wave as bootstrap-static.
-    Only picks/live wait for bootstrap because their event ids depend on phase detection.
-    This preserves single-run point-in-time authority while removing an avoidable network
-    round trip from the critical path.
-    """
+    """Acquire the sole Official FPL snapshot and finish purchase/sell-value reconstruction."""
     started = perf_counter()
     report_as_of = parse_dt(as_of) if isinstance(as_of, str) else as_of
     if report_as_of is not None and report_as_of.tzinfo is None:
         raise RuntimeError("--as-of must include timezone offset")
 
     initial_specs = [
-        ("bootstrap", "bootstrap-static/", 3),
-        ("fixtures", "fixtures/", 3),
-        ("event_status", "event-status/", 3),
-        ("entry", f"entry/{TEAM_ID}/", 3),
-        ("history", f"entry/{TEAM_ID}/history/", 3),
-        ("transfers", f"entry/{TEAM_ID}/transfers/", 3),
+        ("bootstrap", "bootstrap-static/", API_RETRIES),
+        ("fixtures", "fixtures/", API_RETRIES),
+        ("event_status", "event-status/", API_RETRIES),
+        ("entry", f"entry/{TEAM_ID}/", API_RETRIES),
+        ("history", f"entry/{TEAM_ID}/history/", API_RETRIES),
+        ("transfers", f"entry/{TEAM_ID}/transfers/", API_RETRIES),
     ]
     wave_started = perf_counter()
     initial = _parallel_official_get(initial_specs)
@@ -118,9 +164,9 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
 
     dependent_specs = []
     if submitted_gw:
-        dependent_specs.append(("picks", f"entry/{TEAM_ID}/event/{submitted_gw}/picks/", 3))
+        dependent_specs.append(("picks", f"entry/{TEAM_ID}/event/{submitted_gw}/picks/", API_RETRIES))
     if scoring_gw:
-        dependent_specs.append(("event_live", f"event/{scoring_gw}/live/", 3))
+        dependent_specs.append(("event_live", f"event/{scoring_gw}/live/", API_RETRIES))
     wave_started = perf_counter()
     dependent = _parallel_official_get(dependent_specs)
     dependent_wave_ms = round((perf_counter() - wave_started) * 1000, 2)
@@ -151,7 +197,6 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
     gw1_ids: set[int] = set()
     gw1_ms = 0.0
     if need_gw1:
-        # Conditional reconstruction is part of acquisition, never a downstream fetch.
         wave_started = perf_counter()
         gw1, gw1_health = get_json(f"entry/{TEAM_ID}/event/1/picks/", retries=1)
         gw1_ms = round((perf_counter() - wave_started) * 1000, 2)

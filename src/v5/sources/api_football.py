@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
@@ -10,6 +9,7 @@ from typing import Any
 import requests
 
 from src.v5.config_cache import load_json_config
+from src.v5.sources.cache import load_json_cache, write_json_cache
 from src.v5.sources.season import season_authority
 
 CONFIG = "config/intelligence/source_fusion.json"
@@ -22,23 +22,6 @@ def _now() -> datetime:
 def _cache_path(cache_dir: Path, key: str) -> Path:
     safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in key)
     return cache_dir / f"{safe}.json"
-
-
-def _load_cache(path: Path, ttl_seconds: int) -> dict[str, Any] | None:
-    if not path.exists() or (_now().timestamp() - path.stat().st_mtime) > ttl_seconds:
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else None
-    except Exception:
-        return None
-
-
-def _write_cache(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-    tmp.replace(path)
 
 
 def _header_value(headers: requests.structures.CaseInsensitiveDict[str], names: list[str]) -> str | None:
@@ -120,7 +103,7 @@ def _resolve_league(
     cache_dir = Path(str(cfg["cache_dir"]))
     ttl = int(cfg["cache_ttl_seconds"])
     cache = _cache_path(cache_dir, f"league_{competition_key}_{season_start_year}")
-    cached = _load_cache(cache, ttl)
+    cached = load_json_cache(cache, ttl)
     if cached is not None:
         observability["cache_hits"] += 1
         observability["league_cache_hits"] += 1
@@ -152,9 +135,9 @@ def _resolve_league(
                 "type": league.get("type"),
                 "matched_alias": alias,
             }
-            _write_cache(cache, {"generated_at": _now().isoformat(), "league": resolved})
+            write_json_cache(cache, {"generated_at": _now().isoformat(), "league": resolved})
             return resolved
-    _write_cache(cache, {"generated_at": _now().isoformat(), "league": None})
+    write_json_cache(cache, {"generated_at": _now().isoformat(), "league": None})
     return None
 
 
@@ -280,7 +263,7 @@ def collect(bootstrap: dict[str, Any]) -> dict[str, Any]:
 
     cache_dir = Path(str(cfg["cache_dir"]))
     availability_cache = _cache_path(cache_dir, f"availability_{season_start_year}")
-    cached_availability = _load_cache(availability_cache, int(cfg.get("availability_cache_ttl_seconds") or 0))
+    cached_availability = load_json_cache(availability_cache, int(cfg.get("availability_cache_ttl_seconds") or 0))
     cacheable_classes = {str(value) for value in cfg.get("cacheable_unavailability_classes") or []}
     if cached_availability is not None:
         cached_class = str(cached_availability.get("availability_class") or "")
@@ -326,7 +309,7 @@ def collect(bootstrap: dict[str, Any]) -> dict[str, Any]:
                     continue
                 observability["competitions_resolved"] += 1
                 cache = _cache_path(cache_dir, f"fixtures_{competition_key}_{season_start_year}_{from_date}_{to_date}")
-                cached = _load_cache(cache, ttl)
+                cached = load_json_cache(cache, ttl)
                 if cached is not None:
                     observability["cache_hits"] += 1
                     observability["fixture_cache_hits"] += 1
@@ -341,7 +324,7 @@ def collect(bootstrap: dict[str, Any]) -> dict[str, Any]:
                         observability,
                     )
                     response_rows = payload.get("response") or []
-                    _write_cache(cache, {"generated_at": _now().isoformat(), "response": response_rows})
+                    write_json_cache(cache, {"generated_at": _now().isoformat(), "response": response_rows})
                 observability["fixtures_returned"] += len(response_rows)
                 for item in response_rows:
                     if not isinstance(item, dict):
@@ -378,7 +361,7 @@ def collect(bootstrap: dict[str, Any]) -> dict[str, Any]:
         reason = f"{type(exc).__name__}:{exc}"
         availability_class = _classify_unavailability(reason, cfg)
         if availability_class in cacheable_classes:
-            _write_cache(
+            write_json_cache(
                 availability_cache,
                 {
                     "generated_at": _now().isoformat(),

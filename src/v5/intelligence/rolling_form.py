@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from src.v5.runtime_normalization import safe_int
+
 
 def _f(value: Any, default: float = 0.0) -> float:
     try:
@@ -12,15 +14,6 @@ def _f(value: Any, default: float = 0.0) -> float:
         return float(value)
     except (TypeError, ValueError):
         return float(default)
-
-
-def _i(value: Any) -> int | None:
-    try:
-        if value in (None, ""):
-            return None
-        return int(float(value))
-    except (TypeError, ValueError):
-        return None
 
 
 def _load(path: str) -> dict[str, Any]:
@@ -36,7 +29,7 @@ def _load(path: str) -> dict[str, Any]:
 
 def _artifact_is_valid(payload: dict[str, Any], expected_gw: int) -> bool:
     rows = payload.get("rows") if isinstance(payload.get("rows"), list) else []
-    artifact_gw = _i(payload.get("gw"))
+    artifact_gw = safe_int(payload.get("gw"))
     dataset = str(payload.get("dataset") or "")
     return bool(rows) and artifact_gw == expected_gw and dataset == "playermatchstats"
 
@@ -86,7 +79,7 @@ def build_rolling_form(
                 "path": path,
                 "available": bool(payload.get("rows")),
                 "valid": valid,
-                "artifact_gw": _i(payload.get("gw")),
+                "artifact_gw": safe_int(payload.get("gw")),
                 "dataset": payload.get("dataset"),
                 "fetched_at": payload.get("fetched_at"),
             }
@@ -114,7 +107,7 @@ def build_rolling_form(
         for item in artifacts[gw].get("rows") or []:
             if not isinstance(item, dict):
                 continue
-            eid = _i(item.get("player_id"))
+            eid = safe_int(item.get("player_id"))
             if eid is None:
                 continue
             key = str(eid)

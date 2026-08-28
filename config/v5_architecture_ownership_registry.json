@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "contract": "V5_ARCHITECTURE_OWNERSHIP_V1",
+  "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
+  "governance": {
+    "fail_closed_on_duplicate_identity": true,
+    "fail_closed_on_duplicate_business_authority": true,
+    "fail_closed_on_duplicate_output_path": true,
+    "fail_closed_on_duplicate_route_target_without_alias": true,
+    "fail_closed_on_canonical_rule_redefinition": true,
+    "fail_closed_on_official_fpl_fetch_outside_owner": true,
+    "fail_closed_on_exact_nontrivial_function_clone": true,
+    "fail_closed_on_hardcoded_service_topology": true,
+    "guard_is_promotion_blocking": true,
+    "guard_must_not_join_user_hot_path": true
+  },
+  "responsibilities": [
+    {"id":"OFFICIAL_PUBLIC_ACQUISITION","owner":"ingestion","implementation":"src.v5.public_api"},
+    {"id":"OFFICIAL_AUTHENTICATED_ACQUISITION","owner":"ingestion","implementation":"src.v5.official_auth"},
+    {"id":"SOURCE_AUTHORITY","owner":"ingestion","implementation":"src.v5.source_authority"},
+    {"id":"FPL_RULES_CONSTANTS","owner":"truth","implementation":"src.rules"},
+    {"id":"PHASE_AUTHORITY","owner":"truth","implementation":"src.v5.state"},
+    {"id":"SQUAD_AUTHORITY","owner":"truth","implementation":"src.v5.team_service"},
+    {"id":"FINANCE_AUTHORITY","owner":"truth","implementation":"src.v5.finance"},
+    {"id":"PRICE_INTELLIGENCE","owner":"price","implementation":"src.v5.price_trajectory"},
+    {"id":"PLAYER_PREDICTION","owner":"prediction","implementation":"src.v5.intelligence.projection"},
+    {"id":"PREDICTION_EVALUATION","owner":"evaluation","implementation":"src.v5.evaluation.core"},
+    {"id":"ENGINE_DECISION","owner":"decision","implementation":"src.v5.services.decision"},
+    {"id":"WATCHLIST_SCREENING","owner":"watchlist","implementation":"src.v5.services.watchlist"},
+    {"id":"FINAL_GOVERNANCE","owner":"governance","implementation":"src.v5.services.governance"},
+    {"id":"HUMAN_REPORTING","owner":"reporting","implementation":"src.v5.reporting"},
+    {"id":"DURABLE_PERSISTENCE","owner":"snapshot","implementation":"src.v5.persistence"},
+    {"id":"WORKFLOW_ORCHESTRATION","owner":"orchestrator","implementation":"src.v5.services.orchestrator"},
+    {"id":"ARCHITECTURE_OWNERSHIP_AUDIT","owner":"architecture_guard","implementation":"src.v5.architecture_guard"}
+  ],
+  "shared_primitives": [
+    {"id":"XMINS_DISTRIBUTION","owner":"prediction","consumers":["decision","watchlist","reporting"]},
+    {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","consumers":["decision","watchlist","reporting","evaluation"]},
+    {"id":"SOURCE_FUSION_EVIDENCE","owner":"ingestion","consumers":["prediction","reporting"]},
+    {"id":"DECISION_TRACE","owner":"decision","consumers":["governance","reporting","orchestrator"]},
+    {"id":"EXECUTION_FINGERPRINT","owner":"orchestrator","consumers":["decision","snapshot","evaluation"]},
+    {"id":"RUNTIME_MATERIALIZATION","owner":"snapshot","consumers":["orchestrator"]}
+  ],
+  "guard_scope": {
+    "json_registry_globs": [
+      "config/v5_*.json",
+      "config/intelligence/*.json",
+      "config/rules/*.json",
+      "config/dss_core_registry.json",
+      "config/dss_extension_registry.json",
+      "config/enhancement_layers_registry.json",
+      "config/gate0_registry.json",
+      "config/sources/registry.json"
+    ],
+    "canonical_rule_symbols": [
+      "ASSIST_POINTS",
+      "CHIP_API_NAMES",
+      "CHIP_DISPLAY_NAMES",
+      "CHIP_RULES",
+      "CLEAN_SHEET_POINTS",
+      "DC_RULES",
+      "GOAL_POINTS",
+      "LINEUP_RULES",
+      "RULESET_ID",
+      "RULESET_SEASON",
+      "SQUAD_RULES"
+    ],
+    "official_public_network_owner": "src/v5/public_api.py",
+    "official_public_fetch_callers": ["src/v5/services/ingestion.py"],
+    "official_authenticated_network_owner": "src/v5/official_auth.py",
+    "official_authenticated_fetch_callers": ["src/v5/authenticated_official.py"],
+    "allowed_service_import_pairs": [
+      ["src/v5/services/orchestrator_beta.py", "src.v5.services.orchestrator"]
+    ],
+    "allowed_route_target_aliases": [],
+    "exact_clone_min_ast_nodes": 40,
+    "exact_clone_ignored_function_names": ["main","run","handle","check","write","load","dump","_f","_cfg","_now","_iso","_clamp"],
+    "service_port_range": [8100, 8199]
+  }
+}

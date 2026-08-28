@@ -1,6 +1,6 @@
 {
-  "version": 6,
-  "contract": "V5_RUNTIME_RELEASE_FINGERPRINT_V6",
+  "version": 7,
+  "contract": "V5_RUNTIME_RELEASE_FINGERPRINT_V7",
   "algorithm": "sha256",
   "include_roots": ["src/v5", "config/intelligence", "config/rules", "config/venues"],
   "include_files": [
@@ -40,6 +40,26 @@
     "config/v5_on_demand_trigger.json",
     "config/v5_convergence_manifest.json"
   ],
+  "exact_execution": {
+    "contract": "V5_EXACT_EXECUTION_FINGERPRINT_V1",
+    "replay_contract": "V5_POINT_IN_TIME_REPLAY_V1",
+    "code_revision_env": ["V5_CODE_REVISION", "GITHUB_SHA"],
+    "require_code_revision_for_promotion": true,
+    "runtime_release_fingerprint_is_always_required": true,
+    "replay_fingerprint_excludes_execution_identity": true,
+    "execution_fingerprint_binds_correlation_and_capture_time": true,
+    "raw_authenticated_payload_forbidden": true,
+    "replay_boundary": "POST_TRUTH_PRE_INTELLIGENCE",
+    "required_replay_inputs": [
+      "bootstrap",
+      "fixtures",
+      "truth",
+      "event_live",
+      "source_fusion",
+      "state_hydration",
+      "runner_policy"
+    ]
+  },
   "governance": {
     "path_and_content_hashing": true,
     "sorted_deterministically": true,
@@ -49,6 +69,8 @@
     "wire_or_payload_or_materialization_policy_change_resets_acceptance": true,
     "execution_plane_policy_change_resets_acceptance": true,
     "venue_authority_change_resets_acceptance": true,
-    "production_baseline_is_bound_separately": true
+    "production_baseline_is_bound_separately": true,
+    "same_replay_fingerprint_must_represent_same_canonical_inputs": true,
+    "point_in_time_replay_must_not_refetch_current_sources": true
   }
 }

@@ -128,32 +128,32 @@ def enrich_prediction(prediction: dict[str, Any], full_enrichment: dict[str, Any
         xdist = _xmins_distribution(row.get("xmins") or {}, cfg)
         bundle.declare("xmins_distribution", xdist, reason=None if xdist else "xmins evidence incomplete")
         if xdist:
-            bundle.consume("xmins_distribution", "advanced_prediction")
-            aggregate.consume("xmins_distribution", "advanced_prediction")
+            bundle.consume("xmins_distribution", "advanced_prediction", effect_scope="SHADOW_OVERLAY")
+            aggregate.consume("xmins_distribution", "advanced_prediction", effect_scope="SHADOW_OVERLAY")
 
         sustainability = _sustainability(row, cfg)
         bundle.declare("sustainability", sustainability, reason=None if sustainability else "attacking rates unavailable")
         if sustainability:
-            bundle.consume("sustainability", "advanced_prediction")
+            bundle.consume("sustainability", "advanced_prediction", effect_scope="SHADOW_OVERLAY")
 
         rates = row.get("rates") if isinstance(row.get("rates"), dict) else {}
         ret = player_return_probabilities(rates.get("xg90"), rates.get("xa90"), (xdist or {}).get("expected_minutes"))
         bundle.declare("score_distribution", ret if ret.get("status") == "ACTIVE" else None, reason=ret.get("reason"))
         if ret.get("status") == "ACTIVE":
-            bundle.consume("score_distribution", "advanced_prediction")
+            bundle.consume("score_distribution", "advanced_prediction", effect_scope="SHADOW_OVERLAY")
 
         dc_ev, dc_reason = _defcon_evidence(row)
         bundle.declare("defcon_probability", dc_ev, reason=dc_reason)
         if dc_ev:
-            bundle.consume("defcon_probability", "advanced_prediction")
+            bundle.consume("defcon_probability", "advanced_prediction", effect_scope="SHADOW_OVERLAY")
             if not defcon_consumed:
-                aggregate.consume("defcon_probability", "advanced_prediction")
+                aggregate.consume("defcon_probability", "advanced_prediction", effect_scope="SHADOW_OVERLAY")
                 defcon_consumed = True
 
         uncertainty = _uncertainty_split(_f(row.get("uncertainty")), cfg)
         bundle.declare("uncertainty_decomposition", uncertainty)
-        bundle.consume("uncertainty_decomposition", "advanced_prediction")
-        aggregate.consume("uncertainty_decomposition", "advanced_prediction")
+        bundle.consume("uncertainty_decomposition", "advanced_prediction", effect_scope="SHADOW_OVERLAY")
+        aggregate.consume("uncertainty_decomposition", "advanced_prediction", effect_scope="SHADOW_OVERLAY")
         row["advanced"] = {
             "xmins_distribution": xdist,
             "sustainability": sustainability,

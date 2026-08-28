@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "contract": "OWNED_CHALLENGER_COMPARATOR_V1",
+  "capability_status": "ADVISORY_ONLY",
+  "horizons": [1, 2, 3, 5],
+  "challenger_types": ["GOVERNED_WATCHLIST", "EMERGING_CHALLENGER"],
+  "owned_targeting": {
+    "same_position_required": true,
+    "max_owned_targets_per_challenger": 3,
+    "price_band_tolerance": 20,
+    "prefer_direct_swap_affordability": true,
+    "bench_or_lower_projection_increases_replaceability": true
+  },
+  "emerging_screen": {
+    "max_candidates": 12,
+    "allowed_statuses": ["a", "d"],
+    "minimum_expected_minutes": 50.0,
+    "minimum_start_probability": 0.45,
+    "maximum_dnp_probability": 0.35,
+    "minimum_h5_points": 12.0,
+    "strong_match_return_trigger": 2,
+    "strong_xgi_trigger": 0.75,
+    "shots_trigger": 4,
+    "box_touches_trigger": 8,
+    "chances_created_trigger": 4,
+    "position_xgi90_trigger": {
+      "GK": 99.0,
+      "DEF": 0.20,
+      "MID": 0.38,
+      "FWD": 0.45
+    },
+    "sustainable_minimum_trigger_count": 2,
+    "sustainable_minimum_start_probability": 0.60
+  },
+  "decision": {
+    "review_gain_5gw": 1.0,
+    "lean_gain_5gw": 3.0,
+    "strong_gain_5gw": 5.0,
+    "lean_minimum_signal_to_noise": 0.55,
+    "strong_minimum_signal_to_noise": 0.85,
+    "minimum_start_probability_for_transfer": 0.60,
+    "strong_minimum_start_probability": 0.75,
+    "emerging_requires_sustainable_candidate_for_transfer_labels": true,
+    "missing_structural_or_critical_evidence_caps_at": "REVIEW"
+  },
+  "evidence": {
+    "recent_competitive_load_contract": "RECENT_COMPETITIVE_LOAD_V1",
+    "future_non_pl_competition_requires_report_time_verification": true,
+    "coach_and_true_tactical_style_require_verified_evidence": true,
+    "external_consensus_requires_report_time_refresh": true,
+    "social_signal_may_trigger_investigation_but_never_becomes_fact_without_crosscheck": true
+  },
+  "governance": {
+    "reuse_canonical_projection_xpts": true,
+    "reuse_canonical_xmins": true,
+    "reuse_canonical_tactical_matchup": true,
+    "reuse_canonical_package_legality_and_scoring": true,
+    "reuse_canonical_price_state": true,
+    "reuse_governed_watchlist": true,
+    "no_duplicate_fixture_engine": true,
+    "no_duplicate_projection_engine": true,
+    "no_duplicate_xmins_engine": true,
+    "no_duplicate_tactical_engine": true,
+    "no_duplicate_price_engine": true,
+    "one_match_haul_is_trigger_not_buy": true,
+    "positive_projected_edge_is_not_sufficient_alone": true,
+    "no_majority_vote_across_external_models": true,
+    "may_not_overwrite_canonical_transfer_recommendation": true,
+    "may_not_overwrite_starting_xi": true,
+    "may_not_overwrite_captain_or_vice": true,
+    "may_not_overwrite_watchlist": true,
+    "may_not_overwrite_chip_decision": true,
+    "missing_evidence_is_explicit": true
+  }
+}

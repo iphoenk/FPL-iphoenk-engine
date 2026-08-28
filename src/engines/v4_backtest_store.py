@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from src.utils import DATA, atomic_json, parse_dt, read_json
+from src.utils import DATA, atomic_json, parse_dt, read_json, utcnow
 
 SNAPDIR = DATA / "validation" / "deadline"
 ARCHIVE_RECDIR = DATA / "validation" / "archive" / "reconciled"
@@ -117,7 +117,7 @@ def persist_deadline_snapshot(gw: int, deadline_time: str | None, predictions: d
             raise RuntimeError("existing deadline snapshot deadline mismatch")
         return existing
     deadline = parse_dt(deadline_time)
-    current = now
+    current = now or utcnow()
     if not (_aware(deadline) and _aware(current)):
         raise RuntimeError("deadline snapshot requires timezone-aware timestamps")
     if current >= deadline:

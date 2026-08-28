@@ -13,6 +13,7 @@ INTERACTIVE_SERVICE_PATH = ROOT / "config" / "runtime" / "interactive_service_re
 REC_PATH = ROOT / "config" / "rec_registry.json"
 IMPLEMENTATION_STATUS_PATH = ROOT / "IMPLEMENTATION_STATUS.json"
 OFFICIAL_FIRST_PATH = ROOT / "config" / "sources" / "official_first_coverage.json"
+OFFICIAL_ENDPOINT_OWNERSHIP_PATH = ROOT / "config" / "sources" / "official_endpoint_ownership.json"
 FRAMEWORK_PATHS = {
     "dss_core": ROOT / "config" / "dss_core_registry.json",
     "dss_extensions": ROOT / "config" / "dss_extension_registry.json",
@@ -86,6 +87,68 @@ def _scan_official_fetches(active: dict[str, set[str]]) -> dict[str, list[str]]:
             if any(needle in text for needle in needles):
                 hits[service].append(module)
     return {service: sorted(modules) for service, modules in sorted(hits.items())}
+
+
+def _scan_core_refetches(active: dict[str, set[str]]) -> list[str]:
+    forbidden_needles = (
+        'get_json("bootstrap-static/")',
+        'get_json("fixtures/")',
+        'get_json("event-status/")',
+    )
+    hits: list[str] = []
+    for service, modules in active.items():
+        if service == "official_snapshot":
+            continue
+        for module in modules:
+            path = _module_path(module)
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8")
+            for needle in forbidden_needles:
+                if needle in text:
+                    hits.append(f"{service}:{module}:{needle}")
+    return sorted(hits)
+
+
+def _validate_official_endpoint_ownership(errors: list[str], service_names: set[str]) -> dict[str, Any]:
+    payload = _load(OFFICIAL_ENDPOINT_OWNERSHIP_PATH)
+    if payload.get("registry") != "OFFICIAL_ENDPOINT_OWNERSHIP_V1":
+        errors.append("unexpected Official endpoint ownership registry")
+    rows = list(payload.get("network_purposes") or [])
+    ids = [str(row.get("id") or "") for row in rows]
+    duplicate_ids = _duplicates(ids)
+    if duplicate_ids:
+        errors.append(f"duplicate Official network purpose ids: {duplicate_ids}")
+    endpoint_families: list[str] = []
+    owners: set[str] = set()
+    invalid: list[dict[str, Any]] = []
+    for row in rows:
+        rid = str(row.get("id") or "")
+        owner = str(row.get("owner_service") or "")
+        scope = str(row.get("scope") or "")
+        families = [str(value) for value in row.get("endpoint_families") or []]
+        if not rid or not owner or not scope or not families:
+            invalid.append(row)
+            continue
+        if owner not in service_names:
+            errors.append(f"Official network purpose {rid} owner service missing: {owner}")
+        owners.add(owner)
+        endpoint_families.extend(families)
+        dup_local = _duplicates(families)
+        if dup_local:
+            errors.append(f"Official network purpose {rid} duplicate endpoint families: {dup_local}")
+    if invalid:
+        errors.append(f"invalid Official endpoint ownership rows: {invalid}")
+    duplicate_families = _duplicates(endpoint_families)
+    if duplicate_families:
+        errors.append(f"Official endpoint family owned by multiple network purposes: {duplicate_families}")
+    return {
+        "registry": payload.get("registry"),
+        "network_purpose_count": len(rows),
+        "owners": sorted(owners),
+        "duplicate_purpose_ids": duplicate_ids,
+        "duplicate_endpoint_families": duplicate_families,
+    }
 
 
 def _validate_rec_registry(errors: list[str], service_names: set[str]) -> dict[str, Any]:
@@ -276,14 +339,20 @@ def run() -> dict[str, Any]:
     if bad_staged:
         errors.append(f"invalid staged artifact ownership: {bad_staged}")
 
+    endpoint_state = _validate_official_endpoint_ownership(errors, service_names)
     official_hits = _scan_official_fetches(combined_active)
-    allowed_fetch_services = {str(value) for value in ownership.get("official_fetch_allowed_services") or []}
-    forbidden_fetches = {service: modules for service, modules in official_hits.items() if service not in allowed_fetch_services}
+    declared_network_owners = set(endpoint_state.get("owners") or [])
+    architecture_allowed = {str(value) for value in ownership.get("official_fetch_allowed_services") or []}
+    if architecture_allowed != declared_network_owners:
+        errors.append(
+            f"Official fetch owner registry drift: architecture={sorted(architecture_allowed)} endpoint_registry={sorted(declared_network_owners)}"
+        )
+    forbidden_fetches = {service: modules for service, modules in official_hits.items() if service not in declared_network_owners}
     if forbidden_fetches:
-        errors.append(f"Official FPL fetch detected outside declared owner/exception services: {forbidden_fetches}")
-    transitional_fetches = {service: modules for service, modules in official_hits.items() if service in allowed_fetch_services and service != "official_snapshot"}
-    if transitional_fetches:
-        warnings.append(f"declared non-snapshot Official fetch exceptions remain: {transitional_fetches}")
+        errors.append(f"Official FPL fetch detected outside scoped network owner: {forbidden_fetches}")
+    core_refetches = _scan_core_refetches(combined_active)
+    if core_refetches:
+        errors.append(f"core Official snapshot endpoints refetched downstream: {core_refetches}")
 
     rec_state = _validate_rec_registry(errors, service_names)
     status = "PASS" if not errors else "FAIL"
@@ -295,11 +364,13 @@ def run() -> dict[str, Any]:
         "shared_primitives": len(primitive_rows),
         "framework_counts": framework_counts,
         "rec": rec_state,
+        "official_endpoint_ownership": endpoint_state,
         "background_service_count": len(services),
         "interactive_service_count": len(interactive_services),
         "total_bounded_service_count": len(service_names),
         "multiwriter_artifacts": {artifact: sorted(owners) for artifact, owners in writers.items() if len(owners) > 1},
         "official_fetch_services": official_hits,
+        "core_official_refetches": core_refetches,
         "legacy_registry_references": legacy_registry_refs,
         "policy": ownership.get("policy") or {},
     }

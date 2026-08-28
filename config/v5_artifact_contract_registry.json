@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "registry": "V5_ARTIFACT_CONTRACTS_V1",
   "owner": "snapshot",
   "policy": {
@@ -22,6 +22,25 @@
         "counts": "object",
         "cross_source": "list",
         "policy": "object"
+      }
+    },
+    "mini_league_tracking": {
+      "filename": "mini_league_tracking.json",
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "model", "generated_at", "status", "configured", "auto_discovered", "tracking_count", "leagues", "governance"],
+      "equals": {
+        "schema_version": 1,
+        "contract": "V5_MINI_LEAGUE_TRACKING_V1"
+      },
+      "types": {
+        "model": "string",
+        "generated_at": "string",
+        "status": "string",
+        "configured": "object",
+        "auto_discovered": "object",
+        "tracking_count": "integer",
+        "leagues": "object",
+        "governance": "object"
       }
     },
     "replay_bundle": {

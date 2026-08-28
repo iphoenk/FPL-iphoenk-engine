@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "registry": "V3_LOGIC_OWNERSHIP_V1",
   "policy": {
     "service_command_module_has_single_runtime_owner": true,
@@ -11,7 +11,11 @@
     "version_stamped_modules_are_not_active_runtime_owners": true,
     "microservice_boundaries_follow_artifact_and_failure_ownership": true,
     "file_size_alone_does_not_define_monolith": true,
-    "policy_thresholds_belong_in_config_or_rules": true
+    "policy_thresholds_belong_in_config_or_rules": true,
+    "canonical_rule_symbols_have_single_source_owner": true,
+    "canonical_legality_functions_have_single_source_owner": true,
+    "official_detail_must_reuse_standard_snapshot_endpoints": true,
+    "architecture_guard_runs_outside_runtime_critical_path": true
   },
   "approved_direct_official_fetch_services": [
     "official_snapshot",
@@ -23,6 +27,35 @@
     "final",
     "decision-output",
     "serving-output"
+  ],
+  "canonical_symbol_owners": {
+    "src/rules.py": [
+      "SQUAD_RULES",
+      "LINEUP_RULES",
+      "SCORING_RULES",
+      "GOAL_POINTS",
+      "ASSIST_POINTS",
+      "CLEAN_SHEET_POINTS",
+      "SAVE_INTERVAL",
+      "DC_RULES",
+      "CHIP_RULES"
+    ],
+    "src/domain/fpl_legality.py": [
+      "formation_from_rows",
+      "legal_starting_xi",
+      "squad_violations",
+      "legal_squad"
+    ]
+  },
+  "forbidden_runtime_imports": [
+    "from src.models.package_optimizer_v2 import legal_squad"
+  ],
+  "official_detail_forbidden_standard_fetch_tokens": [
+    "get_json(\"bootstrap-static/\"",
+    "get_json(\"fixtures/\"",
+    "get_json(f\"entry/{TEAM_ID}/\",",
+    "get_json(f\"entry/{team_id}/history/\"",
+    "get_json(f\"event/{scoring}/live/\""
   ],
   "bundle_forbidden_tokens": [
     "src.sources.official_fpl",
@@ -38,7 +71,10 @@
   "max_declared_commands_per_logical_service": 8,
   "notes": {
     "official_snapshot": "single standard/fresh public Official snapshot owner",
-    "official_detail": "single expensive/broad public Official detail owner; its expansion and historical-reconciliation modules may fetch distinct detail endpoints inside the same logical service",
+    "official_detail": "single expensive/broad public Official detail owner; it must consume snapshot for standard endpoints and may network-fetch only additional detail/historical-pick evidence",
+    "rules": "Official rule constants and derived canonical rule symbols are defined only by src/rules.py",
+    "legality": "FPL squad and XI legality functions are defined only by src/domain/fpl_legality.py; optimizer and governance are consumers",
+    "architecture_guard": "ownership validation belongs in CI/release acceptance and never becomes a new runtime service or critical-path hop",
     "authenticated_official": "private authorized reads use dedicated official_auth transport and are not standard public Official fetch duplication",
     "bundles": "FAST bundles may call existing service-stage functions in process but may not define a second football formula or source authority"
   }

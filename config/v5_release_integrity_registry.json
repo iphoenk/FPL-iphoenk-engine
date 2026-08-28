@@ -1,6 +1,6 @@
 {
-  "version": 7,
-  "contract": "V5_RUNTIME_RELEASE_FINGERPRINT_V7",
+  "version": 8,
+  "contract": "V5_RUNTIME_RELEASE_FINGERPRINT_V8",
   "algorithm": "sha256",
   "include_roots": ["src/v5", "config/intelligence", "config/rules", "config/venues"],
   "include_files": [
@@ -58,6 +58,16 @@
       "source_fusion",
       "state_hydration",
       "runner_policy"
+    ],
+    "replay_output_volatile_fields": [
+      "generated_at",
+      "evaluated_at",
+      "created_at",
+      "updated_at",
+      "correlation_id",
+      "elapsed_ms",
+      "round_trip_ms",
+      "transport_overhead_ms"
     ]
   },
   "governance": {
@@ -71,6 +81,7 @@
     "venue_authority_change_resets_acceptance": true,
     "production_baseline_is_bound_separately": true,
     "same_replay_fingerprint_must_represent_same_canonical_inputs": true,
-    "point_in_time_replay_must_not_refetch_current_sources": true
+    "point_in_time_replay_must_not_refetch_current_sources": true,
+    "replay_output_comparison_ignores_only_registry_declared_volatile_fields": true
   }
 }

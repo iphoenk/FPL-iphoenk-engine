@@ -4,17 +4,15 @@ from __future__ import annotations
 
 The manifest is deliberately separate from runtime_performance.json. Performance
 telemetry is observational and may be overwritten by FULL runs; reuse state is a
-correctness contract. A semantic service may be reused only when:
+correctness contract.
 
-- the current engine/schema match the manifest;
-- the current canonical semantic input signature matches exactly;
-- all declared reusable outputs still match their captured SHA-256 hashes;
-- artifact contracts validate; and
-- logical artifact age is within the profile ceiling.
+Semantic inputs may be declared either as a whole JSON artifact (legacy string
+form) or as a field-selective object::
 
-The input signature itself is captured by fast_entrypoint while ephemeral inputs
-(such as official_snapshot.json) still exist. This module persists that validated
-state only after external production contracts pass.
+    {"path": "official_snapshot.json", "include_paths": ["bootstrap.elements", "fixtures"]}
+
+Field selectors are config-owned so runtime code does not accumulate ad-hoc lists
+of decision-irrelevant metadata. Missing selected fields fail closed.
 """
 
 import argparse
@@ -30,7 +28,10 @@ from src.version import ENGINE_VERSION, SCHEMA_VERSION
 MANIFEST_PATH = base.DATA / "runtime_reuse_manifest.json"
 _VOLATILE_SIGNATURE_KEYS = {
     "generated_at",
+    "updated_at",
     "fetched_at",
+    "captured_at",
+    "observed_at",
     "age_minutes",
     "elapsed_ms",
     "latency_ms",
@@ -39,7 +40,9 @@ _VOLATILE_SIGNATURE_KEYS = {
     "seed_input_ms",
     "promotion_ms",
     "validation_ms",
+    "cache_age_ms",
 }
+_MISSING = object()
 
 
 def _now() -> str:
@@ -95,30 +98,70 @@ def canonicalize(value: Any) -> Any:
     return value
 
 
-def semantic_file_bytes(path: Path) -> bytes | None:
+def _select_path(payload: Any, dotted_path: str) -> Any:
+    current = payload
+    for part in str(dotted_path).split("."):
+        if not part or not isinstance(current, dict) or part not in current:
+            return _MISSING
+        current = current[part]
+    return current
+
+
+def semantic_file_bytes(path: Path, include_paths: list[str] | None = None) -> bytes | None:
     if not path.exists() or not path.is_file():
         return None
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
+        if include_paths:
+            return None
         return path.read_bytes()
+
+    if include_paths:
+        selected: dict[str, Any] = {}
+        for dotted in include_paths:
+            value = _select_path(payload, dotted)
+            if value is _MISSING:
+                return None
+            selected[str(dotted)] = value
+        payload = selected
     normalized = canonicalize(payload)
     return json.dumps(normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
+def _input_spec(value: Any) -> tuple[str, list[str] | None] | None:
+    if isinstance(value, str) and value:
+        return value, None
+    if not isinstance(value, dict):
+        return None
+    path = str(value.get("path") or "").strip()
+    include = [str(item).strip() for item in value.get("include_paths") or [] if str(item).strip()]
+    if not path or not include:
+        return None
+    return path, include
+
+
 def input_signature(service_name: str, reuse_cfg: dict[str, Any], canonical: Path) -> str | None:
-    inputs = [str(value) for value in reuse_cfg.get("signature_inputs") or []]
+    input_specs = list(reuse_cfg.get("signature_inputs") or [])
     configs = [str(value) for value in reuse_cfg.get("signature_config_files") or []]
-    if not inputs and not configs:
+    if not input_specs and not configs:
         return None
     digest = hashlib.sha256()
     digest.update(f"{ENGINE_VERSION}|{SCHEMA_VERSION}|{service_name}".encode("utf-8"))
-    for rel in inputs:
-        raw = semantic_file_bytes(canonical / rel)
+    for value in input_specs:
+        parsed = _input_spec(value)
+        if parsed is None:
+            return None
+        rel, include = parsed
+        raw = semantic_file_bytes(canonical / rel, include)
         if raw is None:
             return None
         digest.update(b"\nINPUT:")
         digest.update(rel.encode("utf-8"))
+        if include:
+            digest.update(b"[")
+            digest.update("|".join(include).encode("utf-8"))
+            digest.update(b"]")
         digest.update(b"\n")
         digest.update(raw)
     for rel in configs:
@@ -197,7 +240,7 @@ def capture(profile_name: str = "fast_decision") -> dict[str, Any]:
         raise RuntimeError(f"semantic reuse manifest capture missing validated service signatures: {sorted(missing)}")
 
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "registry": "RUNTIME_REUSE_MANIFEST_V1",
         "engine_version": ENGINE_VERSION,
         "engine_schema_version": SCHEMA_VERSION,
@@ -207,6 +250,8 @@ def capture(profile_name: str = "fast_decision") -> dict[str, Any]:
         "policy": {
             "separate_from_performance_telemetry": True,
             "input_signature_captured_while_ephemeral_inputs_exist": True,
+            "semantic_field_selection_is_config_owned": True,
+            "missing_selected_semantic_field_fails_closed": True,
             "artifact_hash_must_match_before_reuse": True,
             "artifact_contract_validation_required": True,
             "manifest_written_only_after_external_contract_validation": True,

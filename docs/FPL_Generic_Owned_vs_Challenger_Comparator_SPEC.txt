@@ -1,0 +1,16 @@
+Reference implementation source: user-provided FPL MULTI-ENGINE PLAYER CHALLENGER COMPARATOR generic specification.
+
+This repository implementation is governed by REC-43 and docs/REC43_OWNED_CHALLENGER_COMPARATOR.md.
+
+Core retained requirements:
+- generic OWNED vs governed WATCHLIST and EMERGING_CHALLENGER comparison;
+- no named-pair hardcoding;
+- recent haul is discovery trigger only, never automatic BUY;
+- 1/2/3/5 GW comparison;
+- fixture-by-fixture tactical/rest/congestion context;
+- reuse canonical xPts, xMins, fixture, tactical, price, watchlist and package engines;
+- evidence hierarchy and explicit UNVERIFIED/PENDING states;
+- transfer structural value and reversal triggers;
+- multi-engine comparable output semantics;
+- initial ADVISORY_ONLY decision influence;
+- production claim only after canonical merge, tests, fresh runtime publication and artifact verification.

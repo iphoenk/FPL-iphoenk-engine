@@ -94,9 +94,9 @@ def run() -> dict[str, Any]:
     obs_payload = _observations()
     observations = list(obs_payload.get("observations") or [])
     projections = read_json(DATA / "projections.json", {})
-    latest = read_json(DATA / "latest.json", {})
     ledger = read_json(DATA / "prediction_ledger.json", {})
-    planning_gw = int((latest.get("phase") or {}).get("planning_gw") or projections.get("planning_gw") or 0)
+    prediction_accuracy = read_json(DATA / "prediction_accuracy.json", {})
+    planning_gw = int(projections.get("planning_gw") or 0)
     internal = _current_internal(projections, planning_gw)
 
     providers = []
@@ -104,14 +104,13 @@ def run() -> dict[str, Any]:
     for provider in registry.get("providers") or []:
         pid = str(provider.get("id"))
         if pid == "internal":
-            internal_accuracy = latest.get("prediction_evaluation") or {}
-            sample = int(internal_accuracy.get("sample_size") or 0)
+            sample = int((prediction_accuracy.get("overall") or {}).get("sample_size") or 0)
             providers.append({
                 **provider,
                 "state": "ACTIVE",
                 "current_coverage": len(internal),
                 "historical_sample": sample,
-                "dynamic_weight_eligible": bool(internal_accuracy.get("dynamic_weight_eligible")),
+                "dynamic_weight_eligible": bool(prediction_accuracy.get("dynamic_weight_eligible")),
             })
             continue
 
@@ -187,6 +186,7 @@ def run() -> dict[str, Any]:
         "status": "ACTIVE_WITH_EXTERNAL_OBSERVATIONS" if has_external else "ACTIVE_INTERNAL_ONLY_EXTERNAL_DATA_ABSENT",
     }
     atomic_json(OUT_PATH, out)
+    latest = read_json(DATA / "latest.json", {})
     latest.setdefault("files", {})["challenger_scorecard"] = "data/challenger_scorecard.json"
     latest["challenger_scorecard"] = {
         "status": out["status"],

@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "registry": "V3_ARCHITECTURE_OWNERSHIP_V1",
+  "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
+  "inspired_by": [
+    "V4.9.6 architecture consolidation ownership registry",
+    "V5 bounded-context microservice and performance-first principles"
+  ],
+  "policy": {
+    "one_authoritative_owner_per_responsibility": true,
+    "one_final_owner_per_artifact": true,
+    "shared_evidence_is_reused_not_recomputed": true,
+    "enhancements_are_cross_cutting_layers_not_new_business_authorities": true,
+    "gate0_is_validator_not_alternate_business_logic": true,
+    "rec_items_are_change_records_not_business_capabilities": true,
+    "compatibility_modules_may_not_be_active_runtime_owners": true,
+    "no_new_undeclared_multi_writer_artifacts": true,
+    "no_new_duplicate_framework_ids": true,
+    "official_standard_fetches_have_declared_owners": true,
+    "warm_serving_is_separate_from_source_refresh": true
+  },
+  "responsibilities": [
+    {"id":"OFFICIAL_FPL_ACQUISITION","owner_service":"official_snapshot","implementation":"src.engines.official_snapshot_service"},
+    {"id":"FPL_RULES_AUTHORITY","owner_service":"rules","implementation":"src.rules"},
+    {"id":"TEAM_AND_FINANCE_STATE","owner_service":"team_state","implementation":"src.engines.team_state_service"},
+    {"id":"MARKET_TRUTH","owner_service":"market_state","implementation":"src.engines.market_state_service"},
+    {"id":"LIVE_STATE","owner_service":"live_state","implementation":"src.engines.live_state_service"},
+    {"id":"PLAYER_FEATURE_CONTRACT","owner_service":"advanced_stats","implementation":"src.engines.player_features"},
+    {"id":"BASE_SNAPSHOT_FAN_IN","owner_service":"base_snapshot","implementation":"src.engines.base_snapshot_service"},
+    {"id":"HISTORICAL_PRIOR","owner_service":"historical_prior","implementation":"src.engines.historical_prior_runtime"},
+    {"id":"SOURCE_AND_ENRICHMENT_HEALTH","owner_service":"source_layer","implementation":"src.engines.source_layer"},
+    {"id":"PRICE_INTELLIGENCE","owner_service":"price","implementation":"src.engines.price_service"},
+    {"id":"PLAYER_PROJECTION","owner_service":"prediction","implementation":"src.engines.prediction_service"},
+    {"id":"PACKAGE_OPTIMIZATION","owner_service":"prediction","implementation":"src.engines.decision_intelligence"},
+    {"id":"AUTHENTICATED_OFFICIAL_PRECISION","owner_service":"authenticated_official","implementation":"src.engines.authenticated_official"},
+    {"id":"OFFICIAL_DETAIL_EXPANSION","owner_service":"official_detail","implementation":"src.engines.official_expansion"},
+    {"id":"PREDICTION_EVALUATION","owner_service":"prediction_evaluation","implementation":"src.engines.prediction_evaluation"},
+    {"id":"LINEUP_AND_CAPTAIN_GOVERNANCE","owner_service":"lineup_governance","implementation":"src.engines.lineup_governance"},
+    {"id":"CHALLENGER_SCORECARD","owner_service":"challenger","implementation":"src.engines.challenger_scorecard"},
+    {"id":"FRAMEWORK_POSTFLIGHT_GOVERNANCE","owner_service":"governance","implementation":"src.engines.framework_health_service"},
+    {"id":"EXTERNAL_DSS_WATCHLIST","owner_service":"watchlist","implementation":"src.engines.dss_watchlist"},
+    {"id":"REPORT_CORE","owner_service":"reporting","implementation":"src.engines.report_architecture"},
+    {"id":"REPORT_FINAL_SERVING","owner_service":"report_materializer","implementation":"src.engines.report_materializer"}
+  ],
+  "shared_primitives": [
+    {"id":"FPL_RULES_CONSTANTS","owner":"rules","implementation":"src.rules","consumers":["Gate0","prediction","package_optimizer","lineup_governance","reporting"]},
+    {"id":"XMINS_DISTRIBUTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-05","DSS-06","DSS-07","DSS-08","DSS-09","DSS-X10","DSS-X11"]},
+    {"id":"ADVANCED_ATTACKING_EVIDENCE","owner":"advanced_stats","implementation":"src.engines.player_features","consumers":["DSS-12","DSS-13","DSS-14","DSS-15","DSS-16","DSS-38"]},
+    {"id":"TEAM_STRENGTH_AND_FIXTURE_PROBABILITY","owner":"prediction","implementation":"src.models.team_strength","consumers":["DSS-19","DSS-20","DSS-21","DSS-22","DSS-23","DSS-24","DSS-29"]},
+    {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-25","DSS-26","DSS-27","DSS-28","ENH-04"]},
+    {"id":"PACKAGE_SCORING_AND_LEGALITY_PRECHECK","owner":"prediction","implementation":"src.models.package_optimizer_v2","consumers":["DSS-40","DSS-45","DSS-46","DSS-X05","DSS-X06","DSS-X07","DSS-X08","ENH-06"]},
+    {"id":"PRICE_MARKET_EVIDENCE","owner":"price","implementation":"src.engines.price_radar","consumers":["DSS-39","DSS-41","DSS-42","DSS-43","DSS-X15","ENH-05"]},
+    {"id":"RECONCILIATION_AND_CALIBRATION_EVIDENCE","owner":"prediction_evaluation","implementation":"src.engines.prediction_evaluation","consumers":["DSS-44","DSS-X12","ENH-03","REC-04","REC-07","REC-26"]},
+    {"id":"USER_DECISION_AUTHORITY","owner":"report_materializer","implementation":"src.engines.personal_gameweek_context","consumers":["DSS-X09","ENH-07","REC-39","REC-40"]}
+  ],
+  "compatibility_only_modules": [
+    "src.engine",
+    "src.engines.decision_intelligence_v313"
+  ],
+  "legacy_business_implementations_to_retire": [
+    "src.models.projection",
+    "src.models.fixture",
+    "src.models.optimizer"
+  ],
+  "declared_staged_artifacts": {
+    "health.json": {"final_owner":"base_snapshot","allowed_writers":["official_snapshot","base_snapshot"]},
+    "team.json": {"final_owner":"base_snapshot","allowed_writers":["team_state","base_snapshot"]},
+    "chips.json": {"final_owner":"base_snapshot","allowed_writers":["team_state","base_snapshot"]},
+    "prices.json": {"final_owner":"price","allowed_writers":["market_state","base_snapshot","price"]},
+    "advanced_stats_sync.json": {"final_owner":"base_snapshot","allowed_writers":["advanced_stats","base_snapshot"]},
+    "user_report.json": {"final_owner":"report_materializer","allowed_writers":["reporting","report_materializer"]}
+  },
+  "official_fetch_allowed_services": [
+    "official_snapshot",
+    "authenticated_official",
+    "official_detail",
+    "prediction_evaluation"
+  ],
+  "notes": {
+    "prediction_evaluation_official_fetch": "Transitional exception for settled historical event reads; remove after snapshot/reconciliation ownership is fully centralized.",
+    "package_optimization_owner": "Currently co-located in prediction service. Future split is allowed only if artifact ownership remains singular and latency improves."
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "contract": "V5_ARCHITECTURE_OWNERSHIP_V1",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "governance": {
@@ -22,7 +22,9 @@
     {"id":"PHASE_AUTHORITY","owner":"truth","implementation":"src.v5.state"},
     {"id":"SQUAD_AUTHORITY","owner":"truth","implementation":"src.v5.team_service"},
     {"id":"FINANCE_AUTHORITY","owner":"truth","implementation":"src.v5.finance"},
+    {"id":"MINI_LEAGUE_TRACKING","owner":"truth","implementation":"src.v5.mini_league"},
     {"id":"PRICE_INTELLIGENCE","owner":"price","implementation":"src.v5.price_trajectory"},
+    {"id":"PRICE_CALIBRATION_MONITOR","owner":"price","implementation":"src.v5.price_calibration"},
     {"id":"PLAYER_PREDICTION","owner":"prediction","implementation":"src.v5.intelligence.projection"},
     {"id":"PREDICTION_EVALUATION","owner":"evaluation","implementation":"src.v5.evaluation.core"},
     {"id":"ENGINE_DECISION","owner":"decision","implementation":"src.v5.services.decision"},

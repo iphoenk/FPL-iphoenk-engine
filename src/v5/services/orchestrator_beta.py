@@ -22,7 +22,9 @@ def handle(operation:str,payload:dict[str,Any])->Any:
     read_service,read_operation=_route("artifact_read")
     states=invoke_parallel_envelopes({"prediction":(read_service,read_operation,{"name":"predictions","default":{}}),"report_state":(read_service,read_operation,{"name":"report_state","default":{}})},correlation_id=cid)
     prediction=states["prediction"]["data"] or {}
-    truth={"team":snapshot.get("team_summary") or {},"context":snapshot.get("phase") or {},"live":snapshot.get("live_summary") or {},"match_state":snapshot.get("match_state") or {}}
+    live_summary=snapshot.get("live_summary") if isinstance(snapshot.get("live_summary"),dict) else {}
+    embedded_match_state=live_summary.get("match_state") if isinstance(live_summary.get("match_state"),dict) else {}
+    truth={"team":snapshot.get("team_summary") or {},"context":snapshot.get("phase") or {},"live":live_summary,"match_state":snapshot.get("match_state") if isinstance(snapshot.get("match_state"),dict) else embedded_match_state}
     price={"alerts":{"alerts":((snapshot.get("price_summary") or {}).get("alerts") or [])}}
     decision=snapshot.get("decision_summary") or {}
     governance=snapshot.get("framework_health") or {}
@@ -46,6 +48,7 @@ def handle(operation:str,payload:dict[str,Any])->Any:
     write_service,write_operation=_route("artifact_write"); mapping=load_json_config(CONFIG).get("artifact_mapping") or {}
     writes=invoke_parallel_envelopes({"watchlist":(write_service,write_operation,{"name":mapping["watchlist"],"data":watchlist}),"user_report":(write_service,write_operation,{"name":mapping["user_report"],"data":report["user_report"]}),"technical_appendix":(write_service,write_operation,{"name":mapping["technical_appendix"],"data":report["technical_appendix"]}),"report_state":(write_service,write_operation,{"name":mapping["report_state"],"data":report["report_state"]})},correlation_id=cid)
     snapshot["schedule_decision"]=schedule
+    snapshot["match_state"]=match_state
     snapshot["watchlist_summary"]={"status":watchlist.get("status"),"candidate_count":watchlist.get("candidate_count"),"screening_contract":watchlist.get("screening_contract")}
     snapshot["user_report"]=report["user_report"]
     snapshot["technical_appendix"]=report["technical_appendix"]

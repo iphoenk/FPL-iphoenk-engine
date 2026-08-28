@@ -81,6 +81,7 @@ def resolve_locked_player(row: dict, by_id: dict, teams: dict, positions: dict) 
 def _validate_authoritative_squad(squad: list[dict], by_id: dict[int, dict]) -> None:
     if not squad:
         return
+    normalized: list[dict] = []
     for row in squad:
         element = int(row.get("element") or -1)
         player = by_id.get(element)
@@ -89,11 +90,13 @@ def _validate_authoritative_squad(squad: list[dict], by_id: dict[int, dict]) -> 
         actual_position = POSITION_BY_TYPE.get(player.get("element_type"))
         if not actual_position or row.get("position") != actual_position:
             raise RuntimeError(f"FAIL CLOSED: position mismatch {element}")
-        if row.get("team_id") != player.get("team"):
+        declared_team = row.get("team_id")
+        if declared_team is not None and int(declared_team) != int(player.get("team") or 0):
             raise RuntimeError(f"FAIL CLOSED: team mismatch {element}")
+        normalized.append({**row, "team_id": int(player.get("team") or 0)})
     failed = {
         name: detail
-        for name, (passed, detail) in squad_legality_checks(squad).items()
+        for name, (passed, detail) in squad_legality_checks(normalized).items()
         if not passed
     }
     if failed:

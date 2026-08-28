@@ -35,6 +35,28 @@ def test_semantic_signature_ignores_runtime_metadata_but_not_decision_data(tmp_p
     assert third != second
 
 
+def test_semantic_field_selector_ignores_unselected_health_metadata(tmp_path):
+    cfg = {
+        "signature_inputs": [{"path": "official.json", "include_paths": ["bootstrap.elements", "fixtures"]}],
+        "signature_config_files": [],
+    }
+    base = {"bootstrap": {"elements": [{"id": 1, "now_cost": 100}]}, "fixtures": [{"id": 1}], "endpoint_health": {"bootstrap": {"cache_hit": False}}}
+    _write(tmp_path / "official.json", base)
+    first = fast_entrypoint._input_signature("prediction", cfg, tmp_path)
+    base["endpoint_health"]["bootstrap"]["cache_hit"] = True
+    _write(tmp_path / "official.json", base)
+    assert fast_entrypoint._input_signature("prediction", cfg, tmp_path) == first
+    base["bootstrap"]["elements"][0]["now_cost"] = 101
+    _write(tmp_path / "official.json", base)
+    assert fast_entrypoint._input_signature("prediction", cfg, tmp_path) != first
+
+
+def test_semantic_field_selector_fails_closed_on_missing_field(tmp_path):
+    cfg = {"signature_inputs": [{"path": "a.json", "include_paths": ["phase.planning_gw"]}], "signature_config_files": []}
+    _write(tmp_path / "a.json", {"phase": {}})
+    assert fast_entrypoint._input_signature("prediction", cfg, tmp_path) is None
+
+
 def test_output_hash_detects_mutated_reused_artifact(tmp_path):
     path = tmp_path / "out.json"
     _write(path, {"generated_at": "2026-01-01T00:00:00+00:00", "value": 1})
@@ -43,17 +65,21 @@ def test_output_hash_detects_mutated_reused_artifact(tmp_path):
     assert reuse_manifest.file_sha256(path) != first
 
 
-def test_fast_profile_closes_rec41_fence_and_declares_safe_semantic_reuse():
+def test_fast_profile_closes_rec41_fence_and_declares_state_safe_semantic_reuse():
     profiles = json.loads((ROOT / "config/runtime/execution_profiles.json").read_text())
     fast = profiles["profiles"]["fast_decision"]
     assert profiles["policy"]["rec41_player_feature_migration_fence_active"] is False
     assert profiles["policy"]["semantic_reuse_manifest_is_separate_from_performance_telemetry"] is True
-    assert profiles["policy"]["cross_service_mutated_artifacts_are_not_semantically_reused_until_ownership_is_single"] is True
+    assert profiles["policy"]["semantic_signature_fields_are_config_owned"] is True
+    assert profiles["policy"]["time_dependent_or_state_transition_services_are_not_reused_without_explicit_time_contract"] is True
     assert fast["reuse_services"]["advanced_stats"]["max_age_seconds"] == 21600
     assert fast["reuse_services"]["prediction"]["mode"] == "semantic_signature"
-    assert fast["reuse_services"]["prediction_evaluation"]["mode"] == "semantic_signature"
-    assert {"prediction", "prediction_evaluation", "lineup_governance", "challenger", "governance", "watchlist"}.issubset(fast["reuse_services"])
+    assert {"prediction", "lineup_governance", "challenger", "governance"}.issubset(fast["reuse_services"])
+    assert "prediction_evaluation" not in fast["reuse_services"]
+    assert "watchlist" not in fast["reuse_services"]
     assert "reporting" not in fast["reuse_services"] and "report_materializer" not in fast["reuse_services"]
+    prediction_inputs = fast["reuse_services"]["prediction"]["signature_inputs"]
+    assert any(isinstance(row, dict) and row.get("path") == "latest.json" and "phase.planning_gw" in row.get("include_paths", []) for row in prediction_inputs)
     assert set(fast["command_bundles"]) == {"governance", "watchlist", "reporting", "report_materializer"}
 
 

@@ -11,13 +11,13 @@ from typing import Any
 import requests
 
 from src.models.player_identity import norm_name
-from src.sources.official_fpl import get_json
 from src.sources.registry import load_source_registry, source_config, source_ingestion_config
 from src.utils import DATA, ROOT, atomic_json, parse_dt, read_json
 
 POLICY_PATH = ROOT / "config" / "intelligence" / "historical_priors.json"
 RAW_OUT = DATA / "stats" / "vaastav_previous_season.json"
 PRIOR_OUT = DATA / "prior_season.json"
+OFFICIAL = DATA / "official_snapshot.json"
 
 
 def _now() -> str:
@@ -235,13 +235,15 @@ def build_prior_index(elements: list[dict[str, Any]], payload: dict[str, Any]) -
 
 
 def run() -> dict[str, Any]:
-    bootstrap, health = get_json("bootstrap-static/")
+    official = read_json(OFFICIAL, {})
+    bootstrap = official.get("bootstrap") or {}
     if not bootstrap:
-        raise RuntimeError(f"Official bootstrap unavailable for historical prior service: {health.get('status')}")
+        raise RuntimeError("official_snapshot missing bootstrap for historical prior service")
     payload, fetch_mode = _fetch_previous_season()
     prior = build_prior_index(list(bootstrap.get("elements") or []), payload)
     prior["fetch_mode"] = fetch_mode
-    prior["source_health"] = health.get("status")
+    prior["source_health"] = ((official.get("endpoint_health") or {}).get("bootstrap") or {}).get("status")
+    prior.setdefault("governance", {})["official_snapshot_reused"] = True
     atomic_json(PRIOR_OUT, prior)
 
     latest = read_json(DATA / "latest.json", {})

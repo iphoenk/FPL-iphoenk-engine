@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from functools import lru_cache
 from typing import Any
 
+from src.models.player_identity import norm_name
 from src.utils import ROOT
 
 POLICY_PATH = ROOT / "config" / "intelligence" / "new_signing_adaptation.json"
@@ -20,9 +22,80 @@ def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
     return max(low, min(high, value))
 
 
+def _team_code(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    text = str(value).strip()
+    try:
+        number = float(text)
+        if number.is_integer():
+            return str(int(number))
+    except (TypeError, ValueError):
+        pass
+    return text.casefold() or None
+
+
 @lru_cache(maxsize=1)
 def load_policy() -> dict[str, Any]:
     return json.loads(POLICY_PATH.read_text(encoding="utf-8"))
+
+
+def annotate_prior_team_context(
+    prior_payload: dict[str, Any],
+    current_elements: list[dict[str, Any]],
+    previous_payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Annotate previous-season priors with current-vs-previous club context.
+
+    Player identity remains the join key. Club identity is used only to decide
+    whether old starter/role evidence is portable to the current club.
+    """
+    rows = list(previous_payload.get("rows") or [])
+    by_code = {str(row.get("code")): row for row in rows if row.get("code") not in (None, "")}
+    by_name: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        full = norm_name(f"{row.get('first_name', '')} {row.get('second_name', '')}")
+        if full:
+            by_name[full].append(row)
+
+    annotated = 0
+    changed = 0
+    unknown = 0
+    prior_players = prior_payload.get("players") or {}
+    for player in current_elements:
+        element = str(int(player["id"]))
+        prior = prior_players.get(element)
+        if not prior:
+            continue
+        row = by_code.get(str(player.get("code")))
+        if row is None:
+            full = norm_name(f"{player.get('first_name', '')} {player.get('second_name', '')}")
+            candidates = by_name.get(full, [])
+            row = candidates[0] if len(candidates) == 1 else None
+        previous_code = _team_code((row or {}).get("team_code"))
+        current_code = _team_code(player.get("team_code"))
+        transfer_flag = None if previous_code is None or current_code is None else previous_code != current_code
+        prior.update({
+            "previous_team_code": previous_code,
+            "current_team_code": current_code,
+            "team_change_detected": transfer_flag,
+            "previous_team_name": (row or {}).get("team") or (row or {}).get("team_name"),
+        })
+        annotated += 1
+        changed += int(transfer_flag is True)
+        unknown += int(transfer_flag is None)
+
+    prior_payload["transfer_context_summary"] = {
+        "annotated_prior_players": annotated,
+        "team_changes_detected": changed,
+        "team_context_unknown": unknown,
+        "method": "stable_player_identity_then_previous_vs_current_team_code",
+    }
+    prior_payload.setdefault("governance", {}).update({
+        "old_club_role_is_not_assumed_portable": True,
+        "team_change_detection_does_not_change_player_identity": True,
+    })
+    return prior_payload
 
 
 def classify(historical: dict[str, Any] | None) -> str:
@@ -84,7 +157,7 @@ def build_adaptation(
         "state": state,
         "team_change_detected": historical.get("team_change_detected"),
         "previous_team_code": historical.get("previous_team_code"),
-        "current_team_code": historical.get("current_team_code") or player.get("team_code"),
+        "current_team_code": historical.get("current_team_code") or _team_code(player.get("team_code")),
         "starter_prior_retention": round(starter_retention, 4),
         "starter_minutes_retention": round(minutes_retention, 4),
         "attacking_prior_retention": round(attack_retention, 4),

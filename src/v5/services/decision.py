@@ -9,6 +9,7 @@ from src.v5.decision.dss_evaluator import evaluate_dss
 from src.v5.decision.lineup_optimizer import optimize_lineup
 from src.v5.decision.package_governance import govern_packages
 from src.v5.decision.package_optimizer import build_packages
+from src.v5.decision.planning_override import apply_user_lineup_override
 
 CONFIG = "config/v5_decision_registry.json"
 PACKAGE_CONFIG = "config/intelligence/package_optimizer.json"
@@ -190,7 +191,13 @@ def _prepare(payload: dict[str, Any]) -> dict[str, Any]:
     planning_gw = int(prediction.get("planning_gw") or 1)
     packages = _apply_package_guardrails(build_packages(prediction, team, rules), prediction, team, planning_gw)
     package_governance = govern_packages(packages, truth)
-    lineup = optimize_lineup(team, prediction, rules)
+    engine_lineup = optimize_lineup(team, prediction, rules)
+    lineup, user_lineup_authority = apply_user_lineup_override(
+        engine_lineup,
+        truth=truth,
+        rules=rules,
+        planning_gw=planning_gw,
+    )
     capabilities = _active_local_capabilities(packages, package_governance, lineup)
     ready = packages.get("status") == "READY" and package_governance.get("status") == "READY" and lineup.get("status") == "READY"
     return {
@@ -200,6 +207,8 @@ def _prepare(payload: dict[str, Any]) -> dict[str, Any]:
         "packages": packages,
         "package_governance": package_governance,
         "lineup": lineup,
+        "engine_lineup_recommendation": engine_lineup,
+        "user_lineup_authority": user_lineup_authority,
         "capabilities": capabilities,
         "price_context": {"alert_count": len(((price.get("alerts") or {}).get("alerts") or []))},
     }
@@ -245,6 +254,8 @@ def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -
     packages = prepared.get("packages") if isinstance(prepared.get("packages"), dict) else {}
     package_governance = prepared.get("package_governance") if isinstance(prepared.get("package_governance"), dict) else {}
     lineup = prepared.get("lineup") if isinstance(prepared.get("lineup"), dict) else {}
+    engine_lineup = prepared.get("engine_lineup_recommendation") if isinstance(prepared.get("engine_lineup_recommendation"), dict) else {}
+    user_lineup_authority = prepared.get("user_lineup_authority") if isinstance(prepared.get("user_lineup_authority"), dict) else {}
     local_capabilities = prepared.get("capabilities") if isinstance(prepared.get("capabilities"), list) else []
     evaluation = payload.get("evaluation") if isinstance(payload.get("evaluation"), dict) else {}
     evaluation_capabilities = evaluation.get("capabilities") if isinstance(evaluation.get("capabilities"), list) else []
@@ -297,6 +308,8 @@ def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -
         "optimizer_best_candidate": package_governance.get("optimizer_best_candidate"),
         "optimizer_best_challenger": package_governance.get("optimizer_best_challenger"),
         "lineup": lineup,
+        "engine_lineup_recommendation": engine_lineup,
+        "user_lineup_authority": user_lineup_authority,
         "dss": dss,
         "decision_trace": trace,
         "capabilities": local_capabilities,
@@ -306,6 +319,9 @@ def _finalize(payload: dict[str, Any], prepared: dict[str, Any] | None = None) -
             **(package_governance.get("governance") or {}),
             "manual_authority_override": bool(package_governance.get("manual_authority_override")),
             "lineup_authority": lineup.get("authority"),
+            "user_lineup_override_active": bool(user_lineup_authority.get("active")),
+            "engine_lineup_recommendation_preserved": bool(engine_lineup),
+            "engine_can_warn_but_not_overwrite_user": True,
             "dss_evaluation_model": dss.get("evaluation_model"),
             "evaluation_capabilities_consumed": sorted(str(value) for value in evaluation_capabilities),
             "gate0_preflight_model": gate0_preflight.get("model"),

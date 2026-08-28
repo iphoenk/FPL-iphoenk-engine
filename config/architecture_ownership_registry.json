@@ -203,7 +203,18 @@
         "PRICE_MARKET_EVIDENCE",
         "RATE_SHRINKAGE_SUSTAINABILITY",
         "FIXTURE_RUN_SUMMARY",
-        "PLAN_AND_SQUAD_LEGALITY"
+        "SQUAD_LEGALITY"
+      ]
+    },
+    {
+      "id": "SQUAD_LEGALITY",
+      "owner": "domain_legality",
+      "implementation": "src.engines.fpl_legality.squad_shape_is_legal",
+      "consumers": [
+        "raw_snapshot",
+        "optimization",
+        "framework_postflight",
+        "challenger_comparator"
       ]
     }
   ]

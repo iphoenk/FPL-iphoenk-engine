@@ -216,8 +216,6 @@ def _screen_candidate(candidate: dict, umap: dict[int, dict], pmap: dict[int, di
         "checks": checks,
         "start_probability_3gw": round(start, 4) if start is not None else None,
         "dnp_probability_3gw": round(dnp, 4) if dnp is not None else None,
-        "start_probability_trend_5gw": start_trend,
-        "expected_minutes_trend_5gw": minute_trend,
         "fixture_rows_5gw": fixtures,
     }
 
@@ -243,6 +241,8 @@ def _role_sustainability(universe: dict, pred: dict) -> dict:
         "minutes": universe.get("minutes"),
         "start_probability_3gw": round(start, 4) if start is not None else None,
         "dnp_probability_3gw": round(dnp, 4) if dnp is not None else None,
+        "start_probability_trend_5gw": start_trend,
+        "expected_minutes_trend_5gw": minute_trend,
         "raw_attacking_rate": round(raw_attacking, 4),
         "shrunk_attacking_rate": round(shrunk_attacking, 4),
         "raw_to_shrunk_ratio": round(spike_ratio, 4),

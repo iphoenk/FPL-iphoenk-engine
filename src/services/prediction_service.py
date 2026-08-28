@@ -5,6 +5,7 @@ from time import perf_counter
 
 from src.engines.fpl_rules_2026 import POSITION_BY_TYPE
 from src.engines.v4_runner import build_predictions
+from src.models.tactical_matchup import attach_tactical_matchups
 from src.services.contracts import file_digest
 from src.utils import DATA, append_jsonl, atomic_json, iso_now, read_json
 
@@ -118,6 +119,8 @@ def run() -> dict:
     bootstrap, fixtures = official["bootstrap"], official.get("fixtures") or []
     generated = iso_now()
     predictions = build_predictions(bootstrap, fixtures, generated, stats_gw=enrichment.get("stats_gw"))
+    planning_gw = int(phase.get("planning_gw") or phase.get("submitted_gw") or 1)
+    predictions = attach_tactical_matchups(predictions, planning_gw)
     atomic_json(DATA / "predictions_v4.json", predictions)
     atomic_json(DATA / "universe.json", {"generated_at": generated, "players": enrichment["universe"]})
     atomic_json(DATA / "health.json", raw["endpoint_health"])
@@ -176,6 +179,7 @@ def run() -> dict:
     raw_snapshot_ms = float(raw.get("duration_ms") or 0)
     enrichment_ms = float(enrichment.get("duration_ms") or 0)
     official_context = _official_context_summary(bootstrap, fixtures)
+    tactical_summary = predictions.get("tactical_matchup_summary") or {}
     latest = {
         "schema_version": 495,
         "engine_version": "4.9.5-official-first-reporting",
@@ -193,6 +197,7 @@ def run() -> dict:
             "model": predictions["model_version"],
             "players": len(predictions["players"]),
             "top_5gw": predictions["players"][:10],
+            "tactical_matchup": tactical_summary,
         },
         "team_summary": {
             "itb": itb,
@@ -240,6 +245,9 @@ def run() -> dict:
             "service_boundaries_registry_driven": True,
             "engine_recommendations_are_advisory": True,
             "human_effective_plan_is_separate_contract": True,
+            "tactical_matchup_is_advisory": True,
+            "tactical_matchup_never_directly_mutates_xpts": True,
+            "tactical_matchup_report_policy": "material-highlights-only",
         },
     }
     atomic_json(DATA / "latest.json", latest)
@@ -252,6 +260,7 @@ def run() -> dict:
         "engine": latest["engine_version"],
         "players": len(predictions["players"]),
         "official_context": official_context,
+        "tactical_matchup": tactical_summary,
         "duration_ms": latest["performance"]["prediction_ms"],
     }))
     return latest

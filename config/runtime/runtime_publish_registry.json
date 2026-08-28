@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "registry": "RUNTIME_PUBLISH_REGISTRY_V1",
   "policy": {
     "runtime_branch_is_current_state_not_git_history_database": true,
@@ -8,11 +8,13 @@
     "raw_authenticated_payloads_are_forbidden": true,
     "temporary_service_artifacts_are_forbidden": true,
     "missing_optional_paths_do_not_block_publication": true,
-    "semantic_reuse_metadata_is_hydrated_from_runtime_performance": true
+    "semantic_reuse_state_is_separate_from_performance_telemetry": true,
+    "semantic_reuse_manifest_is_written_only_after_contract_validation": true
   },
   "hydrate_paths": [
     "latest.json",
     "runtime_performance.json",
+    "runtime_reuse_manifest.json",
     "price_cache.json",
     "price_trajectory.json",
     "price_alerts.json",
@@ -38,6 +40,14 @@
     "package_decision.json",
     "official_detail.json",
     "rules_compliance.json",
+    "user_report.json",
+    "decision_brief.json",
+    "deep_review_payload.json",
+    "technical_appendix.json",
+    "dss_watchlist_summary.json",
+    "official_detail_owned.json",
+    "official_detail_watchlist.json",
+    "report_artifact_registry.json",
     "stats/vaastav_previous_season.json",
     "stats/shots_current.json",
     "stats/playermatchstats_current.json"
@@ -46,6 +56,7 @@
     "latest.json",
     "runtime_manifest.json",
     "runtime_performance.json",
+    "runtime_reuse_manifest.json",
     "health.json",
     "native.json",
     "team.json",

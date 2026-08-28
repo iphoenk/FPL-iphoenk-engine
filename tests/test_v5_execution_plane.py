@@ -1,6 +1,16 @@
 from datetime import datetime, timedelta, timezone
 
-from src.v5.execution_plane import build_hot_bundle, evaluate_hot_materialization, freshness_budget_seconds, plane
+import pytest
+
+import src.v5.execution_plane as execution_plane
+from src.v5.execution_plane import (
+    build_hot_bundle,
+    evaluate_hot_materialization,
+    freshness_budget_seconds,
+    plane,
+    refresh_schedule,
+    requires_active_refresh_worker,
+)
 
 
 def _bundle(now: datetime, fingerprint: str = "fp1", mode: str = "deadline"):
@@ -28,6 +38,42 @@ def test_hot_plane_is_subsecond_and_forbids_network_refresh():
     assert hot["network_refresh_allowed"] is False
     assert hot["stale_materialization_action"] == "FAIL_CLOSED"
     assert "historical_prior_and_native_prediction" not in hot["allowed_stages"]
+
+
+def test_refresh_schedule_has_strict_freshness_headroom_for_every_mode():
+    for mode in ("daily", "deadline", "live", "on_demand"):
+        schedule = refresh_schedule(mode)
+        assert schedule["target_interval_seconds"] < schedule["freshness_budget_seconds"]
+        assert schedule["freshness_headroom_seconds"] > 0
+        assert schedule["hidden_request_time_refresh_forbidden"] is True
+        assert schedule["overlapping_refreshes_forbidden"] is True
+        assert schedule["worker_enablement_requires_explicit_deployment_config"] is True
+
+
+def test_deadline_and_live_require_non_github_subminute_worker():
+    for mode in ("deadline", "live"):
+        schedule = refresh_schedule(mode)
+        assert schedule["scheduler_class"] == "SUBMINUTE_WORKER_REQUIRED"
+        assert schedule["target_interval_seconds"] < 60
+        assert schedule["github_actions_authoritative"] is False
+        assert requires_active_refresh_worker(mode) is True
+
+
+def test_daily_allows_coarse_scheduler_and_on_demand_requires_explicit_prewarm():
+    daily = refresh_schedule("daily")
+    on_demand = refresh_schedule("on_demand")
+    assert daily["scheduler_class"] == "COARSE_ALLOWED"
+    assert daily["github_actions_authoritative"] is True
+    assert requires_active_refresh_worker("daily") is False
+    assert on_demand["scheduler_class"] == "EXPLICIT_PREWARM_REQUIRED"
+    assert on_demand["activation"] == "EXPLICIT_PREWARM"
+    assert requires_active_refresh_worker("on_demand") is False
+
+
+def test_refresh_interval_equal_to_freshness_budget_is_rejected(monkeypatch):
+    monkeypatch.setattr(execution_plane, "freshness_budget_seconds", lambda mode, name=None: 20)
+    with pytest.raises(RuntimeError, match="must be below freshness budget"):
+        execution_plane.refresh_schedule("deadline")
 
 
 def test_build_hot_bundle_is_compact_and_declares_full_refresh_provenance():

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from typing import Any
 
-from src.models.package_optimizer_v2 import legal_squad
+from src.domain.fpl_legality import formation_from_rows, legal_squad, legal_starting_xi
 from src.rules import LINEUP_RULES, RULESET_ID, SQUAD_RULES
 from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
 
@@ -69,27 +69,20 @@ def _player_row(proj: dict[str, Any], gw: int, policy: dict[str, Any]) -> dict[s
     }
 
 
-def _formation(rows: list[dict[str, Any]]) -> str | None:
-    counts = {pos: sum(1 for p in rows if p.get("position") == pos) for pos in ("DEF", "MID", "FWD")}
-    form = f"{counts['DEF']}-{counts['MID']}-{counts['FWD']}"
-    return form if form in set(LINEUP_RULES.get("legal_formations") or []) else None
-
-
 def _lineup_candidates(players: list[dict[str, Any]]) -> list[dict[str, Any]]:
     required_size = int(LINEUP_RULES.get("starting_xi_size") or 11)
-    required_gk = int(LINEUP_RULES.get("starting_goalkeepers") or 1)
     candidates = []
     for combo in itertools.combinations(players, required_size):
         rows = list(combo)
-        if sum(1 for p in rows if p.get("position") == "GK") != required_gk:
+        if not legal_starting_xi(rows):
             continue
-        form = _formation(rows)
-        if not form:
+        formation = formation_from_rows(rows)
+        if not formation:
             continue
         score = sum(_f(p.get("selection_score")) for p in rows)
         mean = sum(_f(p.get("xpts_mean")) for p in rows)
         variance = sum(_f(p.get("xpts_std")) ** 2 for p in rows)
-        candidates.append({"formation": form, "score": round(score, 4), "xpts_mean": round(mean, 3), "xpts_std": round(variance ** 0.5, 3), "element_ids": sorted(int(p["element"]) for p in rows)})
+        candidates.append({"formation": formation, "score": round(score, 4), "xpts_mean": round(mean, 3), "xpts_std": round(variance ** 0.5, 3), "element_ids": sorted(int(p["element"]) for p in rows)})
     candidates.sort(key=lambda row: (row["score"], row["xpts_mean"], row["formation"]), reverse=True)
     return candidates
 
@@ -195,6 +188,7 @@ def build_lineup_decision(projections: dict[str, Any], lock: dict[str, Any], chi
             "captain_dnp_guard_applied": True,
             "bench_order_is_model_output_not_manual_lock": True,
             "squad_selection_scores_published_for_report_transparency": True,
+            "canonical_legality_primitive_consumed": True,
         },
     }
     return decision
@@ -229,7 +223,7 @@ def build_package_decision(package_optimizer: dict[str, Any], projections: dict[
         "planning_gw": int(projections.get("planning_gw") or 1), "selected_package": selected,
         "selected_package_id": selected.get("id"), "optimizer_best_candidate_id": (optimizer_best or {}).get("id"),
         "manual_authority_override": freeze, "current_squad_legal": current_legal, "gate0_revalidated": gate0_revalidated,
-        "governance": {"optimizer_is_candidate_generator_only": bool(package_cfg.get("optimizer_is_candidate_generator_only", True)), "locked_composition_preserved": freeze, "manual_authority_wins": True},
+        "governance": {"optimizer_is_candidate_generator_only": bool(package_cfg.get("optimizer_is_candidate_generator_only", True)), "locked_composition_preserved": freeze, "manual_authority_wins": True, "canonical_legality_primitive_consumed": True},
     }
 
 

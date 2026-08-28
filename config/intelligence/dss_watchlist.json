@@ -62,6 +62,10 @@
     },
     "score_scale": 100.0,
     "material_dnp_risk_threshold": 0.20,
+    "explanation_limits": {
+      "reasons": 3,
+      "risks": 3
+    },
     "market_overlay_scores": {
       "RISE": {
         "CRITICAL": 1.0,

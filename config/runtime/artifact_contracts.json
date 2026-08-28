@@ -45,6 +45,12 @@
       "required_fields": ["schema_version", "contract", "generated_at", "status", "source_contract", "teams", "governance"],
       "equals": {"schema_version": 2, "contract": "RECENT_TACTICAL_FORM_V1", "source_contract": "TACTICAL_OBSERVED_CONTEXT_V1"},
       "types": {"teams": "object", "governance": "object"}
+    },
+    "owned_challenger_comparator.json": {
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "generated_at", "planning_gw", "capability_status", "owned_count", "challenger_counts", "top_comparisons", "comparisons", "governance"],
+      "equals": {"schema_version": 1, "contract": "OWNED_CHALLENGER_COMPARATOR_V1", "capability_status": "ADVISORY_ONLY", "owned_count": 15},
+      "types": {"challenger_counts": "object", "emerging_challengers": "list", "top_comparisons": "list", "comparisons": "list", "by_owned": "object", "governance": "object"}
     }
   }
 }

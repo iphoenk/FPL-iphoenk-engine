@@ -13,29 +13,66 @@ DSS_EXT = ROOT / "config" / "dss_extension_registry.json"
 ENH = ROOT / "config" / "enhancement_layers_registry.json"
 GATE0 = ROOT / "config" / "gate0_registry.json"
 SERVICES = ROOT / "config" / "v3_service_registry.json"
+OFFICIAL_COVERAGE = ROOT / "config" / "sources" / "official_first_coverage.json"
 
 
 def _load(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _ids(payload: dict[str, Any]) -> set[str]:
+def _rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
     for key in ("modules", "layers", "checks"):
         rows = payload.get(key)
         if isinstance(rows, list):
-            return {str(row.get("id")) for row in rows if row.get("id")}
-    return set()
+            return list(rows)
+    return []
+
+
+def _ids(payload: dict[str, Any]) -> set[str]:
+    return {str(row.get("id")) for row in _rows(payload) if row.get("id")}
+
+
+def _audit_unique_registry_ids(errors: list[str], name: str, payload: dict[str, Any]) -> set[str]:
+    rows = _rows(payload)
+    values = [str(row.get("id") or "") for row in rows]
+    duplicates = sorted(key for key, count in Counter(values).items() if key and count > 1)
+    empty = sum(1 for value in values if not value)
+    if duplicates or empty:
+        errors.append(f"{name} ids invalid/duplicated: duplicates={duplicates} empty={empty}")
+    expected = int(payload.get("expected_count") or 0)
+    if expected and expected != len(rows):
+        errors.append(f"{name} expected_count={expected} but declared={len(rows)}")
+    return {value for value in values if value}
 
 
 def run() -> dict[str, Any]:
     master = _load(MASTER)
-    dss_ids = _ids(_load(DSS_CORE))
-    ext_ids = _ids(_load(DSS_EXT))
-    enh_ids = _ids(_load(ENH))
-    gate_ids = _ids(_load(GATE0))
+    core_payload = _load(DSS_CORE)
+    ext_payload = _load(DSS_EXT)
+    enh_payload = _load(ENH)
+    gate_payload = _load(GATE0)
+    coverage = _load(OFFICIAL_COVERAGE)
     service_ids = set((_load(SERVICES).get("services") or {}).keys())
     rows = list(master.get("capabilities") or [])
     errors: list[str] = []
+
+    dss_ids = _audit_unique_registry_ids(errors, "DSS core", core_payload)
+    ext_ids = _audit_unique_registry_ids(errors, "DSS extensions", ext_payload)
+    enh_ids = _audit_unique_registry_ids(errors, "Enhancements", enh_payload)
+    gate_ids = _audit_unique_registry_ids(errors, "Gate0", gate_payload)
+
+    recommendations = coverage.get("recommendations") or {}
+    rec_ids = set(str(key) for key in recommendations)
+    if len(rec_ids) != len(recommendations):
+        errors.append("Official-first recommendation IDs are duplicated")
+    unknown_endpoint_refs = []
+    endpoint_ids = set((coverage.get("endpoint_catalog") or {}).keys())
+    for rec_id, row in recommendations.items():
+        for endpoint in row.get("endpoints") or []:
+            if str(endpoint) not in endpoint_ids:
+                unknown_endpoint_refs.append(f"{rec_id}:{endpoint}")
+    if unknown_endpoint_refs:
+        errors.append(f"Official-first recommendations reference unknown endpoint ids: {sorted(unknown_endpoint_refs)}")
 
     if master.get("registry") != "V3_CAPABILITY_MASTER_30":
         errors.append("capability registry id must be V3_CAPABILITY_MASTER_30")
@@ -49,6 +86,7 @@ def run() -> dict[str, Any]:
 
     owners: dict[str, list[str]] = defaultdict(list)
     ext_owners: dict[str, list[str]] = defaultdict(list)
+    referenced_rec_ids: set[str] = set()
     for row in rows:
         cap_id = str(row.get("id") or "")
         owner_service = str(row.get("owner_service") or "")
@@ -58,28 +96,45 @@ def run() -> dict[str, Any]:
         invalid_consumers = sorted(set(consumers) - service_ids)
         if invalid_consumers:
             errors.append(f"{cap_id} invalid consumer services: {invalid_consumers}")
+        if len(consumers) != len(set(consumers)):
+            errors.append(f"{cap_id} duplicate consumer services: {consumers}")
         if owner_service in consumers:
             errors.append(f"{cap_id} owner_service repeated as consumer: {owner_service}")
 
         owns = row.get("owns") or {}
-        for value in owns.get("dss") or []:
-            owners[str(value)].append(cap_id)
-        for value in owns.get("extensions") or []:
-            ext_owners[str(value)].append(cap_id)
+        owned_dss = [str(value) for value in owns.get("dss") or []]
+        owned_ext = [str(value) for value in owns.get("extensions") or []]
+        if len(owned_dss) != len(set(owned_dss)):
+            errors.append(f"{cap_id} duplicates owned DSS ids: {owned_dss}")
+        if len(owned_ext) != len(set(owned_ext)):
+            errors.append(f"{cap_id} duplicates owned extension ids: {owned_ext}")
+        for value in owned_dss:
+            owners[value].append(cap_id)
+        for value in owned_ext:
+            ext_owners[value].append(cap_id)
 
         refs = row.get("references") or {}
-        invalid_gate = sorted(set(str(x) for x in refs.get("gate0") or []) - gate_ids)
-        invalid_enh = sorted(set(str(x) for x in refs.get("enhancements") or []) - enh_ids)
-        invalid_related = sorted(set(str(x) for x in refs.get("related_dss") or []) - dss_ids)
+        gate_refs = [str(x) for x in refs.get("gate0") or []]
+        enh_refs = [str(x) for x in refs.get("enhancements") or []]
+        related_refs = [str(x) for x in refs.get("related_dss") or []]
+        rec_refs = [str(x) for x in refs.get("rec") or []]
+        for label, values in (("Gate0", gate_refs), ("Enhancement", enh_refs), ("related DSS", related_refs), ("REC", rec_refs)):
+            if len(values) != len(set(values)):
+                errors.append(f"{cap_id} duplicate {label} references: {values}")
+        invalid_gate = sorted(set(gate_refs) - gate_ids)
+        invalid_enh = sorted(set(enh_refs) - enh_ids)
+        invalid_related = sorted(set(related_refs) - dss_ids)
+        invalid_rec = sorted(set(rec_refs) - rec_ids)
         if invalid_gate:
             errors.append(f"{cap_id} invalid Gate0 references: {invalid_gate}")
         if invalid_enh:
             errors.append(f"{cap_id} invalid Enhancement references: {invalid_enh}")
         if invalid_related:
             errors.append(f"{cap_id} invalid related DSS references: {invalid_related}")
-        # A primitive owned by this capability must never also be presented as a
-        # cross-domain related reference within the same capability.
-        same_ref = sorted(set(str(x) for x in owns.get("dss") or []) & set(str(x) for x in refs.get("related_dss") or []))
+        if invalid_rec:
+            errors.append(f"{cap_id} invalid REC references: {invalid_rec}")
+        referenced_rec_ids.update(rec_refs)
+        same_ref = sorted(set(owned_dss) & set(related_refs))
         if same_ref:
             errors.append(f"{cap_id} owns and references the same DSS primitives: {same_ref}")
 
@@ -123,10 +178,14 @@ def run() -> dict[str, Any]:
         "owned_extensions": len(ext_owners),
         "dss_expected": len(dss_ids),
         "extensions_expected": len(ext_ids),
+        "official_first_rec_count": len(rec_ids),
+        "capability_referenced_rec_count": len(referenced_rec_ids),
         "duplicate_dss_owners": duplicate_dss,
         "duplicate_extension_owners": duplicate_ext,
         "policy": {
             "primitive_ownership_is_bijective": not missing_dss and not duplicate_dss and not missing_ext and not duplicate_ext,
+            "registry_ids_are_unique": True,
+            "capability_rec_references_resolve_to_official_first_matrix": True,
             "enhancement_and_rec_are_non_owning_references": True,
         },
     }

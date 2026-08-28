@@ -103,6 +103,21 @@
     "never_mutate_dss": true,
     "never_override_official_native_fields": true
   },
+  "authority_display": {
+    "current_team_source_order": ["USER_OVERRIDE", "POST_DEADLINE_OFFICIAL", "ENGINE_RECOMMENDATION"],
+    "engine_recommendation_is_challenger_when_user_override": true,
+    "never_surface_superseded_captain_as_current": true,
+    "never_surface_superseded_vice_captain_as_current": true,
+    "current_team_and_engine_challenger_must_be_distinct": true
+  },
+  "serving_freshness": {
+    "always_refetch_latest_before_visible_report": true,
+    "normal_max_age_minutes": 90,
+    "deadline_or_matchday_max_age_minutes": 30,
+    "stale_model_fields_never_relabelled_as_fresh": true,
+    "refresh_direct_official_native_fields_when_stale": true,
+    "latest_branch_head_must_be_checked_when_freshness_is_in_doubt": true
+  },
   "action_board": {
     "max_items": 8,
     "allowed_actions": ["HOLD", "START", "BENCH", "LOCK", "LEAN", "OPEN", "WATCH", "BUY", "SELL", "REVIEW"]
@@ -112,8 +127,40 @@
     "natural_fpl_language": true,
     "presentation_is_primary_human_surface": true,
     "raw_machine_states_are_audit_only": true,
-    "forbidden_user_report_tokens": ["go_allowed", "SUSPECT_STATIC_OFFSET0", "DSS-", "Gate 0", "epistemik", "asset-value protection"],
-    "forbidden_user_presentation_tokens": ["HOLD", "CHANGE", "REVIEW", "LOCK", "LEAN", "OPEN"],
+    "forbidden_user_report_tokens": [
+      "go_allowed",
+      "SUSPECT_STATIC_OFFSET0",
+      "DSS-",
+      "Gate 0",
+      "epistemik",
+      "asset-value protection",
+      "user_override_active",
+      "runtime_publish",
+      "schema_version",
+      "report_artifact_registry",
+      "technical_appendix",
+      "payload_type",
+      "REFRESH_REQUIRED",
+      "INVALID_EVIDENCE_CONTRACT",
+      "PARTIAL/UNAVAILABLE"
+    ],
+    "forbidden_user_presentation_tokens": [
+      "HOLD",
+      "CHANGE",
+      "REVIEW",
+      "LOCK",
+      "LEAN",
+      "OPEN",
+      "user_override_active",
+      "runtime_publish",
+      "schema_version",
+      "report_artifact_registry",
+      "technical_appendix",
+      "payload_type",
+      "REFRESH_REQUIRED",
+      "INVALID_EVIDENCE_CONTRACT",
+      "PARTIAL/UNAVAILABLE"
+    ],
     "technical_terms_allowed_only_in_appendix": true
   },
   "governance": {

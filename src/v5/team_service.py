@@ -28,6 +28,8 @@ def _now_costs(index: ElementIndex) -> dict[int, int]:
 def build_team_state(
     *,
     phase,
+    planning_gw: int | None,
+    submitted_gw: int | None,
     bootstrap: dict,
     identity: ElementIndex,
     locked_squad: dict | None,
@@ -38,6 +40,8 @@ def build_team_state(
 ) -> dict[str, Any]:
     resolved = select_squad(
         phase=phase,
+        planning_gw=planning_gw,
+        submitted_gw=submitted_gw,
         bootstrap=bootstrap,
         locked_squad=locked_squad,
         authenticated_my_team=authenticated_my_team,
@@ -64,6 +68,7 @@ def build_team_state(
         bank = entry.get("last_deadline_bank")
     return {
         "authority": resolved["authority"],
+        "projection_baseline": resolved.get("projection_baseline") or {},
         "squad": list(squad),
         "validation": resolved["validation"],
         "finance": {
@@ -72,4 +77,9 @@ def build_team_state(
             "authenticated_coverage": auth_finance.get("coverage", {}),
         },
         "owned_ids": list(owned_ids),
+        "governance": {
+            "planning_override_must_target_exact_gw": True,
+            "stale_planning_override_is_rejected": True,
+            "post_deadline_official_submission_reclaims_authority": True,
+        },
     }

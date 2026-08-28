@@ -6,24 +6,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from src.utils import atomic_json, read_json
 from src.v5.config_cache import load_json_config
 
 REGISTRY = "config/v5_on_demand_report_registry.json"
 
 
-def _load(path: Path, default: Any = None) -> Any:
-    if not path.exists():
-        return default
-    with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
-
-
-def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2, ensure_ascii=False)
-    tmp.replace(path)
+def _read(path: Path, default: Any = None) -> Any:
+    value = read_json(path, default)
+    return default if value is None else value
 
 
 def _name(row: Any) -> str | None:
@@ -57,13 +48,13 @@ def build(source_dir: str, output_dir: str, request_config: str, source_sha: str
     src = Path(source_dir)
     out = Path(output_dir)
     registry = load_json_config(REGISTRY)
-    trigger = _load(Path(request_config), {}) or {}
-    latest = _load(src / "latest.json", {}) or {}
-    user = _load(src / "user_report.json", {}) or {}
-    lineup = _load(src / "lineup_decision.json", {}) or {}
-    decision_brief = _load(src / "decision_brief.json", {}) or {}
-    framework = _load(src / "framework_health.json", {}) or {}
-    watchlist_summary = _load(src / "dss_watchlist_summary.json", {}) or {}
+    trigger = _read(Path(request_config), {}) or {}
+    latest = _read(src / "latest.json", {}) or {}
+    user = _read(src / "user_report.json", {}) or {}
+    lineup = _read(src / "lineup_decision.json", {}) or {}
+    decision_brief = _read(src / "decision_brief.json", {}) or {}
+    framework = _read(src / "framework_health.json", {}) or {}
+    watchlist_summary = _read(src / "dss_watchlist_summary.json", {}) or {}
 
     if not latest or not user or not lineup:
         raise RuntimeError("on-demand report requires fresh latest, user_report and lineup_decision artifacts")
@@ -150,8 +141,8 @@ def build(source_dir: str, output_dir: str, request_config: str, source_sha: str
 
     request_id = str(trigger.get("request_id") or packaged_at.replace(":", "").replace("+00:00", "Z"))
     safe_id = "".join(ch for ch in request_id if ch.isalnum() or ch in {"-", "_", "."}) or "request"
-    _atomic_write(out / "latest.json", payload)
-    _atomic_write(out / "reports" / f"{safe_id}.json", payload)
+    atomic_json(out / "latest.json", payload)
+    atomic_json(out / "reports" / f"{safe_id}.json", payload)
     print(json.dumps({
         "report_type": payload["report_type"],
         "engine_version": payload["authority"]["engine_version"],

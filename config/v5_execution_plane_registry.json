@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "contract": "V5_EXECUTION_PLANE_V1",
   "purpose": "Separate heavy evidence refresh from the user-facing subsecond decision path without reducing analytical breadth or duplicating business authority.",
   "planes": {
@@ -19,6 +19,7 @@
         "decision_finalize",
         "governance_audit",
         "watchlist_screening",
+        "owned_challenger_comparator_advisory",
         "decision_first_reporting",
         "durable_materialization"
       ],
@@ -124,6 +125,8 @@
     "refresh_and_hot_planes_must_share_the_same_business_authorities": true,
     "hot_plane_must_not_call_external_data_providers": true,
     "hot_plane_must_not_recompute_prediction_or_optimizer": true,
+    "hot_plane_must_not_recompute_challenger_comparator": true,
+    "challenger_comparator_runs_on_refresh_plane_only": true,
     "stale_data_must_not_trigger_hidden_synchronous_refresh": true,
     "durable_materialization_required_before_hot_eligibility": true,
     "runtime_fingerprint_must_match_current_release": true,

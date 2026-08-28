@@ -68,6 +68,7 @@
     "framework_health.json",
     "dss_operational_evidence.json",
     "dss_watchlist.json",
+    "owned_challenger_comparator.json",
     "dss_watchlist_summary.json",
     "official_detail.json",
     "official_detail_owned.json",

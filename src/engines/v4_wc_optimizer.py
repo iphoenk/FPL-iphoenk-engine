@@ -7,11 +7,8 @@ from heapq import nlargest
 from typing import Iterable
 
 from src.engines.team_value import sell_cost
+from src.engines.fpl_rules_2026 import POSITION_COUNTS, BUDGET_TENTHS, MAX_PER_CLUB
 from src.utils import CONFIG, read_json
-
-POSITION_COUNTS = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
-BUDGET_TENTHS = 1000
-MAX_PER_CLUB = 3
 
 
 @dataclass(frozen=True)

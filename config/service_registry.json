@@ -1,20 +1,257 @@
 {
-  "schema_version": 8,
-  "registry": "fpl_v4_9_5_microservice_registry_v8",
-  "architecture_version": "4.9.5",
+  "schema_version": 9,
+  "registry": "fpl_v4_9_6_microservice_registry_v9",
+  "architecture_version": "4.9.6",
   "execution_model": "process_isolated_dag_parallel_single_host",
   "services": [
-    {"id":"raw_snapshot","name":"Raw Snapshot Service","boundary_state":"INDEPENDENT","module":"src.services.raw_snapshot_service","command":["{python}","-m","src.services.raw_snapshot_service","{mode}"],"runtime_flags":{"as_of":"--as-of"},"timeout_seconds":90,"depends_on":[],"produces":["raw_snapshot"],"critical":true},
-    {"id":"enrichment","name":"Enrichment Service","boundary_state":"INDEPENDENT","module":"src.services.enrichment_service","command":["{python}","-m","src.services.enrichment_service"],"runtime_flags":{"stats":"--stats","deep_stats":"--deep-stats"},"timeout_seconds":90,"depends_on":["raw_snapshot"],"produces":["enrichment"],"critical":true},
-    {"id":"prediction","name":"Prediction Service","boundary_state":"INDEPENDENT","module":"src.services.prediction_service","command":["{python}","-m","src.services.prediction_service"],"timeout_seconds":60,"depends_on":["enrichment"],"produces":["latest_snapshot","predictions","team_state","universe","source_health"],"critical":true},
-    {"id":"validation_lifecycle","name":"Validation Lifecycle Service","boundary_state":"INDEPENDENT","module":"src.engines.v4_validation_cycle","command":["{python}","-m","src.engines.v4_validation_cycle","cycle"],"timeout_seconds":25,"depends_on":["prediction"],"produces":["validation_lifecycle"],"critical":true},
-    {"id":"rules_compliance","name":"Rules Compliance Service","boundary_state":"INDEPENDENT","module":"src.engines.compliance_audit","command":["{python}","-m","src.engines.compliance_audit"],"timeout_seconds":20,"depends_on":["prediction"],"produces":["compliance"],"critical":true},
-    {"id":"framework_preflight","name":"Framework PRE-FLIGHT Service","boundary_state":"INDEPENDENT","module":"src.engines.framework_health_audit","command":["{python}","-m","src.engines.framework_health_audit","--phase","preflight","--strict"],"timeout_seconds":20,"depends_on":["validation_lifecycle","rules_compliance"],"produces":["framework_preflight"],"critical":true},
-    {"id":"optimization","name":"Optimization & Decision Service","boundary_state":"INDEPENDENT","module":"src.services.optimization_slo_service","command":["{python}","-m","src.services.optimization_slo_service"],"timeout_seconds":45,"depends_on":["prediction"],"produces":["wc_decision","wc_package","lineup","recommendation_sanity","decision_pipeline"],"critical":true},
-    {"id":"user_decision_overlay","name":"User Decision Overlay Service","boundary_state":"INDEPENDENT","module":"src.services.user_decision_overlay_service","command":["{python}","-m","src.services.user_decision_overlay_service"],"timeout_seconds":20,"depends_on":["optimization"],"produces":["effective_plan"],"critical":true},
-    {"id":"personal_gw_scorecard","name":"Personal GW Scorecard & Projection Service","boundary_state":"INDEPENDENT","module":"src.services.gw_scorecard_service","command":["{python}","-m","src.services.gw_scorecard_service"],"timeout_seconds":20,"depends_on":["user_decision_overlay"],"produces":["gw_scorecard"],"critical":true},
-    {"id":"framework_postflight","name":"Framework POST-FLIGHT Truth Service","boundary_state":"INDEPENDENT","module":"src.services.framework_postflight_truth_service","command":["{python}","-m","src.services.framework_postflight_truth_service"],"timeout_seconds":20,"depends_on":["framework_preflight","user_decision_overlay"],"produces":["framework_postflight"],"critical":true},
-    {"id":"report_governance","name":"Checkpoint Report Governance Service","boundary_state":"INDEPENDENT","module":"src.engines.v4_checkpoint_governance","command":["{python}","-m","src.engines.v4_checkpoint_governance"],"timeout_seconds":20,"depends_on":["framework_postflight","personal_gw_scorecard"],"produces":["checkpoint_decision"],"critical":true}
+    {
+      "id": "architecture_guard",
+      "name": "Architecture Ownership Guard Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.services.architecture_guard_service",
+      "command": [
+        "{python}",
+        "-m",
+        "src.services.architecture_guard_service"
+      ],
+      "timeout_seconds": 20,
+      "depends_on": [],
+      "produces": [
+        "architecture_guard"
+      ],
+      "critical": true
+    },
+    {
+      "id": "raw_snapshot",
+      "name": "Raw Snapshot Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.services.raw_snapshot_service",
+      "command": [
+        "{python}",
+        "-m",
+        "src.services.raw_snapshot_service",
+        "{mode}"
+      ],
+      "runtime_flags": {
+        "as_of": "--as-of"
+      },
+      "timeout_seconds": 90,
+      "depends_on": [],
+      "produces": [
+        "raw_snapshot"
+      ],
+      "critical": true
+    },
+    {
+      "id": "enrichment",
+      "name": "Enrichment Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.services.enrichment_service",
+      "command": [
+        "{python}",
+        "-m",
+        "src.services.enrichment_service"
+      ],
+      "runtime_flags": {
+        "stats": "--stats",
+        "deep_stats": "--deep-stats"
+      },
+      "timeout_seconds": 90,
+      "depends_on": [
+        "raw_snapshot"
+      ],
+      "produces": [
+        "enrichment"
+      ],
+      "critical": true
+    },
+    {
+      "id": "prediction",
+      "name": "Prediction Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.services.prediction_service",
+      "command": [
+        "{python}",
+        "-m",
+        "src.services.prediction_service"
+      ],
+      "timeout_seconds": 60,
+      "depends_on": [
+        "enrichment"
+      ],
+      "produces": [
+        "latest_snapshot",
+        "predictions",
+        "team_state",
+        "universe",
+        "source_health"
+      ],
+      "critical": true
+    },
+    {
+      "id": "validation_lifecycle",
+      "name": "Validation Lifecycle Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.engines.v4_validation_cycle",
+      "command": [
+        "{python}",
+        "-m",
+        "src.engines.v4_validation_cycle",
+        "cycle"
+      ],
+      "timeout_seconds": 25,
+      "depends_on": [
+        "prediction"
+      ],
+      "produces": [
+        "validation_lifecycle"
+      ],
+      "critical": true
+    },
+    {
+      "id": "rules_compliance",
+      "name": "Rules Compliance Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.engines.compliance_audit",
+      "command": [
+        "{python}",
+        "-m",
+        "src.engines.compliance_audit"
+      ],
+      "timeout_seconds": 20,
+      "depends_on": [
+        "prediction"
+      ],
+      "produces": [
+        "compliance"
+      ],
+      "critical": true
+    },
+    {
+      "id": "framework_preflight",
+      "name": "Framework PRE-FLIGHT Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.engines.framework_health_audit",
+      "command": [
+        "{python}",
+        "-m",
+        "src.engines.framework_health_audit",
+        "--phase",
+        "preflight",
+        "--strict"
+      ],
+      "timeout_seconds": 20,
+      "depends_on": [
+        "validation_lifecycle",
+        "rules_compliance",
+        "architecture_guard"
+      ],
+      "produces": [
+        "framework_preflight"
+      ],
+      "critical": true
+    },
+    {
+      "id": "optimization",
+      "name": "Optimization & Decision Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.services.optimization_slo_service",
+      "command": [
+        "{python}",
+        "-m",
+        "src.services.optimization_slo_service"
+      ],
+      "timeout_seconds": 45,
+      "depends_on": [
+        "prediction"
+      ],
+      "produces": [
+        "wc_decision",
+        "wc_package",
+        "lineup",
+        "recommendation_sanity",
+        "decision_pipeline"
+      ],
+      "critical": true
+    },
+    {
+      "id": "user_decision_overlay",
+      "name": "User Decision Overlay Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.services.user_decision_overlay_service",
+      "command": [
+        "{python}",
+        "-m",
+        "src.services.user_decision_overlay_service"
+      ],
+      "timeout_seconds": 20,
+      "depends_on": [
+        "optimization"
+      ],
+      "produces": [
+        "effective_plan"
+      ],
+      "critical": true
+    },
+    {
+      "id": "personal_gw_scorecard",
+      "name": "Personal GW Scorecard & Projection Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.services.gw_scorecard_service",
+      "command": [
+        "{python}",
+        "-m",
+        "src.services.gw_scorecard_service"
+      ],
+      "timeout_seconds": 20,
+      "depends_on": [
+        "user_decision_overlay"
+      ],
+      "produces": [
+        "gw_scorecard"
+      ],
+      "critical": true
+    },
+    {
+      "id": "framework_postflight",
+      "name": "Framework POST-FLIGHT Truth Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.services.framework_postflight_truth_service",
+      "command": [
+        "{python}",
+        "-m",
+        "src.services.framework_postflight_truth_service"
+      ],
+      "timeout_seconds": 20,
+      "depends_on": [
+        "framework_preflight",
+        "user_decision_overlay"
+      ],
+      "produces": [
+        "framework_postflight"
+      ],
+      "critical": true
+    },
+    {
+      "id": "report_governance",
+      "name": "Checkpoint Report Governance Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.engines.v4_checkpoint_governance",
+      "command": [
+        "{python}",
+        "-m",
+        "src.engines.v4_checkpoint_governance"
+      ],
+      "timeout_seconds": 20,
+      "depends_on": [
+        "framework_postflight",
+        "personal_gw_scorecard"
+      ],
+      "produces": [
+        "checkpoint_decision"
+      ],
+      "critical": true
+    }
   ],
   "guardrails": {
     "official_fpl_api_authority": "raw_snapshot_only",
@@ -47,7 +284,11 @@
     "advanced_ablation_diagnostic_not_arbitrary_gate": true,
     "advanced_ablation_failure_cannot_block_core_publish": true,
     "fail_closed_on_contract_failure": true,
-    "lock_after_pass": ["raw_snapshot", "enrichment", "prediction"],
+    "lock_after_pass": [
+      "raw_snapshot",
+      "enrichment",
+      "prediction"
+    ],
     "appearance_formula_regression_tested": true,
     "prediction_quality_inputs_consumed": true,
     "truthful_competition_evidence": true,
@@ -63,6 +304,21 @@
     "technical_reason_codes_separate_from_human_report": true,
     "scheduled_checkpoint_recovery_enabled": true,
     "gate0_checks_unchanged": 16,
-    "registry_counts_unchanged": {"dss_core":50,"dss_extensions":16,"enhancements":8}
+    "registry_counts_unchanged": {
+      "dss_core": 50,
+      "dss_extensions": 16,
+      "enhancements": 8
+    },
+    "architecture_ownership_guard_process_isolated": true,
+    "duplicate_service_ids_rejected": true,
+    "duplicate_contract_producers_rejected": true,
+    "duplicate_contract_paths_rejected": true,
+    "duplicate_registry_ids_rejected": true,
+    "canonical_rules_single_owner": true,
+    "canonical_legality_single_implementation": true,
+    "exact_nontrivial_function_clones_rejected": true,
+    "reusable_production_workflow_single_owner": true,
+    "release_manifest_single_source": true,
+    "service_count": 12
   }
 }

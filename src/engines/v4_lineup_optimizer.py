@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+from src.engines.fpl_rules_2026 import LEGAL_FORMATION_TUPLES
+from src.engines.fpl_legality import formation_from_rows
 from src.utils import DATA, CONFIG, atomic_json, read_json
 
 OUTFILE = DATA / "lineup_decision_v4.json"
 MANUAL_FILE = CONFIG / "manual_lineup.json"
-LEGAL_FORMATIONS = [(d,m,10-d-m) for d in range(3,6) for m in range(2,6) if 1 <= 10-d-m <= 3]
 
 
 def _f(v, default=0.0):
@@ -30,9 +31,7 @@ def _player_row(pred, universe_row, idx=0):
 
 
 def _formation(rows):
-    c={p:sum(r["position"]==p for r in rows) for p in ("DEF","MID","FWD")}
-    form=f"{c['DEF']}-{c['MID']}-{c['FWD']}"
-    return form if (c['DEF'],c['MID'],c['FWD']) in LEGAL_FORMATIONS else None
+    return formation_from_rows(rows)
 
 
 def _legal_xi(rows):
@@ -40,7 +39,7 @@ def _legal_xi(rows):
     if not all(by[p] for p in by): raise RuntimeError("locked squad missing position group")
     gk=max(by["GK"],key=lambda r:(r["xpts"],r["start_probability"],-r["dnp_probability"]))
     best=None
-    for d,m,f in LEGAL_FORMATIONS:
+    for d,m,f in LEGAL_FORMATION_TUPLES:
         if len(by["DEF"])<d or len(by["MID"])<m or len(by["FWD"])<f: continue
         chosen=[gk]+sorted(by["DEF"],key=lambda r:(r["xpts"],r["start_probability"]),reverse=True)[:d]+sorted(by["MID"],key=lambda r:(r["xpts"],r["start_probability"]),reverse=True)[:m]+sorted(by["FWD"],key=lambda r:(r["xpts"],r["start_probability"]),reverse=True)[:f]
         score=sum(r["xpts"] for r in chosen); risk=sum(r["dnp_probability"] for r in chosen); width=sum(r["interval_width"] for r in chosen)

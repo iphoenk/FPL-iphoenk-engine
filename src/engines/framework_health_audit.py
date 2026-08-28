@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from src.engines.team_value import sell_cost
-from src.engines.v4_wc_optimizer import MAX_PER_CLUB, POSITION_COUNTS
+from src.engines.fpl_rules_2026 import MAX_PER_CLUB, POSITION_COUNTS
+from src.engines.fpl_legality import plan_legality_checks
 from src.utils import CONFIG, DATA, atomic_json, parse_dt, read_json, utcnow
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,7 +32,6 @@ POSTFLIGHT_OUTPUTS = {
     "data/decision_pipeline_v4.json",
     "data/framework_health_v4.json",
 }
-LEGAL_FORMS = {"3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-2-3", "5-3-2", "5-4-1"}
 _PREDICTION_CACHE: dict | None = None
 _PROBE_CACHE: dict[tuple[str | None, str], tuple[str, dict]] | None = None
 
@@ -630,17 +630,8 @@ def _gate0(phase: str, compliance: dict, lineup: dict, packages: dict) -> dict:
     checks["G0-09"] = ("PASS" if eligible and identity_ok else "FAIL", f"eligible={eligible},identity_ok={identity_ok}")
 
     if phase == "postflight" and lineup:
-        xi = list(lineup.get("starting_xi") or [])
-        xi_ids = {int(player.get("element")) for player in xi if player.get("element") is not None}
-        captain = int((lineup.get("captain") or {}).get("element") or -1)
-        vice = int((lineup.get("vice_captain") or {}).get("element") or -1)
-        bench = lineup.get("bench") or {}
-        checks["G0-10"] = ("PASS" if len(xi) == 11 and lineup.get("formation") in LEGAL_FORMS else "FAIL", f"formation={lineup.get('formation')},xi={len(xi)}")
-        checks["G0-11"] = ("PASS" if sum(player.get("position") == "GK" for player in xi) == 1 else "FAIL", "starting GK")
-        checks["G0-12"] = ("PASS" if captain in xi_ids and vice in xi_ids and captain != vice else "FAIL", f"captain={captain},vice={vice}")
-        checks["G0-13"] = ("PASS" if bool(bench.get("gk")) and len(bench.get("order") or []) == 3 else "FAIL", "bench structure")
-        chip_ok = (lineup.get("chip_context") or {}).get("single_chip_rule_respected") is True
-        checks["G0-14"] = ("PASS" if chip_ok and compliance.get("overall") == "PASS" else "FAIL", f"single_chip={chip_ok},rules={compliance.get('overall')}")
+        for check_id, (ok, detail) in plan_legality_checks(lineup, compliance).items():
+            checks[check_id] = ("PASS" if ok else "FAIL", detail)
     else:
         for check_id in ("G0-10", "G0-11", "G0-12", "G0-13", "G0-14"):
             checks[check_id] = ("DEFERRED", "requires governed postflight lineup/chip output")

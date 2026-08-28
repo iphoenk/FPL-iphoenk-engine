@@ -1,4 +1,4 @@
-# FPL iphoenk Engine V4.9.4.3
+# FPL iphoenk Engine V4.9.6
 
 A production-oriented personal FPL data platform.
 
@@ -237,3 +237,11 @@ See `docs/v4-microservices.md` for service ownership, failure semantics, and pre
 - External Official/community network latency is measured separately and is explicitly outside the deterministic <5s SLO; the engine does not mislabel variable internet latency as compute performance.
 - The eleven process-isolated services, prediction formulas, optimizer search widths, sell-value logic, human-authority semantics, calibration lifecycle, and post-publish ablation architecture remain unchanged.
 - Production acceptance on GitHub Actions passed 135 tests, all 11 services, Gate 0 16/16, dual-plan legality, strict ablation, and a 1.71s deterministic decision compute on the merge verification run.
+
+## V4.9.6 architecture consolidation
+- 12 process-isolated microservices; Architecture Ownership Guard runs independently and fail-closes duplicate ownership.
+- One canonical FPL rules registry (`config/fpl_rules_2026_27.json`).
+- One canonical plan-legality primitive (`src/engines/fpl_legality.py`) reused by optimizer/health/postflight.
+- Main and recovery schedules call one reusable production workflow.
+- Shared DSS evidence is explicitly reused as a primitive rather than recomputed by parallel modules.
+- Release metadata is sourced from `config/release_manifest.json` and verified by the architecture guard.

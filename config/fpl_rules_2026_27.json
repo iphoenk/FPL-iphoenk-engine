@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "ruleset": "FPL-2026-27",
+  "squad": {
+    "size": 15,
+    "positions": {
+      "GK": 2,
+      "DEF": 5,
+      "MID": 5,
+      "FWD": 3
+    },
+    "max_per_club": 3,
+    "budget_tenths": 1000,
+    "legal_formations": [
+      "3-4-3",
+      "3-5-2",
+      "4-3-3",
+      "4-4-2",
+      "4-5-1",
+      "5-2-3",
+      "5-3-2",
+      "5-4-1"
+    ]
+  },
+  "scoring": {
+    "goal_points": {
+      "GK": 10,
+      "DEF": 6,
+      "MID": 5,
+      "FWD": 4
+    },
+    "assist": 3,
+    "clean_sheet": {
+      "GK": 4,
+      "DEF": 4,
+      "MID": 1,
+      "FWD": 0
+    },
+    "appearance_under_60": 1,
+    "appearance_60_plus": 2,
+    "saves_per_point": 3,
+    "penalty_save": 5,
+    "bonus": [
+      1,
+      2,
+      3
+    ],
+    "yellow_card": -1,
+    "red_card": -3,
+    "own_goal": -2,
+    "penalty_miss": -2,
+    "goals_conceded_per_minus_point": 2,
+    "defcon_points": 2
+  },
+  "defcon": {
+    "GK": {
+      "eligible": false,
+      "threshold": null,
+      "metric": null
+    },
+    "DEF": {
+      "eligible": true,
+      "threshold": 10,
+      "metric": "CBIT"
+    },
+    "MID": {
+      "eligible": true,
+      "threshold": 12,
+      "metric": "CBIRT"
+    },
+    "FWD": {
+      "eligible": true,
+      "threshold": 12,
+      "metric": "CBIRT"
+    }
+  },
+  "chips": {
+    "wildcard": {
+      "per_half": 1,
+      "gw1_allowed": true,
+      "preserve_banked_ft": true
+    },
+    "bench_boost": {
+      "per_half": 1,
+      "gw1_allowed": true,
+      "preserve_banked_ft": true
+    },
+    "free_hit": {
+      "per_half": 1,
+      "gw1_allowed": false,
+      "preserve_banked_ft": true
+    },
+    "triple_captain": {
+      "per_half": 1,
+      "gw1_allowed": true,
+      "preserve_banked_ft": true
+    }
+  },
+  "chip_policy": {
+    "first_half_last_gw": 19,
+    "second_half_first_gw": 20,
+    "max_chips_per_gw": 1
+  }
+}

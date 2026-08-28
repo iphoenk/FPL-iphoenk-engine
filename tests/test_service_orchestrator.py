@@ -19,19 +19,19 @@ def test_registered_services_are_ordered_and_contract_complete():
     levels = _service_levels(services)
     ids = [row["id"] for row in ordered]
     by_id = {row["id"]: row for row in ordered}
-    assert len(ordered) == 11
-    assert ordered[0]["id"] == "raw_snapshot"
+    assert len(ordered) == 12
+    assert {ordered[0]["id"], ordered[1]["id"]} == {"architecture_guard", "raw_snapshot"}
     assert ordered[-1]["id"] == "report_governance"
     assert all(row["boundary_state"] == "INDEPENDENT" for row in ordered)
-    assert ids[:3] == ["raw_snapshot", "enrichment", "prediction"]
+    assert ids.index("raw_snapshot") < ids.index("enrichment") < ids.index("prediction")
     assert set(by_id["rules_compliance"]["depends_on"]) == {"prediction"}
     assert set(by_id["validation_lifecycle"]["depends_on"]) == {"prediction"}
     assert set(by_id["optimization"]["depends_on"]) == {"prediction"}
-    assert set(by_id["framework_preflight"]["depends_on"]) == {"validation_lifecycle", "rules_compliance"}
+    assert set(by_id["framework_preflight"]["depends_on"]) == {"validation_lifecycle", "rules_compliance", "architecture_guard"}
     assert set(by_id["framework_postflight"]["depends_on"]) == {"framework_preflight", "user_decision_overlay"}
     assert ids.index("optimization") < ids.index("user_decision_overlay") < ids.index("personal_gw_scorecard")
     assert set(ordered[-1]["depends_on"]) == {"framework_postflight", "personal_gw_scorecard"}
-    assert any({row["id"] for row in level} == {"validation_lifecycle", "rules_compliance", "optimization"} for level in levels)
+    assert any({"validation_lifecycle", "rules_compliance", "optimization"} <= {row["id"] for row in level} for level in levels)
     assert any({row["id"] for row in level} == {"framework_preflight", "user_decision_overlay"} for level in levels)
     assert any({row["id"] for row in level} == {"personal_gw_scorecard", "framework_postflight"} for level in levels)
     declared = contracts["contracts"]
@@ -66,6 +66,10 @@ def test_registered_services_are_ordered_and_contract_complete():
     assert guardrails["postflight_requires_preflight_and_effective_plan"] is True
     assert guardrails["human_report_language_governed"] is True
     assert guardrails["scheduled_checkpoint_recovery_enabled"] is True
+    assert guardrails["architecture_ownership_guard_process_isolated"] is True
+    assert guardrails["duplicate_service_ids_rejected"] is True
+    assert guardrails["canonical_rules_single_owner"] is True
+    assert guardrails["service_count"] == 12
     assert guardrails["registry_counts_unchanged"] == {
         "dss_core": 50,
         "dss_extensions": 16,

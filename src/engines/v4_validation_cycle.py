@@ -11,6 +11,7 @@ from src.engines.v4_backtest_store import (
     refresh_eligible_view,
 )
 from src.engines.v4_reconciliation_truth import reconcile_finished_gw
+from src.release import RELEASE_VERSION
 from src.utils import DATA, atomic_json, parse_dt, read_json, utcnow
 
 RAW_SNAPSHOT = DATA / "runtime" / "snapshot.v1.json"
@@ -147,7 +148,7 @@ def cycle(now: datetime | None = None) -> dict:
     out = {
         "schema_version": 4943,
         "engine": "v4.9.3-validation-lifecycle-v4.9.4.3-truthful-starts",
-        "release": "4.9.4.3",
+        "release": RELEASE_VERSION,
         "status": "PASS",
         "simulated": simulated,
         "snapshot": snapshot,

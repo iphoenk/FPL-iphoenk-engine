@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "contract": "RECENT_COMPETITIVE_LOAD_V1",
+  "scope": {"owned": "ALL_15", "watchlist": "ALL_20", "mandatory_before_visible_report": true, "mandatory_on_deadline_day": true},
+  "competitions": ["Premier League", "FA Cup", "EFL Cup", "UEFA Champions League", "UEFA Europa League", "UEFA Conference League", "Community Shield", "other official competitive first-team fixture"],
+  "source_precedence": ["official_club_match_report_or_lineup", "official_competition_match_centre", "Premier League_or_Official_FPL", "reliable_direct_manager_or_team_news", "pundit_or_community_crosscheck_only"],
+  "mandatory_player_fields": ["competition", "match_time", "started", "minutes", "sub_on_minute", "sub_off_minute", "position_or_role", "goal_or_assist", "set_piece_or_penalty_role_if_observed", "knock_or_injury_signal", "extra_time_minutes", "travel_context", "rest_hours_to_next_fixture"],
+  "press_conference_fields": ["manager_quote_or_official_team_news", "availability", "rotation_hint", "fitness_or_knock", "role_or_position_hint", "expected_return_timing_if_relevant"],
+  "xmins_handoff": {
+    "enabled": true,
+    "direct_xpts_mutation_forbidden": true,
+    "allowed_targets": ["manager_start_probability", "rotation_risk", "congestion_factor", "availability_challenge", "xmins_confidence"],
+    "rules": {
+      "started_60plus_with_rest_under_72h": {"rotation_risk_delta": 0.12, "congestion_factor_cap": 0.94},
+      "started_80plus_with_rest_under_72h": {"rotation_risk_delta": 0.18, "congestion_factor_cap": 0.90},
+      "played_extra_time_with_rest_under_96h": {"rotation_risk_delta": 0.10, "congestion_factor_cap": 0.92},
+      "unused_or_short_bench_with_rest_under_72h": {"rotation_risk_delta": -0.05, "congestion_factor_floor": 0.98},
+      "verified_manager_positive_availability": {"manager_start_probability_floor": 0.78},
+      "verified_manager_rotation_warning": {"rotation_risk_delta": 0.15},
+      "verified_manager_doubt_or_knock": {"availability_review_required": true, "confidence_ceiling": "MEDIUM"}
+    },
+    "double_count_guard": "same physical load signal may affect xMins once only"
+  },
+  "reporting": {"must_state_if_press_conference_coverage_incomplete": true, "must_state_if_last_competitive_match_not_verified": true, "must_surface_material_player_deltas": true, "technical_tokens_hidden_from_user_report": true},
+  "governance": {"verified_facts_outrank_models": true, "one_match_does_not_create_buy_or_sell_by_itself": true, "recent_match_load_is_xmins_evidence_not_direct_points_evidence": true}
+}

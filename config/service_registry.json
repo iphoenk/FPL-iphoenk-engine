@@ -1,6 +1,6 @@
 {
-  "schema_version": 10,
-  "registry": "fpl_v4_9_6_microservice_registry_v10",
+  "schema_version": 11,
+  "registry": "fpl_v4_9_6_microservice_registry_v11",
   "architecture_version": "4.9.6",
   "execution_model": "process_isolated_dag_parallel_single_host",
   "services": [

@@ -58,6 +58,7 @@ def universe(element, name, team_id, position="MID", cost=65, status="a", points
         "now_cost": cost,
         "status": status,
         "points": points,
+        "event_points": points,
         "expected_goal_involvements": str(xgi),
         "starts": starts,
         "minutes": minutes,
@@ -175,7 +176,7 @@ def test_injury_or_suspension_fails_minimum_screen(status):
 def test_one_haul_is_trigger_not_automatic_transfer():
     umap, pmap, _, _, _, _ = team_and_maps()
     signals = _trigger_signals(umap[2], pmap[2], policy())
-    assert "RECENT_POINTS_RETURN" in signals
+    assert "RECENT_EVENT_POINTS_RETURN" in signals
     weak = copy.deepcopy(pmap[2])
     for fx in weak["fixtures"]:
         fx["xmins"]["start_probability"] = .3
@@ -256,7 +257,36 @@ def test_missing_external_congestion_is_explicit():
 @pytest.mark.parametrize("competition_field", ["midweek_schedule", "international_context"])
 def test_verified_external_workload_can_be_consumed_without_refetch(competition_field):
     umap, pmap, owned, team, effective, raw = team_and_maps()
-    tactical = {"teams": {"1": {"events": {str(gw): {"rest_days": 3, competition_field: {"verified": True}, "matchup_edge": "NEUTRAL", "matchup_risk": "MEDIUM", "confidence": .8, "source": "test_verified"} for gw in range(2, 7)}}}, "2": {"events": {str(gw): {"rest_days": 3, competition_field: {"verified": True}, "matchup_edge": "POSITIVE", "matchup_risk": "LOW", "confidence": .8, "source": "test_verified"} for gw in range(2, 7)}}}}}
+    tactical = {
+        "teams": {
+            "1": {
+                "events": {
+                    str(gw): {
+                        "rest_days": 3,
+                        competition_field: {"verified": True},
+                        "matchup_edge": "NEUTRAL",
+                        "matchup_risk": "MEDIUM",
+                        "confidence": .8,
+                        "source": "test_verified",
+                    }
+                    for gw in range(2, 7)
+                }
+            },
+            "2": {
+                "events": {
+                    str(gw): {
+                        "rest_days": 3,
+                        competition_field: {"verified": True},
+                        "matchup_edge": "POSITIVE",
+                        "matchup_risk": "LOW",
+                        "confidence": .8,
+                        "source": "test_verified",
+                    }
+                    for gw in range(2, 7)
+                }
+            },
+        }
+    }
     result = _comparison_pair(candidate(), 1, (umap, pmap, owned), team, effective, raw, policy(), tactical)
     assert result["data_quality"]["tactical_verified_gws"] >= 3
 
@@ -326,3 +356,21 @@ def test_output_contains_required_common_contract_fields():
         "decision", "decision_reasons", "decision_risks", "reversal_triggers", "data_quality",
     }
     assert required <= set(result)
+
+
+def test_season_total_points_never_masquerades_as_recent_haul():
+    row = universe(99, "SeasonTotalOnly", 9, points=15, xgi=0.0, starts=0, minutes=0, tin=0, tout=0)
+    row["points"] = 99
+    row["event_points"] = 2
+    pred = prediction(99, "SeasonTotalOnly", value=0.5)
+    signals = _trigger_signals(row, pred, policy())
+    assert "RECENT_EVENT_POINTS_RETURN" not in signals
+
+
+def test_missing_event_points_does_not_fabricate_recent_haul():
+    row = universe(100, "NoEventPoints", 10, points=15, xgi=0.0, starts=0, minutes=0, tin=0, tout=0)
+    row["points"] = 99
+    row.pop("event_points", None)
+    pred = prediction(100, "NoEventPoints", value=0.5)
+    signals = _trigger_signals(row, pred, policy())
+    assert "RECENT_EVENT_POINTS_RETURN" not in signals

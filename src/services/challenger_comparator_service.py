@@ -173,10 +173,12 @@ def _engine_governed_candidates(umap: dict[int, dict]) -> list[dict]:
 def _trigger_signals(universe_row: dict, pred: dict, policy: dict) -> list[str]:
     cfg = policy.get("emerging_trigger") or {}
     signals = []
-    if f(universe_row.get("points")) >= f(cfg.get("points_signal"), 8):
-        signals.append("RECENT_POINTS_RETURN")
+    # Recent-match discovery must use Official FPL event_points from the
+    # immutable raw snapshot. Season total_points is never a recent-haul proxy.
+    if universe_row.get("event_points") is not None and f(universe_row.get("event_points")) >= f(cfg.get("points_signal"), 8):
+        signals.append("RECENT_EVENT_POINTS_RETURN")
     if f(universe_row.get("expected_goal_involvements")) >= f(cfg.get("xgi_signal"), 0.55):
-        signals.append("UNDERLYING_XGI")
+        signals.append("SEASON_UNDERLYING_XGI")
     net_transfers = f(universe_row.get("transfers_in_event")) - f(universe_row.get("transfers_out_event"))
     if net_transfers >= f(cfg.get("net_transfers_signal"), 25000):
         signals.append("MARKET_ATTENTION")
@@ -662,6 +664,13 @@ def run() -> dict[str, Any]:
     raw = read_json(RAW_SNAPSHOT, {})
     if raw.get("schema") != "snapshot.v1":
         raise RuntimeError("immutable raw snapshot contract is required for fixture identity")
+    event_points_coverage = 0
+    for player in (((raw.get("official") or {}).get("bootstrap") or {}).get("elements") or []):
+        element = int(player.get("id") or 0)
+        if element in umap:
+            # Local comparator evidence only: do not mutate canonical universe.
+            umap[element]["event_points"] = player.get("event_points")
+            event_points_coverage += player.get("event_points") is not None
     optional_tactical_relative = str((policy.get("evidence") or {}).get("optional_tactical_path") or "data/tactical_context_v4.json")
     optional_tactical_path = DATA.parent / optional_tactical_relative
     tactical = read_json(optional_tactical_path, {}) if optional_tactical_path.is_file() else {}
@@ -710,6 +719,9 @@ def run() -> dict[str, Any]:
             "engine_governed_candidates": len(engine_governed),
             "emerging_challengers": len(emerging),
             "emerging_trigger_is_not_transfer": True,
+            "recent_event_points_source": "raw_snapshot.official.bootstrap.elements.event_points",
+            "recent_event_points_coverage": event_points_coverage,
+            "season_total_points_never_used_as_recent_haul": True,
         },
         "candidate_summaries": candidate_summaries,
         "comparisons": comparisons,

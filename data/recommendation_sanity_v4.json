@@ -61,7 +61,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5051,
             "current_season_weight": 0.1111,
-            "market_support": 0.9846,
+            "market_support": 0.9852,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -201,7 +201,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5051,
             "current_season_weight": 0.1111,
-            "market_support": 0.9846,
+            "market_support": 0.9852,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -369,7 +369,7 @@
             "horizon_stability": 0.9415,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.6543,
+            "market_support": 0.6546,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -409,7 +409,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5051,
             "current_season_weight": 0.1111,
-            "market_support": 0.9846,
+            "market_support": 0.9852,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -629,7 +629,7 @@
             "horizon_stability": 0.9415,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.6543,
+            "market_support": 0.6546,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -688,7 +688,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5051,
             "current_season_weight": 0.1111,
-            "market_support": 0.9846,
+            "market_support": 0.9852,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -893,7 +893,7 @@
           "horizon_stability": 0.9027,
           "rate_spike_risk": 0.5051,
           "current_season_weight": 0.1111,
-          "market_support": 0.9846,
+          "market_support": 0.9852,
           "flags": [
             "EARLY_SEASON_SAMPLE"
           ]

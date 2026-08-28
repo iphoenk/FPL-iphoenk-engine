@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-28T05:09:59.476668+00:00",
+  "generated_at": "2026-08-28T05:21:43.508629+00:00",
   "team_id": 3462711,
   "squad_authority": "LOCKED_PRE_DEADLINE",
   "projection_baseline": {
@@ -147,7 +147,7 @@
       "now_cost": 45,
       "sell_cost": 45,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "2.6",
+      "ownership": "2.7",
       "status": "a"
     },
     {

@@ -3,27 +3,29 @@
   "engine": "v4.9.2-truthful-health",
   "phase": "preflight",
   "checkpoint_context": {
-    "policy_id": "REGULAR_MONITOR",
-    "label": "Regular Tactical Monitor",
+    "policy_id": "MIDDAY_TACTICAL_1230",
+    "label": "12.30 Midday Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-28T05:09:58.633861+00:00",
-    "local_as_of": "2026-08-28T12:09:58.633861+07:00",
+    "as_of": "2026-08-28T05:21:42.640484+00:00",
+    "local_as_of": "2026-08-28T12:21:42.640484+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 740.0,
+    "minutes_to_deadline": 728.3,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
     "max_snapshot_age_minutes": 90,
-    "recommended_refresh_minutes": 180,
+    "recommended_refresh_minutes": 60,
     "report_scope": [
       "personal_gw_scorecard",
       "gate0",
       "locked_15",
       "availability",
       "xmins",
+      "role",
+      "challengers",
       "price_radar",
-      "challengers"
+      "lineup_watch"
     ],
     "registry": "fpl_checkpoint_policy_v1",
     "registry_schema_version": 1
@@ -1115,7 +1117,7 @@
         "detail": {
           "age_minutes": 0.0,
           "max_age_minutes": 90,
-          "checkpoint_policy_id": "REGULAR_MONITOR"
+          "checkpoint_policy_id": "MIDDAY_TACTICAL_1230"
         }
       },
       {
@@ -1337,7 +1339,7 @@
     "detail": {
       "age_minutes": 0.0,
       "max_age_minutes": 90,
-      "checkpoint_policy_id": "REGULAR_MONITOR"
+      "checkpoint_policy_id": "MIDDAY_TACTICAL_1230"
     }
   },
   "source_health": {
@@ -1376,5 +1378,5 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 247.58
+  "performance_ms": 221.31
 }

@@ -2,27 +2,29 @@
   "schema_version": 473,
   "engine": "v4.7.3-unified-decision-pipeline-checkpoint-aware",
   "checkpoint_context": {
-    "policy_id": "REGULAR_MONITOR",
-    "label": "Regular Tactical Monitor",
+    "policy_id": "MIDDAY_TACTICAL_1230",
+    "label": "12.30 Midday Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-28T05:09:58.633861+00:00",
-    "local_as_of": "2026-08-28T12:09:58.633861+07:00",
+    "as_of": "2026-08-28T05:21:42.640484+00:00",
+    "local_as_of": "2026-08-28T12:21:42.640484+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 740.0,
+    "minutes_to_deadline": 728.3,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
     "max_snapshot_age_minutes": 90,
-    "recommended_refresh_minutes": 180,
+    "recommended_refresh_minutes": 60,
     "report_scope": [
       "personal_gw_scorecard",
       "gate0",
       "locked_15",
       "availability",
       "xmins",
+      "role",
+      "challengers",
       "price_radar",
-      "challengers"
+      "lineup_watch"
     ],
     "registry": "fpl_checkpoint_policy_v1",
     "registry_schema_version": 1
@@ -38,14 +40,14 @@
     "wildcard_active": true
   },
   "timings": {
-    "load_shared_inputs_and_candidates_ms": 110.7,
-    "wc_decision_cpu_ms": 517.5,
-    "package_audit_cpu_ms": 1860.3,
-    "lineup_cpu_ms": 6.1,
-    "decision_parallel_wall_ms": 1931.2,
-    "parallel_speedup_estimate": 1.234,
-    "evidence_sanity_ms": 3.7,
-    "total_pipeline_ms": 2046.9
+    "load_shared_inputs_and_candidates_ms": 105.7,
+    "wc_decision_cpu_ms": 661.1,
+    "package_audit_cpu_ms": 1614.9,
+    "lineup_cpu_ms": 6.0,
+    "decision_parallel_wall_ms": 1670.0,
+    "parallel_speedup_estimate": 1.366,
+    "evidence_sanity_ms": 3.4,
+    "total_pipeline_ms": 1780.6
   },
   "results": {
     "wc_raw": "MATERIAL_UPGRADE",
@@ -89,8 +91,8 @@
   "performance_slo": {
     "scope": "deterministic_decision_compute_excludes_external_source_network_io",
     "limit_ms": 5000.0,
-    "actual_ms": 2046.9,
-    "service_wall_ms": 2090.34,
+    "actual_ms": 1780.6,
+    "service_wall_ms": 1820.52,
     "status": "PASS"
   }
 }

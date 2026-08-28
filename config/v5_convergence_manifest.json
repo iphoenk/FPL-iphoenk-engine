@@ -33,6 +33,7 @@
     "package_guardrails": "decision service -> config/intelligence/package_optimizer.json",
     "external_watchlist": "watchlist service",
     "framework_governance": "governance service",
+    "time_schedule_governance": "governance service -> config/v5_time_schedule_governance.json",
     "reporting": "reporting service",
     "on_demand_reporting": "current production authority router -> config/v5_on_demand_report_registry.json",
     "persistence": "snapshot service -> config/v5_persistence_registry.json",

@@ -96,6 +96,41 @@ def _capabilities(team: dict[str, Any], chip_state: dict[str, Any]) -> list[str]
     return sorted(capabilities)
 
 
+def _match_state(fixtures: list[dict[str, Any]], scoring_gw: int | None) -> dict[str, Any]:
+    if scoring_gw is None:
+        return {
+            "authority": "OFFICIAL_FPL_FIXTURES",
+            "scoring_gw": None,
+            "live_match_active": False,
+            "live_fixture_count": 0,
+            "live_fixtures": [],
+        }
+    live_rows = []
+    for row in fixtures or []:
+        if not isinstance(row, dict) or int(row.get("event") or -1) != int(scoring_gw):
+            continue
+        if row.get("started") is not True or row.get("finished") is True:
+            continue
+        live_rows.append(
+            {
+                "id": row.get("id"),
+                "event": row.get("event"),
+                "kickoff_time": row.get("kickoff_time"),
+                "team_h": row.get("team_h"),
+                "team_a": row.get("team_a"),
+                "started": True,
+                "finished": False,
+            }
+        )
+    return {
+        "authority": "OFFICIAL_FPL_FIXTURES",
+        "scoring_gw": scoring_gw,
+        "live_match_active": bool(live_rows),
+        "live_fixture_count": len(live_rows),
+        "live_fixtures": live_rows,
+    }
+
+
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     bootstrap = payload.get("bootstrap")
     if not isinstance(bootstrap, dict):
@@ -125,6 +160,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         transfers=base.get("entry_transfers") if isinstance(base.get("entry_transfers"), list) else [],
         entry=base.get("entry") if isinstance(base.get("entry"), dict) else None,
     )
+    match_state = _match_state(base.get("fixtures") if isinstance(base.get("fixtures"), list) else [], context.scoring_gw)
     live = personalized_live_score(
         picks=submitted,
         event_live=dynamic.get("event_live") if isinstance(dynamic.get("event_live"), dict) else None,
@@ -132,11 +168,13 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         scoring_gw=context.scoring_gw,
         is_live_event=context.is_live_event,
     )
+    live = {**live, "match_state": match_state}
     chip_state = _chip_state(context, lock, submitted, base.get("entry_history") if isinstance(base.get("entry_history"), dict) else None)
     return {
         "context": context_dict(context),
         "team": team,
         "live": live,
+        "match_state": match_state,
         "rules": _rules_view(),
         "chip_state": chip_state,
         "capabilities": _capabilities(team, chip_state),

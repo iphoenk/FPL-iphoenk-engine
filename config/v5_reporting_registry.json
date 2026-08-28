@@ -1,8 +1,15 @@
 {
-  "schema_version": 1,
-  "model_id": "v5_decision_first_report_v1",
+  "schema_version": 2,
+  "model_id": "v5_decision_first_report_v2_schedule_governed",
   "layers": ["USER_REPORT", "TECHNICAL_APPENDIX"],
-  "section_order": ["decision", "changes_since_last_report", "owned_squad", "starting_xi", "captaincy", "chip", "price_radar", "external_watchlist", "engine_line", "action_board"],
+  "section_order": ["emission", "checkpoint_message", "decision", "changes_since_last_report", "owned_squad", "starting_xi", "captaincy", "chip", "price_radar", "external_watchlist", "engine_line", "action_board"],
+  "emission_governance": {
+    "owner": "GOVERNANCE_SERVICE",
+    "reporting_never_self_authorizes_visibility": true,
+    "silent_internal_evaluation_supported": true,
+    "deadline_day_full_report_even_when_unchanged": true,
+    "collision_yields_one_visible_report": true
+  },
   "stable_report": {
     "enabled": true,
     "compact_when_no_material_change": true,

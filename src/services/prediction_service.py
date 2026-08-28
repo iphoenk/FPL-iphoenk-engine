@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from time import perf_counter
 
-from src.engine import expanded_live
+from src.engines.fpl_rules_2026 import POSITION_BY_TYPE
 from src.engines.v4_runner import build_predictions
 from src.services.contracts import file_digest
 from src.utils import DATA, append_jsonl, atomic_json, iso_now, read_json
@@ -11,6 +11,31 @@ from src.utils import DATA, append_jsonl, atomic_json, iso_now, read_json
 RUNTIME = DATA / "runtime"
 SNAPSHOT = RUNTIME / "snapshot.v1.json"
 ENRICHMENT = RUNTIME / "enrichment.v1.json"
+LIVE_STAT_FIELDS = (
+    "minutes",
+    "goals_scored",
+    "assists",
+    "clean_sheets",
+    "goals_conceded",
+    "own_goals",
+    "penalties_saved",
+    "penalties_missed",
+    "yellow_cards",
+    "red_cards",
+    "saves",
+    "bonus",
+    "bps",
+    "total_points",
+    "defensive_contribution",
+)
+
+
+def _expanded_live(element_live: dict) -> dict:
+    """Map Official event-live data into the single persisted live-score payload."""
+    stats = element_live.get("stats") or {}
+    out = {field: stats.get(field) for field in LIVE_STAT_FIELDS if field in stats}
+    out["explain"] = element_live.get("explain")
+    return out
 
 
 def _write_price_artifacts(bootstrap: dict, generated: str) -> tuple[list[dict], list[dict]]:
@@ -115,14 +140,13 @@ def run() -> dict:
     live_payload = {"generated_at": generated, "status": "IDLE", "scoring_gw": phase.get("scoring_gw"), "players": []}
     picks, live = official.get("picks"), official.get("event_live")
     if picks and live:
-        by_id = {p["id"]: p for p in bootstrap["elements"]}
-        teams = {t["id"]: t["name"] for t in bootstrap.get("teams", [])}
-        positions = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
-        live_by_id = {p["id"]: p for p in live.get("elements", [])}
+        by_id = {player["id"]: player for player in bootstrap["elements"]}
+        teams = {team["id"]: team["name"] for team in bootstrap.get("teams", [])}
+        live_by_id = {player["id"]: player for player in live.get("elements", [])}
         detail = []
         gross = 0
         for pick in picks.get("picks", []):
-            stats = expanded_live(live_by_id.get(pick["element"], {}))
+            stats = _expanded_live(live_by_id.get(pick["element"], {}))
             raw_points = stats.get("total_points", 0) or 0
             gross += raw_points * max(0, pick.get("multiplier", 0))
             player = by_id.get(pick["element"], {})
@@ -130,7 +154,7 @@ def run() -> dict:
                 "element": pick["element"],
                 "name": player.get("web_name"),
                 "team": teams.get(player.get("team")),
-                "position": positions.get(player.get("element_type")),
+                "position": POSITION_BY_TYPE.get(player.get("element_type")),
                 "pick_position": pick.get("position"),
                 "multiplier": pick.get("multiplier"),
                 "captain": pick.get("is_captain"),

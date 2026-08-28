@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "registry": "V3_INTERACTIVE_SERVICES_V1",
+  "architecture": "BOUNDED_INTERACTIVE_MICROSERVICES",
+  "policy": {
+    "background_refresh_and_interactive_decision_are_separate_lanes": true,
+    "interactive_services_consume_canonical_artifacts": true,
+    "interactive_services_do_not_fetch_network": true,
+    "interactive_services_do_not_reimplement_prediction_formulas": true,
+    "decision_regeneration_must_recompute_governed_decision_from_fresh_projections": true,
+    "gateway_serves_only_validated_materialized_or_regenerated_decisions": true,
+    "hard_end_to_end_ceiling_ms": 1000
+  },
+  "services": {
+    "decision_hotpath": {
+      "bounded_context": "interactive decision regeneration",
+      "module": "src.engines.decision_hotpath_service",
+      "owns": ["interactive_lineup_package_regeneration"],
+      "consumes": ["projections.json","package_optimizer.json","team.json","chips.json","latest.json","framework_health.json","dss_watchlist_summary.json","decision_brief.json","config/locked_squad.json"],
+      "network": false,
+      "writes_canonical_artifacts": false
+    },
+    "instant_gateway": {
+      "bounded_context": "validated decision serving gateway",
+      "module": "src.runtime_v3.instant_serving",
+      "owns": ["interactive_validated_response"],
+      "consumes": ["latest.json","user_report.json","decision_brief.json","framework_health.json","dss_watchlist_summary.json"],
+      "network": false,
+      "writes_canonical_artifacts": false
+    }
+  }
+}

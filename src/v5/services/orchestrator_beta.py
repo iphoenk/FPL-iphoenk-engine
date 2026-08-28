@@ -169,6 +169,30 @@ def _refresh_run(payload: dict[str, Any]) -> dict[str, Any]:
         cid,
     )
     watchlist = watch_env["data"]
+
+    comparator_env = _invoke(
+        "challenger_compare",
+        {
+            "truth": truth,
+            "price": price,
+            "prediction": prediction,
+            "watchlist": watchlist,
+            "decision": decision,
+        },
+        cid,
+    )
+    comparator = comparator_env["data"]
+    decision = {**decision, "challenger_comparator": comparator}
+    snapshot["decision_summary"] = decision
+    snapshot["challenger_comparator_summary"] = {
+        "status": comparator.get("status"),
+        "operating_status": comparator.get("operating_status"),
+        "comparison_count": comparator.get("comparison_count", 0),
+        "governed_watchlist_challengers": comparator.get("governed_watchlist_challengers", 0),
+        "emerging_full_comparison_eligible": comparator.get("emerging_full_comparison_eligible", 0),
+        "decision_counts": comparator.get("decision_counts", {}),
+    }
+
     report_payload = {
         "truth": truth,
         "price": price,
@@ -176,6 +200,7 @@ def _refresh_run(payload: dict[str, Any]) -> dict[str, Any]:
         "decision": decision,
         "governance": governance,
         "watchlist": watchlist,
+        "challenger_comparator": comparator,
         "previous_report_state": states["report_state"]["data"] or {},
         "performance": snapshot.get("service_performance") or {},
         "force_full_report": bool(payload.get("force_full_report", False)),
@@ -194,6 +219,11 @@ def _refresh_run(payload: dict[str, Any]) -> dict[str, Any]:
     support_writes = invoke_parallel_envelopes(
         {
             "watchlist": (write_service, write_operation, {"name": mapping["watchlist"], "data": watchlist}),
+            "challenger_comparator": (
+                write_service,
+                write_operation,
+                {"name": mapping["challenger_comparator"], "data": comparator},
+            ),
             "user_report": (write_service, write_operation, {"name": mapping["user_report"], "data": report["user_report"]}),
             "technical_appendix": (
                 write_service,
@@ -233,20 +263,23 @@ def _refresh_run(payload: dict[str, Any]) -> dict[str, Any]:
             for key, value in states.items()
         },
         "watchlist": _metric(watch_env),
+        "challenger_comparator": _metric(comparator_env),
         "reporting": _metric(report_env),
         "persistence": persistence_metrics,
     }
     performance["full_beta_end_to_end_ms"] = round((perf_counter() - full_started) * 1000.0, 3)
     performance["full_beta_contract"] = {
         "execution_plane": "refresh",
-        "scope": "core+watchlist+reporting+persistence+hot_materialization",
+        "scope": "core+watchlist+challenger_comparator+reporting+persistence+hot_materialization",
         "includes_core_orchestrator": True,
         "includes_watchlist": True,
+        "includes_challenger_comparator": True,
         "includes_reporting": True,
         "includes_persistence": True,
         "latency_release_blocking": False,
         "hot_path_is_measured_separately": True,
         "hot_materialization_is_final_commit_marker": True,
+        "challenger_comparator_advisory_only": True,
     }
     return snapshot
 

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from src.v5.config_cache import load_json_config
+from src.v5.time_utils import parse_iso_datetime
 
 CONFIG = "config/v5_mini_league_registry.json"
 
@@ -18,15 +19,6 @@ def _int(value: Any, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return int(default)
-
-
-def _parse_dt(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except (TypeError, ValueError):
-        return None
 
 
 def discovered_private_league_ids(kind: str, entry: dict[str, Any] | None) -> list[str]:
@@ -207,8 +199,8 @@ def _append_history(history: list[dict[str, Any]], current: dict[str, Any], gene
         return [candidate]
     prior = history[-1]
     changed = _standing_signature(prior) != _standing_signature(candidate)
-    prior_at = _parse_dt(prior.get("generated_at"))
-    current_at = _parse_dt(generated_at)
+    prior_at = parse_iso_datetime(prior.get("generated_at"))
+    current_at = parse_iso_datetime(generated_at)
     checkpoint_due = True
     if prior_at is not None and current_at is not None:
         checkpoint_due = (current_at - prior_at).total_seconds() >= checkpoint_minutes * 60

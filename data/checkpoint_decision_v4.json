@@ -1,16 +1,16 @@
 {
-  "schema_version": 492,
-  "engine": "v4.9.2-checkpoint-governance",
-  "evaluated_at": "2026-08-27T16:15:59.596409+00:00",
+  "schema_version": 495,
+  "engine": "v4.9.5-checkpoint-governance-human-report",
+  "evaluated_at": "2026-08-28T02:03:58.303493+00:00",
   "checkpoint_context": {
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-27T16:15:53.175616+00:00",
-    "local_as_of": "2026-08-27T23:15:53.175616+07:00",
+    "as_of": "2026-08-28T02:03:53.240315+00:00",
+    "local_as_of": "2026-08-28T09:03:53.240315+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 1514.1,
+    "minutes_to_deadline": 926.1,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -29,9 +29,30 @@
     "registry_schema_version": 1
   },
   "action_state": "HOLD",
-  "headline": "HOLD LOCK 15",
-  "summary": "Pertahankan komposisi 15 pemain. Rekomendasi masih dapat dipantau, tetapi belum cukup kuat untuk dieksekusi.",
-  "structure_action": "KEEP_LOCKED_15",
+  "headline": "HOLD",
+  "summary": "Pertahankan struktur saat ini sambil menunggu informasi yang cukup kuat untuk membenarkan perubahan.",
+  "structure_action": "KEEP_CURRENT_STRUCTURE",
+  "human_report": {
+    "language_policy": "fpl_human_report_language_v1",
+    "audience": "FPL_MANAGER",
+    "decision": "HOLD",
+    "headline": "HOLD",
+    "summary": "Pertahankan struktur saat ini sambil menunggu informasi yang cukup kuat untuk membenarkan perubahan.",
+    "why": [
+      "Struktur tim saat ini masih cukup layak untuk dipertahankan.",
+      "Ada paket alternatif yang menarik, tetapi belum cukup kuat untuk memaksa perubahan sekarang.",
+      "Perbedaan proyeksi XI saat ini terhadap alternatif sekitar 1.81 poin, sehingga masih masuk wilayah keputusan yang bisa dipengaruhi preferensi dan informasi terbaru.",
+      "XI, bench, kapten, dan vice-captain masih dapat disesuaikan sampai final review.",
+      "Karena Wildcard sedang aktif, fokusnya adalah memilih kombinasi 15 pemain terbaik tanpa mempertimbangkan biaya hit."
+    ],
+    "what_to_do": [
+      "Pertahankan struktur saat ini.",
+      "Pantau team news, starter security, harga, dan challenger sampai checkpoint berikutnya.",
+      "Gunakan fleksibilitas Wildcard untuk memperbaiki struktur hanya jika ada peningkatan yang benar-benar material."
+    ],
+    "technical_terms_suppressed_from_primary_reasoning": true,
+    "technical_state_location": "readiness_or_technical_appendix_only"
+  },
   "squad": {
     "authority": "LOCKED_PRE_DEADLINE",
     "expected_authority": "LOCKED_PRE_DEADLINE",
@@ -73,9 +94,9 @@
     "human_override_active": true,
     "engine_comparison": {
       "changed_xi_slots_vs_engine": 2,
-      "user_xi_xpts": 39.05,
+      "user_xi_xpts": 39.06,
       "engine_xi_xpts": 40.87,
-      "user_minus_engine_xpts": -1.82,
+      "user_minus_engine_xpts": -1.81,
       "formation_changed": true,
       "captain_changed": false,
       "vice_changed": false,
@@ -362,7 +383,7 @@
       "gw": 2,
       "decision_authority": "USER_OVERRIDE",
       "formation": "3-5-2",
-      "xi_xpts": 39.05,
+      "xi_xpts": 39.06,
       "captain": {
         "element": 426,
         "name": "B.Fernandes",
@@ -378,8 +399,8 @@
       "chip_short": "WC",
       "bench_xpts": 12.73,
       "bench_counted_xpts": 0.0,
-      "standard_captain_team_xpts": 44.18,
-      "estimated_points": 44.18,
+      "standard_captain_team_xpts": 44.19,
+      "estimated_points": 44.19,
       "starting_xi": [
         {
           "element": 572,
@@ -391,7 +412,7 @@
           "element": 115,
           "name": "De Cuyper",
           "position": "DEF",
-          "xpts": 3.494
+          "xpts": 3.495
         },
         {
           "element": 8,
@@ -415,7 +436,7 @@
           "element": 15,
           "name": "Ødegaard",
           "position": "MID",
-          "xpts": 2.56
+          "xpts": 2.563
         },
         {
           "element": 557,
@@ -433,7 +454,7 @@
           "element": 565,
           "name": "M.Sangaré",
           "position": "MID",
-          "xpts": 2.939
+          "xpts": 2.94
         },
         {
           "element": 411,
@@ -445,7 +466,7 @@
           "element": 165,
           "name": "João Pedro",
           "position": "FWD",
-          "xpts": 4.087
+          "xpts": 4.088
         }
       ],
       "bench": [
@@ -461,7 +482,7 @@
           "element": 346,
           "name": "Calvert-Lewin",
           "position": "FWD",
-          "xpts": 3.511
+          "xpts": 3.51
         },
         {
           "slot": 2,
@@ -504,9 +525,9 @@
       "human_override_active": true,
       "engine_comparison": {
         "changed_xi_slots_vs_engine": 2,
-        "user_xi_xpts": 39.05,
+        "user_xi_xpts": 39.06,
         "engine_xi_xpts": 40.87,
-        "user_minus_engine_xpts": -1.82,
+        "user_minus_engine_xpts": -1.81,
         "formation_changed": true,
         "captain_changed": false,
         "vice_changed": false,
@@ -542,18 +563,18 @@
     "prediction_health": "AMBER",
     "decision_engine": "PROVISIONAL",
     "capability_coverage": {
-      "active": 56,
+      "active": 62,
       "warmup": 2,
-      "partial": 16,
+      "partial": 10,
       "failed": 0,
       "declared": 74,
-      "active_ratio": 0.7838
+      "active_ratio": 0.8378
     },
     "gate0_pass": true,
     "health_go_allowed": false,
     "freshness": {
       "pass": true,
-      "age_minutes": 0.09,
+      "age_minutes": 0.07,
       "max_age_minutes": 90,
       "reason": null
     },
@@ -587,6 +608,8 @@
     "stale_wildcard_flag_does_not_force_future_lock": true,
     "engine_is_advisory": true,
     "user_decision_is_final_authority": true,
-    "go_never_auto_executes_without_user_final_lock": true
+    "go_never_auto_executes_without_user_final_lock": true,
+    "primary_report_plain_fpl_language": true,
+    "technical_reason_codes_separate_from_human_reasoning": true
   }
 }

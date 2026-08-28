@@ -6,11 +6,11 @@
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-27T16:15:53.175616+00:00",
-    "local_as_of": "2026-08-27T23:15:53.175616+07:00",
+    "as_of": "2026-08-28T02:03:53.240315+00:00",
+    "local_as_of": "2026-08-28T09:03:53.240315+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 1514.1,
+    "minutes_to_deadline": 926.1,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -85,7 +85,7 @@
         "id": "G0-06",
         "name": "Budget / Affordability",
         "status": "PASS",
-        "detail": "{\"available_budget_tenths\": 1000, \"bank_tenths\": 5, \"formula_reconciled\": true, \"market_value_tenths\": 1000, \"owned_players\": 15, \"sell_value_tenths\": 995}"
+        "detail": "{\"available_budget_tenths\": 1000, \"bank_tenths\": 5, \"formula_reconciled\": true, \"market_value_tenths\": 1001, \"owned_players\": 15, \"sell_value_tenths\": 995}"
       },
       {
         "id": "G0-07",
@@ -244,7 +244,7 @@
           "enriched_prior_distributions": 1848,
           "strong_direct_evidence_players": 72,
           "strong_direct_evidence_min_pstart": 0.8207,
-          "no_evidence_players": 90,
+          "no_evidence_players": 91,
           "no_evidence_max_xmins": 7.0,
           "direct_evidence_sanity": true
         }
@@ -263,7 +263,7 @@
           "enriched_prior_distributions": 1848,
           "strong_direct_evidence_players": 72,
           "strong_direct_evidence_min_pstart": 0.8207,
-          "no_evidence_players": 90,
+          "no_evidence_players": 91,
           "no_evidence_max_xmins": 7.0,
           "direct_evidence_sanity": true
         }
@@ -369,10 +369,9 @@
           "prediction_sources": [
             "fpl_core_insights:players",
             "fpl_core_insights:players+fpl_core_insights:playermatchstats",
-            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
-            "official_fpl_current_state"
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
           ],
-          "consumed_players": 614,
+          "consumed_players": 616,
           "materially_distinct_players": 11,
           "materially_distinct_ratio": 0.0179,
           "decision_used_players": 310,
@@ -395,10 +394,9 @@
           "prediction_sources": [
             "fpl_core_insights:players",
             "fpl_core_insights:players+fpl_core_insights:playermatchstats",
-            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
-            "official_fpl_current_state"
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
           ],
-          "consumed_players": 614,
+          "consumed_players": 616,
           "materially_distinct_players": 11,
           "materially_distinct_ratio": 0.0179,
           "decision_used_players": 310,
@@ -1115,7 +1113,7 @@
         ],
         "probe": "data_freshness",
         "detail": {
-          "age_minutes": 0.0,
+          "age_minutes": 0.1,
           "max_age_minutes": 90,
           "checkpoint_policy_id": "REGULAR_MONITOR"
         }
@@ -1206,10 +1204,9 @@
             "prediction_sources": [
               "fpl_core_insights:players",
               "fpl_core_insights:players+fpl_core_insights:playermatchstats",
-              "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots",
-              "official_fpl_current_state"
+              "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
             ],
-            "consumed_players": 614,
+            "consumed_players": 616,
             "materially_distinct_players": 11,
             "materially_distinct_ratio": 0.0179,
             "decision_used_players": 310,
@@ -1338,7 +1335,7 @@
   "data_freshness": {
     "status": "PASS",
     "detail": {
-      "age_minutes": 0.0,
+      "age_minutes": 0.1,
       "max_age_minutes": 90,
       "checkpoint_policy_id": "REGULAR_MONITOR"
     }
@@ -1379,5 +1376,5 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 300.77
+  "performance_ms": 141.67
 }

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-27T16:15:54.171311+00:00",
+  "generated_at": "2026-08-28T02:03:54.314578+00:00",
   "team_id": 3462711,
   "squad_authority": "LOCKED_PRE_DEADLINE",
   "projection_baseline": {
@@ -131,7 +131,7 @@
       "now_cost": 45,
       "sell_cost": 45,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "2.5",
+      "ownership": "2.6",
       "status": "a"
     },
     {
@@ -155,7 +155,7 @@
       "now_cost": 46,
       "sell_cost": 45,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "7.0",
+      "ownership": "7.5",
       "status": "a"
     },
     {
@@ -167,7 +167,7 @@
       "now_cost": 56,
       "sell_cost": 55,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "41.5",
+      "ownership": "41.6",
       "status": "a"
     },
     {
@@ -179,7 +179,7 @@
       "now_cost": 46,
       "sell_cost": 45,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "7.0",
+      "ownership": "7.2",
       "status": "a"
     },
     {
@@ -215,7 +215,7 @@
       "now_cost": 120,
       "sell_cost": 120,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "48.7",
+      "ownership": "48.6",
       "status": "a"
     },
     {
@@ -224,10 +224,10 @@
       "team": "Arsenal",
       "position": "MID",
       "purchase_cost": 65,
-      "now_cost": 65,
+      "now_cost": 66,
       "sell_cost": 65,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "11.2",
+      "ownership": "11.4",
       "status": "a"
     },
     {
@@ -239,7 +239,7 @@
       "now_cost": 65,
       "sell_cost": 65,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "25.9",
+      "ownership": "26.0",
       "status": "a"
     },
     {
@@ -251,7 +251,7 @@
       "now_cost": 75,
       "sell_cost": 75,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "25.9",
+      "ownership": "26.0",
       "status": "a"
     },
     {
@@ -263,7 +263,7 @@
       "now_cost": 56,
       "sell_cost": 55,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "7.7",
+      "ownership": "8.0",
       "status": "a"
     },
     {
@@ -287,7 +287,7 @@
       "now_cost": 76,
       "sell_cost": 75,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "67.3",
+      "ownership": "67.6",
       "status": "a"
     },
     {
@@ -299,12 +299,12 @@
       "now_cost": 60,
       "sell_cost": 60,
       "purchase_source": "locked_squad_element_id",
-      "ownership": "29.0",
+      "ownership": "28.9",
       "status": "a"
     }
   ],
   "totals": {
-    "market_value": 1000,
+    "market_value": 1001,
     "sell_value": 995,
     "itb": 5
   }

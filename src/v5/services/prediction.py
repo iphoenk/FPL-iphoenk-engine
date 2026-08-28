@@ -36,6 +36,7 @@ BASE_CAPABILITIES = [
     "bonus_route",
     "advanced_stats_integration",
     "authoritative_advanced_attack_fusion",
+    "advanced_stats_point_in_time_freshness",
     "player_specific_defcon_probability",
     "sustainability",
     "team_defensive_risk",
@@ -90,6 +91,18 @@ def _source_fusion(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _bind_advanced_freshness_context(enrichment: dict[str, Any]) -> None:
+    advanced = enrichment.get("advanced_stats") if isinstance(enrichment.get("advanced_stats"), dict) else {}
+    players = advanced.get("players") if isinstance(advanced.get("players"), dict) else {}
+    context = {
+        "authoritative_eligible": bool(advanced.get("authoritative_eligible")),
+        "freshness": advanced.get("freshness") if isinstance(advanced.get("freshness"), dict) else {},
+    }
+    for row in players.values():
+        if isinstance(row, dict):
+            row["_source_context"] = context
+
+
 def _compact_enrichment(enrichment: dict[str, Any]) -> dict[str, Any]:
     advanced = enrichment.get("advanced_stats") if isinstance(enrichment.get("advanced_stats"), dict) else {}
     schedule = enrichment.get("schedule") if isinstance(enrichment.get("schedule"), dict) else {}
@@ -104,6 +117,7 @@ def _compact_enrichment(enrichment: dict[str, Any]) -> dict[str, Any]:
     return {
         "status": enrichment.get("status"),
         "model": enrichment.get("model"),
+        "planning_gw": enrichment.get("planning_gw"),
         "advanced_stats": {
             k: advanced.get(k)
             for k in (
@@ -116,6 +130,9 @@ def _compact_enrichment(enrichment: dict[str, Any]) -> dict[str, Any]:
                 "missing_player_behavior",
                 "understat_status",
                 "understat_players",
+                "artifact_gw",
+                "authoritative_eligible",
+                "freshness",
             )
         },
         "schedule": {
@@ -134,6 +151,8 @@ def _compact_enrichment(enrichment: dict[str, Any]) -> dict[str, Any]:
             "status": current_form.get("status"),
             "source": current_form.get("source"),
             "players": len(current_form.get("players") or {}),
+            "authoritative_mean_adjustment": current_form.get("authoritative_mean_adjustment"),
+            "advanced_artifact_freshness": current_form.get("advanced_artifact_freshness"),
         },
         "source_fusion": {
             "status": fusion.get("status"),
@@ -174,6 +193,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 {
                     "capabilities": [
                         "advanced_stats_sync",
+                        "advanced_stats_point_in_time_freshness",
                         "player_defensive_contribution_evidence",
                         "european_congestion",
                         "domestic_cup_congestion",
@@ -208,10 +228,16 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "prediction build network refresh is forbidden after point-in-time replay boundary; resolve prior before capture"
         )
 
-    source_fusion = _source_fusion(payload)
-    enrichment = build_full_core_enrichment(bootstrap, fixtures, source_fusion=source_fusion)
-    capabilities = _capabilities(enrichment)
     planning_gw = int(payload.get("planning_gw") or 1)
+    source_fusion = _source_fusion(payload)
+    enrichment = build_full_core_enrichment(
+        bootstrap,
+        fixtures,
+        source_fusion=source_fusion,
+        planning_gw=planning_gw,
+    )
+    _bind_advanced_freshness_context(enrichment)
+    capabilities = _capabilities(enrichment)
     previous_prior = payload.get("historical_prior") if isinstance(payload.get("historical_prior"), dict) else {}
     prior = resolve_prior(
         bootstrap,

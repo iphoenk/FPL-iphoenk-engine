@@ -8,6 +8,7 @@ from typing import Any
 import requests
 
 from src.v5.config_cache import load_json_config
+from src.v5.runtime_normalization import parse_utc_timestamp
 
 CONFIG = "config/intelligence/historical_priors.json"
 
@@ -53,22 +54,10 @@ def _previous_season_label(season: str | None) -> str:
     return f"{start}-{str(start + 1)[-2:]}"
 
 
-def _parse_dt(value: Any) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
-
-
 def is_fresh(prior: dict[str, Any] | None, *, now: datetime | None = None) -> bool:
     if not isinstance(prior, dict) or not prior.get("players"):
         return False
-    generated = _parse_dt(prior.get("generated_at") or prior.get("fetched_at"))
+    generated = parse_utc_timestamp(prior.get("generated_at") or prior.get("fetched_at"))
     if generated is None:
         return False
     age_hours = ((now or _now()) - generated).total_seconds() / 3600.0

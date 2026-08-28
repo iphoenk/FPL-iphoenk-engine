@@ -9,6 +9,7 @@ from src.utils import ROOT
 
 OWNERSHIP_PATH = ROOT / "config" / "v3_architecture_ownership_registry.json"
 SERVICE_PATH = ROOT / "config" / "v3_service_registry.json"
+INTERACTIVE_SERVICE_PATH = ROOT / "config" / "runtime" / "interactive_service_registry.json"
 REC_PATH = ROOT / "config" / "rec_registry.json"
 IMPLEMENTATION_STATUS_PATH = ROOT / "IMPLEMENTATION_STATUS.json"
 OFFICIAL_FIRST_PATH = ROOT / "config" / "sources" / "official_first_coverage.json"
@@ -57,6 +58,14 @@ def _active_modules(services: dict[str, Any]) -> dict[str, set[str]]:
     return result
 
 
+def _interactive_modules(services: dict[str, Any]) -> dict[str, set[str]]:
+    result: dict[str, set[str]] = {}
+    for service, spec in services.items():
+        module = str(spec.get("module") or "")
+        result[service] = {module} if module else set()
+    return result
+
+
 def _artifact_writers(services: dict[str, Any]) -> dict[str, set[str]]:
     writers: dict[str, set[str]] = defaultdict(set)
     for service, spec in services.items():
@@ -79,7 +88,7 @@ def _scan_official_fetches(active: dict[str, set[str]]) -> dict[str, list[str]]:
     return {service: sorted(modules) for service, modules in sorted(hits.items())}
 
 
-def _validate_rec_registry(errors: list[str], services: dict[str, Any]) -> dict[str, Any]:
+def _validate_rec_registry(errors: list[str], service_names: set[str]) -> dict[str, Any]:
     rec = _load(REC_PATH)
     impl = _load(IMPLEMENTATION_STATUS_PATH)
     official = _load(OFFICIAL_FIRST_PATH)
@@ -106,10 +115,10 @@ def _validate_rec_registry(errors: list[str], services: dict[str, Any]) -> dict[
         if not rid or not title or not status or not owner or relation not in allowed_relations:
             invalid_rows.append(row)
             continue
-        if owner not in services and owner not in allowed_non_service:
+        if owner not in service_names and owner not in allowed_non_service:
             errors.append(f"REC {rid} owner is neither service nor declared governance owner: {owner}")
-        if relation == "EXTENDS_EXISTING_OWNER" and owner not in services:
-            errors.append(f"REC {rid} EXTENDS_EXISTING_OWNER must point to runtime service: {owner}")
+        if relation == "EXTENDS_EXISTING_OWNER" and owner not in service_names:
+            errors.append(f"REC {rid} EXTENDS_EXISTING_OWNER must point to runtime/interactive service: {owner}")
         if relation == "GOVERNANCE_ONLY" and owner not in allowed_non_service:
             errors.append(f"REC {rid} GOVERNANCE_ONLY must point to declared governance owner: {owner}")
     if invalid_rows:
@@ -152,12 +161,23 @@ def run() -> dict[str, Any]:
     warnings: list[str] = []
     ownership = _load(OWNERSHIP_PATH)
     service_registry = _load(SERVICE_PATH)
+    interactive_registry = _load(INTERACTIVE_SERVICE_PATH)
     services = service_registry.get("services") or {}
+    interactive_services = interactive_registry.get("services") or {}
     if ownership.get("registry") != "V3_ARCHITECTURE_OWNERSHIP_V1":
         errors.append("unexpected V3 architecture ownership registry")
+    if interactive_registry.get("registry") != "V3_INTERACTIVE_SERVICES_V1":
+        errors.append("unexpected interactive service registry")
     if not isinstance(services, dict) or not services:
         errors.append("V3 service registry has no services")
         services = {}
+    if not isinstance(interactive_services, dict) or not interactive_services:
+        errors.append("V3 interactive service registry has no services")
+        interactive_services = {}
+    overlapping_service_names = sorted(set(services) & set(interactive_services))
+    if overlapping_service_names:
+        errors.append(f"background and interactive service names overlap: {overlapping_service_names}")
+    service_names = set(services) | set(interactive_services)
 
     responsibilities = list(ownership.get("responsibilities") or [])
     responsibility_ids = [str(row.get("id")) for row in responsibilities]
@@ -171,7 +191,7 @@ def run() -> dict[str, Any]:
         if not rid or not owner or not implementation:
             errors.append(f"invalid responsibility row: {row}")
             continue
-        if owner not in services:
+        if owner not in service_names:
             errors.append(f"responsibility {rid} owner service missing: {owner}")
         if implementation.startswith("src.") and not _module_path(implementation).is_file():
             errors.append(f"responsibility {rid} implementation missing: {implementation}")
@@ -219,17 +239,19 @@ def run() -> dict[str, Any]:
         errors.append(f"framework registries still point at legacy business implementations: {sorted(legacy_registry_refs)}")
 
     active = _active_modules(services)
+    interactive_active = _interactive_modules(interactive_services)
+    combined_active = {**active, **interactive_active}
     compatibility = {str(value) for value in ownership.get("compatibility_only_modules") or []}
     forbidden_active = compatibility | legacy_modules
     active_forbidden: list[str] = []
     module_services: dict[str, set[str]] = defaultdict(set)
-    for service, modules in active.items():
+    for service, modules in combined_active.items():
         for module in modules:
             module_services[module].add(service)
             if module in forbidden_active:
                 active_forbidden.append(f"{service}:{module}")
     if active_forbidden:
-        errors.append(f"compatibility/legacy modules active in runtime services: {sorted(active_forbidden)}")
+        errors.append(f"compatibility/legacy modules active in services: {sorted(active_forbidden)}")
     cross_service_module_duplicates = {module: sorted(owners) for module, owners in module_services.items() if len(owners) > 1}
     if cross_service_module_duplicates:
         errors.append(f"same executable module owned by multiple services: {cross_service_module_duplicates}")
@@ -254,7 +276,7 @@ def run() -> dict[str, Any]:
     if bad_staged:
         errors.append(f"invalid staged artifact ownership: {bad_staged}")
 
-    official_hits = _scan_official_fetches(active)
+    official_hits = _scan_official_fetches(combined_active)
     allowed_fetch_services = {str(value) for value in ownership.get("official_fetch_allowed_services") or []}
     forbidden_fetches = {service: modules for service, modules in official_hits.items() if service not in allowed_fetch_services}
     if forbidden_fetches:
@@ -263,7 +285,7 @@ def run() -> dict[str, Any]:
     if transitional_fetches:
         warnings.append(f"declared non-snapshot Official fetch exceptions remain: {transitional_fetches}")
 
-    rec_state = _validate_rec_registry(errors, services)
+    rec_state = _validate_rec_registry(errors, service_names)
     status = "PASS" if not errors else "FAIL"
     result = {
         "status": status,
@@ -273,7 +295,9 @@ def run() -> dict[str, Any]:
         "shared_primitives": len(primitive_rows),
         "framework_counts": framework_counts,
         "rec": rec_state,
-        "service_count": len(services),
+        "background_service_count": len(services),
+        "interactive_service_count": len(interactive_services),
+        "total_bounded_service_count": len(service_names),
         "multiwriter_artifacts": {artifact: sorted(owners) for artifact, owners in writers.items() if len(owners) > 1},
         "official_fetch_services": official_hits,
         "legacy_registry_references": legacy_registry_refs,

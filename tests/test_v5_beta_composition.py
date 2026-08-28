@@ -5,6 +5,26 @@ import pytest
 from src.v5.services import orchestrator_beta
 
 
+def _comparator_stub():
+    return {
+        "schema_version":1,
+        "contract":"V5_OWNED_CHALLENGER_COMPARATOR_V1",
+        "model":"v5_owned_challenger_comparator_v1",
+        "status":"READY",
+        "operating_status":"ADVISORY_ONLY",
+        "planning_gw":2,
+        "horizons":[1,2,3,5],
+        "comparison_count":0,
+        "governed_watchlist_challengers":0,
+        "emerging_full_comparison_eligible":0,
+        "decision_counts":{},
+        "challenger_summaries":[],
+        "emerging_screening":[],
+        "comparisons":[],
+        "governance":{"advisory_only":True,"canonical_decision_mutated":False},
+    }
+
+
 def test_beta_refresh_adds_watchlist_reporting_hot_materialization_and_persistence(monkeypatch):
     base={"mode":"daily","team_id":1,"correlation_id":"c1","team_summary":{"authority":"user_lock","team_value_ledger":[{"element":1}]},"phase":{"phase":"PRE_DEADLINE"},"price_summary":{"alerts":[]},"decision_summary":{"dss":{},"lineup":{},"selected_package_id":"HOLD"},"framework_health":{"go_allowed":False},"prediction_summary":{},"evaluation_summary":{},"service_performance":{}}
     monkeypatch.setattr(orchestrator_beta,"core_handle",lambda operation,payload:dict(base))
@@ -17,6 +37,7 @@ def test_beta_refresh_adds_watchlist_reporting_hot_materialization_and_persisten
     monkeypatch.setattr(orchestrator_beta,"invoke_parallel_envelopes",parallel)
     def one(service,operation,payload,correlation_id):
         if service=="watchlist":return {"data":{"status":"INSUFFICIENT_EVIDENCE","candidate_count":0,"screening_contract":"FULL_DSS_SCREEN_V1","positions":{}},"elapsed_ms":1,"round_trip_ms":2}
+        if service=="decision" and operation=="compare_challengers":return {"data":_comparator_stub(),"elapsed_ms":1,"round_trip_ms":2}
         if service=="reporting":return {"data":{"user_report":{"layer":"USER_REPORT"},"technical_appendix":{"layer":"TECHNICAL_APPENDIX"},"report_state":{"state":{}}},"elapsed_ms":1,"round_trip_ms":2}
         if service=="snapshot" and operation=="write" and payload.get("name")=="decision_hot_bundle":
             persistence_order.append(("hot_commit", payload.get("name")))
@@ -25,16 +46,20 @@ def test_beta_refresh_adds_watchlist_reporting_hot_materialization_and_persisten
     monkeypatch.setattr(orchestrator_beta,"invoke_envelope",one)
     result=orchestrator_beta.handle("run",{"persist":False})
     assert result["watchlist_summary"]["screening_contract"]=="FULL_DSS_SCREEN_V1"
+    assert result["challenger_comparator_summary"]["operating_status"]=="ADVISORY_ONLY"
+    assert result["decision_summary"]["challenger_comparator"]["governance"]["canonical_decision_mutated"] is False
     assert result["user_report"]["layer"]=="USER_REPORT"
     assert result["technical_appendix"]["layer"]=="TECHNICAL_APPENDIX"
     assert result["execution_plane"]["current"]=="refresh"
     assert result["execution_plane"]["hot_materialization_commit_order"]=="AFTER_SUPPORTING_ARTIFACTS"
     assert persistence_order[0][0]=="support"
-    assert set(persistence_order[0][1])=={"watchlist","user_report","technical_appendix","report_state"}
+    assert set(persistence_order[0][1])=={"watchlist","challenger_comparator","user_report","technical_appendix","report_state"}
     assert persistence_order[1]==("hot_commit","decision_hot_bundle")
     assert "beta_composition" in result["service_performance"]
+    assert result["service_performance"]["beta_composition"]["challenger_comparator"]["round_trip_ms"]==2
     assert result["service_performance"]["full_beta_contract"]["latency_release_blocking"] is False
     assert result["service_performance"]["full_beta_contract"]["hot_materialization_is_final_commit_marker"] is True
+    assert result["service_performance"]["full_beta_contract"]["challenger_comparator_advisory_only"] is True
 
 
 def test_supporting_persistence_failure_never_publishes_hot_materialization(monkeypatch):
@@ -48,6 +73,7 @@ def test_supporting_persistence_failure_never_publishes_hot_materialization(monk
     monkeypatch.setattr(orchestrator_beta,"invoke_parallel_envelopes",parallel)
     def one(service,operation,payload,correlation_id):
         if service=="watchlist":return {"data":{"status":"READY","candidate_count":0,"positions":{}},"elapsed_ms":1,"round_trip_ms":2}
+        if service=="decision" and operation=="compare_challengers":return {"data":_comparator_stub(),"elapsed_ms":1,"round_trip_ms":2}
         if service=="reporting":return {"data":{"user_report":{},"technical_appendix":{},"report_state":{}},"elapsed_ms":1,"round_trip_ms":2}
         if service=="snapshot" and payload.get("name")=="decision_hot_bundle":
             hot_commits.append(payload)
@@ -64,7 +90,7 @@ def test_hot_run_reads_only_materialized_bundle_and_is_subsecond(monkeypatch):
     bundle={
         "schema_version":2,"contract":"V5_DECISION_HOT_BUNDLE_V2","generated_at":now,
         "runtime_fingerprint":"fp1","mode":"daily","phase":{"phase":"PRE_DEADLINE"},"team_id":1,
-        "squad_authority":"user_lock","decision_summary":{"selected_package_id":"HOLD"},
+        "squad_authority":"user_lock","decision_summary":{"selected_package_id":"HOLD","challenger_comparator":{"operating_status":"ADVISORY_ONLY"}},
         "framework_health":{"go_allowed":False},"watchlist_summary":{"candidate_count":20},
         "user_report":{"layer":"USER_REPORT"},"technical_appendix":{"layer":"TECHNICAL_APPENDIX"},"report_state":{"state":{}},
     }
@@ -78,6 +104,7 @@ def test_hot_run_reads_only_materialized_bundle_and_is_subsecond(monkeypatch):
     result=orchestrator_beta.handle("hot_run",{"mode":"daily","team_id":1})
     assert result["governance"]["execution_plane"]=="hot"
     assert result["governance"]["hidden_synchronous_refresh"] is False
+    assert result["decision_summary"]["challenger_comparator"]["operating_status"]=="ADVISORY_ONLY"
     assert result["service_performance"]["pass"] is True
     assert result["service_performance"]["hot_path_wall_ms"] < 950
     assert [name for name,_ in calls]==["artifact_read"]

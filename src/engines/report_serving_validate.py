@@ -102,6 +102,33 @@ def _first_highlight(value: dict) -> str | None:
     return str(rows[0]) if rows else None
 
 
+def _owned_rows(payload: dict) -> list[dict]:
+    if isinstance(payload.get("owned_squad"), dict):
+        return [row for row in (payload.get("owned_squad") or {}).get("facts") or [] if isinstance(row, dict)]
+    return [row for row in payload.get("owned_15") or [] if isinstance(row, dict)]
+
+
+def _authority_captain(payload: dict) -> tuple[str, dict]:
+    planning = ((payload.get("gameweek_context") or {}).get("planning") or {})
+    authority = str(planning.get("decision_authority") or "")
+    captain = planning.get("captain") if isinstance(planning.get("captain"), dict) else {}
+    if not captain:
+        current = payload.get("current_team") if isinstance(payload.get("current_team"), dict) else {}
+        captain = {"name": current.get("captain")}
+    return authority, captain
+
+
+def _owned_player_row(payload: dict, player: dict) -> dict:
+    element = player.get("element")
+    name = str(player.get("name") or "").casefold()
+    for row in _owned_rows(payload):
+        if element is not None and row.get("element") is not None and int(row.get("element")) == int(element):
+            return row
+        if name and str(row.get("name") or "").casefold() == name:
+            return row
+    return {}
+
+
 def _tactical_presentation_note(payload: dict) -> str:
     notes: list[str] = []
     battle = _battle_dict(payload)
@@ -116,24 +143,34 @@ def _tactical_presentation_note(payload: dict) -> str:
             detail = lead_note or challenge_note
             notes.append(f"Battle XI {starter} vs {challenger}: {detail}")
 
-    captaincy = payload.get("captaincy") or {}
-    model = captaincy.get("model") if isinstance(captaincy, dict) else None
-    if isinstance(model, dict):
-        captain = model.get("captain") if isinstance(model.get("captain"), dict) else {}
-        vice = model.get("vice") if isinstance(model.get("vice"), dict) else {}
-        cap_note = _first_highlight(captain)
-        vice_note = _first_highlight(vice)
-        if cap_note and captain.get("name"):
-            notes.append(f"Kapten {captain.get('name')}: {cap_note}")
-        elif vice_note and vice.get("name"):
-            notes.append(f"Vice {vice.get('name')}: {vice_note}")
+    authority, active_captain = _authority_captain(payload)
+    active_name = str(active_captain.get("name") or "")
+    if authority == "USER_OVERRIDE" and active_name:
+        active_row = _owned_player_row(payload, active_captain)
+        active_note = _first_highlight(active_row)
+        if active_note:
+            notes.append(f"Kapten aktif {active_name}: {active_note}")
+        else:
+            notes.append(f"Kapten aktif {active_name}: matchup sudah diperiksa; belum ada highlight material yang cukup untuk mengubah pilihan saat ini")
     else:
-        comparison = captaincy.get("tactical_comparison") if isinstance(captaincy, dict) else None
-        if isinstance(comparison, dict):
-            cap = comparison.get("captain") if isinstance(comparison.get("captain"), dict) else {}
-            highlights = cap.get("highlights") or []
-            if highlights and captaincy.get("captain"):
-                notes.append(f"Kapten {captaincy.get('captain')}: {highlights[0]}")
+        captaincy = payload.get("captaincy") or {}
+        model = captaincy.get("model") if isinstance(captaincy, dict) else None
+        if isinstance(model, dict):
+            captain = model.get("captain") if isinstance(model.get("captain"), dict) else {}
+            vice = model.get("vice") if isinstance(model.get("vice"), dict) else {}
+            cap_note = _first_highlight(captain)
+            vice_note = _first_highlight(vice)
+            if cap_note and captain.get("name"):
+                notes.append(f"Kapten {captain.get('name')}: {cap_note}")
+            elif vice_note and vice.get("name"):
+                notes.append(f"Vice {vice.get('name')}: {vice_note}")
+        else:
+            comparison = captaincy.get("tactical_comparison") if isinstance(captaincy, dict) else None
+            if isinstance(comparison, dict):
+                cap = comparison.get("captain") if isinstance(comparison.get("captain"), dict) else {}
+                highlights = cap.get("highlights") or []
+                if highlights and captaincy.get("captain"):
+                    notes.append(f"Kapten {captaincy.get('captain')}: {highlights[0]}")
 
     if notes:
         return " ".join(notes[:2])
@@ -168,7 +205,17 @@ def _validate_tactical(payload_name: str, payload: dict, expected_owned: int, ex
     assert all(isinstance(row.get("tactical_matchup"), dict) for row in watch_rows), (payload_name, "watch tactical coverage")
     assert "verified_shape" not in json.dumps(payload, ensure_ascii=False), (payload_name, "misleading verified_shape alias leaked")
     presentation = payload.get("user_presentation") or {}
-    assert presentation.get("tactical_matchup"), (payload_name, "missing tactical user presentation")
+    tactical_text = str(presentation.get("tactical_matchup") or "")
+    assert tactical_text, (payload_name, "missing tactical user presentation")
+    authority, active_captain = _authority_captain(payload)
+    active_name = str(active_captain.get("name") or "")
+    if authority == "USER_OVERRIDE" and active_name:
+        assert f"Kapten aktif {active_name}:" in tactical_text, (payload_name, "tactical presentation ignored user captain authority", tactical_text)
+        model = (payload.get("captaincy") or {}).get("model") if isinstance(payload.get("captaincy"), dict) else None
+        model_captain = model.get("captain") if isinstance(model, dict) and isinstance(model.get("captain"), dict) else {}
+        model_name = str(model_captain.get("name") or "")
+        if model_name and model_name != active_name:
+            assert f"Kapten {model_name}:" not in tactical_text, (payload_name, "engine captain mislabeled as active captain", tactical_text)
 
 
 def run() -> dict:
@@ -276,6 +323,7 @@ def run() -> dict:
         "owned_transparency": True,
         "tactical_context": True,
         "tactical_presentation": True,
+        "tactical_authority_aligned": True,
         "tactical_overlay": tactical_overlay,
         "tactical_direct_xpts_mutation": False,
         "selection_score": contract.get("owned_rows_require_selection_score"),

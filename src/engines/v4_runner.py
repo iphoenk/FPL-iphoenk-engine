@@ -3,16 +3,9 @@ from __future__ import annotations
 from collections import defaultdict
 
 from src.models.player_identity import build_identity_index
-from src.models.v4_prediction import XA_PRIOR, XG_PRIOR, clamp, competition_adjustment, project_horizon, team_strength
+from src.models.v4_prediction import XA_PRIOR, XG_PRIOR, clamp, competition_adjustment, f, project_horizon, team_strength
 from src.models.v4_prediction_inputs import load_prediction_enrichment
 from src.utils import CONFIG, read_json
-
-
-def f(value, default=0.0):
-    try:
-        return float(value if value is not None else default)
-    except (TypeError, ValueError):
-        return float(default)
 
 
 def _strength_scale(value, values):

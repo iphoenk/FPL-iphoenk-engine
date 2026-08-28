@@ -5,11 +5,8 @@ from heapq import heappush, heapreplace
 from itertools import combinations
 
 from src.engines import v4_wc_package_audit as base
+from src.engines.v4_optimizer_primitives import gw_value as _gw_value
 from src.engines.v4_wc_optimizer import MAX_PER_CLUB, POSITION_COUNTS, reconcile_owned_costs, validate_squad
-
-
-def _gw_value(player, index: int) -> float:
-    return player.gw_xpts[index] if index < len(player.gw_xpts) else 0.0
 
 
 def _prefix(values) -> list[float]:

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from time import perf_counter
 
+from src.engines.fpl_rules_2026 import POSITION_BY_TYPE
 from src.services.contracts import file_digest
 from src.utils import DATA, atomic_json, iso_now, read_json
 
@@ -13,7 +14,6 @@ EFFECTIVE_PLAN = DATA / "effective_plan_v4.json"
 OUTFILE = DATA / "gw_scorecard_v4.json"
 ARCHIVE_DIR = DATA / "gw_results"
 
-POSITION_BY_TYPE = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
 CHIP_NAMES = {
     "bboost": "BENCH_BOOST",
     "bench_boost": "BENCH_BOOST",

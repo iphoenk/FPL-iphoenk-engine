@@ -8,7 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from src.rules import LINEUP_RULES, SQUAD_RULES
+from src.domain.fpl_legality import legal_squad
+from src.rules import LINEUP_RULES
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "config" / "intelligence" / "package_optimizer.json"
@@ -45,27 +46,6 @@ def _gw_index(players: list[dict[str, Any]]) -> dict[int, dict[int, dict[str, An
 
 def _indexed_row(index: dict[int, dict[int, dict[str, Any]]], player: dict[str, Any], gw: int) -> dict[str, Any]:
     return index.get(int(player.get("element") or -1), {}).get(int(gw), {"mean": 0.0, "std": 0.0})
-
-
-def legal_squad(players: list[dict[str, Any]]) -> bool:
-    expected = {k: int(v) for k, v in (SQUAD_RULES.get("position_counts") or {}).items()}
-    if len(players) != int(SQUAD_RULES.get("squad_size") or 0):
-        return False
-    counts = {k: 0 for k in expected}
-    clubs: dict[int, int] = {}
-    seen = set()
-    for player in players:
-        element = int(player.get("element") or -1)
-        if element in seen:
-            return False
-        seen.add(element)
-        position = player.get("position")
-        if position not in counts:
-            return False
-        counts[position] += 1
-        team_id = int(player.get("team_id") or -1)
-        clubs[team_id] = clubs.get(team_id, 0) + 1
-    return counts == expected and max(clubs.values(), default=0) <= int(SQUAD_RULES.get("max_players_per_club") or 0)
 
 
 def _best_lineup_indexed(players: list[dict[str, Any]], gw: int, index: dict[int, dict[int, dict[str, Any]]]) -> dict[str, Any]:
@@ -183,9 +163,6 @@ def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int 
             captain_std = _f(captain_row.get("std"))
             captain_var = captain_std ** 2
             total_mean += lineup["mean"] + bench_weight * bench_mean + captain_weight * captain_mean
-            # lineup variance already contains one copy of the captain random variable.
-            # Adding captain_weight * X therefore adds both its own variance and
-            # covariance with the existing captain component: ((1+w)^2 - 1) Var(X).
             captain_extra_var = ((1.0 + captain_weight) ** 2 - 1.0) * captain_var
             total_var += lineup["variance"] + (bench_weight ** 2) * bench_var + captain_extra_var
 

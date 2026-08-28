@@ -14,6 +14,7 @@
   "purchase_reconstruction_baseline_gw": 1,
   "price_pressure_list_size": 25,
   "price_summary_list_size": 10,
+  "official_detail_max_elements": 40,
   "fail_closed": true,
   "schema_version": 49
 }

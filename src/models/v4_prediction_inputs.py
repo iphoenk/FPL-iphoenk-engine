@@ -146,18 +146,72 @@ def build_last_season_index(elements, payload):
     return result
 
 
+def build_historical_index(elements, payloads):
+    """Aggregate two-or-more older completed seasons for bounded fallback priors."""
+    valid_payloads = [
+        payload for payload in (payloads or [])
+        if payload.get("status") == "LIVE" and payload.get("season") and payload.get("rows")
+    ]
+    valid_payloads.sort(key=lambda payload: str(payload.get("season")), reverse=True)
+    season_indexes = [
+        (str(payload["season"]), build_last_season_index(elements, payload))
+        for payload in valid_payloads
+    ]
+    result = {}
+    for player in elements:
+        element = int(player["id"])
+        observations = []
+        for rank, (season, index) in enumerate(season_indexes):
+            row = index.get(element)
+            if not row:
+                continue
+            minutes = max(0.0, f(row.get("minutes")))
+            recency = 0.65 ** rank
+            reliability = min(1.0, minutes / 1800.0)
+            weight = recency * (0.35 + 0.65 * reliability)
+            observations.append((season, row, weight))
+        if not observations:
+            continue
+        total_weight = sum(weight for _, _, weight in observations)
+        if total_weight <= 0:
+            continue
+        result[element] = {
+            "minutes": sum(f(row.get("minutes")) for _, row, _ in observations),
+            "starts": sum(f(row.get("starts")) for _, row, _ in observations),
+            "xg_per90": sum(f(row.get("xg_per90")) * weight for _, row, weight in observations) / total_weight,
+            "xa_per90": sum(f(row.get("xa_per90")) * weight for _, row, weight in observations) / total_weight,
+            "start_rate": sum(f(row.get("start_rate")) * weight for _, row, weight in observations) / total_weight,
+            "avg_minutes_when_start": sum(f(row.get("avg_minutes_when_start")) * weight for _, row, weight in observations) / total_weight,
+            "seasons_used": [season for season, _, _ in observations],
+            "season_count": len(observations),
+            "source": "+".join(f"vaastav:{season}" for season, _, _ in observations),
+            "identity_matches": [row.get("identity_match") for _, row, _ in observations],
+            "aggregation": "recency_and_minutes_weighted_older_seasons",
+        }
+    return result
+
+
 def load_prediction_enrichment(elements, stats_gw=None):
     suffix = f"gw{int(stats_gw)}" if stats_gw else None
     core = read_json(DATA / "stats" / f"core_insights_{suffix}.json", {}) if suffix else {}
     shots = read_json(DATA / "stats" / f"shots_{suffix}.json", {}) if suffix else {}
     matches = read_json(DATA / "stats" / f"playermatchstats_{suffix}.json", {}) if suffix else {}
     previous = read_json(DATA / "stats" / "vaastav_previous_season.json", {})
+    historical_payloads = [
+        read_json(path, {})
+        for path in sorted((DATA / "stats").glob("vaastav_historical_*.json"), reverse=True)
+    ]
+    historical_payloads = [payload for payload in historical_payloads if payload.get("status") == "LIVE"]
+    historical = build_historical_index(elements, historical_payloads)
     return {
         "advanced": aggregate_advanced(core.get("rows"), shots.get("rows"), matches.get("rows")),
         "last_season": build_last_season_index(elements, previous),
+        "historical": historical,
         "meta": {
             "stats_gw": stats_gw,
             "advanced_files": [name for name, obj in (("core_insights", core), ("shots", shots), ("playermatchstats", matches)) if obj.get("rows")],
             "last_season": previous.get("season"),
+            "historical_seasons": [str(payload.get("season")) for payload in historical_payloads],
+            "historical_source": "vaastav/Fantasy-Premier-League",
         },
     }

@@ -73,11 +73,14 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
     stats_gw = phase.get("current_gw") or phase.get("last_finished_gw")
     advanced = {}
     if sync_stats and stats_gw:
+        history_seasons = vaastav.historical_seasons()
         tasks = {
             "core_insights": lambda: core_insights.sync_gw(stats_gw),
             "vaastav": lambda: vaastav.sync_gw(stats_gw),
             "last_season": vaastav.sync_previous_season,
         }
+        for season in history_seasons:
+            tasks[f"historical:{season}"] = lambda season=season: vaastav.sync_historical_season(season)
         if deep_stats:
             tasks["deep"] = lambda: core_insights.sync_optional_deep_files(stats_gw)
         results = _run_parallel(tasks)
@@ -85,6 +88,14 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
             "core_insights": {"ok": bool(results["core_insights"].get("schema_valid")), "rows": results["core_insights"].get("row_count")},
             "vaastav": {"ok": bool(results["vaastav"].get("rows")), "rows": results["vaastav"].get("row_count")},
             "last_season": {"ok": bool(results["last_season"].get("rows")), "rows": results["last_season"].get("row_count")},
+            "historical_seasons": {
+                season: {
+                    "ok": bool(results[f"historical:{season}"].get("rows")),
+                    "rows": results[f"historical:{season}"].get("row_count"),
+                    "cache_reused": bool(results[f"historical:{season}"].get("cache_reused")),
+                }
+                for season in history_seasons
+            },
         }
         if deep_stats:
             advanced["deep"] = results["deep"]

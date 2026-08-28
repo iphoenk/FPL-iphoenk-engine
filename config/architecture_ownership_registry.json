@@ -183,6 +183,14 @@
         "DSS-28",
         "DSS-29"
       ]
+    },
+    {
+      "id": "MULTI_SEASON_HISTORICAL_PRIOR",
+      "owner": "prediction_model",
+      "implementation": "src.models.v4_prediction_inputs.build_historical_index + src.engines.v4_runner.player_priors",
+      "consumers": [
+        "DSS-36"
+      ]
     }
   ]
 }

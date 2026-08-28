@@ -96,7 +96,11 @@
         "players",
         "input_coverage.advanced_decision_used_ratio",
         "capability_evidence.role_competition_adjustments",
-        "capability_evidence.role_competition_factor_variants"
+        "capability_evidence.role_competition_factor_variants",
+        "input_coverage.historical_seasons",
+        "input_coverage.historical_matched",
+        "input_coverage.historical_fallback_consumed",
+        "capability_evidence.historical_fallback_consumed"
       ],
       "min_lengths": {
         "players": 500

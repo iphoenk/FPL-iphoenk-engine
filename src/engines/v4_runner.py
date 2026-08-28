@@ -231,7 +231,7 @@ def team_role_priors(elements, advanced, quality=None):
     return result
 
 
-def player_priors(player, last_season=None):
+def player_priors(player, last_season=None, historical=None):
     pos = int(player.get("element_type", 3))
     price = f(player.get("now_cost")) / 10
     ownership = f(player.get("selected_by_percent"))
@@ -241,18 +241,42 @@ def player_priors(player, last_season=None):
     role = clamp((ownership / 35) * 0.25 + (threat / 100) * 0.45 + (creativity / 100) * 0.30)
     base_xg = XG_PRIOR[pos] * (1 + 0.75 * premium + 0.35 * role)
     base_xa = XA_PRIOR[pos] * (1 + 0.45 * premium + 0.45 * role)
-    prior_weight = min(0.65, f((last_season or {}).get("minutes")) / 1800 * 0.65)
-    xg = base_xg * (1 - prior_weight) + f((last_season or {}).get("xg_per90"), base_xg) * prior_weight
-    xa = base_xa * (1 - prior_weight) + f((last_season or {}).get("xa_per90"), base_xa) * prior_weight
+    last_minutes = f((last_season or {}).get("minutes"))
+    prior_weight = min(0.65, last_minutes / 1800 * 0.65)
+    history_minutes = f((historical or {}).get("minutes"))
+    history_seasons = list((historical or {}).get("seasons_used") or [])
+    thin_last_season = clamp((900.0 - last_minutes) / 900.0)
+    historical_weight = (
+        min(0.25, history_minutes / 3600 * 0.25) * thin_last_season
+        if len(history_seasons) >= 2 else 0.0
+    )
+    historical_weight = min(historical_weight, max(0.0, 0.75 - prior_weight))
+    base_weight = max(0.0, 1 - prior_weight - historical_weight)
+    xg = (
+        base_xg * base_weight
+        + f((last_season or {}).get("xg_per90"), base_xg) * prior_weight
+        + f((historical or {}).get("xg_per90"), base_xg) * historical_weight
+    )
+    xa = (
+        base_xa * base_weight
+        + f((last_season or {}).get("xa_per90"), base_xa) * prior_weight
+        + f((historical or {}).get("xa_per90"), base_xa) * historical_weight
+    )
     return {
         "xg90_prior": xg,
         "xa90_prior": xa,
         "premium_prior": premium,
         "role_prior": role,
         "last_season_weight": prior_weight,
-        "last_season_minutes": f((last_season or {}).get("minutes")),
+        "last_season_minutes": last_minutes,
         "last_season_source": (last_season or {}).get("source"),
         "last_season_identity_match": (last_season or {}).get("identity_match"),
+        "historical_weight": historical_weight,
+        "historical_minutes": history_minutes,
+        "historical_seasons": history_seasons,
+        "historical_source": (historical or {}).get("source"),
+        "historical_prior_consumed": historical_weight > 0,
+        "historical_usage": "thin_or_missing_last_season_fallback_only",
     }
 
 
@@ -363,6 +387,7 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
     enrichment = load_prediction_enrichment(elements, stats_gw)
     advanced = enrichment["advanced"]
     last_season = enrichment["last_season"]
+    historical = enrichment.get("historical") or {}
     quality = _quality_config()
     finished_events = sum(bool(event.get("finished")) for event in bootstrap.get("events", []))
     xmins_context = minutes_contexts(elements, last_season, max(1, finished_events), advanced, quality)
@@ -371,8 +396,10 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
     rows = []
     materially_distinct = 0
     advanced_decision_used = 0
+    historical_fallback_consumed = 0
     for player in elements:
-        priors = player_priors(player, last_season.get(player["id"]))
+        priors = player_priors(player, last_season.get(player["id"]), historical.get(player["id"]))
+        historical_fallback_consumed += int(bool(priors.get("historical_prior_consumed")))
         role = role_priors[player["id"]]
         player_advanced = advanced.get(player["id"])
         material_advanced = advanced_materially_distinct(player, player_advanced)
@@ -392,6 +419,10 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
             "role_prior": priors["role_prior"],
             "last_season_weight": priors["last_season_weight"],
             "last_season_source": priors["last_season_source"],
+            "historical_weight": priors["historical_weight"],
+            "historical_source": priors["historical_source"],
+            "historical_seasons": priors["historical_seasons"],
+            "historical_prior_consumed": priors["historical_prior_consumed"],
             "set_piece_share": role["set_piece_share"],
             "penalty_share": role["penalty_share"],
             "set_piece_order_weight": role["set_piece_order_weight"],
@@ -430,6 +461,8 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
             "advanced_decision_used": advanced_decision_used,
             "advanced_decision_used_ratio": round(advanced_decision_used / max(1, len(elements)), 4),
             "last_season_matched": len(last_season),
+            "historical_matched": len(historical),
+            "historical_fallback_consumed": historical_fallback_consumed,
             **enrichment["meta"],
         },
         "capability_evidence": {
@@ -444,6 +477,7 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
             ),
             "value_coverage": sum(bool(row.get("value")) for row in rows),
             "advanced_decision_coverage": advanced_decision_used,
+            "historical_fallback_consumed": historical_fallback_consumed,
         },
         "players": rows,
     }

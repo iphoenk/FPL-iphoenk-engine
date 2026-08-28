@@ -192,6 +192,7 @@ def _assert_prediction_and_validation(health: dict) -> tuple[dict, dict]:
     extensions = {row["id"]: row for row in health["dss_extensions"]["items"]}
     assert core["DSS-16"]["status"] == "ACTIVE", core["DSS-16"]
     assert core["DSS-29"]["status"] == "ACTIVE", core["DSS-29"]
+    assert core["DSS-36"]["status"] == "ACTIVE", core["DSS-36"]
     eligible = lifecycle.get("eligibility", {}).get("eligible_samples")
     if eligible is not None:
         if int(eligible) == 0:
@@ -203,6 +204,9 @@ def _assert_prediction_and_validation(health: dict) -> tuple[dict, dict]:
     coverage = predictions.get("input_coverage") or {}
     assert coverage.get("advanced_matched", 0) > 0
     assert coverage.get("last_season_matched", 0) > 0
+    assert len(coverage.get("historical_seasons") or []) >= 2
+    assert coverage.get("historical_matched", 0) > 0
+    assert coverage.get("historical_fallback_consumed", 0) > 0
     assert coverage.get("advanced_decision_used_ratio", 0) >= 0.25
     evidence = predictions.get("capability_evidence") or {}
     assert evidence.get("dynamic_opponent_fixtures", 0) > 0

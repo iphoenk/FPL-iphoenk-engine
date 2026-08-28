@@ -1,5 +1,5 @@
 {
-  "version":6,
+  "version":7,
   "data_root":"data/v5",
   "artifacts":{
     "latest":"latest.json",
@@ -10,6 +10,7 @@
     "prices":"prices.json",
     "price_trajectory":"price_trajectory.json",
     "price_alerts":"price_alerts.json",
+    "mini_league_tracking":"mini_league_tracking.json",
     "historical_prior":"historical_prior.json",
     "predictions":"predictions.json",
     "prediction_quality":"prediction_quality.json",

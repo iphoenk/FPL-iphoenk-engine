@@ -59,6 +59,7 @@ PURCHASE_RECONSTRUCTION_BASELINE_GW = _required_int(
 )
 PRICE_PRESSURE_LIST_SIZE = _required_int(ENGINE_CONFIG, "price_pressure_list_size", minimum=1)
 PRICE_SUMMARY_LIST_SIZE = _required_int(ENGINE_CONFIG, "price_summary_list_size", minimum=1)
+OFFICIAL_DETAIL_MAX_ELEMENTS = _required_int(ENGINE_CONFIG, "official_detail_max_elements", minimum=1)
 API_RETRIES = _required_int(ENGINE_CONFIG, "api_retries", minimum=1)
 API_BACKOFF_SECONDS = _required_float(ENGINE_CONFIG, "api_backoff_seconds", minimum=0.0)
 API_TIMEOUT_SECONDS = _required_int(ENGINE_CONFIG, "api_timeout_seconds", env="FPL_TIMEOUT", minimum=1)

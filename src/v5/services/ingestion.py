@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.utils import iso_now
 from src.v5.authenticated_official import collect_runtime
 from src.v5.config_cache import load_json_config
+from src.v5.mini_league import collection_plan
 from src.v5.official_auth import expected_team_id
 from src.v5.official_history import finished_gameweeks, reconcile_historical_submissions
 from src.v5.public_api import FetchSpec, fetch_many
@@ -98,6 +100,44 @@ def _settlement_actuals(gameweeks: list[int]) -> dict[str, Any]:
     }
 
 
+def _mini_league_standings(entry: dict[str, Any] | None) -> dict[str, Any]:
+    plan = collection_plan(entry)
+    specs = {
+        str(row["key"]): FetchSpec(route=str(row["route"]), params={"league_id": str(row["league_id"])})
+        for row in plan.get("requests") or []
+    }
+    if specs:
+        data, health = fetch_many(specs)
+    else:
+        data, health = {}, {}
+    leagues: dict[str, dict[str, Any]] = {"classic": {}, "h2h": {}}
+    for row in plan.get("requests") or []:
+        payload = data.get(str(row["key"]))
+        if isinstance(payload, dict):
+            leagues[str(row["kind"])][str(row["league_id"])] = payload
+    configured = plan.get("configured") if isinstance(plan.get("configured"), dict) else {}
+    request_count = len(specs)
+    live_count = sum(len(rows) for rows in leagues.values())
+    return {
+        "schema_version": 1,
+        "contract": "OFFICIAL_MINI_LEAGUE_STANDINGS_V1",
+        "authority": "OFFICIAL_FPL_STANDINGS",
+        "generated_at": iso_now(),
+        "status": "NO_PRIVATE_LEAGUES_DISCOVERED" if request_count == 0 else "LIVE" if live_count else "UNAVAILABLE",
+        "plan": plan,
+        "configured_count": sum(len(configured.get(kind) or []) for kind in ("classic", "h2h")),
+        "requested_count": request_count,
+        "available_count": live_count,
+        "leagues": leagues,
+        "health": health,
+        "governance": {
+            "official_standings_only": True,
+            "full_rival_picks_collected": False,
+            "collection_is_noncritical": True,
+        },
+    }
+
+
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     team_id = int(payload.get("team_id") or expected_team_id())
     if operation == "collect_base":
@@ -134,6 +174,9 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         raw_proxy = raw_proxy if isinstance(raw_proxy, list) else hcfg.get("retrospective_proxy_gameweeks") or [1]
         proxy_gws = [int(value) for value in raw_proxy if int(value) > 0]
         return _historical_submitted(team_id, max_gws=max_gws, proxy_gws=proxy_gws)
+    if operation == "collect_mini_leagues":
+        entry = payload.get("entry") if isinstance(payload.get("entry"), dict) else None
+        return _mini_league_standings(entry)
     if operation == "collect_authenticated":
         return collect_runtime(payload.get("owned_ids") or ())
     if operation == "collect_enrichment":

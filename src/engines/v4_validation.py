@@ -5,7 +5,7 @@ from collections import defaultdict
 from statistics import mean
 
 from src.models.v4_calibration import eligible
-from src.models.v4_metrics import mae_rows, spearman_rows
+from src.models.v4_metrics import brier_values, mae_rows, mae_values, spearman_rows
 
 POSITIONS = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
 
@@ -25,30 +25,39 @@ def interval_coverage(rows):
 
 
 def minutes_metrics(rows):
-    m = [r for r in rows if r.get("actual_minutes") is not None and r.get("predicted_minutes") is not None]
-    if not m:
+    sample = [r for r in rows if r.get("actual_minutes") is not None and r.get("predicted_minutes") is not None]
+    if not sample:
         return {"n": 0, "mae": None, "start_n": 0, "start_missing": 0, "start_brier": None, "p60_brier": None}
-    mmae = mean(abs(float(r["actual_minutes"]) - float(r["predicted_minutes"])) for r in m)
-    sb = []
-    p6 = []
+
+    minutes_mae = mae_values(
+        [float(r["predicted_minutes"]) for r in sample],
+        [float(r["actual_minutes"]) for r in sample],
+    )
+    start_probabilities = []
+    start_outcomes = []
+    p60_probabilities = []
+    p60_outcomes = []
     start_missing = 0
-    for r in m:
-        actual_started = r.get("actual_started")
+    for row in sample:
+        actual_started = row.get("actual_started")
         if actual_started is None:
             start_missing += 1
-        elif r.get("start_probability") is not None:
-            actual_start = 1.0 if bool(actual_started) else 0.0
-            sb.append((float(r["start_probability"]) - actual_start) ** 2)
-        actual60 = 1.0 if float(r["actual_minutes"]) >= 60 else 0.0
-        if r.get("p60") is not None:
-            p6.append((float(r["p60"]) - actual60) ** 2)
+        elif row.get("start_probability") is not None:
+            start_probabilities.append(float(row["start_probability"]))
+            start_outcomes.append(1.0 if bool(actual_started) else 0.0)
+        if row.get("p60") is not None:
+            p60_probabilities.append(float(row["p60"]))
+            p60_outcomes.append(1.0 if float(row["actual_minutes"]) >= 60 else 0.0)
+
+    start_brier = brier_values(start_probabilities, start_outcomes)
+    p60_brier = brier_values(p60_probabilities, p60_outcomes)
     return {
-        "n": len(m),
-        "mae": round(mmae, 4),
-        "start_n": len(sb),
+        "n": len(sample),
+        "mae": round(minutes_mae, 4) if minutes_mae is not None else None,
+        "start_n": len(start_probabilities),
         "start_missing": start_missing,
-        "start_brier": round(mean(sb), 4) if sb else None,
-        "p60_brier": round(mean(p6), 4) if p6 else None,
+        "start_brier": round(start_brier, 4) if start_brier is not None else None,
+        "p60_brier": round(p60_brier, 4) if p60_brier is not None else None,
     }
 
 
@@ -60,21 +69,21 @@ def ranking_metrics(rows, ks=(10, 25, 50)):
     spearman_value = spearman_rows(rows)
     out = {"spearman": round(spearman_value, 4) if spearman_value is not None else None}
     for k in ks:
-        pred = {r["element"] for r in predicted_sorted[:k]}
+        predicted = {r["element"] for r in predicted_sorted[:k]}
         actual = {r["element"] for r in actual_sorted[:k]}
-        out[f"top{k}_precision"] = round(len(pred & actual) / max(1, len(pred)), 4)
+        out[f"top{k}_precision"] = round(len(predicted & actual) / max(1, len(predicted)), 4)
         out[f"top{k}_actual_points"] = round(sum(float(r["actual"]) for r in predicted_sorted[:k]), 2)
     return out
 
 
 def position_breakdown(rows):
     groups = defaultdict(list)
-    for r in rows:
-        groups[r.get("position", "UNK")].append(r)
+    for row in rows:
+        groups[row.get("position", "UNK")].append(row)
     out = {}
-    for pos, group in groups.items():
+    for position, group in groups.items():
         mae_value = mae_rows(group)
-        out[pos] = {
+        out[position] = {
             "n": len(group),
             "mae": round(mae_value, 4) if mae_value is not None else None,
             "rmse": round(rmse(group), 4),
@@ -122,22 +131,22 @@ def validate_rows(rows, deadline):
 def reconcile_prediction_snapshot(prediction_snapshot, actual_by_element, event, deadline):
     rows = []
     generated = prediction_snapshot.get("generated_at")
-    for p in prediction_snapshot.get("players", []):
-        fx = next((x for x in p.get("fixtures", []) if int(x.get("event") or -1) == int(event)), None)
-        if not fx:
+    for player in prediction_snapshot.get("players", []):
+        fixture = next((row for row in player.get("fixtures", []) if int(row.get("event") or -1) == int(event)), None)
+        if not fixture:
             continue
-        actual = actual_by_element.get(int(p["element"]))
+        actual = actual_by_element.get(int(player["element"]))
         if not actual:
             continue
-        xmins = fx.get("xmins", {})
+        xmins = fixture.get("xmins", {})
         rows.append({
-            "element": int(p["element"]),
-            "name": p.get("name"),
-            "position": p.get("position"),
-            "predicted": float(fx.get("xpts", 0)),
+            "element": int(player["element"]),
+            "name": player.get("name"),
+            "position": player.get("position"),
+            "predicted": float(fixture.get("xpts", 0)),
             "actual": float(actual.get("total_points", 0)),
-            "lower80": fx.get("lower80"),
-            "upper80": fx.get("upper80"),
+            "lower80": fixture.get("lower80"),
+            "upper80": fixture.get("upper80"),
             "predicted_minutes": xmins.get("expected_minutes"),
             "actual_minutes": actual.get("minutes"),
             "actual_started": actual.get("started"),

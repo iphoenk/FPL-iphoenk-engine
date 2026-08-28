@@ -19,6 +19,13 @@ def _prefix(values) -> list[float]:
     return out
 
 
+def _club_signature(players) -> int:
+    signature = 0
+    for player in players:
+        signature += 1 << ((player.team_id - 1) * 2)
+    return signature
+
+
 def _keep_profile(players) -> dict:
     ps = list(players)
     by_pos = {pos: [p for p in ps if p.position == pos] for pos in POSITION_COUNTS}
@@ -39,6 +46,44 @@ def _keep_profile(players) -> dict:
         "x10": sum(p.x10 for p in ps),
         "x15": sum(p.x15 for p in ps),
         "gw_total": [sum(_gw_value(p, i) for p in ps) for i in range(5)],
+        "gw_sorted": gw_sorted,
+        "gw_prefix": gw_prefix,
+    }
+
+
+def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
+    """Derive an OUT-set profile from the fixed baseline without rescanning keep players."""
+    outs = tuple(outs)
+    out_by_pos = {pos: [p for p in outs if p.position == pos] for pos in POSITION_COUNTS}
+    gw_sorted = []
+    gw_prefix = []
+    for index in range(5):
+        sorted_by_pos = {}
+        prefix_by_pos = {}
+        for pos in POSITION_COUNTS:
+            removals = out_by_pos[pos]
+            if not removals:
+                sorted_by_pos[pos] = baseline["gw_sorted"][index][pos]
+                prefix_by_pos[pos] = baseline["gw_prefix"][index][pos]
+                continue
+            values = list(baseline["gw_sorted"][index][pos])
+            for player in removals:
+                values.remove(_gw_value(player, index))
+            sorted_by_pos[pos] = values
+            prefix_by_pos[pos] = _prefix(values)
+        gw_sorted.append(sorted_by_pos)
+        gw_prefix.append(prefix_by_pos)
+    return {
+        "cost": baseline["cost"] - sum(p.cost for p in outs),
+        "objective": baseline["objective"] - sum(p.objective for p in outs),
+        "x3": baseline["x3"] - sum(p.x3 for p in outs),
+        "x5": baseline["x5"] - sum(p.x5 for p in outs),
+        "x10": baseline["x10"] - sum(p.x10 for p in outs),
+        "x15": baseline["x15"] - sum(p.x15 for p in outs),
+        "gw_total": [
+            baseline["gw_total"][index] - sum(_gw_value(p, index) for p in outs)
+            for index in range(5)
+        ],
         "gw_sorted": gw_sorted,
         "gw_prefix": gw_prefix,
     }
@@ -110,12 +155,6 @@ def _metrics_from_profiles(profile: dict, chosen_profile: dict) -> dict:
 
 
 def _small_candidate_template(need: Counter, bp: dict) -> list[tuple]:
-    """Build the exact k<=2 candidate ranking once per positional need signature.
-
-    The reference rank depends only on chosen-player objective/uncertainty. Budget
-    and club legality depend on the OUT set, so those are intentionally filtered
-    later. Stable sort preserves the reference tie semantics.
-    """
     pools = [list(combinations(bp[pos], count)) for pos, count in need.items()]
     states = [tuple()]
     for comboset in pools:
@@ -125,11 +164,7 @@ def _small_candidate_template(need: Counter, bp: dict) -> list[tuple]:
     return [chosen for _, chosen in scored]
 
 
-def _legal_small_candidates(template: list[tuple], keep: list, budget: int, k: int) -> list[tuple]:
-    keep_cost = sum(p.cost for p in keep)
-    clubs = 0
-    for player in keep:
-        clubs += 1 << ((player.team_id - 1) * 2)
+def _legal_small_candidates(template: list[tuple], keep_cost: int, clubs: int, budget: int, k: int) -> list[tuple]:
     cap = 16 if k == 1 else 30
     legal = []
     for chosen in template:
@@ -148,6 +183,42 @@ def _legal_small_candidates(template: list[tuple], keep: list, budget: int, k: i
             if len(legal) >= cap:
                 break
     return legal
+
+
+def _bounded_candidate_states(need: Counter, bp: dict, keep_cost: int, clubs: int, budget: int, beam: int) -> list[tuple]:
+    """Exact bounded-beam semantics with precomputed baseline cost/club signature."""
+    slots = []
+    for pos, count in need.items():
+        slots += [pos] * count
+    states = [(tuple(), keep_cost, clubs, 0.0)]
+    for pos in slots:
+        nxt = []
+        for chosen, cost, signature, score in states:
+            used = {p.element for p in chosen}
+            for player in bp[pos]:
+                shift = (player.team_id - 1) * 2
+                if player.element in used or cost + player.cost > budget or ((signature >> shift) & 0b11) >= MAX_PER_CLUB:
+                    continue
+                nxt.append((
+                    chosen + (player,),
+                    cost + player.cost,
+                    signature + (1 << shift),
+                    score + player.objective - .12 * player.uncertainty,
+                ))
+        nxt.sort(key=lambda state: (state[3], -state[1]), reverse=True)
+        dedup, seen = [], set()
+        for state in nxt:
+            key = tuple(sorted(p.element for p in state[0]))
+            if key in seen:
+                continue
+            seen.add(key)
+            dedup.append(state)
+            if len(dedup) >= beam:
+                break
+        states = dedup
+        if not states:
+            break
+    return [state[0] for state in states]
 
 
 def _materialize_package(compact: tuple, k: int, basecost: int, budget: int) -> dict:
@@ -203,11 +274,15 @@ def audit_packages_from_candidates_fast(
     bp = {pos: [p for p in fr if p.position == pos] for pos in POSITION_COUNTS}
     cm = base._fast_metrics(cur, include_detail=True)
     basecost = cm["cost"]
+    baseline_profile = _keep_profile(cur)
+    baseline_clubs = _club_signature(cur)
     results: dict[str, list[dict]] = {}
     keep_profiles = 0
     evaluated = 0
     small_templates: dict[tuple, list[tuple]] = {}
     small_template_hits = 0
+    bounded_states: dict[tuple, list[tuple]] = {}
+    bounded_state_hits = 0
     chosen_profiles: dict[tuple[int, ...], dict] = {}
     chosen_profile_hits = 0
 
@@ -215,26 +290,34 @@ def audit_packages_from_candidates_fast(
         heap: list[tuple] = []
         sequence = 0
         for outs in combinations(cur, k):
-            outids = {p.element for p in outs}
             need = Counter(p.position for p in outs)
             if any(len(bp[pos]) < count for pos, count in need.items()):
                 continue
             out_unc = sum(p.uncertainty for p in outs)
-            keep = [p for p in cur if p.element not in outids]
-            profile = _keep_profile(keep)
+            keep_cost = basecost - sum(p.cost for p in outs)
+            keep_clubs = baseline_clubs
+            for player in outs:
+                keep_clubs -= 1 << ((player.team_id - 1) * 2)
+            profile = _keep_profile_from_baseline(baseline_profile, outs)
             keep_profiles += 1
+            need_key = tuple(need.items())
 
             if k <= 2:
-                need_key = tuple(need.items())
                 template = small_templates.get(need_key)
                 if template is None:
                     template = _small_candidate_template(need, bp)
                     small_templates[need_key] = template
                 else:
                     small_template_hits += 1
-                candidate_states = _legal_small_candidates(template, keep, budget, k)
+                candidate_states = _legal_small_candidates(template, keep_cost, keep_clubs, budget, k)
             else:
-                candidate_states = base._candidate_states(cur, outids, need, bp, budget, k, beam_size)
+                state_key = (need_key, keep_cost, keep_clubs)
+                candidate_states = bounded_states.get(state_key)
+                if candidate_states is None:
+                    candidate_states = _bounded_candidate_states(need, bp, keep_cost, keep_clubs, budget, beam_size)
+                    bounded_states[state_key] = candidate_states
+                else:
+                    bounded_state_hits += 1
 
             for chosen in candidate_states:
                 if len(chosen) != k:
@@ -298,7 +381,7 @@ def audit_packages_from_candidates_fast(
 
     return {
         "schema_version": 472,
-        "engine": "v4.7.2-wc-package-audit-performance-hotfix-prefix-reuse",
+        "engine": "v4.7.2-wc-package-audit-performance-hotfix-state-reuse",
         "wildcard_active": bool(locked.get("wildcard_active")),
         "affordability": affordability,
         "baseline": cm | {"itb": budget - basecost},
@@ -314,9 +397,14 @@ def audit_packages_from_candidates_fast(
             "keep_profiles": keep_profiles,
             "small_candidate_templates": len(small_templates),
             "small_candidate_template_hits": small_template_hits,
+            "bounded_state_cache_entries": len(bounded_states),
+            "bounded_state_cache_hits": bounded_state_hits,
             "chosen_profile_cache_entries": len(chosen_profiles),
             "chosen_profile_cache_hits": chosen_profile_hits,
             "target_metrics_cache_removed": True,
+            "baseline_keep_profile_reuse": True,
+            "precomputed_baseline_club_signature": True,
+            "bounded_state_structural_cache": True,
             "sorted_keep_position_prefixes": True,
             "unaffected_position_prefix_reuse": True,
             "frontier_per_position": per_position_frontier,
@@ -344,7 +432,7 @@ def audit_packages_from_candidates_fast(
             "owned_price_basis": "sell_cost",
             "unowned_price_basis": "now_cost",
             "ranking_metric": "risk-adjusted best-XI plus bench-adjusted 5GW utility",
-            "search": "shortlisted k<=2, bounded beam k=3-4, exact prefix-reuse evaluator",
+            "search": "shortlisted k<=2, bounded beam k=3-4, exact structural-state and prefix reuse",
             "frontier_per_position": per_position_frontier,
             "beam_size": beam_size,
             "risk_penalty_enabled": True,

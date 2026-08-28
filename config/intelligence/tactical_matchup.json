@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "model_id": "TACTICAL_MATCHUP_ADVISORY_V1",
   "recent_gw_window": 5,
   "primary_horizon_gws": 5,
@@ -11,6 +11,8 @@
     "recent_gw_tactical_pattern_required_when_available": true,
     "player_role_matchup_required_when_available": true,
     "opponent_vulnerability_map_required_when_available": true,
+    "observed_event_proxies_may_supply_rich_context": true,
+    "observed_event_proxies_are_not_true_pressing_or_build_up": true,
     "advisory_only": true,
     "never_directly_mutate_xpts": true,
     "never_override_legality": true,
@@ -30,8 +32,8 @@
     "player_roles": "data/player_role_profiles.json"
   },
   "supported_profile_fields": {
-    "team": ["coach","base_formation","formation_variants","build_up","pressing","defensive_line","width","transition","set_piece_profile","vulnerabilities","strengths"],
-    "recent_form": ["gw","formation","possession_pattern","pressing_pattern","chance_creation_zones","chance_concession_zones","role_changes","notes"],
+    "team": ["coach","base_formation","formation_variants","build_up","pressing","defensive_line","width","transition","set_piece_profile","vulnerabilities","strengths","observed_style_proxies","recent_match_count"],
+    "recent_form": ["gw","match_id","opponent_team_id","formation","possession_pattern","pressing_pattern","chance_creation_zones","chance_concession_zones","role_changes","strengths","vulnerabilities","observed_style_proxies","observed_metrics","notes","confidence"],
     "player_role": ["role","zones","set_pieces","penalties","progression_route","return_routes"]
   }
 }

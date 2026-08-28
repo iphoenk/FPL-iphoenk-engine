@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "model_id": "TACTICAL_MATCHUP_ADVISORY_V1",
+  "recent_gw_window": 5,
+  "primary_horizon_gws": 5,
+  "strategic_horizon_gws": 15,
+  "policy": {
+    "background_analysis_required_for_owned_and_watchlist": true,
+    "coach_style_required_when_available": true,
+    "base_formation_and_variants_required_when_available": true,
+    "recent_gw_tactical_pattern_required_when_available": true,
+    "player_role_matchup_required_when_available": true,
+    "opponent_vulnerability_map_required_when_available": true,
+    "advisory_only": true,
+    "never_directly_mutate_xpts": true,
+    "never_override_legality": true,
+    "never_promote_watchlist_from_tactical_signal_alone": true,
+    "allow_selection_tiebreaker_only_when_gap_is_close": true,
+    "report_only_material_highlights": true,
+    "missing_evidence_is_never_fabricated": true
+  },
+  "materiality": {
+    "close_xpts_gap": 0.35,
+    "minimum_evidence_items": 2,
+    "maximum_report_highlights_per_player": 2
+  },
+  "accepted_context_keys": [
+    "team_profiles",
+    "recent_form",
+    "player_roles"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "policy": "fpl_v4_owned_challenger_comparator_v1",
+  "mode": "ADVISORY_ONLY",
+  "horizons": [1, 2, 3, 5],
+  "candidate_limits": {
+    "governed": 20,
+    "emerging": 20,
+    "owned_targets_per_challenger": 3,
+    "published_comparisons": 40
+  },
+  "screening": {
+    "status_allowed": ["a", "d"],
+    "minimum_start_probability_3gw": 0.62,
+    "maximum_dnp_probability_3gw": 0.28,
+    "maximum_direct_swap_price_gap_tenths": 25,
+    "minimum_relevant_fixtures_5gw": 3
+  },
+  "emerging_trigger": {
+    "minimum_signals": 2,
+    "points_signal": 8,
+    "xgi_signal": 0.55,
+    "net_transfers_signal": 25000,
+    "minutes_signal": 60,
+    "start_signal": 1,
+    "value_signal_xpts5_per_million": 2.2
+  },
+  "decision_policy": {
+    "calibration_state": "PROVISIONAL_UNCALIBRATED",
+    "edge_to_uncertainty_review": 0.35,
+    "edge_to_uncertainty_lean": 0.80,
+    "edge_to_uncertainty_strong": 1.35,
+    "minimum_core_confidence_for_lean": 0.68,
+    "minimum_core_confidence_for_strong": 0.80,
+    "missing_tactical_or_congestion_caps_strong": true,
+    "emerging_without_sustainable_signal_caps_at_watch": true
+  },
+  "evidence": {
+    "optional_watchlist_path": "data/watchlist_v4.json",
+    "optional_tactical_path": "data/tactical_context_v4.json",
+    "canonical_governed_candidate_path": "data/recommendation_sanity_v4.json",
+    "canonical_team_path": "data/team.json",
+    "canonical_universe_path": "data/universe.json",
+    "canonical_predictions_path": "data/predictions_v4.json",
+    "canonical_effective_plan_path": "data/effective_plan_v4.json",
+    "canonical_checkpoint_path": "data/checkpoint_decision_v4.json"
+  },
+  "guardrails": {
+    "recent_haul_is_discovery_signal_only": true,
+    "no_direct_official_fpl_fetch": true,
+    "no_duplicate_xpts_engine": true,
+    "no_duplicate_xmins_engine": true,
+    "no_duplicate_fixture_engine": true,
+    "no_duplicate_price_engine": true,
+    "no_duplicate_role_engine": true,
+    "no_duplicate_watchlist_screening": true,
+    "never_mutate_effective_plan": true,
+    "never_mutate_optimizer_recommendation": true,
+    "never_mutate_watchlist": true,
+    "never_mutate_lineup_captain_chip": true,
+    "unverified_evidence_never_fabricated": true,
+    "missing_critical_evidence_fails_safe": true
+  }
+}

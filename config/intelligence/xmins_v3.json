@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "model_id": "xmins_v3_historical_prior",
   "neutral_start_prior": 0.72,
   "signal_weights": {
@@ -19,6 +19,28 @@
   "starter_minutes_max": 90.0,
   "availability_defaults": {"a": 1.0, "d": 0.75, "i": 0.25, "s": 0.0, "u": 0.0},
   "small_sample_matches": 3,
+  "fixture_congestion": {
+    "enabled": true,
+    "model": "adjacent_fixture_rest_role_weighted_v1",
+    "calibration_status": "PROVISIONAL_STRUCTURAL_PRIOR",
+    "rest_thresholds_days": {
+      "severe_below": 2.5,
+      "elevated_below": 3.5
+    },
+    "severity_weights": {
+      "severe": 1.0,
+      "elevated": 0.5
+    },
+    "max_role_weighted_start_penalty": 0.08,
+    "minimum_rotation_risk": 0.05,
+    "promotion_requires_settled_backtest": true,
+    "governance": {
+      "fixture_specific_only": true,
+      "calendar_global_minimum_must_not_drive_current_xmins": true,
+      "factor_is_role_weighted": true,
+      "no_schedule_evidence_means_neutral_factor": true
+    }
+  },
   "confidence": {
     "high_min_starts": 6,
     "medium_min_starts": 2,

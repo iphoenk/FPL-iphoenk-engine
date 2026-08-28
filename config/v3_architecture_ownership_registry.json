@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "registry": "V3_ARCHITECTURE_OWNERSHIP_V1",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "inspired_by": [
@@ -22,7 +22,9 @@
     "background_refresh_and_interactive_serving_are_separate_bounded_lanes": true,
     "interactive_microservices_consume_canonical_business_primitives": true,
     "interactive_microservices_may_not_duplicate_projection_or_legality_formulas": true,
-    "warm_decision_regeneration_is_separate_from_source_refresh": true
+    "warm_decision_regeneration_is_separate_from_source_refresh": true,
+    "tactical_context_has_single_bounded_materialization_owner": true,
+    "missing_tactical_evidence_must_remain_partial_or_unavailable": true
   },
   "responsibilities": [
     {"id":"OFFICIAL_FPL_ACQUISITION","owner_service":"official_snapshot","implementation":"src.engines.official_snapshot_service"},
@@ -31,6 +33,7 @@
     {"id":"MARKET_TRUTH","owner_service":"market_state","implementation":"src.engines.market_state_service"},
     {"id":"LIVE_STATE","owner_service":"live_state","implementation":"src.engines.live_state_service"},
     {"id":"PLAYER_FEATURE_CONTRACT","owner_service":"advanced_stats","implementation":"src.engines.player_features"},
+    {"id":"TACTICAL_CONTEXT_MATERIALIZATION","owner_service":"tactical_context","implementation":"src.engines.tactical_context_service"},
     {"id":"BASE_SNAPSHOT_FAN_IN","owner_service":"base_snapshot","implementation":"src.engines.base_snapshot_service"},
     {"id":"HISTORICAL_PRIOR","owner_service":"historical_prior","implementation":"src.engines.historical_prior_runtime"},
     {"id":"SOURCE_AND_ENRICHMENT_HEALTH","owner_service":"source_layer","implementation":"src.engines.source_layer"},
@@ -50,10 +53,11 @@
     {"id":"INTERACTIVE_VALIDATED_GATEWAY","owner_service":"instant_gateway","implementation":"src.runtime_v3.instant_serving"}
   ],
   "shared_primitives": [
-    {"id":"OFFICIAL_CORE_SNAPSHOT_CONSUMPTION","owner":"official_snapshot","implementation":"src.engines.official_snapshot_primitives","consumers":["team_state","market_state","live_state","historical_prior","source_layer","prediction","official_detail","prediction_evaluation"]},
+    {"id":"OFFICIAL_CORE_SNAPSHOT_CONSUMPTION","owner":"official_snapshot","implementation":"src.engines.official_snapshot_primitives","consumers":["team_state","market_state","live_state","historical_prior","source_layer","prediction","official_detail","prediction_evaluation","tactical_context"]},
     {"id":"FPL_RULES_CONSTANTS","owner":"rules","implementation":"src.rules","consumers":["Gate0","prediction","package_optimizer","lineup_governance","reporting","decision_hotpath"]},
     {"id":"XMINS_DISTRIBUTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-05","DSS-06","DSS-07","DSS-08","DSS-09","DSS-X10","DSS-X11"]},
-    {"id":"ADVANCED_ATTACKING_EVIDENCE","owner":"advanced_stats","implementation":"src.engines.player_features","consumers":["DSS-12","DSS-13","DSS-14","DSS-15","DSS-16","DSS-38"]},
+    {"id":"ADVANCED_ATTACKING_EVIDENCE","owner":"advanced_stats","implementation":"src.engines.player_features","consumers":["DSS-12","DSS-13","DSS-14","DSS-15","DSS-16","DSS-38","tactical_context"]},
+    {"id":"TACTICAL_MATCHUP_CONTEXT","owner":"tactical_context","implementation":"src.engines.tactical_context_service","consumers":["prediction","reporting","watchlist"]},
     {"id":"TEAM_STRENGTH_AND_FIXTURE_PROBABILITY","owner":"prediction","implementation":"src.models.team_strength","consumers":["DSS-19","DSS-20","DSS-21","DSS-22","DSS-23","DSS-24","DSS-29"]},
     {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","implementation":"src.models.historical_projection","consumers":["DSS-25","DSS-26","DSS-27","DSS-28","ENH-04","decision_hotpath"]},
     {"id":"PACKAGE_SCORING_AND_LEGALITY_PRECHECK","owner":"prediction","implementation":"src.models.package_optimizer_v2","consumers":["DSS-40","DSS-45","DSS-46","DSS-X05","DSS-X06","DSS-X07","DSS-X08","ENH-06","lineup_governance","decision_hotpath"]},
@@ -92,6 +96,7 @@
     "official_endpoint_ownership": "Network purpose ownership is canonical in config/sources/official_endpoint_ownership.json. Core bootstrap/fixtures/entry/current-live data must be consumed from official_snapshot downstream.",
     "prediction_evaluation_official_fetch": "Only historical finished-GW event-live settlement not represented by the current core snapshot is network-owned by prediction_evaluation.",
     "package_optimization_owner": "Canonical optimizer remains prediction-owned. decision_hotpath consumes its artifact and canonical lineup/package governance builders; it does not own or duplicate football formulas.",
+    "tactical_context_owner": "tactical_context materializes observed internal role/shape evidence once. Prediction consumes it; prediction may not recreate tactical source artifacts.",
     "interactive_lane": "decision_hotpath and instant_gateway are separate bounded interactive microservices outside the background refresh DAG."
   }
 }

@@ -1,24 +1,24 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "registry": "DSS_EXTENSIONS",
   "expected_count": 16,
-  "description": "Post-core intelligence. Extensions may evolve without renumbering the canonical DSS-50.",
+  "description": "Post-core intelligence. Extensions may evolve without renumbering the canonical DSS-50. required_files identify canonical active owners, not legacy compatibility implementations.",
   "modules": [
     {"id":"DSS-X01","name":"Point-in-Time / Leakage Protection","critical":true,"required_files":["src/engines/leakage_guard.py"],"operational_probe":"leakage_guard"},
-    {"id":"DSS-X02","name":"Prediction Uncertainty & Interval Width","critical":true,"required_files":["src/models/projection.py"],"operational_probe":"projection_uncertainty"},
-    {"id":"DSS-X03","name":"Rate-Spike / Small-Sample Detection","critical":true,"required_files":["src/models/projection.py"],"operational_probe":"small_sample_guard"},
+    {"id":"DSS-X02","name":"Prediction Uncertainty & Interval Width","critical":true,"required_files":["src/models/historical_projection.py"],"operational_probe":"projection_uncertainty"},
+    {"id":"DSS-X03","name":"Rate-Spike / Small-Sample Detection","critical":true,"required_files":["src/models/historical_projection.py"],"operational_probe":"small_sample_guard"},
     {"id":"DSS-X04","name":"Evidence Fusion Confidence","critical":true,"required_files":["src/engines/reliability.py"],"operational_probe":"reliability_overlay"},
-    {"id":"DSS-X05","name":"Outgoing Baseline Resistance","critical":true,"required_files":["src/models/optimizer.py"],"operational_probe":"governed_optimizer"},
-    {"id":"DSS-X06","name":"Incoming Team-Cluster Penalty","critical":false,"required_files":["src/models/optimizer.py"],"operational_probe":"team_cluster_penalty"},
-    {"id":"DSS-X07","name":"Early-Season Multi-Change Cap","critical":true,"required_files":["src/models/optimizer.py"],"operational_probe":"early_season_change_cap"},
-    {"id":"DSS-X08","name":"Package Churn / Change-Count Penalty","critical":false,"required_files":["src/models/optimizer.py"],"operational_probe":"package_churn_penalty"},
-    {"id":"DSS-X09","name":"Manual Draft Authority","critical":true,"required_files":["config/locked_squad.json"],"operational_probe":"manual_authority"},
-    {"id":"DSS-X10","name":"Lineup Robustness Margin","critical":true,"required_files":[],"operational_probe":"lineup_robustness"},
-    {"id":"DSS-X11","name":"Captain Safe-Pool / DNP Guard","critical":true,"required_files":["src/models/projection.py"],"operational_probe":"captain_dnp_guard"},
-    {"id":"DSS-X12","name":"Calibration, Reconciliation & Backtest Store","critical":true,"required_files":["src/models/calibration.py","src/models/model_registry.py"],"operational_probe":"calibration_store"},
+    {"id":"DSS-X05","name":"Outgoing Baseline Resistance","critical":true,"required_files":["src/models/package_optimizer_v2.py"],"operational_probe":"governed_optimizer"},
+    {"id":"DSS-X06","name":"Incoming Team-Cluster Penalty","critical":false,"required_files":["src/models/package_optimizer_v2.py"],"operational_probe":"team_cluster_penalty"},
+    {"id":"DSS-X07","name":"Early-Season Multi-Change Cap","critical":true,"required_files":["src/models/package_optimizer_v2.py"],"operational_probe":"early_season_change_cap"},
+    {"id":"DSS-X08","name":"Package Churn / Change-Count Penalty","critical":false,"required_files":["src/models/package_optimizer_v2.py"],"operational_probe":"package_churn_penalty"},
+    {"id":"DSS-X09","name":"Manual Draft Authority","critical":true,"required_files":["config/locked_squad.json","src/engines/personal_gameweek_context.py"],"operational_probe":"manual_authority"},
+    {"id":"DSS-X10","name":"Lineup Robustness Margin","critical":true,"required_files":["src/engines/lineup_governance.py"],"operational_probe":"lineup_robustness"},
+    {"id":"DSS-X11","name":"Captain Safe-Pool / DNP Guard","critical":true,"required_files":["src/engines/lineup_governance.py"],"operational_probe":"captain_dnp_guard"},
+    {"id":"DSS-X12","name":"Calibration, Reconciliation & Backtest Store","critical":true,"required_files":["src/engines/prediction_evaluation.py","src/models/calibration.py","src/models/model_registry.py"],"operational_probe":"calibration_store"},
     {"id":"DSS-X13","name":"Data Freshness & Refresh Policy","critical":true,"required_files":["src/engines/refresh_policy.py","data/health.json"],"operational_probe":"data_freshness"},
     {"id":"DSS-X14","name":"Source / Enrichment Health","critical":false,"required_files":["config/sources/registry.json","data/latest.json"],"operational_probe":"source_health"},
     {"id":"DSS-X15","name":"Price Intelligence Reconciliation","critical":false,"required_files":["src/engines/price_radar.py","data/prices.json","data/price_cache.json"],"operational_probe":"price_intelligence"},
-    {"id":"DSS-X16","name":"Runtime / Performance Observability","critical":false,"required_files":["data/health.json"],"operational_probe":"runtime_observability"}
+    {"id":"DSS-X16","name":"Runtime / Performance Observability","critical":false,"required_files":["data/health.json","data/runtime_performance.json"],"operational_probe":"runtime_observability"}
   ]
 }

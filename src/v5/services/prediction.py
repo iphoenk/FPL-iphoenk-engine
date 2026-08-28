@@ -6,6 +6,7 @@ from src.v5.config_cache import load_json_config
 from src.v5.intelligence.advanced_prediction import enrich_prediction
 from src.v5.intelligence.full_core_enrichment import build_full_core_enrichment
 from src.v5.intelligence.historical_prior import resolve_prior
+from src.v5.intelligence.native_feature_trace import build_native_feature_trace
 from src.v5.intelligence.prediction_quality import evaluate_prediction_quality
 from src.v5.intelligence.projection import build_predictions
 
@@ -39,6 +40,7 @@ BASE_CAPABILITIES = [
     "regression_risk",
     "probabilistic_return_overlay",
     "truthful_feature_bundle",
+    "native_authoritative_feature_trace",
 ]
 
 
@@ -207,6 +209,15 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         historical_prior=prior,
         full_enrichment=enrichment,
     )
+    native_feature_trace = build_native_feature_trace(base, enrichment)
+    player_feature_trace = native_feature_trace.get("players") if isinstance(native_feature_trace.get("players"), dict) else {}
+    for player in base.get("players") or []:
+        if isinstance(player, dict) and player.get("element") is not None:
+            player["feature_use"] = player_feature_trace.get(str(int(player["element"])))
+    base["native_feature_use"] = {
+        key: value for key, value in native_feature_trace.items() if key != "players"
+    }
+
     quality = evaluate_prediction_quality(base, prior, owned_ids=payload.get("owned_ids") or ())
     degraded_context = _quality_degraded_context(quality)
     result = enrich_prediction(
@@ -247,6 +258,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 "fixtures": player.get("fixtures"),
                 "projection_confidence": player.get("projection_confidence"),
                 "defensive_contribution": player.get("defensive_contribution"),
+                "feature_use": player.get("feature_use"),
                 "advanced": player.get("advanced"),
             }
         )
@@ -265,6 +277,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "team_strength": result.get("team_strength"),
         "role_intelligence": result.get("role_intelligence"),
         "players": compact,
+        "native_feature_use": result.get("native_feature_use"),
         "advanced_prediction": result.get("advanced_prediction"),
         "full_core_enrichment": _compact_enrichment(enrichment),
         "network_contract": result.get("network_contract"),

@@ -1,9 +1,16 @@
 {
-  "schema_version": 2,
-  "model_id": "v5_full_core_evidence_enrichment_v2",
+  "schema_version": 3,
+  "model_id": "v5_full_core_evidence_enrichment_v3",
   "advanced_stats": {
     "shots_path": "data/stats/shots_gw1.json",
     "player_match_stats_path": "data/stats/playermatchstats_gw1.json",
+    "artifact_resolution": {
+      "shots_path_template": "data/stats/shots_gw{gw}.json",
+      "player_match_stats_path_template": "data/stats/playermatchstats_gw{gw}.json",
+      "selection": "EXPECTED_COMPLETED_GW_THEN_LATEST_COMMON_NOT_FUTURE",
+      "require_common_gameweek_pair": true,
+      "static_paths_are_no_planning_gw_fallback_only": true
+    },
     "required_shot_fields": ["player_id", "xg", "start_x", "start_y"],
     "required_match_fields": ["player_id", "minutes_played", "total_shots", "touches_opposition_box", "chances_created", "xg", "xa"],
     "source": "FPL-Core-Insights",

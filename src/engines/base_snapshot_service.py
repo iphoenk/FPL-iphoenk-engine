@@ -71,7 +71,7 @@ def run(mode: str = "daily") -> dict:
     official = read_json(DATA / "official_snapshot.json", {})
     team = read_json(DATA / "team.json", {})
     live = read_json(DATA / "live.json", {})
-    prices = read_json(DATA / "prices.json", {})
+    market_prices = read_json(DATA / "market_prices.json", {})
     universe = read_json(DATA / "universe.json", {})
     chips = read_json(DATA / "chips.json", {})
     advanced = read_json(DATA / "advanced_stats_sync.json", {})
@@ -81,7 +81,7 @@ def run(mode: str = "daily") -> dict:
         "official_snapshot": official,
         "team": team,
         "live": live,
-        "prices": prices,
+        "market_prices": market_prices,
         "universe": universe,
         "chips": chips,
         "health": health,
@@ -147,13 +147,13 @@ def run(mode: str = "daily") -> dict:
             "net_points": live.get("net_points"),
         },
         "price_summary": {
-            "confirmed_changes": prices.get("confirmed_changes") or [],
-            "top_buy_pressure": list(prices.get("top_buy_pressure") or [])[:PRICE_SUMMARY_LIST_SIZE],
+            "confirmed_changes": market_prices.get("confirmed_changes") or [],
+            "top_buy_pressure": list(market_prices.get("top_buy_pressure") or [])[:PRICE_SUMMARY_LIST_SIZE],
+            "stage": "RAW_MARKET_FACTS",
         },
         "files": {
             "team": "data/team.json",
             "live": "data/live.json",
-            "prices": "data/prices.json",
             "health": "data/health.json",
             "universe": "data/universe.json",
             "chips": "data/chips.json",
@@ -166,6 +166,7 @@ def run(mode: str = "daily") -> dict:
             "advanced_stats_are_community_enrichment": True,
             "leakage_guard_required_for_predictive_training": True,
             "base_snapshot_is_fan_in_only": True,
+            "market_price_input_contract": market_prices.get("contract"),
             "reused_latest_state_profile": os.getenv("FPL_EXECUTION_PROFILE", "").strip() or None,
             "reused_latest_state_carried_forward": carry_audit,
         },

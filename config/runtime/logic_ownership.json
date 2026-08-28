@@ -1,9 +1,10 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "registry": "V3_LOGIC_OWNERSHIP_V1",
   "policy": {
     "service_command_module_has_single_runtime_owner": true,
     "standard_official_network_fetch_has_explicit_owner": true,
+    "official_fetch_authority_is_logical_service_owned_not_file_owned": true,
     "decision_and_evaluation_layers_consume_artifacts_not_standard_official_network": true,
     "bundle_modules_are_orchestration_only": true,
     "bundle_modules_must_not_duplicate_business_formulas": true,
@@ -12,11 +13,11 @@
     "file_size_alone_does_not_define_monolith": true,
     "policy_thresholds_belong_in_config_or_rules": true
   },
-  "approved_direct_official_fetch_modules": [
-    "src.engines.official_snapshot_service",
-    "src.engines.official_expansion"
+  "approved_direct_official_fetch_services": [
+    "official_snapshot",
+    "official_detail"
   ],
-  "forbidden_direct_official_fetch_service_stages": [
+  "forbidden_direct_official_fetch_service_stages_for_unapproved_services": [
     "parallel",
     "governed-decision",
     "final",
@@ -36,8 +37,9 @@
   ],
   "max_declared_commands_per_logical_service": 8,
   "notes": {
-    "official_detail": "official_expansion is the explicit expensive/broad Official detail owner; it is separate from the standard snapshot owner by failure and latency semantics",
-    "authenticated_official": "private authorized reads use the dedicated official_auth transport and are not standard public Official fetch duplication",
+    "official_snapshot": "single standard/fresh public Official snapshot owner",
+    "official_detail": "single expensive/broad public Official detail owner; its expansion and historical-reconciliation modules may fetch distinct detail endpoints inside the same logical service",
+    "authenticated_official": "private authorized reads use dedicated official_auth transport and are not standard public Official fetch duplication",
     "bundles": "FAST bundles may call existing service-stage functions in process but may not define a second football formula or source authority"
   }
 }

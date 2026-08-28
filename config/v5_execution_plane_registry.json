@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "contract": "V5_EXECUTION_PLANE_V1",
   "purpose": "Separate heavy evidence refresh from the user-facing subsecond decision path without reducing analytical breadth or duplicating business authority.",
   "planes": {
@@ -75,6 +75,14 @@
   "refresh_scheduling": {
     "contract": "V5_REFRESH_SCHEDULER_V1",
     "owner": "orchestrator",
+    "deployment": {
+      "enabled_env": "V5_REFRESH_WORKER_ENABLED",
+      "mode_env": "V5_REFRESH_WORKER_MODE",
+      "enabled_default": false,
+      "startup_behavior": "IMMEDIATE_REFRESH",
+      "shutdown_behavior": "STOP_AFTER_CURRENT_ITERATION",
+      "failure_behavior": "KEEP_LAST_HEALTHY_MATERIALIZATION"
+    },
     "modes": {
       "daily": {
         "strategy": "PERIODIC",

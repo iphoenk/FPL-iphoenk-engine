@@ -28,7 +28,7 @@ def test_full_core_enrichment_uses_real_advanced_stats_and_fail_neutral_missing_
     ]
     result = build_full_core_enrichment(bootstrap, fixtures)
     assert result["status"] == "ACTIVE"
-    assert result["schema_version"] == 4
+    assert result["schema_version"] == 5
     assert set(result["capabilities"]) == {
         "advanced_stats_sync", "advanced_stats_point_in_time_freshness",
         "player_defensive_contribution_evidence", "european_congestion",
@@ -47,6 +47,8 @@ def test_full_core_enrichment_uses_real_advanced_stats_and_fail_neutral_missing_
     assert advanced["governance"]["fpl_core_insights_primary"] is True
     assert advanced["governance"]["understat_challenger_only"] is True
     assert advanced["governance"]["shot_in_box_is_not_box_touch"] is True
+    assert advanced["artifact_resolution"]["status"] == "STATIC_NO_PLANNING_GW"
+    assert advanced["artifact_resolution"]["selected_gw"] is None
     assert advanced["authoritative_eligible"] is False
     assert advanced["freshness"]["status"] == "UNKNOWN_NO_PLANNING_GW"
     schedule = result["schedule"]

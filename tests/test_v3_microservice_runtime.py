@@ -49,7 +49,7 @@ def test_v3_runtime_registry_is_dependency_aware_and_artifact_owned():
     assert "fixture_weather.json" in services["source_layer"]["artifacts"]
     assert services["price"]["depends_on"] == ["base_snapshot", "source_layer"]
     assert set(services["official_detail"]["depends_on"]) == {"price", "official_snapshot"}
-    assert services["prediction_evaluation"]["depends_on"] == ["prediction"]
+    assert set(services["prediction_evaluation"]["depends_on"]) == {"prediction", "official_snapshot"}
     assert services["lineup_governance"]["depends_on"] == ["prediction"]
     assert set(services["challenger"]["depends_on"]) == {"prediction_evaluation", "source_layer"}
     assert set(services["governance"]["depends_on"]) == {"source_layer", "price", "prediction", "authenticated_official", "rules", "official_detail", "prediction_evaluation", "lineup_governance", "challenger"}

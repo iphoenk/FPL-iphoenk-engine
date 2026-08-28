@@ -5,7 +5,7 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "4a5df23d403f77e9dcb7b87e0e2a4c41765d4792",
+    "production_main_sha": "64475fa6b04a697e9b1265fa3b9e3d903d5087a6",
     "production_schema_version": 48,
     "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
   },

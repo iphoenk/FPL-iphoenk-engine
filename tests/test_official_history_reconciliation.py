@@ -16,6 +16,12 @@ def test_gw1_public_official_history_is_proxy_only(monkeypatch, tmp_path):
     _write(data / "team.json", {"team_id": 3462711})
     _write(data / "latest.json", {"official_detail_summary": {}})
     _write(data / "official_detail.json", {"generated_at": "before"})
+    _write(data / "official_snapshot.json", {
+        "bootstrap": {"elements": []},
+        "history": {"current": [{"event": 1, "points": 71, "total_points": 71, "overall_rank": 462166}]},
+        "phase": {"submitted_gw": 0},
+        "endpoint_health": {"history": {"status": "LIVE"}},
+    })
     _write(cfg, {
         "retrospective_proxy_baseline": {
             "enabled": True,
@@ -28,8 +34,6 @@ def test_gw1_public_official_history_is_proxy_only(monkeypatch, tmp_path):
     })
 
     def fake_get_json(path, retries=1):
-        if path == "entry/3462711/history/":
-            return {"current": [{"event": 1, "points": 71, "total_points": 71, "overall_rank": 462166}]}, {"status": "LIVE"}
         if path == "entry/3462711/event/1/picks/":
             return {
                 "active_chip": "bboost",
@@ -70,6 +74,11 @@ def test_history_reconciliation_requires_authoritative_team_id(monkeypatch, tmp_
     _write(data / "team.json", {})
     _write(data / "latest.json", {})
     _write(data / "official_detail.json", {})
+    _write(data / "official_snapshot.json", {
+        "bootstrap": {"elements": []},
+        "history": {"current": []},
+        "endpoint_health": {"history": {"status": "LIVE"}},
+    })
     _write(cfg, {"retrospective_proxy_baseline": {"gameweeks": [1]}})
     monkeypatch.setattr(mod, "DATA", data)
     monkeypatch.setattr(mod, "CONFIG_PATH", cfg)

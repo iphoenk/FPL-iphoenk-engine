@@ -105,9 +105,10 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
     assert all(row.get("boundary_state") == "INDEPENDENT" for row in services)
     assert all(all(contract.get("valid") for contract in row.get("contracts") or []) for row in services)
     levels = orchestration.get("execution_levels") or []
-    assert any(set(level) == {"validation_lifecycle", "rules_compliance"} for level in levels)
+    assert any(set(level) == {"validation_lifecycle", "rules_compliance", "optimization"} for level in levels)
+    assert any(set(level) == {"framework_preflight", "user_decision_overlay"} for level in levels)
     assert any(set(level) == {"personal_gw_scorecard", "framework_postflight"} for level in levels)
-    assert (orchestration.get("summary") or {}).get("parallel_levels", 0) >= 2
+    assert (orchestration.get("summary") or {}).get("parallel_levels", 0) >= 3
     assert orchestration.get("snapshot_identity", {}).get("sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
     assert latest.get("lineage", {}).get("snapshot_sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
     assert latest.get("lineage", {}).get("enrichment_sha256") == file_digest(DATA / "runtime/enrichment.v1.json")
@@ -140,6 +141,8 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
         "official_fpl_first_when_field_available",
         "dag_parallel_ready_services",
         "parallel_services_must_have_no_dependency_edge",
+        "optimizer_may_parallelize_with_validation_before_preflight",
+        "postflight_requires_preflight_and_effective_plan",
         "human_report_language_governed",
         "technical_reason_codes_separate_from_human_report",
         "scheduled_checkpoint_recovery_enabled",
@@ -218,6 +221,12 @@ def _assert_engine_advisory(latest: dict) -> tuple[dict, dict, dict, dict]:
     assert pg.get("stale_lock_players_not_direct_optimizer_input") is True
     assert pg.get("engine_lineup_is_advisory_only") is True
     assert pg.get("manual_override_applied_in_separate_microservice") is True
+    assert pg.get("parallel_lineup_with_wc_package") is True
+    assert pg.get("exact_streaming_top_packages") is True
+    package_perf = packages.get("performance") or {}
+    assert package_perf.get("exact_streaming_top_packages") is True
+    assert package_perf.get("stable_top_package_tie_semantics") is True
+    assert package_perf.get("search_quality_reduction") is False
     planning_squad = pipeline.get("planning_squad") or {}
     baseline = latest.get("projection_baseline") or {}
     assert planning_squad.get("planning_gw") == baseline.get("planning_gw")
@@ -341,6 +350,7 @@ def run() -> dict:
     sanity = _load("recommendation_sanity_v4.json")
     assert sanity.get("final_verdict") in {"KEEP_15", "OPTIONAL_IMPROVEMENT", "MATERIAL_UPGRADE"}
     plan_truth = health.get("gate0", {}).get("plan_authority_validation") or {}
+    service_durations = {row.get("id"): row.get("duration_ms") for row in services}
     out = {
         "health": health["overall"],
         "gate0": health["gate0"]["counts"],
@@ -361,9 +371,12 @@ def run() -> dict:
         "human_reasons": (checkpoint.get("human_report") or {}).get("why"),
         "execution_authorized": (checkpoint.get("decision") or {}).get("execution_authorized"),
         "services": len(services),
+        "service_durations_ms": service_durations,
+        "execution_levels": orchestration.get("execution_levels"),
         "eligible_calibration_samples": lifecycle.get("eligibility", {}).get("eligible_samples"),
         "orchestration_ms": orchestration.get("duration_ms"),
         "orchestration_target": orchestration.get("runtime_target"),
+        "pipeline_timings": pipeline.get("timings"),
         "pipeline_ms": (pipeline.get("timings") or {}).get("total_pipeline_ms"),
         "decision_slo": pipeline.get("performance_slo"),
     }

@@ -2,6 +2,7 @@ from __future__ import annotations
 from functools import lru_cache
 from src.utils import CONFIG, read_json
 
+
 @lru_cache(maxsize=1)
 def load_rules_registry() -> dict:
     rules = read_json(CONFIG / "fpl_rules_2026_27.json", {})
@@ -12,22 +13,28 @@ def load_rules_registry() -> dict:
             raise RuntimeError(f"FPL rules registry missing {key}")
     return rules
 
+
 _RULES = load_rules_registry()
+_SQUAD = _RULES["squad"]
 RULESET_ID = str(_RULES["ruleset"])
 SCORING = _RULES["scoring"]
 DEFCON = _RULES["defcon"]
 CHIPS = _RULES["chips"]
-POSITION_COUNTS = _RULES["squad"]["positions"]
-BUDGET_TENTHS = int(_RULES["squad"]["budget_tenths"])
-MAX_PER_CLUB = int(_RULES["squad"]["max_per_club"])
-LEGAL_FORMATIONS = frozenset(_RULES["squad"]["legal_formations"])
-LEGAL_FORMATION_TUPLES = tuple(tuple(int(x) for x in form.split("-")) for form in _RULES["squad"]["legal_formations"])
+SQUAD_SIZE = int(_SQUAD["size"])
+POSITION_COUNTS = {str(key): int(value) for key, value in _SQUAD["positions"].items()}
+POSITION_BY_TYPE = {int(key): str(value) for key, value in _SQUAD["element_type_to_position"].items()}
+BUDGET_TENTHS = int(_SQUAD["budget_tenths"])
+MAX_PER_CLUB = int(_SQUAD["max_per_club"])
+LEGAL_FORMATIONS = frozenset(str(value) for value in _SQUAD["legal_formations"])
+LEGAL_FORMATION_TUPLES = tuple(tuple(int(x) for x in form.split("-")) for form in _SQUAD["legal_formations"])
 FIRST_HALF_LAST_GW = int(_RULES["chip_policy"]["first_half_last_gw"])
 SECOND_HALF_FIRST_GW = int(_RULES["chip_policy"]["second_half_first_gw"])
 MAX_CHIPS_PER_GW = int(_RULES["chip_policy"]["max_chips_per_gw"])
 
+
 def chip_half(gw: int) -> int:
     return 1 if int(gw) <= FIRST_HALF_LAST_GW else 2
+
 
 def chip_allowed(chip: str, gw: int, used: list[dict] | None = None) -> tuple[bool, str]:
     used = used or []
@@ -49,8 +56,10 @@ def chip_allowed(chip: str, gw: int, used: list[dict] | None = None) -> tuple[bo
             return False, "free_hit_not_consecutive"
     return True, "ok"
 
+
 def defcon_rule(position: str) -> dict:
     return DEFCON[position]
+
 
 def positional_defcon_actions(position: str, clearances=0, blocks=0, interceptions=0, tackles=0, recoveries=0) -> float:
     base = float(clearances) + float(blocks) + float(interceptions) + float(tackles)

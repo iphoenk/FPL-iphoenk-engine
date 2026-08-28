@@ -1,0 +1,35 @@
+name: V4.9.6 reconciliation readiness one-shot migration
+
+on:
+  push:
+    branches:
+      - codex/v4.9.6.1-gw2-reconciliation-readiness
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v4.9.6.1-gw2-reconciliation-readiness
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply registry and quality-gate migration
+        run: python tools/v4961_reconciliation_readiness_migrate.py
+      - name: Commit generated consolidation changes
+        shell: bash
+        run: |
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add config/ README.md src/engines/v4_quality_gate.py
+          if git diff --cached --quiet; then
+            echo "No migration changes"
+            exit 0
+          fi
+          git commit -m "feat(v4): register GW2 reconciliation readiness audit"
+          git push origin HEAD:codex/v4.9.6.1-gw2-reconciliation-readiness

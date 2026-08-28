@@ -262,3 +262,14 @@ See `docs/v4-microservices.md` for service ownership, failure semantics, and pre
 - DSS-29 Fixture Swing is ACTIVE through a prediction-owned `fixture_run` summary derived from the already canonical Official-FPL fixture-adjustment path; health/reporting do not rescore fixtures.
 - Ownership registry explicitly assigns rate-shrinkage sustainability and fixture-run summarization to the prediction model so future services must reuse rather than reimplement them.
 - DSS-08 System/Formation Fit and DSS-36 Multi-Season Prior remain PARTIAL until genuinely stronger evidence exists; they are not promoted by proxy.
+
+
+## V4 generic OWNED vs challenger comparator
+
+- Adds a process-isolated, `ADVISORY_ONLY` comparator for any OWNED player versus governed candidates and performance-triggered emerging challengers.
+- A recent haul is discovery evidence only; it can create `EMERGING_CHALLENGER` but never directly creates a BUY/TRANSFER instruction.
+- The comparator reuses canonical V4 prediction, xMins, fixture-run, price/sell-value, squad-legality, rate-shrinkage and user-plan artifacts; it does not create second xPts/xMins/fixture/price/role engines.
+- Official fixture identity is read from the immutable raw snapshot without API refetch. Missing opponent tactical structure, all-competition congestion, international context or external consensus is explicitly `UNVERIFIED` rather than fabricated.
+- Runtime output is `data/challenger_comparator_v4.json`. It exposes 1/2/3/5-GW comparisons, fixture-by-fixture projections, affordability, uncertainty, sustainability, decision risks and reversal triggers.
+- V4 does not currently materialize an authoritative watchlist by default. If `data/watchlist_v4.json` is absent, engine-governed DSS candidates are clearly labelled `GOVERNED_DSS_CANDIDATE` rather than falsely called watchlist candidates.
+- Allowed advisory classifications are `HOLD_OWNED`, `WATCH_CHALLENGER`, `PROMOTE_TO_WATCHLIST`, `REVIEW`, `LEAN_TRANSFER`, and `STRONG_TRANSFER`; comparator output never overwrites the canonical optimizer, effective user plan, XI, C/VC, chip or watchlist.

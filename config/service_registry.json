@@ -254,6 +254,25 @@
       "critical": true
     },
     {
+      "id": "challenger_comparator",
+      "name": "Generic OWNED vs Challenger Comparator Service",
+      "boundary_state": "INDEPENDENT",
+      "module": "src.services.challenger_comparator_service",
+      "command": [
+        "{python}",
+        "-m",
+        "src.services.challenger_comparator_service"
+      ],
+      "timeout_seconds": 25,
+      "depends_on": [
+        "user_decision_overlay"
+      ],
+      "produces": [
+        "challenger_comparator"
+      ],
+      "critical": true
+    },
+    {
       "id": "report_governance",
       "name": "Checkpoint Report Governance Service",
       "boundary_state": "INDEPENDENT",
@@ -266,7 +285,8 @@
       "timeout_seconds": 20,
       "depends_on": [
         "framework_postflight",
-        "personal_gw_scorecard"
+        "personal_gw_scorecard",
+        "challenger_comparator"
       ],
       "produces": [
         "checkpoint_decision"
@@ -340,10 +360,19 @@
     "exact_nontrivial_function_clones_rejected": true,
     "reusable_production_workflow_single_owner": true,
     "release_manifest_single_source": true,
-    "service_count": 13,
+    "service_count": 14,
     "reconciliation_readiness_process_isolated": true,
     "reconciliation_readiness_read_only": true,
     "reconciliation_readiness_no_official_refetch": true,
-    "reconciliation_readiness_reuses_validation_integrity": true
+    "reconciliation_readiness_reuses_validation_integrity": true,
+    "challenger_comparator_process_isolated": true,
+    "challenger_comparator_advisory_only": true,
+    "challenger_comparator_no_official_refetch": true,
+    "challenger_comparator_reuses_canonical_predictions": true,
+    "challenger_comparator_reuses_canonical_legality_and_price": true,
+    "challenger_comparator_recent_haul_trigger_not_transfer": true,
+    "challenger_comparator_never_overwrites_effective_plan": true,
+    "challenger_comparator_never_mutates_watchlist": true,
+    "challenger_comparator_missing_evidence_fail_safe": true
   }
 }

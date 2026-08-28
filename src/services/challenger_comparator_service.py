@@ -216,6 +216,8 @@ def _screen_candidate(candidate: dict, umap: dict[int, dict], pmap: dict[int, di
         "checks": checks,
         "start_probability_3gw": round(start, 4) if start is not None else None,
         "dnp_probability_3gw": round(dnp, 4) if dnp is not None else None,
+        "start_probability_trend_5gw": start_trend,
+        "expected_minutes_trend_5gw": minute_trend,
         "fixture_rows_5gw": fixtures,
     }
 
@@ -230,6 +232,10 @@ def _role_sustainability(universe: dict, pred: dict) -> dict:
     spike_ratio = raw_attacking / max(0.04, shrunk_attacking)
     start = _average_fixture_metric(pred, "start_probability", 3)
     dnp = _average_fixture_metric(pred, "dnp_probability", 3)
+    start_series = [f((row.get("xmins") or {}).get("start_probability")) for row in fixtures[:5]]
+    minute_series = [f((row.get("xmins") or {}).get("expected_minutes")) for row in fixtures[:5]]
+    start_trend = round(start_series[-1] - start_series[0], 4) if len(start_series) >= 2 else None
+    minute_trend = round(minute_series[-1] - minute_series[0], 1) if len(minute_series) >= 2 else None
     return {
         "tactical_role": priors.get("tactical_role") or (first.get("calibration") or {}).get("tactical_role"),
         "tactical_role_source": priors.get("tactical_role_source") or (first.get("calibration") or {}).get("tactical_role_source"),
@@ -255,7 +261,8 @@ def _performance_signal(candidate: dict, screening: dict, sustainability: dict, 
         return "NOISE"
     if not screening.get("pass"):
         return "INTERESTING"
-    if f(sustainability.get("raw_to_shrunk_ratio"), 99) > 2.5:
+    maximum_ratio = f((policy.get("screening") or {}).get("maximum_raw_to_shrunk_ratio_for_sustainable"), 2.5)
+    if f(sustainability.get("raw_to_shrunk_ratio"), 99) > maximum_ratio:
         return "STRONG"
     return "SUSTAINABLE_CANDIDATE"
 
@@ -356,7 +363,8 @@ def _rank_owned_targets(challenger: dict, owned: dict[int, dict], pmap: dict[int
             reasons.append("CHALLENGER_HIGHER_5GW_XPTS")
         if owned_element in bench_ids:
             reasons.append("OWNED_BENCH_ROLE")
-        if owned_start is not None and owned_start < 0.72:
+        minutes_risk = f((policy.get("screening") or {}).get("owned_minutes_risk_start_probability"), 0.72)
+        if owned_start is not None and owned_start < minutes_risk:
             reasons.append("OWNED_MINUTES_RISK")
         ranked.append({
             "owned_element": owned_element,
@@ -493,11 +501,12 @@ def _comparison_pair(challenger: dict, owned_element: int, maps: tuple[dict[int,
         len(challenger_fixtures) >= 3,
         combined_uncertainty is not None,
     ]) / 5.0
+    confidence_weights = policy.get("confidence_weights") or {}
     confidence = clamp(
-        0.58 * core_completeness
-        + 0.22 * (screening.get("start_probability_3gw") or 0)
-        + 0.10 * min(1.0, tactical_verified / 3.0)
-        + 0.10 * min(1.0, congestion_verified / 3.0)
+        f(confidence_weights.get("core_completeness"), 0.58) * core_completeness
+        + f(confidence_weights.get("start_security"), 0.22) * (screening.get("start_probability_3gw") or 0)
+        + f(confidence_weights.get("tactical_evidence"), 0.10) * min(1.0, tactical_verified / 3.0)
+        + f(confidence_weights.get("congestion_evidence"), 0.10) * min(1.0, congestion_verified / 3.0)
     )
     decision_cfg = policy.get("decision_policy") or {}
     decision = "HOLD_OWNED"
@@ -620,7 +629,13 @@ def _comparison_pair(challenger: dict, owned_element: int, maps: tuple[dict[int,
         "decision_risks": sorted(set(risks)),
         "reversal_triggers": reversal,
         "watchlist_governance_suggestion": (
-            "PROMOTE_TO_WATCHLIST" if decision == "PROMOTE_TO_WATCHLIST" else "NO_AUTOMATIC_WATCHLIST_MUTATION"
+            "PROMOTE_TO_WATCHLIST"
+            if decision == "PROMOTE_TO_WATCHLIST"
+            else "REVIEW_DEMOTION"
+            if challenger.get("challenger_type") == "GOVERNED_WATCHLIST" and (not screening.get("pass") or raw_gain5 <= 0)
+            else "KEEP_OR_REPRIORITIZE"
+            if challenger.get("challenger_type") == "GOVERNED_WATCHLIST"
+            else "NO_AUTOMATIC_WATCHLIST_MUTATION"
         ),
         "data_quality": {
             "core_projection": "VERIFIED_CANONICAL",
@@ -683,7 +698,7 @@ def run() -> dict[str, Any]:
     decision_counts = Counter(row.get("decision") for row in comparisons)
     output = {
         "schema_version": 497,
-        "engine": "v4.9.7-owned-challenger-comparator",
+        "engine": "v4.9.6-owned-challenger-comparator",
         "generated_at": iso_now(),
         "status": "PASS",
         "capability_state": "ADVISORY_ONLY",

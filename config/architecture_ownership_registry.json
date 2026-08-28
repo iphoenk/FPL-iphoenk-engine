@@ -68,6 +68,11 @@
       "id": "RECONCILIATION_READINESS",
       "owner": "reconciliation_readiness",
       "implementation": "src.services.reconciliation_readiness_service"
+    },
+    {
+      "id": "OWNED_CHALLENGER_COMPARISON",
+      "owner": "challenger_comparator",
+      "implementation": "src.services.challenger_comparator_service"
     }
   ],
   "shared_primitives": [
@@ -182,6 +187,23 @@
         "DSS-27",
         "DSS-28",
         "DSS-29"
+      ]
+    },
+    {
+      "id": "CHALLENGER_COMPARISON_ORCHESTRATION",
+      "owner": "challenger_comparator",
+      "implementation": "src.services.challenger_comparator_service",
+      "consumers": [
+        "report_governance",
+        "master_monitor"
+      ],
+      "reuses": [
+        "XMINS_DISTRIBUTION",
+        "MULTI_HORIZON_PROJECTION",
+        "PRICE_MARKET_EVIDENCE",
+        "RATE_SHRINKAGE_SUSTAINABILITY",
+        "FIXTURE_RUN_SUMMARY",
+        "PLAN_AND_SQUAD_LEGALITY"
       ]
     }
   ]

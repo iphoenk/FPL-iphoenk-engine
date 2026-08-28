@@ -2,7 +2,12 @@
   "schema_version": 1,
   "policy": "fpl_v4_owned_challenger_comparator_v1",
   "mode": "ADVISORY_ONLY",
-  "horizons": [1, 2, 3, 5],
+  "horizons": [
+    1,
+    2,
+    3,
+    5
+  ],
   "candidate_limits": {
     "governed": 20,
     "emerging": 20,
@@ -10,11 +15,16 @@
     "published_comparisons": 40
   },
   "screening": {
-    "status_allowed": ["a", "d"],
+    "status_allowed": [
+      "a",
+      "d"
+    ],
     "minimum_start_probability_3gw": 0.62,
     "maximum_dnp_probability_3gw": 0.28,
     "maximum_direct_swap_price_gap_tenths": 25,
-    "minimum_relevant_fixtures_5gw": 3
+    "minimum_relevant_fixtures_5gw": 3,
+    "owned_minutes_risk_start_probability": 0.72,
+    "maximum_raw_to_shrunk_ratio_for_sustainable": 2.5
   },
   "emerging_trigger": {
     "minimum_signals": 2,
@@ -28,10 +38,10 @@
   "decision_policy": {
     "calibration_state": "PROVISIONAL_UNCALIBRATED",
     "edge_to_uncertainty_review": 0.35,
-    "edge_to_uncertainty_lean": 0.80,
+    "edge_to_uncertainty_lean": 0.8,
     "edge_to_uncertainty_strong": 1.35,
     "minimum_core_confidence_for_lean": 0.68,
-    "minimum_core_confidence_for_strong": 0.80,
+    "minimum_core_confidence_for_strong": 0.8,
     "missing_tactical_or_congestion_caps_strong": true,
     "emerging_without_sustainable_signal_caps_at_watch": true
   },
@@ -60,5 +70,11 @@
     "never_mutate_lineup_captain_chip": true,
     "unverified_evidence_never_fabricated": true,
     "missing_critical_evidence_fails_safe": true
+  },
+  "confidence_weights": {
+    "core_completeness": 0.58,
+    "start_security": 0.22,
+    "tactical_evidence": 0.1,
+    "congestion_evidence": 0.1
   }
 }

@@ -46,6 +46,20 @@ def _ledger(gw: int = 1):
     }
 
 
+def _collecting_ledger(gw: int = 1):
+    return {
+        "schema_version": 2,
+        "records": {
+            str(gw): {
+                "gw": gw,
+                "deadline_time": "2026-08-20T10:00:00+00:00",
+                "latest_pre_deadline_forecast": _forecast(gw),
+                "status": "COLLECTING",
+            }
+        },
+    }
+
+
 def _event_live(points_a=7, points_b=2):
     return {
         "elements": [
@@ -91,6 +105,43 @@ def test_catch_up_settles_old_finished_gw_when_scoring_gw_has_advanced():
     assert result["accuracy"]["settled_gameweeks"] == [1]
     assert result["accuracy"]["settlement"]["completed_gameweeks"] == [1]
     assert result["accuracy"]["temporal_guard"]["status"] == "PASS"
+
+
+def test_rollover_collecting_record_freezes_and_settles_after_planning_gw_advances():
+    ledger = _collecting_ledger(1)
+    predeadline = deepcopy(ledger["records"]["1"]["latest_pre_deadline_forecast"])
+    result = evaluate(
+        prediction={"planning_gw": 2, "players": []},
+        context={"planning_gw": 2, "scoring_gw": 2, "deadline_time": "2099-08-27T10:00:00+00:00"},
+        bootstrap=_bootstrap(True),
+        event_live=None,
+        ledger=ledger,
+        event_live_by_gw={"1": _event_live(7, 2)},
+    )
+    record = result["ledger"]["records"]["1"]
+    assert record["status"] == "SETTLED"
+    assert record["frozen_forecast"] == predeadline
+    assert record["metrics"]["sample_size"] == 2
+    assert result["accuracy"]["overall"]["sample_size"] == 2
+    assert result["accuracy"]["freeze_lifecycle"]["attempted_gameweeks"] == [1]
+    assert result["accuracy"]["freeze_lifecycle"]["completed_gameweeks"] == [1]
+    assert result["accuracy"]["settlement"]["completed_gameweeks"] == [1]
+    assert result["accuracy"]["temporal_guard"]["status"] == "PASS"
+
+
+def test_expired_collecting_record_freezes_without_actual_and_waits_for_settlement():
+    result = evaluate(
+        prediction={"planning_gw": 2, "players": []},
+        context={"planning_gw": 2, "scoring_gw": 2, "deadline_time": "2099-08-27T10:00:00+00:00"},
+        bootstrap=_bootstrap(False),
+        event_live=None,
+        ledger=_collecting_ledger(1),
+    )
+    record = result["ledger"]["records"]["1"]
+    assert record["status"] == "FROZEN_AWAITING_SETTLEMENT"
+    assert record["frozen_forecast"] == _forecast(1)
+    assert result["accuracy"]["freeze_lifecycle"]["completed_gameweeks"] == [1]
+    assert result["accuracy"]["overall"]["sample_size"] == 0
 
 
 def test_single_current_event_live_remains_backward_compatible():

@@ -191,6 +191,19 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     )
     performance["state_hydration"] = {key: _metric(value) for key, value in states.items()}
 
+    prior_env = _call(
+        "historical_prior_resolve",
+        {
+            "bootstrap": bootstrap,
+            "rules": truth["rules"],
+            "historical_prior": states["historical_prior"]["data"] or {},
+            "allow_network_refresh": bool(feature_switches.get("historical_prior_network_refresh", False)),
+        },
+        correlation_id,
+    )
+    states["historical_prior"] = prior_env
+    performance["historical_prior_resolve"] = _metric(prior_env)
+
     replay_capture = build_replay_capture(
         correlation_id=correlation_id,
         team_id=team_id,
@@ -232,7 +245,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                     "horizon": prediction_horizon,
                     "owned_ids": owned_ids,
                     "historical_prior": states["historical_prior"]["data"] or {},
-                    "allow_historical_prior_refresh": bool(feature_switches.get("historical_prior_network_refresh", False)),
+                    "allow_historical_prior_refresh": False,
                     "source_fusion": source_fusion,
                 },
             ),
@@ -430,6 +443,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             ),
             "promotion_fingerprint_complete": bool(execution_fingerprint.get("promotion_fingerprint_complete")),
             "exact_execution_fingerprint_scoring_input": False,
+            "post_capture_network_refresh_forbidden": True,
         },
     }
 

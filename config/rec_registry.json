@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "registry": "V3_REC_REGISTRY_V1",
-  "expected_count": 43,
+  "expected_count": 44,
   "non_service_owners": ["architecture_governance","ci_governance","release_acceptance","runtime_governance"],
   "allowed_relations": ["EXTENDS_EXISTING_OWNER","GOVERNANCE_ONLY","SUPERSEDES","REPLACES"],
   "policy": {
@@ -57,6 +57,7 @@
     {"id":"REC-39","title":"Personal Gameweek Context and User Decision Authority","status":"DONE_PROD","owner":"report_materializer","relation":"EXTENDS_EXISTING_OWNER"},
     {"id":"REC-40","title":"Report Completeness and Natural Presentation","status":"DONE_PROD","owner":"reporting","relation":"EXTENDS_EXISTING_OWNER"},
     {"id":"REC-41","title":"Tactical Role and System Evidence Contract","status":"DONE_PROD","owner":"advanced_stats","relation":"EXTENDS_EXISTING_OWNER"},
-    {"id":"REC-42","title":"Architecture Consolidation No-Duplicate Guard and Sub-Second Decision Serving","status":"CANDIDATE","owner":"architecture_governance","relation":"GOVERNANCE_ONLY"}
+    {"id":"REC-42","title":"Architecture Consolidation No-Duplicate Guard and Sub-Second Decision Serving","status":"CANDIDATE","owner":"architecture_governance","relation":"GOVERNANCE_ONLY"},
+    {"id":"REC-43","title":"Generic Owned vs Challenger Comparator","status":"CANDIDATE","owner":"watchlist","relation":"EXTENDS_EXISTING_OWNER"}
   ]
 }

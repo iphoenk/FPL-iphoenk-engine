@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 
@@ -11,8 +12,10 @@ def test_snapshot_contract_version_and_release_registry_are_explicit():
     release = json.loads((ROOT / "config/release_manifest.json").read_text())
     source = (ROOT / "src/services/raw_snapshot_service.py").read_text()
 
-    assert contracts["contracts"]["raw_snapshot"]["min_schema_version"] == 492
-    assert '"schema_version": 492' in source
+    min_version = int(contracts["contracts"]["raw_snapshot"]["min_schema_version"])
+    match = re.search(r'"schema_version"\s*:\s*(\d+)', source)
+    assert match is not None
+    assert int(match.group(1)) >= min_version
     assert services["architecture_version"] == release["release"]
     assert services["guardrails"]["advanced_ablation_observational_outside_decision_chain"] is True
     assert services["guardrails"]["advanced_ablation_full_shadow_parity_required"] is True

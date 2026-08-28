@@ -51,7 +51,12 @@ def test_compact_serving_uses_current_user_authority_and_keeps_engine_as_challen
             "confidence": "MEDIUM",
             "captain": "Haaland",
             "vice": "De Cuyper",
+            "reason": "engine captain reason",
         },
+        "action_board": [
+            {"action": "LEAN", "subject": "Captain: Haaland", "trigger": "engine captain reason"},
+            {"action": "HOLD", "subject": "Squad", "trigger": "no material change"},
+        ],
     }
 
     _sync_current_authority(payload, compact_captaincy=True)
@@ -59,11 +64,16 @@ def test_compact_serving_uses_current_user_authority_and_keeps_engine_as_challen
     assert payload["captaincy"]["captain"] == "Bruno Fernandes"
     assert payload["captaincy"]["vice"] == "Haaland"
     assert payload["captaincy"]["authority"] == "USER_OVERRIDE"
+    assert payload["captaincy"]["reason"] == "pilihan tim saat ini; tinjau ulang hanya jika ada kabar tim atau bukti baru yang material"
     assert payload["captaincy"]["engine_challenger"]["captain"] == "Haaland"
     assert payload["captaincy"]["engine_challenger"]["vice"] == "De Cuyper"
+    assert payload["captaincy"]["engine_challenger"]["reason"] == "engine captain reason"
     assert payload["current_team"]["formation"] == "3-5-2"
     assert payload["current_team"]["bench_order"] == ["Robinson", "Calvert-Lewin", "Aina"]
     assert payload["current_team"]["gk_bench"] == "Verbruggen"
+    assert payload["action_board"][0]["subject"] == "Captain: Bruno Fernandes"
+    assert payload["action_board"][0]["trigger"] == "ubah hanya jika ada kabar tim atau bukti baru yang material"
+    assert payload["action_board"][1]["subject"] == "Squad"
 
 
 def test_gw2_manual_override_matches_latest_user_team_authority():

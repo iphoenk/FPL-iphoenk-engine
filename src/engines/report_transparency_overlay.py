@@ -156,6 +156,7 @@ def _sync_current_authority(payload: dict[str, Any], *, compact_captaincy: bool)
     vice = dict(planning.get("vice_captain") or {})
     bench_gk = next((row for row in bench if row.get("position") == "GK"), {})
     outfield_bench = [row for row in bench if row.get("position") != "GK"]
+    engine_recommendation = planning.get("engine_recommendation") or {}
 
     current_team = {
         "decision_authority": planning.get("decision_authority"),
@@ -172,20 +173,37 @@ def _sync_current_authority(payload: dict[str, Any], *, compact_captaincy: bool)
     }
     payload["current_team"] = current_team
 
+    # Action Board is part of the human-serving contract. When a user override is
+    # authoritative, it must not surface the engine captain as though it were the
+    # current selection. Keep the challenger in its dedicated comparison field.
+    if planning.get("decision_authority") == "USER_OVERRIDE" and captain.get("name"):
+        board = []
+        for raw in payload.get("action_board") or []:
+            item = dict(raw)
+            subject = str(item.get("subject") or "")
+            if subject.lower().startswith("captain:"):
+                item["subject"] = f"Captain: {captain.get('name')}"
+                item["trigger"] = "ubah hanya jika ada kabar tim atau bukti baru yang material"
+            board.append(item)
+        payload["action_board"] = board
+
     if not compact_captaincy:
         return
     section = dict(payload.get("captaincy") or {})
     engine_captain = section.get("captain")
     engine_vice = section.get("vice")
-    engine_recommendation = planning.get("engine_recommendation") or {}
+    engine_reason = section.get("reason")
     section["captain"] = captain.get("name") or engine_captain
     section["vice"] = vice.get("name") or engine_vice
     section["authority"] = planning.get("decision_authority")
+    if planning.get("decision_authority") == "USER_OVERRIDE":
+        section["reason"] = "pilihan tim saat ini; tinjau ulang hanya jika ada kabar tim atau bukti baru yang material"
     section["engine_challenger"] = {
         "captain": engine_captain or engine_recommendation.get("captain"),
         "vice": engine_vice or engine_recommendation.get("vice_captain"),
         "formation": engine_recommendation.get("formation"),
         "estimated_points": engine_recommendation.get("estimated_points"),
+        "reason": engine_reason,
     }
     payload["captaincy"] = section
 

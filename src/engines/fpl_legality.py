@@ -1,12 +1,26 @@
 from __future__ import annotations
+from collections import Counter
 from collections.abc import Iterable
-from src.engines.fpl_rules_2026 import LEGAL_FORMATIONS
+from src.engines.fpl_rules_2026 import LEGAL_FORMATIONS, MAX_PER_CLUB, POSITION_COUNTS, SQUAD_SIZE
+
 
 def formation_from_rows(rows: Iterable[dict]) -> str | None:
     rows = list(rows)
     counts = {p: sum(row.get("position") == p for row in rows) for p in ("DEF", "MID", "FWD")}
     formation = f"{counts['DEF']}-{counts['MID']}-{counts['FWD']}"
     return formation if formation in LEGAL_FORMATIONS else None
+
+
+def squad_shape_is_legal(players: Iterable[dict]) -> bool:
+    rows = list(players)
+    if len(rows) != SQUAD_SIZE:
+        return False
+    position_counts = Counter(str(row.get("position") or "") for row in rows)
+    if any(position_counts.get(position, 0) != expected for position, expected in POSITION_COUNTS.items()):
+        return False
+    clubs = Counter(row.get("team_id", row.get("team")) for row in rows)
+    return bool(clubs) and max(clubs.values(), default=0) <= MAX_PER_CLUB
+
 
 def plan_legality_checks(plan: dict, compliance: dict | None = None) -> dict[str, tuple[bool, str]]:
     xi = list(plan.get("starting_xi") or [])

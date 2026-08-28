@@ -1,12 +1,24 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from functools import lru_cache
 from typing import Any
 
 from src.utils import DATA, ROOT, read_json
 
 CONFIG_PATH = ROOT / "config" / "intelligence" / "tactical_matchup.json"
+ROUTE_LABELS = {
+    "box_pressure": "tekanan di kotak",
+    "shot_volume": "volume tembakan",
+    "chance_creation": "kreasi peluang",
+    "final_third_progression": "progresi final third",
+    "wide_delivery": "delivery dari area lebar",
+    "set_piece_activity": "aktivitas bola mati",
+    "transition_threat": "ancaman transisi",
+    "penalty_route": "rute penalti",
+}
+CONFIDENCE_RANK = {"NONE": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3}
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -109,7 +121,20 @@ def _rich_opponent_context(opponent: dict[str, Any]) -> bool:
     for key in ("coach", "pressing", "build_up", "defensive_line", "width", "transition", "set_piece_profile"):
         if opponent.get(key):
             return True
-    return bool(opponent.get("vulnerabilities") or opponent.get("strengths"))
+    return bool(opponent.get("vulnerabilities") or opponent.get("strengths") or opponent.get("observed_style_proxies"))
+
+
+def _evidence_confidence(opponent: dict[str, Any], role: dict[str, Any], recent: list[dict[str, Any]]) -> str:
+    values = [
+        str((opponent.get("evidence") or {}).get("confidence") or "NONE").upper(),
+        str(role.get("confidence") or "NONE").upper(),
+    ]
+    if recent:
+        values.append(str(recent[0].get("confidence") or "NONE").upper())
+    valid = [value for value in values if value in CONFIDENCE_RANK and value != "NONE"]
+    if not valid:
+        return "NONE"
+    return min(valid, key=lambda value: CONFIDENCE_RANK[value])
 
 
 def _material_highlights(opponent: dict[str, Any], recent: list[dict[str, Any]], role: dict[str, Any]) -> list[str]:
@@ -120,16 +145,19 @@ def _material_highlights(opponent: dict[str, Any], recent: list[dict[str, Any]],
         opp_vuln = [opp_vuln]
     if isinstance(return_routes, str):
         return_routes = [return_routes]
-    overlap = [str(v) for v in return_routes if any(str(v).lower() in str(x).lower() or str(x).lower() in str(v).lower() for x in opp_vuln)]
+    overlap = [str(v) for v in return_routes if str(v) in {str(x) for x in opp_vuln}]
     if overlap:
-        highlights.append(f"role matchup mendukung: {', '.join(overlap[:2])}")
+        labels = [ROUTE_LABELS.get(value, value) for value in overlap[:2]]
+        highlights.append("rute pemain bertemu area lawan yang baru tertekan: " + ", ".join(labels))
     if opponent.get("pressing") and role.get("progression_route"):
         highlights.append(f"lawan {opponent.get('pressing')}; route pemain {role.get('progression_route')}")
     if recent:
-        latest = sorted(recent, key=lambda x: int(x.get("gw") or 0), reverse=True)[0]
-        notes = latest.get("notes") or latest.get("chance_concession_zones") or latest.get("pressing_pattern")
-        if notes:
-            highlights.append(f"recent-GW lawan: {notes}")
+        latest = recent[0]
+        concession_zones = latest.get("chance_concession_zones") or []
+        if concession_zones:
+            highlights.append("zona tembakan yang baru dikonsesikan lawan: " + ", ".join(str(x) for x in concession_zones[:2]))
+        elif latest.get("notes"):
+            highlights.append(f"recent lawan: {latest.get('notes')}")
     limit = int((load_config().get("materiality") or {}).get("maximum_report_highlights_per_player") or 2)
     return highlights[: max(1, limit)]
 
@@ -142,6 +170,7 @@ def attach_tactical_matchups(projections: dict[str, Any], planning_gw: int) -> d
     player_roles = _player_map(_artifact("player_roles"))
 
     ready = partial = unavailable = 0
+    confidence_counts: Counter[str] = Counter()
     for player in projections.get("players") or []:
         try:
             team_id = int(player.get("team_id") or -1)
@@ -159,15 +188,21 @@ def attach_tactical_matchups(projections: dict[str, Any], planning_gw: int) -> d
         minimum = int((cfg.get("materiality") or {}).get("minimum_evidence_items") or 2)
         rich_context = _rich_opponent_context(opponent)
         assessed_role = bool(role.get("role"))
-        verified_recent = bool(recent_rows)
-        if evidence_count >= minimum and opponent_id > 0 and rich_context and assessed_role and verified_recent:
-            status = "READY"; ready += 1
+        observed_recent = bool(recent_rows)
+        confidence = _evidence_confidence(opponent, role, recent_rows)
+        if evidence_count >= minimum and opponent_id > 0 and rich_context and assessed_role and observed_recent:
+            status = "READY"
+            ready += 1
         elif evidence_count > 0 and opponent_id > 0:
-            status = "PARTIAL"; partial += 1
+            status = "PARTIAL"
+            partial += 1
         else:
-            status = "UNAVAILABLE"; unavailable += 1
+            status = "UNAVAILABLE"
+            unavailable += 1
+        confidence_counts[confidence] += 1
         player["tactical_matchup"] = {
             "status": status,
+            "evidence_confidence": confidence,
             "planning_gw": planning_gw,
             "opponent_team_id": opponent_id if opponent_id > 0 else None,
             "coach": own.get("coach"),
@@ -176,8 +211,12 @@ def attach_tactical_matchups(projections: dict[str, Any], planning_gw: int) -> d
             "opponent_coach": opponent.get("coach"),
             "opponent_shape": opponent.get("base_formation"),
             "opponent_shape_evidence": ((opponent.get("evidence") or {}).get("class")),
+            "opponent_strengths": opponent.get("strengths") or [],
+            "opponent_vulnerabilities": opponent.get("vulnerabilities") or [],
+            "opponent_observed_style_proxies": opponent.get("observed_style_proxies") or [],
             "player_role": role.get("role"),
             "player_role_confidence": role.get("confidence"),
+            "player_return_routes": role.get("return_routes") or [],
             "evidence_count": evidence_count,
             "recent_gw_evidence_count": len(recent_rows),
             "rich_opponent_context": rich_context,
@@ -194,9 +233,11 @@ def attach_tactical_matchups(projections: dict[str, Any], planning_gw: int) -> d
         "ready": ready,
         "partial": partial,
         "unavailable": unavailable,
+        "evidence_confidence": dict(confidence_counts),
         "advisory_only": True,
         "xpts_mutation": False,
-        "ready_requires_verified_rich_opponent_context_role_and_recent_pattern": True,
+        "ready_requires_observed_rich_opponent_context_role_and_recent_pattern": True,
+        "verified_coach_style_is_optional_and_never_inferred": True,
         "close_xpts_gap": _f((cfg.get("materiality") or {}).get("close_xpts_gap"), 0.35),
     }
     projections.setdefault("governance", {})["tactical_matchup"] = {
@@ -206,5 +247,6 @@ def attach_tactical_matchups(projections: dict[str, Any], planning_gw: int) -> d
         "allow_selection_tiebreaker_only_when_gap_is_close": True,
         "missing_evidence_is_never_fabricated": True,
         "observed_fpl_position_shape_alone_is_partial_not_ready": True,
+        "observed_event_proxies_are_not_claimed_as_true_pressing_or_build_up": True,
     }
     return projections

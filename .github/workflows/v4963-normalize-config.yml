@@ -1,0 +1,47 @@
+name: V4.9.6.3 normalize config diff
+
+on:
+  push:
+    branches:
+      - codex/v4.9.6.3-multiseason-prior
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v4.9.6.3-multiseason-prior
+          fetch-depth: 0
+      - name: Restore production formatting and apply semantic delta only
+        run: |
+          git fetch origin v4-prediction-engine
+          git show origin/v4-prediction-engine:config/dss_core_registry.json > config/dss_core_registry.json
+          git show origin/v4-prediction-engine:config/sources.json > config/sources.json
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('config/dss_core_registry.json')
+          s=p.read_text()
+          old='{"id":"DSS-36","name":"Multi-Season / Historical Prior","category":"priors","critical":false,"required_files":["data/history.jsonl","data/predictions_v4.json"],"operational_probe":"historical_prior"}'
+          new='{"id":"DSS-36","name":"Multi-Season / Historical Prior","category":"priors","critical":false,"required_files":["data/predictions_v4.json"],"operational_probe":"historical_prior"}'
+          if old not in s:
+              raise SystemExit('DSS-36 production row not found')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('config/sources.json')
+          s=p.read_text()
+          old='    "raw_base": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data"\n'
+          new='    "raw_base": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data",\n    "historical_depth": 2\n'
+          if old not in s:
+              raise SystemExit('Vaastav source row not found')
+          p.write_text(s.replace(old,new,1))
+          PY
+          git rm .github/workflows/v4963-normalize-config.yml
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add config/dss_core_registry.json config/sources.json
+          git commit -m "chore(v4): minimize multi-season config diff"
+          git push origin HEAD:codex/v4.9.6.3-multiseason-prior

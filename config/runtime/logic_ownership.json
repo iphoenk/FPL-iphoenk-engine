@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "registry": "V3_LOGIC_OWNERSHIP_V1",
   "policy": {
     "service_command_module_has_single_runtime_owner": true,
@@ -15,12 +15,18 @@
     "canonical_rule_symbols_have_single_source_owner": true,
     "canonical_legality_functions_have_single_source_owner": true,
     "official_detail_must_reuse_standard_snapshot_endpoints": true,
+    "all_engine_official_fetch_modules_must_be_explicitly_allowed": true,
     "architecture_guard_runs_outside_runtime_critical_path": true
   },
   "approved_direct_official_fetch_services": [
     "official_snapshot",
     "official_detail"
   ],
+  "approved_engine_official_fetch_modules": {
+    "src.engines.official_snapshot_service": "official_snapshot",
+    "src.engines.official_expansion": "official_detail",
+    "src.engines.official_history_reconciliation": "official_detail"
+  },
   "forbidden_direct_official_fetch_service_stages_for_unapproved_services": [
     "parallel",
     "governed-decision",
@@ -72,6 +78,7 @@
   "notes": {
     "official_snapshot": "single standard/fresh public Official snapshot owner",
     "official_detail": "single expensive/broad public Official detail owner; it must consume snapshot for standard endpoints and may network-fetch only additional detail/historical-pick evidence",
+    "official_fetch_guard": "every engine module importing the public Official transport must be explicitly mapped to its logical service owner; helper-module indirection cannot bypass ownership checks",
     "rules": "Official rule constants and derived canonical rule symbols are defined only by src/rules.py",
     "legality": "FPL squad and XI legality functions are defined only by src/domain/fpl_legality.py; optimizer and governance are consumers",
     "architecture_guard": "ownership validation belongs in CI/release acceptance and never becomes a new runtime service or critical-path hop",

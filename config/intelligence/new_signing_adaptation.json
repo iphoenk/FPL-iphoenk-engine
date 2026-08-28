@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "contract": "NEW_SIGNING_ADAPTATION_V1",
+  "model_id": "new_signing_transfer_adaptation_v1",
+  "neutral_start_probability": 0.62,
+  "neutral_starter_minutes": 70.0,
+  "states": {
+    "SAME_CLUB": {
+      "starter_prior_retention": 1.0,
+      "starter_minutes_retention": 1.0,
+      "attacking_prior_retention": 1.0,
+      "prior_evidence_retention": 1.0,
+      "confidence_ceiling": null,
+      "retire_old_club_starter_prior_after_team_matches": null
+    },
+    "INTRA_PL_TRANSFER": {
+      "starter_prior_retention": 0.35,
+      "starter_minutes_retention": 0.45,
+      "attacking_prior_retention": 0.75,
+      "prior_evidence_retention": 0.50,
+      "confidence_ceiling": "MEDIUM",
+      "current_starts_to_unlock_confidence": 3,
+      "retire_old_club_starter_prior_after_team_matches": 4
+    },
+    "NO_PREVIOUS_PL_PRIOR": {
+      "starter_prior_retention": 0.0,
+      "starter_minutes_retention": 0.0,
+      "attacking_prior_retention": 0.0,
+      "prior_evidence_retention": 0.0,
+      "confidence_ceiling": "MEDIUM",
+      "current_starts_to_unlock_confidence": 3,
+      "retire_old_club_starter_prior_after_team_matches": 0
+    },
+    "PRIOR_TEAM_UNKNOWN": {
+      "starter_prior_retention": 0.80,
+      "starter_minutes_retention": 0.85,
+      "attacking_prior_retention": 0.90,
+      "prior_evidence_retention": 0.85,
+      "confidence_ceiling": "MEDIUM",
+      "current_starts_to_unlock_confidence": 3,
+      "retire_old_club_starter_prior_after_team_matches": 5
+    }
+  },
+  "governance": {
+    "player_quality_and_new_club_role_are_separate": true,
+    "old_club_starter_security_never_transfers_one_for_one": true,
+    "portable_attacking_skill_may_retain_more_weight_than_starter_role": true,
+    "current_official_starts_take_over_quickly": true,
+    "missing_previous_pl_prior_is_not_fabricated": true,
+    "cross_league_prior_requires_verified_source_before_model_use": true,
+    "confidence_is_capped_until_new_club_evidence_accumulates": true
+  }
+}

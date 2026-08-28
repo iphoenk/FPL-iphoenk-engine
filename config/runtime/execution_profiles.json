@@ -12,21 +12,21 @@
   },
   "profiles": {
     "fast_decision": {
-      "description": "Interactive decision regeneration. REC-41 migration fence temporarily disables advanced_stats reuse so player_features is regenerated with tactical-role evidence. Historical priors refresh hourly so transfer-window club changes are incorporated promptly while the underlying previous-season source remains cacheable.",
+      "description": "Interactive decision regeneration. REC-41 migration fence temporarily disables advanced_stats reuse so player_features is regenerated with tactical-role evidence. Historical priors are re-indexed every run so current Official club identity is always reconciled against cached previous-season evidence.",
       "max_parallel_services": 4,
       "reuse_services": {
         "advanced_stats": {"max_age_seconds": 0},
-        "historical_prior": {"max_age_seconds": 3600},
+        "historical_prior": {"max_age_seconds": 0},
         "source_layer": {"max_age_seconds": 1800},
         "official_detail": {"max_age_seconds": 3600}
       }
     },
     "live": {
-      "description": "Match/live decision path. REC-41 migration fence temporarily disables advanced_stats reuse so player_features is regenerated with tactical-role evidence. Historical priors refresh hourly for current transfer context.",
+      "description": "Match/live decision path. REC-41 migration fence temporarily disables advanced_stats reuse so player_features is regenerated with tactical-role evidence. Historical priors are re-indexed every run for current transfer context; the underlying previous-season dataset remains independently cacheable.",
       "max_parallel_services": 4,
       "reuse_services": {
         "advanced_stats": {"max_age_seconds": 0},
-        "historical_prior": {"max_age_seconds": 3600},
+        "historical_prior": {"max_age_seconds": 0},
         "source_layer": {"max_age_seconds": 1800},
         "official_detail": {"max_age_seconds": 3600}
       }

@@ -18,11 +18,16 @@ def test_fast_profile_and_slo_are_registry_owned():
     profiles = json.loads((ROOT / "config/runtime/execution_profiles.json").read_text())
     slo = json.loads((ROOT / "config/runtime/performance_slo.json").read_text())
     fast = profiles["profiles"]["fast_decision"]
-    assert fast["max_parallel_services"] <= 4
+    assert fast["max_parallel_services"] <= 5
     assert set(fast["reuse_services"]) >= {"advanced_stats", "historical_prior", "source_layer", "official_detail"}
     assert profiles["policy"]["reused_service_latest_state_is_carried_forward"] is True
+    assert profiles["policy"]["parallelism_follows_v5_bounded_fanout_principle"] is True
     assert slo["profiles"]["fast_decision"]["target_wall_ms"] == 10000
     assert slo["profiles"]["fast_decision"]["legacy_ceiling_ms"] == 45000
+    assert slo["profiles"]["instant_serving"]["target_wall_ms"] == 500
+    assert slo["profiles"]["instant_serving"]["legacy_ceiling_ms"] == 1000
+    assert slo["policy"]["sub_second_target_applies_to_validated_warm_serving"] is True
+    assert slo["policy"]["external_network_refresh_is_measured_separately"] is True
 
 
 def test_reuse_service_requires_fresh_complete_artifacts(monkeypatch, tmp_path):

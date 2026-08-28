@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "registry": "V3_INSTANT_SERVING_V1",
+  "policy": {
+    "serve_only_materialized_validated_artifacts": true,
+    "no_external_network_calls": true,
+    "no_football_formula_recompute": true,
+    "fail_closed_when_required_artifact_missing": true,
+    "fail_closed_when_artifact_stale": true,
+    "refresh_path_is_separate_from_serving_path": true,
+    "official_fpl_remains_native_authority": true,
+    "user_decision_authority_is_preserved": true
+  },
+  "required_artifacts": [
+    "latest.json",
+    "user_report.json",
+    "decision_brief.json",
+    "framework_health.json",
+    "dss_watchlist_summary.json"
+  ],
+  "freshness_seconds": {
+    "normal": 300,
+    "deadline_day": 120,
+    "live": 90
+  },
+  "contract": {
+    "owned_count": 15,
+    "watchlist_count": 20,
+    "gate0_pass": 16
+  },
+  "performance": {
+    "target_wall_ms": 500,
+    "hard_ceiling_ms": 1000,
+    "benchmark_repetitions": 5
+  }
+}

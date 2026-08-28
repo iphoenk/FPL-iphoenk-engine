@@ -7,6 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from src.engines.official_snapshot_primitives import endpoint_health, load_snapshot, snapshot_event_live_for_gw
 from src.models.calibration import brier, mae, spearman_rank
 from src.sources.official_fpl import get_json
 from src.utils import DATA, ROOT, atomic_json, parse_dt, read_json, utcnow
@@ -123,8 +124,9 @@ def run() -> dict[str, Any]:
     latest = read_json(DATA / "latest.json", {})
     projections = read_json(DATA / "projections.json", {})
     ledger = read_json(LEDGER_PATH, {"schema_version": 1, "records": {}})
+    snapshot = load_snapshot()
     records = ledger.setdefault("records", {})
-    phase = latest.get("phase") or {}
+    phase = latest.get("phase") or snapshot.get("phase") or {}
     planning_gw = int(phase.get("planning_gw") or projections.get("planning_gw") or 0)
     deadline = parse_dt(phase.get("deadline_time"))
 
@@ -145,8 +147,11 @@ def run() -> dict[str, Any]:
             else:
                 record["status"] = "MISSED_PRE_DEADLINE_FREEZE"
 
-    bootstrap, bh = get_json("bootstrap-static/")
-    events = {int(e["id"]): e for e in (bootstrap or {}).get("events", [])}
+    bootstrap = snapshot.get("bootstrap") or {}
+    bh = endpoint_health(snapshot, "bootstrap")
+    events = {int(e["id"]): e for e in bootstrap.get("events", [])}
+    settled_from_snapshot = 0
+    settled_from_network = 0
     for key, record in records.items():
         gw = int(record.get("gw") or key)
         if record.get("status") == "SETTLED" or not record.get("frozen_forecast"):
@@ -154,10 +159,17 @@ def run() -> dict[str, Any]:
         event = events.get(gw) or {}
         if cfg.get("settle_only_finished_events", True) and not event.get("finished"):
             continue
-        live, health = get_json(f"event/{gw}/live/")
+        live, health = snapshot_event_live_for_gw(snapshot, gw)
+        if live is not None:
+            settled_from_snapshot += 1
+            health = {**health, "reuse": "CORE_SNAPSHOT"}
+        else:
+            live, health = get_json(f"event/{gw}/live/")
+            settled_from_network += 1
         if live:
             _settle_record(record, live)
             record["settlement_source_health"] = health.get("status")
+            record["settlement_source"] = "CORE_SNAPSHOT" if health.get("reuse") else "HISTORICAL_EVENT_LIVE"
 
     all_pairs = []
     by_position: dict[str, list[dict[str, Any]]] = {}
@@ -190,8 +202,14 @@ def run() -> dict[str, Any]:
             "accuracy_claim_requires_settled_sample": True,
             "pre_deadline_forecast_is_frozen_before_scoring": True,
             "post_deadline_information_cannot_rewrite_frozen_forecast": True,
+            "core_snapshot_consumed_before_historical_network": True,
         },
-        "source_health": {"bootstrap": bh.get("status")},
+        "source_health": {
+            "bootstrap": bh.get("status"),
+            "bootstrap_source": "CORE_SNAPSHOT",
+            "event_live_snapshot_reused": settled_from_snapshot,
+            "historical_event_live_fetched": settled_from_network,
+        },
     }
     ledger["updated_at"] = _now()
     ledger["model"] = cfg.get("model_id")
@@ -205,6 +223,7 @@ def run() -> dict[str, Any]:
         "confidence": accuracy["confidence"],
         "settled_gameweeks": accuracy["settled_gameweeks"],
         "dynamic_weight_eligible": accuracy["dynamic_weight_eligible"],
+        "core_snapshot_consumed": True,
     }
     atomic_json(DATA / "latest.json", latest)
     return accuracy

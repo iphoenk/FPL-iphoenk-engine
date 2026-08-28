@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "registry": "OFFICIAL_ENDPOINT_OWNERSHIP_V1",
+  "policy": {
+    "one_owner_per_network_purpose": true,
+    "core_snapshot_endpoints_may_not_be_refetched_by_detail_services": true,
+    "same_endpoint_family_may_have_distinct_owner_only_when_scope_is_explicit": true,
+    "downstream_services_consume_snapshot_before_network": true,
+    "historical_settlement_is_distinct_from_current_live_snapshot": true,
+    "private_authenticated_precision_is_distinct_from_public_snapshot": true
+  },
+  "network_purposes": [
+    {
+      "id": "CORE_PUBLIC_SNAPSHOT",
+      "owner_service": "official_snapshot",
+      "scope": "current planning/submitted/scoring state",
+      "endpoint_families": ["bootstrap-static","fixtures","event-status","entry","entry-history","entry-transfers","current-entry-picks","current-event-live","purchase-baseline-picks"]
+    },
+    {
+      "id": "PUBLIC_DETAIL_EXPANSION",
+      "owner_service": "official_detail",
+      "scope": "expensive/lazy detail and historical submitted-team expansion not present in core snapshot",
+      "endpoint_families": ["element-summary","set-piece-notes","dream-team","entry-cup","league-standings","historical-entry-picks"]
+    },
+    {
+      "id": "HISTORICAL_PREDICTION_SETTLEMENT",
+      "owner_service": "prediction_evaluation",
+      "scope": "finished historical GW actuals needed to settle frozen predictions",
+      "endpoint_families": ["historical-event-live"]
+    },
+    {
+      "id": "PRIVATE_AUTHENTICATED_PRECISION",
+      "owner_service": "authenticated_official",
+      "scope": "authorized unpublished private current-team precision",
+      "endpoint_families": ["private-my-team"]
+    }
+  ]
+}

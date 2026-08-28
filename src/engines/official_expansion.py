@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json, os
+from src.engines.official_snapshot_primitives import endpoint_health, load_snapshot
 from src.sources.official_fpl import get_json
 from src.utils import DATA, ROOT, atomic_json, iso_now
 
@@ -161,14 +162,22 @@ def _mini_league_tracking(leagues,previous_detail,entry):
 
 def run():
     previous_detail=_load("official_detail.json",{}); latest=_load("latest.json",{})
-    bootstrap,hb=get_json("bootstrap-static/")
-    if not bootstrap: raise RuntimeError("Official bootstrap unavailable")
-    phase=latest.get("phase",{}); planning=phase.get("planning_gw"); scoring=phase.get("scoring_gw") or phase.get("current_gw")
-    health={"bootstrap":hb}
-    entry,h=get_json(f"entry/{TEAM_ID}/",retries=1); health["entry_detail"]=h
-    fixtures,h=get_json("fixtures/"); health["fixtures_detail"]=h
-    live=None
-    if scoring: live,h=get_json(f"event/{scoring}/live/"); health["event_live_detail"]=h
+    snapshot=load_snapshot()
+    bootstrap=snapshot.get("bootstrap") or {}
+    if not bootstrap: raise RuntimeError("Official snapshot bootstrap unavailable")
+    phase=snapshot.get("phase") or latest.get("phase",{}); planning=phase.get("planning_gw"); scoring=phase.get("scoring_gw") or phase.get("current_gw")
+    entry=snapshot.get("entry") or {}
+    fixtures=snapshot.get("fixtures") or []
+    live=snapshot.get("event_live") if scoring else None
+    hb=endpoint_health(snapshot,"bootstrap")
+    health={
+        "bootstrap":hb,
+        "entry_detail":endpoint_health(snapshot,"entry"),
+        "fixtures_detail":endpoint_health(snapshot,"fixtures"),
+    }
+    if scoring:
+        health["event_live_detail"]=endpoint_health(snapshot,"event_live")
+
     setpieces,h=get_json("team/set-piece-notes/",retries=1); health["set_piece_notes"]=h
     dream_all,h=get_json("dream-team/",retries=1); health["dream_team_season"]=h
     dream_gw=None; dream_gw_id=phase.get("last_finished_gw") or scoring
@@ -180,10 +189,10 @@ def run():
     cup,h=get_json(f"entry/{TEAM_ID}/cup/",retries=1); health["entry_cup"]=h
     leagues=_optional_leagues(health,entry); mini_league_tracking=_mini_league_tracking(leagues,previous_detail,entry)
     detail_ok=sum(1 for h in detail_health.values() if h.get("status")=="LIVE")
-    official_health={"core":latest.get("endpoint_health",{}),"detail":health,"element_summary":{"requested":len(detail_ids),"live":detail_ok,"failed":len(detail_ids)-detail_ok},"overall":"HEALTHY" if hb.get("status")=="LIVE" and detail_ok>=len(owned) else "DEGRADED"}
-    payload={"generated_at":iso_now(),"owned_element_ids":owned,"detail_element_ids":detail_ids,"element_summaries":details,"set_piece_notes":setpieces,"fixture_stats":_fixture_stats(fixtures,planning),"event_live_rich":_live_rich(live),"dream_team":{"season":dream_all,"gw":dream_gw,"gw_id":dream_gw_id},"leagues":leagues,"mini_league_tracking":mini_league_tracking,"entry_cup":cup,"official_health":official_health}
+    official_health={"core":snapshot.get("endpoint_health",{}),"detail":health,"element_summary":{"requested":len(detail_ids),"live":detail_ok,"failed":len(detail_ids)-detail_ok},"overall":"HEALTHY" if hb.get("status")=="LIVE" and detail_ok>=len(owned) else "DEGRADED"}
+    payload={"generated_at":iso_now(),"owned_element_ids":owned,"detail_element_ids":detail_ids,"element_summaries":details,"set_piece_notes":setpieces,"fixture_stats":_fixture_stats(fixtures,planning),"event_live_rich":_live_rich(live),"dream_team":{"season":dream_all,"gw":dream_gw,"gw_id":dream_gw_id},"leagues":leagues,"mini_league_tracking":mini_league_tracking,"entry_cup":cup,"official_health":official_health,"snapshot_reuse":{"bootstrap":True,"entry":True,"fixtures":True,"current_event_live":bool(scoring)}}
     atomic_json(DATA/"official_detail.json",payload)
-    latest["official_detail_summary"]={"generated_at":payload["generated_at"],"owned_detail_coverage":f"{sum(1 for x in owned if str(x) in details)}/{len(owned)}","detail_requested":len(detail_ids),"detail_live":detail_ok,"set_piece_notes_status":health["set_piece_notes"].get("status"),"dream_team_status":health["dream_team_season"].get("status"),"entry_cup_status":health["entry_cup"].get("status"),"mini_league_status":mini_league_tracking.get("status"),"mini_leagues_tracking":mini_league_tracking.get("tracking_count",0),"mini_leagues_auto_discovered":sum(len(v) for v in (mini_league_tracking.get("auto_discovered") or {}).values()),"overall":official_health["overall"],"file":"data/official_detail.json"}
+    latest["official_detail_summary"]={"generated_at":payload["generated_at"],"owned_detail_coverage":f"{sum(1 for x in owned if str(x) in details)}/{len(owned)}","detail_requested":len(detail_ids),"detail_live":detail_ok,"set_piece_notes_status":health["set_piece_notes"].get("status"),"dream_team_status":health["dream_team_season"].get("status"),"entry_cup_status":health["entry_cup"].get("status"),"mini_league_status":mini_league_tracking.get("status"),"mini_leagues_tracking":mini_league_tracking.get("tracking_count",0),"mini_leagues_auto_discovered":sum(len(v) for v in (mini_league_tracking.get("auto_discovered") or {}).values()),"overall":official_health["overall"],"core_snapshot_reused":True,"file":"data/official_detail.json"}
     latest["official_health_panel"]=official_health; atomic_json(DATA/"latest.json",latest); return payload
 
 if __name__ == "__main__": run()

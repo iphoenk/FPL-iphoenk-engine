@@ -161,14 +161,6 @@ def run() -> dict[str, Any]:
     atomic_json(TEAM_OUT, out["team_profiles"])
     atomic_json(ROLE_OUT, out["player_roles"])
     atomic_json(RECENT_OUT, out["recent_form"])
-    latest = read_json(DATA / "latest.json", {})
-    latest.setdefault("files", {}).update({
-        "tactical_team_profiles": "data/tactical_team_profiles.json",
-        "player_role_profiles": "data/player_role_profiles.json",
-        "recent_tactical_form": "data/recent_tactical_form.json",
-    })
-    latest["tactical_context_summary"] = out["summary"]
-    atomic_json(DATA / "latest.json", latest)
     print(json.dumps(out["summary"], ensure_ascii=False))
     return out["summary"]
 

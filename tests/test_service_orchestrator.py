@@ -26,10 +26,13 @@ def test_registered_services_are_ordered_and_contract_complete():
     assert ids[:3] == ["raw_snapshot", "enrichment", "prediction"]
     assert set(by_id["rules_compliance"]["depends_on"]) == {"prediction"}
     assert set(by_id["validation_lifecycle"]["depends_on"]) == {"prediction"}
+    assert set(by_id["optimization"]["depends_on"]) == {"prediction"}
     assert set(by_id["framework_preflight"]["depends_on"]) == {"validation_lifecycle", "rules_compliance"}
+    assert set(by_id["framework_postflight"]["depends_on"]) == {"framework_preflight", "user_decision_overlay"}
     assert ids.index("optimization") < ids.index("user_decision_overlay") < ids.index("personal_gw_scorecard")
     assert set(ordered[-1]["depends_on"]) == {"framework_postflight", "personal_gw_scorecard"}
-    assert any({row["id"] for row in level} == {"validation_lifecycle", "rules_compliance"} for level in levels)
+    assert any({row["id"] for row in level} == {"validation_lifecycle", "rules_compliance", "optimization"} for level in levels)
+    assert any({row["id"] for row in level} == {"framework_preflight", "user_decision_overlay"} for level in levels)
     assert any({row["id"] for row in level} == {"personal_gw_scorecard", "framework_postflight"} for level in levels)
     declared = contracts["contracts"]
     assert all(name in declared for service in ordered for name in service["produces"])
@@ -59,6 +62,8 @@ def test_registered_services_are_ordered_and_contract_complete():
     assert guardrails["official_fpl_first_when_field_available"] is True
     assert guardrails["dag_parallel_ready_services"] is True
     assert guardrails["parallel_services_must_have_no_dependency_edge"] is True
+    assert guardrails["optimizer_may_parallelize_with_validation_before_preflight"] is True
+    assert guardrails["postflight_requires_preflight_and_effective_plan"] is True
     assert guardrails["human_report_language_governed"] is True
     assert guardrails["scheduled_checkpoint_recovery_enabled"] is True
     assert guardrails["registry_counts_unchanged"] == {

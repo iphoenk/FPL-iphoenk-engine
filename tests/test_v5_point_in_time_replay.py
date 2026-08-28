@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from src.v5.artifact_contracts import validate_payload
 from src.v5.decision.decision_trace import bind_execution_fingerprint
 from src.v5.release_integrity import (
@@ -9,6 +11,7 @@ from src.v5.release_integrity import (
     verify_replay_outputs,
 )
 from src.v5.replay_capture import build_replay_capture, finalize_replay_bundle
+from src.v5.services import prediction as prediction_service
 from src.v5.services import snapshot as snapshot_service
 
 
@@ -173,3 +176,40 @@ def test_decision_trace_v2_binds_fingerprint_as_provenance_only():
     assert bound["fingerprint_binding"]["bound"] is True
     assert bound["fingerprint_binding"]["scoring_input"] is False
     assert bound["fingerprint_binding"]["provenance_only"] is True
+
+
+def test_historical_prior_network_refresh_is_owned_by_pre_capture_operation(monkeypatch):
+    observed = {}
+
+    def fake_resolve(bootstrap, rules, *, previous_prior, allow_network_refresh):
+        observed["bootstrap"] = bootstrap
+        observed["rules"] = rules
+        observed["previous_prior"] = previous_prior
+        observed["allow_network_refresh"] = allow_network_refresh
+        return {"status": "READY", "players": {}, "fetch_mode": "TEST"}
+
+    monkeypatch.setattr(prediction_service, "resolve_prior", fake_resolve)
+    result = prediction_service.handle(
+        "resolve_prior",
+        {
+            "bootstrap": {"elements": []},
+            "rules": {"season": "2026-27"},
+            "historical_prior": {"status": "STALE"},
+            "allow_network_refresh": True,
+        },
+    )
+    assert result["fetch_mode"] == "TEST"
+    assert observed["allow_network_refresh"] is True
+
+
+def test_prediction_build_forbids_post_capture_historical_prior_network_refresh():
+    with pytest.raises(RuntimeError, match="forbidden after point-in-time replay boundary"):
+        prediction_service.handle(
+            "build",
+            {
+                "bootstrap": {"elements": []},
+                "fixtures": [],
+                "rules": {"season": "2026-27"},
+                "allow_historical_prior_refresh": True,
+            },
+        )

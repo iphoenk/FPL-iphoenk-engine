@@ -1,5 +1,5 @@
 {
-  "schema_version": 14,
+  "schema_version": 15,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
   "production_contract": "v3.22-runtime-optimization-fast-under-10s",
   "transport": "isolated-filesystem-contract",
@@ -71,7 +71,8 @@
     "normalized_player_features_are_decision_neutral_until_model_opt_in": true,
     "player_feature_model_opt_in_rec01_active": true,
     "tactical_context_is_separate_bounded_evidence_service": true,
-    "tactical_context_never_infers_missing_coach_style_or_recent_patterns": true
+    "tactical_context_never_infers_missing_coach_style_or_true_pressing": true,
+    "tactical_context_rolling_history_is_service_owned": true
   },
   "runtime": {
     "max_parallel_services": 5,
@@ -87,7 +88,7 @@
     "market_state": {"stage":"base-domain","depends_on":["official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","price_cache.json"],"commands":[{"module":"src.engines.market_state_service","args":[]}],"artifacts":["price_cache.json","prices.json","universe.json"],"latest_keys":[],"latest_file_keys":[]},
     "live_state": {"stage":"base-domain","depends_on":["official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json"],"commands":[{"module":"src.engines.live_state_service","args":[]}],"artifacts":["live.json"],"latest_keys":[],"latest_file_keys":[]},
     "advanced_stats": {"stage":"base-domain","depends_on":["official_snapshot"],"critical":true,"isolated":false,"inputs":[],"commands":[{"module":"src.engines.advanced_stats_service","args":["{stats}","{deep_stats}"]},{"module":"src.engines.player_features","args":[]}],"artifacts":["advanced_stats_sync.json","player_features.json"],"latest_keys":[],"latest_file_keys":[]},
-    "tactical_context": {"stage":"base-domain","depends_on":["advanced_stats","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","player_features.json"],"commands":[{"module":"src.engines.tactical_context_service","args":[]}],"artifacts":["tactical_team_profiles.json","player_role_profiles.json","recent_tactical_form.json"],"latest_keys":[],"latest_file_keys":[]},
+    "tactical_context": {"stage":"base-domain","depends_on":["advanced_stats","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","player_features.json","stats/shots_current.json","stats/playermatchstats_current.json","recent_tactical_form.json"],"commands":[{"module":"src.engines.tactical_context_service","args":[]}],"artifacts":["tactical_team_profiles.json","player_role_profiles.json","recent_tactical_form.json"],"latest_keys":[],"latest_file_keys":[]},
     "base_snapshot": {"stage":"base-fan-in","depends_on":["official_snapshot","team_state","market_state","live_state","advanced_stats"],"critical":true,"isolated":false,"inputs":[],"commands":[{"module":"src.engines.base_snapshot_service","args":["{mode}"]}],"artifacts":["latest.json","native.json","health.json","team.json","chips.json","live.json","prices.json","universe.json","advanced_stats_sync.json"],"latest_keys":[],"latest_file_keys":[]},
     "historical_prior": {"stage":"parallel","depends_on":["base_snapshot","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","latest.json","stats/vaastav_previous_season.json"],"commands":[{"module":"src.engines.historical_prior_runtime","args":[]}],"artifacts":["prior_season.json","stats/vaastav_previous_season.json"],"latest_keys":["historical_prior_summary"],"latest_file_keys":["prior_season","vaastav_previous_season"]},
     "source_layer": {"stage":"parallel","depends_on":["base_snapshot","historical_prior","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","latest.json","health.json","challenger_observations.json","fixture_weather.json","stats/shots_current.json","stats/playermatchstats_current.json","stats/vaastav_previous_season.json"],"commands":[{"module":"src.engines.source_layer","args":[]}],"artifacts":["source_health.json","source_registry_runtime.json","challenger_observations.json","fixture_weather.json"],"latest_keys":["source_layer_summary"],"latest_file_keys":["source_health","source_registry_runtime","challenger_observations","fixture_weather"]},

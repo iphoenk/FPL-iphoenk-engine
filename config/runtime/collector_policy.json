@@ -3,7 +3,7 @@
   "timezone": "Asia/Jakarta",
   "schedules": {
     "primary": "55 * * * *",
-    "adaptive": "15 * * * *",
+    "adaptive": "*/15 * * * *",
     "deep_stats": "30 21 * * *",
     "report_midday": "30 5 * * *",
     "report_evening": "30 14 * * *"

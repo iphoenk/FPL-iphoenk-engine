@@ -60,27 +60,52 @@ def _compact_picks(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _snapshot_picks_for_gw(snapshot: dict[str, Any], gw: int) -> tuple[dict[str, Any] | None, str | None]:
+    phase = snapshot.get("phase") or {}
+    submitted_gw = _i(phase.get("submitted_gw"), -1)
+    if submitted_gw == gw and isinstance(snapshot.get("picks"), dict):
+        return snapshot.get("picks"), "submitted_snapshot"
+    baseline = snapshot.get("purchase_baseline") or {}
+    if _i(baseline.get("gw"), -1) == gw and isinstance(baseline.get("picks"), dict):
+        return baseline.get("picks"), "purchase_baseline_snapshot"
+    return None, None
+
+
 def run() -> dict[str, Any]:
     cfg = _load(CONFIG_PATH, {})
     proxy_cfg = cfg.get("retrospective_proxy_baseline") or {}
     detail = _load(DATA / "official_detail.json", {})
     latest = _load(DATA / "latest.json", {})
     team = _load(DATA / "team.json", {})
+    snapshot = _load(DATA / "official_snapshot.json", {})
     team_id = _i(team.get("team_id"), 0)
     if team_id <= 0:
         raise RuntimeError("Official historical reconciliation requires authoritative team_id")
+    if _i(snapshot.get("team_id"), team_id) != team_id:
+        raise RuntimeError("Official historical reconciliation snapshot team_id mismatch")
 
-    history_payload, history_health = get_json(f"entry/{team_id}/history/", retries=1)
-    current_rows = (history_payload or {}).get("current") or []
+    history_payload = snapshot.get("history") or {}
+    endpoint_health = snapshot.get("endpoint_health") or {}
+    current_rows = history_payload.get("current") or []
     finished_gws = sorted({_i(row.get("event")) for row in current_rows if _i(row.get("event")) > 0})
     limit = max(1, _i(proxy_cfg.get("max_historical_gameweeks"), 5))
     wanted = finished_gws[-limit:]
 
     rows: dict[str, Any] = {}
-    health: dict[str, Any] = {"entry_history": history_health}
+    health: dict[str, Any] = {
+        "entry_history": endpoint_health.get("history") or {"status": "SNAPSHOT"},
+    }
+    network_pick_fetches = 0
+    snapshot_pick_reuses = 0
     for gw in wanted:
-        picks, picks_health = get_json(f"entry/{team_id}/event/{gw}/picks/", retries=1)
-        health[f"picks_gw_{gw}"] = picks_health
+        picks, snapshot_source = _snapshot_picks_for_gw(snapshot, gw)
+        if picks:
+            snapshot_pick_reuses += 1
+            health[f"picks_gw_{gw}"] = {"status": "SNAPSHOT", "source": snapshot_source}
+        else:
+            picks, picks_health = get_json(f"entry/{team_id}/event/{gw}/picks/", retries=1)
+            network_pick_fetches += 1
+            health[f"picks_gw_{gw}"] = picks_health
         history_row = next((row for row in current_rows if _i(row.get("event")) == gw), {})
         if not picks:
             rows[str(gw)] = {
@@ -118,6 +143,12 @@ def run() -> dict[str, Any]:
             "current_private_pre_deadline_draft": "OPTIONAL_AUTHENTICATED_MONITOR",
         },
         "source_health": health,
+        "governance": {
+            "entry_history_reused_from_snapshot": True,
+            "snapshot_pick_reuses": snapshot_pick_reuses,
+            "historical_pick_network_fetches": network_pick_fetches,
+            "network_fetch_only_for_missing_historical_pick_artifacts": True,
+        },
     }
     detail["historical_entry"] = historical
     atomic_json(DATA / "official_detail.json", detail)
@@ -128,6 +159,8 @@ def run() -> dict[str, Any]:
         "historical_gameweeks_available": len(rows),
         "retrospective_proxy_gameweeks": available_proxy,
         "private_pre_deadline_draft_authority": "OPTIONAL_AUTHENTICATED_MONITOR",
+        "historical_snapshot_pick_reuses": snapshot_pick_reuses,
+        "historical_pick_network_fetches": network_pick_fetches,
     })
     latest["official_historical_authority"] = historical["authority_split"]
     atomic_json(DATA / "latest.json", latest)

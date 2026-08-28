@@ -4,6 +4,7 @@ from collections import Counter
 from typing import Any
 
 from src.v5.config_cache import load_json_config
+from src.v5.decision.challenger_comparator import build_comparator
 from src.v5.decision.decision_trace import build_trace
 from src.v5.decision.dss_evaluator import evaluate_dss
 from src.v5.decision.lineup_optimizer import optimize_lineup
@@ -46,6 +47,15 @@ def _inputs(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], di
     if not rules or not team or not prediction:
         raise ValueError("decision service requires truth rules/team and prediction payload")
     return truth, prediction, price, rules, team
+
+
+def _compare_challengers(payload: dict[str, Any]) -> dict[str, Any]:
+    truth = payload.get("truth") if isinstance(payload.get("truth"), dict) else {}
+    prediction = payload.get("prediction") if isinstance(payload.get("prediction"), dict) else {}
+    watchlist = payload.get("watchlist") if isinstance(payload.get("watchlist"), dict) else {}
+    decision = payload.get("decision") if isinstance(payload.get("decision"), dict) else {}
+    price = payload.get("price") if isinstance(payload.get("price"), dict) else {}
+    return build_comparator(prediction, truth, watchlist, decision, price)
 
 
 def _effective_change_cap(planning_gw: int) -> tuple[int, dict[str, Any]]:
@@ -341,9 +351,11 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "bridge_only": False,
             "production_recommendation": False,
             "model": _cfg().get("model_id"),
-            "capabilities": list(_cfg().get("capabilities") or []),
-            "operations": ["prepare", "finalize", "build"],
+            "capabilities": [*_cfg().get("capabilities", []), "owned_challenger_comparator"],
+            "operations": ["prepare", "finalize", "build", "compare_challengers"],
         }
+    if operation == "compare_challengers":
+        return _compare_challengers(payload)
     if operation == "prepare":
         return _prepare(payload)
     if operation == "finalize":

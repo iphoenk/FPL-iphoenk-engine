@@ -104,8 +104,10 @@ def test_reporting_governance_blocks_internal_terms_from_human_surface():
         assert token in forbidden
 
 
-def test_deadline_adaptive_schedule_is_quarter_hour():
+def test_adaptive_schedule_covers_quarter_hour_support_without_colliding_with_master_30():
     workflow = Path(".github/workflows/v3-runtime-fast.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/runtime/collector_policy.json").read_text(encoding="utf-8"))
-    assert 'cron: "*/15 * * * *"' in workflow
-    assert policy["schedules"]["adaptive"] == "*/15 * * * *"
+    assert 'cron: "30 * * * *"' in workflow
+    assert 'cron: "0,15,45 * * * *"' in workflow
+    assert policy["schedules"]["primary"] == "30 * * * *"
+    assert policy["schedules"]["adaptive"] == "0,15,45 * * * *"

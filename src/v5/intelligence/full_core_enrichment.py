@@ -19,6 +19,7 @@ CAPABILITIES = [
     "preseason_prior",
     "current_form",
     "source_fusion",
+    "advanced_stats_point_in_time_freshness",
 ]
 
 
@@ -66,10 +67,101 @@ def _dc_sample_quality(minutes: float) -> str:
     return "ESTABLISHED"
 
 
-def _advanced_stats(bootstrap: dict[str, Any], source_fusion: dict[str, Any]) -> dict[str, Any]:
+def _advanced_freshness(
+    cfg: dict[str, Any],
+    shots: dict[str, Any],
+    match: dict[str, Any],
+    planning_gw: int | None,
+) -> dict[str, Any]:
+    policy = cfg.get("authoritative_freshness") if isinstance(cfg.get("authoritative_freshness"), dict) else {}
+    shots_gw = _i(shots.get("gw"))
+    match_gw = _i(match.get("gw"))
+    require_match = bool(policy.get("require_shots_and_match_gw_match", True))
+    maximum_lag = max(0, int(policy.get("maximum_gw_lag") or 0))
+    offset = int(policy.get("expected_completed_gw_offset_from_planning_gw") or -1)
+    base = {
+        "planning_gw": int(planning_gw) if planning_gw is not None else None,
+        "shots_gw": shots_gw,
+        "match_stats_gw": match_gw,
+        "shots_fetched_at": shots.get("fetched_at"),
+        "match_stats_fetched_at": match.get("fetched_at"),
+        "maximum_gw_lag": maximum_lag,
+        "future_gw_forbidden": bool(policy.get("future_gw_forbidden", True)),
+        "require_shots_and_match_gw_match": require_match,
+    }
+    if planning_gw is None:
+        return {
+            **base,
+            "status": "UNKNOWN_NO_PLANNING_GW",
+            "authoritative_eligible": False,
+            "expected_completed_gw": None,
+            "artifact_gw": match_gw if match_gw is not None else shots_gw,
+            "gw_lag": None,
+            "reason": "planning_gw is required for point-in-time authority",
+        }
+    expected = max(0, int(planning_gw) + offset)
+    if shots_gw is None or match_gw is None:
+        return {
+            **base,
+            "status": "MISSING_ARTIFACT_GW",
+            "authoritative_eligible": False,
+            "expected_completed_gw": expected,
+            "artifact_gw": match_gw if match_gw is not None else shots_gw,
+            "gw_lag": None,
+            "reason": "advanced artifact gameweek metadata is required for authoritative use",
+        }
+    if require_match and shots_gw != match_gw:
+        return {
+            **base,
+            "status": "ARTIFACT_GW_MISMATCH",
+            "authoritative_eligible": False,
+            "expected_completed_gw": expected,
+            "artifact_gw": None,
+            "gw_lag": None,
+            "reason": "shots and player-match-stat artifacts refer to different gameweeks",
+        }
+    artifact_gw = match_gw
+    if bool(policy.get("future_gw_forbidden", True)) and artifact_gw > expected:
+        return {
+            **base,
+            "status": "FUTURE_DATA_BLOCKED",
+            "authoritative_eligible": False,
+            "expected_completed_gw": expected,
+            "artifact_gw": artifact_gw,
+            "gw_lag": expected - artifact_gw,
+            "reason": "advanced artifact is newer than the last completed gameweek for this planning point",
+        }
+    lag = expected - artifact_gw
+    if lag > maximum_lag:
+        return {
+            **base,
+            "status": "STALE_GW",
+            "authoritative_eligible": False,
+            "expected_completed_gw": expected,
+            "artifact_gw": artifact_gw,
+            "gw_lag": lag,
+            "reason": "advanced artifact is older than the configured authoritative gameweek lag",
+        }
+    return {
+        **base,
+        "status": "CURRENT_COMPLETED_GW",
+        "authoritative_eligible": True,
+        "expected_completed_gw": expected,
+        "artifact_gw": artifact_gw,
+        "gw_lag": lag,
+        "reason": None,
+    }
+
+
+def _advanced_stats(
+    bootstrap: dict[str, Any],
+    source_fusion: dict[str, Any],
+    planning_gw: int | None = None,
+) -> dict[str, Any]:
     cfg = load_json_config(CONFIG)["advanced_stats"]
     shots = _load_artifact(str(cfg["shots_path"]))
     match = _load_artifact(str(cfg["player_match_stats_path"]))
+    freshness = _advanced_freshness(cfg, shots, match, planning_gw)
     shot_rows = shots.get("rows") if isinstance(shots.get("rows"), list) else []
     match_rows = match.get("rows") if isinstance(match.get("rows"), list) else []
     players: dict[int, dict[str, float]] = {}
@@ -182,12 +274,17 @@ def _advanced_stats(bootstrap: dict[str, Any], source_fusion: dict[str, Any]) ->
         "understat_players": len(understat_rows),
         "understat_identity_matches": matched,
         "understat_crosschecks": crosschecks,
+        "artifact_gw": freshness.get("artifact_gw"),
+        "authoritative_eligible": bool(freshness.get("authoritative_eligible")),
+        "freshness": freshness,
         "governance": {
             "fpl_core_insights_primary": True,
             "understat_challenger_only": True,
             "shot_in_box_is_not_box_touch": True,
             "defensive_contribution_metrics_follow_official_position_rules": True,
             "missing_defensive_evidence_is_unavailable_not_zero": True,
+            "point_in_time_freshness_gates_authoritative_feature_fusion": True,
+            "stale_or_future_evidence_remains_visible_but_non_authoritative": True,
         },
     }
 
@@ -343,20 +440,33 @@ def _current_form(bootstrap: dict[str, Any], advanced: dict[str, Any]) -> dict[s
             "advanced": adv or None,
             "understat_challenger": understat.get(str(eid)),
         }
-    return {"status": "ACTIVE", "source": "official_fpl+fpl_core_insights+understat_challenger", "players": rows}
+    return {
+        "status": "ACTIVE",
+        "source": "official_fpl+fpl_core_insights+understat_challenger",
+        "players": rows,
+        "advanced_artifact_freshness": advanced.get("freshness"),
+        "authoritative_mean_adjustment": False,
+    }
 
 
-def build_full_core_enrichment(bootstrap: dict[str, Any], fixtures: list[dict[str, Any]], source_fusion: dict[str, Any] | None = None) -> dict[str, Any]:
+def build_full_core_enrichment(
+    bootstrap: dict[str, Any],
+    fixtures: list[dict[str, Any]],
+    source_fusion: dict[str, Any] | None = None,
+    *,
+    planning_gw: int | None = None,
+) -> dict[str, Any]:
     fusion = source_fusion if isinstance(source_fusion, dict) else {"status": "UNAVAILABLE", "sources": {}}
-    advanced = _advanced_stats(bootstrap, fusion)
+    advanced = _advanced_stats(bootstrap, fusion, planning_gw=planning_gw)
     schedule = _schedule_context(bootstrap, fixtures, fusion)
     preseason = _preseason(fusion)
     current_form = _current_form(bootstrap, advanced)
     capabilities = list(CAPABILITIES)
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "model": load_json_config(CONFIG).get("model_id"),
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "planning_gw": int(planning_gw) if planning_gw is not None else None,
         "status": "ACTIVE",
         "capabilities": capabilities,
         "advanced_stats": advanced,
@@ -369,5 +479,6 @@ def build_full_core_enrichment(bootstrap: dict[str, Any], fixtures: list[dict[st
             "missing_external_evidence_is_unavailable_not_zero": True,
             "no_claimed_minutes_without_source": True,
             "official_fpl_identity_price_rules_never_overridden": True,
+            "authoritative_advanced_evidence_requires_point_in_time_freshness": True,
         },
     }

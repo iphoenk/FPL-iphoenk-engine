@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 
 from src.v5.config_cache import load_json_config
+from src.v5.price_calibration import evaluate_price_calibration
 from src.v5.price_trajectory import (
     alerts,
     build_trajectory,
@@ -24,9 +25,15 @@ def build_price_snapshot(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     generated_at = now or datetime.now(timezone.utc)
+    previous_state = previous_state or {}
     total_players = int(bootstrap.get("total_players") or 0)
     raw_rows = [price_row(player, total_players) for player in bootstrap.get("elements", [])]
-    enriched, new_state = build_trajectory(raw_rows, previous_state or {}, generated_at)
+    enriched, new_state = build_trajectory(raw_rows, previous_state, generated_at)
+    calibration, state_patches = evaluate_price_calibration(previous_state, enriched, generated_at)
+    for key, patch in state_patches.items():
+        new_state["players"].setdefault(key, {}).update(patch)
+    new_state["calibration"] = calibration
+
     buy, buy_noise = filtered_pressure(enriched, "buy")
     sell, sell_noise = filtered_pressure(enriched, "sell")
     rising = sorted(
@@ -46,7 +53,7 @@ def build_price_snapshot(
         for row in sorted(enriched, key=risk_sort_key, reverse=True)
         if int(row["element"]) not in owned
     ][: market_watch_capacity()]
-    prior_players = (previous_state or {}).get("players", {})
+    prior_players = previous_state.get("players", {})
     confirmed = []
     for row in enriched:
         prior = prior_players.get(str(row["element"])) or {}
@@ -73,6 +80,7 @@ def build_price_snapshot(
             "top_rise_risk": rising[:limit],
             "top_fall_risk": falling[:limit],
             "market_noise": {"buy": buy_noise, "sell": sell_noise},
+            "model_health": calibration["summary"],
         },
         "trajectory_state": new_state,
         "alerts": {
@@ -80,4 +88,5 @@ def build_price_snapshot(
             "alerts": alert_rows,
             "market_watch_candidates": external_watch,
         },
+        "calibration": calibration,
     }

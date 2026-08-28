@@ -85,26 +85,51 @@ def _projection_baseline_authority(lock: dict, phase: dict) -> dict:
 
 
 def run(mode: str = "daily", as_of: str | None = None) -> dict:
-    """Acquire the sole official-FPL snapshot and finish price reconstruction."""
+    """Acquire the sole official-FPL snapshot and finish price reconstruction.
+
+    Fixed Official endpoints are fetched in the same initial wave as bootstrap-static.
+    Only picks/live wait for bootstrap because their event ids depend on phase detection.
+    This preserves single-run point-in-time authority while removing an avoidable network
+    round trip from the critical path.
+    """
     started = perf_counter()
     report_as_of = parse_dt(as_of) if isinstance(as_of, str) else as_of
     if report_as_of is not None and report_as_of.tzinfo is None:
         raise RuntimeError("--as-of must include timezone offset")
-    bootstrap, bootstrap_health = get_json("bootstrap-static/")
+
+    initial_specs = [
+        ("bootstrap", "bootstrap-static/", 3),
+        ("fixtures", "fixtures/", 3),
+        ("event_status", "event-status/", 3),
+        ("entry", f"entry/{TEAM_ID}/", 3),
+        ("history", f"entry/{TEAM_ID}/history/", 3),
+        ("transfers", f"entry/{TEAM_ID}/transfers/", 3),
+    ]
+    wave_started = perf_counter()
+    initial = _parallel_official_get(initial_specs)
+    initial_wave_ms = round((perf_counter() - wave_started) * 1000, 2)
+    bootstrap = (initial.get("bootstrap") or (None, {}))[0]
     if not bootstrap:
         raise RuntimeError("bootstrap unavailable")
+
     phase = detect_phase(bootstrap, report_as_of or utcnow())
     checkpoint = resolve_checkpoint(mode, phase.get("deadline_time"), phase.get("is_live_event", False), as_of=report_as_of, simulated=report_as_of is not None)
     submitted_gw, scoring_gw = phase["submitted_gw"], phase["scoring_gw"]
-    specs = [("fixtures", "fixtures/", 3), ("event_status", "event-status/", 3), ("entry", f"entry/{TEAM_ID}/", 3), ("history", f"entry/{TEAM_ID}/history/", 3), ("transfers", f"entry/{TEAM_ID}/transfers/", 3)]
+
+    dependent_specs = []
     if submitted_gw:
-        specs.append(("picks", f"entry/{TEAM_ID}/event/{submitted_gw}/picks/", 3))
+        dependent_specs.append(("picks", f"entry/{TEAM_ID}/event/{submitted_gw}/picks/", 3))
     if scoring_gw:
-        specs.append(("event_live", f"event/{scoring_gw}/live/", 3))
-    fetched = _parallel_official_get(specs)
+        dependent_specs.append(("event_live", f"event/{scoring_gw}/live/", 3))
+    wave_started = perf_counter()
+    dependent = _parallel_official_get(dependent_specs)
+    dependent_wave_ms = round((perf_counter() - wave_started) * 1000, 2)
+
+    fetched = {**initial, **dependent}
     payloads = {key: pair[0] for key, pair in fetched.items()}
-    health = {"bootstrap": bootstrap_health, **{key: pair[1] for key, pair in fetched.items()}}
+    health = {key: pair[1] for key, pair in fetched.items()}
     _normalize_endpoint_health(health, payloads, submitted_gw, scoring_gw, bool(phase.get("is_live_event")))
+
     teams, positions, by_id = maps(bootstrap)
     lock = read_json(CONFIG / "locked_squad.json", {})
     projection_baseline = _projection_baseline_authority(lock, phase)
@@ -120,15 +145,20 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
             if player:
                 squad.append({"element": player["id"], "name": player["web_name"], "position": positions[player["element_type"]], "purchase_cost": pick.get("purchase_price"), "selling_price": pick.get("selling_price"), "source": "official_picks"})
     _validate_authoritative_squad(squad, by_id)
+
     spells = build_transfer_spells(payloads.get("transfers") or [])
     need_gw1 = any(row.get("purchase_cost") is None and (spells.get(row["element"]) or {}).get("purchase_cost") is None for row in squad)
     gw1_ids: set[int] = set()
+    gw1_ms = 0.0
     if need_gw1:
         # Conditional reconstruction is part of acquisition, never a downstream fetch.
+        wave_started = perf_counter()
         gw1, gw1_health = get_json(f"entry/{TEAM_ID}/event/1/picks/", retries=1)
+        gw1_ms = round((perf_counter() - wave_started) * 1000, 2)
         health["gw1_picks"] = gw1_health
         payloads["gw1_picks"] = gw1
         gw1_ids = {row["element"] for row in (gw1 or {}).get("picks", [])}
+
     ledger = []
     for row in squad:
         player = by_id[row["element"]]
@@ -141,6 +171,8 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         if selling is None and purchase is not None:
             selling = sell_cost(player["now_cost"], int(purchase))
         ledger.append({"element": player["id"], "name": player["web_name"], "team": teams[player["team"]], "position": positions[player["element_type"]], "purchase_cost": purchase, "now_cost": player["now_cost"], "sell_cost": selling, "purchase_source": source, "ownership": player.get("selected_by_percent"), "status": player.get("status")})
+
+    total_ms = round((perf_counter() - started) * 1000, 2)
     out = {
         "schema": "snapshot.v1",
         "schema_version": 492,
@@ -150,7 +182,7 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         "checkpoint_context": checkpoint,
         "phase": phase,
         "team_id": TEAM_ID,
-        "official": {"bootstrap": bootstrap, **payloads},
+        "official": payloads,
         "endpoint_health": health,
         "squad_authority": projection_baseline["effective_authority"],
         "projection_baseline": projection_baseline,
@@ -158,13 +190,23 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         "team_value_ledger": ledger,
         "itb_tenths": lock.get("itb_tenths") if use_lock else (payloads.get("entry") or {}).get("last_deadline_bank"),
         "gw1_reconstruction_requested": need_gw1,
-        "duration_ms": round((perf_counter() - started) * 1000, 2),
+        "acquisition_timing": {
+            "initial_parallel_ms": initial_wave_ms,
+            "dependent_parallel_ms": dependent_wave_ms,
+            "gw1_conditional_ms": gw1_ms,
+            "initial_requests": len(initial_specs),
+            "dependent_requests": len(dependent_specs),
+            "bootstrap_overlapped_with_independent_official_endpoints": True,
+        },
+        "duration_ms": total_ms,
     }
     atomic_json(OUTFILE, out)
     print(json.dumps({
         "service": "raw_snapshot",
         "schema": "snapshot.v1",
         "duration_ms": out["duration_ms"],
+        "initial_parallel_ms": initial_wave_ms,
+        "dependent_parallel_ms": dependent_wave_ms,
         "planning_gw": projection_baseline["planning_gw"],
         "baseline_gw": projection_baseline["baseline_gw"],
         "squad_authority": out["squad_authority"],

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from src.engines.reliability import validate_snapshot
 from src.services.contracts import file_digest
-from src.utils import DATA
+from src.utils import CONFIG, DATA
 
 
 LEGAL_FORMATIONS = {"3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-2-3", "5-3-2", "5-4-1"}
@@ -27,8 +27,7 @@ def _assert_version(obj: dict, label: str, minimum: int, prefix: str, field: str
         raise AssertionError(
             f"stale or incompatible {label}: schema={actual_schema}, {field}={actual_version!r}; "
             f"expected schema>={minimum} and {field} prefix {prefix!r}. "
-            "Run `python -m src.services.orchestrator daily --stats --deep-stats` "
-            "before invoking the quality gate."
+            "Run `python -m src.services.orchestrator daily --stats --deep-stats` before invoking the quality gate."
         )
 
 
@@ -54,6 +53,7 @@ def _assert_framework_health() -> tuple[dict, dict]:
         assert governance.get("critical_warmup_blocks_unqualified_go") is True
         assert governance.get("pipeline_health_separate_from_prediction_health") is True
         assert obj.get("checkpoint_context", {}).get("policy_id")
+
     assert pre["gate0"]["counts"].get("PASS", 0) + pre["gate0"]["counts"].get("DEFERRED", 0) == 16
     assert post["gate0"]["counts"].get("PASS", 0) == 16
     assert post.get("pipeline_health") == "GREEN"
@@ -64,6 +64,21 @@ def _assert_framework_health() -> tuple[dict, dict]:
     assert plan_truth.get("both_required") is True
     assert (post.get("governance") or {}).get("effective_plan_legality_enforced") is True
     assert (post.get("governance") or {}).get("engine_and_effective_plan_legality_reported_separately") is True
+    assert (post.get("governance") or {}).get("official_fpl_first_when_available") is True
+
+    official_first = post.get("official_fpl_first") or {}
+    assert official_first.get("status") == "PASS"
+    assert official_first.get("promoted_count", 0) >= 6
+    assert set(official_first.get("promoted_modules") or []) >= {"DSS-18", "DSS-20", "DSS-21", "DSS-22", "DSS-23", "DSS-38"}
+    assert official_first.get("ownership_eo_limitation_disclosed") is True
+    assert official_first.get("external_schedule_limitation_disclosed") is True
+
+    core = {row["id"]: row for row in post["dss_core"]["items"]}
+    for module_id in ("DSS-18", "DSS-20", "DSS-21", "DSS-22", "DSS-23", "DSS-38"):
+        assert core[module_id]["status"] == "ACTIVE", (module_id, core[module_id])
+    assert core["DSS-41"]["status"] == "PARTIAL"
+    assert core["DSS-41"]["detail"]["effective_ownership_available_from_official_fpl"] is False
+
     critical_warmup = list(post.get("critical_warmup") or [])
     if critical_warmup:
         assert post.get("prediction_health") == "AMBER"
@@ -77,19 +92,23 @@ def _assert_framework_health() -> tuple[dict, dict]:
 
 def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
     orchestration = _load("service_orchestration_v4.json")
-    _assert_version(orchestration, "orchestration", 492, "v4.9.3-service-orchestrator")
+    _assert_version(orchestration, "orchestration", 495, "v4.9.5-service-orchestrator-dag-parallel")
     assert orchestration.get("status") == "PASS"
     assert orchestration.get("stats_enabled") is True
     assert orchestration.get("deep_stats_enabled") is True
+    assert orchestration.get("execution_model") == "process_isolated_dag_parallel_single_host"
     services = orchestration.get("services") or []
     ids = [row.get("id") for row in services]
     assert len(services) == 11 and all(row.get("status") == "PASS" for row in services), services
-    assert ids[:4] == ["raw_snapshot", "enrichment", "prediction", "validation_lifecycle"]
-    assert ids.index("optimization") < ids.index("user_decision_overlay") < ids.index("personal_gw_scorecard")
-    assert ids.index("user_decision_overlay") < ids.index("framework_postflight")
+    assert ids[:3] == ["raw_snapshot", "enrichment", "prediction"]
     assert ids[-1] == "report_governance"
     assert all(row.get("boundary_state") == "INDEPENDENT" for row in services)
     assert all(all(contract.get("valid") for contract in row.get("contracts") or []) for row in services)
+    levels = orchestration.get("execution_levels") or []
+    assert any(set(level) == {"validation_lifecycle", "rules_compliance", "optimization"} for level in levels)
+    assert any(set(level) == {"framework_preflight", "user_decision_overlay"} for level in levels)
+    assert any(set(level) == {"personal_gw_scorecard", "framework_postflight"} for level in levels)
+    assert (orchestration.get("summary") or {}).get("parallel_levels", 0) >= 3
     assert orchestration.get("snapshot_identity", {}).get("sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
     assert latest.get("lineage", {}).get("snapshot_sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
     assert latest.get("lineage", {}).get("enrichment_sha256") == file_digest(DATA / "runtime/enrichment.v1.json")
@@ -119,11 +138,22 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
         "effective_plan_legality_enforced_post_overlay",
         "engine_effective_plan_legality_reported_separately",
         "decision_compute_slo_excludes_external_network_io",
+        "official_fpl_first_when_field_available",
+        "dag_parallel_ready_services",
+        "parallel_services_must_have_no_dependency_edge",
+        "optimizer_may_parallelize_with_validation_before_preflight",
+        "postflight_requires_preflight_and_effective_plan",
+        "human_report_language_governed",
+        "technical_reason_codes_separate_from_human_report",
+        "scheduled_checkpoint_recovery_enabled",
     ):
         assert guardrails.get(key) is True, (key, guardrails.get(key))
     assert guardrails.get("decision_compute_slo_ms") == 5000
     assert guardrails.get("official_fpl_api_authority") == "raw_snapshot_only"
     assert guardrails.get("gate0_checks_unchanged") == 16
+    target = orchestration.get("runtime_target") or {}
+    assert float(target.get("target_ms") or 0) == 5000.0
+    assert target.get("hard_gate") is False
     return orchestration, services
 
 
@@ -191,6 +221,12 @@ def _assert_engine_advisory(latest: dict) -> tuple[dict, dict, dict, dict]:
     assert pg.get("stale_lock_players_not_direct_optimizer_input") is True
     assert pg.get("engine_lineup_is_advisory_only") is True
     assert pg.get("manual_override_applied_in_separate_microservice") is True
+    assert pg.get("parallel_lineup_with_wc_package") is True
+    assert pg.get("exact_streaming_top_packages") is True
+    package_perf = packages.get("performance") or {}
+    assert package_perf.get("exact_streaming_top_packages") is True
+    assert package_perf.get("stable_top_package_tie_semantics") is True
+    assert package_perf.get("search_quality_reduction") is False
     planning_squad = pipeline.get("planning_squad") or {}
     baseline = latest.get("projection_baseline") or {}
     assert planning_squad.get("planning_gw") == baseline.get("planning_gw")
@@ -236,7 +272,7 @@ def _assert_scorecard_and_governance(latest: dict, health: dict, overlay: dict, 
     scorecard = _load("gw_scorecard_v4.json")
     checkpoint = _load("checkpoint_decision_v4.json")
     _assert_version(scorecard, "scorecard", 494, "v4.9.4-personal-gw-scorecard")
-    _assert_version(checkpoint, "checkpoint", 492, "v4.9.2-checkpoint-governance")
+    _assert_version(checkpoint, "checkpoint", 495, "v4.9.5-checkpoint-governance-human-report")
     assert scorecard.get("status") == "PASS"
     assert scorecard.get("snapshot_sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
     assert scorecard.get("effective_plan_sha256") == file_digest(DATA / "effective_plan_v4.json")
@@ -274,6 +310,16 @@ def _assert_scorecard_and_governance(latest: dict, health: dict, overlay: dict, 
         assert "USER_FINAL_LOCK_REQUIRED" in (checkpoint.get("readiness") or {}).get("reasons", [])
     if health.get("prediction_health") == "AMBER" and not latest.get("checkpoint_context", {}).get("is_simulation"):
         assert action == "HOLD"
+
+    human = checkpoint.get("human_report") or {}
+    assert human.get("language_policy") == "fpl_human_report_language_v1"
+    assert human.get("technical_terms_suppressed_from_primary_reasoning") is True
+    assert human.get("why") and human.get("what_to_do")
+    policy = json.loads((CONFIG / "report_language_policy.json").read_text(encoding="utf-8"))
+    primary = " ".join([*(human.get("why") or []), *(human.get("what_to_do") or [])]).lower()
+    for marker in policy.get("technical_terms_forbidden_in_primary_reasoning") or []:
+        assert str(marker).lower() not in primary, marker
+    assert (checkpoint.get("guardrails") or {}).get("technical_reason_codes_separate_from_human_reasoning") is True
     return scorecard, checkpoint
 
 
@@ -281,9 +327,16 @@ def run() -> dict:
     pre, health = _assert_framework_health()
     latest = _load("latest.json")
     assert validate_snapshot(latest)["ok"]
-    _assert_version(latest, "latest", 492, "4.9.2-independent-services", field="engine_version")
+    _assert_version(latest, "latest", 495, "4.9.5-official-first-reporting", field="engine_version")
     assert latest.get("files", {}).get("effective_plan") == "data/effective_plan_v4.json"
     assert latest.get("files", {}).get("gw_scorecard") == "data/gw_scorecard_v4.json"
+    official = latest.get("official_context") or {}
+    assert official.get("official_fpl_first") is True
+    assert official.get("source") == "raw_snapshot.official.bootstrap+fixtures"
+    assert int(official.get("team_strength_rows_complete") or 0) == int(official.get("teams") or 0) > 0
+    assert int(official.get("fixture_context_rows_complete") or 0) == int(official.get("upcoming_fixture_rows") or 0) > 0
+    assert official.get("effective_ownership_available_from_official_fpl") is False
+    assert (latest.get("meta") or {}).get("official_fpl_first_for_available_fields") is True
     basis = latest.get("projection_baseline") or {}
     assert basis.get("default_rule") == "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD"
     assert basis.get("baseline_gw") == (latest.get("phase") or {}).get("submitted_gw")
@@ -297,9 +350,12 @@ def run() -> dict:
     sanity = _load("recommendation_sanity_v4.json")
     assert sanity.get("final_verdict") in {"KEEP_15", "OPTIONAL_IMPROVEMENT", "MATERIAL_UPGRADE"}
     plan_truth = health.get("gate0", {}).get("plan_authority_validation") or {}
+    service_durations = {row.get("id"): row.get("duration_ms") for row in services}
     out = {
         "health": health["overall"],
         "gate0": health["gate0"]["counts"],
+        "capability_coverage": health.get("capability_coverage"),
+        "official_promoted": (health.get("official_fpl_first") or {}).get("promoted_modules"),
         "engine_plan_legal": (plan_truth.get("engine_plan") or {}).get("legal"),
         "effective_plan_legal": (plan_truth.get("effective_plan") or {}).get("legal"),
         "recommendation": sanity["final_verdict"],
@@ -311,17 +367,20 @@ def run() -> dict:
         "user_minus_engine_xpts": (overlay.get("comparison") or {}).get("user_minus_engine_xpts"),
         "previous_gw": (scorecard.get("headline") or {}).get("previous"),
         "planning_gw": (scorecard.get("headline") or {}).get("planning"),
-        "projection_baseline_gw": basis.get("baseline_gw"),
-        "projection_override_applied": basis.get("override_applied"),
         "action": checkpoint.get("action_state"),
+        "human_reasons": (checkpoint.get("human_report") or {}).get("why"),
         "execution_authorized": (checkpoint.get("decision") or {}).get("execution_authorized"),
         "services": len(services),
+        "service_durations_ms": service_durations,
+        "execution_levels": orchestration.get("execution_levels"),
         "eligible_calibration_samples": lifecycle.get("eligibility", {}).get("eligible_samples"),
         "orchestration_ms": orchestration.get("duration_ms"),
+        "orchestration_target": orchestration.get("runtime_target"),
+        "pipeline_timings": pipeline.get("timings"),
         "pipeline_ms": (pipeline.get("timings") or {}).get("total_pipeline_ms"),
         "decision_slo": pipeline.get("performance_slo"),
     }
-    print("V4.9.4.3 RECONCILIATION-TRUTH RUNTIME GATE PASS", json.dumps(out, ensure_ascii=False))
+    print("V4.9.5 OFFICIAL-FIRST HUMAN-REPORT DAG GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

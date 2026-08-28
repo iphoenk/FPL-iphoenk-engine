@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.services.contracts import MISSING, validate_contract, value_at
-from src.services.orchestrator import _ordered_services, _render_command, orchestrate
+from src.services.orchestrator import _ordered_services, _render_command, _service_levels, orchestrate
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,17 +16,28 @@ def test_registered_services_are_ordered_and_contract_complete():
     services = json.loads((ROOT / "config/service_registry.json").read_text())
     contracts = json.loads((ROOT / "config/service_contract_registry.json").read_text())
     ordered = _ordered_services(services)
+    levels = _service_levels(services)
     ids = [row["id"] for row in ordered]
+    by_id = {row["id"]: row for row in ordered}
     assert len(ordered) == 11
     assert ordered[0]["id"] == "raw_snapshot"
     assert ordered[-1]["id"] == "report_governance"
     assert all(row["boundary_state"] == "INDEPENDENT" for row in ordered)
-    assert ids[:4] == ["raw_snapshot", "enrichment", "prediction", "validation_lifecycle"]
+    assert ids[:3] == ["raw_snapshot", "enrichment", "prediction"]
+    assert set(by_id["rules_compliance"]["depends_on"]) == {"prediction"}
+    assert set(by_id["validation_lifecycle"]["depends_on"]) == {"prediction"}
+    assert set(by_id["optimization"]["depends_on"]) == {"prediction"}
+    assert set(by_id["framework_preflight"]["depends_on"]) == {"validation_lifecycle", "rules_compliance"}
+    assert set(by_id["framework_postflight"]["depends_on"]) == {"framework_preflight", "user_decision_overlay"}
     assert ids.index("optimization") < ids.index("user_decision_overlay") < ids.index("personal_gw_scorecard")
     assert set(ordered[-1]["depends_on"]) == {"framework_postflight", "personal_gw_scorecard"}
+    assert any({row["id"] for row in level} == {"validation_lifecycle", "rules_compliance", "optimization"} for level in levels)
+    assert any({row["id"] for row in level} == {"framework_preflight", "user_decision_overlay"} for level in levels)
+    assert any({row["id"] for row in level} == {"personal_gw_scorecard", "framework_postflight"} for level in levels)
     declared = contracts["contracts"]
     assert all(name in declared for service in ordered for name in service["produces"])
     guardrails = services["guardrails"]
+    assert services["execution_model"] == "process_isolated_dag_parallel_single_host"
     assert guardrails["gate0_checks_unchanged"] == 16
     assert guardrails["validation_lifecycle_no_official_refetch"] is True
     assert guardrails["deadline_snapshot_immutable"] is True
@@ -48,6 +59,13 @@ def test_registered_services_are_ordered_and_contract_complete():
     assert guardrails["advanced_ablation_observational_outside_decision_chain"] is True
     assert guardrails["advanced_ablation_full_shadow_parity_required"] is True
     assert guardrails["advanced_ablation_diagnostic_not_arbitrary_gate"] is True
+    assert guardrails["official_fpl_first_when_field_available"] is True
+    assert guardrails["dag_parallel_ready_services"] is True
+    assert guardrails["parallel_services_must_have_no_dependency_edge"] is True
+    assert guardrails["optimizer_may_parallelize_with_validation_before_preflight"] is True
+    assert guardrails["postflight_requires_preflight_and_effective_plan"] is True
+    assert guardrails["human_report_language_governed"] is True
+    assert guardrails["scheduled_checkpoint_recovery_enabled"] is True
     assert guardrails["registry_counts_unchanged"] == {
         "dss_core": 50,
         "dss_extensions": 16,
@@ -152,3 +170,4 @@ def test_latest_contract_preserves_file_pointers_including_effective_plan():
         "team", "live", "prices", "health", "universe", "chips", "predictions",
         "effective_plan", "gw_scorecard", "checkpoint_decision", "service_orchestration",
     )} <= required
+    assert {"official_context.source", "official_context.official_fpl_first"} <= required

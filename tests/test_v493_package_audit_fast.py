@@ -35,5 +35,8 @@ def test_compact_package_audit_matches_reference_acceptance_snapshot():
     assert perf["compact_keep_profile"] is True
     assert perf["scalar_delta_metrics"] is True
     assert perf["position_value_reuse"] is True
+    assert perf["exact_streaming_top_packages"] is True
+    assert perf["stable_top_package_tie_semantics"] is True
+    assert perf["full_result_sort_removed"] is True
     assert perf["search_quality_reduction"] is False
     assert perf["evaluated_packages"] == reference["performance"]["evaluated_packages"]

@@ -35,6 +35,52 @@ def _write_price_artifacts(bootstrap: dict, generated: str) -> tuple[list[dict],
     return confirmed, momentum
 
 
+def _official_context_summary(bootstrap: dict, fixtures: list[dict]) -> dict:
+    teams = list(bootstrap.get("teams") or [])
+    players = list(bootstrap.get("elements") or [])
+    upcoming = [row for row in fixtures if not row.get("finished") and row.get("event") is not None]
+    strength_fields = (
+        "strength_attack_home", "strength_attack_away",
+        "strength_defence_home", "strength_defence_away",
+        "strength_overall_home", "strength_overall_away",
+    )
+    strength_complete = sum(all(team.get(field) is not None for field in strength_fields) for team in teams)
+    fixture_context_complete = sum(
+        row.get("team_h") is not None
+        and row.get("team_a") is not None
+        and row.get("team_h_difficulty") is not None
+        and row.get("team_a_difficulty") is not None
+        for row in upcoming
+    )
+    player_fields = {
+        "ownership": "selected_by_percent",
+        "expected_goals": "expected_goals",
+        "expected_assists": "expected_assists",
+        "expected_goal_involvements": "expected_goal_involvements",
+        "expected_goals_conceded": "expected_goals_conceded",
+        "bps": "bps",
+        "bonus": "bonus",
+        "form": "form",
+        "starts": "starts",
+    }
+    coverage = {
+        label: sum(player.get(field) is not None for player in players)
+        for label, field in player_fields.items()
+    }
+    return {
+        "source": "raw_snapshot.official.bootstrap+fixtures",
+        "official_fpl_first": True,
+        "teams": len(teams),
+        "team_strength_rows_complete": strength_complete,
+        "upcoming_fixture_rows": len(upcoming),
+        "fixture_context_rows_complete": fixture_context_complete,
+        "player_rows": len(players),
+        "player_field_coverage": coverage,
+        "effective_ownership_available_from_official_fpl": False,
+        "external_schedule_scope": "premier_league_only",
+    }
+
+
 def run() -> dict:
     started = perf_counter()
     raw, enrichment = read_json(SNAPSHOT, {}), read_json(ENRICHMENT, {})
@@ -105,9 +151,10 @@ def run() -> dict:
     prediction_ms = round((perf_counter() - started) * 1000, 2)
     raw_snapshot_ms = float(raw.get("duration_ms") or 0)
     enrichment_ms = float(enrichment.get("duration_ms") or 0)
+    official_context = _official_context_summary(bootstrap, fixtures)
     latest = {
-        "schema_version": 492,
-        "engine_version": "4.9.2-independent-services",
+        "schema_version": 495,
+        "engine_version": "4.9.5-official-first-reporting",
         "generated_at": generated,
         "mode": raw["mode"],
         "checkpoint_context": raw["checkpoint_context"],
@@ -117,6 +164,7 @@ def run() -> dict:
         "squad_authority": raw["squad_authority"],
         "projection_baseline": raw.get("projection_baseline") or {},
         "advanced_stats_sync": enrichment["advanced_stats_sync"],
+        "official_context": official_context,
         "prediction_summary": {
             "model": predictions["model_version"],
             "players": len(predictions["players"]),
@@ -156,6 +204,7 @@ def run() -> dict:
         "meta": {
             "direct_fpl_api_authority": False,
             "raw_snapshot_is_official_api_authority": True,
+            "official_fpl_first_for_available_fields": True,
             "fail_closed": True,
             "prediction_point_in_time": True,
             "advanced_stats_are_community_enrichment": True,
@@ -174,7 +223,13 @@ def run() -> dict:
     if gw:
         atomic_json(DATA / "gw" / f"{gw:02d}.json", latest)
     append_jsonl(DATA / "history.jsonl", latest)
-    print(json.dumps({"service": "prediction", "engine": latest["engine_version"], "players": len(predictions["players"]), "duration_ms": latest["performance"]["prediction_ms"]}))
+    print(json.dumps({
+        "service": "prediction",
+        "engine": latest["engine_version"],
+        "players": len(predictions["players"]),
+        "official_context": official_context,
+        "duration_ms": latest["performance"]["prediction_ms"],
+    }))
     return latest
 
 

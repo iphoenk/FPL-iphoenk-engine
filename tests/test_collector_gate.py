@@ -14,7 +14,7 @@ def test_hourly_primary_always_collects():
 
 
 def test_adaptive_slot_skips_normal_day():
-    collect, reason = should_collect("schedule", "15 * * * *", utc(2026, 8, 25, 18), utc(2026, 8, 28, 17, 30), False)
+    collect, reason = should_collect("schedule", "*/15 * * * *", utc(2026, 8, 25, 18), utc(2026, 8, 28, 17, 30), False)
     assert collect is False
     assert reason == "adaptive_slot_not_needed"
 
@@ -23,14 +23,14 @@ def test_adaptive_slot_runs_within_24h_deadline():
     now = utc(2026, 8, 27, 18)
     deadline = utc(2026, 8, 28, 17, 30)
     assert deadline_intensive(now, deadline) is True
-    collect, reason = should_collect("schedule", "15 * * * *", now, deadline, False)
+    collect, reason = should_collect("schedule", "*/15 * * * *", now, deadline, False)
     assert collect is True
     assert reason == "adaptive_deadline_window"
 
 
 def test_adaptive_slot_runs_during_match_window():
     now = utc(2026, 8, 25, 18)
-    collect, reason = should_collect("schedule", "15 * * * *", now, utc(2026, 8, 29, 18), True)
+    collect, reason = should_collect("schedule", "*/15 * * * *", now, utc(2026, 8, 29, 18), True)
     assert collect is True
     assert reason == "adaptive_match_window"
 

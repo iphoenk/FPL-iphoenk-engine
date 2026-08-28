@@ -1,3 +1,4 @@
+import ast
 import json
 from pathlib import Path
 
@@ -64,19 +65,30 @@ def test_watchlist_ranking_primitives_are_config_owned_and_fpl_scoring_is_rule_o
     assert "_f(rates.get(\"saves90\")) / 3.0" not in implementation
 
 
+def _imports_public_official_transport(path: Path) -> bool:
+    tree = ast.parse(path.read_text(), filename=str(path))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "src.sources.official_fpl":
+            return True
+        if isinstance(node, ast.Import):
+            if any(alias.name == "src.sources.official_fpl" for alias in node.names):
+                return True
+    return False
+
+
 def test_public_official_transport_imports_are_explicitly_owned_even_in_helper_modules():
     ownership = json.loads((ROOT / "config" / "runtime" / "logic_ownership.json").read_text())
     allowed = ownership["approved_engine_official_fetch_modules"]
     found = {}
     for path in sorted((ROOT / "src" / "engines").rglob("*.py")):
-        text = path.read_text()
-        if "src.sources.official_fpl" not in text:
+        if not _imports_public_official_transport(path):
             continue
         module = ".".join(path.relative_to(ROOT).with_suffix("").parts)
         found[module] = allowed.get(module)
     assert set(found) == set(allowed)
     assert all(found.values())
     assert "src.engines.price_radar" not in found
+    assert "src.engines.historical_prior_service" not in found
 
 
 def test_price_artifacts_have_raw_market_intermediate_and_one_canonical_writer():

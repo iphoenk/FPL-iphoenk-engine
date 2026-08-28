@@ -13,6 +13,7 @@ from src.v5.execution_plane import (
     materialization,
     plane,
 )
+from src.v5.replay_executor import execute_replay
 from src.v5.service_client import invoke_envelope, invoke_parallel_envelopes
 from src.v5.services.orchestrator import handle as core_handle
 
@@ -109,6 +110,32 @@ def _hot_run(payload: dict[str, Any]) -> dict[str, Any]:
     if elapsed_ms > hard_ms:
         raise RuntimeError(f"V5 HOT SLA BREACH: {elapsed_ms:.1f}ms > {hard_ms}ms")
     return result
+
+
+def _replay_run(payload: dict[str, Any]) -> dict[str, Any]:
+    """Re-execute a captured decision strictly from point-in-time replay inputs."""
+    cid = str(payload.get("correlation_id") or f"replay-{uuid.uuid4().hex}")
+    supplied = payload.get("replay_bundle")
+    if isinstance(supplied, dict):
+        bundle = supplied
+    else:
+        mapping = load_json_config(CONFIG).get("artifact_mapping") or {}
+        read_env = _invoke(
+            "artifact_read",
+            {"name": mapping["replay_bundle"], "default": {}},
+            cid,
+        )
+        bundle = read_env.get("data") if isinstance(read_env.get("data"), dict) else {}
+
+    requested_team = payload.get("team_id")
+    if requested_team is not None and int(requested_team) != int(bundle.get("team_id") or -1):
+        raise RuntimeError("V5 REPLAY FAIL CLOSED: replay bundle belongs to a different team")
+
+    return execute_replay(
+        bundle,
+        invoke_route=_invoke,
+        correlation_id=cid,
+    )
 
 
 def _refresh_run(payload: dict[str, Any]) -> dict[str, Any]:
@@ -227,6 +254,8 @@ def _refresh_run(payload: dict[str, Any]) -> dict[str, Any]:
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation == "hot_run":
         return _hot_run(payload)
+    if operation == "replay":
+        return _replay_run(payload)
     if operation != "run":
         return core_handle(operation, payload)
 

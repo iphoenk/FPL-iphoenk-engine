@@ -1,5 +1,5 @@
 {
-  "version":7,
+  "version":8,
   "data_root":"data/v5",
   "artifacts":{
     "latest":"latest.json",
@@ -19,6 +19,7 @@
     "prediction_accuracy":"prediction_accuracy.json",
     "challenger_observations":"challenger_observations.json",
     "challenger_scorecard":"challenger_scorecard.json",
+    "challenger_comparator":"challenger_comparator.json",
     "package_optimizer":"package_optimizer.json",
     "watchlist":"dss_watchlist.json",
     "framework_health":"framework_health.json",

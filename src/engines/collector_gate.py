@@ -239,7 +239,6 @@ def normal_report_mode(now_utc: datetime, hourly_checkpoint: bool | None = None)
     ):
         if str(normal.get(key) or "") == hhmm:
             return mode
-    # Scheduled GitHub execution can be delayed while retaining the intended hourly checkpoint.
     if hourly_checkpoint:
         for key, mode in (
             ("deep_review", "NORMAL_DEEP_REVIEW"),
@@ -359,8 +358,11 @@ def should_collect(
     if is_deep_stats_schedule(schedule_expr):
         return True, "daily_deep_stats"
     if is_adaptive_schedule(schedule_expr):
-        if deadline_intensive(now_utc, deadline_utc):
-            return True, "adaptive_deadline_window"
+        final_grace = int((policy.get("deadline_day") or {}).get("final_review_grace_minutes") or 15)
+        if deadline_intensive(now_utc, deadline_utc) and final_review_due(
+            now_utc, deadline_utc, grace_minutes=final_grace
+        ):
+            return True, "adaptive_final_review"
         if match_window:
             return True, "adaptive_live_refresh"
         return False, "adaptive_slot_not_needed"
@@ -409,7 +411,6 @@ def main() -> int:
         hourly_checkpoint=(event == "schedule" and is_primary_schedule(schedule_expr)),
         final_review_grace_minutes=final_grace if event == "schedule" else 0,
     )
-    # The direct fixture probe is authoritative for Match Mode; avoid refetching only to populate the decision object.
     if match_window:
         decision["match_mode"] = True
         if event == "schedule" and is_primary_schedule(schedule_expr) and not deadline_intensive(now, deadline):

@@ -10,8 +10,10 @@ from src.v5.intelligence.historical_prior import resolve_prior
 from src.v5.intelligence.native_feature_trace import build_native_feature_trace
 from src.v5.intelligence.prediction_quality import evaluate_prediction_quality
 from src.v5.intelligence.projection import build_predictions
+from src.v5.intelligence.rolling_form import build_rolling_form
 
 ROLE_CONFIG = "config/intelligence/role_intelligence.json"
+EVIDENCE_CONFIG = "config/intelligence/evidence_enrichment.json"
 BASE_CAPABILITIES = [
     "xmins",
     "xmins_distribution",
@@ -37,6 +39,7 @@ BASE_CAPABILITIES = [
     "advanced_stats_integration",
     "authoritative_advanced_attack_fusion",
     "advanced_stats_point_in_time_freshness",
+    "rolling_current_form_point_in_time",
     "player_specific_defcon_probability",
     "sustainability",
     "team_defensive_risk",
@@ -103,6 +106,42 @@ def _bind_advanced_freshness_context(enrichment: dict[str, Any]) -> None:
             row["_source_context"] = context
 
 
+def _bind_rolling_current_form(
+    enrichment: dict[str, Any],
+    bootstrap: dict[str, Any],
+    planning_gw: int,
+) -> None:
+    evidence_cfg = load_json_config(EVIDENCE_CONFIG)
+    rolling_cfg = evidence_cfg.get("current_form") if isinstance(evidence_cfg.get("current_form"), dict) else {}
+    rolling = build_rolling_form(planning_gw=planning_gw, config=rolling_cfg)
+    existing = enrichment.get("current_form") if isinstance(enrichment.get("current_form"), dict) else {}
+    existing_players = existing.get("players") if isinstance(existing.get("players"), dict) else {}
+    rolling_players = rolling.get("players") if isinstance(rolling.get("players"), dict) else {}
+    merged_players: dict[str, Any] = {}
+    for player in bootstrap.get("elements") or []:
+        if not isinstance(player, dict) or player.get("id") is None:
+            continue
+        key = str(int(player["id"]))
+        base = existing_players.get(key) if isinstance(existing_players.get(key), dict) else {}
+        rolling_player = rolling_players.get(key) if isinstance(rolling_players.get(key), dict) else None
+        merged_players[key] = {
+            **base,
+            "rolling_attack": rolling_player,
+            "rolling_authoritative_eligible": bool(rolling_player and rolling_player.get("authoritative_eligible")),
+        }
+    enrichment["current_form"] = {
+        **{key: value for key, value in rolling.items() if key != "players"},
+        "official_context_source": existing.get("source"),
+        "players": merged_players,
+        "authoritative_mean_adjustment": False,
+        "governance": {
+            **(rolling.get("governance") if isinstance(rolling.get("governance"), dict) else {}),
+            "bootstrap_form_fields_are_context_not_second_attack_overlay": True,
+            "prediction_mean_unchanged_until_fusion_stage_promotes_rolling_form": True,
+        },
+    }
+
+
 def _compact_enrichment(enrichment: dict[str, Any]) -> dict[str, Any]:
     advanced = enrichment.get("advanced_stats") if isinstance(enrichment.get("advanced_stats"), dict) else {}
     schedule = enrichment.get("schedule") if isinstance(enrichment.get("schedule"), dict) else {}
@@ -149,10 +188,15 @@ def _compact_enrichment(enrichment: dict[str, Any]) -> dict[str, Any]:
         "preseason": preseason,
         "current_form": {
             "status": current_form.get("status"),
+            "model": current_form.get("model"),
             "source": current_form.get("source"),
             "players": len(current_form.get("players") or {}),
+            "valid_gws": current_form.get("valid_gws"),
+            "expected_completed_gw": current_form.get("expected_completed_gw"),
+            "latest_completed_gw_available": current_form.get("latest_completed_gw_available"),
+            "authoritative_eligible": current_form.get("authoritative_eligible"),
+            "authoritative_players": current_form.get("authoritative_players"),
             "authoritative_mean_adjustment": current_form.get("authoritative_mean_adjustment"),
-            "advanced_artifact_freshness": current_form.get("advanced_artifact_freshness"),
         },
         "source_fusion": {
             "status": fusion.get("status"),
@@ -194,6 +238,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                     "capabilities": [
                         "advanced_stats_sync",
                         "advanced_stats_point_in_time_freshness",
+                        "rolling_current_form_point_in_time",
                         "player_defensive_contribution_evidence",
                         "european_congestion",
                         "domestic_cup_congestion",
@@ -237,6 +282,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         planning_gw=planning_gw,
     )
     _bind_advanced_freshness_context(enrichment)
+    _bind_rolling_current_form(enrichment, bootstrap, planning_gw)
     capabilities = _capabilities(enrichment)
     previous_prior = payload.get("historical_prior") if isinstance(payload.get("historical_prior"), dict) else {}
     prior = resolve_prior(

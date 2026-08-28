@@ -179,21 +179,54 @@ def _declare_player_features(
         provenance=current_form.get("source"),
     )
 
-    schedule = _dict(enrichment.get("schedule"))
-    league_rest = _dict(_dict(schedule.get("league_rest_days")).get(team_id))
-    cross_rest = _dict(_dict(schedule.get("cross_competition_rest_days")).get(team_id))
-    rest_evidence = {
-        "league": league_rest or None,
-        "cross_competition": cross_rest or None,
-    }
-    if not league_rest and not cross_rest:
-        rest_evidence = {}
-    bundle.declare(
-        "rest_congestion",
-        rest_evidence or None,
-        reason=None if rest_evidence else "rest/congestion evidence unavailable for team",
-        provenance="official_fpl+api_football" if rest_evidence else None,
-    )
+    overlay = _dict(player.get("fixture_congestion_overlay"))
+    fixture_rest_rows = [
+        row
+        for row in (overlay.get("fixtures") or [])
+        if isinstance(row, dict)
+        and _dict(_dict(row.get("congestion")).get("rest_context")).get("status") == "ACTIVE"
+    ]
+    if fixture_rest_rows:
+        rest_evidence = {
+            "application_mode": overlay.get("application_mode"),
+            "evaluated_fixtures": overlay.get("evaluated_fixtures"),
+            "fixtures_with_rest_evidence": overlay.get("fixtures_with_rest_evidence"),
+            "applied_fixtures": overlay.get("applied_fixtures"),
+        }
+        bundle.declare(
+            "rest_congestion",
+            rest_evidence,
+            provenance="fixture_specific_official_fpl+api_football",
+        )
+        bundle.consume(
+            "rest_congestion",
+            "fixture_congestion_overlay",
+            effect_scope="SHADOW_OVERLAY",
+            contribution={
+                "fixtures_with_rest_evidence": len(fixture_rest_rows),
+                "applied_fixtures": overlay.get("applied_fixtures"),
+                "authoritative_xmins_replaced": False,
+                "authoritative_xpts_replaced": False,
+            },
+        )
+    else:
+        schedule = _dict(enrichment.get("schedule"))
+        league_rest = _dict(_dict(schedule.get("league_rest_days")).get(team_id))
+        cross_rest = _dict(_dict(schedule.get("cross_competition_rest_days")).get(team_id))
+        global_context = {
+            "global_calendar_context_available": bool(league_rest or cross_rest),
+            "fixture_specific_evidence": False,
+        }
+        bundle.declare(
+            "rest_congestion",
+            global_context if global_context["global_calendar_context_available"] else None,
+            reason=(
+                "global rest context exists but fixture-specific evidence is required for consumption"
+                if global_context["global_calendar_context_available"]
+                else "rest/congestion evidence unavailable for team"
+            ),
+            provenance="full_core_enrichment",
+        )
 
     preseason = _dict(enrichment.get("preseason"))
     preseason_available = str(preseason.get("evidence_status") or "") == "AVAILABLE"
@@ -213,13 +246,15 @@ def _declare_player_features(
 def _aggregate_feature_bundles(
     player_snapshots: dict[str, dict[str, Any]],
     enrichment: dict[str, Any],
-) -> tuple[dict[str, Any], list[str]]:
+) -> tuple[dict[str, Any], list[str], list[str], list[str]]:
     names: set[str] = set()
     for snapshot in player_snapshots.values():
         names.update((_dict(snapshot.get("states"))).keys())
 
     aggregate = FeatureBundle()
     unintegrated: list[str] = []
+    shadow_only: list[str] = []
+    available_only: list[str] = []
     for name in sorted(names):
         states = [
             _dict(_dict(snapshot.get("states")).get(name))
@@ -257,6 +292,10 @@ def _aggregate_feature_bundles(
                 )
             if authoritative == 0:
                 unintegrated.append(name)
+                if active > 0:
+                    shadow_only.append(name)
+                else:
+                    available_only.append(name)
 
     preseason = _dict(enrichment.get("preseason"))
     if str(preseason.get("evidence_status") or "") == "AVAILABLE":
@@ -275,8 +314,15 @@ def _aggregate_feature_bundles(
             )
         if name not in unintegrated:
             unintegrated.append(name)
+        if name not in available_only:
+            available_only.append(name)
 
-    return aggregate.snapshot(), sorted(set(unintegrated))
+    return (
+        aggregate.snapshot(),
+        sorted(set(unintegrated)),
+        sorted(set(shadow_only)),
+        sorted(set(available_only)),
+    )
 
 
 def build_native_feature_trace(
@@ -291,17 +337,20 @@ def build_native_feature_trace(
         bundle = _declare_player_features(player, enrichment)
         players[str(int(player["element"]))] = bundle.snapshot()
 
-    aggregate, unintegrated = _aggregate_feature_bundles(players, enrichment)
+    aggregate, unintegrated, shadow_only, available_only = _aggregate_feature_bundles(players, enrichment)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "model": TRACE_MODEL,
         "players": players,
         "aggregate_feature_bundle": aggregate,
         "unintegrated_features": unintegrated,
+        "shadow_only_features": shadow_only,
+        "available_only_features": available_only,
         "governance": {
             "active_means_consumed_not_merely_fetched": True,
             "authoritative_effect_requires_explicit_xmins_xpts_or_decision_scope": True,
             "available_but_unintegrated_features_must_not_be_claimed_as_model_inputs": True,
+            "shadow_overlay_must_not_be_claimed_as_authoritative": True,
             "telemetry_does_not_change_prediction_values": True,
         },
     }

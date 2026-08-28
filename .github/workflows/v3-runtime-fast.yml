@@ -115,6 +115,10 @@ jobs:
           python -m src.engines.report_serving_validate
           python -m src.engines.report_time_contract_validate
 
+      - name: Capture validated FAST semantic reuse manifest
+        if: steps.cadence.outputs.should_collect == 'true' && steps.runtime.outputs.profile == 'fast_decision'
+        run: python -m src.runtime_v3.reuse_manifest --profile fast_decision
+
       - name: Enforce transition ceiling and report FAST target
         if: steps.cadence.outputs.should_collect == 'true'
         run: python -m src.runtime_v3.performance_guard --profile "${{ steps.runtime.outputs.profile }}"

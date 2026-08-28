@@ -9,7 +9,7 @@ from typing import Any
 from src.utils import DATA, ROOT, atomic_json, read_json
 
 CONFIG_PATH = ROOT / "config" / "intelligence" / "reporting.json"
-USER_OUT = DATA / "user_report.json"
+USER_OUT = DATA / "report_draft.json"
 TECH_OUT = DATA / "technical_appendix.json"
 STATE_OUT = DATA / "report_state.json"
 
@@ -303,20 +303,20 @@ def _watchlist_section(watchlist: dict[str, Any]) -> dict[str, Any]:
 def _engine_line(framework: dict[str, Any], latest: dict[str, Any]) -> dict[str, Any]:
     overall = str(framework.get("overall") or "UNKNOWN")
     critical = list(framework.get("critical_failed") or [])
-    freshness = (framework.get("data_freshness") or {}).get("status")
-    fresh_text = "data fresh" if freshness == "PASS" else "freshness perlu dipantau"
-    if critical:
-        text = f"Engine: {overall}, {fresh_text}, ada critical failure yang bisa memengaruhi keputusan."
-    else:
-        text = f"Engine: {overall}, {fresh_text}, tidak ada critical failure."
-    return {"text": text, "critical": bool(critical), "generated_at": latest.get("generated_at")}
+    prediction = str(((framework.get("prediction_quality") or {}).get("status") or "UNKNOWN"))
+    return {
+        "status": "GREEN" if overall == "GREEN" and not critical else "REVIEW",
+        "critical": critical,
+        "prediction_quality": prediction,
+        "source": "framework_health",
+        "freshness": ((latest.get("source_freshness") or {}).get("bootstrap") or {}).get("age_minutes"),
+    }
 
 
 def _action_board(user: dict[str, Any]) -> list[dict[str, Any]]:
-    max_items = int((load_policy().get("action_board") or {}).get("max_items") or 8)
-    items: list[dict[str, Any]] = []
-    decision = user.get("decision") or {}
-    items.append({"action": decision.get("squad"), "subject": "Squad", "trigger": "ubah hanya jika ada evidence baru yang material"})
+    cfg = load_policy().get("action_board") or {}
+    max_items = int(cfg.get("max_items") or 6)
+    items = []
     lineup = user.get("starting_xi") or {}
     battle = ((lineup.get("model") or {}).get("battle") or {})
     if battle.get("starter") or battle.get("challenger"):
@@ -459,7 +459,7 @@ def run() -> dict[str, Any]:
     atomic_json(STATE_OUT, state)
     latest = read_json(DATA / "latest.json", {})
     latest.setdefault("files", {}).update({
-        "user_report": "data/user_report.json",
+        "report_draft": "data/report_draft.json",
         "technical_appendix": "data/technical_appendix.json",
         "report_state": "data/report_state.json",
     })

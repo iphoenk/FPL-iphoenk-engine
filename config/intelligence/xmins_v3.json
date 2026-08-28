@@ -21,6 +21,7 @@
   "small_sample_matches": 3,
   "fixture_congestion": {
     "enabled": true,
+    "application_mode": "SHADOW_ONLY",
     "model": "adjacent_fixture_rest_role_weighted_v1",
     "calibration_status": "PROVISIONAL_STRUCTURAL_PRIOR",
     "rest_thresholds_days": {
@@ -38,7 +39,8 @@
       "fixture_specific_only": true,
       "calendar_global_minimum_must_not_drive_current_xmins": true,
       "factor_is_role_weighted": true,
-      "no_schedule_evidence_means_neutral_factor": true
+      "no_schedule_evidence_means_neutral_factor": true,
+      "shadow_only_until_settled_calibration_gate_passes": true
     }
   },
   "confidence": {

@@ -12,9 +12,25 @@ def _gw_value(player, index: int) -> float:
     return player.gw_xpts[index] if index < len(player.gw_xpts) else 0.0
 
 
+def _prefix(values) -> list[float]:
+    out = [0.0]
+    for value in values:
+        out.append(out[-1] + value)
+    return out
+
+
 def _keep_profile(players) -> dict:
     ps = list(players)
     by_pos = {pos: [p for p in ps if p.position == pos] for pos in POSITION_COUNTS}
+    gw_sorted = []
+    gw_prefix = []
+    for index in range(5):
+        sorted_by_pos = {
+            pos: sorted((_gw_value(p, index) for p in by_pos[pos]), reverse=True)
+            for pos in POSITION_COUNTS
+        }
+        gw_sorted.append(sorted_by_pos)
+        gw_prefix.append({pos: _prefix(values) for pos, values in sorted_by_pos.items()})
     return {
         "cost": sum(p.cost for p in ps),
         "objective": sum(p.objective for p in ps),
@@ -23,57 +39,71 @@ def _keep_profile(players) -> dict:
         "x10": sum(p.x10 for p in ps),
         "x15": sum(p.x15 for p in ps),
         "gw_total": [sum(_gw_value(p, i) for p in ps) for i in range(5)],
-        "gw_by_pos": [
-            {pos: [_gw_value(p, i) for p in by_pos[pos]] for pos in POSITION_COUNTS}
-            for i in range(5)
-        ],
+        "gw_sorted": gw_sorted,
+        "gw_prefix": gw_prefix,
     }
 
 
-def _best_xi_from_values(by: dict[str, list[float]]) -> float:
-    gk = max(by["GK"], default=0.0)
-    dv = sorted(by["DEF"], reverse=True)
-    mv = sorted(by["MID"], reverse=True)
-    fv = sorted(by["FWD"], reverse=True)
-    dp = [0.0]
-    mp = [0.0]
-    fp = [0.0]
-    for value in dv:
-        dp.append(dp[-1] + value)
-    for value in mv:
-        mp.append(mp[-1] + value)
-    for value in fv:
-        fp.append(fp[-1] + value)
+def _chosen_profile(chosen) -> dict:
+    ps = tuple(chosen)
+    gw_by_pos = []
+    for index in range(5):
+        row = {pos: [] for pos in POSITION_COUNTS}
+        for player in ps:
+            row[player.position].append(_gw_value(player, index))
+        gw_by_pos.append(row)
+    return {
+        "cost": sum(p.cost for p in ps),
+        "objective": sum(p.objective for p in ps),
+        "x3": sum(p.x3 for p in ps),
+        "x5": sum(p.x5 for p in ps),
+        "x10": sum(p.x10 for p in ps),
+        "x15": sum(p.x15 for p in ps),
+        "gw_total": [sum(_gw_value(p, i) for p in ps) for i in range(5)],
+        "gw_by_pos": gw_by_pos,
+    }
+
+
+def _best_xi_from_prefix(prefix: dict[str, list[float]]) -> float:
+    gk = prefix["GK"][1]
+    dp = prefix["DEF"]
+    mp = prefix["MID"]
+    fp = prefix["FWD"]
     return max(
-        gk + dp[3] + mp[4] + fp[3], gk + dp[3] + mp[5] + fp[2],
-        gk + dp[4] + mp[3] + fp[3], gk + dp[4] + mp[4] + fp[2],
-        gk + dp[4] + mp[5] + fp[1], gk + dp[5] + mp[2] + fp[3],
-        gk + dp[5] + mp[3] + fp[2], gk + dp[5] + mp[4] + fp[1],
+        gk + dp[3] + mp[4] + fp[3],
+        gk + dp[3] + mp[5] + fp[2],
+        gk + dp[4] + mp[3] + fp[3],
+        gk + dp[4] + mp[4] + fp[2],
+        gk + dp[4] + mp[5] + fp[1],
+        gk + dp[5] + mp[2] + fp[3],
+        gk + dp[5] + mp[3] + fp[2],
+        gk + dp[5] + mp[4] + fp[1],
     )
 
 
-def _metrics_from_keep_profile(profile: dict, chosen) -> dict:
-    chosen = tuple(chosen)
+def _metrics_from_profiles(profile: dict, chosen_profile: dict) -> dict:
     xi5 = 0.0
     utility5 = 0.0
     for index in range(5):
-        by = {pos: list(profile["gw_by_pos"][index][pos]) for pos in POSITION_COUNTS}
-        chosen_total = 0.0
-        for player in chosen:
-            value = _gw_value(player, index)
-            by[player.position].append(value)
-            chosen_total += value
-        xi = _best_xi_from_values(by)
-        total = profile["gw_total"][index] + chosen_total
+        prefixes = {}
+        additions = chosen_profile["gw_by_pos"][index]
+        for pos in POSITION_COUNTS:
+            if additions[pos]:
+                merged = sorted(profile["gw_sorted"][index][pos] + additions[pos], reverse=True)
+                prefixes[pos] = _prefix(merged)
+            else:
+                prefixes[pos] = profile["gw_prefix"][index][pos]
+        xi = _best_xi_from_prefix(prefixes)
+        total = profile["gw_total"][index] + chosen_profile["gw_total"][index]
         xi5 += xi
         utility5 += xi + .12 * (total - xi)
     return {
-        "cost": profile["cost"] + sum(p.cost for p in chosen),
-        "objective": round(profile["objective"] + sum(p.objective for p in chosen), 4),
-        "squad_xpts_3": round(profile["x3"] + sum(p.x3 for p in chosen), 2),
-        "squad_xpts_5": round(profile["x5"] + sum(p.x5 for p in chosen), 2),
-        "squad_xpts_10": round(profile["x10"] + sum(p.x10 for p in chosen), 2),
-        "squad_xpts_15": round(profile["x15"] + sum(p.x15 for p in chosen), 2),
+        "cost": profile["cost"] + chosen_profile["cost"],
+        "objective": round(profile["objective"] + chosen_profile["objective"], 4),
+        "squad_xpts_3": round(profile["x3"] + chosen_profile["x3"], 2),
+        "squad_xpts_5": round(profile["x5"] + chosen_profile["x5"], 2),
+        "squad_xpts_10": round(profile["x10"] + chosen_profile["x10"], 2),
+        "squad_xpts_15": round(profile["x15"] + chosen_profile["x15"], 2),
         "best_xi_xpts_5": round(xi5, 2),
         "bench_adjusted_utility_5": round(utility5, 2),
     }
@@ -174,12 +204,12 @@ def audit_packages_from_candidates_fast(
     cm = base._fast_metrics(cur, include_detail=True)
     basecost = cm["cost"]
     results: dict[str, list[dict]] = {}
-    metrics_cache: dict[tuple[int, ...], dict] = {}
-    metrics_cache_hits = 0
     keep_profiles = 0
     evaluated = 0
     small_templates: dict[tuple, list[tuple]] = {}
     small_template_hits = 0
+    chosen_profiles: dict[tuple[int, ...], dict] = {}
+    chosen_profile_hits = 0
 
     for k in range(1, max_replacements + 1):
         heap: list[tuple] = []
@@ -193,7 +223,6 @@ def audit_packages_from_candidates_fast(
             keep = [p for p in cur if p.element not in outids]
             profile = _keep_profile(keep)
             keep_profiles += 1
-            keep_ids = tuple(p.element for p in keep)
 
             if k <= 2:
                 need_key = tuple(need.items())
@@ -210,13 +239,14 @@ def audit_packages_from_candidates_fast(
             for chosen in candidate_states:
                 if len(chosen) != k:
                     continue
-                key = tuple(sorted((*keep_ids, *(p.element for p in chosen))))
-                if key in metrics_cache:
-                    tm = metrics_cache[key]
-                    metrics_cache_hits += 1
+                chosen_key = tuple(sorted(p.element for p in chosen))
+                chosen_profile = chosen_profiles.get(chosen_key)
+                if chosen_profile is None:
+                    chosen_profile = _chosen_profile(chosen)
+                    chosen_profiles[chosen_key] = chosen_profile
                 else:
-                    tm = _metrics_from_keep_profile(profile, chosen)
-                    metrics_cache[key] = tm
+                    chosen_profile_hits += 1
+                tm = _metrics_from_profiles(profile, chosen_profile)
                 evaluated += 1
                 dxi = tm["best_xi_xpts_5"] - cm["best_xi_xpts_5"]
                 du = tm["bench_adjusted_utility_5"] - cm["bench_adjusted_utility_5"]
@@ -268,7 +298,7 @@ def audit_packages_from_candidates_fast(
 
     return {
         "schema_version": 472,
-        "engine": "v4.7.2-wc-package-audit-performance-hotfix-compact-profile",
+        "engine": "v4.7.2-wc-package-audit-performance-hotfix-prefix-reuse",
         "wildcard_active": bool(locked.get("wildcard_active")),
         "affordability": affordability,
         "baseline": cm | {"itb": budget - basecost},
@@ -280,17 +310,19 @@ def audit_packages_from_candidates_fast(
         "overall_verdict": verdict,
         "recommended_package": overall,
         "performance": {
-            "metrics_cache_entries": len(metrics_cache),
-            "metrics_cache_hits": metrics_cache_hits,
             "evaluated_packages": evaluated,
             "keep_profiles": keep_profiles,
             "small_candidate_templates": len(small_templates),
             "small_candidate_template_hits": small_template_hits,
+            "chosen_profile_cache_entries": len(chosen_profiles),
+            "chosen_profile_cache_hits": chosen_profile_hits,
+            "target_metrics_cache_removed": True,
+            "sorted_keep_position_prefixes": True,
+            "unaffected_position_prefix_reuse": True,
             "frontier_per_position": per_position_frontier,
             "beam_size": beam_size,
             "single_pass_metrics": True,
             "score_only_hotloop": True,
-            "compact_target_cache": True,
             "redundant_target_validation_removed": True,
             "candidate_reuse_supported": True,
             "packed_club_signature": True,
@@ -312,7 +344,7 @@ def audit_packages_from_candidates_fast(
             "owned_price_basis": "sell_cost",
             "unowned_price_basis": "now_cost",
             "ranking_metric": "risk-adjusted best-XI plus bench-adjusted 5GW utility",
-            "search": "shortlisted k<=2, bounded beam k=3-4, compact keep-profile evaluator",
+            "search": "shortlisted k<=2, bounded beam k=3-4, exact prefix-reuse evaluator",
             "frontier_per_position": per_position_frontier,
             "beam_size": beam_size,
             "risk_penalty_enabled": True,

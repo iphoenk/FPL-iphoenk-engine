@@ -8,24 +8,24 @@
     "reused_service_latest_state_is_carried_forward": true,
     "fast_profile_must_preserve_decision_and_artifact_contracts": true,
     "profile_does_not_change_football_model_formulas": true,
-    "rec41_player_feature_migration_fence_active": true
+    "rec41_player_feature_migration_fence_active": false
   },
   "profiles": {
     "fast_decision": {
-      "description": "Interactive decision regeneration. REC-41 migration fence temporarily disables advanced_stats reuse so player_features is regenerated with tactical-role evidence.",
+      "description": "Interactive decision regeneration with safe reuse of fresh complete advanced-stat, historical, source-layer and Official-detail artifacts.",
       "max_parallel_services": 4,
       "reuse_services": {
-        "advanced_stats": {"max_age_seconds": 0},
+        "advanced_stats": {"max_age_seconds": 21600},
         "historical_prior": {"max_age_seconds": 86400},
         "source_layer": {"max_age_seconds": 1800},
         "official_detail": {"max_age_seconds": 3600}
       }
     },
     "live": {
-      "description": "Match/live decision path. REC-41 migration fence temporarily disables advanced_stats reuse so player_features is regenerated with tactical-role evidence.",
+      "description": "Match/live decision path with safe reuse of fresh complete advanced-stat, historical, source-layer and Official-detail artifacts.",
       "max_parallel_services": 4,
       "reuse_services": {
-        "advanced_stats": {"max_age_seconds": 0},
+        "advanced_stats": {"max_age_seconds": 21600},
         "historical_prior": {"max_age_seconds": 86400},
         "source_layer": {"max_age_seconds": 1800},
         "official_detail": {"max_age_seconds": 3600}

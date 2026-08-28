@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from heapq import heappush, heapreplace
 from itertools import combinations
 
 from src.engines import v4_wc_package_audit as base
@@ -78,6 +79,30 @@ def _metrics_from_keep_profile(profile: dict, chosen) -> dict:
     }
 
 
+def _materialize_package(compact: tuple, k: int, basecost: int, budget: int) -> dict:
+    outs, chosen, tm, dxi, du, risk_delta, risk_penalty, adj_xi, adj_util = compact
+    return {
+        "replacements": k,
+        "out": [base.payload(p) for p in sorted(outs, key=lambda x: (x.position, x.name))],
+        "in": [base.payload(p) for p in sorted(chosen, key=lambda x: (x.position, x.name))],
+        "target_cost": tm["cost"],
+        "target_itb": budget - tm["cost"],
+        "delta_cost": tm["cost"] - basecost,
+        "delta_objective": round(tm["objective"] - 0.0, 4),  # replaced by caller below
+        "delta_squad_xpts_3": tm["squad_xpts_3"],              # replaced by caller below
+        "delta_squad_xpts_5": tm["squad_xpts_5"],
+        "delta_squad_xpts_10": tm["squad_xpts_10"],
+        "delta_squad_xpts_15": tm["squad_xpts_15"],
+        "delta_best_xi_xpts_5": round(dxi, 2),
+        "delta_bench_adjusted_utility_5": round(du, 2),
+        "risk_delta": round(risk_delta, 3),
+        "risk_penalty": round(risk_penalty, 3),
+        "adjusted_best_xi_gain_5": round(adj_xi, 2),
+        "adjusted_utility_gain_5": round(adj_util, 2),
+        "classification": base.package_class(adj_xi, adj_util, k),
+    }
+
+
 def audit_packages_from_candidates_fast(
     cands,
     locked,
@@ -114,7 +139,8 @@ def audit_packages_from_candidates_fast(
     evaluated = 0
 
     for k in range(1, max_replacements + 1):
-        packs = []
+        heap: list[tuple] = []
+        sequence = 0
         for outs in combinations(cur, k):
             outids = {p.element for p in outs}
             need = Counter(p.position for p in outs)
@@ -143,40 +169,35 @@ def audit_packages_from_candidates_fast(
                 risk_penalty = max(0, risk_delta) * .35 + max(0, k - 1) * .20
                 adj_xi = dxi - risk_penalty
                 adj_util = du - risk_penalty
-                packs.append({
-                    "replacements": k,
-                    "_out_players": sorted(outs, key=lambda x: (x.position, x.name)),
-                    "_in_players": sorted(chosen, key=lambda x: (x.position, x.name)),
-                    "target_cost": tm["cost"],
-                    "target_itb": budget - tm["cost"],
-                    "delta_cost": tm["cost"] - basecost,
-                    "delta_objective": round(tm["objective"] - cm["objective"], 4),
-                    "delta_squad_xpts_3": round(tm["squad_xpts_3"] - cm["squad_xpts_3"], 2),
-                    "delta_squad_xpts_5": round(tm["squad_xpts_5"] - cm["squad_xpts_5"], 2),
-                    "delta_squad_xpts_10": round(tm["squad_xpts_10"] - cm["squad_xpts_10"], 2),
-                    "delta_squad_xpts_15": round(tm["squad_xpts_15"] - cm["squad_xpts_15"], 2),
-                    "delta_best_xi_xpts_5": round(dxi, 2),
-                    "delta_bench_adjusted_utility_5": round(du, 2),
-                    "risk_delta": round(risk_delta, 3),
-                    "risk_penalty": round(risk_penalty, 3),
-                    "adjusted_best_xi_gain_5": round(adj_xi, 2),
-                    "adjusted_utility_gain_5": round(adj_util, 2),
-                    "classification": base.package_class(adj_xi, adj_util, k),
-                })
 
-        packs.sort(
-            key=lambda row: (
-                row["adjusted_utility_gain_5"],
-                row["adjusted_best_xi_gain_5"],
-                row["delta_objective"],
-                row["target_itb"],
-            ),
-            reverse=True,
-        )
-        selected = packs[:top_per_size]
-        for row in selected:
-            row["out"] = [base.payload(p) for p in row.pop("_out_players")]
-            row["in"] = [base.payload(p) for p in row.pop("_in_players")]
+                # Exact same ranking as the previous stable full sort, but keep only
+                # the top output rows. All candidate states are still evaluated.
+                delta_objective = round(tm["objective"] - cm["objective"], 4)
+                rank = (
+                    round(adj_util, 2),
+                    round(adj_xi, 2),
+                    delta_objective,
+                    budget - tm["cost"],
+                    -sequence,
+                )
+                compact = (tuple(outs), tuple(chosen), tm, dxi, du, risk_delta, risk_penalty, adj_xi, adj_util)
+                entry = (*rank, compact)
+                sequence += 1
+                if len(heap) < top_per_size:
+                    heappush(heap, entry)
+                elif entry[:5] > heap[0][:5]:
+                    heapreplace(heap, entry)
+
+        selected = []
+        for entry in sorted(heap, key=lambda row: row[:5], reverse=True):
+            row = _materialize_package(entry[5], k, basecost, budget)
+            tm = entry[5][2]
+            row["delta_objective"] = round(tm["objective"] - cm["objective"], 4)
+            row["delta_squad_xpts_3"] = round(tm["squad_xpts_3"] - cm["squad_xpts_3"], 2)
+            row["delta_squad_xpts_5"] = round(tm["squad_xpts_5"] - cm["squad_xpts_5"], 2)
+            row["delta_squad_xpts_10"] = round(tm["squad_xpts_10"] - cm["squad_xpts_10"], 2)
+            row["delta_squad_xpts_15"] = round(tm["squad_xpts_15"] - cm["squad_xpts_15"], 2)
+            selected.append(row)
         results[str(k)] = selected
 
     best = {key: (rows[0] if rows else None) for key, rows in results.items()}
@@ -219,6 +240,9 @@ def audit_packages_from_candidates_fast(
             "candidate_reuse_supported": True,
             "packed_club_signature": True,
             "top_packages_only_payload_materialization": True,
+            "exact_streaming_top_packages": True,
+            "stable_top_package_tie_semantics": True,
+            "full_result_sort_removed": True,
             "compact_keep_profile": True,
             "scalar_delta_metrics": True,
             "position_value_reuse": True,

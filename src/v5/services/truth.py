@@ -108,6 +108,34 @@ def _capabilities(
     return sorted(capabilities)
 
 
+def _enrich_mini_leagues(payload: dict[str, Any]) -> dict[str, Any]:
+    truth = payload.get("truth") if isinstance(payload.get("truth"), dict) else {}
+    if not truth:
+        raise ValueError("mini league truth enrichment requires existing truth")
+    entry = payload.get("entry") if isinstance(payload.get("entry"), dict) else {}
+    collection = payload.get("mini_league_collection") if isinstance(payload.get("mini_league_collection"), dict) else {}
+    previous = payload.get("previous_mini_league") if isinstance(payload.get("previous_mini_league"), dict) else {}
+    team_id = int(payload.get("team_id") or entry.get("id") or 0)
+    tracking = build_tracking(
+        team_id=team_id,
+        entry=entry,
+        collection=collection,
+        previous_state=previous,
+    )
+    enriched = dict(truth)
+    team = dict(enriched.get("team") or {})
+    team["mini_league_tracking"] = tracking
+    enriched["team"] = team
+    enriched["mini_league_tracking"] = tracking
+    enriched["capabilities"] = _capabilities(
+        team,
+        enriched.get("chip_state") if isinstance(enriched.get("chip_state"), dict) else {},
+        enriched.get("historical_entry") if isinstance(enriched.get("historical_entry"), dict) else {},
+        tracking,
+    )
+    return enriched
+
+
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     bootstrap = payload.get("bootstrap")
     if not isinstance(bootstrap, dict):
@@ -116,6 +144,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         return context_dict(build_event_context(bootstrap, now=parse_datetime(payload.get("now"))))
     if operation == "rules":
         return _rules_view()
+    if operation == "enrich_mini_leagues":
+        return _enrich_mini_leagues(payload)
     identity = build_index(bootstrap)
     if operation == "resolve":
         return list(resolve_many(payload.get("element_ids") or (), identity))

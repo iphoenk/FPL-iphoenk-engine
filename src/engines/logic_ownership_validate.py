@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import re
 from collections import defaultdict
@@ -38,6 +39,25 @@ def _active_model_ids() -> dict[str, str]:
     return out
 
 
+def _python_symbol_definitions() -> dict[str, set[str]]:
+    definitions: dict[str, set[str]] = defaultdict(set)
+    for path in sorted((ROOT / "src").rglob("*.py")):
+        relative = path.relative_to(ROOT).as_posix()
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=relative)
+        except Exception:
+            continue
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                definitions[node.name].add(relative)
+            elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                for target in targets:
+                    if isinstance(target, ast.Name):
+                        definitions[target.id].add(relative)
+    return definitions
+
+
 def run() -> dict[str, Any]:
     services_payload = _load(SERVICE_REGISTRY)
     profiles = _load(EXECUTION_PROFILES)
@@ -58,12 +78,18 @@ def run() -> dict[str, Any]:
         "version_stamped_modules_are_not_active_runtime_owners",
         "microservice_boundaries_follow_artifact_and_failure_ownership",
         "policy_thresholds_belong_in_config_or_rules",
+        "canonical_rule_symbols_have_single_source_owner",
+        "canonical_legality_functions_have_single_source_owner",
+        "official_detail_must_reuse_standard_snapshot_endpoints",
+        "architecture_guard_runs_outside_runtime_critical_path",
     ):
         if policy.get(key) is not True:
             errors.append(f"logic ownership policy missing {key}=true")
 
     if "collector" in services:
         errors.append("monolithic collector service is forbidden")
+    if "architecture_guard" in services:
+        errors.append("architecture guard must remain CI/release-only, not a runtime service")
     if len(services) < 10:
         errors.append(f"runtime unexpectedly collapsed into too few logical services: {len(services)}")
 
@@ -88,6 +114,16 @@ def run() -> dict[str, Any]:
             if _module_path(module) is None:
                 errors.append(f"active service module path does not resolve: {module}")
 
+    guard_modules = {
+        "src.engines.architecture_contract_validate",
+        "src.engines.capability_contract_validate",
+        "src.engines.artifact_flow_validate",
+        "src.engines.logic_ownership_validate",
+    }
+    runtime_guards = sorted(set(active_modules) & guard_modules)
+    if runtime_guards:
+        errors.append(f"architecture guards leaked into runtime critical path: {runtime_guards}")
+
     duplicate_module_owners = {module: owners for module, owners in sorted(module_owners.items()) if len(set(owners)) > 1}
     if duplicate_module_owners:
         errors.append(f"active service command modules have multiple owners: {duplicate_module_owners}")
@@ -100,11 +136,13 @@ def run() -> dict[str, Any]:
 
     direct_fetch_modules: list[str] = []
     direct_fetch_services: set[str] = set()
+    module_text: dict[str, str] = {}
     for module in sorted(set(active_modules)):
         path = _module_path(module)
         if path is None:
             continue
         text = path.read_text(encoding="utf-8")
+        module_text[module] = text
         if "src.sources.official_fpl" not in text:
             continue
         direct_fetch_modules.append(module)
@@ -119,6 +157,20 @@ def run() -> dict[str, Any]:
             errors.append(f"unapproved direct Official public fetch service: {owner}:{module}")
             if module_stage.get(module) in forbidden_fetch_stages:
                 errors.append(f"decision/downstream stage directly fetches Official public API: {module_stage.get(module)}:{owner}:{module}")
+
+    detail_forbidden = [str(x) for x in policy_payload.get("official_detail_forbidden_standard_fetch_tokens") or []]
+    detail_modules = sorted(module for module, owners in module_owners.items() if "official_detail" in owners)
+    detail_endpoint_violations: list[str] = []
+    for module in detail_modules:
+        text = module_text.get(module)
+        if text is None:
+            path = _module_path(module)
+            text = path.read_text(encoding="utf-8") if path else ""
+        for token in detail_forbidden:
+            if token in text:
+                violation = f"{module}:{token}"
+                detail_endpoint_violations.append(violation)
+                errors.append(f"official_detail refetches standard snapshot endpoint: {violation}")
 
     bundle_owners: dict[str, list[str]] = defaultdict(list)
     forbidden_bundle_tokens = [str(x) for x in policy_payload.get("bundle_forbidden_tokens") or []]
@@ -141,6 +193,34 @@ def run() -> dict[str, Any]:
     if duplicate_bundle_owners:
         errors.append(f"bundle modules assigned to multiple logical services: {duplicate_bundle_owners}")
 
+    definitions = _python_symbol_definitions()
+    canonical_owners = policy_payload.get("canonical_symbol_owners") or {}
+    canonical_symbol_errors: list[str] = []
+    for owner_path, symbols in canonical_owners.items():
+        owner_path = str(owner_path)
+        if not (ROOT / owner_path).exists():
+            canonical_symbol_errors.append(f"canonical owner path missing: {owner_path}")
+            continue
+        for symbol in symbols or []:
+            symbol = str(symbol)
+            locations = sorted(definitions.get(symbol) or [])
+            if owner_path not in locations:
+                canonical_symbol_errors.append(f"canonical symbol missing from owner: {symbol}:{owner_path}")
+            extras = [location for location in locations if location != owner_path]
+            if extras:
+                canonical_symbol_errors.append(f"canonical symbol duplicated: {symbol}:owner={owner_path}:extras={extras}")
+    errors.extend(canonical_symbol_errors)
+
+    forbidden_runtime_imports = [str(x) for x in policy_payload.get("forbidden_runtime_imports") or []]
+    forbidden_import_hits: list[str] = []
+    for path in sorted((ROOT / "src").rglob("*.py")):
+        text = path.read_text(encoding="utf-8")
+        for token in forbidden_runtime_imports:
+            if token in text:
+                hit = f"{path.relative_to(ROOT).as_posix()}:{token}"
+                forbidden_import_hits.append(hit)
+                errors.append(f"forbidden runtime dependency bypasses canonical primitive: {hit}")
+
     model_ids = _active_model_ids()
     model_value_owners: dict[str, list[str]] = defaultdict(list)
     for location, value in model_ids.items():
@@ -161,11 +241,17 @@ def run() -> dict[str, Any]:
         "direct_official_fetch_modules": direct_fetch_modules,
         "direct_official_fetch_services": sorted(direct_fetch_services),
         "approved_official_fetch_services": sorted(approved_fetch_services),
+        "official_detail_standard_endpoint_refetches": detail_endpoint_violations,
+        "canonical_symbol_errors": canonical_symbol_errors,
+        "forbidden_primitive_imports": forbidden_import_hits,
         "active_model_ids": len(model_ids),
         "duplicate_model_ids": duplicate_model_ids,
         "policy": {
             "microservice_architecture_preserved": len(services) >= 10 and "collector" not in services,
             "standard_official_fetch_is_logical_service_owned": direct_fetch_services.issubset(approved_fetch_services),
+            "official_detail_reuses_standard_snapshot": not detail_endpoint_violations,
+            "canonical_rule_and_legality_ownership_is_single": not canonical_symbol_errors and not forbidden_import_hits,
+            "architecture_guard_outside_runtime": not runtime_guards,
             "bundles_are_orchestration_only": not any("bundle contains forbidden" in error for error in errors),
         },
     }

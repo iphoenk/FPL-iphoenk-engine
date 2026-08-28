@@ -1,7 +1,7 @@
 {
   "schema_version": 14,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.22-runtime-optimization-fast-under-10s",
+  "production_contract": "v3.25-capability-consolidation-fast-under-2s",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,
@@ -68,7 +68,11 @@
     "weather_is_observational_and_advisory_only": true,
     "weather_never_directly_mutates_xpts_or_decisions": true,
     "normalized_player_features_are_decision_neutral_until_model_opt_in": true,
-    "player_feature_model_opt_in_rec01_active": true
+    "player_feature_model_opt_in_rec01_active": true,
+    "rules_legality_ownership_primitives_are_single_source": true,
+    "architecture_guard_is_ci_release_gate_not_runtime_service": true,
+    "shared_evidence_is_computed_once_and_referenced": true,
+    "scheduler_and_recovery_share_production_workflow": true
   },
   "runtime": {
     "max_parallel_services": 5,
@@ -90,8 +94,8 @@
     "price": {"stage":"parallel","depends_on":["base_snapshot","source_layer"],"critical":true,"isolated":true,"inputs":["latest.json","team.json","prices.json","price_trajectory.json","challenger_observations.json"],"commands":[{"module":"src.engines.price_service","args":[]}],"artifacts":["prices.json","price_trajectory.json","price_alerts.json","price_challenger_context.json"],"latest_keys":["price_summary"],"latest_file_keys":["price_trajectory","price_alerts","price_challenger_context"]},
     "prediction": {"stage":"parallel","depends_on":["historical_prior","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","latest.json","team.json","prior_season.json","player_features.json"],"commands":[{"module":"src.engines.prediction_service","args":[]}],"artifacts":["team_strength.json","projections.json","package_optimizer.json","prediction_quality.json"],"latest_keys":["decision_intelligence","prediction_quality_summary"],"latest_file_keys":["team_strength","projections","package_optimizer","prediction_quality"]},
     "authenticated_official": {"stage":"parallel","depends_on":["base_snapshot"],"critical":true,"isolated":true,"inputs":["latest.json","team.json"],"commands":[{"module":"src.engines.authenticated_official","args":[]}],"artifacts":["auth.json"],"latest_keys":["authenticated_official"],"latest_file_keys":["auth"]},
-    "official_detail": {"stage":"parallel","depends_on":["price"],"critical":true,"isolated":true,"inputs":["latest.json","team.json","prices.json"],"commands":[{"module":"src.engines.official_expansion","args":[]},{"module":"src.engines.official_history_reconciliation","args":[]}],"artifacts":["official_detail.json"],"latest_keys":["official_detail_summary","official_health_panel","official_historical_authority"],"latest_file_keys":[]},
-    "prediction_evaluation": {"stage":"parallel","depends_on":["prediction"],"critical":true,"isolated":true,"inputs":["latest.json","projections.json","prediction_ledger.json"],"commands":[{"module":"src.engines.prediction_evaluation","args":[]}],"artifacts":["prediction_ledger.json","prediction_accuracy.json"],"latest_keys":["prediction_evaluation"],"latest_file_keys":["prediction_ledger","prediction_accuracy"]},
+    "official_detail": {"stage":"parallel","depends_on":["price","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","latest.json","team.json","prices.json"],"commands":[{"module":"src.engines.official_expansion","args":[]},{"module":"src.engines.official_history_reconciliation","args":[]}],"artifacts":["official_detail.json"],"latest_keys":["official_detail_summary","official_health_panel","official_historical_authority"],"latest_file_keys":[]},
+    "prediction_evaluation": {"stage":"parallel","depends_on":["prediction","official_snapshot"],"critical":true,"isolated":true,"inputs":["official_snapshot.json","latest.json","projections.json","prediction_ledger.json"],"commands":[{"module":"src.engines.prediction_evaluation","args":[]}],"artifacts":["prediction_ledger.json","prediction_accuracy.json"],"latest_keys":["prediction_evaluation"],"latest_file_keys":["prediction_ledger","prediction_accuracy"]},
     "lineup_governance": {"stage":"governed-decision","depends_on":["prediction"],"critical":true,"isolated":true,"inputs":["latest.json","team.json","chips.json","projections.json","package_optimizer.json"],"commands":[{"module":"src.engines.lineup_governance","args":[]}],"artifacts":["lineup_decision.json","package_decision.json"],"latest_keys":["lineup_decision_summary","package_decision_summary"],"latest_file_keys":["lineup_decision","package_decision"]},
     "challenger": {"stage":"parallel","depends_on":["prediction_evaluation","source_layer"],"critical":true,"isolated":true,"inputs":["latest.json","projections.json","prediction_ledger.json","challenger_observations.json","source_health.json"],"commands":[{"module":"src.engines.challenger_scorecard","args":[]}],"artifacts":["challenger_scorecard.json"],"latest_keys":["challenger_scorecard"],"latest_file_keys":["challenger_scorecard"]},
     "governance": {"stage":"final","depends_on":["source_layer","price","prediction","authenticated_official","rules","official_detail","prediction_evaluation","lineup_governance","challenger"],"critical":true,"isolated":false,"commands":[{"module":"src.engines.framework_health_service","args":["--phase","preflight","--strict"]},{"module":"src.engines.framework_health_service","args":["--phase","postflight","--strict"]},{"module":"src.engines.p0_framework_health_overlay","args":[]},{"module":"src.engines.lineup_framework_health_overlay","args":[]},{"module":"src.engines.decision_quality_overlay","args":[]},{"module":"src.engines.source_framework_overlay","args":[]},{"module":"src.engines.dss_operationalization_overlay","args":[]},{"module":"src.engines.dss_evidence_maturity","args":[]}]},

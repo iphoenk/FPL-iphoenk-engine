@@ -3,8 +3,8 @@ name: FPL V4 production gate
 on:
   workflow_dispatch:
   schedule:
-    # GitHub cron is UTC. Minute :30 is also minute :30 in WIB (UTC+7),
-    # so this supplies the Master Monitor hourly evaluation checkpoint.
+    # Master Monitor governance: evaluate every hour at minute :30 WIB.
+    # GitHub cron is UTC; the minute field remains :30 after timezone conversion.
     - cron: "30 * * * *"
   push:
     branches: [v4-prediction-engine]

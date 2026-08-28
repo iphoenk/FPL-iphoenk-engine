@@ -11,7 +11,7 @@ COVERAGE_PATH = ROOT / "config" / "sources" / "official_first_coverage.json"
 EXPECTED_RECS = tuple(
     [f"REC-{n:02d}" for n in range(1, 9)]
     + ["REC-09a", "REC-09b"]
-    + [f"REC-{n:02d}" for n in range(10, 41)]
+    + [f"REC-{n:02d}" for n in range(10, 42)]
 )
 
 APPLICABILITY = {

@@ -160,6 +160,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         transfers=base.get("entry_transfers") if isinstance(base.get("entry_transfers"), list) else [],
         entry=base.get("entry") if isinstance(base.get("entry"), dict) else None,
     )
+    match_state = _match_state(base.get("fixtures") if isinstance(base.get("fixtures"), list) else [], context.scoring_gw)
     live = personalized_live_score(
         picks=submitted,
         event_live=dynamic.get("event_live") if isinstance(dynamic.get("event_live"), dict) else None,
@@ -167,8 +168,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         scoring_gw=context.scoring_gw,
         is_live_event=context.is_live_event,
     )
+    live = {**live, "match_state": match_state}
     chip_state = _chip_state(context, lock, submitted, base.get("entry_history") if isinstance(base.get("entry_history"), dict) else None)
-    match_state = _match_state(base.get("fixtures") if isinstance(base.get("fixtures"), list) else [], context.scoring_gw)
     return {
         "context": context_dict(context),
         "team": team,

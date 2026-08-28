@@ -1,8 +1,13 @@
 {
-  "schema_version": 3,
-  "model_id": "v5_prediction_evaluation_v3",
+  "schema_version": 4,
+  "model_id": "v5_prediction_evaluation_v4",
   "freeze_policy": "ALL_EXPIRED_STORED_PRE_DEADLINE_FORECASTS_FROZEN_BEFORE_SETTLEMENT",
   "minimum_sample_for_dynamic_weight": 50,
+  "calibration_readiness": {
+    "minimum_settled_gameweeks_for_baseline_candidate": 3,
+    "minimum_settled_gameweeks_for_dynamic_weight": 5,
+    "minimum_player_observations_for_dynamic_weight": 50
+  },
   "confidence_sample_thresholds": {"low_max": 49, "medium_max": 149},
   "frozen_baseline_metrics": null,
   "non_regression_tolerances": {
@@ -18,6 +23,9 @@
     "settled_sample_required_for_accuracy_claim": true,
     "freeze_is_independent_of_active_planning_gw": true,
     "freeze_source_must_be_persisted_pre_deadline_forecast": true,
-    "actual_payload_must_never_mutate_frozen_forecast": true
+    "actual_payload_must_never_mutate_frozen_forecast": true,
+    "dynamic_weight_requires_player_and_multi_gameweek_evidence": true,
+    "single_settled_gameweek_cannot_enable_dynamic_weight": true,
+    "calibration_readiness_must_not_recompute_evaluation_metrics": true
   }
 }

@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "registry": "V5_ARTIFACT_CONTRACTS_V1",
   "owner": "snapshot",
   "policy": {
@@ -22,6 +22,26 @@
         "counts": "object",
         "cross_source": "list",
         "policy": "object"
+      }
+    },
+    "replay_bundle": {
+      "filename": "replay_bundle.json",
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "captured_at", "correlation_id", "team_id", "mode", "replay_boundary", "inputs", "fingerprint", "expected_output_hashes", "governance"],
+      "equals": {
+        "schema_version": 1,
+        "contract": "V5_POINT_IN_TIME_REPLAY_V1"
+      },
+      "types": {
+        "captured_at": "string",
+        "correlation_id": "string",
+        "team_id": "integer",
+        "mode": "string",
+        "replay_boundary": "string",
+        "inputs": "object",
+        "fingerprint": "object",
+        "expected_output_hashes": "object",
+        "governance": "object"
       }
     },
     "decision_hot_bundle": {

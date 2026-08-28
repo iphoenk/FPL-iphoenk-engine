@@ -8,7 +8,7 @@ on:
       - 'data/**'
   schedule:
     - cron: "55 * * * *"
-    - cron: "15 * * * *"
+    - cron: "*/15 * * * *"
     - cron: "30 5 * * *"
     - cron: "30 14 * * *"
 

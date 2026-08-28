@@ -4,17 +4,9 @@ from datetime import datetime
 from typing import Any
 
 from src.v5.config_cache import load_json_config
+from src.v5.time_utils import parse_iso_datetime
 
 PRICE_CONFIG = "config/v5_price_trajectory_registry.json"
-
-
-def _parse_dt(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except (TypeError, ValueError):
-        return None
 
 
 def prediction_snapshot(row: dict[str, Any]) -> dict[str, Any]:
@@ -41,7 +33,7 @@ def _event_for_change(
     realized = "RISE" if int(current_cost) > int(prior_cost) else "FALL"
     prediction = prior.get("prediction") if isinstance(prior.get("prediction"), dict) else {}
     predicted_direction = prediction.get("risk_direction")
-    deadline = _parse_dt(prediction.get("predicted_change_deadline"))
+    deadline = parse_iso_datetime(prediction.get("predicted_change_deadline"))
     timing_error = None
     if deadline is not None:
         timing_error = round(abs((observed_at - deadline).total_seconds()) / 3600.0, 2)
@@ -75,7 +67,7 @@ def _miss_event(
         return None
     prediction = prior.get("prediction") if isinstance(prior.get("prediction"), dict) else {}
     predicted_direction = prediction.get("risk_direction")
-    deadline = _parse_dt(prediction.get("predicted_change_deadline"))
+    deadline = parse_iso_datetime(prediction.get("predicted_change_deadline"))
     if predicted_direction not in {"RISE", "FALL"} or deadline is None:
         return None
     overdue = (observed_at - deadline).total_seconds() / 3600.0

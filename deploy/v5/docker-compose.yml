@@ -74,6 +74,11 @@ services:
     ports: ["8110:8110"]
     depends_on: {truth: {condition: service_healthy}, price: {condition: service_healthy}, prediction: {condition: service_healthy}, decision: {condition: service_healthy}}
     healthcheck: *health
+  architecture_guard:
+    build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
+    environment: {V5_SERVICE_ID: architecture_guard, V5_SERVICE_PORT: 8111}
+    ports: ["8111:8111"]
+    healthcheck: *health
   orchestrator:
     build: {context: ../.., dockerfile: deploy/v5/Dockerfile}
     environment:

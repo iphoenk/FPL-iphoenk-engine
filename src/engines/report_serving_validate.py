@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.utils import DATA, ROOT
+from src.engines.tactical_decision_consumption import apply_report_overlay
+from src.utils import DATA, ROOT, atomic_json
 
 REGISTRY = ROOT / "config" / "report_artifact_registry.json"
 
@@ -54,7 +55,132 @@ def _validate_personal_gameweek_context(payload_name: str, payload: dict) -> Non
     assert governance.get("engine_recommendation_remains_visible_for_comparison") is True, payload_name
 
 
+def _normalise_public_tactical_fields(value):
+    """Remove misleading public aliases without changing internal evidence semantics."""
+    if isinstance(value, list):
+        return [_normalise_public_tactical_fields(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    out = {}
+    for key, item in value.items():
+        public_key = "observed_shape" if key == "verified_shape" else key
+        out[public_key] = _normalise_public_tactical_fields(item)
+    return out
+
+
+def _battle_dict(payload: dict) -> dict:
+    if isinstance(((payload.get("starting_xi") or {}).get("model") or {}).get("battle"), dict):
+        return ((payload.get("starting_xi") or {}).get("model") or {}).get("battle") or {}
+    value = payload.get("main_starting_xi_battle")
+    return value if isinstance(value, dict) else {}
+
+
+def _sync_battle_outcome(payload: dict, lineup: dict) -> None:
+    """Keep displayed starter/challenger aligned with the post-tiebreak legal XI."""
+    battle = _battle_dict(payload)
+    if not battle:
+        return
+    starter = str(battle.get("starter") or "")
+    challenger = str(battle.get("challenger") or "")
+    if not starter or not challenger:
+        return
+    final_starters = {str(row.get("name") or "") for row in lineup.get("starting_xi") or []}
+    starter_in = starter in final_starters
+    challenger_in = challenger in final_starters
+    if challenger_in and not starter_in:
+        battle["starter"], battle["challenger"] = challenger, starter
+        leader = battle.get("leader_metrics")
+        challenger_metrics = battle.get("challenger_metrics")
+        if isinstance(leader, dict) and isinstance(challenger_metrics, dict):
+            battle["leader_metrics"], battle["challenger_metrics"] = challenger_metrics, leader
+        battle["tactical_outcome_note"] = "matchup lawan memecahkan battle yang sangat dekat; kandidat model awal tetap disimpan sebagai pembanding"
+
+
+def _first_highlight(value: dict) -> str | None:
+    tactical = value.get("tactical_matchup") or {}
+    rows = tactical.get("highlights") or []
+    return str(rows[0]) if rows else None
+
+
+def _tactical_presentation_note(payload: dict) -> str:
+    notes: list[str] = []
+    battle = _battle_dict(payload)
+    if battle:
+        starter = str(battle.get("starter") or "")
+        challenger = str(battle.get("challenger") or "")
+        leader = battle.get("leader_metrics") if isinstance(battle.get("leader_metrics"), dict) else {}
+        challenge = battle.get("challenger_metrics") if isinstance(battle.get("challenger_metrics"), dict) else {}
+        lead_note = _first_highlight(leader)
+        challenge_note = _first_highlight(challenge)
+        if starter and challenger and (lead_note or challenge_note):
+            detail = lead_note or challenge_note
+            notes.append(f"Battle XI {starter} vs {challenger}: {detail}")
+
+    captaincy = payload.get("captaincy") or {}
+    model = captaincy.get("model") if isinstance(captaincy, dict) else None
+    if isinstance(model, dict):
+        captain = model.get("captain") if isinstance(model.get("captain"), dict) else {}
+        vice = model.get("vice") if isinstance(model.get("vice"), dict) else {}
+        cap_note = _first_highlight(captain)
+        vice_note = _first_highlight(vice)
+        if cap_note and captain.get("name"):
+            notes.append(f"Kapten {captain.get('name')}: {cap_note}")
+        elif vice_note and vice.get("name"):
+            notes.append(f"Vice {vice.get('name')}: {vice_note}")
+    else:
+        comparison = captaincy.get("tactical_comparison") if isinstance(captaincy, dict) else None
+        if isinstance(comparison, dict):
+            cap = comparison.get("captain") if isinstance(comparison.get("captain"), dict) else {}
+            highlights = cap.get("highlights") or []
+            if highlights and captaincy.get("captain"):
+                notes.append(f"Kapten {captaincy.get('captain')}: {highlights[0]}")
+
+    if notes:
+        return " ".join(notes[:2])
+    context = payload.get("tactical_context") or {}
+    evidence = context.get("owned_evidence") or {}
+    enough = int(evidence.get("cukup") or 0)
+    limited = int(evidence.get("terbatas") or 0)
+    return f"Matchup lawan sudah diperiksa untuk seluruh skuad; evidence cukup pada {enough} pemain dan masih terbatas pada {limited} pemain. Tidak ada klaim taktis yang dipaksakan saat evidence belum cukup."
+
+
+def _finalise_public_tactical(payload: dict, lineup: dict) -> dict:
+    _sync_battle_outcome(payload, lineup)
+    presentation = payload.get("user_presentation")
+    if isinstance(presentation, dict):
+        presentation["tactical_matchup"] = _tactical_presentation_note(payload)
+    payload = _normalise_public_tactical_fields(payload)
+    return payload
+
+
+def _validate_tactical(payload_name: str, payload: dict, expected_owned: int, expected_watch: int) -> None:
+    context = payload.get("tactical_context") or {}
+    assert int(context.get("owned_players") or 0) == expected_owned, (payload_name, context)
+    assert int(context.get("watchlist_players") or 0) == expected_watch, (payload_name, context)
+    usage = context.get("decision_usage") or {}
+    assert usage.get("direct_xpts_mutation") is False, (payload_name, usage)
+    owned_rows = ((payload.get("owned_squad") or {}).get("facts") or []) if "owned_squad" in payload else (payload.get("owned_15") or [])
+    assert all(isinstance(row.get("tactical_matchup"), dict) for row in owned_rows), (payload_name, "owned tactical coverage")
+    assert all((row.get("tactical_matchup") or {}).get("evidence_state") in {"CUKUP", "TERBATAS", "TIDAK_TERSEDIA"} for row in owned_rows), (payload_name, "owned tactical state")
+    watch_positions = ((payload.get("external_watchlist") or {}).get("positions") or {}) if "external_watchlist" in payload else (payload.get("watchlist_20") or {})
+    watch_rows = [row for rows in watch_positions.values() for row in rows]
+    assert len(watch_rows) == expected_watch, (payload_name, len(watch_rows))
+    assert all(isinstance(row.get("tactical_matchup"), dict) for row in watch_rows), (payload_name, "watch tactical coverage")
+    assert "verified_shape" not in json.dumps(payload, ensure_ascii=False), (payload_name, "misleading verified_shape alias leaked")
+    presentation = payload.get("user_presentation") or {}
+    assert presentation.get("tactical_matchup"), (payload_name, "missing tactical user presentation")
+
+
 def run() -> dict:
+    # Tactical serving decoration is the final consumer overlay. It reuses the
+    # projection-owned matchup and never recalculates or mutates xPts.
+    tactical_overlay = apply_report_overlay()
+    lineup = _load(DATA / "lineup_decision.json")
+    for name in ("user_report.json", "decision_brief.json", "deep_review_payload.json"):
+        path = DATA / name
+        payload = _load(path)
+        atomic_json(path, _finalise_public_tactical(payload, lineup))
+
     registry = _load(REGISTRY)
     runtime_registry = _load(DATA / "report_artifact_registry.json")
     assert runtime_registry == registry
@@ -97,6 +223,7 @@ def run() -> dict:
     assert (brief.get("serving_contract") or {}).get("watchlist") == expected_watch
 
     for payload_name, payload in (("brief", brief), ("deep", deep), ("user", user)):
+        _validate_tactical(payload_name, payload, expected_owned, expected_watch)
         if contract.get("report_time_intelligence_required") is True:
             report_time = payload.get("report_time_intelligence") or {}
             assert report_time.get("status") in {"REFRESH_REQUIRED", "READY", "INVALID_EVIDENCE_CONTRACT"}, (payload_name, report_time)
@@ -147,13 +274,17 @@ def run() -> dict:
         "watchlist": expected_watch,
         "per_position": expected_per,
         "owned_transparency": True,
+        "tactical_context": True,
+        "tactical_presentation": True,
+        "tactical_overlay": tactical_overlay,
+        "tactical_direct_xpts_mutation": False,
         "selection_score": contract.get("owned_rows_require_selection_score"),
         "model_validation": contract.get("model_validation_required"),
         "weather_context": contract.get("weather_context_required"),
         "report_time_intelligence": contract.get("report_time_intelligence_required"),
         "personal_gameweek_context": contract.get("personal_gameweek_context_required"),
         "sizes": sizes,
-        "default_fast": latest.get("report_serving", {}).get("default_fast_artifact"),
+        "default_fast": latest.get("report_serving", {}).get("default_fast_review_artifact") or latest.get("report_serving", {}).get("default_fast_artifact"),
         "default_deep": latest.get("report_serving", {}).get("default_deep_review_artifact"),
     }
     print(json.dumps(result, ensure_ascii=False))

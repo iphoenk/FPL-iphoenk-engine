@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "contract": "TACTICAL_DECISION_CONSUMPTION_V1",
+  "policy": {
+    "advisory_only": true,
+    "direct_xpts_mutation_forbidden": true,
+    "close_call_only": true,
+    "missing_evidence_is_neutral": true,
+    "player_membership_never_promoted_by_tactical_alone": true,
+    "verified_manager_system_claims_require_verified_manager_evidence": true,
+    "consumer_must_reuse_projection_tactical_matchup": true
+  },
+  "threshold_refs": {
+    "lineup_selection": "config/intelligence/lineup_governance.json#battle.close_margin_threshold",
+    "captaincy_and_bench": "config/intelligence/tactical_matchup.json#materiality.close_xpts_gap"
+  },
+  "watchlist": {
+    "close_dss_score_gap": 1.0,
+    "published_membership_unchanged": true,
+    "rerank_close_candidates_only": true
+  },
+  "tiebreak_order": [
+    "route_vulnerability_overlap_count",
+    "material_highlight_count",
+    "evidence_confidence_rank"
+  ],
+  "reporting": {
+    "owned_all_15_receive_compact_tactical_context": true,
+    "watchlist_all_20_receive_compact_tactical_context": true,
+    "starting_xi_battle_receives_tactical_comparison": true,
+    "captain_and_vice_receive_tactical_comparison": true,
+    "surface_only_material_highlights": true,
+    "technical_tiebreak_vectors_hidden_from_user_report": true
+  }
+}

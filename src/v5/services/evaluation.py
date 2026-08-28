@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.v5.evaluation.calibration import apply_calibration_readiness
 from src.v5.evaluation.core import challenger_scorecard, evaluate
 from src.v5.evaluation.evidence_guard import evaluate as evaluate_evidence_guard
 from src.v5.evaluation.prediction_settlement import build_settlement_artifact
@@ -10,6 +11,7 @@ from src.v5.evaluation.shadow_parity import compare as compare_shadow
 BASE_CAPABILITIES = [
     "prediction_evaluation",
     "calibration_store",
+    "calibration_readiness",
     "challenger_scorecard",
     "shadow_parity",
     "learning_loop",
@@ -48,6 +50,9 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         ledger,
         event_live_by_gw=event_live_by_gw,
     )
+    # Readiness is an evaluation-owned refinement of the core observation-count
+    # candidate gate. It does not recalculate prediction accuracy metrics.
+    result["accuracy"] = apply_calibration_readiness(result["accuracy"])
     scorecard = challenger_scorecard(prediction, observations, result["accuracy"])
     evidence_guard = evaluate_evidence_guard(prediction, context, truth)
     settlement = build_settlement_artifact(result["ledger"], result["accuracy"])

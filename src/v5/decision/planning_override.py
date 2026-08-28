@@ -5,11 +5,12 @@ from typing import Any
 
 from src.v5.config_cache import load_json_config
 
-OVERRIDE_CONFIG = "config/manual_lineup_override.json"
+OVERRIDE_CONFIG = "config/manual_lineup.json"
 SQUAD_REGISTRY = "config/v5_squad_registry.json"
+EXPLICIT_AUTHORITY_STATUSES = {"ACTIVE", "LOCKED", "FINAL_LOCK", "USER_LOCKED"}
 
 
-def _rows(lineup: dict[str, Any]) -> dict[int, dict[str, Any]]:
+def _manual_override_rows(lineup: dict[str, Any]) -> dict[int, dict[str, Any]]:
     out: dict[int, dict[str, Any]] = {}
     for key in ("starters", "bench"):
         for row in lineup.get(key) or []:
@@ -18,9 +19,12 @@ def _rows(lineup: dict[str, Any]) -> dict[int, dict[str, Any]]:
     return out
 
 
-def _active_for_gw(override: dict[str, Any], planning_gw: int, phase: str) -> bool:
-    status = str(override.get("status") or "INACTIVE").upper()
-    if status in {"", "INACTIVE", "DISABLED", "NONE"}:
+def _manual_override_explicit(cfg: dict[str, Any]) -> bool:
+    return str(cfg.get("status") or "INACTIVE").upper() in EXPLICIT_AUTHORITY_STATUSES
+
+
+def _manual_override_active_for_gw(override: dict[str, Any], planning_gw: int, phase: str) -> bool:
+    if not _manual_override_explicit(override):
         return False
     if phase != "PRE_DEADLINE":
         return False
@@ -29,7 +33,7 @@ def _active_for_gw(override: dict[str, Any], planning_gw: int, phase: str) -> bo
     return int(override["gw"]) == int(planning_gw)
 
 
-def _formation(starters: list[dict[str, Any]], rules: dict[str, Any]) -> str:
+def _manual_override_formation(starters: list[dict[str, Any]], rules: dict[str, Any]) -> str:
     counts = Counter(str(row.get("position")) for row in starters)
     if counts.get("GK", 0) != 1:
         raise RuntimeError("V5 decision FAIL CLOSED: user XI must contain exactly one GK")
@@ -62,19 +66,22 @@ def apply_user_lineup_override(
     cfg = load_json_config(OVERRIDE_CONFIG) if override is None else dict(override)
     phase = str(((truth.get("context") or {}).get("phase") or ""))
     policy = (load_json_config(SQUAD_REGISTRY).get("planning_override") or {})
-    active = _active_for_gw(cfg, planning_gw, phase)
+    explicit = _manual_override_explicit(cfg)
+    active = _manual_override_active_for_gw(cfg, planning_gw, phase)
     if not active:
-        stale = str(cfg.get("status") or "INACTIVE").upper() not in {"", "INACTIVE", "DISABLED", "NONE"} and cfg.get("gw") is not None and int(cfg.get("gw")) != int(planning_gw)
+        stale = bool(explicit and cfg.get("gw") is not None and int(cfg.get("gw")) != int(planning_gw))
         return engine, {
             "active": False,
             "reason": "STALE_TARGET_GW" if stale else "NO_EXPLICIT_USER_OVERRIDE",
+            "draft_available": bool(not explicit and (cfg.get("starting_xi") or [])),
+            "draft_status": cfg.get("status"),
             "target_gw": cfg.get("gw"),
             "planning_gw": int(planning_gw),
             "engine_recommendation_preserved": True,
             "post_deadline_official_submission_reclaims_authority": phase != "PRE_DEADLINE",
         }
 
-    pmap = _rows(engine)
+    pmap = _manual_override_rows(engine)
     if len(pmap) != 15:
         raise RuntimeError(f"V5 decision FAIL CLOSED: expected 15 owned lineup rows, got {len(pmap)}")
     xi_ids = [int(value) for value in (cfg.get("starting_xi") or [])]
@@ -97,7 +104,7 @@ def apply_user_lineup_override(
         raise RuntimeError("V5 decision FAIL CLOSED: bench_order must contain all three remaining outfield players")
 
     starters = [pmap[element] for element in xi_ids]
-    formation = _formation(starters, rules)
+    formation = _manual_override_formation(starters, rules)
     bench = [pmap[element] for element in bench_order] + [pmap[bench_gk]]
     chip_context = dict(engine.get("chip_context") or {})
     if cfg.get("active_chip") is not None:

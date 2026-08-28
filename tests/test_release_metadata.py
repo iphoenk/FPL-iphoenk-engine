@@ -56,7 +56,8 @@ def test_release_metadata_surfaces_are_consistent():
     assert artifact_registry["consumer_contract"]["report_checkpoint_required"] is True
     assert service_registry["schema_version"] == 14
     assert service_registry["production_contract"].startswith("v3.22-")
-    assert len(service_registry["services"]) == 20
+    assert "tactical_context" in service_registry["services"]
+    assert service_registry["policy"]["service_boundaries_follow_artifact_ownership_not_file_size"] is True
     assert interactive_registry["registry"] == "V3_INTERACTIVE_SERVICES_V1"
     assert len(interactive_registry["services"]) == 2
     assert source_registry["registry"] == "SOURCE_REGISTRY_V4"

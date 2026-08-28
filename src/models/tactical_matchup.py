@@ -105,6 +105,13 @@ def _current_fixture(player: dict[str, Any], planning_gw: int) -> dict[str, Any]
     return {}
 
 
+def _rich_opponent_context(opponent: dict[str, Any]) -> bool:
+    for key in ("coach", "pressing", "build_up", "defensive_line", "width", "transition", "set_piece_profile"):
+        if opponent.get(key):
+            return True
+    return bool(opponent.get("vulnerabilities") or opponent.get("strengths"))
+
+
 def _material_highlights(opponent: dict[str, Any], recent: list[dict[str, Any]], role: dict[str, Any]) -> list[str]:
     highlights: list[str] = []
     opp_vuln = opponent.get("vulnerabilities") or []
@@ -150,7 +157,10 @@ def attach_tactical_matchups(projections: dict[str, Any], planning_gw: int) -> d
         recent_rows = sorted(recent_rows, key=lambda x: int(x.get("gw") or 0), reverse=True)[: int(cfg.get("recent_gw_window") or 5)]
         evidence_count = sum(bool(x) for x in (own, opponent, role, recent_rows))
         minimum = int((cfg.get("materiality") or {}).get("minimum_evidence_items") or 2)
-        if evidence_count >= minimum and opponent_id > 0:
+        rich_context = _rich_opponent_context(opponent)
+        assessed_role = bool(role.get("role"))
+        verified_recent = bool(recent_rows)
+        if evidence_count >= minimum and opponent_id > 0 and rich_context and assessed_role and verified_recent:
             status = "READY"; ready += 1
         elif evidence_count > 0 and opponent_id > 0:
             status = "PARTIAL"; partial += 1
@@ -162,11 +172,15 @@ def attach_tactical_matchups(projections: dict[str, Any], planning_gw: int) -> d
             "opponent_team_id": opponent_id if opponent_id > 0 else None,
             "coach": own.get("coach"),
             "own_shape": own.get("base_formation"),
+            "own_shape_evidence": ((own.get("evidence") or {}).get("class")),
             "opponent_coach": opponent.get("coach"),
             "opponent_shape": opponent.get("base_formation"),
+            "opponent_shape_evidence": ((opponent.get("evidence") or {}).get("class")),
             "player_role": role.get("role"),
+            "player_role_confidence": role.get("confidence"),
             "evidence_count": evidence_count,
             "recent_gw_evidence_count": len(recent_rows),
+            "rich_opponent_context": rich_context,
             "highlights": _material_highlights(opponent, recent_rows, role) if status != "UNAVAILABLE" else [],
             "advisory_only": True,
             "xpts_mutated": False,
@@ -182,6 +196,7 @@ def attach_tactical_matchups(projections: dict[str, Any], planning_gw: int) -> d
         "unavailable": unavailable,
         "advisory_only": True,
         "xpts_mutation": False,
+        "ready_requires_verified_rich_opponent_context_role_and_recent_pattern": True,
         "close_xpts_gap": _f((cfg.get("materiality") or {}).get("close_xpts_gap"), 0.35),
     }
     projections.setdefault("governance", {})["tactical_matchup"] = {
@@ -190,5 +205,6 @@ def attach_tactical_matchups(projections: dict[str, Any], planning_gw: int) -> d
         "never_directly_mutate_xpts": True,
         "allow_selection_tiebreaker_only_when_gap_is_close": True,
         "missing_evidence_is_never_fabricated": True,
+        "observed_fpl_position_shape_alone_is_partial_not_ready": True,
     }
     return projections

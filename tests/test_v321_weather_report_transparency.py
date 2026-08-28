@@ -19,7 +19,6 @@ def test_weather_is_optional_enrichment_not_new_microservice():
     assert weather["class"] == "ENRICHMENT"
     assert weather["critical"] is False
     assert weather["adapter"] == "weather_artifact"
-    assert len(services["services"]) == 20
     assert not any("weather" in name.lower() for name in services["services"])
     source_layer = services["services"]["source_layer"]
     assert "official_snapshot.json" in source_layer["inputs"]

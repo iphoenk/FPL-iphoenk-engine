@@ -96,6 +96,15 @@ jobs:
                   raise SystemExit(f"orchestrator {operation} failed: {envelope.get('error')}")
               return envelope.get('data') or {}, external_ms
 
+          def stage_round_trip(value):
+              if not isinstance(value, dict):
+                  return None
+              if isinstance(value.get('round_trip_ms'), (int, float)):
+                  return float(value['round_trip_ms'])
+              nested = [stage_round_trip(child) for child in value.values() if isinstance(child, dict)]
+              nested = [item for item in nested if item is not None]
+              return max(nested) if nested else None
+
           refresh, refresh_external_ms = invoke('run', {
               'mode': 'daily',
               'team_id': team_id,
@@ -107,6 +116,13 @@ jobs:
           materialization = refresh.get('execution_plane') or {}
           assert materialization.get('hot_materialization') == 'READY', materialization
           assert materialization.get('hot_materialization_commit_order') == 'AFTER_SUPPORTING_ARTIFACTS', materialization
+
+          stage_breakdown = []
+          for name, value in refresh_perf.items():
+              ms = stage_round_trip(value)
+              if ms is not None:
+                  stage_breakdown.append({'stage': name, 'max_round_trip_ms': round(ms, 3)})
+          stage_breakdown.sort(key=lambda row: row['max_round_trip_ms'], reverse=True)
 
           hot, hot_external_ms = invoke('hot_run', {
               'mode': 'daily',
@@ -124,6 +140,7 @@ jobs:
                   'observability_ceiling_ms': refresh_ceiling_ms,
                   'within_observability_ceiling': refresh_external_ms <= refresh_ceiling_ms,
                   'release_blocking': False,
+                  'stage_breakdown': stage_breakdown,
               },
               'hot_path': {
                   'internal_ms': hot_internal_ms,
@@ -176,9 +193,6 @@ jobs:
                   if worker.get('enabled') is True and worker.get('running') is True and int(worker.get('successes') or 0) >= 1:
                       break
               except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
-                  # Container recreate can briefly reset/refuse the connection before
-                  # uvicorn has completed startup. Treat only this bounded startup
-                  # window as retryable; worker success is still required below.
                   startup_errors.append(type(exc).__name__)
               time.sleep(0.5)
           else:
@@ -234,8 +248,8 @@ jobs:
       - name: Show cluster diagnostics on failure
         if: failure()
         run: |
-          docker compose -f deploy/v5/docker-compose.yml ps
-          docker compose -f deploy/v5/docker-compose.yml logs --tail=200 orchestrator decision prediction snapshot || true
+          docker compose -f deploy/v5/docker-compose.yml ps || true
+          docker compose -f deploy/v5/docker-compose.yml logs --tail=200 || true
 
       - name: Stop V5 cluster
         if: always()

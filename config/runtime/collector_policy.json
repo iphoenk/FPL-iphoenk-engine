@@ -1,22 +1,139 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "contract": "FPL_MASTER_MONITOR_TIME_SCHEDULE_GOVERNANCE_V1",
   "timezone": "Asia/Jakarta",
+  "visible_checkpoint_minute": 30,
   "schedules": {
-    "primary": "55 * * * *",
-    "adaptive": "*/15 * * * *",
-    "deep_stats": "30 21 * * *",
-    "report_midday": "30 5 * * *",
-    "report_evening": "30 14 * * *"
+    "primary": "30 * * * *",
+    "adaptive": "0,15,45 * * * *",
+    "deep_stats": "30 21 * * *"
   },
-  "deadline_intensive_hours": 24,
-  "match_window": {
-    "pre_kickoff_minutes": 15,
-    "post_kickoff_minutes": 195
+  "normal_reports": {
+    "deep_review": "04:30",
+    "midday_tactical": "12:30",
+    "night_tactical_price": "21:30",
+    "off_schedule_default": "INTERNAL_ONLY_SILENT"
+  },
+  "deadline_day": {
+    "window_hours": 24,
+    "full_visible_report_every_hour": true,
+    "suppress_when_no_material_change": false,
+    "no_material_change_text": "NO MATERIAL CHANGE SINCE PREVIOUS CHECKPOINT",
+    "final_review_grace_minutes": 15,
+    "final_review": {
+      "overnight_deadline_hours": [0, 1],
+      "overnight_lead_minutes": 180,
+      "default_lead_minutes": 90,
+      "continues_hourly_after_final_review": true
+    }
+  },
+  "direct_official_refresh": {
+    "max_runtime_age_minutes": 30,
+    "refresh_on_material_native_change": true,
+    "native_factual_conflict_winner": "DIRECT_OFFICIAL_FPL",
+    "record_divergence": true
+  },
+  "official_phase_probe": {
+    "endpoint_path": "bootstrap-static/",
+    "timeout_seconds": 8
   },
   "fixture_probe": {
     "official_source_id": "official_fpl",
     "endpoint_path": "fixtures/",
     "timeout_seconds": 8
+  },
+  "match_mode": {
+    "after_gameweek_active_only": true,
+    "current_scoring_gw_only": true,
+    "requires_started_true": true,
+    "requires_finished_false": true,
+    "visible_checkpoint_minute": 30,
+    "consolidated_report": true,
+    "separate_fact_from_model_interpretation": true,
+    "single_live_haul_never_auto_buy_sell": true,
+    "emerging_challenger_is_discovery_only": true
+  },
+  "post_deadline_reconciliation": {
+    "state": "POST_DEADLINE_RECONCILIATION",
+    "official_submitted_picks_become_authoritative": true,
+    "never_infer_unavailable_submitted_xi_c_vc": true,
+    "historical_submitted_state_is_immutable": true
+  },
+  "collision_priority": [
+    "DEADLINE_DAY_FINAL_REVIEW",
+    "DEADLINE_DAY",
+    "MATCH_MODE",
+    "NORMAL_DEEP_REVIEW",
+    "NORMAL_MIDDAY",
+    "NORMAL_NIGHT",
+    "CRITICAL_PRICE_ALERT",
+    "PERMITTED_EMERGENCY"
+  ],
+  "price_monitor": {
+    "mandatory_modes": [
+      "NORMAL_DEEP_REVIEW",
+      "NORMAL_MIDDAY",
+      "NORMAL_NIGHT",
+      "DEADLINE_DAY",
+      "DEADLINE_DAY_FINAL_REVIEW"
+    ],
+    "confirmed_change_class": "FACT",
+    "predicted_change_class": "MODEL_PREDICTION",
+    "off_schedule_visible_only_if_actionable": true
+  },
+  "deadline_source_sweep": {
+    "fresh_before_every_visible_deadline_report": true,
+    "status_labels": [
+      "AVAILABLE",
+      "PARTIAL",
+      "STALE",
+      "UNAVAILABLE",
+      "NO MATERIAL UPDATE"
+    ],
+    "never_fabricate_source_finding": true,
+    "tiers": {
+      "1": ["official_fpl_native", "official_fpl_web", "premier_league_official", "official_clubs", "official_manager_team_communications"],
+      "2": ["reliable_beat_reporters", "verified_press_conference", "reliable_injury_lineup_reporters"],
+      "3": ["fpl_live", "livefpl", "onefpl", "fffix", "ffhub", "ffscout"],
+      "4": ["ben_crellin"],
+      "5": ["x_twitter", "reddit"]
+    }
+  },
+  "player_comparator": {
+    "horizons_gw": [1, 2, 3, 5],
+    "strategic_horizon_gw": [10, 15],
+    "triggers": [
+      "NEW_WATCHLIST_PUBLICATION",
+      "MATERIAL_LIVE_PERFORMANCE",
+      "XMINS_CHANGE",
+      "START_SECURITY_CHANGE",
+      "INJURY",
+      "SUSPENSION",
+      "ROLE_CHANGE",
+      "MANAGER_TACTICAL_CHANGE",
+      "EUROPEAN_CUP_SCHEDULE_CONFIRMATION",
+      "INTERNATIONAL_CALLUP",
+      "SIGNIFICANT_INTERNATIONAL_MINUTES",
+      "PRICE_CHANGE",
+      "FIXTURE_REARRANGEMENT",
+      "OWNED_PLAYER_DETERIORATION",
+      "CHALLENGER_IMPROVEMENT",
+      "NORMAL_DEEP_REVIEW",
+      "DEADLINE_DAY_CHECKPOINT"
+    ]
+  },
+  "workload_monitor": {
+    "competitions": [
+      "PREMIER_LEAGUE",
+      "CHAMPIONS_LEAGUE",
+      "EUROPA_LEAGUE",
+      "CONFERENCE_LEAGUE",
+      "CARABAO_CUP",
+      "FA_CUP",
+      "INTERNATIONAL",
+      "OTHER_RELEVANT_COMPETITIVE"
+    ],
+    "capture": ["match_date", "kickoff", "location", "travel", "actual_minutes", "started", "benched", "substitution_minute", "extra_time", "days_rest_before_next_pl"]
   },
   "event_policy": {
     "push": "COLLECT",
@@ -29,6 +146,11 @@
     "collector_gate_must_not_embed_release_version": true,
     "official_network_location_is_source_registry_owned": true,
     "deep_stats_publish_through_runtime_data_only": true,
-    "scheduled_report_checkpoints_must_collect": true
+    "scheduled_report_checkpoints_must_collect": true,
+    "hourly_internal_evaluation_does_not_imply_visible_report": true,
+    "never_skip_deadline_day_hourly_visible_report": true,
+    "never_emit_match_mode_without_live_current_gw_match": true,
+    "never_duplicate_visible_reports_on_collision": true,
+    "lower_priority_material_is_folded_into_higher_priority_report": true
   }
 }

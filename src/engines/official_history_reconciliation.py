@@ -67,10 +67,10 @@ def run() -> dict[str, Any]:
     detail = _load(DATA / "official_detail.json", {})
     latest = _load(DATA / "latest.json", {})
     team = _load(DATA / "team.json", {})
-    snapshot = load_snapshot()
     team_id = _i(team.get("team_id"), 0)
     if team_id <= 0:
         raise RuntimeError("Official historical reconciliation requires authoritative team_id")
+    snapshot = load_snapshot(DATA)
 
     history_payload = snapshot.get("history") or {}
     history_health = endpoint_health(snapshot, "history")

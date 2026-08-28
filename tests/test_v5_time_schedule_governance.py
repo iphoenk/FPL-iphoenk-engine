@@ -105,13 +105,14 @@ def test_official_fixture_match_state_only_counts_started_unfinished_current_gw(
 
 def test_deadline_source_sweep_is_fresh_and_never_fabricates_missing_sources():
     deadline = "2026-08-28T17:30:00Z"
+    source_label = "FPL Live / LiveFPL"
     schedule = resolve_schedule(
         _context(deadline),
         now="2026-08-28T22:30:00+07:00",
-        source_observations={"LiveFPL": {"status": "AVAILABLE"}},
+        source_observations={source_label: {"status": "AVAILABLE"}},
     )
     assert schedule["fresh_source_sweep_required"] is True
-    assert schedule["source_statuses"]["LiveFPL"] == "AVAILABLE"
+    assert schedule["source_statuses"][source_label] == "AVAILABLE"
     assert schedule["source_statuses"]["Official FPL website"] == "UNAVAILABLE"
 
 

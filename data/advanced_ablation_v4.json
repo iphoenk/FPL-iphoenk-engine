@@ -2,9 +2,9 @@
   "schema_version": 493,
   "engine": "v4.9.3-advanced-ablation",
   "status": "PASS",
-  "generated_at": "2026-08-28T05:09:59.476668+00:00",
-  "snapshot_sha256": "1c66c47fe4b504eeaec45fcb44e9e9a9af10dcf542d1e1ff1de509be2fee7568",
-  "enrichment_sha256": "90462f103958b3e9e4f4fe365947c125aefa0a016dc70d62d60fc5eabb15a21b",
+  "generated_at": "2026-08-28T05:21:43.508629+00:00",
+  "snapshot_sha256": "0e787502e7c617bd9f00cc50927f43362a9f0762e0f1c1db64ad47ab00b80423",
+  "enrichment_sha256": "e83c4c68d764696948351259517f9c2d1597eea9d9d90cca0cbddf82dcfa3935",
   "model_version": "v4.9.2-truthful-health",
   "ablation": {
     "treatment": "community_advanced_current_season_enrichment",
@@ -504,5 +504,5 @@
     "decision_flip_is_reported_not_forced": true,
     "future_empirical_value_requires_reconciled_samples": true
   },
-  "performance_ms": 5518.49
+  "performance_ms": 5099.0
 }

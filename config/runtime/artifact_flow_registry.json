@@ -1,12 +1,13 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "registry": "V3_ARTIFACT_FLOW_OWNERSHIP_V1",
   "policy": {
     "one_final_owner_per_artifact": true,
     "fan_in_passthrough_is_not_ownership": true,
     "staged_mutation_requires_explicit_order": true,
     "undeclared_multi_writer_is_forbidden": true,
-    "latest_sidecar_merge_is_transport_not_business_ownership": true
+    "latest_sidecar_merge_is_transport_not_business_ownership": true,
+    "intermediate_artifacts_have_explicit_owners": true
   },
   "fan_in_passthrough": {
     "base_snapshot": [
@@ -14,17 +15,12 @@
       "team.json",
       "chips.json",
       "live.json",
-      "prices.json",
+      "market_prices.json",
       "universe.json",
       "advanced_stats_sync.json"
     ]
   },
   "staged_mutation_chains": {
-    "prices.json": {
-      "writers": ["market_state", "price"],
-      "final_owner": "price",
-      "reason": "market_state materializes current Official market facts; price adds trajectory/calibration/challenger context to the same public price contract"
-    },
     "user_report.json": {
       "writers": ["reporting", "report_materializer"],
       "final_owner": "report_materializer",
@@ -38,6 +34,7 @@
     "team.json": "team_state",
     "chips.json": "team_state",
     "live.json": "live_state",
+    "market_prices.json": "market_state",
     "prices.json": "price",
     "universe.json": "market_state",
     "advanced_stats_sync.json": "advanced_stats",

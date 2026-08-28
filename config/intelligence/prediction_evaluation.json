@@ -1,9 +1,12 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "model_id": "v5_prediction_evaluation_v4",
   "freeze_policy": "ALL_EXPIRED_STORED_PRE_DEADLINE_FORECASTS_FROZEN_BEFORE_SETTLEMENT",
   "minimum_sample_for_dynamic_weight": 50,
   "calibration_readiness": {
+    "owner": "evaluation",
+    "player_observation_gate_source": "evaluation.core.dynamic_weight_eligible",
+    "metric_recalculation": "FORBIDDEN",
     "minimum_settled_gameweeks_for_baseline_candidate": 3,
     "minimum_settled_gameweeks_for_dynamic_weight": 5,
     "minimum_player_observations_for_dynamic_weight": 50
@@ -26,6 +29,7 @@
     "actual_payload_must_never_mutate_frozen_forecast": true,
     "dynamic_weight_requires_player_and_multi_gameweek_evidence": true,
     "single_settled_gameweek_cannot_enable_dynamic_weight": true,
-    "calibration_readiness_must_not_recompute_evaluation_metrics": true
+    "calibration_readiness_must_not_recompute_evaluation_metrics": true,
+    "one_owner_per_calibration_business_rule": true
   }
 }

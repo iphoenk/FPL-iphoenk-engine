@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "locked_squad_config": "config/locked_squad.json",
   "validation": {
     "fail_closed": true,
@@ -7,6 +7,16 @@
     "require_unique_elements": true,
     "require_exact_position_counts": true,
     "require_club_limit": true
+  },
+  "planning_override": {
+    "enabled": true,
+    "target_gw_required": true,
+    "stale_target_behavior": "SKIP_USER_LOCK_AND_CONTINUE_AUTHORITY_CHAIN",
+    "user_decision_target_gw_required": true,
+    "engine_recommendation_preserved_for_comparison": true,
+    "lineup_legality_fail_closed": true,
+    "captain_and_vice_must_be_distinct_xi_members": true,
+    "post_deadline_official_submission_reclaims_authority": true
   },
   "reconciliation": {
     "enabled": true,

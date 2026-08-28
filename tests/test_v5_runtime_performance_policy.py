@@ -66,7 +66,8 @@ def test_existing_workflows_and_shadow_cycle_enforce_hot_runtime_contract():
     assert "hot_path_hard_limit_seconds" in shadow
     assert "hot_path_wall_ms" in shadow
     assert "hot_path_hard_limit_seconds" in dev_perf
-    assert "/v1/invoke/hot_run" in dev_perf
+    assert "/v1/invoke/{operation}" in dev_perf
+    assert "invoke('hot_run'" in dev_perf
     assert "hot_path_hard_limit_seconds" in shadow_cycle
     assert "hot_path_under_one_second" in shadow_cycle
     assert 'operation == "hot_run"' in beta

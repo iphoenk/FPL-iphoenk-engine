@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "transport": {
     "api_base_env": "FPL_API_BASE",
     "api_base_default": "https://fantasy.premierleague.com/api",
@@ -26,7 +26,9 @@
       "entry_picks": 15,
       "event_live": 15,
       "element_summary": 120,
-      "set_piece_notes": 300
+      "set_piece_notes": 300,
+      "classic_league_standings": 60,
+      "h2h_league_standings": 60
     },
     "singleflight": {
       "enabled": true,
@@ -45,7 +47,9 @@
     "entry_picks": "entry/{team_id}/event/{event}/picks/",
     "event_live": "event/{event}/live/",
     "element_summary": "element-summary/{element}/",
-    "set_piece_notes": "team/set-piece-notes/"
+    "set_piece_notes": "team/set-piece-notes/",
+    "classic_league_standings": "leagues-classic/{league_id}/standings/",
+    "h2h_league_standings": "leagues-h2h/{league_id}/standings/"
   },
   "collection_groups": {
     "base": ["bootstrap", "fixtures", "event_status", "entry", "entry_history", "entry_transfers"],

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from src.utils import atomic_json, read_json
 from src.v5.config_cache import load_json_config
 from src.v5.evaluation.shadow_parity import compare
 from src.v5.official_auth import expected_team_id
@@ -17,20 +18,11 @@ MANIFEST_CONFIG = "config/v5_convergence_manifest.json"
 PERFORMANCE_CONFIG = "config/v5_performance_budgets.json"
 
 
-def _load(path: str) -> dict[str, Any]:
-    with open(path, encoding="utf-8") as fh:
-        data = json.load(fh)
+def _read_object(path: str) -> dict[str, Any]:
+    data = read_json(Path(path), None)
     if not isinstance(data, dict):
         raise RuntimeError(f"expected object in {path}")
     return data
-
-
-def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2, ensure_ascii=False)
-    tmp.replace(path)
 
 
 def _ids(rows: Any) -> set[int]:
@@ -38,8 +30,8 @@ def _ids(rows: Any) -> set[int]:
 
 
 def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int) -> dict[str, Any]:
-    v3_latest = _load(v3_latest_path)
-    v3_lineup = _load(v3_lineup_path)
+    v3_latest = _read_object(v3_latest_path)
+    v3_lineup = _read_object(v3_lineup_path)
     v3_reference = {**v3_latest, **v3_lineup}
     manifest = load_json_config(MANIFEST_CONFIG)
     baselines = manifest.get("baselines") if isinstance(manifest.get("baselines"), dict) else {}
@@ -129,8 +121,8 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
     }
     out = Path(output_dir)
     cycle_path = out / "cycles" / f"{cycle_id}.json"
-    _atomic_write(cycle_path, result)
-    _atomic_write(out / "latest_shadow_cycle.json", result)
+    atomic_json(cycle_path, result)
+    atomic_json(out / "latest_shadow_cycle.json", result)
     print(json.dumps({"cycle_id": cycle_id, "cycle_pass": cycle_pass, "post_validation_status": post_status, "parity_pass": parity.get("pass"), "refresh_pipeline_wall_ms": refresh_wall_ms, "hot_path_wall_ms": hot_wall_ms, "release_fingerprint": release["fingerprint"], "output": str(cycle_path)}, ensure_ascii=False))
     return result
 

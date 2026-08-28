@@ -34,10 +34,12 @@ jobs:
         run: pip install -r requirements.txt pytest
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
-      - name: Validate architecture ownership contract
+      - name: Validate architecture and ownership contracts
         run: |
           python -m src.engines.architecture_contract_validate
           python -m src.engines.capability_contract_validate
+          python -m src.engines.artifact_flow_validate
+          python -m src.engines.logic_ownership_validate
       - name: Full unit and regression suite
         run: python -m pytest -q
       - name: Hydrate operational LKG for release acceptance

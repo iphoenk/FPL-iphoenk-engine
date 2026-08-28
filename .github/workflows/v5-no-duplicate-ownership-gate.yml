@@ -1,0 +1,74 @@
+name: V5 No Duplicate Ownership Gate
+
+on:
+  push:
+    branches: ['v5-*']
+    paths:
+      - 'config/v5_*.json'
+      - 'config/intelligence/**'
+      - 'config/rules/**'
+      - 'config/dss_core_registry.json'
+      - 'config/dss_extension_registry.json'
+      - 'config/enhancement_layers_registry.json'
+      - 'config/gate0_registry.json'
+      - 'config/sources/**'
+      - 'src/v5/**'
+      - 'deploy/v5/**'
+      - 'tests/test_v5_architecture_ownership_guard.py'
+      - 'tests/test_v5_microservices.py'
+      - '.github/workflows/v5-no-duplicate-ownership-gate.yml'
+  pull_request:
+    branches: [v5-beta6-roadmap]
+    paths:
+      - 'config/v5_*.json'
+      - 'config/intelligence/**'
+      - 'config/rules/**'
+      - 'config/dss_core_registry.json'
+      - 'config/dss_extension_registry.json'
+      - 'config/enhancement_layers_registry.json'
+      - 'config/gate0_registry.json'
+      - 'config/sources/**'
+      - 'src/v5/**'
+      - 'deploy/v5/**'
+      - 'tests/test_v5_architecture_ownership_guard.py'
+      - 'tests/test_v5_microservices.py'
+      - '.github/workflows/v5-no-duplicate-ownership-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-duplicate-ownership:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: "${{ github.workspace }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+      - name: Architecture ownership regressions
+        run: |
+          python -m pytest -q \
+            tests/test_v5_architecture_ownership_guard.py \
+            tests/test_v5_microservices.py
+      - name: Fail closed on duplicate or overlap
+        run: |
+          python - <<'PY'
+          import json
+          from src.v5.architecture_guard import run_audit
+
+          result = run_audit()
+          print(json.dumps(result, indent=2, ensure_ascii=False))
+          failed = {name: row['detail'] for name, row in result['checks'].items() if not row['pass']}
+          assert result['status'] == 'PASS', f'V5 architecture ownership violations: {json.dumps(failed, ensure_ascii=False)}'
+          PY

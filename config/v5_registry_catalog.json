@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "purpose": "Catalog of V5 domains that must resolve through a shared module or registry instead of duplicated implementation logic.",
   "domains": {
     "official_rules": {"authority": "config/rules/registry.json", "status": "ACTIVE"},
@@ -19,6 +19,8 @@
     "finance": {"authority": "src/v5/finance.py + config/v5_finance_registry.json", "status": "ACTIVE"},
     "phase_authority": {"authority": "src/v5/state.py + config/v5_phase_authority_registry.json", "status": "ACTIVE"},
     "price_trajectory": {"authority": "src/v5/price_trajectory.py + config/v5_price_trajectory_registry.json", "status": "ACTIVE_ALPHA"},
+    "price_calibration_monitor": {"authority": "src/v5/price_calibration.py + config/v5_price_trajectory_registry.json", "status": "ACTIVE_MONITOR"},
+    "mini_league_tracking": {"authority": "src/v5/mini_league.py + config/v5_mini_league_registry.json", "status": "ACTIVE"},
     "projection_weights": {"authority": "config/intelligence/projection.json", "status": "ACTIVE_ALPHA"}
   }
 }

@@ -106,6 +106,7 @@ jobs:
           refresh_internal_ms = float(refresh_perf.get('full_beta_end_to_end_ms') or 0.0)
           materialization = refresh.get('execution_plane') or {}
           assert materialization.get('hot_materialization') == 'READY', materialization
+          assert materialization.get('hot_materialization_commit_order') == 'AFTER_SUPPORTING_ARTIFACTS', materialization
 
           hot, hot_external_ms = invoke('hot_run', {
               'mode': 'daily',
@@ -143,11 +144,90 @@ jobs:
           assert hot_external_ms <= hard_ms, f'V5 user-facing hot round trip exceeded hard limit: {hot_external_ms:.1f}ms > {hard_ms:.1f}ms'
           PY
 
+      - name: Recreate orchestrator with enabled deadline refresh worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          V5_REFRESH_WORKER_ENABLED=true \
+          V5_REFRESH_WORKER_MODE=deadline \
+          docker compose -f deploy/v5/docker-compose.yml up -d --no-deps --force-recreate orchestrator
+
+      - name: Validate enabled refresh-worker canary and hot SLA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          hard_ms = float(os.environ['V5_HOT_HARD_MS'])
+          team_id = int(os.environ['FPL_TEAM_ID'])
+          deadline = time.monotonic() + 45.0
+          worker = {}
+          while time.monotonic() < deadline:
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:8100/health', timeout=3) as response:
+                      health = json.load(response)
+                  worker = health.get('refresh_worker') or {}
+                  if worker.get('enabled') is True and worker.get('running') is True and int(worker.get('successes') or 0) >= 1:
+                      break
+              except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+                  pass
+              time.sleep(0.5)
+          else:
+              raise SystemExit(f'refresh worker did not produce a successful materialization: {worker}')
+
+          assert worker.get('mode') == 'deadline', worker
+          assert int(worker.get('interval_seconds') or 0) == 20, worker
+          assert worker.get('scheduler_class') == 'SUBMINUTE_WORKER_REQUIRED', worker
+          assert int(worker.get('failures') or 0) == 0, worker
+          assert worker.get('last_materialization_status') == 'READY', worker
+
+          body = json.dumps({
+              'mode': 'deadline',
+              'team_id': team_id,
+              'correlation_id': 'dev-worker-hot-canary',
+          }).encode('utf-8')
+          req = urllib.request.Request(
+              'http://127.0.0.1:8100/v1/invoke/hot_run',
+              data=body,
+              headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+              method='POST',
+          )
+          started = time.perf_counter()
+          with urllib.request.urlopen(req, timeout=10) as response:
+              envelope = json.load(response)
+          external_ms = (time.perf_counter() - started) * 1000.0
+          assert envelope.get('ok') is True, envelope
+          hot = envelope.get('data') or {}
+          perf = hot.get('service_performance') or {}
+          freshness = ((hot.get('governance') or {}).get('freshness') or {})
+          internal_ms = float(perf.get('hot_path_wall_ms') or 0.0)
+          result = {
+              'worker': worker,
+              'hot_path_with_worker_enabled': {
+                  'internal_ms': internal_ms,
+                  'external_ms': round(external_ms, 3),
+                  'hard_limit_ms': hard_ms,
+                  'freshness': freshness,
+              },
+          }
+          print(json.dumps(result, indent=2, ensure_ascii=False))
+          assert freshness.get('eligible') is True, freshness
+          assert freshness.get('mode') == 'deadline', freshness
+          assert 0.0 < internal_ms <= hard_ms, perf
+          assert 0.0 < external_ms <= hard_ms, result
+          assert (hot.get('governance') or {}).get('hidden_synchronous_refresh') is False
+          PY
+
       - name: Show cluster diagnostics on failure
         if: failure()
         run: |
           docker compose -f deploy/v5/docker-compose.yml ps
-          docker compose -f deploy/v5/docker-compose.yml logs --tail=160 orchestrator decision prediction snapshot || true
+          docker compose -f deploy/v5/docker-compose.yml logs --tail=200 orchestrator decision prediction snapshot || true
 
       - name: Stop V5 cluster
         if: always()

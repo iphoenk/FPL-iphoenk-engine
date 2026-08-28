@@ -9,7 +9,7 @@ on:
   schedule:
     # Master hourly evaluation at :30 WIB. UTC has the same minute offset.
     - cron: "30 * * * *"
-    # Adaptive freshness/final-review support without duplicating the :30 master checkpoint.
+    # Adaptive freshness / off-:30 Final Review support. Deliberately excludes :30 to avoid collision.
     - cron: "0,15,45 * * * *"
 
 permissions:

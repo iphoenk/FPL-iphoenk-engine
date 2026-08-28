@@ -40,6 +40,30 @@ def test_squad_constraints_are_owned_by_active_ruleset():
     assert int(SQUAD_RULES["max_players_per_club"]) > 0
 
 
+def test_watchlist_ranking_primitives_are_config_owned_and_fpl_scoring_is_rule_owned():
+    policy = json.loads((ROOT / "config" / "intelligence" / "dss_watchlist.json").read_text())
+    implementation = (ROOT / "src" / "engines" / "dss_watchlist.py").read_text()
+    primitives = policy["ranking_primitives"]
+
+    assert policy["schema_version"] >= 2
+    assert abs(sum(float(v) for v in primitives["role_security"].values()) - 1.0) < 1e-9
+    assert abs(
+        float(primitives["xmins_security"]["base_weight"])
+        + float(primitives["xmins_security"]["expected_minutes_share_weight"])
+        - 1.0
+    ) < 1e-9
+    assert 0.0 <= float(primitives["xmins_security"]["dnp_penalty"]) <= 1.0
+    assert float(primitives["price_floor_millions"]) > 0
+    assert float(primitives["score_scale"]) > 0
+    assert set(primitives["market_overlay_scores"]) == {"RISE", "FALL", "NEUTRAL"}
+    assert "_ranking_primitives()" in implementation
+    assert "SAVE_INTERVAL" in implementation
+    assert "SAVE_POINTS_PER_INTERVAL" in implementation
+    assert "role_security = 0.55" not in implementation
+    assert "evidence_factor = 0.85" not in implementation
+    assert "_f(rates.get(\"saves90\")) / 3.0" not in implementation
+
+
 def test_onefpl_report_time_queries_and_domains_are_registry_owned():
     machine_registry = json.loads((ROOT / "config" / "sources" / "registry.json").read_text())
     report_registry = json.loads((ROOT / "config" / "sources" / "report_time_registry.json").read_text())

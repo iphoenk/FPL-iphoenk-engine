@@ -41,12 +41,19 @@ def _rules_view() -> dict[str, Any]:
 
 def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None, entry_history: dict[str, Any] | None) -> dict[str, Any]:
     used = (entry_history or {}).get("chips") if isinstance((entry_history or {}).get("chips"), list) else []
-    ledger = build_chip_ledger(used, current_gw=context.planning_gw or context.current_gw or 1)
+    gw = int(context.planning_gw or context.current_gw or 1)
+    ledger = build_chip_ledger(used, current_gw=gw)
     raw_active = None
     source = None
+    target_raw = lock.get("target_gw")
+    target_gw = int(target_raw) if target_raw is not None else None
+    lock_target_matches = target_gw == gw
     if context.phase.value == "PRE_DEADLINE":
-        if bool(lock.get("wildcard_active")):
+        if bool(lock.get("wildcard_active")) and lock_target_matches:
             raw_active = "wildcard"
+            source = "user_lock"
+        elif bool(lock.get("free_hit_active")) and lock_target_matches:
+            raw_active = "free_hit"
             source = "user_lock"
     elif isinstance(submitted, dict):
         raw_active = submitted.get("active_chip")
@@ -57,7 +64,6 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
     known = active_chip is None or active_chip in CHIP_DISPLAY_NAMES
     available_now = active_chip is None or active_chip in available
     special_legal = True
-    gw = int(context.planning_gw or context.current_gw or 1)
     if active_chip == "free_hit" and gw == 1 and not bool(CHIP_RULES.get("free_hit_gw1_allowed", False)):
         special_legal = False
     legal = known and available_now and special_legal
@@ -67,6 +73,8 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
         "source": source,
         "planning_gw": gw,
         "submitted_gw": context.submitted_gw,
+        "override_target_gw": target_gw,
+        "lock_target_matches_planning_gw": lock_target_matches,
         "current_half": int(current_half),
         "available_this_half": sorted(available),
         "one_chip_per_gameweek": bool(CHIP_RULES.get("one_chip_per_gameweek", True)),
@@ -76,6 +84,10 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
         "special_rule_legal": special_legal,
         "legal": legal,
         "ledger": ledger,
+        "governance": {
+            "pre_deadline_user_chip_requires_exact_target_gw": True,
+            "post_deadline_submitted_chip_is_authoritative": True,
+        },
     }
 
 
@@ -162,6 +174,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     lock = payload.get("locked_squad") if isinstance(payload.get("locked_squad"), dict) else locked_squad()
     team = build_team_state(
         phase=context.phase,
+        planning_gw=context.planning_gw or context.current_gw,
+        submitted_gw=context.submitted_gw,
         bootstrap=bootstrap,
         identity=identity,
         locked_squad=lock,

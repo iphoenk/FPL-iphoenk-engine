@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.models.observed_tactical_context import (
+    _percentile,
     build_current_recent_rows,
     merge_recent_history,
     player_return_routes,
@@ -25,6 +26,11 @@ def _cfg():
             "central_y_max": 65.0,
         },
     }
+
+
+def test_tied_zero_values_are_midrank_not_false_top_percentile():
+    assert _percentile(0.0, [0.0, 0.0, 0.0, 0.0]) == 0.5
+    assert _percentile(2.0, [0.0, 1.0, 2.0, 3.0]) == 0.625
 
 
 def test_current_match_events_create_observed_recent_context_without_fake_pressing():
@@ -68,6 +74,7 @@ def test_current_match_events_create_observed_recent_context_without_fake_pressi
     assert beta["chance_concession_zones"]
     assert alpha["evidence"]["true_pressing_not_inferred"] is True
     assert alpha["observed_style_proxies"]
+    assert all(float(item["observed_value"]) > 0 for item in alpha["observed_style_proxies"])
 
 
 def test_rolling_history_deduplicates_current_gw_and_keeps_window():

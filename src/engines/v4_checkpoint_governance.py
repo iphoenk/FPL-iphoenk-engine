@@ -8,6 +8,7 @@ from src.utils import CONFIG, DATA, atomic_json, parse_dt, read_json, utcnow
 
 OUTFILE = DATA / "checkpoint_decision_v4.json"
 ACTIONS = CONFIG / "report_action_registry.json"
+LANGUAGE_POLICY = CONFIG / "report_language_policy.json"
 
 
 def _freshness(latest: dict, now: datetime) -> dict:
@@ -57,6 +58,92 @@ def _planning_authority(locked: dict, scorecard: dict) -> dict:
     }
 
 
+def _plain_reasoning(
+    action: str,
+    verdict: str,
+    freshness: dict,
+    lineup: dict,
+    planning_scorecard: dict,
+    recommended: dict,
+    wildcard_active: bool,
+) -> list[str]:
+    comparison = planning_scorecard.get("engine_comparison") or {}
+    delta = comparison.get("user_minus_engine_xpts")
+    reasons: list[str] = []
+
+    if action == "REFRESH_REQUIRED":
+        return [
+            "Data terakhir sudah terlalu lama untuk dijadikan dasar keputusan saat ini.",
+            "Perbarui kondisi pemain, harga, dan informasi tim sebelum melakukan perubahan.",
+        ]
+    if action == "BLOCKED":
+        return [
+            "Data atau struktur tim belum konsisten untuk menghasilkan keputusan yang aman.",
+            "Jangan mengubah tim sampai sumber masalah sudah diperbaiki dan pemeriksaan ulang selesai.",
+        ]
+    if action == "SIMULATION_ONLY":
+        return ["Hasil ini hanya simulasi dan tidak digunakan sebagai instruksi perubahan tim nyata."]
+    if action == "EMERGENCY_UPDATE_ONLY":
+        return [
+            "Tahap final review sudah lewat, jadi struktur tim sebaiknya dipertahankan.",
+            "Perubahan hanya layak dilakukan jika muncul kabar baru yang benar-benar memengaruhi peluang bermain atau kelayakan pemain.",
+        ]
+
+    if action == "HOLD":
+        reasons.append("Struktur tim saat ini masih cukup layak untuk dipertahankan.")
+        if verdict == "MATERIAL_UPGRADE" and recommended.get("replacements"):
+            reasons.append("Ada paket alternatif yang menarik, tetapi belum cukup kuat untuk memaksa perubahan sekarang.")
+        elif verdict == "OPTIONAL_IMPROVEMENT":
+            reasons.append("Ada alternatif yang sedikit lebih menarik, tetapi manfaatnya belum cukup besar untuk terburu-buru berubah.")
+        else:
+            reasons.append("Belum ada peningkatan yang cukup jelas untuk membenarkan perubahan struktur saat ini.")
+        if isinstance(delta, (int, float)):
+            reasons.append(f"Perbedaan proyeksi XI saat ini terhadap alternatif sekitar {abs(float(delta)):.2f} poin, sehingga masih masuk wilayah keputusan yang bisa dipengaruhi preferensi dan informasi terbaru.")
+        if not str(lineup.get("status") or "").upper() == "FINAL_LOCKED":
+            reasons.append("XI, bench, kapten, dan vice-captain masih dapat disesuaikan sampai final review.")
+        if wildcard_active:
+            reasons.append("Karena Wildcard sedang aktif, fokusnya adalah memilih kombinasi 15 pemain terbaik tanpa mempertimbangkan biaya hit.")
+        return reasons
+
+    if action == "REVIEW_REQUIRED":
+        reasons.extend([
+            "Ada kandidat perubahan yang layak dibandingkan kembali sebelum keputusan final.",
+            "Manfaatnya belum cukup kuat untuk langsung dijalankan tanpa mengecek starter security, team news, dan horizon fixture terbaru.",
+        ])
+        return reasons
+
+    if action == "GO":
+        reasons.append("Perbandingan terbaru menunjukkan paket perubahan yang cukup kuat untuk menjadi pilihan utama.")
+        if recommended.get("replacements"):
+            reasons.append(f"Paket yang disarankan melibatkan {int(recommended['replacements'])} perubahan dan tetap harus dikonfirmasi pada final lock.")
+        return reasons
+
+    return ["Pertahankan keputusan saat ini sampai informasi berikutnya memberikan alasan yang lebih kuat untuk berubah."]
+
+
+def _plain_actions(action: str, lineup: dict, wildcard_active: bool) -> list[str]:
+    if action == "REFRESH_REQUIRED":
+        return ["Refresh data terlebih dahulu.", "Jangan mengeksekusi perubahan sebelum hasil terbaru tersedia."]
+    if action == "BLOCKED":
+        return ["Perbaiki data atau struktur yang bermasalah.", "Jalankan pemeriksaan ulang sebelum mengambil keputusan."]
+    if action == "GO":
+        if str(lineup.get("status") or "").upper() == "FINAL_LOCKED":
+            return ["Pertahankan final lock kecuali muncul berita material baru."]
+        return ["Bandingkan paket rekomendasi dengan preferensi user.", "Berikan final lock hanya setelah XI, bench, kapten, vice, dan chip dikonfirmasi."]
+    actions = ["Pertahankan struktur saat ini.", "Pantau team news, starter security, harga, dan challenger sampai checkpoint berikutnya."]
+    if wildcard_active:
+        actions.append("Gunakan fleksibilitas Wildcard untuk memperbaiki struktur hanya jika ada peningkatan yang benar-benar material.")
+    return actions
+
+
+def _validate_plain_language(reasoning: list[str], actions: list[str], policy: dict) -> None:
+    combined = " ".join([*reasoning, *actions]).lower()
+    forbidden = [str(value).lower() for value in policy.get("technical_terms_forbidden_in_primary_reasoning") or []]
+    leaking = [value for value in forbidden if value and value in combined]
+    if leaking:
+        raise RuntimeError(f"technical language leaked into primary report reasoning: {leaking}")
+
+
 def govern_checkpoint(
     latest: dict,
     health: dict,
@@ -76,6 +163,7 @@ def govern_checkpoint(
         raise RuntimeError("checkpoint governance now must be timezone-aware")
 
     actions = actions or read_json(ACTIONS, {})
+    language_policy = read_json(LANGUAGE_POLICY, {})
     scorecard = scorecard or {}
     context = dict(latest.get("checkpoint_context") or {})
     freshness = _freshness(latest, evaluated_at)
@@ -137,15 +225,30 @@ def govern_checkpoint(
         reasons.append("USER_FINAL_LOCK_REQUIRED")
 
     planning_scorecard = scorecard.get("planning_gw") or {}
+    human_reasoning = _plain_reasoning(action, verdict, freshness, lineup, planning_scorecard, recommended, wildcard_active)
+    human_actions = _plain_actions(action, lineup, wildcard_active)
+    _validate_plain_language(human_reasoning, human_actions, language_policy)
+
     return {
-        "schema_version": 492,
-        "engine": "v4.9.2-checkpoint-governance",
+        "schema_version": 495,
+        "engine": "v4.9.5-checkpoint-governance-human-report",
         "evaluated_at": evaluated_at.isoformat(),
         "checkpoint_context": context,
         "action_state": action,
         "headline": action_definition.get("headline"),
         "summary": action_definition.get("summary"),
         "structure_action": action_definition.get("structure_action"),
+        "human_report": {
+            "language_policy": language_policy.get("registry"),
+            "audience": language_policy.get("audience", "FPL_MANAGER"),
+            "decision": action,
+            "headline": action_definition.get("headline"),
+            "summary": action_definition.get("summary"),
+            "why": human_reasoning,
+            "what_to_do": human_actions,
+            "technical_terms_suppressed_from_primary_reasoning": True,
+            "technical_state_location": language_policy.get("technical_state_location"),
+        },
         "squad": {
             "authority": latest.get("squad_authority"),
             "expected_authority": expected_authority,
@@ -216,6 +319,8 @@ def govern_checkpoint(
             "engine_is_advisory": True,
             "user_decision_is_final_authority": True,
             "go_never_auto_executes_without_user_final_lock": True,
+            "primary_report_plain_fpl_language": True,
+            "technical_reason_codes_separate_from_human_reasoning": True,
         },
     }
 
@@ -244,6 +349,7 @@ def run(now: str | None = None) -> dict:
         "previous_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("previous"),
         "planning_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("planning"),
         "squad_basis": (out.get("squad") or {}).get("authority_source"),
+        "human_reason_count": len((out.get("human_report") or {}).get("why") or []),
     }, ensure_ascii=False))
     return out
 

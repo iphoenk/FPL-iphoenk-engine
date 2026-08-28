@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 from src.rules import RULESET_ID
 from src.v5.config_cache import load_json_config
+from src.v5.time_utils import parse_iso_datetime
 
 
 def parse_datetime(value: Any) -> datetime | None:
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value.astimezone(timezone.utc)
-    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
+    parsed = parse_iso_datetime(value)
+    if value is not None and parsed is None:
+        raise ValueError(f"invalid datetime value: {value!r}")
+    return parsed
 
 
 def context_dict(context) -> dict[str, Any]:

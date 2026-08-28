@@ -2,6 +2,9 @@ name: FPL iphoenk V4 prediction gate
 
 on:
   workflow_dispatch:
+  schedule:
+    # Master Monitor hourly evaluation. GitHub cron is UTC; minute :30 is also :30 WIB.
+    - cron: "30 * * * *"
 
 permissions:
   contents: read

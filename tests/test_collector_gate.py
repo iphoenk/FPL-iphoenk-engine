@@ -41,16 +41,24 @@ def test_adaptive_slot_skips_normal_day():
     assert reason == "adaptive_slot_not_needed"
 
 
-def test_adaptive_slot_runs_within_exact_24h_deadline_window():
+def test_deadline_day_window_is_exactly_24h_and_adaptive_only_runs_for_final_review():
     deadline = utc(2026, 8, 28, 17, 30)
     assert deadline_intensive(deadline - timedelta(hours=24), deadline) is True
     assert deadline_intensive(deadline - timedelta(hours=24, seconds=1), deadline) is False
     assert deadline_intensive(deadline + timedelta(seconds=1), deadline) is False
-    collect, reason = should_collect(
-        "schedule", "0,15,45 * * * *", deadline - timedelta(hours=3), deadline, False
+
+    ordinary_adaptive, ordinary_reason = should_collect(
+        "schedule", "0,15,45 * * * *", deadline - timedelta(hours=2), deadline, False
     )
-    assert collect is True
-    assert reason == "adaptive_deadline_window"
+    assert ordinary_adaptive is False
+    assert ordinary_reason == "adaptive_slot_not_needed"
+
+    daytime_deadline = utc(2026, 8, 29, 11, 30)  # 18:30 WIB; final review 17:00 WIB
+    final_collect, final_reason = should_collect(
+        "schedule", "0,15,45 * * * *", utc(2026, 8, 29, 10, 0), daytime_deadline, False
+    )
+    assert final_collect is True
+    assert final_reason == "adaptive_final_review"
 
 
 def test_adaptive_slot_runs_for_live_refresh_without_authorizing_match_report_by_itself():

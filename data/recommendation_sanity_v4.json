@@ -41,8 +41,8 @@
       ],
       "raw_classification": "MATERIAL_UPGRADE",
       "raw_adjusted_utility_gain_5": 8.05,
-      "evidence_confidence": 0.84,
-      "sanity_gain_5": 6.762,
+      "evidence_confidence": 0.8401,
+      "sanity_gain_5": 6.763,
       "classification": "MATERIAL_UPGRADE",
       "material_eligible": true,
       "evidence": {
@@ -52,7 +52,7 @@
             "name": "Szoboszlai",
             "team": "Liverpool",
             "position": "MID",
-            "confidence": 0.84,
+            "confidence": 0.8401,
             "grade": "HIGH",
             "start_probability_5": 0.9506,
             "dnp_probability_5": 0.0445,
@@ -61,7 +61,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5051,
             "current_season_weight": 0.1111,
-            "market_support": 0.9873,
+            "market_support": 0.9889,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -89,9 +89,9 @@
             ]
           }
         ],
-        "avg_incoming_confidence": 0.84,
+        "avg_incoming_confidence": 0.8401,
         "avg_outgoing_confidence": 0.7731,
-        "min_incoming_confidence": 0.84,
+        "min_incoming_confidence": 0.8401,
         "severe_rate_spikes": 0,
         "team_cluster_excess": 0,
         "early_season": true,
@@ -163,7 +163,7 @@
       "raw_classification": "MATERIAL_UPGRADE",
       "raw_adjusted_utility_gain_5": 13.36,
       "evidence_confidence": 0.7651,
-      "sanity_gain_5": 10.221,
+      "sanity_gain_5": 10.222,
       "classification": "MATERIAL_UPGRADE",
       "material_eligible": true,
       "evidence": {
@@ -192,7 +192,7 @@
             "name": "Szoboszlai",
             "team": "Liverpool",
             "position": "MID",
-            "confidence": 0.84,
+            "confidence": 0.8401,
             "grade": "HIGH",
             "start_probability_5": 0.9506,
             "dnp_probability_5": 0.0445,
@@ -201,7 +201,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5051,
             "current_season_weight": 0.1111,
-            "market_support": 0.9873,
+            "market_support": 0.9889,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -349,7 +349,7 @@
       ],
       "raw_classification": "MATERIAL_UPGRADE",
       "raw_adjusted_utility_gain_5": 18.86,
-      "evidence_confidence": 0.6593,
+      "evidence_confidence": 0.6594,
       "sanity_gain_5": 12.435,
       "classification": "OPTIONAL_IMPROVEMENT",
       "material_eligible": false,
@@ -369,7 +369,7 @@
             "horizon_stability": 0.9415,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.6576,
+            "market_support": 0.6586,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -400,7 +400,7 @@
             "name": "Szoboszlai",
             "team": "Liverpool",
             "position": "MID",
-            "confidence": 0.84,
+            "confidence": 0.8401,
             "grade": "HIGH",
             "start_probability_5": 0.9506,
             "dnp_probability_5": 0.0445,
@@ -409,7 +409,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5051,
             "current_season_weight": 0.1111,
-            "market_support": 0.9873,
+            "market_support": 0.9889,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -629,7 +629,7 @@
             "horizon_stability": 0.9415,
             "rate_spike_risk": 1.0,
             "current_season_weight": 0.1111,
-            "market_support": 0.6576,
+            "market_support": 0.6586,
             "flags": [
               "HIGH_UNCERTAINTY",
               "RAW_RATE_SPIKE",
@@ -679,7 +679,7 @@
             "name": "Szoboszlai",
             "team": "Liverpool",
             "position": "MID",
-            "confidence": 0.84,
+            "confidence": 0.8401,
             "grade": "HIGH",
             "start_probability_5": 0.9506,
             "dnp_probability_5": 0.0445,
@@ -688,7 +688,7 @@
             "horizon_stability": 0.9027,
             "rate_spike_risk": 0.5051,
             "current_season_weight": 0.1111,
-            "market_support": 0.9873,
+            "market_support": 0.9889,
             "flags": [
               "EARLY_SEASON_SAMPLE"
             ]
@@ -855,7 +855,7 @@
     "raw_classification": "MATERIAL_UPGRADE",
     "raw_adjusted_utility_gain_5": 13.36,
     "evidence_confidence": 0.7651,
-    "sanity_gain_5": 10.221,
+    "sanity_gain_5": 10.222,
     "classification": "MATERIAL_UPGRADE",
     "material_eligible": true,
     "evidence": {
@@ -884,7 +884,7 @@
           "name": "Szoboszlai",
           "team": "Liverpool",
           "position": "MID",
-          "confidence": 0.84,
+          "confidence": 0.8401,
           "grade": "HIGH",
           "start_probability_5": 0.9506,
           "dnp_probability_5": 0.0445,
@@ -893,7 +893,7 @@
           "horizon_stability": 0.9027,
           "rate_spike_risk": 0.5051,
           "current_season_weight": 0.1111,
-          "market_support": 0.9873,
+          "market_support": 0.9889,
           "flags": [
             "EARLY_SEASON_SAMPLE"
           ]

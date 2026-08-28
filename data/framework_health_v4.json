@@ -6,11 +6,11 @@
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-28T06:20:16.328712+00:00",
-    "local_as_of": "2026-08-28T13:20:16.328712+07:00",
+    "as_of": "2026-08-28T06:35:49.737565+00:00",
+    "local_as_of": "2026-08-28T13:35:49.737565+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 669.7,
+    "minutes_to_deadline": 654.2,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -33,12 +33,12 @@
   "prediction_health": "AMBER",
   "capability_health": "AMBER",
   "capability_coverage": {
-    "active": 62,
+    "active": 64,
     "warmup": 2,
-    "partial": 10,
+    "partial": 8,
     "failed": 0,
     "declared": 74,
-    "active_ratio": 0.8378
+    "active_ratio": 0.8649
   },
   "decision_engine": "PROVISIONAL",
   "recommendation_allowed": true,
@@ -175,8 +175,8 @@
     "integrity_ok": true,
     "registry": "DSS_CORE_50",
     "counts": {
-      "ACTIVE": 39,
-      "PARTIAL": 10,
+      "ACTIVE": 41,
+      "PARTIAL": 8,
       "WARMUP": 1
     },
     "items": [
@@ -448,13 +448,18 @@
         "id": "DSS-16",
         "name": "Goal Involvement Sustainability",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
         "probe": "sustainability",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "players": 616,
+          "fixtures_checked": 616,
+          "shrinkage_evidence_covered": 616,
+          "valid_weight_rows": 616,
+          "material_shrinkage_players": 552,
+          "canonical_owner": "src.models.v4_prediction.rates"
         }
       },
       {
@@ -648,13 +653,21 @@
         "id": "DSS-29",
         "name": "Fixture Swing / Future Run",
         "critical": false,
-        "status": "PARTIAL",
+        "status": "ACTIVE",
         "required_files": [
           "data/predictions_v4.json"
         ],
         "probe": "fixture_swing",
         "detail": {
-          "reason": "capability is incomplete or lacks production decision-output evidence"
+          "players": 616,
+          "fixture_run_covered": 616,
+          "distinct_swing_values": 20,
+          "directions": {
+            "IMPROVING": 145,
+            "WORSENING": 180,
+            "STABLE": 291
+          },
+          "canonical_owner": "src.models.v4_prediction.fixture_run_summary"
         }
       },
       {
@@ -1250,14 +1263,14 @@
         "probe": "runtime_observability",
         "detail": {
           "timings": {
-            "load_shared_inputs_and_candidates_ms": 111.6,
-            "wc_decision_cpu_ms": 812.3,
-            "package_audit_cpu_ms": 1570.6,
-            "lineup_cpu_ms": 6.3,
-            "decision_parallel_wall_ms": 1718.0,
-            "parallel_speedup_estimate": 1.391,
-            "evidence_sanity_ms": 3.4,
-            "total_pipeline_ms": 1834.3
+            "load_shared_inputs_and_candidates_ms": 111.5,
+            "wc_decision_cpu_ms": 511.4,
+            "package_audit_cpu_ms": 1668.6,
+            "lineup_cpu_ms": 7.0,
+            "decision_parallel_wall_ms": 1711.3,
+            "parallel_speedup_estimate": 1.278,
+            "evidence_sanity_ms": 3.5,
+            "total_pipeline_ms": 1827.6
           }
         }
       }
@@ -1494,7 +1507,7 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 157.23,
+  "performance_ms": 153.44,
   "official_fpl_first": {
     "status": "PASS",
     "source": "raw_snapshot.official.bootstrap+fixtures",

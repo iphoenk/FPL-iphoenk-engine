@@ -278,7 +278,8 @@ def test_congestion_is_surfaced_as_shadow_and_missing_context_is_neutral():
     neutral = _pair(_run())
     assert neutral["rest_congestion_by_gw"][0]["challenger"]["status"] == "UNAVAILABLE"
     assert neutral["international_context"]["status"] == "UNAVAILABLE_AT_PLAYER_LEVEL"
-    assert "not fabricated" in neutral["midweek_schedule"]["detail"]
+    assert "TBD/UNVERIFIED" in neutral["midweek_schedule"]["detail"]
+    assert "no fixture is fabricated" in neutral["midweek_schedule"]["detail"]
 
 
 def test_one_haul_is_not_used_as_buy_signal_but_process_can_promote_emerging():

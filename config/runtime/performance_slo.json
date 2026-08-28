@@ -1,22 +1,33 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "registry": "RUNTIME_PERFORMANCE_SLO_V1",
   "policy": {
     "interactive_target_is_engine_runtime_not_github_runner_startup": true,
     "profile_specific_slo": true,
     "resource_limits_begin_observe_only_until_baseline_is_collected": true,
-    "correctness_must_not_be_traded_for_latency": true
+    "correctness_must_not_be_traded_for_latency": true,
+    "sub_second_target_applies_to_validated_warm_serving": true,
+    "external_network_refresh_is_measured_separately": true,
+    "stale_artifacts_may_not_be_misreported_as_fresh_to_hit_slo": true,
+    "duplicate_fetch_or_duplicate_business_compute_may_not_be_used_to_hide_latency": true
   },
   "profiles": {
+    "instant_serving": {
+      "target_wall_ms": 500,
+      "warning_wall_ms": 750,
+      "legacy_ceiling_ms": 1000,
+      "enforcement": "HARD_CEILING",
+      "scope": "validated precomputed decision/report serving only; no external source refresh"
+    },
     "fast_decision": {
       "target_wall_ms": 10000,
-      "warning_wall_ms": 8500,
+      "warning_wall_ms": 7500,
       "legacy_ceiling_ms": 45000,
       "enforcement": "TARGET_WITH_LEGACY_CEILING"
     },
     "live": {
       "target_wall_ms": 10000,
-      "warning_wall_ms": 8500,
+      "warning_wall_ms": 7500,
       "legacy_ceiling_ms": 45000,
       "enforcement": "TARGET_WITH_LEGACY_CEILING"
     },

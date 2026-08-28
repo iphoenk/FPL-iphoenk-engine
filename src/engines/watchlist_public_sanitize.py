@@ -45,8 +45,20 @@ def _public_underlying(source: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _public_tactical(value: Any) -> dict[str, Any]:
+    raw = dict(value or {}) if isinstance(value, dict) else {}
+    # The shape comes from observed FPL-position evidence, not a verified tactical
+    # formation. Keep the public contract truthful even if an older internal alias
+    # is still present during a rolling migration.
+    if "verified_shape" in raw:
+        raw["observed_shape"] = raw.pop("verified_shape")
+    return raw
+
+
 def _public_row(source: dict[str, Any]) -> dict[str, Any]:
     row = {key: source.get(key) for key in PUBLIC_FIELDS if key in source}
+    if "tactical_matchup" in row:
+        row["tactical_matchup"] = _public_tactical(row.get("tactical_matchup"))
     underlying = _public_underlying(source)
     if underlying:
         row["underlying"] = underlying
@@ -82,6 +94,7 @@ def sanitize(payload: dict[str, Any]) -> dict[str, Any]:
         "ready_contract_requires_ready_status": True,
         "user_report_positions_are_public_safe": True,
         "tactical_context_is_projection_owned_and_public_safe": True,
+        "tactical_shape_is_observational_not_verified_formation": True,
         "tactical_membership_promotion_forbidden": True,
     })
     return result

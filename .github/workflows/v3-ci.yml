@@ -36,7 +36,7 @@ jobs:
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
       - name: Validate architecture ownership contract
         run: python -m src.engines.architecture_contract_validate
-      - name: Enforce no-duplicate architecture ownership
+      - name: Enforce no-duplicate architecture and REC ownership
         run: python -m src.engines.v3_architecture_ownership_guard
       - name: Full unit and regression suite
         run: python -m pytest -q
@@ -63,6 +63,9 @@ jobs:
       - name: Composite FULL + FAST release acceptance
         if: github.event_name == 'pull_request'
         run: python -m src.runtime_v3.release_acceptance
-      - name: Benchmark validated instant serving under 1s
+      - name: Benchmark governed decision regeneration under 1s
+        if: github.event_name == 'pull_request'
+        run: python -m src.engines.decision_hotpath_service --benchmark
+      - name: Benchmark validated instant gateway under 1s
         if: github.event_name == 'pull_request'
         run: python -m src.runtime_v3.instant_serving --benchmark

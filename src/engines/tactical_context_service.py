@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import json
-from collections import Counter
 from typing import Any
 
+from src.models.observed_tactical_context import (
+    build_current_recent_rows,
+    load_config as load_observed_config,
+    merge_recent_history,
+    player_return_routes,
+    summarize_team_history,
+)
 from src.utils import DATA, atomic_json, iso_now, read_json
 
 TEAM_OUT = DATA / "tactical_team_profiles.json"
@@ -24,71 +30,89 @@ def _team_names(official: dict[str, Any]) -> dict[int, str]:
     return out
 
 
-def _formation_variants(system: dict[str, Any]) -> list[str]:
-    shapes = [
-        str(row.get("fpl_position_shape"))
-        for row in system.get("matches") or []
-        if row.get("valid") and row.get("fpl_position_shape")
-    ]
-    return [shape for shape, _ in Counter(shapes).most_common()]
-
-
 def build() -> dict[str, dict[str, Any]]:
     official = read_json(DATA / "official_snapshot.json", {})
+    bootstrap = official.get("bootstrap") or {}
+    elements = bootstrap.get("elements") or []
     features = read_json(DATA / "player_features.json", {})
     if features.get("contract") != "PLAYER_FEATURE_CONTRACT_V1":
         raise RuntimeError("tactical context requires canonical PLAYER_FEATURE_CONTRACT_V1")
+
     names = _team_names(official)
     systems = features.get("team_system_context") or {}
     players = features.get("players") or {}
+    match_payload = read_json(DATA / "stats" / "playermatchstats_current.json", {})
+    shots_payload = read_json(DATA / "stats" / "shots_current.json", {})
+    observed_cfg = load_observed_config()
+    previous_recent = read_json(RECENT_OUT, {})
+    current_recent = build_current_recent_rows(elements, match_payload, shots_payload, systems, observed_cfg)
+    recent_teams = merge_recent_history(previous_recent, current_recent, sorted(names), observed_cfg)
     generated_at = iso_now()
 
     team_rows: dict[str, Any] = {}
+    teams_with_recent = 0
     for team_id, name in sorted(names.items()):
         system = systems.get(str(team_id)) or {}
+        history = recent_teams.get(str(team_id)) or []
+        history_summary = summarize_team_history(history, observed_cfg)
+        teams_with_recent += int(bool(history))
+        base_shape = history_summary.get("dominant_shape") or system.get("dominant_shape")
+        variants = history_summary.get("formation_variants") or ([system.get("dominant_shape")] if system.get("dominant_shape") else [])
+        strengths = history_summary.get("strengths") or []
+        vulnerabilities = history_summary.get("vulnerabilities") or []
+        style_proxies = history_summary.get("observed_style_proxies") or []
         team_rows[str(team_id)] = {
             "team_id": team_id,
             "team_name": name,
             "coach": None,
-            "base_formation": system.get("dominant_shape"),
-            "formation_variants": _formation_variants(system),
+            "base_formation": base_shape,
+            "formation_variants": variants,
             "build_up": None,
             "pressing": None,
             "defensive_line": None,
             "width": None,
             "transition": None,
-            "set_piece_profile": None,
-            "vulnerabilities": [],
-            "strengths": [],
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY" if "set_piece_activity" in strengths else None,
+            "vulnerabilities": vulnerabilities,
+            "strengths": strengths,
+            "observed_style_proxies": style_proxies,
+            "recent_match_count": int(history_summary.get("matches") or 0),
             "evidence": {
-                "class": "OBSERVED_FPL_POSITION_SHAPE",
-                "confidence": system.get("confidence") or "NONE",
+                "class": "OBSERVED_SHAPE_PLUS_MATCH_EVENTS" if history else "OBSERVED_FPL_POSITION_SHAPE",
+                "confidence": history_summary.get("confidence") if history else (system.get("confidence") or "NONE"),
                 "valid_matches": int(system.get("valid_matches") or 0),
                 "observed_matches": int(system.get("observed_matches") or 0),
+                "recent_match_events": int(history_summary.get("matches") or 0),
                 "shape_consistency": float(system.get("shape_consistency") or 0.0),
                 "not_true_tactical_formation": True,
-                "source": "PLAYER_FEATURE_CONTRACT_V1.team_system_context",
+                "true_pressing_not_inferred": True,
+                "true_build_up_not_inferred": True,
+                "source": "PLAYER_FEATURE_CONTRACT_V1 + TACTICAL_OBSERVED_CONTEXT_V1",
             },
         }
 
     role_rows: dict[str, Any] = {}
     assessed = 0
+    routes_covered = 0
     for key, player in players.items():
         role = player.get("tactical_role") or {}
         profile = role.get("profile")
+        route_evidence = player_return_routes(player)
         if profile and profile != "UNASSESSED":
             assessed += 1
+        if route_evidence.get("return_routes"):
+            routes_covered += 1
         role_rows[str(key)] = {
             "element": int(player.get("element") or key),
             "name": player.get("name"),
             "team_id": int(player.get("team_id") or -1),
             "position": player.get("position"),
             "role": profile if profile and profile != "UNASSESSED" else None,
-            "zones": [],
-            "set_pieces": None,
-            "penalties": None,
-            "progression_route": None,
-            "return_routes": [],
+            "zones": route_evidence.get("zones") or [],
+            "set_pieces": route_evidence.get("set_pieces"),
+            "penalties": route_evidence.get("penalties"),
+            "progression_route": route_evidence.get("progression_route"),
+            "return_routes": route_evidence.get("return_routes") or [],
             "confidence": role.get("confidence") or "NONE",
             "sample_quality": role.get("sample_quality"),
             "evidence_minutes": role.get("evidence_minutes"),
@@ -96,49 +120,55 @@ def build() -> dict[str, dict[str, Any]]:
             "reason": role.get("reason"),
             "evidence": {
                 "class": "OBSERVED_ADVANCED_ROLE_PROFILE" if profile and profile != "UNASSESSED" else "NO_ADVANCED_ROLE_EVIDENCE",
+                "return_route_class": "OBSERVED_PLAYER_EVENTS" if route_evidence.get("return_routes") else "NO_OBSERVED_RETURN_ROUTE",
                 "decision_influence": "ADVISORY_ONLY",
                 "source": ((player.get("provenance") or {}).get("tactical_role")),
             },
         }
 
-    teams = len(team_rows)
     team_profiles = {
-        "schema_version": 1,
+        "schema_version": 2,
         "contract": "TACTICAL_TEAM_PROFILES_V1",
         "generated_at": generated_at,
-        "status": "PARTIAL_INTERNAL_EVIDENCE",
+        "status": "OBSERVED_ENRICHMENT_EVIDENCE" if teams_with_recent else "PARTIAL_INTERNAL_EVIDENCE",
         "teams": team_rows,
         "governance": {
             "coach_style_not_inferred": True,
+            "pressing_not_inferred_from_defensive_activity_proxy": True,
             "fpl_position_shape_not_claimed_as_true_tactical_formation": True,
-            "missing_tactical_fields_are_explicit_null_or_empty": True,
+            "observed_strengths_and_vulnerabilities_require_match_event_evidence": True,
             "external_verified_tactical_enrichment_may_extend_but_not_overwrite_canonical_identity": True,
         },
     }
     player_roles = {
-        "schema_version": 1,
+        "schema_version": 2,
         "contract": "TACTICAL_PLAYER_ROLE_PROFILES_V1",
         "generated_at": generated_at,
-        "status": "PARTIAL_INTERNAL_EVIDENCE",
+        "status": "OBSERVED_ENRICHMENT_EVIDENCE",
         "players": role_rows,
         "assessed_players": assessed,
+        "return_route_players": routes_covered,
         "total_players": len(role_rows),
         "governance": {
             "role_profiles_are_observed_evidence_not_manager_declared_roles": True,
-            "missing_routes_zones_setpieces_are_not_inferred": True,
+            "return_routes_require_observed_player_events": True,
+            "zero_observed_event_does_not_prove_absence_of_role": True,
             "advisory_only": True,
         },
     }
     recent_form = {
-        "schema_version": 1,
+        "schema_version": 2,
         "contract": "RECENT_TACTICAL_FORM_V1",
         "generated_at": generated_at,
-        "status": "NO_VERIFIED_RECENT_TACTICAL_PATTERN_ARTIFACT",
-        "teams": {str(team_id): [] for team_id in sorted(names)},
+        "status": "OBSERVED_RECENT_MATCH_EVENTS" if teams_with_recent else "NO_OBSERVED_RECENT_MATCH_EVENT_ARTIFACT",
+        "source_contract": observed_cfg.get("contract"),
+        "teams": recent_teams,
         "governance": {
-            "empty_is_valid_when_verified_recent_tactical_pattern_is_unavailable": True,
-            "match_ids_are_not_guessed_into_gameweeks": True,
-            "missing_pressing_or_chance_zone_evidence_is_never_fabricated": True,
+            "rolling_window_gws": int(observed_cfg.get("recent_gw_window") or 5),
+            "history_deduplicated_by_gw_match_team": True,
+            "match_ids_are_source_observed_not_guessed": True,
+            "true_pressing_or_possession_is_never_fabricated": True,
+            "shot_and_concession_zones_are_observed_event_locations": True,
         },
     }
     return {
@@ -147,11 +177,13 @@ def build() -> dict[str, dict[str, Any]]:
         "recent_form": recent_form,
         "summary": {
             "generated_at": generated_at,
-            "team_profiles": teams,
+            "team_profiles": len(team_rows),
             "player_profiles": len(role_rows),
             "assessed_player_roles": assessed,
-            "verified_recent_tactical_teams": 0,
-            "status": "PARTIAL_INTERNAL_EVIDENCE",
+            "player_return_routes": routes_covered,
+            "observed_recent_tactical_teams": teams_with_recent,
+            "current_gw": match_payload.get("gw"),
+            "status": "OBSERVED_ENRICHMENT_EVIDENCE" if teams_with_recent else "PARTIAL_INTERNAL_EVIDENCE",
         },
     }
 

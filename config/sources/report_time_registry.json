@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "registry": "REPORT_TIME_SOURCE_REGISTRY_V1",
   "policy": {
     "official_fpl_remains_native_authority": true,
@@ -14,7 +14,10 @@
     "onefpl_is_report_time_only": true,
     "press_conference_sweep_required": true,
     "last_competitive_match_sweep_required": true,
-    "recent_competitive_load_policy_ref": "config/intelligence/recent_competitive_load.json"
+    "tactical_external_sweep_required": true,
+    "tactical_external_sweep_may_enrich_but_never_overwrite_observed_machine_evidence": true,
+    "recent_competitive_load_policy_ref": "config/intelligence/recent_competitive_load.json",
+    "tactical_matchup_policy_ref": "config/intelligence/tactical_matchup.json"
   },
   "consensus": {
     "minimum_current_pundits": 2,
@@ -109,8 +112,8 @@
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
       "domains": ["fantasyfootballscout.co.uk"],
-      "queries": ["Fantasy Football Scout Gameweek team news", "Fantasy Football Scout captaincy"],
-      "capabilities": ["team_news_context", "predicted_lineups", "buy_sell", "captaincy", "role_opinion", "set_piece_context"],
+      "queries": ["Fantasy Football Scout Gameweek team news", "Fantasy Football Scout captaincy", "Fantasy Football Scout tactical formation role Gameweek", "Fantasy Football Scout set pieces predicted lineups"],
+      "capabilities": ["team_news_context", "predicted_lineups", "buy_sell", "captaincy", "role_opinion", "set_piece_context", "tactical_style_opinion", "formation_opinion"],
       "consensus_vote": true,
       "authority_ceiling": "ADVISORY"
     },
@@ -133,8 +136,8 @@
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
       "domains": ["premierleague.com"],
-      "queries": ["Premier League team news injuries Gameweek", "official club injury team news Premier League", "Premier League press conference manager quotes Gameweek"],
-      "capabilities": ["availability", "suspension", "fixture_confirmation", "manager_quote", "press_conference", "official_team_news"],
+      "queries": ["Premier League team news injuries Gameweek", "official club injury team news Premier League", "Premier League press conference manager quotes Gameweek", "official manager tactical system formation latest Premier League", "official club manager role formation press conference"],
+      "capabilities": ["availability", "suspension", "fixture_confirmation", "manager_quote", "press_conference", "official_team_news", "coach_system_context", "manager_role_hint", "manager_tactical_quote"],
       "consensus_vote": false,
       "authority_ceiling": "VERIFIED_CONTEXT"
     },
@@ -145,8 +148,8 @@
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
       "domains": ["premierleague.com", "uefa.com", "efl.com", "thefa.com"],
-      "queries": ["official club latest match report lineup Carabao Cup", "official club latest match report UEFA", "official club latest competitive match lineup minutes"],
-      "capabilities": ["recent_competitive_match", "starting_lineup", "minutes_load", "substitution_timing", "role_observation", "knock_or_injury", "extra_time", "travel_rest_context"],
+      "queries": ["official club latest match report lineup Carabao Cup", "official club latest match report UEFA", "official club latest competitive match lineup minutes", "official club latest match formation tactical report", "official competition match report role position shape"],
+      "capabilities": ["recent_competitive_match", "starting_lineup", "minutes_load", "substitution_timing", "role_observation", "knock_or_injury", "extra_time", "travel_rest_context", "recent_shape_observation", "role_change_observation", "tactical_pattern_observation"],
       "consensus_vote": false,
       "authority_ceiling": "VERIFIED_CONTEXT"
     }

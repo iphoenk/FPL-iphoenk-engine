@@ -4,7 +4,7 @@ from typing import Any
 
 from src.v5.intelligence.feature_bundle import FeatureBundle
 
-TRACE_MODEL = "native_projection_feature_use_v1"
+TRACE_MODEL = "native_projection_feature_use_v2"
 EMPIRICAL_DC_SOURCE = "player_cbit_cbirt_shrunk_to_position_prior"
 
 
@@ -147,6 +147,24 @@ def _declare_player_features(
         reason=None if attacking_evidence else "player advanced attacking evidence unavailable",
         provenance=advanced_stats.get("source"),
     )
+    authoritative_fusion = _dict(player.get("authoritative_feature_fusion"))
+    attack_fusion = _dict(authoritative_fusion.get("advanced_attacking"))
+    if attacking_evidence and bool(attack_fusion.get("applied")):
+        bundle.consume(
+            "advanced_attacking_stats",
+            "native_projection",
+            effect_scope="AUTHORITATIVE_XPTS",
+            contribution={
+                "used_fields": attack_fusion.get("used_fields"),
+                "evidence_minutes": attack_fusion.get("evidence_minutes"),
+                "weight": attack_fusion.get("weight"),
+                "xg90_native": attack_fusion.get("xg90_native"),
+                "xg90_final": attack_fusion.get("xg90_final"),
+                "xa90_native": attack_fusion.get("xa90_native"),
+                "xa90_final": attack_fusion.get("xa90_final"),
+                "partial_field_consumption": True,
+            },
+        )
 
     defensive = _dict(player.get("defensive_contribution"))
     defensive_source = str(defensive.get("source") or "")
@@ -172,10 +190,15 @@ def _declare_player_features(
     current_form = _dict(enrichment.get("current_form"))
     current_form_players = _dict(current_form.get("players"))
     current_form_player = _dict(current_form_players.get(element))
+    current_form_fusion = _dict(authoritative_fusion.get("current_form"))
     bundle.declare(
         "current_form_enrichment",
         current_form_player or None,
-        reason=None if current_form_player else "current-form enrichment unavailable for player",
+        reason=(
+            str(current_form_fusion.get("reason"))
+            if current_form_player and current_form_fusion.get("reason")
+            else (None if current_form_player else "current-form enrichment unavailable for player")
+        ),
         provenance=current_form.get("source"),
     )
 
@@ -339,7 +362,7 @@ def build_native_feature_trace(
 
     aggregate, unintegrated, shadow_only, available_only = _aggregate_feature_bundles(players, enrichment)
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "model": TRACE_MODEL,
         "players": players,
         "aggregate_feature_bundle": aggregate,
@@ -351,6 +374,7 @@ def build_native_feature_trace(
             "authoritative_effect_requires_explicit_xmins_xpts_or_decision_scope": True,
             "available_but_unintegrated_features_must_not_be_claimed_as_model_inputs": True,
             "shadow_overlay_must_not_be_claimed_as_authoritative": True,
+            "partial_field_consumption_must_name_used_fields": True,
             "telemetry_does_not_change_prediction_values": True,
         },
     }

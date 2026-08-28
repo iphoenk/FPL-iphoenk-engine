@@ -10,8 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_repository_passes_architecture_ownership_no_duplicate_gate():
     out = run_audit()
-    assert out["status"] == "PASS", out
-    assert all(row["pass"] for row in out["checks"].values()), out["checks"]
+    failed = {name: row["detail"] for name, row in out["checks"].items() if not row["pass"]}
+    assert out["status"] == "PASS", failed
+    assert not failed, failed
 
 
 def test_architecture_guard_is_noncritical_and_not_hot_path_dependency():

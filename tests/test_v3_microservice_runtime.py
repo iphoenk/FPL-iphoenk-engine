@@ -8,7 +8,7 @@ from src.sources import official_fpl
 def test_v3_runtime_registry_is_dependency_aware_and_artifact_owned():
     registry = _load_registry()
     _validate_dag(registry)
-    assert registry["schema_version"] >= 13
+    assert registry["schema_version"] >= 15
     assert registry["architecture"] == "V3_BOUNDED_PROCESS_MICROSERVICES"
     policy = registry["policy"]
     for key in (
@@ -22,7 +22,8 @@ def test_v3_runtime_registry_is_dependency_aware_and_artifact_owned():
         "version_neutral_service_entrypoints", "weather_enrichment_lives_inside_source_layer_not_new_microservice",
         "weather_is_observational_and_advisory_only", "weather_never_directly_mutates_xpts_or_decisions",
         "owned_report_rows_require_current_gw_xpts", "settled_prediction_validation_is_exposed_to_reports",
-        "tactical_context_is_separate_bounded_evidence_service", "tactical_context_never_infers_missing_coach_style_or_recent_patterns",
+        "tactical_context_is_separate_bounded_evidence_service", "tactical_context_never_infers_missing_coach_style_or_true_pressing",
+        "tactical_context_rolling_history_is_service_owned",
     ):
         assert policy[key] is True, key
 
@@ -42,6 +43,7 @@ def test_v3_runtime_registry_is_dependency_aware_and_artifact_owned():
     assert services["live_state"]["depends_on"] == ["official_snapshot"]
     assert services["advanced_stats"]["depends_on"] == ["official_snapshot"]
     assert set(services["tactical_context"]["depends_on"]) == {"advanced_stats", "official_snapshot"}
+    assert {"official_snapshot.json", "player_features.json", "stats/shots_current.json", "stats/playermatchstats_current.json", "recent_tactical_form.json"} <= set(services["tactical_context"]["inputs"])
     assert set(services["base_snapshot"]["depends_on"]) == {"official_snapshot", "team_state", "market_state", "live_state", "advanced_stats"}
     assert set(services["historical_prior"]["depends_on"]) == {"base_snapshot", "official_snapshot"}
     assert set(services["prediction"]["depends_on"]) == {"historical_prior", "official_snapshot", "tactical_context"}

@@ -45,11 +45,7 @@ def annotate_prior_team_context(
     current_elements: list[dict[str, Any]],
     previous_payload: dict[str, Any],
 ) -> dict[str, Any]:
-    """Annotate previous-season priors with current-vs-previous club context.
-
-    Player identity remains the join key. Club identity is used only to decide
-    whether old starter/role evidence is portable to the current club.
-    """
+    """Annotate previous-season priors with current-vs-previous club context."""
     rows = list(previous_payload.get("rows") or [])
     by_code = {str(row.get("code")): row for row in rows if row.get("code") not in (None, "")}
     by_name: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -178,3 +174,51 @@ def build_adaptation(
             "cross_league_prior_not_fabricated": state == "NO_PREVIOUS_PL_PRIOR",
         },
     }
+
+
+def apply_adaptation_to_prior(
+    prior_payload: dict[str, Any],
+    current_elements: list[dict[str, Any]],
+    team_matches_played: int = 0,
+) -> dict[str, Any]:
+    """Separate portable player skill from old-club starter/role evidence."""
+    by_element = {str(int(player["id"])): player for player in current_elements}
+    adapted_counts: dict[str, int] = defaultdict(int)
+    for element, historical in (prior_payload.get("players") or {}).items():
+        player = by_element.get(str(element))
+        if not player:
+            continue
+        adaptation = build_adaptation(player, historical, team_matches_played)
+        state = adaptation["state"]
+        adapted_counts[state] += 1
+        raw = {
+            "start_probability": historical.get("start_probability"),
+            "avg_minutes_when_start": historical.get("avg_minutes_when_start"),
+            "attacking_prior_weight": historical.get("attacking_prior_weight"),
+            "evidence_minutes": historical.get("minutes"),
+        }
+        historical["raw_pre_transfer_adaptation"] = raw
+        historical["transfer_adaptation"] = adaptation
+        if state == "SAME_CLUB":
+            continue
+        historical["start_probability"] = adaptation.get("adapted_prior_start_probability")
+        historical["avg_minutes_when_start"] = adaptation.get("adapted_starter_minutes_prior")
+        historical["attacking_prior_weight"] = round(
+            _clamp(_f(raw.get("attacking_prior_weight"))) * _f(adaptation.get("attacking_prior_retention"), 1.0), 4
+        )
+        historical["minutes"] = adaptation.get("adapted_prior_evidence_minutes")
+
+    prior_payload["new_signing_adaptation_summary"] = {
+        "contract": load_policy().get("contract"),
+        "team_matches_played": int(team_matches_played or 0),
+        "states": dict(adapted_counts),
+        "starter_role_prior_mutated": True,
+        "portable_skill_prior_retained_separately": True,
+    }
+    prior_payload.setdefault("governance", {}).update({
+        "new_signing_adaptation_applied": True,
+        "old_club_start_probability_is_shrunk_or_retired": True,
+        "attacking_skill_prior_retention_is_separate": True,
+        "missing_cross_league_prior_is_not_fabricated": True,
+    })
+    return prior_payload

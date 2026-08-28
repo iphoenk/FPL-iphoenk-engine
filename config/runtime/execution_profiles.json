@@ -1,5 +1,5 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "registry": "RUNTIME_EXECUTION_PROFILES_V1",
   "policy": {
     "reuse_requires_all_declared_service_artifacts": true,
@@ -13,13 +13,15 @@
     "semantic_reuse_requires_same_engine_version": true,
     "semantic_reuse_requires_output_hash_match": true,
     "semantic_reuse_manifest_is_separate_from_performance_telemetry": true,
+    "semantic_signature_fields_are_config_owned": true,
+    "time_dependent_or_state_transition_services_are_not_reused_without_explicit_time_contract": true,
     "cross_service_mutated_artifacts_are_not_semantically_reused_until_ownership_is_single": true,
     "fast_command_bundles_preserve_logical_service_artifact_contracts": true,
     "rec41_player_feature_migration_fence_active": false
   },
   "profiles": {
     "fast_decision": {
-      "description": "Low-latency decision regeneration. Fresh Official truth and market pressure still run. Deterministic model/governance products reuse only validated logical age, exact semantic signatures and unchanged output hashes. Cross-service report mutations are regenerated until their artifact ownership is consolidated.",
+      "description": "Low-latency decision regeneration. Fresh Official truth and market pressure still run. Deterministic model/governance products reuse only validated logical age, config-owned semantic field signatures and unchanged output hashes. Time-dependent settlement and state-transition watchlist/report layers regenerate.",
       "max_parallel_services": 4,
       "reuse_services": {
         "advanced_stats": {"mode":"logical_age","max_age_seconds":21600},
@@ -28,13 +30,14 @@
         "official_detail": {"mode":"logical_age","max_age_seconds":3600},
         "prediction": {
           "mode":"semantic_signature","max_age_seconds":21600,
-          "signature_inputs":["official_snapshot.json","team.json","prior_season.json","player_features.json"],
+          "signature_inputs":[
+            {"path":"official_snapshot.json","include_paths":["bootstrap.elements","bootstrap.teams","bootstrap.element_types","fixtures"]},
+            {"path":"latest.json","include_paths":["phase.planning_gw"]},
+            "team.json",
+            "prior_season.json",
+            "player_features.json"
+          ],
           "signature_config_files":["config/intelligence/projection.json","config/intelligence/package_optimizer.json","config/intelligence/xmins_v2.json","config/intelligence/team_strength.json"]
-        },
-        "prediction_evaluation": {
-          "mode":"semantic_signature","max_age_seconds":1800,
-          "signature_inputs":["official_snapshot.json","projections.json","prediction_ledger.json"],
-          "signature_config_files":["config/intelligence/prediction_evaluation.json"]
         },
         "lineup_governance": {
           "mode":"semantic_signature","max_age_seconds":21600,
@@ -43,7 +46,7 @@
         },
         "challenger": {
           "mode":"semantic_signature","max_age_seconds":1800,
-          "signature_inputs":["projections.json","prediction_ledger.json","challenger_observations.json","source_health.json"],
+          "signature_inputs":["projections.json","prediction_ledger.json","prediction_accuracy.json","challenger_observations.json"],
           "signature_config_files":["config/intelligence/challenger_registry.json"]
         },
         "governance": {
@@ -51,11 +54,6 @@
           "artifacts":["framework_health.json","dss_operational_evidence.json"],
           "signature_inputs":["team.json","chips.json","projections.json","prediction_quality.json","lineup_decision.json","package_decision.json","prediction_accuracy.json","source_health.json","challenger_scorecard.json","price_alerts.json","rules_compliance.json"],
           "signature_config_files":["config/dss_core_registry.json","config/dss_extension_registry.json","config/enhancement_layers_registry.json","config/gate0_registry.json","config/intelligence/dss_operationalization.json","config/intelligence/capability_master_registry.json"]
-        },
-        "watchlist": {
-          "mode":"semantic_signature","max_age_seconds":1800,
-          "signature_inputs":["team.json","projections.json","package_optimizer.json","prices.json","price_alerts.json","framework_health.json","dss_operational_evidence.json"],
-          "signature_config_files":["config/intelligence/dss_watchlist.json","config/intelligence/capability_master_registry.json"]
         }
       },
       "command_bundles": {
@@ -75,7 +73,13 @@
         "official_detail": {"mode":"logical_age","max_age_seconds":1800},
         "prediction": {
           "mode":"semantic_signature","max_age_seconds":3600,
-          "signature_inputs":["official_snapshot.json","team.json","prior_season.json","player_features.json"],
+          "signature_inputs":[
+            {"path":"official_snapshot.json","include_paths":["bootstrap.elements","bootstrap.teams","bootstrap.element_types","fixtures"]},
+            {"path":"latest.json","include_paths":["phase.planning_gw"]},
+            "team.json",
+            "prior_season.json",
+            "player_features.json"
+          ],
           "signature_config_files":["config/intelligence/projection.json","config/intelligence/package_optimizer.json","config/intelligence/xmins_v2.json","config/intelligence/team_strength.json"]
         }
       },

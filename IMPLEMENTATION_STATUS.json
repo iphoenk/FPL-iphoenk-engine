@@ -127,6 +127,10 @@
       "pr": 106,
       "feature_ci_run": 33171209718,
       "summary": "Consolidates architecture ownership and shared primitives, removes legacy registry ownership drift, adds a no-duplicate CI gate, closes the REC-41 forced-refresh fence, and adds fail-closed validated warm serving with a hard sub-1s SLO without changing football formulas."
+    },
+    "REC-43": {
+      "status": "CANDIDATE",
+      "summary": "Generic OWNED-vs-governed-WATCHLIST/emerging challenger comparator. Reuses canonical projection, xMins, tactical, package, legality and price evidence; emerging performance is discovery-only; initial decision influence is ADVISORY_ONLY."
     }
   },
   "calibration_monitors": {

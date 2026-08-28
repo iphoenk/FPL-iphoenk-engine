@@ -66,7 +66,9 @@
     "health.json": {"final_owner":"base_snapshot","allowed_writers":["official_snapshot","base_snapshot"]},
     "team.json": {"final_owner":"base_snapshot","allowed_writers":["team_state","base_snapshot"]},
     "chips.json": {"final_owner":"base_snapshot","allowed_writers":["team_state","base_snapshot"]},
+    "live.json": {"final_owner":"base_snapshot","allowed_writers":["live_state","base_snapshot"]},
     "prices.json": {"final_owner":"price","allowed_writers":["market_state","base_snapshot","price"]},
+    "universe.json": {"final_owner":"base_snapshot","allowed_writers":["market_state","base_snapshot"]},
     "advanced_stats_sync.json": {"final_owner":"base_snapshot","allowed_writers":["advanced_stats","base_snapshot"]},
     "user_report.json": {"final_owner":"report_materializer","allowed_writers":["reporting","report_materializer"]}
   },

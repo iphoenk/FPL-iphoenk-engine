@@ -1,9 +1,8 @@
-name: FPL iphoenk V4 scheduled checkpoint recovery
+name: FPL V4 scheduled checkpoint recovery
 
 on:
   workflow_dispatch:
   schedule:
-    # Recovery sweeps 15 minutes after 04:30, 12:30 and 21:30 Asia/Jakarta.
     - cron: "45 21 * * *"
     - cron: "45 5 * * *"
     - cron: "45 14 * * *"
@@ -16,18 +15,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  recover-v4-checkpoint:
+  freshness:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
-    env:
-      PYTHONPATH: ${{ github.workspace }}
+    outputs:
+      needs_recovery: ${{ steps.check.outputs.needs_recovery }}
+      age_minutes: ${{ steps.check.outputs.age_minutes }}
+      threshold_minutes: ${{ steps.check.outputs.threshold_minutes }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           ref: v4-prediction-engine
-      - name: Check whether scheduled data is already fresh
-        id: freshness
+      - id: check
         shell: bash
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
@@ -35,63 +33,31 @@ jobs:
           from datetime import datetime, timezone
           from pathlib import Path
 
-          path = Path('data/latest.json')
-          fresh = False
-          age_minutes = None
+          config=json.loads(Path('config/engine.json').read_text())
+          threshold=float(config['checkpoint_recovery_fresh_minutes'])
+          path=Path('data/latest.json'); fresh=False; age=None
           if path.exists():
-              obj = json.loads(path.read_text())
-              raw = obj.get('generated_at')
+              raw=json.loads(path.read_text()).get('generated_at')
               if raw:
-                  generated = datetime.fromisoformat(raw.replace('Z', '+00:00'))
-                  age_minutes = max(0.0, (datetime.now(timezone.utc) - generated).total_seconds() / 60.0)
-                  fresh = age_minutes <= 45
+                  generated=datetime.fromisoformat(raw.replace('Z','+00:00'))
+                  age=max(0.0,(datetime.now(timezone.utc)-generated).total_seconds()/60.0)
+                  fresh=age<=threshold
           print(f"needs_recovery={'false' if fresh else 'true'}")
-          print(f"age_minutes={'' if age_minutes is None else round(age_minutes, 2)}")
+          print(f"age_minutes={'' if age is None else round(age,2)}")
+          print(f"threshold_minutes={threshold:g}")
           PY
-      - name: Set up Python
-        if: steps.freshness.outputs.needs_recovery == 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: requirements.txt
-      - name: Install cached dependencies
-        if: steps.freshness.outputs.needs_recovery == 'true'
-        run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Recover 11-service production snapshot
-        if: steps.freshness.outputs.needs_recovery == 'true'
-        run: python -m src.services.orchestrator daily --stats --deep-stats
-      - name: Centralized production quality gate
-        if: steps.freshness.outputs.needs_recovery == 'true'
-        run: python -m src.engines.v4_quality_gate
-      - name: Publish recovered core data
-        if: steps.freshness.outputs.needs_recovery == 'true'
-        shell: bash
-        run: |
-          git config user.name "fpl-iphoenk-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/
-          if git diff --cached --quiet; then echo "No recovered core data changes"; exit 0; fi
-          git commit -m "data(v4): recover missed scheduled checkpoint"
-          git fetch origin v4-prediction-engine
-          git rebase origin/v4-prediction-engine
-          git push origin HEAD:v4-prediction-engine
-      - name: Recovery diagnostic ablation
-        if: steps.freshness.outputs.needs_recovery == 'true'
-        run: python -m src.engines.v4_advanced_ablation
-      - name: Publish recovered ablation diagnostic
-        if: steps.freshness.outputs.needs_recovery == 'true'
-        shell: bash
-        run: |
-          git config user.name "fpl-iphoenk-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/advanced_ablation_v4.json
-          if git diff --cached --quiet; then echo "No recovered ablation changes"; exit 0; fi
-          git commit -m "data(v4): recover ablation diagnostic"
-          git fetch origin v4-prediction-engine
-          git rebase origin/v4-prediction-engine
-          git push origin HEAD:v4-prediction-engine
-      - name: Recovery summary
-        run: |
-          echo "needs_recovery=${{ steps.freshness.outputs.needs_recovery }}"
-          echo "previous_age_minutes=${{ steps.freshness.outputs.age_minutes }}"
+  recover:
+    needs: freshness
+    if: needs.freshness.outputs.needs_recovery == 'true'
+    uses: ./.github/workflows/fpl-engine-core.yml
+    permissions:
+      contents: write
+    with:
+      ref: v4-prediction-engine
+      publish: true
+  summary:
+    needs: [freshness, recover]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "needs_recovery=${{ needs.freshness.outputs.needs_recovery }} age_minutes=${{ needs.freshness.outputs.age_minutes }} threshold_minutes=${{ needs.freshness.outputs.threshold_minutes }}"

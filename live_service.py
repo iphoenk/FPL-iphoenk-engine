@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -8,11 +7,14 @@ import secrets
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
-from src.services.orchestrator import orchestrate
-from src.utils import DATA, read_json
 
-app = FastAPI(title="FPL iphoenk Engine V4.9.2", version="4.9.2")
-POLL = int(os.getenv("FPL_LIVE_POLL_SECONDS", "60"))
+from src.release import RELEASE_VERSION
+from src.services.orchestrator import orchestrate
+from src.utils import CONFIG, DATA, read_json
+
+_ENGINE_CONFIG = read_json(CONFIG / "engine.json", {})
+app = FastAPI(title=f"FPL iphoenk Engine V{RELEASE_VERSION}", version=RELEASE_VERSION)
+POLL = int(os.getenv("FPL_LIVE_POLL_SECONDS", str(_ENGINE_CONFIG.get("live_poll_seconds") or 60)))
 _subscribers: set[asyncio.Queue] = set()
 _broadcast_task: asyncio.Task | None = None
 _subscriber_lock = asyncio.Lock()
@@ -38,7 +40,7 @@ async def _broadcast_loop() -> None:
         try:
             await asyncio.to_thread(_run_live)
             event = {"event": "message", "data": read_json(DATA / "live.json", {})}
-        except Exception as exc:  # fail visibly to every connected client
+        except Exception as exc:
             event = {"event": "error", "data": {"error": str(exc)}}
         encoded = json.dumps(event["data"], ensure_ascii=False, sort_keys=True)
         if event["event"] == "error" or encoded != last:
@@ -73,20 +75,31 @@ async def _subscribe():
                 _broadcast_task.cancel()
                 _broadcast_task = None
 
+
 @app.get("/health")
-def health(): return read_json(DATA/"health.json",{})
+def health():
+    return read_json(DATA / "health.json", {})
+
 
 @app.get("/latest")
-def latest(): return read_json(DATA/"latest.json",{})
+def latest():
+    return read_json(DATA / "latest.json", {})
+
 
 @app.get("/live")
-def live(): return read_json(DATA/"live.json",{})
+def live():
+    return read_json(DATA / "live.json", {})
+
 
 @app.get("/team")
-def team(): return read_json(DATA/"team.json",{})
+def team():
+    return read_json(DATA / "team.json", {})
+
 
 @app.get("/prices")
-def prices(): return read_json(DATA/"prices.json",{})
+def prices():
+    return read_json(DATA / "prices.json", {})
+
 
 @app.post("/refresh")
 async def refresh(
@@ -95,6 +108,7 @@ async def refresh(
 ):
     _authorize_refresh(authorization, refresh_token)
     return await asyncio.to_thread(_run_live)
+
 
 @app.get("/stream")
 async def stream():

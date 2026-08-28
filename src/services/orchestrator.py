@@ -216,7 +216,10 @@ def orchestrate(
                     if result.returncode != 0:
                         row["status"] = "FAIL"
                         service_states[service_id] = "FAIL"
-                        raise RuntimeError(f"service failed: {service_id} exit={result.returncode}")
+                        detail = row["stderr_tail"] or row["stdout_tail"] or "no service output"
+                        raise RuntimeError(
+                            f"service failed: {service_id} exit={result.returncode}: {detail}"
+                        )
 
                     row["status"] = "PROCESS_PASS"
                     validation = validate_contracts(list(service.get("produces") or []), contracts, root=root)

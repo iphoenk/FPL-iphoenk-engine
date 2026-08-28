@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import csv
-import io
-import requests
-
+from src.sources.csv_fetch import fetch_csv
 from src.utils import DATA, CONFIG, iso_now, atomic_json, read_json
 
 CACHE = DATA / "stats"
@@ -23,9 +20,7 @@ def base_url():
     ).rstrip("/")
 
 def _fetch_csv(url: str, timeout: int = 30):
-    r = requests.get(url, timeout=timeout)
-    r.raise_for_status()
-    return list(csv.DictReader(io.StringIO(r.text)))
+    return fetch_csv(url, timeout=timeout)
 
 def _gw_base(gw: int) -> str:
     return f"{base_url()}/{season()}/By%20Gameweek/GW{gw}"

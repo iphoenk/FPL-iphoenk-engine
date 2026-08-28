@@ -4,12 +4,11 @@ import json
 import statistics
 from pathlib import Path
 
+from src.engines.fpl_rules_2026 import LEGAL_FORMATIONS
 from src.engines.reliability import validate_snapshot
+from src.release import RELEASE_VERSION
 from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA
-
-
-LEGAL_FORMATIONS = {"3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-2-3", "5-3-2", "5-4-1"}
 
 
 def _load(name: str) -> dict:
@@ -99,16 +98,20 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
     assert orchestration.get("execution_model") == "process_isolated_dag_parallel_single_host"
     services = orchestration.get("services") or []
     ids = [row.get("id") for row in services]
-    assert len(services) == 11 and all(row.get("status") == "PASS" for row in services), services
-    assert ids[:3] == ["raw_snapshot", "enrichment", "prediction"]
+    registry = json.loads((CONFIG / "service_registry.json").read_text(encoding="utf-8"))
+    expected_ids = [row.get("id") for row in registry.get("services") or []]
+    assert len(services) == len(expected_ids) and set(ids) == set(expected_ids), (ids, expected_ids)
+    assert all(row.get("status") == "PASS" for row in services), services
+    assert "architecture_guard" in ids and "raw_snapshot" in ids and "prediction" in ids
     assert ids[-1] == "report_governance"
     assert all(row.get("boundary_state") == "INDEPENDENT" for row in services)
     assert all(all(contract.get("valid") for contract in row.get("contracts") or []) for row in services)
     levels = orchestration.get("execution_levels") or []
+    assert levels and set(levels[0]) == {"architecture_guard", "raw_snapshot"}
     assert any(set(level) == {"validation_lifecycle", "rules_compliance", "optimization"} for level in levels)
     assert any(set(level) == {"framework_preflight", "user_decision_overlay"} for level in levels)
     assert any(set(level) == {"personal_gw_scorecard", "framework_postflight"} for level in levels)
-    assert (orchestration.get("summary") or {}).get("parallel_levels", 0) >= 3
+    assert (orchestration.get("summary") or {}).get("parallel_levels", 0) >= 4
     assert orchestration.get("snapshot_identity", {}).get("sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
     assert latest.get("lineage", {}).get("snapshot_sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
     assert latest.get("lineage", {}).get("enrichment_sha256") == file_digest(DATA / "runtime/enrichment.v1.json")
@@ -154,6 +157,9 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
     target = orchestration.get("runtime_target") or {}
     assert float(target.get("target_ms") or 0) == 5000.0
     assert target.get("hard_gate") is False
+    architecture = _load("architecture_ownership_v4.json")
+    assert architecture.get("status") == "PASS"
+    assert all(row.get("pass") for row in (architecture.get("checks") or {}).values())
     return orchestration, services
 
 
@@ -258,7 +264,7 @@ def _assert_human_overlay(latest: dict, engine_lineup: dict) -> tuple[dict, dict
     assert (overlay.get("comparison") or {}).get("engine_can_warn_but_not_overwrite") is True
     engine = overlay.get("engine_recommendation") or {}
     assert engine.get("formation") == engine_lineup.get("formation")
-    assert {r["element"] for r in engine.get("starting_xi") or []} == {r["element"] for r in engine_lineup.get("starting_xi") or []}
+    assert {row["element"] for row in engine.get("starting_xi") or []} == {row["element"] for row in engine_lineup.get("starting_xi") or []}
     if (overlay.get("user_override") or {}).get("active"):
         assert effective.get("authority") == "USER_OVERRIDE"
         assert effective.get("decision_authority") == "USER"
@@ -352,6 +358,7 @@ def run() -> dict:
     plan_truth = health.get("gate0", {}).get("plan_authority_validation") or {}
     service_durations = {row.get("id"): row.get("duration_ms") for row in services}
     out = {
+        "release": RELEASE_VERSION,
         "health": health["overall"],
         "gate0": health["gate0"]["counts"],
         "capability_coverage": health.get("capability_coverage"),
@@ -380,7 +387,7 @@ def run() -> dict:
         "pipeline_ms": (pipeline.get("timings") or {}).get("total_pipeline_ms"),
         "decision_slo": pipeline.get("performance_slo"),
     }
-    print("V4.9.5 OFFICIAL-FIRST HUMAN-REPORT DAG GATE PASS", json.dumps(out, ensure_ascii=False))
+    print(f"V{RELEASE_VERSION} ARCHITECTURE-CONSOLIDATED GATE PASS", json.dumps(out, ensure_ascii=False))
     return out
 
 

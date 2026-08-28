@@ -4,14 +4,11 @@ from heapq import heappush, heapreplace
 from typing import Iterable
 
 from src.engines import v4_wc_optimizer as base
+from src.engines.v4_optimizer_primitives import gw_value as _gw_value
 from src.engines.v4_wc_optimizer import Candidate, MAX_PER_CLUB, POSITION_COUNTS
 
 
 DEFAULT_POOL_SIZES = {"GK": 20, "DEF": 34, "MID": 40, "FWD": 28}
-
-
-def _gw_value(player: Candidate, index: int) -> float:
-    return player.gw_xpts[index] if index < len(player.gw_xpts) else 0.0
 
 
 def _squad_utility_fixed(players: tuple[Candidate, ...], horizon: int = 5, bench_weight: float = .12) -> float:

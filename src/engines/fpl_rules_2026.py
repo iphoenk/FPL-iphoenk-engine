@@ -1,39 +1,35 @@
 from __future__ import annotations
+from functools import lru_cache
+from src.utils import CONFIG, read_json
 
-SCORING = {
-    "goal_points": {"GK": 10, "DEF": 6, "MID": 5, "FWD": 4},
-    "assist": 3,
-    "clean_sheet": {"GK": 4, "DEF": 4, "MID": 1, "FWD": 0},
-    "appearance_under_60": 1,
-    "appearance_60_plus": 2,
-    "saves_per_point": 3,
-    "penalty_save": 5,
-    "bonus": [1, 2, 3],
-    "yellow_card": -1,
-    "red_card": -3,
-    "own_goal": -2,
-    "penalty_miss": -2,
-    "goals_conceded_per_minus_point": 2,
-    "defcon_points": 2,
-}
 
-DEFCON = {
-    "GK": {"eligible": False, "threshold": None, "metric": None},
-    "DEF": {"eligible": True, "threshold": 10, "metric": "CBIT"},
-    "MID": {"eligible": True, "threshold": 12, "metric": "CBIRT"},
-    "FWD": {"eligible": True, "threshold": 12, "metric": "CBIRT"},
-}
+@lru_cache(maxsize=1)
+def load_rules_registry() -> dict:
+    rules = read_json(CONFIG / "fpl_rules_2026_27.json", {})
+    if rules.get("ruleset") != "FPL-2026-27":
+        raise RuntimeError("unexpected FPL ruleset")
+    for key in ("squad", "scoring", "defcon", "chips", "chip_policy"):
+        if key not in rules:
+            raise RuntimeError(f"FPL rules registry missing {key}")
+    return rules
 
-CHIPS = {
-    "wildcard": {"per_half": 1, "gw1_allowed": True, "preserve_banked_ft": True},
-    "bench_boost": {"per_half": 1, "gw1_allowed": True, "preserve_banked_ft": True},
-    "free_hit": {"per_half": 1, "gw1_allowed": False, "preserve_banked_ft": True},
-    "triple_captain": {"per_half": 1, "gw1_allowed": True, "preserve_banked_ft": True},
-}
 
-FIRST_HALF_LAST_GW = 19
-SECOND_HALF_FIRST_GW = 20
-MAX_CHIPS_PER_GW = 1
+_RULES = load_rules_registry()
+_SQUAD = _RULES["squad"]
+RULESET_ID = str(_RULES["ruleset"])
+SCORING = _RULES["scoring"]
+DEFCON = _RULES["defcon"]
+CHIPS = _RULES["chips"]
+SQUAD_SIZE = int(_SQUAD["size"])
+POSITION_COUNTS = {str(key): int(value) for key, value in _SQUAD["positions"].items()}
+POSITION_BY_TYPE = {int(key): str(value) for key, value in _SQUAD["element_type_to_position"].items()}
+BUDGET_TENTHS = int(_SQUAD["budget_tenths"])
+MAX_PER_CLUB = int(_SQUAD["max_per_club"])
+LEGAL_FORMATIONS = frozenset(str(value) for value in _SQUAD["legal_formations"])
+LEGAL_FORMATION_TUPLES = tuple(tuple(int(x) for x in form.split("-")) for form in _SQUAD["legal_formations"])
+FIRST_HALF_LAST_GW = int(_RULES["chip_policy"]["first_half_last_gw"])
+SECOND_HALF_FIRST_GW = int(_RULES["chip_policy"]["second_half_first_gw"])
+MAX_CHIPS_PER_GW = int(_RULES["chip_policy"]["max_chips_per_gw"])
 
 
 def chip_half(gw: int) -> int:
@@ -52,7 +48,7 @@ def chip_allowed(chip: str, gw: int, used: list[dict] | None = None) -> tuple[bo
         return False, "one_chip_per_gw"
     half = chip_half(gw)
     same = [x for x in used if x.get("chip") == chip and chip_half(int(x.get("gw", 0))) == half]
-    if len(same) >= rule["per_half"]:
+    if len(same) >= int(rule["per_half"]):
         return False, "chip_already_used_this_half"
     if chip == "free_hit":
         fh_gws = [int(x.get("gw", -99)) for x in used if x.get("chip") == "free_hit"]

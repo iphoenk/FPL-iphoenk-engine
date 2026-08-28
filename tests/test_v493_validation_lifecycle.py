@@ -4,6 +4,7 @@ import json
 import pytest
 
 import src.engines.v4_backtest_store as store
+import src.engines.v4_reconciliation_truth as truth
 import src.engines.v4_validation_cycle as lifecycle
 
 
@@ -82,8 +83,8 @@ def test_retroactive_deadline_snapshot_is_rejected(monkeypatch, tmp_path):
 def test_reconciliation_is_idempotent_and_uses_frozen_snapshot(monkeypatch, tmp_path):
     _isolate(monkeypatch, tmp_path)
     store.persist_deadline_snapshot(2, DEADLINE, _prediction(), now=PRE_DEADLINE)
-    first = store.reconcile_finished_gw(2, _live(points=7), now=POST_DEADLINE)
-    second = store.reconcile_finished_gw(2, _live(points=1), now=POST_DEADLINE)
+    first = truth.reconcile_finished_gw(2, _live(points=7), now=POST_DEADLINE)
+    second = truth.reconcile_finished_gw(2, _live(points=1), now=POST_DEADLINE)
 
     assert first == second
     assert first["report"]["rows"][0]["actual"] == 7
@@ -94,7 +95,7 @@ def test_reconciliation_is_idempotent_and_uses_frozen_snapshot(monkeypatch, tmp_
 def test_health_view_only_materializes_current_model(monkeypatch, tmp_path):
     _isolate(monkeypatch, tmp_path)
     store.persist_deadline_snapshot(2, DEADLINE, _prediction(model=MODEL), now=PRE_DEADLINE)
-    store.reconcile_finished_gw(2, _live(), now=POST_DEADLINE)
+    truth.reconcile_finished_gw(2, _live(), now=POST_DEADLINE)
 
     mismatch = store.refresh_eligible_view("v4.9.9-future-model")
     assert mismatch["eligible_samples"] == 0

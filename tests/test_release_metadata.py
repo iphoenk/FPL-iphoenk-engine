@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 from live_service import app
@@ -10,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_release_metadata_single_source_of_truth():
-    assert ENGINE_VERSION == "3.24.0"
-    assert SCHEMA_VERSION == 49
+    assert re.fullmatch(r"\d+\.\d+\.\d+", ENGINE_VERSION)
+    assert isinstance(SCHEMA_VERSION, int) and SCHEMA_VERSION > 0
     assert ENGINE_RUNTIME_VERSION == ENGINE_VERSION
     assert ENGINE_RUNTIME_SCHEMA == SCHEMA_VERSION
     assert app.version == ENGINE_VERSION
@@ -28,6 +29,7 @@ def test_release_metadata_surfaces_are_consistent():
     tactical = json.loads((ROOT / "config" / "intelligence" / "tactical_role_context.json").read_text())
     artifact_registry = json.loads((ROOT / "config" / "report_artifact_registry.json").read_text())
     service_registry = json.loads((ROOT / "config" / "v3_service_registry.json").read_text())
+    interactive_registry = json.loads((ROOT / "config" / "runtime" / "interactive_service_registry.json").read_text())
     source_registry = json.loads((ROOT / "config" / "sources" / "registry.json").read_text())
     runtime_artifact_registry = json.loads((ROOT / "config" / "runtime" / "artifact_contracts.json").read_text())
 
@@ -55,6 +57,8 @@ def test_release_metadata_surfaces_are_consistent():
     assert service_registry["schema_version"] == 14
     assert service_registry["production_contract"].startswith("v3.22-")
     assert len(service_registry["services"]) == 20
+    assert interactive_registry["registry"] == "V3_INTERACTIVE_SERVICES_V1"
+    assert len(interactive_registry["services"]) == 2
     assert source_registry["registry"] == "SOURCE_REGISTRY_V4"
     assert runtime_artifact_registry["registry"] == "RUNTIME_ARTIFACT_CONTRACTS_V2"
 

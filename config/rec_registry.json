@@ -2,6 +2,8 @@
   "schema_version": 1,
   "registry": "V3_REC_REGISTRY_V1",
   "expected_count": 43,
+  "non_service_owners": ["architecture_governance","ci_governance","release_acceptance","runtime_governance"],
+  "allowed_relations": ["EXTENDS_EXISTING_OWNER","GOVERNANCE_ONLY","SUPERSEDES","REPLACES"],
   "policy": {
     "rec_is_change_record_not_business_owner": true,
     "one_canonical_rec_record_per_id": true,

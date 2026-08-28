@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from src.engines.tactical_decision_consumption import apply_watchlist_overlay
 from src.utils import DATA, atomic_json, read_json
 
 WATCHLIST_OUT = DATA / "dss_watchlist.json"
@@ -11,7 +12,7 @@ PUBLIC_FIELDS = {
     "element", "name", "team", "team_id", "position", "now_cost", "price", "status",
     "ownership_pct", "projection_confidence", "xmins", "horizons", "direct_replacement_context",
     "evidence_coverage", "critical_dimension_score", "dss_score", "rank", "lifecycle",
-    "reasons", "risks", "action",
+    "reasons", "risks", "action", "tactical_matchup",
 }
 
 
@@ -80,6 +81,8 @@ def sanitize(payload: dict[str, Any]) -> dict[str, Any]:
         "natural_language_price_confidence": True,
         "ready_contract_requires_ready_status": True,
         "user_report_positions_are_public_safe": True,
+        "tactical_context_is_projection_owned_and_public_safe": True,
+        "tactical_membership_promotion_forbidden": True,
     })
     return result
 
@@ -88,6 +91,9 @@ def run() -> dict[str, Any]:
     payload = read_json(WATCHLIST_OUT, {})
     if not payload:
         raise RuntimeError("dss_watchlist.json unavailable for public sanitization")
+    # Reuse projection-owned tactical evidence. It may rerank only already-published
+    # close DSS candidates; it can never promote a new member into the top 20.
+    payload = apply_watchlist_overlay(payload)
     clean = sanitize(payload)
     atomic_json(WATCHLIST_OUT, clean)
 
@@ -96,6 +102,7 @@ def run() -> dict[str, Any]:
     summary["screening_contract"] = clean.get("screening_contract")
     summary["status"] = clean.get("status")
     summary["public_sanitized"] = True
+    summary["tactical_close_call_consumed"] = True
     latest["dss_watchlist_summary"] = summary
     atomic_json(DATA / "latest.json", latest)
     return clean
@@ -108,4 +115,5 @@ if __name__ == "__main__":
         "screening_contract": result.get("screening_contract"),
         "public_contract": result.get("public_contract"),
         "candidate_audit_count": len(result.get("candidate_audit") or {}),
+        "tactical_reranked_position_count": ((result.get("governance") or {}).get("tactical_reranked_position_count")),
     }, ensure_ascii=False))

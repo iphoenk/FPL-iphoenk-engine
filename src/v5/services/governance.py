@@ -5,6 +5,7 @@ from typing import Any
 from src.v5.config_cache import load_json_config
 from src.v5.governance.core import build_health
 from src.v5.governance.gate0 import audit as gate0_audit, postflight as gate0_postflight, preflight as gate0_preflight
+from src.v5.schedule_governance import resolve_schedule
 
 GATE0_POLICY = "config/v5_gate0_policy_registry.json"
 DSS_POLICY = "config/v5_dss_policy_registry.json"
@@ -53,10 +54,28 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation == "status":
         return {
             "status": "ACTIVE",
-            "capabilities": ["gate0", "framework_health", "enhancement_layers", "final_governance"],
+            "capabilities": [
+                "gate0",
+                "framework_health",
+                "enhancement_layers",
+                "final_governance",
+                "time_schedule_governance",
+            ],
             "gate0_model": _gate0_policy().get("model_id"),
             "strict_postflight_policy": (_dss_policy().get("governance") or {}).get("all_modules_active_for_unqualified_go"),
         }
+    if operation == "schedule":
+        return resolve_schedule(
+            payload.get("context") if isinstance(payload.get("context"), dict) else {},
+            now=payload.get("now"),
+            official_deadline_time=payload.get("official_deadline_time"),
+            live_match_active=bool(payload.get("live_match_active", False)),
+            runtime_age_minutes=payload.get("runtime_age_minutes"),
+            material_native_state_may_have_changed=bool(payload.get("material_native_state_may_have_changed", False)),
+            price_actionable=bool(payload.get("price_actionable", False)),
+            permitted_emergency=bool(payload.get("permitted_emergency", False)),
+            source_observations=payload.get("source_observations") if isinstance(payload.get("source_observations"), dict) else None,
+        )
     truth = payload.get("truth") if isinstance(payload.get("truth"), dict) else {}
     decision = payload.get("decision") if isinstance(payload.get("decision"), dict) else {}
     if operation == "gate0_preflight":

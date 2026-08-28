@@ -26,10 +26,24 @@ def test_advanced_prediction_never_replaces_base_xpts_and_defcon_prior_not_activ
     assert row["advanced"]["authoritative_xpts_replaced"] is False
     assert row["advanced"]["xmins_distribution"]["dnp_probability"] == 0.05
     assert row["advanced"]["defcon_probability"] is None
-    assert row["advanced"]["feature_bundle"]["states"]["defcon_probability"]["state"] == "UNAVAILABLE"
+    state = row["advanced"]["feature_bundle"]["states"]["defcon_probability"]
+    assert state["state"] == "UNAVAILABLE"
+    assert state["authoritative_effect"] is False
 
 
-def test_empirical_player_defcon_probability_is_active_with_consumption_evidence():
+def test_advanced_overlay_consumption_is_explicitly_non_authoritative():
+    out = enrich_prediction({"players": [_base_player()]}, {})
+    row = out["players"][0]
+    feature_bundle = row["advanced"]["feature_bundle"]
+    for feature in ("xmins_distribution", "sustainability", "score_distribution", "uncertainty_decomposition"):
+        state = feature_bundle["states"][feature]
+        assert state["state"] == "ACTIVE"
+        assert state["effect_scopes"] == ["SHADOW_OVERLAY"]
+        assert state["authoritative_effect"] is False
+    assert feature_bundle["authoritative_active_count"] == 0
+
+
+def test_empirical_player_defcon_probability_is_active_with_shadow_consumption_evidence():
     player = _base_player()
     player["rates"]["dc90"] = 1.1
     player["rates"]["sources"]["dc90"] = "player_cbit_cbirt_shrunk_to_position_prior"
@@ -54,4 +68,7 @@ def test_empirical_player_defcon_probability_is_active_with_consumption_evidence
     assert evidence["evidence_minutes"] == 900
     assert state["state"] == "ACTIVE"
     assert state["consumed_by"] == ["advanced_prediction"]
+    assert state["effect_scopes"] == ["SHADOW_OVERLAY"]
+    assert state["authoritative_effect"] is False
     assert aggregate["state"] == "ACTIVE"
+    assert aggregate["authoritative_effect"] is False

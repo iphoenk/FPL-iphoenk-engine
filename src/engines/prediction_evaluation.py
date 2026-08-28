@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from src.models.calibration import brier, mae, spearman_rank
-from src.sources.official_fpl import get_json
 from src.utils import DATA, ROOT, atomic_json, parse_dt, read_json, utcnow
 
 CONFIG_PATH = ROOT / "config" / "intelligence" / "prediction_evaluation.json"
@@ -108,7 +107,7 @@ def _confidence(sample_size: int) -> str:
     return "HIGH"
 
 
-def _settle_record(record: dict[str, Any], event_live: dict[str, Any]) -> None:
+def _settle_record(record: dict[str, Any], event_live: dict[str, Any], source_health: str | None) -> None:
     actual = _actual_rows(event_live)
     amap = {int(x["element"]): x for x in actual}
     frozen = (record.get("frozen_forecast") or {}).get("players") or []
@@ -116,15 +115,20 @@ def _settle_record(record: dict[str, Any], event_live: dict[str, Any]) -> None:
     record["actual"] = {"settled_at": _now(), "players": actual}
     record["metrics"] = _metrics(pairs)
     record["status"] = "SETTLED"
+    record["settlement_source_health"] = source_health
+    record["settlement_authority"] = "PUBLIC_OFFICIAL_SNAPSHOT"
 
 
 def run() -> dict[str, Any]:
     cfg = load_config()
     latest = read_json(DATA / "latest.json", {})
+    official = read_json(DATA / "official_snapshot.json", {})
+    if not official.get("bootstrap"):
+        raise RuntimeError("prediction evaluation requires canonical official_snapshot.json")
     projections = read_json(DATA / "projections.json", {})
     ledger = read_json(LEDGER_PATH, {"schema_version": 1, "records": {}})
     records = ledger.setdefault("records", {})
-    phase = latest.get("phase") or {}
+    phase = official.get("phase") or {}
     planning_gw = int(phase.get("planning_gw") or projections.get("planning_gw") or 0)
     deadline = parse_dt(phase.get("deadline_time"))
 
@@ -145,8 +149,11 @@ def run() -> dict[str, Any]:
             else:
                 record["status"] = "MISSED_PRE_DEADLINE_FREEZE"
 
-    bootstrap, bh = get_json("bootstrap-static/")
-    events = {int(e["id"]): e for e in (bootstrap or {}).get("events", [])}
+    bootstrap = official.get("bootstrap") or {}
+    events = {int(e["id"]): e for e in bootstrap.get("events") or []}
+    scoring_gw = int(phase.get("scoring_gw") or 0)
+    event_live = official.get("event_live") or {}
+    event_live_status = (((official.get("endpoint_health") or {}).get("event_live") or {}).get("status"))
     for key, record in records.items():
         gw = int(record.get("gw") or key)
         if record.get("status") == "SETTLED" or not record.get("frozen_forecast"):
@@ -154,10 +161,10 @@ def run() -> dict[str, Any]:
         event = events.get(gw) or {}
         if cfg.get("settle_only_finished_events", True) and not event.get("finished"):
             continue
-        live, health = get_json(f"event/{gw}/live/")
-        if live:
-            _settle_record(record, live)
-            record["settlement_source_health"] = health.get("status")
+        if gw == scoring_gw and event_live:
+            _settle_record(record, event_live, event_live_status)
+        elif event.get("finished"):
+            record["settlement_pending_reason"] = "FINISHED_EVENT_NOT_PRESENT_IN_CURRENT_OFFICIAL_SNAPSHOT"
 
     all_pairs = []
     by_position: dict[str, list[dict[str, Any]]] = {}
@@ -190,8 +197,10 @@ def run() -> dict[str, Any]:
             "accuracy_claim_requires_settled_sample": True,
             "pre_deadline_forecast_is_frozen_before_scoring": True,
             "post_deadline_information_cannot_rewrite_frozen_forecast": True,
+            "official_network_fetch_is_single_owner": True,
+            "historical_settlement_repair_is_not_a_fast_path_network_fetch": True,
         },
-        "source_health": {"bootstrap": bh.get("status")},
+        "source_health": {"bootstrap": (((official.get("endpoint_health") or {}).get("bootstrap") or {}).get("status"))},
     }
     ledger["updated_at"] = _now()
     ledger["model"] = cfg.get("model_id")

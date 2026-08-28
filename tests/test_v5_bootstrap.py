@@ -81,12 +81,7 @@ def test_finance_uses_official_half_profit_rule():
 
 
 def test_finance_prefers_authenticated_exact_sell_value():
-    resolved = resolve_sell_value(
-        element_id=1,
-        now_cost=50,
-        authenticated_selling_price=48,
-        authenticated_purchase_price=45,
-    )
+    resolved = resolve_sell_value(element_id=1, now_cost=50, authenticated_selling_price=48, authenticated_purchase_price=45)
     assert resolved.sell_cost == 48
     assert resolved.source == "authenticated_selling_price"
     assert resolved.exact is True
@@ -184,6 +179,8 @@ def _fake_squad_inputs():
     bootstrap = {"elements": elements, "teams": teams}
     locked_ids = list(range(1, 16))
     lock = {
+        "planning_override_active": True,
+        "target_gw": 2,
         "players": [
             {
                 "element": eid,
@@ -193,7 +190,7 @@ def _fake_squad_inputs():
                 "purchase_cost": 50,
             }
             for eid in locked_ids
-        ]
+        ],
     }
     submitted_ids = list(range(1, 15)) + [16]
     picks = {"picks": [{"element": eid} for eid in submitted_ids]}
@@ -205,17 +202,24 @@ def test_squad_authority_switches_by_phase_and_reconciles():
     pre = select_squad(
         phase=Phase.PRE_DEADLINE,
         bootstrap=bootstrap,
+        planning_gw=2,
+        submitted_gw=None,
         locked_squad=lock,
         submitted_picks=picks,
     )
     post = select_squad(
         phase=Phase.POST_DEADLINE,
         bootstrap=bootstrap,
+        planning_gw=2,
+        submitted_gw=2,
         locked_squad=lock,
         submitted_picks=picks,
     )
     assert pre["authority"] == "user_lock"
+    assert pre["projection_baseline"]["override_target_gw"] == 2
+    assert pre["projection_baseline"]["override_applied"] is True
     assert post["authority"] == "official_public"
+    assert post["projection_baseline"]["post_deadline_official_reclaims_authority"] is True
     assert pre["validation"]["passed"] is True
     assert post["validation"]["passed"] is True
     reconciliation = reconcile_baseline(pre["squad"], post["squad"])

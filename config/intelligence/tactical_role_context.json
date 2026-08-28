@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "contract": "TACTICAL_ROLE_CONTEXT_V1",
+  "model_id": "observed_role_and_fpl_shape_v1",
+  "policy": {
+    "official_identity_is_authoritative": true,
+    "advanced_stats_are_enrichment": true,
+    "fpl_position_shape_is_not_claimed_as_true_tactical_formation": true,
+    "missing_role_evidence_is_explicit": true,
+    "decision_influence": "ADVISORY_ONLY",
+    "xmins_adjustment_enabled": false,
+    "xpts_rate_adjustment_enabled": false,
+    "minimum_matches_for_future_model_opt_in": 3,
+    "minimum_shape_consistency_for_future_model_opt_in": 0.67
+  },
+  "confidence": {
+    "NO_ADVANCED_EVIDENCE": "NONE",
+    "SINGLE_APPEARANCE": "LOW",
+    "LIMITED": "LOW",
+    "DEVELOPING": "MEDIUM",
+    "ESTABLISHED": "HIGH"
+  },
+  "team_shape": {
+    "valid_starter_count": 11,
+    "required_goalkeepers": 1,
+    "minimum_matches_medium": 2,
+    "minimum_matches_high": 4,
+    "high_consistency": 0.75
+  },
+  "role_thresholds": {
+    "DEF": {
+      "attacking_box_touches_per90": 2.5,
+      "attacking_chances_created_per90": 1.0,
+      "box_threat_xg_per90": 0.15,
+      "box_threat_shots_per90": 1.0
+    },
+    "MID": {
+      "shooter_box_touches_per90": 4.0,
+      "shooter_shots_per90": 2.0,
+      "shooter_xg_per90": 0.25,
+      "creator_chances_created_per90": 2.0,
+      "creator_xa_per90": 0.20
+    },
+    "FWD": {
+      "shooter_box_touches_per90": 5.0,
+      "shooter_shots_per90": 2.5,
+      "shooter_xg_per90": 0.35,
+      "creator_chances_created_per90": 1.5,
+      "creator_xa_per90": 0.15
+    }
+  }
+}

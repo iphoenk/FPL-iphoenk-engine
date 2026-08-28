@@ -48,6 +48,69 @@ def freshness_budget_seconds(mode: str, name: str | None = None) -> int:
     return value
 
 
+def refresh_schedule(mode: str) -> dict[str, Any]:
+    """Resolve and validate the refresh cadence for one execution mode.
+
+    The cadence is deliberately owned by the execution-plane registry. Hot-path
+    freshness must never depend on a request-time refresh and sub-minute modes
+    must be served by an active worker/job plane rather than GitHub Actions.
+    """
+    cfg = registry()
+    scheduling = cfg.get("refresh_scheduling")
+    if not isinstance(scheduling, dict) or scheduling.get("contract") != "V5_REFRESH_SCHEDULER_V1":
+        raise RuntimeError("invalid V5 refresh scheduling contract")
+    if str(scheduling.get("owner") or "") != "orchestrator":
+        raise RuntimeError("V5 refresh scheduling must be owned by orchestrator")
+    modes = scheduling.get("modes")
+    if not isinstance(modes, dict):
+        raise RuntimeError("V5 refresh scheduling must define modes")
+    row = modes.get(str(mode))
+    if not isinstance(row, dict):
+        raise KeyError(f"no V5 refresh schedule for mode: {mode}")
+
+    interval = int(row.get("target_interval_seconds") or 0)
+    if interval <= 0:
+        raise RuntimeError(f"invalid V5 refresh interval for mode {mode}: {interval}")
+    freshness = freshness_budget_seconds(str(mode))
+    governance = scheduling.get("governance") if isinstance(scheduling.get("governance"), dict) else {}
+    if bool(governance.get("target_interval_must_be_less_than_freshness_budget", True)) and interval >= freshness:
+        raise RuntimeError(
+            f"V5 refresh interval must be below freshness budget for mode {mode}: {interval} >= {freshness}"
+        )
+
+    scheduler_class = str(row.get("scheduler_class") or "")
+    if str(mode) in {"deadline", "live"} and scheduler_class != "SUBMINUTE_WORKER_REQUIRED":
+        raise RuntimeError(f"V5 {mode} refresh must require a sub-minute worker")
+    if scheduler_class == "SUBMINUTE_WORKER_REQUIRED" and interval >= 60:
+        raise RuntimeError(f"V5 sub-minute worker interval must be below 60 seconds for mode {mode}")
+
+    github_actions_authoritative = not (
+        bool(governance.get("github_actions_must_not_be_authoritative_for_subminute_modes", True))
+        and scheduler_class == "SUBMINUTE_WORKER_REQUIRED"
+    )
+    return {
+        "contract": scheduling.get("contract"),
+        "owner": scheduling.get("owner"),
+        "mode": str(mode),
+        "strategy": row.get("strategy"),
+        "activation": row.get("activation"),
+        "scheduler_class": scheduler_class,
+        "target_interval_seconds": interval,
+        "freshness_budget_seconds": freshness,
+        "freshness_headroom_seconds": freshness - interval,
+        "github_actions_authoritative": github_actions_authoritative,
+        "hidden_request_time_refresh_forbidden": bool(governance.get("hidden_request_time_refresh_forbidden", True)),
+        "overlapping_refreshes_forbidden": bool(governance.get("overlapping_refreshes_forbidden", True)),
+        "worker_enablement_requires_explicit_deployment_config": bool(
+            governance.get("worker_enablement_requires_explicit_deployment_config", True)
+        ),
+    }
+
+
+def requires_active_refresh_worker(mode: str) -> bool:
+    return refresh_schedule(mode)["scheduler_class"] == "SUBMINUTE_WORKER_REQUIRED"
+
+
 @lru_cache(maxsize=1)
 def current_runtime_fingerprint() -> str:
     """Return the immutable runtime fingerprint for this long-lived process.

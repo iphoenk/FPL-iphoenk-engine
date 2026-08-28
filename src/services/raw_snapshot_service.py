@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 
 from src.engines.checkpoint_policy import resolve_checkpoint
-from src.engines.fpl_rules_2026 import MAX_PER_CLUB, POSITION_BY_TYPE, POSITION_COUNTS, SQUAD_SIZE
+from src.engines.fpl_legality import squad_legality_checks
+from src.engines.fpl_rules_2026 import POSITION_BY_TYPE
 from src.engines.team_value import build_transfer_spells, sell_cost
 from src.sources.official_fpl import get_json
 from src.utils import CONFIG, DATA, atomic_json, iso_now, parse_dt, read_json, utcnow
@@ -81,13 +81,6 @@ def resolve_locked_player(row: dict, by_id: dict, teams: dict, positions: dict) 
 def _validate_authoritative_squad(squad: list[dict], by_id: dict[int, dict]) -> None:
     if not squad:
         return
-    if len(squad) != SQUAD_SIZE:
-        raise RuntimeError(f"FAIL CLOSED: squad count {len(squad)}")
-    element_ids = [int(row.get("element") or -1) for row in squad]
-    if len(element_ids) != len(set(element_ids)):
-        raise RuntimeError("FAIL CLOSED: duplicate squad element")
-    positions: Counter[str] = Counter()
-    clubs: Counter[int] = Counter()
     for row in squad:
         element = int(row.get("element") or -1)
         player = by_id.get(element)
@@ -96,12 +89,15 @@ def _validate_authoritative_squad(squad: list[dict], by_id: dict[int, dict]) -> 
         actual_position = POSITION_BY_TYPE.get(player.get("element_type"))
         if not actual_position or row.get("position") != actual_position:
             raise RuntimeError(f"FAIL CLOSED: position mismatch {element}")
-        positions[actual_position] += 1
-        clubs[int(player.get("team") or 0)] += 1
-    if any(positions.get(position, 0) != expected for position, expected in POSITION_COUNTS.items()):
-        raise RuntimeError(f"FAIL CLOSED: positions {dict(positions)}")
-    if max(clubs.values(), default=0) > MAX_PER_CLUB:
-        raise RuntimeError(f"FAIL CLOSED: club limit {dict(clubs)}")
+        if row.get("team_id") != player.get("team"):
+            raise RuntimeError(f"FAIL CLOSED: team mismatch {element}")
+    failed = {
+        name: detail
+        for name, (passed, detail) in squad_legality_checks(squad).items()
+        if not passed
+    }
+    if failed:
+        raise RuntimeError(f"FAIL CLOSED: authoritative squad illegal {failed}")
 
 
 def _normalize_endpoint_health(health: dict, payloads: dict, submitted_gw: int | None, scoring_gw: int | None, is_live_event: bool) -> None:
@@ -184,12 +180,27 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
     if use_lock:
         for row in lock.get("players", []):
             player = resolve_locked_player(row, by_id, teams, positions)
-            squad.append({"element": player["id"], "name": player["web_name"], "position": positions[player["element_type"]], "purchase_cost": row.get("purchase_cost"), "source": "locked_squad_element_id"})
+            squad.append({
+                "element": player["id"],
+                "name": player["web_name"],
+                "team_id": player["team"],
+                "position": positions[player["element_type"]],
+                "purchase_cost": row.get("purchase_cost"),
+                "source": "locked_squad_element_id",
+            })
     else:
         for pick in (payloads.get("picks") or {}).get("picks", []):
             player = by_id.get(pick["element"])
             if player:
-                squad.append({"element": player["id"], "name": player["web_name"], "position": positions[player["element_type"]], "purchase_cost": pick.get("purchase_price"), "selling_price": pick.get("selling_price"), "source": "official_picks"})
+                squad.append({
+                    "element": player["id"],
+                    "name": player["web_name"],
+                    "team_id": player["team"],
+                    "position": positions[player["element_type"]],
+                    "purchase_cost": pick.get("purchase_price"),
+                    "selling_price": pick.get("selling_price"),
+                    "source": "official_picks",
+                })
     _validate_authoritative_squad(squad, by_id)
 
     spells = build_transfer_spells(payloads.get("transfers") or [])
@@ -215,7 +226,19 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         selling = row.get("selling_price")
         if selling is None and purchase is not None:
             selling = sell_cost(player["now_cost"], int(purchase))
-        ledger.append({"element": player["id"], "name": player["web_name"], "team": teams[player["team"]], "position": positions[player["element_type"]], "purchase_cost": purchase, "now_cost": player["now_cost"], "sell_cost": selling, "purchase_source": source, "ownership": player.get("selected_by_percent"), "status": player.get("status")})
+        ledger.append({
+            "element": player["id"],
+            "name": player["web_name"],
+            "team": teams[player["team"]],
+            "team_id": player["team"],
+            "position": positions[player["element_type"]],
+            "purchase_cost": purchase,
+            "now_cost": player["now_cost"],
+            "sell_cost": selling,
+            "purchase_source": source,
+            "ownership": player.get("selected_by_percent"),
+            "status": player.get("status"),
+        })
 
     total_ms = round((perf_counter() - started) * 1000, 2)
     out = {

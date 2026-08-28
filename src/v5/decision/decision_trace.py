@@ -57,7 +57,8 @@ def _gate0_context(preflight: dict[str, Any]) -> tuple[bool, tuple[str, ...], tu
     return passed, checked, failed
 
 
-def _bind_execution_fingerprint(raw: dict[str, Any], execution_fingerprint: dict[str, Any] | None) -> None:
+def bind_execution_fingerprint(raw: dict[str, Any], execution_fingerprint: dict[str, Any] | None) -> dict[str, Any]:
+    """Bind exact-execution identity as provenance only, never as a scoring input."""
     policy = _cfg()["trace"]
     raw["trace_contract"] = str(policy.get("contract") or "V5_DECISION_TRACE_V1")
     fingerprint = execution_fingerprint if isinstance(execution_fingerprint, dict) else {}
@@ -72,6 +73,7 @@ def _bind_execution_fingerprint(raw: dict[str, Any], execution_fingerprint: dict
         "provenance_only": True,
         "required_for_promotion": bool(policy.get("require_exact_execution_fingerprint_for_promotion", True)),
     }
+    return raw
 
 
 def build_trace(
@@ -248,5 +250,4 @@ def build_trace(
     raw["p_outperform_hold_independent_baseline"] = round(probability, 4)
     raw["gate0_preflight_pass"] = preflight_passed
     raw["production_recommendation"] = None
-    _bind_execution_fingerprint(raw, execution_fingerprint)
-    return raw
+    return bind_execution_fingerprint(raw, execution_fingerprint)

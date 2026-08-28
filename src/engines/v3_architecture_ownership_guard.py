@@ -9,6 +9,9 @@ from src.utils import ROOT
 
 OWNERSHIP_PATH = ROOT / "config" / "v3_architecture_ownership_registry.json"
 SERVICE_PATH = ROOT / "config" / "v3_service_registry.json"
+REC_PATH = ROOT / "config" / "rec_registry.json"
+IMPLEMENTATION_STATUS_PATH = ROOT / "IMPLEMENTATION_STATUS.json"
+OFFICIAL_FIRST_PATH = ROOT / "config" / "sources" / "official_first_coverage.json"
 FRAMEWORK_PATHS = {
     "dss_core": ROOT / "config" / "dss_core_registry.json",
     "dss_extensions": ROOT / "config" / "dss_extension_registry.json",
@@ -76,6 +79,74 @@ def _scan_official_fetches(active: dict[str, set[str]]) -> dict[str, list[str]]:
     return {service: sorted(modules) for service, modules in sorted(hits.items())}
 
 
+def _validate_rec_registry(errors: list[str], services: dict[str, Any]) -> dict[str, Any]:
+    rec = _load(REC_PATH)
+    impl = _load(IMPLEMENTATION_STATUS_PATH)
+    official = _load(OFFICIAL_FIRST_PATH)
+    if rec.get("registry") != "V3_REC_REGISTRY_V1":
+        errors.append("unexpected V3 REC registry")
+    rows = list(rec.get("records") or [])
+    ids = [str(row.get("id") or "") for row in rows]
+    dup_ids = _duplicates(ids)
+    if dup_ids:
+        errors.append(f"duplicate REC ids: {dup_ids}")
+    expected = int(rec.get("expected_count") or 0)
+    if expected != len(rows):
+        errors.append(f"REC expected_count={expected} declared={len(rows)}")
+
+    allowed_non_service = {str(v) for v in rec.get("non_service_owners") or []}
+    allowed_relations = {str(v) for v in rec.get("allowed_relations") or []}
+    invalid_rows: list[dict[str, Any]] = []
+    for row in rows:
+        rid = str(row.get("id") or "")
+        title = str(row.get("title") or "")
+        status = str(row.get("status") or "")
+        owner = str(row.get("owner") or "")
+        relation = str(row.get("relation") or "")
+        if not rid or not title or not status or not owner or relation not in allowed_relations:
+            invalid_rows.append(row)
+            continue
+        if owner not in services and owner not in allowed_non_service:
+            errors.append(f"REC {rid} owner is neither service nor declared governance owner: {owner}")
+        if relation == "EXTENDS_EXISTING_OWNER" and owner not in services:
+            errors.append(f"REC {rid} EXTENDS_EXISTING_OWNER must point to runtime service: {owner}")
+        if relation == "GOVERNANCE_ONLY" and owner not in allowed_non_service:
+            errors.append(f"REC {rid} GOVERNANCE_ONLY must point to declared governance owner: {owner}")
+    if invalid_rows:
+        errors.append(f"invalid REC rows: {invalid_rows}")
+
+    canonical = {str(row["id"]): row for row in rows if row.get("id")}
+    impl_status = impl.get("rec_status") if isinstance(impl.get("rec_status"), dict) else {}
+    official_rows = official.get("recommendations") if isinstance(official.get("recommendations"), dict) else {}
+    canonical_ids = set(canonical)
+    impl_ids = set(map(str, impl_status))
+    official_ids = set(map(str, official_rows))
+    if impl_ids != canonical_ids:
+        errors.append(f"IMPLEMENTATION_STATUS REC set drift: missing={sorted(canonical_ids-impl_ids)} extra={sorted(impl_ids-canonical_ids)}")
+    if official_ids != canonical_ids:
+        errors.append(f"Official-first REC set drift: missing={sorted(canonical_ids-official_ids)} extra={sorted(official_ids-canonical_ids)}")
+
+    status_drift: dict[str, dict[str, str]] = {}
+    for rid, row in canonical.items():
+        projected = impl_status.get(rid) if isinstance(impl_status.get(rid), dict) else {}
+        canonical_status = str(row.get("status") or "")
+        projected_status = str(projected.get("status") or "")
+        if canonical_status != projected_status:
+            status_drift[rid] = {"canonical": canonical_status, "implementation_status": projected_status}
+    if status_drift:
+        errors.append(f"REC status projection drift: {status_drift}")
+
+    return {
+        "registry": rec.get("registry"),
+        "count": len(rows),
+        "duplicate_ids": dup_ids,
+        "status_projection_sync": not bool(status_drift),
+        "official_first_set_sync": official_ids == canonical_ids,
+        "implementation_status_set_sync": impl_ids == canonical_ids,
+        "governance_owners": sorted(allowed_non_service),
+    }
+
+
 def run() -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -133,9 +204,9 @@ def run() -> dict[str, Any]:
         if dup:
             errors.append(f"{name} duplicate ids: {dup}")
         all_framework_ids.extend(ids)
-        expected = int(payload.get("expected_count") or 0)
-        if expected and expected != len(rows):
-            errors.append(f"{name} expected_count={expected} declared={len(rows)}")
+        expected_count = int(payload.get("expected_count") or 0)
+        if expected_count and expected_count != len(rows):
+            errors.append(f"{name} expected_count={expected_count} declared={len(rows)}")
         for row in rows:
             for required in row.get("required_files") or []:
                 required_text = str(required)
@@ -159,11 +230,7 @@ def run() -> dict[str, Any]:
                 active_forbidden.append(f"{service}:{module}")
     if active_forbidden:
         errors.append(f"compatibility/legacy modules active in runtime services: {sorted(active_forbidden)}")
-    cross_service_module_duplicates = {
-        module: sorted(owners)
-        for module, owners in module_services.items()
-        if len(owners) > 1
-    }
+    cross_service_module_duplicates = {module: sorted(owners) for module, owners in module_services.items() if len(owners) > 1}
     if cross_service_module_duplicates:
         errors.append(f"same executable module owned by multiple services: {cross_service_module_duplicates}")
 
@@ -181,11 +248,7 @@ def run() -> dict[str, Any]:
         allowed = {str(value) for value in declaration.get("allowed_writers") or []}
         final_owner = str(declaration.get("final_owner") or "")
         if final_owner not in owners or owners - allowed or not final_owner:
-            bad_staged[artifact] = {
-                "actual": sorted(owners),
-                "allowed": sorted(allowed),
-                "final_owner": final_owner,
-            }
+            bad_staged[artifact] = {"actual": sorted(owners), "allowed": sorted(allowed), "final_owner": final_owner}
     if undeclared_multiwriters:
         errors.append(f"undeclared multi-writer artifacts: {undeclared_multiwriters}")
     if bad_staged:
@@ -193,21 +256,14 @@ def run() -> dict[str, Any]:
 
     official_hits = _scan_official_fetches(active)
     allowed_fetch_services = {str(value) for value in ownership.get("official_fetch_allowed_services") or []}
-    forbidden_fetches = {
-        service: modules
-        for service, modules in official_hits.items()
-        if service not in allowed_fetch_services
-    }
+    forbidden_fetches = {service: modules for service, modules in official_hits.items() if service not in allowed_fetch_services}
     if forbidden_fetches:
         errors.append(f"Official FPL fetch detected outside declared owner/exception services: {forbidden_fetches}")
-    transitional_fetches = {
-        service: modules
-        for service, modules in official_hits.items()
-        if service in allowed_fetch_services and service != "official_snapshot"
-    }
+    transitional_fetches = {service: modules for service, modules in official_hits.items() if service in allowed_fetch_services and service != "official_snapshot"}
     if transitional_fetches:
         warnings.append(f"declared non-snapshot Official fetch exceptions remain: {transitional_fetches}")
 
+    rec_state = _validate_rec_registry(errors, services)
     status = "PASS" if not errors else "FAIL"
     result = {
         "status": status,
@@ -216,12 +272,9 @@ def run() -> dict[str, Any]:
         "responsibilities": len(responsibilities),
         "shared_primitives": len(primitive_rows),
         "framework_counts": framework_counts,
+        "rec": rec_state,
         "service_count": len(services),
-        "multiwriter_artifacts": {
-            artifact: sorted(owners)
-            for artifact, owners in writers.items()
-            if len(owners) > 1
-        },
+        "multiwriter_artifacts": {artifact: sorted(owners) for artifact, owners in writers.items() if len(owners) > 1},
         "official_fetch_services": official_hits,
         "legacy_registry_references": legacy_registry_refs,
         "policy": ownership.get("policy") or {},

@@ -59,6 +59,45 @@ def _disabled_history() -> dict[str, Any]:
     }
 
 
+def _settlement_actuals(gameweeks: list[int]) -> dict[str, Any]:
+    unique = sorted({int(gw) for gw in gameweeks if int(gw) > 0})
+    maximum = max(1, int(_historical_cfg().get("max_historical_gameweeks") or 5))
+    bounded = unique[-maximum:]
+    specs = {
+        f"settlement_event_live_gw_{gw}": FetchSpec(route="event_live", params={"event": gw})
+        for gw in bounded
+    }
+    if specs:
+        data, health = fetch_many(specs)
+    else:
+        data, health = {}, {}
+    by_gw: dict[str, Any] = {}
+    unavailable: list[int] = []
+    for gw in bounded:
+        key = f"settlement_event_live_gw_{gw}"
+        value = data.get(key)
+        if isinstance(value, dict) and isinstance(value.get("elements"), list):
+            by_gw[str(gw)] = value
+        else:
+            unavailable.append(gw)
+    return {
+        "schema_version": 1,
+        "contract": "official_event_live_settlement_actuals_v1",
+        "authority": "OFFICIAL_FPL_EVENT_LIVE_POST_GW",
+        "requested_gameweeks": bounded,
+        "available_gameweeks": sorted(int(gw) for gw in by_gw),
+        "unavailable_gameweeks": unavailable,
+        "event_live_by_gw": by_gw,
+        "health": health,
+        "governance": {
+            "caller_supplies_only_frozen_unsettled_finished_gameweeks": True,
+            "collection_is_bounded_by_historical_window": True,
+            "evaluation_service_does_not_fetch_network": True,
+            "missing_actual_is_unavailable_not_zero": True,
+        },
+    }
+
+
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     team_id = int(payload.get("team_id") or expected_team_id())
     if operation == "collect_base":
@@ -84,6 +123,10 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "decision_neutral": True,
         }
         return {"payloads": data, "health": health}
+    if operation == "collect_settlement_actuals":
+        raw = payload.get("gameweeks")
+        gameweeks = [int(value) for value in raw] if isinstance(raw, list) else []
+        return _settlement_actuals(gameweeks)
     if operation == "collect_historical_submitted":
         hcfg = _historical_cfg()
         max_gws = max(1, int(payload.get("max_historical_gameweeks") or hcfg.get("max_historical_gameweeks") or 5))

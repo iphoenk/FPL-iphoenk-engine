@@ -25,17 +25,8 @@
     "enabled": true,
     "decision_influence": "XMINS_ROTATION_CONFIDENCE_ONLY",
     "policy_ref": "config/recent_competitive_load.json",
-    "required_sweeps": [
-      "press_conference_and_official_team_news",
-      "latest_competitive_first_team_match_all_competitions"
-    ],
-    "preferred_sources": [
-      "official_club",
-      "premierleague.com",
-      "uefa.com",
-      "efl.com",
-      "thefa.com"
-    ],
+    "required_sweeps": ["press_conference_and_official_team_news", "latest_competitive_first_team_match_all_competitions"],
+    "preferred_sources": ["official_club", "premierleague.com", "uefa.com", "efl.com", "thefa.com"],
     "direct_xpts_mutation_forbidden": true
   }
 }

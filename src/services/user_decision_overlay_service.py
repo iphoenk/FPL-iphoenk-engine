@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
-from collections import Counter
 from time import perf_counter
 
+from src.engines.fpl_legality import formation_from_rows
+from src.engines.fpl_rules_2026 import CHIPS
 from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA, atomic_json, iso_now, read_json
 
@@ -13,13 +14,7 @@ LATEST = DATA / "latest.json"
 MANUAL = CONFIG / "manual_lineup.json"
 LOCKED = CONFIG / "locked_squad.json"
 OUTFILE = DATA / "effective_plan_v4.json"
-
-LEGAL_FORMATIONS = {
-    (3, 4, 3), (3, 5, 2),
-    (4, 3, 3), (4, 4, 2), (4, 5, 1),
-    (5, 2, 3), (5, 3, 2), (5, 4, 1),
-}
-ALLOWED_CHIPS = {"NONE", "WILDCARD", "FREE_HIT", "BENCH_BOOST", "TRIPLE_CAPTAIN"}
+ALLOWED_CHIPS = {"NONE"} | {str(chip).upper() for chip in CHIPS}
 
 
 def _all_engine_rows(lineup: dict) -> dict[int, dict]:
@@ -35,13 +30,12 @@ def _all_engine_rows(lineup: dict) -> dict[int, dict]:
 
 
 def _formation(rows: list[dict]) -> str:
-    counts = Counter(row.get("position") for row in rows)
-    if counts.get("GK", 0) != 1:
+    if sum(row.get("position") == "GK" for row in rows) != 1:
         raise RuntimeError("manual XI must contain exactly one GK")
-    shape = (counts.get("DEF", 0), counts.get("MID", 0), counts.get("FWD", 0))
-    if shape not in LEGAL_FORMATIONS:
-        raise RuntimeError(f"manual XI illegal formation: {shape}")
-    return f"{shape[0]}-{shape[1]}-{shape[2]}"
+    formation = formation_from_rows(rows)
+    if formation is None:
+        raise RuntimeError("manual XI illegal formation")
+    return formation
 
 
 def _manual_is_active(manual: dict, planning_gw: int | None) -> bool:

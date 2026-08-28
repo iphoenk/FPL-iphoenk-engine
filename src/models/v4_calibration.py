@@ -16,17 +16,10 @@ def eligible(available_at, deadline):
         return False
 
 
-# Backward-compatible names. Metric formulas live only in src.models.v4_metrics.
-def mae(rows):
-    return mae_rows(rows)
-
-
-def spearman(rows):
-    return spearman_rows(rows)
-
-
-def calibration_error(rows, bins=5):
-    return calibration_error_rows(rows, bins=bins)
+# Backward-compatible names are aliases, not second metric implementations.
+mae = mae_rows
+spearman = spearman_rows
+calibration_error = calibration_error_rows
 
 
 def backtest(rows, deadline):

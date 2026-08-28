@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 
-from src.engines.collector_gate import should_collect
+from src.engines.collector_gate import normal_report_mode, should_collect
 from src.engines.report_user_presentation import RAW_DECISION_TOKENS, build_user_presentation, resolve_report_checkpoint
 
 
@@ -100,9 +100,18 @@ def test_natural_presentation_keeps_machine_states_out_of_human_surface():
     assert all(token not in text for token in RAW_DECISION_TOKENS)
 
 
-def test_report_checkpoint_crons_are_mandatory_collects():
-    now = datetime(2026, 8, 27, 5, 30, tzinfo=timezone.utc)
-    for expr in ("30 5 * * *", "30 14 * * *"):
-        collect, reason = should_collect("schedule", expr, now, None, False)
+def test_normal_report_slots_are_selected_inside_master_hourly_checkpoint_without_duplicate_crons():
+    workflow = open(".github/workflows/v3-runtime-fast.yml", encoding="utf-8").read()
+    assert 'cron: "30 * * * *"' in workflow
+    assert 'cron: "30 5 * * *"' not in workflow
+    assert 'cron: "30 14 * * *"' not in workflow
+
+    checkpoints = (
+        (datetime(2026, 8, 27, 5, 30, tzinfo=timezone.utc), "NORMAL_MIDDAY"),
+        (datetime(2026, 8, 27, 14, 30, tzinfo=timezone.utc), "NORMAL_NIGHT"),
+    )
+    for now, expected_mode in checkpoints:
+        collect, reason = should_collect("schedule", "30 * * * *", now, None, False)
         assert collect is True
-        assert reason == "scheduled_report_checkpoint"
+        assert reason == "hourly_primary"
+        assert normal_report_mode(now, hourly_checkpoint=True) == expected_mode

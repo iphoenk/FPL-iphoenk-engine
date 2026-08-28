@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
 
 # Collector policy schedule ownership moved to split workflows:
-# primary -> v3-runtime-fast.yml  cron: "55 * * * *"
-# adaptive -> v3-runtime-fast.yml cron: "*/15 * * * *"
-# deep_stats -> v3-refresh-full.yml cron: "30 21 * * *"
-# report_midday -> v3-runtime-fast.yml cron: "30 5 * * *"
-# report_evening -> v3-runtime-fast.yml cron: "30 14 * * *"
+# primary master hourly evaluation -> v3-runtime-fast.yml cron: "30 * * * *"
+# adaptive freshness/final-review helper -> v3-runtime-fast.yml cron: "0,15,45 * * * *"
+# deep_stats / 04:30 WIB deep review -> v3-refresh-full.yml cron: "30 21 * * *"
+# 12:30 and 21:30 visible reports are selected by WIB governance inside the hourly primary run.
+# This avoids duplicate scheduled runtime/report jobs at the same checkpoint.
 
 permissions:
   contents: read

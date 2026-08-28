@@ -79,6 +79,47 @@ def _metrics_from_keep_profile(profile: dict, chosen) -> dict:
     }
 
 
+def _small_candidate_template(need: Counter, bp: dict) -> list[tuple]:
+    """Build the exact k<=2 candidate ranking once per positional need signature.
+
+    The reference rank depends only on chosen-player objective/uncertainty. Budget
+    and club legality depend on the OUT set, so those are intentionally filtered
+    later. Stable sort preserves the reference tie semantics.
+    """
+    pools = [list(combinations(bp[pos], count)) for pos, count in need.items()]
+    states = [tuple()]
+    for comboset in pools:
+        states = [state + combo for state in states for combo in comboset if len({p.element for p in state + combo}) == len(state + combo)]
+    scored = [(sum(p.objective - .12 * p.uncertainty for p in chosen), chosen) for chosen in states]
+    scored.sort(key=lambda row: row[0], reverse=True)
+    return [chosen for _, chosen in scored]
+
+
+def _legal_small_candidates(template: list[tuple], keep: list, budget: int, k: int) -> list[tuple]:
+    keep_cost = sum(p.cost for p in keep)
+    clubs = 0
+    for player in keep:
+        clubs += 1 << ((player.team_id - 1) * 2)
+    cap = 16 if k == 1 else 30
+    legal = []
+    for chosen in template:
+        if keep_cost + sum(p.cost for p in chosen) > budget:
+            continue
+        signature = clubs
+        ok = True
+        for player in chosen:
+            shift = (player.team_id - 1) * 2
+            if ((signature >> shift) & 0b11) >= MAX_PER_CLUB:
+                ok = False
+                break
+            signature += 1 << shift
+        if ok:
+            legal.append(chosen)
+            if len(legal) >= cap:
+                break
+    return legal
+
+
 def _materialize_package(compact: tuple, k: int, basecost: int, budget: int) -> dict:
     outs, chosen, tm, dxi, du, risk_delta, risk_penalty, adj_xi, adj_util = compact
     return {
@@ -88,8 +129,8 @@ def _materialize_package(compact: tuple, k: int, basecost: int, budget: int) -> 
         "target_cost": tm["cost"],
         "target_itb": budget - tm["cost"],
         "delta_cost": tm["cost"] - basecost,
-        "delta_objective": round(tm["objective"] - 0.0, 4),  # replaced by caller below
-        "delta_squad_xpts_3": tm["squad_xpts_3"],              # replaced by caller below
+        "delta_objective": round(tm["objective"] - 0.0, 4),
+        "delta_squad_xpts_3": tm["squad_xpts_3"],
         "delta_squad_xpts_5": tm["squad_xpts_5"],
         "delta_squad_xpts_10": tm["squad_xpts_10"],
         "delta_squad_xpts_15": tm["squad_xpts_15"],
@@ -137,6 +178,8 @@ def audit_packages_from_candidates_fast(
     metrics_cache_hits = 0
     keep_profiles = 0
     evaluated = 0
+    small_templates: dict[tuple, list[tuple]] = {}
+    small_template_hits = 0
 
     for k in range(1, max_replacements + 1):
         heap: list[tuple] = []
@@ -144,7 +187,7 @@ def audit_packages_from_candidates_fast(
         for outs in combinations(cur, k):
             outids = {p.element for p in outs}
             need = Counter(p.position for p in outs)
-            if any(len(bp[pos]) < n for pos, n in need.items()):
+            if any(len(bp[pos]) < count for pos, count in need.items()):
                 continue
             out_unc = sum(p.uncertainty for p in outs)
             keep = [p for p in cur if p.element not in outids]
@@ -152,7 +195,19 @@ def audit_packages_from_candidates_fast(
             keep_profiles += 1
             keep_ids = tuple(p.element for p in keep)
 
-            for chosen in base._candidate_states(cur, outids, need, bp, budget, k, beam_size):
+            if k <= 2:
+                need_key = tuple(need.items())
+                template = small_templates.get(need_key)
+                if template is None:
+                    template = _small_candidate_template(need, bp)
+                    small_templates[need_key] = template
+                else:
+                    small_template_hits += 1
+                candidate_states = _legal_small_candidates(template, keep, budget, k)
+            else:
+                candidate_states = base._candidate_states(cur, outids, need, bp, budget, k, beam_size)
+
+            for chosen in candidate_states:
                 if len(chosen) != k:
                     continue
                 key = tuple(sorted((*keep_ids, *(p.element for p in chosen))))
@@ -170,8 +225,6 @@ def audit_packages_from_candidates_fast(
                 adj_xi = dxi - risk_penalty
                 adj_util = du - risk_penalty
 
-                # Exact same ranking as the previous stable full sort, but keep only
-                # the top output rows. All candidate states are still evaluated.
                 delta_objective = round(tm["objective"] - cm["objective"], 4)
                 rank = (
                     round(adj_util, 2),
@@ -231,6 +284,8 @@ def audit_packages_from_candidates_fast(
             "metrics_cache_hits": metrics_cache_hits,
             "evaluated_packages": evaluated,
             "keep_profiles": keep_profiles,
+            "small_candidate_templates": len(small_templates),
+            "small_candidate_template_hits": small_template_hits,
             "frontier_per_position": per_position_frontier,
             "beam_size": beam_size,
             "single_pass_metrics": True,
@@ -246,6 +301,7 @@ def audit_packages_from_candidates_fast(
             "compact_keep_profile": True,
             "scalar_delta_metrics": True,
             "position_value_reuse": True,
+            "small_package_candidate_template_cache": True,
             "search_quality_reduction": False,
         },
         "guardrails": {

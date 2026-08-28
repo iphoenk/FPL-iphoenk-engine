@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from src.engines.tactical_decision_consumption import apply_report_overlay
 from src.utils import DATA, ROOT
 
 REGISTRY = ROOT / "config" / "report_artifact_registry.json"
@@ -54,7 +55,25 @@ def _validate_personal_gameweek_context(payload_name: str, payload: dict) -> Non
     assert governance.get("engine_recommendation_remains_visible_for_comparison") is True, payload_name
 
 
+def _validate_tactical(payload_name: str, payload: dict, expected_owned: int, expected_watch: int) -> None:
+    context = payload.get("tactical_context") or {}
+    assert int(context.get("owned_players") or 0) == expected_owned, (payload_name, context)
+    assert int(context.get("watchlist_players") or 0) == expected_watch, (payload_name, context)
+    usage = context.get("decision_usage") or {}
+    assert usage.get("direct_xpts_mutation") is False, (payload_name, usage)
+    owned_rows = ((payload.get("owned_squad") or {}).get("facts") or []) if "owned_squad" in payload else (payload.get("owned_15") or [])
+    assert all(isinstance(row.get("tactical_matchup"), dict) for row in owned_rows), (payload_name, "owned tactical coverage")
+    assert all((row.get("tactical_matchup") or {}).get("evidence_state") in {"CUKUP", "TERBATAS", "TIDAK_TERSEDIA"} for row in owned_rows), (payload_name, "owned tactical state")
+    watch_positions = ((payload.get("external_watchlist") or {}).get("positions") or {}) if "external_watchlist" in payload else (payload.get("watchlist_20") or {})
+    watch_rows = [row for rows in watch_positions.values() for row in rows]
+    assert len(watch_rows) == expected_watch, (payload_name, len(watch_rows))
+    assert all(isinstance(row.get("tactical_matchup"), dict) for row in watch_rows), (payload_name, "watch tactical coverage")
+
+
 def run() -> dict:
+    # Tactical serving decoration is the final consumer overlay. It reuses the
+    # projection-owned matchup and never recalculates or mutates xPts.
+    tactical_overlay = apply_report_overlay()
     registry = _load(REGISTRY)
     runtime_registry = _load(DATA / "report_artifact_registry.json")
     assert runtime_registry == registry
@@ -97,6 +116,7 @@ def run() -> dict:
     assert (brief.get("serving_contract") or {}).get("watchlist") == expected_watch
 
     for payload_name, payload in (("brief", brief), ("deep", deep), ("user", user)):
+        _validate_tactical(payload_name, payload, expected_owned, expected_watch)
         if contract.get("report_time_intelligence_required") is True:
             report_time = payload.get("report_time_intelligence") or {}
             assert report_time.get("status") in {"REFRESH_REQUIRED", "READY", "INVALID_EVIDENCE_CONTRACT"}, (payload_name, report_time)
@@ -147,6 +167,9 @@ def run() -> dict:
         "watchlist": expected_watch,
         "per_position": expected_per,
         "owned_transparency": True,
+        "tactical_context": True,
+        "tactical_overlay": tactical_overlay,
+        "tactical_direct_xpts_mutation": False,
         "selection_score": contract.get("owned_rows_require_selection_score"),
         "model_validation": contract.get("model_validation_required"),
         "weather_context": contract.get("weather_context_required"),

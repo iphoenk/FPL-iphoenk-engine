@@ -1,5 +1,5 @@
 {
-  "version":5,
+  "version":6,
   "data_root":"data/v5",
   "artifacts":{
     "latest":"latest.json",
@@ -25,6 +25,7 @@
     "user_report":"user_report.json",
     "technical_appendix":"technical_appendix.json",
     "report_state":"report_state.json",
+    "replay_bundle":"replay_bundle.json",
     "decision_hot_bundle":"decision_hot_bundle.json",
     "history":"history.jsonl"
   },
@@ -35,6 +36,8 @@
     "persist_raw_authenticated_payload":false,
     "separate_from_v3_v4_runtime_data":true,
     "do_not_overwrite_healthy_price_state_with_degraded_fallback":true,
-    "decision_hot_bundle_requires_durable_write_before_memory_publish":true
+    "decision_hot_bundle_requires_durable_write_before_memory_publish":true,
+    "replay_bundle_contains_post_truth_inputs_only":true,
+    "replay_bundle_forbids_raw_authenticated_payload":true
   }
 }

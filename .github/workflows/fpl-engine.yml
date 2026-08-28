@@ -5,7 +5,7 @@ on:
 
 # Collector policy schedule ownership moved to split workflows:
 # primary -> v3-runtime-fast.yml  cron: "55 * * * *"
-# adaptive -> v3-runtime-fast.yml cron: "15 * * * *"
+# adaptive -> v3-runtime-fast.yml cron: "*/15 * * * *"
 # deep_stats -> v3-refresh-full.yml cron: "30 21 * * *"
 # report_midday -> v3-runtime-fast.yml cron: "30 5 * * *"
 # report_evening -> v3-runtime-fast.yml cron: "30 14 * * *"

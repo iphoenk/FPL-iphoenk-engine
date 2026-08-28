@@ -1,12 +1,12 @@
 {
-  "status": "INACTIVE",
+  "status": "ACTIVE",
   "gw": 2,
-  "source": "USER_MANUAL_DECISION",
-  "starting_xi": [],
-  "captain": null,
-  "vice_captain": null,
-  "bench_gk": null,
-  "bench_order": [],
+  "source": "USER_SCREENSHOT_2026-08-28T00:40:04Z",
+  "starting_xi": [572, 115, 8, 88, 426, 15, 557, 40, 565, 411, 165],
+  "captain": 426,
+  "vice_captain": 411,
+  "bench_gk": 109,
+  "bench_order": [254, 346, 473],
   "active_chip": "WILDCARD",
-  "note": "Activate only when the user explicitly overrides engine formation, XI, bench, captain, vice-captain, or chip for this exact GW."
+  "note": "GW2 current-team authority from the user's latest screenshot. Applies to V3/V4/V5 reporting until superseded by a newer user lock or post-deadline Official submitted picks. Engine recommendations remain challengers and must not silently overwrite this current selection."
 }

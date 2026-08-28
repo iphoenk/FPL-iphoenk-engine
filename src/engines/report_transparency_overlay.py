@@ -145,6 +145,51 @@ def _weather_context(weather: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _sync_current_authority(payload: dict[str, Any], *, compact_captaincy: bool) -> None:
+    planning = ((payload.get("gameweek_context") or {}).get("planning") or {})
+    if planning.get("status") != "PROJECTION":
+        return
+
+    starters = [dict(row) for row in planning.get("starting_xi") or []]
+    bench = [dict(row) for row in planning.get("bench") or []]
+    captain = dict(planning.get("captain") or {})
+    vice = dict(planning.get("vice_captain") or {})
+    bench_gk = next((row for row in bench if row.get("position") == "GK"), {})
+    outfield_bench = [row for row in bench if row.get("position") != "GK"]
+
+    current_team = {
+        "decision_authority": planning.get("decision_authority"),
+        "source": planning.get("source"),
+        "gw": planning.get("gw"),
+        "formation": planning.get("formation"),
+        "starting_xi": [row.get("name") for row in starters],
+        "captain": captain.get("name"),
+        "vice_captain": vice.get("name"),
+        "bench_order": [row.get("name") for row in outfield_bench],
+        "gk_bench": bench_gk.get("name"),
+        "active_chip": planning.get("active_chip"),
+        "estimated_points": planning.get("estimated_points"),
+    }
+    payload["current_team"] = current_team
+
+    if not compact_captaincy:
+        return
+    section = dict(payload.get("captaincy") or {})
+    engine_captain = section.get("captain")
+    engine_vice = section.get("vice")
+    engine_recommendation = planning.get("engine_recommendation") or {}
+    section["captain"] = captain.get("name") or engine_captain
+    section["vice"] = vice.get("name") or engine_vice
+    section["authority"] = planning.get("decision_authority")
+    section["engine_challenger"] = {
+        "captain": engine_captain or engine_recommendation.get("captain"),
+        "vice": engine_vice or engine_recommendation.get("vice_captain"),
+        "formation": engine_recommendation.get("formation"),
+        "estimated_points": engine_recommendation.get("estimated_points"),
+    }
+    payload["captaincy"] = section
+
+
 def run() -> dict[str, Any]:
     latest = read_json(DATA / "latest.json", {})
     projections = read_json(DATA / "projections.json", {})
@@ -170,6 +215,7 @@ def run() -> dict[str, Any]:
             "settled_prediction": _settled_validation(latest),
         }
         payload["weather_context"] = _weather_context(weather)
+        _sync_current_authority(payload, compact_captaincy=path.name != "user_report.json")
         atomic_json(path, payload)
         result[path.name] = {"owned": len(decorated), "weather": payload["weather_context"]["status"]}
 

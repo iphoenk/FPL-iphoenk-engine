@@ -139,14 +139,19 @@ def test_dag_parallelization_only_groups_dependency_independent_services():
     registry = json.loads((ROOT / "config/service_registry.json").read_text())
     levels = _service_levels(registry)
     assert registry["execution_model"] == "process_isolated_dag_parallel_single_host"
-    assert {row["id"] for row in levels[0]} == {"architecture_guard", "raw_snapshot"}
-    assert any({row["id"] for row in level} == {"validation_lifecycle", "rules_compliance", "optimization"} for level in levels)
-    assert any({row["id"] for row in level} == {"framework_preflight", "user_decision_overlay"} for level in levels)
-    assert any({row["id"] for row in level} == {"personal_gw_scorecard", "framework_postflight"} for level in levels)
+    roots = {row["id"] for row in registry["services"] if not row.get("depends_on")}
+    assert {row["id"] for row in levels[0]} == roots
+    level_index = {row["id"]: index for index, level in enumerate(levels) for row in level}
     by_id = {row["id"]: row for row in registry["services"]}
+    assert set(level_index) == set(by_id)
+    for service_id, row in by_id.items():
+        for dependency in row.get("depends_on") or []:
+            assert dependency in by_id
+            assert level_index[dependency] < level_index[service_id]
     assert by_id["optimization"]["depends_on"] == ["prediction"]
+    assert set(by_id["reconciliation_readiness"]["depends_on"]) == {"validation_lifecycle", "architecture_guard"}
+    assert "reconciliation_readiness" in by_id["framework_preflight"]["depends_on"]
     assert set(by_id["framework_postflight"]["depends_on"]) == {"framework_preflight", "user_decision_overlay"}
-    assert "architecture_guard" in by_id["framework_preflight"]["depends_on"]
     assert registry["guardrails"]["optimizer_may_parallelize_with_validation_before_preflight"] is True
     assert registry["guardrails"]["postflight_requires_preflight_and_effective_plan"] is True
     for level in levels:

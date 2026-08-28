@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "contract": "V5_OWNED_CHALLENGER_COMPARATOR_V1",
+  "model_id": "v5_owned_challenger_comparator_v1",
+  "status": "ADVISORY_ONLY",
+  "horizons": [1, 2, 3, 5],
+  "limits": {
+    "max_owned_targets_per_challenger": 3,
+    "max_emerging_per_position": 3,
+    "max_comparisons": 48
+  },
+  "emerging_screening": {
+    "allowed_player_statuses": ["a", "d"],
+    "minimum_start_probability": 0.55,
+    "maximum_dnp_probability": 0.35,
+    "minimum_expected_minutes": 50.0,
+    "minimum_xpts_5": 16.0,
+    "minimum_attack_rate90": 0.42,
+    "minimum_set_piece_share": 0.5,
+    "minimum_penalty_share": 0.5,
+    "minimum_defcon_points90": 0.55,
+    "sustainable_minimum_trigger_count": 3,
+    "strong_minimum_trigger_count": 2,
+    "single_signal_label": "INTERESTING"
+  },
+  "target_selection": {
+    "similar_price_band_tenths": 20,
+    "premium_core_price_tenths": 90,
+    "weights": {
+      "affordability": 0.22,
+      "price_similarity": 0.12,
+      "xpts_5_weakness": 0.28,
+      "xmins_weakness": 0.18,
+      "bench_replaceability": 0.10,
+      "non_core_replaceability": 0.10
+    }
+  },
+  "transfer_value": {
+    "normal_transfer_opportunity_cost_points": 1.0,
+    "wildcard_opportunity_cost_points": 0.0,
+    "base_structural_change_cost_points": 0.5,
+    "premium_core_change_cost_points": 1.5,
+    "unknown_finance_blocks_lean_or_strong": true,
+    "club_limit": 3
+  },
+  "decision_governance": {
+    "calibration_status": "PROVISIONAL_UNCALIBRATED",
+    "minimum_gain_for_review_5gw": 1.5,
+    "minimum_gain_for_lean_5gw": 3.5,
+    "minimum_gain_for_strong_5gw": 6.0,
+    "minimum_signal_to_uncertainty_for_review": 0.35,
+    "minimum_signal_to_uncertainty_for_lean": 0.75,
+    "minimum_signal_to_uncertainty_for_strong": 1.25,
+    "strong_transfer_requires_non_proxy_tactical_evidence": true,
+    "positive_edge_alone_is_insufficient": true,
+    "production_authority": false
+  },
+  "tactical_evidence": {
+    "current_native_level": "PROXY_ONLY",
+    "missing_current_coach_behavior": "INSUFFICIENT_EVIDENCE",
+    "historical_team_dna_must_not_override_current_coach": true,
+    "never_infer_specific_press_block_or_vulnerability_without_evidence": true
+  },
+  "watchlist_governance": {
+    "may_suggest_promotion": true,
+    "may_suggest_priority_change": true,
+    "may_mutate_watchlist": false
+  },
+  "governance": {
+    "generic_not_player_pair_specific": true,
+    "reuse_canonical_xpts": true,
+    "reuse_canonical_xmins": true,
+    "reuse_canonical_fixtures": true,
+    "reuse_canonical_price_and_sell_value": true,
+    "reuse_canonical_watchlist": true,
+    "reuse_canonical_congestion_overlay": true,
+    "recent_haul_is_discovery_signal_not_buy_authority": true,
+    "missing_evidence_is_unavailable_not_zero": true,
+    "external_consensus_is_advisory": true,
+    "majority_vote_forbidden": true,
+    "may_override_canonical_transfer": false,
+    "may_override_starting_xi": false,
+    "may_override_captain": false,
+    "may_override_vice_captain": false,
+    "may_override_chip": false,
+    "may_override_watchlist": false
+  },
+  "validation_matrix": [
+    "same_price_direct_swap",
+    "upgrade_requiring_itb",
+    "downgrade",
+    "active_wildcard",
+    "normal_free_transfer",
+    "european_congestion",
+    "domestic_cup_congestion",
+    "international_duty",
+    "missing_tactical_data",
+    "missing_external_source",
+    "tbd_midweek_opponent",
+    "injury",
+    "suspension",
+    "one_haul_trigger",
+    "weak_underlying_after_haul",
+    "improving_xmins",
+    "deteriorating_xmins",
+    "club_limit_violation",
+    "position_legality",
+    "early_season_low_confidence",
+    "watchlist_promotion",
+    "watchlist_demotion",
+    "multiple_challengers_one_owned",
+    "one_challenger_multiple_owned",
+    "cross_engine_divergence"
+  ]
+}

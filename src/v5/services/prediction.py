@@ -43,6 +43,7 @@ BASE_CAPABILITIES = [
     "truthful_feature_bundle",
     "native_authoritative_feature_trace",
     "fixture_specific_congestion_shadow",
+    "point_in_time_prior_freeze",
 ]
 
 
@@ -161,7 +162,7 @@ def _compact_enrichment(enrichment: dict[str, Any]) -> dict[str, Any]:
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:
-    if operation not in {"build", "build_full", "status"}:
+    if operation not in {"build", "build_full", "resolve_prior", "status"}:
         raise KeyError(f"unsupported prediction operation: {operation}")
     if operation == "status":
         return {
@@ -186,10 +187,25 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         }
 
     bootstrap = payload.get("bootstrap")
-    fixtures = payload.get("fixtures")
     rules = payload.get("rules")
+    if operation == "resolve_prior":
+        if not isinstance(bootstrap, dict) or not isinstance(rules, dict):
+            raise ValueError("prediction resolve_prior requires bootstrap and truth-service rules")
+        previous_prior = payload.get("historical_prior") if isinstance(payload.get("historical_prior"), dict) else {}
+        return resolve_prior(
+            bootstrap,
+            rules,
+            previous_prior=previous_prior,
+            allow_network_refresh=bool(payload.get("allow_network_refresh", False)),
+        )
+
+    fixtures = payload.get("fixtures")
     if not isinstance(bootstrap, dict) or not isinstance(fixtures, list) or not isinstance(rules, dict):
         raise ValueError("prediction service requires bootstrap, fixtures and truth-service rules")
+    if bool(payload.get("allow_historical_prior_refresh", False)):
+        raise RuntimeError(
+            "prediction build network refresh is forbidden after point-in-time replay boundary; resolve prior before capture"
+        )
 
     source_fusion = _source_fusion(payload)
     enrichment = build_full_core_enrichment(bootstrap, fixtures, source_fusion=source_fusion)
@@ -200,7 +216,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         bootstrap,
         rules,
         previous_prior=previous_prior,
-        allow_network_refresh=bool(payload.get("allow_historical_prior_refresh", False)),
+        allow_network_refresh=False,
     )
     base = build_predictions(
         bootstrap,

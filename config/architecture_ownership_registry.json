@@ -1,6 +1,6 @@
 {
-  "schema_version": 2,
-  "registry": "fpl_v4_9_6_architecture_ownership_v2",
+  "schema_version": 3,
+  "registry": "fpl_v4_9_6_architecture_ownership_v3",
   "release": "4.9.6",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "responsibilities": [
@@ -90,6 +90,24 @@
       "id": "RECONCILIATION_EVIDENCE",
       "owner": "reconciliation_truth",
       "consumers": ["DSS-44", "DSS-X12", "ENH-03"]
+    },
+    {
+      "id": "OPTIMIZER_GW_VALUE",
+      "owner": "optimizer_primitives",
+      "implementation": "src.engines.v4_optimizer_primitives.gw_value",
+      "consumers": ["v4_wc_optimizer_fast", "v4_wc_package_audit_fast"]
+    },
+    {
+      "id": "CSV_HTTP_FETCH",
+      "owner": "source_transport",
+      "implementation": "src.sources.csv_fetch.fetch_csv",
+      "consumers": ["core_insights", "vaastav"]
+    },
+    {
+      "id": "NUMERIC_COERCION",
+      "owner": "prediction_model",
+      "implementation": "src.models.v4_prediction.f",
+      "consumers": ["v4_prediction", "v4_runner"]
     }
   ]
 }

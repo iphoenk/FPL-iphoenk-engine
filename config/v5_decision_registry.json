@@ -1,5 +1,5 @@
 {
-  "schema_version": 9,
+  "schema_version": 10,
   "model_id": "v5_native_decision_governance_v9",
   "lineup": {
     "positions": ["GK", "DEF", "MID", "FWD"],
@@ -29,11 +29,16 @@
     "critical_partial_floor_multiplier": 0.25
   },
   "trace": {
+    "contract": "V5_DECISION_TRACE_V2",
     "require_truth_authority": true,
     "require_ruleset_id": true,
     "require_projection_model": true,
     "require_gate0_preflight": true,
     "require_dss_coverage": true,
+    "bind_exact_execution_fingerprint": true,
+    "exact_execution_fingerprint_is_provenance_only": true,
+    "exact_execution_fingerprint_is_not_scoring_input": true,
+    "require_exact_execution_fingerprint_for_promotion": true,
     "gate0_pass_status": "PASS",
     "local_constraint_labels": {
       "package_ready": "decision:package_legality_and_affordability",

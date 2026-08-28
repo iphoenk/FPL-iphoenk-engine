@@ -1,12 +1,24 @@
 {
-  "schema_version": 1,
-  "model_id": "v5_decision_first_report_v1",
+  "schema_version": 2,
+  "model_id": "v5_decision_first_report_v2",
   "layers": ["USER_REPORT", "TECHNICAL_APPENDIX"],
-  "section_order": ["decision", "changes_since_last_report", "owned_squad", "starting_xi", "captaincy", "chip", "price_radar", "external_watchlist", "engine_line", "action_board"],
+  "section_order": ["presentation", "report_checkpoint", "decision", "changes_since_last_report", "owned_squad", "starting_xi", "captaincy", "chip", "price_radar", "external_watchlist", "engine_line", "action_board"],
   "stable_report": {
     "enabled": true,
     "compact_when_no_material_change": true,
     "material_delta_keys": ["squad", "starting_xi", "captain", "vice_captain", "chip", "price", "critical_health"]
+  },
+  "scheduled_report_checkpoints": {
+    "enabled": true,
+    "timezone": "Asia/Jakarta",
+    "grace_minutes": 60,
+    "history_days": 14,
+    "silent_missing_forbidden": true,
+    "slots": [
+      {"id": "DAILY_DEEP", "time": "04:30", "label": "Review pagi 04:30 WIB"},
+      {"id": "MIDDAY_CATCHUP", "time": "12:30", "label": "Catch-up 12:30 WIB"},
+      {"id": "EVENING_CHECK", "time": "21:30", "label": "Review malam 21:30 WIB"}
+    ]
   },
   "starting_xi": {
     "lock_margin": 0.75,
@@ -33,6 +45,9 @@
   },
   "language": {
     "decision_first": true,
+    "natural_fpl_language": true,
+    "presentation_is_primary_human_surface": true,
+    "raw_machine_states_are_audit_only": true,
     "technical_terms_allowed_only_in_appendix": true,
     "forbidden_user_report_tokens": ["go_allowed", "SUSPECT_STATIC_OFFSET0", "DSS-", "Gate 0", "epistemik", "asset-value protection"]
   },
@@ -42,6 +57,8 @@
     "latest_gw_is_evidence_not_single_gw_decision_driver": true,
     "primary_horizon_gws": [3, 5],
     "strategic_horizon_gws": [10, 15],
-    "missing_external_evidence_is_never_fabricated": true
+    "missing_external_evidence_is_never_fabricated": true,
+    "scheduled_checkpoint_miss_is_explicit": true,
+    "user_override_preserves_engine_comparison": true
   }
 }

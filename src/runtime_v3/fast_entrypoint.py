@@ -5,132 +5,32 @@ from __future__ import annotations
 The canonical orchestrator remains the reference implementation used by
 FULL/DEEP. FAST/LIVE patch runtime mechanics only:
 
-1. logical-age reuse reads an artifact's own `generated_at`, never hydration
+1. logical-age reuse reads an artifact's own logical timestamp, never hydration
    filesystem mtime;
-2. semantic reuse is allowed only when the current canonical input signature
-   exactly matches the signature recorded by a prior run of the same engine
-   version;
+2. semantic reuse requires an exact current input-signature match against the
+   separately validated reuse manifest plus unchanged output hashes;
 3. multi-command logical services may execute through one bundle process while
    artifact ownership, validation and promotion remain canonical.
 
 No football formula or decision rule is changed here.
 """
 
-import hashlib
-import json
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from src.runtime_v3 import orchestrator as base
+from src.runtime_v3.reuse_manifest import (
+    artifact_age_seconds as _artifact_age_seconds,
+    file_sha256,
+    input_signature as _input_signature,
+    load_manifest,
+    logical_generated_at as _logical_generated_at,
+    reuse_artifacts as _reuse_artifacts,
+)
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 _ORIGINAL_RUN_SERVICE = base._run_service
-_PREVIOUS_PERFORMANCE: dict[str, Any] = {}
-_VOLATILE_SIGNATURE_KEYS = {
-    "generated_at",
-    "fetched_at",
-    "age_minutes",
-    "elapsed_ms",
-    "latency_ms",
-    "performance_ms",
-    "queue_wait_ms",
-    "seed_input_ms",
-    "promotion_ms",
-    "validation_ms",
-}
-
-
-def _parse_ts(value: Any) -> datetime | None:
-    if not value:
-        return None
-    try:
-        text = str(value).strip().replace("Z", "+00:00")
-        dt = datetime.fromisoformat(text)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc)
-    except (TypeError, ValueError):
-        return None
-
-
-def _logical_generated_at(path: Path) -> datetime | None:
-    if not path.exists() or not path.is_file():
-        return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    if not isinstance(payload, dict):
-        return None
-    for key in ("generated_at", "updated_at", "captured_at", "observed_at", "p0_overlay_generated_at", "lineup_overlay_generated_at", "decision_quality_overlay_generated_at"):
-        dt = _parse_ts(payload.get(key))
-        if dt is not None:
-            return dt
-    return None
-
-
-def _canonicalize(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {
-            str(key): _canonicalize(item)
-            for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
-            if str(key) not in _VOLATILE_SIGNATURE_KEYS
-        }
-    if isinstance(value, list):
-        return [_canonicalize(item) for item in value]
-    return value
-
-
-def _semantic_file_bytes(path: Path) -> bytes | None:
-    if not path.exists() or not path.is_file():
-        return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return path.read_bytes()
-    normalized = _canonicalize(payload)
-    return json.dumps(normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
-
-
-def _input_signature(service_name: str, reuse_cfg: dict[str, Any], canonical: Path) -> str | None:
-    inputs = [str(value) for value in reuse_cfg.get("signature_inputs") or []]
-    configs = [str(value) for value in reuse_cfg.get("signature_config_files") or []]
-    if not inputs and not configs:
-        return None
-    digest = hashlib.sha256()
-    digest.update(f"{ENGINE_VERSION}|{SCHEMA_VERSION}|{service_name}".encode("utf-8"))
-    for rel in inputs:
-        raw = _semantic_file_bytes(canonical / rel)
-        if raw is None:
-            return None
-        digest.update(b"\nINPUT:")
-        digest.update(rel.encode("utf-8"))
-        digest.update(b"\n")
-        digest.update(raw)
-    for rel in configs:
-        path = base.ROOT / rel
-        if not path.exists() or not path.is_file():
-            return None
-        digest.update(b"\nCONFIG:")
-        digest.update(rel.encode("utf-8"))
-        digest.update(b"\n")
-        digest.update(path.read_bytes())
-    return digest.hexdigest()
-
-
-def _reuse_artifacts(spec: dict[str, Any], reuse_cfg: dict[str, Any]) -> list[str]:
-    override = [str(name) for name in reuse_cfg.get("artifacts") or []]
-    return override or [str(name) for name in spec.get("artifacts") or []]
-
-
-def _artifact_age_seconds(paths: list[Path]) -> tuple[float, str] | None:
-    for path in paths:
-        logical_time = _logical_generated_at(path)
-        if logical_time is not None:
-            age = max(0.0, (datetime.now(timezone.utc) - logical_time).total_seconds())
-            return age, f"{path.name}:logical_generated_at"
-    return None
+_PREVIOUS_MANIFEST: dict[str, Any] = {}
 
 
 def _logical_reuse_service(
@@ -161,13 +61,23 @@ def _logical_reuse_service(
 
     mode = str(reuse_cfg.get("mode") or "logical_age")
     signature: str | None = None
+    manifest_row: dict[str, Any] = {}
     if mode == "semantic_signature":
-        if str(_PREVIOUS_PERFORMANCE.get("engine_version") or "") != ENGINE_VERSION:
+        if (
+            str(_PREVIOUS_MANIFEST.get("engine_version") or "") != ENGINE_VERSION
+            or int(_PREVIOUS_MANIFEST.get("engine_schema_version") or -1) != SCHEMA_VERSION
+        ):
             return None
         signature = _input_signature(service_name, reuse_cfg, canonical)
-        previous = ((_PREVIOUS_PERFORMANCE.get("services") or {}).get(service_name) or {})
-        if not signature or previous.get("input_signature") != signature:
+        manifest_row = ((_PREVIOUS_MANIFEST.get("services") or {}).get(service_name) or {})
+        if not signature or manifest_row.get("input_signature") != signature:
             return None
+        expected_hashes = manifest_row.get("artifact_sha256") or {}
+        if set(expected_hashes) != set(artifacts):
+            return None
+        for name, path in zip(artifacts, paths):
+            if expected_hashes.get(name) != file_sha256(path):
+                return None
     elif mode != "logical_age":
         raise RuntimeError(f"unsupported FAST reuse mode for {service_name}: {mode}")
 
@@ -190,6 +100,7 @@ def _logical_reuse_service(
         "reuse_time_source": time_source,
         "reuse_mode": mode,
         "input_signature": signature,
+        "manifest_hash_verified": mode == "semantic_signature",
         "artifact_validation": validations,
         "commands": [],
     }
@@ -235,8 +146,8 @@ def _bundled_run_service(
 
 
 def install() -> None:
-    global _PREVIOUS_PERFORMANCE
-    _PREVIOUS_PERFORMANCE = base.read_json(base.PERFORMANCE_PATH, {})
+    global _PREVIOUS_MANIFEST
+    _PREVIOUS_MANIFEST = load_manifest()
     base._reuse_service = _logical_reuse_service
     base._run_service = _bundled_run_service
 

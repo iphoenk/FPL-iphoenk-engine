@@ -96,6 +96,26 @@ def _source_fusion_summary(source_fusion: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _unresolved_finished_settlement_gws(ledger: dict[str, Any] | None, bootstrap: dict[str, Any]) -> list[int]:
+    records = ledger.get("records") if isinstance(ledger, dict) and isinstance(ledger.get("records"), dict) else {}
+    finished = {
+        int(event["id"])
+        for event in bootstrap.get("events") or []
+        if isinstance(event, dict) and event.get("id") is not None and bool(event.get("finished"))
+    }
+    unresolved: list[int] = []
+    for key, record in records.items():
+        if not isinstance(record, dict) or record.get("status") == "SETTLED" or not record.get("frozen_forecast"):
+            continue
+        try:
+            gw = int(record.get("gw") or key)
+        except (TypeError, ValueError):
+            continue
+        if gw in finished:
+            unresolved.append(gw)
+    return sorted(set(unresolved))
+
+
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation == "cluster_health":
         return cluster_health("orchestrator")
@@ -190,6 +210,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         correlation_id=correlation_id,
     )
     performance["state_hydration"] = {key: _metric(value) for key, value in states.items()}
+    settlement_gws = _unresolved_finished_settlement_gws(states["prediction_ledger"]["data"], bootstrap)
 
     prior_env = _call(
         "historical_prior_resolve",
@@ -274,6 +295,23 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "prediction": _metric(prediction_env),
     }
 
+    settlement_actuals: dict[str, Any] = {
+        "requested_gameweeks": [],
+        "available_gameweeks": [],
+        "unavailable_gameweeks": [],
+        "event_live_by_gw": {},
+    }
+    if bool(feature_switches.get("prediction_settlement_catch_up", False)) and settlement_gws:
+        settlement_env = _call("settlement_actuals", {"gameweeks": settlement_gws}, correlation_id)
+        settlement_actuals = settlement_env["data"] if isinstance(settlement_env.get("data"), dict) else settlement_actuals
+        performance["settlement_actuals"] = _metric(settlement_env)
+    else:
+        performance["settlement_actuals"] = {
+            "status": "SKIPPED",
+            "reason": "NO_FROZEN_UNSETTLED_FINISHED_GAMEWEEK" if not settlement_gws else "FEATURE_DISABLED",
+            "requested_gameweeks": settlement_gws,
+        }
+
     evaluation_service, evaluation_operation = _route("evaluation_build")
     prepare_service, prepare_operation = _route("decision_prepare")
     preflight_service, preflight_operation = _route("gate0_preflight")
@@ -287,6 +325,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                     "context": context,
                     "bootstrap": bootstrap,
                     "event_live": (dynamic_result.get("payloads") or {}).get("event_live"),
+                    "event_live_by_gw": settlement_actuals.get("event_live_by_gw") or {},
                     "ledger": states["prediction_ledger"]["data"],
                     "observations": states["challenger_observations"]["data"],
                 },
@@ -411,6 +450,9 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "sample_size": (accuracy.get("overall") or {}).get("sample_size", 0),
             "confidence": accuracy.get("confidence"),
             "challenger_status": scorecard.get("status"),
+            "settlement": accuracy.get("settlement"),
+            "catch_up_requested_gameweeks": settlement_actuals.get("requested_gameweeks", []),
+            "catch_up_available_gameweeks": settlement_actuals.get("available_gameweeks", []),
         },
         "decision_summary": {
             **decision,
@@ -420,6 +462,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "endpoint_health": {
             "base": base_result.get("health", {}),
             "dynamic": dynamic_result.get("health", {}),
+            "settlement_actuals": settlement_actuals.get("health", {}),
         },
         "authenticated_official": {
             "state": auth_summary.get("state"),
@@ -444,6 +487,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "promotion_fingerprint_complete": bool(execution_fingerprint.get("promotion_fingerprint_complete")),
             "exact_execution_fingerprint_scoring_input": False,
             "post_capture_network_refresh_forbidden": True,
+            "settlement_actuals_collected_after_prediction_boundary": True,
+            "settlement_actuals_decision_input": False,
         },
     }
 

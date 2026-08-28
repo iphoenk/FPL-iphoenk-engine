@@ -6,12 +6,14 @@ from src.sources import official_first as mod
 from src.utils import ROOT
 
 
-def test_every_rec_through_41_has_explicit_official_disposition():
+def test_every_canonical_rec_has_explicit_official_disposition():
     payload = mod.load_official_first_coverage()
+    rec_registry = json.loads((ROOT / "config" / "rec_registry.json").read_text())
     health = mod.validate_official_first_coverage(payload)
+    canonical_ids = {row["id"] for row in rec_registry["records"]}
     assert health["integrity_ok"] is True
-    assert health["covered_recommendations"] == 42  # REC-09a and REC-09b are separate dispositions.
-    assert set(payload["recommendations"]) == set(mod.EXPECTED_RECS)
+    assert health["covered_recommendations"] == rec_registry["expected_count"]
+    assert set(payload["recommendations"]) == canonical_ids == set(mod.EXPECTED_RECS)
     assert payload["recommendations"]["REC-01"]["applicability"] == "PUBLIC_FIRST"
     assert payload["recommendations"]["REC-23"]["applicability"] == "PUBLIC_THEN_PRIVATE_AUTH"
     assert payload["recommendations"]["REC-36"]["endpoints"] == ["entry_history", "entry_picks"]
@@ -19,6 +21,7 @@ def test_every_rec_through_41_has_explicit_official_disposition():
     assert payload["recommendations"]["REC-39"]["applicability"] == "PUBLIC_THEN_PRIVATE_AUTH"
     assert payload["recommendations"]["REC-40"]["applicability"] == "NOT_APPLICABLE"
     assert payload["recommendations"]["REC-41"]["applicability"] == "PUBLIC_FIRST_WITH_ENRICHMENT"
+    assert payload["recommendations"]["REC-42"]["applicability"] == "NOT_APPLICABLE"
 
 
 def test_fallback_is_closed_and_requires_explicit_official_reason():
@@ -41,6 +44,8 @@ def test_fallback_is_closed_and_requires_explicit_official_reason():
     assert mod.official_attempt_required("REC-41") is True
     assert mod.fallback_allowed("REC-41", "FIELD_NOT_EXPOSED") is True
     assert mod.fallback_allowed("REC-41", "OFFICIAL_NOT_APPLICABLE") is False
+    assert mod.official_attempt_required("REC-42") is False
+    assert mod.fallback_allowed("REC-42", "OFFICIAL_NOT_APPLICABLE") is True
 
 
 def test_invalid_or_incomplete_matrix_fails_closed():

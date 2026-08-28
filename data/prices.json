@@ -1,34 +1,34 @@
 {
-  "generated_at": "2026-08-28T03:20:38.246546+00:00",
+  "generated_at": "2026-08-28T04:01:08.734223+00:00",
   "confirmed_changes": [],
   "top_buy_pressure": [
     {
       "element": 608,
       "name": "Jebbison",
-      "net_transfers": 1655,
+      "net_transfers": 1660,
       "ownership_pct": 0.0,
-      "momentum": 1655.0
+      "momentum": 1660.0
     },
     {
       "element": 613,
       "name": "Ahoka",
-      "net_transfers": 1123,
+      "net_transfers": 1132,
       "ownership_pct": 0.0,
-      "momentum": 1123.0
+      "momentum": 1132.0
     },
     {
       "element": 616,
       "name": "Bouaddi",
-      "net_transfers": 1079,
+      "net_transfers": 1097,
       "ownership_pct": 0.0,
-      "momentum": 1079.0
+      "momentum": 1097.0
     },
     {
       "element": 611,
       "name": "Wan-Bissaka",
-      "net_transfers": 1013,
+      "net_transfers": 1019,
       "ownership_pct": 0.0,
-      "momentum": 1013.0
+      "momentum": 1019.0
     },
     {
       "element": 602,
@@ -40,44 +40,37 @@
     {
       "element": 614,
       "name": "Hadjam",
-      "net_transfers": 672,
+      "net_transfers": 676,
       "ownership_pct": 0.0,
-      "momentum": 672.0
+      "momentum": 676.0
     },
     {
       "element": 145,
       "name": "Fofana",
-      "net_transfers": 439,
+      "net_transfers": 441,
       "ownership_pct": 0.0,
-      "momentum": 439.0
+      "momentum": 441.0
     },
     {
       "element": 255,
       "name": "J.Cuenca",
-      "net_transfers": 432,
+      "net_transfers": 434,
       "ownership_pct": 0.0,
-      "momentum": 432.0
+      "momentum": 434.0
     },
     {
       "element": 75,
       "name": "Christie",
-      "net_transfers": 268,
+      "net_transfers": 267,
       "ownership_pct": 0.0,
-      "momentum": 268.0
+      "momentum": 267.0
     },
     {
       "element": 598,
       "name": "Elvedi",
-      "net_transfers": 80,
+      "net_transfers": 78,
       "ownership_pct": 0.0,
-      "momentum": 80.0
-    },
-    {
-      "element": 119,
-      "name": "Costinha",
-      "net_transfers": 76,
-      "ownership_pct": 0.0,
-      "momentum": 76.0
+      "momentum": 78.0
     },
     {
       "element": 600,
@@ -87,11 +80,18 @@
       "momentum": 76.0
     },
     {
+      "element": 119,
+      "name": "Costinha",
+      "net_transfers": 75,
+      "ownership_pct": 0.0,
+      "momentum": 75.0
+    },
+    {
       "element": 615,
       "name": "Di Gregorio",
-      "net_transfers": 67,
+      "net_transfers": 68,
       "ownership_pct": 0.0,
-      "momentum": 67.0
+      "momentum": 68.0
     },
     {
       "element": 612,
@@ -110,95 +110,95 @@
     {
       "element": 115,
       "name": "De Cuyper",
-      "net_transfers": 405885,
+      "net_transfers": 406526,
       "ownership_pct": 7.5,
-      "momentum": 0.5497189679691203
+      "momentum": 0.5505274704440503
     },
     {
       "element": 98,
       "name": "Janelt",
-      "net_transfers": 21262,
+      "net_transfers": 21321,
       "ownership_pct": 0.4,
-      "momentum": 0.5399461628320382
+      "momentum": 0.5413894672693108
     },
     {
       "element": 268,
       "name": "King",
-      "net_transfers": 23873,
+      "net_transfers": 23923,
       "ownership_pct": 0.5,
-      "momentum": 0.4849968510655588
+      "momentum": 0.4859632729341025
     },
     {
       "element": 123,
       "name": "Hinshelwood",
-      "net_transfers": 117180,
+      "net_transfers": 117166,
       "ownership_pct": 2.6,
-      "momentum": 0.4578041185961924
+      "momentum": 0.4576993542691288
     },
     {
       "element": 565,
       "name": "M.Sangaré",
-      "net_transfers": 342886,
+      "net_transfers": 343584,
       "ownership_pct": 8.0,
-      "momentum": 0.4353698827030857
+      "momentum": 0.43620907016868976
     },
     {
       "element": 403,
       "name": "Sávio",
-      "net_transfers": 29326,
+      "net_transfers": 29499,
       "ownership_pct": 0.7,
-      "momentum": 0.425557232412352
+      "momentum": 0.42801799187463724
     },
     {
       "element": 244,
       "name": "Armstrong",
-      "net_transfers": 7896,
+      "net_transfers": 7918,
       "ownership_pct": 0.2,
-      "momentum": 0.4010361115343593
+      "momentum": 0.4021126402925194
     },
     {
       "element": 88,
       "name": "Kayode",
-      "net_transfers": 253844,
+      "net_transfers": 254173,
       "ownership_pct": 7.2,
-      "momentum": 0.35812397011354147
+      "momentum": 0.3585491745580786
     },
     {
       "element": 586,
       "name": "Mendy",
-      "net_transfers": 116745,
+      "net_transfers": 117166,
       "ownership_pct": 3.4,
-      "momentum": 0.34878614236461736
+      "momentum": 0.3500052277038431
     },
     {
       "element": 454,
       "name": "Elanga",
-      "net_transfers": 64776,
+      "net_transfers": 64966,
       "ownership_pct": 1.9,
-      "momentum": 0.3463068303323211
+      "momentum": 0.3472836226205304
     }
   ],
   "top_sell_pressure": [
     {
       "element": 206,
       "name": "Chadi Riad",
-      "net_transfers": -2194,
+      "net_transfers": -2199,
       "ownership_pct": 0.0,
-      "momentum": -2194.0
+      "momentum": -2199.0
     },
     {
       "element": 450,
       "name": "Livramento",
-      "net_transfers": -1032,
+      "net_transfers": -1034,
       "ownership_pct": 0.0,
-      "momentum": -1032.0
+      "momentum": -1034.0
     },
     {
       "element": 373,
       "name": "C.Jones",
-      "net_transfers": -978,
+      "net_transfers": -980,
       "ownership_pct": 0.0,
-      "momentum": -978.0
+      "momentum": -980.0
     },
     {
       "element": 80,
@@ -210,30 +210,30 @@
     {
       "element": 121,
       "name": "Mitoma",
-      "net_transfers": -952,
+      "net_transfers": -955,
       "ownership_pct": 0.0,
-      "momentum": -952.0
+      "momentum": -955.0
     },
     {
       "element": 458,
       "name": "Joelinton",
-      "net_transfers": -907,
+      "net_transfers": -908,
       "ownership_pct": 0.0,
-      "momentum": -907.0
+      "momentum": -908.0
     },
     {
       "element": 77,
       "name": "Adli",
-      "net_transfers": -843,
+      "net_transfers": -844,
       "ownership_pct": 0.0,
-      "momentum": -843.0
+      "momentum": -844.0
     },
     {
       "element": 331,
       "name": "Gudmundsson",
-      "net_transfers": -830,
+      "net_transfers": -831,
       "ownership_pct": 0.0,
-      "momentum": -830.0
+      "momentum": -831.0
     },
     {
       "element": 402,
@@ -252,23 +252,23 @@
     {
       "element": 312,
       "name": "Taylor",
-      "net_transfers": -699,
+      "net_transfers": -700,
       "ownership_pct": 0.0,
-      "momentum": -699.0
+      "momentum": -700.0
     },
     {
       "element": 425,
       "name": "Fredricson",
-      "net_transfers": -638,
+      "net_transfers": -640,
       "ownership_pct": 0.0,
-      "momentum": -638.0
+      "momentum": -640.0
     },
     {
       "element": 578,
       "name": "Mudryk",
-      "net_transfers": -635,
+      "net_transfers": -636,
       "ownership_pct": 0.0,
-      "momentum": -635.0
+      "momentum": -636.0
     },
     {
       "element": 341,
@@ -280,9 +280,9 @@
     {
       "element": 507,
       "name": "Phillips",
-      "net_transfers": -605,
+      "net_transfers": -607,
       "ownership_pct": 0.0,
-      "momentum": -605.0
+      "momentum": -607.0
     },
     {
       "element": 430,
@@ -294,9 +294,9 @@
     {
       "element": 217,
       "name": "M.França",
-      "net_transfers": -553,
+      "net_transfers": -554,
       "ownership_pct": 0.0,
-      "momentum": -553.0
+      "momentum": -554.0
     },
     {
       "element": 413,
@@ -308,23 +308,23 @@
     {
       "element": 196,
       "name": "Markelo",
-      "net_transfers": -540,
+      "net_transfers": -542,
       "ownership_pct": 0.0,
-      "momentum": -540.0
+      "momentum": -542.0
     },
     {
       "element": 324,
       "name": "Mehmeti",
-      "net_transfers": -512,
+      "net_transfers": -513,
       "ownership_pct": 0.0,
-      "momentum": -512.0
+      "momentum": -513.0
     },
     {
       "element": 164,
       "name": "Quenda",
-      "net_transfers": -482,
+      "net_transfers": -483,
       "ownership_pct": 0.0,
-      "momentum": -482.0
+      "momentum": -483.0
     },
     {
       "element": 141,
@@ -336,23 +336,23 @@
     {
       "element": 245,
       "name": "Dibling",
-      "net_transfers": -470,
+      "net_transfers": -472,
       "ownership_pct": 0.0,
-      "momentum": -470.0
+      "momentum": -472.0
     },
     {
       "element": 375,
       "name": "Nyoni",
-      "net_transfers": -464,
+      "net_transfers": -465,
       "ownership_pct": 0.0,
-      "momentum": -464.0
+      "momentum": -465.0
     },
     {
       "element": 554,
       "name": "Van Oevelen",
-      "net_transfers": -463,
+      "net_transfers": -464,
       "ownership_pct": 0.0,
-      "momentum": -463.0
+      "momentum": -464.0
     }
   ]
 }

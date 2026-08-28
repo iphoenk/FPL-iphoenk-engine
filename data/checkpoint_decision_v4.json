@@ -1,16 +1,16 @@
 {
   "schema_version": 495,
   "engine": "v4.9.5-checkpoint-governance-human-report",
-  "evaluated_at": "2026-08-28T03:20:41.666979+00:00",
+  "evaluated_at": "2026-08-28T04:01:11.527205+00:00",
   "checkpoint_context": {
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-28T03:20:37.526352+00:00",
-    "local_as_of": "2026-08-28T10:20:37.526352+07:00",
+    "as_of": "2026-08-28T04:01:08.169328+00:00",
+    "local_as_of": "2026-08-28T11:01:08.169328+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 849.4,
+    "minutes_to_deadline": 808.9,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -41,7 +41,7 @@
     "why": [
       "Struktur tim saat ini masih cukup layak untuk dipertahankan.",
       "Ada paket alternatif yang menarik, tetapi belum cukup kuat untuk memaksa perubahan sekarang.",
-      "Perbedaan proyeksi XI saat ini terhadap alternatif sekitar 1.81 poin, sehingga masih masuk wilayah keputusan yang bisa dipengaruhi preferensi dan informasi terbaru.",
+      "Perbedaan proyeksi XI saat ini terhadap alternatif sekitar 0.94 poin, sehingga masih masuk wilayah keputusan yang bisa dipengaruhi preferensi dan informasi terbaru.",
       "XI, bench, kapten, dan vice-captain masih dapat disesuaikan sampai final review.",
       "Karena Wildcard sedang aktif, fokusnya adalah memilih kombinasi 15 pemain terbaik tanpa mempertimbangkan biaya hit."
     ],
@@ -93,10 +93,10 @@
     "active_chip": "WILDCARD",
     "human_override_active": true,
     "engine_comparison": {
-      "changed_xi_slots_vs_engine": 2,
-      "user_xi_xpts": 39.06,
+      "changed_xi_slots_vs_engine": 1,
+      "user_xi_xpts": 39.93,
       "engine_xi_xpts": 40.87,
-      "user_minus_engine_xpts": -1.81,
+      "user_minus_engine_xpts": -0.94,
       "formation_changed": true,
       "captain_changed": false,
       "vice_changed": false,
@@ -383,7 +383,7 @@
       "gw": 2,
       "decision_authority": "USER_OVERRIDE",
       "formation": "3-5-2",
-      "xi_xpts": 39.06,
+      "xi_xpts": 39.93,
       "captain": {
         "element": 426,
         "name": "B.Fernandes",
@@ -397,10 +397,10 @@
       },
       "active_chip": "WILDCARD",
       "chip_short": "WC",
-      "bench_xpts": 12.73,
+      "bench_xpts": 11.86,
       "bench_counted_xpts": 0.0,
-      "standard_captain_team_xpts": 44.19,
-      "estimated_points": 44.19,
+      "standard_captain_team_xpts": 45.05,
+      "estimated_points": 45.05,
       "starting_xi": [
         {
           "element": 572,
@@ -421,10 +421,10 @@
           "xpts": 2.82
         },
         {
-          "element": 254,
-          "name": "Robinson",
+          "element": 88,
+          "name": "Kayode",
           "position": "DEF",
-          "xpts": 2.664
+          "xpts": 3.534
         },
         {
           "element": 426,
@@ -479,17 +479,17 @@
         },
         {
           "slot": 1,
+          "element": 254,
+          "name": "Robinson",
+          "position": "DEF",
+          "xpts": 2.664
+        },
+        {
+          "slot": 2,
           "element": 346,
           "name": "Calvert-Lewin",
           "position": "FWD",
           "xpts": 3.51
-        },
-        {
-          "slot": 2,
-          "element": 88,
-          "name": "Kayode",
-          "position": "DEF",
-          "xpts": 3.534
         },
         {
           "slot": 3,
@@ -524,10 +524,10 @@
       },
       "human_override_active": true,
       "engine_comparison": {
-        "changed_xi_slots_vs_engine": 2,
-        "user_xi_xpts": 39.06,
+        "changed_xi_slots_vs_engine": 1,
+        "user_xi_xpts": 39.93,
         "engine_xi_xpts": 40.87,
-        "user_minus_engine_xpts": -1.81,
+        "user_minus_engine_xpts": -0.94,
         "formation_changed": true,
         "captain_changed": false,
         "vice_changed": false,
@@ -543,7 +543,7 @@
     },
     "headline": {
       "previous": "GW1 FINAL · 71 pts · BB",
-      "planning": "GW2 PROJECTION · 44.2 xPts · WC · 3-5-2 · C B.Fernandes"
+      "planning": "GW2 PROJECTION · 45.0 xPts · WC · 3-5-2 · C B.Fernandes"
     },
     "history": [
       {
@@ -574,7 +574,7 @@
     "health_go_allowed": false,
     "freshness": {
       "pass": true,
-      "age_minutes": 0.06,
+      "age_minutes": 0.05,
       "max_age_minutes": 90,
       "reason": null
     },

@@ -6,11 +6,11 @@
     "policy_id": "REGULAR_MONITOR",
     "label": "Regular Tactical Monitor",
     "run_mode": "daily",
-    "as_of": "2026-08-28T03:20:37.526352+00:00",
-    "local_as_of": "2026-08-28T10:20:37.526352+07:00",
+    "as_of": "2026-08-28T04:01:08.169328+00:00",
+    "local_as_of": "2026-08-28T11:01:08.169328+07:00",
     "timezone": "Asia/Jakarta",
     "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 849.4,
+    "minutes_to_deadline": 808.9,
     "is_final_review": false,
     "post_final_emergency_only": false,
     "is_simulation": false,
@@ -1376,5 +1376,5 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 234.14
+  "performance_ms": 179.92
 }

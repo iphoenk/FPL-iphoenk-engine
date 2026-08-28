@@ -1,7 +1,7 @@
 {
   "schema_version": 4941,
   "engine": "v4.9.4.1-user-decision-overlay",
-  "generated_at": "2026-08-28T03:20:41.243702+00:00",
+  "generated_at": "2026-08-28T04:01:11.123946+00:00",
   "status": "PASS",
   "planning_gw": 2,
   "team_authority": "LOCKED_PRE_DEADLINE",
@@ -318,7 +318,7 @@
   "user_override": {
     "active": true,
     "target_gw": 2,
-    "source": "latest_user_pick_team_screenshot",
+    "source": "USER_SCREENSHOT_2026-08-28T00:40:04Z",
     "status": "MANUAL_DRAFT_ADJUSTABLE",
     "decision_authority": "USER"
   },
@@ -326,11 +326,11 @@
     "authority": "USER_OVERRIDE",
     "status": "MANUAL_DRAFT_ADJUSTABLE",
     "gw": 2,
-    "source": "latest_user_pick_team_screenshot",
+    "source": "USER_SCREENSHOT_2026-08-28T00:40:04Z",
     "decision_authority": "USER",
     "overwrite_policy": "ENGINE_RECOMMENDS_USER_DECIDES",
     "formation": "3-5-2",
-    "xi_xpts": 39.06,
+    "xi_xpts": 39.93,
     "starting_xi": [
       {
         "element": 572,
@@ -384,22 +384,21 @@
         "interval_width": 4.63
       },
       {
-        "slot": 1,
-        "element": 254,
-        "name": "Robinson",
+        "element": 88,
+        "name": "Kayode",
         "position": "DEF",
-        "team": "Fulham",
-        "xpts": 2.664,
-        "lower80": 0.365,
-        "upper80": 4.964,
-        "start_probability": 0.7451,
-        "bench_probability": 0.0255,
-        "dnp_probability": 0.2294,
-        "availability": 0.7706,
-        "captain_score": 2.5458,
-        "vice_score": 2.2795,
-        "bench_score": 2.5403,
-        "interval_width": 4.599
+        "team": "Brentford",
+        "xpts": 3.534,
+        "lower80": 1.071,
+        "upper80": 5.998,
+        "start_probability": 0.9079,
+        "bench_probability": 0.0092,
+        "dnp_probability": 0.0829,
+        "availability": 0.9171,
+        "captain_score": 3.6929,
+        "vice_score": 3.4955,
+        "bench_score": 3.5187,
+        "interval_width": 4.927
       },
       {
         "element": 426,
@@ -577,6 +576,24 @@
       "order": [
         {
           "slot": 1,
+          "element": 254,
+          "name": "Robinson",
+          "position": "DEF",
+          "team": "Fulham",
+          "xpts": 2.664,
+          "lower80": 0.365,
+          "upper80": 4.964,
+          "start_probability": 0.7451,
+          "bench_probability": 0.0255,
+          "dnp_probability": 0.2294,
+          "availability": 0.7706,
+          "captain_score": 2.5458,
+          "vice_score": 2.2795,
+          "bench_score": 2.5403,
+          "interval_width": 4.599
+        },
+        {
+          "slot": 2,
           "element": 346,
           "name": "Calvert-Lewin",
           "position": "FWD",
@@ -592,24 +609,6 @@
           "vice_score": 3.4006,
           "bench_score": 3.4532,
           "interval_width": 4.969
-        },
-        {
-          "slot": 2,
-          "element": 88,
-          "name": "Kayode",
-          "position": "DEF",
-          "team": "Brentford",
-          "xpts": 3.534,
-          "lower80": 1.071,
-          "upper80": 5.998,
-          "start_probability": 0.9079,
-          "bench_probability": 0.0092,
-          "dnp_probability": 0.0829,
-          "availability": 0.9171,
-          "captain_score": 3.6929,
-          "vice_score": 3.4955,
-          "bench_score": 3.5187,
-          "interval_width": 4.927
         },
         {
           "slot": 3,
@@ -638,10 +637,10 @@
     }
   },
   "comparison": {
-    "changed_xi_slots_vs_engine": 2,
-    "user_xi_xpts": 39.06,
+    "changed_xi_slots_vs_engine": 1,
+    "user_xi_xpts": 39.93,
     "engine_xi_xpts": 40.87,
-    "user_minus_engine_xpts": -1.81,
+    "user_minus_engine_xpts": -0.94,
     "formation_changed": true,
     "captain_changed": false,
     "vice_changed": false,
@@ -661,8 +660,8 @@
   },
   "lineage": {
     "engine_lineup_sha256": "73344045c2b099347fde6ccfc3680f9e2b5ad88a87878b4ab72f9a86fc43e463",
-    "team_sha256": "05b9953713f01c741e44e8c9cd320946248466bf0f5aa04ee34b857667b102a0",
-    "latest_sha256": "3e0293ce60a45acfa483530e29bedd6dc8a3a2a5a768d909b501c5894c48c6bd"
+    "team_sha256": "78bd6e3eb81e35b4f1a48b35c2205c8f42d57d65bf49df547df2c24b4518eb27",
+    "latest_sha256": "66c17acb5d18dd56692dd5786d4a6c3684129667197903a8adf2f4dcefb54c5e"
   },
-  "performance_ms": 3.36
+  "performance_ms": 2.89
 }

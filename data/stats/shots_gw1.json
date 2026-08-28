@@ -3,7 +3,7 @@
   "dataset": "shots",
   "season": "2026-2027",
   "gw": 1,
-  "fetched_at": "2026-08-28T03:20:37.930188+00:00",
+  "fetched_at": "2026-08-28T04:01:08.488540+00:00",
   "source_url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/2026-2027/By%20Gameweek/GW1/shots.csv",
   "row_count": 277,
   "schema_columns": [

@@ -56,6 +56,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pytest
+      - name: Architecture audit diagnostics
+        run: |
+          python - <<'PY'
+          import json
+          from src.v5.architecture_guard import run_audit
+
+          result = run_audit()
+          failed = {name: row['detail'] for name, row in result['checks'].items() if not row['pass']}
+          print('V5_ARCH_AUDIT_STATUS=' + str(result['status']))
+          print('V5_ARCH_AUDIT_FAILED=' + json.dumps(failed, ensure_ascii=False, separators=(',', ':')))
+          PY
       - name: Architecture ownership regressions
         run: |
           python -m pytest -q \
@@ -68,7 +79,6 @@ jobs:
           from src.v5.architecture_guard import run_audit
 
           result = run_audit()
-          print(json.dumps(result, indent=2, ensure_ascii=False))
           failed = {name: row['detail'] for name, row in result['checks'].items() if not row['pass']}
           assert result['status'] == 'PASS', f'V5 architecture ownership violations: {json.dumps(failed, ensure_ascii=False)}'
           PY

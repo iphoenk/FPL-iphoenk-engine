@@ -1,5 +1,5 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "registry": "RUNTIME_EXECUTION_PROFILES_V1",
   "policy": {
     "reuse_requires_all_declared_service_artifacts": true,
@@ -14,6 +14,7 @@
     "semantic_reuse_requires_output_hash_match": true,
     "semantic_reuse_manifest_is_separate_from_performance_telemetry": true,
     "semantic_signature_fields_are_config_owned": true,
+    "semantic_signature_list_fields_are_config_owned": true,
     "time_dependent_or_state_transition_services_are_not_reused_without_explicit_time_contract": true,
     "cross_service_mutated_artifacts_are_not_semantically_reused_until_ownership_is_single": true,
     "fast_command_bundles_preserve_logical_service_artifact_contracts": true,
@@ -31,18 +32,25 @@
         "prediction": {
           "mode":"semantic_signature","max_age_seconds":21600,
           "signature_inputs":[
-            {"path":"official_snapshot.json","include_paths":["bootstrap.elements","bootstrap.teams","bootstrap.element_types","fixtures"]},
+            {
+              "path":"official_snapshot.json",
+              "include_list_fields":{
+                "bootstrap.elements":["id","element_type","team","now_cost","status","selected_by_percent","starts","minutes","expected_goals","expected_assists","bonus","saves","chance_of_playing_next_round"],
+                "bootstrap.teams":["id","name","strength_attack_home","strength_attack_away","strength_defence_home","strength_defence_away"],
+                "fixtures":["event","kickoff_time","team_h","team_a","team_h_score","team_a_score","finished"]
+              }
+            },
             {"path":"latest.json","include_paths":["phase.planning_gw"]},
-            "team.json",
-            "prior_season.json",
-            "player_features.json"
+            {"path":"team.json","include_paths":["totals.itb"],"include_list_fields":{"team_value_ledger":["element","sell_cost"]}},
+            {"path":"prior_season.json","include_paths":["model","season","players"]},
+            {"path":"player_features.json","include_paths":["contract","decision_neutral","model_opt_in","defensive_contribution_policy","tactical_role_policy","players"]}
           ],
-          "signature_config_files":["config/intelligence/projection.json","config/intelligence/package_optimizer.json","config/intelligence/xmins_v2.json","config/intelligence/team_strength.json"]
+          "signature_config_files":["config/engine.json","config/rules/registry.json","config/rules/fpl_2026_27.json","config/intelligence/projection.json","config/intelligence/package_optimizer.json","config/intelligence/xmins_v2.json","config/intelligence/historical_priors.json","config/intelligence/team_strength.json"]
         },
         "lineup_governance": {
           "mode":"semantic_signature","max_age_seconds":21600,
           "signature_inputs":["team.json","chips.json","projections.json","package_optimizer.json"],
-          "signature_config_files":["config/intelligence/lineup_governance.json","config/manual_lineup_override.json","config/locked_squad.json"]
+          "signature_config_files":["config/intelligence/lineup_governance.json","config/manual_lineup_override.json","config/locked_squad.json","config/rules/registry.json","config/rules/fpl_2026_27.json"]
         },
         "challenger": {
           "mode":"semantic_signature","max_age_seconds":1800,
@@ -74,13 +82,20 @@
         "prediction": {
           "mode":"semantic_signature","max_age_seconds":3600,
           "signature_inputs":[
-            {"path":"official_snapshot.json","include_paths":["bootstrap.elements","bootstrap.teams","bootstrap.element_types","fixtures"]},
+            {
+              "path":"official_snapshot.json",
+              "include_list_fields":{
+                "bootstrap.elements":["id","element_type","team","now_cost","status","selected_by_percent","starts","minutes","expected_goals","expected_assists","bonus","saves","chance_of_playing_next_round"],
+                "bootstrap.teams":["id","name","strength_attack_home","strength_attack_away","strength_defence_home","strength_defence_away"],
+                "fixtures":["event","kickoff_time","team_h","team_a","team_h_score","team_a_score","finished"]
+              }
+            },
             {"path":"latest.json","include_paths":["phase.planning_gw"]},
-            "team.json",
-            "prior_season.json",
-            "player_features.json"
+            {"path":"team.json","include_paths":["totals.itb"],"include_list_fields":{"team_value_ledger":["element","sell_cost"]}},
+            {"path":"prior_season.json","include_paths":["model","season","players"]},
+            {"path":"player_features.json","include_paths":["contract","decision_neutral","model_opt_in","defensive_contribution_policy","tactical_role_policy","players"]}
           ],
-          "signature_config_files":["config/intelligence/projection.json","config/intelligence/package_optimizer.json","config/intelligence/xmins_v2.json","config/intelligence/team_strength.json"]
+          "signature_config_files":["config/engine.json","config/rules/registry.json","config/rules/fpl_2026_27.json","config/intelligence/projection.json","config/intelligence/package_optimizer.json","config/intelligence/xmins_v2.json","config/intelligence/historical_priors.json","config/intelligence/team_strength.json"]
         }
       },
       "command_bundles": {

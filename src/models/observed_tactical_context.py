@@ -43,11 +43,13 @@ def _b(value: Any) -> bool:
 
 
 def _percentile(value: float, universe: list[float]) -> float:
+    """Midrank percentile so tied zero values never become false 100th-percentile signals."""
     values = sorted(float(x) for x in universe)
     if not values:
         return 0.0
-    le = sum(1 for x in values if x <= value)
-    return round(le / len(values), 4)
+    less = sum(1 for x in values if x < value)
+    equal = sum(1 for x in values if x == value)
+    return round((less + 0.5 * equal) / len(values), 4)
 
 
 def _sample_confidence(matches: int, cfg: dict[str, Any]) -> str:
@@ -210,11 +212,17 @@ def _signal_rows(match_agg: dict[tuple[str, int], dict[str, Any]], cfg: dict[str
             for signal, metric in metric_map.items()
         }
         ranked = sorted(percentiles.items(), key=lambda item: item[1], reverse=True)
-        strengths = [signal for signal, pct in ranked if pct >= high and signal != "defensive_activity_proxy"][:maximum]
+        strengths = [
+            signal for signal, pct in ranked
+            if pct >= high
+            and signal != "defensive_activity_proxy"
+            and _f(row["metrics"].get(metric_map[signal])) > 0
+        ][:maximum]
         style_proxies = [
             {"signal": signal, "percentile": pct, "observed_value": row["metrics"].get(metric_map[signal], 0.0)}
-            for signal, pct in ranked[:maximum]
-        ]
+            for signal, pct in ranked
+            if _f(row["metrics"].get(metric_map[signal])) > 0
+        ][:maximum]
         out[key] = {**row, "percentiles": percentiles, "strengths": strengths, "observed_style_proxies": style_proxies}
 
     for key, row in out.items():
@@ -232,7 +240,7 @@ def _signal_rows(match_agg: dict[tuple[str, int], dict[str, Any]], cfg: dict[str
                 concession_percentiles[signal] = pct
             vulnerabilities = [
                 signal for signal, pct in sorted(concession_percentiles.items(), key=lambda item: item[1], reverse=True)
-                if pct >= high
+                if pct >= high and _f(opponent["metrics"].get(metric_map[signal])) > 0
             ][:maximum]
         row["vulnerabilities"] = vulnerabilities
         row["concession_percentiles"] = concession_percentiles

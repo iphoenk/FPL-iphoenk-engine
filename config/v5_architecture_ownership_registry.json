@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "contract": "V5_ARCHITECTURE_OWNERSHIP_V1",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "governance": {
@@ -35,6 +35,7 @@
   ],
   "shared_primitives": [
     {"id":"SOURCE_JSON_CACHE","owner":"ingestion","implementation":"src.v5.sources.cache","consumers":["api_football","understat"]},
+    {"id":"RUNTIME_NORMALIZATION","owner":"orchestrator","implementation":"src.v5.runtime_normalization","consumers":["prediction","execution_plane"]},
     {"id":"XMINS_DISTRIBUTION","owner":"prediction","consumers":["decision","watchlist","reporting"]},
     {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","consumers":["decision","watchlist","reporting","evaluation"]},
     {"id":"SOURCE_FUSION_EVIDENCE","owner":"ingestion","consumers":["prediction","reporting"]},

@@ -57,6 +57,23 @@ def _gate0_context(preflight: dict[str, Any]) -> tuple[bool, tuple[str, ...], tu
     return passed, checked, failed
 
 
+def _bind_execution_fingerprint(raw: dict[str, Any], execution_fingerprint: dict[str, Any] | None) -> None:
+    policy = _cfg()["trace"]
+    raw["trace_contract"] = str(policy.get("contract") or "V5_DECISION_TRACE_V1")
+    fingerprint = execution_fingerprint if isinstance(execution_fingerprint, dict) else {}
+    raw["runtime_release_fingerprint"] = fingerprint.get("runtime_release_fingerprint")
+    raw["replay_fingerprint"] = fingerprint.get("replay_fingerprint")
+    raw["execution_fingerprint"] = fingerprint.get("execution_fingerprint")
+    raw["code_revision"] = fingerprint.get("code_revision")
+    raw["promotion_fingerprint_complete"] = fingerprint.get("promotion_fingerprint_complete")
+    raw["fingerprint_binding"] = {
+        "bound": bool(fingerprint.get("replay_fingerprint") and fingerprint.get("execution_fingerprint")),
+        "scoring_input": False,
+        "provenance_only": True,
+        "required_for_promotion": bool(policy.get("require_exact_execution_fingerprint_for_promotion", True)),
+    }
+
+
 def build_trace(
     *,
     truth: dict[str, Any],
@@ -67,6 +84,7 @@ def build_trace(
     lineup: dict[str, Any],
     dss: dict[str, Any],
     gate0_preflight: dict[str, Any],
+    execution_fingerprint: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cfg = _cfg()
     policy = cfg["package_selection"]
@@ -230,4 +248,5 @@ def build_trace(
     raw["p_outperform_hold_independent_baseline"] = round(probability, 4)
     raw["gate0_preflight_pass"] = preflight_passed
     raw["production_recommendation"] = None
+    _bind_execution_fingerprint(raw, execution_fingerprint)
     return raw

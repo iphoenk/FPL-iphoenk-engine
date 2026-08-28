@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "registry": "RUNTIME_EXECUTION_PROFILES_V1",
   "policy": {
     "reuse_requires_all_declared_service_artifacts": true,
@@ -11,12 +11,14 @@
     "reuse_freshness_uses_logical_artifact_time_not_hydration_mtime": true,
     "semantic_reuse_requires_current_input_signature_match": true,
     "semantic_reuse_requires_same_engine_version": true,
+    "semantic_reuse_requires_output_hash_match": true,
+    "semantic_reuse_manifest_is_separate_from_performance_telemetry": true,
     "fast_command_bundles_preserve_logical_service_artifact_contracts": true,
     "rec41_player_feature_migration_fence_active": false
   },
   "profiles": {
     "fast_decision": {
-      "description": "Low-latency decision regeneration. Fresh Official truth remains mandatory. Stable enrichment uses logical-age reuse; deterministic downstream decisions may be reused only when canonical semantic input signatures are unchanged. Multi-step logical services are process-bundled without changing football formulas or artifact contracts.",
+      "description": "Low-latency decision regeneration. Fresh Official truth, market pressure and prediction settlement still run. Stable enrichment, deterministic decision layers and report-serving layers may be reused only when validated logical age, exact semantic input signatures and captured output hashes all match.",
       "max_parallel_services": 4,
       "reuse_services": {
         "advanced_stats": {"mode":"logical_age","max_age_seconds":21600},
@@ -31,7 +33,7 @@
         "lineup_governance": {
           "mode":"semantic_signature","max_age_seconds":21600,
           "signature_inputs":["team.json","chips.json","projections.json","package_optimizer.json"],
-          "signature_config_files":["config/intelligence/lineup_governance.json"]
+          "signature_config_files":["config/intelligence/lineup_governance.json","config/manual_lineup_override.json","config/locked_squad.json"]
         },
         "challenger": {
           "mode":"semantic_signature","max_age_seconds":1800,
@@ -42,12 +44,22 @@
           "mode":"semantic_signature","max_age_seconds":1800,
           "artifacts":["framework_health.json","dss_operational_evidence.json"],
           "signature_inputs":["team.json","chips.json","projections.json","prediction_quality.json","lineup_decision.json","package_decision.json","prediction_accuracy.json","source_health.json","challenger_scorecard.json","price_alerts.json","rules_compliance.json"],
-          "signature_config_files":["config/dss_core_registry.json","config/dss_extension_registry.json","config/enhancement_layers_registry.json","config/gate0_registry.json","config/intelligence/dss_operationalization.json"]
+          "signature_config_files":["config/dss_core_registry.json","config/dss_extension_registry.json","config/enhancement_layers_registry.json","config/gate0_registry.json","config/intelligence/dss_operationalization.json","config/intelligence/capability_master_registry.json"]
         },
         "watchlist": {
           "mode":"semantic_signature","max_age_seconds":1800,
           "signature_inputs":["team.json","projections.json","package_optimizer.json","prices.json","price_alerts.json","framework_health.json","dss_operational_evidence.json"],
-          "signature_config_files":["config/intelligence/dss_watchlist.json"]
+          "signature_config_files":["config/intelligence/dss_watchlist.json","config/intelligence/capability_master_registry.json"]
+        },
+        "reporting": {
+          "mode":"semantic_signature","max_age_seconds":1800,
+          "signature_inputs":["latest.json","team.json","lineup_decision.json","package_decision.json","projections.json","price_alerts.json","prediction_quality.json","framework_health.json","challenger_scorecard.json","report_state.json","dss_watchlist.json","source_health.json","dss_operational_evidence.json"],
+          "signature_config_files":["config/intelligence/reporting.json"]
+        },
+        "report_materializer": {
+          "mode":"semantic_signature","max_age_seconds":1800,
+          "signature_inputs":["official_snapshot.json","latest.json","user_report.json","technical_appendix.json","team.json","projections.json","lineup_decision.json","dss_watchlist.json","official_detail.json","source_health.json","fixture_weather.json"],
+          "signature_config_files":["config/report_artifact_registry.json","config/manual_lineup_override.json","config/locked_squad.json"]
         }
       },
       "command_bundles": {
@@ -58,7 +70,7 @@
       }
     },
     "live": {
-      "description": "Low-latency live path. Long-lived enrichment/detail may be reused by logical age, but live scoring, lineup, prediction evaluation, reports and all state affected by current event data are regenerated unless their configured semantic inputs are unchanged.",
+      "description": "Low-latency live path. Long-lived enrichment/detail may be reused by logical age, but live scoring and time-sensitive downstream outputs regenerate unless their profile explicitly declares a safe semantic contract.",
       "max_parallel_services": 4,
       "reuse_services": {
         "advanced_stats": {"mode":"logical_age","max_age_seconds":21600},

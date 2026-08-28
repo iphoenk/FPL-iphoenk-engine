@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
+from src.engines.fpl_legality import plan_legality_checks
 from src.engines.v4_backtest_store import actual_by_element as legacy_actual_by_element
 from src.engines.v4_reconciliation_truth import actual_by_element
 from src.engines.v4_validation import minutes_metrics
-from src.services.framework_postflight_truth_service import _plan_checks
 from src.services.optimization_slo_service import DECISION_COMPUTE_SLO_MS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,9 +25,9 @@ def _live():
 def test_official_starts_is_only_start_truth():
     for mapper in (actual_by_element, legacy_actual_by_element):
         actual = mapper(_live())
-        assert actual[1]["started"] is True   # starter can leave before 45
-        assert actual[2]["started"] is False  # substitute can play more than 45
-        assert actual[3]["started"] is None   # missing Official evidence is unknown
+        assert actual[1]["started"] is True
+        assert actual[2]["started"] is False
+        assert actual[3]["started"] is None
 
 
 def test_missing_start_is_excluded_from_start_brier_not_inferred():
@@ -56,22 +56,24 @@ def _plan(formation="3-5-2"):
     }
 
 
-def test_effective_plan_legality_is_independently_testable():
-    checks = _plan_checks(_plan(), {"overall": "PASS"})
+def test_effective_plan_legality_is_independently_testable_through_canonical_owner():
+    checks = plan_legality_checks(_plan(), {"overall": "PASS"})
     assert all(ok for ok, _ in checks.values())
     bad = _plan()
     bad["captain"] = {"element": 99}
-    assert _plan_checks(bad, {"overall": "PASS"})["G0-12"][0] is False
+    assert plan_legality_checks(bad, {"overall": "PASS"})["G0-12"][0] is False
 
 
-def test_v4943_registry_keeps_11_microservices_and_hard_5s_compute_slo():
+def test_runtime_architecture_preserves_hard_5s_compute_slo_and_adds_independent_guard():
     registry = json.loads((ROOT / "config" / "service_registry.json").read_text())
     services = registry["services"]
-    assert len(services) == 11
+    assert len(services) == 12
     by_id = {row["id"]: row for row in services}
+    assert by_id["architecture_guard"]["module"] == "src.services.architecture_guard_service"
     assert by_id["optimization"]["module"] == "src.services.optimization_slo_service"
     assert by_id["framework_postflight"]["module"] == "src.services.framework_postflight_truth_service"
     assert "user_decision_overlay" in by_id["framework_postflight"]["depends_on"]
+    assert "architecture_guard" in by_id["framework_preflight"]["depends_on"]
     assert DECISION_COMPUTE_SLO_MS == 5000.0
     assert registry["guardrails"]["decision_compute_slo_ms"] == 5000
     assert registry["guardrails"]["decision_compute_slo_excludes_external_network_io"] is True

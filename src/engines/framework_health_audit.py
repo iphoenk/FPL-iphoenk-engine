@@ -9,7 +9,7 @@ from typing import Any, Callable
 
 from src.engines.team_value import sell_cost
 from src.engines.fpl_rules_2026 import MAX_PER_CLUB, POSITION_COUNTS
-from src.engines.fpl_legality import plan_legality_checks
+from src.engines.fpl_legality import formation_from_rows, plan_legality_checks
 from src.utils import CONFIG, DATA, atomic_json, parse_dt, read_json, utcnow
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -425,7 +425,18 @@ def _probe_lineup() -> tuple[bool, dict]:
     lineup = read_json(DATA / "lineup_decision_v4.json", {})
     xi = list(lineup.get("starting_xi") or [])
     guardrails = lineup.get("guardrails") or {}
-    return len(xi) == 11 and lineup.get("formation") in LEGAL_FORMS and all(guardrails.values()), {"xi": len(xi), "formation": lineup.get("formation")}
+    derived_formation = formation_from_rows(xi)
+    valid = (
+        len(xi) == 11
+        and derived_formation is not None
+        and lineup.get("formation") == derived_formation
+        and all(guardrails.values())
+    )
+    return valid, {
+        "xi": len(xi),
+        "formation": lineup.get("formation"),
+        "derived_formation": derived_formation,
+    }
 
 
 def _probe_chip() -> tuple[bool, dict]:

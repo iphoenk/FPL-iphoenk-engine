@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime, timezone
 from typing import Any
 
 from src.v5.config_cache import load_json_config
+from src.v5.report_checkpoint import resolve_report_checkpoint
 
 CONFIG = "config/v5_reporting_registry.json"
 
@@ -87,7 +89,9 @@ def _captaincy(lineup: dict[str, Any]) -> dict[str, Any]:
     vice = lineup.get("vice_captain") or {}
     if not captain:
         return {"decision": "OPEN", "confidence": "LOW", "reason": "captain candidate unavailable"}
-    margin = _f(safe[0].get("captain_score")) - _f(safe[1].get("captain_score")) if len(safe) > 1 else 0.0
+    first_score = _f(safe[0].get("captain_score"), _f(safe[0].get("score"))) if safe else 0.0
+    second_score = _f(safe[1].get("captain_score"), _f(safe[1].get("score"))) if len(safe) > 1 else first_score
+    margin = first_score - second_score if len(safe) > 1 else 0.0
     start_p = _f(captain.get("start_probability"), _f(captain.get("xmins_start_probability")))
     mins = _f(captain.get("expected_minutes"), _f(captain.get("xmins")))
     dnp = _f(captain.get("dnp_probability"), max(0.0, 1.0 - start_p))
@@ -106,6 +110,7 @@ def _captaincy(lineup: dict[str, Any]) -> dict[str, Any]:
         "vice_captain": vice,
         "candidate_margin": round(margin, 4),
         "checks": checks,
+        "effective_authority": lineup.get("authority"),
     }
 
 
@@ -120,6 +125,8 @@ def _lineup(lineup: dict[str, Any], compact: bool) -> dict[str, Any]:
         "battle": battle,
         "starting_xi": [] if compact else _starters(lineup),
         "bench": [] if compact else lineup.get("bench") or [],
+        "effective_authority": lineup.get("authority"),
+        "user_override": lineup.get("user_override") or {},
     }
 
 
@@ -134,6 +141,94 @@ def _price(price: dict[str, Any], watchlist: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _natural_presentation(
+    *,
+    decision_state: str,
+    lineup: dict[str, Any],
+    captaincy: dict[str, Any],
+    price_section: dict[str, Any],
+    checkpoint: dict[str, Any],
+    truth: dict[str, Any],
+    decision: dict[str, Any],
+) -> dict[str, Any]:
+    squad_text = {
+        "HOLD": "Belum ada alasan kuat untuk mengubah komposisi skuad saat ini.",
+        "CHANGE": "Ada perubahan skuad yang layak dipertimbangkan berdasarkan evidence terbaru.",
+        "REVIEW": "Komposisi skuad masih perlu ditinjau sebelum keputusan final.",
+    }.get(decision_state, "Status komposisi skuad sedang diperbarui.")
+
+    formation = lineup.get("formation")
+    lineup_authority = str(lineup.get("authority") or "")
+    user_override = bool((decision.get("user_lineup_authority") or {}).get("active"))
+    if user_override:
+        xi_text = f"Pilihan XI pengguna menjadi baseline efektif untuk GW ini{f' dengan formasi {formation}' if formation else ''}. Engine tetap menyimpan rekomendasinya sebagai pembanding dan tidak menimpa pilihan pengguna."
+    else:
+        battle = lineup.get("main_starting_xi_battle") or {}
+        if formation and battle.get("status") == "CLEAR":
+            xi_text = f"Formasi {formation} saat ini menjadi susunan XI yang paling kuat menurut engine."
+        elif formation:
+            xi_text = f"Formasi {formation} menjadi baseline saat ini, tetapi battle starter-bench masih perlu dipantau."
+        else:
+            xi_text = "Susunan XI masih diperbarui."
+
+    captain = lineup.get("captain") or {}
+    vice = lineup.get("vice_captain") or {}
+    captain_name = captain.get("name") or "kandidat utama"
+    vice_name = vice.get("name")
+    if user_override:
+        captain_text = f"Kapten efektif adalah {captain_name} sesuai keputusan pengguna."
+    elif captaincy.get("decision") == "LOCK":
+        captain_text = f"{captain_name} saat ini menjadi pilihan kapten yang paling kuat."
+    elif captaincy.get("decision") == "LEAN":
+        captain_text = f"Pilihan kapten saat ini lebih condong ke {captain_name}, tetapi belum final."
+    else:
+        captain_text = f"{captain_name} memimpin kandidat kapten, tetapi evidence belum cukup untuk mengunci pilihan."
+    if vice_name:
+        captain_text += f" Wakil kapten saat ini {vice_name}."
+
+    chip = str((lineup.get("chip_context") or {}).get("active_chip") or "").lower()
+    chip_text = {
+        "wildcard": "Wildcard aktif untuk GW target ini; chip tidak menambah poin langsung dan tidak boleh terbawa otomatis ke GW berikutnya.",
+        "free_hit": "Free Hit aktif hanya untuk GW target ini dan komposisi akan kembali setelah Gameweek selesai.",
+        "bench_boost": "Bench Boost aktif, sehingga kontribusi bench ikut dihitung.",
+        "triple_captain": "Triple Captain aktif, sehingga multiplier kapten menjadi fokus utama.",
+    }.get(chip, "Tidak ada chip aktif yang membutuhkan tindakan khusus saat ini.")
+
+    owned_price = price_section.get("owned") or []
+    price_text = (
+        f"Ada {len(owned_price)} pemain milik sendiri dengan tekanan harga HIGH/CRITICAL yang perlu diperiksa."
+        if owned_price
+        else "Belum ada tekanan harga HIGH/CRITICAL pada pemain milik sendiri."
+    )
+    missed = checkpoint.get("missed_due") or []
+    checkpoint_text = (
+        f"Ada {len(missed)} checkpoint terjadwal yang terlewat dan harus ditinjau."
+        if missed
+        else "Checkpoint report yang sudah jatuh tempo tercatat lengkap."
+    )
+    baseline = ((truth.get("team") or {}).get("projection_baseline") or {})
+    baseline_text = None
+    if baseline.get("override_applied"):
+        baseline_text = f"Komposisi planning memakai user lock khusus GW{baseline.get('planning_gw')}; lock ini tidak berlaku otomatis untuk GW berikutnya."
+    elif baseline.get("stale_override_rejected"):
+        baseline_text = "User lock dari GW sebelumnya sudah dianggap stale dan tidak lagi menjadi authority."
+
+    return {
+        "schema": "v5_user_report_presentation_v1",
+        "language": "id-ID",
+        "primary_human_surface": True,
+        "headline": squad_text,
+        "starting_xi": xi_text,
+        "captaincy": captain_text,
+        "chip": chip_text,
+        "price": price_text,
+        "planning_baseline": baseline_text,
+        "checkpoint": checkpoint_text,
+        "effective_lineup_authority": lineup_authority,
+        "raw_machine_states_available_for_audit": True,
+    }
+
+
 def build_report(payload: dict[str, Any]) -> dict[str, Any]:
     cfg = load_json_config(CONFIG)
     decision = payload.get("decision") if isinstance(payload.get("decision"), dict) else {}
@@ -145,6 +240,12 @@ def build_report(payload: dict[str, Any]) -> dict[str, Any]:
     report_request = payload.get("report_request") if isinstance(payload.get("report_request"), dict) else {}
     if not decision or not truth:
         raise ValueError("reporting requires decision and truth payloads")
+
+    checkpoint, checkpoint_state = resolve_report_checkpoint(
+        datetime.now(timezone.utc),
+        previous,
+        cfg.get("scheduled_report_checkpoints") if isinstance(cfg.get("scheduled_report_checkpoints"), dict) else {},
+    )
     current = _state(decision, price, governance)
     changes = _changes(current, previous)
     force_full = bool(payload.get("force_full_report", False))
@@ -160,21 +261,41 @@ def build_report(payload: dict[str, Any]) -> dict[str, Any]:
         watchlist = {"status": "INSUFFICIENT_EVIDENCE", "positions": {}}
     selected = decision.get("selected_package") or {}
     trace = decision.get("decision_trace") or {}
+    decision_state = "HOLD" if decision.get("selected_package_id") == "HOLD" else ("CHANGE" if selected else "REVIEW")
+    lineup_section = _lineup(lineup, compact)
+    captaincy_section = _captaincy(lineup)
+    price_section = _price(price, watchlist)
+    presentation = _natural_presentation(
+        decision_state=decision_state,
+        lineup=lineup,
+        captaincy=captaincy_section,
+        price_section=price_section,
+        checkpoint=checkpoint,
+        truth=truth,
+        decision=decision,
+    )
     user_report = {
         "layer": "USER_REPORT",
         "report_mode": "COMPACT_DELTA" if compact else "FULL_DECISION",
         "request_context": report_request,
+        "presentation": presentation,
+        "report_checkpoint": checkpoint,
         "decision": {
-            "state": "HOLD" if decision.get("selected_package_id") == "HOLD" else ("CHANGE" if selected else "REVIEW"),
+            "state": decision_state,
             "selected_package_id": decision.get("selected_package_id"),
             "confidence": trace.get("confidence"),
+            "raw_machine_state_for_audit": True,
         },
         "changes_since_last_report": changes,
-        "owned_squad": {"authority": (truth.get("team") or {}).get("authority"), "count": _owned_count(truth)},
-        "starting_xi": _lineup(lineup, compact),
-        "captaincy": _captaincy(lineup),
+        "owned_squad": {
+            "authority": (truth.get("team") or {}).get("authority"),
+            "projection_baseline": (truth.get("team") or {}).get("projection_baseline") or {},
+            "count": _owned_count(truth),
+        },
+        "starting_xi": lineup_section,
+        "captaincy": captaincy_section,
         "chip": lineup.get("chip_context") or {},
-        "price_radar": _price(price, watchlist),
+        "price_radar": price_section,
         "external_watchlist": watchlist,
         "engine_line": {
             "status": governance.get("overall") or governance.get("status") or "UNKNOWN",
@@ -201,13 +322,20 @@ def build_report(payload: dict[str, Any]) -> dict[str, Any]:
         "gate0_preflight_pass": decision.get("gate0_preflight_pass"),
         "governance": governance,
         "performance": payload.get("performance") or {},
+        "user_lineup_authority": decision.get("user_lineup_authority") or {},
+        "engine_lineup_recommendation": decision.get("engine_lineup_recommendation") or {},
+        "report_checkpoint": checkpoint,
         "provenance": {
             "ruleset_id": decision.get("ruleset_id"),
             "prediction_model": prediction.get("model_version"),
             "decision_model": decision.get("model"),
         },
     }
-    state = {"fingerprint": _fingerprint(current), "state": current}
+    state = {
+        **checkpoint_state,
+        "fingerprint": _fingerprint(current),
+        "state": current,
+    }
     return {
         "schema_version": int(cfg.get("schema_version") or 1),
         "model": cfg.get("model_id"),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from threading import Lock
 from time import perf_counter
 from typing import Any
 
@@ -16,6 +17,7 @@ from src.v5.service_client import invoke_envelope, invoke_parallel_envelopes
 from src.v5.services.orchestrator import handle as core_handle
 
 CONFIG = "config/v5_orchestrator_registry.json"
+_REFRESH_LOCK = Lock()
 
 
 def _route(name: str) -> tuple[str, str]:
@@ -109,14 +111,14 @@ def _hot_run(payload: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def handle(operation: str, payload: dict[str, Any]) -> Any:
-    if operation == "hot_run":
-        return _hot_run(payload)
-    if operation != "run":
-        return core_handle(operation, payload)
-
+def _refresh_run(payload: dict[str, Any]) -> dict[str, Any]:
     full_started = perf_counter()
-    run_payload = {**payload, "persist": True}
+    run_payload = {
+        key: value
+        for key, value in payload.items()
+        if not str(key).startswith("_refresh_")
+    }
+    run_payload["persist"] = True
     snapshot = core_handle("run", run_payload)
     cid = str(snapshot.get("correlation_id") or payload.get("correlation_id") or "")
 
@@ -158,7 +160,11 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     hot_bundle = build_hot_bundle(snapshot, watchlist, report)
     write_service, write_operation = _route("artifact_write")
     mapping = load_json_config(CONFIG).get("artifact_mapping") or {}
-    writes = invoke_parallel_envelopes(
+
+    # Supporting artifacts must commit first. The decision hot bundle is the
+    # final materialization commit marker and must never become visible from a
+    # refresh that failed part-way through supporting persistence.
+    support_writes = invoke_parallel_envelopes(
         {
             "watchlist": (write_service, write_operation, {"name": mapping["watchlist"], "data": watchlist}),
             "user_report": (write_service, write_operation, {"name": mapping["user_report"], "data": report["user_report"]}),
@@ -168,13 +174,13 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 {"name": mapping["technical_appendix"], "data": report["technical_appendix"]},
             ),
             "report_state": (write_service, write_operation, {"name": mapping["report_state"], "data": report["report_state"]}),
-            "decision_hot_bundle": (
-                write_service,
-                write_operation,
-                {"name": mapping["decision_hot_bundle"], "data": hot_bundle},
-            ),
         },
         correlation_id=cid,
+    )
+    hot_write_env = _invoke(
+        "artifact_write",
+        {"name": mapping["decision_hot_bundle"], "data": hot_bundle},
+        cid,
     )
 
     snapshot["watchlist_summary"] = hot_bundle["watchlist_summary"]
@@ -185,9 +191,15 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "current": "refresh",
         "hot_materialization": "READY",
         "hot_materialization_contract": hot_bundle.get("contract"),
+        "hot_materialization_commit_order": "AFTER_SUPPORTING_ARTIFACTS",
     }
 
     performance = snapshot.setdefault("service_performance", {})
+    persistence_metrics = {
+        key: {"service_compute_ms": value.get("elapsed_ms"), "round_trip_ms": value.get("round_trip_ms")}
+        for key, value in support_writes.items()
+    }
+    persistence_metrics["decision_hot_bundle"] = _metric(hot_write_env)
     performance["beta_composition"] = {
         "state_hydration": {
             key: {"service_compute_ms": value.get("elapsed_ms"), "round_trip_ms": value.get("round_trip_ms")}
@@ -195,10 +207,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         },
         "watchlist": _metric(watch_env),
         "reporting": _metric(report_env),
-        "persistence": {
-            key: {"service_compute_ms": value.get("elapsed_ms"), "round_trip_ms": value.get("round_trip_ms")}
-            for key, value in writes.items()
-        },
+        "persistence": persistence_metrics,
     }
     performance["full_beta_end_to_end_ms"] = round((perf_counter() - full_started) * 1000.0, 3)
     performance["full_beta_contract"] = {
@@ -210,5 +219,23 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "includes_persistence": True,
         "latency_release_blocking": False,
         "hot_path_is_measured_separately": True,
+        "hot_materialization_is_final_commit_marker": True,
     }
     return snapshot
+
+
+def handle(operation: str, payload: dict[str, Any]) -> Any:
+    if operation == "hot_run":
+        return _hot_run(payload)
+    if operation != "run":
+        return core_handle(operation, payload)
+
+    origin = str(payload.get("_refresh_origin") or "request")
+    blocking = origin != "worker"
+    acquired = _REFRESH_LOCK.acquire(blocking=blocking)
+    if not acquired:
+        raise RuntimeError("V5 REFRESH SKIPPED: another refresh is already in progress")
+    try:
+        return _refresh_run(payload)
+    finally:
+        _REFRESH_LOCK.release()

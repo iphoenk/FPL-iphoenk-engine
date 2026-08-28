@@ -1,4 +1,4 @@
-name: FPL iphoenk V4.9.4.3 reconciliation-truth runtime gate
+name: FPL iphoenk V4.9.5 official-first human-report gate
 
 on:
   workflow_dispatch:
@@ -43,9 +43,9 @@ jobs:
         run: pip install --disable-pip-version-check -r requirements.txt pytest
       - name: Unit and acceptance tests
         run: python -m pytest -q
-      - name: Run 11 process-isolated V4 services
+      - name: Run 11 process-isolated DAG-parallel V4 services
         run: python -m src.services.orchestrator daily --stats --deep-stats
-      - name: Centralized V4.9.4.3 core quality gate
+      - name: Centralized V4.9.5 core quality gate
         run: python -m src.engines.v4_quality_gate
       - name: Concise core acceptance summary
         run: |
@@ -70,6 +70,7 @@ jobs:
               'decision_engine': h['decision_engine'],
               'critical_warmup': h['critical_warmup'],
               'capability_coverage': h['capability_coverage'],
+              'official_fpl_first': h.get('official_fpl_first'),
               'recommendation_allowed': h['recommendation_allowed'],
               'go_allowed': h['go_allowed'],
               'gate0': h['gate0']['counts'],
@@ -77,16 +78,17 @@ jobs:
               'effective_plan_legal': plan_truth.get('effective_plan', {}).get('legal'),
               'budget_tenths': w['budget_tenths'],
               'price_basis': w['affordability']['price_basis'],
-              'wc_exact_streaming': w.get('performance', {}).get('exact_streaming_topk'),
-              'wc_bound_pruned': w.get('performance', {}).get('objective_bound_pruned'),
               'refresh_ms': latest.get('performance', {}).get('engine_before_snapshot_write_ms'),
               'decision_pipeline_ms': pipeline.get('timings', {}).get('total_pipeline_ms'),
               'decision_slo': pipeline.get('performance_slo'),
               'checkpoint': checkpoint['checkpoint_context']['policy_id'],
               'action': checkpoint['action_state'],
+              'human_report': checkpoint.get('human_report'),
               'execution_authorized': checkpoint['decision']['execution_authorized'],
               'services': orchestration['summary']['services_passed'],
+              'orchestration_levels': orchestration.get('execution_levels'),
               'orchestration_ms': orchestration['duration_ms'],
+              'orchestration_target': orchestration.get('runtime_target'),
               'projection_baseline': latest.get('projection_baseline'),
               'engine_formation': engine_lineup.get('formation'),
               'engine_captain': (engine_lineup.get('captain') or {}).get('name'),
@@ -98,7 +100,6 @@ jobs:
               'user_minus_engine_xpts': overlay.get('comparison', {}).get('user_minus_engine_xpts'),
               'previous_gw': scorecard.get('headline', {}).get('previous'),
               'planning_gw': scorecard.get('headline', {}).get('planning'),
-              'scorecard_archive': scorecard.get('archive'),
               'validation_snapshot': lifecycle['snapshot'],
               'validation_reconciliation': lifecycle['reconciliation'],
               'eligible_calibration_samples': lifecycle['eligibility'].get('eligible_samples'),

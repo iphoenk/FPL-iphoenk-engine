@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from typing import Any
 
+from src.engines.p0_decision_quality import resolve_locked_chip_context
 from src.models.package_optimizer_v2 import legal_squad
 from src.rules import LINEUP_RULES, RULESET_ID, SQUAD_RULES
 from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
@@ -126,16 +127,9 @@ def _battle(best: dict[str, Any], second: dict[str, Any] | None, pmap: dict[int,
 
 
 def _chip_context(lock: dict[str, Any], chips: dict[str, Any], planning_gw: int, policy: dict[str, Any]) -> dict[str, Any]:
-    chip_cfg = policy.get("chip_governance") or {}
-    active = None
-    if chip_cfg.get("wildcard_context_from_locked_authority") and lock.get("wildcard_active") and lock.get("authoritative_phase") == "pre_deadline_wc":
-        active = "wildcard"
-    used_this_gw = []
-    for row in chips.get("used") or []:
-        if int(row.get("event") or -1) == planning_gw:
-            used_this_gw.append(row.get("name"))
-    active_count = len(used_this_gw) + (1 if active and active not in used_this_gw else 0)
-    return {"planning_gw": planning_gw, "active_chip": active, "used_this_gw": used_this_gw, "single_chip_rule_respected": active_count <= 1, "auto_activate_chip": bool(chip_cfg.get("auto_activate_chip", False)), "ruleset_id": RULESET_ID}
+    context = resolve_locked_chip_context(lock, chips, planning_gw, policy)
+    context["ruleset_id"] = RULESET_ID
+    return context
 
 
 def build_lineup_decision(projections: dict[str, Any], lock: dict[str, Any], chips: dict[str, Any]) -> dict[str, Any]:
@@ -195,6 +189,7 @@ def build_lineup_decision(projections: dict[str, Any], lock: dict[str, Any], chi
             "captain_dnp_guard_applied": True,
             "bench_order_is_model_output_not_manual_lock": True,
             "squad_selection_scores_published_for_report_transparency": True,
+            "planning_chip_is_target_gw_scoped": True,
         },
     }
     return decision

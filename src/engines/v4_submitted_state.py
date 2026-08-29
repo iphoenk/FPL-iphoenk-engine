@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from datetime import datetime
 from pathlib import Path
 
+from src.engines import v4_backtest_store as store
 from src.utils import CONFIG, DATA, atomic_json, parse_dt, read_json, utcnow
 
 ARCHIVE_DIR = DATA / "validation" / "archive" / "submitted"
@@ -14,11 +13,6 @@ MANUAL_LINEUP = CONFIG / "manual_lineup.json"
 
 def submitted_state_path(gw: int) -> Path:
     return ARCHIVE_DIR / f"gw{int(gw):02d}.json"
-
-
-def _digest(payload: dict) -> str:
-    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(raw).hexdigest()
 
 
 def _official_core(picks: dict) -> dict:
@@ -110,7 +104,7 @@ def submitted_state_integrity(payload: dict, expected_gw: int | None = None) -> 
         return False, "submitted_shape_invalid"
     if official.get("captain") is None or official.get("vice_captain") is None:
         return False, "captaincy_missing"
-    if payload.get("submitted_sha256") != _digest(official):
+    if payload.get("submitted_sha256") != store._digest(official):
         return False, "submitted_digest_mismatch"
     deadline = parse_dt(payload.get("deadline_time"))
     captured = parse_dt(payload.get("captured_at"))
@@ -133,7 +127,7 @@ def persist_submitted_state(gw: int, deadline_time: str, picks: dict, now: datet
         ok, reason = submitted_state_integrity(existing, gw)
         if not ok:
             raise RuntimeError(f"existing submitted state failed integrity: {reason}")
-        if existing.get("submitted_sha256") != _digest(official):
+        if existing.get("submitted_sha256") != store._digest(official):
             raise RuntimeError("immutable submitted state conflicts with later Official payload")
         return existing
     baseline = _baseline_for_gw(gw)
@@ -146,7 +140,7 @@ def persist_submitted_state(gw: int, deadline_time: str, picks: dict, now: datet
         "official_truth": True,
         "immutable": True,
         "submitted": official,
-        "submitted_sha256": _digest(official),
+        "submitted_sha256": store._digest(official),
         "predeadline_baseline": baseline,
         "baseline_comparison": _comparison(baseline, official),
         "guardrails": {
@@ -158,6 +152,7 @@ def persist_submitted_state(gw: int, deadline_time: str, picks: dict, now: datet
             "chip_from_official_picks": True,
             "archive_append_only": True,
             "later_conflicting_payload_fails_closed": True,
+            "canonical_validation_digest_reused": True,
         },
     }
     ok, reason = submitted_state_integrity(payload, gw)

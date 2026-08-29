@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from src.engines.external_consensus import run as run_external_consensus
 from src.utils import DATA, atomic_json, read_json
 
 
@@ -10,6 +11,9 @@ def run() -> dict:
     source_health = read_json(DATA / "source_health.json", {})
     if not framework:
         raise RuntimeError("framework_health.json missing")
+
+    external_consensus = run_external_consensus()
+
     if not source_health:
         framework["external_sources"] = {
             "status": "UNAVAILABLE",
@@ -48,6 +52,19 @@ def run() -> dict:
             framework["recommendation_allowed"] = False
             framework["go_allowed"] = False
             framework.setdefault("critical_failed", []).append("SOURCE_LAYER_AUTHORITATIVE")
+
+    framework["external_consensus"] = {
+        "status": external_consensus.get("overall"),
+        "owner": external_consensus.get("owner"),
+        "observation_count": len(external_consensus.get("observations") or []),
+        "requires_official_refresh": bool(external_consensus.get("requires_official_refresh")),
+        "decision_blocking": False,
+        "advisory_only": True,
+        "outage_fail_neutral": bool((external_consensus.get("governance") or {}).get("outage_fail_neutral", True)),
+        "native_truth_mutated": bool((external_consensus.get("governance") or {}).get("native_truth_mutated", False)),
+        "majority_vote_used": bool((external_consensus.get("governance") or {}).get("majority_vote_used", False)),
+    }
+
     atomic_json(DATA / "framework_health.json", framework)
     latest = read_json(DATA / "latest.json", {})
     latest["source_health_summary"] = {
@@ -56,8 +73,19 @@ def run() -> dict:
         "challenger_live": (framework.get("external_sources") or {}).get("challenger_live", []),
         "structured_observations": (framework.get("external_sources") or {}).get("structured_observations", {}),
     }
+    latest["external_consensus_summary"] = {
+        "overall": external_consensus.get("overall"),
+        "observation_count": len(external_consensus.get("observations") or []),
+        "requires_official_refresh": bool(external_consensus.get("requires_official_refresh")),
+        "advisory_only": True,
+        "owner": external_consensus.get("owner"),
+    }
+    latest.setdefault("files", {})["external_consensus"] = "data/external_consensus.json"
     atomic_json(DATA / "latest.json", latest)
-    print(json.dumps(latest["source_health_summary"], ensure_ascii=False))
+    print(json.dumps({
+        "source_health": latest["source_health_summary"],
+        "external_consensus": latest["external_consensus_summary"],
+    }, ensure_ascii=False))
     return framework
 
 

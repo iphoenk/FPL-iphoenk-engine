@@ -1,8 +1,8 @@
 {
-  "schema_version": 2,
-  "model_id": "v5_decision_first_report_v2_schedule_governed",
+  "schema_version": 3,
+  "model_id": "v5_decision_first_report_v3_comparator_governed",
   "layers": ["USER_REPORT", "TECHNICAL_APPENDIX"],
-  "section_order": ["emission", "checkpoint_message", "decision", "changes_since_last_report", "owned_squad", "starting_xi", "captaincy", "chip", "price_radar", "external_watchlist", "engine_line", "action_board"],
+  "section_order": ["emission", "checkpoint_message", "decision", "changes_since_last_report", "owned_squad", "starting_xi", "captaincy", "chip", "price_radar", "external_watchlist", "owned_vs_challenger", "engine_line", "action_board"],
   "emission_governance": {
     "owner": "GOVERNANCE_SERVICE",
     "reporting_never_self_authorizes_visibility": true,
@@ -13,7 +13,7 @@
   "stable_report": {
     "enabled": true,
     "compact_when_no_material_change": true,
-    "material_delta_keys": ["squad", "starting_xi", "captain", "vice_captain", "chip", "price", "critical_health"]
+    "material_delta_keys": ["squad", "starting_xi", "captain", "vice_captain", "chip", "price", "owned_vs_challenger", "critical_health"]
   },
   "starting_xi": {
     "lock_margin": 0.75,
@@ -33,6 +33,13 @@
     "allowed_urgencies": ["HIGH", "CRITICAL"],
     "external_requires_full_dss_watchlist": true,
     "show_market_noise": false
+  },
+  "owned_challenger": {
+    "authority": "ADVISORY_ONLY",
+    "max_full_rows": 8,
+    "max_compact_rows": 3,
+    "never_overwrite_canonical_decision": true,
+    "material_delta_enabled": true
   },
   "action_board": {
     "max_items": 8,

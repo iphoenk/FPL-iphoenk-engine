@@ -4,6 +4,7 @@ import json
 
 from src.engines import compliance_audit, framework_health_audit, v4_validation_cycle
 from src.services import reconciliation_readiness_service
+from src.utils import DATA, read_json
 
 
 def run() -> dict:
@@ -17,8 +18,8 @@ def run() -> dict:
     lifecycle = v4_validation_cycle.cycle()
     readiness = reconciliation_readiness_service.run()
 
-    compliance = compliance_audit.run_audit()
     compliance_audit.main()
+    compliance = read_json(DATA / "compliance_audit.json", {})
 
     preflight = framework_health_audit.audit("preflight", strict=True)
     out = {

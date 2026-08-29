@@ -5,6 +5,7 @@ import pytest
 
 from src.runtime_v3.artifact_contracts import validate_artifact
 from src.runtime_v3.orchestrator import _attempt_promotion
+from src.utils import atomic_json
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -67,6 +68,22 @@ def test_malformed_nonisolated_artifact_also_fails_contract(tmp_path):
     accepted = _attempt_promotion("bad", result, spec, canonical)
     assert accepted["status"] == "FAILED"
     assert accepted["failure_stage"] == "artifact_validation"
+
+
+def test_decision_brief_is_compact_without_changing_json_semantics(tmp_path):
+    brief = tmp_path / "decision_brief.json"
+    other = tmp_path / "other.json"
+    payload = {"owned_15": [{"element": 1, "name": "Player"}], "watchlist_20": {"GK": []}}
+
+    atomic_json(brief, payload)
+    atomic_json(other, payload)
+
+    brief_text = brief.read_text(encoding="utf-8")
+    other_text = other.read_text(encoding="utf-8")
+    assert json.loads(brief_text) == payload
+    assert json.loads(other_text) == payload
+    assert "\n" not in brief_text
+    assert len(brief_text.encode("utf-8")) < len(other_text.encode("utf-8"))
 
 
 def test_runtime_registry_declares_artifact_integrity_policy():

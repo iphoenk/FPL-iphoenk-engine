@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from src.engines.competitive_load import run as run_competitive_load
 from src.engines.external_consensus import run as run_external_consensus
 from src.utils import DATA, atomic_json, read_json
 
@@ -13,6 +14,7 @@ def run() -> dict:
         raise RuntimeError("framework_health.json missing")
 
     external_consensus = run_external_consensus()
+    competitive_load = run_competitive_load()
 
     if not source_health:
         framework["external_sources"] = {
@@ -64,6 +66,17 @@ def run() -> dict:
         "native_truth_mutated": bool((external_consensus.get("governance") or {}).get("native_truth_mutated", False)),
         "majority_vote_used": bool((external_consensus.get("governance") or {}).get("majority_vote_used", False)),
     }
+    framework["competitive_load"] = {
+        "status": competitive_load.get("status"),
+        "owner": competitive_load.get("owner"),
+        "player_count": competitive_load.get("player_count"),
+        "state_counts": competitive_load.get("state_counts") or {},
+        "source_gw": competitive_load.get("source_gw"),
+        "advisory_only": True,
+        "decision_blocking": False,
+        "direct_xpts_mutation": False,
+        "direct_xmins_mutation": False,
+    }
 
     atomic_json(DATA / "framework_health.json", framework)
     latest = read_json(DATA / "latest.json", {})
@@ -80,11 +93,21 @@ def run() -> dict:
         "advisory_only": True,
         "owner": external_consensus.get("owner"),
     }
+    latest["competitive_load_summary"] = {
+        "status": competitive_load.get("status"),
+        "player_count": competitive_load.get("player_count"),
+        "state_counts": competitive_load.get("state_counts") or {},
+        "source_gw": competitive_load.get("source_gw"),
+        "advisory_only": True,
+        "owner": competitive_load.get("owner"),
+    }
     latest.setdefault("files", {})["external_consensus"] = "data/external_consensus.json"
+    latest["files"]["recent_competitive_load"] = "data/recent_competitive_load.json"
     atomic_json(DATA / "latest.json", latest)
     print(json.dumps({
         "source_health": latest["source_health_summary"],
         "external_consensus": latest["external_consensus_summary"],
+        "competitive_load": latest["competitive_load_summary"],
     }, ensure_ascii=False))
     return framework
 

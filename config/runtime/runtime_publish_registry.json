@@ -33,6 +33,7 @@
     "recent_tactical_form.json",
     "prior_season.json",
     "official_detail.json",
+    "rules_source_state.json",
     "stats/vaastav_previous_season.json",
     "stats/shots_current.json",
     "stats/playermatchstats_current.json"
@@ -92,6 +93,7 @@
     "report_artifact_registry.json",
     "auth.json",
     "rules_compliance.json",
+    "rules_source_state.json",
     "stats/vaastav_previous_season.json",
     "stats/shots_current.json",
     "stats/playermatchstats_current.json"

@@ -76,6 +76,10 @@ jobs:
             fi
           done < "$RUNNER_TEMP/hydrate-paths.txt"
 
+      - name: Refresh Official FPL rules drift baseline
+        if: steps.cadence.outputs.should_collect == 'true' && steps.cadence.outputs.visible_mode == 'NORMAL_DEEP_REVIEW'
+        run: python -m src.engines.rules_compliance_audit --check-remote
+
       - name: Validate architecture ownership contract
         if: steps.cadence.outputs.should_collect == 'true'
         run: python -m src.engines.architecture_contract_validate

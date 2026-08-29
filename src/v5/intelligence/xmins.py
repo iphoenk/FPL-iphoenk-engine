@@ -58,12 +58,20 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
     weighted_logit = sum(_logit(p) * w for _, p, w in signals if w > 0)
     total_weight = sum(w for _, _, w in signals if w > 0)
     raw_start = _sigmoid(weighted_logit / max(1e-6, total_weight))
-    rotation_risk = clamp(_f(context.get("rotation_risk"), 0.0), 0.0, 1.0)
+
+    observed_rotation_risk = clamp(_f(context.get("rotation_risk"), 0.0), 0.0, 1.0)
+    # Role-start probability and role-derived rotation risk are two views of the
+    # same evidence family. Applying both would double-penalize a player. Rotation
+    # risk only becomes a second multiplicative penalty when the caller explicitly
+    # certifies that it comes from independent evidence (for example manager news,
+    # verified congestion/rest information, or another separately governed source).
+    rotation_risk_independent = bool(context.get("rotation_risk_independent_evidence", False))
+    effective_rotation_risk = observed_rotation_risk if rotation_risk_independent else 0.0
     congestion_factor = clamp(_f(context.get("congestion_factor"), 1.0), 0.0, 1.0)
     start_probability = clamp(
         raw_start
         * availability
-        * (1.0 - rotation_risk * clamp(_f(cfg.get("rotation_risk_strength"), 0.55), 0.0, 1.0))
+        * (1.0 - effective_rotation_risk * clamp(_f(cfg.get("rotation_risk_strength"), 0.55), 0.0, 1.0))
         * congestion_factor,
         0.0,
         availability,
@@ -153,7 +161,9 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
         "minutes_std": round(minutes_std, 2),
         "availability": round(availability, 4),
         "availability_source": availability_source,
-        "rotation_risk": round(rotation_risk, 4),
+        "rotation_risk": round(observed_rotation_risk, 4),
+        "effective_rotation_risk": round(effective_rotation_risk, 4),
+        "rotation_risk_independent_evidence": rotation_risk_independent,
         "congestion_factor": round(congestion_factor, 4),
         "small_sample_guard": small_sample,
         "confidence": confidence,
@@ -170,5 +180,7 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
             "current_official_availability_is_authority": True,
             "historical_prior_is_shrinkage_evidence": True,
             "missing_historical_prior_is_not_fabricated": True,
+            "role_probability_and_role_rotation_risk_not_double_counted": True,
+            "independent_rotation_evidence_required_for_second_penalty": True,
         },
     }

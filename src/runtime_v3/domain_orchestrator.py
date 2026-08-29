@@ -3,10 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +22,7 @@ DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
 PERFORMANCE_PATH = DATA / "runtime_performance.json"
 DOMAIN_RUNTIME_ID = "v3-domain-pipeline-v1"
 _DOMAIN_RESULT_PREFIX = "V3_DOMAIN_RESULT="
+_PARALLEL_ISOLATED_DOMAINS = ("MODEL", "MARKET")
 
 
 def _load_domains() -> dict[str, Any]:
@@ -143,6 +146,7 @@ def _run_domain_process(
     cache_dir: Path,
     cache_ttl: int,
     timeout: int,
+    data_dir: Path = DATA,
 ) -> dict[str, Any]:
     cmd = [
         sys.executable,
@@ -160,7 +164,7 @@ def _run_domain_process(
         cmd.append("--deep-stats")
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT)
-    env["FPL_DATA_DIR"] = str(DATA)
+    env["FPL_DATA_DIR"] = str(data_dir)
     env["FPL_HTTP_CACHE_DIR"] = str(cache_dir)
     env["FPL_HTTP_CACHE_TTL_SECONDS"] = str(cache_ttl)
     env["FPL_EXECUTION_PROFILE"] = profile_name
@@ -195,6 +199,101 @@ def _run_domain_process(
     return payload
 
 
+def _domain_seed_paths(capabilities: list[str], services: dict[str, Any]) -> list[str]:
+    paths = {"latest.json", "incremental_reuse_state.json"}
+    for capability in capabilities:
+        spec = services[capability]
+        paths.update(str(value) for value in spec.get("inputs") or [])
+        paths.update(str(value) for value in spec.get("artifacts") or [])
+    return sorted(paths)
+
+
+def _seed_isolated_domain(domain_name: str, capabilities: list[str], services: dict[str, Any], temp_root: Path) -> Path:
+    workspace = temp_root / f"isolated-{domain_name.lower()}"
+    workspace.mkdir(parents=True, exist_ok=True)
+    for relative in _domain_seed_paths(capabilities, services):
+        source = DATA / relative
+        if not source.is_file():
+            continue
+        target = workspace / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+    return workspace
+
+
+def _promote_isolated_domain(
+    domain_name: str,
+    capabilities: list[str],
+    services: dict[str, Any],
+    workspace: Path,
+) -> dict[str, Any]:
+    canonical_latest = read_json(DATA / "latest.json", {})
+    workspace_latest = read_json(workspace / "latest.json", {})
+    if not isinstance(canonical_latest, dict) or not isinstance(workspace_latest, dict):
+        raise RuntimeError(f"{domain_name} latest.json fan-in requires object payloads")
+
+    promotion_plan: list[tuple[str, Path]] = []
+    for capability in capabilities:
+        for relative in services[capability].get("artifacts") or []:
+            name = str(relative)
+            source = workspace / name
+            if not source.is_file():
+                raise RuntimeError(f"{domain_name} validated artifact missing before fan-in: {name}")
+            promotion_plan.append((name, source))
+
+    canonical_files = canonical_latest.setdefault("files", {})
+    workspace_files = workspace_latest.get("files") if isinstance(workspace_latest.get("files"), dict) else {}
+    merged_latest_keys: list[str] = []
+    merged_file_keys: list[str] = []
+    for capability in capabilities:
+        spec = services[capability]
+        for key in spec.get("latest_keys") or []:
+            key = str(key)
+            if key in workspace_latest:
+                canonical_latest[key] = workspace_latest[key]
+                merged_latest_keys.append(key)
+        for key in spec.get("latest_file_keys") or []:
+            key = str(key)
+            if key in workspace_files:
+                canonical_files[key] = workspace_files[key]
+                merged_file_keys.append(key)
+
+    workspace_state = read_json(workspace / "incremental_reuse_state.json", {})
+    canonical_state = read_json(DATA / "incremental_reuse_state.json", {})
+    if not isinstance(canonical_state, dict):
+        canonical_state = {}
+    if isinstance(workspace_state, dict) and isinstance(workspace_state.get("services"), dict):
+        canonical_state.setdefault("schema_version", workspace_state.get("schema_version", 1))
+        canonical_state.setdefault("registry", workspace_state.get("registry", "V3_INCREMENTAL_REUSE_STATE_V1"))
+        canonical_services = canonical_state.setdefault("services", {})
+        for capability in capabilities:
+            if capability in workspace_state["services"]:
+                canonical_services[capability] = workspace_state["services"][capability]
+
+    copied: list[str] = []
+    copied_bytes = 0
+    for name, source in promotion_plan:
+        target = DATA / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        staging = target.with_suffix(target.suffix + f".{domain_name.lower()}.fan-in.tmp")
+        shutil.copy2(source, staging)
+        os.replace(staging, target)
+        copied.append(name)
+        copied_bytes += target.stat().st_size
+    atomic_json(DATA / "latest.json", canonical_latest)
+    if canonical_state:
+        atomic_json(DATA / "incremental_reuse_state.json", canonical_state)
+
+    return {
+        "domain": domain_name,
+        "workspace_isolated": True,
+        "promoted_artifacts": sorted(set(copied)),
+        "promoted_bytes": copied_bytes,
+        "merged_latest_keys": sorted(set(merged_latest_keys)),
+        "merged_latest_file_keys": sorted(set(merged_file_keys)),
+    }
+
+
 def _reuse_diagnostic_summary(name: str, capability_results: dict[str, dict[str, Any]], profile_name: str) -> dict[str, Any]:
     row = capability_results.get(name) or {}
     before = row.get("reuse_diagnostic_before")
@@ -210,6 +309,37 @@ def _reuse_diagnostic_summary(name: str, capability_results: dict[str, dict[str,
         "decision_time": False,
         "execution_status": row.get("status"),
         "reuse_mode": row.get("reuse_mode"),
+    }
+
+
+def _accept_domain_result(
+    domain_name: str,
+    domain_payload: dict[str, Any],
+    capabilities: list[str],
+    services: dict[str, Any],
+    capability_results: dict[str, dict[str, Any]],
+    completed_capabilities: set[str],
+    domain_results: dict[str, dict[str, Any]],
+    *,
+    fan_in: dict[str, Any] | None = None,
+) -> None:
+    results = domain_payload.get("results") or {}
+    for capability in capabilities:
+        result = results.get(capability)
+        if not isinstance(result, dict):
+            raise RuntimeError(f"domain {domain_name} omitted capability result {capability}")
+        result["execution_domain"] = domain_name
+        capability_results[capability] = result
+        if result.get("status") not in {"SUCCESS", "REUSED"} and bool(services[capability].get("critical", True)):
+            raise RuntimeError(f"critical capability {capability} failed in {domain_name}: {result.get('error')}")
+        completed_capabilities.add(capability)
+    domain_results[domain_name] = {
+        "status": "SUCCESS",
+        "elapsed_ms": domain_payload.get("elapsed_ms"),
+        "process_elapsed_ms": domain_payload.get("process_elapsed_ms"),
+        "capabilities": capabilities,
+        "workspace_isolated": bool(fan_in),
+        "fan_in": fan_in,
     }
 
 
@@ -230,6 +360,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
     domain_results: dict[str, dict[str, Any]] = {}
     completed_capabilities: set[str] = set()
     completed_domains: set[str] = set()
+    parallel_pairs_executed: list[list[str]] = []
 
     with tempfile.TemporaryDirectory(prefix="fpl-v3-domain-") as tmp:
         temp_root = Path(tmp)
@@ -239,8 +370,64 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
 
         pending = list(domain_registry["domains"].keys())
         while pending:
+            parallel_ready = all(
+                domain in pending
+                and set(domain_registry["domains"][domain].get("depends_on") or []).issubset(completed_domains)
+                for domain in _PARALLEL_ISOLATED_DOMAINS
+            )
+            if parallel_ready:
+                workspaces: dict[str, Path] = {}
+                capabilities_by_domain: dict[str, list[str]] = {}
+                for domain_name in _PARALLEL_ISOLATED_DOMAINS:
+                    capabilities = [str(value) for value in domain_registry["domains"][domain_name].get("capabilities") or []]
+                    capabilities_by_domain[domain_name] = capabilities
+                    workspaces[domain_name] = _seed_isolated_domain(domain_name, capabilities, services, temp_root)
+                pair_started = time.perf_counter()
+                with ThreadPoolExecutor(max_workers=2, thread_name_prefix="v3-domain") as pool:
+                    futures = {
+                        domain_name: pool.submit(
+                            _run_domain_process,
+                            domain_name,
+                            mode=mode,
+                            stats=stats,
+                            deep_stats=deep_stats,
+                            profile_name=profile_name,
+                            cache_dir=cache_dir,
+                            cache_ttl=cache_ttl,
+                            timeout=timeout,
+                            data_dir=workspaces[domain_name],
+                        )
+                        for domain_name in _PARALLEL_ISOLATED_DOMAINS
+                    }
+                    payloads = {domain_name: futures[domain_name].result() for domain_name in _PARALLEL_ISOLATED_DOMAINS}
+                pair_wall_ms = round((time.perf_counter() - pair_started) * 1000.0, 3)
+                for domain_name in _PARALLEL_ISOLATED_DOMAINS:
+                    fan_in = _promote_isolated_domain(
+                        domain_name,
+                        capabilities_by_domain[domain_name],
+                        services,
+                        workspaces[domain_name],
+                    )
+                    fan_in["parallel_pair_wall_ms"] = pair_wall_ms
+                    _accept_domain_result(
+                        domain_name,
+                        payloads[domain_name],
+                        capabilities_by_domain[domain_name],
+                        services,
+                        capability_results,
+                        completed_capabilities,
+                        domain_results,
+                        fan_in=fan_in,
+                    )
+                    completed_domains.add(domain_name)
+                    pending.remove(domain_name)
+                parallel_pairs_executed.append(list(_PARALLEL_ISOLATED_DOMAINS))
+                continue
+
             progressed = False
             for domain_name in list(pending):
+                if domain_name in _PARALLEL_ISOLATED_DOMAINS:
+                    continue
                 domain_spec = domain_registry["domains"][domain_name]
                 if not set(domain_spec.get("depends_on") or []).issubset(completed_domains):
                     continue
@@ -265,25 +452,15 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                     cache_ttl=cache_ttl,
                     timeout=timeout,
                 )
-                results = domain_payload.get("results") or {}
-                for capability in capabilities:
-                    result = results.get(capability)
-                    if not isinstance(result, dict):
-                        raise RuntimeError(f"domain {domain_name} omitted capability result {capability}")
-                    result["execution_domain"] = domain_name
-                    capability_results[capability] = result
-                    if result.get("status") not in {"SUCCESS", "REUSED"} and bool(services[capability].get("critical", True)):
-                        raise RuntimeError(
-                            f"critical capability {capability} failed in {domain_name}: {result.get('error')}"
-                        )
-                    completed_capabilities.add(capability)
-
-                domain_results[domain_name] = {
-                    "status": "SUCCESS",
-                    "elapsed_ms": domain_payload.get("elapsed_ms"),
-                    "process_elapsed_ms": domain_payload.get("process_elapsed_ms"),
-                    "capabilities": capabilities,
-                }
+                _accept_domain_result(
+                    domain_name,
+                    domain_payload,
+                    capabilities,
+                    services,
+                    capability_results,
+                    completed_capabilities,
+                    domain_results,
+                )
                 completed_domains.add(domain_name)
                 pending.remove(domain_name)
                 progressed = True
@@ -327,6 +504,9 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             "process_count": len(domain_results),
             "one_process_per_execution_domain": True,
             "business_ownership_unchanged": True,
+            "isolated_parallel_domains": list(_PARALLEL_ISOLATED_DOMAINS),
+            "parallel_pairs_executed": parallel_pairs_executed,
+            "deterministic_fan_in": True,
         }
         performance["runtime_id"] = DOMAIN_RUNTIME_ID
         performance["architecture"] = domain_registry["architecture"]
@@ -334,6 +514,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         performance["capability_owner_count"] = len(capability_results)
         performance["execution_domains"] = domain_results
         performance["cross_capability_copy_promotion"] = False
+        performance["isolated_domain_fan_in_promotion"] = bool(parallel_pairs_executed)
         performance["ephemeral_artifacts_removed"] = legacy._cleanup_ephemeral(service_registry, DATA)
         atomic_json(PERFORMANCE_PATH, performance)
 
@@ -347,7 +528,10 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             "capability_owner_count": len(capability_results),
             "shared_canonical_domain_workspace": True,
             "one_process_per_execution_domain": True,
+            "isolated_parallel_domains": list(_PARALLEL_ISOLATED_DOMAINS),
+            "deterministic_fan_in": True,
             "cross_capability_copy_promotion": False,
+            "isolated_domain_fan_in_promotion": bool(parallel_pairs_executed),
             "total_wall_ms": round(total_ms, 3),
         })
         atomic_json(DATA / "latest.json", latest)

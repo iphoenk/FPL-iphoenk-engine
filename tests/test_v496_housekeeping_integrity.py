@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 from pathlib import Path
 
@@ -9,6 +10,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _module_path(module: str) -> Path:
     return ROOT / (module.replace(".", "/") + ".py")
+
+
+def _imports(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    imports: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.add(node.module)
+    return imports
 
 
 def test_every_registered_service_has_real_module_matching_command_and_contracts():
@@ -68,6 +80,13 @@ def test_enhancement_decision_vocabulary_matches_canonical_arbitration():
     assert "HOLD/REVIEW/CHANGE" in capabilities
     assert "GO/HOLD/WAIT/REJECT" not in capabilities
     assert "src/engines/v4_decision_arbitration.py" in row["required_files"]
+
+
+def test_duplicate_legacy_calibration_module_is_removed():
+    assert not (ROOT / "src/models/calibration.py").exists()
+    assert (ROOT / "src/models/metrics.py").is_file()
+    imports = set().union(*(_imports(path) for path in (ROOT / "src").rglob("*.py")))
+    assert "src.models.calibration" not in imports
 
 
 def test_registry_cardinality_and_ids_are_canonical():

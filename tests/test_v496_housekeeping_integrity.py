@@ -77,11 +77,13 @@ def test_support_modules_are_not_accidental_business_microservices():
     registered = {row["module"] for row in registry["services"]}
     support_only = {
         "src.services.orchestrator",
+        "src.services.hot_orchestrator",
         "src.services.contracts",
         "src.services.checkpoint_timing_probe",
         "src.services.runtime_publish_stamp",
         "src.services.competitive_load_service",
         "src.services.architecture_guard_service",
+        "src.services.prediction_model_cache",
     }
     assert not (registered & support_only)
 

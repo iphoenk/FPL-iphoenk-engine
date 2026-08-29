@@ -11,6 +11,11 @@ from src.services.contracts import file_digest
 from src.services.prediction_model_cache import build_predictions_cached, last_status as prediction_cache_status
 from src.utils import DATA, append_jsonl, atomic_json, iso_now, read_json
 
+# Compatibility seam retained for tests and callers that patch the prediction
+# builder at the service boundary. Production points this alias at the exact
+# semantic cache wrapper.
+build_predictions = build_predictions_cached
+
 RUNTIME = DATA / "runtime"
 SNAPSHOT = RUNTIME / "snapshot.v1.json"
 ENRICHMENT = RUNTIME / "enrichment.v1.json"
@@ -146,7 +151,7 @@ def run():
     generated = iso_now()
 
     t = perf_counter()
-    predictions = build_predictions_cached(bootstrap, fixtures, generated, stats_gw=enrichment.get("stats_gw"))
+    predictions = build_predictions(bootstrap, fixtures, generated, stats_gw=enrichment.get("stats_gw"))
     base_prediction_ms = round((perf_counter() - t) * 1000, 2)
     cache_status = prediction_cache_status()
 

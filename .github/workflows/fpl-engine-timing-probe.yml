@@ -41,6 +41,9 @@ jobs:
   core:
     needs: probe
     if: needs.probe.outputs.run_full == 'true'
+    concurrency:
+      group: fpl-iphoenk-v4-gate
+      cancel-in-progress: false
     uses: ./.github/workflows/fpl-engine-core.yml
     permissions:
       contents: write

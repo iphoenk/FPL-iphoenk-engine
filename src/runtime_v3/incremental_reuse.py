@@ -36,6 +36,17 @@ def _normalize(value: Any, *, top_level: bool = False) -> Any:
     return value
 
 
+def _semantic_json(name: str, value: Any) -> Any:
+    value = _normalize(value, top_level=True)
+    if name == "official_snapshot.json" and isinstance(value, dict):
+        return {
+            "phase": value.get("phase"),
+            "bootstrap": value.get("bootstrap"),
+            "fixtures": value.get("fixtures"),
+        }
+    return value
+
+
 def _digest_path(name: str) -> str | None:
     path = ROOT / name if name.startswith("config/") else DATA / name
     if not path.is_file():
@@ -44,7 +55,12 @@ def _digest_path(name: str) -> str | None:
     if path.suffix == ".json":
         try:
             value = json.loads(raw.decode("utf-8"))
-            raw = json.dumps(_normalize(value, top_level=True), sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+            raw = json.dumps(
+                _semantic_json(name, value),
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
         except Exception:
             pass
     return hashlib.sha256(raw).hexdigest()

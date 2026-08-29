@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -172,9 +173,39 @@ def _semantic_json(service_name: str, name: str, value: Any) -> Any:
     return value
 
 
+def _valid_hex_digest(value: str, lengths: tuple[int, ...]) -> bool:
+    return len(value) in lengths and all(ch in "0123456789abcdefABCDEF" for ch in value)
+
+
+def _deployment_code_digest() -> tuple[str | None, str]:
+    explicit = os.getenv("FPL_DEPLOYMENT_CODE_DIGEST", "").strip()
+    if _valid_hex_digest(explicit, (64,)):
+        return explicit.lower(), "FPL_DEPLOYMENT_CODE_DIGEST"
+
+    github_sha = os.getenv("GITHUB_SHA", "").strip()
+    if _valid_hex_digest(github_sha, (40, 64)):
+        normalized = hashlib.sha256(f"git:{github_sha.lower()}".encode("utf-8")).hexdigest()
+        return normalized, "GITHUB_SHA"
+    return None, "SOURCE_TREE_HASH"
+
+
+def source_tree_identity() -> dict[str, str | bool | None]:
+    digest, source = _deployment_code_digest()
+    return {
+        "source": source,
+        "digest_prefix": digest[:12] if digest else None,
+        "precomputed": digest is not None,
+    }
+
+
 @lru_cache(maxsize=8)
 def _digest_source_tree(path_text: str) -> str:
     path = Path(path_text)
+    if path.resolve() == (ROOT / "src").resolve():
+        deployment_digest, _ = _deployment_code_digest()
+        if deployment_digest:
+            return deployment_digest
+
     digest = hashlib.sha256()
     for child in sorted(p for p in path.rglob("*.py") if p.is_file()):
         digest.update(str(child.relative_to(path)).encode("utf-8"))

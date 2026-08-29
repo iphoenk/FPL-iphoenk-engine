@@ -5,7 +5,8 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "83873ea33ca631344212a792a57911fad7e1575b",
+    "production_main_sha": "7af907fc1f994f32c7c65d8fbf7eb3e40436c39a",
+    "production_code_commit": "83873ea33ca631344212a792a57911fad7e1575b",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-seven-domain-live-safe-reuse-prediction-freeze-recovery",
@@ -105,6 +106,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is capability-reanchored to current production main 83873ea3 / V3.39 runtime schema 49. The frozen football-truth baseline remains V3.20. Current V3 decision-quality and 11-domain/6-phase topology changes are reconciled by explicit V5 capability evidence rather than code or topology-name copying. Authenticated Official FPL is the preferred current pre-deadline team authority when available. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
+    "reason": "V5.0.0-beta.4 is capability-reanchored to current production main 7af907fc / V3.39 runtime schema 49, with code-bearing 11-domain topology commit 83873ea3. The frozen football-truth baseline remains V3.20. Current V3 decision-quality and 11-domain/6-phase topology changes are reconciled by explicit V5 capability evidence rather than code or topology-name copying. Authenticated Official FPL is the preferred current pre-deadline team authority when available. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
   }
 }

@@ -11,10 +11,11 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     env:
       PYTHONPATH: ${{ github.workspace }}
       FPL_AUTH_MODE: disabled
+      RUNTIME_BRANCH: runtime-data
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,3 +34,25 @@ jobs:
         run: python -m src.runtime_v3.registry_compiler --check
       - name: Run full regression suite
         run: python -m pytest -q
+      - name: Hydrate operational LKG read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}" || true
+          python - <<'PY' > "$RUNNER_TEMP/hydrate-paths.txt"
+          import json
+          cfg=json.load(open('config/runtime/runtime_publish_registry.json'))
+          for path in cfg.get('hydrate_paths', []):
+              print(path)
+          PY
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            if git cat-file -e "origin/${RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
+              mkdir -p "data/$(dirname "$file")"
+              git show "origin/${RUNTIME_BRANCH}:data/${file}" > "data/${file}"
+            fi
+          done < "$RUNNER_TEMP/hydrate-paths.txt"
+      - name: Composite FULL and FAST acceptance
+        run: python -m src.runtime_v3.release_acceptance
+      - name: Benchmark validated warm serving
+        run: python -m src.runtime_v3.unified_fastpath --benchmark

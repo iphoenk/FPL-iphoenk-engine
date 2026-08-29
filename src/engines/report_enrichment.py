@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.engines.decision_arbitration import arbitrate_decisions, assert_decision_consistency
 from src.engines.owned_challenger_comparator import build as build_owned_challenger_comparator
 from src.engines.report_time_intelligence import run as run_report_time_intelligence
 from src.utils import DATA, atomic_json, read_json
@@ -138,13 +139,17 @@ def _comparator_user_block(payload: dict[str, Any]) -> dict[str, Any]:
         "governed_watchlist_count": payload.get("governed_watchlist_count"),
         "emerging_candidate_count": payload.get("emerging_candidate_count"),
         "state_counts": payload.get("state_counts") or {},
+        "actionability_counts": payload.get("actionability_counts") or {},
         "top_comparisons": [
             {
                 "player_out": row.get("player_out"),
                 "player_in": row.get("player_in"),
                 "challenger_type": row.get("challenger_type"),
                 "state": row.get("state"),
+                "horizon_3gw": (row.get("horizons") or {}).get("3"),
                 "horizon_5gw": (row.get("horizons") or {}).get("5"),
+                "actionability": row.get("actionability") or {},
+                "reason": row.get("reason"),
                 "missing_critical_evidence": row.get("missing_critical_evidence") or [],
                 "confidence": row.get("confidence"),
             }
@@ -289,6 +294,12 @@ def run() -> dict[str, Any]:
     tech["audit"]["owned_challenger_comparator_is_advisory_only"] = bool(comparator.get("advisory_only"))
     tech["audit"]["owned_challenger_comparator_reuses_governed_watchlist"] = int(comparator.get("governed_watchlist_count") or 0) == 20
     _apply_readiness_and_actionability(user, tech, latest, report_time)
+
+    arbitration = arbitrate_decisions(user, lineup, comparator)
+    user["decision_consistency"] = arbitration
+    tech["decision_arbitration"] = arbitration
+    tech["audit"]["decision_consistency_arbitrated_once"] = True
+    assert_decision_consistency(arbitration)
 
     atomic_json(DATA / "user_report.json", user)
     atomic_json(DATA / "technical_appendix.json", tech)

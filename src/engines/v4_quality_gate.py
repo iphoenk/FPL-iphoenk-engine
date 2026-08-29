@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import statistics
 
 from src.engines import v4_quality_gate_legacy as legacy
 from src.services.contracts import file_digest
@@ -70,6 +71,93 @@ def _assert_framework_health() -> tuple[dict, dict]:
         assert post.get("prediction_health") == "GREEN"
         assert post.get("decision_engine") == "HEALTHY"
     return pre, post
+
+
+def _assert_competition_evidence(players: list[dict], evidence: dict) -> None:
+    """Validate competition evidence without requiring an artificial mixed population.
+
+    Every player must expose the competition inputs. Zero adjustments are valid only
+    when the current data contains no governed competition/squad-depth pressure.
+    Conversely, if pressure exists, at least one adjustment must be applied. It is
+    legitimate for every player to receive a bounded adjustment when every team has
+    non-zero squad-depth pressure, so the gate must not require an unadjusted player.
+    """
+    assert players
+    priors = [row.get("priors") or {} for row in players]
+    assert all("competition_factor" in row for row in priors)
+    assert all("competition_pressure" in row for row in priors)
+    assert all("squad_depth_pressure" in row for row in priors)
+    assert all(0.72 <= float(row.get("competition_factor") or 0) <= 1.0 for row in priors)
+    assert all(0.0 <= float(row.get("competition_pressure") or 0) <= 1.0 for row in priors)
+    assert all(0.0 <= float(row.get("squad_depth_pressure") or 0) <= 0.3 for row in priors)
+
+    adjustments = int(evidence.get("role_competition_adjustments", 0) or 0)
+    variants = int(evidence.get("role_competition_factor_variants", 0) or 0)
+    pressure_rows = sum(
+        float(row.get("competition_pressure") or 0) > 0
+        or float(row.get("squad_depth_pressure") or 0) > 0
+        for row in priors
+    )
+    assert 0 <= adjustments <= len(players)
+    assert variants >= 1
+    if pressure_rows:
+        assert adjustments > 0
+    else:
+        assert adjustments == 0
+        assert variants == 1
+
+
+def _assert_prediction_and_validation(health: dict) -> tuple[dict, dict]:
+    lifecycle = legacy._load("validation/lifecycle_v4.json")
+    readiness = legacy._load("validation/reconciliation_readiness_v4.json")
+    predictions = legacy._load("predictions_v4.json")
+    assert readiness.get("status") == "PASS"
+    assert readiness.get("blockers") == []
+    assert (readiness.get("checks") or {}).get("snapshot_integrity", {}).get("pass") is True
+    assert (readiness.get("checks") or {}).get("ownership_chain", {}).get("pass") is True
+    assert (readiness.get("guardrails") or {}).get("read_only_audit") is True
+    assert (readiness.get("guardrails") or {}).get("official_api_refetch") is False
+    assert (readiness.get("guardrails") or {}).get("reconciliation_truth_not_reimplemented") is True
+    legacy._assert_version(lifecycle, "validation lifecycle", 4943, "v4.9.3-validation-lifecycle")
+    legacy._assert_version(predictions, "predictions", 492, "v4.9.2-truthful-health", field="model_version")
+    assert lifecycle.get("status") == "PASS"
+    lifecycle_guardrails = lifecycle.get("guardrails") or {}
+    assert lifecycle_guardrails.get("started_from_official_stats_starts_only") is True
+    assert lifecycle_guardrails.get("minutes_never_infer_started") is True
+    assert lifecycle_guardrails.get("missing_starts_excluded_from_start_brier") is True
+    assert predictions.get("point_in_time") is True
+    players = predictions.get("players") or []
+    assert len(players) >= 500
+    assert lifecycle.get("eligibility", {}).get("model_version") == predictions.get("model_version")
+    core = {row["id"]: row for row in health["dss_core"]["items"]}
+    extensions = {row["id"]: row for row in health["dss_extensions"]["items"]}
+    assert core["DSS-16"]["status"] == "ACTIVE", core["DSS-16"]
+    assert core["DSS-29"]["status"] == "ACTIVE", core["DSS-29"]
+    eligible = lifecycle.get("eligibility", {}).get("eligible_samples")
+    if eligible is not None:
+        if int(eligible) == 0:
+            assert core["DSS-44"]["status"] == "WARMUP"
+            assert extensions["DSS-X12"]["status"] == "WARMUP"
+        else:
+            assert core["DSS-44"]["status"] == "ACTIVE"
+            assert extensions["DSS-X12"]["status"] == "ACTIVE"
+    coverage = predictions.get("input_coverage") or {}
+    assert coverage.get("advanced_matched", 0) > 0
+    assert coverage.get("last_season_matched", 0) > 0
+    assert coverage.get("advanced_decision_used_ratio", 0) >= 0.25
+    evidence = predictions.get("capability_evidence") or {}
+    assert evidence.get("dynamic_opponent_fixtures", 0) > 0
+    _assert_competition_evidence(players, evidence)
+    fixture_run_complete = sum(
+        (row.get("fixture_run") or {}).get("source") == "official_fpl_fixture_adjustment"
+        and (row.get("fixture_run") or {}).get("decision_usage") == "multi_horizon_projection_context"
+        for row in players
+    )
+    assert fixture_run_complete == len(players)
+    all_x = [fx["xpts"] for row in players for fx in row.get("fixtures", [])]
+    assert all_x and statistics.median(all_x) < 8
+    assert sum(x > 15 for x in all_x) / len(all_x) < 0.03
+    return lifecycle, predictions
 
 
 def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
@@ -157,6 +245,7 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
 
 
 legacy._assert_framework_health = _assert_framework_health
+legacy._assert_prediction_and_validation = _assert_prediction_and_validation
 legacy._assert_orchestration = _assert_orchestration
 _assert_version = legacy._assert_version
 run = legacy.run

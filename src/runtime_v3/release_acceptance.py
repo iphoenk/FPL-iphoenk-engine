@@ -6,6 +6,9 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
+
+from src.utils import DATA, read_json
 
 
 @dataclass(frozen=True)
@@ -32,14 +35,35 @@ def integration_gates() -> tuple[Gate, ...]:
     )
 
 
+def _runtime_breakdown() -> dict:
+    payload = read_json(DATA / "runtime_performance.json", {})
+    services = payload.get("services") if isinstance(payload, dict) else {}
+    if not isinstance(services, dict):
+        return {}
+    return {
+        name: {
+            "status": row.get("status"),
+            "elapsed_ms": row.get("elapsed_ms"),
+            "reuse_mode": row.get("reuse_mode"),
+            "batched": row.get("single_process_module_batch") is True,
+            "commands_ms": [command.get("elapsed_ms") for command in row.get("commands") or []],
+        }
+        for name, row in services.items()
+    }
+
+
 def run() -> dict:
     results = []
     started = time.perf_counter()
+    runtime_gates = {"full_runtime", "fast_cold_warmup", "fast_runtime"}
     for gate in integration_gates():
         gate_start = time.perf_counter()
         proc = subprocess.run(gate.command, check=False)
         elapsed = round((time.perf_counter() - gate_start) * 1000.0, 3)
-        results.append({"gate": gate.name, "returncode": proc.returncode, "elapsed_ms": elapsed})
+        row = {"gate": gate.name, "returncode": proc.returncode, "elapsed_ms": elapsed}
+        if gate.name in runtime_gates:
+            row["service_breakdown"] = _runtime_breakdown()
+        results.append(row)
         if proc.returncode != 0:
             result = {"status": "FAIL", "failed_gate": gate.name, "gates": results, "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3)}
             print(json.dumps(result, ensure_ascii=False))
@@ -56,6 +80,7 @@ def run() -> dict:
             "cold_then_warm_fast_required": True,
             "seven_domain_runtime_required": True,
             "same_input_material_equivalence_required": True,
+            "per_capability_timing_is_release_observable": True,
         },
     }
     print(json.dumps(result, ensure_ascii=False))

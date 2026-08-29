@@ -1,0 +1,11 @@
+{
+  "source": "FPL-Core-Insights",
+  "dataset": "shots",
+  "season": "2026-2027",
+  "gw": 2,
+  "fetched_at": "2026-08-29T03:47:03.770954+00:00",
+  "source_url": "https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/2026-2027/By%20Gameweek/GW2/shots.csv",
+  "row_count": 0,
+  "schema_columns": [],
+  "rows": []
+}

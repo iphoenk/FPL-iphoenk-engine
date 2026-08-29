@@ -3,14 +3,14 @@
   "release": "4.9.6",
   "service": "reconciliation_readiness",
   "status": "PASS",
-  "target_gw": 2,
+  "target_gw": 3,
   "stage": "PREDEADLINE_READY",
   "ready_for_reconciliation_now": false,
   "checks": {
     "snapshot_integrity": {
       "pass": true,
       "reason": null,
-      "players": 614
+      "players": 622
     },
     "validation_lifecycle": {
       "pass": true,
@@ -28,20 +28,20 @@
     },
     "submitted_picks": {
       "pass": false,
-      "submitted_gw": 1,
+      "submitted_gw": 2,
       "picks": 0,
-      "expected_gw": 2
+      "expected_gw": 3
     },
     "finished_gw": {
       "pass": false,
       "last_finished_gw": 1,
-      "expected_gw": 2
+      "expected_gw": 3
     },
     "official_actuals": {
       "pass": false,
-      "scoring_gw": 1,
+      "scoring_gw": 2,
       "elements": 0,
-      "expected_gw": 2
+      "expected_gw": 3
     },
     "reconciliation_archive": {
       "pass": false,

@@ -1,32 +1,110 @@
 {
   "schema_version": 495,
   "engine": "v4.9.5-checkpoint-governance-human-report",
-  "evaluated_at": "2026-08-28T06:35:53.749661+00:00",
+  "evaluated_at": "2026-08-29T03:47:07.652502+00:00",
   "checkpoint_context": {
-    "policy_id": "REGULAR_MONITOR",
-    "label": "Regular Tactical Monitor",
+    "policy_id": "MATCHDAY_LIVE",
+    "label": "Consolidated Match Mode",
+    "operating_mode": "MATCH_MODE",
+    "requested_run_mode": "daily",
     "run_mode": "daily",
-    "as_of": "2026-08-28T06:35:49.737565+00:00",
-    "local_as_of": "2026-08-28T13:35:49.737565+07:00",
+    "as_of": "2026-08-29T03:47:03.297255+00:00",
+    "local_as_of": "2026-08-29T10:47:03.297255+07:00",
     "timezone": "Asia/Jakarta",
-    "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 654.2,
+    "deadline_time": "2026-09-04T17:30:00+00:00",
+    "minutes_to_deadline": 9462.9,
+    "deadline_day_active": false,
     "is_final_review": false,
+    "final_review_target_local": "2026-09-04T21:30:00+07:00",
     "post_final_emergency_only": false,
+    "post_deadline_reconciliation": false,
+    "is_live_match": true,
+    "is_master_hourly_checkpoint": true,
+    "timing_probe_only": false,
+    "visible_output_authorized": true,
+    "full_visible_report_required": false,
+    "no_material_change_must_still_report": false,
+    "fresh_source_sweep_required": false,
+    "direct_official_refresh_max_age_minutes": null,
+    "price_radar_required": false,
+    "duplicate_report_forbidden": true,
+    "absorbed_policy_ids": [],
+    "collision_merged": false,
+    "deadline_report_continues_after_final_review": false,
     "is_simulation": false,
-    "max_snapshot_age_minutes": 90,
-    "recommended_refresh_minutes": 180,
+    "max_snapshot_age_minutes": 5,
+    "recommended_refresh_minutes": 1,
+    "payload": null,
+    "payloads": [],
+    "roster_contract": {},
     "report_scope": [
       "personal_gw_scorecard",
-      "gate0",
-      "locked_15",
-      "availability",
-      "xmins",
-      "price_radar",
-      "challengers"
+      "official_picks",
+      "event_live",
+      "owned_playing",
+      "captain",
+      "vice_captain",
+      "goals",
+      "assists",
+      "clean_sheets",
+      "cards",
+      "bonus_bps",
+      "defcon",
+      "minutes",
+      "starter_sub_state",
+      "dnp",
+      "autosubs",
+      "captaincy_transfer",
+      "injuries",
+      "tactical_role",
+      "watchlist_performance",
+      "emerging_challenger",
+      "next_gw_implications",
+      "fact_vs_model_separation"
     ],
-    "registry": "fpl_checkpoint_policy_v1",
-    "registry_schema_version": 1
+    "registry": "fpl_checkpoint_policy_v2_time_schedule_governance",
+    "registry_schema_version": 2
+  },
+  "emission": {
+    "status": "VISIBLE_AUTHORIZED",
+    "authorized": true,
+    "visible_report_count": 1,
+    "max_visible_reports": 1,
+    "single_consolidated_report": true,
+    "duplicate_reports_forbidden": true,
+    "policy_id": "MATCHDAY_LIVE",
+    "collision_merged": false,
+    "absorbed_policy_ids": [],
+    "full_report_required": false,
+    "must_report_when_no_material_change": false,
+    "fresh_source_sweep_required": false,
+    "price_radar_required": false,
+    "report_scope": [
+      "personal_gw_scorecard",
+      "official_picks",
+      "event_live",
+      "owned_playing",
+      "captain",
+      "vice_captain",
+      "goals",
+      "assists",
+      "clean_sheets",
+      "cards",
+      "bonus_bps",
+      "defcon",
+      "minutes",
+      "starter_sub_state",
+      "dnp",
+      "autosubs",
+      "captaincy_transfer",
+      "injuries",
+      "tactical_role",
+      "watchlist_performance",
+      "emerging_challenger",
+      "next_gw_implications",
+      "fact_vs_model_separation"
+    ],
+    "suppression_allowed": true
   },
   "action_state": "HOLD",
   "headline": "HOLD",
@@ -41,42 +119,38 @@
     "why": [
       "Struktur tim saat ini masih cukup layak untuk dipertahankan.",
       "Ada paket alternatif yang menarik, tetapi belum cukup kuat untuk memaksa perubahan sekarang.",
-      "Perbedaan proyeksi XI saat ini terhadap alternatif sekitar 0.94 poin, sehingga masih masuk wilayah keputusan yang bisa dipengaruhi preferensi dan informasi terbaru.",
-      "XI, bench, kapten, dan vice-captain masih dapat disesuaikan sampai final review.",
-      "Karena Wildcard sedang aktif, fokusnya adalah memilih kombinasi 15 pemain terbaik tanpa mempertimbangkan biaya hit."
+      "Perbedaan proyeksi XI saat ini terhadap alternatif sekitar 0.00 poin, sehingga masih masuk wilayah keputusan yang bisa dipengaruhi preferensi dan informasi terbaru.",
+      "XI, bench, kapten, dan vice-captain masih dapat disesuaikan sampai final review."
     ],
     "what_to_do": [
       "Pertahankan struktur saat ini.",
-      "Pantau team news, starter security, harga, dan challenger sampai checkpoint berikutnya.",
-      "Gunakan fleksibilitas Wildcard untuk memperbaiki struktur hanya jika ada peningkatan yang benar-benar material."
+      "Pantau team news, starter security, harga, dan challenger sampai checkpoint berikutnya."
     ],
     "technical_terms_suppressed_from_primary_reasoning": true,
     "technical_state_location": "readiness_or_technical_appendix_only"
   },
   "squad": {
-    "authority": "LOCKED_PRE_DEADLINE",
-    "expected_authority": "LOCKED_PRE_DEADLINE",
+    "authority": "OFFICIAL_SUBMITTED",
+    "expected_authority": "OFFICIAL_SUBMITTED",
     "authority_ok": true,
-    "baseline_gw": 1,
-    "planning_gw": 2,
-    "planning_override_applied": true,
+    "baseline_gw": 2,
+    "planning_gw": 3,
+    "planning_override_applied": false,
     "planning_override_target_gw": 2,
-    "authority_source": "USER_CAPTURED_WC_DRAFT",
-    "wildcard_active": true,
+    "authority_source": "OFFICIAL_FPL_PICKS",
+    "wildcard_active": false,
     "locked_players": 15,
-    "composition_status": "LOCKED_15",
-    "hit_recommendation": "NOT_APPLICABLE_WILDCARD_ACTIVE"
+    "composition_status": "SUBMITTED_OR_CURRENT",
+    "hit_recommendation": "UNASSESSED"
   },
   "decision": {
     "raw_package_verdict": "MATERIAL_UPGRADE",
     "governed_verdict": "MATERIAL_UPGRADE",
-    "recommended_replacements": 2,
+    "recommended_replacements": 1,
     "recommended_out": [
-      "Tzolis",
       "Ødegaard"
     ],
     "recommended_in": [
-      "Schade",
       "Szoboszlai"
     ],
     "material_eligible": true,
@@ -86,21 +160,15 @@
   },
   "lineup": {
     "status": "ADJUSTABLE",
-    "decision_authority": "USER_OVERRIDE",
-    "formation": "3-5-2",
-    "captain": "B.Fernandes",
-    "vice_captain": "Haaland",
-    "active_chip": "WILDCARD",
-    "human_override_active": true,
+    "decision_authority": "ENGINE_RECOMMENDATION",
+    "formation": "3-4-3",
+    "captain": "Haaland",
+    "vice_captain": "B.Fernandes",
+    "active_chip": "NONE",
+    "human_override_active": false,
     "engine_comparison": {
-      "changed_xi_slots_vs_engine": 1,
-      "user_xi_xpts": 39.93,
-      "engine_xi_xpts": 40.87,
-      "user_minus_engine_xpts": -0.94,
-      "formation_changed": true,
-      "captain_changed": false,
-      "vice_changed": false,
-      "chip_changed": false,
+      "changed_xi_slots_vs_engine": 0,
+      "user_minus_engine_xpts": 0.0,
       "engine_can_warn_but_not_overwrite": true
     },
     "requires_explicit_final_lock": true
@@ -380,27 +448,27 @@
     },
     "planning_gw": {
       "status": "PROJECTION",
-      "gw": 2,
-      "decision_authority": "USER_OVERRIDE",
-      "formation": "3-5-2",
-      "xi_xpts": 39.93,
+      "gw": 3,
+      "decision_authority": "ENGINE_RECOMMENDATION",
+      "formation": "3-4-3",
+      "xi_xpts": 42.19,
       "captain": {
-        "element": 426,
-        "name": "B.Fernandes",
-        "xpts": 5.128,
+        "element": 411,
+        "name": "Haaland",
+        "xpts": 5.529,
         "multiplier": 2
       },
       "vice_captain": {
-        "element": 411,
-        "name": "Haaland",
-        "xpts": 4.896
+        "element": 426,
+        "name": "B.Fernandes",
+        "xpts": 5.166
       },
-      "active_chip": "WILDCARD",
-      "chip_short": "WC",
-      "bench_xpts": 11.86,
+      "active_chip": "NONE",
+      "chip_short": "NONE",
+      "bench_xpts": 10.81,
       "bench_counted_xpts": 0.0,
-      "standard_captain_team_xpts": 45.05,
-      "estimated_points": 45.05,
+      "standard_captain_team_xpts": 47.72,
+      "estimated_points": 47.72,
       "starting_xi": [
         {
           "element": 572,
@@ -412,61 +480,61 @@
           "element": 115,
           "name": "De Cuyper",
           "position": "DEF",
-          "xpts": 3.495
-        },
-        {
-          "element": 8,
-          "name": "Calafiori",
-          "position": "DEF",
-          "xpts": 2.82
+          "xpts": 3.365
         },
         {
           "element": 88,
           "name": "Kayode",
           "position": "DEF",
-          "xpts": 3.534
+          "xpts": 3.343
+        },
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "position": "DEF",
+          "xpts": 2.756
         },
         {
           "element": 426,
           "name": "B.Fernandes",
           "position": "MID",
-          "xpts": 5.128
-        },
-        {
-          "element": 15,
-          "name": "Ødegaard",
-          "position": "MID",
-          "xpts": 2.563
-        },
-        {
-          "element": 557,
-          "name": "Tzolis",
-          "position": "MID",
-          "xpts": 2.846
+          "xpts": 5.166
         },
         {
           "element": 40,
           "name": "Rogers",
           "position": "MID",
-          "xpts": 4.374
+          "xpts": 3.863
         },
         {
           "element": 565,
           "name": "M.Sangaré",
           "position": "MID",
-          "xpts": 2.94
+          "xpts": 3.094
+        },
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "position": "MID",
+          "xpts": 2.839
         },
         {
           "element": 411,
           "name": "Haaland",
           "position": "FWD",
-          "xpts": 4.896
+          "xpts": 5.529
         },
         {
           "element": 165,
           "name": "João Pedro",
           "position": "FWD",
-          "xpts": 4.088
+          "xpts": 4.63
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "position": "FWD",
+          "xpts": 4.359
         }
       ],
       "bench": [
@@ -482,21 +550,21 @@
           "element": 254,
           "name": "Robinson",
           "position": "DEF",
-          "xpts": 2.664
+          "xpts": 2.663
         },
         {
           "slot": 2,
-          "element": 346,
-          "name": "Calvert-Lewin",
-          "position": "FWD",
-          "xpts": 3.51
+          "element": 15,
+          "name": "Ødegaard",
+          "position": "MID",
+          "xpts": 2.562
         },
         {
           "slot": 3,
           "element": 473,
           "name": "Aina",
           "position": "DEF",
-          "xpts": 2.466
+          "xpts": 2.365
         }
       ],
       "uncertainty": {
@@ -511,39 +579,33 @@
         "no_extra_official_api_fetch": true
       },
       "squad_basis": {
-        "planning_gw": 2,
-        "baseline_gw": 1,
+        "planning_gw": 3,
+        "baseline_gw": 2,
         "default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
         "default_authority": "OFFICIAL_SUBMITTED",
         "override_requested": true,
         "override_target_gw": 2,
-        "override_applied": true,
-        "effective_authority": "LOCKED_PRE_DEADLINE",
-        "authority_source": "USER_CAPTURED_WC_DRAFT",
-        "stale_override_rejected": false
+        "override_applied": false,
+        "effective_authority": "OFFICIAL_SUBMITTED",
+        "authority_source": "OFFICIAL_FPL_PICKS",
+        "stale_override_rejected": true
       },
-      "human_override_active": true,
+      "human_override_active": false,
       "engine_comparison": {
-        "changed_xi_slots_vs_engine": 1,
-        "user_xi_xpts": 39.93,
-        "engine_xi_xpts": 40.87,
-        "user_minus_engine_xpts": -0.94,
-        "formation_changed": true,
-        "captain_changed": false,
-        "vice_changed": false,
-        "chip_changed": false,
+        "changed_xi_slots_vs_engine": 0,
+        "user_minus_engine_xpts": 0.0,
         "engine_can_warn_but_not_overwrite": true
       },
       "engine_recommendation": {
         "formation": "3-4-3",
-        "xi_xpts": 40.87,
-        "captain": "B.Fernandes",
-        "active_chip": "WILDCARD"
+        "xi_xpts": 42.19,
+        "captain": "Haaland",
+        "active_chip": "NONE"
       }
     },
     "headline": {
       "previous": "GW1 FINAL · 71 pts · BB",
-      "planning": "GW2 PROJECTION · 45.0 xPts · WC · 3-5-2 · C B.Fernandes"
+      "planning": "GW3 PROJECTION · 47.7 xPts · 3-4-3 · C Haaland"
     },
     "history": [
       {
@@ -575,7 +637,7 @@
     "freshness": {
       "pass": true,
       "age_minutes": 0.06,
-      "max_age_minutes": 90,
+      "max_age_minutes": 5,
       "reason": null
     },
     "critical_partial": [],
@@ -589,12 +651,28 @@
   },
   "report_scope": [
     "personal_gw_scorecard",
-    "gate0",
-    "locked_15",
-    "availability",
-    "xmins",
-    "price_radar",
-    "challengers"
+    "official_picks",
+    "event_live",
+    "owned_playing",
+    "captain",
+    "vice_captain",
+    "goals",
+    "assists",
+    "clean_sheets",
+    "cards",
+    "bonus_bps",
+    "defcon",
+    "minutes",
+    "starter_sub_state",
+    "dnp",
+    "autosubs",
+    "captaincy_transfer",
+    "injuries",
+    "tactical_role",
+    "watchlist_performance",
+    "emerging_challenger",
+    "next_gw_implications",
+    "fact_vs_model_separation"
   ],
   "guardrails": {
     "raw_optimizer_not_authoritative": true,
@@ -610,6 +688,10 @@
     "user_decision_is_final_authority": true,
     "go_never_auto_executes_without_user_final_lock": true,
     "primary_report_plain_fpl_language": true,
-    "technical_reason_codes_separate_from_human_reasoning": true
+    "technical_reason_codes_separate_from_human_reasoning": true,
+    "checkpoint_policy_is_sole_timing_authority": true,
+    "legacy_post_final_emergency_path_forbidden": true,
+    "visible_report_count_never_exceeds_one": true,
+    "collision_scopes_consumed_from_checkpoint_policy": true
   }
 }

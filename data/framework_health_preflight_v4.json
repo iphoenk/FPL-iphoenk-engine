@@ -3,30 +3,67 @@
   "engine": "v4.9.2-truthful-health",
   "phase": "preflight",
   "checkpoint_context": {
-    "policy_id": "REGULAR_MONITOR",
-    "label": "Regular Tactical Monitor",
+    "policy_id": "MATCHDAY_LIVE",
+    "label": "Consolidated Match Mode",
+    "operating_mode": "MATCH_MODE",
+    "requested_run_mode": "daily",
     "run_mode": "daily",
-    "as_of": "2026-08-28T06:35:49.737565+00:00",
-    "local_as_of": "2026-08-28T13:35:49.737565+07:00",
+    "as_of": "2026-08-29T03:47:03.297255+00:00",
+    "local_as_of": "2026-08-29T10:47:03.297255+07:00",
     "timezone": "Asia/Jakarta",
-    "deadline_time": "2026-08-28T17:30:00+00:00",
-    "minutes_to_deadline": 654.2,
+    "deadline_time": "2026-09-04T17:30:00+00:00",
+    "minutes_to_deadline": 9462.9,
+    "deadline_day_active": false,
     "is_final_review": false,
+    "final_review_target_local": "2026-09-04T21:30:00+07:00",
     "post_final_emergency_only": false,
+    "post_deadline_reconciliation": false,
+    "is_live_match": true,
+    "is_master_hourly_checkpoint": true,
+    "timing_probe_only": false,
+    "visible_output_authorized": true,
+    "full_visible_report_required": false,
+    "no_material_change_must_still_report": false,
+    "fresh_source_sweep_required": false,
+    "direct_official_refresh_max_age_minutes": null,
+    "price_radar_required": false,
+    "duplicate_report_forbidden": true,
+    "absorbed_policy_ids": [],
+    "collision_merged": false,
+    "deadline_report_continues_after_final_review": false,
     "is_simulation": false,
-    "max_snapshot_age_minutes": 90,
-    "recommended_refresh_minutes": 180,
+    "max_snapshot_age_minutes": 5,
+    "recommended_refresh_minutes": 1,
+    "payload": null,
+    "payloads": [],
+    "roster_contract": {},
     "report_scope": [
       "personal_gw_scorecard",
-      "gate0",
-      "locked_15",
-      "availability",
-      "xmins",
-      "price_radar",
-      "challengers"
+      "official_picks",
+      "event_live",
+      "owned_playing",
+      "captain",
+      "vice_captain",
+      "goals",
+      "assists",
+      "clean_sheets",
+      "cards",
+      "bonus_bps",
+      "defcon",
+      "minutes",
+      "starter_sub_state",
+      "dnp",
+      "autosubs",
+      "captaincy_transfer",
+      "injuries",
+      "tactical_role",
+      "watchlist_performance",
+      "emerging_challenger",
+      "next_gw_implications",
+      "fact_vs_model_separation"
     ],
-    "registry": "fpl_checkpoint_policy_v1",
-    "registry_schema_version": 1
+    "registry": "fpl_checkpoint_policy_v2_time_schedule_governance",
+    "registry_schema_version": 2
   },
   "overall": "GREEN",
   "pipeline_health": "GREEN",
@@ -179,9 +216,9 @@
         ],
         "probe": "universe_identity",
         "detail": {
-          "players": 616,
-          "valid": 616,
-          "unique_ids": 616
+          "players": 622,
+          "valid": 622,
+          "unique_ids": 622
         }
       },
       {
@@ -195,9 +232,9 @@
         ],
         "probe": "universe_price_position",
         "detail": {
-          "players": 616,
-          "valid": 616,
-          "unique_ids": 616
+          "players": 622,
+          "valid": 622,
+          "unique_ids": 622
         }
       },
       {
@@ -210,9 +247,9 @@
         ],
         "probe": "universe_registration",
         "detail": {
-          "players": 616,
-          "valid": 616,
-          "unique_ids": 616
+          "players": 622,
+          "valid": 622,
+          "unique_ids": 622
         }
       },
       {
@@ -226,7 +263,7 @@
         ],
         "probe": "availability",
         "detail": {
-          "players": 616,
+          "players": 622,
           "coverage": 1.0
         }
       },
@@ -240,11 +277,11 @@
         ],
         "probe": "xmins",
         "detail": {
-          "fixture_distributions_checked": 1848,
-          "enriched_prior_distributions": 1848,
-          "strong_direct_evidence_players": 72,
-          "strong_direct_evidence_min_pstart": 0.8207,
-          "no_evidence_players": 91,
+          "fixture_distributions_checked": 1866,
+          "enriched_prior_distributions": 1866,
+          "strong_direct_evidence_players": 73,
+          "strong_direct_evidence_min_pstart": 0.8152,
+          "no_evidence_players": 86,
           "no_evidence_max_xmins": 7.0,
           "direct_evidence_sanity": true
         }
@@ -259,11 +296,11 @@
         ],
         "probe": "xmins_distribution",
         "detail": {
-          "fixture_distributions_checked": 1848,
-          "enriched_prior_distributions": 1848,
-          "strong_direct_evidence_players": 72,
-          "strong_direct_evidence_min_pstart": 0.8207,
-          "no_evidence_players": 91,
+          "fixture_distributions_checked": 1866,
+          "enriched_prior_distributions": 1866,
+          "strong_direct_evidence_players": 73,
+          "strong_direct_evidence_min_pstart": 0.8152,
+          "no_evidence_players": 86,
           "no_evidence_max_xmins": 7.0,
           "direct_evidence_sanity": true
         }
@@ -278,10 +315,10 @@
         ],
         "probe": "tactical_role",
         "detail": {
-          "players": 616,
-          "role_covered": 616,
-          "source_covered": 616,
-          "competition_consumed": 585
+          "players": 622,
+          "role_covered": 622,
+          "source_covered": 622,
+          "competition_consumed": 601
         }
       },
       {
@@ -307,12 +344,12 @@
         ],
         "probe": "rotation_competition",
         "detail": {
-          "players": 616,
-          "covered": 616,
-          "role_matched_adjustments": 585,
-          "unadjusted_players": 31,
-          "distinct_competition_factors": 17,
-          "flag_factor_consistent": 616,
+          "players": 622,
+          "covered": 622,
+          "role_matched_adjustments": 601,
+          "unadjusted_players": 21,
+          "distinct_competition_factors": 16,
+          "flag_factor_consistent": 622,
           "broad_position_diagnostics": 0,
           "reason": null
         }
@@ -327,12 +364,12 @@
         ],
         "probe": "set_piece_role",
         "detail": {
-          "fixtures": 616,
-          "covered": 616,
-          "empirical_shares": 616,
-          "posterior_team_shares": 616,
-          "prior_reallocation": 616,
-          "adjusted_fixtures": 616,
+          "fixtures": 622,
+          "covered": 622,
+          "empirical_shares": 622,
+          "posterior_team_shares": 622,
+          "prior_reallocation": 622,
+          "adjusted_fixtures": 622,
           "reason": null
         }
       },
@@ -346,12 +383,12 @@
         ],
         "probe": "penalty_role",
         "detail": {
-          "fixtures": 616,
-          "covered": 616,
-          "empirical_shares": 616,
-          "posterior_team_shares": 616,
-          "prior_reallocation": 616,
-          "adjusted_fixtures": 616,
+          "fixtures": 622,
+          "covered": 622,
+          "empirical_shares": 622,
+          "posterior_team_shares": 622,
+          "prior_reallocation": 622,
+          "adjusted_fixtures": 622,
           "reason": null
         }
       },
@@ -368,14 +405,13 @@
         "detail": {
           "prediction_sources": [
             "fpl_core_insights:players",
-            "fpl_core_insights:players+fpl_core_insights:playermatchstats",
-            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats"
           ],
-          "consumed_players": 616,
-          "materially_distinct_players": 11,
-          "materially_distinct_ratio": 0.0179,
-          "decision_used_players": 310,
-          "decision_used_ratio": 0.5032,
+          "consumed_players": 622,
+          "materially_distinct_players": 151,
+          "materially_distinct_ratio": 0.2428,
+          "decision_used_players": 170,
+          "decision_used_ratio": 0.2733,
           "active_minimum_ratio": 0.25,
           "synced_but_not_consumed_broadly": false
         }
@@ -393,14 +429,13 @@
         "detail": {
           "prediction_sources": [
             "fpl_core_insights:players",
-            "fpl_core_insights:players+fpl_core_insights:playermatchstats",
-            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats"
           ],
-          "consumed_players": 616,
-          "materially_distinct_players": 11,
-          "materially_distinct_ratio": 0.0179,
-          "decision_used_players": 310,
-          "decision_used_ratio": 0.5032,
+          "consumed_players": 622,
+          "materially_distinct_players": 151,
+          "materially_distinct_ratio": 0.2428,
+          "decision_used_players": 170,
+          "decision_used_ratio": 0.2733,
           "active_minimum_ratio": 0.25,
           "synced_but_not_consumed_broadly": false
         }
@@ -443,11 +478,11 @@
         ],
         "probe": "sustainability",
         "detail": {
-          "players": 616,
-          "fixtures_checked": 616,
-          "shrinkage_evidence_covered": 616,
-          "valid_weight_rows": 616,
-          "material_shrinkage_players": 552,
+          "players": 622,
+          "fixtures_checked": 622,
+          "shrinkage_evidence_covered": 622,
+          "valid_weight_rows": 622,
+          "material_shrinkage_players": 555,
           "canonical_owner": "src.models.v4_prediction.rates"
         }
       },
@@ -558,9 +593,9 @@
         ],
         "probe": "opponent_defence_dynamic",
         "detail": {
-          "fixtures": 1848,
-          "covered": 1848,
-          "dynamic_defence": 1848,
+          "fixtures": 1866,
+          "covered": 1866,
+          "dynamic_defence": 1866,
           "neutral_overall_fallback": 0,
           "distinct_scoring_ratings": 18,
           "reason": null
@@ -577,8 +612,8 @@
         "probe": "horizon_3",
         "detail": {
           "field": "xpts_3",
-          "players": 616,
-          "covered": 616
+          "players": 622,
+          "covered": 622
         }
       },
       {
@@ -592,8 +627,8 @@
         "probe": "horizon_5",
         "detail": {
           "field": "xpts_5",
-          "players": 616,
-          "covered": 616
+          "players": 622,
+          "covered": 622
         }
       },
       {
@@ -607,8 +642,8 @@
         "probe": "horizon_10",
         "detail": {
           "field": "xpts_10",
-          "players": 616,
-          "covered": 616
+          "players": 622,
+          "covered": 622
         }
       },
       {
@@ -622,8 +657,8 @@
         "probe": "horizon_15",
         "detail": {
           "field": "xpts_15",
-          "players": 616,
-          "covered": 616
+          "players": 622,
+          "covered": 622
         }
       },
       {
@@ -636,13 +671,13 @@
         ],
         "probe": "fixture_swing",
         "detail": {
-          "players": 616,
-          "fixture_run_covered": 616,
+          "players": 622,
+          "fixture_run_covered": 622,
           "distinct_swing_values": 20,
           "directions": {
-            "IMPROVING": 145,
-            "WORSENING": 180,
-            "STABLE": 291
+            "IMPROVING": 146,
+            "WORSENING": 181,
+            "STABLE": 295
           },
           "canonical_owner": "src.models.v4_prediction.fixture_run_summary"
         }
@@ -724,8 +759,8 @@
         "probe": "last_season_integration",
         "detail": {
           "source_season": "2025-26",
-          "input_matches": 406,
-          "consumed_priors": 406
+          "input_matches": 407,
+          "consumed_priors": 407
         }
       },
       {
@@ -960,7 +995,7 @@
         ],
         "probe": "leakage_guard",
         "detail": {
-          "players": 616,
+          "players": 622,
           "provenance_samples": 50
         }
       },
@@ -1127,8 +1162,8 @@
         "probe": "data_freshness",
         "detail": {
           "age_minutes": 0.0,
-          "max_age_minutes": 90,
-          "checkpoint_policy_id": "REGULAR_MONITOR"
+          "max_age_minutes": 5,
+          "checkpoint_policy_id": "MATCHDAY_LIVE"
         }
       },
       {
@@ -1216,14 +1251,13 @@
           "advanced_integration": {
             "prediction_sources": [
               "fpl_core_insights:players",
-              "fpl_core_insights:players+fpl_core_insights:playermatchstats",
-              "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
+              "fpl_core_insights:players+fpl_core_insights:playermatchstats"
             ],
-            "consumed_players": 616,
-            "materially_distinct_players": 11,
-            "materially_distinct_ratio": 0.0179,
-            "decision_used_players": 310,
-            "decision_used_ratio": 0.5032,
+            "consumed_players": 622,
+            "materially_distinct_players": 151,
+            "materially_distinct_ratio": 0.2428,
+            "decision_used_players": 170,
+            "decision_used_ratio": 0.2733,
             "active_minimum_ratio": 0.25,
             "synced_but_not_consumed_broadly": false
           }
@@ -1240,7 +1274,7 @@
         ],
         "probe": "leakage_guard",
         "detail": {
-          "players": 616,
+          "players": 622,
           "provenance_samples": 50
         }
       },
@@ -1271,8 +1305,8 @@
         "probe": "multi_horizon",
         "detail": {
           "field": "xpts_15",
-          "players": 616,
-          "covered": 616
+          "players": 622,
+          "covered": 622
         }
       },
       {
@@ -1349,8 +1383,8 @@
     "status": "PASS",
     "detail": {
       "age_minutes": 0.0,
-      "max_age_minutes": 90,
-      "checkpoint_policy_id": "REGULAR_MONITOR"
+      "max_age_minutes": 5,
+      "checkpoint_policy_id": "MATCHDAY_LIVE"
     }
   },
   "source_health": {
@@ -1389,5 +1423,5 @@
     "operational_probe_cache_entries": 69,
     "audit_scoped_cache": true
   },
-  "performance_ms": 151.13
+  "performance_ms": 140.76
 }

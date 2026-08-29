@@ -1,7 +1,7 @@
 {
   "schema_version": 492,
   "engine": "v4.9.2-wc-optimizer-truthful-health-exact-streaming",
-  "wildcard_active": true,
+  "wildcard_active": false,
   "budget_tenths": 1000,
   "baseline_itb_tenths": 5,
   "affordability": {
@@ -13,13 +13,6 @@
     "ledger": [
       {
         "element": 572,
-        "purchase_cost": 45,
-        "now_cost": 45,
-        "sell_cost": 45,
-        "source": "official_or_locked_selling_price"
-      },
-      {
-        "element": 109,
         "purchase_cost": 45,
         "now_cost": 45,
         "sell_cost": 45,
@@ -43,20 +36,6 @@
         "element": 88,
         "purchase_cost": 45,
         "now_cost": 46,
-        "sell_cost": 45,
-        "source": "official_or_locked_selling_price"
-      },
-      {
-        "element": 254,
-        "purchase_cost": 45,
-        "now_cost": 45,
-        "sell_cost": 45,
-        "source": "official_or_locked_selling_price"
-      },
-      {
-        "element": 473,
-        "purchase_cost": 45,
-        "now_cost": 45,
         "sell_cost": 45,
         "source": "official_or_locked_selling_price"
       },
@@ -89,13 +68,6 @@
         "source": "official_or_locked_selling_price"
       },
       {
-        "element": 565,
-        "purchase_cost": 55,
-        "now_cost": 56,
-        "sell_cost": 55,
-        "source": "official_or_locked_selling_price"
-      },
-      {
         "element": 411,
         "purchase_cost": 155,
         "now_cost": 155,
@@ -115,28 +87,56 @@
         "now_cost": 60,
         "sell_cost": 60,
         "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 109,
+        "purchase_cost": 45,
+        "now_cost": 45,
+        "sell_cost": 45,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 565,
+        "purchase_cost": 55,
+        "now_cost": 56,
+        "sell_cost": 55,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 254,
+        "purchase_cost": 45,
+        "now_cost": 45,
+        "sell_cost": 45,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 473,
+        "purchase_cost": 45,
+        "now_cost": 45,
+        "sell_cost": 45,
+        "source": "official_or_locked_selling_price"
       }
     ],
     "fail_closed_on_missing_purchase_price": true
   },
-  "screened_players": 570,
+  "screened_players": 569,
   "current": {
     "cost": 995,
-    "objective": 52.9131,
-    "squad_xpts_3": 156.95,
-    "squad_xpts_5": 261.55,
-    "squad_xpts_10": 523.44,
-    "squad_xpts_15": 785.01,
-    "best_xi_xpts_5": 205.61,
-    "bench_adjusted_utility_5": 212.32,
+    "objective": 54.0666,
+    "squad_xpts_3": 160.51,
+    "squad_xpts_5": 267.28,
+    "squad_xpts_10": 534.7,
+    "squad_xpts_15": 802.13,
+    "best_xi_xpts_5": 211.74,
+    "bench_adjusted_utility_5": 218.41,
     "best_xi_by_gw": [
       {
         "gw_offset": 1,
-        "xpts": 40.87,
+        "xpts": 42.19,
         "elements": [
           572,
-          88,
           115,
+          88,
           8,
           426,
           40,
@@ -149,7 +149,24 @@
       },
       {
         "gw_offset": 2,
-        "xpts": 41.65,
+        "xpts": 42.83,
+        "elements": [
+          109,
+          115,
+          88,
+          8,
+          426,
+          565,
+          40,
+          557,
+          411,
+          346,
+          165
+        ]
+      },
+      {
+        "gw_offset": 3,
+        "xpts": 42.77,
         "elements": [
           109,
           115,
@@ -165,13 +182,30 @@
         ]
       },
       {
-        "gw_offset": 3,
-        "xpts": 41.37,
+        "gw_offset": 4,
+        "xpts": 42.23,
         "elements": [
           109,
           115,
           88,
           8,
+          426,
+          40,
+          565,
+          557,
+          411,
+          346,
+          165
+        ]
+      },
+      {
+        "gw_offset": 5,
+        "xpts": 41.73,
+        "elements": [
+          109,
+          115,
+          8,
+          88,
           426,
           40,
           557,
@@ -180,144 +214,110 @@
           165,
           346
         ]
-      },
-      {
-        "gw_offset": 4,
-        "xpts": 40.96,
-        "elements": [
-          109,
-          115,
-          88,
-          8,
-          473,
-          426,
-          40,
-          557,
-          411,
-          165,
-          346
-        ]
-      },
-      {
-        "gw_offset": 5,
-        "xpts": 40.75,
-        "elements": [
-          109,
-          115,
-          8,
-          88,
-          426,
-          40,
-          557,
-          15,
-          411,
-          165,
-          346
-        ]
       }
     ]
   },
   "optimized": {
-    "cost": 1000,
-    "objective": 60.4036,
-    "squad_xpts_3": 181.24,
-    "squad_xpts_5": 298.16,
-    "squad_xpts_10": 593.92,
-    "squad_xpts_15": 890.84,
-    "best_xi_xpts_5": 229.81,
-    "bench_adjusted_utility_5": 238.01,
+    "cost": 996,
+    "objective": 61.9313,
+    "squad_xpts_3": 184.8,
+    "squad_xpts_5": 306.59,
+    "squad_xpts_10": 609.3,
+    "squad_xpts_15": 914.27,
+    "best_xi_xpts_5": 234.68,
+    "bench_adjusted_utility_5": 243.31,
     "best_xi_by_gw": [
       {
         "gw_offset": 1,
-        "xpts": 46.77,
+        "xpts": 47.33,
         "elements": [
-          226,
+          140,
           388,
           356,
-          534,
+          229,
           426,
           427,
           368,
-          154,
-          94,
+          399,
           106,
-          165
+          165,
+          346
         ]
       },
       {
         "gw_offset": 2,
-        "xpts": 46.94,
+        "xpts": 47.86,
         "elements": [
           109,
           388,
           115,
-          88,
-          356,
-          94,
-          368,
+          445,
+          399,
           426,
+          368,
+          453,
           427,
-          154,
-          106
+          106,
+          346
         ]
       },
       {
         "gw_offset": 3,
-        "xpts": 46.11,
+        "xpts": 46.74,
         "elements": [
-          109,
+          140,
           356,
           115,
           388,
           368,
-          154,
           426,
-          94,
           427,
+          399,
           106,
+          346,
           165
         ]
       },
       {
         "gw_offset": 4,
-        "xpts": 45.16,
+        "xpts": 47.37,
         "elements": [
-          226,
+          109,
           388,
-          115,
-          356,
+          229,
+          445,
+          399,
           426,
+          453,
           368,
-          94,
-          427,
-          154,
           106,
+          346,
           165
         ]
       },
       {
         "gw_offset": 5,
-        "xpts": 44.83,
+        "xpts": 45.37,
         "elements": [
-          226,
-          534,
-          115,
+          140,
           388,
+          229,
+          445,
           426,
-          154,
           427,
+          453,
           368,
-          94,
+          399,
           106,
           165
         ]
       }
     ],
-    "itb": 0
+    "itb": 4
   },
   "delta": {
-    "best_xi_xpts_5": 24.2,
-    "bench_adjusted_utility_5": 25.69
+    "best_xi_xpts_5": 22.94,
+    "bench_adjusted_utility_5": 24.9
   },
   "classification": "MATERIAL_UPGRADE",
   "out": [
@@ -332,6 +332,12 @@
       "name": "Calafiori",
       "position": "DEF",
       "sell_cost": 55
+    },
+    {
+      "element": 88,
+      "name": "Kayode",
+      "position": "DEF",
+      "sell_cost": 45
     },
     {
       "element": 254,
@@ -384,10 +390,16 @@
       "now_cost": 60
     },
     {
-      "element": 534,
-      "name": "Hume",
+      "element": 229,
+      "name": "Tarkowski",
       "position": "DEF",
-      "now_cost": 45
+      "now_cost": 60
+    },
+    {
+      "element": 445,
+      "name": "Thiaw",
+      "position": "DEF",
+      "now_cost": 50
     },
     {
       "element": 356,
@@ -402,28 +414,28 @@
       "now_cost": 80
     },
     {
-      "element": 226,
-      "name": "Pickford",
+      "element": 140,
+      "name": "Sánchez",
       "position": "GK",
-      "now_cost": 55
+      "now_cost": 50
+    },
+    {
+      "element": 453,
+      "name": "Barnes",
+      "position": "MID",
+      "now_cost": 60
+    },
+    {
+      "element": 399,
+      "name": "Cherki",
+      "position": "MID",
+      "now_cost": 76
     },
     {
       "element": 427,
       "name": "Mbeumo",
       "position": "MID",
       "now_cost": 80
-    },
-    {
-      "element": 154,
-      "name": "Palmer",
-      "position": "MID",
-      "now_cost": 95
-    },
-    {
-      "element": 94,
-      "name": "Schade",
-      "position": "MID",
-      "now_cost": 60
     },
     {
       "element": 368,
@@ -433,18 +445,18 @@
     }
   ],
   "optimized_elements": [
-    226,
+    140,
     109,
     388,
     115,
     356,
-    88,
-    534,
+    445,
+    229,
     426,
     368,
-    94,
-    154,
+    399,
     427,
+    453,
     106,
     165,
     346
@@ -457,8 +469,8 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.8714,
-      "xpts5_delta": 9.1
+      "objective_delta": 1.6759,
+      "xpts5_delta": 8.14
     },
     {
       "owned": 557,
@@ -467,18 +479,8 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 1.5622,
-      "xpts5_delta": 7.56
-    },
-    {
-      "owned": 565,
-      "owned_name": "M.Sangaré",
-      "challenger": 94,
-      "challenger_name": "Schade",
-      "position": "MID",
-      "cost_delta": 5,
-      "objective_delta": 1.2375,
-      "xpts5_delta": 6.07
+      "objective_delta": 1.3765,
+      "xpts5_delta": 6.65
     },
     {
       "owned": 8,
@@ -487,8 +489,8 @@
       "challenger_name": "Guéhi",
       "position": "DEF",
       "cost_delta": 5,
-      "objective_delta": 1.1893,
-      "xpts5_delta": 5.77
+      "objective_delta": 1.2878,
+      "xpts5_delta": 6.26
     },
     {
       "owned": 473,
@@ -497,8 +499,8 @@
       "challenger_name": "Thiaw",
       "position": "DEF",
       "cost_delta": 5,
-      "objective_delta": 0.936,
-      "xpts5_delta": 4.71
+      "objective_delta": 1.1902,
+      "xpts5_delta": 5.98
     },
     {
       "owned": 254,
@@ -507,18 +509,18 @@
       "challenger_name": "Thiaw",
       "position": "DEF",
       "cost_delta": 5,
-      "objective_delta": 0.9019,
-      "xpts5_delta": 4.62
+      "objective_delta": 1.0473,
+      "xpts5_delta": 5.35
     },
     {
-      "owned": 165,
-      "owned_name": "João Pedro",
-      "challenger": 106,
-      "challenger_name": "Thiago",
-      "position": "FWD",
+      "owned": 565,
+      "owned_name": "M.Sangaré",
+      "challenger": 453,
+      "challenger_name": "Barnes",
+      "position": "MID",
       "cost_delta": 5,
-      "objective_delta": 0.6501,
-      "xpts5_delta": 3.04
+      "objective_delta": 0.9435,
+      "xpts5_delta": 5.02
     },
     {
       "owned": 40,
@@ -527,8 +529,18 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": -5,
-      "objective_delta": 0.4854,
-      "xpts5_delta": 2.25
+      "objective_delta": 0.7426,
+      "xpts5_delta": 3.54
+    },
+    {
+      "owned": 165,
+      "owned_name": "João Pedro",
+      "challenger": 106,
+      "challenger_name": "Thiago",
+      "position": "FWD",
+      "cost_delta": 5,
+      "objective_delta": 0.5918,
+      "xpts5_delta": 2.71
     },
     {
       "owned": 572,
@@ -537,8 +549,18 @@
       "challenger_name": "Kelleher",
       "position": "GK",
       "cost_delta": 5,
-      "objective_delta": 0.4254,
+      "objective_delta": 0.4253,
       "xpts5_delta": 1.97
+    },
+    {
+      "owned": 88,
+      "owned_name": "Kayode",
+      "challenger": 445,
+      "challenger_name": "Thiaw",
+      "position": "DEF",
+      "cost_delta": 5,
+      "objective_delta": 0.3039,
+      "xpts5_delta": 1.88
     },
     {
       "owned": 109,
@@ -551,24 +573,14 @@
       "xpts5_delta": 0.38
     },
     {
-      "owned": 346,
-      "owned_name": "Calvert-Lewin",
-      "challenger": 223,
-      "challenger_name": "Mateta",
-      "position": "FWD",
-      "cost_delta": 5,
-      "objective_delta": 0.0892,
-      "xpts5_delta": 0.5
-    },
-    {
-      "owned": 88,
-      "owned_name": "Kayode",
+      "owned": 115,
+      "owned_name": "De Cuyper",
       "challenger": 445,
       "challenger_name": "Thiaw",
       "position": "DEF",
       "cost_delta": 5,
-      "objective_delta": -0.0436,
-      "xpts5_delta": 0.17
+      "objective_delta": -0.0419,
+      "xpts5_delta": 0.04
     },
     {
       "owned": 426,
@@ -577,18 +589,18 @@
       "challenger_name": "Szoboszlai",
       "position": "MID",
       "cost_delta": -50,
-      "objective_delta": -0.0862,
-      "xpts5_delta": -0.82
+      "objective_delta": -0.3133,
+      "xpts5_delta": -1.94
     },
     {
-      "owned": 115,
-      "owned_name": "De Cuyper",
-      "challenger": 445,
-      "challenger_name": "Thiaw",
-      "position": "DEF",
-      "cost_delta": 5,
-      "objective_delta": -0.3324,
-      "xpts5_delta": -1.4
+      "owned": 346,
+      "owned_name": "Calvert-Lewin",
+      "challenger": 569,
+      "challenger_name": "Gonzalo",
+      "position": "FWD",
+      "cost_delta": 0,
+      "objective_delta": -0.4087,
+      "xpts5_delta": -1.97
     },
     {
       "owned": 411,
@@ -597,8 +609,8 @@
       "challenger_name": "Thiago",
       "position": "FWD",
       "cost_delta": -75,
-      "objective_delta": -0.5504,
-      "xpts5_delta": -3.07
+      "objective_delta": -0.7905,
+      "xpts5_delta": -4.3
     }
   ],
   "hard_constraints": {
@@ -627,8 +639,8 @@
     "safe_objective_bound": true,
     "fixed_position_finalist_scoring": true,
     "finalist_materialization_removed": true,
-    "generated_states": 189017,
-    "objective_bound_pruned": 1782780,
+    "generated_states": 201514,
+    "objective_bound_pruned": 1803541,
     "beam_size_unchanged": true,
     "direct_challenger_position_index": true,
     "value_term_consumed": true,

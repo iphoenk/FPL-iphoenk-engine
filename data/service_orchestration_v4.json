@@ -1,8 +1,8 @@
 {
   "schema_version": 495,
   "engine": "v4.9.5-service-orchestrator-dag-parallel",
-  "started_at": "2026-08-28T06:35:49.331648+00:00",
-  "completed_at": "2026-08-28T06:35:53.762390+00:00",
+  "started_at": "2026-08-29T03:47:02.828262+00:00",
+  "completed_at": "2026-08-29T03:47:07.664422+00:00",
   "status": "PASS",
   "mode": "daily",
   "simulated": false,
@@ -74,9 +74,9 @@
     "report_governance"
   ],
   "snapshot_identity": {
-    "sha256": "ad4627eb7aba16dce5cc200bf42cdba4f4c0b89f58ae4d88602574b6d5dae596",
-    "generated_at": "2026-08-28T06:35:49.799481+00:00",
-    "checkpoint_policy_id": "REGULAR_MONITOR"
+    "sha256": "a85d4b303514555d27c510d869308c4c1d9e59391feb68061cffe6382128a09b",
+    "generated_at": "2026-08-29T03:47:03.388771+00:00",
+    "checkpoint_policy_id": "MATCHDAY_LIVE"
   },
   "services": [
     {
@@ -96,7 +96,7 @@
         }
       ],
       "execution_level": 0,
-      "duration_ms": 785.34,
+      "duration_ms": 820.29,
       "exit_code": 0,
       "stdout_tail": "{\"service\": \"architecture_guard\", \"status\": \"PASS\", \"checks\": {\"unique_service_ids\": true, \"unique_contract_producers\": true, \"contract_paths_complete\": true, \"unique_contract_paths\": true, \"unique_registry_ids\": true, \"unique_responsibility_ids\": true, \"unique_shared_primitive_ids\": true, \"all_responsibilities_have_one_owner\": true, \"canonical_rule_definitions_single_owner\": true, \"official_fpl_fetch_single_owner\": true, \"no_exact_nontrivial_function_clones\": true, \"legacy_engine_is_thin_adapter\": true, \"reconciliation_truth_single_owner\": true, \"raw_snapshot_reuses_canonical_legality\": true, \"single_reusable_production_workflow\": true, \"release_single_source_coherent\": true}, \"failed_detail\": {}}",
       "stderr_tail": ""
@@ -113,18 +113,18 @@
           "path": "data/runtime/snapshot.v1.json",
           "valid": true,
           "errors": [],
-          "sha256": "ad4627eb7aba16dce5cc200bf42cdba4f4c0b89f58ae4d88602574b6d5dae596",
-          "bytes": 3814496
+          "sha256": "a85d4b303514555d27c510d869308c4c1d9e59391feb68061cffe6382128a09b",
+          "bytes": 3822082
         }
       ],
       "execution_level": 0,
-      "duration_ms": 499.1,
+      "duration_ms": 588.72,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"raw_snapshot\", \"schema\": \"snapshot.v1\", \"duration_ms\": 338.56, \"initial_parallel_ms\": 276.35, \"dependent_parallel_ms\": 61.36, \"planning_gw\": 2, \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"override_applied\": true}",
+      "stdout_tail": "{\"service\": \"raw_snapshot\", \"schema\": \"snapshot.v1\", \"duration_ms\": 436.78, \"initial_parallel_ms\": 344.85, \"dependent_parallel_ms\": 59.65, \"planning_gw\": 3, \"baseline_gw\": 2, \"squad_authority\": \"OFFICIAL_SUBMITTED\", \"override_applied\": false, \"checkpoint_policy\": \"MATCHDAY_LIVE\", \"visible_output_authorized\": true, \"active_live_fixture_count\": 1}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/runtime/snapshot.v1.json",
-        "sha256": "ad4627eb7aba16dce5cc200bf42cdba4f4c0b89f58ae4d88602574b6d5dae596"
+        "sha256": "a85d4b303514555d27c510d869308c4c1d9e59391feb68061cffe6382128a09b"
       }
     },
     {
@@ -141,18 +141,18 @@
           "path": "data/runtime/enrichment.v1.json",
           "valid": true,
           "errors": [],
-          "sha256": "4548c1f1d3679666e1aba881f997d359d35f8f8fab20210370b3dd975b050dde",
-          "bytes": 644233
+          "sha256": "ef1a2b75ee7135f33cfc680a6bfe0f01fc900d1725eb007bd6e78fd84ef87a23",
+          "bytes": 649457
         }
       ],
       "execution_level": 1,
-      "duration_ms": 437.37,
+      "duration_ms": 498.86,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"enrichment\", \"schema\": \"enrichment.v1\", \"duration_ms\": 278.74, \"official_players\": 616}",
+      "stdout_tail": "{\"service\": \"enrichment\", \"schema\": \"enrichment.v1\", \"duration_ms\": 350.63, \"official_players\": 622}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/runtime/enrichment.v1.json",
-        "sha256": "4548c1f1d3679666e1aba881f997d359d35f8f8fab20210370b3dd975b050dde"
+        "sha256": "ef1a2b75ee7135f33cfc680a6bfe0f01fc900d1725eb007bd6e78fd84ef87a23"
       }
     },
     {
@@ -169,50 +169,50 @@
           "path": "data/latest.json",
           "valid": true,
           "errors": [],
-          "sha256": "42ec69198fc5debef5da60eeba563cc0b8493531516cadd13781a536d0aeaaf2",
-          "bytes": 587771
+          "sha256": "304a44a41fa24b465db0828c538b9f3b59fe070e00b82bdeb883b0be046b867c",
+          "bytes": 591580
         },
         {
           "contract": "predictions",
           "path": "data/predictions_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "28884bd207653cd788d2389f5587e5bba8b676fd29d4bbd7e686778d15c748d7",
-          "bytes": 33232517
+          "sha256": "8e96c7c0736e4c6abad74417ce493746415d54548920fa15cb53d793790bca15",
+          "bytes": 33423791
         },
         {
           "contract": "team_state",
           "path": "data/team.json",
           "valid": true,
           "errors": [],
-          "sha256": "2cf36b53c403ef2fbff8c165561f735bc3d4d8292644d6f135db239b29441c04",
-          "bytes": 7855
+          "sha256": "ddea2a72191b9ace492e5dd1683049ac7999a177eab2db3ff36e6b0065c4fc65",
+          "bytes": 8072
         },
         {
           "contract": "universe",
           "path": "data/universe.json",
           "valid": true,
           "errors": [],
-          "sha256": "e59ad963fe8eefa82c2eb27a05bdf5f4ff5395643fbaa2d3978beab38003cda4",
-          "bytes": 643112
+          "sha256": "a79eb4812408ed042605eeafeaa727f4e4a8607791362d99b3c2b828120c690f",
+          "bytes": 648338
         },
         {
           "contract": "source_health",
           "path": "data/health.json",
           "valid": true,
           "errors": [],
-          "sha256": "63aa9be5ef9bd3bfc9c8515623a59a70b538911cf4dd49e95f9ec50ed10076d3",
-          "bytes": 2013
+          "sha256": "69dd8d598ea269c48c700ed156b52071efa39d37bc3f675f3ff0f783f1d7b062",
+          "bytes": 2275
         }
       ],
       "execution_level": 2,
-      "duration_ms": 818.84,
+      "duration_ms": 865.43,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"prediction\", \"engine\": \"4.9.5-official-first-reporting\", \"players\": 616, \"official_context\": {\"source\": \"raw_snapshot.official.bootstrap+fixtures\", \"official_fpl_first\": true, \"teams\": 20, \"team_strength_rows_complete\": 20, \"upcoming_fixture_rows\": 370, \"fixture_context_rows_complete\": 370, \"player_rows\": 616, \"player_field_coverage\": {\"ownership\": 616, \"expected_goals\": 616, \"expected_assists\": 616, \"expected_goal_involvements\": 616, \"expected_goals_conceded\": 616, \"bps\": 616, \"bonus\": 616, \"form\": 616, \"starts\": 616}, \"effective_ownership_available_from_official_fpl\": false, \"external_schedule_scope\": \"premier_league_only\"}, \"duration_ms\": 725.41}",
+      "stdout_tail": "{\"service\": \"prediction\", \"engine\": \"4.9.5-official-first-reporting\", \"players\": 622, \"official_context\": {\"source\": \"raw_snapshot.official.bootstrap+fixtures\", \"official_fpl_first\": true, \"teams\": 20, \"team_strength_rows_complete\": 20, \"upcoming_fixture_rows\": 370, \"fixture_context_rows_complete\": 370, \"player_rows\": 622, \"player_field_coverage\": {\"ownership\": 622, \"expected_goals\": 622, \"expected_assists\": 622, \"expected_goal_involvements\": 622, \"expected_goals_conceded\": 622, \"bps\": 622, \"bonus\": 622, \"form\": 622, \"starts\": 622}, \"effective_ownership_available_from_official_fpl\": false, \"external_schedule_scope\": \"premier_league_only\"}, \"source_sweep_runtime_wired\": [\"official_fpl_native\"], \"duration_ms\": 777.5}",
       "stderr_tail": "",
       "locked_artifact": {
         "path": "data/latest.json",
-        "sha256": "42ec69198fc5debef5da60eeba563cc0b8493531516cadd13781a536d0aeaaf2"
+        "sha256": "304a44a41fa24b465db0828c538b9f3b59fe070e00b82bdeb883b0be046b867c"
       }
     },
     {
@@ -229,14 +229,14 @@
           "path": "data/validation/lifecycle_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "0609e836dc56dd3ff093e08c91aff752e0bfe0725ba1cd246f33bef7e5843724",
-          "bytes": 1245
+          "sha256": "b14dbcac41b5837434a6bfae2abacf87b87710acb1515e106ad929329864dacd",
+          "bytes": 1940
         }
       ],
       "execution_level": 3,
-      "duration_ms": 434.4,
+      "duration_ms": 902.9,
       "exit_code": 0,
-      "stdout_tail": ".3-validation-lifecycle-v4.9.4.3-truthful-starts\",\n  \"release\": \"4.9.6\",\n  \"status\": \"PASS\",\n  \"simulated\": false,\n  \"snapshot\": {\n    \"status\": \"PASS\",\n    \"action\": \"PRESERVED\",\n    \"gw\": 2,\n    \"deadline_time\": \"2026-08-28T17:30:00Z\",\n    \"players\": 614,\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"captured_at\": \"2026-08-27T10:45:41.952884+00:00\",\n    \"immutable\": true\n  },\n  \"reconciliation\": {\n    \"status\": \"SKIP\",\n    \"reason\": \"no_predeadline_snapshot\",\n    \"gw\": 1\n  },\n  \"eligibility\": {\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"eligible_samples\": 0,\n    \"eligible_gws\": [],\n    \"rejected_samples\": [],\n    \"archive_is_append_only\": true,\n    \"health_view_rebuilt\": true\n  },\n  \"guardrails\": {\n    \"raw_snapshot_only\": true,\n    \"official_api_refetch\": false,\n    \"retroactive_snapshot_rejected\": true,\n    \"deadline_snapshot_immutable\": true,\n    \"reconciliation_archive_immutable\": true,\n    \"reconciliation_idempotent\": true,\n    \"health_view_current_model_only\": true,\n    \"simulation_never_mutates_store\": true,\n    \"started_from_official_stats_starts_only\": true,\n    \"minutes_never_infer_started\": true,\n    \"missing_starts_excluded_from_start_brier\": true\n  }\n}",
+      "stdout_tail": "added\": [],\n      \"squad_removed\": [],\n      \"starting_xi_changed\": false,\n      \"bench_changed\": false,\n      \"captain_changed\": true,\n      \"vice_captain_changed\": false,\n      \"chip_changed\": true,\n      \"material_change\": false\n    }\n  },\n  \"reconciliation\": {\n    \"status\": \"SKIP\",\n    \"reason\": \"no_predeadline_snapshot\",\n    \"gw\": 1\n  },\n  \"eligibility\": {\n    \"model_version\": \"v4.9.2-truthful-health\",\n    \"eligible_samples\": 0,\n    \"eligible_gws\": [],\n    \"rejected_samples\": [],\n    \"archive_is_append_only\": true,\n    \"health_view_rebuilt\": true\n  },\n  \"guardrails\": {\n    \"raw_snapshot_only\": true,\n    \"official_api_refetch\": false,\n    \"retroactive_snapshot_rejected\": true,\n    \"deadline_snapshot_immutable\": true,\n    \"submitted_state_immutable\": true,\n    \"submitted_state_from_official_picks_only\": true,\n    \"submitted_state_conflict_fails_closed\": true,\n    \"reconciliation_archive_immutable\": true,\n    \"reconciliation_idempotent\": true,\n    \"health_view_current_model_only\": true,\n    \"simulation_never_mutates_store\": true,\n    \"started_from_official_stats_starts_only\": true,\n    \"minutes_never_infer_started\": true,\n    \"missing_starts_excluded_from_start_brier\": true\n  }\n}",
       "stderr_tail": ""
     },
     {
@@ -258,7 +258,7 @@
         }
       ],
       "execution_level": 3,
-      "duration_ms": 78.99,
+      "duration_ms": 82.21,
       "exit_code": 0,
       "stdout_tail": "PASS rules_registry_identity \nPASS scoring_registry_loaded \nPASS defcon_gk_veto \nPASS defcon_def_cbit_10 \nPASS defcon_mid_cbirt_12 \nPASS defcon_fwd_cbirt_12 \nPASS recoveries_excluded_for_def \nPASS recoveries_included_mid_fwd \nPASS defcon_reward_capped_two \nPASS one_chip_per_gw_constant \nPASS chip_half_boundary \nPASS free_hit_not_gw1 \nPASS free_hit_not_consecutive \nPASS chip_once_per_half \nPASS wc_fh_preserve_banked_ft \nPASS dgw_defcon_per_match [1.672, 1.672]\nOVERALL PASS",
       "stderr_tail": ""
@@ -277,46 +277,46 @@
           "path": "data/wc_decision_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "5636d5507b09c78fcbccb9d9ddc16cff0de95679ab70bbefd88c50b8863660b5",
-          "bytes": 12896
+          "sha256": "fa0bf912333a3e81edfc3f88f4e518d872eefc07ea0549f013f8163266ffad8c",
+          "bytes": 13122
         },
         {
           "contract": "wc_package",
           "path": "data/wc_package_audit_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "a40a8dd5b5c34392065c30ea9632ad03666e78d18584f785cdedd944c529fdd5",
-          "bytes": 100336
+          "sha256": "79c65b513e89a4966f275d41d8ba5643240452200c563417a370094f631f7b3f",
+          "bytes": 100321
         },
         {
           "contract": "lineup",
           "path": "data/lineup_decision_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "73344045c2b099347fde6ccfc3680f9e2b5ad88a87878b4ab72f9a86fc43e463",
-          "bytes": 8555
+          "sha256": "e4aa04658d483938684e580db5ea57649a7ddf2a428ef617f1dadeff4a884b81",
+          "bytes": 8563
         },
         {
           "contract": "recommendation_sanity",
           "path": "data/recommendation_sanity_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "3acf39e55f29bd0fadc193e37660e077ca192d6aa37aeaa299e0b7d60d9f200f",
-          "bytes": 27175
+          "sha256": "1723a63f85b7a87cbb2c6b14740934fee3aec9f36a4aa12ca20b97f6611b1ab3",
+          "bytes": 25434
         },
         {
           "contract": "decision_pipeline",
           "path": "data/decision_pipeline_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "ae7c64e56381b8f12bb3645c954323390d96e697da0c6222fc91ad547ca03ecd",
-          "bytes": 3203
+          "sha256": "96f82506289b34dd58136a4bc4f0d71e87fedca1eec074948cd404ce847507b4",
+          "bytes": 4385
         }
       ],
       "execution_level": 3,
-      "duration_ms": 1950.56,
+      "duration_ms": 2181.51,
       "exit_code": 0,
-      "stdout_tail": "PTIMIZER_ONLY\", \"formation\": \"3-4-3\", \"captain\": \"B.Fernandes\"}, \"performance_guardrails\": {\"shared_json_loaded_once\": true, \"shared_candidates_built_once\": true, \"fork_copy_on_write\": true, \"parallel_wc_package\": true, \"parallel_lineup_with_wc_package\": true, \"fast_wc_finalist_scoring\": true, \"redundant_package_validation_removed\": true, \"concise_stdout\": true, \"search_quality_reduction\": false, \"wc_beam_unchanged\": true, \"package_frontier_beam_unchanged\": true, \"bounded_top_k_same_wc_beam\": true, \"exact_streaming_wc_topk\": true, \"stable_wc_tie_semantics\": true, \"safe_wc_objective_bound\": true, \"fixed_position_finalist_scoring\": true, \"compact_package_keep_profile\": true, \"package_scalar_delta_metrics\": true, \"package_position_value_reuse\": true, \"exact_streaming_top_packages\": true, \"top_packages_only_payload_materialization\": true, \"checkpoint_action_deferred_until_postflight_health\": true, \"planning_squad_from_team_contract\": true, \"stale_lock_players_not_direct_optimizer_input\": true, \"engine_lineup_is_advisory_only\": true, \"manual_override_applied_in_separate_microservice\": true}}\n{\"service\": \"optimization\", \"status\": \"PASS\", \"decision_compute_ms\": 1827.6, \"limit_ms\": 5000.0}",
+      "stdout_tail": ": \"OPTIMIZER_ONLY\", \"formation\": \"3-4-3\", \"captain\": \"Haaland\"}, \"performance_guardrails\": {\"shared_json_loaded_once\": true, \"shared_candidates_built_once\": true, \"fork_copy_on_write\": true, \"parallel_wc_package\": true, \"parallel_lineup_with_wc_package\": true, \"fast_wc_finalist_scoring\": true, \"redundant_package_validation_removed\": true, \"concise_stdout\": true, \"search_quality_reduction\": false, \"wc_beam_unchanged\": true, \"package_frontier_beam_unchanged\": true, \"bounded_top_k_same_wc_beam\": true, \"exact_streaming_wc_topk\": true, \"stable_wc_tie_semantics\": true, \"safe_wc_objective_bound\": true, \"fixed_position_finalist_scoring\": true, \"compact_package_keep_profile\": true, \"package_scalar_delta_metrics\": true, \"package_position_value_reuse\": true, \"exact_streaming_top_packages\": true, \"top_packages_only_payload_materialization\": true, \"checkpoint_action_deferred_until_postflight_health\": true, \"planning_squad_from_team_contract\": true, \"stale_lock_players_not_direct_optimizer_input\": true, \"engine_lineup_is_advisory_only\": true, \"manual_override_applied_in_separate_microservice\": true}}\n{\"service\": \"optimization\", \"status\": \"PASS\", \"decision_compute_ms\": 2067.3, \"limit_ms\": 5000.0}",
       "stderr_tail": ""
     },
     {
@@ -334,14 +334,14 @@
           "path": "data/validation/reconciliation_readiness_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "c711020abd77d19ad4d2f89b2351d22596a42340d77dd2f1da73d9cfc7f1111f",
+          "sha256": "b77cb5fc6da046b3feeeb8896294f80aa5a72d36734ad2eaeaf37f88fd6c41bd",
           "bytes": 1753
         }
       ],
       "execution_level": 4,
-      "duration_ms": 286.84,
+      "duration_ms": 82.76,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"reconciliation_readiness\", \"status\": \"PASS\", \"target_gw\": 2, \"stage\": \"PREDEADLINE_READY\", \"blockers\": [], \"pending\": [\"gw_finish\", \"official_event_live_actuals\", \"official_submitted_picks_after_deadline\", \"post_gw_reconciliation\"]}",
+      "stdout_tail": "{\"service\": \"reconciliation_readiness\", \"status\": \"PASS\", \"target_gw\": 3, \"stage\": \"PREDEADLINE_READY\", \"blockers\": [], \"pending\": [\"gw_finish\", \"official_event_live_actuals\", \"official_submitted_picks_after_deadline\", \"post_gw_reconciliation\"]}",
       "stderr_tail": ""
     },
     {
@@ -361,14 +361,14 @@
           "path": "data/framework_health_preflight_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "b8e0119355989eb23b0a007740ef24dafdbdd89a731b87e4ef60341c3f57a7a0",
-          "bytes": 38800
+          "sha256": "8dec37ac35087cb31a077c5ba4e58a292a370fa94c7cc453f8acfd89f76c2efc",
+          "bytes": 39682
         }
       ],
       "execution_level": 5,
-      "duration_ms": 239.12,
+      "duration_ms": 222.55,
       "exit_code": 0,
-      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"preflight\", \"gate0\": {\"PASS\": 10, \"DEFERRED\": 6}, \"dss_core\": {\"ACTIVE\": 27, \"PARTIAL\": 14, \"DEFERRED\": 8, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 6, \"DEFERRED\": 9, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 4, \"DEFERRED\": 4}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 151.13}",
+      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"preflight\", \"gate0\": {\"PASS\": 10, \"DEFERRED\": 6}, \"dss_core\": {\"ACTIVE\": 27, \"PARTIAL\": 14, \"DEFERRED\": 8, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 6, \"DEFERRED\": 9, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 4, \"DEFERRED\": 4}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 140.76}",
       "stderr_tail": ""
     },
     {
@@ -385,14 +385,14 @@
           "path": "data/effective_plan_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "981d1cfc5cfae27d60282cd1e5fe0d7628dccbd3729feb8273d7d767a90d6c4a",
-          "bytes": 18433
+          "sha256": "6658e48e2b592110abe4d48a4ca1660484196fff3feff8fb8a067bb03318d6c1",
+          "bytes": 18089
         }
       ],
       "execution_level": 4,
-      "duration_ms": 55.29,
+      "duration_ms": 52.57,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"user_decision_overlay\", \"status\": \"PASS\", \"planning_gw\": 2, \"authority\": \"USER_OVERRIDE\", \"formation\": \"3-5-2\", \"captain\": \"B.Fernandes\", \"chip\": \"WILDCARD\", \"user_minus_engine_xpts\": -0.94, \"duration_ms\": 3.79}",
+      "stdout_tail": "{\"service\": \"user_decision_overlay\", \"status\": \"PASS\", \"planning_gw\": 3, \"authority\": \"ENGINE_RECOMMENDATION\", \"formation\": \"3-4-3\", \"captain\": \"Haaland\", \"chip\": \"NONE\", \"user_minus_engine_xpts\": 0.0, \"duration_ms\": 3.51}",
       "stderr_tail": ""
     },
     {
@@ -409,14 +409,14 @@
           "path": "data/gw_scorecard_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "4e317a442a08ce11773c4c7bf2039c9c15858fd690a22af46d914b52b239ee5b",
-          "bytes": 11964
+          "sha256": "6e8a73932669a966c24fd0893477afb6940b627ae9d8a5a96e444ef3a9624023",
+          "bytes": 11971
         }
       ],
       "execution_level": 5,
-      "duration_ms": 75.73,
+      "duration_ms": 71.79,
       "exit_code": 0,
-      "stdout_tail": "{\"service\": \"personal_gw_scorecard\", \"status\": \"PASS\", \"previous\": \"GW1 FINAL · 71 pts · BB\", \"planning\": \"GW2 PROJECTION · 45.0 xPts · WC · 3-5-2 · C B.Fernandes\", \"baseline_gw\": 1, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"decision_authority\": \"USER_OVERRIDE\", \"human_override_active\": true, \"archive_action\": \"PRESERVED\", \"duration_ms\": 19.49}",
+      "stdout_tail": "{\"service\": \"personal_gw_scorecard\", \"status\": \"PASS\", \"previous\": \"GW1 FINAL · 71 pts · BB\", \"planning\": \"GW3 PROJECTION · 47.7 xPts · 3-4-3 · C Haaland\", \"baseline_gw\": 2, \"squad_authority\": \"OFFICIAL_SUBMITTED\", \"decision_authority\": \"ENGINE_RECOMMENDATION\", \"human_override_active\": false, \"archive_action\": \"PRESERVED\", \"duration_ms\": 18.2}",
       "stderr_tail": ""
     },
     {
@@ -434,14 +434,14 @@
           "path": "data/framework_health_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "9414cd696f90333669b580b52e32902b1b18c404950c698b8c6b160f8339a723",
-          "bytes": 43172
+          "sha256": "922656b6e1e181e56ee3057374ca33b9ee086f6051f39658c20fe593cfb6dda7",
+          "bytes": 44061
         }
       ],
       "execution_level": 6,
-      "duration_ms": 363.71,
+      "duration_ms": 360.15,
       "exit_code": 0,
-      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"postflight\", \"gate0\": {\"PASS\": 16}, \"dss_core\": {\"ACTIVE\": 35, \"PARTIAL\": 14, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 15, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 8}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 153.44}\n{\"service\": \"framework_postflight\", \"pipeline_health\": \"GREEN\", \"gate0\": {\"PASS\": 16}, \"engine_formation\": \"3-4-3\", \"effective_formation\": \"3-5-2\", \"both_legal\": true, \"official_promoted\": [\"DSS-18\", \"DSS-20\", \"DSS-21\", \"DSS-22\", \"DSS-23\", \"DSS-38\"], \"capability_coverage\": {\"active\": 64, \"warmup\": 2, \"partial\": 8, \"failed\": 0, \"declared\": 74, \"active_ratio\": 0.8649}}",
+      "stdout_tail": "{\"framework_health\": \"GREEN\", \"pipeline_health\": \"GREEN\", \"prediction_health\": \"AMBER\", \"capability_health\": \"AMBER\", \"phase\": \"postflight\", \"gate0\": {\"PASS\": 16}, \"dss_core\": {\"ACTIVE\": 35, \"PARTIAL\": 14, \"WARMUP\": 1}, \"extensions\": {\"ACTIVE\": 15, \"WARMUP\": 1}, \"enhancements\": {\"ACTIVE\": 8}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 152.94}\n{\"service\": \"framework_postflight\", \"pipeline_health\": \"GREEN\", \"gate0\": {\"PASS\": 16}, \"engine_formation\": \"3-4-3\", \"effective_formation\": \"3-4-3\", \"both_legal\": true, \"official_promoted\": [\"DSS-18\", \"DSS-20\", \"DSS-21\", \"DSS-22\", \"DSS-23\", \"DSS-38\"], \"capability_coverage\": {\"active\": 64, \"warmup\": 2, \"partial\": 8, \"failed\": 0, \"declared\": 74, \"active_ratio\": 0.8649}}",
       "stderr_tail": ""
     },
     {
@@ -459,14 +459,14 @@
           "path": "data/checkpoint_decision_v4.json",
           "valid": true,
           "errors": [],
-          "sha256": "8542f41db4f02f7c118656b971bdecb3b9e44a978f7db1b5f4e7dc0cf591ea95",
-          "bytes": 17049
+          "sha256": "6adf60476b1961317cab3e17f4582cc50e87cc189b3b2dc028b61488d0eec757",
+          "bytes": 19162
         }
       ],
       "execution_level": 7,
-      "duration_ms": 60.76,
+      "duration_ms": 55.69,
       "exit_code": 0,
-      "stdout_tail": "{\"checkpoint\": \"REGULAR_MONITOR\", \"action\": \"HOLD\", \"headline\": \"HOLD\", \"governed_verdict\": \"MATERIAL_UPGRADE\", \"decision_authority\": \"USER_OVERRIDE\", \"previous_gw\": \"GW1 FINAL · 71 pts · BB\", \"planning_gw\": \"GW2 PROJECTION · 45.0 xPts · WC · 3-5-2 · C B.Fernandes\", \"squad_basis\": \"USER_CAPTURED_WC_DRAFT\", \"human_reason_count\": 5}",
+      "stdout_tail": "{\"checkpoint\": \"MATCHDAY_LIVE\", \"visible_report_count\": 1, \"action\": \"HOLD\", \"headline\": \"HOLD\", \"governed_verdict\": \"MATERIAL_UPGRADE\", \"decision_authority\": \"ENGINE_RECOMMENDATION\", \"previous_gw\": \"GW1 FINAL · 71 pts · BB\", \"planning_gw\": \"GW3 PROJECTION · 47.7 xPts · 3-4-3 · C Haaland\", \"squad_basis\": \"OFFICIAL_FPL_PICKS\", \"human_reason_count\": 4}",
       "stderr_tail": ""
     }
   ],
@@ -542,10 +542,10 @@
     "reconciliation_readiness_no_official_refetch": true,
     "reconciliation_readiness_reuses_validation_integrity": true
   },
-  "duration_ms": 4430.76,
+  "duration_ms": 4836.17,
   "runtime_target": {
     "target_ms": 5000.0,
-    "actual_ms": 4430.76,
+    "actual_ms": 4836.17,
     "status": "PASS",
     "hard_gate": false,
     "reason": "full orchestration includes Official/community network latency; deterministic decision compute remains the hard <5s gate"
@@ -560,8 +560,8 @@
     "fail_closed": true
   },
   "locked_artifacts": {
-    "data/runtime/snapshot.v1.json": "ad4627eb7aba16dce5cc200bf42cdba4f4c0b89f58ae4d88602574b6d5dae596",
-    "data/runtime/enrichment.v1.json": "4548c1f1d3679666e1aba881f997d359d35f8f8fab20210370b3dd975b050dde",
-    "data/latest.json": "42ec69198fc5debef5da60eeba563cc0b8493531516cadd13781a536d0aeaaf2"
+    "data/runtime/snapshot.v1.json": "a85d4b303514555d27c510d869308c4c1d9e59391feb68061cffe6382128a09b",
+    "data/runtime/enrichment.v1.json": "ef1a2b75ee7135f33cfc680a6bfe0f01fc900d1725eb007bd6e78fd84ef87a23",
+    "data/latest.json": "304a44a41fa24b465db0828c538b9f3b59fe070e00b82bdeb883b0be046b867c"
   }
 }

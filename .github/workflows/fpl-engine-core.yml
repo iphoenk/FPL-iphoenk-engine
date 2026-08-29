@@ -32,7 +32,22 @@ jobs:
       - name: Install cached dependencies
         run: pip install --disable-pip-version-check -r requirements.txt pytest
       - name: Unit and acceptance tests
-        run: python -m pytest -q
+        id: deterministic_tests
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -q --tb=short 2>&1 | tee pytest-diagnostic.txt
+          test_exit=${PIPESTATUS[0]}
+          set -e
+          exit "$test_exit"
+      - name: Upload deterministic failure diagnostics
+        if: failure() && steps.deterministic_tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: pytest-diagnostic.txt
+          if-no-files-found: error
+          retention-days: 7
       - name: Run process-isolated DAG-parallel V4 services
         run: python -m src.services.orchestrator daily --stats --deep-stats
       - name: Centralized V4 core quality gate

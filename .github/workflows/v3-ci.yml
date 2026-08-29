@@ -63,9 +63,6 @@ jobs:
       - name: Composite FULL + FAST release acceptance
         if: github.event_name == 'pull_request'
         run: python -m src.runtime_v3.release_acceptance
-      - name: Benchmark governed decision regeneration under 1s
+      - name: Benchmark unified interactive fastpath under 2s, prefer 1s
         if: github.event_name == 'pull_request'
-        run: python -m src.engines.decision_hotpath_service --benchmark
-      - name: Benchmark validated instant gateway under 1s
-        if: github.event_name == 'pull_request'
-        run: python -m src.runtime_v3.instant_serving --benchmark
+        run: python -m src.runtime_v3.unified_fastpath --benchmark

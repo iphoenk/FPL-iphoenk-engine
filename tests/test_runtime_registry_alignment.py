@@ -26,6 +26,7 @@ def test_decision_snapshot_is_declared_across_producer_consumer_and_publish_cont
 
     reporting = services["reporting"]
     evaluation = services["prediction_evaluation"]
+    snapshot_contract = contracts["decision_validation_snapshots.json"]
 
     assert {"module": "src.engines.prediction_decision_snapshot", "args": []} in reporting["commands"]
     assert "decision_validation_snapshots.json" in reporting["artifacts"]
@@ -33,7 +34,8 @@ def test_decision_snapshot_is_declared_across_producer_consumer_and_publish_cont
     assert "decision_validation_snapshots.json" in evaluation["inputs"]
     assert "decision_validation_snapshots.json" in publish["hydrate_paths"]
     assert "decision_validation_snapshots.json" in publish["publish_paths"]
-    assert "decision_validation_snapshots.json" in contracts
+    assert snapshot_contract["equals"]["schema_version"] == 2
+    assert snapshot_contract["equals"]["owner"] == "reporting.decision_snapshot_evidence"
 
 
 def test_lineup_governance_latest_file_contract_is_preserved() -> None:
@@ -83,3 +85,18 @@ def test_prediction_snapshot_and_xmins_have_explicit_canonical_owners() -> None:
     xmins = primitives["XMINS_DISTRIBUTION"]
     assert xmins["owner"] == "prediction"
     assert xmins["implementation"] == "src.models.xmins_v3"
+
+
+def test_decision_hotpath_compatibility_path_delegates_to_unified_owner() -> None:
+    ownership = _json("config/v3_architecture_ownership_registry.json")
+    interactive = _json("config/runtime/interactive_service_registry.json")
+    source = (ROOT / "src/engines/decision_hotpath_service.py").read_text(encoding="utf-8")
+
+    assert "src.engines.decision_hotpath_service" in ownership["compatibility_only_modules"]
+    assert interactive["services"] == {
+        "unified_fastpath": interactive["services"]["unified_fastpath"]
+    }
+    assert interactive["compatibility_entrypoints"]["decision_hotpath"] == "src.engines.decision_hotpath_service"
+    assert "from src.runtime_v3.unified_fastpath import run as run_unified_fastpath" in source
+    assert "build_lineup_decision" not in source
+    assert "build_package_decision" not in source

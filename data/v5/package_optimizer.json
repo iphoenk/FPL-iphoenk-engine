@@ -4429,6 +4429,9 @@
       "prediction_evaluation": [
         "evaluation"
       ],
+      "prediction_promotion_evidence": [
+        "evaluation"
+      ],
       "prediction_settlement": [
         "evaluation"
       ],
@@ -4464,7 +4467,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 56 active price alerts"
+      "market timing context contains 52 active price alerts"
     ],
     "evidence": [
       {
@@ -4567,7 +4570,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 56
+    "alert_count": 52
   },
   "governance": {
     "candidate_generation_only": true,
@@ -4595,6 +4598,7 @@
       "learning_loop",
       "owned_challenger_comparator",
       "prediction_evaluation",
+      "prediction_promotion_evidence",
       "prediction_settlement",
       "reliability_overlay",
       "shadow_parity",

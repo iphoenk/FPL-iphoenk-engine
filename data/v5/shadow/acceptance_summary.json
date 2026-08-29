@@ -1,15 +1,15 @@
 {
   "schema_version": 4,
   "model": "v5_postvalidated_shadow_acceptance_v4",
-  "generated_at": "2026-08-29T08:18:25.679599+00:00",
+  "generated_at": "2026-08-29T09:30:59.864112+00:00",
   "v5_version": "5.0.0-beta.4",
-  "release_fingerprint": "sha256:ea2fb70f20820756973ebb8465af1a7895bbc0d0365da77ec683111c40ac448f",
+  "release_fingerprint": "sha256:461d9b362802b582b48a179157963386baa4e81ff3088d9b89e84effc27430d0",
   "production_baseline_version": "v3.20.0",
   "production_main_sha": "9aaa898146f8396b6bf7f3337ca9ab6afa0f69cd",
   "required_validated_cycles": 3,
-  "validated_successful_cycles": 3,
-  "remaining_validated_cycles": 0,
-  "operational_candidate_eligible": true,
+  "validated_successful_cycles": 1,
+  "remaining_validated_cycles": 2,
+  "operational_candidate_eligible": false,
   "prediction_candidate_eligible": false,
   "prediction_acceptance": {
     "eligible": false,
@@ -33,28 +33,12 @@
   "production_promotion_requires_explicit_manual_action": true,
   "validated_cycles": [
     {
-      "cycle_id": "20260829T081212.239696+0000",
-      "generated_at": "2026-08-29T08:12:12.239696+00:00",
-      "validated_at": "2026-08-29T08:12:12.377162+00:00",
+      "cycle_id": "20260829T093059.689496+0000",
+      "generated_at": "2026-08-29T09:30:59.689496+00:00",
+      "validated_at": "2026-08-29T09:30:59.864112+00:00",
       "v3_engine_version": "3.39.0",
       "v5_engine_version": "5.0.0-beta.4",
-      "release_fingerprint": "sha256:ea2fb70f20820756973ebb8465af1a7895bbc0d0365da77ec683111c40ac448f"
-    },
-    {
-      "cycle_id": "20260829T081520.968039+0000",
-      "generated_at": "2026-08-29T08:15:20.968039+00:00",
-      "validated_at": "2026-08-29T08:15:21.152447+00:00",
-      "v3_engine_version": "3.39.0",
-      "v5_engine_version": "5.0.0-beta.4",
-      "release_fingerprint": "sha256:ea2fb70f20820756973ebb8465af1a7895bbc0d0365da77ec683111c40ac448f"
-    },
-    {
-      "cycle_id": "20260829T081825.488653+0000",
-      "generated_at": "2026-08-29T08:18:25.488653+00:00",
-      "validated_at": "2026-08-29T08:18:25.679599+00:00",
-      "v3_engine_version": "3.39.0",
-      "v5_engine_version": "5.0.0-beta.4",
-      "release_fingerprint": "sha256:ea2fb70f20820756973ebb8465af1a7895bbc0d0365da77ec683111c40ac448f"
+      "release_fingerprint": "sha256:461d9b362802b582b48a179157963386baa4e81ff3088d9b89e84effc27430d0"
     }
   ]
 }

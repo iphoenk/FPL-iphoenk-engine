@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-29T08:18:22.169234+00:00",
+  "generated_at": "2026-08-29T09:30:56.699942+00:00",
   "model": "v5_prediction_evaluation_v2",
   "freeze_policy": "LATEST_PRE_DEADLINE_FORECAST_FROZEN_FOR_SETTLEMENT",
   "overall": {
@@ -29,5 +29,31 @@
     "pre_deadline_forecast_is_frozen_before_scoring": true,
     "post_deadline_information_cannot_rewrite_frozen_forecast": true,
     "temporal_guard_required": true
+  },
+  "decision_metrics": {
+    "captain_regret": {
+      "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+      "sample_size": 0,
+      "mean": null
+    },
+    "xi_regret": {
+      "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+      "sample_size": 0,
+      "mean": null
+    },
+    "transfer_comparator_realized_net_gain": {
+      "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+      "sample_size": 0,
+      "mean": null
+    }
+  },
+  "promotion_evidence": {
+    "model": "v5_prediction_promotion_evidence_v1",
+    "settled_gameweeks_checked": [],
+    "governance": {
+      "genuine_predeadline_snapshot_required": true,
+      "postdeadline_reconstruction_forbidden": true,
+      "exact_hit_cost_required_for_transfer_net_gain": true
+    }
   }
 }

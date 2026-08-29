@@ -3,8 +3,8 @@
 Production-oriented personal FPL decision engine and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
-- Current accepted production release: `3.24.0` / schema `49`.
-- Current release candidate: `3.39.0` / schema `49`, stabilization of the current V3.39 main lineage after independent QA/QC review.
+- Current accepted production release: `3.39.0` / schema `49`.
+- V3.39 stabilization is merged to `main`, main CI is GREEN, and the matching `runtime-data` snapshot is published.
 - Background execution is organized as 21 artifact-owned capabilities mapped exactly once into 7 execution domains: `ACQUIRE`, `ENRICH`, `MODEL`, `MARKET`, `DECISION`, `GOVERNANCE`, `PUBLISH`.
 - Interactive serving is owned by the single `unified_fastpath` lane; execution domains are orchestration boundaries, not alternate business owners.
 - `config/rec_registry.json` is the canonical REC set. `IMPLEMENTATION_STATUS.json`, Official-first coverage and this documentation are projections/consumers, not competing REC authorities.
@@ -16,13 +16,15 @@ Production-oriented personal FPL decision engine and persisted Official-FPL-deri
 - Canonical roadmap and Definition of Done: `MASTER_TASK_LIST_V3.md`.
 
 ## V3.39 Stabilization
-This release line preserves the existing football formulas while tightening runtime, release and governance hygiene.
+This release preserves the existing football formulas while tightening runtime, release and governance hygiene.
 
 - Competitive-load runtime and report-time governance use one canonical policy file: `config/intelligence/competitive_load.json`.
-- The legacy duplicate `recent_competitive_load.json` policy is removed only after its report-time rules are migrated into the canonical policy.
+- The legacy duplicate `recent_competitive_load.json` policy was removed only after its report-time rules were migrated into the canonical policy and all DSS dependencies were repointed.
 - CI blocks accidental placeholder/probe files such as `x`, `noop` and `probe` from being committed again.
 - Release metadata is aligned with the V3.39 code lineage without claiming predictive validation that has not yet been earned from settled Gameweeks.
 - The 21-capability / 7-domain equivalence guard remains mandatory and prevents execution-domain drift from business capability ownership.
+- Candidate CI run `33238691899` passed **304 tests**, FULL **8.427s**, FAST **4.642s**, and interactive serving **9.022ms median / 165.394ms max**.
+- Merged-main CI run `33238768506` passed and production runtime run `33238768480` published `runtime-data` for V3.39.0. The published runtime manifest records FAST **5.388s**, within the 10s SLO.
 
 ## V3.25 Architecture Consolidation + Interactive Decision Lane
 REC-42 applies the V4 one-owner/no-duplicate concept and V5 bounded-context/performance principles without changing FPL scoring or prediction formulas.
@@ -99,4 +101,4 @@ Broad/expensive Official expansion belongs to FULL refresh; FAST may reuse only 
 - Human-facing report language must not make raw machine state the primary narrative.
 - Required scheduled report checkpoints must be auditable and missed checkpoints explicit.
 
-See `MASTER_TASK_LIST_V3.md` for authoritative production/candidate state, calibration monitors, deferred work and release checklist.
+See `MASTER_TASK_LIST_V3.md` for authoritative production state, calibration monitors, deferred work and release checklist.

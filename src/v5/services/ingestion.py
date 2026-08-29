@@ -4,9 +4,25 @@ from typing import Any
 
 from src.v5.authenticated_official import collect_runtime
 from src.v5.official_auth import expected_team_id
-from src.v5.public_api import fetch_many
+from src.v5.public_api import FetchSpec, fetch_many
 from src.v5.request_plan import request_specs
 from src.v5.sources.fusion import collect as collect_source_fusion
+
+
+def _event_live_history(gameweeks: Any) -> dict[str, Any]:
+    requested = sorted({int(value) for value in (gameweeks or []) if int(value) > 0})
+    if not requested:
+        return {"payloads": {}, "health": {}, "requested_gameweeks": []}
+    specs = {
+        f"gw_{gw}": FetchSpec(route="event_live", params={"event": gw})
+        for gw in requested
+    }
+    data, health = fetch_many(specs)
+    return {
+        "payloads": {str(gw): data.get(f"gw_{gw}") for gw in requested},
+        "health": {str(gw): health.get(f"gw_{gw}") or {} for gw in requested},
+        "requested_gameweeks": requested,
+    }
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:
@@ -23,6 +39,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         }
         data, health = fetch_many(request_specs("dynamic_requests", tokens))
         return {"payloads": data, "health": health}
+    if operation == "collect_event_live_history":
+        return _event_live_history(payload.get("gameweeks"))
     if operation == "collect_authenticated":
         return collect_runtime(payload.get("owned_ids") or ())
     if operation == "collect_enrichment":

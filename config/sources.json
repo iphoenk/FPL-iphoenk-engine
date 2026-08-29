@@ -27,5 +27,13 @@
     "required_sweeps": ["press_conference_and_official_team_news", "latest_competitive_first_team_match_all_competitions"],
     "preferred_sources": ["official_club", "premierleague.com", "uefa.com", "efl.com", "thefa.com"],
     "direct_xpts_mutation_forbidden": true
+  },
+  "performance_reuse": {
+    "current_gw_stats_ttl_minutes": 60,
+    "deep_stats_ttl_minutes": 180,
+    "previous_season_ttl_minutes": 10080,
+    "policy": "reuse_only_when_cached_payload_is_schema-valid_and_within_ttl; otherwise refresh",
+    "official_fpl_excluded": true,
+    "volatile_team_news_excluded": true
   }
 }

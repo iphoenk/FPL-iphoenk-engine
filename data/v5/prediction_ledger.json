@@ -6155,7 +6155,7 @@
       "gw": 3,
       "deadline_time": "2026-09-04T17:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-08-29T13:19:34.942450+00:00",
+        "generated_at": "2026-08-29T13:22:31.954490+00:00",
         "players": [
           {
             "element": 1,
@@ -10161,8 +10161,8 @@
             "element": 350,
             "name": "A.Becker",
             "position": "GK",
-            "xpts": 2.889,
-            "xpts_std": 2.684,
+            "xpts": 2.883,
+            "xpts_std": 2.682,
             "xmins": 74.7,
             "start_probability": 0.8045,
             "clean_sheet_probability": 0.1257
@@ -10221,8 +10221,8 @@
             "element": 356,
             "name": "Virgil",
             "position": "DEF",
-            "xpts": 3.632,
-            "xpts_std": 2.937,
+            "xpts": 3.625,
+            "xpts_std": 2.934,
             "xmins": 78.3,
             "start_probability": 0.851,
             "clean_sheet_probability": 0.1257
@@ -10301,8 +10301,8 @@
             "element": 364,
             "name": "Tsimikas",
             "position": "DEF",
-            "xpts": 2.532,
-            "xpts_std": 2.711,
+            "xpts": 2.526,
+            "xpts_std": 2.709,
             "xmins": 48.1,
             "start_probability": 0.6029,
             "clean_sheet_probability": 0.1257
@@ -10321,8 +10321,8 @@
             "element": 366,
             "name": "Wirtz",
             "position": "MID",
-            "xpts": 4.065,
-            "xpts_std": 3.181,
+            "xpts": 4.05,
+            "xpts_std": 3.175,
             "xmins": 72.8,
             "start_probability": 0.8018,
             "clean_sheet_probability": 0.1257
@@ -10341,8 +10341,8 @@
             "element": 368,
             "name": "Szoboszlai",
             "position": "MID",
-            "xpts": 4.743,
-            "xpts_std": 3.404,
+            "xpts": 4.76,
+            "xpts_std": 3.411,
             "xmins": 78.2,
             "start_probability": 0.851,
             "clean_sheet_probability": 0.1257
@@ -10351,8 +10351,8 @@
             "element": 369,
             "name": "Ngumoha",
             "position": "MID",
-            "xpts": 3.494,
-            "xpts_std": 3.034,
+            "xpts": 3.48,
+            "xpts_std": 3.029,
             "xmins": 67.4,
             "start_probability": 0.7114,
             "clean_sheet_probability": 0.1257
@@ -10371,8 +10371,8 @@
             "element": 371,
             "name": "Gravenberch",
             "position": "MID",
-            "xpts": 3.068,
-            "xpts_std": 2.71,
+            "xpts": 3.06,
+            "xpts_std": 2.707,
             "xmins": 76.1,
             "start_probability": 0.8437,
             "clean_sheet_probability": 0.1257
@@ -10411,8 +10411,8 @@
             "element": 375,
             "name": "Nyoni",
             "position": "MID",
-            "xpts": 2.816,
-            "xpts_std": 2.83,
+            "xpts": 2.804,
+            "xpts_std": 2.825,
             "xmins": 48.1,
             "start_probability": 0.6029,
             "clean_sheet_probability": 0.1257
@@ -10431,9 +10431,9 @@
             "element": 377,
             "name": "Munoz",
             "position": "MID",
-            "xpts": 3.544,
-            "xpts_std": 3.017,
-            "xmins": 62.8,
+            "xpts": 3.591,
+            "xpts_std": 3.036,
+            "xmins": 63.4,
             "start_probability": 0.7524,
             "clean_sheet_probability": 0.1257
           },
@@ -10451,8 +10451,8 @@
             "element": 379,
             "name": "Isak",
             "position": "FWD",
-            "xpts": 4.518,
-            "xpts_std": 3.444,
+            "xpts": 4.499,
+            "xpts_std": 3.436,
             "xmins": 66.8,
             "start_probability": 0.7337,
             "clean_sheet_probability": 0.1257
@@ -10501,8 +10501,8 @@
             "element": 579,
             "name": "Araujo",
             "position": "DEF",
-            "xpts": 2.495,
-            "xpts_std": 2.696,
+            "xpts": 2.489,
+            "xpts_std": 2.693,
             "xmins": 48.1,
             "start_probability": 0.6029,
             "clean_sheet_probability": 0.1257
@@ -11431,8 +11431,8 @@
             "element": 167,
             "name": "Delap",
             "position": "FWD",
-            "xpts": 2.691,
-            "xpts_std": 2.757,
+            "xpts": 2.685,
+            "xpts_std": 2.754,
             "xmins": 61.5,
             "start_probability": 0.6358,
             "clean_sheet_probability": 0.4928
@@ -11441,8 +11441,8 @@
             "element": 467,
             "name": "Sels",
             "position": "GK",
-            "xpts": 4.142,
-            "xpts_std": 3.189,
+            "xpts": 4.136,
+            "xpts_std": 3.186,
             "xmins": 75.2,
             "start_probability": 0.8225,
             "clean_sheet_probability": 0.4928
@@ -11461,8 +11461,8 @@
             "element": 469,
             "name": "N.Williams",
             "position": "DEF",
-            "xpts": 4.581,
-            "xpts_std": 3.336,
+            "xpts": 4.576,
+            "xpts_std": 3.334,
             "xmins": 77.5,
             "start_probability": 0.851,
             "clean_sheet_probability": 0.4928
@@ -11481,8 +11481,8 @@
             "element": 471,
             "name": "Milenković",
             "position": "DEF",
-            "xpts": 4.255,
-            "xpts_std": 3.199,
+            "xpts": 4.252,
+            "xpts_std": 3.198,
             "xmins": 78.3,
             "start_probability": 0.851,
             "clean_sheet_probability": 0.4928
@@ -11491,8 +11491,8 @@
             "element": 472,
             "name": "Murillo",
             "position": "DEF",
-            "xpts": 4.077,
-            "xpts_std": 3.196,
+            "xpts": 4.074,
+            "xpts_std": 3.194,
             "xmins": 70.0,
             "start_probability": 0.7937,
             "clean_sheet_probability": 0.4928
@@ -11501,8 +11501,8 @@
             "element": 473,
             "name": "Aina",
             "position": "DEF",
-            "xpts": 4.034,
-            "xpts_std": 3.204,
+            "xpts": 4.033,
+            "xpts_std": 3.203,
             "xmins": 70.7,
             "start_probability": 0.7707,
             "clean_sheet_probability": 0.4928
@@ -11511,8 +11511,8 @@
             "element": 474,
             "name": "Jair Cunha",
             "position": "DEF",
-            "xpts": 3.787,
-            "xpts_std": 3.13,
+            "xpts": 3.784,
+            "xpts_std": 3.129,
             "xmins": 66.5,
             "start_probability": 0.7404,
             "clean_sheet_probability": 0.4928
@@ -11551,7 +11551,7 @@
             "element": 478,
             "name": "Netz",
             "position": "DEF",
-            "xpts": 3.239,
+            "xpts": 3.238,
             "xpts_std": 3.02,
             "xmins": 57.3,
             "start_probability": 0.5824,
@@ -11571,8 +11571,8 @@
             "element": 480,
             "name": "Gibbs-White",
             "position": "MID",
-            "xpts": 4.456,
-            "xpts_std": 3.283,
+            "xpts": 4.442,
+            "xpts_std": 3.278,
             "xmins": 77.1,
             "start_probability": 0.851,
             "clean_sheet_probability": 0.4928
@@ -11621,8 +11621,8 @@
             "element": 486,
             "name": "McAtee",
             "position": "MID",
-            "xpts": 2.901,
-            "xpts_std": 2.815,
+            "xpts": 2.895,
+            "xpts_std": 2.812,
             "xmins": 64.6,
             "start_probability": 0.6758,
             "clean_sheet_probability": 0.4928
@@ -11671,8 +11671,8 @@
             "element": 491,
             "name": "Igor Jesus",
             "position": "FWD",
-            "xpts": 2.93,
-            "xpts_std": 2.71,
+            "xpts": 2.922,
+            "xpts_std": 2.707,
             "xmins": 67.6,
             "start_probability": 0.7969,
             "clean_sheet_probability": 0.4928
@@ -11691,9 +11691,9 @@
             "element": 558,
             "name": "Schlager",
             "position": "MID",
-            "xpts": 3.104,
-            "xpts_std": 2.832,
-            "xmins": 61.1,
+            "xpts": 3.108,
+            "xpts_std": 2.833,
+            "xmins": 61.7,
             "start_probability": 0.7524,
             "clean_sheet_probability": 0.4928
           },
@@ -12382,6 +12382,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-08-29T13:19:35.710672+00:00",
+  "updated_at": "2026-08-29T13:22:32.709295+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

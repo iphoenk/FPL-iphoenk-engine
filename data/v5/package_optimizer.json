@@ -21,28 +21,28 @@
       "horizons": {
         "3": {
           "valid": true,
-          "mean": 165.861,
+          "mean": 165.859,
           "std": 20.282
         },
         "5": {
           "valid": true,
-          "mean": 278.382,
+          "mean": 278.38,
           "std": 26.31
         },
         "10": {
           "valid": true,
-          "mean": 556.049,
+          "mean": 556.046,
           "std": 37.141
         },
         "15": {
           "valid": true,
-          "mean": 834.864,
+          "mean": 834.858,
           "std": 45.513
         }
       },
-      "objective_mean": 328.421,
+      "objective_mean": 328.419,
       "objective_std": 14.131,
-      "robust_score": 326.726,
+      "robust_score": 326.723,
       "performance": {
         "projection_lookup": "indexed_o1",
         "horizon_evaluation": "single_pass_prefix",
@@ -89,34 +89,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 174.622,
+            "mean": 174.62,
             "std": 20.895
           },
           "5": {
             "valid": true,
-            "mean": 291.241,
-            "std": 27.009
+            "mean": 291.238,
+            "std": 27.008
           },
           "10": {
             "valid": true,
-            "mean": 578.398,
+            "mean": 578.394,
             "std": 38.008
           },
           "15": {
             "valid": true,
-            "mean": 864.656,
+            "mean": 864.65,
             "std": 46.453
           }
         },
-        "objective_mean": 342.676,
+        "objective_mean": 342.673,
         "objective_std": 14.51,
-        "robust_score": 340.485,
+        "robust_score": 340.482,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 340.535,
+        "raw_robust_score": 340.532,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -132,9 +132,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 332.458,
-        "p50": 342.408,
-        "p75": 353.728,
+        "p25": 332.455,
+        "p50": 342.405,
+        "p75": 353.725,
         "p_outperform_hold_independent_baseline": 0.7592
       },
       "team_cluster": {
@@ -190,34 +190,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 173.68,
+            "mean": 173.678,
             "std": 20.74
           },
           "5": {
             "valid": true,
-            "mean": 290.764,
+            "mean": 290.762,
             "std": 26.864
           },
           "10": {
             "valid": true,
-            "mean": 577.264,
+            "mean": 577.261,
             "std": 37.789
           },
           "15": {
             "valid": true,
-            "mean": 864.29,
-            "std": 46.227
+            "mean": 864.284,
+            "std": 46.226
           }
         },
-        "objective_mean": 341.916,
+        "objective_mean": 341.914,
         "objective_std": 14.421,
-        "robust_score": 339.736,
+        "robust_score": 339.733,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 339.786,
+        "raw_robust_score": 339.783,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -233,9 +233,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 331.637,
-        "p50": 342.412,
-        "p75": 352.859,
+        "p25": 331.635,
+        "p50": 342.41,
+        "p75": 352.857,
         "p_outperform_hold_independent_baseline": 0.7481
       },
       "team_cluster": {
@@ -292,34 +292,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 173.834,
-            "std": 20.869
+            "mean": 173.832,
+            "std": 20.868
           },
           "5": {
             "valid": true,
-            "mean": 291.22,
-            "std": 27.045
+            "mean": 291.217,
+            "std": 27.044
           },
           "10": {
             "valid": true,
-            "mean": 575.34,
+            "mean": 575.337,
             "std": 37.944
           },
           "15": {
             "valid": true,
-            "mean": 860.658,
-            "std": 46.392
+            "mean": 860.652,
+            "std": 46.391
           }
         },
-        "objective_mean": 341.48,
-        "objective_std": 14.505,
-        "robust_score": 339.239,
+        "objective_mean": 341.477,
+        "objective_std": 14.504,
+        "robust_score": 339.236,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 339.339,
+        "raw_robust_score": 339.336,
         "team_cluster_penalty_points": 0.1,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -335,9 +335,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 331.327,
-        "p50": 341.762,
-        "p75": 350.563,
+        "p25": 331.325,
+        "p50": 341.759,
+        "p75": 350.559,
         "p_outperform_hold_independent_baseline": 0.7405
       },
       "team_cluster": {
@@ -393,34 +393,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 173.217,
-            "std": 20.82
+            "mean": 173.215,
+            "std": 20.819
           },
           "5": {
             "valid": true,
-            "mean": 290.128,
+            "mean": 290.125,
             "std": 26.982
           },
           "10": {
             "valid": true,
-            "mean": 577.214,
+            "mean": 577.211,
             "std": 38.007
           },
           "15": {
             "valid": true,
-            "mean": 862.778,
+            "mean": 862.772,
             "std": 46.452
           }
         },
-        "objective_mean": 341.353,
+        "objective_mean": 341.35,
         "objective_std": 14.485,
-        "robust_score": 339.165,
+        "robust_score": 339.162,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 339.215,
+        "raw_robust_score": 339.212,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -436,9 +436,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 331.8,
-        "p50": 340.689,
-        "p75": 350.671,
+        "p25": 331.797,
+        "p50": 340.686,
+        "p75": 350.668,
         "p_outperform_hold_independent_baseline": 0.7386
       },
       "team_cluster": {
@@ -494,34 +494,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 172.982,
+            "mean": 172.98,
             "std": 20.777
           },
           "5": {
             "valid": true,
-            "mean": 290.214,
+            "mean": 290.212,
             "std": 26.951
           },
           "10": {
             "valid": true,
-            "mean": 575.82,
+            "mean": 575.817,
             "std": 37.907
           },
           "15": {
             "valid": true,
-            "mean": 862.106,
+            "mean": 862.1,
             "std": 46.373
           }
         },
-        "objective_mean": 341.007,
+        "objective_mean": 341.004,
         "objective_std": 14.46,
-        "robust_score": 338.821,
+        "robust_score": 338.819,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 338.871,
+        "raw_robust_score": 338.869,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -537,9 +537,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 332.157,
-        "p50": 342.127,
-        "p75": 349.946,
+        "p25": 332.154,
+        "p50": 342.124,
+        "p75": 349.943,
         "p_outperform_hold_independent_baseline": 0.7332
       },
       "team_cluster": {
@@ -595,34 +595,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 172.989,
+            "mean": 172.987,
             "std": 20.688
           },
           "5": {
             "valid": true,
-            "mean": 289.396,
+            "mean": 289.393,
             "std": 26.788
           },
           "10": {
             "valid": true,
-            "mean": 574.65,
+            "mean": 574.647,
             "std": 37.694
           },
           "15": {
             "valid": true,
-            "mean": 860.305,
-            "std": 46.112
+            "mean": 860.299,
+            "std": 46.111
           }
         },
-        "objective_mean": 340.384,
+        "objective_mean": 340.381,
         "objective_std": 14.383,
-        "robust_score": 338.208,
+        "robust_score": 338.205,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 338.258,
+        "raw_robust_score": 338.255,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -638,9 +638,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 333.102,
-        "p50": 341.609,
-        "p75": 349.915,
+        "p25": 333.099,
+        "p50": 341.606,
+        "p75": 349.912,
         "p_outperform_hold_independent_baseline": 0.7235
       },
       "team_cluster": {
@@ -697,34 +697,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 172.667,
+            "mean": 172.665,
             "std": 20.792
           },
           "5": {
             "valid": true,
-            "mean": 288.901,
+            "mean": 288.898,
             "std": 26.925
           },
           "10": {
             "valid": true,
-            "mean": 574.741,
+            "mean": 574.738,
             "std": 37.926
           },
           "15": {
             "valid": true,
-            "mean": 858.932,
+            "mean": 858.926,
             "std": 46.349
           }
         },
-        "objective_mean": 339.962,
+        "objective_mean": 339.959,
         "objective_std": 14.459,
-        "robust_score": 337.777,
+        "robust_score": 337.774,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 337.827,
+        "raw_robust_score": 337.824,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -740,9 +740,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 331.487,
-        "p50": 340.063,
-        "p75": 352.522,
+        "p25": 331.484,
+        "p50": 340.06,
+        "p75": 352.519,
         "p_outperform_hold_independent_baseline": 0.7159
       },
       "team_cluster": {
@@ -798,34 +798,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 172.414,
+            "mean": 172.412,
             "std": 20.744
           },
           "5": {
             "valid": true,
-            "mean": 288.922,
-            "std": 26.885
+            "mean": 288.919,
+            "std": 26.884
           },
           "10": {
             "valid": true,
-            "mean": 574.096,
-            "std": 37.846
+            "mean": 574.092,
+            "std": 37.845
           },
           "15": {
             "valid": true,
-            "mean": 860.293,
+            "mean": 860.289,
             "std": 46.319
           }
         },
-        "objective_mean": 339.902,
-        "objective_std": 14.433,
-        "robust_score": 337.72,
+        "objective_mean": 339.899,
+        "objective_std": 14.432,
+        "robust_score": 337.717,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 337.77,
+        "raw_robust_score": 337.767,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -841,9 +841,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 331.176,
-        "p50": 339.943,
-        "p75": 349.211,
+        "p25": 331.173,
+        "p50": 339.94,
+        "p75": 349.207,
         "p_outperform_hold_independent_baseline": 0.7151
       },
       "team_cluster": {
@@ -899,34 +899,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 172.432,
+            "mean": 172.43,
             "std": 20.749
           },
           "5": {
             "valid": true,
-            "mean": 288.986,
+            "mean": 288.984,
             "std": 26.894
           },
           "10": {
             "valid": true,
-            "mean": 573.347,
-            "std": 37.826
+            "mean": 573.344,
+            "std": 37.825
           },
           "15": {
             "valid": true,
-            "mean": 858.26,
+            "mean": 858.254,
             "std": 46.27
           }
         },
-        "objective_mean": 339.615,
+        "objective_mean": 339.612,
         "objective_std": 14.433,
-        "robust_score": 337.433,
+        "robust_score": 337.43,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 337.483,
+        "raw_robust_score": 337.48,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -942,9 +942,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 329.464,
-        "p50": 338.099,
-        "p75": 347.683,
+        "p25": 329.461,
+        "p50": 338.096,
+        "p75": 347.68,
         "p_outperform_hold_independent_baseline": 0.7103
       },
       "team_cluster": {
@@ -1000,34 +1000,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 172.607,
+            "mean": 172.604,
             "std": 20.77
           },
           "5": {
             "valid": true,
-            "mean": 289.336,
+            "mean": 289.334,
             "std": 26.922
           },
           "10": {
             "valid": true,
-            "mean": 572.791,
+            "mean": 572.788,
             "std": 37.807
           },
           "15": {
             "valid": true,
-            "mean": 856.049,
-            "std": 46.202
+            "mean": 856.043,
+            "std": 46.201
           }
         },
-        "objective_mean": 339.499,
+        "objective_mean": 339.496,
         "objective_std": 14.441,
-        "robust_score": 337.316,
+        "robust_score": 337.314,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 337.366,
+        "raw_robust_score": 337.364,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1043,10 +1043,10 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 330.075,
-        "p50": 340.396,
-        "p75": 349.707,
-        "p_outperform_hold_independent_baseline": 0.7083
+        "p25": 330.072,
+        "p50": 340.393,
+        "p75": 349.704,
+        "p_outperform_hold_independent_baseline": 0.7082
       },
       "team_cluster": {
         "club_counts": {
@@ -1102,34 +1102,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 172.949,
+            "mean": 172.947,
             "std": 20.762
           },
           "5": {
             "valid": true,
-            "mean": 288.457,
+            "mean": 288.454,
             "std": 26.838
           },
           "10": {
             "valid": true,
-            "mean": 572.843,
+            "mean": 572.839,
             "std": 37.768
           },
           "15": {
             "valid": true,
-            "mean": 856.447,
+            "mean": 856.441,
             "std": 46.166
           }
         },
-        "objective_mean": 339.401,
+        "objective_mean": 339.398,
         "objective_std": 14.418,
-        "robust_score": 337.22,
+        "robust_score": 337.217,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 337.27,
+        "raw_robust_score": 337.267,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1145,9 +1145,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 331.384,
-        "p50": 341.594,
-        "p75": 351.701,
+        "p25": 331.381,
+        "p50": 341.591,
+        "p75": 351.698,
         "p_outperform_hold_independent_baseline": 0.7067
       },
       "team_cluster": {
@@ -1203,34 +1203,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 171.726,
-            "std": 20.637
+            "mean": 171.724,
+            "std": 20.636
           },
           "5": {
             "valid": true,
-            "mean": 288.424,
-            "std": 26.781
+            "mean": 288.421,
+            "std": 26.78
           },
           "10": {
             "valid": true,
-            "mean": 573.458,
-            "std": 37.701
+            "mean": 573.455,
+            "std": 37.7
           },
           "15": {
             "valid": true,
-            "mean": 858.351,
+            "mean": 858.345,
             "std": 46.114
           }
         },
-        "objective_mean": 339.159,
+        "objective_mean": 339.156,
         "objective_std": 14.369,
-        "robust_score": 336.984,
+        "robust_score": 336.982,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 337.034,
+        "raw_robust_score": 337.032,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1246,9 +1246,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 330.334,
-        "p50": 338.209,
-        "p75": 350.273,
+        "p25": 330.331,
+        "p50": 338.206,
+        "p75": 350.27,
         "p_outperform_hold_independent_baseline": 0.7029
       },
       "team_cluster": {
@@ -1305,34 +1305,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 172.714,
+            "mean": 172.712,
             "std": 20.719
           },
           "5": {
             "valid": true,
-            "mean": 288.543,
+            "mean": 288.54,
             "std": 26.807
           },
           "10": {
             "valid": true,
-            "mean": 571.449,
+            "mean": 571.445,
             "std": 37.668
           },
           "15": {
             "valid": true,
-            "mean": 855.775,
+            "mean": 855.769,
             "std": 46.087
           }
         },
-        "objective_mean": 339.054,
+        "objective_mean": 339.051,
         "objective_std": 14.393,
-        "robust_score": 336.877,
+        "robust_score": 336.874,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 336.927,
+        "raw_robust_score": 336.924,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1348,10 +1348,10 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 329.991,
-        "p50": 341.011,
-        "p75": 349.031,
-        "p_outperform_hold_independent_baseline": 0.701
+        "p25": 329.988,
+        "p50": 341.008,
+        "p75": 349.028,
+        "p_outperform_hold_independent_baseline": 0.7009
       },
       "team_cluster": {
         "club_counts": {
@@ -1406,34 +1406,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 172.161,
-            "std": 20.736
+            "mean": 172.159,
+            "std": 20.735
           },
           "5": {
             "valid": true,
-            "mean": 288.436,
-            "std": 26.875
+            "mean": 288.433,
+            "std": 26.874
           },
           "10": {
             "valid": true,
-            "mean": 569.785,
+            "mean": 569.782,
             "std": 37.703
           },
           "15": {
             "valid": true,
-            "mean": 852.449,
-            "std": 46.105
+            "mean": 852.443,
+            "std": 46.104
           }
         },
-        "objective_mean": 338.204,
+        "objective_mean": 338.201,
         "objective_std": 14.413,
-        "robust_score": 335.975,
+        "robust_score": 335.972,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 336.075,
+        "raw_robust_score": 336.072,
         "team_cluster_penalty_points": 0.1,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1449,9 +1449,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 328.648,
-        "p50": 336.888,
-        "p75": 346.773,
+        "p25": 328.645,
+        "p50": 336.885,
+        "p75": 346.77,
         "p_outperform_hold_independent_baseline": 0.686
       },
       "team_cluster": {
@@ -1507,34 +1507,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 171.915,
+            "mean": 171.913,
             "std": 20.718
           },
           "5": {
             "valid": true,
-            "mean": 287.968,
+            "mean": 287.965,
             "std": 26.846
           },
           "10": {
             "valid": true,
-            "mean": 570.177,
+            "mean": 570.174,
             "std": 37.712
           },
           "15": {
             "valid": true,
-            "mean": 852.062,
-            "std": 46.088
+            "mean": 852.056,
+            "std": 46.087
           }
         },
-        "objective_mean": 337.966,
+        "objective_mean": 337.964,
         "objective_std": 14.403,
-        "robust_score": 335.788,
+        "robust_score": 335.785,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 335.838,
+        "raw_robust_score": 335.835,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1550,9 +1550,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 327.699,
-        "p50": 338.094,
-        "p75": 346.053,
+        "p25": 327.697,
+        "p50": 338.092,
+        "p75": 346.051,
         "p_outperform_hold_independent_baseline": 0.6819
       },
       "team_cluster": {
@@ -1609,34 +1609,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 172.432,
+            "mean": 172.43,
             "std": 20.731
           },
           "5": {
             "valid": true,
-            "mean": 287.438,
+            "mean": 287.435,
             "std": 26.79
           },
           "10": {
             "valid": true,
-            "mean": 569.673,
+            "mean": 569.669,
             "std": 37.655
           },
           "15": {
             "valid": true,
-            "mean": 850.249,
+            "mean": 850.243,
             "std": 45.983
           }
         },
-        "objective_mean": 337.752,
+        "objective_mean": 337.749,
         "objective_std": 14.388,
-        "robust_score": 335.575,
+        "robust_score": 335.572,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 335.625,
+        "raw_robust_score": 335.622,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1652,9 +1652,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 329.315,
-        "p50": 338.551,
-        "p75": 348.227,
+        "p25": 329.312,
+        "p50": 338.548,
+        "p75": 348.224,
         "p_outperform_hold_independent_baseline": 0.6782
       },
       "team_cluster": {
@@ -1711,34 +1711,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 171.309,
+            "mean": 171.307,
             "std": 20.643
           },
           "5": {
             "valid": true,
-            "mean": 287.43,
+            "mean": 287.428,
             "std": 26.781
           },
           "10": {
             "valid": true,
-            "mean": 570.265,
-            "std": 37.667
+            "mean": 570.262,
+            "std": 37.666
           },
           "15": {
             "valid": true,
-            "mean": 853.897,
+            "mean": 853.891,
             "std": 46.086
           }
         },
-        "objective_mean": 337.731,
+        "objective_mean": 337.729,
         "objective_std": 14.368,
-        "robust_score": 335.557,
+        "robust_score": 335.554,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 335.607,
+        "raw_robust_score": 335.604,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1754,9 +1754,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 325.262,
-        "p50": 338.518,
-        "p75": 346.564,
+        "p25": 325.26,
+        "p50": 338.516,
+        "p75": 346.562,
         "p_outperform_hold_independent_baseline": 0.678
       },
       "team_cluster": {
@@ -1912,34 +1912,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 170.761,
+            "mean": 170.758,
             "std": 20.659
           },
           "5": {
             "valid": true,
-            "mean": 287.264,
-            "std": 26.836
+            "mean": 287.262,
+            "std": 26.835
           },
           "10": {
             "valid": true,
-            "mean": 570.916,
+            "mean": 570.913,
             "std": 37.779
           },
           "15": {
             "valid": true,
-            "mean": 855.203,
+            "mean": 855.199,
             "std": 46.227
           }
         },
-        "objective_mean": 337.674,
+        "objective_mean": 337.672,
         "objective_std": 14.394,
-        "robust_score": 335.447,
+        "robust_score": 335.444,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 335.547,
+        "raw_robust_score": 335.544,
         "team_cluster_penalty_points": 0.1,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1955,9 +1955,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 327.706,
-        "p50": 337.952,
-        "p75": 346.716,
+        "p25": 327.704,
+        "p50": 337.95,
+        "p75": 346.714,
         "p_outperform_hold_independent_baseline": 0.6768
       },
       "team_cluster": {
@@ -2012,34 +2012,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 171.655,
+            "mean": 171.653,
             "std": 20.708
           },
           "5": {
             "valid": true,
-            "mean": 286.903,
+            "mean": 286.9,
             "std": 26.803
           },
           "10": {
             "valid": true,
-            "mean": 569.466,
+            "mean": 569.461,
             "std": 37.718
           },
           "15": {
             "valid": true,
-            "mean": 852.374,
+            "mean": 852.366,
             "std": 46.131
           }
         },
-        "objective_mean": 337.43,
+        "objective_mean": 337.427,
         "objective_std": 14.393,
-        "robust_score": 335.253,
+        "robust_score": 335.25,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 335.303,
+        "raw_robust_score": 335.3,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -2055,9 +2055,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 327.749,
-        "p50": 337.138,
-        "p75": 347.234,
+        "p25": 327.746,
+        "p50": 337.135,
+        "p75": 347.231,
         "p_outperform_hold_independent_baseline": 0.6724
       },
       "team_cluster": {
@@ -2107,7 +2107,7 @@
         "element": 467,
         "name": "Sels",
         "now_cost": 50,
-        "candidate_score": 17.71
+        "candidate_score": 17.68
       },
       {
         "element": 1,
@@ -2157,7 +2157,7 @@
         "element": 469,
         "name": "N.Williams",
         "now_cost": 50,
-        "candidate_score": 19.753
+        "candidate_score": 19.73
       },
       {
         "element": 279,
@@ -2201,13 +2201,13 @@
         "element": 368,
         "name": "Szoboszlai",
         "now_cost": 70,
-        "candidate_score": 21.284
+        "candidate_score": 21.354
       },
       {
-        "element": 480,
-        "name": "Gibbs-White",
-        "now_cost": 79,
-        "candidate_score": 20.748
+        "element": 367,
+        "name": "Gakpo",
+        "now_cost": 70,
+        "candidate_score": 20.745
       }
     ],
     "FWD": [
@@ -2221,7 +2221,7 @@
         "element": 379,
         "name": "Isak",
         "now_cost": 90,
-        "candidate_score": 19.724
+        "candidate_score": 19.644
       },
       {
         "element": 316,
@@ -2271,28 +2271,28 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 165.861,
+            "mean": 165.859,
             "std": 20.282
           },
           "5": {
             "valid": true,
-            "mean": 278.382,
+            "mean": 278.38,
             "std": 26.31
           },
           "10": {
             "valid": true,
-            "mean": 556.049,
+            "mean": 556.046,
             "std": 37.141
           },
           "15": {
             "valid": true,
-            "mean": 834.864,
+            "mean": 834.858,
             "std": 45.513
           }
         },
-        "objective_mean": 328.421,
+        "objective_mean": 328.419,
         "objective_std": 14.131,
-        "robust_score": 326.726,
+        "robust_score": 326.723,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
@@ -2339,34 +2339,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 174.622,
+            "mean": 174.62,
             "std": 20.895
           },
           "5": {
             "valid": true,
-            "mean": 291.241,
-            "std": 27.009
+            "mean": 291.238,
+            "std": 27.008
           },
           "10": {
             "valid": true,
-            "mean": 578.398,
+            "mean": 578.394,
             "std": 38.008
           },
           "15": {
             "valid": true,
-            "mean": 864.656,
+            "mean": 864.65,
             "std": 46.453
           }
         },
-        "objective_mean": 342.676,
+        "objective_mean": 342.673,
         "objective_std": 14.51,
-        "robust_score": 340.485,
+        "robust_score": 340.482,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 340.535,
+        "raw_robust_score": 340.532,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -2382,9 +2382,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 332.458,
-        "p50": 342.408,
-        "p75": 353.728,
+        "p25": 332.455,
+        "p50": 342.405,
+        "p75": 353.725,
         "p_outperform_hold_independent_baseline": 0.7592
       },
       "team_cluster": {
@@ -2441,34 +2441,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 174.622,
+            "mean": 174.62,
             "std": 20.895
           },
           "5": {
             "valid": true,
-            "mean": 291.241,
-            "std": 27.009
+            "mean": 291.238,
+            "std": 27.008
           },
           "10": {
             "valid": true,
-            "mean": 578.398,
+            "mean": 578.394,
             "std": 38.008
           },
           "15": {
             "valid": true,
-            "mean": 864.656,
+            "mean": 864.65,
             "std": 46.453
           }
         },
-        "objective_mean": 342.676,
+        "objective_mean": 342.673,
         "objective_std": 14.51,
-        "robust_score": 340.485,
+        "robust_score": 340.482,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 340.535,
+        "raw_robust_score": 340.532,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -2484,9 +2484,9 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 332.458,
-        "p50": 342.408,
-        "p75": 353.728,
+        "p25": 332.455,
+        "p50": 342.405,
+        "p75": 353.725,
         "p_outperform_hold_independent_baseline": 0.7592
       },
       "team_cluster": {
@@ -2529,28 +2529,28 @@
       "horizons": {
         "3": {
           "valid": true,
-          "mean": 165.861,
+          "mean": 165.859,
           "std": 20.282
         },
         "5": {
           "valid": true,
-          "mean": 278.382,
+          "mean": 278.38,
           "std": 26.31
         },
         "10": {
           "valid": true,
-          "mean": 556.049,
+          "mean": 556.046,
           "std": 37.141
         },
         "15": {
           "valid": true,
-          "mean": 834.864,
+          "mean": 834.858,
           "std": 45.513
         }
       },
-      "objective_mean": 328.421,
+      "objective_mean": 328.419,
       "objective_std": 14.131,
-      "robust_score": 326.726,
+      "robust_score": 326.723,
       "performance": {
         "projection_lookup": "indexed_o1",
         "horizon_evaluation": "single_pass_prefix",
@@ -2597,34 +2597,34 @@
       "horizons": {
         "3": {
           "valid": true,
-          "mean": 174.622,
+          "mean": 174.62,
           "std": 20.895
         },
         "5": {
           "valid": true,
-          "mean": 291.241,
-          "std": 27.009
+          "mean": 291.238,
+          "std": 27.008
         },
         "10": {
           "valid": true,
-          "mean": 578.398,
+          "mean": 578.394,
           "std": 38.008
         },
         "15": {
           "valid": true,
-          "mean": 864.656,
+          "mean": 864.65,
           "std": 46.453
         }
       },
-      "objective_mean": 342.676,
+      "objective_mean": 342.673,
       "objective_std": 14.51,
-      "robust_score": 340.485,
+      "robust_score": 340.482,
       "performance": {
         "projection_lookup": "indexed_o1",
         "horizon_evaluation": "single_pass_prefix",
         "gw_lineups_evaluated": 15
       },
-      "raw_robust_score": 340.535,
+      "raw_robust_score": 340.532,
       "team_cluster_penalty_points": 0.05,
       "guardrails": {
         "early_season_change_cap_enabled": true,
@@ -2640,9 +2640,9 @@
     },
     "legal": true,
     "monte_carlo": {
-      "p25": 332.458,
-      "p50": 342.408,
-      "p75": 353.728,
+      "p25": 332.455,
+      "p50": 342.405,
+      "p75": 353.725,
       "p_outperform_hold_independent_baseline": 0.7592
     },
     "team_cluster": {
@@ -2698,34 +2698,34 @@
       "horizons": {
         "3": {
           "valid": true,
-          "mean": 174.622,
+          "mean": 174.62,
           "std": 20.895
         },
         "5": {
           "valid": true,
-          "mean": 291.241,
-          "std": 27.009
+          "mean": 291.238,
+          "std": 27.008
         },
         "10": {
           "valid": true,
-          "mean": 578.398,
+          "mean": 578.394,
           "std": 38.008
         },
         "15": {
           "valid": true,
-          "mean": 864.656,
+          "mean": 864.65,
           "std": 46.453
         }
       },
-      "objective_mean": 342.676,
+      "objective_mean": 342.673,
       "objective_std": 14.51,
-      "robust_score": 340.485,
+      "robust_score": 340.482,
       "performance": {
         "projection_lookup": "indexed_o1",
         "horizon_evaluation": "single_pass_prefix",
         "gw_lineups_evaluated": 15
       },
-      "raw_robust_score": 340.535,
+      "raw_robust_score": 340.532,
       "team_cluster_penalty_points": 0.05,
       "guardrails": {
         "early_season_change_cap_enabled": true,
@@ -2741,9 +2741,9 @@
     },
     "legal": true,
     "monte_carlo": {
-      "p25": 332.458,
-      "p50": 342.408,
-      "p75": 353.728,
+      "p25": 332.455,
+      "p50": 342.405,
+      "p75": 353.725,
       "p_outperform_hold_independent_baseline": 0.7592
     },
     "team_cluster": {
@@ -2827,11 +2827,11 @@
         "name": "Aina",
         "position": "DEF",
         "team_id": 18,
-        "mean": 4.034,
-        "std": 3.204,
+        "mean": 4.033,
+        "std": 3.203,
         "start_probability": 0.7707,
         "dnp_probability": 0.0803,
-        "score": 4.0853
+        "score": 4.0844
       },
       {
         "element": 426,
@@ -3268,8 +3268,8 @@
       {
         "rank": 1,
         "formation": "5-3-2",
-        "selection_score": 49.3328,
-        "mean": 48.64,
+        "selection_score": 49.3319,
+        "mean": 48.639,
         "std": 11.079,
         "element_ids": [
           8,
@@ -3288,9 +3288,9 @@
       {
         "rank": 2,
         "formation": "5-3-2",
-        "selection_score": 49.2848,
-        "mean": 48.682,
-        "std": 11.116,
+        "selection_score": 49.2839,
+        "mean": 48.681,
+        "std": 11.115,
         "element_ids": [
           8,
           15,
@@ -3308,9 +3308,9 @@
       {
         "rank": 3,
         "formation": "5-3-2",
-        "selection_score": 49.2115,
-        "mean": 48.525,
-        "std": 11.07,
+        "selection_score": 49.2106,
+        "mean": 48.524,
+        "std": 11.069,
         "element_ids": [
           8,
           40,
@@ -3326,8 +3326,8 @@
         ]
       }
     ],
-    "expected_starting_xi_mean": 48.64,
-    "selection_score": 49.333,
+    "expected_starting_xi_mean": 48.639,
+    "selection_score": 49.332,
     "authority": "v5_decision_lineup_optimizer",
     "performance": {
       "projection_lookup": "indexed_o1",
@@ -4458,7 +4458,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 57 active price alerts"
+      "market timing context contains 55 active price alerts"
     ],
     "evidence": [
       {
@@ -4561,7 +4561,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 57
+    "alert_count": 55
   },
   "governance": {
     "candidate_generation_only": true,

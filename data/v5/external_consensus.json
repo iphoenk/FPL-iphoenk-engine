@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "contract": "V5_EXTERNAL_CONSENSUS_V1",
-  "generated_at": "2026-08-29T13:19:38.318400+00:00",
+  "generated_at": "2026-08-29T13:22:35.246264+00:00",
   "owner": "evaluation.external_consensus",
   "native_conclusion_frozen_before_overlay": true,
   "native_snapshot": {
@@ -71,11 +71,11 @@
           "name": "Aina",
           "position": "DEF",
           "team_id": 18,
-          "mean": 4.034,
-          "std": 3.204,
+          "mean": 4.033,
+          "std": 3.203,
           "start_probability": 0.7707,
           "dnp_probability": 0.0803,
-          "score": 4.0853
+          "score": 4.0844
         },
         {
           "element": 426,
@@ -512,8 +512,8 @@
         {
           "rank": 1,
           "formation": "5-3-2",
-          "selection_score": 49.3328,
-          "mean": 48.64,
+          "selection_score": 49.3319,
+          "mean": 48.639,
           "std": 11.079,
           "element_ids": [
             8,
@@ -532,9 +532,9 @@
         {
           "rank": 2,
           "formation": "5-3-2",
-          "selection_score": 49.2848,
-          "mean": 48.682,
-          "std": 11.116,
+          "selection_score": 49.2839,
+          "mean": 48.681,
+          "std": 11.115,
           "element_ids": [
             8,
             15,
@@ -552,9 +552,9 @@
         {
           "rank": 3,
           "formation": "5-3-2",
-          "selection_score": 49.2115,
-          "mean": 48.525,
-          "std": 11.07,
+          "selection_score": 49.2106,
+          "mean": 48.524,
+          "std": 11.069,
           "element_ids": [
             8,
             40,
@@ -570,8 +570,8 @@
           ]
         }
       ],
-      "expected_starting_xi_mean": 48.64,
-      "selection_score": 49.333,
+      "expected_starting_xi_mean": 48.639,
+      "selection_score": 49.332,
       "authority": "v5_decision_lineup_optimizer",
       "performance": {
         "projection_lookup": "indexed_o1",

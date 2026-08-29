@@ -8,12 +8,12 @@
     "schema_version": 1,
     "model": "v5_master_time_schedule_governance_v1",
     "timezone": "Asia/Jakarta",
-    "evaluated_at": "2026-08-29T13:19:38.111185+00:00",
-    "local_evaluated_at": "2026-08-29T20:19:38.111185+07:00",
+    "evaluated_at": "2026-08-29T13:22:35.043058+00:00",
+    "local_evaluated_at": "2026-08-29T20:22:35.043058+07:00",
     "hourly_checkpoint": false,
     "official_deadline_time": "2026-09-04T17:30:00+00:00",
     "local_deadline_time": "2026-09-05T00:30:00+07:00",
-    "minutes_to_deadline": 8890.365,
+    "minutes_to_deadline": 8887.416,
     "deadline_day_active": false,
     "final_review_target": "2026-09-04T21:30:00+07:00",
     "final_review_due": false,
@@ -53,7 +53,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 57 active price alerts"
+      "market timing context contains 55 active price alerts"
     ],
     "evidence": [
       {
@@ -1236,7 +1236,7 @@
   "owned_challenger_comparator": {
     "schema_version": 1,
     "model": "v5_owned_challenger_comparator_v1",
-    "generated_at": "2026-08-29T13:19:38.507543+00:00",
+    "generated_at": "2026-08-29T13:22:35.429940+00:00",
     "status": "ACTIVE_ALPHA",
     "authority": "ADVISORY_ONLY",
     "planning_gw": 3,
@@ -1354,7 +1354,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -1475,7 +1475,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -1886,7 +1886,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2008,7 +2008,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2415,7 +2415,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2532,7 +2532,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -2550,10 +2550,10 @@
         "horizons": {
           "1": {
             "owned_xpts": 4.045,
-            "challenger_xpts": 4.581,
-            "raw_gain": 0.536,
-            "combined_uncertainty": 4.63,
-            "signal_to_noise": 0.116,
+            "challenger_xpts": 4.576,
+            "raw_gain": 0.531,
+            "combined_uncertainty": 4.629,
+            "signal_to_noise": 0.115,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -2570,17 +2570,17 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "2": {
             "owned_xpts": 7.356,
-            "challenger_xpts": 8.35,
-            "raw_gain": 0.994,
-            "combined_uncertainty": 6.232,
-            "signal_to_noise": 0.159,
+            "challenger_xpts": 8.34,
+            "raw_gain": 0.984,
+            "combined_uncertainty": 6.23,
+            "signal_to_noise": 0.158,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -2605,25 +2605,25 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               }
             ]
           },
           "3": {
             "owned_xpts": 11.401,
-            "challenger_xpts": 12.931,
-            "raw_gain": 1.53,
-            "combined_uncertainty": 7.764,
-            "signal_to_noise": 0.197,
+            "challenger_xpts": 12.916,
+            "raw_gain": 1.515,
+            "combined_uncertainty": 7.762,
+            "signal_to_noise": 0.195,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -2656,33 +2656,33 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "5": {
             "owned_xpts": 18.077,
-            "challenger_xpts": 20.597,
-            "raw_gain": 2.52,
-            "combined_uncertainty": 9.774,
-            "signal_to_noise": 0.258,
+            "challenger_xpts": 20.574,
+            "raw_gain": 2.497,
+            "combined_uncertainty": 9.771,
+            "signal_to_noise": 0.256,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -2731,45 +2731,45 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.897,
-                "std": 3.049
+                "xpts": 3.894,
+                "std": 3.047
               }
             ]
           }
         },
-        "performance_signal": "STRONG",
+        "performance_signal": "INTERESTING",
         "affordability": {
           "status": "VERIFIED",
           "affordable": true,
@@ -2822,7 +2822,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 2.52,
+          "raw_gain_5gw": 2.497,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -2935,7 +2935,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3050,7 +3050,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3067,19 +3067,19 @@
         },
         "horizons": {
           "1": {
-            "owned_xpts": 4.034,
-            "challenger_xpts": 4.581,
-            "raw_gain": 0.547,
-            "combined_uncertainty": 4.625,
-            "signal_to_noise": 0.118,
+            "owned_xpts": 4.033,
+            "challenger_xpts": 4.576,
+            "raw_gain": 0.543,
+            "combined_uncertainty": 4.623,
+            "signal_to_noise": 0.117,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -3088,33 +3088,33 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "2": {
-            "owned_xpts": 7.321,
-            "challenger_xpts": 8.35,
-            "raw_gain": 1.029,
-            "combined_uncertainty": 6.222,
-            "signal_to_noise": 0.165,
+            "owned_xpts": 7.318,
+            "challenger_xpts": 8.34,
+            "raw_gain": 1.022,
+            "combined_uncertainty": 6.219,
+            "signal_to_noise": 0.164,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               }
             ],
             "challenger_fixtures": [
@@ -3123,49 +3123,49 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               }
             ]
           },
           "3": {
-            "owned_xpts": 11.355,
-            "challenger_xpts": 12.931,
-            "raw_gain": 1.576,
-            "combined_uncertainty": 7.753,
-            "signal_to_noise": 0.203,
+            "owned_xpts": 11.351,
+            "challenger_xpts": 12.916,
+            "raw_gain": 1.565,
+            "combined_uncertainty": 7.75,
+            "signal_to_noise": 0.202,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -3174,73 +3174,73 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "5": {
-            "owned_xpts": 18.091,
-            "challenger_xpts": 20.597,
-            "raw_gain": 2.506,
-            "combined_uncertainty": 9.771,
-            "signal_to_noise": 0.256,
+            "owned_xpts": 18.083,
+            "challenger_xpts": 20.574,
+            "raw_gain": 2.491,
+            "combined_uncertainty": 9.767,
+            "signal_to_noise": 0.255,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.449,
-                "std": 2.958
+                "xpts": 3.447,
+                "std": 2.957
               }
             ],
             "challenger_fixtures": [
@@ -3249,45 +3249,45 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.897,
-                "std": 3.049
+                "xpts": 3.894,
+                "std": 3.047
               }
             ]
           }
         },
-        "performance_signal": "STRONG",
+        "performance_signal": "INTERESTING",
         "affordability": {
           "status": "VERIFIED",
           "affordable": true,
@@ -3340,7 +3340,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 2.506,
+          "raw_gain_5gw": 2.491,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -3455,7 +3455,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3572,7 +3572,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3977,7 +3977,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -4092,7 +4092,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4111,19 +4111,19 @@
         },
         "horizons": {
           "1": {
-            "owned_xpts": 4.034,
+            "owned_xpts": 4.033,
             "challenger_xpts": 4.255,
-            "raw_gain": 0.221,
+            "raw_gain": 0.222,
             "combined_uncertainty": 4.56,
-            "signal_to_noise": 0.048,
+            "signal_to_noise": 0.049,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -4138,10 +4138,10 @@
             ]
           },
           "2": {
-            "owned_xpts": 7.321,
+            "owned_xpts": 7.318,
             "challenger_xpts": 7.829,
-            "raw_gain": 0.508,
-            "combined_uncertainty": 6.157,
+            "raw_gain": 0.511,
+            "combined_uncertainty": 6.156,
             "signal_to_noise": 0.083,
             "owned_fixtures": [
               {
@@ -4149,16 +4149,16 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               }
             ],
             "challenger_fixtures": [
@@ -4181,10 +4181,10 @@
             ]
           },
           "3": {
-            "owned_xpts": 11.355,
+            "owned_xpts": 11.351,
             "challenger_xpts": 11.901,
-            "raw_gain": 0.546,
-            "combined_uncertainty": 7.629,
+            "raw_gain": 0.55,
+            "combined_uncertainty": 7.628,
             "signal_to_noise": 0.072,
             "owned_fixtures": [
               {
@@ -4192,24 +4192,24 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -4240,51 +4240,51 @@
             ]
           },
           "5": {
-            "owned_xpts": 18.091,
+            "owned_xpts": 18.083,
             "challenger_xpts": 20.092,
-            "raw_gain": 2.001,
-            "combined_uncertainty": 9.778,
-            "signal_to_noise": 0.205,
+            "raw_gain": 2.009,
+            "combined_uncertainty": 9.776,
+            "signal_to_noise": 0.206,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.449,
-                "std": 2.958
+                "xpts": 3.447,
+                "std": 2.957
               }
             ],
             "challenger_fixtures": [
@@ -4384,7 +4384,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 2.001,
+          "raw_gain_5gw": 2.009,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -4501,7 +4501,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4623,7 +4623,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -5034,7 +5034,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -5151,7 +5151,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -5169,10 +5169,10 @@
         "horizons": {
           "1": {
             "owned_xpts": 4.232,
-            "challenger_xpts": 4.581,
-            "raw_gain": 0.349,
-            "combined_uncertainty": 4.673,
-            "signal_to_noise": 0.075,
+            "challenger_xpts": 4.576,
+            "raw_gain": 0.344,
+            "combined_uncertainty": 4.672,
+            "signal_to_noise": 0.074,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -5189,17 +5189,17 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "2": {
             "owned_xpts": 8.104,
-            "challenger_xpts": 8.35,
-            "raw_gain": 0.246,
-            "combined_uncertainty": 6.368,
-            "signal_to_noise": 0.039,
+            "challenger_xpts": 8.34,
+            "raw_gain": 0.236,
+            "combined_uncertainty": 6.366,
+            "signal_to_noise": 0.037,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -5224,25 +5224,25 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               }
             ]
           },
           "3": {
             "owned_xpts": 11.226,
-            "challenger_xpts": 12.931,
-            "raw_gain": 1.705,
-            "combined_uncertainty": 7.718,
-            "signal_to_noise": 0.221,
+            "challenger_xpts": 12.916,
+            "raw_gain": 1.69,
+            "combined_uncertainty": 7.715,
+            "signal_to_noise": 0.219,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -5275,33 +5275,33 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "5": {
             "owned_xpts": 19.246,
-            "challenger_xpts": 20.597,
-            "raw_gain": 1.351,
-            "combined_uncertainty": 9.903,
-            "signal_to_noise": 0.136,
+            "challenger_xpts": 20.574,
+            "raw_gain": 1.328,
+            "combined_uncertainty": 9.9,
+            "signal_to_noise": 0.134,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -5350,40 +5350,40 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.897,
-                "std": 3.049
+                "xpts": 3.894,
+                "std": 3.047
               }
             ]
           }
@@ -5441,7 +5441,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 1.351,
+          "raw_gain_5gw": 1.328,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -5556,7 +5556,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -5677,7 +5677,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -6082,7 +6082,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -6201,7 +6201,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -6220,9 +6220,9 @@
         },
         "horizons": {
           "1": {
-            "owned_xpts": 4.034,
+            "owned_xpts": 4.033,
             "challenger_xpts": 4.549,
-            "raw_gain": 0.515,
+            "raw_gain": 0.516,
             "combined_uncertainty": 4.63,
             "signal_to_noise": 0.111,
             "owned_fixtures": [
@@ -6231,8 +6231,8 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -6247,10 +6247,10 @@
             ]
           },
           "2": {
-            "owned_xpts": 7.321,
+            "owned_xpts": 7.318,
             "challenger_xpts": 8.087,
-            "raw_gain": 0.766,
-            "combined_uncertainty": 6.19,
+            "raw_gain": 0.769,
+            "combined_uncertainty": 6.189,
             "signal_to_noise": 0.124,
             "owned_fixtures": [
               {
@@ -6258,16 +6258,16 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               }
             ],
             "challenger_fixtures": [
@@ -6290,10 +6290,10 @@
             ]
           },
           "3": {
-            "owned_xpts": 11.355,
+            "owned_xpts": 11.351,
             "challenger_xpts": 12.109,
-            "raw_gain": 0.754,
-            "combined_uncertainty": 7.637,
+            "raw_gain": 0.758,
+            "combined_uncertainty": 7.636,
             "signal_to_noise": 0.099,
             "owned_fixtures": [
               {
@@ -6301,24 +6301,24 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -6349,51 +6349,51 @@
             ]
           },
           "5": {
-            "owned_xpts": 18.091,
+            "owned_xpts": 18.083,
             "challenger_xpts": 19.39,
-            "raw_gain": 1.299,
-            "combined_uncertainty": 9.645,
-            "signal_to_noise": 0.135,
+            "raw_gain": 1.307,
+            "combined_uncertainty": 9.644,
+            "signal_to_noise": 0.136,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.449,
-                "std": 2.958
+                "xpts": 3.447,
+                "std": 2.957
               }
             ],
             "challenger_fixtures": [
@@ -6493,7 +6493,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 1.299,
+          "raw_gain_5gw": 1.307,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -6612,7 +6612,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -6729,7 +6729,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -7136,7 +7136,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -7257,7 +7257,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -7662,7 +7662,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -7781,7 +7781,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -7800,10 +7800,10 @@
         },
         "horizons": {
           "1": {
-            "owned_xpts": 4.034,
+            "owned_xpts": 4.033,
             "challenger_xpts": 5.665,
-            "raw_gain": 1.631,
-            "combined_uncertainty": 4.964,
+            "raw_gain": 1.632,
+            "combined_uncertainty": 4.963,
             "signal_to_noise": 0.329,
             "owned_fixtures": [
               {
@@ -7811,8 +7811,8 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -7827,27 +7827,27 @@
             ]
           },
           "2": {
-            "owned_xpts": 7.321,
+            "owned_xpts": 7.318,
             "challenger_xpts": 11.082,
-            "raw_gain": 3.761,
-            "combined_uncertainty": 6.825,
-            "signal_to_noise": 0.551,
+            "raw_gain": 3.764,
+            "combined_uncertainty": 6.824,
+            "signal_to_noise": 0.552,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               }
             ],
             "challenger_fixtures": [
@@ -7870,35 +7870,35 @@
             ]
           },
           "3": {
-            "owned_xpts": 11.355,
+            "owned_xpts": 11.351,
             "challenger_xpts": 16.269,
-            "raw_gain": 4.914,
-            "combined_uncertainty": 8.351,
-            "signal_to_noise": 0.588,
+            "raw_gain": 4.918,
+            "combined_uncertainty": 8.35,
+            "signal_to_noise": 0.589,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -7929,51 +7929,51 @@
             ]
           },
           "5": {
-            "owned_xpts": 18.091,
+            "owned_xpts": 18.083,
             "challenger_xpts": 26.264,
-            "raw_gain": 8.173,
-            "combined_uncertainty": 10.56,
-            "signal_to_noise": 0.774,
+            "raw_gain": 8.181,
+            "combined_uncertainty": 10.559,
+            "signal_to_noise": 0.775,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.449,
-                "std": 2.958
+                "xpts": 3.447,
+                "std": 2.957
               }
             ],
             "challenger_fixtures": [
@@ -8073,7 +8073,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 8.173,
+          "raw_gain_5gw": 8.181,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -8188,7 +8188,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -8310,7 +8310,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -8715,7 +8715,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -8835,7 +8835,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -8854,10 +8854,10 @@
         },
         "horizons": {
           "1": {
-            "owned_xpts": 4.034,
+            "owned_xpts": 4.033,
             "challenger_xpts": 4.68,
-            "raw_gain": 0.646,
-            "combined_uncertainty": 4.689,
+            "raw_gain": 0.647,
+            "combined_uncertainty": 4.688,
             "signal_to_noise": 0.138,
             "owned_fixtures": [
               {
@@ -8865,8 +8865,8 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -8881,27 +8881,27 @@
             ]
           },
           "2": {
-            "owned_xpts": 7.321,
+            "owned_xpts": 7.318,
             "challenger_xpts": 8.805,
-            "raw_gain": 1.484,
-            "combined_uncertainty": 6.366,
-            "signal_to_noise": 0.233,
+            "raw_gain": 1.487,
+            "combined_uncertainty": 6.364,
+            "signal_to_noise": 0.234,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               }
             ],
             "challenger_fixtures": [
@@ -8924,35 +8924,35 @@
             ]
           },
           "3": {
-            "owned_xpts": 11.355,
+            "owned_xpts": 11.351,
             "challenger_xpts": 13.302,
-            "raw_gain": 1.947,
-            "combined_uncertainty": 7.873,
-            "signal_to_noise": 0.247,
+            "raw_gain": 1.951,
+            "combined_uncertainty": 7.872,
+            "signal_to_noise": 0.248,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -8983,10 +8983,10 @@
             ]
           },
           "5": {
-            "owned_xpts": 18.091,
+            "owned_xpts": 18.083,
             "challenger_xpts": 21.926,
-            "raw_gain": 3.835,
-            "combined_uncertainty": 10.024,
+            "raw_gain": 3.843,
+            "combined_uncertainty": 10.022,
             "signal_to_noise": 0.383,
             "owned_fixtures": [
               {
@@ -8994,40 +8994,40 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.449,
-                "std": 2.958
+                "xpts": 3.447,
+                "std": 2.957
               }
             ],
             "challenger_fixtures": [
@@ -9127,7 +9127,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 3.835,
+          "raw_gain_5gw": 3.843,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -9244,7 +9244,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -9365,7 +9365,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -9770,7 +9770,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -9891,7 +9891,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -10296,7 +10296,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -10418,7 +10418,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -10827,7 +10827,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -10948,7 +10948,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -11357,7 +11357,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -11476,7 +11476,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -11885,7 +11885,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -12008,7 +12008,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -12413,7 +12413,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -12534,7 +12534,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -12939,7 +12939,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -13058,7 +13058,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -13463,7 +13463,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -13586,7 +13586,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -13999,7 +13999,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -14120,7 +14120,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -14531,7 +14531,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -14653,7 +14653,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -15060,7 +15060,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -15177,7 +15177,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -15195,10 +15195,10 @@
         "horizons": {
           "1": {
             "owned_xpts": 4.045,
-            "challenger_xpts": 4.581,
-            "raw_gain": 0.536,
-            "combined_uncertainty": 4.63,
-            "signal_to_noise": 0.116,
+            "challenger_xpts": 4.576,
+            "raw_gain": 0.531,
+            "combined_uncertainty": 4.629,
+            "signal_to_noise": 0.115,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -15215,17 +15215,17 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "2": {
             "owned_xpts": 7.356,
-            "challenger_xpts": 8.35,
-            "raw_gain": 0.994,
-            "combined_uncertainty": 6.232,
-            "signal_to_noise": 0.159,
+            "challenger_xpts": 8.34,
+            "raw_gain": 0.984,
+            "combined_uncertainty": 6.23,
+            "signal_to_noise": 0.158,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -15250,25 +15250,25 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               }
             ]
           },
           "3": {
             "owned_xpts": 11.401,
-            "challenger_xpts": 12.931,
-            "raw_gain": 1.53,
-            "combined_uncertainty": 7.764,
-            "signal_to_noise": 0.197,
+            "challenger_xpts": 12.916,
+            "raw_gain": 1.515,
+            "combined_uncertainty": 7.762,
+            "signal_to_noise": 0.195,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -15301,33 +15301,33 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "5": {
             "owned_xpts": 18.077,
-            "challenger_xpts": 20.597,
-            "raw_gain": 2.52,
-            "combined_uncertainty": 9.774,
-            "signal_to_noise": 0.258,
+            "challenger_xpts": 20.574,
+            "raw_gain": 2.497,
+            "combined_uncertainty": 9.771,
+            "signal_to_noise": 0.256,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -15376,45 +15376,45 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.897,
-                "std": 3.049
+                "xpts": 3.894,
+                "std": 3.047
               }
             ]
           }
         },
-        "performance_signal": "STRONG",
+        "performance_signal": "INTERESTING",
         "affordability": {
           "status": "VERIFIED",
           "affordable": true,
@@ -15467,7 +15467,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 2.52,
+          "raw_gain_5gw": 2.497,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -15580,7 +15580,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -15695,7 +15695,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -15712,19 +15712,19 @@
         },
         "horizons": {
           "1": {
-            "owned_xpts": 4.034,
-            "challenger_xpts": 4.581,
-            "raw_gain": 0.547,
-            "combined_uncertainty": 4.625,
-            "signal_to_noise": 0.118,
+            "owned_xpts": 4.033,
+            "challenger_xpts": 4.576,
+            "raw_gain": 0.543,
+            "combined_uncertainty": 4.623,
+            "signal_to_noise": 0.117,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -15733,33 +15733,33 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "2": {
-            "owned_xpts": 7.321,
-            "challenger_xpts": 8.35,
-            "raw_gain": 1.029,
-            "combined_uncertainty": 6.222,
-            "signal_to_noise": 0.165,
+            "owned_xpts": 7.318,
+            "challenger_xpts": 8.34,
+            "raw_gain": 1.022,
+            "combined_uncertainty": 6.219,
+            "signal_to_noise": 0.164,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               }
             ],
             "challenger_fixtures": [
@@ -15768,49 +15768,49 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               }
             ]
           },
           "3": {
-            "owned_xpts": 11.355,
-            "challenger_xpts": 12.931,
-            "raw_gain": 1.576,
-            "combined_uncertainty": 7.753,
-            "signal_to_noise": 0.203,
+            "owned_xpts": 11.351,
+            "challenger_xpts": 12.916,
+            "raw_gain": 1.565,
+            "combined_uncertainty": 7.75,
+            "signal_to_noise": 0.202,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -15819,73 +15819,73 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "5": {
-            "owned_xpts": 18.091,
-            "challenger_xpts": 20.597,
-            "raw_gain": 2.506,
-            "combined_uncertainty": 9.771,
-            "signal_to_noise": 0.256,
+            "owned_xpts": 18.083,
+            "challenger_xpts": 20.574,
+            "raw_gain": 2.491,
+            "combined_uncertainty": 9.767,
+            "signal_to_noise": 0.255,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.449,
-                "std": 2.958
+                "xpts": 3.447,
+                "std": 2.957
               }
             ],
             "challenger_fixtures": [
@@ -15894,45 +15894,45 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.897,
-                "std": 3.049
+                "xpts": 3.894,
+                "std": 3.047
               }
             ]
           }
         },
-        "performance_signal": "STRONG",
+        "performance_signal": "INTERESTING",
         "affordability": {
           "status": "VERIFIED",
           "affordable": true,
@@ -15985,7 +15985,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 2.506,
+          "raw_gain_5gw": 2.491,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -16100,7 +16100,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -16217,7 +16217,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -16622,7 +16622,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -16737,7 +16737,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -16756,19 +16756,19 @@
         },
         "horizons": {
           "1": {
-            "owned_xpts": 4.034,
+            "owned_xpts": 4.033,
             "challenger_xpts": 4.255,
-            "raw_gain": 0.221,
+            "raw_gain": 0.222,
             "combined_uncertainty": 4.56,
-            "signal_to_noise": 0.048,
+            "signal_to_noise": 0.049,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -16783,10 +16783,10 @@
             ]
           },
           "2": {
-            "owned_xpts": 7.321,
+            "owned_xpts": 7.318,
             "challenger_xpts": 7.829,
-            "raw_gain": 0.508,
-            "combined_uncertainty": 6.157,
+            "raw_gain": 0.511,
+            "combined_uncertainty": 6.156,
             "signal_to_noise": 0.083,
             "owned_fixtures": [
               {
@@ -16794,16 +16794,16 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               }
             ],
             "challenger_fixtures": [
@@ -16826,10 +16826,10 @@
             ]
           },
           "3": {
-            "owned_xpts": 11.355,
+            "owned_xpts": 11.351,
             "challenger_xpts": 11.901,
-            "raw_gain": 0.546,
-            "combined_uncertainty": 7.629,
+            "raw_gain": 0.55,
+            "combined_uncertainty": 7.628,
             "signal_to_noise": 0.072,
             "owned_fixtures": [
               {
@@ -16837,24 +16837,24 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               }
             ],
             "challenger_fixtures": [
@@ -16885,51 +16885,51 @@
             ]
           },
           "5": {
-            "owned_xpts": 18.091,
+            "owned_xpts": 18.083,
             "challenger_xpts": 20.092,
-            "raw_gain": 2.001,
-            "combined_uncertainty": 9.778,
-            "signal_to_noise": 0.205,
+            "raw_gain": 2.009,
+            "combined_uncertainty": 9.776,
+            "signal_to_noise": 0.206,
             "owned_fixtures": [
               {
                 "gw": 3,
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.034,
-                "std": 3.204
+                "xpts": 4.033,
+                "std": 3.203
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.287,
-                "std": 2.89
+                "xpts": 3.285,
+                "std": 2.889
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.449,
-                "std": 2.958
+                "xpts": 3.447,
+                "std": 2.957
               }
             ],
             "challenger_fixtures": [
@@ -17029,7 +17029,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 2.001,
+          "raw_gain_5gw": 2.009,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -17146,7 +17146,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -17268,7 +17268,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -17679,7 +17679,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -17796,7 +17796,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
+              "evidence_timestamp": "2026-08-29T13:22:32.002871+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -17814,10 +17814,10 @@
         "horizons": {
           "1": {
             "owned_xpts": 4.232,
-            "challenger_xpts": 4.581,
-            "raw_gain": 0.349,
-            "combined_uncertainty": 4.673,
-            "signal_to_noise": 0.075,
+            "challenger_xpts": 4.576,
+            "raw_gain": 0.344,
+            "combined_uncertainty": 4.672,
+            "signal_to_noise": 0.074,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -17834,17 +17834,17 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "2": {
             "owned_xpts": 8.104,
-            "challenger_xpts": 8.35,
-            "raw_gain": 0.246,
-            "combined_uncertainty": 6.368,
-            "signal_to_noise": 0.039,
+            "challenger_xpts": 8.34,
+            "raw_gain": 0.236,
+            "combined_uncertainty": 6.366,
+            "signal_to_noise": 0.037,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -17869,25 +17869,25 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               }
             ]
           },
           "3": {
             "owned_xpts": 11.226,
-            "challenger_xpts": 12.931,
-            "raw_gain": 1.705,
-            "combined_uncertainty": 7.718,
-            "signal_to_noise": 0.221,
+            "challenger_xpts": 12.916,
+            "raw_gain": 1.69,
+            "combined_uncertainty": 7.715,
+            "signal_to_noise": 0.219,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -17920,33 +17920,33 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               }
             ]
           },
           "5": {
             "owned_xpts": 19.246,
-            "challenger_xpts": 20.597,
-            "raw_gain": 1.351,
-            "combined_uncertainty": 9.903,
-            "signal_to_noise": 0.136,
+            "challenger_xpts": 20.574,
+            "raw_gain": 1.328,
+            "combined_uncertainty": 9.9,
+            "signal_to_noise": 0.134,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -17995,40 +17995,40 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.581,
-                "std": 3.336
+                "xpts": 4.576,
+                "std": 3.334
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.769,
-                "std": 2.995
+                "xpts": 3.764,
+                "std": 2.993
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.897,
-                "std": 3.049
+                "xpts": 3.894,
+                "std": 3.047
               }
             ]
           }
@@ -18086,7 +18086,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 1.351,
+          "raw_gain_5gw": 1.328,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -18250,7 +18250,7 @@
   "gate0_preflight_pass": true,
   "governance": {
     "framework_schema": 8,
-    "generated_at": "2026-08-29T13:19:36.705416+00:00",
+    "generated_at": "2026-08-29T13:22:33.685136+00:00",
     "auditor": "v5-microservice-governance-v4",
     "overall": "GREEN",
     "decision_engine": "HEALTHY",
@@ -19817,9 +19817,9 @@
     "base_collection": {
       "service_id": "ingestion",
       "operation": "collect_base",
-      "service_compute_ms": 210.012,
-      "round_trip_ms": 265.971,
-      "transport_overhead_ms": 55.959,
+      "service_compute_ms": 130.435,
+      "round_trip_ms": 185.11,
+      "transport_overhead_ms": 54.675,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -19832,9 +19832,9 @@
     "event_context": {
       "service_id": "truth",
       "operation": "context",
-      "service_compute_ms": 0.087,
-      "round_trip_ms": 41.223,
-      "transport_overhead_ms": 41.136,
+      "service_compute_ms": 0.08,
+      "round_trip_ms": 36.948,
+      "transport_overhead_ms": 36.868,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -19848,9 +19848,9 @@
       "auth": {
         "service_id": "ingestion",
         "operation": "collect_authenticated",
-        "service_compute_ms": 0.049,
-        "round_trip_ms": 14.977,
-        "transport_overhead_ms": 14.928,
+        "service_compute_ms": 0.055,
+        "round_trip_ms": 19.921,
+        "transport_overhead_ms": 19.866,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19863,9 +19863,9 @@
       "enrichment": {
         "service_id": "ingestion",
         "operation": "collect_enrichment",
-        "service_compute_ms": 2.269,
-        "round_trip_ms": 44.372,
-        "transport_overhead_ms": 42.103,
+        "service_compute_ms": 1.787,
+        "round_trip_ms": 40.549,
+        "transport_overhead_ms": 38.762,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19878,9 +19878,9 @@
       "dynamic": {
         "service_id": "ingestion",
         "operation": "collect_dynamic",
-        "service_compute_ms": 55.159,
-        "round_trip_ms": 88.345,
-        "transport_overhead_ms": 33.186,
+        "service_compute_ms": 70.144,
+        "round_trip_ms": 101.217,
+        "transport_overhead_ms": 31.073,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19894,9 +19894,9 @@
     "truth_assembly": {
       "service_id": "truth",
       "operation": "assemble",
-      "service_compute_ms": 1.301,
-      "round_trip_ms": 81.606,
-      "transport_overhead_ms": 80.305,
+      "service_compute_ms": 1.616,
+      "round_trip_ms": 80.538,
+      "transport_overhead_ms": 78.922,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -19907,12 +19907,12 @@
       }
     },
     "state_hydration": {
-      "price_trajectory": {
+      "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 1.56,
-        "round_trip_ms": 14.778,
-        "transport_overhead_ms": 13.218,
+        "service_compute_ms": 8.132,
+        "round_trip_ms": 23.358,
+        "transport_overhead_ms": 15.226,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19925,9 +19925,24 @@
       "challenger_observations": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 0.194,
-        "round_trip_ms": 12.588,
-        "transport_overhead_ms": 12.394,
+        "service_compute_ms": 2.949,
+        "round_trip_ms": 26.616,
+        "transport_overhead_ms": 23.667,
+        "transport_attempts": 1,
+        "transport_retry_policy": "idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "price_trajectory": {
+        "service_id": "snapshot",
+        "operation": "read",
+        "service_compute_ms": 1.386,
+        "round_trip_ms": 30.474,
+        "transport_overhead_ms": 29.088,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19940,24 +19955,9 @@
       "historical_prior": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 2.122,
-        "round_trip_ms": 24.729,
-        "transport_overhead_ms": 22.607,
-        "transport_attempts": 1,
-        "transport_retry_policy": "idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "prediction_ledger": {
-        "service_id": "snapshot",
-        "operation": "read",
-        "service_compute_ms": 6.056,
-        "round_trip_ms": 27.34,
-        "transport_overhead_ms": 21.284,
+        "service_compute_ms": 2.73,
+        "round_trip_ms": 30.69,
+        "transport_overhead_ms": 27.96,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19972,8 +19972,8 @@
       "service_id": "evaluation",
       "operation": "settlement_targets",
       "service_compute_ms": 0.022,
-      "round_trip_ms": 41.898,
-      "transport_overhead_ms": 41.876,
+      "round_trip_ms": 41.701,
+      "transport_overhead_ms": 41.679,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -19987,9 +19987,9 @@
       "price": {
         "service_id": "price",
         "operation": "build",
-        "service_compute_ms": 23.945,
-        "round_trip_ms": 121.479,
-        "transport_overhead_ms": 97.534,
+        "service_compute_ms": 27.591,
+        "round_trip_ms": 116.524,
+        "transport_overhead_ms": 88.933,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -20002,9 +20002,9 @@
       "prediction": {
         "service_id": "prediction",
         "operation": "build",
-        "service_compute_ms": 311.775,
-        "round_trip_ms": 638.582,
-        "transport_overhead_ms": 326.807,
+        "service_compute_ms": 302.507,
+        "round_trip_ms": 613.07,
+        "transport_overhead_ms": 310.563,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -20023,9 +20023,9 @@
       "gate0_preflight": {
         "service_id": "governance",
         "operation": "gate0_preflight",
-        "service_compute_ms": 1.14,
-        "round_trip_ms": 8.804,
-        "transport_overhead_ms": 7.664,
+        "service_compute_ms": 0.661,
+        "round_trip_ms": 9.081,
+        "transport_overhead_ms": 8.42,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -20038,9 +20038,9 @@
       "evaluation": {
         "service_id": "evaluation",
         "operation": "build",
-        "service_compute_ms": 5.459,
-        "round_trip_ms": 336.573,
-        "transport_overhead_ms": 331.114,
+        "service_compute_ms": 3.651,
+        "round_trip_ms": 338.962,
+        "transport_overhead_ms": 335.311,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -20053,9 +20053,9 @@
       "decision_prepare": {
         "service_id": "decision",
         "operation": "prepare",
-        "service_compute_ms": 570.61,
-        "round_trip_ms": 798.635,
-        "transport_overhead_ms": 228.025,
+        "service_compute_ms": 567.125,
+        "round_trip_ms": 792.957,
+        "transport_overhead_ms": 225.832,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -20069,9 +20069,9 @@
     "decision_finalize": {
       "service_id": "decision",
       "operation": "finalize",
-      "service_compute_ms": 1.818,
-      "round_trip_ms": 210.196,
-      "transport_overhead_ms": 208.378,
+      "service_compute_ms": 1.893,
+      "round_trip_ms": 210.497,
+      "transport_overhead_ms": 208.604,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -20085,8 +20085,8 @@
       "service_id": "governance",
       "operation": "audit",
       "service_compute_ms": 0.946,
-      "round_trip_ms": 226.229,
-      "transport_overhead_ms": 225.283,
+      "round_trip_ms": 215.487,
+      "transport_overhead_ms": 214.541,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -20097,27 +20097,12 @@
       }
     },
     "artifact_persistence": {
-      "historical_prior": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 13.088,
-        "round_trip_ms": 115.694,
-        "transport_overhead_ms": 102.606,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
       "source_fusion": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 6.489,
-        "round_trip_ms": 114.62,
-        "transport_overhead_ms": 108.131,
+        "service_compute_ms": 4.619,
+        "round_trip_ms": 106.057,
+        "transport_overhead_ms": 101.438,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20127,27 +20112,12 @@
           "cooldown_seconds": 10.0
         }
       },
-      "prediction_quality": {
+      "historical_prior": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 0.449,
-        "round_trip_ms": 47.167,
-        "transport_overhead_ms": 46.718,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "team_strength": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 12.162,
-        "round_trip_ms": 50.633,
-        "transport_overhead_ms": 38.471,
+        "service_compute_ms": 11.471,
+        "round_trip_ms": 146.804,
+        "transport_overhead_ms": 135.333,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20160,9 +20130,9 @@
       "prediction_accuracy": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 4.288,
-        "round_trip_ms": 42.428,
-        "transport_overhead_ms": 38.14,
+        "service_compute_ms": 1.092,
+        "round_trip_ms": 51.677,
+        "transport_overhead_ms": 50.585,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20172,12 +20142,12 @@
           "cooldown_seconds": 10.0
         }
       },
-      "prediction_ledger": {
+      "prediction_quality": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 17.677,
-        "round_trip_ms": 66.342,
-        "transport_overhead_ms": 48.665,
+        "service_compute_ms": 1.218,
+        "round_trip_ms": 73.105,
+        "transport_overhead_ms": 71.887,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20187,27 +20157,12 @@
           "cooldown_seconds": 10.0
         }
       },
-      "framework_health": {
+      "team_strength": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 2.889,
-        "round_trip_ms": 43.216,
-        "transport_overhead_ms": 40.327,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "challenger_scorecard": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 1.758,
-        "round_trip_ms": 46.28,
-        "transport_overhead_ms": 44.522,
+        "service_compute_ms": 11.686,
+        "round_trip_ms": 69.989,
+        "transport_overhead_ms": 58.303,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20220,9 +20175,9 @@
       "package_optimizer": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 9.645,
-        "round_trip_ms": 66.766,
-        "transport_overhead_ms": 57.121,
+        "service_compute_ms": 5.637,
+        "round_trip_ms": 58.016,
+        "transport_overhead_ms": 52.379,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20232,12 +20187,42 @@
           "cooldown_seconds": 10.0
         }
       },
-      "price_trajectory": {
+      "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 9.459,
-        "round_trip_ms": 54.26,
-        "transport_overhead_ms": 44.801,
+        "service_compute_ms": 15.713,
+        "round_trip_ms": 79.269,
+        "transport_overhead_ms": 63.556,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "challenger_scorecard": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 3.38,
+        "round_trip_ms": 60.417,
+        "transport_overhead_ms": 57.037,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "framework_health": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 3.549,
+        "round_trip_ms": 57.918,
+        "transport_overhead_ms": 54.369,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20250,9 +20235,24 @@
       "price_alerts": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 3.915,
-        "round_trip_ms": 52.926,
-        "transport_overhead_ms": 49.011,
+        "service_compute_ms": 7.916,
+        "round_trip_ms": 59.773,
+        "transport_overhead_ms": 51.857,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "price_trajectory": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 5.427,
+        "round_trip_ms": 62.931,
+        "transport_overhead_ms": 57.504,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20265,9 +20265,9 @@
       "prices": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 38.697,
-        "round_trip_ms": 104.585,
-        "transport_overhead_ms": 65.888,
+        "service_compute_ms": 38.184,
+        "round_trip_ms": 208.193,
+        "transport_overhead_ms": 170.009,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20280,9 +20280,9 @@
       "predictions": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 518.032,
-        "round_trip_ms": 844.444,
-        "transport_overhead_ms": 326.412,
+        "service_compute_ms": 476.984,
+        "round_trip_ms": 811.658,
+        "transport_overhead_ms": 334.674,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20296,9 +20296,9 @@
     "snapshot_write": {
       "service_id": "snapshot",
       "operation": "snapshot",
-      "service_compute_ms": 18.584,
-      "round_trip_ms": 24.541,
-      "transport_overhead_ms": 5.957,
+      "service_compute_ms": 24.877,
+      "round_trip_ms": 30.842,
+      "transport_overhead_ms": 5.965,
       "transport_attempts": 1,
       "transport_retry_policy": "non_idempotent",
       "transport_circuit": {
@@ -20308,7 +20308,7 @@
         "cooldown_seconds": 10.0
       }
     },
-    "orchestrator_wall_ms": 3544.272
+    "orchestrator_wall_ms": 3393.814
   },
   "provenance": {
     "ruleset_id": "FPL_2026_27",

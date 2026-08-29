@@ -6,7 +6,10 @@ from pathlib import Path
 import pytest
 
 from src.engines.base_snapshot_service import _reusable_state_from_previous
-from src.engines.production_contract_validate import _validate_runtime_service_states
+from src.engines.production_contract_validate import (
+    _validate_runtime_architecture,
+    _validate_runtime_service_states,
+)
 from src.runtime_v3 import orchestrator
 from src.runtime_v3.performance_guard import evaluate
 from src.runtime_v3.publish_snapshot import materialize
@@ -53,6 +56,50 @@ def test_profile_aware_production_contract_accepts_only_validated_declared_reuse
     undeclared=json.loads(json.dumps(payload)); undeclared["profile_config"]["reuse_services"]={}
     with pytest.raises(AssertionError):
         _validate_runtime_service_states(undeclared)
+
+
+def test_production_contract_accepts_canonical_11_domain_6_phase_runtime():
+    canonical_domains = [
+        "official_state",
+        "personal_team_state",
+        "football_context",
+        "market_context",
+        "prediction",
+        "squad_decision",
+        "challenger_analysis",
+        "framework_governance",
+        "prediction_validation",
+        "reporting",
+        "serving",
+    ]
+    snapshot = {
+        "id": "v3-domain-pipeline-v2",
+        "architecture": "V3_CANONICAL_DOMAIN_PIPELINE",
+        "dependency_aware_scheduling": True,
+        "shared_official_cache": True,
+        "shared_canonical_domain_workspace": True,
+        "cross_capability_copy_promotion": False,
+        "execution_domain_count": 11,
+        "execution_phase_count": 6,
+        "service_count": 11,
+        "capability_owner_count": 21,
+    }
+    runtime = {
+        "runtime_id": "v3-domain-pipeline-v2",
+        "architecture": "V3_CANONICAL_DOMAIN_PIPELINE",
+        "execution_domain_count": 11,
+        "execution_phase_count": 6,
+        "capability_owner_count": 21,
+        "cross_capability_copy_promotion": False,
+        "canonical_domain_order": canonical_domains,
+        "execution_domains": {name: {"status": "SUCCESS"} for name in canonical_domains},
+        "execution_phase_results": {
+            phase: {"status": "SUCCESS"}
+            for phase in ["ACQUIRE", "ENRICH", "MODEL", "DECISION", "GOVERNANCE", "PUBLISH"]
+        },
+        "services": {f"capability_{index}": {} for index in range(21)},
+    }
+    _validate_runtime_architecture(snapshot, runtime)
 
 
 def test_rec32_carries_only_registry_owned_reusable_latest_state(monkeypatch):

@@ -203,7 +203,11 @@
   },
   "architecture": {
     "active_background_capability_count": 21,
-    "execution_domain_count": 7,
+    "execution_domain_count": 11,
+    "execution_phase_count": 6,
+    "canonical_domain_registry": "V3_EXECUTION_DOMAINS_V2",
+    "candidate_topology_status": "AWAITING_CI_MERGE_AND_RUNTIME_PUBLICATION",
+    "latest_production_evidence_domain_count": 7,
     "official_fpl_native_authority": true,
     "official_first_rec_coverage": true,
     "external_evidence_non_authoritative": true,

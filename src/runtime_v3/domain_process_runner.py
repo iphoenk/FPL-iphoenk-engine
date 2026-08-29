@@ -22,7 +22,7 @@ DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
 
 def _domains() -> dict[str, Any]:
     payload = json.loads(DOMAIN_PATH.read_text(encoding="utf-8"))
-    if payload.get("registry") != "V3_EXECUTION_DOMAINS_V1":
+    if payload.get("registry") != "V3_EXECUTION_DOMAINS_V2":
         raise RuntimeError("unexpected execution domain registry")
     return payload.get("domains") or {}
 

@@ -20,18 +20,46 @@ from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
 PERFORMANCE_PATH = DATA / "runtime_performance.json"
-DOMAIN_RUNTIME_ID = "v3-domain-pipeline-v1"
+DOMAIN_RUNTIME_ID = "v3-domain-pipeline-v2"
 _DOMAIN_RESULT_PREFIX = "V3_DOMAIN_RESULT="
-_PARALLEL_ISOLATED_DOMAINS = ("MODEL", "MARKET")
+_CANONICAL_PHASES = ("ACQUIRE", "ENRICH", "MODEL", "DECISION", "GOVERNANCE", "PUBLISH")
+_CANONICAL_DOMAINS = (
+    "official_state",
+    "personal_team_state",
+    "football_context",
+    "market_context",
+    "prediction",
+    "squad_decision",
+    "challenger_analysis",
+    "framework_governance",
+    "prediction_validation",
+    "reporting",
+    "serving",
+)
+_PARALLEL_ISOLATED_DOMAINS = ("prediction", "market_context")
 
 
 def _load_domains() -> dict[str, Any]:
     payload = json.loads(DOMAIN_PATH.read_text(encoding="utf-8"))
-    if payload.get("registry") != "V3_EXECUTION_DOMAINS_V1":
+    if payload.get("registry") != "V3_EXECUTION_DOMAINS_V2":
         raise RuntimeError("unexpected execution domain registry")
     domains = payload.get("domains")
-    if not isinstance(domains, dict) or len(domains) != 7:
-        raise RuntimeError("V3.26 requires exactly seven execution domains")
+    if not isinstance(domains, dict) or len(domains) != int(payload.get("domain_count") or 0):
+        raise RuntimeError("execution domain count does not match its registry contract")
+    if tuple(domains) != _CANONICAL_DOMAINS:
+        raise RuntimeError(f"canonical execution domain order drifted: {tuple(domains)}")
+    phases = payload.get("canonical_phases")
+    if not isinstance(phases, dict) or tuple(phases) != _CANONICAL_PHASES:
+        raise RuntimeError("canonical execution phase contract drifted")
+    if int(payload.get("phase_count") or 0) != len(_CANONICAL_PHASES):
+        raise RuntimeError("execution phase count does not match its registry contract")
+    phase_domains = [str(name) for phase in _CANONICAL_PHASES for name in phases.get(phase) or []]
+    if len(phase_domains) != len(set(phase_domains)) or set(phase_domains) != set(domains):
+        raise RuntimeError("canonical phases must cover every execution domain exactly once")
+    for phase, names in phases.items():
+        for name in names:
+            if (domains.get(str(name)) or {}).get("phase") != phase:
+                raise RuntimeError(f"execution domain phase drift: {name} is not owned by {phase}")
     return payload
 
 
@@ -51,6 +79,47 @@ def _validate_domain_coverage(domain_registry: dict[str, Any], service_registry:
     extra = sorted(set(seen) - services)
     if missing or extra:
         raise RuntimeError(f"execution domain coverage drift: missing={missing} extra={extra}")
+
+    owner = {
+        capability: domain_name
+        for domain_name, spec in domains.items()
+        for capability in spec.get("capabilities") or []
+    }
+    remaining = set(domains)
+    completed: set[str] = set()
+    while remaining:
+        ready = {
+            name
+            for name in remaining
+            if set(domains[name].get("depends_on") or []).issubset(completed)
+        }
+        if not ready:
+            raise RuntimeError(f"execution domain dependency cycle: {sorted(remaining)}")
+        completed.update(ready)
+        remaining.difference_update(ready)
+
+    def ancestors(domain_name: str) -> set[str]:
+        found: set[str] = set()
+        pending = list(domains[domain_name].get("depends_on") or [])
+        while pending:
+            dependency = str(pending.pop())
+            if dependency in found:
+                continue
+            found.add(dependency)
+            pending.extend(domains[dependency].get("depends_on") or [])
+        return found
+
+    for domain_name, spec in domains.items():
+        upstream = ancestors(domain_name)
+        domain_capabilities = set(spec.get("capabilities") or [])
+        for capability in domain_capabilities:
+            for dependency in (service_registry["services"][capability].get("depends_on") or []):
+                dependency_owner = owner[str(dependency)]
+                if dependency_owner != domain_name and dependency_owner not in upstream:
+                    raise RuntimeError(
+                        "execution domain dependency does not cover capability dependency: "
+                        f"{domain_name}:{capability} requires {dependency_owner}:{dependency}"
+                    )
 
 
 def _profile(mode: str, deep_stats: bool, explicit: str | None) -> tuple[str, dict[str, Any]]:
@@ -321,6 +390,7 @@ def _accept_domain_result(
     completed_capabilities: set[str],
     domain_results: dict[str, dict[str, Any]],
     *,
+    phase: str,
     fan_in: dict[str, Any] | None = None,
 ) -> None:
     results = domain_payload.get("results") or {}
@@ -335,6 +405,7 @@ def _accept_domain_result(
         completed_capabilities.add(capability)
     domain_results[domain_name] = {
         "status": "SUCCESS",
+        "phase": phase,
         "elapsed_ms": domain_payload.get("elapsed_ms"),
         "process_elapsed_ms": domain_payload.get("process_elapsed_ms"),
         "capabilities": capabilities,
@@ -417,6 +488,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                         capability_results,
                         completed_capabilities,
                         domain_results,
+                        phase=str(domain_registry["domains"][domain_name]["phase"]),
                         fan_in=fan_in,
                     )
                     completed_domains.add(domain_name)
@@ -460,6 +532,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                     capability_results,
                     completed_capabilities,
                     domain_results,
+                    phase=str(domain_spec["phase"]),
                 )
                 completed_domains.add(domain_name)
                 pending.remove(domain_name)
@@ -502,6 +575,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         performance["domain_process_execution"] = {
             "enabled": True,
             "process_count": len(domain_results),
+            "phase_count": int(domain_registry["phase_count"]),
             "one_process_per_execution_domain": True,
             "business_ownership_unchanged": True,
             "isolated_parallel_domains": list(_PARALLEL_ISOLATED_DOMAINS),
@@ -511,6 +585,17 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         performance["runtime_id"] = DOMAIN_RUNTIME_ID
         performance["architecture"] = domain_registry["architecture"]
         performance["execution_domain_count"] = len(domain_results)
+        performance["execution_phase_count"] = int(domain_registry["phase_count"])
+        performance["execution_phases"] = domain_registry["canonical_phases"]
+        performance["canonical_domain_order"] = list(domain_registry["domains"])
+        performance["execution_order"] = list(domain_results)
+        performance["execution_phase_results"] = {
+            phase: {
+                "status": "SUCCESS",
+                "domains": list(names),
+            }
+            for phase, names in domain_registry["canonical_phases"].items()
+        }
         performance["capability_owner_count"] = len(capability_results)
         performance["execution_domains"] = domain_results
         performance["cross_capability_copy_promotion"] = False
@@ -525,6 +610,12 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             "architecture": domain_registry["architecture"],
             "service_count": len(domain_results),
             "execution_domain_count": len(domain_results),
+            "execution_phase_count": int(domain_registry["phase_count"]),
+            "execution_phases": domain_registry["canonical_phases"],
+            "canonical_domain_order": list(domain_registry["domains"]),
+            "execution_order": list(domain_results),
+            "dependency_aware_scheduling": True,
+            "shared_official_cache": True,
             "capability_owner_count": len(capability_results),
             "shared_canonical_domain_workspace": True,
             "one_process_per_execution_domain": True,
@@ -547,6 +638,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         "within_target_slo": performance.get("within_target_slo"),
         "within_target_budget": performance.get("within_target_budget"),
         "execution_domain_count": len(domain_results),
+        "execution_phase_count": int(domain_registry["phase_count"]),
         "capability_owner_count": len(capability_results),
         "domains": domain_results,
         "content_addressed_reuse": performance.get("content_addressed_reuse"),

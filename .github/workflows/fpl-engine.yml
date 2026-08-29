@@ -1,0 +1,21 @@
+name: FPL iphoenk V3 compatibility marker
+
+on:
+  workflow_dispatch:
+
+# Inert compatibility marker for architecture tooling during V3.26 migration.
+# Active runtime scheduling is owned exclusively by v3-runtime.yml.
+# Collector policy expressions retained here as documentation only:
+# cron: "30 * * * *"
+# cron: "0,15,45 * * * *"
+# cron: "30 21 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility-notice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: echo "V3 runtime is unified in .github/workflows/v3-runtime.yml"

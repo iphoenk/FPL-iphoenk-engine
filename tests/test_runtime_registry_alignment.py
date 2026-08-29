@@ -59,8 +59,27 @@ def test_active_v3_workflow_and_domains_have_single_runtime_owner() -> None:
     assert "Inert compatibility marker" in compat
 
 
-def test_decision_arbitration_is_reporting_helper_not_service() -> None:
+def test_decision_arbitration_is_reporting_owned_helper_not_service() -> None:
     services = _json("config/v3_service_registry.json")["services"]
+    ownership = _json("config/v3_architecture_ownership_registry.json")
     source = (ROOT / "src/engines/report_enrichment.py").read_text(encoding="utf-8")
+    primitives = {row["id"]: row for row in ownership["shared_primitives"]}
+
     assert "decision_arbitration" not in services
     assert "from src.engines.decision_arbitration import arbitrate_decisions, assert_decision_consistency" in source
+    assert primitives["FINAL_DECISION_ARBITRATION"]["owner"] == "reporting"
+    assert primitives["FINAL_DECISION_ARBITRATION"]["implementation"] == "src.engines.decision_arbitration"
+
+
+def test_prediction_snapshot_and_xmins_have_explicit_canonical_owners() -> None:
+    ownership = _json("config/v3_architecture_ownership_registry.json")
+    primitives = {row["id"]: row for row in ownership["shared_primitives"]}
+
+    snapshot = primitives["PREDEADLINE_DECISION_SNAPSHOT_EVIDENCE"]
+    assert snapshot["owner"] == "reporting"
+    assert snapshot["implementation"] == "src.engines.prediction_decision_snapshot"
+    assert "prediction_evaluation" in snapshot["consumers"]
+
+    xmins = primitives["XMINS_DISTRIBUTION"]
+    assert xmins["owner"] == "prediction"
+    assert xmins["implementation"] == "src.models.xmins_v3"

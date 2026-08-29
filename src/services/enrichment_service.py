@@ -5,6 +5,8 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 
+from src.services.competitive_load_service import OUT as COMPETITIVE_LOAD_OUT
+from src.services.competitive_load_service import PRESS_EVIDENCE, build_competitive_load
 from src.services.contracts import file_digest
 from src.sources import core_insights, vaastav
 from src.utils import DATA, atomic_json, iso_now, read_json
@@ -88,9 +90,14 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         }
         if deep_stats:
             advanced["deep"] = results["deep"]
+
     teams = {team["id"]: team["name"] for team in bootstrap.get("teams", [])}
     positions = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
     universe = [_official_player_row(player, teams, positions) for player in bootstrap.get("elements", [])]
+
+    competitive_load = build_competitive_load(raw, read_json(PRESS_EVIDENCE, {}))
+    atomic_json(COMPETITIVE_LOAD_OUT, competitive_load)
+
     out = {
         "schema": "enrichment.v1",
         "schema_version": 495,
@@ -98,6 +105,16 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         "lineage": {"snapshot_schema": "snapshot.v1", "snapshot_sha256": file_digest(SNAPSHOT)},
         "stats_gw": stats_gw,
         "advanced_stats_sync": advanced,
+        "competitive_load": {
+            "artifact": str(COMPETITIVE_LOAD_OUT.relative_to(DATA.parent)),
+            "schema": competitive_load.get("schema"),
+            "players": competitive_load.get("coverage", {}).get("players"),
+            "official_fpl_current_gw_load": competitive_load.get("coverage", {}).get("official_fpl_current_gw_load"),
+            "observed_player_fixture_rows": competitive_load.get("coverage", {}).get("observed_player_fixture_rows"),
+            "other_competitions": competitive_load.get("coverage", {}).get("other_competitions"),
+            "press_conference_collection": competitive_load.get("coverage", {}).get("press_conference_collection"),
+            "complete_for_visible_report": competitive_load.get("coverage", {}).get("complete_for_visible_report"),
+        },
         "official_player_evidence": {
             "source": "raw_snapshot.official.bootstrap.elements",
             "players": len(universe),
@@ -111,7 +128,14 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         "duration_ms": round((perf_counter() - started) * 1000, 2),
     }
     atomic_json(OUTFILE, out)
-    print(json.dumps({"service": "enrichment", "schema": "enrichment.v1", "duration_ms": out["duration_ms"], "official_players": len(universe)}))
+    print(json.dumps({
+        "service": "enrichment",
+        "schema": "enrichment.v1",
+        "duration_ms": out["duration_ms"],
+        "official_players": len(universe),
+        "competitive_load_rows": competitive_load.get("coverage", {}).get("observed_player_fixture_rows"),
+        "competitive_load_complete_for_visible_report": competitive_load.get("coverage", {}).get("complete_for_visible_report"),
+    }))
     return out
 
 

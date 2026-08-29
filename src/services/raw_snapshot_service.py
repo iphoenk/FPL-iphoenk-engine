@@ -5,6 +5,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from time import perf_counter
+from zoneinfo import ZoneInfo
 
 from src.engines.checkpoint_policy import resolve_checkpoint
 from src.engines.fpl_legality import squad_legality_checks
@@ -18,6 +19,7 @@ OUTFILE = RUNTIME / "snapshot.v1.json"
 _ENGINE_CONFIG = read_json(CONFIG / "engine.json", {})
 TEAM_ID = int(_ENGINE_CONFIG.get("team_id") or 0)
 API_RETRIES = int(_ENGINE_CONFIG.get("api_retries") or 0)
+WIB = ZoneInfo("Asia/Jakarta")
 if TEAM_ID <= 0 or API_RETRIES <= 0:
     raise RuntimeError("engine config must provide positive team_id and api_retries")
 
@@ -36,11 +38,7 @@ def _parallel_official_get(specs: list[tuple[str, str, int]]) -> dict:
 
 
 def detect_phase(bootstrap: dict, fixtures: list[dict] | None = None, as_of=None) -> dict:
-    """Resolve FPL phase and actual current-GW live-match state.
-
-    Match Mode must be based on at least one fixture that Official FPL marks started and
-    not finished. A merely active Gameweek is not sufficient.
-    """
+    """Resolve FPL phase while separating match-day context from a truly live fixture."""
     now = as_of or utcnow()
     fixtures = fixtures or []
     events = bootstrap.get("events", [])
@@ -56,14 +54,24 @@ def detect_phase(bootstrap: dict, fixtures: list[dict] | None = None, as_of=None
         planning = nxt
 
     current_gw = current["id"] if current else None
+    current_gw_fixtures = [
+        fixture for fixture in fixtures
+        if current_gw and int(fixture.get("event") or 0) == int(current_gw)
+    ]
     live_fixtures = [
         fixture
-        for fixture in fixtures
-        if current_gw
-        and int(fixture.get("event") or 0) == int(current_gw)
-        and fixture.get("started") is True
+        for fixture in current_gw_fixtures
+        if fixture.get("started") is True
         and fixture.get("finished") is not True
+        and fixture.get("finished_provisional") is not True
     ]
+    local_date = now.astimezone(WIB).date()
+    match_day_fixtures = []
+    for fixture in current_gw_fixtures:
+        kickoff = parse_dt(fixture.get("kickoff_time"))
+        if kickoff and kickoff.astimezone(WIB).date() == local_date:
+            match_day_fixtures.append(fixture)
+
     just_passed_current_deadline = bool(
         current
         and current_deadline
@@ -81,6 +89,10 @@ def detect_phase(bootstrap: dict, fixtures: list[dict] | None = None, as_of=None
         "deadline_time": planning.get("deadline_time") if planning else None,
         "current_deadline_time": current.get("deadline_time") if current else None,
         "post_deadline_reconciliation": just_passed_current_deadline,
+        "match_day_active": bool(match_day_fixtures),
+        "match_day_fixture_count": len(match_day_fixtures),
+        "match_day_fixture_ids": [fixture.get("id") for fixture in match_day_fixtures],
+        "match_day_timezone": "Asia/Jakarta",
         "active_live_fixture_count": len(live_fixtures),
         "active_live_fixture_ids": [fixture.get("id") for fixture in live_fixtures],
         "is_live_match": bool(live_fixtures),
@@ -323,6 +335,7 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         "override_applied": projection_baseline["override_applied"],
         "checkpoint_policy": checkpoint.get("policy_id"),
         "visible_output_authorized": checkpoint.get("visible_output_authorized"),
+        "match_day_active": phase.get("match_day_active"),
         "active_live_fixture_count": phase.get("active_live_fixture_count"),
     }))
     return out

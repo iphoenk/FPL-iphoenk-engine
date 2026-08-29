@@ -12,6 +12,19 @@ REGISTRY_PATH = ROOT / "config" / "runtime" / "incremental_reuse.json"
 STATE_PATH = DATA / "incremental_reuse_state.json"
 
 _VOLATILE_KEYS = {"generated_at", "runtime_architecture"}
+_PREDICTION_TEAM_FIELDS = (
+    "id", "name", "strength_attack_home", "strength_attack_away",
+    "strength_defence_home", "strength_defence_away",
+)
+_PREDICTION_PLAYER_FIELDS = (
+    "id", "element_type", "team", "web_name", "now_cost", "status",
+    "selected_by_percent", "starts", "minutes", "expected_goals",
+    "expected_assists", "bonus", "saves", "chance_of_playing_next_round",
+)
+_PREDICTION_FIXTURE_FIELDS = (
+    "event", "kickoff_time", "finished", "team_h", "team_a",
+    "team_h_score", "team_a_score",
+)
 
 
 def _registry() -> dict[str, Any]:
@@ -36,19 +49,41 @@ def _normalize(value: Any, *, top_level: bool = False) -> Any:
     return value
 
 
-def _semantic_json(name: str, value: Any) -> Any:
+def _pick(row: dict[str, Any], fields: tuple[str, ...]) -> dict[str, Any]:
+    return {field: row.get(field) for field in fields}
+
+
+def _prediction_official_snapshot(value: dict[str, Any]) -> dict[str, Any]:
+    bootstrap = value.get("bootstrap") if isinstance(value.get("bootstrap"), dict) else {}
+    phase = value.get("phase") if isinstance(value.get("phase"), dict) else {}
+    teams = [_pick(row, _PREDICTION_TEAM_FIELDS) for row in bootstrap.get("teams") or [] if isinstance(row, dict)]
+    elements = [_pick(row, _PREDICTION_PLAYER_FIELDS) for row in bootstrap.get("elements") or [] if isinstance(row, dict)]
+    fixtures = [_pick(row, _PREDICTION_FIXTURE_FIELDS) for row in value.get("fixtures") or [] if isinstance(row, dict)]
+    teams.sort(key=lambda row: int(row.get("id") or 0))
+    elements.sort(key=lambda row: int(row.get("id") or 0))
+    fixtures.sort(key=lambda row: (
+        int(row.get("event") or 999),
+        str(row.get("kickoff_time") or ""),
+        int(row.get("team_h") or 0),
+        int(row.get("team_a") or 0),
+    ))
+    return {
+        "planning_gw": phase.get("planning_gw"),
+        "teams": teams,
+        "elements": elements,
+        "fixtures": fixtures,
+    }
+
+
+def _semantic_json(service_name: str, name: str, value: Any) -> Any:
     value = _normalize(value, top_level=True)
-    if name == "official_snapshot.json" and isinstance(value, dict):
-        return {
-            "phase": value.get("phase"),
-            "bootstrap": value.get("bootstrap"),
-            "fixtures": value.get("fixtures"),
-        }
+    if service_name == "prediction" and name == "official_snapshot.json" and isinstance(value, dict):
+        return _prediction_official_snapshot(value)
     return value
 
 
-def _digest_path(name: str) -> str | None:
-    path = ROOT / name if name.startswith("config/") else DATA / name
+def _digest_path(service_name: str, name: str) -> str | None:
+    path = ROOT / name if name.startswith(("config/", "src/")) else DATA / name
     if not path.is_file():
         return None
     raw = path.read_bytes()
@@ -56,7 +91,7 @@ def _digest_path(name: str) -> str | None:
         try:
             value = json.loads(raw.decode("utf-8"))
             raw = json.dumps(
-                _semantic_json(name, value),
+                _semantic_json(service_name, name, value),
                 sort_keys=True,
                 separators=(",", ":"),
                 ensure_ascii=False,
@@ -72,7 +107,7 @@ def fingerprint(service_name: str) -> str | None:
         return None
     rows: list[tuple[str, str]] = []
     for name in spec.get("inputs") or []:
-        digest = _digest_path(str(name))
+        digest = _digest_path(service_name, str(name))
         if digest is None:
             return None
         rows.append((str(name), digest))

@@ -160,7 +160,6 @@ def test_wildcard_removes_unknown_ft_actionability_cap_when_other_evidence_is_ve
     challenger["xpts_5"] = 30
     out = compare(prediction=prediction, team=team, watchlist=watchlist, workload_context=workload, transfer_state={"wildcard_active": True, "authoritative": True})
     mid = next(row for row in out["pairs"] if row["challenger"]["element"] == 101)
-    # Future tactical is still intentionally UNVERIFIED, so transfer grade must remain capped.
     assert mid["classification"] == "REVIEW"
     assert "TRANSFER_COST_UNVERIFIED" not in mid["reasons"]
 
@@ -276,7 +275,8 @@ def test_comparator_change_is_material_report_delta():
     comparator = compare(prediction=prediction, team=team, watchlist=watchlist, workload_context=workload)
     first = build_report(_report_payload(comparator))
     changed = deepcopy(comparator)
-    changed["top_comparisons"][0]["classification"] = "REVIEW"
+    old = changed["top_comparisons"][0]["classification"]
+    changed["top_comparisons"][0]["classification"] = "HOLD_OWNED" if old != "HOLD_OWNED" else "WATCH_CHALLENGER"
     second_payload = _report_payload(changed)
     second_payload["previous_report_state"] = first["report_state"]
     second = build_report(second_payload)

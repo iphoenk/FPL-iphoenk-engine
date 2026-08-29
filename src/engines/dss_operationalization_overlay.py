@@ -222,6 +222,66 @@ def _ownership_context(spec: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     }
 
 
+def _transfer_momentum(spec: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+    universe = read_json(DATA / "universe.json", {})
+    price_cache = read_json(DATA / "price_cache.json", {})
+    rows = list(universe.get("players") or [])
+    cache = price_cache.get("players") or {}
+
+    covered, ratio = _coverage(
+        rows,
+        lambda p: p.get("element") is not None
+        and p.get("transfers_in_event") is not None
+        and p.get("transfers_out_event") is not None,
+    )
+    linked = 0
+    price_matches = 0
+    total_in = 0
+    total_out = 0
+    active_momentum = 0
+    for player in rows:
+        element = player.get("element")
+        if element is None:
+            continue
+        cache_row = cache.get(str(element)) or cache.get(element)
+        if isinstance(cache_row, dict):
+            linked += 1
+            if cache_row.get("now_cost") is not None and player.get("now_cost") is not None:
+                if int(cache_row.get("now_cost")) == int(player.get("now_cost")):
+                    price_matches += 1
+        if player.get("transfers_in_event") is None or player.get("transfers_out_event") is None:
+            continue
+        transfers_in = int(player.get("transfers_in_event") or 0)
+        transfers_out = int(player.get("transfers_out_event") or 0)
+        total_in += transfers_in
+        total_out += transfers_out
+        if transfers_in != transfers_out:
+            active_momentum += 1
+
+    linked_ratio = linked / max(1, len(rows))
+    price_match_ratio = price_matches / max(1, len(rows))
+    minimum = _minimum_ratio()
+    ok = bool(rows) and ratio >= minimum and linked_ratio >= minimum and price_match_ratio >= minimum
+    return ok, {
+        "evidence_state": "AVAILABLE" if ok else "INSUFFICIENT",
+        "players": len(rows),
+        "transfer_count_covered": covered,
+        "transfer_count_coverage_ratio": round(ratio, 4),
+        "price_cache_linked": linked,
+        "price_cache_linkage_ratio": round(linked_ratio, 4),
+        "current_price_matches": price_matches,
+        "current_price_match_ratio": round(price_match_ratio, 4),
+        "players_with_nonzero_net_momentum": active_momentum,
+        "total_transfers_in_event": total_in,
+        "total_transfers_out_event": total_out,
+        "net_transfers_event": total_in - total_out,
+        "source": "Official FPL universe transfer counts + governed market-state price cache",
+        "fallback": spec.get("fallback"),
+        "external_threshold_invented": False,
+        "predicted_price_change_invented": False,
+    }
+
+
 def _learning_loop(spec: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     accuracy = read_json(DATA / "prediction_accuracy.json", {})
     ledger = read_json(DATA / "prediction_ledger.json", {})
@@ -294,6 +354,7 @@ EVALUATORS: dict[str, Callable[[dict[str, Any]], tuple[bool, dict[str, Any]]]] =
     "prediction_quality": _prediction_quality,
     "price_value": _price_value,
     "ownership_context": _ownership_context,
+    "transfer_momentum": _transfer_momentum,
     "learning_loop": _learning_loop,
     "lineup_output": _lineup_output,
     "package_guardrail": _package_guardrail,

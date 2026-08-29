@@ -26,6 +26,7 @@ def integration_gates() -> tuple[Gate, ...]:
         Gate("full_resource_guard", (py, "-m", "src.runtime_v3.performance_guard", "--profile", "full_refresh")),
         Gate("fast_runtime", (py, "-m", "src.runtime_v3.domain_orchestrator", "--mode", "daily", "--stats", "--profile", "fast_decision")),
         Gate("fast_slo_guard", (py, "-m", "src.runtime_v3.performance_guard", "--profile", "fast_decision")),
+        Gate("material_equivalence", (py, "-m", "src.runtime_v3.equivalence_acceptance")),
     )
 
 
@@ -56,6 +57,7 @@ def run() -> dict:
             "fail_closed_on_first_failed_gate": True,
             "full_and_fast_profiles_both_required": True,
             "seven_domain_runtime_required": True,
+            "same_input_material_equivalence_required": True,
         },
     }
     print(json.dumps(result, ensure_ascii=False))

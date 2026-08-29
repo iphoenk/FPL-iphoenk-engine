@@ -23,8 +23,7 @@ DECISION_CACHE = DATA / "decision_hot_cache_v4.json"
 WC_OUTFILE = DATA / "wc_decision_v4.json"
 PACKAGE_OUTFILE = DATA / "wc_package_audit_v4.json"
 LINEUP_OUTFILE = DATA / "lineup_decision_v4.json"
-CACHE_ALGORITHM = "v4.9.6-exact-semantic-decision-cache-v1"
-VOLATILE_CACHE_KEYS = {"generated_at", "point_in_time", "fetched_at", "available_at", "runtime_publish_at", "evaluated_at"}
+CACHE_ALGORITHM = "v4.9.6-exact-semantic-decision-cache-v2"
 _SHARED = None
 
 
@@ -115,35 +114,85 @@ def _run_parallel_decisions(candidates, locked, predictions, universe):
     return statuses, wall_ms
 
 
-def _without_runtime_stamps(value):
-    if isinstance(value, dict):
-        return {key: _without_runtime_stamps(item) for key, item in value.items() if key not in VOLATILE_CACHE_KEYS}
-    if isinstance(value, list):
-        return [_without_runtime_stamps(item) for item in value]
-    return value
+def _candidate_semantics(candidates) -> list[dict]:
+    """Compact exact semantics consumed by WC/package optimizers.
 
-
-def _semantic_fingerprint(predictions: dict, universe: dict, locked: dict) -> str:
-    """Hash only decision-semantic inputs, never run timestamps.
-
-    Full player rows are retained after removing timestamp-only provenance, so
-    lineup start-security, intervals, role evidence and every optimizer field are
-    covered. Cache hits are exact semantic reuse, never approximate stale reuse.
+    The Candidate object is already the canonical normalization boundary for those
+    optimizers. Hashing it avoids recursively serializing prediction provenance that
+    cannot affect WC/package outputs while preserving exact cache invalidation for
+    every field the optimizers can read.
     """
+    return [
+        {
+            "element": row.element,
+            "name": row.name,
+            "position": row.position,
+            "team_id": row.team_id,
+            "team": row.team,
+            "cost": row.cost,
+            "x3": row.x3,
+            "x5": row.x5,
+            "x10": row.x10,
+            "x15": row.x15,
+            "uncertainty": row.uncertainty,
+            "objective": row.objective,
+            "gw_xpts": list(row.gw_xpts),
+        }
+        for row in sorted(candidates, key=lambda item: item.element)
+    ]
+
+
+def _lineup_semantics(predictions: dict, universe: dict, locked: dict) -> list[dict]:
+    """Hash exactly the fields consumed by optimize_lineup(manual=None).
+
+    This deliberately excludes timestamps, provenance blobs, external tactical
+    serving evidence and unowned player detail because none can affect the cached
+    lineup artifact. Sanity, tactical serving and arbitration are never cached and
+    still consume the full current prediction/universe payload every run.
+    """
+    pmap = {int(row.get("element") or 0): row for row in predictions.get("players") or [] if row.get("element") is not None}
+    umap = {int(row.get("element") or 0): row for row in universe.get("players") or [] if row.get("element") is not None}
+    rows = []
+    for owned in sorted(locked.get("players") or [], key=lambda row: int(row.get("element") or 0)):
+        element = int(owned.get("element") or 0)
+        pred = pmap.get(element) or {}
+        uni = umap.get(element) or {}
+        fixture = ((pred.get("fixtures") or [{}])[0]) or {}
+        xmins = fixture.get("xmins") or {}
+        rows.append({
+            "element": element,
+            "name": uni.get("name") or pred.get("name"),
+            "position": uni.get("position") or pred.get("position"),
+            "team": uni.get("team") or pred.get("team"),
+            "xpts": fixture.get("xpts"),
+            "lower80": fixture.get("lower80"),
+            "upper80": fixture.get("upper80"),
+            "start_probability": xmins.get("start_probability"),
+            "start_probability_confidence": xmins.get("start_probability_confidence"),
+            "bench_probability": xmins.get("bench_probability"),
+            "dnp_probability": xmins.get("dnp_probability"),
+            "tactical_role": (pred.get("priors") or {}).get("tactical_role"),
+        })
+    return rows
+
+
+def _semantic_fingerprint(predictions: dict, universe: dict, locked: dict, candidates=None) -> str:
+    """Hash exact inputs of cached WC/package/lineup artifacts, not whole payloads.
+
+    Candidate normalization covers WC/package semantics. A separate owned-player
+    projection covers lineup semantics. This reduces fingerprint complexity from a
+    recursive full-payload walk to a bounded compact projection while remaining
+    exact for the three cached artifacts.
+    """
+    normalized_candidates = candidates if candidates is not None else build_candidates(predictions, universe)
+    serving_policy = read_json(CONFIG / "serving_improvement_registry.json", {}) or {}
     payload = {
         "algorithm": CACHE_ALGORITHM,
         "prediction_model": predictions.get("model_version"),
-        "prediction_players": sorted(
-            (_without_runtime_stamps(row) for row in predictions.get("players") or []),
-            key=lambda row: int(row.get("element") or 0),
-        ),
-        "universe_players": sorted(
-            (_without_runtime_stamps(row) for row in universe.get("players") or []),
-            key=lambda row: int(row.get("element") or 0),
-        ),
-        "planning_squad": _without_runtime_stamps(locked),
-        "quality_config": read_json(CONFIG / "prediction_quality_registry.json", {}),
-        "serving_policy": read_json(CONFIG / "serving_improvement_registry.json", {}),
+        "candidate_semantics": _candidate_semantics(normalized_candidates),
+        "lineup_semantics": _lineup_semantics(predictions, universe, locked),
+        "planning_squad": locked,
+        "lineup_policy": serving_policy.get("lineup") or {},
     }
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
@@ -174,13 +223,14 @@ def _cache_hit(fingerprint: str) -> tuple[bool, str]:
 
 def _write_cache(fingerprint: str) -> None:
     atomic_json(DECISION_CACHE, {
-        "schema_version": 1,
+        "schema_version": 2,
         "algorithm": CACHE_ALGORITHM,
         "fingerprint": fingerprint,
         "artifact_sha256": {key: file_digest(path) for key, path in _cache_artifacts().items()},
         "guardrails": {
             "exact_semantic_inputs_only": True,
-            "runtime_timestamps_excluded_from_key": sorted(VOLATILE_CACHE_KEYS),
+            "bounded_consumer_projection_not_full_payload": True,
+            "runtime_timestamps_not_consumed_by_cache_key": True,
             "artifact_digest_verified_before_reuse": True,
             "manual_user_override_not_cached": True,
             "sanity_tactical_arbitration_rerun_every_time": True,
@@ -197,9 +247,21 @@ def run():
     team = read_json(DATA / "team.json", {})
     latest = read_json(DATA / "latest.json", {})
     locked = effective_planning_squad(team, configured_lock, latest)
+    load_ms = round((perf_counter() - t0) * 1000.0, 1)
+
+    t = perf_counter()
     candidates = build_candidates(predictions, universe)
-    fingerprint = _semantic_fingerprint(predictions, universe, locked)
-    timings = {"load_shared_inputs_candidates_and_fingerprint_ms": round((perf_counter() - t0) * 1000.0, 1)}
+    candidates_ms = round((perf_counter() - t) * 1000.0, 1)
+
+    t = perf_counter()
+    fingerprint = _semantic_fingerprint(predictions, universe, locked, candidates=candidates)
+    fingerprint_ms = round((perf_counter() - t) * 1000.0, 1)
+    timings = {
+        "load_shared_inputs_ms": load_ms,
+        "build_candidates_ms": candidates_ms,
+        "semantic_fingerprint_ms": fingerprint_ms,
+        "load_shared_inputs_candidates_and_fingerprint_ms": round(load_ms + candidates_ms + fingerprint_ms, 1),
+    }
 
     hit, cache_reason = _cache_hit(fingerprint)
     if hit:
@@ -294,6 +356,7 @@ def run():
             "canonical_decision_single_owner": True,
             "material_upgrade_alone_never_execution": True,
             "exact_semantic_optimizer_cache": True,
+            "optimizer_cache_bounded_to_actual_consumers": True,
             "optimizer_cache_never_skips_sanity_tactical_or_arbitration": True,
             "optimizer_cache_artifact_digest_verified": True,
         },
@@ -305,6 +368,7 @@ def run():
         "transfer_state": out["results"]["transfer_candidate_state"],
         "formation": lineup.get("formation"),
         "optimizer_cache_hit": hit,
+        "semantic_fingerprint_ms": fingerprint_ms,
         "decision_parallel_wall_ms": parallel_wall,
         "package_audit_cpu_ms": statuses["packages"]["ms"],
         "lineup_cpu_ms": statuses["lineup"]["ms"],

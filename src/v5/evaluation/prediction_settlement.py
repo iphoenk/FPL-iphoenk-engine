@@ -62,6 +62,60 @@ def recover_overdue_predeadline_freezes(ledger: dict[str, Any], *, now: datetime
     }
 
 
+def settlement_targets(
+    ledger: dict[str, Any],
+    bootstrap: dict[str, Any],
+    *,
+    scoring_gw: int | None = None,
+    current_event_live_available: bool = False,
+) -> dict[str, Any]:
+    """Return only frozen, finished, unsettled GWs that need historical event-live.
+
+    Evaluation owns the semantic target selection. Ingestion owns the network fetch.
+    The active scoring GW is excluded only when its event-live payload is already
+    present, preventing duplicate Official requests while retaining fail-neutral
+    recovery when the current payload is unavailable.
+    """
+    records = ledger.get("records") if isinstance(ledger.get("records"), dict) else {}
+    finished = {
+        int(row.get("id"))
+        for row in bootstrap.get("events") or []
+        if isinstance(row, dict) and row.get("id") is not None and row.get("finished") is True
+    }
+    current = int(scoring_gw or 0)
+    targets: set[int] = set()
+    for key, record in records.items():
+        if not isinstance(record, dict):
+            continue
+        if record.get("status") == "SETTLED" or not isinstance(record.get("frozen_forecast"), dict):
+            continue
+        try:
+            gw = int(record.get("gw") or key)
+        except (TypeError, ValueError):
+            continue
+        if gw not in finished:
+            continue
+        if current_event_live_available and gw == current:
+            continue
+        targets.add(gw)
+    ordered = sorted(targets)
+    return {
+        "contract": "V5_PREDICTION_SETTLEMENT_TARGETS_V1",
+        "gameweeks": ordered,
+        "count": len(ordered),
+        "scoring_gw": current or None,
+        "current_event_live_available": bool(current_event_live_available),
+        "governance": {
+            "finished_events_only": True,
+            "frozen_forecast_required": True,
+            "settled_records_excluded": True,
+            "current_event_live_deduplicated": True,
+            "network_owner": "ingestion",
+            "settlement_owner": "evaluation",
+        },
+    }
+
+
 def build_settlement_artifact(ledger: dict[str, Any], accuracy: dict[str, Any]) -> dict[str, Any]:
     records = ledger.get("records") if isinstance(ledger.get("records"), dict) else {}
     settled = sorted(int(k) for k,v in records.items() if isinstance(v,dict) and v.get("status") == "SETTLED")
@@ -80,8 +134,10 @@ def build_settlement_artifact(ledger: dict[str, Any], accuracy: dict[str, Any]) 
         "temporal_guard": validate_frozen_ledger(ledger),
         "baseline_comparison": accuracy.get("baseline_comparison"),
         "eligible_for_accuracy_claim": bool(settled) and int(((accuracy.get("overall") or {}).get("sample_size")) or 0) > 0,
+        "settlement_source_health": accuracy.get("settlement_source_health"),
         "governance": {
             "overdue_recovery_uses_genuine_predeadline_snapshot_only": True,
             "retroactive_prediction_reconstruction_forbidden": True,
+            "historical_event_live_is_official_actual_only": True,
         },
     }

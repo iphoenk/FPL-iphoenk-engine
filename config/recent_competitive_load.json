@@ -1,13 +1,15 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "contract": "RECENT_COMPETITIVE_LOAD_V2",
   "runtime_consumption": {
-    "status": "EXTERNAL_REPORT_EVIDENCE_REQUIRED",
-    "automated_python_consumer": null,
+    "status": "PARTIALLY_AUTOMATED",
+    "automated_python_consumer": "src.services.enrichment_service -> src.services.competitive_load_service.build_competitive_load",
+    "automated_scope": "current scoring-GW Premier League player load from raw_snapshot.official.event_live.explain",
+    "external_evidence_scope": ["other official competitions", "press conference and manager team news"],
     "decision_mutation": "NOT_AUTOMATED",
     "visible_report_executor_must_verify": true,
-    "fail_closed_language": "do not claim recent competitive load or press-conference coverage was checked unless evidence was actually gathered",
-    "future_automation_requires_new_registered_consumer": true
+    "fail_closed_language": "do not claim full recent competitive load or press-conference coverage was checked unless external evidence was actually gathered",
+    "future_full_automation_requires_verified_external_source_adapters": true
   },
   "scope": {"owned": "ALL_15", "watchlist": "ALL_20", "mandatory_before_visible_report": true, "mandatory_on_deadline_day": true},
   "competitions": ["Premier League", "FA Cup", "EFL Cup", "UEFA Champions League", "UEFA Europa League", "UEFA Conference League", "Community Shield", "other official competitive first-team fixture"],

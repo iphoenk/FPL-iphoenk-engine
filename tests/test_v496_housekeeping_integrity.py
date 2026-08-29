@@ -63,13 +63,13 @@ def test_registered_contract_producers_are_unique_and_complete():
     assert all((contracts[name].get("path") or "").strip() for name in produced)
 
 
-def test_architecture_guard_is_pre_orchestration_assurance_not_runtime_microservice():
+def test_architecture_guard_is_startup_assurance_not_runtime_microservice():
     registry = json.loads((ROOT / "config/service_registry.json").read_text())
     registered = {row["module"] for row in registry["services"]}
     assert "src.services.architecture_guard_service" not in registered
-    core = (ROOT / ".github/workflows/fpl-engine-core.yml").read_text(encoding="utf-8")
-    assert "python -m src.services.architecture_guard_service" in core
-    assert core.index("python -m src.services.architecture_guard_service") < core.index("python -m src.services.orchestrator")
+    orchestrator = (ROOT / "src/services/orchestrator.py").read_text(encoding="utf-8")
+    assert "from src.services import architecture_guard_service" in orchestrator
+    assert "startup_assurance = architecture_guard_service.run()" in orchestrator
 
 
 def test_support_modules_are_not_accidental_business_microservices():

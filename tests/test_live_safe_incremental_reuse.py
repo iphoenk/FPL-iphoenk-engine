@@ -27,10 +27,22 @@ def test_prediction_semantic_fingerprint_changes_on_material_score_change():
     assert left != right
 
 
-def test_all_incremental_services_require_explicit_live_opt_in():
+def test_live_reuse_is_explicit_and_limited_to_planning_services():
     registry = incremental_reuse._registry()
-    assert registry["policy"]["live_reuse_requires_explicit_service_opt_in"] is True
-    assert registry["policy"]["disable_when_current_scoring_fixture_live"] is True
+    policy = registry["policy"]
+    assert policy["live_reuse_requires_explicit_service_opt_in"] is True
+    assert policy["disable_when_current_scoring_fixture_live"] is True
+    assert policy["reuse_is_invalidated_by_source_tree_change"] is True
     services = registry["services"]
-    assert services
-    assert all(spec.get("allow_during_live") is True for spec in services.values())
+    assert {name for name, spec in services.items() if spec.get("allow_during_live") is True} == {
+        "prediction",
+        "lineup_governance",
+        "challenger",
+    }
+    assert all("src/" in spec.get("inputs", []) for spec in services.values())
+
+
+def test_source_tree_digest_is_available_for_reuse_invalidation():
+    digest = incremental_reuse._digest_path("prediction", "src/")
+    assert isinstance(digest, str)
+    assert len(digest) == 64

@@ -93,10 +93,24 @@ def test_decision_hotpath_compatibility_path_delegates_to_unified_owner() -> Non
     source = (ROOT / "src/engines/decision_hotpath_service.py").read_text(encoding="utf-8")
 
     assert "src.engines.decision_hotpath_service" in ownership["compatibility_only_modules"]
-    assert interactive["services"] == {
-        "unified_fastpath": interactive["services"]["unified_fastpath"]
-    }
+    assert set(interactive["services"]) == {"unified_fastpath"}
     assert interactive["compatibility_entrypoints"]["decision_hotpath"] == "src.engines.decision_hotpath_service"
     assert "from src.runtime_v3.unified_fastpath import run as run_unified_fastpath" in source
     assert "build_lineup_decision" not in source
     assert "build_package_decision" not in source
+
+
+def test_active_framework_health_service_overrides_legacy_formula_probes() -> None:
+    service = (ROOT / "src/engines/framework_health_service.py").read_text(encoding="utf-8")
+    legacy = (ROOT / "src/engines/framework_health_audit.py").read_text(encoding="utf-8")
+
+    # Historical fallbacks may remain in the compatibility audit core, but active
+    # framework health must replace all three before audit_engine.run().
+    assert "from src.models.projection import xmins_distribution" in legacy
+    assert "from src.models.projection import project_points" in legacy
+    assert "from src.models.optimizer import legal_counts" in legacy
+    assert "def activate_canonical_probe_contracts()" in service
+    assert "audit_engine._probe_xmins = canonical_xmins_probe" in service
+    assert "audit_engine._probe_projection = canonical_projection_probe" in service
+    assert "audit_engine._probe_structural = canonical_structural_probe" in service
+    assert service.index("activate_canonical_probe_contracts()", service.index("def run()")) < service.index("audit_engine.run()", service.index("def run()"))

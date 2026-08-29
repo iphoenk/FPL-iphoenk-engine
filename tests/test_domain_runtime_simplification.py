@@ -42,4 +42,4 @@ def test_unified_runtime_is_only_scheduled_v3_runtime_workflow():
     assert "schedule:" not in compat
     assert not (workflows / "v3-runtime-fast.yml").exists()
     assert not (workflows / "v3-refresh-full.yml").exists()
-    assert "src.runtime_v3.incremental_domain_orchestrator" in runtime
+    assert "src.runtime_v3.domain_orchestrator" in runtime

@@ -35,10 +35,12 @@ def _keep_profile(players) -> dict:
         }
         gw_sorted.append(sorted_by_pos)
         gw_prefix.append({pos: _prefix(values) for pos, values in sorted_by_pos.items()})
+    objective_terms = tuple(p.objective for p in ps)
     return {
         "cost": sum(p.cost for p in ps),
-        "objective": sum(p.objective for p in ps),
-        "objective_terms": tuple((p.element, p.objective) for p in ps),
+        "objective": sum(objective_terms),
+        "objective_terms": objective_terms,
+        "objective_elements": tuple((p.element, p.objective) for p in ps),
         "x3": sum(p.x3 for p in ps),
         "x5": sum(p.x5 for p in ps),
         "x10": sum(p.x10 for p in ps),
@@ -52,18 +54,16 @@ def _keep_profile(players) -> dict:
 def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
     """Derive an OUT-set profile while preserving reference float order exactly.
 
-    Subtracting aggregate objectives from the baseline is mathematically equivalent,
-    but binary floating-point addition is not associative. The reference audit sums
-    keep players in their original target order before adding incoming players. Keep
-    this tiny ordered objective accumulator so the optimized path retains exact
-    ranking/tie semantics without rescanning full target metrics.
+    CPython 3.12 gives ``sum(float_iterable)`` improved numerical semantics, so a
+    baseline-total-minus-outs shortcut is not guaranteed to round identically to the
+    reference target sum. Preserve the ordered objective terms and let ``sum`` see the
+    exact same keep sequence that the reference audit sees.
     """
     outs = tuple(outs)
     out_ids = {p.element for p in outs}
-    objective = 0.0
-    for element, value in baseline["objective_terms"]:
-        if element not in out_ids:
-            objective += value
+    objective_terms = tuple(
+        value for element, value in baseline["objective_elements"] if element not in out_ids
+    )
     out_by_pos = {pos: [p for p in outs if p.position == pos] for pos in POSITION_COUNTS}
     gw_sorted = []
     gw_prefix = []
@@ -85,7 +85,8 @@ def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
         gw_prefix.append(prefix_by_pos)
     return {
         "cost": baseline["cost"] - sum(p.cost for p in outs),
-        "objective": objective,
+        "objective": sum(objective_terms),
+        "objective_terms": objective_terms,
         "x3": baseline["x3"] - sum(p.x3 for p in outs),
         "x5": baseline["x5"] - sum(p.x5 for p in outs),
         "x10": baseline["x10"] - sum(p.x10 for p in outs),
@@ -107,10 +108,11 @@ def _chosen_profile(chosen) -> dict:
         for player in ps:
             row[player.position].append(_gw_value(player, index))
         gw_by_pos.append(row)
+    objective_terms = tuple(p.objective for p in ps)
     return {
         "cost": sum(p.cost for p in ps),
-        "objective": sum(p.objective for p in ps),
-        "objective_terms": tuple(p.objective for p in ps),
+        "objective": sum(objective_terms),
+        "objective_terms": objective_terms,
         "x3": sum(p.x3 for p in ps),
         "x5": sum(p.x5 for p in ps),
         "x10": sum(p.x10 for p in ps),
@@ -153,9 +155,7 @@ def _metrics_from_profiles(profile: dict, chosen_profile: dict) -> dict:
         total = profile["gw_total"][index] + chosen_profile["gw_total"][index]
         xi5 += xi
         utility5 += xi + .12 * (total - xi)
-    objective = profile["objective"]
-    for value in chosen_profile["objective_terms"]:
-        objective += value
+    objective = sum(profile["objective_terms"] + chosen_profile["objective_terms"])
     return {
         "cost": profile["cost"] + chosen_profile["cost"],
         "objective": round(objective, 4),

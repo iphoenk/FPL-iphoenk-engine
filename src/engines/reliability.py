@@ -19,11 +19,15 @@ def validate_snapshot(snapshot: dict) -> dict:
         if not files.get(key):
             errors.append(f"missing_file_pointer:{key}")
     summary = snapshot.get("team_summary") or {}
-    required_value_fields = ("squad_market_value", "itb", "total_market_funds", "squad_sell_value", "transferable_funds")
-    for key in required_value_fields:
-        if summary.get(key) is None:
-            errors.append(f"missing_team_summary:{key}")
-    if summary.get("squad_market_value", 0) < 0 or summary.get("squad_sell_value", 0) < 0:
+    if summary.get("itb") is None:
+        errors.append("missing_team_summary:itb")
+    explicit = all(summary.get(key) is not None for key in ("squad_market_value", "total_market_funds", "squad_sell_value", "transferable_funds"))
+    legacy = summary.get("market_value") is not None and summary.get("sell_value") is not None
+    if not explicit and not legacy:
+        errors.append("missing_team_summary:value_semantics")
+    market = summary.get("squad_market_value", summary.get("market_value", 0))
+    sell = summary.get("squad_sell_value", summary.get("sell_value", 0))
+    if market < 0 or sell < 0:
         errors.append("negative_team_value")
     return {"ok": not errors, "errors": errors}
 

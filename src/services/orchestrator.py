@@ -63,8 +63,7 @@ def _render_command(service: dict, mode: str, stats: bool, deep_stats: bool, as_
 
 
 def _tail(value: str, limit: int = 1200) -> str:
-    value = (value or "").strip()
-    return value[-limit:]
+    return (value or "").strip()[-limit:]
 
 
 def _assert_locked_artifacts(locked_artifacts: dict[str, str], stage: str) -> None:
@@ -80,6 +79,23 @@ def _service_env(root: Path, locked_artifacts: dict[str, str]) -> dict:
     if snapshot_path in locked_artifacts:
         env["FPL_SNAPSHOT_SHA256"] = locked_artifacts[snapshot_path]
     return env
+
+
+def _lock_service_artifact(service: dict, root: Path, locked_artifacts: dict[str, str], row: dict, report: dict) -> None:
+    rel = service.get("lock_artifact")
+    if not rel:
+        return
+    target = root / str(rel)
+    digest = file_digest(target)
+    locked_artifacts[str(target)] = digest
+    row["locked_artifact"] = {"path": str(rel), "sha256": digest}
+    if service.get("snapshot_identity"):
+        payload = read_json(target, {})
+        report["snapshot_identity"] = {
+            "sha256": digest,
+            "generated_at": payload.get("generated_at"),
+            "checkpoint_policy_id": (payload.get("checkpoint_context") or {}).get("policy_id"),
+        }
 
 
 def orchestrate(
@@ -101,11 +117,7 @@ def orchestrate(
     contracts = contract_registry or read_json(CONTRACT_REGISTRY, {})
     levels = _service_levels(registry)
     services = [service for level in levels for service in level]
-    level_by_id = {
-        service["id"]: level_index
-        for level_index, level in enumerate(levels)
-        for service in level
-    }
+    level_by_id = {service["id"]: level_index for level_index, level in enumerate(levels) for service in level}
     order_index = {service["id"]: index for index, service in enumerate(services)}
     started = time.perf_counter()
     report = {
@@ -126,22 +138,13 @@ def orchestrate(
         "launch_order": [],
         "completion_order": [],
         "snapshot_identity": None,
-        "startup_assurance": {
-            "service": "architecture_guard",
-            "status": startup_assurance.get("status"),
-            "runtime_microservice": False,
-        },
+        "startup_assurance": {"service": "architecture_guard", "status": startup_assurance.get("status"), "runtime_microservice": False},
         "services": [],
         "guardrails": dict(registry.get("guardrails") or {}),
     }
     atomic_json(outfile, report)
 
     locked_artifacts: dict[str, str] = {}
-    lock_targets = {
-        "raw_snapshot": root / "data/runtime/snapshot.v1.json",
-        "enrichment": root / "data/runtime/enrichment.v1.json",
-        "prediction": root / "data/latest.json",
-    }
     service_states: dict[str, str] = {}
     pending = {service["id"]: service for service in services}
     max_workers = max(1, max(len(level) for level in levels))
@@ -202,12 +205,7 @@ def orchestrate(
                         result = future.result()
                     except subprocess.TimeoutExpired as exc:
                         _assert_locked_artifacts(locked_artifacts, f"after timed-out service {service_id}")
-                        row.update({
-                            "status": "FAIL",
-                            "error": "timeout",
-                            "stdout_tail": _tail(exc.stdout or ""),
-                            "stderr_tail": _tail(exc.stderr or ""),
-                        })
+                        row.update({"status": "FAIL", "error": "timeout", "stdout_tail": _tail(exc.stdout or ""), "stderr_tail": _tail(exc.stderr or "")})
                         service_states[service_id] = "FAIL"
                         raise RuntimeError(f"service timeout: {service_id}")
                     except Exception as exc:
@@ -234,19 +232,7 @@ def orchestrate(
                         service_states[service_id] = "FAIL"
                         raise RuntimeError(f"contract validation failed: {service_id}")
 
-                    if service_id in lock_targets:
-                        target = lock_targets[service_id]
-                        digest = file_digest(target)
-                        locked_artifacts[str(target)] = digest
-                        row["locked_artifact"] = {"path": str(target.relative_to(root)), "sha256": digest}
-                    if service_id == "raw_snapshot":
-                        latest = read_json(lock_targets[service_id], {})
-                        report["snapshot_identity"] = {
-                            "sha256": locked_artifacts[str(lock_targets[service_id])],
-                            "generated_at": latest.get("generated_at"),
-                            "checkpoint_policy_id": (latest.get("checkpoint_context") or {}).get("policy_id"),
-                        }
-
+                    _lock_service_artifact(service, root, locked_artifacts, row, report)
                     row["status"] = "PASS"
                     service_states[service_id] = "PASS"
                     report["completion_order"].append(service_id)
@@ -272,9 +258,7 @@ def orchestrate(
             "runtime_boundaries_reduced_from": 13,
             "runtime_boundaries_reduced_to": len(services),
         }
-        report["locked_artifacts"] = {
-            str(Path(path).relative_to(root)): digest for path, digest in locked_artifacts.items()
-        }
+        report["locked_artifacts"] = {str(Path(path).relative_to(root)): digest for path, digest in locked_artifacts.items()}
         atomic_json(outfile, report)
         print(json.dumps({
             "orchestrator": "PASS",

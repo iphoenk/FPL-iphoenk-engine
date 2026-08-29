@@ -125,9 +125,16 @@ def reconcile_latest_finished(raw: dict | None = None, now: datetime | None = No
     }
 
 
-def cycle(now: datetime | None = None) -> dict:
-    raw = read_json(RAW_SNAPSHOT, {})
-    predictions = read_json(PREDICTIONS, {})
+def cycle(now: datetime | None = None, raw: dict | None = None, predictions: dict | None = None) -> dict:
+    """Run validation lifecycle against one optional preloaded immutable snapshot.
+
+    Default callers retain the file-backed contract. Consolidated validation may
+    provide the exact raw/prediction objects it already loaded so lifecycle and
+    framework PRE-FLIGHT evaluate the same point-in-time evidence without parsing
+    the large prediction artifact twice.
+    """
+    raw = raw if raw is not None else read_json(RAW_SNAPSHOT, {})
+    predictions = predictions if predictions is not None else read_json(PREDICTIONS, {})
     if raw.get("schema") != "snapshot.v1":
         raise RuntimeError("validation lifecycle requires runtime snapshot.v1")
     if not predictions.get("model_version") or not predictions.get("players"):
@@ -168,6 +175,7 @@ def cycle(now: datetime | None = None) -> dict:
             "started_from_official_stats_starts_only": True,
             "minutes_never_infer_started": True,
             "missing_starts_excluded_from_start_brier": True,
+            "preloaded_snapshot_contract_equivalent": True,
         },
     }
     atomic_json(OUTFILE, out)

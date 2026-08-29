@@ -24,6 +24,8 @@ def _mini_registries():
                 "command": ["python", "snapshot"],
                 "depends_on": [],
                 "produces": ["latest"],
+                "lock_artifact": "data/latest.json",
+                "snapshot_identity": True,
             },
             {
                 "id": "decision",

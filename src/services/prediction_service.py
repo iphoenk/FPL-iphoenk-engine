@@ -6,10 +6,15 @@ from time import perf_counter
 from src.engines.fpl_rules_2026 import POSITION_BY_TYPE
 from src.engines.source_sweep_status import build_source_sweep_status
 from src.engines.v4_freshness import evaluate_freshness
-from src.engines.v4_runner import build_predictions
 from src.engines.v4_xmins_evidence import attach_xmins_evidence
 from src.services.contracts import file_digest
+from src.services.prediction_model_cache import build_predictions_cached, last_status as prediction_cache_status
 from src.utils import DATA, append_jsonl, atomic_json, iso_now, read_json
+
+# Compatibility seam retained for tests and callers that patch the prediction
+# builder at the service boundary. Production points this alias at the exact
+# semantic cache wrapper.
+build_predictions = build_predictions_cached
 
 RUNTIME = DATA / "runtime"
 SNAPSHOT = RUNTIME / "snapshot.v1.json"
@@ -105,7 +110,6 @@ def _team_value_totals(ledger, itb):
         "squad_sell_value": squad_sell_value,
         "transferable_funds": squad_sell_value + bank,
         "unit": "tenths_gbp_million",
-        # Backward-compatible machine aliases only.
         "market_value": squad_market_value,
         "sell_value": squad_sell_value,
     }
@@ -145,9 +149,17 @@ def run():
     bootstrap = official["bootstrap"]
     fixtures = official.get("fixtures") or []
     generated = iso_now()
+
+    t = perf_counter()
     predictions = build_predictions(bootstrap, fixtures, generated, stats_gw=enrichment.get("stats_gw"))
+    base_prediction_ms = round((perf_counter() - t) * 1000, 2)
+    cache_status = prediction_cache_status()
+
+    t = perf_counter()
     competitive_load = read_json(DATA / "competitive_load_v4.json", {})
     predictions = attach_xmins_evidence(predictions, competitive_load)
+    xmins_evidence_ms = round((perf_counter() - t) * 1000, 2)
+
     atomic_json(DATA / "predictions_v4.json", predictions)
     atomic_json(DATA / "universe.json", {"generated_at": generated, "players": enrichment["universe"]})
     atomic_json(DATA / "health.json", raw["endpoint_health"])
@@ -214,8 +226,6 @@ def run():
     official_context = _official_context_summary(bootstrap, fixtures)
     source_sweep_status = build_source_sweep_status(raw.get("endpoint_health") or {})
 
-    # Canonical release identity remains schema 496 for V4.9.6. New sub-contracts
-    # carry their own schema ids without mutating this established runtime identity.
     latest = {
         "schema_version": 496,
         "engine_version": "4.9.6-official-first-reporting",
@@ -253,7 +263,13 @@ def run():
             "service_orchestration": "data/service_orchestration_v4.json",
         },
         "performance": {
-            "raw_snapshot_ms": raw_snapshot_ms, "enrichment_ms": enrichment_ms, "prediction_ms": prediction_ms,
+            "raw_snapshot_ms": raw_snapshot_ms,
+            "enrichment_ms": enrichment_ms,
+            "prediction_ms": prediction_ms,
+            "base_prediction_ms": base_prediction_ms,
+            "xmins_evidence_ms": xmins_evidence_ms,
+            "prediction_base_cache_hit": bool(cache_status.get("hit")),
+            "prediction_base_cache_reason": cache_status.get("reason"),
             "engine_before_snapshot_write_ms": round(raw_snapshot_ms + enrichment_ms + prediction_ms, 2),
         },
         "meta": {
@@ -266,6 +282,8 @@ def run():
             "human_effective_plan_is_separate_contract": True, "source_governance_names_do_not_imply_runtime_adapters": True,
             "team_value_labels_are_semantically_explicit": True, "legacy_team_value_aliases_are_machine_contract_only": True,
             "chip_state_is_phase_aware": True, "submitted_native_match_facts_preserved": True,
+            "prediction_base_cache_exact_semantic_only": True,
+            "competitive_load_reattached_after_base_cache": True,
         },
     }
     freshness = evaluate_freshness(latest)
@@ -280,7 +298,11 @@ def run():
     print(json.dumps({
         "service": "prediction", "engine": latest["engine_version"], "players": len(predictions["players"]),
         "freshness_state": latest["freshness_state"], "source_age_minutes": latest["source_age_minutes"],
-        "source_sweep_runtime_wired": source_sweep_status.get("runtime_wired_sources"), "duration_ms": prediction_ms,
+        "source_sweep_runtime_wired": source_sweep_status.get("runtime_wired_sources"),
+        "prediction_base_cache_hit": bool(cache_status.get("hit")),
+        "base_prediction_ms": base_prediction_ms,
+        "xmins_evidence_ms": xmins_evidence_ms,
+        "duration_ms": prediction_ms,
     }))
     return latest
 

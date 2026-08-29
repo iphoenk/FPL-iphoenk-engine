@@ -4,6 +4,7 @@ import json
 from time import perf_counter
 
 from src.engines.fpl_rules_2026 import POSITION_BY_TYPE
+from src.engines.source_sweep_status import build_source_sweep_status
 from src.engines.v4_runner import build_predictions
 from src.services.contracts import file_digest
 from src.utils import DATA, append_jsonl, atomic_json, iso_now, read_json
@@ -176,6 +177,7 @@ def run() -> dict:
     raw_snapshot_ms = float(raw.get("duration_ms") or 0)
     enrichment_ms = float(enrichment.get("duration_ms") or 0)
     official_context = _official_context_summary(bootstrap, fixtures)
+    source_sweep_status = build_source_sweep_status(raw.get("endpoint_health") or {})
     latest = {
         "schema_version": 495,
         "engine_version": "4.9.5-official-first-reporting",
@@ -185,6 +187,7 @@ def run() -> dict:
         "team_id": raw["team_id"],
         "phase": phase,
         "endpoint_health": raw["endpoint_health"],
+        "source_sweep_status": source_sweep_status,
         "squad_authority": raw["squad_authority"],
         "projection_baseline": raw.get("projection_baseline") or {},
         "advanced_stats_sync": enrichment["advanced_stats_sync"],
@@ -217,7 +220,7 @@ def run() -> dict:
             "effective_plan": "data/effective_plan_v4.json",
             "gw_scorecard": "data/gw_scorecard_v4.json",
             "checkpoint_decision": "data/checkpoint_decision_v4.json",
-            "service_orchestration": "data/service_orchestration_v4.json",
+            "service_orchestration": "data/service_orchestration_v4.json"
         },
         "performance": {
             "raw_snapshot_ms": raw_snapshot_ms,
@@ -240,6 +243,7 @@ def run() -> dict:
             "service_boundaries_registry_driven": True,
             "engine_recommendations_are_advisory": True,
             "human_effective_plan_is_separate_contract": True,
+            "source_governance_names_do_not_imply_runtime_adapters": True
         },
     }
     atomic_json(DATA / "latest.json", latest)
@@ -252,6 +256,7 @@ def run() -> dict:
         "engine": latest["engine_version"],
         "players": len(predictions["players"]),
         "official_context": official_context,
+        "source_sweep_runtime_wired": source_sweep_status.get("runtime_wired_sources"),
         "duration_ms": latest["performance"]["prediction_ms"],
     }))
     return latest

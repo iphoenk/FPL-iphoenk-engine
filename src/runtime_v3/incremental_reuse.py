@@ -80,6 +80,31 @@ def fingerprint(service_name: str) -> str | None:
     return hashlib.sha256(payload).hexdigest()
 
 
+def stored_fingerprint(service_name: str) -> str | None:
+    state = read_json(STATE_PATH, {})
+    row = (state.get("services") or {}).get(service_name) if isinstance(state, dict) else None
+    return str(row.get("fingerprint")) if isinstance(row, dict) and row.get("fingerprint") else None
+
+
+def diagnose(service_name: str) -> dict[str, Any]:
+    current = fingerprint(service_name)
+    stored = stored_fingerprint(service_name)
+    if current is None:
+        reason = "MATERIAL_INPUT_MISSING"
+    elif stored is None:
+        reason = "NO_STORED_FINGERPRINT"
+    elif current != stored:
+        reason = "INPUT_FINGERPRINT_CHANGED"
+    else:
+        reason = "MATCH"
+    return {
+        "reason": reason,
+        "current": current[:12] if current else None,
+        "stored": stored[:12] if stored else None,
+        "match": bool(current and stored and current == stored),
+    }
+
+
 def try_reuse(service_name: str, service_spec: dict[str, Any], profile_name: str) -> dict[str, Any] | None:
     registry = _registry()
     if profile_name not in set((registry.get("policy") or {}).get("enabled_profiles") or []):
@@ -93,11 +118,7 @@ def try_reuse(service_name: str, service_spec: dict[str, Any], profile_name: str
     if not all(path.is_file() for path in paths):
         return None
     current = fingerprint(service_name)
-    if not current:
-        return None
-    state = read_json(STATE_PATH, {})
-    row = (state.get("services") or {}).get(service_name) if isinstance(state, dict) else None
-    if not isinstance(row, dict) or row.get("fingerprint") != current:
+    if not current or stored_fingerprint(service_name) != current:
         return None
     validations = [validate_artifact(path, name) for path, name in zip(paths, artifacts)]
     return {
@@ -119,13 +140,13 @@ def try_reuse(service_name: str, service_spec: dict[str, Any], profile_name: str
     }
 
 
-def record(service_name: str, profile_name: str) -> None:
+def record(service_name: str, profile_name: str, fingerprint_value: str | None = None) -> None:
     registry = _registry()
     if profile_name not in set((registry.get("policy") or {}).get("enabled_profiles") or []):
         return
     if service_name not in (registry.get("services") or {}):
         return
-    current = fingerprint(service_name)
+    current = fingerprint_value or fingerprint(service_name)
     if not current:
         return
     state = read_json(STATE_PATH, {})

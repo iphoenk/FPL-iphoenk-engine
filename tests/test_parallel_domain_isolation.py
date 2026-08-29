@@ -1,8 +1,32 @@
 from src.runtime_v3 import domain_orchestrator as runtime
+from src.runtime_v3 import registry_compiler
 
 
-def test_prediction_market_context_are_only_parallel_isolated_domains():
-    assert runtime._PARALLEL_ISOLATED_DOMAINS == ("prediction", "market_context")
+def _safe_parallel_waves() -> list[tuple[str, ...]]:
+    registry = runtime._load_domains()
+    service_registry = runtime.legacy._load_registry()
+    services = service_registry["services"]
+    plan = registry_compiler.compile_runtime_plan(
+        domain_registry=registry,
+        service_registry=service_registry,
+    )
+    return [
+        tuple(str(domain) for domain in wave)
+        for wave in plan["domain_waves"]
+        if len(wave) > 1
+        and runtime._parallel_wave_isolation_safe(
+            tuple(str(domain) for domain in wave),
+            registry,
+            services,
+        )
+    ]
+
+
+def test_parallel_domains_are_compiled_and_isolation_safe():
+    safe_waves = _safe_parallel_waves()
+    assert ("market_context", "prediction") in safe_waves
+    assert ("squad_decision", "prediction_validation") in safe_waves
+
     registry = runtime._load_domains()
     policy = registry["policy"]
     assert policy["prediction_and_market_context_use_isolated_workspaces"] is True
@@ -26,7 +50,7 @@ def test_seed_paths_are_contract_derived():
     ]
 
 
-def test_prediction_market_context_declared_latest_write_sets_do_not_overlap():
+def test_current_compiled_parallel_waves_have_disjoint_declared_write_sets():
     services = runtime.legacy._load_registry()["services"]
     domains = runtime._load_domains()["domains"]
 
@@ -41,8 +65,10 @@ def test_prediction_market_context_declared_latest_write_sets_do_not_overlap():
             latest_file_keys.update(str(x) for x in spec.get("latest_file_keys") or [])
         return artifacts, latest_keys, latest_file_keys
 
-    model = write_set("prediction")
-    market = write_set("market_context")
-    assert model[0].isdisjoint(market[0])
-    assert model[1].isdisjoint(market[1])
-    assert model[2].isdisjoint(market[2])
+    for wave in _safe_parallel_waves():
+        declared = [write_set(domain_name) for domain_name in wave]
+        for index, left in enumerate(declared):
+            for right in declared[index + 1 :]:
+                assert left[0].isdisjoint(right[0])
+                assert left[1].isdisjoint(right[1])
+                assert left[2].isdisjoint(right[2])

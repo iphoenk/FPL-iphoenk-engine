@@ -37,7 +37,6 @@ _CANONICAL_DOMAINS = (
     "reporting",
     "serving",
 )
-_PARALLEL_ISOLATED_DOMAINS = ("prediction", "market_context")
 
 
 def _load_domains() -> dict[str, Any]:
@@ -364,6 +363,47 @@ def _promote_isolated_domain(
     }
 
 
+
+def _parallel_wave_isolation_safe(
+    wave: tuple[str, ...],
+    domain_registry: dict[str, Any],
+    services: dict[str, Any],
+) -> bool:
+    """Only parallelize compiled waves whose capability outputs cannot collide."""
+    if len(wave) < 2:
+        return False
+    artifacts_seen: set[str] = set()
+    latest_keys_seen: set[str] = set()
+    latest_file_keys_seen: set[str] = set()
+    for domain_name in wave:
+        domain_spec = domain_registry["domains"].get(domain_name) or {}
+        capabilities = [str(value) for value in domain_spec.get("capabilities") or []]
+        if not capabilities:
+            return False
+        if any(not bool((services.get(capability) or {}).get("isolated", False)) for capability in capabilities):
+            return False
+        artifacts = {
+            str(value)
+            for capability in capabilities
+            for value in (services[capability].get("artifacts") or [])
+        }
+        latest_keys = {
+            str(value)
+            for capability in capabilities
+            for value in (services[capability].get("latest_keys") or [])
+        }
+        latest_file_keys = {
+            str(value)
+            for capability in capabilities
+            for value in (services[capability].get("latest_file_keys") or [])
+        }
+        if artifacts_seen & artifacts or latest_keys_seen & latest_keys or latest_file_keys_seen & latest_file_keys:
+            return False
+        artifacts_seen.update(artifacts)
+        latest_keys_seen.update(latest_keys)
+        latest_file_keys_seen.update(latest_file_keys)
+    return True
+
 def _reuse_diagnostic_summary(name: str, capability_results: dict[str, dict[str, Any]], profile_name: str) -> dict[str, Any]:
     row = capability_results.get(name) or {}
     before = row.get("reuse_diagnostic_before")
@@ -445,21 +485,50 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         pending = list(compiled_plan["domain_order"])
-        while pending:
-            parallel_ready = all(
-                domain in pending
-                and set(domain_registry["domains"][domain].get("depends_on") or []).issubset(completed_domains)
-                for domain in _PARALLEL_ISOLATED_DOMAINS
+        parallel_waves = [
+            tuple(str(domain) for domain in wave)
+            for wave in compiled_plan["domain_waves"]
+            if len(wave) > 1
+            and _parallel_wave_isolation_safe(
+                tuple(str(domain) for domain in wave),
+                domain_registry,
+                services,
             )
-            if parallel_ready:
+        ]
+        parallel_wave_domains = {domain for wave in parallel_waves for domain in wave}
+        while pending:
+            ready_wave = next(
+                (
+                    wave
+                    for wave in parallel_waves
+                    if all(
+                        domain in pending
+                        and set(domain_registry["domains"][domain].get("depends_on") or []).issubset(completed_domains)
+                        for domain in wave
+                    )
+                ),
+                None,
+            )
+            if ready_wave is not None:
                 workspaces: dict[str, Path] = {}
                 capabilities_by_domain: dict[str, list[str]] = {}
-                for domain_name in _PARALLEL_ISOLATED_DOMAINS:
-                    capabilities = [str(value) for value in domain_registry["domains"][domain_name].get("capabilities") or []]
+                for domain_name in ready_wave:
+                    domain_spec = domain_registry["domains"][domain_name]
+                    capabilities = [str(value) for value in domain_spec.get("capabilities") or []]
+                    domain_set = set(capabilities)
+                    for capability in capabilities:
+                        spec = services[capability]
+                        external_deps = {str(dep) for dep in spec.get("depends_on") or []} - domain_set
+                        missing = sorted(external_deps - completed_capabilities)
+                        if missing:
+                            raise RuntimeError(
+                                f"parallel domain ordering violates capability dependency: {domain_name}:{capability} missing={missing}"
+                            )
                     capabilities_by_domain[domain_name] = capabilities
                     workspaces[domain_name] = _seed_isolated_domain(domain_name, capabilities, services, temp_root)
-                pair_started = time.perf_counter()
-                with ThreadPoolExecutor(max_workers=2, thread_name_prefix="v3-domain") as pool:
+
+                wave_started = time.perf_counter()
+                with ThreadPoolExecutor(max_workers=len(ready_wave), thread_name_prefix="v3-domain") as pool:
                     futures = {
                         domain_name: pool.submit(
                             _run_domain_process,
@@ -473,18 +542,21 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                             timeout=timeout,
                             data_dir=workspaces[domain_name],
                         )
-                        for domain_name in _PARALLEL_ISOLATED_DOMAINS
+                        for domain_name in ready_wave
                     }
-                    payloads = {domain_name: futures[domain_name].result() for domain_name in _PARALLEL_ISOLATED_DOMAINS}
-                pair_wall_ms = round((time.perf_counter() - pair_started) * 1000.0, 3)
-                for domain_name in _PARALLEL_ISOLATED_DOMAINS:
+                    payloads = {domain_name: futures[domain_name].result() for domain_name in ready_wave}
+                wave_wall_ms = round((time.perf_counter() - wave_started) * 1000.0, 3)
+
+                for domain_name in ready_wave:
                     fan_in = _promote_isolated_domain(
                         domain_name,
                         capabilities_by_domain[domain_name],
                         services,
                         workspaces[domain_name],
                     )
-                    fan_in["parallel_pair_wall_ms"] = pair_wall_ms
+                    fan_in["parallel_wave_wall_ms"] = wave_wall_ms
+                    if len(ready_wave) == 2:
+                        fan_in["parallel_pair_wall_ms"] = wave_wall_ms
                     _accept_domain_result(
                         domain_name,
                         payloads[domain_name],
@@ -498,12 +570,12 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                     )
                     completed_domains.add(domain_name)
                     pending.remove(domain_name)
-                parallel_pairs_executed.append(list(_PARALLEL_ISOLATED_DOMAINS))
+                parallel_pairs_executed.append(list(ready_wave))
                 continue
 
             progressed = False
             for domain_name in list(pending):
-                if domain_name in _PARALLEL_ISOLATED_DOMAINS:
+                if domain_name in parallel_wave_domains:
                     continue
                 domain_spec = domain_registry["domains"][domain_name]
                 if not set(domain_spec.get("depends_on") or []).issubset(completed_domains):
@@ -596,8 +668,10 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             "phase_count": int(domain_registry["phase_count"]),
             "one_process_per_execution_domain": True,
             "business_ownership_unchanged": True,
-            "isolated_parallel_domains": list(_PARALLEL_ISOLATED_DOMAINS),
+            "isolated_parallel_domains": sorted(parallel_wave_domains),
             "parallel_pairs_executed": parallel_pairs_executed,
+            "compiled_parallel_waves": [list(wave) for wave in parallel_waves],
+            "parallel_wave_scheduler": "COMPILED_ISOLATION_SAFE",
             "deterministic_fan_in": True,
         }
         performance["runtime_id"] = DOMAIN_RUNTIME_ID
@@ -637,7 +711,9 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             "capability_owner_count": len(capability_results),
             "shared_canonical_domain_workspace": True,
             "one_process_per_execution_domain": True,
-            "isolated_parallel_domains": list(_PARALLEL_ISOLATED_DOMAINS),
+            "isolated_parallel_domains": sorted(parallel_wave_domains),
+            "compiled_parallel_waves": [list(wave) for wave in parallel_waves],
+            "parallel_wave_scheduler": "COMPILED_ISOLATION_SAFE",
             "deterministic_fan_in": True,
             "cross_capability_copy_promotion": False,
             "isolated_domain_fan_in_promotion": bool(parallel_pairs_executed),

@@ -43,6 +43,15 @@ def _fixture_context(fixture_id: int, team_id: int, fixtures_by_id: dict[int, di
     }
 
 
+def _live_map(event_live: dict) -> dict[int, dict]:
+    elements = event_live.get("elements") or {}
+    if isinstance(elements, dict):
+        return {int(key): value or {} for key, value in elements.items()}
+    if isinstance(elements, list):
+        return {int(row.get("id") or 0): row for row in elements if row.get("id") is not None}
+    return {}
+
+
 def _explain_stats(explain_row: dict) -> dict:
     values: dict[str, float] = {}
     for row in explain_row.get("stats") or []:
@@ -63,9 +72,10 @@ def build_competitive_load(snapshot: dict, press_evidence: dict | None = None) -
     players = bootstrap.get("elements") or []
     teams = {int(row.get("id") or 0): row.get("name") for row in bootstrap.get("teams") or []}
     fixtures_by_id = {int(row.get("id") or 0): row for row in fixtures if row.get("id") is not None}
-    live_by_id = {int(row.get("id") or 0): row for row in event_live.get("elements") or []}
+    live_by_id = _live_map(event_live)
     press_evidence = press_evidence or {}
     press_teams = press_evidence.get("teams") or {}
+    press_players = press_evidence.get("players") or {}
 
     rows = []
     observed_matches = 0
@@ -105,7 +115,13 @@ def build_competitive_load(snapshot: dict, press_evidence: dict | None = None) -
             })
 
         team_name = teams.get(team_id) or str(team_id)
-        press = press_teams.get(team_name) or press_teams.get(str(team_id)) or {}
+        press = (
+            press_players.get(str(element))
+            or press_players.get(element)
+            or press_teams.get(team_name)
+            or press_teams.get(str(team_id))
+            or {}
+        )
         press_status = "VERIFIED" if press.get("verified") is True else "UNVERIFIED"
         rows.append({
             "element": element,
@@ -126,7 +142,7 @@ def build_competitive_load(snapshot: dict, press_evidence: dict | None = None) -
             },
         })
 
-    live_available = bool(event_live.get("elements"))
+    live_available = bool(live_by_id)
     verified_press = sum(row["press_conference"]["status"] == "VERIFIED" for row in rows)
     verified_press_teams = len({row["team_id"] for row in rows if row["press_conference"]["status"] == "VERIFIED"})
     return {

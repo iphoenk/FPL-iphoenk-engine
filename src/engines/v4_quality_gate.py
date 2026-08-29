@@ -34,7 +34,7 @@ def _assert_framework_health() -> tuple[dict, dict]:
     pre = _load("framework_health_preflight_v4.json")
     post = _load("framework_health_v4.json")
     for obj, phase in ((pre, "preflight"), (post, "postflight")):
-        _assert_version(obj, phase, 492, "v4.9.2-truthful-health")
+        _assert_version(obj, phase, 492, f"v{RELEASE_VERSION}-truthful-health")
         assert obj.get("phase") == phase
         assert obj.get("registry_integrity") is True
         assert obj.get("overall") == obj.get("pipeline_health")

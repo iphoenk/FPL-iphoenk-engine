@@ -10,6 +10,10 @@ def _json(path: str) -> dict:
     return json.loads((ROOT / path).read_text(encoding="utf-8"))
 
 
+def _module_path(module: str) -> Path:
+    return ROOT / (module.replace(".", "/") + ".py")
+
+
 def test_module_batches_match_service_registry_entrypoints_exactly() -> None:
     services = _json("config/v3_service_registry.json")["services"]
     batches = _json("config/runtime/module_batches.json")["batches"]
@@ -17,6 +21,22 @@ def test_module_batches_match_service_registry_entrypoints_exactly() -> None:
     for service_name, batch_commands in batches.items():
         assert service_name in services, service_name
         assert services[service_name].get("commands") == batch_commands, service_name
+
+
+def test_all_active_service_command_modules_exist_and_exclude_retired_business_modules() -> None:
+    services = _json("config/v3_service_registry.json")["services"]
+    ownership = _json("config/v3_architecture_ownership_registry.json")
+    retired = set(ownership.get("legacy_business_implementations_to_retire") or [])
+
+    active_modules = []
+    for service_name, spec in services.items():
+        for command in spec.get("commands") or []:
+            module = str(command.get("module") or "")
+            assert module, service_name
+            assert _module_path(module).is_file(), (service_name, module)
+            active_modules.append(module)
+
+    assert retired.isdisjoint(active_modules)
 
 
 def test_decision_snapshot_is_declared_across_producer_consumer_and_publish_contracts() -> None:
@@ -36,6 +56,31 @@ def test_decision_snapshot_is_declared_across_producer_consumer_and_publish_cont
     assert "decision_validation_snapshots.json" in publish["publish_paths"]
     assert snapshot_contract["equals"]["schema_version"] == 2
     assert snapshot_contract["equals"]["owner"] == "reporting.decision_snapshot_evidence"
+
+
+def test_governance_service_declares_every_persisted_governance_artifact() -> None:
+    service = _json("config/v3_service_registry.json")["services"]["governance"]
+    expected_artifacts = {
+        "framework_health_preflight.json",
+        "framework_health.json",
+        "external_consensus.json",
+        "recent_competitive_load.json",
+        "dss_operational_evidence.json",
+    }
+    expected_latest = {
+        "source_health_summary",
+        "external_consensus_summary",
+        "competitive_load_summary",
+        "dss_operationalization_summary",
+        "dss_evidence_maturity",
+    }
+    assert set(service["artifacts"]) == expected_artifacts
+    assert set(service["latest_keys"]) == expected_latest
+    assert set(service["latest_file_keys"]) == {
+        "external_consensus",
+        "recent_competitive_load",
+        "dss_operational_evidence",
+    }
 
 
 def test_lineup_governance_latest_file_contract_is_preserved() -> None:

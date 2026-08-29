@@ -34,7 +34,8 @@
     ],
     "reporting": [
       {"module":"src.engines.report_architecture","args":[]},
-      {"module":"src.engines.report_enrichment","args":[]}
+      {"module":"src.engines.report_enrichment","args":[]},
+      {"module":"src.engines.prediction_decision_snapshot","args":[]}
     ],
     "report_materializer": [
       {"module":"src.engines.report_materializer","args":[]},

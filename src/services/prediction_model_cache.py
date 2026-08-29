@@ -10,7 +10,7 @@ from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
 
 CACHE = DATA / "predictions_base_hot_cache_v4.json"
-ALGORITHM = "v4.9.6-exact-base-prediction-cache-v1"
+ALGORITHM = "v4.9.6-exact-base-prediction-cache-v2"
 _LAST_STATUS: dict = {}
 
 
@@ -65,10 +65,13 @@ def semantic_fingerprint(bootstrap: dict, fixtures: list[dict], stats_gw: int | 
 
 
 def _restamp(value, generated_at: str):
+    """Refresh timestamp provenance while preserving boolean point-in-time truth."""
     if isinstance(value, dict):
         out = {}
         for key, item in value.items():
-            if key in {"generated_at", "point_in_time"}:
+            if key == "generated_at":
+                out[key] = generated_at
+            elif key == "point_in_time" and isinstance(item, str):
                 out[key] = generated_at
             else:
                 out[key] = _restamp(item, generated_at)
@@ -89,7 +92,7 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
 
     predictions = canonical_build_predictions(bootstrap, fixtures, generated_at, stats_gw=stats_gw)
     atomic_json(CACHE, {
-        "schema_version": 1,
+        "schema_version": 2,
         "algorithm": ALGORITHM,
         "fingerprint": fingerprint,
         "predictions": predictions,
@@ -97,7 +100,9 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
             "canonical_builder_on_miss": True,
             "all_semantic_prediction_inputs_hashed": True,
             "model_source_digest_invalidates_cache": True,
-            "only_runtime_point_in_time_is_restamped": True,
+            "generated_timestamp_restamped": True,
+            "boolean_point_in_time_truth_preserved": True,
+            "string_point_in_time_provenance_restamped": True,
             "competitive_load_and_team_news_attached_after_base_cache": True,
         },
     })

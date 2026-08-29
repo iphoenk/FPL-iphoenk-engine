@@ -169,3 +169,7 @@ jobs:
           git add -f data/
           git commit -m "data: rolling FPL runtime snapshot [skip ci]"
           git push --force origin HEAD:"$RUNTIME_BRANCH"
+
+      - name: Verify V3 production definition of done
+        if: steps.cadence.outputs.should_collect == 'true'
+        run: python -m src.runtime_v3.definition_of_done --scope production --source-commit "$GITHUB_SHA"

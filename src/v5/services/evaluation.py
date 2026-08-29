@@ -8,7 +8,7 @@ from src.v5.evaluation.evidence_guard import evaluate as evaluate_evidence_guard
 from src.v5.evaluation.external_consensus import normalize as normalize_external_consensus
 from src.v5.evaluation.owned_challenger_comparator import compare as compare_owned_challenger
 from src.v5.evaluation.owned_challenger_context import enrich_with_decision_context
-from src.v5.evaluation.prediction_settlement import build_settlement_artifact
+from src.v5.evaluation.prediction_settlement import build_settlement_artifact, settlement_targets
 from src.v5.evaluation.promotion_evidence import build as build_promotion_evidence
 from src.v5.evaluation.shadow_parity import compare as compare_shadow
 
@@ -32,10 +32,25 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         return {
             "status": "ACTIVE",
             "capabilities": list(BASE_CAPABILITIES),
-            "operations": ["build", "compare_owned_challenger", "normalize_external_consensus", "capture_decision_validation", "promotion_evidence", "shadow_compare"],
+            "operations": [
+                "build",
+                "settlement_targets",
+                "compare_owned_challenger",
+                "normalize_external_consensus",
+                "capture_decision_validation",
+                "promotion_evidence",
+                "shadow_compare",
+            ],
         }
     if operation == "shadow_compare":
         return compare_shadow(payload.get("v3") or {}, payload.get("v5") or {})
+    if operation == "settlement_targets":
+        return settlement_targets(
+            payload.get("ledger") if isinstance(payload.get("ledger"), dict) else {},
+            payload.get("bootstrap") if isinstance(payload.get("bootstrap"), dict) else {},
+            scoring_gw=payload.get("scoring_gw"),
+            current_event_live_available=bool(payload.get("current_event_live_available", False)),
+        )
     if operation == "promotion_evidence":
         return build_promotion_evidence(
             payload.get("ledger") if isinstance(payload.get("ledger"), dict) else {},
@@ -82,9 +97,19 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     truth = payload.get("truth") if isinstance(payload.get("truth"), dict) else {}
     bootstrap = payload.get("bootstrap") if isinstance(payload.get("bootstrap"), dict) else {}
     event_live = payload.get("event_live") if isinstance(payload.get("event_live"), dict) else None
+    event_live_by_gw = payload.get("event_live_by_gw") if isinstance(payload.get("event_live_by_gw"), dict) else None
+    settlement_health = payload.get("settlement_health") if isinstance(payload.get("settlement_health"), dict) else None
     ledger = payload.get("ledger") if isinstance(payload.get("ledger"), dict) else None
     observations = payload.get("observations") if isinstance(payload.get("observations"), dict) else None
-    result = evaluate(prediction, context, bootstrap, event_live, ledger)
+    result = evaluate(
+        prediction,
+        context,
+        bootstrap,
+        event_live,
+        ledger,
+        event_live_by_gw=event_live_by_gw,
+        settlement_health=settlement_health,
+    )
     scorecard = challenger_scorecard(prediction, observations, result["accuracy"])
     evidence_guard = evaluate_evidence_guard(prediction, context, truth)
     settlement = build_settlement_artifact(result["ledger"], result["accuracy"])

@@ -124,7 +124,7 @@ jobs:
           if [ "${{ steps.runtime_profile.outputs.extra }}" = "--deep-stats" ]; then
             args+=(--deep-stats)
           fi
-          python -m src.runtime_v3.incremental_domain_orchestrator "${args[@]}"
+          python -m src.runtime_v3.domain_orchestrator "${args[@]}"
 
       - name: Validate production decision contracts
         if: steps.cadence.outputs.should_collect == 'true'

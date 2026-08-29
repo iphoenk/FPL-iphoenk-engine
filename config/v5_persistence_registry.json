@@ -1,5 +1,5 @@
 {
-  "version":5,
+  "version":6,
   "data_root":"data/v5",
   "artifacts":{
     "latest":"latest.json",
@@ -14,10 +14,13 @@
     "predictions":"predictions.json",
     "prediction_quality":"prediction_quality.json",
     "team_strength":"team_strength.json",
+    "competitive_load":"recent_competitive_load.json",
     "prediction_ledger":"prediction_ledger.json",
     "prediction_accuracy":"prediction_accuracy.json",
+    "decision_validation_snapshots":"decision_validation_snapshots.json",
     "challenger_observations":"challenger_observations.json",
     "challenger_scorecard":"challenger_scorecard.json",
+    "external_consensus":"external_consensus.json",
     "owned_challenger_comparator":"owned_challenger_comparator.json",
     "package_optimizer":"package_optimizer.json",
     "watchlist":"dss_watchlist.json",

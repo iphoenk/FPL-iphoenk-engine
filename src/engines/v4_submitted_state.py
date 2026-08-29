@@ -47,7 +47,37 @@ def _official_core(picks: dict) -> dict:
         "captain": captains[0]["element"],
         "vice_captain": vice[0]["element"],
         "active_chip": picks.get("active_chip"),
+        # Capture evidence only. FPL updates these scoring/rank fields through the GW,
+        # so they must never participate in immutable submitted-lineup identity.
         "entry_history": picks.get("entry_history") or {},
+    }
+
+
+def _submitted_identity(official: dict) -> dict:
+    """Return only facts that are immutable from the deadline submission.
+
+    Official FPL may change entry_history and effective multipliers as matches settle
+    (autosubs/captain fallback/scoring). Those are native match-state facts, not a
+    change to what the manager submitted at the deadline. Identity therefore locks
+    element+pick-position+C/VC and chip while excluding live-derived fields.
+    """
+    players = [
+        {
+            "element": int(row["element"]),
+            "position": int(row["position"]),
+            "captain": bool(row.get("captain")),
+            "vice_captain": bool(row.get("vice_captain")),
+        }
+        for row in (official.get("players") or [])
+    ]
+    return {
+        "players": players,
+        "squad_elements": [int(value) for value in (official.get("squad_elements") or [])],
+        "starting_xi": [int(value) for value in (official.get("starting_xi") or [])],
+        "bench": [int(value) for value in (official.get("bench") or [])],
+        "captain": official.get("captain"),
+        "vice_captain": official.get("vice_captain"),
+        "active_chip": official.get("active_chip"),
     }
 
 
@@ -104,8 +134,13 @@ def submitted_state_integrity(payload: dict, expected_gw: int | None = None) -> 
         return False, "submitted_shape_invalid"
     if official.get("captain") is None or official.get("vice_captain") is None:
         return False, "captaincy_missing"
+    # Preserve backward compatibility with existing immutable v4963 archives whose
+    # submitted_sha256 covered the full capture including mutable entry_history.
     if payload.get("submitted_sha256") != store._digest(official):
         return False, "submitted_digest_mismatch"
+    identity_digest = payload.get("submitted_identity_sha256")
+    if identity_digest is not None and identity_digest != store._digest(_submitted_identity(official)):
+        return False, "submitted_identity_digest_mismatch"
     deadline = parse_dt(payload.get("deadline_time"))
     captured = parse_dt(payload.get("captured_at"))
     if not deadline or not captured or deadline.tzinfo is None or captured.tzinfo is None or captured < deadline:
@@ -121,18 +156,21 @@ def persist_submitted_state(gw: int, deadline_time: str, picks: dict, now: datet
     if current < deadline:
         raise RuntimeError("pre-deadline submitted state archive rejected")
     official = _official_core(picks)
+    current_identity_digest = store._digest(_submitted_identity(official))
     path = submitted_state_path(gw)
     existing = read_json(path, None)
     if existing:
         ok, reason = submitted_state_integrity(existing, gw)
         if not ok:
             raise RuntimeError(f"existing submitted state failed integrity: {reason}")
-        if existing.get("submitted_sha256") != store._digest(official):
+        existing_official = existing.get("submitted") or {}
+        existing_identity_digest = existing.get("submitted_identity_sha256") or store._digest(_submitted_identity(existing_official))
+        if existing_identity_digest != current_identity_digest:
             raise RuntimeError("immutable submitted state conflicts with later Official payload")
         return existing
     baseline = _baseline_for_gw(gw)
     payload = {
-        "schema_version": 4963,
+        "schema_version": 4964,
         "kind": "official_submitted_state",
         "gw": int(gw),
         "deadline_time": deadline_time,
@@ -140,7 +178,10 @@ def persist_submitted_state(gw: int, deadline_time: str, picks: dict, now: datet
         "official_truth": True,
         "immutable": True,
         "submitted": official,
+        # Full-capture digest protects the archive bytes. Identity digest governs
+        # whether a later Official payload is the same deadline submission.
         "submitted_sha256": store._digest(official),
+        "submitted_identity_sha256": current_identity_digest,
         "predeadline_baseline": baseline,
         "baseline_comparison": _comparison(baseline, official),
         "guardrails": {
@@ -151,7 +192,10 @@ def persist_submitted_state(gw: int, deadline_time: str, picks: dict, now: datet
             "captain_vice_from_official_flags": True,
             "chip_from_official_picks": True,
             "archive_append_only": True,
-            "later_conflicting_payload_fails_closed": True,
+            "later_conflicting_submission_identity_fails_closed": True,
+            "mutable_entry_history_excluded_from_submission_identity": True,
+            "live_multiplier_excluded_from_submission_identity": True,
+            "legacy_v4963_full_capture_digest_supported": True,
             "canonical_validation_digest_reused": True,
         },
     }

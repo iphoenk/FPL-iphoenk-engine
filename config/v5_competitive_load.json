@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "contract": "V5_COMPETITIVE_LOAD_PRIMITIVE_V1",
+  "owner": "prediction.competitive_load",
+  "states": ["RESTED", "NORMAL", "CONGESTED", "HIGH_ROTATION_RISK", "UNKNOWN"],
+  "classification": {
+    "rested_min_hours": 144,
+    "congested_rest_hours": 72,
+    "high_rotation_rest_hours": 72,
+    "high_rotation_minutes": 80,
+    "extra_time_high_risk_rest_hours": 96,
+    "congested_matches_7d": 2,
+    "congested_matches_14d": 4
+  },
+  "governance": {
+    "official_fpl_pl_fixture_facts_are_native": true,
+    "non_pl_competitions_require_verified_observation": true,
+    "missing_non_pl_evidence_is_explicit": true,
+    "no_blanket_fatigue_penalty": true,
+    "direct_xpts_mutation_forbidden": true,
+    "direct_xmins_mutation_forbidden_until_calibrated": true,
+    "allowed_use": ["evidence", "confidence", "tie_breaker", "rotation_review"],
+    "coach_rotation_tendency_must_not_be_inferred_without_evidence": true,
+    "travel_distance_must_not_be_invented": true,
+    "one_match_does_not_create_buy_or_sell": true
+  }
+}

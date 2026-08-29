@@ -42,13 +42,18 @@ def compare(v3: dict[str, Any], v5: dict[str, Any]) -> dict[str, Any]:
     v3_lock = str(v3.get("captain_state") or "").upper() == "LOCK"
     v5_lock = str(((v5.get("user_report") or {}).get("captaincy") or {}).get("decision") or "").upper() == "LOCK"
 
-    v3_authority = str(v3.get("squad_authority") or "").lower()
+    # Shadow parity is a DECISION-parity contract. A live production snapshot can
+    # legitimately have OFFICIAL_SUBMITTED as scoring authority while its next-GW
+    # planning decision still comes from a pre-deadline user lock. Prefer the
+    # explicit decision authority when present; falling back to generic squad
+    # authority is only for older artifacts that do not expose the distinction.
+    v3_authority = str(v3.get("decision_squad_authority") or v3.get("squad_authority") or "").lower()
     v3_manual = bool(v3.get("manual_lock_authoritative")) or v3_authority in {
         "pre_deadline_wc",
         "user_lock",
         "manual_lock",
     }
-    v5_authority = str(v5.get("squad_authority") or "").lower()
+    v5_authority = str(v5.get("decision_squad_authority") or v5.get("squad_authority") or "").lower()
 
     v5_gate0 = (v5.get("framework_health") or {}).get("gate0") or {}
     v5_legality_known = v5_gate0.get("pass") is not None

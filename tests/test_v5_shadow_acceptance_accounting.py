@@ -15,23 +15,26 @@ def _cycle(
     cycle_id: str,
     *,
     v5: str,
-    v3: str,
+    v3_runtime: str,
     baseline: str,
     sha: str,
     fingerprint: str,
+    runtime_schema: int = 49,
     post: str = "PASS",
     cycle_pass: bool = True,
 ) -> dict:
     return {
-        "schema_version": 5,
+        "schema_version": 6,
         "cycle_id": cycle_id,
         "generated_at": f"2026-08-27T00:0{cycle_id[-1]}:00+00:00",
         "mode": "REAL_SHADOW",
-        "v3": {"engine_version": v3},
+        "v3": {"engine_version": v3_runtime, "schema_version": runtime_schema},
         "v5": {"engine_version": v5},
         "acceptance_context": {
             "production_baseline_version": baseline,
             "production_main_sha": sha,
+            "production_runtime_engine_version": v3_runtime,
+            "production_runtime_schema_version": runtime_schema,
             "release_fingerprint": fingerprint,
         },
         "parity": {"pass": cycle_pass},
@@ -51,50 +54,49 @@ def _strict_policy() -> dict:
     }
 
 
-def test_accounting_counts_only_postvalidated_cycles_for_current_version_baseline_and_fingerprint(tmp_path, monkeypatch):
-    baseline = "v3.17.1"
+def test_accounting_counts_runtime_reference_even_when_frozen_truth_version_differs(tmp_path, monkeypatch):
+    baseline = "v3.20.0"
     sha = "abc123"
     fingerprint = "sha256:test-runtime"
-    monkeypatch.setattr(accounting, "V5_VERSION", "5.0.0-beta.2")
+    monkeypatch.setattr(accounting, "V5_VERSION", "5.0.0-beta.4")
     monkeypatch.setattr(accounting, "_baseline", lambda: (baseline, sha))
     monkeypatch.setattr(accounting, "_required_cycles", lambda: 3)
     monkeypatch.setattr(accounting, "_current_release_fingerprint", lambda: fingerprint)
     monkeypatch.setattr(accounting, "_accounting_policy", _strict_policy)
 
     cycles = tmp_path / "cycles"
-    _write(cycles / "c1.json", _cycle("c1", v5="5.0.0-beta.2", v3="3.17.1", baseline=baseline, sha=sha, fingerprint=fingerprint))
-    _write(cycles / "c2.json", _cycle("c2", v5="5.0.0-beta.2", v3="3.17.1", baseline=baseline, sha=sha, fingerprint=fingerprint, post="PENDING"))
-    _write(cycles / "c3.json", _cycle("c3", v5="5.0.0-beta.1", v3="3.17.1", baseline=baseline, sha=sha, fingerprint=fingerprint))
-    _write(cycles / "c4.json", _cycle("c4", v5="5.0.0-beta.2", v3="3.17.0", baseline=baseline, sha=sha, fingerprint=fingerprint))
-    _write(cycles / "c5.json", _cycle("c5", v5="5.0.0-beta.2", v3="3.17.1", baseline=baseline, sha=sha, fingerprint="sha256:different-runtime"))
+    _write(cycles / "c1.json", _cycle("c1", v5="5.0.0-beta.4", v3_runtime="3.25.0", baseline=baseline, sha=sha, fingerprint=fingerprint))
+    _write(cycles / "c2.json", _cycle("c2", v5="5.0.0-beta.4", v3_runtime="3.25.0", baseline=baseline, sha=sha, fingerprint=fingerprint, post="PENDING"))
+    _write(cycles / "c3.json", _cycle("c3", v5="5.0.0-beta.3", v3_runtime="3.25.0", baseline=baseline, sha=sha, fingerprint=fingerprint))
+    bad_runtime = _cycle("c4", v5="5.0.0-beta.4", v3_runtime="3.25.0", baseline=baseline, sha=sha, fingerprint=fingerprint)
+    bad_runtime["acceptance_context"]["production_runtime_engine_version"] = "3.24.0"
+    _write(cycles / "c4.json", bad_runtime)
+    _write(cycles / "c5.json", _cycle("c5", v5="5.0.0-beta.4", v3_runtime="3.25.0", baseline=baseline, sha=sha, fingerprint="sha256:different-runtime"))
 
     rows = accounting._validated_cycles(cycles)
     assert [row["cycle_id"] for row in rows] == ["c1"]
+    assert rows[0]["v3_engine_version"] == "3.25.0"
     assert rows[0]["release_fingerprint"] == fingerprint
 
 
 def test_finalize_marks_cycle_validated_and_computes_three_of_three_when_prediction_gate_passes(tmp_path, monkeypatch):
-    baseline = "v3.17.1"
+    baseline = "v3.20.0"
     sha = "abc123"
     fingerprint = "sha256:test-runtime"
-    monkeypatch.setattr(accounting, "V5_VERSION", "5.0.0-beta.2")
+    monkeypatch.setattr(accounting, "V5_VERSION", "5.0.0-beta.4")
     monkeypatch.setattr(accounting, "_baseline", lambda: (baseline, sha))
     monkeypatch.setattr(accounting, "_required_cycles", lambda: 3)
     monkeypatch.setattr(accounting, "_current_release_fingerprint", lambda: fingerprint)
     monkeypatch.setattr(accounting, "_accounting_policy", _strict_policy)
     monkeypatch.setattr(accounting, "_prediction_acceptance", lambda _out: {
-        "eligible": True,
-        "status": "PASS",
-        "checks": {"settled_evidence": True},
-        "settled_gameweeks": 4,
-        "sample_size": 1000,
-        "confidence": "HIGH",
+        "eligible": True, "status": "PASS", "checks": {"settled_evidence": True},
+        "settled_gameweeks": 4, "sample_size": 1000, "confidence": "HIGH",
     })
 
     cycles = tmp_path / "cycles"
-    _write(cycles / "c1.json", _cycle("c1", v5="5.0.0-beta.2", v3="3.17.1", baseline=baseline, sha=sha, fingerprint=fingerprint))
-    _write(cycles / "c2.json", _cycle("c2", v5="5.0.0-beta.2", v3="3.17.1", baseline=baseline, sha=sha, fingerprint=fingerprint))
-    current = _cycle("c3", v5="5.0.0-beta.2", v3="3.17.1", baseline=baseline, sha=sha, fingerprint=fingerprint, post="PENDING")
+    for cycle_id in ("c1", "c2"):
+        _write(cycles / f"{cycle_id}.json", _cycle(cycle_id, v5="5.0.0-beta.4", v3_runtime="3.25.0", baseline=baseline, sha=sha, fingerprint=fingerprint))
+    current = _cycle("c3", v5="5.0.0-beta.4", v3_runtime="3.25.0", baseline=baseline, sha=sha, fingerprint=fingerprint, post="PENDING")
     latest = tmp_path / "latest_shadow_cycle.json"
     _write(latest, current)
     _write(cycles / "c3.json", current)
@@ -109,33 +111,30 @@ def test_finalize_marks_cycle_validated_and_computes_three_of_three_when_predict
     assert summary["production_candidate_eligible"] is True
     assert summary["production_candidate_auto_promoted"] is False
     assert persisted["post_validation"]["status"] == "PASS"
-    assert persisted["post_validation"]["release_fingerprint"] == fingerprint
+    assert persisted["post_validation"]["validator_contract"] == "V5_REAL_SHADOW_POSTVALIDATION_V4"
     assert persisted["acceptance_progress"]["counts_as_successful_acceptance_cycle"] is True
     assert persisted["acceptance_progress"]["production_candidate_eligible"] is True
 
 
 def test_three_operational_cycles_do_not_bypass_prediction_acceptance(tmp_path, monkeypatch):
-    baseline = "v3.17.1"
+    baseline = "v3.20.0"
     sha = "abc123"
     fingerprint = "sha256:test-runtime"
-    monkeypatch.setattr(accounting, "V5_VERSION", "5.0.0-beta.2")
+    monkeypatch.setattr(accounting, "V5_VERSION", "5.0.0-beta.4")
     monkeypatch.setattr(accounting, "_baseline", lambda: (baseline, sha))
     monkeypatch.setattr(accounting, "_required_cycles", lambda: 3)
     monkeypatch.setattr(accounting, "_current_release_fingerprint", lambda: fingerprint)
     monkeypatch.setattr(accounting, "_accounting_policy", _strict_policy)
     monkeypatch.setattr(accounting, "_prediction_acceptance", lambda _out: {
-        "eligible": False,
-        "status": "INSUFFICIENT_OR_UNPROVEN_SETTLED_EVIDENCE",
-        "checks": {"settled_evidence": False},
-        "settled_gameweeks": 0,
-        "sample_size": 0,
-        "confidence": "LOW",
+        "eligible": False, "status": "INSUFFICIENT_OR_UNPROVEN_SETTLED_EVIDENCE",
+        "checks": {"settled_evidence": False}, "settled_gameweeks": 0,
+        "sample_size": 0, "confidence": "LOW",
     })
 
     cycles = tmp_path / "cycles"
     for cycle_id in ("c1", "c2"):
-        _write(cycles / f"{cycle_id}.json", _cycle(cycle_id, v5="5.0.0-beta.2", v3="3.17.1", baseline=baseline, sha=sha, fingerprint=fingerprint))
-    current = _cycle("c3", v5="5.0.0-beta.2", v3="3.17.1", baseline=baseline, sha=sha, fingerprint=fingerprint, post="PENDING")
+        _write(cycles / f"{cycle_id}.json", _cycle(cycle_id, v5="5.0.0-beta.4", v3_runtime="3.25.0", baseline=baseline, sha=sha, fingerprint=fingerprint))
+    current = _cycle("c3", v5="5.0.0-beta.4", v3_runtime="3.25.0", baseline=baseline, sha=sha, fingerprint=fingerprint, post="PENDING")
     latest = tmp_path / "latest_shadow_cycle.json"
     _write(latest, current)
     _write(cycles / "c3.json", current)

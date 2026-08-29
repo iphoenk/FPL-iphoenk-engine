@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "contract": "V5_EXTERNAL_CONSENSUS_V1",
+  "owner": "evaluation.external_consensus",
+  "sources": {
+    "livefpl": "LIVE_EO_RANK_CHALLENGER",
+    "onefpl": "MARKET_PLANNER_CHALLENGER",
+    "fffix": "PROJECTION_LINEUP_PRICE_CHALLENGER",
+    "ffhub": "AI_DECISION_CHALLENGER",
+    "ffscout": "EDITORIAL_TACTICAL_CHALLENGER"
+  },
+  "availability_states": ["AVAILABLE", "PARTIAL", "STALE", "UNAVAILABLE", "NO_MATERIAL_UPDATE"],
+  "directions": ["SUPPORT_NATIVE", "OPPOSE_NATIVE", "NEUTRAL", "INSUFFICIENT_EVIDENCE"],
+  "governance": {
+    "native_engine_runs_first": true,
+    "official_fpl_remains_fact_authority": true,
+    "external_is_advisory_only": true,
+    "majority_vote_forbidden": true,
+    "external_may_not_overwrite_native_truth": true,
+    "factual_divergence_requires_official_refresh": true,
+    "all_sources_unavailable_is_fail_neutral": true,
+    "external_calls_forbidden_from_warm_interactive_path": true,
+    "missing_or_paywalled_player_signal_must_not_be_invented": true
+  }
+}

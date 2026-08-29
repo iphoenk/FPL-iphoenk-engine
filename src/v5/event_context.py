@@ -64,21 +64,27 @@ def build_event_context(bootstrap: dict, *, now: datetime | None = None) -> Even
         and current_time >= current_deadline
     )
 
-    # A finished current GW must not force POST_GW when a future planning GW
-    # already exists. Between gameweeks the operational phase is PRE_DEADLINE
-    # for the next deadline, so the latest user lock/authenticated draft remains
-    # authoritative for squad, lineup, captaincy and chip planning.
-    planning_is_finished_current = bool(
+    planning_is_current = bool(
         planning
         and current
         and int(planning.get("id") or -1) == int(current.get("id") or -2)
+    )
+    # Live scoring and planning authority are distinct clocks. A current GW may
+    # be live while the next GW is already the planning target. In that state,
+    # keep is_live_event=True for scoring/Match Mode, but resolve the decision
+    # phase against the NEXT deadline so the governed pre-deadline authority
+    # chain (user lock -> authenticated -> public) remains intact.
+    planning_live_started = bool(live_started and planning_is_current)
+    planning_is_finished_current = bool(
+        planning_is_current
+        and current
         and current.get(flags["finished"])
         and not nxt
     )
     phase = resolve_phase(
         deadline_time=planning_deadline,
         now=current_time,
-        live_started=live_started,
+        live_started=planning_live_started,
         finished=planning_is_finished_current,
     )
     return EventContext(

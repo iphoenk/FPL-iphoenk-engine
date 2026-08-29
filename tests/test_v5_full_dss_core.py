@@ -29,11 +29,16 @@ def test_full_core_enrichment_uses_real_advanced_stats_and_fail_neutral_missing_
     result = build_full_core_enrichment(bootstrap, fixtures)
     assert result["status"] == "ACTIVE"
     assert set(result["capabilities"]) == {
-        "advanced_stats_sync", "european_congestion", "domestic_cup_congestion", "international_load",
+        "advanced_stats_sync", "competitive_load", "european_congestion", "domestic_cup_congestion", "international_load",
         "rest_days", "preseason_prior", "current_form", "source_fusion", "observed_tactical_context",
     }
     assert result["governance"]["missing_external_evidence_is_unavailable_not_zero"] is True
     assert result["governance"]["official_fpl_identity_price_rules_never_overridden"] is True
+    assert result["governance"]["competitive_load_is_advisory_and_does_not_directly_mutate_xpts_or_xmins"] is True
+    load = result["competitive_load"]
+    assert load["contract"] == "V5_COMPETITIVE_LOAD_PRIMITIVE_V1"
+    assert load["governance"]["direct_xpts_mutation_forbidden"] is True
+    assert load["governance"]["direct_xmins_mutation_forbidden_until_calibrated"] is True
     advanced = result["advanced_stats"]
     assert advanced["status"] == "ACTIVE"
     assert advanced["shots_rows"] > 0

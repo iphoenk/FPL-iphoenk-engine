@@ -1,5 +1,5 @@
 {
-  "version": 24,
+  "version": 25,
   "module_policy": {
     "minimum_registered_modules": 48,
     "required_truth_modules": ["rules", "source_authority", "public_api", "official_authenticated", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
@@ -24,7 +24,8 @@
   },
   "convergence": {
     "production_baseline": "v3.20.0",
-    "production_main_sha": "83873ea33ca631344212a792a57911fad7e1575b",
+    "production_main_sha": "7af907fc1f994f32c7c65d8fbf7eb3e40436c39a",
+    "production_code_commit": "83873ea33ca631344212a792a57911fad7e1575b",
     "production_runtime": "v3.39-seven-domain-live-safe-reuse-prediction-freeze-recovery",
     "production_runtime_schema_version": 49,
     "production_execution_registry": "V3_EXECUTION_DOMAINS_V2",

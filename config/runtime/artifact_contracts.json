@@ -16,10 +16,16 @@
       "equals": {"schema_version": 2, "contract": "challenger_observation_v2"},
       "types": {"observations": "list", "counts": "object", "cross_source": "list", "policy": "object"}
     },
+    "external_benchmark_observations.json": {
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "observations"],
+      "equals": {"schema_version": 1, "contract": "EXTERNAL_BENCHMARK_OBSERVATIONS_V1"},
+      "types": {"observations": "list"}
+    },
     "external_consensus.json": {
       "root_type": "object",
       "required_fields": ["schema_version", "contract", "generated_at", "owner", "native_conclusion_frozen_before_overlay", "overall", "observations", "subjects", "source_status", "governance"],
-      "equals": {"schema_version": 1, "contract": "EXTERNAL_CONSENSUS_V1", "owner": "source_layer.external_consensus", "native_conclusion_frozen_before_overlay": true},
+      "equals": {"schema_version": 1, "contract": "EXTERNAL_CONSENSUS_V1", "owner": "governance.external_consensus", "native_conclusion_frozen_before_overlay": true},
       "types": {"observations": "list", "subjects": "list", "source_status": "object", "governance": "object", "authority": "object", "native_snapshot": "object"}
     },
     "fixture_weather.json": {

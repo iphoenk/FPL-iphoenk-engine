@@ -24,7 +24,7 @@ def test_release_metadata_surfaces_are_consistent():
     implementation = json.loads((ROOT / "IMPLEMENTATION_STATUS.json").read_text())
     engine_config = json.loads((ROOT / "config" / "engine.json").read_text())
     readme = (ROOT / "README.md").read_text().splitlines()
-    workflow = (ROOT / ".github" / "workflows" / "fpl-engine.yml").read_text().splitlines()
+    workflow = (ROOT / ".github" / "workflows" / "v3-runtime.yml").read_text().splitlines()
     reporting = json.loads((ROOT / "config" / "intelligence" / "reporting.json").read_text())
     tactical = json.loads((ROOT / "config" / "intelligence" / "tactical_role_context.json").read_text())
     artifact_registry = json.loads((ROOT / "config" / "report_artifact_registry.json").read_text())
@@ -32,13 +32,14 @@ def test_release_metadata_surfaces_are_consistent():
     interactive_registry = json.loads((ROOT / "config" / "runtime" / "interactive_service_registry.json").read_text())
     source_registry = json.loads((ROOT / "config" / "sources" / "registry.json").read_text())
     runtime_artifact_registry = json.loads((ROOT / "config" / "runtime" / "artifact_contracts.json").read_text())
+    execution_domains = json.loads((ROOT / "config" / "runtime" / "execution_domains.json").read_text())
 
     assert implementation["version"] == ENGINE_VERSION
     assert implementation["schema_version"] == SCHEMA_VERSION
     assert implementation["release_metadata_source"] == "src/version.py"
     assert engine_config["schema_version"] == SCHEMA_VERSION
     assert readme[0] == f"# FPL iphoenk Engine v{ENGINE_VERSION}"
-    assert workflow[0] == f"name: FPL iphoenk collector v{ENGINE_VERSION} microservices"
+    assert workflow[0] == "name: V3 Runtime"
     assert reporting["model_id"] == "decision_first_report_v2"
     assert reporting["language"]["presentation_is_primary_human_surface"] is True
     assert reporting["governance"]["scheduled_checkpoint_miss_is_explicit"] is True
@@ -58,6 +59,8 @@ def test_release_metadata_surfaces_are_consistent():
     assert service_registry["production_contract"].startswith("v3.22-")
     assert "tactical_context" in service_registry["services"]
     assert service_registry["policy"]["service_boundaries_follow_artifact_ownership_not_file_size"] is True
+    assert execution_domains["registry"] == "V3_EXECUTION_DOMAINS_V1"
+    assert execution_domains["domain_count"] == 7
     assert interactive_registry["registry"] == "V3_INTERACTIVE_SERVICES_V1"
     assert len(interactive_registry["services"]) == 2
     assert source_registry["registry"] == "SOURCE_REGISTRY_V4"

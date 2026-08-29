@@ -90,7 +90,7 @@ def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
         "collector_challenger": selected,
         "report_time": {
             "livefpl": "EO/live-rank challenger, terutama MATCH MODE",
-            "onefpl": "transfer trends, market momentum, price/planner context",
+            "onefpl": "dicek melalui web saat report terjadwal atau on-demand untuk transfer trends, market momentum, price/planner context",
             "fffix": "predicted points, predicted lineup/xMins, price dan rotation challenger",
             "ffhub": "AI transfer/decision, fixture/player comparison, XI/captain challenger",
             "ffscout": "predicted lineup, team news, RMT/player comparison dan tactical/editorial challenger",

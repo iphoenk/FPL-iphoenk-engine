@@ -39,7 +39,16 @@ def _ids(rows: Any) -> set[int]:
 def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int) -> dict[str, Any]:
     v3_latest = _load(v3_latest_path)
     v3_lineup = _load(v3_lineup_path)
-    v3_reference = {**v3_latest, **v3_lineup}
+    # The lineup artifact is a planning-decision artifact and may retain the
+    # authority label from the draft that produced it. Current squad authority
+    # belongs to latest.json. Preserve both instead of allowing the planning
+    # artifact to overwrite canonical phase-aware squad truth.
+    v3_reference = {
+        **v3_latest,
+        **v3_lineup,
+        "squad_authority": v3_latest.get("squad_authority") or v3_lineup.get("squad_authority"),
+        "decision_squad_authority": v3_lineup.get("squad_authority"),
+    }
     manifest = load_json_config(MANIFEST_CONFIG)
     baselines = manifest.get("baselines") if isinstance(manifest.get("baselines"), dict) else {}
     release = runtime_fingerprint()
@@ -84,7 +93,7 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
             "release_fingerprint_files": release["files_hashed"],
         },
         "post_validation": {"status": post_status, "validated_at": None, "validator_contract": "V5_REAL_SHADOW_POSTVALIDATION_V2"},
-        "v3": {"engine_version": v3_latest.get("engine_version"), "generated_at": v3_latest.get("generated_at"), "planning_gw": (v3_latest.get("phase") or {}).get("planning_gw"), "formation": v3_lineup.get("formation"), "starting_xi": v3_lineup.get("starting_xi") or [], "captain": v3_lineup.get("captain"), "vice_captain": v3_lineup.get("vice_captain"), "ruleset_id": v3_lineup.get("ruleset_id"), "squad_authority": v3_lineup.get("squad_authority")},
+        "v3": {"engine_version": v3_latest.get("engine_version"), "generated_at": v3_latest.get("generated_at"), "planning_gw": (v3_latest.get("phase") or {}).get("planning_gw"), "formation": v3_lineup.get("formation"), "starting_xi": v3_lineup.get("starting_xi") or [], "captain": v3_lineup.get("captain"), "vice_captain": v3_lineup.get("vice_captain"), "ruleset_id": v3_lineup.get("ruleset_id"), "squad_authority": v3_reference.get("squad_authority"), "decision_squad_authority": v3_lineup.get("squad_authority")},
         "v5": {"engine_version": v5.get("engine_version"), "release_fingerprint": release["fingerprint"], "runner_status": v5.get("runner_status"), "planning_gw": (v5.get("phase") or {}).get("planning_gw"), "phase": (v5.get("phase") or {}).get("phase"), "squad_authority": v5.get("squad_authority"), "owned_count": len(owned_ids), "owned_ids": owned_ids, "decision": decision, "watchlist": watch, "user_report": v5.get("user_report") or {}, "source_fusion_health": v5.get("source_fusion_health") or {}, "governance": v5.get("governance") or {}, "framework_health": v5.get("framework_health") or {}, "service_performance": v5.get("service_performance") or {}, "authenticated_official": v5.get("authenticated_official") or {}},
         "parity": parity,
         "operational_invariants": {"pass": invariant_pass, "checks": invariants},

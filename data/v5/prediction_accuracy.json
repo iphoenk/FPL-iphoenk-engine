@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-29T09:36:24.481809+00:00",
+  "generated_at": "2026-08-29T09:52:18.566333+00:00",
   "model": "v5_prediction_evaluation_v2",
   "freeze_policy": "LATEST_PRE_DEADLINE_FORECAST_FROZEN_FOR_SETTLEMENT",
   "overall": {
@@ -24,10 +24,19 @@
     "non_regression_pass": false,
     "checks": {}
   },
+  "settlement_source_health": {
+    "current_event_live_available": true,
+    "historical_event_live_requested": 0,
+    "historical_event_live_fetched": 0,
+    "historical_event_live_health": {},
+    "settled_sources": {},
+    "missing_historical_actuals_fail_neutral": true
+  },
   "governance": {
     "accuracy_claim_requires_settled_sample": true,
     "pre_deadline_forecast_is_frozen_before_scoring": true,
     "post_deadline_information_cannot_rewrite_frozen_forecast": true,
+    "historical_event_live_supplies_actuals_only": true,
     "temporal_guard_required": true
   },
   "decision_metrics": {

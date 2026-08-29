@@ -40,9 +40,9 @@ def _aware(value: datetime | None) -> bool:
 def deadline_player_projection(players: list[dict], gw: int) -> tuple[list[dict], int]:
     """Keep only point-in-time fields consumed by post-GW reconciliation.
 
-    DNP probability and the explicit tactical delta are retained so calibration
-    and tactical-ablation metrics remain lossless without storing the verbose
-    full prediction artifact.
+    DNP probability and the explicit tactical delta are retained when supplied so
+    newer calibration metrics remain lossless, while older prediction payloads
+    without those optional fields remain valid immutable inputs.
     """
     projected: list[dict] = []
     target_fixture_rows = 0
@@ -54,17 +54,19 @@ def deadline_player_projection(players: list[dict], gw: int) -> tuple[list[dict]
         if fixture is not None:
             xmins = fixture.get("xmins") or {}
             components = fixture.get("components") or {}
+            xmins_compact = {
+                "expected_minutes": xmins.get("expected_minutes"),
+                "start_probability": xmins.get("start_probability"),
+                "p60": xmins.get("p60"),
+            }
+            if "dnp_probability" in xmins:
+                xmins_compact["dnp_probability"] = xmins.get("dnp_probability")
             fixtures.append({
                 "event": int(gw),
                 "xpts": fixture.get("xpts"),
                 "lower80": fixture.get("lower80"),
                 "upper80": fixture.get("upper80"),
-                "xmins": {
-                    "expected_minutes": xmins.get("expected_minutes"),
-                    "start_probability": xmins.get("start_probability"),
-                    "dnp_probability": xmins.get("dnp_probability"),
-                    "p60": xmins.get("p60"),
-                },
+                "xmins": xmins_compact,
                 "components": {
                     "tactical_adjustment": components.get("tactical_adjustment", 0.0),
                 },
@@ -106,8 +108,6 @@ def snapshot_integrity(snapshot: dict, expected_gw: int | None = None) -> tuple[
                     return False, "compact_snapshot_fixture_gw_mismatch"
                 xmins = fixture.get("xmins") or {}
                 required = ("expected_minutes", "start_probability", "p60")
-                if projection == COMPACT_PROJECTION:
-                    required = (*required, "dnp_probability")
                 if fixture.get("xpts") is None or any(xmins.get(field) is None for field in required):
                     return False, "compact_snapshot_missing_reconciliation_fields"
                 if projection == COMPACT_PROJECTION and "tactical_adjustment" not in (fixture.get("components") or {}):

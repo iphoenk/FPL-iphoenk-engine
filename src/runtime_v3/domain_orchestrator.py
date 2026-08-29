@@ -79,14 +79,15 @@ def _run_capability(
     profile_name: str,
     profile_cfg: dict[str, Any],
 ) -> dict[str, Any]:
+    reuse_active = incremental_reuse.active(profile_name)
     reused = legacy._reuse_service(name, spec, DATA, profile_cfg)
-    if reused is None:
+    if reused is None and reuse_active:
         reused = incremental_reuse.try_reuse(name, spec, profile_name)
     if reused is not None:
         reused["execution_boundary"] = "DOMAIN_SHARED_CANONICAL"
         return reused
 
-    input_fingerprint_before = incremental_reuse.fingerprint(name)
+    input_fingerprint_before = incremental_reuse.fingerprint(name) if reuse_active else None
     shared_spec = _execution_spec(name, spec)
     result = legacy._run_service(
         name,
@@ -112,7 +113,8 @@ def _run_capability(
         result["promotion_ms"] = 0.0
         result["promoted_output_bytes"] = 0
         result["execution_boundary"] = "DOMAIN_SHARED_CANONICAL"
-        incremental_reuse.record(name, profile_name, input_fingerprint_before)
+        if reuse_active:
+            incremental_reuse.record(name, profile_name, input_fingerprint_before)
         return result
     except Exception as exc:
         result["status"] = "FAILED"
@@ -212,14 +214,16 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             temp_root,
         )
         reuse_registry = incremental_reuse._registry().get("services") or {}
+        reuse_active = incremental_reuse.active(profile_name)
         performance["content_addressed_reuse"] = {
-            "enabled": profile_name in {"fast_decision", "live"},
+            "enabled": reuse_active,
+            "inactive_reason": incremental_reuse.inactive_reason(profile_name),
             "reused_services": sorted(
                 name for name, row in capability_results.items()
                 if row.get("reuse_mode") == "CONTENT_ADDRESSED"
             ),
             "diagnostics": {
-                name: incremental_reuse.diagnose(name)
+                name: incremental_reuse.diagnose(name, profile_name)
                 for name in reuse_registry
             },
         }

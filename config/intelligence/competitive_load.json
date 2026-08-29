@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "contract": "COMPETITIVE_LOAD_PRIMITIVE_V1",
   "owner": "governance.competitive_load",
   "scope": {
@@ -25,10 +25,48 @@
   "source_precedence": [
     "official_club_match_report_or_lineup",
     "official_competition_match_centre",
+    "official_national_team_match_centre",
     "Premier League_or_Official_FPL",
     "reliable_direct_manager_or_team_news",
     "pundit_or_community_crosscheck_only"
   ],
+  "observation_validation": {
+    "contract": "COMPETITIVE_LOAD_OBSERVATIONS_V1",
+    "retention_hours": 504,
+    "future_tolerance_minutes": 10,
+    "max_minutes": 130,
+    "max_extra_time_minutes": 30,
+    "require_source_url": true,
+    "allowed_verification_levels": [
+      "OFFICIAL_CLUB",
+      "OFFICIAL_COMPETITION",
+      "OFFICIAL_NATIONAL_TEAM",
+      "CROSSCHECKED_OFFICIAL"
+    ],
+    "allowed_travel_contexts": [
+      "HOME",
+      "DOMESTIC_AWAY",
+      "EUROPEAN_AWAY",
+      "INTERNATIONAL_AWAY",
+      "LONG_HAUL_AWAY",
+      "NEUTRAL_VENUE",
+      "UNKNOWN"
+    ],
+    "dedup_key": ["element", "competition", "match_time"],
+    "invalid_rows_are_rejected_not_coerced": true,
+    "stale_rows_do_not_affect_current_load": true,
+    "future_rows_do_not_affect_current_load": true
+  },
+  "report_time_handoff": {
+    "input_artifact": "data/competitive_load_observations.json",
+    "producer": "REPORT_TIME_VERIFIED_EVIDENCE",
+    "runtime_hydrate_and_republish": true,
+    "official_or_crosschecked_official_only": true,
+    "machine_scraper_not_required": true,
+    "empty_or_missing_input_is_fail_soft": true,
+    "invalid_observation_is_fail_soft_but_audited": true,
+    "never_upgrade_coverage_from_unverified_evidence": true
+  },
   "mandatory_player_fields": [
     "competition",
     "match_time",
@@ -128,6 +166,9 @@
     "coach_rotation_tendency_must_not_be_inferred_without_evidence": true,
     "travel_distance_must_not_be_invented": true,
     "one_match_does_not_create_buy_or_sell": true,
-    "recent_match_load_is_xmins_evidence_not_direct_points_evidence": true
+    "recent_match_load_is_xmins_evidence_not_direct_points_evidence": true,
+    "external_observation_validation_is_fail_closed_per_row": true,
+    "external_observation_file_missing_is_fail_soft": true,
+    "verification_provenance_is_required_for_non_pl_load": true
   }
 }

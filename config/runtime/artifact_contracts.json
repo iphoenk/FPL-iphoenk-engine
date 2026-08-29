@@ -22,6 +22,12 @@
       "equals": {"schema_version": 1, "contract": "EXTERNAL_BENCHMARK_OBSERVATIONS_V1"},
       "types": {"observations": "list"}
     },
+    "competitive_load_observations.json": {
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "observations"],
+      "equals": {"schema_version": 1, "contract": "COMPETITIVE_LOAD_OBSERVATIONS_V1"},
+      "types": {"observations": "list"}
+    },
     "external_consensus.json": {
       "root_type": "object",
       "required_fields": ["schema_version", "contract", "generated_at", "owner", "native_conclusion_frozen_before_overlay", "overall", "observations", "subjects", "source_status", "governance"],
@@ -30,9 +36,9 @@
     },
     "recent_competitive_load.json": {
       "root_type": "object",
-      "required_fields": ["schema_version", "contract", "generated_at", "owner", "status", "players", "player_count", "state_counts", "governance"],
+      "required_fields": ["schema_version", "contract", "generated_at", "owner", "status", "players", "player_count", "state_counts", "external_observation_count", "external_player_coverage", "observation_audit", "governance"],
       "equals": {"schema_version": 1, "contract": "COMPETITIVE_LOAD_PRIMITIVE_V1", "owner": "governance.competitive_load"},
-      "types": {"players": "object", "player_count": "integer", "state_counts": "object", "governance": "object"}
+      "types": {"players": "object", "player_count": "integer", "state_counts": "object", "external_observation_count": "integer", "external_player_coverage": "integer", "observation_audit": "object", "governance": "object"}
     },
     "decision_validation_snapshots.json": {
       "root_type": "object",

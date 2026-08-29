@@ -38,6 +38,7 @@ def _keep_profile(players) -> dict:
     return {
         "cost": sum(p.cost for p in ps),
         "objective": sum(p.objective for p in ps),
+        "objective_terms": tuple((p.element, p.objective) for p in ps),
         "x3": sum(p.x3 for p in ps),
         "x5": sum(p.x5 for p in ps),
         "x10": sum(p.x10 for p in ps),
@@ -49,8 +50,20 @@ def _keep_profile(players) -> dict:
 
 
 def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
-    """Derive an OUT-set profile from the fixed baseline without rescanning keep players."""
+    """Derive an OUT-set profile while preserving reference float order exactly.
+
+    Subtracting aggregate objectives from the baseline is mathematically equivalent,
+    but binary floating-point addition is not associative. The reference audit sums
+    keep players in their original target order before adding incoming players. Keep
+    this tiny ordered objective accumulator so the optimized path retains exact
+    ranking/tie semantics without rescanning full target metrics.
+    """
     outs = tuple(outs)
+    out_ids = {p.element for p in outs}
+    objective = 0.0
+    for element, value in baseline["objective_terms"]:
+        if element not in out_ids:
+            objective += value
     out_by_pos = {pos: [p for p in outs if p.position == pos] for pos in POSITION_COUNTS}
     gw_sorted = []
     gw_prefix = []
@@ -72,7 +85,7 @@ def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
         gw_prefix.append(prefix_by_pos)
     return {
         "cost": baseline["cost"] - sum(p.cost for p in outs),
-        "objective": baseline["objective"] - sum(p.objective for p in outs),
+        "objective": objective,
         "x3": baseline["x3"] - sum(p.x3 for p in outs),
         "x5": baseline["x5"] - sum(p.x5 for p in outs),
         "x10": baseline["x10"] - sum(p.x10 for p in outs),
@@ -97,6 +110,7 @@ def _chosen_profile(chosen) -> dict:
     return {
         "cost": sum(p.cost for p in ps),
         "objective": sum(p.objective for p in ps),
+        "objective_terms": tuple(p.objective for p in ps),
         "x3": sum(p.x3 for p in ps),
         "x5": sum(p.x5 for p in ps),
         "x10": sum(p.x10 for p in ps),
@@ -139,9 +153,12 @@ def _metrics_from_profiles(profile: dict, chosen_profile: dict) -> dict:
         total = profile["gw_total"][index] + chosen_profile["gw_total"][index]
         xi5 += xi
         utility5 += xi + .12 * (total - xi)
+    objective = profile["objective"]
+    for value in chosen_profile["objective_terms"]:
+        objective += value
     return {
         "cost": profile["cost"] + chosen_profile["cost"],
-        "objective": round(profile["objective"] + chosen_profile["objective"], 4),
+        "objective": round(objective, 4),
         "squad_xpts_3": round(profile["x3"] + chosen_profile["x3"], 2),
         "squad_xpts_5": round(profile["x5"] + chosen_profile["x5"], 2),
         "squad_xpts_10": round(profile["x10"] + chosen_profile["x10"], 2),
@@ -319,7 +336,7 @@ def audit_packages_from_candidates_fast(
             for chosen in candidate_states:
                 if len(chosen) != k:
                     continue
-                chosen_key = tuple(sorted(p.element for p in chosen))
+                chosen_key = tuple(p.element for p in chosen)
                 chosen_profile = chosen_profiles.get(chosen_key)
                 if chosen_profile is None:
                     chosen_profile = _chosen_profile(chosen)
@@ -419,6 +436,7 @@ def audit_packages_from_candidates_fast(
             "scalar_delta_metrics": True,
             "position_value_reuse": True,
             "small_package_candidate_template_cache": True,
+            "exact_reference_float_accumulation": True,
             "search_quality_reduction": False,
         },
         "guardrails": {

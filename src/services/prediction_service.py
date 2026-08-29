@@ -71,6 +71,25 @@ def _team_value_totals(ledger: list[dict], itb: int | None) -> dict:
     }
 
 
+def _chip_state_summary(official: dict, phase: dict) -> dict:
+    picks = official.get("picks") or {}
+    history = official.get("history") or {}
+    submitted_chip = str(picks.get("active_chip") or "NONE").upper()
+    used = list(history.get("chips") or [])
+    used_names = [str(row.get("name") or "").upper() for row in used if isinstance(row, dict)]
+    return {
+        "submitted_gw": phase.get("submitted_gw"),
+        "submitted_chip": submitted_chip,
+        "submitted_chip_source": "official_fpl_picks.active_chip",
+        "chip_used_this_submitted_gw": submitted_chip != "NONE",
+        "historical_used_chips": used_names,
+        "planning_gw": phase.get("planning_gw"),
+        "planning_chip": "NONE",
+        "planning_chip_source": "decision_pipeline_default_until_explicit_user_plan",
+        "phase_semantics": "submitted_chip_is_historical_truth_after_deadline; planning_chip_is_future_decision_state",
+    }
+
+
 def run() -> dict:
     started = perf_counter()
     raw, enrichment = read_json(SNAPSHOT, {}), read_json(ENRICHMENT, {})
@@ -86,11 +105,12 @@ def run() -> dict:
     atomic_json(DATA / "predictions_v4.json", predictions)
     atomic_json(DATA / "universe.json", {"generated_at": generated, "players": enrichment["universe"]})
     atomic_json(DATA / "health.json", raw["endpoint_health"])
-    atomic_json(DATA / "chips.json", {"generated_at": generated, "used": (official.get("history") or {}).get("chips", [])})
+    chip_summary = _chip_state_summary(official, phase)
+    atomic_json(DATA / "chips.json", {"generated_at": generated, "used": (official.get("history") or {}).get("chips", []), "current": chip_summary})
     ledger, squad = raw["team_value_ledger"], raw["squad"]
     itb = raw.get("itb_tenths")
     value_totals = _team_value_totals(ledger, itb)
-    atomic_json(DATA / "team.json", {"generated_at": generated, "team_id": raw["team_id"], "squad_authority": raw["squad_authority"], "projection_baseline": raw.get("projection_baseline") or {}, "squad": squad, "team_value_ledger": ledger, "totals": value_totals})
+    atomic_json(DATA / "team.json", {"generated_at": generated, "team_id": raw["team_id"], "squad_authority": raw["squad_authority"], "projection_baseline": raw.get("projection_baseline") or {}, "squad": squad, "team_value_ledger": ledger, "totals": value_totals, "chip_summary": chip_summary})
     live_payload = {"generated_at": generated, "status": "IDLE", "scoring_gw": phase.get("scoring_gw"), "players": []}
     picks, live = official.get("picks"), official.get("event_live")
     if picks and live:
@@ -121,12 +141,13 @@ def run() -> dict:
         "endpoint_health": raw["endpoint_health"], "source_sweep_status": source_sweep_status, "squad_authority": raw["squad_authority"], "projection_baseline": raw.get("projection_baseline") or {}, "advanced_stats_sync": enrichment["advanced_stats_sync"], "official_context": official_context,
         "prediction_summary": {"model": predictions["model_version"], "players": len(predictions["players"]), "top_5gw": predictions["players"][:10]},
         "team_summary": value_totals,
+        "chip_summary": chip_summary,
         "live_summary": {"status": live_payload["status"], "gross_points": live_payload.get("gross_points"), "net_points": live_payload.get("net_points")},
         "price_summary": {"confirmed_changes": confirmed, "top_buy_pressure": momentum[:10]},
         "lineage": {"snapshot_sha256": snapshot_sha, "enrichment_sha256": enrichment_sha},
         "files": {"team": "data/team.json", "live": "data/live.json", "prices": "data/prices.json", "health": "data/health.json", "universe": "data/universe.json", "chips": "data/chips.json", "predictions": "data/predictions_v4.json", "effective_plan": "data/effective_plan_v4.json", "gw_scorecard": "data/gw_scorecard_v4.json", "checkpoint_decision": "data/checkpoint_decision_v4.json", "service_orchestration": "data/service_orchestration_v4.json"},
         "performance": {"raw_snapshot_ms": raw_snapshot_ms, "enrichment_ms": enrichment_ms, "prediction_ms": prediction_ms, "engine_before_snapshot_write_ms": round(raw_snapshot_ms + enrichment_ms + prediction_ms, 2)},
-        "meta": {"direct_fpl_api_authority": False, "raw_snapshot_is_official_api_authority": True, "official_fpl_first_for_available_fields": True, "fail_closed": True, "prediction_point_in_time": True, "advanced_stats_are_community_enrichment": True, "leakage_guard_required_for_predictive_training": True, "parallel_fetch_is_single_snapshot_not_polling": True, "checkpoint_policy_registry_driven": True, "simulation_never_authorizes_action": True, "service_contract_compatible": True, "service_boundaries_registry_driven": True, "engine_recommendations_are_advisory": True, "human_effective_plan_is_separate_contract": True, "source_governance_names_do_not_imply_runtime_adapters": True, "team_value_labels_are_semantically_explicit": True},
+        "meta": {"direct_fpl_api_authority": False, "raw_snapshot_is_official_api_authority": True, "official_fpl_first_for_available_fields": True, "fail_closed": True, "prediction_point_in_time": True, "advanced_stats_are_community_enrichment": True, "leakage_guard_required_for_predictive_training": True, "parallel_fetch_is_single_snapshot_not_polling": True, "checkpoint_policy_registry_driven": True, "simulation_never_authorizes_action": True, "service_contract_compatible": True, "service_boundaries_registry_driven": True, "engine_recommendations_are_advisory": True, "human_effective_plan_is_separate_contract": True, "source_governance_names_do_not_imply_runtime_adapters": True, "team_value_labels_are_semantically_explicit": True, "chip_state_is_phase_aware": True},
     }
     atomic_json(DATA / "latest.json", latest)
     gw = phase.get("submitted_gw") or phase.get("planning_gw")

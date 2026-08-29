@@ -1,6 +1,6 @@
 {
-  "schema_version": 4,
-  "model_id": "v5_shadow_parity_v4",
+  "schema_version": 5,
+  "model_id": "v5_shadow_parity_v5",
   "required_cycles_before_production_candidate": 3,
   "tolerances": {
     "starting_xi_symmetric_difference_max": 2,
@@ -13,7 +13,20 @@
     "require_same_v5_version": true,
     "require_same_production_baseline": true,
     "require_same_release_fingerprint": true,
-    "require_prediction_acceptance_for_production_candidate": true
+    "require_prediction_acceptance_for_production_candidate": true,
+    "reject_claimed_official_auth_validation_without_proof": true
+  },
+  "official_auth_validation": {
+    "contract": "V5_OFFICIAL_AUTH_SHADOW_PROOF_V1",
+    "applies_when_trigger_requires_authenticated_official_predeadline": true,
+    "required_phase": "PRE_DEADLINE",
+    "required_decision_squad_authority": "official_authenticated",
+    "required_authenticated_state": "VALID",
+    "verified_entry_must_match_expected_entry": true,
+    "draft_must_match_authoritative_squad": true,
+    "raw_authenticated_payload_persistence_forbidden": true,
+    "missing_or_disabled_credentials_fail_validation": true,
+    "fallback_user_lock_may_run_engine_but_cannot_satisfy_official_auth_proof": true
   },
   "production_candidate_policy": {
     "operational_acceptance": "three postvalidated REAL_SHADOW cycles on exact V5 version, production baseline and runtime release fingerprint",

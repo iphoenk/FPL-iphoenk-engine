@@ -175,7 +175,8 @@ def _role_evidence_label(role: dict[str, Any]) -> str:
 
 
 def _evidence_state(value: Any, *, partial: bool = False) -> str:
-    if value not in {None, "", [], {}}:
+    available = value is not None and value != "" and value != [] and value != {}
+    if available:
         return "PARTIAL" if partial else "AVAILABLE"
     return "UNAVAILABLE"
 
@@ -224,6 +225,12 @@ def _dimension_matrix(opponent: dict[str, Any], recent_rows: list[dict[str, Any]
     vulnerabilities = opponent.get("vulnerabilities") or []
     strengths = opponent.get("strengths") or []
     style = opponent.get("observed_style_proxies") or []
+    venue_value = None
+    if fixture:
+        if fixture.get("venue") is not None:
+            venue_value = fixture.get("venue")
+        elif "is_home" in fixture:
+            venue_value = fixture.get("is_home")
     return {
         "opponent_coach": _evidence_state(opponent.get("coach")),
         "formation_or_variants": _evidence_state(opponent.get("base_formation") or opponent.get("formation_variants"), partial=True),
@@ -242,7 +249,7 @@ def _dimension_matrix(opponent: dict[str, Any], recent_rows: list[dict[str, Any]
         "second_balls": "UNAVAILABLE",
         "gk_distribution_shot_stopping": "UNAVAILABLE",
         "expected_possession_game_state": "UNAVAILABLE",
-        "venue": _evidence_state(fixture.get("venue") or fixture.get("is_home") if fixture else None),
+        "venue": _evidence_state(venue_value),
         "recent_tactical_adjustments_2_5": _evidence_state(recent_rows, partial=True),
         "structural_injuries_suspensions": "UNAVAILABLE",
         "observed_strengths": _evidence_state(strengths, partial=True),

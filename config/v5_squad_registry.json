@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "locked_squad_config": "config/locked_squad.json",
   "validation": {
     "fail_closed": true,
@@ -7,6 +7,12 @@
     "require_unique_elements": true,
     "require_exact_position_counts": true,
     "require_club_limit": true
+  },
+  "pre_deadline": {
+    "default_authority": "official_authenticated",
+    "fallback_authority": "user_lock",
+    "last_resort_authority": "official_public",
+    "persistent_user_lock_must_not_mask_authenticated_current_team": true
   },
   "reconciliation": {
     "enabled": true,

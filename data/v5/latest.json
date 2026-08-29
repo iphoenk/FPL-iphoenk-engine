@@ -4,7 +4,7 @@
   "runtime_architecture": "bounded-context-microservices",
   "runner_status": "BETA_SHADOW_READY",
   "mode": "daily",
-  "correlation_id": "248f3e11f46a45d6b371f9da20dea135",
+  "correlation_id": "5baa952a81624797bbae2bb911a075b9",
   "team_id": 3462711,
   "phase": {
     "current_gw": 2,
@@ -15,12 +15,12 @@
     "scoring_gw": 2,
     "deadline_time": "2026-09-04T17:30:00Z",
     "is_live_event": true,
-    "phase": "LIVE",
+    "phase": "PRE_DEADLINE",
     "ruleset_id": "FPL_2026_27"
   },
-  "squad_authority": "official_public",
+  "squad_authority": "user_lock",
   "team_summary": {
-    "authority": "official_public",
+    "authority": "user_lock",
     "squad": [
       {
         "element": 572,
@@ -28,98 +28,8 @@
         "team_id": 11,
         "team": "Hull City",
         "position": "GK",
-        "purchase_cost": null,
-        "source": "official_submitted"
-      },
-      {
-        "element": 115,
-        "name": "De Cuyper",
-        "team_id": 5,
-        "team": "Brighton",
-        "position": "DEF",
-        "purchase_cost": null,
-        "source": "official_submitted"
-      },
-      {
-        "element": 8,
-        "name": "Calafiori",
-        "team_id": 1,
-        "team": "Arsenal",
-        "position": "DEF",
-        "purchase_cost": null,
-        "source": "official_submitted"
-      },
-      {
-        "element": 88,
-        "name": "Kayode",
-        "team_id": 4,
-        "team": "Brentford",
-        "position": "DEF",
-        "purchase_cost": null,
-        "source": "official_submitted"
-      },
-      {
-        "element": 426,
-        "name": "B.Fernandes",
-        "team_id": 16,
-        "team": "Man Utd",
-        "position": "MID",
-        "purchase_cost": null,
-        "source": "official_submitted"
-      },
-      {
-        "element": 15,
-        "name": "Ødegaard",
-        "team_id": 1,
-        "team": "Arsenal",
-        "position": "MID",
-        "purchase_cost": null,
-        "source": "official_submitted"
-      },
-      {
-        "element": 557,
-        "name": "Tzolis",
-        "team_id": 1,
-        "team": "Arsenal",
-        "position": "MID",
-        "purchase_cost": null,
-        "source": "official_submitted"
-      },
-      {
-        "element": 40,
-        "name": "Rogers",
-        "team_id": 6,
-        "team": "Chelsea",
-        "position": "MID",
-        "purchase_cost": null,
-        "source": "official_submitted"
-      },
-      {
-        "element": 411,
-        "name": "Haaland",
-        "team_id": 15,
-        "team": "Man City",
-        "position": "FWD",
-        "purchase_cost": null,
-        "source": "official_submitted"
-      },
-      {
-        "element": 165,
-        "name": "João Pedro",
-        "team_id": 6,
-        "team": "Chelsea",
-        "position": "FWD",
-        "purchase_cost": null,
-        "source": "official_submitted"
-      },
-      {
-        "element": 346,
-        "name": "Calvert-Lewin",
-        "team_id": 13,
-        "team": "Leeds",
-        "position": "FWD",
-        "purchase_cost": null,
-        "source": "official_submitted"
+        "purchase_cost": 45,
+        "source": "user_lock"
       },
       {
         "element": 109,
@@ -127,17 +37,35 @@
         "team_id": 5,
         "team": "Brighton",
         "position": "GK",
-        "purchase_cost": null,
-        "source": "official_submitted"
+        "purchase_cost": 45,
+        "source": "user_lock"
       },
       {
-        "element": 565,
-        "name": "M.Sangaré",
+        "element": 115,
+        "name": "De Cuyper",
+        "team_id": 5,
+        "team": "Brighton",
+        "position": "DEF",
+        "purchase_cost": 45,
+        "source": "user_lock"
+      },
+      {
+        "element": 8,
+        "name": "Calafiori",
+        "team_id": 1,
+        "team": "Arsenal",
+        "position": "DEF",
+        "purchase_cost": 55,
+        "source": "user_lock"
+      },
+      {
+        "element": 88,
+        "name": "Kayode",
         "team_id": 4,
         "team": "Brentford",
-        "position": "MID",
-        "purchase_cost": null,
-        "source": "official_submitted"
+        "position": "DEF",
+        "purchase_cost": 45,
+        "source": "user_lock"
       },
       {
         "element": 254,
@@ -145,8 +73,8 @@
         "team_id": 10,
         "team": "Fulham",
         "position": "DEF",
-        "purchase_cost": null,
-        "source": "official_submitted"
+        "purchase_cost": 45,
+        "source": "user_lock"
       },
       {
         "element": 473,
@@ -154,8 +82,80 @@
         "team_id": 18,
         "team": "Nott'm Forest",
         "position": "DEF",
-        "purchase_cost": null,
-        "source": "official_submitted"
+        "purchase_cost": 45,
+        "source": "user_lock"
+      },
+      {
+        "element": 426,
+        "name": "B.Fernandes",
+        "team_id": 16,
+        "team": "Man Utd",
+        "position": "MID",
+        "purchase_cost": 120,
+        "source": "user_lock"
+      },
+      {
+        "element": 15,
+        "name": "Ødegaard",
+        "team_id": 1,
+        "team": "Arsenal",
+        "position": "MID",
+        "purchase_cost": 65,
+        "source": "user_lock"
+      },
+      {
+        "element": 557,
+        "name": "Tzolis",
+        "team_id": 1,
+        "team": "Arsenal",
+        "position": "MID",
+        "purchase_cost": 65,
+        "source": "user_lock"
+      },
+      {
+        "element": 40,
+        "name": "Rogers",
+        "team_id": 6,
+        "team": "Chelsea",
+        "position": "MID",
+        "purchase_cost": 75,
+        "source": "user_lock"
+      },
+      {
+        "element": 565,
+        "name": "M.Sangaré",
+        "team_id": 4,
+        "team": "Brentford",
+        "position": "MID",
+        "purchase_cost": 55,
+        "source": "user_lock"
+      },
+      {
+        "element": 411,
+        "name": "Haaland",
+        "team_id": 15,
+        "team": "Man City",
+        "position": "FWD",
+        "purchase_cost": 155,
+        "source": "user_lock"
+      },
+      {
+        "element": 165,
+        "name": "João Pedro",
+        "team_id": 6,
+        "team": "Chelsea",
+        "position": "FWD",
+        "purchase_cost": 75,
+        "source": "user_lock"
+      },
+      {
+        "element": 346,
+        "name": "Calvert-Lewin",
+        "team_id": 13,
+        "team": "Leeds",
+        "position": "FWD",
+        "purchase_cost": 60,
+        "source": "user_lock"
       }
     ],
     "validation": {
@@ -177,12 +177,12 @@
         "5": 2,
         "1": 3,
         "4": 2,
+        "10": 1,
+        "18": 1,
         "16": 1,
         "6": 2,
         "15": 1,
-        "13": 1,
-        "10": 1,
-        "18": 1
+        "13": 1
       }
     },
     "finance": {
@@ -194,10 +194,23 @@
           "team": "Hull City",
           "position": "GK",
           "purchase_cost": 45,
-          "source": "official_submitted",
+          "source": "user_lock",
           "now_cost": 45,
           "sell_cost": 45,
           "finance_source": "entry_transfer_history",
+          "finance_exact": false
+        },
+        {
+          "element": 109,
+          "name": "Verbruggen",
+          "team_id": 5,
+          "team": "Brighton",
+          "position": "GK",
+          "purchase_cost": 45,
+          "source": "user_lock",
+          "now_cost": 45,
+          "sell_cost": 45,
+          "finance_source": "initial_squad_baseline",
           "finance_exact": false
         },
         {
@@ -207,7 +220,7 @@
           "team": "Brighton",
           "position": "DEF",
           "purchase_cost": 45,
-          "source": "official_submitted",
+          "source": "user_lock",
           "now_cost": 46,
           "sell_cost": 45,
           "finance_source": "entry_transfer_history",
@@ -220,7 +233,7 @@
           "team": "Arsenal",
           "position": "DEF",
           "purchase_cost": 55,
-          "source": "official_submitted",
+          "source": "user_lock",
           "now_cost": 56,
           "sell_cost": 55,
           "finance_source": "entry_transfer_history",
@@ -233,126 +246,9 @@
           "team": "Brentford",
           "position": "DEF",
           "purchase_cost": 45,
-          "source": "official_submitted",
+          "source": "user_lock",
           "now_cost": 46,
           "sell_cost": 45,
-          "finance_source": "entry_transfer_history",
-          "finance_exact": false
-        },
-        {
-          "element": 426,
-          "name": "B.Fernandes",
-          "team_id": 16,
-          "team": "Man Utd",
-          "position": "MID",
-          "purchase_cost": 120,
-          "source": "official_submitted",
-          "now_cost": 120,
-          "sell_cost": 120,
-          "finance_source": "initial_squad_baseline",
-          "finance_exact": false
-        },
-        {
-          "element": 15,
-          "name": "Ødegaard",
-          "team_id": 1,
-          "team": "Arsenal",
-          "position": "MID",
-          "purchase_cost": 65,
-          "source": "official_submitted",
-          "now_cost": 66,
-          "sell_cost": 65,
-          "finance_source": "entry_transfer_history",
-          "finance_exact": false
-        },
-        {
-          "element": 557,
-          "name": "Tzolis",
-          "team_id": 1,
-          "team": "Arsenal",
-          "position": "MID",
-          "purchase_cost": 65,
-          "source": "official_submitted",
-          "now_cost": 65,
-          "sell_cost": 65,
-          "finance_source": "initial_squad_baseline",
-          "finance_exact": false
-        },
-        {
-          "element": 40,
-          "name": "Rogers",
-          "team_id": 6,
-          "team": "Chelsea",
-          "position": "MID",
-          "purchase_cost": 75,
-          "source": "official_submitted",
-          "now_cost": 75,
-          "sell_cost": 75,
-          "finance_source": "entry_transfer_history",
-          "finance_exact": false
-        },
-        {
-          "element": 411,
-          "name": "Haaland",
-          "team_id": 15,
-          "team": "Man City",
-          "position": "FWD",
-          "purchase_cost": 155,
-          "source": "official_submitted",
-          "now_cost": 155,
-          "sell_cost": 155,
-          "finance_source": "initial_squad_baseline",
-          "finance_exact": false
-        },
-        {
-          "element": 165,
-          "name": "João Pedro",
-          "team_id": 6,
-          "team": "Chelsea",
-          "position": "FWD",
-          "purchase_cost": 75,
-          "source": "official_submitted",
-          "now_cost": 76,
-          "sell_cost": 75,
-          "finance_source": "initial_squad_baseline",
-          "finance_exact": false
-        },
-        {
-          "element": 346,
-          "name": "Calvert-Lewin",
-          "team_id": 13,
-          "team": "Leeds",
-          "position": "FWD",
-          "purchase_cost": 60,
-          "source": "official_submitted",
-          "now_cost": 60,
-          "sell_cost": 60,
-          "finance_source": "entry_transfer_history",
-          "finance_exact": false
-        },
-        {
-          "element": 109,
-          "name": "Verbruggen",
-          "team_id": 5,
-          "team": "Brighton",
-          "position": "GK",
-          "purchase_cost": 45,
-          "source": "official_submitted",
-          "now_cost": 45,
-          "sell_cost": 45,
-          "finance_source": "initial_squad_baseline",
-          "finance_exact": false
-        },
-        {
-          "element": 565,
-          "name": "M.Sangaré",
-          "team_id": 4,
-          "team": "Brentford",
-          "position": "MID",
-          "purchase_cost": 55,
-          "source": "official_submitted",
-          "now_cost": 56,
-          "sell_cost": 55,
           "finance_source": "entry_transfer_history",
           "finance_exact": false
         },
@@ -363,7 +259,7 @@
           "team": "Fulham",
           "position": "DEF",
           "purchase_cost": 45,
-          "source": "official_submitted",
+          "source": "user_lock",
           "now_cost": 45,
           "sell_cost": 45,
           "finance_source": "entry_transfer_history",
@@ -376,9 +272,113 @@
           "team": "Nott'm Forest",
           "position": "DEF",
           "purchase_cost": 45,
-          "source": "official_submitted",
+          "source": "user_lock",
           "now_cost": 45,
           "sell_cost": 45,
+          "finance_source": "entry_transfer_history",
+          "finance_exact": false
+        },
+        {
+          "element": 426,
+          "name": "B.Fernandes",
+          "team_id": 16,
+          "team": "Man Utd",
+          "position": "MID",
+          "purchase_cost": 120,
+          "source": "user_lock",
+          "now_cost": 120,
+          "sell_cost": 120,
+          "finance_source": "initial_squad_baseline",
+          "finance_exact": false
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "team_id": 1,
+          "team": "Arsenal",
+          "position": "MID",
+          "purchase_cost": 65,
+          "source": "user_lock",
+          "now_cost": 66,
+          "sell_cost": 65,
+          "finance_source": "entry_transfer_history",
+          "finance_exact": false
+        },
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "team_id": 1,
+          "team": "Arsenal",
+          "position": "MID",
+          "purchase_cost": 65,
+          "source": "user_lock",
+          "now_cost": 65,
+          "sell_cost": 65,
+          "finance_source": "initial_squad_baseline",
+          "finance_exact": false
+        },
+        {
+          "element": 40,
+          "name": "Rogers",
+          "team_id": 6,
+          "team": "Chelsea",
+          "position": "MID",
+          "purchase_cost": 75,
+          "source": "user_lock",
+          "now_cost": 75,
+          "sell_cost": 75,
+          "finance_source": "entry_transfer_history",
+          "finance_exact": false
+        },
+        {
+          "element": 565,
+          "name": "M.Sangaré",
+          "team_id": 4,
+          "team": "Brentford",
+          "position": "MID",
+          "purchase_cost": 55,
+          "source": "user_lock",
+          "now_cost": 56,
+          "sell_cost": 55,
+          "finance_source": "entry_transfer_history",
+          "finance_exact": false
+        },
+        {
+          "element": 411,
+          "name": "Haaland",
+          "team_id": 15,
+          "team": "Man City",
+          "position": "FWD",
+          "purchase_cost": 155,
+          "source": "user_lock",
+          "now_cost": 155,
+          "sell_cost": 155,
+          "finance_source": "initial_squad_baseline",
+          "finance_exact": false
+        },
+        {
+          "element": 165,
+          "name": "João Pedro",
+          "team_id": 6,
+          "team": "Chelsea",
+          "position": "FWD",
+          "purchase_cost": 75,
+          "source": "user_lock",
+          "now_cost": 76,
+          "sell_cost": 75,
+          "finance_source": "initial_squad_baseline",
+          "finance_exact": false
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "team_id": 13,
+          "team": "Leeds",
+          "position": "FWD",
+          "purchase_cost": 60,
+          "source": "user_lock",
+          "now_cost": 60,
+          "sell_cost": 60,
           "finance_source": "entry_transfer_history",
           "finance_exact": false
         }
@@ -397,24 +397,24 @@
     },
     "owned_ids": [
       572,
+      109,
       115,
       8,
       88,
+      254,
+      473,
       426,
       15,
       557,
       40,
+      565,
       411,
       165,
-      346,
-      109,
-      565,
-      254,
-      473
+      346
     ]
   },
   "live_summary": {
-    "generated_at": "2026-08-29T02:27:15.836943+00:00",
+    "generated_at": "2026-08-29T08:01:16.736859+00:00",
     "status": "PROVISIONAL",
     "scoring_gw": 2,
     "gross_points": 13,
@@ -430,7 +430,7 @@
         "element_type": 1,
         "position": "GK",
         "now_cost": 45,
-        "ownership": "3.1",
+        "ownership": "3.2",
         "status": "a",
         "pick_position": 1,
         "multiplier": 1,
@@ -475,7 +475,7 @@
         "element_type": 2,
         "position": "DEF",
         "now_cost": 46,
-        "ownership": "8.9",
+        "ownership": "9.1",
         "status": "a",
         "pick_position": 2,
         "multiplier": 1,
@@ -610,7 +610,7 @@
         "element_type": 3,
         "position": "MID",
         "now_cost": 120,
-        "ownership": "47.5",
+        "ownership": "47.4",
         "status": "a",
         "pick_position": 5,
         "multiplier": 1,
@@ -745,7 +745,7 @@
         "element_type": 3,
         "position": "MID",
         "now_cost": 75,
-        "ownership": "26.2",
+        "ownership": "26.1",
         "status": "a",
         "pick_position": 8,
         "multiplier": 1,
@@ -790,7 +790,7 @@
         "element_type": 4,
         "position": "FWD",
         "now_cost": 155,
-        "ownership": "68.2",
+        "ownership": "68.3",
         "status": "a",
         "pick_position": 9,
         "multiplier": 1,
@@ -892,7 +892,7 @@
         "element_type": 4,
         "position": "FWD",
         "now_cost": 60,
-        "ownership": "28.3",
+        "ownership": "28.2",
         "status": "a",
         "pick_position": 11,
         "multiplier": 1,
@@ -982,7 +982,7 @@
         "element_type": 3,
         "position": "MID",
         "now_cost": 56,
-        "ownership": "9.3",
+        "ownership": "9.4",
         "status": "a",
         "pick_position": 13,
         "multiplier": 0,
@@ -1146,7 +1146,7 @@
           "status": "ACTIVE",
           "availability_class": null,
           "reason": null,
-          "fetch_mode": "NETWORK",
+          "fetch_mode": "CACHE",
           "player_count": 317,
           "fixture_count": 0,
           "credential_present": null,
@@ -1167,9 +1167,9 @@
           "player_count": 0,
           "fixture_count": 0,
           "credential_present": true,
-          "network_requests": 1,
-          "cache_hits": 0,
-          "availability_cache_hits": 0,
+          "network_requests": 0,
+          "cache_hits": 1,
+          "availability_cache_hits": 1,
           "competitions_attempted": 1,
           "competitions_resolved": 0,
           "quota_remaining": null,
@@ -1184,9 +1184,9 @@
       "reason": "RuntimeError:API-Football errors: {'plan': 'Free plans do not have access to this season, try from 2022 to 2024.'}",
       "evidence_status": null,
       "credential_present": true,
-      "network_requests": 1,
-      "cache_hits": 0,
-      "availability_cache_hits": 0,
+      "network_requests": 0,
+      "cache_hits": 1,
+      "availability_cache_hits": 1,
       "competitions_attempted": 1,
       "competitions_resolved": 0,
       "fixture_count": 0,
@@ -1194,186 +1194,17 @@
       "quota_limit": null,
       "failure_count": 0,
       "fail_neutral": true,
-      "cached_provider_restriction": false
+      "cached_provider_restriction": true
     },
     "understat": {
       "status": "ACTIVE",
-      "fetch_mode": "NETWORK",
+      "fetch_mode": "CACHE",
       "player_count": 317
     }
   },
   "price_summary": {
     "status": "READY",
-    "confirmed_changes": [
-      {
-        "element": 9,
-        "name": "Hincapie",
-        "previous": 55,
-        "current": 54,
-        "delta": -1
-      },
-      {
-        "element": 14,
-        "name": "Eze",
-        "previous": 65,
-        "current": 64,
-        "delta": -1
-      },
-      {
-        "element": 15,
-        "name": "Ødegaard",
-        "previous": 65,
-        "current": 66,
-        "delta": 1
-      },
-      {
-        "element": 16,
-        "name": "Madueke",
-        "previous": 65,
-        "current": 64,
-        "delta": -1
-      },
-      {
-        "element": 17,
-        "name": "Merino",
-        "previous": 60,
-        "current": 59,
-        "delta": -1
-      },
-      {
-        "element": 19,
-        "name": "Zubimendi",
-        "previous": 55,
-        "current": 54,
-        "delta": -1
-      },
-      {
-        "element": 452,
-        "name": "Bruno G.",
-        "previous": 70,
-        "current": 69,
-        "delta": -1
-      },
-      {
-        "element": 113,
-        "name": "F.Kadıoğlu",
-        "previous": 45,
-        "current": 44,
-        "delta": -1
-      },
-      {
-        "element": 122,
-        "name": "Minteh",
-        "previous": 60,
-        "current": 59,
-        "delta": -1
-      },
-      {
-        "element": 154,
-        "name": "Palmer",
-        "previous": 95,
-        "current": 96,
-        "delta": 1
-      },
-      {
-        "element": 206,
-        "name": "Chadi Riad",
-        "previous": 45,
-        "current": 44,
-        "delta": -1
-      },
-      {
-        "element": 208,
-        "name": "Sarr",
-        "previous": 65,
-        "current": 64,
-        "delta": -1
-      },
-      {
-        "element": 217,
-        "name": "M.França",
-        "previous": 50,
-        "current": 49,
-        "delta": -1
-      },
-      {
-        "element": 392,
-        "name": "Aït-Nouri",
-        "previous": 55,
-        "current": 54,
-        "delta": -1
-      },
-      {
-        "element": 399,
-        "name": "Cherki",
-        "previous": 75,
-        "current": 76,
-        "delta": 1
-      },
-      {
-        "element": 400,
-        "name": "Doku",
-        "previous": 75,
-        "current": 74,
-        "delta": -1
-      },
-      {
-        "element": 481,
-        "name": "Anderson",
-        "previous": 65,
-        "current": 64,
-        "delta": -1
-      },
-      {
-        "element": 415,
-        "name": "Dorgu",
-        "previous": 60,
-        "current": 59,
-        "delta": -1
-      },
-      {
-        "element": 440,
-        "name": "Zirkzee",
-        "previous": 55,
-        "current": 54,
-        "delta": -1
-      },
-      {
-        "element": 480,
-        "name": "Gibbs-White",
-        "previous": 80,
-        "current": 79,
-        "delta": -1
-      },
-      {
-        "element": 482,
-        "name": "Hudson-Odoi",
-        "previous": 60,
-        "current": 59,
-        "delta": -1
-      },
-      {
-        "element": 515,
-        "name": "Maddison",
-        "previous": 65,
-        "current": 64,
-        "delta": -1
-      },
-      {
-        "element": 518,
-        "name": "P.M.Sarr",
-        "previous": 50,
-        "current": 49,
-        "delta": -1
-      },
-      {
-        "element": 546,
-        "name": "Adingra",
-        "previous": 50,
-        "current": 49,
-        "delta": -1
-      }
-    ],
+    "confirmed_changes": [],
     "top_rise_risk": [
       {
         "element": 391,
@@ -1381,29 +1212,29 @@
         "team_id": 15,
         "element_type": 2,
         "now_cost": 55,
-        "ownership_pct": 14.4,
-        "estimated_owners": 1435276,
-        "net_transfers": 46918,
-        "momentum": 0.03268918312575421,
-        "official_progress_pct": 99.9,
-        "official_hourly_rate_raw": 1206.0,
-        "official_hourly_rate_pct": 12.06,
+        "ownership_pct": 14.5,
+        "estimated_owners": 1446577,
+        "net_transfers": 55351,
+        "momentum": 0.03826343153527258,
+        "official_progress_pct": 103.5,
+        "official_hourly_rate_raw": 1512.0,
+        "official_hourly_rate_pct": 15.12,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": 114.3,
+            "projected_percent": 116.8,
             "likelihood": 5,
             "likelihood_label": "VERY_LIKELY_RISE"
           },
           {
             "offset": 1,
-            "projected_percent": 131.1,
+            "projected_percent": 137.8,
             "likelihood": 5,
             "likelihood_label": "VERY_LIKELY_RISE"
           },
           {
             "offset": 2,
-            "projected_percent": 147.9,
+            "projected_percent": 158.9,
             "likelihood": 5,
             "likelihood_label": "VERY_LIKELY_RISE"
           }
@@ -1412,13 +1243,13 @@
         "official_calibrating": false,
         "risk_direction": "RISE",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": 0.96,
-        "acceleration_pct_per_hour2": 0.225,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": 0.647,
+        "acceleration_pct_per_hour2": 0.55,
         "trajectory": "ACCELERATING",
-        "trajectory_eta_hours": 0.01,
+        "trajectory_eta_hours": null,
         "official_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
-        "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "trajectory_predicted_change_deadline": null,
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "urgency": "CRITICAL",
@@ -1431,45 +1262,45 @@
         "element_type": 3,
         "now_cost": 65,
         "ownership_pct": 26.1,
-        "estimated_owners": 2601439,
-        "net_transfers": 6870,
-        "momentum": 0.0026408460855703326,
-        "official_progress_pct": 94.0,
-        "official_hourly_rate_raw": 79.0,
-        "official_hourly_rate_pct": 0.79,
+        "estimated_owners": 2603839,
+        "net_transfers": 7825,
+        "momentum": 0.003005178123532215,
+        "official_progress_pct": 94.3,
+        "official_hourly_rate_raw": 183.0,
+        "official_hourly_rate_pct": 1.83,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": 94.9,
-            "likelihood": 3,
-            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
-          },
-          {
-            "offset": 1,
             "projected_percent": 96.0,
             "likelihood": 4,
             "likelihood_label": "RISE_SIGNAL_LEVEL_4"
           },
           {
-            "offset": 2,
-            "projected_percent": 97.1,
+            "offset": 1,
+            "projected_percent": 98.5,
             "likelihood": 4,
             "likelihood_label": "RISE_SIGNAL_LEVEL_4"
+          },
+          {
+            "offset": 2,
+            "projected_percent": 101.0,
+            "likelihood": 5,
+            "likelihood_label": "VERY_LIKELY_RISE"
           }
         ],
         "official_locked_until": null,
         "official_calibrating": false,
         "risk_direction": "RISE",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": 0.467,
-        "acceleration_pct_per_hour2": -0.024,
-        "trajectory": "DECELERATING",
-        "trajectory_eta_hours": 7.59,
-        "official_predicted_change_deadline": null,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": 0.054,
+        "acceleration_pct_per_hour2": 0.187,
+        "trajectory": "ACCELERATING",
+        "trajectory_eta_hours": 3.11,
+        "official_predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
-        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
+        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
         "urgency": "CRITICAL",
         "price_actionable": true
       },
@@ -1480,22 +1311,22 @@
         "element_type": 3,
         "now_cost": 70,
         "ownership_pct": 6.6,
-        "estimated_owners": 657835,
-        "net_transfers": 3740,
-        "momentum": 0.005685316226713385,
-        "official_progress_pct": 81.7,
-        "official_hourly_rate_raw": 125.0,
-        "official_hourly_rate_pct": 1.25,
+        "estimated_owners": 658442,
+        "net_transfers": 4643,
+        "momentum": 0.00705149428499397,
+        "official_progress_pct": 82.0,
+        "official_hourly_rate_raw": 130.0,
+        "official_hourly_rate_pct": 1.3,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": 83.2,
+            "projected_percent": 83.1,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           },
           {
             "offset": 1,
-            "projected_percent": 85.0,
+            "projected_percent": 84.9,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           },
@@ -1510,11 +1341,60 @@
         "official_calibrating": false,
         "risk_direction": "RISE",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": 0.625,
-        "acceleration_pct_per_hour2": -0.054,
-        "trajectory": "DECELERATING",
-        "trajectory_eta_hours": 14.64,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": 0.054,
+        "acceleration_pct_per_hour2": 0.009,
+        "trajectory": "STEADY",
+        "trajectory_eta_hours": 13.85,
+        "official_predicted_change_deadline": null,
+        "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "prediction_source": "TRAJECTORY_RATE",
+        "urgency": "CRITICAL",
+        "price_actionable": true
+      },
+      {
+        "element": 368,
+        "name": "Szoboszlai",
+        "team_id": 14,
+        "element_type": 3,
+        "now_cost": 70,
+        "ownership_pct": 43.4,
+        "estimated_owners": 4329756,
+        "net_transfers": 5650,
+        "momentum": 0.001304923418317337,
+        "official_progress_pct": 81.1,
+        "official_hourly_rate_raw": 167.0,
+        "official_hourly_rate_pct": 1.67,
+        "official_projections": [
+          {
+            "offset": 0,
+            "projected_percent": 82.5,
+            "likelihood": 3,
+            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
+          },
+          {
+            "offset": 1,
+            "projected_percent": 84.9,
+            "likelihood": 3,
+            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
+          },
+          {
+            "offset": 2,
+            "projected_percent": 87.2,
+            "likelihood": 3,
+            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
+          }
+        ],
+        "official_locked_until": null,
+        "official_calibrating": false,
+        "risk_direction": "RISE",
+        "official_projection_health": "LIVE",
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": 0.072,
+        "acceleration_pct_per_hour2": 0.135,
+        "trajectory": "ACCELERATING",
+        "trajectory_eta_hours": 11.32,
         "official_predicted_change_deadline": null,
         "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
@@ -1528,13 +1408,13 @@
         "team_id": 6,
         "element_type": 3,
         "now_cost": 75,
-        "ownership_pct": 26.2,
-        "estimated_owners": 2611406,
-        "net_transfers": 1397,
-        "momentum": 0.000534960860164984,
-        "official_progress_pct": 86.2,
-        "official_hourly_rate_raw": -68.0,
-        "official_hourly_rate_pct": -0.68,
+        "ownership_pct": 26.1,
+        "estimated_owners": 2603839,
+        "net_transfers": 1051,
+        "momentum": 0.0004036347869434324,
+        "official_progress_pct": 85.9,
+        "official_hourly_rate_raw": -51.0,
+        "official_hourly_rate_pct": -0.51,
         "official_projections": [
           {
             "offset": 0,
@@ -1544,13 +1424,13 @@
           },
           {
             "offset": 1,
-            "projected_percent": 84.4,
+            "projected_percent": 84.7,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           },
           {
             "offset": 2,
-            "projected_percent": 83.5,
+            "projected_percent": 84.0,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           }
@@ -1559,64 +1439,15 @@
         "official_calibrating": false,
         "risk_direction": "RISE",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": 0.575,
-        "acceleration_pct_per_hour2": -0.064,
-        "trajectory": "REVERSING",
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": -0.054,
+        "acceleration_pct_per_hour2": 0.031,
+        "trajectory": "DECELERATING",
         "trajectory_eta_hours": null,
         "official_predicted_change_deadline": null,
         "trajectory_predicted_change_deadline": null,
         "predicted_change_deadline": null,
         "prediction_source": null,
-        "urgency": "HIGH",
-        "price_actionable": true
-      },
-      {
-        "element": 368,
-        "name": "Szoboszlai",
-        "team_id": 14,
-        "element_type": 3,
-        "now_cost": 70,
-        "ownership_pct": 43.4,
-        "estimated_owners": 4325765,
-        "net_transfers": 4383,
-        "momentum": 0.00101323118569779,
-        "official_progress_pct": 80.7,
-        "official_hourly_rate_raw": 92.0,
-        "official_hourly_rate_pct": 0.92,
-        "official_projections": [
-          {
-            "offset": 0,
-            "projected_percent": 81.9,
-            "likelihood": 3,
-            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
-          },
-          {
-            "offset": 1,
-            "projected_percent": 83.1,
-            "likelihood": 3,
-            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
-          },
-          {
-            "offset": 2,
-            "projected_percent": 84.4,
-            "likelihood": 3,
-            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
-          }
-        ],
-        "official_locked_until": null,
-        "official_calibrating": false,
-        "risk_direction": "RISE",
-        "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": 0.543,
-        "acceleration_pct_per_hour2": -0.028,
-        "trajectory": "DECELERATING",
-        "trajectory_eta_hours": 20.98,
-        "official_predicted_change_deadline": null,
-        "trajectory_predicted_change_deadline": "2026-08-30T23:00:00+00:00",
-        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
         "urgency": "HIGH",
         "price_actionable": true
       },
@@ -1627,28 +1458,28 @@
         "element_type": 4,
         "now_cost": 60,
         "ownership_pct": 4.2,
-        "estimated_owners": 418622,
-        "net_transfers": 16146,
-        "momentum": 0.03856940151258176,
-        "official_progress_pct": 71.1,
-        "official_hourly_rate_raw": 361.0,
-        "official_hourly_rate_pct": 3.61,
+        "estimated_owners": 419008,
+        "net_transfers": 18883,
+        "momentum": 0.04506596532763098,
+        "official_progress_pct": 72.3,
+        "official_hourly_rate_raw": 471.0,
+        "official_hourly_rate_pct": 4.71,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": 75.5,
+            "projected_percent": 76.5,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           },
           {
             "offset": 1,
-            "projected_percent": 80.5,
+            "projected_percent": 83.0,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           },
           {
             "offset": 2,
-            "projected_percent": 85.5,
+            "projected_percent": 89.6,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           }
@@ -1657,11 +1488,11 @@
         "official_calibrating": false,
         "risk_direction": "RISE",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": 0.878,
-        "acceleration_pct_per_hour2": 0.042,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": 0.216,
+        "acceleration_pct_per_hour2": 0.198,
         "trajectory": "ACCELERATING",
-        "trajectory_eta_hours": 8.01,
+        "trajectory_eta_hours": 5.88,
         "official_predicted_change_deadline": null,
         "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
@@ -1675,29 +1506,29 @@
         "team_id": 17,
         "element_type": 4,
         "now_cost": 60,
-        "ownership_pct": 3.7,
-        "estimated_owners": 368786,
-        "net_transfers": 14198,
-        "momentum": 0.03849929227248323,
-        "official_progress_pct": 68.9,
-        "official_hourly_rate_raw": 249.0,
-        "official_hourly_rate_pct": 2.49,
+        "ownership_pct": 3.8,
+        "estimated_owners": 379103,
+        "net_transfers": 16340,
+        "momentum": 0.04310174279813138,
+        "official_progress_pct": 69.8,
+        "official_hourly_rate_raw": 438.0,
+        "official_hourly_rate_pct": 4.38,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": 71.9,
+            "projected_percent": 73.7,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           },
           {
             "offset": 1,
-            "projected_percent": 75.4,
+            "projected_percent": 79.8,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           },
           {
             "offset": 2,
-            "projected_percent": 78.9,
+            "projected_percent": 85.9,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           }
@@ -1706,11 +1537,60 @@
         "official_calibrating": false,
         "risk_direction": "RISE",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": 0.698,
-        "acceleration_pct_per_hour2": -0.0,
-        "trajectory": "STEADY",
-        "trajectory_eta_hours": 12.49,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": 0.162,
+        "acceleration_pct_per_hour2": 0.34,
+        "trajectory": "ACCELERATING",
+        "trajectory_eta_hours": 6.89,
+        "official_predicted_change_deadline": null,
+        "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "prediction_source": "TRAJECTORY_RATE",
+        "urgency": "HIGH",
+        "price_actionable": true
+      },
+      {
+        "element": 249,
+        "name": "Barry",
+        "team_id": 9,
+        "element_type": 4,
+        "now_cost": 55,
+        "ownership_pct": 3.6,
+        "estimated_owners": 359150,
+        "net_transfers": 9585,
+        "momentum": 0.026688013364889324,
+        "official_progress_pct": 61.5,
+        "official_hourly_rate_raw": 396.0,
+        "official_hourly_rate_pct": 3.96,
+        "official_projections": [
+          {
+            "offset": 0,
+            "projected_percent": 65.0,
+            "likelihood": 3,
+            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
+          },
+          {
+            "offset": 1,
+            "projected_percent": 70.5,
+            "likelihood": 3,
+            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
+          },
+          {
+            "offset": 2,
+            "projected_percent": 76.0,
+            "likelihood": 3,
+            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
+          }
+        ],
+        "official_locked_until": null,
+        "official_calibrating": false,
+        "risk_direction": "RISE",
+        "official_projection_health": "LIVE",
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": 0.126,
+        "acceleration_pct_per_hour2": 0.392,
+        "trajectory": "ACCELERATING",
+        "trajectory_eta_hours": 9.72,
         "official_predicted_change_deadline": null,
         "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
@@ -1724,29 +1604,29 @@
         "team_id": 5,
         "element_type": 2,
         "now_cost": 46,
-        "ownership_pct": 8.9,
-        "estimated_owners": 887080,
-        "net_transfers": 38070,
-        "momentum": 0.04291608423141092,
-        "official_progress_pct": 34.4,
-        "official_hourly_rate_raw": 936.0,
-        "official_hourly_rate_pct": 9.36,
+        "ownership_pct": 9.1,
+        "estimated_owners": 907852,
+        "net_transfers": 46456,
+        "momentum": 0.0511713362971057,
+        "official_progress_pct": 37.8,
+        "official_hourly_rate_raw": 1452.0,
+        "official_hourly_rate_pct": 14.52,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": 45.6,
+            "projected_percent": 50.6,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           },
           {
             "offset": 1,
-            "projected_percent": 58.7,
+            "projected_percent": 70.8,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           },
           {
             "offset": 2,
-            "projected_percent": 71.7,
+            "projected_percent": 91.0,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           }
@@ -1755,11 +1635,11 @@
         "official_calibrating": false,
         "risk_direction": "RISE",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": 0.61,
-        "acceleration_pct_per_hour2": 0.121,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": 0.611,
+        "acceleration_pct_per_hour2": 0.927,
         "trajectory": "ACCELERATING",
-        "trajectory_eta_hours": 7.01,
+        "trajectory_eta_hours": 4.28,
         "official_predicted_change_deadline": null,
         "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
@@ -1773,29 +1653,29 @@
         "team_id": 11,
         "element_type": 2,
         "now_cost": 40,
-        "ownership_pct": 4.4,
-        "estimated_owners": 438556,
-        "net_transfers": 16670,
-        "momentum": 0.038011109185600016,
-        "official_progress_pct": 32.5,
-        "official_hourly_rate_raw": 374.0,
-        "official_hourly_rate_pct": 3.74,
+        "ownership_pct": 4.5,
+        "estimated_owners": 448937,
+        "net_transfers": 19897,
+        "momentum": 0.04432024983460931,
+        "official_progress_pct": 33.7,
+        "official_hourly_rate_raw": 488.0,
+        "official_hourly_rate_pct": 4.88,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": 37.0,
+            "projected_percent": 38.0,
             "likelihood": 2,
             "likelihood_label": "RISE_SIGNAL_LEVEL_2"
           },
           {
             "offset": 1,
-            "projected_percent": 42.2,
+            "projected_percent": 44.8,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           },
           {
             "offset": 2,
-            "projected_percent": 47.4,
+            "projected_percent": 51.6,
             "likelihood": 3,
             "likelihood_label": "RISE_SIGNAL_LEVEL_3"
           }
@@ -1804,60 +1684,11 @@
         "official_calibrating": false,
         "risk_direction": "RISE",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": 0.702,
-        "acceleration_pct_per_hour2": 0.081,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": 0.216,
+        "acceleration_pct_per_hour2": 0.205,
         "trajectory": "ACCELERATING",
-        "trajectory_eta_hours": 18.05,
-        "official_predicted_change_deadline": null,
-        "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
-        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
-        "urgency": "HIGH",
-        "price_actionable": true
-      },
-      {
-        "element": 565,
-        "name": "M.Sangaré",
-        "team_id": 4,
-        "element_type": 3,
-        "now_cost": 56,
-        "ownership_pct": 9.3,
-        "estimated_owners": 926949,
-        "net_transfers": 19972,
-        "momentum": 0.02154595344511942,
-        "official_progress_pct": 29.4,
-        "official_hourly_rate_raw": 429.0,
-        "official_hourly_rate_pct": 4.29,
-        "official_projections": [
-          {
-            "offset": 0,
-            "projected_percent": 34.5,
-            "likelihood": 2,
-            "likelihood_label": "RISE_SIGNAL_LEVEL_2"
-          },
-          {
-            "offset": 1,
-            "projected_percent": 40.5,
-            "likelihood": 3,
-            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
-          },
-          {
-            "offset": 2,
-            "projected_percent": 46.5,
-            "likelihood": 3,
-            "likelihood_label": "RISE_SIGNAL_LEVEL_3"
-          }
-        ],
-        "official_locked_until": null,
-        "official_calibrating": false,
-        "risk_direction": "RISE",
-        "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": 0.478,
-        "acceleration_pct_per_hour2": -0.015,
-        "trajectory": "DECELERATING",
-        "trajectory_eta_hours": 16.46,
+        "trajectory_eta_hours": 13.59,
         "official_predicted_change_deadline": null,
         "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
@@ -1874,28 +1705,28 @@
         "element_type": 3,
         "now_cost": 60,
         "ownership_pct": 0.4,
-        "estimated_owners": 39868,
-        "net_transfers": -422,
-        "momentum": -0.010584930269890639,
-        "official_progress_pct": -99.9,
-        "official_hourly_rate_raw": -12.0,
-        "official_hourly_rate_pct": -0.12,
+        "estimated_owners": 39905,
+        "net_transfers": -514,
+        "momentum": -0.012880591404585891,
+        "official_progress_pct": -101.3,
+        "official_hourly_rate_raw": -15.0,
+        "official_hourly_rate_pct": -0.15,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": -103.4,
+            "projected_percent": -104.6,
             "likelihood": -5,
             "likelihood_label": "VERY_LIKELY_DROP"
           },
           {
             "offset": 1,
-            "projected_percent": -107.5,
+            "projected_percent": -110.0,
             "likelihood": -5,
             "likelihood_label": "VERY_LIKELY_DROP"
           },
           {
             "offset": 2,
-            "projected_percent": -111.6,
+            "projected_percent": -115.4,
             "likelihood": -5,
             "likelihood_label": "VERY_LIKELY_DROP"
           }
@@ -1904,13 +1735,62 @@
         "official_calibrating": false,
         "risk_direction": "FALL",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": -0.942,
-        "acceleration_pct_per_hour2": 0.001,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": -0.251,
+        "acceleration_pct_per_hour2": -0.005,
         "trajectory": "STEADY",
-        "trajectory_eta_hours": 0.83,
+        "trajectory_eta_hours": null,
         "official_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
-        "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "trajectory_predicted_change_deadline": null,
+        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
+        "urgency": "CRITICAL",
+        "price_actionable": true
+      },
+      {
+        "element": 461,
+        "name": "Touré",
+        "team_id": 17,
+        "element_type": 3,
+        "now_cost": 60,
+        "ownership_pct": 0.2,
+        "estimated_owners": 19952,
+        "net_transfers": -226,
+        "momentum": -0.011327185244587009,
+        "official_progress_pct": -99.6,
+        "official_hourly_rate_raw": -2.0,
+        "official_hourly_rate_pct": -0.02,
+        "official_projections": [
+          {
+            "offset": 0,
+            "projected_percent": -100.4,
+            "likelihood": -5,
+            "likelihood_label": "VERY_LIKELY_DROP"
+          },
+          {
+            "offset": 1,
+            "projected_percent": -101.8,
+            "likelihood": -5,
+            "likelihood_label": "VERY_LIKELY_DROP"
+          },
+          {
+            "offset": 2,
+            "projected_percent": -103.2,
+            "likelihood": -5,
+            "likelihood_label": "VERY_LIKELY_DROP"
+          }
+        ],
+        "official_locked_until": null,
+        "official_calibrating": false,
+        "risk_direction": "FALL",
+        "official_projection_health": "LIVE",
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": -0.144,
+        "acceleration_pct_per_hour2": -0.005,
+        "trajectory": "REVERSING",
+        "trajectory_eta_hours": 20.0,
+        "official_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "trajectory_predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "urgency": "CRITICAL",
@@ -1923,77 +1803,28 @@
         "element_type": 4,
         "now_cost": 60,
         "ownership_pct": 1.0,
-        "estimated_owners": 99672,
-        "net_transfers": -15,
-        "momentum": -0.0001504936190705514,
-        "official_progress_pct": -99.1,
-        "official_hourly_rate_raw": 4.0,
-        "official_hourly_rate_pct": 0.04,
+        "estimated_owners": 99763,
+        "net_transfers": -7,
+        "momentum": -7.016629411705743e-05,
+        "official_progress_pct": -98.8,
+        "official_hourly_rate_raw": 9.0,
+        "official_hourly_rate_pct": 0.09,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": -98.6,
-            "likelihood": -4,
-            "likelihood_label": "DROP_SIGNAL_LEVEL_4"
-          },
-          {
-            "offset": 1,
             "projected_percent": -98.0,
             "likelihood": -4,
             "likelihood_label": "DROP_SIGNAL_LEVEL_4"
           },
           {
-            "offset": 2,
-            "projected_percent": -97.4,
-            "likelihood": -4,
-            "likelihood_label": "DROP_SIGNAL_LEVEL_4"
-          }
-        ],
-        "official_locked_until": null,
-        "official_calibrating": false,
-        "risk_direction": "FALL",
-        "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": -0.242,
-        "acceleration_pct_per_hour2": 0.007,
-        "trajectory": "REVERSING",
-        "trajectory_eta_hours": null,
-        "official_predicted_change_deadline": null,
-        "trajectory_predicted_change_deadline": null,
-        "predicted_change_deadline": null,
-        "prediction_source": null,
-        "urgency": "CRITICAL",
-        "price_actionable": true
-      },
-      {
-        "element": 461,
-        "name": "Touré",
-        "team_id": 17,
-        "element_type": 3,
-        "now_cost": 60,
-        "ownership_pct": 0.2,
-        "estimated_owners": 19934,
-        "net_transfers": -199,
-        "momentum": -0.009982943714257049,
-        "official_progress_pct": -98.8,
-        "official_hourly_rate_raw": 1.0,
-        "official_hourly_rate_pct": 0.01,
-        "official_projections": [
-          {
-            "offset": 0,
-            "projected_percent": -98.5,
-            "likelihood": -4,
-            "likelihood_label": "DROP_SIGNAL_LEVEL_4"
-          },
-          {
             "offset": 1,
-            "projected_percent": -98.1,
+            "projected_percent": -96.7,
             "likelihood": -4,
             "likelihood_label": "DROP_SIGNAL_LEVEL_4"
           },
           {
             "offset": 2,
-            "projected_percent": -97.8,
+            "projected_percent": -95.4,
             "likelihood": -4,
             "likelihood_label": "DROP_SIGNAL_LEVEL_4"
           }
@@ -2002,10 +1833,10 @@
         "official_calibrating": false,
         "risk_direction": "FALL",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": -0.841,
-        "acceleration_pct_per_hour2": 0.002,
-        "trajectory": "REVERSING",
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": 0.054,
+        "acceleration_pct_per_hour2": 0.009,
+        "trajectory": "STEADY",
         "trajectory_eta_hours": null,
         "official_predicted_change_deadline": null,
         "trajectory_predicted_change_deadline": null,
@@ -2024,25 +1855,25 @@
         "estimated_owners": 1,
         "net_transfers": -6,
         "momentum": -6.0,
-        "official_progress_pct": -97.6,
+        "official_progress_pct": -97.7,
         "official_hourly_rate_raw": 0.0,
         "official_hourly_rate_pct": 0.0,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": -97.6,
+            "projected_percent": -97.7,
             "likelihood": -4,
             "likelihood_label": "DROP_SIGNAL_LEVEL_4"
           },
           {
             "offset": 1,
-            "projected_percent": -97.6,
+            "projected_percent": -97.7,
             "likelihood": -4,
             "likelihood_label": "DROP_SIGNAL_LEVEL_4"
           },
           {
             "offset": 2,
-            "projected_percent": -97.6,
+            "projected_percent": -97.7,
             "likelihood": -4,
             "likelihood_label": "DROP_SIGNAL_LEVEL_4"
           }
@@ -2051,8 +1882,8 @@
         "official_calibrating": false,
         "risk_direction": "FALL",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": -0.389,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": -0.018,
         "acceleration_pct_per_hour2": 0.0,
         "trajectory": "STEADY",
         "trajectory_eta_hours": null,
@@ -2070,28 +1901,28 @@
         "element_type": 3,
         "now_cost": 55,
         "ownership_pct": 2.8,
-        "estimated_owners": 279081,
-        "net_transfers": -6445,
-        "momentum": -0.02309365381376733,
-        "official_progress_pct": -94.6,
-        "official_hourly_rate_raw": -213.0,
-        "official_hourly_rate_pct": -2.13,
+        "estimated_owners": 279339,
+        "net_transfers": -7800,
+        "momentum": -0.027923061226681558,
+        "official_progress_pct": -96.4,
+        "official_hourly_rate_raw": -277.0,
+        "official_hourly_rate_pct": -2.77,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": -99.7,
-            "likelihood": -4,
-            "likelihood_label": "DROP_SIGNAL_LEVEL_4"
+            "projected_percent": -101.3,
+            "likelihood": -5,
+            "likelihood_label": "VERY_LIKELY_DROP"
           },
           {
             "offset": 1,
-            "projected_percent": -105.6,
+            "projected_percent": -109.1,
             "likelihood": -5,
             "likelihood_label": "VERY_LIKELY_DROP"
           },
           {
             "offset": 2,
-            "projected_percent": -111.6,
+            "projected_percent": -116.8,
             "likelihood": -5,
             "likelihood_label": "VERY_LIKELY_DROP"
           }
@@ -2100,14 +1931,14 @@
         "official_calibrating": false,
         "risk_direction": "FALL",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": -0.947,
-        "acceleration_pct_per_hour2": -0.02,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": -0.323,
+        "acceleration_pct_per_hour2": -0.115,
         "trajectory": "ACCELERATING",
-        "trajectory_eta_hours": 2.54,
-        "official_predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "trajectory_eta_hours": 1.3,
+        "official_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
-        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "urgency": "CRITICAL",
         "price_actionable": true
@@ -2119,28 +1950,28 @@
         "element_type": 2,
         "now_cost": 55,
         "ownership_pct": 2.1,
-        "estimated_owners": 209311,
-        "net_transfers": -4545,
-        "momentum": -0.02171410007118594,
-        "official_progress_pct": -93.6,
-        "official_hourly_rate_raw": -113.0,
-        "official_hourly_rate_pct": -1.13,
+        "estimated_owners": 209504,
+        "net_transfers": -5412,
+        "momentum": -0.025832442340003054,
+        "official_progress_pct": -95.1,
+        "official_hourly_rate_raw": -153.0,
+        "official_hourly_rate_pct": -1.53,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": -97.3,
+            "projected_percent": -98.8,
             "likelihood": -4,
             "likelihood_label": "DROP_SIGNAL_LEVEL_4"
           },
           {
             "offset": 1,
-            "projected_percent": -101.5,
+            "projected_percent": -104.6,
             "likelihood": -5,
             "likelihood_label": "VERY_LIKELY_DROP"
           },
           {
             "offset": 2,
-            "projected_percent": -105.8,
+            "projected_percent": -110.4,
             "likelihood": -5,
             "likelihood_label": "VERY_LIKELY_DROP"
           }
@@ -2149,11 +1980,11 @@
         "official_calibrating": false,
         "risk_direction": "FALL",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": -1.215,
-        "acceleration_pct_per_hour2": -0.006,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": -0.269,
+        "acceleration_pct_per_hour2": -0.072,
         "trajectory": "ACCELERATING",
-        "trajectory_eta_hours": 5.66,
+        "trajectory_eta_hours": 3.2,
         "official_predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
@@ -2168,28 +1999,28 @@
         "element_type": 3,
         "now_cost": 60,
         "ownership_pct": 0.2,
-        "estimated_owners": 19934,
-        "net_transfers": -385,
-        "momentum": -0.019313735326577708,
-        "official_progress_pct": -93.6,
-        "official_hourly_rate_raw": -9.0,
-        "official_hourly_rate_pct": -0.09,
+        "estimated_owners": 19952,
+        "net_transfers": -460,
+        "momentum": -0.02305533279871692,
+        "official_progress_pct": -94.7,
+        "official_hourly_rate_raw": -17.0,
+        "official_hourly_rate_pct": -0.17,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": -95.8,
+            "projected_percent": -97.7,
             "likelihood": -4,
             "likelihood_label": "DROP_SIGNAL_LEVEL_4"
           },
           {
             "offset": 1,
-            "projected_percent": -98.3,
-            "likelihood": -4,
-            "likelihood_label": "DROP_SIGNAL_LEVEL_4"
+            "projected_percent": -102.5,
+            "likelihood": -5,
+            "likelihood_label": "VERY_LIKELY_DROP"
           },
           {
             "offset": 2,
-            "projected_percent": -100.9,
+            "projected_percent": -107.3,
             "likelihood": -5,
             "likelihood_label": "VERY_LIKELY_DROP"
           }
@@ -2198,14 +2029,14 @@
         "official_calibrating": false,
         "risk_direction": "FALL",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": -0.493,
-        "acceleration_pct_per_hour2": -0.0,
-        "trajectory": "STEADY",
-        "trajectory_eta_hours": 71.11,
-        "official_predicted_change_deadline": "2026-08-31T23:00:00+00:00",
-        "trajectory_predicted_change_deadline": "2026-09-01T23:00:00+00:00",
-        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": -0.198,
+        "acceleration_pct_per_hour2": -0.014,
+        "trajectory": "ACCELERATING",
+        "trajectory_eta_hours": 31.18,
+        "official_predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "trajectory_predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "urgency": "CRITICAL",
         "price_actionable": true
@@ -2217,28 +2048,28 @@
         "element_type": 3,
         "now_cost": 70,
         "ownership_pct": 4.3,
-        "estimated_owners": 428589,
-        "net_transfers": -5658,
-        "momentum": -0.013201458740191652,
-        "official_progress_pct": -92.2,
-        "official_hourly_rate_raw": -171.0,
-        "official_hourly_rate_pct": -1.71,
+        "estimated_owners": 428985,
+        "net_transfers": -6892,
+        "momentum": -0.01606582980756903,
+        "official_progress_pct": -94.0,
+        "official_hourly_rate_raw": -234.0,
+        "official_hourly_rate_pct": -2.34,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": -97.1,
+            "projected_percent": -98.9,
             "likelihood": -4,
             "likelihood_label": "DROP_SIGNAL_LEVEL_4"
           },
           {
             "offset": 1,
-            "projected_percent": -102.9,
+            "projected_percent": -106.8,
             "likelihood": -5,
             "likelihood_label": "VERY_LIKELY_DROP"
           },
           {
             "offset": 2,
-            "projected_percent": -108.6,
+            "projected_percent": -114.7,
             "likelihood": -5,
             "likelihood_label": "VERY_LIKELY_DROP"
           }
@@ -2247,11 +2078,60 @@
         "official_calibrating": false,
         "risk_direction": "FALL",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": -1.038,
-        "acceleration_pct_per_hour2": -0.01,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": -0.323,
+        "acceleration_pct_per_hour2": -0.113,
         "trajectory": "ACCELERATING",
-        "trajectory_eta_hours": 4.56,
+        "trajectory_eta_hours": 2.56,
+        "official_predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
+        "urgency": "CRITICAL",
+        "price_actionable": true
+      },
+      {
+        "element": 448,
+        "name": "Burn",
+        "team_id": 17,
+        "element_type": 2,
+        "now_cost": 50,
+        "ownership_pct": 1.6,
+        "estimated_owners": 159622,
+        "net_transfers": -4994,
+        "momentum": -0.0312864141534375,
+        "official_progress_pct": -92.0,
+        "official_hourly_rate_raw": -246.0,
+        "official_hourly_rate_pct": -2.46,
+        "official_projections": [
+          {
+            "offset": 0,
+            "projected_percent": -97.2,
+            "likelihood": -4,
+            "likelihood_label": "DROP_SIGNAL_LEVEL_4"
+          },
+          {
+            "offset": 1,
+            "projected_percent": -105.3,
+            "likelihood": -5,
+            "likelihood_label": "VERY_LIKELY_DROP"
+          },
+          {
+            "offset": 2,
+            "projected_percent": -113.5,
+            "likelihood": -5,
+            "likelihood_label": "VERY_LIKELY_DROP"
+          }
+        ],
+        "official_locked_until": null,
+        "official_calibrating": false,
+        "risk_direction": "FALL",
+        "official_projection_health": "LIVE",
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": -0.287,
+        "acceleration_pct_per_hour2": -0.226,
+        "trajectory": "ACCELERATING",
+        "trajectory_eta_hours": 3.25,
         "official_predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
@@ -2266,28 +2146,28 @@
         "element_type": 2,
         "now_cost": 45,
         "ownership_pct": 10.7,
-        "estimated_owners": 1066490,
-        "net_transfers": -1189,
-        "momentum": -0.0011148721506999597,
-        "official_progress_pct": -91.5,
-        "official_hourly_rate_raw": -151.0,
-        "official_hourly_rate_pct": -1.51,
+        "estimated_owners": 1067474,
+        "net_transfers": -1571,
+        "momentum": -0.0014716986081159823,
+        "official_progress_pct": -91.9,
+        "official_hourly_rate_raw": -195.0,
+        "official_hourly_rate_pct": -1.95,
         "official_projections": [
           {
             "offset": 0,
-            "projected_percent": -93.3,
+            "projected_percent": -93.6,
             "likelihood": -3,
             "likelihood_label": "DROP_SIGNAL_LEVEL_3"
           },
           {
             "offset": 1,
-            "projected_percent": -95.3,
+            "projected_percent": -96.3,
             "likelihood": -4,
             "likelihood_label": "DROP_SIGNAL_LEVEL_4"
           },
           {
             "offset": 2,
-            "projected_percent": -97.3,
+            "projected_percent": -98.9,
             "likelihood": -4,
             "likelihood_label": "DROP_SIGNAL_LEVEL_4"
           }
@@ -2296,64 +2176,15 @@
         "official_calibrating": false,
         "risk_direction": "FALL",
         "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": -0.463,
-        "acceleration_pct_per_hour2": 0.004,
-        "trajectory": "DECELERATING",
-        "trajectory_eta_hours": 5.63,
+        "hours_to_next_price_deadline": 14.98,
+        "observed_progress_velocity_pct_per_hour": -0.072,
+        "acceleration_pct_per_hour2": -0.079,
+        "trajectory": "ACCELERATING",
+        "trajectory_eta_hours": 4.15,
         "official_predicted_change_deadline": null,
         "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
-        "urgency": "CRITICAL",
-        "price_actionable": true
-      },
-      {
-        "element": 448,
-        "name": "Burn",
-        "team_id": 17,
-        "element_type": 2,
-        "now_cost": 50,
-        "ownership_pct": 1.6,
-        "estimated_owners": 159475,
-        "net_transfers": -4110,
-        "momentum": -0.02577206458692585,
-        "official_progress_pct": -90.4,
-        "official_hourly_rate_raw": -120.0,
-        "official_hourly_rate_pct": -1.2,
-        "official_projections": [
-          {
-            "offset": 0,
-            "projected_percent": -93.8,
-            "likelihood": -3,
-            "likelihood_label": "DROP_SIGNAL_LEVEL_3"
-          },
-          {
-            "offset": 1,
-            "projected_percent": -97.7,
-            "likelihood": -4,
-            "likelihood_label": "DROP_SIGNAL_LEVEL_4"
-          },
-          {
-            "offset": 2,
-            "projected_percent": -101.6,
-            "likelihood": -5,
-            "likelihood_label": "VERY_LIKELY_DROP"
-          }
-        ],
-        "official_locked_until": null,
-        "official_calibrating": false,
-        "risk_direction": "FALL",
-        "official_projection_health": "LIVE",
-        "hours_to_next_price_deadline": 20.55,
-        "observed_progress_velocity_pct_per_hour": -0.739,
-        "acceleration_pct_per_hour2": -0.006,
-        "trajectory": "ACCELERATING",
-        "trajectory_eta_hours": 8.0,
-        "official_predicted_change_deadline": "2026-08-31T23:00:00+00:00",
-        "trajectory_predicted_change_deadline": "2026-08-29T23:00:00+00:00",
-        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
-        "prediction_source": "OFFICIAL_PROJECTION",
         "urgency": "CRITICAL",
         "price_actionable": true
       }
@@ -2365,8 +2196,8 @@
         "owned": false,
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
-        "official_progress_pct": 99.9,
-        "official_hourly_rate_pct": 12.06,
+        "official_progress_pct": 103.5,
+        "official_hourly_rate_pct": 15.12,
         "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
@@ -2378,9 +2209,22 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -99.9,
-        "official_hourly_rate_pct": -0.12,
+        "official_progress_pct": -101.3,
+        "official_hourly_rate_pct": -0.15,
         "trajectory": "STEADY",
+        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
+        "official_projection_health": "LIVE"
+      },
+      {
+        "element": 461,
+        "name": "Touré",
+        "owned": false,
+        "risk_direction": "FALL",
+        "urgency": "CRITICAL",
+        "official_progress_pct": -99.6,
+        "official_hourly_rate_pct": -0.02,
+        "trajectory": "REVERSING",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -2391,22 +2235,9 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -99.1,
-        "official_hourly_rate_pct": 0.04,
-        "trajectory": "REVERSING",
-        "predicted_change_deadline": null,
-        "prediction_source": null,
-        "official_projection_health": "LIVE"
-      },
-      {
-        "element": 461,
-        "name": "Touré",
-        "owned": false,
-        "risk_direction": "FALL",
-        "urgency": "CRITICAL",
         "official_progress_pct": -98.8,
-        "official_hourly_rate_pct": 0.01,
-        "trajectory": "REVERSING",
+        "official_hourly_rate_pct": 0.09,
+        "trajectory": "STEADY",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "LIVE"
@@ -2417,7 +2248,7 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -97.6,
+        "official_progress_pct": -97.7,
         "official_hourly_rate_pct": 0.0,
         "trajectory": "STEADY",
         "predicted_change_deadline": null,
@@ -2430,24 +2261,11 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -94.6,
-        "official_hourly_rate_pct": -2.13,
+        "official_progress_pct": -96.4,
+        "official_hourly_rate_pct": -2.77,
         "trajectory": "ACCELERATING",
-        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
-        "prediction_source": "OFFICIAL_PROJECTION",
-        "official_projection_health": "LIVE"
-      },
-      {
-        "element": 557,
-        "name": "Tzolis",
-        "owned": true,
-        "risk_direction": "RISE",
-        "urgency": "CRITICAL",
-        "official_progress_pct": 94.0,
-        "official_hourly_rate_pct": 0.79,
-        "trajectory": "DECELERATING",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
+        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
       {
@@ -2456,8 +2274,8 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -93.6,
-        "official_hourly_rate_pct": -1.13,
+        "official_progress_pct": -95.1,
+        "official_hourly_rate_pct": -1.53,
         "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
@@ -2469,9 +2287,22 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -93.6,
-        "official_hourly_rate_pct": -0.09,
-        "trajectory": "STEADY",
+        "official_progress_pct": -94.7,
+        "official_hourly_rate_pct": -0.17,
+        "trajectory": "ACCELERATING",
+        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
+        "official_projection_health": "LIVE"
+      },
+      {
+        "element": 557,
+        "name": "Tzolis",
+        "owned": true,
+        "risk_direction": "RISE",
+        "urgency": "CRITICAL",
+        "official_progress_pct": 94.3,
+        "official_hourly_rate_pct": 1.83,
+        "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -2482,8 +2313,21 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -92.2,
-        "official_hourly_rate_pct": -1.71,
+        "official_progress_pct": -94.0,
+        "official_hourly_rate_pct": -2.34,
+        "trajectory": "ACCELERATING",
+        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
+        "official_projection_health": "LIVE"
+      },
+      {
+        "element": 448,
+        "name": "Burn",
+        "owned": false,
+        "risk_direction": "FALL",
+        "urgency": "CRITICAL",
+        "official_progress_pct": -92.0,
+        "official_hourly_rate_pct": -2.46,
         "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
@@ -2495,24 +2339,11 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -91.5,
-        "official_hourly_rate_pct": -1.51,
-        "trajectory": "DECELERATING",
+        "official_progress_pct": -91.9,
+        "official_hourly_rate_pct": -1.95,
+        "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
-        "official_projection_health": "LIVE"
-      },
-      {
-        "element": 448,
-        "name": "Burn",
-        "owned": false,
-        "risk_direction": "FALL",
-        "urgency": "CRITICAL",
-        "official_progress_pct": -90.4,
-        "official_hourly_rate_pct": -1.2,
-        "trajectory": "ACCELERATING",
-        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
-        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
       {
@@ -2521,9 +2352,22 @@
         "owned": false,
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
-        "official_progress_pct": 81.7,
-        "official_hourly_rate_pct": 1.25,
-        "trajectory": "DECELERATING",
+        "official_progress_pct": 82.0,
+        "official_hourly_rate_pct": 1.3,
+        "trajectory": "STEADY",
+        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "prediction_source": "TRAJECTORY_RATE",
+        "official_projection_health": "LIVE"
+      },
+      {
+        "element": 368,
+        "name": "Szoboszlai",
+        "owned": false,
+        "risk_direction": "RISE",
+        "urgency": "CRITICAL",
+        "official_progress_pct": 81.1,
+        "official_hourly_rate_pct": 1.67,
+        "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "LIVE"
@@ -2534,11 +2378,11 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "HIGH",
-        "official_progress_pct": -87.4,
-        "official_hourly_rate_pct": -0.23,
+        "official_progress_pct": -88.7,
+        "official_hourly_rate_pct": -0.37,
         "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
+        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
       {
@@ -2547,24 +2391,11 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "HIGH",
-        "official_progress_pct": -86.8,
-        "official_hourly_rate_pct": -0.42,
+        "official_progress_pct": -87.7,
+        "official_hourly_rate_pct": -0.64,
         "trajectory": "ACCELERATING",
-        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
-        "official_projection_health": "LIVE"
-      },
-      {
-        "element": 40,
-        "name": "Rogers",
-        "owned": true,
-        "risk_direction": "RISE",
-        "urgency": "HIGH",
-        "official_progress_pct": 86.2,
-        "official_hourly_rate_pct": -0.68,
-        "trajectory": "REVERSING",
-        "predicted_change_deadline": null,
-        "prediction_source": null,
+        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
       {
@@ -2573,22 +2404,22 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "HIGH",
-        "official_progress_pct": -84.9,
-        "official_hourly_rate_pct": -0.33,
-        "trajectory": "STEADY",
+        "official_progress_pct": -86.1,
+        "official_hourly_rate_pct": -0.58,
+        "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
+        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
       {
-        "element": 27,
-        "name": "G.Jesus",
-        "owned": false,
-        "risk_direction": "FALL",
+        "element": 40,
+        "name": "Rogers",
+        "owned": true,
+        "risk_direction": "RISE",
         "urgency": "HIGH",
-        "official_progress_pct": -84.7,
-        "official_hourly_rate_pct": 0.02,
-        "trajectory": "REVERSING",
+        "official_progress_pct": 85.9,
+        "official_hourly_rate_pct": -0.51,
+        "trajectory": "DECELERATING",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "LIVE"
@@ -2599,7 +2430,7 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "HIGH",
-        "official_progress_pct": -84.3,
+        "official_progress_pct": -84.8,
         "official_hourly_rate_pct": 0.0,
         "trajectory": "STEADY",
         "predicted_change_deadline": null,
@@ -2607,14 +2438,14 @@
         "official_projection_health": "LIVE"
       },
       {
-        "element": 187,
-        "name": "Eccles",
+        "element": 27,
+        "name": "G.Jesus",
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "HIGH",
-        "official_progress_pct": -83.4,
-        "official_hourly_rate_pct": 0.0,
-        "trajectory": "STEADY",
+        "official_progress_pct": -84.7,
+        "official_hourly_rate_pct": -0.08,
+        "trajectory": "REVERSING",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "LIVE"
@@ -2675,28 +2506,28 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 165.726,
-            "std": 20.273
+            "mean": 165.781,
+            "std": 20.277
           },
           "5": {
             "valid": true,
-            "mean": 278.198,
-            "std": 26.3
+            "mean": 278.295,
+            "std": 26.306
           },
           "10": {
             "valid": true,
-            "mean": 555.745,
-            "std": 37.13
+            "mean": 555.947,
+            "std": 37.139
           },
           "15": {
             "valid": true,
-            "mean": 834.454,
-            "std": 45.5
+            "mean": 834.727,
+            "std": 45.51
           }
         },
-        "objective_mean": 328.217,
-        "objective_std": 14.126,
-        "robust_score": 326.522,
+        "objective_mean": 328.33,
+        "objective_std": 14.129,
+        "robust_score": 326.635,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
@@ -2743,34 +2574,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 174.458,
-              "std": 20.883
+              "mean": 174.541,
+              "std": 20.89
             },
             "5": {
               "valid": true,
-              "mean": 291.01,
-              "std": 26.996
+              "mean": 291.154,
+              "std": 27.005
             },
             "10": {
               "valid": true,
-              "mean": 578.0,
-              "std": 37.992
+              "mean": 578.295,
+              "std": 38.005
             },
             "15": {
               "valid": true,
-              "mean": 864.113,
-              "std": 46.436
+              "mean": 864.519,
+              "std": 46.45
             }
           },
-          "objective_mean": 342.417,
-          "objective_std": 14.503,
-          "robust_score": 340.227,
+          "objective_mean": 342.584,
+          "objective_std": 14.508,
+          "robust_score": 340.393,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 340.277,
+          "raw_robust_score": 340.443,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -2786,10 +2617,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 332.204,
-          "p50": 342.149,
-          "p75": 353.463,
-          "p_outperform_hold_independent_baseline": 0.7585
+          "p25": 332.368,
+          "p50": 342.316,
+          "p75": 353.634,
+          "p_outperform_hold_independent_baseline": 0.7592
         },
         "team_cluster": {
           "club_counts": {
@@ -2844,34 +2675,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 173.545,
-              "std": 20.731
+              "mean": 173.6,
+              "std": 20.735
             },
             "5": {
               "valid": true,
-              "mean": 290.58,
-              "std": 26.855
+              "mean": 290.677,
+              "std": 26.861
             },
             "10": {
               "valid": true,
-              "mean": 576.96,
-              "std": 37.777
+              "mean": 577.162,
+              "std": 37.786
             },
             "15": {
               "valid": true,
-              "mean": 863.88,
-              "std": 46.214
+              "mean": 864.153,
+              "std": 46.224
             }
           },
-          "objective_mean": 341.712,
-          "objective_std": 14.416,
-          "robust_score": 339.532,
+          "objective_mean": 341.825,
+          "objective_std": 14.419,
+          "robust_score": 339.645,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 339.582,
+          "raw_robust_score": 339.695,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -2887,9 +2718,9 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 331.436,
-          "p50": 342.208,
-          "p75": 352.651,
+          "p25": 331.547,
+          "p50": 342.321,
+          "p75": 352.766,
           "p_outperform_hold_independent_baseline": 0.7481
         },
         "team_cluster": {
@@ -2946,34 +2777,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 173.93,
-              "std": 20.828
+              "mean": 174.013,
+              "std": 20.835
             },
             "5": {
               "valid": true,
-              "mean": 289.986,
-              "std": 26.922
+              "mean": 290.13,
+              "std": 26.931
             },
             "10": {
               "valid": true,
-              "mean": 576.456,
-              "std": 37.905
+              "mean": 576.751,
+              "std": 37.918
             },
             "15": {
               "valid": true,
-              "mean": 863.329,
-              "std": 46.378
+              "mean": 863.736,
+              "std": 46.393
             }
           },
-          "objective_mean": 341.547,
-          "objective_std": 14.467,
-          "robust_score": 339.411,
+          "objective_mean": 341.715,
+          "objective_std": 14.472,
+          "robust_score": 339.578,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 339.411,
+          "raw_robust_score": 339.578,
           "team_cluster_penalty_points": 0.0,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -2989,10 +2820,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 332.273,
-          "p50": 342.725,
-          "p75": 350.587,
-          "p_outperform_hold_independent_baseline": 0.7451
+          "p25": 332.438,
+          "p50": 342.893,
+          "p75": 350.758,
+          "p_outperform_hold_independent_baseline": 0.7459
         },
         "team_cluster": {
           "club_counts": {
@@ -3048,34 +2879,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 173.671,
-              "std": 20.857
+              "mean": 173.754,
+              "std": 20.864
             },
             "5": {
               "valid": true,
-              "mean": 290.988,
-              "std": 27.032
+              "mean": 291.132,
+              "std": 27.041
             },
             "10": {
               "valid": true,
-              "mean": 574.943,
-              "std": 37.928
+              "mean": 575.238,
+              "std": 37.941
             },
             "15": {
               "valid": true,
-              "mean": 860.114,
-              "std": 46.374
+              "mean": 860.521,
+              "std": 46.389
             }
           },
-          "objective_mean": 341.221,
-          "objective_std": 14.498,
-          "robust_score": 338.981,
+          "objective_mean": 341.388,
+          "objective_std": 14.503,
+          "robust_score": 339.148,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 339.081,
+          "raw_robust_score": 339.248,
           "team_cluster_penalty_points": 0.1,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -3091,10 +2922,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 331.073,
-          "p50": 341.503,
-          "p75": 350.3,
-          "p_outperform_hold_independent_baseline": 0.7397
+          "p25": 331.237,
+          "p50": 341.67,
+          "p75": 350.47,
+          "p_outperform_hold_independent_baseline": 0.7405
         },
         "team_cluster": {
           "club_counts": {
@@ -3149,34 +2980,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 172.819,
-              "std": 20.765
+              "mean": 172.902,
+              "std": 20.772
             },
             "5": {
               "valid": true,
-              "mean": 289.983,
-              "std": 26.939
+              "mean": 290.127,
+              "std": 26.948
             },
             "10": {
               "valid": true,
-              "mean": 575.422,
-              "std": 37.891
+              "mean": 575.717,
+              "std": 37.904
             },
             "15": {
               "valid": true,
-              "mean": 861.562,
-              "std": 46.355
+              "mean": 861.969,
+              "std": 46.37
             }
           },
-          "objective_mean": 340.748,
-          "objective_std": 14.453,
-          "robust_score": 338.564,
+          "objective_mean": 340.915,
+          "objective_std": 14.458,
+          "robust_score": 338.73,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 338.614,
+          "raw_robust_score": 338.78,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -3192,10 +3023,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 331.902,
-          "p50": 341.868,
-          "p75": 349.683,
-          "p_outperform_hold_independent_baseline": 0.7324
+          "p25": 332.066,
+          "p50": 342.035,
+          "p75": 349.853,
+          "p_outperform_hold_independent_baseline": 0.7332
         },
         "team_cluster": {
           "club_counts": {
@@ -3250,34 +3081,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 173.38,
-              "std": 20.801
+              "mean": 173.463,
+              "std": 20.807
             },
             "5": {
               "valid": true,
-              "mean": 288.758,
-              "std": 26.865
+              "mean": 288.902,
+              "std": 26.874
             },
             "10": {
               "valid": true,
-              "mean": 573.984,
-              "std": 37.824
+              "mean": 574.279,
+              "std": 37.837
             },
             "15": {
               "valid": true,
-              "mean": 859.482,
-              "std": 46.276
+              "mean": 859.889,
+              "std": 46.29
             }
           },
-          "objective_mean": 340.156,
-          "objective_std": 14.44,
-          "robust_score": 338.023,
+          "objective_mean": 340.323,
+          "objective_std": 14.445,
+          "robust_score": 338.189,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 338.023,
+          "raw_robust_score": 338.189,
           "team_cluster_penalty_points": 0.0,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -3293,10 +3124,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 332.092,
-          "p50": 340.699,
-          "p75": 351.909,
-          "p_outperform_hold_independent_baseline": 0.7227
+          "p25": 332.256,
+          "p50": 340.867,
+          "p75": 352.08,
+          "p_outperform_hold_independent_baseline": 0.7236
         },
         "team_cluster": {
           "club_counts": {
@@ -3352,34 +3183,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 172.854,
-              "std": 20.679
+              "mean": 172.909,
+              "std": 20.683
             },
             "5": {
               "valid": true,
-              "mean": 289.211,
-              "std": 26.778
+              "mean": 289.308,
+              "std": 26.784
             },
             "10": {
               "valid": true,
-              "mean": 574.346,
-              "std": 37.682
+              "mean": 574.548,
+              "std": 37.691
             },
             "15": {
               "valid": true,
-              "mean": 859.895,
-              "std": 46.099
+              "mean": 860.168,
+              "std": 46.109
             }
           },
-          "objective_mean": 340.18,
-          "objective_std": 14.378,
-          "robust_score": 338.004,
+          "objective_mean": 340.292,
+          "objective_std": 14.381,
+          "robust_score": 338.117,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 338.054,
+          "raw_robust_score": 338.167,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -3395,10 +3226,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 332.9,
-          "p50": 341.404,
-          "p75": 349.708,
-          "p_outperform_hold_independent_baseline": 0.7236
+          "p25": 333.011,
+          "p50": 341.517,
+          "p75": 349.822,
+          "p_outperform_hold_independent_baseline": 0.7235
         },
         "team_cluster": {
           "club_counts": {
@@ -3454,34 +3285,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 173.689,
-              "std": 20.773
+              "mean": 173.744,
+              "std": 20.777
             },
             "5": {
               "valid": true,
-              "mean": 288.362,
-              "std": 26.781
+              "mean": 288.459,
+              "std": 26.787
             },
             "10": {
               "valid": true,
-              "mean": 572.178,
-              "std": 37.67
+              "mean": 572.38,
+              "std": 37.679
             },
             "15": {
               "valid": true,
-              "mean": 857.132,
-              "std": 46.097
+              "mean": 857.404,
+              "std": 46.107
             }
           },
-          "objective_mean": 339.649,
-          "objective_std": 14.401,
-          "robust_score": 337.521,
+          "objective_mean": 339.761,
+          "objective_std": 14.405,
+          "robust_score": 337.633,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 337.521,
+          "raw_robust_score": 337.633,
           "team_cluster_penalty_points": 0.0,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -3497,9 +3328,9 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 330.357,
-          "p50": 340.626,
-          "p75": 349.201,
+          "p25": 330.467,
+          "p50": 340.739,
+          "p75": 349.316,
           "p_outperform_hold_independent_baseline": 0.7145
         },
         "team_cluster": {
@@ -3556,34 +3387,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 172.25,
-              "std": 20.733
+              "mean": 172.333,
+              "std": 20.739
             },
             "5": {
               "valid": true,
-              "mean": 288.691,
-              "std": 26.872
+              "mean": 288.835,
+              "std": 26.881
             },
             "10": {
               "valid": true,
-              "mean": 573.698,
-              "std": 37.83
+              "mean": 573.993,
+              "std": 37.843
             },
             "15": {
               "valid": true,
-              "mean": 859.768,
-              "std": 46.302
+              "mean": 860.175,
+              "std": 46.317
             }
           },
-          "objective_mean": 339.645,
-          "objective_std": 14.426,
-          "robust_score": 337.463,
+          "objective_mean": 339.812,
+          "objective_std": 14.43,
+          "robust_score": 337.63,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 337.513,
+          "raw_robust_score": 337.68,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -3599,10 +3430,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 330.923,
-          "p50": 339.686,
-          "p75": 348.949,
-          "p_outperform_hold_independent_baseline": 0.7143
+          "p25": 331.088,
+          "p50": 339.853,
+          "p75": 349.119,
+          "p_outperform_hold_independent_baseline": 0.7152
         },
         "team_cluster": {
           "club_counts": {
@@ -3657,34 +3488,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 172.467,
-              "std": 20.648
+              "mean": 172.522,
+              "std": 20.652
             },
             "5": {
               "valid": true,
-              "mean": 288.329,
-              "std": 26.723
+              "mean": 288.426,
+              "std": 26.729
             },
             "10": {
               "valid": true,
-              "mean": 572.794,
-              "std": 37.602
+              "mean": 572.996,
+              "std": 37.611
             },
             "15": {
               "valid": true,
-              "mean": 859.035,
-              "std": 46.045
+              "mean": 859.308,
+              "std": 46.054
             }
           },
-          "objective_mean": 339.407,
-          "objective_std": 14.352,
-          "robust_score": 337.235,
+          "objective_mean": 339.52,
+          "objective_std": 14.355,
+          "robust_score": 337.347,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 337.285,
+          "raw_robust_score": 337.397,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -3700,10 +3531,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 330.827,
-          "p50": 342.074,
-          "p75": 349.789,
-          "p_outperform_hold_independent_baseline": 0.7108
+          "p25": 330.938,
+          "p50": 342.188,
+          "p75": 349.904,
+          "p_outperform_hold_independent_baseline": 0.7107
         },
         "team_cluster": {
           "club_counts": {
@@ -3760,34 +3591,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 172.269,
-              "std": 20.738
+              "mean": 172.352,
+              "std": 20.744
             },
             "5": {
               "valid": true,
-              "mean": 288.755,
-              "std": 26.881
+              "mean": 288.899,
+              "std": 26.89
             },
             "10": {
               "valid": true,
-              "mean": 572.95,
-              "std": 37.81
+              "mean": 573.245,
+              "std": 37.823
             },
             "15": {
               "valid": true,
-              "mean": 857.716,
-              "std": 46.253
+              "mean": 858.123,
+              "std": 46.267
             }
           },
-          "objective_mean": 339.356,
-          "objective_std": 14.426,
-          "robust_score": 337.175,
+          "objective_mean": 339.524,
+          "objective_std": 14.431,
+          "robust_score": 337.342,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 337.225,
+          "raw_robust_score": 337.392,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -3803,10 +3634,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 329.21,
-          "p50": 337.841,
-          "p75": 347.42,
-          "p_outperform_hold_independent_baseline": 0.7094
+          "p25": 329.374,
+          "p50": 338.009,
+          "p75": 347.591,
+          "p_outperform_hold_independent_baseline": 0.7103
         },
         "team_cluster": {
           "club_counts": {
@@ -3861,34 +3692,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 172.443,
-              "std": 20.759
+              "mean": 172.526,
+              "std": 20.765
             },
             "5": {
               "valid": true,
-              "mean": 289.105,
-              "std": 26.909
+              "mean": 289.249,
+              "std": 26.918
             },
             "10": {
               "valid": true,
-              "mean": 572.394,
-              "std": 37.792
+              "mean": 572.689,
+              "std": 37.805
             },
             "15": {
               "valid": true,
-              "mean": 855.506,
-              "std": 46.184
+              "mean": 855.913,
+              "std": 46.199
             }
           },
-          "objective_mean": 339.24,
-          "objective_std": 14.434,
-          "robust_score": 337.058,
+          "objective_mean": 339.408,
+          "objective_std": 14.438,
+          "robust_score": 337.225,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 337.108,
+          "raw_robust_score": 337.275,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -3904,10 +3735,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 329.821,
-          "p50": 340.136,
-          "p75": 349.443,
-          "p_outperform_hold_independent_baseline": 0.7074
+          "p25": 329.986,
+          "p50": 340.304,
+          "p75": 349.614,
+          "p_outperform_hold_independent_baseline": 0.7083
         },
         "team_cluster": {
           "club_counts": {
@@ -3963,34 +3794,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 172.578,
-              "std": 20.71
+              "mean": 172.633,
+              "std": 20.714
             },
             "5": {
               "valid": true,
-              "mean": 288.359,
-              "std": 26.797
+              "mean": 288.456,
+              "std": 26.803
             },
             "10": {
               "valid": true,
-              "mean": 571.144,
-              "std": 37.656
+              "mean": 571.346,
+              "std": 37.665
             },
             "15": {
               "valid": true,
-              "mean": 855.366,
-              "std": 46.074
+              "mean": 855.638,
+              "std": 46.084
             }
           },
-          "objective_mean": 338.849,
-          "objective_std": 14.387,
-          "robust_score": 336.673,
+          "objective_mean": 338.962,
+          "objective_std": 14.39,
+          "robust_score": 336.785,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 336.723,
+          "raw_robust_score": 336.835,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -4006,9 +3837,9 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 329.79,
-          "p50": 340.805,
-          "p75": 348.822,
+          "p25": 329.901,
+          "p50": 340.918,
+          "p75": 348.937,
           "p_outperform_hold_independent_baseline": 0.701
         },
         "team_cluster": {
@@ -4064,34 +3895,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 172.902,
-              "std": 20.747
+              "mean": 172.957,
+              "std": 20.751
             },
             "5": {
               "valid": true,
-              "mean": 288.34,
-              "std": 26.817
+              "mean": 288.437,
+              "std": 26.823
             },
             "10": {
               "valid": true,
-              "mean": 569.121,
-              "std": 37.605
+              "mean": 569.323,
+              "std": 37.614
             },
             "15": {
               "valid": true,
-              "mean": 853.133,
-              "std": 46.035
+              "mean": 853.406,
+              "std": 46.045
             }
           },
-          "objective_mean": 338.452,
-          "objective_std": 14.396,
-          "robust_score": 336.225,
+          "objective_mean": 338.565,
+          "objective_std": 14.399,
+          "robust_score": 336.337,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 336.325,
+          "raw_robust_score": 336.437,
           "team_cluster_penalty_points": 0.1,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -4107,10 +3938,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 328.367,
-          "p50": 338.025,
-          "p75": 346.749,
-          "p_outperform_hold_independent_baseline": 0.6941
+          "p25": 328.478,
+          "p50": 338.137,
+          "p75": 346.863,
+          "p_outperform_hold_independent_baseline": 0.694
         },
         "team_cluster": {
           "club_counts": {
@@ -4166,34 +3997,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 173.172,
-              "std": 20.742
+              "mean": 173.227,
+              "std": 20.746
             },
             "5": {
               "valid": true,
-              "mean": 287.343,
-              "std": 26.732
+              "mean": 287.44,
+              "std": 26.739
             },
             "10": {
               "valid": true,
-              "mean": 569.008,
-              "std": 37.556
+              "mean": 569.21,
+              "std": 37.565
             },
             "15": {
               "valid": true,
-              "mean": 850.933,
-              "std": 45.914
+              "mean": 851.207,
+              "std": 45.924
             }
           },
-          "objective_mean": 338.0,
-          "objective_std": 14.371,
-          "robust_score": 335.875,
+          "objective_mean": 338.113,
+          "objective_std": 14.374,
+          "robust_score": 335.988,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 335.875,
+          "raw_robust_score": 335.988,
           "team_cluster_penalty_points": 0.0,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -4209,9 +4040,9 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 326.569,
-          "p50": 338.217,
-          "p75": 347.209,
+          "p25": 326.68,
+          "p50": 338.33,
+          "p75": 347.323,
           "p_outperform_hold_independent_baseline": 0.6863
         },
         "team_cluster": {
@@ -4269,34 +4100,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 172.05,
-              "std": 20.654
+              "mean": 172.105,
+              "std": 20.659
             },
             "5": {
               "valid": true,
-              "mean": 287.335,
-              "std": 26.723
+              "mean": 287.432,
+              "std": 26.729
             },
             "10": {
               "valid": true,
-              "mean": 569.6,
-              "std": 37.568
+              "mean": 569.802,
+              "std": 37.577
             },
             "15": {
               "valid": true,
-              "mean": 854.582,
-              "std": 46.016
+              "mean": 854.855,
+              "std": 46.026
             }
           },
-          "objective_mean": 337.98,
-          "objective_std": 14.351,
-          "robust_score": 335.808,
+          "objective_mean": 338.092,
+          "objective_std": 14.354,
+          "robust_score": 335.92,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 335.858,
+          "raw_robust_score": 335.97,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -4312,10 +4143,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 329.149,
-          "p50": 338.893,
-          "p75": 347.417,
-          "p_outperform_hold_independent_baseline": 0.6861
+          "p25": 329.26,
+          "p50": 339.005,
+          "p75": 347.531,
+          "p_outperform_hold_independent_baseline": 0.686
         },
         "team_cluster": {
           "club_counts": {
@@ -4371,34 +4202,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 171.752,
-              "std": 20.707
+              "mean": 171.835,
+              "std": 20.713
             },
             "5": {
               "valid": true,
-              "mean": 287.736,
-              "std": 26.833
+              "mean": 287.88,
+              "std": 26.842
             },
             "10": {
               "valid": true,
-              "mean": 569.78,
-              "std": 37.697
+              "mean": 570.075,
+              "std": 37.71
             },
             "15": {
               "valid": true,
-              "mean": 851.518,
-              "std": 46.07
+              "mean": 851.925,
+              "std": 46.085
             }
           },
-          "objective_mean": 337.708,
-          "objective_std": 14.396,
-          "robust_score": 335.53,
+          "objective_mean": 337.875,
+          "objective_std": 14.401,
+          "robust_score": 335.697,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 335.58,
+          "raw_robust_score": 335.747,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -4414,10 +4245,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 327.446,
-          "p50": 337.836,
-          "p75": 345.791,
-          "p_outperform_hold_independent_baseline": 0.681
+          "p25": 327.609,
+          "p50": 338.003,
+          "p75": 345.961,
+          "p_outperform_hold_independent_baseline": 0.6819
         },
         "team_cluster": {
           "club_counts": {
@@ -4473,34 +4304,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 170.702,
-              "std": 20.654
+              "mean": 170.785,
+              "std": 20.661
             },
             "5": {
               "valid": true,
-              "mean": 287.139,
-              "std": 26.828
+              "mean": 287.283,
+              "std": 26.837
             },
             "10": {
               "valid": true,
-              "mean": 570.956,
-              "std": 37.778
+              "mean": 571.251,
+              "std": 37.791
             },
             "15": {
               "valid": true,
-              "mean": 855.139,
-              "std": 46.221
+              "mean": 855.546,
+              "std": 46.235
             }
           },
-          "objective_mean": 337.608,
-          "objective_std": 14.391,
-          "robust_score": 335.381,
+          "objective_mean": 337.775,
+          "objective_std": 14.396,
+          "robust_score": 335.548,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 335.481,
+          "raw_robust_score": 335.648,
           "team_cluster_penalty_points": 0.1,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -4516,10 +4347,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 327.792,
-          "p50": 336.553,
-          "p75": 346.867,
-          "p_outperform_hold_independent_baseline": 0.6793
+          "p25": 327.956,
+          "p50": 336.72,
+          "p75": 347.037,
+          "p_outperform_hold_independent_baseline": 0.6802
         },
         "team_cluster": {
           "club_counts": {
@@ -4573,34 +4404,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 170.597,
-              "std": 20.647
+              "mean": 170.68,
+              "std": 20.654
             },
             "5": {
               "valid": true,
-              "mean": 287.033,
-              "std": 26.823
+              "mean": 287.177,
+              "std": 26.832
             },
             "10": {
               "valid": true,
-              "mean": 570.519,
-              "std": 37.763
+              "mean": 570.814,
+              "std": 37.776
             },
             "15": {
               "valid": true,
-              "mean": 854.679,
-              "std": 46.21
+              "mean": 855.086,
+              "std": 46.224
             }
           },
-          "objective_mean": 337.417,
-          "objective_std": 14.387,
-          "robust_score": 335.191,
+          "objective_mean": 337.585,
+          "objective_std": 14.392,
+          "robust_score": 335.358,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 335.291,
+          "raw_robust_score": 335.458,
           "team_cluster_penalty_points": 0.1,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -4616,10 +4447,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 327.454,
-          "p50": 337.695,
-          "p75": 346.455,
-          "p_outperform_hold_independent_baseline": 0.6759
+          "p25": 327.618,
+          "p50": 337.863,
+          "p75": 346.626,
+          "p_outperform_hold_independent_baseline": 0.6768
         },
         "team_cluster": {
           "club_counts": {
@@ -4673,34 +4504,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 171.689,
-              "std": 20.606
+              "mean": 171.744,
+              "std": 20.611
             },
             "5": {
               "valid": true,
-              "mean": 286.245,
-              "std": 26.631
+              "mean": 286.342,
+              "std": 26.638
             },
             "10": {
               "valid": true,
-              "mean": 569.13,
-              "std": 37.499
+              "mean": 569.332,
+              "std": 37.508
             },
             "15": {
               "valid": true,
-              "mean": 853.433,
-              "std": 45.913
+              "mean": 853.706,
+              "std": 45.923
             }
           },
-          "objective_mean": 337.283,
-          "objective_std": 14.313,
-          "robust_score": 335.116,
+          "objective_mean": 337.396,
+          "objective_std": 14.316,
+          "robust_score": 335.228,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 335.166,
+          "raw_robust_score": 335.278,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -4716,9 +4547,9 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 328.687,
-          "p50": 337.981,
-          "p75": 345.383,
+          "p25": 328.798,
+          "p50": 338.095,
+          "p75": 345.497,
           "p_outperform_hold_independent_baseline": 0.6739
         },
         "team_cluster": {
@@ -4796,7 +4627,7 @@
           "element": 387,
           "name": "O'Reilly",
           "now_cost": 65,
-          "candidate_score": 21.573
+          "candidate_score": 21.616
         },
         {
           "element": 84,
@@ -4834,7 +4665,7 @@
           "element": 399,
           "name": "Cherki",
           "now_cost": 76,
-          "candidate_score": 25.035
+          "candidate_score": 25.081
         },
         {
           "element": 12,
@@ -4855,6 +4686,12 @@
           "candidate_score": 22.464
         },
         {
+          "element": 398,
+          "name": "Foden",
+          "now_cost": 70,
+          "candidate_score": 22.365
+        },
+        {
           "element": 154,
           "name": "Palmer",
           "now_cost": 96,
@@ -4865,12 +4702,6 @@
           "name": "Gakpo",
           "now_cost": 70,
           "candidate_score": 20.699
-        },
-        {
-          "element": 68,
-          "name": "Tavernier",
-          "now_cost": 60,
-          "candidate_score": 20.501
         }
       ],
       "FWD": [
@@ -4934,28 +4765,28 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 165.726,
-              "std": 20.273
+              "mean": 165.781,
+              "std": 20.277
             },
             "5": {
               "valid": true,
-              "mean": 278.198,
-              "std": 26.3
+              "mean": 278.295,
+              "std": 26.306
             },
             "10": {
               "valid": true,
-              "mean": 555.745,
-              "std": 37.13
+              "mean": 555.947,
+              "std": 37.139
             },
             "15": {
               "valid": true,
-              "mean": 834.454,
-              "std": 45.5
+              "mean": 834.727,
+              "std": 45.51
             }
           },
-          "objective_mean": 328.217,
-          "objective_std": 14.126,
-          "robust_score": 326.522,
+          "objective_mean": 328.33,
+          "objective_std": 14.129,
+          "robust_score": 326.635,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
@@ -5002,34 +4833,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 174.458,
-              "std": 20.883
+              "mean": 174.541,
+              "std": 20.89
             },
             "5": {
               "valid": true,
-              "mean": 291.01,
-              "std": 26.996
+              "mean": 291.154,
+              "std": 27.005
             },
             "10": {
               "valid": true,
-              "mean": 578.0,
-              "std": 37.992
+              "mean": 578.295,
+              "std": 38.005
             },
             "15": {
               "valid": true,
-              "mean": 864.113,
-              "std": 46.436
+              "mean": 864.519,
+              "std": 46.45
             }
           },
-          "objective_mean": 342.417,
-          "objective_std": 14.503,
-          "robust_score": 340.227,
+          "objective_mean": 342.584,
+          "objective_std": 14.508,
+          "robust_score": 340.393,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 340.277,
+          "raw_robust_score": 340.443,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -5045,10 +4876,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 332.204,
-          "p50": 342.149,
-          "p75": 353.463,
-          "p_outperform_hold_independent_baseline": 0.7585
+          "p25": 332.368,
+          "p50": 342.316,
+          "p75": 353.634,
+          "p_outperform_hold_independent_baseline": 0.7592
         },
         "team_cluster": {
           "club_counts": {
@@ -5104,34 +4935,34 @@
           "horizons": {
             "3": {
               "valid": true,
-              "mean": 174.458,
-              "std": 20.883
+              "mean": 174.541,
+              "std": 20.89
             },
             "5": {
               "valid": true,
-              "mean": 291.01,
-              "std": 26.996
+              "mean": 291.154,
+              "std": 27.005
             },
             "10": {
               "valid": true,
-              "mean": 578.0,
-              "std": 37.992
+              "mean": 578.295,
+              "std": 38.005
             },
             "15": {
               "valid": true,
-              "mean": 864.113,
-              "std": 46.436
+              "mean": 864.519,
+              "std": 46.45
             }
           },
-          "objective_mean": 342.417,
-          "objective_std": 14.503,
-          "robust_score": 340.227,
+          "objective_mean": 342.584,
+          "objective_std": 14.508,
+          "robust_score": 340.393,
           "performance": {
             "projection_lookup": "indexed_o1",
             "horizon_evaluation": "single_pass_prefix",
             "gw_lineups_evaluated": 15
           },
-          "raw_robust_score": 340.277,
+          "raw_robust_score": 340.443,
           "team_cluster_penalty_points": 0.05,
           "guardrails": {
             "early_season_change_cap_enabled": true,
@@ -5147,10 +4978,10 @@
         },
         "legal": true,
         "monte_carlo": {
-          "p25": 332.204,
-          "p50": 342.149,
-          "p75": 353.463,
-          "p_outperform_hold_independent_baseline": 0.7585
+          "p25": 332.368,
+          "p50": 342.316,
+          "p75": 353.634,
+          "p_outperform_hold_independent_baseline": 0.7592
         },
         "team_cluster": {
           "club_counts": {
@@ -5169,13 +5000,13 @@
         }
       },
       "optimizer_best_challenger_id": "2:8,426->388,399",
-      "manual_authority_override": false,
-      "team_authority": "official_public",
-      "phase": "LIVE",
+      "manual_authority_override": true,
+      "team_authority": "user_lock",
+      "phase": "PRE_DEADLINE",
       "governance": {
         "optimizer_is_candidate_generator_only": true,
         "auto_select_optimizer_candidate": false,
-        "locked_composition_frozen": false,
+        "locked_composition_frozen": true,
         "manual_authority_overrides_optimizer_candidate": true
       }
     },
@@ -5192,28 +5023,28 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 165.726,
-            "std": 20.273
+            "mean": 165.781,
+            "std": 20.277
           },
           "5": {
             "valid": true,
-            "mean": 278.198,
-            "std": 26.3
+            "mean": 278.295,
+            "std": 26.306
           },
           "10": {
             "valid": true,
-            "mean": 555.745,
-            "std": 37.13
+            "mean": 555.947,
+            "std": 37.139
           },
           "15": {
             "valid": true,
-            "mean": 834.454,
-            "std": 45.5
+            "mean": 834.727,
+            "std": 45.51
           }
         },
-        "objective_mean": 328.217,
-        "objective_std": 14.126,
-        "robust_score": 326.522,
+        "objective_mean": 328.33,
+        "objective_std": 14.129,
+        "robust_score": 326.635,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
@@ -5260,34 +5091,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 174.458,
-            "std": 20.883
+            "mean": 174.541,
+            "std": 20.89
           },
           "5": {
             "valid": true,
-            "mean": 291.01,
-            "std": 26.996
+            "mean": 291.154,
+            "std": 27.005
           },
           "10": {
             "valid": true,
-            "mean": 578.0,
-            "std": 37.992
+            "mean": 578.295,
+            "std": 38.005
           },
           "15": {
             "valid": true,
-            "mean": 864.113,
-            "std": 46.436
+            "mean": 864.519,
+            "std": 46.45
           }
         },
-        "objective_mean": 342.417,
-        "objective_std": 14.503,
-        "robust_score": 340.227,
+        "objective_mean": 342.584,
+        "objective_std": 14.508,
+        "robust_score": 340.393,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 340.277,
+        "raw_robust_score": 340.443,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -5303,10 +5134,10 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 332.204,
-        "p50": 342.149,
-        "p75": 353.463,
-        "p_outperform_hold_independent_baseline": 0.7585
+        "p25": 332.368,
+        "p50": 342.316,
+        "p75": 353.634,
+        "p_outperform_hold_independent_baseline": 0.7592
       },
       "team_cluster": {
         "club_counts": {
@@ -5361,34 +5192,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 174.458,
-            "std": 20.883
+            "mean": 174.541,
+            "std": 20.89
           },
           "5": {
             "valid": true,
-            "mean": 291.01,
-            "std": 26.996
+            "mean": 291.154,
+            "std": 27.005
           },
           "10": {
             "valid": true,
-            "mean": 578.0,
-            "std": 37.992
+            "mean": 578.295,
+            "std": 38.005
           },
           "15": {
             "valid": true,
-            "mean": 864.113,
-            "std": 46.436
+            "mean": 864.519,
+            "std": 46.45
           }
         },
-        "objective_mean": 342.417,
-        "objective_std": 14.503,
-        "robust_score": 340.227,
+        "objective_mean": 342.584,
+        "objective_std": 14.508,
+        "robust_score": 340.393,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 340.277,
+        "raw_robust_score": 340.443,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -5404,10 +5235,10 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 332.204,
-        "p50": 342.149,
-        "p75": 353.463,
-        "p_outperform_hold_independent_baseline": 0.7585
+        "p25": 332.368,
+        "p50": 342.316,
+        "p75": 353.634,
+        "p_outperform_hold_independent_baseline": 0.7592
       },
       "team_cluster": {
         "club_counts": {
@@ -5475,6 +5306,28 @@
           "score": 5.1787
         },
         {
+          "element": 254,
+          "name": "Robinson",
+          "position": "DEF",
+          "team_id": 10,
+          "mean": 4.045,
+          "std": 3.211,
+          "start_probability": 0.7678,
+          "dnp_probability": 0.0813,
+          "score": 4.0933
+        },
+        {
+          "element": 473,
+          "name": "Aina",
+          "position": "DEF",
+          "team_id": 18,
+          "mean": 3.996,
+          "std": 3.188,
+          "start_probability": 0.7707,
+          "dnp_probability": 0.0803,
+          "score": 4.0489
+        },
+        {
           "element": 426,
           "name": "B.Fernandes",
           "position": "MID",
@@ -5512,11 +5365,11 @@
           "name": "Haaland",
           "position": "FWD",
           "team_id": 15,
-          "mean": 5.319,
-          "std": 3.666,
+          "mean": 5.33,
+          "std": 3.671,
           "start_probability": 0.8358,
           "dnp_probability": 0.0575,
-          "score": 5.3747
+          "score": 5.3852
         },
         {
           "element": 165,
@@ -5528,28 +5381,6 @@
           "start_probability": 0.8131,
           "dnp_probability": 0.0654,
           "score": 4.0619
-        },
-        {
-          "element": 254,
-          "name": "Robinson",
-          "position": "DEF",
-          "team_id": 10,
-          "mean": 4.045,
-          "std": 3.211,
-          "start_probability": 0.7678,
-          "dnp_probability": 0.0813,
-          "score": 4.0933
-        },
-        {
-          "element": 473,
-          "name": "Aina",
-          "position": "DEF",
-          "team_id": 18,
-          "mean": 3.996,
-          "std": 3.188,
-          "start_probability": 0.7707,
-          "dnp_probability": 0.0803,
-          "score": 4.0489
         }
       ],
       "bench": [
@@ -5711,7 +5542,7 @@
         "team_id": 15,
         "start_probability": 0.8358,
         "dnp_probability": 0.0575,
-        "score": 5.6786,
+        "score": 5.6892,
         "tactical": {
           "status": "READY",
           "opponent_team_id": 7,
@@ -5770,7 +5601,7 @@
           "team_id": 15,
           "start_probability": 0.8358,
           "dnp_probability": 0.0575,
-          "score": 6.5122,
+          "score": 6.5241,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 7,
@@ -5931,9 +5762,9 @@
         {
           "rank": 1,
           "formation": "5-3-2",
-          "selection_score": 49.2859,
-          "mean": 48.591,
-          "std": 11.073,
+          "selection_score": 49.2964,
+          "mean": 48.602,
+          "std": 11.075,
           "element_ids": [
             8,
             15,
@@ -5951,9 +5782,9 @@
         {
           "rank": 2,
           "formation": "5-3-2",
-          "selection_score": 49.2379,
-          "mean": 48.633,
-          "std": 11.11,
+          "selection_score": 49.2484,
+          "mean": 48.644,
+          "std": 11.111,
           "element_ids": [
             8,
             15,
@@ -5971,9 +5802,9 @@
         {
           "rank": 3,
           "formation": "5-3-2",
-          "selection_score": 49.1646,
-          "mean": 48.476,
-          "std": 11.063,
+          "selection_score": 49.1751,
+          "mean": 48.487,
+          "std": 11.065,
           "element_ids": [
             8,
             40,
@@ -5989,8 +5820,8 @@
           ]
         }
       ],
-      "expected_starting_xi_mean": 48.591,
-      "selection_score": 49.286,
+      "expected_starting_xi_mean": 48.602,
+      "selection_score": 49.296,
       "authority": "v5_decision_lineup_optimizer",
       "performance": {
         "projection_lookup": "indexed_o1",
@@ -6882,6 +6713,9 @@
         "clean_sheet_probability": [
           "prediction"
         ],
+        "competitive_load": [
+          "prediction"
+        ],
         "current_form": [
           "prediction"
         ],
@@ -7062,6 +6896,12 @@
         "data_reliability_triangulation": [
           "evaluation"
         ],
+        "decision_validation_snapshot": [
+          "evaluation"
+        ],
+        "external_consensus": [
+          "evaluation"
+        ],
         "leakage_guard": [
           "evaluation"
         ],
@@ -7097,18 +6937,19 @@
     },
     "decision_trace": {
       "decision_type": "HOLD",
-      "action": "HOLD current squad; no transfer package clears the configured review threshold",
+      "action": "HOLD authoritative manual LOCK; optimizer challenger is review evidence only",
       "subject_element_ids": [],
-      "score": 13.705,
+      "score": 13.758,
       "confidence": "MEDIUM-HIGH",
       "reasons_for": [
-        "best challenger robust score delta vs HOLD = 13.705",
-        "best challenger independent-baseline probability of outperforming HOLD = 0.758",
+        "best challenger robust score delta vs HOLD = 13.758",
+        "best challenger independent-baseline probability of outperforming HOLD = 0.759",
         "lineup formation = 5-3-2",
+        "authoritative manual LOCK freezes squad composition while retaining optimizer challenger evidence",
         "optimizer challenger clears configured strong-review thresholds"
       ],
       "reasons_against": [
-        "market timing context contains 47 active price alerts"
+        "market timing context contains 57 active price alerts"
       ],
       "evidence": [
         {
@@ -7117,7 +6958,7 @@
           "authority": "truth-service",
           "freshness": null,
           "provenance": {
-            "squad_authority": "official_public"
+            "squad_authority": "user_lock"
           }
         },
         {
@@ -7159,7 +7000,7 @@
           "provenance": {
             "package_model": "multi_horizon_package_optimizer_v2",
             "package_governance_model": "v5_package_governance_v1",
-            "manual_authority_override": false,
+            "manual_authority_override": true,
             "dss_model": "capability_contract_dss_v317"
           }
         }
@@ -7182,9 +7023,9 @@
       "ruleset_id": "FPL_2026_27",
       "selected_package_id": "HOLD",
       "optimizer_best_challenger_id": "2:8,426->388,399",
-      "manual_authority_override": false,
-      "robust_gain_vs_hold": 13.705,
-      "p_outperform_hold_independent_baseline": 0.7585,
+      "manual_authority_override": true,
+      "robust_gain_vs_hold": 13.758,
+      "p_outperform_hold_independent_baseline": 0.7592,
       "gate0_preflight_pass": true,
       "production_recommendation": null
     },
@@ -7211,7 +7052,7 @@
       "team_cluster_penalty"
     ],
     "price_context": {
-      "alert_count": 47
+      "alert_count": 57
     },
     "governance": {
       "candidate_generation_only": true,
@@ -7224,15 +7065,17 @@
       "monte_carlo_seed": "stable_sha256_policy",
       "optimizer_is_candidate_generator_only": true,
       "auto_select_optimizer_candidate": false,
-      "locked_composition_frozen": false,
+      "locked_composition_frozen": true,
       "manual_authority_overrides_optimizer_candidate": true,
-      "manual_authority_override": false,
+      "manual_authority_override": true,
       "dss_evaluation_model": "capability_contract_dss_v317",
       "evaluation_capabilities_consumed": [
         "calibration_store",
         "challenger_scorecard",
         "data_freshness",
         "data_reliability_triangulation",
+        "decision_validation_snapshot",
+        "external_consensus",
         "leakage_guard",
         "learning_loop",
         "owned_challenger_comparator",
@@ -7258,7 +7101,7 @@
   },
   "framework_health": {
     "framework_schema": 8,
-    "generated_at": "2026-08-29T02:27:17.787982+00:00",
+    "generated_at": "2026-08-29T08:01:18.845285+00:00",
     "auditor": "v5-microservice-governance-v4",
     "overall": "GREEN",
     "decision_engine": "HEALTHY",
@@ -8572,6 +8415,9 @@
       "clean_sheet_probability": [
         "prediction"
       ],
+      "competitive_load": [
+        "prediction"
+      ],
       "current_form": [
         "prediction"
       ],
@@ -8758,6 +8604,12 @@
       "data_reliability_triangulation": [
         "evaluation"
       ],
+      "decision_validation_snapshot": [
+        "evaluation"
+      ],
+      "external_consensus": [
+        "evaluation"
+      ],
       "leakage_guard": [
         "evaluation"
       ],
@@ -8814,9 +8666,9 @@
       "bootstrap": {
         "status": "LIVE",
         "http_status": 200,
-        "latency_ms": 270,
+        "latency_ms": 183,
         "attempts": 1,
-        "fetched_at": "2026-08-29T02:27:14.544474+00:00",
+        "fetched_at": "2026-08-29T08:01:16.368018+00:00",
         "error": null,
         "path": "bootstrap-static/",
         "cache_hit": false,
@@ -8828,9 +8680,9 @@
       "fixtures": {
         "status": "LIVE",
         "http_status": 200,
-        "latency_ms": 235,
+        "latency_ms": 155,
         "attempts": 1,
-        "fetched_at": "2026-08-29T02:27:14.509347+00:00",
+        "fetched_at": "2026-08-29T08:01:16.339979+00:00",
         "error": null,
         "path": "fixtures/",
         "cache_hit": false,
@@ -8842,9 +8694,9 @@
       "event_status": {
         "status": "LIVE",
         "http_status": 200,
-        "latency_ms": 241,
+        "latency_ms": 165,
         "attempts": 1,
-        "fetched_at": "2026-08-29T02:27:14.515070+00:00",
+        "fetched_at": "2026-08-29T08:01:16.348805+00:00",
         "error": null,
         "path": "event-status/",
         "cache_hit": false,
@@ -8856,9 +8708,9 @@
       "entry": {
         "status": "LIVE",
         "http_status": 200,
-        "latency_ms": 230,
+        "latency_ms": 260,
         "attempts": 1,
-        "fetched_at": "2026-08-29T02:27:14.503814+00:00",
+        "fetched_at": "2026-08-29T08:01:16.444938+00:00",
         "error": null,
         "path": "entry/3462711/",
         "cache_hit": false,
@@ -8870,9 +8722,9 @@
       "entry_history": {
         "status": "LIVE",
         "http_status": 200,
-        "latency_ms": 232,
+        "latency_ms": 162,
         "attempts": 1,
-        "fetched_at": "2026-08-29T02:27:14.505199+00:00",
+        "fetched_at": "2026-08-29T08:01:16.347782+00:00",
         "error": null,
         "path": "entry/3462711/history/",
         "cache_hit": false,
@@ -8884,9 +8736,9 @@
       "entry_transfers": {
         "status": "LIVE",
         "http_status": 200,
-        "latency_ms": 242,
+        "latency_ms": 152,
         "attempts": 1,
-        "fetched_at": "2026-08-29T02:27:14.516571+00:00",
+        "fetched_at": "2026-08-29T08:01:16.337145+00:00",
         "error": null,
         "path": "entry/3462711/transfers/",
         "cache_hit": false,
@@ -8900,9 +8752,9 @@
       "submitted_picks": {
         "status": "LIVE",
         "http_status": 200,
-        "latency_ms": 102,
+        "latency_ms": 45,
         "attempts": 1,
-        "fetched_at": "2026-08-29T02:27:14.822313+00:00",
+        "fetched_at": "2026-08-29T08:01:16.625096+00:00",
         "error": null,
         "path": "entry/3462711/event/2/picks/",
         "cache_hit": false,
@@ -8914,9 +8766,9 @@
       "event_live": {
         "status": "LIVE",
         "http_status": 200,
-        "latency_ms": 106,
+        "latency_ms": 48,
         "attempts": 1,
-        "fetched_at": "2026-08-29T02:27:14.825386+00:00",
+        "fetched_at": "2026-08-29T08:01:16.627885+00:00",
         "error": null,
         "path": "event/2/live/",
         "cache_hit": false,

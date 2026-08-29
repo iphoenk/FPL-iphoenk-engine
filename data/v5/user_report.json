@@ -21,16 +21,12 @@
     "initial_report": false,
     "material_change": true,
     "changed": [
-      "starting_xi",
-      "formation",
-      "captain",
-      "vice_captain",
       "price",
       "owned_vs_challenger"
     ]
   },
   "owned_squad": {
-    "authority": "official_public",
+    "authority": "user_lock",
     "count": 15
   },
   "starting_xi": {
@@ -118,6 +114,28 @@
         "score": 5.1787
       },
       {
+        "element": 254,
+        "name": "Robinson",
+        "position": "DEF",
+        "team_id": 10,
+        "mean": 4.045,
+        "std": 3.211,
+        "start_probability": 0.7678,
+        "dnp_probability": 0.0813,
+        "score": 4.0933
+      },
+      {
+        "element": 473,
+        "name": "Aina",
+        "position": "DEF",
+        "team_id": 18,
+        "mean": 3.996,
+        "std": 3.188,
+        "start_probability": 0.7707,
+        "dnp_probability": 0.0803,
+        "score": 4.0489
+      },
+      {
         "element": 426,
         "name": "B.Fernandes",
         "position": "MID",
@@ -155,11 +173,11 @@
         "name": "Haaland",
         "position": "FWD",
         "team_id": 15,
-        "mean": 5.319,
-        "std": 3.666,
+        "mean": 5.33,
+        "std": 3.671,
         "start_probability": 0.8358,
         "dnp_probability": 0.0575,
-        "score": 5.3747
+        "score": 5.3852
       },
       {
         "element": 165,
@@ -171,28 +189,6 @@
         "start_probability": 0.8131,
         "dnp_probability": 0.0654,
         "score": 4.0619
-      },
-      {
-        "element": 254,
-        "name": "Robinson",
-        "position": "DEF",
-        "team_id": 10,
-        "mean": 4.045,
-        "std": 3.211,
-        "start_probability": 0.7678,
-        "dnp_probability": 0.0813,
-        "score": 4.0933
-      },
-      {
-        "element": 473,
-        "name": "Aina",
-        "position": "DEF",
-        "team_id": 18,
-        "mean": 3.996,
-        "std": 3.188,
-        "start_probability": 0.7707,
-        "dnp_probability": 0.0803,
-        "score": 4.0489
       }
     ],
     "bench": [
@@ -358,7 +354,7 @@
       "team_id": 15,
       "start_probability": 0.8358,
       "dnp_probability": 0.0575,
-      "score": 5.6786,
+      "score": 5.6892,
       "tactical": {
         "status": "READY",
         "opponent_team_id": 7,
@@ -399,11 +395,11 @@
         "owned": true,
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
-        "official_progress_pct": 94.0,
-        "official_hourly_rate_pct": 0.79,
-        "trajectory": "DECELERATING",
-        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
+        "official_progress_pct": 94.3,
+        "official_hourly_rate_pct": 1.83,
+        "trajectory": "ACCELERATING",
+        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
       {
@@ -412,9 +408,9 @@
         "owned": true,
         "risk_direction": "RISE",
         "urgency": "HIGH",
-        "official_progress_pct": 86.2,
-        "official_hourly_rate_pct": -0.68,
-        "trajectory": "REVERSING",
+        "official_progress_pct": 85.9,
+        "official_hourly_rate_pct": -0.51,
+        "trajectory": "DECELERATING",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "LIVE"
@@ -427,8 +423,8 @@
         "owned": false,
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
-        "official_progress_pct": 99.9,
-        "official_hourly_rate_pct": 12.06,
+        "official_progress_pct": 103.5,
+        "official_hourly_rate_pct": 15.12,
         "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
@@ -440,9 +436,22 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -99.9,
-        "official_hourly_rate_pct": -0.12,
+        "official_progress_pct": -101.3,
+        "official_hourly_rate_pct": -0.15,
         "trajectory": "STEADY",
+        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
+        "official_projection_health": "LIVE"
+      },
+      {
+        "element": 461,
+        "name": "Touré",
+        "owned": false,
+        "risk_direction": "FALL",
+        "urgency": "CRITICAL",
+        "official_progress_pct": -99.6,
+        "official_hourly_rate_pct": -0.02,
+        "trajectory": "REVERSING",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -453,22 +462,9 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -99.1,
-        "official_hourly_rate_pct": 0.04,
-        "trajectory": "REVERSING",
-        "predicted_change_deadline": null,
-        "prediction_source": null,
-        "official_projection_health": "LIVE"
-      },
-      {
-        "element": 461,
-        "name": "Touré",
-        "owned": false,
-        "risk_direction": "FALL",
-        "urgency": "CRITICAL",
         "official_progress_pct": -98.8,
-        "official_hourly_rate_pct": 0.01,
-        "trajectory": "REVERSING",
+        "official_hourly_rate_pct": 0.09,
+        "trajectory": "STEADY",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "LIVE"
@@ -479,7 +475,7 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -97.6,
+        "official_progress_pct": -97.7,
         "official_hourly_rate_pct": 0.0,
         "trajectory": "STEADY",
         "predicted_change_deadline": null,
@@ -492,10 +488,10 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -94.6,
-        "official_hourly_rate_pct": -2.13,
+        "official_progress_pct": -96.4,
+        "official_hourly_rate_pct": -2.77,
         "trajectory": "ACCELERATING",
-        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
@@ -505,8 +501,8 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -93.6,
-        "official_hourly_rate_pct": -1.13,
+        "official_progress_pct": -95.1,
+        "official_hourly_rate_pct": -1.53,
         "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
@@ -518,10 +514,10 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -93.6,
-        "official_hourly_rate_pct": -0.09,
-        "trajectory": "STEADY",
-        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
+        "official_progress_pct": -94.7,
+        "official_hourly_rate_pct": -0.17,
+        "trajectory": "ACCELERATING",
+        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
@@ -531,8 +527,21 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -92.2,
-        "official_hourly_rate_pct": -1.71,
+        "official_progress_pct": -94.0,
+        "official_hourly_rate_pct": -2.34,
+        "trajectory": "ACCELERATING",
+        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
+        "official_projection_health": "LIVE"
+      },
+      {
+        "element": 448,
+        "name": "Burn",
+        "owned": false,
+        "risk_direction": "FALL",
+        "urgency": "CRITICAL",
+        "official_progress_pct": -92.0,
+        "official_hourly_rate_pct": -2.46,
         "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
@@ -544,24 +553,11 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -91.5,
-        "official_hourly_rate_pct": -1.51,
-        "trajectory": "DECELERATING",
+        "official_progress_pct": -91.9,
+        "official_hourly_rate_pct": -1.95,
+        "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
-        "official_projection_health": "LIVE"
-      },
-      {
-        "element": 448,
-        "name": "Burn",
-        "owned": false,
-        "risk_direction": "FALL",
-        "urgency": "CRITICAL",
-        "official_progress_pct": -90.4,
-        "official_hourly_rate_pct": -1.2,
-        "trajectory": "ACCELERATING",
-        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
-        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
       {
@@ -570,9 +566,22 @@
         "owned": false,
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
-        "official_progress_pct": 81.7,
-        "official_hourly_rate_pct": 1.25,
-        "trajectory": "DECELERATING",
+        "official_progress_pct": 82.0,
+        "official_hourly_rate_pct": 1.3,
+        "trajectory": "STEADY",
+        "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
+        "prediction_source": "TRAJECTORY_RATE",
+        "official_projection_health": "LIVE"
+      },
+      {
+        "element": 368,
+        "name": "Szoboszlai",
+        "owned": false,
+        "risk_direction": "RISE",
+        "urgency": "CRITICAL",
+        "official_progress_pct": 81.1,
+        "official_hourly_rate_pct": 1.67,
+        "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "LIVE"
@@ -583,11 +592,11 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "HIGH",
-        "official_progress_pct": -87.4,
-        "official_hourly_rate_pct": -0.23,
+        "official_progress_pct": -88.7,
+        "official_hourly_rate_pct": -0.37,
         "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
+        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
       {
@@ -596,11 +605,11 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "HIGH",
-        "official_progress_pct": -86.8,
-        "official_hourly_rate_pct": -0.42,
+        "official_progress_pct": -87.7,
+        "official_hourly_rate_pct": -0.64,
         "trajectory": "ACCELERATING",
-        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
+        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
       {
@@ -609,11 +618,24 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "HIGH",
-        "official_progress_pct": -84.9,
-        "official_hourly_rate_pct": -0.33,
-        "trajectory": "STEADY",
+        "official_progress_pct": -86.1,
+        "official_hourly_rate_pct": -0.58,
+        "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
+        "prediction_source": "OFFICIAL_PROJECTION",
+        "official_projection_health": "LIVE"
+      },
+      {
+        "element": 245,
+        "name": "Dibling",
+        "owned": false,
+        "risk_direction": "FALL",
+        "urgency": "HIGH",
+        "official_progress_pct": -84.8,
+        "official_hourly_rate_pct": 0.0,
+        "trajectory": "STEADY",
+        "predicted_change_deadline": null,
+        "prediction_source": null,
         "official_projection_health": "LIVE"
       },
       {
@@ -623,34 +645,8 @@
         "risk_direction": "FALL",
         "urgency": "HIGH",
         "official_progress_pct": -84.7,
-        "official_hourly_rate_pct": 0.02,
+        "official_hourly_rate_pct": -0.08,
         "trajectory": "REVERSING",
-        "predicted_change_deadline": null,
-        "prediction_source": null,
-        "official_projection_health": "LIVE"
-      },
-      {
-        "element": 245,
-        "name": "Dibling",
-        "owned": false,
-        "risk_direction": "FALL",
-        "urgency": "HIGH",
-        "official_progress_pct": -84.3,
-        "official_hourly_rate_pct": 0.0,
-        "trajectory": "STEADY",
-        "predicted_change_deadline": null,
-        "prediction_source": null,
-        "official_projection_health": "LIVE"
-      },
-      {
-        "element": 187,
-        "name": "Eccles",
-        "owned": false,
-        "risk_direction": "FALL",
-        "urgency": "HIGH",
-        "official_progress_pct": -83.4,
-        "official_hourly_rate_pct": 0.0,
-        "trajectory": "STEADY",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "LIVE"
@@ -994,7 +990,7 @@
             "xpts_5": 26.264,
             "xpts_15": 75.494,
             "now_cost": 60,
-            "ownership_pct": 19.6,
+            "ownership_pct": 19.5,
             "projection_confidence": "HIGH",
             "role_available": true,
             "historical_prior_available": true,
@@ -1271,28 +1267,28 @@
           "position": "MID",
           "team_id": 15,
           "price": 7.6,
-          "score": 0.6825,
+          "score": 0.683,
           "dimension_coverage": 1.0,
-          "critical_dimension_score": 0.6318,
+          "critical_dimension_score": 0.6322,
           "dimensions": {
             "role": 0.6,
             "xmins": 0.7770583333333333,
-            "fixtures_3_5": 0.8676666666666667,
+            "fixtures_3_5": 0.8692333333333334,
             "underlying": 0.0,
             "system_fit": 0.7665,
             "competition": 0.7665,
             "set_piece_penalty": 1.0,
-            "price_value": 0.7611111111111112,
+            "price_value": 0.7624853801169592,
             "squad_fit": 0.65
           },
           "evidence": {
             "start_probability": 0.7665,
             "expected_minutes": 71.7,
             "dnp_probability": 0.0817,
-            "xpts_5": 26.03,
-            "xpts_15": 75.617,
+            "xpts_5": 26.077,
+            "xpts_15": 75.751,
             "now_cost": 76,
-            "ownership_pct": 13.1,
+            "ownership_pct": 13.5,
             "projection_confidence": "MEDIUM",
             "role_available": true,
             "historical_prior_available": true,
@@ -1353,7 +1349,7 @@
             "xpts_5": 21.373,
             "xpts_15": 63.784,
             "now_cost": 60,
-            "ownership_pct": 2.5,
+            "ownership_pct": 2.6,
             "projection_confidence": "MEDIUM",
             "role_available": true,
             "historical_prior_available": true,
@@ -2034,6 +2030,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 6,
               "coach": null,
@@ -2042,6 +2041,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [
@@ -2057,14 +2057,68 @@
                 "box_pressure",
                 "chance_creation"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "PARTIAL",
+                "box_protection": "PARTIAL",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "PARTIAL"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 14,
+                "PARTIAL": 6,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "LOW",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
                 "recent-GW lawan: ['long_range', 'close_central']"
               ],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2099,6 +2153,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 7,
               "coach": null,
@@ -2107,6 +2164,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [],
@@ -2120,14 +2178,68 @@
                 "defensive_activity_proxy",
                 "wide_delivery"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "PARTIAL",
+                "box_protection": "PARTIAL",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "UNAVAILABLE"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 15,
+                "PARTIAL": 5,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "MEDIUM",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
                 "recent-GW lawan: ['long_range', 'box_central']"
               ],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2201,6 +2313,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 6,
               "coach": null,
@@ -2209,6 +2324,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [
@@ -2224,14 +2340,68 @@
                 "box_pressure",
                 "chance_creation"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "PARTIAL",
+                "box_protection": "PARTIAL",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "PARTIAL"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 14,
+                "PARTIAL": 6,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "LOW",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
                 "recent-GW lawan: ['long_range', 'close_central']"
               ],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2266,6 +2436,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 20,
               "coach": null,
@@ -2274,6 +2447,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [
@@ -2288,14 +2462,68 @@
                 "final_third_progression",
                 "defensive_activity_proxy"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "PARTIAL",
+                "box_protection": "PARTIAL",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "PARTIAL"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 14,
+                "PARTIAL": 6,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "LOW",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
                 "recent-GW lawan: ['close_central', 'box_central']"
               ],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2369,6 +2597,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 19,
               "coach": null,
@@ -2377,6 +2608,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [],
@@ -2386,12 +2618,66 @@
                 "wide_delivery",
                 "box_pressure"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "UNAVAILABLE",
+                "box_protection": "UNAVAILABLE",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "UNAVAILABLE"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 17,
+                "PARTIAL": 3,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "MEDIUM",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2426,6 +2712,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 19,
               "coach": null,
@@ -2434,6 +2723,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [],
@@ -2443,12 +2733,66 @@
                 "wide_delivery",
                 "box_pressure"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "UNAVAILABLE",
+                "box_protection": "UNAVAILABLE",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "UNAVAILABLE"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 17,
+                "PARTIAL": 3,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "MEDIUM",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2522,6 +2866,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 19,
               "coach": null,
@@ -2530,6 +2877,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [],
@@ -2539,12 +2887,66 @@
                 "wide_delivery",
                 "box_pressure"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "UNAVAILABLE",
+                "box_protection": "UNAVAILABLE",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "UNAVAILABLE"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 17,
+                "PARTIAL": 3,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "MEDIUM",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2579,6 +2981,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 13,
               "coach": null,
@@ -2587,6 +2992,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [],
@@ -2596,14 +3002,68 @@
                 "final_third_progression",
                 "set_piece_activity"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "UNAVAILABLE",
+                "box_protection": "UNAVAILABLE",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "UNAVAILABLE"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 17,
+                "PARTIAL": 3,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "LOW",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
                 "recent-GW lawan: ['long_range', 'close_central']"
               ],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2677,6 +3137,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 8,
               "coach": null,
@@ -2685,6 +3148,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [
@@ -2696,14 +3160,68 @@
                 "transition_threat",
                 "chance_creation"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "UNAVAILABLE",
+                "box_protection": "UNAVAILABLE",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "PARTIAL"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 16,
+                "PARTIAL": 4,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "LOW",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
                 "recent-GW lawan: ['close_left', 'long_range']"
               ],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2738,6 +3256,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 19,
               "coach": null,
@@ -2746,6 +3267,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [],
@@ -2755,12 +3277,66 @@
                 "wide_delivery",
                 "box_pressure"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "UNAVAILABLE",
+                "box_protection": "UNAVAILABLE",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "UNAVAILABLE"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 17,
+                "PARTIAL": 3,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "MEDIUM",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2834,6 +3410,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 8,
               "coach": null,
@@ -2842,6 +3421,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [
@@ -2853,14 +3433,68 @@
                 "transition_threat",
                 "chance_creation"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "UNAVAILABLE",
+                "box_protection": "UNAVAILABLE",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "PARTIAL"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 16,
+                "PARTIAL": 4,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "LOW",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
                 "recent-GW lawan: ['close_left', 'long_range']"
               ],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2895,6 +3529,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 13,
               "coach": null,
@@ -2903,6 +3540,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [],
@@ -2912,14 +3550,68 @@
                 "final_third_progression",
                 "set_piece_activity"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "UNAVAILABLE",
+                "box_protection": "UNAVAILABLE",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "UNAVAILABLE"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 17,
+                "PARTIAL": 3,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "LOW",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
                 "recent-GW lawan: ['long_range', 'close_central']"
               ],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -2993,6 +3685,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 2,
               "coach": null,
@@ -3001,6 +3696,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [],
@@ -3014,14 +3710,68 @@
                 "chance_creation",
                 "shot_volume"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "GK",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "PARTIAL",
+                "box_protection": "PARTIAL",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "UNAVAILABLE"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 15,
+                "PARTIAL": 5,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "LOW",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
                 "recent-GW lawan: ['close_central', 'long_range']"
               ],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -3056,6 +3806,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 20,
               "coach": null,
@@ -3064,6 +3817,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [
@@ -3078,14 +3832,68 @@
                 "final_third_progression",
                 "defensive_activity_proxy"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "GK",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "PARTIAL",
+                "box_protection": "PARTIAL",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "PARTIAL"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 14,
+                "PARTIAL": 6,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "LOW",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
                 "recent-GW lawan: ['close_central', 'box_central']"
               ],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -3159,6 +3967,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 19,
               "coach": null,
@@ -3167,6 +3978,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [],
@@ -3176,12 +3988,66 @@
                 "wide_delivery",
                 "box_pressure"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "UNAVAILABLE",
+                "box_protection": "UNAVAILABLE",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "UNAVAILABLE"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 17,
+                "PARTIAL": 3,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "MEDIUM",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },
@@ -3216,6 +4082,9 @@
             "status": "VERIFIED",
             "current_gw": {
               "status": "READY",
+              "tactical_matchup_label": "INSUFFICIENT_EVIDENCE",
+              "tactical_edge": [],
+              "tactical_risk": [],
               "planning_gw": 3,
               "opponent_team_id": 16,
               "coach": null,
@@ -3224,6 +4093,7 @@
               "opponent_shape": null,
               "opponent_shape_evidence": "OBSERVED_MATCH_EVENT_AGGREGATE",
               "player_role": null,
+              "player_role_evidence_label": "FPL_POSITION_ONLY",
               "player_return_routes": [],
               "player_progression_route": null,
               "opponent_strengths": [
@@ -3237,14 +4107,68 @@
                 "final_third_progression",
                 "chance_creation"
               ],
+              "system_formation_fit": {
+                "status": "UNAVAILABLE",
+                "role_evidence_label": "FPL_POSITION_ONLY",
+                "observed_or_inferred_role": null,
+                "fpl_position": "DEF",
+                "fpl_position_shape_proxy": null,
+                "true_tactical_formation": null,
+                "fit_score": null,
+                "missing_inputs": [
+                  "coach_system",
+                  "recent_xi_shape",
+                  "reliable_true_lineup_position",
+                  "heatmap_position",
+                  "role_change_history",
+                  "competition_specific_role",
+                  "structural_injury_role_effect"
+                ],
+                "governance": {
+                  "fpl_position_shape_is_not_true_tactical_formation": true,
+                  "no_fit_score_without_reliable_system_and_role_evidence": true,
+                  "missing_role_or_system_evidence_is_not_inferred": true,
+                  "advisory_only": true
+                }
+              },
+              "evidence_dimensions": {
+                "opponent_coach": "UNAVAILABLE",
+                "formation_or_variants": "UNAVAILABLE",
+                "build_up": "UNAVAILABLE",
+                "press_height_intensity_triggers": "UNAVAILABLE",
+                "mid_low_block": "UNAVAILABLE",
+                "defensive_line": "UNAVAILABLE",
+                "wide_half_space_protection": "UNAVAILABLE",
+                "fullback_wingback_positioning": "UNAVAILABLE",
+                "transition_defense": "UNAVAILABLE",
+                "counter_profile": "PARTIAL",
+                "set_pieces": "PARTIAL",
+                "aerial_profile": "UNAVAILABLE",
+                "central_wide_vulnerability": "UNAVAILABLE",
+                "box_protection": "UNAVAILABLE",
+                "second_balls": "UNAVAILABLE",
+                "gk_distribution_shot_stopping": "UNAVAILABLE",
+                "expected_possession_game_state": "UNAVAILABLE",
+                "venue": "AVAILABLE",
+                "recent_tactical_adjustments_2_5": "PARTIAL",
+                "structural_injuries_suspensions": "UNAVAILABLE",
+                "observed_strengths": "PARTIAL"
+              },
+              "evidence_dimension_counts": {
+                "UNAVAILABLE": 16,
+                "PARTIAL": 4,
+                "AVAILABLE": 1
+              },
               "evidence_confidence": "LOW",
+              "evidence_timestamp": "2026-08-29T08:01:17.142553+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
                 "recent-GW lawan: ['close_central', 'long_range']"
               ],
               "advisory_only": true,
-              "xpts_mutated": false
+              "xpts_mutated": false,
+              "xmins_mutated": false
             },
             "future_gw": "UNVERIFIED"
           },

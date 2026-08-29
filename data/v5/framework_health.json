@@ -1,6 +1,6 @@
 {
   "framework_schema": 8,
-  "generated_at": "2026-08-29T02:27:17.787982+00:00",
+  "generated_at": "2026-08-29T08:01:18.845285+00:00",
   "auditor": "v5-microservice-governance-v4",
   "overall": "GREEN",
   "decision_engine": "HEALTHY",
@@ -1314,6 +1314,9 @@
     "clean_sheet_probability": [
       "prediction"
     ],
+    "competitive_load": [
+      "prediction"
+    ],
     "current_form": [
       "prediction"
     ],
@@ -1498,6 +1501,12 @@
       "evaluation"
     ],
     "data_reliability_triangulation": [
+      "evaluation"
+    ],
+    "decision_validation_snapshot": [
+      "evaluation"
+    ],
+    "external_consensus": [
       "evaluation"
     ],
     "leakage_guard": [

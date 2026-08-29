@@ -152,11 +152,15 @@ def _battle(best: dict[str, Any], second: dict[str, Any] | None, pmap: dict[int,
     second_ids = set(second.get("element_ids") or [])
     starter_side = [pmap[e] for e in sorted(best_ids - second_ids) if e in pmap]
     bench_side = [pmap[e] for e in sorted(second_ids - best_ids) if e in pmap]
-    margin = round(_f(best.get("decision_score")) - _f(second.get("decision_score")), 4)
+    best_decision = _f(best.get("decision_score"), _f(best.get("score")))
+    second_decision = _f(second.get("decision_score"), _f(second.get("score")))
+    best_base = _f(best.get("base_score"), _f(best.get("score")))
+    second_base = _f(second.get("base_score"), _f(second.get("score")))
+    margin = round(best_decision - second_decision, 4)
     return {
         "status": "CLOSE" if abs(margin) < threshold else "CLEAR",
         "margin": margin,
-        "base_score_margin": round(_f(best.get("base_score")) - _f(second.get("base_score")), 4),
+        "base_score_margin": round(best_base - second_base, 4),
         "starter_side": [{"element": p["element"], "name": p["name"], "position": p["position"], "selection_score": p["selection_score"]} for p in starter_side],
         "bench_side": [{"element": p["element"], "name": p["name"], "position": p["position"], "selection_score": p["selection_score"]} for p in bench_side],
         "alternative_formation": second.get("formation"),

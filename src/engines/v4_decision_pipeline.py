@@ -23,6 +23,7 @@ WC_OUTFILE = DATA / "wc_decision_v4.json"
 PACKAGE_OUTFILE = DATA / "wc_package_audit_v4.json"
 LINEUP_OUTFILE = DATA / "lineup_decision_v4.json"
 CACHE_ALGORITHM = "v4.9.6-exact-semantic-decision-cache-v1"
+VOLATILE_CACHE_KEYS = {"generated_at", "point_in_time", "fetched_at", "available_at", "runtime_publish_at", "evaluated_at"}
 _SHARED = None
 
 
@@ -113,19 +114,33 @@ def _run_parallel_decisions(candidates, locked, predictions, universe):
     return statuses, wall_ms
 
 
+def _without_runtime_stamps(value):
+    if isinstance(value, dict):
+        return {key: _without_runtime_stamps(item) for key, item in value.items() if key not in VOLATILE_CACHE_KEYS}
+    if isinstance(value, list):
+        return [_without_runtime_stamps(item) for item in value]
+    return value
+
+
 def _semantic_fingerprint(predictions: dict, universe: dict, locked: dict) -> str:
     """Hash only decision-semantic inputs, never run timestamps.
 
-    Full player rows are intentionally retained so lineup start-security, intervals,
-    role evidence and every optimizer field are covered. The cache is therefore an
-    exact reuse optimization, not an approximate/stale shortcut.
+    Full player rows are retained after removing timestamp-only provenance, so
+    lineup start-security, intervals, role evidence and every optimizer field are
+    covered. Cache hits are exact semantic reuse, never approximate stale reuse.
     """
     payload = {
         "algorithm": CACHE_ALGORITHM,
         "prediction_model": predictions.get("model_version"),
-        "prediction_players": sorted(predictions.get("players") or [], key=lambda row: int(row.get("element") or 0)),
-        "universe_players": sorted(universe.get("players") or [], key=lambda row: int(row.get("element") or 0)),
-        "planning_squad": locked,
+        "prediction_players": sorted(
+            (_without_runtime_stamps(row) for row in predictions.get("players") or []),
+            key=lambda row: int(row.get("element") or 0),
+        ),
+        "universe_players": sorted(
+            (_without_runtime_stamps(row) for row in universe.get("players") or []),
+            key=lambda row: int(row.get("element") or 0),
+        ),
+        "planning_squad": _without_runtime_stamps(locked),
         "quality_config": read_json(CONFIG / "prediction_quality_registry.json", {}),
         "serving_policy": read_json(CONFIG / "serving_improvement_registry.json", {}),
     }
@@ -164,7 +179,7 @@ def _write_cache(fingerprint: str) -> None:
         "artifact_sha256": {key: file_digest(path) for key, path in _cache_artifacts().items()},
         "guardrails": {
             "exact_semantic_inputs_only": True,
-            "timestamps_excluded_from_key": True,
+            "runtime_timestamps_excluded_from_key": sorted(VOLATILE_CACHE_KEYS),
             "artifact_digest_verified_before_reuse": True,
             "manual_user_override_not_cached": True,
             "sanity_tactical_arbitration_rerun_every_time": True,

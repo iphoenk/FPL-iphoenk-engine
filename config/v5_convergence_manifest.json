@@ -5,9 +5,9 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "0ee0e51d03ae85b593db8294f3f7e04cd4bc3108",
-    "production_schema_version": 48,
-    "production_runtime": "v3.27-unified-fastpath",
+    "production_main_sha": "1d7bfea3f3f8762f7424553c42b8978348bb2dfc",
+    "production_schema_version": 49,
+    "production_runtime": "v3.35-seven-domain-fastpath-dod",
     "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
   },
   "operating_model": {
@@ -24,7 +24,10 @@
     "finance": "truth service -> finance engine",
     "price": "price service",
     "projection": "prediction service",
+    "competitive_load": "prediction service -> config/v5_competitive_load.json",
     "prediction_evaluation": "evaluation service",
+    "external_consensus": "evaluation service -> config/v5_external_consensus.json",
+    "decision_validation_snapshot": "evaluation service",
     "owned_challenger_comparator": "evaluation service",
     "shadow_parity": "evaluation service",
     "shadow_acceptance_accounting": "postvalidation finalizer -> config/v5_shadow_parity_registry.json",
@@ -55,7 +58,13 @@
     "production_runtime_hardening_reconciled_by_capability_not_code_merge": true,
     "interactive_refresh_and_serving_separated": true,
     "official_independent_endpoint_fanout_parallel": true,
-    "material_decision_equivalence_required": true
+    "material_decision_equivalence_required": true,
+    "external_benchmark_consensus_advisory_only": true,
+    "competitive_load_advisory_only": true,
+    "deep_tactical_missing_evidence_explicit": true,
+    "genuine_predeadline_decision_validation_required": true,
+    "production_definition_of_done_executable_required": true,
+    "price_fact_vs_model_semantic_authority_required": true
   },
   "acceptance": {
     "no_regression_vs_v3_20_0_truth": true,
@@ -86,6 +95,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is re-anchored to current production main 0ee0e51 after explicit capability reconciliation through V3.27 runtime hardening. Settled V3.20 football truth remains the frozen scoring baseline. Comparator, tactical consumption, truthful transfer momentum, sub-second interactive serving and material-decision equivalence must pass full Unified Gate plus fresh exact-fingerprint shadow cycles before promotion."
+    "reason": "V5.0.0-beta.4 is re-anchored to production main 1d7bfea after explicit capability reconciliation through V3.35: fastpath/reuse semantics, governed external consensus, native owned-vs-challenger comparator parity, competitive-load evidence, truthful deep tactical/system-fit evidence, genuine predeadline decision validation, executable definition-of-done semantics, and FACT-vs-MODEL price authority. Frozen football-truth baseline remains V3.20. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
   }
 }

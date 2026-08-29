@@ -142,7 +142,7 @@ def test_dag_parallelization_only_groups_dependency_independent_services():
     levels = _service_levels(registry)
     assert registry["execution_model"] == "process_isolated_dag_parallel_single_host"
     roots = {row["id"] for row in registry["services"] if not row.get("depends_on")}
-    assert {row["id"] for row in levels[0]} == roots
+    assert {row["id"] for row in levels[0]} == roots == {"raw_snapshot"}
     level_index = {row["id"]: index for index, level in enumerate(levels) for row in level}
     by_id = {row["id"]: row for row in registry["services"]}
     assert set(level_index) == set(by_id)
@@ -150,12 +150,12 @@ def test_dag_parallelization_only_groups_dependency_independent_services():
         for dependency in row.get("depends_on") or []:
             assert dependency in by_id
             assert level_index[dependency] < level_index[service_id]
+    assert by_id["validation"]["depends_on"] == ["prediction"]
     assert by_id["optimization"]["depends_on"] == ["prediction"]
-    assert set(by_id["reconciliation_readiness"]["depends_on"]) == {"validation_lifecycle", "architecture_guard"}
-    assert "reconciliation_readiness" in by_id["framework_preflight"]["depends_on"]
-    assert set(by_id["framework_postflight"]["depends_on"]) == {"framework_preflight", "user_decision_overlay"}
-    assert registry["guardrails"]["optimizer_may_parallelize_with_validation_before_preflight"] is True
-    assert registry["guardrails"]["postflight_requires_preflight_and_effective_plan"] is True
+    assert level_index["validation"] == level_index["optimization"]
+    assert set(by_id["governance"]["depends_on"]) == {"validation", "user_decision_overlay", "personal_gw_scorecard"}
+    assert registry["guardrails"]["validation_and_optimization_may_parallelize_after_prediction"] is True
+    assert registry["guardrails"]["governance_requires_validation_user_plan_and_scorecard"] is True
     for level in levels:
         ids = {row["id"] for row in level}
         for row in level:

@@ -13,7 +13,7 @@
   },
   "services": {
     "prediction": {"inputs": ["official_snapshot.json","team.json","prior_season.json","player_features.json","tactical_team_profiles.json","player_role_profiles.json","recent_tactical_form.json","config/locked_squad.json","config/intelligence/projection.json","config/intelligence/team_strength.json","config/intelligence/xmins_v2.json"]},
-    "lineup_governance": {"inputs": ["team.json","chips.json","projections.json","package_optimizer.json","config/locked_squad.json","config/manual_lineup.json","config/intelligence/lineup_governance.json"]},
+    "lineup_governance": {"inputs": ["team.json","chips.json","projections.json","package_optimizer.json","config/locked_squad.json","config/intelligence/lineup_governance.json"]},
     "challenger": {"inputs": ["projections.json","prediction_ledger.json","challenger_observations.json","source_health.json","config/intelligence/challenger_registry.json"]},
     "watchlist": {"inputs": ["team.json","projections.json","package_optimizer.json","prices.json","price_alerts.json","framework_health.json","config/intelligence/dss_watchlist.json"]},
     "reporting": {"inputs": ["team.json","lineup_decision.json","package_decision.json","projections.json","price_alerts.json","prediction_quality.json","framework_health.json","challenger_scorecard.json","dss_watchlist.json","source_health.json","dss_operational_evidence.json","config/intelligence/reporting.json"]},

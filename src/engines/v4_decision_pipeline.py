@@ -4,6 +4,7 @@ import hashlib
 import json
 import traceback
 from multiprocessing import get_context
+from pathlib import Path
 from time import perf_counter
 
 from src.engines.v4_decision_arbitration import OUTFILE as ARBITRATION_OUTFILE, resolve_decision
@@ -148,11 +149,11 @@ def _semantic_fingerprint(predictions: dict, universe: dict, locked: dict) -> st
     return hashlib.sha256(raw).hexdigest()
 
 
-def _cache_artifacts() -> dict[str, str]:
+def _cache_artifacts() -> dict[str, Path]:
     return {
-        "wc": str(WC_OUTFILE),
-        "packages": str(PACKAGE_OUTFILE),
-        "lineup": str(LINEUP_OUTFILE),
+        "wc": WC_OUTFILE,
+        "packages": PACKAGE_OUTFILE,
+        "lineup": LINEUP_OUTFILE,
     }
 
 

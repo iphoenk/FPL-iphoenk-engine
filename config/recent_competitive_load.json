@@ -1,6 +1,14 @@
 {
-  "schema_version": 1,
-  "contract": "RECENT_COMPETITIVE_LOAD_V1",
+  "schema_version": 2,
+  "contract": "RECENT_COMPETITIVE_LOAD_V2",
+  "runtime_consumption": {
+    "status": "EXTERNAL_REPORT_EVIDENCE_REQUIRED",
+    "automated_python_consumer": null,
+    "decision_mutation": "NOT_AUTOMATED",
+    "visible_report_executor_must_verify": true,
+    "fail_closed_language": "do not claim recent competitive load or press-conference coverage was checked unless evidence was actually gathered",
+    "future_automation_requires_new_registered_consumer": true
+  },
   "scope": {"owned": "ALL_15", "watchlist": "ALL_20", "mandatory_before_visible_report": true, "mandatory_on_deadline_day": true},
   "competitions": ["Premier League", "FA Cup", "EFL Cup", "UEFA Champions League", "UEFA Europa League", "UEFA Conference League", "Community Shield", "other official competitive first-team fixture"],
   "source_precedence": ["official_club_match_report_or_lineup", "official_competition_match_centre", "Premier League_or_Official_FPL", "reliable_direct_manager_or_team_news", "pundit_or_community_crosscheck_only"],

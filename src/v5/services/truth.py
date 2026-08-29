@@ -38,6 +38,33 @@ def _rules_view() -> dict[str, Any]:
     }
 
 
+def _lock_chip_scope(lock: dict[str, Any], *, planning_gw: int, submitted_gw: int | None) -> tuple[bool, str]:
+    """Return whether a pre-deadline chip flag in a persistent squad lock applies now.
+
+    Squad composition may remain the planning authority across gameweeks, but a chip
+    activation is a one-GW decision. Prefer an explicit lock GW if present. Legacy
+    locks without an explicit GW may only carry their chip flag while the planning
+    GW is still the submitted/current GW for which the lock was created. Once the
+    next GW becomes the planning target, the old chip flag is stale and must not be
+    reactivated.
+    """
+    explicit = lock.get("planning_gw")
+    if explicit is None:
+        explicit = lock.get("gameweek")
+    if explicit is None:
+        explicit = lock.get("gw")
+    if explicit is not None:
+        try:
+            applies = int(explicit) == int(planning_gw)
+        except (TypeError, ValueError):
+            return False, "INVALID_EXPLICIT_GW"
+        return applies, "EXPLICIT_GW_MATCH" if applies else "EXPLICIT_GW_MISMATCH"
+    if submitted_gw is None:
+        return True, "LEGACY_LOCK_NO_SUBMITTED_GW"
+    applies = int(submitted_gw) == int(planning_gw)
+    return applies, "LEGACY_LOCK_CURRENT_GW" if applies else "STALE_PREVIOUS_GW_IGNORED"
+
+
 def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None, entry_history: dict[str, Any] | None) -> dict[str, Any]:
     used = (entry_history or {}).get("chips") if isinstance((entry_history or {}).get("chips"), list) else []
     gw = int(context.planning_gw or context.current_gw or 1)
@@ -47,9 +74,11 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
     submitted_raw = submitted.get("active_chip") if isinstance(submitted, dict) else None
     submitted_chip = CHIP_API_NAMES.get(str(submitted_raw), str(submitted_raw)) if submitted_raw else None
     submitted_gw = int(context.submitted_gw) if context.submitted_gw is not None else None
+    lock_chip_requested = bool(lock.get("wildcard_active"))
+    lock_chip_applies, lock_chip_scope = _lock_chip_scope(lock, planning_gw=gw, submitted_gw=submitted_gw)
 
     if context.phase.value == "PRE_DEADLINE":
-        if bool(lock.get("wildcard_active")):
+        if lock_chip_requested and lock_chip_applies:
             raw_active = "wildcard"
             source = "user_lock"
     elif isinstance(submitted, dict) and submitted_gw == gw:
@@ -76,6 +105,9 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
         "submitted_gw": context.submitted_gw,
         "submitted_active_chip": submitted_chip,
         "submitted_chip_applies_to_planning_gw": bool(submitted_chip and submitted_gw == gw),
+        "user_lock_chip_requested": lock_chip_requested,
+        "user_lock_chip_applies_to_planning_gw": bool(lock_chip_requested and lock_chip_applies),
+        "user_lock_chip_scope": lock_chip_scope,
         "current_half": int(current_half),
         "available_this_half": sorted(available),
         "one_chip_per_gameweek": bool(CHIP_RULES.get("one_chip_per_gameweek", True)),
@@ -85,6 +117,11 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
         "special_rule_legal": special_legal,
         "legal": legal,
         "ledger": ledger,
+        "governance": {
+            "squad_lock_may_persist_across_gws": True,
+            "chip_activation_is_gameweek_scoped": True,
+            "stale_lock_chip_never_reactivated": True,
+        },
     }
 
 

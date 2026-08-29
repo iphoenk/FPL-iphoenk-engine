@@ -34,6 +34,7 @@ EXPECTED_SECTIONS = (
     "finance",
     "bonus_bps",
 )
+REMOTE_DRIFT_STALE_AFTER_HOURS = 36.0
 
 
 def _status(ok: bool) -> str:
@@ -112,12 +113,56 @@ def _semantic_checks() -> dict[str, dict[str, Any]]:
 
 
 def _source_text_fingerprint(html: str) -> str:
-    # Deliberately conservative normalisation. Remote checks are opt-in because
-    # editorial page changes can be unrelated to FPL rules.
+    # Deliberately conservative normalisation. Remote checks are scheduled
+    # separately because editorial page changes can be unrelated to FPL rules.
     text = re.sub(r"(?is)<script.*?</script>|<style.*?</style>", " ", html)
     text = re.sub(r"(?s)<[^>]+>", " ", text)
     text = re.sub(r"\s+", " ", text).strip().lower()
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _age_hours(iso_value: str | None) -> float | None:
+    if not iso_value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(iso_value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return max(0.0, (datetime.now(timezone.utc) - parsed.astimezone(timezone.utc)).total_seconds() / 3600.0)
+    except Exception:
+        return None
+
+
+def _cached_remote_drift_state() -> dict[str, Any]:
+    prior = read_json(SOURCE_STATE, {})
+    prior_sources = prior.get("sources") or {}
+    if not prior_sources:
+        return {
+            "status": "NOT_RUN",
+            "policy": "scheduled remote check has not produced a persisted baseline yet; rules are never auto-mutated",
+            "cached": False,
+            "auto_mutation": False,
+        }
+
+    changes = list(prior.get("changed_sources") or [key for key, row in prior_sources.items() if (row or {}).get("changed")])
+    failures = list(prior.get("failed_sources") or [key for key, row in prior_sources.items() if (row or {}).get("error")])
+    status = str(prior.get("status") or ("REVIEW_REQUIRED" if changes else "PARTIAL" if failures else "NO_CHANGE"))
+    checked_at = prior.get("checked_at")
+    age_hours = _age_hours(checked_at)
+    stale = age_hours is None or age_hours > REMOTE_DRIFT_STALE_AFTER_HOURS
+    if stale and status not in {"REVIEW_REQUIRED"}:
+        status = "STALE"
+
+    return {
+        "status": status,
+        "checked_at": checked_at,
+        "age_hours": round(age_hours, 3) if age_hours is not None else None,
+        "stale_after_hours": REMOTE_DRIFT_STALE_AFTER_HOURS,
+        "cached": True,
+        "changed_sources": changes,
+        "failed_sources": failures,
+        "auto_mutation": False,
+    }
 
 
 def remote_drift_check() -> dict[str, Any]:
@@ -146,19 +191,29 @@ def remote_drift_check() -> dict[str, Any]:
         except Exception as exc:
             failures.append(key)
             current[key] = {"url": url, "error": str(exc), "changed": False}
-    state = {
-        "ruleset_id": RULESET_ID,
-        "checked_at": datetime.now(timezone.utc).isoformat(),
-        "sources": current,
-    }
-    atomic_json(SOURCE_STATE, state)
     if changes:
         status = "REVIEW_REQUIRED"
     elif failures:
         status = "PARTIAL"
     else:
         status = "BASELINED" if not prior_sources else "NO_CHANGE"
-    return {"status": status, "changed_sources": changes, "failed_sources": failures, "auto_mutation": False}
+    state = {
+        "ruleset_id": RULESET_ID,
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "status": status,
+        "changed_sources": changes,
+        "failed_sources": failures,
+        "sources": current,
+    }
+    atomic_json(SOURCE_STATE, state)
+    return {
+        "status": status,
+        "checked_at": state["checked_at"],
+        "cached": False,
+        "changed_sources": changes,
+        "failed_sources": failures,
+        "auto_mutation": False,
+    }
 
 
 def audit(check_remote: bool = False) -> dict[str, Any]:
@@ -181,11 +236,7 @@ def audit(check_remote: bool = False) -> dict[str, Any]:
     semantic = _semantic_checks()
     section_ok = all(x.get("status") == "PASS" for x in sections.values())
     semantic_ok = all(x.get("status") == "PASS" for x in semantic.values())
-    drift = remote_drift_check() if check_remote else {
-        "status": "NOT_RUN",
-        "policy": "opt-in remote check; rules are never auto-mutated",
-        "auto_mutation": False,
-    }
+    drift = remote_drift_check() if check_remote else _cached_remote_drift_state()
 
     if not integrity_ok or not section_ok or not semantic_ok:
         overall = "FAIL"
@@ -212,6 +263,8 @@ def audit(check_remote: bool = False) -> dict[str, Any]:
             "consumers_must_load_registry": True,
             "remote_change_never_auto_mutates_rules": True,
             "registry_integrity_failure_blocks_go": True,
+            "remote_drift_check_is_scheduled_not_hourly": True,
+            "persisted_remote_drift_state_is_reused_between_checks": True,
         },
     }
     atomic_json(OUT, out)

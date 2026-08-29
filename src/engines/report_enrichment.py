@@ -89,12 +89,16 @@ def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
         "otoritas": "Official FPL tetap menjadi sumber native resmi",
         "collector_challenger": selected,
         "report_time": {
-            "onefpl": "dicek melalui web saat report terjadwal atau on-demand dibuat",
+            "livefpl": "EO/live-rank challenger, terutama MATCH MODE",
+            "onefpl": "transfer trends, market momentum, price/planner context",
+            "fffix": "predicted points, predicted lineup/xMins, price dan rotation challenger",
+            "ffhub": "AI transfer/decision, fixture/player comparison, XI/captain challenger",
+            "ffscout": "predicted lineup, team news, RMT/player comparison dan tactical/editorial challenger",
             "fixture_strategy": "Ben Crellin / schedule expert dicek saat report dibuat",
             "pundit_consensus": "FPL Harry, FPL Focal, Let's Talk FPL, BigManBakar, dan Scout editorial dibandingkan dengan DSS",
             "community": "Reddit r/FantasyPL dipakai sebagai sinyal komunitas yang wajib cross-check",
         },
-        "catatan": "Source report-time tidak mengubah DSS. Consensus hanya menjadi evidence pembanding dan fakta tetap membutuhkan authority/cross-check yang sesuai.",
+        "catatan": "External benchmark dan source report-time tidak mengubah native truth/DSS. Consensus hanya evidence overlay; factual divergence memicu refresh Official, bukan overwrite external.",
     }
 
 
@@ -111,9 +115,21 @@ def _report_time_user_block(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _external_consensus_user_block(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "overall": payload.get("overall") or "INSUFFICIENT_EVIDENCE",
+        "requires_official_refresh": bool(payload.get("requires_official_refresh")),
+        "source_status": payload.get("source_status") or {},
+        "subjects": [
+            {"subject": row.get("subject"), "classification": row.get("classification")}
+            for row in payload.get("subjects") or []
+        ],
+        "advisory_only": bool((payload.get("governance") or {}).get("advisory_only", True)),
+        "catatan": "Native multi-GW conclusion remains primary. External benchmarks challenge and explain divergence only; no majority vote and no overwrite of Official/native truth.",
+    }
+
+
 def _action_class(subject: str) -> str:
-    # Legality/active-chip state is an Official/constraint fact. The remaining
-    # action-board rows depend on model ranking, projection, price trajectory or DSS.
     return "FACT_CONSTRAINT" if subject == "Chip" else "MODEL_DERIVED"
 
 
@@ -181,6 +197,7 @@ def run() -> dict[str, Any]:
     projections = read_json(DATA / "projections.json", {})
     watchlist = read_json(DATA / "dss_watchlist.json", {})
     source_health = read_json(DATA / "source_health.json", {})
+    external_consensus = read_json(DATA / "external_consensus.json", {})
     report_time = run_report_time_intelligence()
 
     ledger = {int(row.get("element") or -1): row for row in team.get("team_value_ledger") or []}
@@ -217,6 +234,7 @@ def run() -> dict[str, Any]:
 
     user["source_availability"] = _source_availability(source_health)
     user["report_time_intelligence"] = _report_time_user_block(report_time)
+    user["external_consensus"] = _external_consensus_user_block(external_consensus)
     tech["source_capability_health"] = {
         "source_overall": source_health.get("overall"),
         "capabilities": source_health.get("capability_health") or [],
@@ -226,6 +244,7 @@ def run() -> dict[str, Any]:
         "disagreement_count": source_health.get("disagreement_count", 0),
     }
     tech["report_time_intelligence"] = report_time
+    tech["external_consensus"] = external_consensus
     tech["runtime"] = {
         "current_run_ref": "data/runtime_performance.json",
         "embedded_during_report_stage": False,
@@ -236,6 +255,9 @@ def run() -> dict[str, Any]:
     tech["audit"]["source_reachability_is_separate_from_structured_data"] = True
     tech["audit"]["report_time_sources_do_not_mutate_dss"] = True
     tech["audit"]["pundit_consensus_is_compared_with_dss"] = True
+    tech["audit"]["external_consensus_is_advisory_only"] = bool((external_consensus.get("governance") or {}).get("advisory_only", True))
+    tech["audit"]["external_consensus_never_majority_votes"] = not bool((external_consensus.get("governance") or {}).get("majority_vote_used", False))
+    tech["audit"]["external_consensus_does_not_mutate_native_truth"] = not bool((external_consensus.get("governance") or {}).get("native_truth_mutated", False))
     _apply_readiness_and_actionability(user, tech, latest, report_time)
 
     atomic_json(DATA / "user_report.json", user)

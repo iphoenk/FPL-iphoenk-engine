@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "registry": "V3_INCREMENTAL_REUSE_V1",
+  "policy": {
+    "enabled_profiles": ["fast_decision", "live"],
+    "reuse_requires_matching_input_fingerprint": true,
+    "reuse_requires_all_declared_artifacts": true,
+    "reuse_never_bypasses_artifact_validation": true,
+    "reuse_is_disabled_for_network_owners": true,
+    "full_refresh_and_deep_stats_never_use_fingerprint_reuse": true,
+    "missing_or_invalid_fingerprint_falls_back_to_execution": true,
+    "football_formulas_unchanged": true
+  },
+  "services": {
+    "prediction": {"inputs": ["official_snapshot.json","latest.json","team.json","prior_season.json","player_features.json","tactical_team_profiles.json","player_role_profiles.json","recent_tactical_form.json","config/locked_squad.json","config/intelligence/projection.json","config/intelligence/team_strength.json","config/intelligence/xmins_v2.json"]},
+    "lineup_governance": {"inputs": ["latest.json","team.json","chips.json","projections.json","package_optimizer.json","config/locked_squad.json","config/manual_lineup.json","config/intelligence/lineup_governance.json"]},
+    "challenger": {"inputs": ["latest.json","projections.json","prediction_ledger.json","challenger_observations.json","source_health.json","config/intelligence/challenger_registry.json"]},
+    "governance": {"inputs": ["latest.json","framework_health.json","prediction_quality.json","prediction_accuracy.json","lineup_decision.json","package_decision.json","source_health.json","dss_operational_evidence.json","config/dss_core_registry.json","config/dss_extension_registry.json","config/enhancement_layers_registry.json","config/intelligence/dss_operationalization.json"]},
+    "watchlist": {"inputs": ["latest.json","team.json","projections.json","package_optimizer.json","prices.json","price_alerts.json","framework_health.json","dss_watchlist.json","config/intelligence/dss_watchlist.json"]},
+    "reporting": {"inputs": ["latest.json","team.json","lineup_decision.json","package_decision.json","projections.json","price_alerts.json","prediction_quality.json","framework_health.json","challenger_scorecard.json","report_state.json","dss_watchlist.json","source_health.json","dss_operational_evidence.json","config/intelligence/reporting.json"]},
+    "report_materializer": {"inputs": ["official_snapshot.json","latest.json","user_report.json","technical_appendix.json","team.json","projections.json","lineup_decision.json","dss_watchlist.json","official_detail.json","source_health.json","fixture_weather.json","config/report_artifact_registry.json"]}
+  }
+}

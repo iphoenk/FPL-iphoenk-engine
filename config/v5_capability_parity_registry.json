@@ -3,7 +3,8 @@
   "model": "v5_v3_v4_capability_parity_v4",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "main@83873ea33ca631344212a792a57911fad7e1575b",
+    "current_production_runtime": "main@7af907fc1f994f32c7c65d8fbf7eb3e40436c39a",
+    "current_production_code_commit": "83873ea33ca631344212a792a57911fad7e1575b",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "research_reference": "v4",
@@ -52,7 +53,8 @@
     "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "83873ea33ca631344212a792a57911fad7e1575b",
+    "production_main_sha": "7af907fc1f994f32c7c65d8fbf7eb3e40436c39a",
+    "production_code_commit": "83873ea33ca631344212a792a57911fad7e1575b",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,
@@ -62,7 +64,8 @@
       "domain_count": 11,
       "registry": "V3_EXECUTION_DOMAINS_V2",
       "business_capability_contract_unchanged_by_topology_refactor": true,
-      "service_registry_unchanged_by_topology_refactor": true
+      "service_registry_unchanged_by_topology_refactor": true,
+      "production_closeout_metadata_only_after_code_commit": true
     },
     "capability_equivalence": {
       "gw_scoped_chip_override": {"v5_owner": "truth", "evidence": "src/v5/services/truth.py::_lock_chip_scope"},

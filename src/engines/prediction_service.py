@@ -4,6 +4,11 @@ import json
 from datetime import datetime, timezone
 
 from src.engines.decision_intelligence import build_package_optimizer
+from src.engines.p0_decision_quality import (
+    assert_projection_signature_unchanged,
+    build_position_projection_diagnostics,
+    projection_signature,
+)
 from src.models.historical_projection import build as build_player_projections
 from src.models.prediction_quality import evaluate as evaluate_prediction_quality
 from src.models.tactical_matchup import attach_tactical_matchups
@@ -54,7 +59,11 @@ def run() -> dict:
         horizon=STRATEGIC_HORIZON_GWS,
         player_features_payload=player_features,
     )
+    pre_tactical_signature = projection_signature(projections)
     projections = attach_tactical_matchups(projections, planning_gw)
+    assert_projection_signature_unchanged(pre_tactical_signature, projections)
+    projection_diagnostics = build_position_projection_diagnostics(projections)
+    projections["position_calibration_diagnostics"] = projection_diagnostics
     projections["generated_at"] = _now()
     projections.setdefault("governance", {}).update({
         "official_snapshot_reused": True,
@@ -64,6 +73,9 @@ def run() -> dict:
         "advanced_defensive_evidence_players_used": projections.get("advanced_defensive_evidence_players_used"),
         "tactical_matchup_is_advisory_only": True,
         "tactical_matchup_never_directly_mutates_xpts": True,
+        "tactical_double_count_guard_verified": True,
+        "position_projection_diagnostics_are_non_mutating": True,
+        "v4_is_not_projection_calibration_truth": True,
     })
     atomic_json(DATA / "projections.json", projections)
 
@@ -113,6 +125,7 @@ def run() -> dict:
             "unavailable_players": tactical.get("unavailable", 0),
             "advisory_only": True,
             "xpts_mutation": False,
+            "double_count_guard_verified": True,
             "report_policy": "material-highlights-only",
         },
         "player_feature_model": {
@@ -120,6 +133,12 @@ def run() -> dict:
             "opt_in": projections.get("player_feature_model_opt_in"),
             "defensive_contribution_model": projections.get("defensive_contribution_model"),
             "advanced_defensive_evidence_players_used": projections.get("advanced_defensive_evidence_players_used"),
+        },
+        "projection_calibration": {
+            "status": projection_diagnostics.get("status"),
+            "comparison_authority": projection_diagnostics.get("comparison_authority"),
+            "mutates_xpts": False,
+            "positions": projection_diagnostics.get("positions"),
         },
         "risk_guardrails": {
             "team_cluster_penalty_enabled": (packages.get("governance") or {}).get("team_cluster_penalty_enabled"),
@@ -148,4 +167,5 @@ if __name__ == "__main__":
         "best_package": (out["packages"].get("packages") or [{}])[0].get("id") if out["packages"].get("packages") else None,
         "risk_guardrails": out["packages"].get("governance"),
         "tactical_matchup": out["projections"].get("tactical_matchup_summary"),
+        "projection_calibration": out["projections"].get("position_calibration_diagnostics"),
     }, ensure_ascii=False))

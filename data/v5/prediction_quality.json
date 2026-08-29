@@ -15,14 +15,14 @@
       "pass": true
     },
     "starter_xmins_dispersion": {
-      "value": 0.0671,
+      "value": 0.0632,
       "threshold": 0.035,
-      "sample": 223,
+      "sample": 228,
       "minimum_sample": 40,
       "pass": true
     },
     "owned_low_confidence_share": {
-      "value": 0.2,
+      "value": 0.1333,
       "maximum": 0.6,
       "sample": 15,
       "pass": true
@@ -45,7 +45,7 @@
   "owned_squad": {
     "players": 15,
     "historical_prior_players": 12,
-    "low_confidence_players": 3
+    "low_confidence_players": 2
   },
   "governance": {
     "mechanical_validity_is_not_prediction_quality": true,

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "contract": "V5_EXTERNAL_CONSENSUS_V1",
-  "generated_at": "2026-08-29T13:22:35.246264+00:00",
+  "generated_at": "2026-08-29T15:37:07.918864+00:00",
   "owner": "evaluation.external_consensus",
   "native_conclusion_frozen_before_overlay": true,
   "native_snapshot": {
@@ -16,11 +16,11 @@
           "name": "Tzolakis",
           "position": "GK",
           "team_id": 11,
-          "mean": 4.582,
-          "std": 3.441,
+          "mean": 4.588,
+          "std": 3.444,
           "start_probability": 0.7632,
           "dnp_probability": 0.0829,
-          "score": 4.6038
+          "score": 4.6095
         },
         {
           "element": 115,
@@ -414,7 +414,7 @@
           "team_id": 11,
           "start_probability": 0.7632,
           "dnp_probability": 0.0829,
-          "score": 5.661,
+          "score": 5.6675,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 2,
@@ -512,9 +512,9 @@
         {
           "rank": 1,
           "formation": "5-3-2",
-          "selection_score": 49.3319,
-          "mean": 48.639,
-          "std": 11.079,
+          "selection_score": 49.3376,
+          "mean": 48.645,
+          "std": 11.08,
           "element_ids": [
             8,
             15,
@@ -532,9 +532,9 @@
         {
           "rank": 2,
           "formation": "5-3-2",
-          "selection_score": 49.2839,
-          "mean": 48.681,
-          "std": 11.115,
+          "selection_score": 49.2896,
+          "mean": 48.687,
+          "std": 11.116,
           "element_ids": [
             8,
             15,
@@ -552,9 +552,9 @@
         {
           "rank": 3,
           "formation": "5-3-2",
-          "selection_score": 49.2106,
-          "mean": 48.524,
-          "std": 11.069,
+          "selection_score": 49.2163,
+          "mean": 48.53,
+          "std": 11.07,
           "element_ids": [
             8,
             40,
@@ -570,8 +570,8 @@
           ]
         }
       ],
-      "expected_starting_xi_mean": 48.639,
-      "selection_score": 49.332,
+      "expected_starting_xi_mean": 48.645,
+      "selection_score": 49.338,
       "authority": "v5_decision_lineup_optimizer",
       "performance": {
         "projection_lookup": "indexed_o1",

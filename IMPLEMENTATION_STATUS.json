@@ -1,5 +1,5 @@
 {
-  "version": "3.25.0",
+  "version": "3.39.0",
   "schema_version": 49,
   "release_metadata_source": "src/version.py",
   "production_acceptance": {
@@ -46,35 +46,29 @@
     "xpts_rate_adjustment_enabled": false
   },
   "release_candidate": {
-    "version": "3.25.0",
+    "version": "3.39.0",
     "schema_version": 49,
-    "status": "FEATURE_CI_ACCEPTED_FINAL_RELEASE_CI_PENDING",
-    "pr": 106,
-    "branch": "v3.25-architecture-consolidation-sub1s",
-    "scope": "REC-42 Architecture Consolidation, No-Duplicate Ownership Guard & Sub-Second Warm Serving",
-    "feature_ci_run": 33171209718,
-    "compile_pass": true,
-    "architecture_pass": true,
-    "no_duplicate_ownership_pass": true,
-    "unit_regression_pass": true,
-    "unit_regression_count": 221,
-    "composite_full_fast_acceptance_pass": true,
-    "candidate_full_runtime_ms": 12405.683,
-    "candidate_fast_runtime_ms": 5483.568,
-    "instant_serving_benchmark_repetitions": 5,
-    "instant_serving_min_ms": 0.206,
-    "instant_serving_median_ms": 0.226,
-    "instant_serving_max_ms": 3.041,
-    "instant_serving_hard_ceiling_ms": 1000,
-    "within_fast_slo": true,
-    "within_instant_serving_slo": true,
+    "status": "CLAUDE_QA_STABILIZATION_CI_PENDING",
+    "branch": "codex/v3.39-claude-stabilization",
+    "scope": "Independent QA stabilization: release metadata alignment, canonical competitive-load governance, placeholder/probe CI guard, preserve 21-capability/7-domain equivalence",
+    "compile_pass": null,
+    "architecture_pass": null,
+    "no_duplicate_ownership_pass": null,
+    "unit_regression_pass": null,
+    "composite_full_fast_acceptance_pass": null,
+    "within_fast_slo": null,
+    "within_instant_serving_slo": null,
     "football_formula_changed": false,
     "official_authority_changed": false,
     "user_authority_changed": false,
     "production_merge_complete": false,
     "runtime_publication_complete": false,
     "schema_changed": false,
-    "active_service_count": 20
+    "active_background_capability_count": 21,
+    "execution_domain_count": 7,
+    "legacy_recent_competitive_load_policy_removed": true,
+    "repository_placeholder_guard_added": true,
+    "historical_v325_candidate_evidence_relabelled_as_v339": false
   },
   "rec_status": {
     "REC-01": {"status": "DONE_PROD"},
@@ -126,8 +120,17 @@
       "status": "CANDIDATE",
       "pr": 106,
       "feature_ci_run": 33171209718,
-      "summary": "Consolidates architecture ownership and shared primitives, removes legacy registry ownership drift, adds a no-duplicate CI gate, closes the REC-41 forced-refresh fence, and adds fail-closed validated warm serving with a hard sub-1s SLO without changing football formulas."
+      "summary": "Historical V3.25 candidate evidence for architecture consolidation and sub-second warm serving; retained as evidence and not relabelled as V3.39 acceptance."
     }
+  },
+  "claude_qa_stabilization": {
+    "source_review_date": "2026-08-27",
+    "external_review_ids_are_not_canonical_rec_ids": true,
+    "competitive_load_policy_consolidated": true,
+    "execution_domain_equivalence_guard_already_present": true,
+    "placeholder_probe_guard_added": true,
+    "release_metadata_realigned_to_lineage": true,
+    "predictive_validation_claimed": false
   },
   "calibration_monitors": {
     "settled_prediction_validation": "MONITOR",
@@ -139,7 +142,8 @@
     "tactical_role_evidence_maturity": "MONITOR_BEFORE_MODEL_OPT_IN"
   },
   "architecture": {
-    "active_service_count": 20,
+    "active_background_capability_count": 21,
+    "execution_domain_count": 7,
     "official_fpl_native_authority": true,
     "official_first_rec_coverage": true,
     "external_evidence_non_authoritative": true,
@@ -155,6 +159,8 @@
     "one_owner_per_responsibility": true,
     "shared_primitives_reused_not_reimplemented": true,
     "no_duplicate_architecture_ci_gate": true,
+    "execution_domain_equivalence_ci_gate": true,
+    "competitive_load_single_policy": true,
     "warm_serving_separate_from_source_refresh": true,
     "instant_serving_hard_ceiling_ms": 1000,
     "fast_slo_ms": 10000,

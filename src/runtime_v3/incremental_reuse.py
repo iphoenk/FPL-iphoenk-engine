@@ -34,6 +34,32 @@ def _registry() -> dict[str, Any]:
     return payload
 
 
+def active(profile_name: str) -> bool:
+    registry = _registry()
+    policy = registry.get("policy") or {}
+    if profile_name not in set(policy.get("enabled_profiles") or []):
+        return False
+    if policy.get("disable_when_live_event") is True:
+        latest = read_json(DATA / "latest.json", {})
+        phase = latest.get("phase") if isinstance(latest, dict) and isinstance(latest.get("phase"), dict) else {}
+        if phase.get("is_live_event") is True:
+            return False
+    return True
+
+
+def inactive_reason(profile_name: str) -> str | None:
+    registry = _registry()
+    policy = registry.get("policy") or {}
+    if profile_name not in set(policy.get("enabled_profiles") or []):
+        return "PROFILE_DISABLED"
+    if policy.get("disable_when_live_event") is True:
+        latest = read_json(DATA / "latest.json", {})
+        phase = latest.get("phase") if isinstance(latest, dict) and isinstance(latest.get("phase"), dict) else {}
+        if phase.get("is_live_event") is True:
+            return "LIVE_EVENT_DISABLED"
+    return None
+
+
 def _normalize(value: Any, *, top_level: bool = False) -> Any:
     if isinstance(value, dict):
         out: dict[str, Any] = {}
@@ -121,7 +147,9 @@ def stored_fingerprint(service_name: str) -> str | None:
     return str(row.get("fingerprint")) if isinstance(row, dict) and row.get("fingerprint") else None
 
 
-def diagnose(service_name: str) -> dict[str, Any]:
+def diagnose(service_name: str, profile_name: str | None = None) -> dict[str, Any]:
+    if profile_name is not None and not active(profile_name):
+        return {"reason": inactive_reason(profile_name), "current": None, "stored": None, "match": False}
     current = fingerprint(service_name)
     stored = stored_fingerprint(service_name)
     if current is None:
@@ -142,7 +170,7 @@ def diagnose(service_name: str) -> dict[str, Any]:
 
 def try_reuse(service_name: str, service_spec: dict[str, Any], profile_name: str) -> dict[str, Any] | None:
     registry = _registry()
-    if profile_name not in set((registry.get("policy") or {}).get("enabled_profiles") or []):
+    if not active(profile_name):
         return None
     if service_name not in (registry.get("services") or {}):
         return None
@@ -177,7 +205,7 @@ def try_reuse(service_name: str, service_spec: dict[str, Any], profile_name: str
 
 def record(service_name: str, profile_name: str, fingerprint_value: str | None = None) -> None:
     registry = _registry()
-    if profile_name not in set((registry.get("policy") or {}).get("enabled_profiles") or []):
+    if not active(profile_name):
         return
     if service_name not in (registry.get("services") or {}):
         return

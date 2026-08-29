@@ -4,7 +4,8 @@ Production-oriented personal FPL decision engine and persisted Official-FPL-deri
 
 ## Current release state
 - Current accepted production release: `3.39.0` / schema `49`.
-- V3.39 stabilization is merged to `main`, main CI is GREEN, and the matching `runtime-data` snapshot is published.
+- V3.39 stabilization, REC-04 freeze-recovery correction and behavior-neutral housekeeping are merged to `main`; main CI is GREEN and the matching code-bearing `runtime-data` snapshot is published.
+- Latest production-proven code-bearing merge: `f02933343d275a9e4c34b7f690c4ee34cf822414`. Later metadata-only closeout commits do not redefine behavioral acceptance.
 - Background execution is organized as 21 artifact-owned capabilities mapped exactly once into 7 execution domains: `ACQUIRE`, `ENRICH`, `MODEL`, `MARKET`, `DECISION`, `GOVERNANCE`, `PUBLISH`.
 - Interactive serving is owned by the single `unified_fastpath` lane; execution domains are orchestration boundaries, not alternate business owners.
 - `config/rec_registry.json` is the canonical REC set. `IMPLEMENTATION_STATUS.json`, Official-first coverage and this documentation are projections/consumers, not competing REC authorities.
@@ -15,16 +16,20 @@ Production-oriented personal FPL decision engine and persisted Official-FPL-deri
 - Release metadata source of truth: `src/version.py`.
 - Canonical roadmap and Definition of Done: `MASTER_TASK_LIST_V3.md`.
 
-## V3.39 Stabilization
-This release preserves the existing football formulas while tightening runtime, release and governance hygiene.
+## V3.39 Stabilization + Housekeeping Closeout
+This release preserves the existing football formulas while tightening runtime, release, prediction-settlement and repository hygiene.
 
 - Competitive-load runtime and report-time governance use one canonical policy file: `config/intelligence/competitive_load.json`.
 - The legacy duplicate `recent_competitive_load.json` policy was removed only after its report-time rules were migrated into the canonical policy and all DSS dependencies were repointed.
 - CI blocks accidental placeholder/probe files such as `x`, `noop` and `probe` from being committed again.
 - Release metadata is aligned with the V3.39 code lineage without claiming predictive validation that has not yet been earned from settled Gameweeks.
+- PR #148 closed the prediction-ledger planning-GW rollover gap: an overdue record may promote only its genuine pre-deadline forecast into frozen settlement state; post-deadline information may not be retrofitted as forecast truth.
+- PR #149 physically consolidated 14 legacy version-stamped test modules into four stable domain suites. The legacy allowlist is removed and the naming guard now requires zero `test_v<digit>*` release-test modules.
 - The 21-capability / 7-domain equivalence guard remains mandatory and prevents execution-domain drift from business capability ownership.
-- Candidate CI run `33238691899` passed **304 tests**, FULL **8.427s**, FAST **4.642s**, and interactive serving **9.022ms median / 165.394ms max**.
-- Merged-main CI run `33238768506` passed and production runtime run `33238768480` published `runtime-data` for V3.39.0. The published runtime manifest records FAST **5.388s**, within the 10s SLO.
+- PR #149 candidate CI run `33241937450` passed **307 tests in 1.29s**, FULL **17.283s**, FAST **4.683s**, material-decision equivalence, and interactive serving **7.595ms median / 157.275ms max**.
+- Merged-main CI run `33241992910` passed and production runtime run `33241992902` published the code-bearing `runtime-data` snapshot from `f0293334…`.
+- The published runtime manifest records engine **3.39.0**, schema **49**, FAST **4.834s**, within the 10s SLO, with 55 published runtime files.
+- Data-dependent monitors remain explicitly yellow: settled predictive validation, confidence calibration, price timing calibration, private authenticated precision, model actionability and tactical-evidence maturity are not promoted by housekeeping.
 
 ## V3.25 Architecture Consolidation + Interactive Decision Lane
 REC-42 applies the V4 one-owner/no-duplicate concept and V5 bounded-context/performance principles without changing FPL scoring or prediction formulas.
@@ -81,6 +86,7 @@ Broad/expensive Official expansion belongs to FULL refresh; FAST may reuse only 
 - REC-41 tactical/system evidence is visible in that feature bus but intentionally has no direct decision adjustment yet.
 - All 15 OWNED expose current-GW xPts, uncertainty, xMins/start probability, selection score and lineup/choice state.
 - Prediction formula correctness and predictive accuracy are separate claims. Accuracy requires genuinely frozen pre-deadline forecasts settled against Official realized outcomes.
+- REC-04 freeze/settlement state-machine correctness is production-proven; predictive accuracy itself remains MONITOR until finished Gameweeks provide realized samples.
 - Early-season confidence and model-derived actionability remain calibration-gated.
 - Price prediction remains calibration-gated; Official realized price/ownership/transfer movement is settlement authority.
 - `ENGINE_READY` does not imply final report-time web evidence is already refreshed.
@@ -93,6 +99,7 @@ Broad/expensive Official expansion belongs to FULL refresh; FAST may reuse only 
 - Critical internal artifact failure is fail-closed; optional external-source unavailability is fail-soft.
 - Missing evidence is explicit and is never fabricated to keep health GREEN.
 - Numerical formulas affecting decisions require deterministic regression tests.
+- Release test ownership is version-neutral; version-stamped release-test modules are forbidden.
 - Background FAST refresh and interactive decision latency are separate SLOs.
 - Interactive governed decision regeneration and validated gateway each have a hard `<1s` ceiling.
 - Service boundaries follow bounded-context ownership/failure semantics, not a target service count.

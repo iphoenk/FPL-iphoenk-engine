@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "model": "v5_owned_challenger_comparator_v1",
-  "generated_at": "2026-08-29T13:16:57.725860+00:00",
+  "generated_at": "2026-08-29T13:19:38.507543+00:00",
   "status": "ACTIVE_ALPHA",
   "authority": "ADVISORY_ONLY",
   "planning_gw": 3,
@@ -119,7 +119,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -240,7 +240,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [
@@ -651,7 +651,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -773,7 +773,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -1180,7 +1180,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -1297,7 +1297,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -1700,7 +1700,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -1815,7 +1815,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -2220,7 +2220,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -2337,7 +2337,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -2742,7 +2742,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -2857,7 +2857,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -3266,7 +3266,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -3388,7 +3388,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -3799,7 +3799,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -3916,7 +3916,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -4321,7 +4321,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -4442,7 +4442,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -4847,7 +4847,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -4966,7 +4966,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -5377,7 +5377,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -5494,7 +5494,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -5901,7 +5901,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -6022,7 +6022,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [
@@ -6427,7 +6427,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -6546,7 +6546,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [
@@ -6953,7 +6953,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -7075,7 +7075,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -7480,7 +7480,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -7600,7 +7600,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -8009,7 +8009,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -8130,7 +8130,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -8535,7 +8535,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -8656,7 +8656,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -9061,7 +9061,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -9183,7 +9183,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -9592,7 +9592,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -9713,7 +9713,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [
@@ -10122,7 +10122,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -10241,7 +10241,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -10650,7 +10650,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -10773,7 +10773,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [
@@ -11178,7 +11178,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -11299,7 +11299,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [
@@ -11704,7 +11704,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -11823,7 +11823,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -12228,7 +12228,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -12351,7 +12351,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [
@@ -12764,7 +12764,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -12885,7 +12885,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [
@@ -13296,7 +13296,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -13418,7 +13418,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -13825,7 +13825,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -13942,7 +13942,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -14345,7 +14345,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -14460,7 +14460,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -14865,7 +14865,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -14982,7 +14982,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -15387,7 +15387,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],
@@ -15502,7 +15502,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -15911,7 +15911,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -16033,7 +16033,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -16444,7 +16444,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "LOW",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 1,
             "highlights": [
@@ -16561,7 +16561,7 @@
               "AVAILABLE": 1
             },
             "evidence_confidence": "MEDIUM",
-            "evidence_timestamp": "2026-08-29T13:16:54.216531+00:00",
+            "evidence_timestamp": "2026-08-29T13:19:34.992014+00:00",
             "evidence_count": 4,
             "recent_gw_evidence_count": 2,
             "highlights": [],

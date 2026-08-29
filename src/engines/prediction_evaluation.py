@@ -4,7 +4,7 @@ import json
 import math
 from datetime import datetime, timezone
 from functools import lru_cache
-from pathlib import Path
+from itertools import combinations
 from typing import Any
 
 from src.engines.official_snapshot_primitives import endpoint_health, load_snapshot, snapshot_event_live_for_gw
@@ -14,6 +14,7 @@ from src.utils import DATA, ROOT, atomic_json, parse_dt, read_json, utcnow
 
 CONFIG_PATH = ROOT / "config" / "intelligence" / "prediction_evaluation.json"
 LEDGER_PATH = DATA / "prediction_ledger.json"
+DECISION_SNAPSHOT_PATH = DATA / "decision_validation_snapshots.json"
 OUT_PATH = DATA / "prediction_accuracy.json"
 
 
@@ -100,8 +101,7 @@ def _metrics(pairs: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _confidence(sample_size: int) -> str:
-    cfg = load_config()
-    thresholds = cfg.get("confidence_sample_thresholds") or {}
+    thresholds = load_config().get("confidence_sample_thresholds") or {}
     if sample_size <= int(thresholds.get("low_max") or 49):
         return "LOW"
     if sample_size <= int(thresholds.get("medium_max") or 149):
@@ -109,14 +109,136 @@ def _confidence(sample_size: int) -> str:
     return "HIGH"
 
 
-def _settle_record(record: dict[str, Any], event_live: dict[str, Any]) -> None:
+def _legal_xi(rows: tuple[dict[str, Any], ...]) -> bool:
+    counts: dict[str, int] = {}
+    for row in rows:
+        pos = str(row.get("position") or "")
+        counts[pos] = counts.get(pos, 0) + 1
+    return counts.get("GK", 0) == 1 and counts.get("DEF", 0) >= 3 and counts.get("MID", 0) >= 2 and counts.get("FWD", 0) >= 1
+
+
+def _decision_validation(snapshot: dict[str, Any] | None, actual: list[dict[str, Any]]) -> dict[str, Any]:
+    missing = {
+        "captain_regret": {"status": "NO_GENUINE_PREDEADLINE_SAMPLE", "sample_size": 0, "value": None},
+        "xi_regret": {"status": "NO_GENUINE_PREDEADLINE_SAMPLE", "sample_size": 0, "value": None},
+        "transfer_comparator_realized_net_gain": {"status": "NO_GENUINE_PREDEADLINE_SAMPLE", "sample_size": 0, "value": None},
+    }
+    if not snapshot:
+        return missing
+    amap = {int(x.get("element") or -1): x for x in actual}
+    lineup = snapshot.get("lineup") or {}
+
+    chosen_cap = int(lineup.get("captain") or -1)
+    cap_pool = [int(x) for x in lineup.get("captain_candidates") or [] if int(x) in amap]
+    if chosen_cap in amap and cap_pool:
+        chosen_points = _f(amap[chosen_cap].get("points"))
+        best_points = max(_f(amap[x].get("points")) for x in cap_pool)
+        missing["captain_regret"] = {
+            "status": "SETTLED",
+            "sample_size": 1,
+            "value": round(max(0.0, best_points - chosen_points), 4),
+            "chosen_actual_points": chosen_points,
+            "best_candidate_actual_points": best_points,
+            "candidate_count": len(cap_pool),
+        }
+
+    selected_ids = [int(x.get("element") or -1) for x in lineup.get("starting_xi") or []]
+    owned = [x for x in lineup.get("owned_squad") or [] if int(x.get("element") or -1) in amap]
+    if len(selected_ids) == 11 and len(owned) >= 11 and all(x in amap for x in selected_ids):
+        selected_points = sum(_f(amap[x].get("points")) for x in selected_ids)
+        best_points = None
+        for combo in combinations(owned, 11):
+            if not _legal_xi(combo):
+                continue
+            points = sum(_f(amap[int(row["element"])].get("points")) for row in combo)
+            if best_points is None or points > best_points:
+                best_points = points
+        if best_points is not None:
+            missing["xi_regret"] = {
+                "status": "SETTLED",
+                "sample_size": 1,
+                "value": round(max(0.0, best_points - selected_points), 4),
+                "selected_xi_actual_points": round(selected_points, 4),
+                "best_legal_xi_actual_points": round(best_points, 4),
+            }
+
+    comparison_rows = []
+    exact_net = []
+    for row in (snapshot.get("comparator") or {}).get("comparisons") or []:
+        out_id = int(row.get("player_out") or -1)
+        in_id = int(row.get("player_in") or -1)
+        if out_id not in amap or in_id not in amap:
+            continue
+        gross = _f(amap[in_id].get("points")) - _f(amap[out_id].get("points"))
+        hit_cost = row.get("exact_hit_cost")
+        net = None if hit_cost is None else gross - _f(hit_cost)
+        comparison_rows.append({
+            "player_out": out_id,
+            "player_in": in_id,
+            "state": row.get("state"),
+            "realized_gross_points_delta_1gw": round(gross, 4),
+            "exact_hit_cost": hit_cost,
+            "realized_net_gain_1gw": round(net, 4) if net is not None else None,
+            "net_gain_state": "AVAILABLE" if net is not None else "UNAVAILABLE_EXACT_HIT_COST",
+        })
+        if net is not None:
+            exact_net.append(net)
+    if comparison_rows:
+        missing["transfer_comparator_realized_net_gain"] = {
+            "status": "SETTLED" if exact_net else "PARTIAL_GROSS_ONLY",
+            "sample_size": len(exact_net),
+            "value": round(sum(exact_net) / len(exact_net), 4) if exact_net else None,
+            "gross_pair_count": len(comparison_rows),
+            "comparisons": comparison_rows,
+            "note": "Net gain is unavailable when exact FPL hit cost was not captured pre-deadline; optimizer change penalties are never substituted.",
+        }
+    return missing
+
+
+def _aggregate_decision_metrics(records: dict[str, Any]) -> dict[str, Any]:
+    names = ("captain_regret", "xi_regret", "transfer_comparator_realized_net_gain")
+    out: dict[str, Any] = {}
+    for name in names:
+        rows = []
+        partial = False
+        for record in records.values():
+            if record.get("status") != "SETTLED":
+                continue
+            metric = (record.get("decision_validation") or {}).get(name) or {}
+            if metric.get("status") == "SETTLED" and metric.get("value") is not None:
+                rows.append(_f(metric.get("value")))
+            elif metric.get("status") == "PARTIAL_GROSS_ONLY":
+                partial = True
+        if rows:
+            out[name] = {"status": "SETTLED", "sample_size": len(rows), "mean": round(sum(rows) / len(rows), 4)}
+        elif partial:
+            out[name] = {"status": "PARTIAL_GROSS_ONLY", "sample_size": 0, "mean": None}
+        else:
+            out[name] = {"status": "NO_GENUINE_PREDEADLINE_SAMPLE", "sample_size": 0, "mean": None}
+    return out
+
+
+def _settle_record(record: dict[str, Any], event_live: dict[str, Any], decision_snapshot: dict[str, Any] | None) -> None:
     actual = _actual_rows(event_live)
     amap = {int(x["element"]): x for x in actual}
     frozen = (record.get("frozen_forecast") or {}).get("players") or []
     pairs = [{"forecast": f, "actual": amap[int(f["element"])]} for f in frozen if int(f["element"]) in amap]
     record["actual"] = {"settled_at": _now(), "players": actual}
     record["metrics"] = _metrics(pairs)
+    if decision_snapshot:
+        record["frozen_decision_snapshot"] = decision_snapshot
+    record["decision_validation"] = _decision_validation(decision_snapshot, actual)
     record["status"] = "SETTLED"
+
+
+def _valid_predeadline_decision_snapshot(snapshot: dict[str, Any] | None, deadline_value: Any) -> dict[str, Any] | None:
+    if not snapshot:
+        return None
+    captured = parse_dt(snapshot.get("captured_at"))
+    deadline = parse_dt(deadline_value or snapshot.get("deadline_time"))
+    if captured is None or deadline is None or captured > deadline:
+        return None
+    return snapshot
 
 
 def run() -> dict[str, Any]:
@@ -124,6 +246,7 @@ def run() -> dict[str, Any]:
     latest = read_json(DATA / "latest.json", {})
     projections = read_json(DATA / "projections.json", {})
     ledger = read_json(LEDGER_PATH, {"schema_version": 1, "records": {}})
+    decision_snapshots = read_json(DECISION_SNAPSHOT_PATH, {"records": {}}).get("records") or {}
     snapshot = load_snapshot()
     records = ledger.setdefault("records", {})
     phase = latest.get("phase") or snapshot.get("phase") or {}
@@ -167,7 +290,8 @@ def run() -> dict[str, Any]:
             live, health = get_json(f"event/{gw}/live/")
             settled_from_network += 1
         if live:
-            _settle_record(record, live)
+            decision_snapshot = _valid_predeadline_decision_snapshot(decision_snapshots.get(str(gw)), record.get("deadline_time"))
+            _settle_record(record, live, decision_snapshot)
             record["settlement_source_health"] = health.get("status")
             record["settlement_source"] = "CORE_SNAPSHOT" if health.get("reuse") else "HISTORICAL_EVENT_LIVE"
 
@@ -181,12 +305,16 @@ def run() -> dict[str, Any]:
         frozen = (record.get("frozen_forecast") or {}).get("players") or []
         pairs = [{"forecast": f, "actual": actual[int(f["element"])]} for f in frozen if int(f["element"]) in actual]
         all_pairs.extend(pairs)
-        by_gw[str(record.get("gw") or key)] = _metrics(pairs)
+        by_gw[str(record.get("gw") or key)] = {
+            **_metrics(pairs),
+            "decision_validation": record.get("decision_validation") or _decision_validation(None, []),
+        }
         for pair in pairs:
             by_position.setdefault(str(pair["forecast"].get("position")), []).append(pair)
 
     overall = _metrics(all_pairs)
     sample_size = int(overall.get("sample_size") or 0)
+    decision_metrics = _aggregate_decision_metrics(records)
     accuracy = {
         "generated_at": _now(),
         "model": cfg.get("model_id"),
@@ -195,14 +323,25 @@ def run() -> dict[str, Any]:
         "confidence": _confidence(sample_size),
         "by_position": {k: _metrics(v) for k, v in sorted(by_position.items())},
         "by_gw": by_gw,
+        "decision_metrics": decision_metrics,
+        "validation_dimensions": {
+            "formula_correctness": {"status": "SEPARATE_GOVERNANCE_TRACK", "counts_as_predictive_accuracy": False},
+            "predictive_accuracy": {"status": overall.get("status"), "sample_size": sample_size},
+        },
         "settled_gameweeks": sorted(int(k) for k, v in records.items() if v.get("status") == "SETTLED"),
         "collecting_gameweeks": sorted(int(k) for k, v in records.items() if v.get("status") != "SETTLED"),
         "dynamic_weight_eligible": sample_size >= int(cfg.get("minimum_sample_for_dynamic_weight") or 50),
         "governance": {
             "accuracy_claim_requires_settled_sample": True,
             "pre_deadline_forecast_is_frozen_before_scoring": True,
+            "pre_deadline_decision_snapshot_required_for_decision_regret": True,
             "post_deadline_information_cannot_rewrite_frozen_forecast": True,
+            "post_deadline_information_cannot_create_retroactive_decision_snapshot": True,
+            "reconcile_only_finished_events": True,
+            "formula_correctness_is_separate_from_predictive_accuracy": True,
+            "optimizer_change_penalty_is_never_used_as_fpl_hit_cost": True,
             "core_snapshot_consumed_before_historical_network": True,
+            "early_season_confidence_is_conservative": True,
         },
         "source_health": {
             "bootstrap": bh.get("status"),
@@ -223,6 +362,7 @@ def run() -> dict[str, Any]:
         "confidence": accuracy["confidence"],
         "settled_gameweeks": accuracy["settled_gameweeks"],
         "dynamic_weight_eligible": accuracy["dynamic_weight_eligible"],
+        "decision_metrics": decision_metrics,
         "core_snapshot_consumed": True,
     }
     atomic_json(DATA / "latest.json", latest)

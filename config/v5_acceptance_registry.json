@@ -1,5 +1,5 @@
 {
-  "version": 19,
+  "version": 20,
   "module_policy": {
     "minimum_registered_modules": 42,
     "required_truth_modules": ["rules", "source_authority", "public_api", "official_authenticated", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
@@ -34,6 +34,13 @@
     "manual_package_authority_required": true,
     "full_dss_watchlist_required": true,
     "dedicated_watchlist_service_required": true,
+    "owned_challenger_comparator_required": true,
+    "owned_challenger_comparator_owner": "evaluation",
+    "tactical_decision_consumption_required": true,
+    "tactical_direct_xpts_mutation_forbidden": true,
+    "transfer_momentum_requires_official_counts_and_price_linkage": true,
+    "interactive_subsecond_serving_required": true,
+    "interactive_target_ms": 1000,
     "decision_first_reporting_required": true,
     "technical_appendix_required": true,
     "delta_first_reporting_required": true,

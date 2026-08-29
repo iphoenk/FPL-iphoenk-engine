@@ -28,6 +28,22 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.ref }}
 
+      - name: Capture production baseline for decision comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$RUNNER_TEMP/v4-before"
+          rm -rf "$baseline"
+          mkdir -p "$baseline"
+          if git ls-remote --exit-code --heads origin "$RUNTIME_BRANCH" >/dev/null 2>&1; then
+            git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+            for file in checkpoint_decision_v4.json serving_payload_v4.json serving_benchmark_v4.json; do
+              if git cat-file -e "origin/${RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
+                git show "origin/${RUNTIME_BRANCH}:data/${file}" > "$baseline/$file"
+              fi
+            done
+          fi
+
       - name: Hydrate latest V4 runtime state
         if: inputs.publish
         shell: bash
@@ -87,6 +103,125 @@ jobs:
           c=json.load(open('data/checkpoint_decision_v4.json'))
           print({'pipeline_health':h['pipeline_health'],'capability_coverage':h['capability_coverage'],'gate0':h['gate0']['counts'],'services':o['summary']['services_passed'],'orchestration_ms':o['duration_ms'],'architecture_guard':a['status'],'action':c['action_state']})
           PY
+
+      - name: Build before-after decision diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          baseline = Path(os.environ['RUNNER_TEMP']) / 'v4-before'
+          output = Path('v4-before-after-diagnostic.json')
+
+          def load(path):
+              try:
+                  return json.loads(Path(path).read_text())
+              except (FileNotFoundError, json.JSONDecodeError):
+                  return {}
+
+          before_c = load(baseline / 'checkpoint_decision_v4.json')
+          before_s = load(baseline / 'serving_payload_v4.json')
+          before_b = load(baseline / 'serving_benchmark_v4.json')
+          after_c = load('data/checkpoint_decision_v4.json')
+          after_s = load('data/serving_payload_v4.json')
+          after_b = load('data/serving_benchmark_v4.json')
+          orchestration = load('data/service_orchestration_v4.json')
+
+          def ids(rows):
+              return [row.get('element') for row in (rows or [])]
+
+          def transfer(checkpoint):
+              t = (((checkpoint.get('canonical_resolution') or {}).get('dimensions') or {}).get('transfer') or {})
+              return {
+                  'action': t.get('action'),
+                  'candidate_state': t.get('candidate_state'),
+                  'out': ids(t.get('out')),
+                  'in': ids(t.get('in')),
+                  'expected_net_gain_3_5gw': t.get('expected_net_gain_3_5gw'),
+                  'multi_horizon_projection': t.get('multi_horizon_projection'),
+                  'execution_authorized': t.get('execution_authorized'),
+                  'blocking_reasons': t.get('blocking_reasons') or [],
+              }
+
+          def compact(checkpoint, serving, benchmark):
+              resolution = checkpoint.get('canonical_resolution') or {}
+              dims = resolution.get('dimensions') or {}
+              freshness = resolution.get('freshness') or {}
+              tactical = serving.get('tactical') or {}
+              quick = benchmark.get('quick_serving') or {}
+              return {
+                  'generated_at': serving.get('generated_at') or checkpoint.get('evaluated_at'),
+                  'overall_action': resolution.get('overall_action') or checkpoint.get('action_state'),
+                  'headline': resolution.get('headline') or checkpoint.get('headline'),
+                  'squad_action': (dims.get('squad') or {}).get('action'),
+                  'transfer': transfer(checkpoint),
+                  'formation': serving.get('formation'),
+                  'xi_elements': ids(serving.get('xi')),
+                  'bench_elements': ids(serving.get('bench')),
+                  'captain_element': (serving.get('captain') or {}).get('element'),
+                  'vice_captain_element': (serving.get('vice_captain') or {}).get('element'),
+                  'captaincy_action': (dims.get('captaincy') or {}).get('action'),
+                  'chip_action': (dims.get('chip') or {}).get('action'),
+                  'planning_chip': (dims.get('chip') or {}).get('planning_chip'),
+                  'price_action': (dims.get('price') or {}).get('action'),
+                  'tactical_owned_count': len(tactical.get('owned') or []),
+                  'tactical_watchlist_count': len(tactical.get('watchlist') or []),
+                  'freshness_state': freshness.get('freshness_state'),
+                  'freshness_mode': freshness.get('freshness_mode'),
+                  'source_age_minutes': freshness.get('source_age_minutes'),
+                  'quick_serving_ms': quick.get('actual_ms'),
+              }
+
+          before = compact(before_c, before_s, before_b) if before_c and before_s else None
+          after = compact(after_c, after_s, after_b)
+          comparable = before is not None
+          stable_fields = [
+              'overall_action', 'squad_action', 'formation', 'xi_elements', 'bench_elements',
+              'captain_element', 'vice_captain_element', 'captaincy_action', 'chip_action',
+              'planning_chip', 'price_action', 'tactical_owned_count', 'tactical_watchlist_count',
+          ]
+          changed = {key: {'before': before.get(key), 'after': after.get(key)}
+                     for key in stable_fields if comparable and before.get(key) != after.get(key)}
+          transfer_changed = comparable and before.get('transfer') != after.get('transfer')
+          result = {
+              'schema_version': 1,
+              'purpose': 'PR validation evidence only; comparison is diagnostic, not an equality gate because Official FPL state can legitimately refresh between runs',
+              'baseline_source': 'runtime-data-v4' if comparable else 'UNAVAILABLE',
+              'after_source': 'current PR validation run',
+              'before': before,
+              'after': after,
+              'comparison': {
+                  'comparable': comparable,
+                  'stable_field_changes': changed,
+                  'transfer_changed': transfer_changed,
+                  'exact_structural_parity': comparable and not changed,
+                  'decision_consistency': {
+                      'headline_matches_overall': str(after.get('headline') or '').startswith(str(after.get('overall_action') or '')),
+                      'exact_15_owned': len(after_s.get('owned_15') or []) == 15,
+                      'exact_20_watchlist': len(after_s.get('watchlist_20') or []) == 20,
+                      'exact_11_xi': len(after_s.get('xi') or []) == 11,
+                      'exact_4_bench': len(after_s.get('bench') or []) == 4,
+                  },
+                  'performance': {
+                      'orchestration_ms': orchestration.get('duration_ms'),
+                      'quick_serving_after_ms': after.get('quick_serving_ms'),
+                      'quick_serving_before_ms': before.get('quick_serving_ms') if comparable else None,
+                  },
+              },
+          }
+          output.write_text(json.dumps(result, indent=2, ensure_ascii=False) + '\n')
+          print(json.dumps(result['comparison'], ensure_ascii=False))
+          PY
+
+      - name: Upload before-after decision diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-before-after-${{ github.run_id }}-${{ github.run_attempt }}
+          path: v4-before-after-diagnostic.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Stamp runtime publication freshness
         if: inputs.publish

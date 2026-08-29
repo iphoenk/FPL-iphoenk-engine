@@ -68,6 +68,11 @@ def _team_value_totals(ledger: list[dict], itb: int | None) -> dict:
         "squad_sell_value": squad_sell_value,
         "transferable_funds": squad_sell_value + bank,
         "unit": "tenths_gbp_million",
+        # Backward-compatible machine-contract aliases only. USER_REPORT must
+        # consume the explicit fields above and never label either alias as
+        # generic "team value".
+        "market_value": squad_market_value,
+        "sell_value": squad_sell_value,
     }
 
 
@@ -147,7 +152,7 @@ def run() -> dict:
         "lineage": {"snapshot_sha256": snapshot_sha, "enrichment_sha256": enrichment_sha},
         "files": {"team": "data/team.json", "live": "data/live.json", "prices": "data/prices.json", "health": "data/health.json", "universe": "data/universe.json", "chips": "data/chips.json", "predictions": "data/predictions_v4.json", "effective_plan": "data/effective_plan_v4.json", "gw_scorecard": "data/gw_scorecard_v4.json", "checkpoint_decision": "data/checkpoint_decision_v4.json", "service_orchestration": "data/service_orchestration_v4.json"},
         "performance": {"raw_snapshot_ms": raw_snapshot_ms, "enrichment_ms": enrichment_ms, "prediction_ms": prediction_ms, "engine_before_snapshot_write_ms": round(raw_snapshot_ms + enrichment_ms + prediction_ms, 2)},
-        "meta": {"direct_fpl_api_authority": False, "raw_snapshot_is_official_api_authority": True, "official_fpl_first_for_available_fields": True, "fail_closed": True, "prediction_point_in_time": True, "advanced_stats_are_community_enrichment": True, "leakage_guard_required_for_predictive_training": True, "parallel_fetch_is_single_snapshot_not_polling": True, "checkpoint_policy_registry_driven": True, "simulation_never_authorizes_action": True, "service_contract_compatible": True, "service_boundaries_registry_driven": True, "engine_recommendations_are_advisory": True, "human_effective_plan_is_separate_contract": True, "source_governance_names_do_not_imply_runtime_adapters": True, "team_value_labels_are_semantically_explicit": True, "chip_state_is_phase_aware": True},
+        "meta": {"direct_fpl_api_authority": False, "raw_snapshot_is_official_api_authority": True, "official_fpl_first_for_available_fields": True, "fail_closed": True, "prediction_point_in_time": True, "advanced_stats_are_community_enrichment": True, "leakage_guard_required_for_predictive_training": True, "parallel_fetch_is_single_snapshot_not_polling": True, "checkpoint_policy_registry_driven": True, "simulation_never_authorizes_action": True, "service_contract_compatible": True, "service_boundaries_registry_driven": True, "engine_recommendations_are_advisory": True, "human_effective_plan_is_separate_contract": True, "source_governance_names_do_not_imply_runtime_adapters": True, "team_value_labels_are_semantically_explicit": True, "legacy_team_value_aliases_are_machine_contract_only": True, "chip_state_is_phase_aware": True},
     }
     atomic_json(DATA / "latest.json", latest)
     gw = phase.get("submitted_gw") or phase.get("planning_gw")

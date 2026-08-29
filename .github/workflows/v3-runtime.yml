@@ -107,7 +107,7 @@ jobs:
           echo "extra=$extra" >> "$GITHUB_OUTPUT"
           echo "selected profile=$profile mode=$mode visible=${{ steps.cadence.outputs.visible_mode }}"
 
-      - name: Run governed execution profile
+      - name: Run governed seven-domain execution profile
         if: steps.cadence.outputs.should_collect == 'true'
         shell: bash
         env:
@@ -124,7 +124,7 @@ jobs:
           if [ "${{ steps.runtime_profile.outputs.extra }}" = "--deep-stats" ]; then
             args+=(--deep-stats)
           fi
-          python -m src.runtime_v3.orchestrator "${args[@]}"
+          python -m src.runtime_v3.domain_orchestrator "${args[@]}"
 
       - name: Validate production decision contracts
         if: steps.cadence.outputs.should_collect == 'true'

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
 
@@ -10,6 +11,7 @@ from src.v5.intelligence.team_strength import build_team_strength
 from src.v5.intelligence.xmins import estimate_xmins
 
 CONFIG = "config/intelligence/projection.json"
+DEFENSIVE_COMPONENTS = ("clean_sheet", "saves", "defensive_contribution", "bonus")
 
 
 def _now() -> str:
@@ -55,6 +57,65 @@ def _p60(xmins: dict[str, Any], cfg: dict[str, Any]) -> float:
     high = max(low + 1.0, _f(transition.get("start_minutes_high"), 70.0))
     conditional = clamp((_f(xmins.get("starter_minutes_if_start"), 72.0) - low) / (high - low), 0.0, 1.0)
     return clamp(_f(xmins.get("start_probability")) * conditional, 0.0, 1.0)
+
+
+def _position_projection_diagnostics(players: list[dict[str, Any]]) -> dict[str, Any]:
+    buckets: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {
+            "players": set(),
+            "fixture_rows": 0,
+            "xpts": 0.0,
+            "appearance": 0.0,
+            "attack": 0.0,
+            "clean_sheet": 0.0,
+            "saves": 0.0,
+            "defensive_contribution": 0.0,
+            "bonus": 0.0,
+        }
+    )
+    for player in players:
+        position = str(player.get("position") or "UNKNOWN")
+        bucket = buckets[position]
+        bucket["players"].add(int(player.get("element") or -1))
+        for gw_row in player.get("xpts_by_gw") or []:
+            for fixture in gw_row.get("fixtures") or []:
+                components = fixture.get("components") if isinstance(fixture.get("components"), dict) else {}
+                bucket["fixture_rows"] += 1
+                bucket["xpts"] += _f(fixture.get("mean"))
+                for key in ("appearance", "attack", *DEFENSIVE_COMPONENTS):
+                    bucket[key] += _f(components.get(key))
+
+    positions: dict[str, Any] = {}
+    for position, bucket in sorted(buckets.items()):
+        count = int(bucket["fixture_rows"])
+        divisor = max(1, count)
+        total = _f(bucket["xpts"])
+        defensive_total = sum(_f(bucket[key]) for key in DEFENSIVE_COMPONENTS)
+        positions[position] = {
+            "player_count": len(bucket["players"]),
+            "fixture_rows": count,
+            "mean_xpts_per_fixture": round(total / divisor, 4),
+            "mean_components_per_fixture": {
+                key: round(_f(bucket[key]) / divisor, 4)
+                for key in ("appearance", "attack", *DEFENSIVE_COMPONENTS)
+            },
+            "defensive_component_share": round(defensive_total / total, 4) if total > 0 else 0.0,
+            "ablation_mean_xpts_per_fixture": {
+                f"without_{key}": round((total - _f(bucket[key])) / divisor, 4)
+                for key in DEFENSIVE_COMPONENTS
+            },
+        }
+    return {
+        "status": "READY" if positions else "NO_FIXTURE_SAMPLE",
+        "mutates_xpts": False,
+        "positions": positions,
+        "governance": {
+            "diagnostics_are_observational_only": True,
+            "component_observability_does_not_change_projection_formula": True,
+            "tactical_enrichment_may_not_mutate_xpts": True,
+            "clean_sheet_probability_consumed_once": True,
+        },
+    }
 
 
 def build_predictions(
@@ -171,7 +232,20 @@ def build_predictions(
                 ) * share * attack_multiplier
                 clean = cs_points.get(element_type, 0) * cs_prob * p60
                 saves = (saves90 / 3.0) * share if position == "GK" else 0.0
-                mean = max(0.0, appearance + attack + clean + dc90 * share + bonus90 * share + saves)
+                defensive_contribution = dc90 * share
+                bonus = bonus90 * share
+                components = {
+                    "appearance": appearance,
+                    "attack": attack,
+                    "clean_sheet": clean,
+                    "saves": saves,
+                    "defensive_contribution": defensive_contribution,
+                    "bonus": bonus,
+                }
+                raw_mean = sum(components.values())
+                mean = max(0.0, raw_mean)
+                if abs(mean - raw_mean) > 1e-9:
+                    raise RuntimeError("V5 projection component sum became negative before non-negative clamp")
                 unc = cfg.get("uncertainty") or {}
                 std = max(
                     _f(unc.get("minimum_points_std"), 1.15),
@@ -189,6 +263,8 @@ def build_predictions(
                     "mean": round(mean, 3),
                     "std": round(std, 3),
                     "clean_sheet_probability": round(cs_prob, 4),
+                    "components": {key: round(value, 4) for key, value in components.items()},
+                    "component_sum": round(raw_mean, 4),
                 }
                 details.append(row)
                 if len(network_fixtures) < 5:
@@ -293,6 +369,7 @@ def build_predictions(
             "capabilities": roles.get("capabilities"),
             "non_claims": roles.get("non_claims"),
         },
+        "projection_diagnostics": _position_projection_diagnostics(players),
         "players": players,
         "network_contract": {
             "bounded": True,

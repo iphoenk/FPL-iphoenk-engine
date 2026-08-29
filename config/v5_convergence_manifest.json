@@ -5,9 +5,11 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "9aaa898146f8396b6bf7f3337ca9ab6afa0f69cd",
+    "production_main_sha": "83873ea33ca631344212a792a57911fad7e1575b",
     "production_schema_version": 48,
+    "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-seven-domain-live-safe-reuse-prediction-freeze-recovery",
+    "production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
   },
   "operating_model": {
@@ -68,7 +70,11 @@
     "runtime_write_set_isolation_required": true,
     "live_safe_incremental_reuse_semantics_required": true,
     "production_definition_of_done_executable_required": true,
-    "price_fact_vs_model_semantic_authority_required": true
+    "price_fact_vs_model_semantic_authority_required": true,
+    "authenticated_official_predeadline_team_required_when_available": true,
+    "explicit_xmins_probability_decomposition_required": true,
+    "projection_component_observability_required": true,
+    "current_v3_execution_topology_reconciled_by_capability": true
   },
   "acceptance": {
     "no_regression_vs_v3_20_0_truth": true,
@@ -99,6 +105,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is bound to production main 9aaa8981, the V3.39 closeout head. The delta from f0293334 is metadata/governance only: production-proven housekeeping evidence, code-bearing acceptance semantics and closeout guards; no football formula or authority change. V5 remains capability-reconciled for V3.36-V3.39 live-safe reuse, write-set isolation, competitive-load consolidation and genuine-predeadline prediction-freeze recovery. Frozen football-truth baseline remains V3.20. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
+    "reason": "V5.0.0-beta.4 is capability-reanchored to current production main 83873ea3 / V3.39 runtime schema 49. The frozen football-truth baseline remains V3.20. Current V3 decision-quality and 11-domain/6-phase topology changes are reconciled by explicit V5 capability evidence rather than code or topology-name copying. Authenticated Official FPL is the preferred current pre-deadline team authority when available. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
   }
 }

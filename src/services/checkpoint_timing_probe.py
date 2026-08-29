@@ -6,8 +6,7 @@ import os
 from datetime import datetime
 
 from src.engines.checkpoint_policy import resolve_checkpoint
-from src.services.raw_snapshot_service import detect_phase
-from src.sources.official_fpl import get_json
+from src.services.raw_snapshot_service import _parallel_official_get, detect_phase
 from src.utils import parse_dt, utcnow
 
 
@@ -26,11 +25,11 @@ def _as_aware_datetime(value: str | datetime | None) -> datetime:
 def evaluate_timing_probe(bootstrap: dict, as_of: str | datetime | None = None) -> dict:
     """Resolve whether a :00 wake-up needs the full V4 engine.
 
-    The probe deliberately fetches only Official FPL bootstrap data. It delegates phase
-    detection and checkpoint policy to their existing authorities instead of duplicating
-    either decision. Ordinary :00 runs stay silent. A full run is authorized only for an
-    exact Final Review, or for a post-deadline reconciliation transition that occurred
-    less than 30 minutes ago and therefore should not wait for the next :30 master run.
+    The probe deliberately uses only Official FPL bootstrap data. Acquisition remains
+    owned by raw_snapshot_service; this module delegates both Official fetch and phase
+    detection instead of becoming a second source owner. Ordinary :00 runs stay silent.
+    A full run is authorized only for an exact Final Review, or for a post-deadline
+    reconciliation transition less than 30 minutes old.
     """
     now = _as_aware_datetime(as_of)
     phase = detect_phase(bootstrap, fixtures=[], as_of=now)
@@ -83,7 +82,8 @@ def evaluate_timing_probe(bootstrap: dict, as_of: str | datetime | None = None) 
 
 
 def run(as_of: str | None = None) -> dict:
-    bootstrap, health = get_json("bootstrap-static/", retries=1)
+    fetched = _parallel_official_get([("bootstrap", "bootstrap-static/", 1)])
+    bootstrap, health = fetched.get("bootstrap") or (None, {})
     if not bootstrap:
         raise RuntimeError(f"Official FPL bootstrap unavailable for timing probe: {health}")
     result = evaluate_timing_probe(bootstrap, as_of=as_of)

@@ -1,18 +1,22 @@
 import json
 from pathlib import Path
 
-from src.runtime_v3.domain_orchestrator import _validate_domain_coverage
+from src.runtime_v3.registry_compiler import compile_execution_plan
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_canonical_domains_cover_every_background_capability_exactly_once():
-    domains = json.loads((ROOT / "config/runtime/execution_domains.json").read_text())
-    services = json.loads((ROOT / "config/v3_service_registry.json").read_text())
-    assert domains["registry"] == "V3_EXECUTION_DOMAINS_V2"
-    assert domains["phase_count"] == 6
-    assert domains["domain_count"] == 11
-    assert domains["canonical_phases"] == {
+def _json(path: str) -> dict:
+    return json.loads((ROOT / path).read_text(encoding="utf-8"))
+
+
+def test_canonical_registry_has_eleven_runtime_services_and_covers_legacy_steps_once():
+    execution = _json("config/runtime/execution_registry.json")
+    implementation = _json("config/v3_service_registry.json")["services"]
+    assert execution["registry"] == "V3_CANONICAL_EXECUTION_REGISTRY_V1"
+    assert execution["phase_count"] == 6
+    assert execution["service_count"] == 11
+    assert execution["canonical_phases"] == {
         "ACQUIRE": ["official_state", "personal_team_state"],
         "ENRICH": ["football_context", "market_context"],
         "MODEL": ["prediction"],
@@ -20,67 +24,36 @@ def test_canonical_domains_cover_every_background_capability_exactly_once():
         "GOVERNANCE": ["framework_governance", "prediction_validation"],
         "PUBLISH": ["reporting", "serving"],
     }
-    assert list(domains["domains"]) == [
-        "official_state",
-        "personal_team_state",
-        "football_context",
-        "market_context",
-        "prediction",
-        "squad_decision",
-        "challenger_analysis",
-        "framework_governance",
-        "prediction_validation",
-        "reporting",
-        "serving",
-    ]
-    _validate_domain_coverage(domains, services)
-    assigned = [cap for spec in domains["domains"].values() for cap in spec["capabilities"]]
-    assert len(assigned) == 21
-    assert len(set(assigned)) == 21
-    assert set(assigned) == set(services["services"])
+    steps = [step for spec in execution["services"].values() for step in spec["implementation_steps"]]
+    assert len(steps) == 21
+    assert len(set(steps)) == 21
+    assert set(steps) == set(implementation)
 
 
-def test_canonical_domain_boundaries_prevent_responsibility_leakage():
-    registry = json.loads((ROOT / "config/runtime/execution_domains.json").read_text())
-    domains = registry["domains"]
-    assert domains["prediction"]["capabilities"] == ["prediction"]
-    assert domains["squad_decision"]["capabilities"] == ["lineup_governance"]
-    assert domains["challenger_analysis"]["capabilities"] == ["challenger"]
-    assert "prediction_validation" in domains["framework_governance"]["depends_on"]
-    assert domains["reporting"]["capabilities"] == ["watchlist", "reporting"]
-    assert domains["serving"]["capabilities"] == ["report_materializer"]
-    assert domains["serving"]["depends_on"] == ["reporting"]
-    assert registry["policy"]["prediction_has_no_decision_or_reporting_ownership"] is True
-    assert registry["policy"]["challenger_analysis_is_advisory_to_squad_decision"] is True
-    assert registry["policy"]["prediction_validation_gates_publication"] is True
-    assert registry["policy"]["phase_membership_is_a_responsibility_taxonomy_not_a_strict_execution_barrier"] is True
-    assert registry["policy"]["dependency_dag_controls_execution_order"] is True
+def test_non_negotiable_boundaries_remain_separate():
+    execution = _json("config/runtime/execution_registry.json")
+    services = execution["services"]
+    assert services["prediction"]["implementation_steps"] == ["prediction"]
+    assert services["squad_decision"]["implementation_steps"] == ["lineup_governance"]
+    assert services["challenger_analysis"]["implementation_steps"] == ["challenger"]
+    assert services["prediction_validation"]["implementation_steps"] == ["prediction_evaluation"]
+    assert services["framework_governance"]["implementation_steps"] == ["governance"]
+    assert services["reporting"]["implementation_steps"] == ["watchlist", "reporting"]
+    assert services["serving"]["implementation_steps"] == ["report_materializer"]
+    assert "prediction_validation" in services["framework_governance"]["depends_on"]
+    assert execution["policy"]["prediction_separate_from_decision"] is True
+    assert execution["policy"]["decision_separate_from_challenger"] is True
+    assert execution["policy"]["prediction_production_separate_from_validation"] is True
+    assert execution["policy"]["governance_separate_from_reporting"] is True
 
 
-def test_domain_dependency_dag_is_acyclic_and_covers_capability_dependencies():
-    registry = json.loads((ROOT / "config/runtime/execution_domains.json").read_text())
-    services = json.loads((ROOT / "config/v3_service_registry.json").read_text())
-    _validate_domain_coverage(registry, services)
-
-
-def test_domain_dag_reaches_every_domain_without_phase_order_assumptions():
-    registry = json.loads((ROOT / "config/runtime/execution_domains.json").read_text())
-    remaining = list(registry["domains"])
-    completed: set[str] = set()
-    waves: list[list[str]] = []
-    while remaining:
-        ready = [
-            name
-            for name in remaining
-            if set(registry["domains"][name]["depends_on"]).issubset(completed)
-        ]
-        assert ready
-        waves.append(ready)
-        completed.update(ready)
-        remaining = [name for name in remaining if name not in ready]
-
-    assert completed == set(registry["domains"])
-    assert waves == [
+def test_compiled_plan_is_deterministic_and_matches_expected_waves():
+    first = compile_execution_plan(write=False)
+    second = compile_execution_plan(write=False)
+    assert first == second
+    assert first["service_count"] == 11
+    assert first["implementation_step_count"] == 21
+    assert first["waves"] == [
         ["official_state"],
         ["personal_team_state"],
         ["football_context"],
@@ -91,29 +64,32 @@ def test_domain_dag_reaches_every_domain_without_phase_order_assumptions():
         ["reporting"],
         ["serving"],
     ]
+    assert first["module_batches_runtime_authority"] is False
+    assert first["plan_hash"] == second["plan_hash"]
 
 
-def test_domains_do_not_replace_business_capability_ownership():
-    domains = json.loads((ROOT / "config/runtime/execution_domains.json").read_text())
-    ownership = json.loads((ROOT / "config/v3_architecture_ownership_registry.json").read_text())
-    interactive = json.loads((ROOT / "config/runtime/interactive_service_registry.json").read_text())
-    assert domains["policy"]["execution_domains_are_process_orchestration_boundaries_not_business_owners"] is True
-    assert domains["policy"]["capability_ownership_remains_in_v3_architecture_ownership_registry"] is True
-    owner_services = {row["owner_service"] for row in ownership["responsibilities"]}
-    assigned = {cap for spec in domains["domains"].values() for cap in spec["capabilities"]}
-    interactive_owners = set(interactive["services"])
-    assert interactive_owners == {"unified_fastpath"}
-    background_owners = owner_services - interactive_owners
-    assert background_owners.issubset(assigned)
-    assert not (interactive_owners & assigned)
+def test_legacy_execution_domains_are_compatibility_projection_not_active_ssot():
+    legacy_domains = _json("config/runtime/execution_domains.json")
+    execution = _json("config/runtime/execution_registry.json")
+    for service_id, spec in execution["services"].items():
+        assert legacy_domains["domains"][service_id]["capabilities"] == spec["implementation_steps"]
+    assert legacy_domains["domain_count"] == execution["service_count"]
 
 
-def test_unified_runtime_is_only_scheduled_v3_runtime_workflow():
+def test_active_runtime_uses_compiled_orchestrator_and_workflow_remains_single_scheduler():
     workflows = ROOT / ".github/workflows"
-    runtime = (workflows / "v3-runtime.yml").read_text()
-    compat = (workflows / "fpl-engine.yml").read_text()
+    runtime = (workflows / "v3-runtime.yml").read_text(encoding="utf-8")
+    compat = (workflows / "fpl-engine.yml").read_text(encoding="utf-8")
+    assert "python -m src.runtime_v3.compiled_orchestrator" in runtime
+    assert "python -m src.runtime_v3.registry_compiler --check" in runtime
     assert "schedule:" in runtime
     assert "schedule:" not in compat
     assert not (workflows / "v3-runtime-fast.yml").exists()
     assert not (workflows / "v3-refresh-full.yml").exists()
-    assert "src.runtime_v3.domain_orchestrator" in runtime
+
+
+def test_module_batches_are_not_imported_by_active_control_plane():
+    orchestrator = (ROOT / "src/runtime_v3/compiled_orchestrator.py").read_text(encoding="utf-8")
+    runner = (ROOT / "src/runtime_v3/coarse_service_runner.py").read_text(encoding="utf-8")
+    assert "module_batch_runner" not in orchestrator
+    assert "module_batch_runner" not in runner

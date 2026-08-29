@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "registry": "fpl_v4_source_adapter_truth_v1",
+  "allowed_statuses": ["AVAILABLE", "PARTIAL", "STALE", "UNAVAILABLE", "NO MATERIAL UPDATE"],
+  "fabrication_forbidden": true,
+  "sources": {
+    "official_fpl_native": {"tier": 1, "adapter": "raw_snapshot_service", "status_rule": "ENDPOINT_HEALTH", "runtime_wired": true},
+    "official_fpl_website": {"tier": 1, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "premier_league_official": {"tier": 1, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "official_clubs": {"tier": 1, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "official_manager_team_communications": {"tier": 1, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "reliable_beat_reporters": {"tier": 2, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "verified_press_conference_reporting": {"tier": 2, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "reliable_injury_lineup_reporters": {"tier": 2, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "fpl_live_livefpl": {"tier": 3, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "onefpl": {"tier": 3, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "fffix": {"tier": 3, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "ffhub": {"tier": 3, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "ffscout": {"tier": 3, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "ben_crellin_fixture_chip_context": {"tier": 4, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "x_twitter": {"tier": 5, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "reddit": {"tier": 5, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false}
+  },
+  "guardrails": {
+    "governance_name_does_not_imply_adapter_exists": true,
+    "unwired_source_cannot_be_reported_available": true,
+    "external_report_time_sweep_may_upgrade_status_with_evidence": true,
+    "official_fpl_native_status_must_come_from_current_endpoint_health": true
+  }
+}

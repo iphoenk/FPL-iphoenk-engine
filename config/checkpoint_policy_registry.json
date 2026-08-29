@@ -87,6 +87,7 @@
       "operating_mode": "DEADLINE_DAY_FINAL_REVIEW",
       "visible_output": true,
       "full_report_required": true,
+      "no_material_change_must_still_report": true,
       "fresh_source_sweep_required": true,
       "direct_official_refresh_max_age_minutes": 30,
       "price_radar_required": true,

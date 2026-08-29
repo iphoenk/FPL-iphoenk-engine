@@ -35,9 +35,12 @@ def _keep_profile(players) -> dict:
         }
         gw_sorted.append(sorted_by_pos)
         gw_prefix.append({pos: _prefix(values) for pos, values in sorted_by_pos.items()})
+    objective_terms = tuple(p.objective for p in ps)
     return {
         "cost": sum(p.cost for p in ps),
-        "objective": sum(p.objective for p in ps),
+        "objective": sum(objective_terms),
+        "objective_terms": objective_terms,
+        "objective_elements": tuple((p.element, p.objective) for p in ps),
         "x3": sum(p.x3 for p in ps),
         "x5": sum(p.x5 for p in ps),
         "x10": sum(p.x10 for p in ps),
@@ -49,8 +52,18 @@ def _keep_profile(players) -> dict:
 
 
 def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
-    """Derive an OUT-set profile from the fixed baseline without rescanning keep players."""
+    """Derive an OUT-set profile while preserving reference float order exactly.
+
+    CPython 3.12 gives ``sum(float_iterable)`` improved numerical semantics, so a
+    baseline-total-minus-outs shortcut is not guaranteed to round identically to the
+    reference target sum. Preserve the ordered objective terms and let ``sum`` see the
+    exact same keep sequence that the reference audit sees.
+    """
     outs = tuple(outs)
+    out_ids = {p.element for p in outs}
+    objective_terms = tuple(
+        value for element, value in baseline["objective_elements"] if element not in out_ids
+    )
     out_by_pos = {pos: [p for p in outs if p.position == pos] for pos in POSITION_COUNTS}
     gw_sorted = []
     gw_prefix = []
@@ -72,7 +85,8 @@ def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
         gw_prefix.append(prefix_by_pos)
     return {
         "cost": baseline["cost"] - sum(p.cost for p in outs),
-        "objective": baseline["objective"] - sum(p.objective for p in outs),
+        "objective": sum(objective_terms),
+        "objective_terms": objective_terms,
         "x3": baseline["x3"] - sum(p.x3 for p in outs),
         "x5": baseline["x5"] - sum(p.x5 for p in outs),
         "x10": baseline["x10"] - sum(p.x10 for p in outs),
@@ -94,9 +108,11 @@ def _chosen_profile(chosen) -> dict:
         for player in ps:
             row[player.position].append(_gw_value(player, index))
         gw_by_pos.append(row)
+    objective_terms = tuple(p.objective for p in ps)
     return {
         "cost": sum(p.cost for p in ps),
-        "objective": sum(p.objective for p in ps),
+        "objective": sum(objective_terms),
+        "objective_terms": objective_terms,
         "x3": sum(p.x3 for p in ps),
         "x5": sum(p.x5 for p in ps),
         "x10": sum(p.x10 for p in ps),
@@ -139,9 +155,10 @@ def _metrics_from_profiles(profile: dict, chosen_profile: dict) -> dict:
         total = profile["gw_total"][index] + chosen_profile["gw_total"][index]
         xi5 += xi
         utility5 += xi + .12 * (total - xi)
+    objective = sum(profile["objective_terms"] + chosen_profile["objective_terms"])
     return {
         "cost": profile["cost"] + chosen_profile["cost"],
-        "objective": round(profile["objective"] + chosen_profile["objective"], 4),
+        "objective": round(objective, 4),
         "squad_xpts_3": round(profile["x3"] + chosen_profile["x3"], 2),
         "squad_xpts_5": round(profile["x5"] + chosen_profile["x5"], 2),
         "squad_xpts_10": round(profile["x10"] + chosen_profile["x10"], 2),
@@ -319,7 +336,7 @@ def audit_packages_from_candidates_fast(
             for chosen in candidate_states:
                 if len(chosen) != k:
                     continue
-                chosen_key = tuple(sorted(p.element for p in chosen))
+                chosen_key = tuple(p.element for p in chosen)
                 chosen_profile = chosen_profiles.get(chosen_key)
                 if chosen_profile is None:
                     chosen_profile = _chosen_profile(chosen)
@@ -419,6 +436,7 @@ def audit_packages_from_candidates_fast(
             "scalar_delta_metrics": True,
             "position_value_reuse": True,
             "small_package_candidate_template_cache": True,
+            "exact_reference_float_accumulation": True,
             "search_quality_reduction": False,
         },
         "guardrails": {

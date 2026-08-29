@@ -14,8 +14,20 @@ def _f(value: Any, default: float = 0.0) -> float:
         return float(default)
 
 
+def policy() -> dict[str, Any]:
+    return load_json_config(CONFIG)
+
+
+def lineup_gap() -> float:
+    return _f((policy().get("lineup") or {}).get("close_score_gap"), .35)
+
+
+def watchlist_gap() -> float:
+    return _f((policy().get("watchlist") or {}).get("close_dss_score_gap"), .05)
+
+
 def tactical_key(player: dict[str, Any]) -> tuple[int, int, int]:
-    cfg = load_json_config(CONFIG)
+    cfg = policy()
     matchup = player.get("tactical_matchup") if isinstance(player.get("tactical_matchup"), dict) else {}
     if str(matchup.get("status") or "") != "READY":
         return (0, 0, 0)
@@ -30,29 +42,17 @@ def tactical_key(player: dict[str, Any]) -> tuple[int, int, int]:
     return (len(overlap), len(highlights), int(rank.get(confidence, 0)))
 
 
-def close_group_sort(
-    rows: list[Any],
-    *,
-    score: Callable[[Any], float],
-    player: Callable[[Any], dict[str, Any]],
-    gap: float,
-) -> list[Any]:
-    """Sort only within score-close groups using tactical evidence.
-
-    Base model score always defines group boundaries and remains unchanged.
-    """
+def close_group_sort(rows: list[Any], *, score: Callable[[Any], float], player: Callable[[Any], dict[str, Any]], gap: float) -> list[Any]:
+    """Sort only within score-close groups using tactical evidence; base scores are immutable."""
     if len(rows) < 2:
         return list(rows)
     base = sorted(rows, key=score, reverse=True)
     out: list[Any] = []
     index = 0
     while index < len(base):
-        anchor = score(base[index])
-        group = [base[index]]
-        index += 1
+        anchor = score(base[index]); group = [base[index]]; index += 1
         while index < len(base) and anchor - score(base[index]) <= gap + 1e-9:
-            group.append(base[index])
-            index += 1
+            group.append(base[index]); index += 1
         if any(tactical_key(player(item)) != (0, 0, 0) for item in group):
             group.sort(key=lambda item: (tactical_key(player(item)), score(item)), reverse=True)
         out.extend(group)

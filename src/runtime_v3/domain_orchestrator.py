@@ -3,11 +3,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
 from typing import Any
 
+from src.runtime_v3 import incremental_reuse
+from src.runtime_v3 import module_batch_runner
 from src.runtime_v3 import orchestrator as legacy
 from src.utils import DATA, ROOT, atomic_json, read_json
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
@@ -15,6 +19,7 @@ from src.version import ENGINE_VERSION, SCHEMA_VERSION
 DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
 PERFORMANCE_PATH = DATA / "runtime_performance.json"
 DOMAIN_RUNTIME_ID = "v3-domain-pipeline-v1"
+_DOMAIN_RESULT_PREFIX = "V3_DOMAIN_RESULT="
 
 
 def _load_domains() -> dict[str, Any]:
@@ -54,6 +59,19 @@ def _profile(mode: str, deep_stats: bool, explicit: str | None) -> tuple[str, di
     return profile_name, profile_cfg
 
 
+def _execution_spec(name: str, spec: dict[str, Any]) -> dict[str, Any]:
+    shared_spec = dict(spec)
+    shared_spec["isolated"] = False
+    batches = module_batch_runner._registry().get("batches") or {}
+    if name in batches:
+        shared_spec["commands"] = [{
+            "module": "src.runtime_v3.module_batch_runner",
+            "args": ["--batch", name, "{stats}", "{deep_stats}", "--mode", "{mode}"],
+        }]
+        shared_spec["single_process_module_batch"] = True
+    return shared_spec
+
+
 def _run_capability(
     name: str,
     spec: dict[str, Any],
@@ -61,15 +79,20 @@ def _run_capability(
     cache_dir: Path,
     context: dict[str, str],
     timeout: int,
+    profile_name: str,
     profile_cfg: dict[str, Any],
 ) -> dict[str, Any]:
+    """Compatibility primitive retained for tests and controlled fallback paths."""
+    reuse_active = incremental_reuse.active(profile_name)
     reused = legacy._reuse_service(name, spec, DATA, profile_cfg)
+    if reused is None and reuse_active:
+        reused = incremental_reuse.try_reuse(name, spec, profile_name)
     if reused is not None:
         reused["execution_boundary"] = "DOMAIN_SHARED_CANONICAL"
         return reused
 
-    shared_spec = dict(spec)
-    shared_spec["isolated"] = False
+    input_fingerprint_before = incremental_reuse.fingerprint(name) if reuse_active else None
+    shared_spec = _execution_spec(name, spec)
     result = legacy._run_service(
         name,
         shared_spec,
@@ -80,6 +103,10 @@ def _run_capability(
         timeout=timeout,
         submitted_at=time.perf_counter(),
     )
+    if input_fingerprint_before:
+        result["input_fingerprint_before"] = input_fingerprint_before
+    if shared_spec.get("single_process_module_batch"):
+        result["single_process_module_batch"] = True
     if result["status"] != "SUCCESS":
         return result
 
@@ -90,6 +117,8 @@ def _run_capability(
         result["promotion_ms"] = 0.0
         result["promoted_output_bytes"] = 0
         result["execution_boundary"] = "DOMAIN_SHARED_CANONICAL"
+        if reuse_active:
+            incremental_reuse.record(name, profile_name, input_fingerprint_before)
         return result
     except Exception as exc:
         result["status"] = "FAILED"
@@ -97,6 +126,68 @@ def _run_capability(
         result["validation_ms"] = round((time.perf_counter() - validation_started) * 1000.0, 3)
         result["error"] = f"{type(exc).__name__}: {exc}"
         return result
+
+
+def _run_domain_process(
+    domain_name: str,
+    *,
+    mode: str,
+    stats: bool,
+    deep_stats: bool,
+    profile_name: str,
+    cache_dir: Path,
+    cache_ttl: int,
+    timeout: int,
+) -> dict[str, Any]:
+    cmd = [
+        sys.executable,
+        "-m",
+        "src.runtime_v3.domain_process_runner",
+        "--domain",
+        domain_name,
+        "--mode",
+        mode,
+        "--profile",
+        profile_name,
+        "--stats" if stats else "--no-stats",
+    ]
+    if deep_stats:
+        cmd.append("--deep-stats")
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(ROOT)
+    env["FPL_DATA_DIR"] = str(DATA)
+    env["FPL_HTTP_CACHE_DIR"] = str(cache_dir)
+    env["FPL_HTTP_CACHE_TTL_SECONDS"] = str(cache_ttl)
+    env["FPL_EXECUTION_PROFILE"] = profile_name
+    started = time.perf_counter()
+    proc = subprocess.run(
+        cmd,
+        cwd=ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        timeout=timeout,
+        check=False,
+    )
+    elapsed_ms = round((time.perf_counter() - started) * 1000.0, 3)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"domain process {domain_name} failed rc={proc.returncode}: "
+            f"{(proc.stderr or proc.stdout or '')[-4000:]}"
+        )
+    marker = next(
+        (line for line in reversed((proc.stdout or "").splitlines()) if line.startswith(_DOMAIN_RESULT_PREFIX)),
+        None,
+    )
+    if marker is None:
+        raise RuntimeError(f"domain process {domain_name} emitted no result marker")
+    payload = json.loads(marker[len(_DOMAIN_RESULT_PREFIX):])
+    if payload.get("status") != "SUCCESS":
+        raise RuntimeError(f"domain process {domain_name} returned {payload.get('status')}")
+    payload["process_elapsed_ms"] = elapsed_ms
+    payload["process_stdout_tail"] = (proc.stdout or "")[-4000:]
+    payload["process_stderr_tail"] = (proc.stderr or "")[-4000:]
+    return payload
 
 
 def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profile: str | None = None) -> dict[str, Any]:
@@ -110,13 +201,6 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
     runtime = service_registry.get("runtime") or {}
     timeout = max(1, int(runtime.get("service_timeout_seconds") or 1))
     cache_ttl = max(1, int(runtime.get("http_cache_ttl_seconds") or 1))
-    context = {
-        "mode": mode,
-        "stats": "--stats" if stats else "--no-stats",
-        "deep_stats": "--deep-stats" if deep_stats else "",
-        "http_cache_ttl": str(cache_ttl),
-        "profile": profile_name,
-    }
 
     wall_started = time.perf_counter()
     capability_results: dict[str, dict[str, Any]] = {}
@@ -137,39 +221,45 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                 domain_spec = domain_registry["domains"][domain_name]
                 if not set(domain_spec.get("depends_on") or []).issubset(completed_domains):
                     continue
-                domain_started = time.perf_counter()
-                domain_capabilities: list[str] = []
-                for capability in domain_spec.get("capabilities") or []:
-                    capability = str(capability)
+                capabilities = [str(value) for value in domain_spec.get("capabilities") or []]
+                domain_set = set(capabilities)
+                for capability in capabilities:
                     spec = services[capability]
-                    missing_deps = sorted(set(str(dep) for dep in spec.get("depends_on") or []) - completed_capabilities)
-                    if missing_deps:
+                    external_deps = {str(dep) for dep in spec.get("depends_on") or []} - domain_set
+                    missing = sorted(external_deps - completed_capabilities)
+                    if missing:
                         raise RuntimeError(
-                            f"domain ordering violates capability dependency: {domain_name}:{capability} missing={missing_deps}"
+                            f"domain ordering violates capability dependency: {domain_name}:{capability} missing={missing}"
                         )
-                    result = _run_capability(
-                        capability,
-                        spec,
-                        cache_dir=cache_dir,
-                        context=context,
-                        timeout=timeout,
-                        profile_cfg=profile_cfg,
-                    )
+
+                domain_payload = _run_domain_process(
+                    domain_name,
+                    mode=mode,
+                    stats=stats,
+                    deep_stats=deep_stats,
+                    profile_name=profile_name,
+                    cache_dir=cache_dir,
+                    cache_ttl=cache_ttl,
+                    timeout=timeout,
+                )
+                results = domain_payload.get("results") or {}
+                for capability in capabilities:
+                    result = results.get(capability)
+                    if not isinstance(result, dict):
+                        raise RuntimeError(f"domain {domain_name} omitted capability result {capability}")
                     result["execution_domain"] = domain_name
                     capability_results[capability] = result
-                    domain_capabilities.append(capability)
-                    if result["status"] in {"SUCCESS", "REUSED"}:
-                        completed_capabilities.add(capability)
-                        continue
-                    if bool(spec.get("critical", True)):
-                        raise RuntimeError(f"critical capability {capability} failed in {domain_name}: {result.get('error')}")
-                    result["discarded_stale_outputs"] = legacy._clear_failed_service_outputs(DATA, spec)
+                    if result.get("status") not in {"SUCCESS", "REUSED"} and bool(services[capability].get("critical", True)):
+                        raise RuntimeError(
+                            f"critical capability {capability} failed in {domain_name}: {result.get('error')}"
+                        )
                     completed_capabilities.add(capability)
 
                 domain_results[domain_name] = {
                     "status": "SUCCESS",
-                    "elapsed_ms": round((time.perf_counter() - domain_started) * 1000.0, 3),
-                    "capabilities": domain_capabilities,
+                    "elapsed_ms": domain_payload.get("elapsed_ms"),
+                    "process_elapsed_ms": domain_payload.get("process_elapsed_ms"),
+                    "capabilities": capabilities,
                 }
                 completed_domains.add(domain_name)
                 pending.remove(domain_name)
@@ -187,6 +277,33 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             profile_cfg,
             temp_root,
         )
+        reuse_registry = incremental_reuse._registry().get("services") or {}
+        reuse_active = incremental_reuse.active(profile_name)
+        performance["content_addressed_reuse"] = {
+            "enabled": reuse_active,
+            "inactive_reason": incremental_reuse.inactive_reason(profile_name),
+            "reused_services": sorted(
+                name for name, row in capability_results.items()
+                if row.get("reuse_mode") == "CONTENT_ADDRESSED"
+            ),
+            "diagnostics": {
+                name: incremental_reuse.diagnose(name, profile_name)
+                for name in reuse_registry
+            },
+        }
+        performance["module_batching"] = {
+            "registry": "V3_MODULE_BATCHES_V1",
+            "batched_services": sorted(
+                name for name, row in capability_results.items()
+                if row.get("single_process_module_batch") is True
+            ),
+        }
+        performance["domain_process_execution"] = {
+            "enabled": True,
+            "process_count": len(domain_results),
+            "one_process_per_execution_domain": True,
+            "business_ownership_unchanged": True,
+        }
         performance["runtime_id"] = DOMAIN_RUNTIME_ID
         performance["architecture"] = domain_registry["architecture"]
         performance["execution_domain_count"] = len(domain_results)
@@ -205,6 +322,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             "execution_domain_count": len(domain_results),
             "capability_owner_count": len(capability_results),
             "shared_canonical_domain_workspace": True,
+            "one_process_per_execution_domain": True,
             "cross_capability_copy_promotion": False,
             "total_wall_ms": round(total_ms, 3),
         })
@@ -223,6 +341,9 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         "execution_domain_count": len(domain_results),
         "capability_owner_count": len(capability_results),
         "domains": domain_results,
+        "content_addressed_reuse": performance.get("content_addressed_reuse"),
+        "module_batching": performance.get("module_batching"),
+        "domain_process_execution": performance.get("domain_process_execution"),
         "resources": performance.get("resources"),
     }, ensure_ascii=False))
     return performance

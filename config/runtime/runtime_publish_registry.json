@@ -11,6 +11,7 @@
   },
   "hydrate_paths": [
     "latest.json",
+    "incremental_reuse_state.json",
     "price_cache.json",
     "price_trajectory.json",
     "prediction_ledger.json",
@@ -35,6 +36,7 @@
     "latest.json",
     "runtime_manifest.json",
     "runtime_performance.json",
+    "incremental_reuse_state.json",
     "health.json",
     "native.json",
     "team.json",

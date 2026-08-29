@@ -1,16 +1,41 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "registry": "V3_EXECUTION_DOMAINS_V2",
   "architecture": "V3_CANONICAL_DOMAIN_PIPELINE",
   "phase_count": 6,
   "domain_count": 11,
   "canonical_phases": {
-    "ACQUIRE": ["official_state", "personal_team_state"],
-    "ENRICH": ["football_context", "market_context"],
-    "MODEL": ["prediction"],
-    "DECISION": ["squad_decision", "challenger_analysis"],
-    "GOVERNANCE": ["framework_governance", "prediction_validation"],
-    "PUBLISH": ["reporting", "serving"]
+    "ACQUIRE": [
+      "official_state",
+      "personal_team_state"
+    ],
+    "ENRICH": [
+      "football_context",
+      "market_context"
+    ],
+    "MODEL": [
+      "prediction"
+    ],
+    "DECISION": [
+      "squad_decision",
+      "challenger_analysis"
+    ],
+    "GOVERNANCE": [
+      "framework_governance",
+      "prediction_validation"
+    ],
+    "PUBLISH": [
+      "reporting",
+      "serving"
+    ]
+  },
+  "control_plane": {
+    "compiler": "src.runtime_v3.registry_compiler",
+    "compiled_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
+    "capability_contract_registry": "config/v3_service_registry.json",
+    "module_batch_registry": "DERIVED_FROM_CAPABILITY_COMMANDS",
+    "human_maintained_module_batch_registry": false,
+    "artifact_writer_exceptions_fail_closed": true
   },
   "compatibility": {
     "previous_registry": "V3_EXECUTION_DOMAINS_V1",
@@ -18,13 +43,31 @@
     "business_capability_contract_unchanged": true,
     "service_registry_unchanged": true,
     "legacy_domain_aliases": {
-      "ACQUIRE": ["official_state", "personal_team_state"],
-      "ENRICH": ["football_context"],
-      "MODEL": ["prediction"],
-      "MARKET": ["market_context"],
-      "DECISION": ["squad_decision", "challenger_analysis"],
-      "GOVERNANCE": ["framework_governance", "prediction_validation"],
-      "PUBLISH": ["reporting", "serving"]
+      "ACQUIRE": [
+        "official_state",
+        "personal_team_state"
+      ],
+      "ENRICH": [
+        "football_context"
+      ],
+      "MODEL": [
+        "prediction"
+      ],
+      "MARKET": [
+        "market_context"
+      ],
+      "DECISION": [
+        "squad_decision",
+        "challenger_analysis"
+      ],
+      "GOVERNANCE": [
+        "framework_governance",
+        "prediction_validation"
+      ],
+      "PUBLISH": [
+        "reporting",
+        "serving"
+      ]
     }
   },
   "policy": {
@@ -45,63 +88,181 @@
     "prediction_has_no_decision_or_reporting_ownership": true,
     "challenger_analysis_is_advisory_to_squad_decision": true,
     "prediction_validation_gates_publication": true,
-    "reporting_and_serving_consume_one_governed_snapshot": true
+    "reporting_and_serving_consume_one_governed_snapshot": true,
+    "capability_registry_is_contract_catalog_not_process_count": true,
+    "module_batches_are_derived_from_capability_commands": true,
+    "duplicate_human_maintained_execution_truth_is_forbidden": true
+  },
+  "artifact_writer_exceptions": {
+    "health.json": {
+      "kind": "base_fan_in_mirror",
+      "writers": [
+        "official_snapshot",
+        "base_snapshot"
+      ]
+    },
+    "team.json": {
+      "kind": "base_fan_in_mirror",
+      "writers": [
+        "team_state",
+        "base_snapshot"
+      ]
+    },
+    "chips.json": {
+      "kind": "base_fan_in_mirror",
+      "writers": [
+        "team_state",
+        "base_snapshot"
+      ]
+    },
+    "live.json": {
+      "kind": "base_fan_in_mirror",
+      "writers": [
+        "live_state",
+        "base_snapshot"
+      ]
+    },
+    "prices.json": {
+      "kind": "base_fan_in_then_market_enrichment",
+      "writers": [
+        "market_state",
+        "base_snapshot",
+        "price"
+      ]
+    },
+    "universe.json": {
+      "kind": "base_fan_in_mirror",
+      "writers": [
+        "market_state",
+        "base_snapshot"
+      ]
+    },
+    "advanced_stats_sync.json": {
+      "kind": "base_fan_in_mirror",
+      "writers": [
+        "advanced_stats",
+        "base_snapshot"
+      ]
+    },
+    "user_report.json": {
+      "kind": "report_then_serving_materialization",
+      "writers": [
+        "reporting",
+        "report_materializer"
+      ]
+    }
   },
   "domains": {
     "official_state": {
       "phase": "ACQUIRE",
       "depends_on": [],
-      "capabilities": ["official_snapshot", "rules"]
+      "capabilities": [
+        "official_snapshot",
+        "rules"
+      ]
     },
     "personal_team_state": {
       "phase": "ACQUIRE",
-      "depends_on": ["official_state"],
-      "capabilities": ["team_state", "market_state", "live_state", "advanced_stats", "base_snapshot", "authenticated_official"]
+      "depends_on": [
+        "official_state"
+      ],
+      "capabilities": [
+        "team_state",
+        "market_state",
+        "live_state",
+        "advanced_stats",
+        "base_snapshot",
+        "authenticated_official"
+      ]
     },
     "football_context": {
       "phase": "ENRICH",
-      "depends_on": ["personal_team_state"],
-      "capabilities": ["historical_prior", "tactical_context", "source_layer"]
+      "depends_on": [
+        "personal_team_state"
+      ],
+      "capabilities": [
+        "historical_prior",
+        "tactical_context",
+        "source_layer"
+      ]
     },
     "market_context": {
       "phase": "ENRICH",
-      "depends_on": ["football_context"],
-      "capabilities": ["price", "official_detail"]
+      "depends_on": [
+        "football_context"
+      ],
+      "capabilities": [
+        "price",
+        "official_detail"
+      ]
     },
     "prediction": {
       "phase": "MODEL",
-      "depends_on": ["football_context"],
-      "capabilities": ["prediction"]
+      "depends_on": [
+        "football_context"
+      ],
+      "capabilities": [
+        "prediction"
+      ]
     },
     "squad_decision": {
       "phase": "DECISION",
-      "depends_on": ["prediction"],
-      "capabilities": ["lineup_governance"]
+      "depends_on": [
+        "prediction"
+      ],
+      "capabilities": [
+        "lineup_governance"
+      ]
     },
     "challenger_analysis": {
       "phase": "DECISION",
-      "depends_on": ["prediction_validation", "football_context"],
-      "capabilities": ["challenger"]
+      "depends_on": [
+        "prediction_validation",
+        "football_context"
+      ],
+      "capabilities": [
+        "challenger"
+      ]
     },
     "framework_governance": {
       "phase": "GOVERNANCE",
-      "depends_on": ["market_context", "prediction_validation", "squad_decision", "challenger_analysis"],
-      "capabilities": ["governance"]
+      "depends_on": [
+        "market_context",
+        "prediction_validation",
+        "squad_decision",
+        "challenger_analysis"
+      ],
+      "capabilities": [
+        "governance"
+      ]
     },
     "prediction_validation": {
       "phase": "GOVERNANCE",
-      "depends_on": ["prediction"],
-      "capabilities": ["prediction_evaluation"]
+      "depends_on": [
+        "prediction"
+      ],
+      "capabilities": [
+        "prediction_evaluation"
+      ]
     },
     "reporting": {
       "phase": "PUBLISH",
-      "depends_on": ["framework_governance"],
-      "capabilities": ["watchlist", "reporting"]
+      "depends_on": [
+        "framework_governance"
+      ],
+      "capabilities": [
+        "watchlist",
+        "reporting"
+      ]
     },
     "serving": {
       "phase": "PUBLISH",
-      "depends_on": ["reporting"],
-      "capabilities": ["report_materializer"]
+      "depends_on": [
+        "reporting"
+      ],
+      "capabilities": [
+        "report_materializer"
+      ]
     }
   }
 }

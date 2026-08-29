@@ -1,11 +1,11 @@
 {
   "schema_version": 4,
   "model": "v5_postvalidated_shadow_acceptance_v4",
-  "generated_at": "2026-08-29T08:01:21.148064+00:00",
+  "generated_at": "2026-08-29T08:12:12.377162+00:00",
   "v5_version": "5.0.0-beta.4",
-  "release_fingerprint": "sha256:63414714391b7cb5d40906da04d9360022c79b53e6d0c7b3b51c2a6835dbad0c",
+  "release_fingerprint": "sha256:ea2fb70f20820756973ebb8465af1a7895bbc0d0365da77ec683111c40ac448f",
   "production_baseline_version": "v3.20.0",
-  "production_main_sha": "f02933343d275a9e4c34b7f690c4ee34cf822414",
+  "production_main_sha": "9aaa898146f8396b6bf7f3337ca9ab6afa0f69cd",
   "required_validated_cycles": 3,
   "validated_successful_cycles": 1,
   "remaining_validated_cycles": 2,
@@ -33,12 +33,12 @@
   "production_promotion_requires_explicit_manual_action": true,
   "validated_cycles": [
     {
-      "cycle_id": "20260829T080120.959538+0000",
-      "generated_at": "2026-08-29T08:01:20.959538+00:00",
-      "validated_at": "2026-08-29T08:01:21.148064+00:00",
+      "cycle_id": "20260829T081212.239696+0000",
+      "generated_at": "2026-08-29T08:12:12.239696+00:00",
+      "validated_at": "2026-08-29T08:12:12.377162+00:00",
       "v3_engine_version": "3.39.0",
       "v5_engine_version": "5.0.0-beta.4",
-      "release_fingerprint": "sha256:63414714391b7cb5d40906da04d9360022c79b53e6d0c7b3b51c2a6835dbad0c"
+      "release_fingerprint": "sha256:ea2fb70f20820756973ebb8465af1a7895bbc0d0365da77ec683111c40ac448f"
     }
   ]
 }

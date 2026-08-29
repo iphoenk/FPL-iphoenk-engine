@@ -69,6 +69,67 @@
         }
       },
       {
+        "element": 384,
+        "name": "Donnarumma",
+        "position": "GK",
+        "team_id": 15,
+        "price": 5.5,
+        "score": 0.6516,
+        "dimension_coverage": 1.0,
+        "critical_dimension_score": 0.6184,
+        "dimensions": {
+          "role": 0.6,
+          "xmins": 0.8561561111111111,
+          "fixtures_3_5": 0.6207999999999999,
+          "underlying": 0.0,
+          "system_fit": 0.8493,
+          "competition": 0.8493,
+          "set_piece_penalty": 1.0,
+          "price_value": 0.7524848484848484,
+          "squad_fit": 0.65
+        },
+        "evidence": {
+          "start_probability": 0.8493,
+          "expected_minutes": 78.2,
+          "dnp_probability": 0.0528,
+          "xpts_5": 18.624,
+          "xpts_15": 53.819,
+          "now_cost": 55,
+          "ownership_pct": 8.2,
+          "projection_confidence": "HIGH",
+          "role_available": true,
+          "historical_prior_available": true,
+          "set_piece_penalty_evidence": true
+        },
+        "action": "WATCH",
+        "confidence": "HIGH",
+        "admission_status": "STRICT",
+        "evidence_gaps": [],
+        "rank": 2,
+        "tactical_matchup": {
+          "status": "READY",
+          "opponent_team_id": 7,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [
+            "chance_creation",
+            "set_piece_activity",
+            "transition_threat"
+          ],
+          "opponent_strengths": [],
+          "route_vulnerability_overlap": [],
+          "highlights": [
+            "recent-GW lawan: ['long_range', 'box_central']"
+          ],
+          "tactical_key": [
+            0,
+            1,
+            2
+          ],
+          "advisory_only": true
+        }
+      },
+      {
         "element": 82,
         "name": "Kelleher",
         "position": "GK",
@@ -105,7 +166,7 @@
         "confidence": "MEDIUM",
         "admission_status": "STRICT",
         "evidence_gaps": [],
-        "rank": 2,
+        "rank": 3,
         "tactical_matchup": {
           "status": "READY",
           "opponent_team_id": 20,
@@ -157,7 +218,7 @@
           "xpts_5": 20.56,
           "xpts_15": 59.102,
           "now_cost": 55,
-          "ownership_pct": 8.8,
+          "ownership_pct": 8.9,
           "projection_confidence": "MEDIUM",
           "role_available": true,
           "historical_prior_available": true,
@@ -167,7 +228,7 @@
         "confidence": "MEDIUM",
         "admission_status": "STRICT",
         "evidence_gaps": [],
-        "rank": 3,
+        "rank": 4,
         "tactical_matchup": {
           "status": "READY",
           "opponent_team_id": 16,
@@ -228,7 +289,7 @@
         "confidence": "MEDIUM",
         "admission_status": "STRICT",
         "evidence_gaps": [],
-        "rank": 4,
+        "rank": 5,
         "tactical_matchup": {
           "status": "READY",
           "opponent_team_id": 8,
@@ -246,61 +307,6 @@
             0,
             1,
             1
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 467,
-        "name": "Sels",
-        "position": "GK",
-        "team_id": 18,
-        "price": 5.0,
-        "score": 0.652,
-        "dimension_coverage": 1.0,
-        "critical_dimension_score": 0.6223,
-        "dimensions": {
-          "role": 0.6,
-          "xmins": 0.8270694444444444,
-          "fixtures_3_5": 0.6243333333333333,
-          "underlying": 0.0,
-          "system_fit": 0.8225,
-          "competition": 0.8225,
-          "set_piece_penalty": 1.0,
-          "price_value": 0.8324444444444444,
-          "squad_fit": 0.65
-        },
-        "evidence": {
-          "start_probability": 0.8225,
-          "expected_minutes": 75.2,
-          "dnp_probability": 0.0621,
-          "xpts_5": 18.73,
-          "xpts_15": 52.828,
-          "now_cost": 50,
-          "ownership_pct": 1.5,
-          "projection_confidence": "MEDIUM",
-          "role_available": true,
-          "historical_prior_available": true,
-          "set_piece_penalty_evidence": true
-        },
-        "action": "WATCH",
-        "confidence": "MEDIUM",
-        "admission_status": "STRICT",
-        "evidence_gaps": [],
-        "rank": 5,
-        "tactical_matchup": {
-          "status": "READY",
-          "opponent_team_id": 19,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [],
-          "opponent_strengths": [],
-          "route_vulnerability_overlap": [],
-          "highlights": [],
-          "tactical_key": [
-            0,
-            0,
-            0
           ],
           "advisory_only": true
         }
@@ -369,6 +375,61 @@
         }
       },
       {
+        "element": 469,
+        "name": "N.Williams",
+        "position": "DEF",
+        "team_id": 18,
+        "price": 5.0,
+        "score": 0.6824,
+        "dimension_coverage": 1.0,
+        "critical_dimension_score": 0.6511,
+        "dimensions": {
+          "role": 0.6,
+          "xmins": 0.854538888888889,
+          "fixtures_3_5": 0.6865666666666667,
+          "underlying": 0.0,
+          "system_fit": 0.851,
+          "competition": 0.851,
+          "set_piece_penalty": 1.0,
+          "price_value": 0.9154222222222224,
+          "squad_fit": 0.65
+        },
+        "evidence": {
+          "start_probability": 0.851,
+          "expected_minutes": 77.5,
+          "dnp_probability": 0.0522,
+          "xpts_5": 20.597,
+          "xpts_15": 57.698,
+          "now_cost": 50,
+          "ownership_pct": 8.8,
+          "projection_confidence": "HIGH",
+          "role_available": true,
+          "historical_prior_available": true,
+          "set_piece_penalty_evidence": true
+        },
+        "action": "WATCH",
+        "confidence": "HIGH",
+        "admission_status": "STRICT",
+        "evidence_gaps": [],
+        "rank": 2,
+        "tactical_matchup": {
+          "status": "READY",
+          "opponent_team_id": 19,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [],
+          "route_vulnerability_overlap": [],
+          "highlights": [],
+          "tactical_key": [
+            0,
+            0,
+            0
+          ],
+          "advisory_only": true
+        }
+      },
+      {
         "element": 84,
         "name": "Collins",
         "position": "DEF",
@@ -405,7 +466,7 @@
         "confidence": "MEDIUM",
         "admission_status": "STRICT",
         "evidence_gaps": [],
-        "rank": 2,
+        "rank": 3,
         "tactical_matchup": {
           "status": "READY",
           "opponent_team_id": 20,
@@ -467,7 +528,7 @@
         "confidence": "MEDIUM",
         "admission_status": "STRICT",
         "evidence_gaps": [],
-        "rank": 3,
+        "rank": 4,
         "tactical_matchup": {
           "status": "READY",
           "opponent_team_id": 13,
@@ -524,7 +585,7 @@
         "confidence": "MEDIUM",
         "admission_status": "STRICT",
         "evidence_gaps": [],
-        "rank": 4,
+        "rank": 5,
         "tactical_matchup": {
           "status": "READY",
           "opponent_team_id": 16,
@@ -544,61 +605,6 @@
             0,
             1,
             1
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 469,
-        "name": "N.Williams",
-        "position": "DEF",
-        "team_id": 18,
-        "price": 5.0,
-        "score": 0.677,
-        "dimension_coverage": 1.0,
-        "critical_dimension_score": 0.646,
-        "dimensions": {
-          "role": 0.6,
-          "xmins": 0.854538888888889,
-          "fixtures_3_5": 0.6712,
-          "underlying": 0.0,
-          "system_fit": 0.851,
-          "competition": 0.851,
-          "set_piece_penalty": 1.0,
-          "price_value": 0.8949333333333332,
-          "squad_fit": 0.65
-        },
-        "evidence": {
-          "start_probability": 0.851,
-          "expected_minutes": 77.5,
-          "dnp_probability": 0.0522,
-          "xpts_5": 20.136,
-          "xpts_15": 56.439,
-          "now_cost": 50,
-          "ownership_pct": 8.8,
-          "projection_confidence": "MEDIUM",
-          "role_available": true,
-          "historical_prior_available": true,
-          "set_piece_penalty_evidence": true
-        },
-        "action": "WATCH",
-        "confidence": "MEDIUM",
-        "admission_status": "STRICT",
-        "evidence_gaps": [],
-        "rank": 5,
-        "tactical_matchup": {
-          "status": "READY",
-          "opponent_team_id": 19,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [],
-          "opponent_strengths": [],
-          "route_vulnerability_overlap": [],
-          "highlights": [],
-          "tactical_key": [
-            0,
-            0,
-            0
           ],
           "advisory_only": true
         }
@@ -632,7 +638,7 @@
           "xpts_5": 26.077,
           "xpts_15": 75.751,
           "now_cost": 76,
-          "ownership_pct": 13.7,
+          "ownership_pct": 14.1,
           "projection_confidence": "MEDIUM",
           "role_available": true,
           "historical_prior_available": true,
@@ -756,7 +762,7 @@
           "xpts_5": 23.379,
           "xpts_15": 66.87,
           "now_cost": 60,
-          "ownership_pct": 3.5,
+          "ownership_pct": 3.4,
           "projection_confidence": "MEDIUM",
           "role_available": true,
           "historical_prior_available": true,
@@ -797,35 +803,35 @@
         "position": "MID",
         "team_id": 14,
         "price": 7.0,
-        "score": 0.6859,
+        "score": 0.6731,
         "dimension_coverage": 1.0,
-        "critical_dimension_score": 0.64,
+        "critical_dimension_score": 0.6287,
         "dimensions": {
           "role": 0.6,
           "xmins": 0.8572611111111111,
-          "fixtures_3_5": 0.7794000000000001,
+          "fixtures_3_5": 0.7388,
           "underlying": 0.0,
           "system_fit": 0.851,
           "competition": 0.851,
           "set_piece_penalty": 1.0,
-          "price_value": 0.7422857142857143,
+          "price_value": 0.7036190476190476,
           "squad_fit": 0.65
         },
         "evidence": {
           "start_probability": 0.851,
           "expected_minutes": 78.2,
           "dnp_probability": 0.0522,
-          "xpts_5": 23.382,
-          "xpts_15": 68.636,
+          "xpts_5": 22.164,
+          "xpts_15": 65.174,
           "now_cost": 70,
-          "ownership_pct": 43.4,
-          "projection_confidence": "MEDIUM",
+          "ownership_pct": 43.3,
+          "projection_confidence": "HIGH",
           "role_available": true,
           "historical_prior_available": true,
           "set_piece_penalty_evidence": true
         },
         "action": "WATCH",
-        "confidence": "MEDIUM",
+        "confidence": "HIGH",
         "admission_status": "STRICT",
         "evidence_gaps": [],
         "rank": 4,
@@ -945,7 +951,7 @@
           "xpts_5": 26.475,
           "xpts_15": 75.315,
           "now_cost": 80,
-          "ownership_pct": 16.4,
+          "ownership_pct": 16.3,
           "projection_confidence": "MEDIUM",
           "role_available": true,
           "historical_prior_available": true,
@@ -1070,7 +1076,7 @@
           "xpts_5": 18.299,
           "xpts_15": 56.453,
           "now_cost": 55,
-          "ownership_pct": 3.6,
+          "ownership_pct": 3.7,
           "projection_confidence": "MEDIUM",
           "role_available": true,
           "historical_prior_available": true,
@@ -1131,7 +1137,7 @@
           "xpts_5": 18.635,
           "xpts_15": 54.252,
           "now_cost": 55,
-          "ownership_pct": 1.9,
+          "ownership_pct": 2.0,
           "projection_confidence": "LOW",
           "role_available": true,
           "historical_prior_available": false,
@@ -1168,36 +1174,36 @@
         }
       },
       {
-        "element": 295,
-        "name": "McBurnie",
+        "element": 379,
+        "name": "Isak",
         "position": "FWD",
-        "team_id": 11,
-        "price": 5.5,
-        "score": 0.5923,
+        "team_id": 14,
+        "price": 9.0,
+        "score": 0.6065,
         "dimension_coverage": 1.0,
-        "critical_dimension_score": 0.5624,
+        "critical_dimension_score": 0.5594,
         "dimensions": {
           "role": 0.6,
-          "xmins": 0.7079116666666666,
-          "fixtures_3_5": 0.5612999999999999,
+          "xmins": 0.7366827777777778,
+          "fixtures_3_5": 0.6868333333333333,
           "underlying": 0.0,
-          "system_fit": 0.7373,
-          "competition": 0.7373,
+          "system_fit": 0.7337,
+          "competition": 0.7337,
           "set_piece_penalty": 1.0,
-          "price_value": 0.6803636363636363,
+          "price_value": 0.5087654320987655,
           "squad_fit": 0.65
         },
         "evidence": {
-          "start_probability": 0.7373,
-          "expected_minutes": 58.8,
-          "dnp_probability": 0.0919,
-          "xpts_5": 16.839,
-          "xpts_15": 47.38,
-          "now_cost": 55,
-          "ownership_pct": 2.2,
-          "projection_confidence": "LOW",
+          "start_probability": 0.7337,
+          "expected_minutes": 66.8,
+          "dnp_probability": 0.0932,
+          "xpts_5": 20.605,
+          "xpts_15": 59.712,
+          "now_cost": 90,
+          "ownership_pct": 16.2,
+          "projection_confidence": "MEDIUM",
           "role_available": true,
-          "historical_prior_available": false,
+          "historical_prior_available": true,
           "set_piece_penalty_evidence": true
         },
         "action": "WATCH",
@@ -1207,18 +1213,19 @@
         "rank": 5,
         "tactical_matchup": {
           "status": "READY",
-          "opponent_team_id": 2,
+          "opponent_team_id": 12,
           "player_role": null,
           "player_return_routes": [],
           "opponent_vulnerabilities": [
-            "final_third_progression",
-            "box_pressure",
-            "shot_volume"
+            "set_piece_activity",
+            "final_third_progression"
           ],
-          "opponent_strengths": [],
+          "opponent_strengths": [
+            "transition_threat"
+          ],
           "route_vulnerability_overlap": [],
           "highlights": [
-            "recent-GW lawan: ['close_central', 'long_range']"
+            "recent-GW lawan: ['long_range', 'close_central']"
           ],
           "tactical_key": [
             0,
@@ -1335,6 +1342,6 @@
     "tactical_consumption_contract": "TACTICAL_DECISION_CONSUMPTION_V1",
     "tactical_tiebreak_close_screened_pool_only": true,
     "tactical_membership_promotion_forbidden": true,
-    "tactical_reranked_position_count": 4
+    "tactical_reranked_position_count": 3
   }
 }

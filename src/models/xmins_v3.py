@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.engines.p0_decision_quality import enrich_xmins_contract
 from src.models.xmins_v2 import estimate_xmins as estimate_xmins_v2
 from src.utils import ROOT, read_json
 
@@ -52,4 +53,4 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
         "historical_prior_is_shrinkage_evidence": True,
         "missing_historical_prior_is_not_fabricated": True,
     })
-    return out
+    return enrich_xmins_contract(out)

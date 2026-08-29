@@ -91,13 +91,20 @@ def _service_live_opt_in(service_name: str | None) -> bool:
     return isinstance(spec, dict) and spec.get("allow_during_live") is True
 
 
+def _any_live_opt_in() -> bool:
+    return any(
+        isinstance(spec, dict) and spec.get("allow_during_live") is True
+        for spec in (_registry().get("services") or {}).values()
+    )
+
+
 def active(profile_name: str, service_name: str | None = None) -> bool:
     registry = _registry()
     policy = registry.get("policy") or {}
     if profile_name not in set(policy.get("enabled_profiles") or []):
         return False
     if policy.get("disable_when_current_scoring_fixture_live") is True and _current_scoring_fixture_live():
-        return _service_live_opt_in(service_name)
+        return _service_live_opt_in(service_name) if service_name else _any_live_opt_in()
     return True
 
 
@@ -107,7 +114,8 @@ def inactive_reason(profile_name: str, service_name: str | None = None) -> str |
     if profile_name not in set(policy.get("enabled_profiles") or []):
         return "PROFILE_DISABLED"
     if policy.get("disable_when_current_scoring_fixture_live") is True and _current_scoring_fixture_live():
-        if _service_live_opt_in(service_name):
+        eligible = _service_live_opt_in(service_name) if service_name else _any_live_opt_in()
+        if eligible:
             return None
         return "CURRENT_SCORING_FIXTURE_LIVE_SERVICE_NOT_OPTED_IN"
     return None

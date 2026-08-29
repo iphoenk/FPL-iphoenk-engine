@@ -1,10 +1,10 @@
 {
-  "version": 1,
+  "version": 2,
   "phases": {
     "PRE_DEADLINE": {
-      "squad": ["user_lock", "official_authenticated", "official_public"],
-      "lineup": ["user_lock", "official_authenticated"],
-      "captaincy": ["user_lock", "official_authenticated"],
+      "squad": ["official_authenticated", "user_lock", "official_public"],
+      "lineup": ["official_authenticated", "user_lock"],
+      "captaincy": ["official_authenticated", "user_lock"],
       "finance": ["official_authenticated", "public_reconstruction"],
       "scoring": ["official_public"]
     },
@@ -34,5 +34,11 @@
     "after_deadline": true,
     "compare": ["latest_pre_deadline_authority", "submitted_picks"],
     "submitted_picks_become_baseline": true
+  },
+  "pre_deadline_governance": {
+    "official_authenticated_is_default_current_team_authority": true,
+    "user_lock_is_fallback_when_authenticated_unavailable": true,
+    "official_public_is_last_resort_for_squad_only": true,
+    "stale_persistent_lock_must_not_mask_live_authenticated_team": true
   }
 }

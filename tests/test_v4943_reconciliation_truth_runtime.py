@@ -62,25 +62,27 @@ def test_effective_plan_legality_is_independently_testable_through_canonical_own
     assert plan_legality_checks(bad, {"overall": "PASS"})["G0-12"][0] is False
 
 
-def test_runtime_architecture_preserves_hard_5s_compute_slo_and_adds_independent_guard():
+def test_runtime_architecture_preserves_hard_5s_compute_slo_with_simplified_boundaries():
     registry = json.loads((ROOT / "config" / "service_registry.json").read_text())
     services = registry["services"]
     declared_count = int(registry["guardrails"]["service_count"])
     ids = [row["id"] for row in services]
-    assert len(services) == declared_count == len(set(ids))
+    assert len(services) == declared_count == len(set(ids)) == 8
     by_id = {row["id"]: row for row in services}
-    assert by_id["architecture_guard"]["module"] == "src.services.architecture_guard_service"
-    assert by_id["reconciliation_readiness"]["module"] == "src.services.reconciliation_readiness_service"
+    assert by_id["validation"]["module"] == "src.services.validation_service"
     assert by_id["optimization"]["module"] == "src.services.optimization_slo_service"
-    assert by_id["framework_postflight"]["module"] == "src.services.framework_postflight_truth_service"
-    assert "user_decision_overlay" in by_id["framework_postflight"]["depends_on"]
-    assert "architecture_guard" in by_id["framework_preflight"]["depends_on"]
+    assert by_id["governance"]["module"] == "src.services.governance_service"
+    assert set(by_id["governance"]["depends_on"]) == {"validation", "user_decision_overlay", "personal_gw_scorecard"}
+    assert "architecture_guard" not in by_id
+    orchestrator = (ROOT / "src/services/orchestrator.py").read_text()
+    assert "startup_assurance = architecture_guard_service.run()" in orchestrator
     assert DECISION_COMPUTE_SLO_MS == 5000.0
     assert registry["guardrails"]["decision_compute_slo_ms"] == 5000
     assert registry["guardrails"]["decision_compute_slo_excludes_external_network_io"] is True
     assert registry["guardrails"]["reconciliation_started_from_official_stats_starts"] is True
     assert registry["guardrails"]["engine_effective_plan_legality_reported_separately"] is True
     assert registry["guardrails"]["reconciliation_readiness_read_only"] is True
+    assert registry["guardrails"]["reconciliation_readiness_process_isolated"] is False
 
 
 def test_reconciliation_truth_has_one_owner_and_no_minutes_threshold():

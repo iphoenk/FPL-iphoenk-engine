@@ -4,6 +4,7 @@
   "policy": {
     "enabled_profiles": ["fast_decision", "live"],
     "disable_when_current_scoring_fixture_live": true,
+    "live_reuse_requires_explicit_service_opt_in": true,
     "reuse_requires_matching_input_fingerprint": true,
     "reuse_requires_all_declared_artifacts": true,
     "reuse_never_bypasses_artifact_validation": true,
@@ -13,11 +14,11 @@
     "football_formulas_unchanged": true
   },
   "services": {
-    "prediction": {"inputs": ["official_snapshot.json","team.json","prior_season.json","player_features.json","tactical_team_profiles.json","player_role_profiles.json","recent_tactical_form.json","config/locked_squad.json","config/intelligence/projection.json","config/intelligence/team_strength.json","config/intelligence/xmins_v2.json"]},
-    "lineup_governance": {"inputs": ["team.json","chips.json","projections.json","package_optimizer.json","config/locked_squad.json","config/intelligence/lineup_governance.json"]},
-    "challenger": {"inputs": ["projections.json","prediction_ledger.json","challenger_observations.json","source_health.json","config/intelligence/challenger_registry.json"]},
-    "watchlist": {"inputs": ["team.json","projections.json","package_optimizer.json","prices.json","price_alerts.json","framework_health.json","config/intelligence/dss_watchlist.json"]},
-    "reporting": {"inputs": ["team.json","lineup_decision.json","package_decision.json","projections.json","price_alerts.json","prediction_quality.json","framework_health.json","challenger_scorecard.json","dss_watchlist.json","source_health.json","dss_operational_evidence.json","config/intelligence/reporting.json"]},
-    "report_materializer": {"inputs": ["official_snapshot.json","user_report.json","technical_appendix.json","team.json","projections.json","lineup_decision.json","dss_watchlist.json","official_detail.json","source_health.json","fixture_weather.json","config/report_artifact_registry.json"]}
+    "prediction": {"allow_during_live": true, "inputs": ["official_snapshot.json","team.json","prior_season.json","player_features.json","tactical_team_profiles.json","player_role_profiles.json","recent_tactical_form.json","config/locked_squad.json","config/intelligence/projection.json","config/intelligence/team_strength.json","config/intelligence/xmins_v2.json"]},
+    "lineup_governance": {"allow_during_live": true, "inputs": ["team.json","chips.json","projections.json","package_optimizer.json","config/locked_squad.json","config/intelligence/lineup_governance.json"]},
+    "challenger": {"allow_during_live": true, "inputs": ["projections.json","prediction_ledger.json","challenger_observations.json","source_health.json","config/intelligence/challenger_registry.json"]},
+    "watchlist": {"allow_during_live": true, "inputs": ["team.json","projections.json","package_optimizer.json","prices.json","price_alerts.json","framework_health.json","config/intelligence/dss_watchlist.json"]},
+    "reporting": {"allow_during_live": true, "inputs": ["team.json","lineup_decision.json","package_decision.json","projections.json","price_alerts.json","prediction_quality.json","framework_health.json","challenger_scorecard.json","dss_watchlist.json","source_health.json","dss_operational_evidence.json","config/intelligence/reporting.json"]},
+    "report_materializer": {"allow_during_live": true, "inputs": ["official_snapshot.json","user_report.json","technical_appendix.json","team.json","projections.json","lineup_decision.json","dss_watchlist.json","official_detail.json","source_health.json","fixture_weather.json","config/report_artifact_registry.json"]}
   }
 }

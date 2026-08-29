@@ -7,15 +7,75 @@ from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA
 
 
+def _assert_framework_health() -> tuple[dict, dict]:
+    """Preserve health checks while matching the engine's FAILED>PARTIAL>WARMUP precedence."""
+    pre = legacy._load("framework_health_preflight_v4.json")
+    post = legacy._load("framework_health_v4.json")
+    for obj, phase in ((pre, "preflight"), (post, "postflight")):
+        legacy._assert_version(obj, phase, 492, f"v{legacy.RELEASE_VERSION}-truthful-health")
+        assert obj.get("phase") == phase
+        assert obj.get("registry_integrity") is True
+        assert obj.get("overall") == obj.get("pipeline_health")
+        assert obj.get("pipeline_health") in {"GREEN", "AMBER"}
+        assert obj.get("prediction_health") in {"GREEN", "AMBER"}
+        assert obj.get("capability_health") in {"GREEN", "AMBER"}
+        assert obj.get("gate0", {}).get("pass") is True
+        assert obj.get("gate0", {}).get("counts", {}).get("FAIL", 0) == 0
+        assert obj.get("dss_core", {}).get("declared") == 50
+        assert obj.get("dss_extensions", {}).get("declared") == 16
+        assert obj.get("enhancements", {}).get("declared") == 8
+        assert not obj.get("critical_failed")
+        governance = obj.get("governance") or {}
+        assert governance.get("file_exists_is_not_sufficient_for_active") is True
+        assert governance.get("critical_warmup_blocks_unqualified_go") is True
+        assert governance.get("pipeline_health_separate_from_prediction_health") is True
+        assert obj.get("checkpoint_context", {}).get("policy_id")
+
+    assert pre["gate0"]["counts"].get("PASS", 0) + pre["gate0"]["counts"].get("DEFERRED", 0) == 16
+    assert post["gate0"]["counts"].get("PASS", 0) == 16
+    assert post.get("pipeline_health") == "GREEN"
+    assert post.get("capability_coverage", {}).get("declared") == 74
+    plan_truth = post.get("gate0", {}).get("plan_authority_validation") or {}
+    assert (plan_truth.get("engine_plan") or {}).get("legal") is True
+    assert (plan_truth.get("effective_plan") or {}).get("legal") is True
+    assert plan_truth.get("both_required") is True
+    assert (post.get("governance") or {}).get("effective_plan_legality_enforced") is True
+    assert (post.get("governance") or {}).get("engine_and_effective_plan_legality_reported_separately") is True
+    assert (post.get("governance") or {}).get("official_fpl_first_when_available") is True
+
+    official_first = post.get("official_fpl_first") or {}
+    assert official_first.get("status") == "PASS"
+    assert official_first.get("promoted_count", 0) >= 6
+    assert set(official_first.get("promoted_modules") or []) >= {"DSS-18", "DSS-20", "DSS-21", "DSS-22", "DSS-23", "DSS-38"}
+    assert official_first.get("ownership_eo_limitation_disclosed") is True
+    assert official_first.get("external_schedule_limitation_disclosed") is True
+
+    core = {row["id"]: row for row in post["dss_core"]["items"]}
+    for module_id in ("DSS-18", "DSS-20", "DSS-21", "DSS-22", "DSS-23", "DSS-38"):
+        assert core[module_id]["status"] == "ACTIVE", (module_id, core[module_id])
+    assert core["DSS-41"]["status"] == "PARTIAL"
+    assert core["DSS-41"]["detail"]["effective_ownership_available_from_official_fpl"] is False
+
+    critical_partial = list(post.get("critical_partial") or [])
+    critical_warmup = list(post.get("critical_warmup") or [])
+    if critical_partial:
+        assert post.get("prediction_health") == "AMBER"
+        assert post.get("decision_engine") == "DEGRADED"
+        assert post.get("go_allowed") is False
+    elif critical_warmup:
+        assert post.get("prediction_health") == "AMBER"
+        assert post.get("decision_engine") == "PROVISIONAL"
+        assert post.get("go_allowed") is False
+    else:
+        assert post.get("prediction_health") == "GREEN"
+        assert post.get("decision_engine") == "HEALTHY"
+    return pre, post
+
+
 def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
     """Validate the simplified execution topology without weakening other gates."""
     orchestration = legacy._load("service_orchestration_v4.json")
-    legacy._assert_version(
-        orchestration,
-        "orchestration",
-        496,
-        "v4.9.6-service-orchestrator-8-boundary",
-    )
+    legacy._assert_version(orchestration, "orchestration", 496, "v4.9.6-service-orchestrator-8-boundary")
     assert orchestration.get("status") == "PASS"
     assert orchestration.get("stats_enabled") is True
     assert orchestration.get("deep_stats_enabled") is True
@@ -25,16 +85,7 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
     ids = [row.get("id") for row in services]
     registry = json.loads((CONFIG / "service_registry.json").read_text(encoding="utf-8"))
     expected_ids = [row.get("id") for row in registry.get("services") or []]
-    assert expected_ids == [
-        "raw_snapshot",
-        "enrichment",
-        "prediction",
-        "validation",
-        "optimization",
-        "user_decision_overlay",
-        "personal_gw_scorecard",
-        "governance",
-    ]
+    assert expected_ids == ["raw_snapshot", "enrichment", "prediction", "validation", "optimization", "user_decision_overlay", "personal_gw_scorecard", "governance"]
     assert len(services) == len(expected_ids) == 8
     assert set(ids) == set(expected_ids), (ids, expected_ids)
     assert all(row.get("status") == "PASS" for row in services), services
@@ -71,42 +122,20 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
 
     guardrails = orchestration.get("guardrails") or {}
     required_true = (
-        "validation_lifecycle_no_official_refetch",
-        "deadline_snapshot_immutable",
-        "retroactive_snapshot_rejected",
-        "reconciliation_archive_immutable",
-        "reconciliation_idempotent",
-        "health_view_current_model_only",
-        "personal_gw_scorecard_no_official_refetch",
-        "finished_gw_archive_immutable",
-        "scorecard_simulation_never_mutates_archive",
-        "scorecard_projection_from_effective_plan_contract",
-        "user_decision_overlay_process_isolated",
-        "engine_is_advisory",
-        "user_decision_is_final_authority",
-        "engine_never_auto_overwrites_valid_user_override",
-        "projection_default_baseline_previous_submitted_gw",
-        "planning_override_requires_target_gw",
-        "stale_planning_override_rejected",
-        "optimizer_search_width_unchanged",
-        "reconciliation_started_from_official_stats_starts",
-        "minutes_never_infer_started",
-        "missing_starts_excluded_from_brier",
-        "effective_plan_legality_enforced_post_overlay",
-        "engine_effective_plan_legality_reported_separately",
-        "decision_compute_slo_excludes_external_network_io",
-        "official_fpl_first_when_field_available",
-        "dag_parallel_ready_services",
-        "parallel_services_must_have_no_dependency_edge",
-        "validation_and_optimization_may_parallelize_after_prediction",
-        "governance_requires_validation_user_plan_and_scorecard",
-        "human_report_language_governed",
-        "technical_reason_codes_separate_from_human_report",
-        "scheduled_checkpoint_recovery_enabled",
-        "architecture_guard_runs_before_orchestration",
-        "immutable_artifacts_declared_per_service",
-        "validation_boundary_preserves_four_artifact_contracts",
-        "governance_boundary_preserves_postflight_and_checkpoint_contracts",
+        "validation_lifecycle_no_official_refetch", "deadline_snapshot_immutable", "retroactive_snapshot_rejected",
+        "reconciliation_archive_immutable", "reconciliation_idempotent", "health_view_current_model_only",
+        "personal_gw_scorecard_no_official_refetch", "finished_gw_archive_immutable", "scorecard_simulation_never_mutates_archive",
+        "scorecard_projection_from_effective_plan_contract", "user_decision_overlay_process_isolated", "engine_is_advisory",
+        "user_decision_is_final_authority", "engine_never_auto_overwrites_valid_user_override",
+        "projection_default_baseline_previous_submitted_gw", "planning_override_requires_target_gw", "stale_planning_override_rejected",
+        "optimizer_search_width_unchanged", "reconciliation_started_from_official_stats_starts", "minutes_never_infer_started",
+        "missing_starts_excluded_from_brier", "effective_plan_legality_enforced_post_overlay",
+        "engine_effective_plan_legality_reported_separately", "decision_compute_slo_excludes_external_network_io",
+        "official_fpl_first_when_field_available", "dag_parallel_ready_services", "parallel_services_must_have_no_dependency_edge",
+        "validation_and_optimization_may_parallelize_after_prediction", "governance_requires_validation_user_plan_and_scorecard",
+        "human_report_language_governed", "technical_reason_codes_separate_from_human_report", "scheduled_checkpoint_recovery_enabled",
+        "architecture_guard_runs_before_orchestration", "immutable_artifacts_declared_per_service",
+        "validation_boundary_preserves_four_artifact_contracts", "governance_boundary_preserves_postflight_and_checkpoint_contracts",
     )
     for key in required_true:
         assert guardrails.get(key) is True, (key, guardrails.get(key))
@@ -127,8 +156,7 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
     return orchestration, services
 
 
-# Keep the complete pre-existing prediction, legality, report, calibration and
-# actionability gate suite unchanged; only replace the topology-specific check.
+legacy._assert_framework_health = _assert_framework_health
 legacy._assert_orchestration = _assert_orchestration
 _assert_version = legacy._assert_version
 run = legacy.run

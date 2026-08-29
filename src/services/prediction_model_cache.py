@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 from pathlib import Path
+from time import perf_counter
 
 from src.engines.v4_runner import build_predictions as canonical_build_predictions
 from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
 
 CACHE = DATA / "predictions_base_hot_cache_v4.json"
-ALGORITHM = "v4.9.6-exact-base-prediction-cache-v2"
+ALGORITHM = "v4.9.6-exact-base-prediction-cache-v3"
 _LAST_STATUS: dict = {}
 
 
@@ -42,12 +42,7 @@ def _stats_digests(stats_gw: int | None) -> dict:
 
 
 def semantic_fingerprint(bootstrap: dict, fixtures: list[dict], stats_gw: int | None) -> str:
-    """Fingerprint every semantic input consumed by canonical build_predictions.
-
-    Runtime timestamps are deliberately absent. Any model source, quality registry,
-    current bootstrap/fixture fact or prediction-enrichment file change invalidates
-    reuse and falls back to the canonical full calculation.
-    """
+    """Fingerprint every semantic input consumed by canonical build_predictions."""
     payload = {
         "algorithm": ALGORITHM,
         "bootstrap": {
@@ -64,35 +59,64 @@ def semantic_fingerprint(bootstrap: dict, fixtures: list[dict], stats_gw: int | 
     return hashlib.sha256(raw).hexdigest()
 
 
+def _restamp_prediction_contract(predictions: dict, generated_at: str) -> dict:
+    """Restamp only timestamp fields defined by the prediction output contract.
+
+    ``read_json`` already returns a newly parsed mutable object. Rebuilding the
+    entire multi-megabyte prediction tree (and previously deepcopying it first)
+    provided no isolation benefit and dominated cache-hit latency. Canonical model
+    output has one root ``generated_at`` and one string ``provenance.point_in_time``
+    per projected fixture; the root boolean ``point_in_time`` remains untouched.
+    """
+    predictions["generated_at"] = generated_at
+    for player in predictions.get("players") or []:
+        for fixture in player.get("fixtures") or []:
+            provenance = fixture.get("provenance")
+            if isinstance(provenance, dict) and isinstance(provenance.get("point_in_time"), str):
+                provenance["point_in_time"] = generated_at
+    return predictions
+
+
+# Backward-compatible helper name for focused tests/callers. It intentionally
+# applies the prediction-contract restamp rather than recursively rewriting keys.
 def _restamp(value, generated_at: str):
-    """Refresh timestamp provenance while preserving boolean point-in-time truth."""
-    if isinstance(value, dict):
-        out = {}
-        for key, item in value.items():
-            if key == "generated_at":
-                out[key] = generated_at
-            elif key == "point_in_time" and isinstance(item, str):
-                out[key] = generated_at
-            else:
-                out[key] = _restamp(item, generated_at)
-        return out
-    if isinstance(value, list):
-        return [_restamp(item, generated_at) for item in value]
-    return value
+    if not isinstance(value, dict):
+        return value
+    return _restamp_prediction_contract(value, generated_at)
 
 
 def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at: str, stats_gw: int | None = None) -> dict:
     global _LAST_STATUS
+    started = perf_counter()
+    t = perf_counter()
     fingerprint = semantic_fingerprint(bootstrap, fixtures, stats_gw)
+    fingerprint_ms = round((perf_counter() - t) * 1000.0, 2)
+
+    t = perf_counter()
     cached = read_json(CACHE, {})
+    cache_read_ms = round((perf_counter() - t) * 1000.0, 2)
     if cached.get("algorithm") == ALGORITHM and cached.get("fingerprint") == fingerprint and (cached.get("predictions") or {}).get("players"):
-        predictions = _restamp(copy.deepcopy(cached["predictions"]), generated_at)
-        _LAST_STATUS = {"hit": True, "reason": "EXACT_SEMANTIC_MATCH", "fingerprint": fingerprint}
+        t = perf_counter()
+        predictions = _restamp_prediction_contract(cached["predictions"], generated_at)
+        restamp_ms = round((perf_counter() - t) * 1000.0, 2)
+        _LAST_STATUS = {
+            "hit": True,
+            "reason": "EXACT_SEMANTIC_MATCH",
+            "fingerprint": fingerprint,
+            "fingerprint_ms": fingerprint_ms,
+            "cache_read_ms": cache_read_ms,
+            "restamp_ms": restamp_ms,
+            "canonical_build_ms": 0.0,
+            "total_ms": round((perf_counter() - started) * 1000.0, 2),
+        }
         return predictions
 
+    t = perf_counter()
     predictions = canonical_build_predictions(bootstrap, fixtures, generated_at, stats_gw=stats_gw)
+    canonical_build_ms = round((perf_counter() - t) * 1000.0, 2)
+    t = perf_counter()
     atomic_json(CACHE, {
-        "schema_version": 2,
+        "schema_version": 3,
         "algorithm": ALGORITHM,
         "fingerprint": fingerprint,
         "predictions": predictions,
@@ -100,13 +124,23 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
             "canonical_builder_on_miss": True,
             "all_semantic_prediction_inputs_hashed": True,
             "model_source_digest_invalidates_cache": True,
-            "generated_timestamp_restamped": True,
+            "prediction_contract_timestamp_restamp_only": True,
             "boolean_point_in_time_truth_preserved": True,
-            "string_point_in_time_provenance_restamped": True,
             "competitive_load_and_team_news_attached_after_base_cache": True,
         },
     })
-    _LAST_STATUS = {"hit": False, "reason": "CACHE_MISS_REBUILT_CANONICAL", "fingerprint": fingerprint}
+    cache_write_ms = round((perf_counter() - t) * 1000.0, 2)
+    _LAST_STATUS = {
+        "hit": False,
+        "reason": "CACHE_MISS_REBUILT_CANONICAL",
+        "fingerprint": fingerprint,
+        "fingerprint_ms": fingerprint_ms,
+        "cache_read_ms": cache_read_ms,
+        "restamp_ms": 0.0,
+        "canonical_build_ms": canonical_build_ms,
+        "cache_write_ms": cache_write_ms,
+        "total_ms": round((perf_counter() - started) * 1000.0, 2),
+    }
     return predictions
 
 

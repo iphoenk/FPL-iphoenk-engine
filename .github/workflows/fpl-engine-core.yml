@@ -71,7 +71,10 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Run process-isolated DAG-parallel V4 services
+      - name: Pre-orchestration architecture assurance
+        run: python -m src.services.architecture_guard_service
+
+      - name: Run 8 bounded DAG-parallel V4 services
         run: python -m src.services.orchestrator daily --stats --deep-stats
 
       - name: Centralized V4 core quality gate

@@ -5,7 +5,7 @@ import json
 from datetime import timedelta
 
 from src.engines import v4_decision_pipeline
-from src.services import enrichment_service
+from src.services import enrichment_service, prediction_model_cache
 from src.sources import official_fpl
 from src.utils import iso_now, utcnow
 
@@ -118,6 +118,44 @@ def test_optimizer_exact_cache_write_uses_path_artifacts(monkeypatch, tmp_path):
     assert stored["guardrails"]["bounded_consumer_projection_not_full_payload"] is True
     assert set(stored["artifact_sha256"]) == {"wc", "packages", "lineup"}
     assert all(len(value) == 64 for value in stored["artifact_sha256"].values())
+
+
+def test_prediction_cache_restamp_preserves_boolean_point_in_time():
+    payload = {
+        "generated_at": "old",
+        "point_in_time": True,
+        "players": [{"fixtures": [{"provenance": {"point_in_time": "old"}}]}],
+    }
+    out = prediction_model_cache._restamp(payload, "new")
+    assert out["generated_at"] == "new"
+    assert out["point_in_time"] is True
+    assert out["players"][0]["fixtures"][0]["provenance"]["point_in_time"] == "new"
+
+
+def test_prediction_cache_second_same_snapshot_is_exact_hit(monkeypatch, tmp_path):
+    cache = tmp_path / "predictions_base_hot_cache_v4.json"
+    calls = {"count": 0}
+
+    def builder(bootstrap, fixtures, generated_at, stats_gw=None):
+        calls["count"] += 1
+        return {
+            "generated_at": generated_at,
+            "point_in_time": True,
+            "model_version": "model",
+            "players": [{"element": 1, "fixtures": [{"provenance": {"point_in_time": generated_at}}]}],
+        }
+
+    monkeypatch.setattr(prediction_model_cache, "CACHE", cache)
+    monkeypatch.setattr(prediction_model_cache, "semantic_fingerprint", lambda bootstrap, fixtures, stats_gw: "same")
+    monkeypatch.setattr(prediction_model_cache, "canonical_build_predictions", builder)
+    first = prediction_model_cache.build_predictions_cached({}, [], "t1", stats_gw=2)
+    second = prediction_model_cache.build_predictions_cached({}, [], "t2", stats_gw=2)
+    assert calls["count"] == 1
+    assert first["point_in_time"] is True
+    assert second["point_in_time"] is True
+    assert second["generated_at"] == "t2"
+    assert second["players"][0]["fixtures"][0]["provenance"]["point_in_time"] == "t2"
+    assert prediction_model_cache.last_status()["hit"] is True
 
 
 def test_fresh_enrichment_cache_is_reused_without_network(monkeypatch, tmp_path):

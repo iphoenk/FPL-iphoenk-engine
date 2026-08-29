@@ -9,6 +9,9 @@ from src.engines import compliance_audit, framework_health_audit, v4_validation_
 from src.services import reconciliation_readiness_service
 from src.utils import DATA, read_json
 
+RAW_SNAPSHOT = DATA / "runtime" / "snapshot.v1.json"
+PREDICTIONS = DATA / "predictions_v4.json"
+
 
 def _preflight_worker(conn) -> None:
     started = perf_counter()
@@ -37,11 +40,20 @@ def run() -> dict:
     PRE-FLIGHT health depends on the immutable raw/enrichment/prediction snapshot but
     not on lifecycle/readiness output. It therefore runs in a forked worker while the
     parent performs lifecycle then reconciliation-readiness in their required order.
-    Rules compliance also remains in the parent. Logical ownership and all artifacts
-    are unchanged; only independent validation work is overlapped.
+    The parent loads raw/prediction evidence once and reuses those exact objects for
+    lifecycle/readiness. Logical ownership and all artifacts remain unchanged.
     """
     total = perf_counter()
     timings = {}
+
+    snapshot_started = perf_counter()
+    raw_snapshot = read_json(RAW_SNAPSHOT, {})
+    predictions_snapshot = read_json(PREDICTIONS, {})
+    timings["parent_snapshot_load_ms"] = round((perf_counter() - snapshot_started) * 1000.0, 2)
+    if raw_snapshot.get("schema") != "snapshot.v1":
+        raise RuntimeError("validation service requires runtime snapshot.v1")
+    if not predictions_snapshot.get("model_version") or not predictions_snapshot.get("players"):
+        raise RuntimeError("validation service requires current predictions_v4.json")
 
     ctx = get_context("fork")
     recv, send = ctx.Pipe(duplex=False)
@@ -51,11 +63,11 @@ def run() -> dict:
     send.close()
 
     started = perf_counter()
-    lifecycle = v4_validation_cycle.cycle()
+    lifecycle = v4_validation_cycle.cycle(raw=raw_snapshot, predictions=predictions_snapshot)
     timings["validation_lifecycle_ms"] = round((perf_counter() - started) * 1000.0, 2)
 
     started = perf_counter()
-    readiness = reconciliation_readiness_service.run()
+    readiness = reconciliation_readiness_service.run(raw=raw_snapshot, lifecycle=lifecycle)
     timings["reconciliation_readiness_ms"] = round((perf_counter() - started) * 1000.0, 2)
 
     started = perf_counter()
@@ -88,6 +100,10 @@ def run() -> dict:
     )
     timings["total_ms"] = round((perf_counter() - total) * 1000.0, 2)
 
+    reuse = readiness.get("input_reuse") or {}
+    if not reuse.get("raw_snapshot_preloaded") or not reuse.get("lifecycle_preloaded"):
+        raise RuntimeError("validation readiness did not reuse parent snapshot contract")
+
     out = {
         "service": "validation",
         "status": "PASS",
@@ -97,6 +113,15 @@ def run() -> dict:
             "rules_compliance": compliance.get("overall"),
             "framework_preflight": preflight.get("overall"),
         },
+        "snapshot_reuse": {
+            "parent_raw_snapshot_loaded_once": True,
+            "parent_predictions_loaded_once": True,
+            "lifecycle_received_preloaded_raw": True,
+            "lifecycle_received_preloaded_predictions": True,
+            "readiness_received_preloaded_raw": bool(reuse.get("raw_snapshot_preloaded")),
+            "readiness_received_lifecycle_result": bool(reuse.get("lifecycle_preloaded")),
+            "preflight_remains_isolated_file_backed_worker": True,
+        },
         "timings_ms": timings,
         "guardrails": {
             "underlying_artifact_contracts_preserved": True,
@@ -104,6 +129,7 @@ def run() -> dict:
             "preflight_only_overlaps_independent_work": True,
             "lifecycle_before_reconciliation_readiness": True,
             "preflight_artifact_status_verified": True,
+            "parent_snapshot_reuse_fail_closed": True,
             "official_api_refetch": False,
             "fail_closed": True,
         },

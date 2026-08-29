@@ -40,19 +40,36 @@ jobs:
         run: |
           set -euo pipefail
           BASELINE_SHA=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_main_sha'])")
-          BASELINE_VERSION=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_truth'])")
+          TRUTH_BASELINE=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_truth'])")
+          RUNTIME_LABEL=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_runtime'])")
           TEAM_ID=$(python -c "import json; print(json.load(open('config/engine.json'))['team_id'])")
           echo "V3_SOURCE_SHA=$BASELINE_SHA" >> "$GITHUB_ENV"
-          echo "V3_BASELINE_VERSION=$BASELINE_VERSION" >> "$GITHUB_ENV"
+          echo "V3_TRUTH_BASELINE=$TRUTH_BASELINE" >> "$GITHUB_ENV"
+          echo "V3_RUNTIME_LABEL=$RUNTIME_LABEL" >> "$GITHUB_ENV"
           echo "FPL_TEAM_ID=$TEAM_ID" >> "$GITHUB_ENV"
-          echo "accepted_baseline=$BASELINE_VERSION sha=$BASELINE_SHA team_id=$TEAM_ID"
+          echo "accepted_truth=$TRUTH_BASELINE runtime=$RUNTIME_LABEL sha=$BASELINE_SHA team_id=$TEAM_ID"
 
-      - name: Hydrate prior V5 shadow state
+      - name: Hydrate prior V5 shadow state and verify V3 runtime snapshot
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin "$V3_SOURCE_BRANCH" "$V3_RUNTIME_BRANCH" "$V5_SHADOW_BRANCH"
           test "$(git rev-parse origin/$V3_SOURCE_BRANCH)" = "$V3_SOURCE_SHA"
+
+          runtime_manifest_tmp="$(mktemp)"
+          git show "origin/${V3_RUNTIME_BRANCH}:data/runtime_manifest.json" > "$runtime_manifest_tmp"
+          python - "$runtime_manifest_tmp" <<'PY' >> "$GITHUB_ENV"
+          import json, os, sys
+          manifest=json.load(open(sys.argv[1]))
+          accepted=os.environ['V3_SOURCE_SHA']
+          actual=str(manifest.get('source_commit') or '')
+          if actual != accepted:
+              raise SystemExit(f'runtime-data source_commit drift: accepted={accepted} runtime={actual}')
+          print(f"V3_EXPECTED_RUNTIME_ENGINE_VERSION={manifest.get('engine_version')}")
+          print(f"V3_EXPECTED_RUNTIME_SCHEMA_VERSION={manifest.get('engine_schema_version')}")
+          PY
+          rm -f "$runtime_manifest_tmp"
+
           mkdir -p .shadow data/v5
           if git cat-file -e "origin/${V5_SHADOW_BRANCH}:data/v5/latest.json" 2>/dev/null; then
             shadow_tmp="$(mktemp -d)"
@@ -80,24 +97,33 @@ jobs:
           v3_tree="$(mktemp -d)"
           trap 'git worktree remove --force "$v3_tree" >/dev/null 2>&1 || true; rm -rf "$v3_tree"' EXIT
           git worktree add --detach "$v3_tree" "$V3_SOURCE_SHA"
-          mkdir -p "$v3_tree/data/stats"
-          for file in price_cache.json price_trajectory.json rules_source_state.json prediction_ledger.json challenger_observations.json report_state.json dss_watchlist.json; do
+          mkdir -p "$v3_tree/data"
+
+          python - "$v3_tree/config/runtime/runtime_publish_registry.json" <<'PY' > "$RUNNER_TEMP/v3-shadow-hydrate-paths.txt"
+          import json, sys
+          cfg=json.load(open(sys.argv[1]))
+          for path in cfg.get('hydrate_paths', []):
+              print(path)
+          PY
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
             if git cat-file -e "origin/${V3_RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
+              mkdir -p "$v3_tree/data/$(dirname "$file")"
               git show "origin/${V3_RUNTIME_BRANCH}:data/${file}" > "$v3_tree/data/${file}"
+              echo "Hydrated V3 reference state data/${file}"
             fi
-          done
-          for stat_file in vaastav_previous_season.json shots_gw1.json playermatchstats_gw1.json core_insights_gw1.json; do
-            if git cat-file -e "origin/${V3_RUNTIME_BRANCH}:data/stats/${stat_file}" 2>/dev/null; then
-              git show "origin/${V3_RUNTIME_BRANCH}:data/stats/${stat_file}" > "$v3_tree/data/stats/${stat_file}"
-            fi
-          done
+          done < "$RUNNER_TEMP/v3-shadow-hydrate-paths.txt"
+
           (
             cd "$v3_tree"
             export PYTHONPATH="$v3_tree"
-            python -m src.runtime_v3.orchestrator --mode daily --stats
+            python -m src.runtime_v3.domain_orchestrator --mode daily --stats --profile fast_decision
+            python -m src.engines.source_contract_validate
             python -m src.engines.production_contract_validate
             python -m src.engines.watchlist_contract_validate
             python -m src.engines.report_serving_validate
+            python -m src.engines.report_time_contract_validate
+            python -m src.runtime_v3.performance_guard --profile fast_decision
           )
           cp "$v3_tree/data/latest.json" .shadow/v3_latest.json
           cp "$v3_tree/data/lineup_decision.json" .shadow/v3_lineup_decision.json
@@ -105,9 +131,23 @@ jobs:
           import json, os
           latest=json.load(open('.shadow/v3_latest.json'))
           lineup=json.load(open('.shadow/v3_lineup_decision.json'))
-          expected=os.environ['V3_BASELINE_VERSION'].removeprefix('v')
-          print({'reference_sha':os.environ['V3_SOURCE_SHA'],'engine_version':latest.get('engine_version'),'generated_at':latest.get('generated_at'),'planning_gw':(latest.get('phase') or {}).get('planning_gw'),'formation':lineup.get('formation'),'captain':(lineup.get('captain') or {}).get('element') if isinstance(lineup.get('captain'),dict) else lineup.get('captain')})
-          assert str(latest.get('engine_version') or '') == expected, (latest.get('engine_version'), expected)
+          expected_version=str(os.environ['V3_EXPECTED_RUNTIME_ENGINE_VERSION'])
+          expected_schema=int(os.environ['V3_EXPECTED_RUNTIME_SCHEMA_VERSION'])
+          observed_version=str(latest.get('engine_version') or '')
+          observed_schema=int(latest.get('schema_version') or 0)
+          print({
+            'reference_sha':os.environ['V3_SOURCE_SHA'],
+            'truth_baseline':os.environ['V3_TRUTH_BASELINE'],
+            'runtime_label':os.environ['V3_RUNTIME_LABEL'],
+            'engine_version':observed_version,
+            'schema_version':observed_schema,
+            'generated_at':latest.get('generated_at'),
+            'planning_gw':(latest.get('phase') or {}).get('planning_gw'),
+            'formation':lineup.get('formation'),
+            'captain':(lineup.get('captain') or {}).get('element') if isinstance(lineup.get('captain'),dict) else lineup.get('captain'),
+          })
+          assert observed_version == expected_version, (observed_version, expected_version)
+          assert observed_schema == expected_schema, (observed_schema, expected_schema)
           PY
 
       - name: Start V5 bounded-context microservices
@@ -171,7 +211,8 @@ jobs:
           source=p['v5'].get('source_fusion_health') or {}
           api=source.get('api_football') or {}
           report_xi=((user.get('starting_xi') or {}).get('starting_xi') or [])
-          expected=os.environ['V3_BASELINE_VERSION'].removeprefix('v')
+          expected_version=str(os.environ['V3_EXPECTED_RUNTIME_ENGINE_VERSION'])
+          expected_schema=int(os.environ['V3_EXPECTED_RUNTIME_SCHEMA_VERSION'])
           allowed_api_unavailability={str(value) for value in source_acceptance.get('api_football_acceptable_unavailability_classes') or []}
           api_status=str(api.get('status') or '')
           api_class=str(api.get('availability_class') or '')
@@ -181,7 +222,10 @@ jobs:
             and api.get('fail_neutral') is True
           )
           print({
-            'accepted_v3':expected,
+            'accepted_truth_baseline':os.environ['V3_TRUTH_BASELINE'],
+            'accepted_runtime_label':os.environ['V3_RUNTIME_LABEL'],
+            'accepted_runtime_engine_version':expected_version,
+            'accepted_runtime_schema_version':expected_schema,
             'v3_engine_version':p['v3'].get('engine_version'),
             'cycle_pass':p['acceptance_progress']['cycle_pass'],
             'post_validation_status_before_finalize':p['acceptance_progress'].get('post_validation_status'),
@@ -201,7 +245,7 @@ jobs:
               'accepted_external_unavailability':accepted_api_unavailability,
             },
           })
-          assert str(p['v3'].get('engine_version') or '') == expected, (p['v3'].get('engine_version'), expected)
+          assert str(p['v3'].get('engine_version') or '') == expected_version, (p['v3'].get('engine_version'), expected_version)
           assert all(checks.values()), f'V5 operational invariant failure: {checks}'
           assert all(position_counts[pos] == 5 for pos in position_counts), f'watchlist positional contract failed: {position_counts}'
           assert core.get('counts') == {'ACTIVE':50}, f'DSS core must be 50/50 ACTIVE: {core.get("counts")}'
@@ -245,6 +289,7 @@ jobs:
             data/v5/technical_appendix.json
             data/v5/framework_health.json
             data/v5/dss_watchlist.json
+            data/v5/owned_challenger_comparator.json
           if-no-files-found: warn
           retention-days: 30
 

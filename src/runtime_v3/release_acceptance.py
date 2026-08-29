@@ -6,7 +6,6 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from pathlib import Path
 
 from src.utils import DATA, read_json
 
@@ -32,6 +31,7 @@ def integration_gates() -> tuple[Gate, ...]:
         Gate("fast_runtime", (py, "-m", runtime, "--mode", "daily", "--stats", "--profile", "fast_decision")),
         Gate("fast_slo_guard", (py, "-m", "src.runtime_v3.performance_guard", "--profile", "fast_decision")),
         Gate("material_equivalence", (py, "-m", "src.runtime_v3.equivalence_acceptance")),
+        Gate("definition_of_done", (py, "-m", "src.runtime_v3.definition_of_done", "--scope", "candidate")),
     )
 
 
@@ -80,6 +80,7 @@ def run() -> dict:
             "cold_then_warm_fast_required": True,
             "seven_domain_runtime_required": True,
             "same_input_material_equivalence_required": True,
+            "definition_of_done_candidate_required": True,
             "per_capability_timing_is_release_observable": True,
         },
     }

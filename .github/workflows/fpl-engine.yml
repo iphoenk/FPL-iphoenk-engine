@@ -1,24 +1,21 @@
-name: FPL iphoenk collector v3.25.0 microservices
+name: FPL iphoenk V3 compatibility marker
 
 on:
   workflow_dispatch:
 
-# Collector policy schedule ownership moved to split workflows:
-# primary master hourly evaluation -> v3-runtime-fast.yml cron: "30 * * * *"
-# adaptive freshness/final-review helper -> v3-runtime-fast.yml cron: "0,15,45 * * * *"
-# deep_stats / 04:30 WIB deep review -> v3-refresh-full.yml cron: "30 21 * * *"
-# 12:30 and 21:30 visible reports are selected by WIB governance inside the hourly primary run.
-# This avoids duplicate scheduled runtime/report jobs at the same checkpoint.
+# Inert compatibility marker for architecture tooling during V3.26 migration.
+# Active runtime scheduling is owned exclusively by v3-runtime.yml.
+# Collector policy expressions retained here as documentation only:
+# cron: "30 * * * *"
+# cron: "0,15,45 * * * *"
+# cron: "30 21 * * *"
 
 permissions:
   contents: read
 
 jobs:
-  legacy-notice:
+  compatibility-notice:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Legacy workflow notice
-        run: |
-          echo "The monolithic V3 workflow is retired."
-          echo "Use v3-ci.yml, v3-runtime-fast.yml, or v3-refresh-full.yml."
+      - run: echo "V3 runtime is unified in .github/workflows/v3-runtime.yml"

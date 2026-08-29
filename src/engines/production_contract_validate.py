@@ -31,6 +31,28 @@ def _validate_runtime_service_states(runtime_performance: dict) -> None:
         raise AssertionError({"service": name, "status": status, "runtime": runtime_performance})
 
 
+def _validate_runtime_architecture(snapshot_runtime: dict, runtime_performance: dict) -> None:
+    assert snapshot_runtime.get("id") == "v3-domain-pipeline-v1", snapshot_runtime
+    assert snapshot_runtime.get("architecture") == "V3_DOMAIN_PIPELINE", snapshot_runtime
+    assert snapshot_runtime.get("dependency_aware_scheduling") is True
+    assert snapshot_runtime.get("shared_official_cache") is True
+    assert snapshot_runtime.get("shared_canonical_domain_workspace") is True
+    assert snapshot_runtime.get("cross_capability_copy_promotion") is False
+    assert int(snapshot_runtime.get("execution_domain_count") or 0) == 7
+    assert int(snapshot_runtime.get("service_count") or 0) == 7
+    assert int(snapshot_runtime.get("capability_owner_count") or 0) == 21
+
+    assert runtime_performance.get("runtime_id") == "v3-domain-pipeline-v1", runtime_performance
+    assert runtime_performance.get("architecture") == "V3_DOMAIN_PIPELINE", runtime_performance
+    assert int(runtime_performance.get("execution_domain_count") or 0) == 7
+    assert int(runtime_performance.get("capability_owner_count") or 0) == 21
+    assert runtime_performance.get("cross_capability_copy_promotion") is False
+    domains = runtime_performance.get("execution_domains") or {}
+    assert list(domains) == ["ACQUIRE", "ENRICH", "MODEL", "MARKET", "DECISION", "GOVERNANCE", "PUBLISH"], domains
+    assert all((row or {}).get("status") == "SUCCESS" for row in domains.values())
+    assert len(runtime_performance.get("services") or {}) == 21
+
+
 def run() -> dict:
     s = load("latest.json")
     p = load("prices.json")
@@ -68,12 +90,8 @@ def run() -> dict:
     assert s["engine_version"] == ENGINE_VERSION
     assert s["schema_version"] == SCHEMA_VERSION
     runtime = s.get("runtime_architecture", {})
-    assert runtime.get("id") == "v3-bounded-process-microservices-v1", runtime
-    assert runtime.get("architecture") == "V3_BOUNDED_PROCESS_MICROSERVICES"
-    assert runtime.get("dependency_aware_scheduling") is True
-    assert runtime.get("shared_official_cache") is True
+    _validate_runtime_architecture(runtime, rp)
     assert s.get("files", {}).get("runtime_performance") == "data/runtime_performance.json"
-    assert rp.get("architecture") == "V3_BOUNDED_PROCESS_MICROSERVICES"
     assert rp.get("shared_official_cache_entries", 0) > 0
     _validate_runtime_service_states(rp)
 
@@ -212,6 +230,8 @@ def run() -> dict:
         "report_decision": user.get("decision", {}).get("overall"),
         "report_mode": user.get("report_mode"),
         "gate0": fh.get("gate0", {}).get("counts"),
+        "execution_domains": rp.get("execution_domain_count"),
+        "capability_owners": rp.get("capability_owner_count"),
     }
     print(json.dumps(summary, ensure_ascii=False))
     return summary

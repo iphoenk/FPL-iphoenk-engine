@@ -86,10 +86,7 @@ def test_natural_presentation_keeps_machine_states_out_of_human_surface():
             },
         },
     }
-    checkpoint = {
-        "current": {"label": "Review malam 21:30 WIB"},
-        "missed_due": [],
-    }
+    checkpoint = {"current": {"label": "Review malam 21:30 WIB"}, "missed_due": []}
     presentation = build_user_presentation(payload, checkpoint)
     text = json.dumps(presentation, ensure_ascii=False)
     assert presentation["language"] == "id-ID"
@@ -101,7 +98,7 @@ def test_natural_presentation_keeps_machine_states_out_of_human_surface():
 
 
 def test_normal_report_slots_are_selected_inside_master_hourly_checkpoint_without_duplicate_crons():
-    workflow = open(".github/workflows/v3-runtime-fast.yml", encoding="utf-8").read()
+    workflow = open(".github/workflows/v3-runtime.yml", encoding="utf-8").read()
     assert 'cron: "30 * * * *"' in workflow
     assert 'cron: "30 5 * * *"' not in workflow
     assert 'cron: "30 14 * * *"' not in workflow

@@ -58,9 +58,7 @@ def test_compact_serving_uses_current_user_authority_and_keeps_engine_as_challen
             {"action": "HOLD", "subject": "Squad", "trigger": "no material change"},
         ],
     }
-
     _sync_current_authority(payload, compact_captaincy=True)
-
     assert payload["captaincy"]["captain"] == "Bruno Fernandes"
     assert payload["captaincy"]["vice"] == "Haaland"
     assert payload["captaincy"]["authority"] == "USER_OVERRIDE"
@@ -91,21 +89,14 @@ def test_reporting_governance_blocks_internal_terms_from_human_surface():
     cfg = json.loads(Path("config/intelligence/reporting.json").read_text(encoding="utf-8"))
     forbidden = set((cfg.get("language") or {}).get("forbidden_user_presentation_tokens") or [])
     for token in {
-        "user_override_active",
-        "runtime_publish",
-        "schema_version",
-        "report_artifact_registry",
-        "technical_appendix",
-        "payload_type",
-        "REFRESH_REQUIRED",
-        "INVALID_EVIDENCE_CONTRACT",
-        "PARTIAL/UNAVAILABLE",
+        "user_override_active", "runtime_publish", "schema_version", "report_artifact_registry",
+        "technical_appendix", "payload_type", "REFRESH_REQUIRED", "INVALID_EVIDENCE_CONTRACT", "PARTIAL/UNAVAILABLE",
     }:
         assert token in forbidden
 
 
 def test_adaptive_schedule_covers_quarter_hour_support_without_colliding_with_master_30():
-    workflow = Path(".github/workflows/v3-runtime-fast.yml").read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/v3-runtime.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/runtime/collector_policy.json").read_text(encoding="utf-8"))
     assert 'cron: "30 * * * *"' in workflow
     assert 'cron: "0,15,45 * * * *"' in workflow

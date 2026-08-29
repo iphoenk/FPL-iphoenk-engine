@@ -35,7 +35,8 @@ def test_reuse_service_requires_fresh_complete_artifacts(monkeypatch, tmp_path):
     spec = {"artifacts": ["a.json", "b.json"]}
     profile = {"reuse_services": {"heavy": {"max_age_seconds": 60}}}
     assert orchestrator._reuse_service("heavy", spec, tmp_path, profile) is None
-    for name in spec["artifacts"]: (tmp_path / name).write_text("{}")
+    for name in spec["artifacts"]:
+        (tmp_path / name).write_text("{}")
     reused = orchestrator._reuse_service("heavy", spec, tmp_path, profile)
     assert reused and reused["status"] == "REUSED"
     old = time.time() - 120
@@ -47,9 +48,11 @@ def test_profile_aware_production_contract_accepts_only_validated_declared_reuse
     payload={"profile_config":{"reuse_services":{"source_layer":{"max_age_seconds":60}}},"services":{"official_snapshot":{"status":"SUCCESS"},"source_layer":{"status":"REUSED","artifact_validation":[{"artifact":"source_health.json","validation":"PARSE_ONLY"}]}}}
     _validate_runtime_service_states(payload)
     bad=json.loads(json.dumps(payload)); bad["services"]["source_layer"]["artifact_validation"]=[]
-    with pytest.raises(AssertionError): _validate_runtime_service_states(bad)
+    with pytest.raises(AssertionError):
+        _validate_runtime_service_states(bad)
     undeclared=json.loads(json.dumps(payload)); undeclared["profile_config"]["reuse_services"]={}
-    with pytest.raises(AssertionError): _validate_runtime_service_states(undeclared)
+    with pytest.raises(AssertionError):
+        _validate_runtime_service_states(undeclared)
 
 
 def test_rec32_carries_only_registry_owned_reusable_latest_state(monkeypatch):
@@ -60,7 +63,9 @@ def test_rec32_carries_only_registry_owned_reusable_latest_state(monkeypatch):
     assert set(files)=={"prior_season","vaastav_previous_season","source_health","source_registry_runtime","challenger_observations","fixture_weather"}
     assert "price_summary" not in state and "arbitrary_stale_state" not in state and "price_alerts" not in files
     assert set(audit)=={"historical_prior","source_layer","official_detail"}
-    monkeypatch.setenv("FPL_EXECUTION_PROFILE","full_refresh"); state,files,audit=_reusable_state_from_previous(previous); assert state=={} and files=={} and audit=={}
+    monkeypatch.setenv("FPL_EXECUTION_PROFILE","full_refresh")
+    state,files,audit=_reusable_state_from_previous(previous)
+    assert state=={} and files=={} and audit=={}
 
 
 def test_publish_snapshot_is_whitelist_only_and_generates_manifest(tmp_path):
@@ -82,9 +87,22 @@ def test_player_features_are_consumed_only_after_explicit_rec01_activation():
     assert any(command.get("module")=="src.engines.player_features" for command in advanced.get("commands") or []) and "player_features.json" in (advanced.get("artifacts") or [])
 
 
-def test_workflows_are_split_shallow_and_runtime_data_is_rolling():
-    legacy=(ROOT/".github/workflows/fpl-engine.yml").read_text(); ci=(ROOT/".github/workflows/v3-ci.yml").read_text(); fast=(ROOT/".github/workflows/v3-runtime-fast.yml").read_text(); full=(ROOT/".github/workflows/v3-refresh-full.yml").read_text(); collector=json.loads((ROOT/"config/runtime/collector_policy.json").read_text()); publish=json.loads((ROOT/"config/runtime/runtime_publish_registry.json").read_text()); schedules=collector["schedules"]; hydrate=set(publish["hydrate_paths"])
+def test_workflows_are_unified_shallow_and_runtime_data_is_rolling():
+    compat=(ROOT/".github/workflows/fpl-engine.yml").read_text()
+    ci=(ROOT/".github/workflows/v3-ci.yml").read_text()
+    runtime=(ROOT/".github/workflows/v3-runtime.yml").read_text()
+    collector=json.loads((ROOT/"config/runtime/collector_policy.json").read_text())
+    publish=json.loads((ROOT/"config/runtime/runtime_publish_registry.json").read_text())
+    schedules=collector["schedules"]
+    hydrate=set(publish["hydrate_paths"])
     assert {"source_health.json","source_registry_runtime.json","challenger_observations.json","fixture_weather.json"}.issubset(hydrate)
-    assert "schedule:" not in legacy and f'cron: "{schedules["primary"]}"' in fast and f'cron: "{schedules["adaptive"]}"' in fast and f'cron: "{schedules["deep_stats"]}"' in full
-    assert "fetch-depth: 0" not in ci+fast+full and "fetch-depth: 1" in ci and "fetch-depth: 1" in fast and "fetch-depth: 1" in full
-    assert "git push --force origin HEAD:\"$RUNTIME_BRANCH\"" in fast and "git push --force origin HEAD:\"$RUNTIME_BRANCH\"" in full and "runtime_publish_registry.json" in fast and "runtime_publish_registry.json" in full and "/data/**" in (ROOT/".gitignore").read_text()
+    assert "schedule:" not in compat
+    assert f'cron: "{schedules["primary"]}"' in runtime
+    assert f'cron: "{schedules["adaptive"]}"' in runtime
+    assert "NORMAL_DEEP_REVIEW" in runtime and 'profile="deep_stats"' in runtime
+    assert not (ROOT/".github/workflows/v3-runtime-fast.yml").exists()
+    assert not (ROOT/".github/workflows/v3-refresh-full.yml").exists()
+    assert "fetch-depth: 0" not in ci+runtime
+    assert "fetch-depth: 1" in ci and "fetch-depth: 1" in runtime
+    assert "git push --force origin HEAD:\"$RUNTIME_BRANCH\"" in runtime
+    assert "runtime_publish_registry.json" in runtime and "/data/**" in (ROOT/".gitignore").read_text()

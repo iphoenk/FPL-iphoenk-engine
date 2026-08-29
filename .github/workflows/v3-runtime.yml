@@ -1,9 +1,14 @@
-name: V3 Refresh Full
+name: V3 Runtime
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'data/**'
   schedule:
-    - cron: "30 21 * * *"
+    - cron: "30 * * * *"
+    - cron: "0,15,45 * * * *"
 
 permissions:
   contents: write
@@ -17,7 +22,7 @@ env:
   RUNTIME_BRANCH: runtime-data
 
 jobs:
-  refresh:
+  runtime:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -25,19 +30,37 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Fetch current runtime phase snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}" || true
+          mkdir -p data
+          if git cat-file -e "origin/${RUNTIME_BRANCH}:data/latest.json" 2>/dev/null; then
+            git show "origin/${RUNTIME_BRANCH}:data/latest.json" > data/latest.json
+          fi
+
+      - name: Decide governed cadence and mode
+        id: cadence
+        env:
+          FPL_SCHEDULE_EXPR: ${{ github.event.schedule }}
+        run: python -m src.engines.collector_gate
+
       - uses: actions/setup-python@v5
+        if: steps.cadence.outputs.should_collect == 'true'
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Install runtime dependencies
+        if: steps.cadence.outputs.should_collect == 'true'
         run: pip install -r requirements.txt
 
-      - name: Fetch only current runtime snapshot
+      - name: Hydrate declared reusable canonical state
+        if: steps.cadence.outputs.should_collect == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin "+${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}" || true
           python - <<'PY' > "$RUNNER_TEMP/hydrate-paths.txt"
           import json
           cfg=json.load(open('config/runtime/runtime_publish_registry.json'))
@@ -54,10 +77,38 @@ jobs:
           done < "$RUNNER_TEMP/hydrate-paths.txt"
 
       - name: Validate architecture ownership contract
+        if: steps.cadence.outputs.should_collect == 'true'
         run: python -m src.engines.architecture_contract_validate
 
-      - name: Run FULL or DEEP execution profile
-        id: runtime
+      - name: Select execution profile
+        if: steps.cadence.outputs.should_collect == 'true'
+        id: runtime_profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          profile="fast_decision"
+          mode="daily"
+          extra=""
+
+          if [ "${{ steps.cadence.outputs.visible_mode }}" = "NORMAL_DEEP_REVIEW" ]; then
+            profile="deep_stats"
+            extra="--deep-stats"
+          elif [ "${{ steps.cadence.outputs.deadline_intensive }}" = "true" ]; then
+            mode="deadline"
+          elif [ "${{ steps.cadence.outputs.match_window }}" = "true" ]; then
+            profile="live"
+            mode="live"
+          elif [ "${{ steps.cadence.outputs.post_deadline_reconciliation }}" = "true" ]; then
+            mode="daily"
+          fi
+
+          echo "profile=$profile" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "extra=$extra" >> "$GITHUB_OUTPUT"
+          echo "selected profile=$profile mode=$mode visible=${{ steps.cadence.outputs.visible_mode }}"
+
+      - name: Run governed seven-domain execution profile
+        if: steps.cadence.outputs.should_collect == 'true'
         shell: bash
         env:
           FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
@@ -69,16 +120,14 @@ jobs:
           FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
         run: |
           set -euo pipefail
-          profile="full_refresh"
-          args=(--mode daily --stats --profile full_refresh)
-          if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
-            profile="deep_stats"
-            args=(--mode daily --stats --deep-stats --profile deep_stats)
+          args=(--mode "${{ steps.runtime_profile.outputs.mode }}" --stats --profile "${{ steps.runtime_profile.outputs.profile }}")
+          if [ "${{ steps.runtime_profile.outputs.extra }}" = "--deep-stats" ]; then
+            args+=(--deep-stats)
           fi
-          echo "profile=$profile" >> "$GITHUB_OUTPUT"
-          python -m src.runtime_v3.orchestrator "${args[@]}"
+          python -m src.runtime_v3.domain_orchestrator "${args[@]}"
 
-      - name: Validate production contracts
+      - name: Validate production decision contracts
+        if: steps.cadence.outputs.should_collect == 'true'
         run: |
           python -m src.engines.source_contract_validate
           python -m src.engines.production_contract_validate
@@ -86,10 +135,12 @@ jobs:
           python -m src.engines.report_serving_validate
           python -m src.engines.report_time_contract_validate
 
-      - name: Enforce profile runtime ceiling and resource observability
-        run: python -m src.runtime_v3.performance_guard --profile "${{ steps.runtime.outputs.profile }}"
+      - name: Enforce selected profile runtime SLO
+        if: steps.cadence.outputs.should_collect == 'true'
+        run: python -m src.runtime_v3.performance_guard --profile "${{ steps.runtime_profile.outputs.profile }}"
 
-      - name: Materialize compact publication whitelist
+      - name: Materialize publication whitelist
+        if: steps.cadence.outputs.should_collect == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -97,10 +148,11 @@ jobs:
           python -m src.runtime_v3.publish_snapshot \
             --source-data data \
             --output-dir "$RUNNER_TEMP/runtime-publish" \
-            --profile "${{ steps.runtime.outputs.profile }}" \
+            --profile "${{ steps.runtime_profile.outputs.profile }}" \
             --source-commit "$GITHUB_SHA"
 
       - name: Publish rolling runtime snapshot
+        if: steps.cadence.outputs.should_collect == 'true'
         shell: bash
         run: |
           set -euo pipefail

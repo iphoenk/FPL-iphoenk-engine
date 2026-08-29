@@ -29,18 +29,21 @@ def test_interactive_lane_is_bounded_and_does_not_duplicate_business_owners():
     ownership = _load("config/v3_architecture_ownership_registry.json")
     services = interactive["services"]
     assert interactive["registry"] == "V3_INTERACTIVE_SERVICES_V1"
-    assert set(services) == {"decision_hotpath", "instant_gateway"}
+    assert set(services) == {"unified_fastpath"}
     assert not (set(background) & set(services))
     assert all(spec["network"] is False for spec in services.values())
     assert all(spec["writes_canonical_artifacts"] is False for spec in services.values())
-    assert interactive["policy"]["hard_end_to_end_ceiling_ms"] == 1000
+    assert interactive["policy"]["preferred_end_to_end_target_ms"] == 1000
+    assert interactive["policy"]["hard_end_to_end_ceiling_ms"] == 2000
+    assert interactive["policy"]["single_pass_artifact_load_and_validation"] is True
     responsibilities = {row["id"]: row for row in ownership["responsibilities"]}
-    assert responsibilities["INTERACTIVE_DECISION_REGENERATION"]["owner_service"] == "decision_hotpath"
-    assert responsibilities["INTERACTIVE_VALIDATED_GATEWAY"]["owner_service"] == "instant_gateway"
+    assert responsibilities["INTERACTIVE_DECISION_REGENERATION"]["owner_service"] == "unified_fastpath"
+    assert responsibilities["INTERACTIVE_VALIDATED_GATEWAY"]["owner_service"] == "unified_fastpath"
+    assert set(interactive["compatibility_entrypoints"]) == {"decision_hotpath", "instant_gateway"}
 
 
-def test_hotpath_consumes_canonical_governance_builders_not_duplicate_formulas():
-    text = (ROOT / "src/engines/decision_hotpath_service.py").read_text(encoding="utf-8")
+def test_unified_fastpath_consumes_canonical_governance_builders_not_duplicate_formulas():
+    text = (ROOT / "src/runtime_v3/unified_fastpath.py").read_text(encoding="utf-8")
     assert "from src.engines.lineup_governance import build_lineup_decision, build_package_decision" in text
     assert "from src.sources.official_fpl" not in text
     assert "get_json(" not in text

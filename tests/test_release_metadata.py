@@ -62,7 +62,8 @@ def test_release_metadata_surfaces_are_consistent():
     assert execution_domains["registry"] == "V3_EXECUTION_DOMAINS_V1"
     assert execution_domains["domain_count"] == 7
     assert interactive_registry["registry"] == "V3_INTERACTIVE_SERVICES_V1"
-    assert len(interactive_registry["services"]) == 2
+    assert interactive_registry["architecture"] == "UNIFIED_INTERACTIVE_FASTPATH"
+    assert len(interactive_registry["services"]) == 1
     assert source_registry["registry"] == "SOURCE_REGISTRY_V4"
     assert runtime_artifact_registry["registry"] == "RUNTIME_ARTIFACT_CONTRACTS_V2"
 

@@ -41,7 +41,7 @@
     "previous_registry": "V3_EXECUTION_DOMAINS_V1",
     "previous_domain_count": 7,
     "business_capability_contract_unchanged": true,
-    "service_registry_unchanged": true,
+    "service_registry_unchanged": false,
     "legacy_domain_aliases": {
       "ACQUIRE": [
         "official_state",
@@ -91,57 +91,15 @@
     "reporting_and_serving_consume_one_governed_snapshot": true,
     "capability_registry_is_contract_catalog_not_process_count": true,
     "module_batches_are_derived_from_capability_commands": true,
-    "duplicate_human_maintained_execution_truth_is_forbidden": true
+    "duplicate_human_maintained_execution_truth_is_forbidden": true,
+    "base_snapshot_declares_only_artifacts_it_actually_writes": true
   },
   "artifact_writer_exceptions": {
-    "health.json": {
-      "kind": "base_fan_in_mirror",
-      "writers": [
-        "official_snapshot",
-        "base_snapshot"
-      ]
-    },
-    "team.json": {
-      "kind": "base_fan_in_mirror",
-      "writers": [
-        "team_state",
-        "base_snapshot"
-      ]
-    },
-    "chips.json": {
-      "kind": "base_fan_in_mirror",
-      "writers": [
-        "team_state",
-        "base_snapshot"
-      ]
-    },
-    "live.json": {
-      "kind": "base_fan_in_mirror",
-      "writers": [
-        "live_state",
-        "base_snapshot"
-      ]
-    },
     "prices.json": {
-      "kind": "base_fan_in_then_market_enrichment",
+      "kind": "base_market_state_then_market_enrichment",
       "writers": [
         "market_state",
-        "base_snapshot",
         "price"
-      ]
-    },
-    "universe.json": {
-      "kind": "base_fan_in_mirror",
-      "writers": [
-        "market_state",
-        "base_snapshot"
-      ]
-    },
-    "advanced_stats_sync.json": {
-      "kind": "base_fan_in_mirror",
-      "writers": [
-        "advanced_stats",
-        "base_snapshot"
       ]
     },
     "user_report.json": {

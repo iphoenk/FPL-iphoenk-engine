@@ -11,7 +11,11 @@
     "artifact_contract_validation_is_preserved": true,
     "gate0_and_dss_strictness_are_preserved": true,
     "official_network_ownership_is_preserved": true,
-    "no_capability_is_removed_by_domain_grouping": true
+    "no_capability_is_removed_by_domain_grouping": true,
+    "model_and_market_use_isolated_workspaces": true,
+    "model_and_market_may_execute_in_parallel": true,
+    "parallel_domain_fan_in_uses_declared_artifacts_and_latest_keys_only": true,
+    "parallel_domain_fan_in_is_deterministic": true
   },
   "domains": {
     "ACQUIRE": {

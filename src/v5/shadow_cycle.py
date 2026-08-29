@@ -39,15 +39,13 @@ def _ids(rows: Any) -> set[int]:
 def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int) -> dict[str, Any]:
     v3_latest = _load(v3_latest_path)
     v3_lineup = _load(v3_lineup_path)
-    # The lineup artifact is a planning-decision artifact and may retain the
-    # authority label from the draft that produced it. Current squad authority
-    # belongs to latest.json. Preserve both instead of allowing the planning
-    # artifact to overwrite canonical phase-aware squad truth.
+    # latest.json owns scoring/live squad truth; lineup_decision owns the planning
+    # decision authority. Keep both so shadow parity never conflates the two.
     v3_reference = {
         **v3_latest,
         **v3_lineup,
         "squad_authority": v3_latest.get("squad_authority") or v3_lineup.get("squad_authority"),
-        "decision_squad_authority": v3_lineup.get("squad_authority"),
+        "decision_squad_authority": v3_lineup.get("squad_authority") or v3_latest.get("squad_authority"),
     }
     manifest = load_json_config(MANIFEST_CONFIG)
     baselines = manifest.get("baselines") if isinstance(manifest.get("baselines"), dict) else {}
@@ -58,6 +56,7 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
         raise RuntimeError("V5 beta orchestrator returned a non-object")
     if not v5.get("ruleset_id"):
         v5["ruleset_id"] = ((v5.get("prediction_summary") or {}).get("ruleset_id"))
+    v5["decision_squad_authority"] = v5.get("squad_authority")
 
     parity = compare(v3_reference, v5)
     generated_at = datetime.now(timezone.utc).isoformat()
@@ -72,14 +71,14 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
         "owned_exactly_15": len(owned_ids) == 15 and len(set(owned_ids)) == 15,
         "lineup_confined_to_owned": len(lineup_ids) == 15 and lineup_ids == set(owned_ids),
         "watchlist_exactly_20": int(watch.get("candidate_count") or 0) == 20,
-        "user_lock_authority_pre_deadline": str((v5.get("phase") or {}).get("phase") or "") != "PRE_DEADLINE" or str(v5.get("squad_authority") or "") == "user_lock",
+        "user_lock_authority_pre_deadline": str((v5.get("phase") or {}).get("phase") or "") != "PRE_DEADLINE" or str(v5.get("decision_squad_authority") or "") == "user_lock",
     }
     invariant_pass = all(invariants.values())
     cycle_pass = bool(parity.get("pass")) and invariant_pass
     post_status = "PENDING" if cycle_pass else "NOT_ELIGIBLE"
 
     result = {
-        "schema_version": 5,
+        "schema_version": 6,
         "cycle_id": cycle_id,
         "generated_at": generated_at,
         "mode": "REAL_SHADOW",
@@ -87,14 +86,17 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
         "acceptance_context": {
             "production_baseline_version": baselines.get("production_truth"),
             "production_main_sha": baselines.get("production_main_sha"),
+            "production_runtime_label": baselines.get("production_runtime"),
+            "production_runtime_engine_version": v3_latest.get("engine_version"),
+            "production_runtime_schema_version": v3_latest.get("schema_version"),
             "v5_version": v5.get("engine_version"),
             "release_fingerprint": release["fingerprint"],
             "release_fingerprint_contract": release["contract"],
             "release_fingerprint_files": release["files_hashed"],
         },
-        "post_validation": {"status": post_status, "validated_at": None, "validator_contract": "V5_REAL_SHADOW_POSTVALIDATION_V2"},
-        "v3": {"engine_version": v3_latest.get("engine_version"), "generated_at": v3_latest.get("generated_at"), "planning_gw": (v3_latest.get("phase") or {}).get("planning_gw"), "formation": v3_lineup.get("formation"), "starting_xi": v3_lineup.get("starting_xi") or [], "captain": v3_lineup.get("captain"), "vice_captain": v3_lineup.get("vice_captain"), "ruleset_id": v3_lineup.get("ruleset_id"), "squad_authority": v3_reference.get("squad_authority"), "decision_squad_authority": v3_lineup.get("squad_authority")},
-        "v5": {"engine_version": v5.get("engine_version"), "release_fingerprint": release["fingerprint"], "runner_status": v5.get("runner_status"), "planning_gw": (v5.get("phase") or {}).get("planning_gw"), "phase": (v5.get("phase") or {}).get("phase"), "squad_authority": v5.get("squad_authority"), "owned_count": len(owned_ids), "owned_ids": owned_ids, "decision": decision, "watchlist": watch, "user_report": v5.get("user_report") or {}, "source_fusion_health": v5.get("source_fusion_health") or {}, "governance": v5.get("governance") or {}, "framework_health": v5.get("framework_health") or {}, "service_performance": v5.get("service_performance") or {}, "authenticated_official": v5.get("authenticated_official") or {}},
+        "post_validation": {"status": post_status, "validated_at": None, "validator_contract": "V5_REAL_SHADOW_POSTVALIDATION_V4"},
+        "v3": {"engine_version": v3_latest.get("engine_version"), "generated_at": v3_latest.get("generated_at"), "planning_gw": (v3_latest.get("phase") or {}).get("planning_gw"), "formation": v3_lineup.get("formation"), "starting_xi": v3_lineup.get("starting_xi") or [], "captain": v3_lineup.get("captain"), "vice_captain": v3_lineup.get("vice_captain"), "ruleset_id": v3_lineup.get("ruleset_id"), "squad_authority": v3_reference.get("squad_authority"), "decision_squad_authority": v3_reference.get("decision_squad_authority")},
+        "v5": {"engine_version": v5.get("engine_version"), "release_fingerprint": release["fingerprint"], "runner_status": v5.get("runner_status"), "planning_gw": (v5.get("phase") or {}).get("planning_gw"), "phase": (v5.get("phase") or {}).get("phase"), "squad_authority": v5.get("squad_authority"), "decision_squad_authority": v5.get("decision_squad_authority"), "owned_count": len(owned_ids), "owned_ids": owned_ids, "decision": decision, "watchlist": watch, "user_report": v5.get("user_report") or {}, "source_fusion_health": v5.get("source_fusion_health") or {}, "governance": v5.get("governance") or {}, "framework_health": v5.get("framework_health") or {}, "service_performance": v5.get("service_performance") or {}, "authenticated_official": v5.get("authenticated_official") or {}},
         "parity": parity,
         "operational_invariants": {"pass": invariant_pass, "checks": invariants},
         "acceptance_progress": {"cycle_pass": cycle_pass, "required_real_cycles": int(parity.get("required_real_cycles") or 3), "real_cycle_recorded": True, "post_validation_required": True, "post_validation_status": post_status, "counts_as_successful_acceptance_cycle": False, "production_candidate_auto_promoted": False},

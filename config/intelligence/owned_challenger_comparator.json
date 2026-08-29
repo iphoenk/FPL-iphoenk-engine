@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "contract": "OWNED_CHALLENGER_COMPARATOR_V2",
-  "owner": "watchlist.owned_challenger_comparator",
+  "owner": "reporting.owned_challenger_comparator",
   "capability_status": "ADVISORY_ONLY",
   "horizons": [1, 2, 3, 5],
   "strategic_horizons": [10, 15],

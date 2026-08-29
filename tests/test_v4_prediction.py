@@ -8,12 +8,12 @@ from src.models.projection import project_points
 def player():return {"id":1,"web_name":"Test","status":"a","minutes":270,"starts":3,"element_type":3,"expected_goals":"0.9","expected_assists":"0.6","bps":45}
 def fixture(i=2):return {"event":i,"difficulty":3,"home":True}
 def test_xmins_distribution_sums():
- d=lineup_distribution(player(),{"recent_starts":[1,1,1],"rest_days":7}); assert abs(d["start_probability"]+d["bench_probability"]+d["dnp_probability"]-1)<0.001; assert 0<=d["expected_minutes"]<=90; assert 0<=d["p60"]<=d["start_probability"]
+ d=lineup_distribution(player(),{"recent_starts":[1,1,1],"rest_days":7}); assert abs(d["start_probability"]+d["bench_probability"]+d["dnp_probability"]-1)<0.001; assert 0<=d["expected_minutes"]<=90; assert 0<=d["p60"]<=d["start_probability"]; assert 0<=d["start_probability_confidence"]<=1
 def test_workload_penalty(): assert workload_factor({"rest_days":2,"cup_minutes_last7":180})<workload_factor({"rest_days":7})
 def test_projection_has_uncertainty_and_components():
- r=project_fixture(player(),fixture(),{"penalty_share":1}); assert r["xpts"]>=0 and r["upper80"]>=r["xpts"]>=r["lower80"]; assert "attack" in r["components"]
+ r=project_fixture(player(),fixture(),{"penalty_share":1}); assert r["xpts"]>=0 and r["upper80"]>=r["xpts"]>=r["lower80"]; assert "attack" in r["components"]; assert "ablation" in r
 def test_appearance_uses_unconditional_p60_without_double_rotation_penalty(monkeypatch):
- monkeypatch.setattr(prediction_model,"lineup_distribution",lambda *_args,**_kwargs:{"start_probability":.6,"bench_probability":.1,"dnp_probability":.3,"expected_minutes":60,"p60":.6,"availability_probability":1,"workload_factor":1,"competition_factor":1,"competition_uncertainty":1})
+ monkeypatch.setattr(prediction_model,"lineup_distribution",lambda *_args,**_kwargs:{"start_probability":.6,"start_probability_confidence":.5,"bench_probability":.1,"dnp_probability":.3,"expected_minutes":60,"p60":.6,"availability_probability":1,"workload_factor":1,"competition_factor":1,"competition_uncertainty":1})
  r=prediction_model.project_fixture(player(),fixture())
  assert r["components"]["appearance"]==1.3
 def test_defcon_is_threshold_points_not_raw_actions():

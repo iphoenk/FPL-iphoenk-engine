@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from src.runtime_v3 import incremental_reuse
 from src.runtime_v3 import orchestrator as legacy
 from src.utils import DATA, ROOT, atomic_json, read_json
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
@@ -61,13 +62,17 @@ def _run_capability(
     cache_dir: Path,
     context: dict[str, str],
     timeout: int,
+    profile_name: str,
     profile_cfg: dict[str, Any],
 ) -> dict[str, Any]:
     reused = legacy._reuse_service(name, spec, DATA, profile_cfg)
+    if reused is None:
+        reused = incremental_reuse.try_reuse(name, spec, profile_name)
     if reused is not None:
         reused["execution_boundary"] = "DOMAIN_SHARED_CANONICAL"
         return reused
 
+    input_fingerprint_before = incremental_reuse.fingerprint(name)
     shared_spec = dict(spec)
     shared_spec["isolated"] = False
     result = legacy._run_service(
@@ -80,6 +85,8 @@ def _run_capability(
         timeout=timeout,
         submitted_at=time.perf_counter(),
     )
+    if input_fingerprint_before:
+        result["input_fingerprint_before"] = input_fingerprint_before
     if result["status"] != "SUCCESS":
         return result
 
@@ -90,6 +97,7 @@ def _run_capability(
         result["promotion_ms"] = 0.0
         result["promoted_output_bytes"] = 0
         result["execution_boundary"] = "DOMAIN_SHARED_CANONICAL"
+        incremental_reuse.record(name, profile_name, input_fingerprint_before)
         return result
     except Exception as exc:
         result["status"] = "FAILED"
@@ -153,6 +161,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                         cache_dir=cache_dir,
                         context=context,
                         timeout=timeout,
+                        profile_name=profile_name,
                         profile_cfg=profile_cfg,
                     )
                     result["execution_domain"] = domain_name
@@ -187,6 +196,18 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             profile_cfg,
             temp_root,
         )
+        reuse_registry = incremental_reuse._registry().get("services") or {}
+        performance["content_addressed_reuse"] = {
+            "enabled": profile_name in {"fast_decision", "live"},
+            "reused_services": sorted(
+                name for name, row in capability_results.items()
+                if row.get("reuse_mode") == "CONTENT_ADDRESSED"
+            ),
+            "diagnostics": {
+                name: incremental_reuse.diagnose(name)
+                for name in reuse_registry
+            },
+        }
         performance["runtime_id"] = DOMAIN_RUNTIME_ID
         performance["architecture"] = domain_registry["architecture"]
         performance["execution_domain_count"] = len(domain_results)
@@ -223,6 +244,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         "execution_domain_count": len(domain_results),
         "capability_owner_count": len(capability_results),
         "domains": domain_results,
+        "content_addressed_reuse": performance.get("content_addressed_reuse"),
         "resources": performance.get("resources"),
     }, ensure_ascii=False))
     return performance

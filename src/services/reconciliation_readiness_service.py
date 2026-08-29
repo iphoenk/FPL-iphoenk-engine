@@ -69,13 +69,20 @@ def run() -> dict:
         if not snapshot_ok:
             blockers.append(f"deadline_snapshot_invalid:{snapshot_reason}")
 
-    owners = {row.get("id"): row.get("owner") for row in ownership.get("responsibilities") or []}
+    responsibilities = {row.get("id"): row for row in ownership.get("responsibilities") or []}
+    expected = {
+        "OFFICIAL_FPL_ACQUISITION": ("raw_snapshot", "raw_snapshot"),
+        "VALIDATION_STORE": ("validation_store", "validation"),
+        "RECONCILIATION_TRUTH": ("reconciliation_truth", "validation"),
+        "VALIDATION_LIFECYCLE": ("validation_lifecycle", "validation"),
+        "RECONCILIATION_READINESS": ("reconciliation_readiness", "validation"),
+    }
     ownership_chain = {
-        "official_fpl_acquisition": owners.get("OFFICIAL_FPL_ACQUISITION") == "raw_snapshot",
-        "validation_store": owners.get("VALIDATION_STORE") == "validation",
-        "reconciliation_truth": owners.get("RECONCILIATION_TRUTH") == "validation",
-        "validation_lifecycle": owners.get("VALIDATION_LIFECYCLE") == "validation",
-        "reconciliation_readiness": owners.get("RECONCILIATION_READINESS") == "validation",
+        key.lower(): bool(
+            responsibilities.get(key, {}).get("owner") == owner
+            and responsibilities.get(key, {}).get("execution_boundary") == boundary
+        )
+        for key, (owner, boundary) in expected.items()
     }
     if not all(ownership_chain.values()):
         blockers.append("reconciliation_ownership_chain_invalid")
@@ -157,6 +164,7 @@ def run() -> dict:
             "reconciliation_truth_not_reimplemented": True,
             "official_fpl_single_acquisition_owner": True,
             "expected_future_state_is_pending_not_failure": True,
+            "logical_owner_preserved_inside_consolidated_boundary": True,
         },
     }
     atomic_json(OUTFILE, out)

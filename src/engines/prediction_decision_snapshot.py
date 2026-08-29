@@ -8,7 +8,7 @@ from src.engines.owned_challenger_comparator import build as build_comparator
 from src.utils import DATA, atomic_json, parse_dt, read_json, utcnow
 
 OUT = DATA / "decision_validation_snapshots.json"
-OWNER = "prediction_evaluation.decision_snapshot_evidence"
+OWNER = "reporting.decision_snapshot_evidence"
 CONTRACT = "DECISION_VALIDATION_SNAPSHOTS_V1"
 
 
@@ -36,6 +36,7 @@ def _compact_comparisons(payload: dict[str, Any]) -> list[dict[str, Any]]:
             "player_out": out_id,
             "player_in": in_id,
             "state": row.get("state"),
+            "actionability": row.get("actionability"),
             "challenger_type": row.get("challenger_type"),
             "exact_hit_cost": None,
             "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST",
@@ -50,8 +51,8 @@ def run() -> dict[str, Any]:
     phase = latest.get("phase") or {}
     planning_gw = _i(phase.get("planning_gw", lineup.get("planning_gw")), 0)
     deadline = parse_dt(phase.get("deadline_time"))
-    payload = read_json(OUT, {"schema_version": 1, "contract": CONTRACT, "records": {}})
-    payload["schema_version"] = 1
+    payload = read_json(OUT, {"schema_version": 2, "contract": CONTRACT, "records": {}})
+    payload["schema_version"] = 2
     payload["contract"] = CONTRACT
     payload["owner"] = OWNER
     records = payload.setdefault("records", {})
@@ -73,6 +74,7 @@ def run() -> dict[str, Any]:
         if element > 0:
             owned.append({"element": element, "position": row.get("position")})
     captain = _i((lineup.get("captain") or {}).get("element"))
+    vice = _i((lineup.get("vice_captain") or {}).get("element"))
     captain_pool = []
     for row in lineup.get("captain_safe_pool") or []:
         element = _i(row.get("element"))
@@ -80,6 +82,13 @@ def run() -> dict[str, Any]:
             captain_pool.append(element)
     if captain > 0 and captain not in captain_pool:
         captain_pool.append(captain)
+    if vice > 0 and vice not in captain_pool:
+        captain_pool.append(vice)
+
+    bench = lineup.get("bench") or {}
+    bench_gk = _i((bench.get("gk") or {}).get("element"))
+    bench_order = [_i(row.get("element")) for row in bench.get("order") or []]
+    bench_order = [element for element in bench_order if element > 0]
 
     record = {
         "gw": planning_gw,
@@ -90,7 +99,10 @@ def run() -> dict[str, Any]:
             "starting_xi": xi,
             "owned_squad": owned,
             "captain": captain if captain > 0 else None,
+            "vice_captain": vice if vice > 0 else None,
             "captain_candidates": captain_pool,
+            "bench_gk": bench_gk if bench_gk > 0 else None,
+            "bench_order": bench_order,
         },
         "comparator": {
             "contract": comparator.get("contract"),
@@ -102,12 +114,24 @@ def run() -> dict[str, Any]:
             "postdeadline_overwrite_forbidden": True,
             "optimizer_change_penalty_is_not_fpl_hit_cost": True,
             "missing_exact_hit_cost_is_never_invented": True,
+            "vice_and_bench_are_captured_only_when_genuinely_available_predeadline": True,
+            "historical_snapshots_are_not_retrofitted": True,
+            "reporting_owns_snapshot_capture": True,
+            "prediction_evaluation_is_consumer_only": True,
         },
     }
     records[str(planning_gw)] = record
     payload["updated_at"] = _now()
     atomic_json(OUT, payload)
-    return {"status": "PREDEADLINE_CAPTURED", "planning_gw": planning_gw, "xi": len(xi), "owned": len(owned), "comparisons": len(record["comparator"]["comparisons"])}
+    return {
+        "status": "PREDEADLINE_CAPTURED",
+        "planning_gw": planning_gw,
+        "xi": len(xi),
+        "owned": len(owned),
+        "vice_captured": vice > 0,
+        "bench_outfield_captured": len(bench_order),
+        "comparisons": len(record["comparator"]["comparisons"]),
+    }
 
 
 if __name__ == "__main__":

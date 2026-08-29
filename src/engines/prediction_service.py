@@ -4,6 +4,11 @@ import json
 from datetime import datetime, timezone
 
 from src.engines.decision_intelligence import build_package_optimizer
+from src.engines.p0_decision_quality import (
+    assert_projection_signature_unchanged,
+    build_position_projection_diagnostics,
+    projection_signature,
+)
 from src.models.historical_projection import build as build_player_projections
 from src.models.prediction_quality import evaluate as evaluate_prediction_quality
 from src.models.tactical_matchup import attach_tactical_matchups
@@ -14,6 +19,19 @@ from src.utils import DATA, atomic_json, read_json
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _annotate_tactical_effect(projections: dict) -> None:
+    for player in projections.get("players") or []:
+        tactical = player.get("tactical_matchup")
+        if not isinstance(tactical, dict):
+            continue
+        tactical["tactical_effect"] = "advisory"
+        tactical["tactical_delta_applied"] = 0.0
+        tactical.setdefault("governance", {}).update({
+            "advisory_layer_does_not_mutate_xpts": True,
+            "tie_break_consumption_is_owned_by_tactical_decision_consumption": True,
+        })
 
 
 def run() -> dict:
@@ -39,22 +57,17 @@ def run() -> dict:
 
     strength = build_team_strength(bootstrap, fixtures)
     strength["generated_at"] = _now()
-    strength["source_health"] = {
-        "bootstrap": (health.get("bootstrap") or {}).get("status"),
-        "fixtures": (health.get("fixtures") or {}).get("status"),
-    }
+    strength["source_health"] = {"bootstrap": (health.get("bootstrap") or {}).get("status"), "fixtures": (health.get("fixtures") or {}).get("status")}
     strength.setdefault("governance", {})["official_snapshot_reused"] = True
     atomic_json(DATA / "team_strength.json", strength)
 
-    projections = build_player_projections(
-        bootstrap,
-        strength,
-        planning_gw,
-        prior,
-        horizon=STRATEGIC_HORIZON_GWS,
-        player_features_payload=player_features,
-    )
+    projections = build_player_projections(bootstrap, strength, planning_gw, prior, horizon=STRATEGIC_HORIZON_GWS, player_features_payload=player_features)
+    pre_tactical_signature = projection_signature(projections)
     projections = attach_tactical_matchups(projections, planning_gw)
+    _annotate_tactical_effect(projections)
+    assert_projection_signature_unchanged(pre_tactical_signature, projections)
+    projection_diagnostics = build_position_projection_diagnostics(projections)
+    projections["position_calibration_diagnostics"] = projection_diagnostics
     projections["generated_at"] = _now()
     projections.setdefault("governance", {}).update({
         "official_snapshot_reused": True,
@@ -64,6 +77,10 @@ def run() -> dict:
         "advanced_defensive_evidence_players_used": projections.get("advanced_defensive_evidence_players_used"),
         "tactical_matchup_is_advisory_only": True,
         "tactical_matchup_never_directly_mutates_xpts": True,
+        "tactical_double_count_guard_verified": True,
+        "tactical_effect_field_explicit": True,
+        "position_projection_diagnostics_are_non_mutating": True,
+        "v4_is_not_projection_calibration_truth": True,
     })
     atomic_json(DATA / "projections.json", projections)
 
@@ -82,56 +99,25 @@ def run() -> dict:
 
     quality = evaluate_prediction_quality(projections, prior)
     atomic_json(DATA / "prediction_quality.json", quality)
-
     tactical = projections.get("tactical_matchup_summary") or {}
-    latest.setdefault("files", {}).update({
-        "team_strength": "data/team_strength.json",
-        "projections": "data/projections.json",
-        "package_optimizer": "data/package_optimizer.json",
-        "prediction_quality": "data/prediction_quality.json",
-    })
+    latest.setdefault("files", {}).update({"team_strength": "data/team_strength.json", "projections": "data/projections.json", "package_optimizer": "data/package_optimizer.json", "prediction_quality": "data/prediction_quality.json"})
     latest["decision_intelligence"] = {
-        "service": "prediction_service",
-        "model": projections.get("model"),
-        "planning_gw": planning_gw,
-        "projection_horizon_gws": STRATEGIC_HORIZON_GWS,
-        "projection_players": len(projections.get("players") or []),
-        "team_strength_model": strength.get("model"),
-        "team_strength_teams": len(strength.get("teams") or []),
-        "historical_prior_model": projections.get("historical_prior_model"),
-        "historical_prior_players_used": projections.get("historical_prior_players_used"),
-        "prediction_quality": quality.get("status"),
-        "package_optimizer_status": packages.get("status"),
-        "package_count": packages.get("package_count", 0),
-        "best_package": (packages.get("packages") or [{}])[0].get("id") if packages.get("packages") else None,
-        "candidate_generation_only": True,
+        "service": "prediction_service", "model": projections.get("model"), "planning_gw": planning_gw, "projection_horizon_gws": STRATEGIC_HORIZON_GWS,
+        "projection_players": len(projections.get("players") or []), "team_strength_model": strength.get("model"), "team_strength_teams": len(strength.get("teams") or []),
+        "historical_prior_model": projections.get("historical_prior_model"), "historical_prior_players_used": projections.get("historical_prior_players_used"),
+        "prediction_quality": quality.get("status"), "package_optimizer_status": packages.get("status"), "package_count": packages.get("package_count", 0),
+        "best_package": (packages.get("packages") or [{}])[0].get("id") if packages.get("packages") else None, "candidate_generation_only": True,
         "tactical_matchup": {
-            "status": "READY" if tactical.get("ready") else ("PARTIAL" if tactical.get("partial") else "UNAVAILABLE"),
-            "model": tactical.get("model"),
-            "ready_players": tactical.get("ready", 0),
-            "partial_players": tactical.get("partial", 0),
-            "unavailable_players": tactical.get("unavailable", 0),
-            "advisory_only": True,
-            "xpts_mutation": False,
-            "report_policy": "material-highlights-only",
+            "status": "READY" if tactical.get("ready") else ("PARTIAL" if tactical.get("partial") else "UNAVAILABLE"), "model": tactical.get("model"),
+            "ready_players": tactical.get("ready", 0), "partial_players": tactical.get("partial", 0), "unavailable_players": tactical.get("unavailable", 0),
+            "advisory_only": True, "tactical_effect": "advisory", "tactical_delta_applied": 0.0, "xpts_mutation": False,
+            "double_count_guard_verified": True, "report_policy": "material-highlights-only",
         },
-        "player_feature_model": {
-            "contract": projections.get("player_feature_contract"),
-            "opt_in": projections.get("player_feature_model_opt_in"),
-            "defensive_contribution_model": projections.get("defensive_contribution_model"),
-            "advanced_defensive_evidence_players_used": projections.get("advanced_defensive_evidence_players_used"),
-        },
-        "risk_guardrails": {
-            "team_cluster_penalty_enabled": (packages.get("governance") or {}).get("team_cluster_penalty_enabled"),
-            "early_season_change_cap_enabled": (packages.get("governance") or {}).get("early_season_change_cap_enabled"),
-            "effective_max_changes": (packages.get("governance") or {}).get("effective_max_changes"),
-        },
+        "player_feature_model": {"contract": projections.get("player_feature_contract"), "opt_in": projections.get("player_feature_model_opt_in"), "defensive_contribution_model": projections.get("defensive_contribution_model"), "advanced_defensive_evidence_players_used": projections.get("advanced_defensive_evidence_players_used")},
+        "projection_calibration": {"status": projection_diagnostics.get("status"), "comparison_authority": projection_diagnostics.get("comparison_authority"), "mutates_xpts": False, "positions": projection_diagnostics.get("positions")},
+        "risk_guardrails": {"team_cluster_penalty_enabled": (packages.get("governance") or {}).get("team_cluster_penalty_enabled"), "early_season_change_cap_enabled": (packages.get("governance") or {}).get("early_season_change_cap_enabled"), "effective_max_changes": (packages.get("governance") or {}).get("effective_max_changes")},
     }
-    latest["prediction_quality_summary"] = {
-        "status": quality.get("status"),
-        "failed_checks": quality.get("failed_checks"),
-        "checks": quality.get("checks"),
-    }
+    latest["prediction_quality_summary"] = {"status": quality.get("status"), "failed_checks": quality.get("failed_checks"), "checks": quality.get("checks")}
     atomic_json(DATA / "latest.json", latest)
     return {"strength": strength, "projections": projections, "packages": packages, "quality": quality}
 
@@ -139,13 +125,10 @@ def run() -> dict:
 if __name__ == "__main__":
     out = run()
     print(json.dumps({
-        "projection_players": len(out["projections"].get("players") or []),
-        "historical_prior_players": out["projections"].get("historical_prior_players_used"),
-        "defensive_contribution_model": out["projections"].get("defensive_contribution_model"),
-        "advanced_defensive_evidence_players_used": out["projections"].get("advanced_defensive_evidence_players_used"),
-        "prediction_quality": out["quality"].get("status"),
-        "package_count": out["packages"].get("package_count"),
+        "projection_players": len(out["projections"].get("players") or []), "historical_prior_players": out["projections"].get("historical_prior_players_used"),
+        "defensive_contribution_model": out["projections"].get("defensive_contribution_model"), "advanced_defensive_evidence_players_used": out["projections"].get("advanced_defensive_evidence_players_used"),
+        "prediction_quality": out["quality"].get("status"), "package_count": out["packages"].get("package_count"),
         "best_package": (out["packages"].get("packages") or [{}])[0].get("id") if out["packages"].get("packages") else None,
-        "risk_guardrails": out["packages"].get("governance"),
-        "tactical_matchup": out["projections"].get("tactical_matchup_summary"),
+        "risk_guardrails": out["packages"].get("governance"), "tactical_matchup": out["projections"].get("tactical_matchup_summary"),
+        "projection_calibration": out["projections"].get("position_calibration_diagnostics"),
     }, ensure_ascii=False))

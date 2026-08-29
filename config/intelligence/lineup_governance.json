@@ -1,22 +1,42 @@
 {
-  "schema_version": 2,
-  "model_id": "governed_lineup_v1",
+  "schema_version": 3,
+  "model_id": "governed_lineup_v2",
   "selection": {
     "risk_aversion_std": 0.12,
     "dnp_penalty_points": 2.0,
     "enumerate_all_legal_xi": true,
-    "publish_alternative_lineups": 3
+    "publish_alternative_lineups": 6,
+    "close_call_rerank_gap": 0.75,
+    "same_team_defensive_cluster_penalty": 0.08,
+    "defensive_route_concentration_penalty": 0.06,
+    "bench_utility_weight": 0.03,
+    "maximum_close_call_adjustment": 0.30
+  },
+  "uncertainty": {
+    "interval": 0.80,
+    "z_value": 1.2815515655,
+    "close_decision_margin": 0.75
   },
   "captaincy": {
     "risk_aversion_std": 0.10,
     "dnp_penalty_points": 4.0,
     "minimum_start_probability": 0.70,
     "maximum_dnp_probability": 0.15,
-    "safe_pool_size": 5
+    "safe_pool_size": 5,
+    "vice_attack_ceiling_weight": 0.08,
+    "vice_focality_weight": 0.12,
+    "vice_penalty_role_bonus": 0.08,
+    "vice_set_piece_role_bonus": 0.04,
+    "vice_defender_small_edge_guard": 0.30,
+    "maximum_vice_context_adjustment": 0.35
   },
   "bench": {
     "risk_aversion_std": 0.10,
-    "dnp_penalty_points": 1.5
+    "dnp_penalty_points": 1.5,
+    "start_probability_weight": 0.20,
+    "ceiling_weight": 0.05,
+    "maximum_context_adjustment": 0.25,
+    "close_battle_threshold": 0.35
   },
   "battle": {
     "close_margin_threshold": 0.75
@@ -36,6 +56,9 @@
     "captain_and_vice_must_be_distinct_starters": true,
     "bench_must_be_one_gk_plus_three_outfield": true,
     "manual_lock_overrides_optimizer_candidate": true,
-    "gate0_postflight_revalidation_required": true
+    "gate0_postflight_revalidation_required": true,
+    "raw_xpts_is_preserved": true,
+    "risk_adjustments_are_bounded_and_decision_only": true,
+    "no_artificial_attacking_formation_preference": true
   }
 }

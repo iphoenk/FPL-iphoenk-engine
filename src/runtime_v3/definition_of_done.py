@@ -133,7 +133,7 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
     _check(rows, "SCHEDULE_GOVERNANCE_PROVEN", schedule_ok, {"master_hourly_30": 'cron: "30 * * * *"' in workflow_text, "adaptive_support": 'cron: "0,15,45 * * * *"' in workflow_text})
 
     comparator = technical.get("owned_challenger_comparator") or {}
-    _check(rows, "COMPARATOR_CANONICAL", comparator.get("contract") in {"OWNED_CHALLENGER_COMPARATOR_V1", "OWNED_CHALLENGER_COMPARATOR_V2"} and comparator.get("advisory_only") is True, {"contract": comparator.get("contract"), "advisory_only": comparator.get("advisory_only")})
+    _check(rows, "COMPARATOR_CANONICAL", comparator.get("contract") in {"OWNED_CHALLENGER_COMPARATOR_V1", "OWNED_CHALLENGER_COMPARATOR_V2", "OWNED_CHALLENGER_COMPARATOR_V3"} and comparator.get("advisory_only") is True, {"contract": comparator.get("contract"), "advisory_only": comparator.get("advisory_only")})
 
     tactical = _tactical_report_coverage(user, watchlist)
     _check(rows, "TACTICAL_EVIDENCE_ALL_35", tactical == {"owned": 15, "owned_with_tactical": 15, "watchlist": 20, "watchlist_with_tactical": 20}, tactical)

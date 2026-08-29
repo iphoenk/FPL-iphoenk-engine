@@ -37,7 +37,7 @@
     "decision_validation_snapshots.json": {
       "root_type": "object",
       "required_fields": ["schema_version", "contract", "records", "updated_at", "owner"],
-      "equals": {"schema_version": 1, "contract": "DECISION_VALIDATION_SNAPSHOTS_V1", "owner": "prediction_evaluation.decision_snapshot_evidence"},
+      "equals": {"schema_version": 2, "contract": "DECISION_VALIDATION_SNAPSHOTS_V1", "owner": "reporting.decision_snapshot_evidence"},
       "types": {"records": "object"}
     },
     "fixture_weather.json": {

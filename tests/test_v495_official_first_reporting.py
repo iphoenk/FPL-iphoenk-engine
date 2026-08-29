@@ -80,7 +80,8 @@ def test_report_language_policy_is_cross_engine_and_hides_technical_reasons():
     assert policy["guardrails"]["primary_reasoning_plain_fpl_language"] is True
     now, latest, health, sanity, effective, locked, scorecard = _governance_fixture()
     out = govern_checkpoint(latest, health, sanity, effective, locked, scorecard=scorecard, now=now)
-    assert out["action_state"] == "HOLD"
+    assert out["action_state"] == "REVIEW"
+    assert out["canonical_resolution"]["overall_action"] == "REVIEW"
     assert "CRITICAL_PREDICTION_WARMUP" in out["readiness"]["reasons"]
     human = out["human_report"]
     assert human["language_policy"] == "fpl_human_report_language_v1"
@@ -94,7 +95,8 @@ def test_stale_report_is_human_refresh_required_not_technical_excuse():
     policy = json.loads((ROOT / "config/report_language_policy.json").read_text())
     now, latest, health, sanity, effective, locked, scorecard = _governance_fixture(age_minutes=61)
     out = govern_checkpoint(latest, health, sanity, effective, locked, scorecard=scorecard, now=now)
-    assert out["action_state"] == "REFRESH_REQUIRED"
+    assert out["action_state"] == "REVIEW"
+    assert out["canonical_resolution"]["overall_action"] == "REVIEW"
     assert "SNAPSHOT_STALE" in out["readiness"]["reasons"]
     primary = " ".join([*out["human_report"]["why"], *out["human_report"]["what_to_do"]]).lower()
     assert "data terakhir" in primary

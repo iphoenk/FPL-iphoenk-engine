@@ -7,6 +7,7 @@ from src.runtime_v3 import domain_orchestrator, incremental_reuse
 from src.runtime_v3 import orchestrator as legacy
 
 _ORIGINAL_REUSE = legacy._reuse_service
+_ORIGINAL_RUN_SERVICE = legacy._run_service
 _ORIGINAL_METADATA = legacy._write_runtime_metadata
 
 
@@ -18,26 +19,35 @@ def _reuse_service(service_name, spec, canonical, profile_cfg):
     return incremental_reuse.try_reuse(service_name, spec, profile_name)
 
 
+def _run_service(service_name, spec, **kwargs):
+    input_fingerprint_before = incremental_reuse.fingerprint(service_name)
+    result = _ORIGINAL_RUN_SERVICE(service_name, spec, **kwargs)
+    if input_fingerprint_before:
+        result["input_fingerprint_before"] = input_fingerprint_before
+    return result
+
+
 def _write_runtime_metadata(registry, service_results, total_ms, cache_dir, profile, profile_cfg, temp_root):
     performance = _ORIGINAL_METADATA(registry, service_results, total_ms, cache_dir, profile, profile_cfg, temp_root)
+    diagnostics = {}
     for name, row in service_results.items():
         if row.get("status") in {"SUCCESS", "REUSED"}:
-            incremental_reuse.record(name, profile)
+            captured = row.get("input_fingerprint_before") or row.get("input_fingerprint")
+            incremental_reuse.record(name, profile, captured)
+        if name in (incremental_reuse._registry().get("services") or {}):
+            diagnostics[name] = incremental_reuse.diagnose(name)
     performance["content_addressed_reuse"] = {
         "enabled": profile in {"fast_decision", "live"},
         "reused_services": sorted(
             name for name, row in service_results.items()
             if row.get("reuse_mode") == "CONTENT_ADDRESSED"
         ),
+        "diagnostics": diagnostics,
     }
     return performance
 
 
 def _install_hooks(profile_name: str) -> None:
-    profiles = legacy._load_profiles().get("profiles") or {}
-    cfg = profiles.get(profile_name)
-    if isinstance(cfg, dict):
-        cfg["_profile_name"] = profile_name
     original_profile = domain_orchestrator._profile
 
     def patched_profile(mode, deep_stats, explicit):
@@ -48,6 +58,7 @@ def _install_hooks(profile_name: str) -> None:
 
     domain_orchestrator._profile = patched_profile
     legacy._reuse_service = _reuse_service
+    legacy._run_service = _run_service
     legacy._write_runtime_metadata = _write_runtime_metadata
 
 

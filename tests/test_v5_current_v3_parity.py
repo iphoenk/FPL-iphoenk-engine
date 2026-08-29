@@ -8,7 +8,8 @@ from src.v5.intelligence.xmins import estimate_xmins
 from src.v5.state import Phase, primary_authority
 
 ROOT = Path(__file__).resolve().parents[1]
-MAIN_SHA = "83873ea33ca631344212a792a57911fad7e1575b"
+MAIN_SHA = "7af907fc1f994f32c7c65d8fbf7eb3e40436c39a"
+CODE_SHA = "83873ea33ca631344212a792a57911fad7e1575b"
 
 
 def _load(path: str):
@@ -22,10 +23,13 @@ def test_current_production_reanchor_is_exact_and_keeps_frozen_truth_baseline():
 
     assert manifest["baselines"]["production_truth"] == "v3.20.0"
     assert manifest["baselines"]["production_main_sha"] == MAIN_SHA
+    assert manifest["baselines"]["production_code_commit"] == CODE_SHA
     assert manifest["baselines"]["production_runtime_schema_version"] == 49
     assert manifest["baselines"]["production_execution_registry"] == "V3_EXECUTION_DOMAINS_V2"
     assert acceptance["convergence"]["production_main_sha"] == MAIN_SHA
+    assert acceptance["convergence"]["production_code_commit"] == CODE_SHA
     assert parity["current_production_reanchor"]["production_main_sha"] == MAIN_SHA
+    assert parity["current_production_reanchor"]["production_code_commit"] == CODE_SHA
     assert parity["governance"]["reanchor_requires_full_v5_gate"] is True
 
 

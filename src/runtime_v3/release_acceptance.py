@@ -16,17 +16,17 @@ class Gate:
 
 def integration_gates() -> tuple[Gate, ...]:
     py = sys.executable
-    incremental = "src.runtime_v3.incremental_domain_orchestrator"
+    runtime = "src.runtime_v3.domain_orchestrator"
     return (
-        Gate("full_runtime", (py, "-m", incremental, "--mode", "daily", "--stats", "--profile", "full_refresh")),
+        Gate("full_runtime", (py, "-m", runtime, "--mode", "daily", "--stats", "--profile", "full_refresh")),
         Gate("source_contract", (py, "-m", "src.engines.source_contract_validate")),
         Gate("production_contract", (py, "-m", "src.engines.production_contract_validate")),
         Gate("watchlist_contract", (py, "-m", "src.engines.watchlist_contract_validate")),
         Gate("report_serving_contract", (py, "-m", "src.engines.report_serving_validate")),
         Gate("report_time_contract", (py, "-m", "src.engines.report_time_contract_validate")),
         Gate("full_resource_guard", (py, "-m", "src.runtime_v3.performance_guard", "--profile", "full_refresh")),
-        Gate("fast_cold_warmup", (py, "-m", incremental, "--mode", "daily", "--stats", "--profile", "fast_decision")),
-        Gate("fast_runtime", (py, "-m", incremental, "--mode", "daily", "--stats", "--profile", "fast_decision")),
+        Gate("fast_cold_warmup", (py, "-m", runtime, "--mode", "daily", "--stats", "--profile", "fast_decision")),
+        Gate("fast_runtime", (py, "-m", runtime, "--mode", "daily", "--stats", "--profile", "fast_decision")),
         Gate("fast_slo_guard", (py, "-m", "src.runtime_v3.performance_guard", "--profile", "fast_decision")),
         Gate("material_equivalence", (py, "-m", "src.runtime_v3.equivalence_acceptance")),
     )
@@ -41,12 +41,7 @@ def run() -> dict:
         elapsed = round((time.perf_counter() - gate_start) * 1000.0, 3)
         results.append({"gate": gate.name, "returncode": proc.returncode, "elapsed_ms": elapsed})
         if proc.returncode != 0:
-            result = {
-                "status": "FAIL",
-                "failed_gate": gate.name,
-                "gates": results,
-                "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3),
-            }
+            result = {"status": "FAIL", "failed_gate": gate.name, "gates": results, "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3)}
             print(json.dumps(result, ensure_ascii=False))
             raise SystemExit(proc.returncode or 1)
     result = {

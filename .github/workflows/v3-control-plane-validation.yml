@@ -1,0 +1,35 @@
+name: V3 Control Plane Validation
+
+on:
+  push:
+    branches:
+      - codex/v3-control-plane-service-simplification
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      FPL_AUTH_MODE: disabled
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+      - name: Compile Python
+        run: python -m compileall -q src live_service.py fpl_daily_tasks.py
+      - name: Validate legacy architecture compatibility
+        run: python -m src.engines.architecture_contract_validate
+      - name: Validate canonical execution registry
+        run: python -m src.runtime_v3.registry_compiler --check
+      - name: Run full regression suite
+        run: python -m pytest -q

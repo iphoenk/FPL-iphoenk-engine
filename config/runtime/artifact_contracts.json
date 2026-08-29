@@ -28,6 +28,12 @@
       "equals": {"schema_version": 1, "contract": "EXTERNAL_CONSENSUS_V1", "owner": "governance.external_consensus", "native_conclusion_frozen_before_overlay": true},
       "types": {"observations": "list", "subjects": "list", "source_status": "object", "governance": "object", "authority": "object", "native_snapshot": "object"}
     },
+    "recent_competitive_load.json": {
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "generated_at", "owner", "status", "players", "player_count", "state_counts", "governance"],
+      "equals": {"schema_version": 1, "contract": "COMPETITIVE_LOAD_PRIMITIVE_V1", "owner": "governance.competitive_load"},
+      "types": {"players": "object", "player_count": "integer", "state_counts": "object", "governance": "object"}
+    },
     "fixture_weather.json": {
       "root_type": "object",
       "required_fields": ["schema_version", "model", "provider", "fixtures", "material_fixtures", "governance"],

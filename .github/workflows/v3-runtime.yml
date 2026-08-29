@@ -76,9 +76,11 @@ jobs:
             fi
           done < "$RUNNER_TEMP/hydrate-paths.txt"
 
-      - name: Validate architecture ownership contract
+      - name: Validate architecture and compile execution plan
         if: steps.cadence.outputs.should_collect == 'true'
-        run: python -m src.engines.architecture_contract_validate
+        run: |
+          python -m src.engines.architecture_contract_validate
+          python -m src.runtime_v3.registry_compiler --check
 
       - name: Select execution profile
         if: steps.cadence.outputs.should_collect == 'true'
@@ -107,7 +109,7 @@ jobs:
           echo "extra=$extra" >> "$GITHUB_OUTPUT"
           echo "selected profile=$profile mode=$mode visible=${{ steps.cadence.outputs.visible_mode }}"
 
-      - name: Run governed eleven-domain / six-phase execution profile
+      - name: Run governed coarse-capability execution profile
         if: steps.cadence.outputs.should_collect == 'true'
         shell: bash
         env:
@@ -124,7 +126,7 @@ jobs:
           if [ "${{ steps.runtime_profile.outputs.extra }}" = "--deep-stats" ]; then
             args+=(--deep-stats)
           fi
-          python -m src.runtime_v3.domain_orchestrator "${args[@]}"
+          python -m src.runtime_v3.compiled_orchestrator "${args[@]}"
 
       - name: Validate production decision contracts
         if: steps.cadence.outputs.should_collect == 'true'

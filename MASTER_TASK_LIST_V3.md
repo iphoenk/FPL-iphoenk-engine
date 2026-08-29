@@ -2,12 +2,9 @@
 
 Canonical status: ACTIVE  
 Canonical roadmap owner: V3 operational stream  
-Current production release: V3.24.0  
+Current production release: V3.39.0  
 Current production schema: 49  
 Production acceptance: COMPLETE  
-Current release candidate: V3.39.0  
-Current candidate schema: 49  
-Candidate acceptance: CLAUDE QA STABILIZATION / CI PENDING  
 FAST refresh target: **<10 seconds**  
 Validated warm serving hard ceiling: **<1 second**  
 Active background capabilities: **21**, grouped into **7 execution domains**
@@ -65,15 +62,15 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 ## Current health contract
 | Area | Requirement | State |
 | --- | --- | --- |
-| Gate0 | 16/16 PASS | production required |
-| DSS | 50 / 16 / 8 ACTIVE | production required |
-| FAST refresh | <10s | production SLO |
-| Validated warm serving | <1000ms hard ceiling, 500ms target | V3.39 candidate inherits guard |
-| Runtime publication | rolling parentless snapshot | required |
-| Official-first | closed explicit matrix | production through REC-41 |
-| Architecture ownership | 21 capabilities mapped exactly once into 7 domains | mandatory CI guard |
-| Competitive-load policy | one canonical runtime/report-time config | V3.39 candidate |
-| Repository hygiene | no accidental placeholder/probe files | V3.39 candidate CI guard |
+| Gate0 | 16/16 PASS | V3.39 production proven |
+| DSS | 50 / 16 / 8 ACTIVE | V3.39 production proven |
+| FAST refresh | <10s | V3.39 published 5.388s |
+| Validated warm serving | <1000ms hard ceiling, 500ms target | V3.39 candidate CI median 9.022ms, max 165.394ms |
+| Runtime publication | rolling parentless snapshot | V3.39 published |
+| Official-first | closed explicit matrix | production |
+| Architecture ownership | 21 capabilities mapped exactly once into 7 domains | production guard |
+| Competitive-load policy | one canonical runtime/report-time config | V3.39 production |
+| Repository hygiene | no accidental placeholder/probe files | V3.39 production CI guard |
 | Predictive calibration | settled frozen forecasts | MONITOR |
 | Price calibration | realized Official movement | MONITOR |
 | Auth private precision | optional/fail-soft | MONITOR |
@@ -104,13 +101,24 @@ Official finished-GW actuals, planning-GW estimated team points, exact-GW WC/FH/
 REC-40 made natural Bahasa Indonesia the primary human-facing surface and persisted 04:30/12:30/21:30 checkpoint completeness.
 
 ### V3.24 Tactical Role & System Evidence
-REC-41 is production-published. Observed player attacking-role profiles and team `FPL_POSITION_SHAPE` are carried through the Player Feature Contract while Official identity/FPL position remains authority. The evidence remains **ADVISORY_ONLY**, with no direct xMins or xPts adjustment. Latest production runtime manifest confirms V3.24.0/schema 49 on `runtime-data`.
+REC-41 is production-published. Observed player attacking-role profiles and team `FPL_POSITION_SHAPE` are carried through the Player Feature Contract while Official identity/FPL position remains authority. The evidence remains **ADVISORY_ONLY**, with no direct xMins or xPts adjustment.
 
 ### V3.25 Architecture Consolidation + Sub-Second Warm Serving
 REC-42 applies the V4.9.6 one-owner/shared-primitive idea with V5 bounded-context and performance principles. DSS/Extension/Enhancement registry ownership is aligned to active implementations, legacy projection/fixture/optimizer ownership drift is fenced, a no-duplicate CI gate is added, REC-41 forced feature refresh is closed after runtime publication, and a fail-closed validated warm-serving lane is introduced. PR #106 feature CI run `33171209718` passed architecture, no-duplicate ownership, **221 tests**, FULL **12.406s**, FAST **5.484s**, and instant-serving benchmark **0.206 / 0.226 / 3.041 ms min/median/max** across five runs. Football formulas were unchanged.
 
 ### V3.39 Claude QA Stabilization
-Independent QA/QC confirmed REC-01 and REC-02 genuinely active, but found release-metadata drift, a duplicated competitive-load policy, and repeated accidental placeholder/probe commits. V3.39 stabilization aligns release metadata with the actual code lineage, migrates runtime/report-time load governance into one canonical config without dropping deadline-day, press-conference, competition-load or double-count rules, and adds a repository hygiene guard. The existing 21-capability/7-domain equivalence guard is retained rather than duplicated.
+Independent QA/QC confirmed REC-01 and REC-02 genuinely active, but found release-metadata drift, a duplicated competitive-load policy, and repeated accidental placeholder/probe commits. V3.39 consolidates runtime/report-time load governance into one canonical config without dropping deadline-day, press-conference, competition-load or double-count rules, adds repository hygiene protection, aligns release metadata with code lineage, and retains the existing 21-capability/7-domain equivalence guard rather than creating another orchestration layer.
+
+Production evidence:
+- PR **#146** merged to `main` at code commit `8c4d62d42683d6191a42dc3b778101885195322c`.
+- Candidate CI run `33238691899`: compile PASS, architecture PASS, no-duplicate ownership PASS, **304 tests PASS in 1.59s**.
+- Composite release acceptance PASS: FULL **8.427s**, FAST **4.642s**, material decision equivalence PASS.
+- Unified interactive serving benchmark: **9.022ms median / 165.394ms max**, below the 1s preferred target.
+- Merged-main CI run `33238768506`: PASS.
+- Production runtime run `33238768480`: PASS, rolling `runtime-data` publication PASS, production Definition of Done PASS.
+- Published runtime manifest: engine **3.39.0**, schema **49**, FAST **5.388s**, Gate0/DSS/report contracts GREEN.
+- No football scoring/projection formula, Official authority or user-decision authority was intentionally changed by this stabilization batch.
+- Predictive accuracy is still not claimed; REC-04 remains MONITOR pending genuinely settled forecast samples.
 
 ## REC-01 through REC-42 canonical status
 The Claude QA follow-up numbering `REC-36` through `REC-39` is external-review notation and must not overwrite the canonical V3 REC IDs below.
@@ -229,9 +237,9 @@ Advanced blank/double simulation, long-horizon chip optimization, full EO/rival 
 A task is DONE only when implementation, deterministic tests, documentation and required production evidence agree. A file existing, source reachability, or an edited status label is not proof. Predictive accuracy, confidence quality, price accuracy and any decision influence from tactical evidence require genuine realized samples.
 
 ## Execution order from here
-1. Run V3.39 stabilization CI on the dedicated branch.
-2. Require competitive-load single-policy tests, 21-capability/7-domain equivalence, release-metadata synchronization and repository hygiene to stay GREEN.
-3. Run composite FULL+FAST release acceptance and warm-serving benchmark.
-4. Merge only after attributable CI evidence is green; do not relabel historical V3.25 metrics as V3.39 evidence.
-5. After merge, verify merged-main CI and publish runtime-data only if runtime-impacting artifacts changed.
-6. Continue REC-04 settled prediction collection; do not treat runtime GREEN as proof of predictive accuracy.
+1. Keep V3.39 production stable; do not add new capability merely because review items are closed.
+2. Continue REC-04 settled prediction collection and evaluate genuinely frozen forecasts as GW samples settle.
+3. Keep REC-07, REC-22, REC-23, REC-26, REC-33 and REC-41 maturity monitors yellow until evidence supports promotion.
+4. Any future version-stamped change must update `src/version.py` and release metadata surfaces in the same release flow.
+5. Preserve one canonical competitive-load policy and the 21-capability/7-domain equivalence gate.
+6. Do not treat runtime GREEN as proof of predictive accuracy.

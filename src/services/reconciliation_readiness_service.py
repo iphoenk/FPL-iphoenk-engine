@@ -72,10 +72,10 @@ def run() -> dict:
     owners = {row.get("id"): row.get("owner") for row in ownership.get("responsibilities") or []}
     ownership_chain = {
         "official_fpl_acquisition": owners.get("OFFICIAL_FPL_ACQUISITION") == "raw_snapshot",
-        "validation_store": owners.get("VALIDATION_STORE") == "validation_store",
-        "reconciliation_truth": owners.get("RECONCILIATION_TRUTH") == "reconciliation_truth",
-        "validation_lifecycle": owners.get("VALIDATION_LIFECYCLE") == "validation_lifecycle",
-        "reconciliation_readiness": owners.get("RECONCILIATION_READINESS") == "reconciliation_readiness",
+        "validation_store": owners.get("VALIDATION_STORE") == "validation",
+        "reconciliation_truth": owners.get("RECONCILIATION_TRUTH") == "validation",
+        "validation_lifecycle": owners.get("VALIDATION_LIFECYCLE") == "validation",
+        "reconciliation_readiness": owners.get("RECONCILIATION_READINESS") == "validation",
     }
     if not all(ownership_chain.values()):
         blockers.append("reconciliation_ownership_chain_invalid")
@@ -129,9 +129,10 @@ def run() -> dict:
         archive_ready=archive_ready,
     )
     out = {
-        "schema_version": 4961,
+        "schema_version": 4962,
         "release": RELEASE_VERSION,
         "service": "reconciliation_readiness",
+        "execution_boundary": "validation",
         "status": "FAIL" if blockers else "PASS",
         "target_gw": target,
         "stage": stage,

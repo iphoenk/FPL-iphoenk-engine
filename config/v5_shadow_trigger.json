@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "v5.0.0-beta.4-postmerge-6",
-  "requested_at": "2026-08-29T02:18:30Z",
+  "requested_cycle": "v5.0.0-beta.4-postmerge-7",
+  "requested_at": "2026-08-29T02:27:30Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "accepted_production_baseline_from_manifest",
   "v5_role": "shadow_only",

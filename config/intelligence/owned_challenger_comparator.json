@@ -1,11 +1,12 @@
 {
-  "schema_version": 2,
-  "contract": "OWNED_CHALLENGER_COMPARATOR_V2",
+  "schema_version": 3,
+  "contract": "OWNED_CHALLENGER_COMPARATOR_V3",
   "owner": "reporting.owned_challenger_comparator",
   "capability_status": "ADVISORY_ONLY",
   "horizons": [1, 2, 3, 5],
   "strategic_horizons": [10, 15],
   "output_states": ["HOLD", "WATCH", "REVIEW", "LEAN_TRANSFER", "STRONG_TRANSFER"],
+  "actionability_states": ["WATCH", "REVIEW", "MATERIAL_UPGRADE", "ACTIONABLE_CHANGE"],
   "challenger_types": ["GOVERNED_WATCHLIST", "EMERGING_CHALLENGER"],
   "owned_targeting": {
     "same_position_required": true,
@@ -31,12 +32,14 @@
     "review_gain_5gw": 1.0,
     "lean_gain_5gw": 3.0,
     "strong_gain_5gw": 5.0,
+    "minimum_positive_3gw_for_material": 0.5,
     "lean_minimum_signal_to_noise": 0.55,
     "strong_minimum_signal_to_noise": 0.85,
     "minimum_start_probability_for_transfer": 0.60,
     "strong_minimum_start_probability": 0.75,
     "strong_requires_complete_critical_evidence": true,
-    "missing_critical_evidence_caps_at": "REVIEW"
+    "missing_critical_evidence_caps_at": "REVIEW",
+    "actionable_change_requires_explicit_timing_evidence": true
   },
   "critical_evidence": [
     "canonical_projection",
@@ -58,6 +61,8 @@
     "reuse_governed_watchlist": true,
     "one_match_haul_is_trigger_not_buy": true,
     "positive_projected_edge_is_not_sufficient_alone": true,
+    "three_to_five_gw_net_benefit_required_for_material_upgrade": true,
+    "actionable_change_requires_affordability_starter_security_tactical_fit_and_timing": true,
     "no_majority_vote_across_external_models": true,
     "may_not_overwrite_canonical_transfer_recommendation": true,
     "may_not_overwrite_starting_xi": true,

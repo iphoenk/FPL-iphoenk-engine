@@ -144,30 +144,46 @@ def _team_cluster_penalty(players: list[dict[str, Any]], cfg: dict[str, Any]) ->
     }
 
 
-def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int = 0) -> dict[str, Any]:
-    cfg = load_config()
+def _scoring_context(cfg: dict[str, Any], planning_gw: int) -> dict[str, Any]:
+    horizons = [int(x) for x in cfg.get("horizons") or [3, 5, 10, 15]]
     change_cap, change_guard = _effective_change_cap(cfg, planning_gw)
+    return {
+        "cfg": cfg,
+        "horizons": horizons,
+        "horizon_set": set(horizons),
+        "max_horizon": max(horizons, default=0),
+        "weights": {str(k): _f(v) for k, v in (cfg.get("horizon_weights") or {}).items()},
+        "bench_weight": _f(cfg.get("bench_utility_weight"), 0.10),
+        "captain_weight": _f(cfg.get("captain_bonus_weight"), 1.0),
+        "risk_aversion": _f(cfg.get("risk_aversion"), 0.12),
+        "change_penalty_points": _f(cfg.get("change_penalty_points"), 0.20),
+        "change_cap": change_cap,
+        "change_guard": change_guard,
+    }
+
+
+def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int = 0, *, scoring_context: dict[str, Any] | None = None) -> dict[str, Any]:
+    context = scoring_context or _scoring_context(load_config(), planning_gw)
+    cfg = context["cfg"]
     cluster_penalty, cluster_guard = _team_cluster_penalty(players, cfg)
-    guardrails = {**change_guard, **cluster_guard}
-    if int(changes) > change_cap:
+    guardrails = {**context["change_guard"], **cluster_guard}
+    if int(changes) > int(context["change_cap"]):
         return {
             "valid": False,
             "reason": "early_season_change_cap_exceeded",
             "guardrails": guardrails,
         }
 
-    horizons = [int(x) for x in cfg.get("horizons") or [3, 5, 10, 15]]
-    bench_weight = _f(cfg.get("bench_utility_weight"), 0.10)
-    captain_weight = _f(cfg.get("captain_bonus_weight"), 1.0)
+    horizons = context["horizons"]
+    bench_weight = context["bench_weight"]
+    captain_weight = context["captain_weight"]
     index = _gw_index(players)
     horizon_results: dict[str, dict[str, Any]] = {}
-    max_horizon = max(horizons, default=0)
-    horizon_set = set(horizons)
     total_mean = 0.0
     total_var = 0.0
     valid = True
 
-    for offset in range(max_horizon):
+    for offset in range(context["max_horizon"]):
         gw = planning_gw + offset
         lineup = _best_lineup_indexed(players, gw, index)
         if not lineup["valid"]:
@@ -183,14 +199,11 @@ def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int 
             captain_std = _f(captain_row.get("std"))
             captain_var = captain_std ** 2
             total_mean += lineup["mean"] + bench_weight * bench_mean + captain_weight * captain_mean
-            # lineup variance already contains one copy of the captain random variable.
-            # Adding captain_weight * X therefore adds both its own variance and
-            # covariance with the existing captain component: ((1+w)^2 - 1) Var(X).
             captain_extra_var = ((1.0 + captain_weight) ** 2 - 1.0) * captain_var
             total_var += lineup["variance"] + (bench_weight ** 2) * bench_var + captain_extra_var
 
         elapsed = offset + 1
-        if elapsed in horizon_set:
+        if elapsed in context["horizon_set"]:
             horizon_results[str(elapsed)] = {
                 "valid": valid,
                 "mean": round(total_mean, 3) if valid else None,
@@ -200,7 +213,7 @@ def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int 
     for horizon in horizons:
         horizon_results.setdefault(str(horizon), {"valid": False, "mean": None, "std": None})
 
-    weights = {str(k): _f(v) for k, v in (cfg.get("horizon_weights") or {}).items()}
+    weights = context["weights"]
     available = [(h, horizon_results[str(h)]) for h in horizons if horizon_results[str(h)]["valid"]]
     weight_sum = sum(weights.get(str(h), 0.0) for h, _ in available)
     if not available or weight_sum <= 0:
@@ -208,8 +221,8 @@ def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int 
     objective_mean = sum(weights.get(str(h), 0.0) * row["mean"] for h, row in available) / weight_sum
     objective_var = sum((weights.get(str(h), 0.0) / weight_sum) ** 2 * row["std"] ** 2 for h, row in available)
     objective_std = math.sqrt(objective_var)
-    change_penalty = int(changes) * _f(cfg.get("change_penalty_points"), 0.20)
-    robust = objective_mean - _f(cfg.get("risk_aversion"), 0.12) * objective_std - change_penalty - cluster_penalty
+    change_penalty = int(changes) * context["change_penalty_points"]
+    robust = objective_mean - context["risk_aversion"] * objective_std - change_penalty - cluster_penalty
     return {
         "valid": True,
         "horizons": horizon_results,

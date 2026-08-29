@@ -5,12 +5,12 @@ Canonical roadmap owner: V3 operational stream
 Current production release: V3.24.0  
 Current production schema: 49  
 Production acceptance: COMPLETE  
-Current release candidate: V3.25.0  
+Current release candidate: V3.39.0  
 Current candidate schema: 49  
-Candidate acceptance: FEATURE CI ACCEPTED / FINAL RELEASE CI PENDING  
+Candidate acceptance: CLAUDE QA STABILIZATION / CI PENDING  
 FAST refresh target: **<10 seconds**  
 Validated warm serving hard ceiling: **<1 second**  
-Active microservices: **20**
+Active background capabilities: **21**, grouped into **7 execution domains**
 
 This file is the single human-readable roadmap for the operational V3 stream. Git history preserves historical release notes; this file represents the **current canonical state**.
 
@@ -57,6 +57,10 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 32. REC-41 tactical/system evidence remains advisory-only and may not mutate xMins or xPts without a later calibrated model opt-in.
 33. Stale artifacts may never be presented as fresh merely to meet a latency target.
 34. Network/source refresh latency and warm-serving latency are measured separately.
+35. The 7 execution domains must cover all 21 background capabilities exactly once and may not become alternate business owners.
+36. Runtime and report-time competitive-load governance must use one canonical policy; duplicated policy files are forbidden.
+37. Version-stamped commits must not drift from `src/version.py`; release metadata surfaces must stay synchronized.
+38. Accidental placeholder/probe files are prohibited from protected release branches.
 
 ## Current health contract
 | Area | Requirement | State |
@@ -64,10 +68,12 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 | Gate0 | 16/16 PASS | production required |
 | DSS | 50 / 16 / 8 ACTIVE | production required |
 | FAST refresh | <10s | production SLO |
-| Validated warm serving | <1000ms hard ceiling, 500ms target | V3.25 candidate |
+| Validated warm serving | <1000ms hard ceiling, 500ms target | V3.39 candidate inherits guard |
 | Runtime publication | rolling parentless snapshot | required |
 | Official-first | closed explicit matrix | production through REC-41 |
-| Architecture ownership | no duplicate responsibility / undeclared multi-writer | V3.25 candidate CI gate |
+| Architecture ownership | 21 capabilities mapped exactly once into 7 domains | mandatory CI guard |
+| Competitive-load policy | one canonical runtime/report-time config | V3.39 candidate |
+| Repository hygiene | no accidental placeholder/probe files | V3.39 candidate CI guard |
 | Predictive calibration | settled frozen forecasts | MONITOR |
 | Price calibration | realized Official movement | MONITOR |
 | Auth private precision | optional/fail-soft | MONITOR |
@@ -103,7 +109,12 @@ REC-41 is production-published. Observed player attacking-role profiles and team
 ### V3.25 Architecture Consolidation + Sub-Second Warm Serving
 REC-42 applies the V4.9.6 one-owner/shared-primitive idea with V5 bounded-context and performance principles. DSS/Extension/Enhancement registry ownership is aligned to active implementations, legacy projection/fixture/optimizer ownership drift is fenced, a no-duplicate CI gate is added, REC-41 forced feature refresh is closed after runtime publication, and a fail-closed validated warm-serving lane is introduced. PR #106 feature CI run `33171209718` passed architecture, no-duplicate ownership, **221 tests**, FULL **12.406s**, FAST **5.484s**, and instant-serving benchmark **0.206 / 0.226 / 3.041 ms min/median/max** across five runs. Football formulas were unchanged.
 
+### V3.39 Claude QA Stabilization
+Independent QA/QC confirmed REC-01 and REC-02 genuinely active, but found release-metadata drift, a duplicated competitive-load policy, and repeated accidental placeholder/probe commits. V3.39 stabilization aligns release metadata with the actual code lineage, migrates runtime/report-time load governance into one canonical config without dropping deadline-day, press-conference, competition-load or double-count rules, and adds a repository hygiene guard. The existing 21-capability/7-domain equivalence guard is retained rather than duplicated.
+
 ## REC-01 through REC-42 canonical status
+The Claude QA follow-up numbering `REC-36` through `REC-39` is external-review notation and must not overwrite the canonical V3 REC IDs below.
+
 | REC | Work item | Status |
 | --- | --- | --- |
 | REC-01 | Player-specific Defensive Contribution | **DONE PROD** |
@@ -150,7 +161,7 @@ REC-42 applies the V4.9.6 one-owner/shared-primitive idea with V5 bounded-contex
 | REC-41 | Tactical Role & System Evidence Contract | **DONE PROD** |
 | REC-42 | Architecture Consolidation + No-Duplicate Guard + Sub-Second Warm Serving | **CANDIDATE** |
 
-## REC-42 candidate acceptance evidence
+## REC-42 V3.25 candidate evidence (historical baseline)
 - PR: **#106**.
 - Feature CI run `33171209718`: compile PASS, existing architecture PASS, new no-duplicate ownership gate PASS, **221 tests PASS**.
 - Composite FULL+FAST acceptance PASS.
@@ -158,10 +169,9 @@ REC-42 applies the V4.9.6 one-owner/shared-primitive idea with V5 bounded-contex
 - FAST: **5.484s** under 10s SLO, down from the previous published V3.24 FAST runtime of **7.624s**.
 - `advanced_stats` FAST reuse: **15.742ms** after closing the completed REC-41 migration fence, instead of rebuilding the feature stack every run.
 - Validated warm-serving benchmark, five repetitions: **min 0.206ms / median 0.226ms / max 3.041ms**, hard ceiling **1000ms**.
-- No service added; active count remains **20**.
+- This evidence is historical V3.25 candidate evidence and is not relabelled as V3.39 acceptance evidence.
 - Schema remains **49**.
 - No football formula, Official authority, or user-decision authority change.
-- Production promotion still requires merge, merged-main CI and runtime publication evidence.
 
 ## Architecture consolidation rules
 1. One authoritative owner per business responsibility.
@@ -174,6 +184,8 @@ REC-42 applies the V4.9.6 one-owner/shared-primitive idea with V5 bounded-contex
 8. Duplicate DSS/Extension/Enhancement/Gate0 IDs fail CI.
 9. Warm serving may use only fresh, complete, contract-valid materialized artifacts.
 10. Source/model refresh remains separate and may not be hidden behind stale data to claim sub-second latency.
+11. Execution domains are orchestration boundaries only; all 21 background capabilities must be assigned exactly once.
+12. Runtime/report-time competitive-load policy duplication is forbidden.
 
 ## Calibration / operational monitors that must remain yellow
 | Monitor | Why |
@@ -200,9 +212,9 @@ Advanced blank/double simulation, long-horizon chip optimization, full EO/rival 
 ## Composite release checklist
 1. Branch from current production `main`.
 2. Keep mutable policy in config/registry/environment owners.
-3. Update version/schema only when the relevant contract changes.
+3. Synchronize `src/version.py`, README, Master Task and Implementation Status whenever a version-stamped release lineage changes; schema changes only when the schema contract changes.
 4. Compile + architecture + no-duplicate ownership + full deterministic tests PASS.
-5. Update Official-first coverage for any REC touching FPL facts.
+5. Update Official-first coverage for any canonical REC touching FPL facts.
 6. Composite FULL contracts/resource guard PASS.
 7. FAST after FULL remains <10s.
 8. Validated warm-serving benchmark remains <1000ms.
@@ -210,13 +222,16 @@ Advanced blank/double simulation, long-horizon chip optimization, full EO/rival 
 10. Confirm `runtime-data` publication for runtime-impacting changes.
 11. Verify Gate0 16/16, DSS 50/16/8, framework GREEN and Decision Engine HEALTHY.
 12. Keep Master Task, Implementation Status, version metadata and README consistent with evidence.
+13. Verify canonical competitive-load policy has no duplicate legacy config.
+14. Verify repository hygiene guard finds no placeholder/probe artifacts.
 
 ## Definition of Done
 A task is DONE only when implementation, deterministic tests, documentation and required production evidence agree. A file existing, source reachability, or an edited status label is not proof. Predictive accuracy, confidence quality, price accuracy and any decision influence from tactical evidence require genuine realized samples.
 
 ## Execution order from here
-1. Complete V3.25 final release CI after release metadata synchronization.
-2. Merge only if architecture ownership, 221+ tests, composite FULL+FAST and instant-serving <1s remain green.
-3. Verify merged-main CI.
-4. Publish a V3.25 runtime-data snapshot and confirm REC-42 ownership/serving contracts remain valid in production.
-5. Close REC-42 as DONE PROD, then attack the remaining FAST refresh hotspot without conflating network-refresh latency with user-facing serving latency.
+1. Run V3.39 stabilization CI on the dedicated branch.
+2. Require competitive-load single-policy tests, 21-capability/7-domain equivalence, release-metadata synchronization and repository hygiene to stay GREEN.
+3. Run composite FULL+FAST release acceptance and warm-serving benchmark.
+4. Merge only after attributable CI evidence is green; do not relabel historical V3.25 metrics as V3.39 evidence.
+5. After merge, verify merged-main CI and publish runtime-data only if runtime-impacting artifacts changed.
+6. Continue REC-04 settled prediction collection; do not treat runtime GREEN as proof of predictive accuracy.

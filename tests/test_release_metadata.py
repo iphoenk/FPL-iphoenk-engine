@@ -1,5 +1,6 @@
 import json
 import re
+import subprocess
 from pathlib import Path
 
 from live_service import app
@@ -37,6 +38,8 @@ def test_release_metadata_surfaces_are_consistent():
     assert implementation["version"] == ENGINE_VERSION
     assert implementation["schema_version"] == SCHEMA_VERSION
     assert implementation["release_metadata_source"] == "src/version.py"
+    assert implementation["release_candidate"]["version"] == ENGINE_VERSION
+    assert implementation["release_candidate"]["schema_version"] == SCHEMA_VERSION
     assert engine_config["schema_version"] == SCHEMA_VERSION
     assert readme[0] == f"# FPL iphoenk Engine v{ENGINE_VERSION}"
     assert workflow[0] == "name: V3 Runtime"
@@ -66,6 +69,27 @@ def test_release_metadata_surfaces_are_consistent():
     assert len(interactive_registry["services"]) == 1
     assert source_registry["registry"] == "SOURCE_REGISTRY_V4"
     assert runtime_artifact_registry["registry"] == "RUNTIME_ARTIFACT_CONTRACTS_V2"
+
+
+def test_latest_visible_version_stamped_commit_matches_engine_release_lineage():
+    result = subprocess.run(
+        ["git", "log", "-n", "100", "--format=%s"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return
+    pattern = re.compile(r"^V(?P<major>\d+)\.(?P<minor>\d+)(?:\.\d+)?(?:\b|:)", re.IGNORECASE)
+    stamped = next((match for line in result.stdout.splitlines() if (match := pattern.match(line.strip()))), None)
+    if stamped is None:
+        return
+    engine_major, engine_minor, _ = (int(part) for part in ENGINE_VERSION.split("."))
+    assert (int(stamped.group("major")), int(stamped.group("minor"))) == (engine_major, engine_minor), (
+        "Version-stamped commit lineage drifted from src/version.py: "
+        f"commit=V{stamped.group('major')}.{stamped.group('minor')} engine={ENGINE_VERSION}"
+    )
 
 
 def test_master_task_governance_is_wired():

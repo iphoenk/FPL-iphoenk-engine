@@ -23,6 +23,7 @@
       "prediction_quality": "DERIVED",
       "price_value": "DERIVED",
       "ownership_context": "NATIVE",
+      "transfer_momentum": "DERIVED",
       "learning_loop": "DERIVED",
       "lineup_output": "DERIVED",
       "package_guardrail": "DERIVED"
@@ -54,6 +55,7 @@
     "regression_risk": {"owner":"prediction_quality","evaluator":"prediction_quality","fallback":"small-sample and uncertainty guards remain active before settled calibration data exists"},
     "price_value": {"owner":"projection","evaluator":"price_value","fallback":"Official current price divided against governed multi-GW projection"},
     "ownership_context": {"owner":"projection","evaluator":"ownership_context","fallback":"Official selected-by percentage; EO is not invented when unavailable"},
+    "transfer_momentum": {"owner":"market_state","evaluator":"transfer_momentum","fallback":"no momentum inference when Official transfer counts or current-price linkage are insufficient"},
     "learning_loop": {"owner":"prediction_evaluation","evaluator":"learning_loop","fallback":"ARMED_NO_SETTLED_SAMPLE until a reconciled post-GW sample exists"},
     "bench_utility": {"owner":"lineup_governance","evaluator":"lineup_output","fallback":"governed bench ordering and autosub utility"},
     "captaincy": {"owner":"lineup_governance","evaluator":"lineup_output","fallback":"governed captain safe-pool with DNP guard"},

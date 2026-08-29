@@ -9,6 +9,7 @@ _data_override = os.getenv("FPL_DATA_DIR")
 DATA = Path(_data_override).expanduser().resolve() if _data_override else ROOT / "data"
 CONFIG = ROOT / "config"
 _JSON_READ_CACHE: dict[Path, tuple[int, int, Any]] = {}
+_COMPACT_JSON_ARTIFACTS = {"decision_brief.json"}
 
 def utcnow():
     return datetime.now(timezone.utc)
@@ -34,7 +35,11 @@ def read_json(path: Path, default=None):
 def atomic_json(path: Path, payload: Any):
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    if path.name in _COMPACT_JSON_ARTIFACTS:
+        serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    else:
+        serialized = json.dumps(payload, ensure_ascii=False, indent=2)
+    tmp.write_text(serialized, encoding="utf-8")
     os.replace(tmp, path)
     try:
         stat = path.stat()

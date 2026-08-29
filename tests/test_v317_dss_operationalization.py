@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+
+import src.engines.dss_operationalization_overlay as operationalization
 from src.engines.dss_operationalization_overlay import EVALUATORS, load_policy
 from src.models.package_optimizer_v2 import load_config, score_package
 
@@ -32,6 +35,68 @@ def test_every_operationalization_capability_has_registered_evaluator():
             assert spec["fallback"], probe
     assert policy["policy"]["missing_external_evidence_is_never_fabricated"] is True
     assert policy["policy"]["strict_postflight_requires_all_dss_active"] is True
+
+
+def test_transfer_momentum_uses_official_counts_and_current_price_linkage(tmp_path, monkeypatch):
+    data = tmp_path / "data"
+    data.mkdir()
+    monkeypatch.setattr(operationalization, "DATA", data)
+
+    players = [
+        {
+            "element": element,
+            "now_cost": 50 + element,
+            "transfers_in_event": element * 10,
+            "transfers_out_event": element * 3,
+        }
+        for element in range(1, 21)
+    ]
+    price_cache = {
+        "players": {
+            str(player["element"]): {"now_cost": player["now_cost"], "ownership": 1.0}
+            for player in players
+        }
+    }
+    (data / "universe.json").write_text(json.dumps({"players": players}), encoding="utf-8")
+    (data / "price_cache.json").write_text(json.dumps(price_cache), encoding="utf-8")
+
+    spec = load_policy()["capabilities"]["transfer_momentum"]
+    ok, detail = operationalization._transfer_momentum(spec)
+
+    assert ok is True
+    assert detail["evidence_state"] == "AVAILABLE"
+    assert detail["transfer_count_coverage_ratio"] == 1.0
+    assert detail["price_cache_linkage_ratio"] == 1.0
+    assert detail["current_price_match_ratio"] == 1.0
+    assert detail["net_transfers_event"] == sum(player["transfers_in_event"] - player["transfers_out_event"] for player in players)
+    assert detail["external_threshold_invented"] is False
+    assert detail["predicted_price_change_invented"] is False
+    assert load_policy()["evidence_maturity"]["evaluator_available_tier"]["transfer_momentum"] == "DERIVED"
+
+
+def test_transfer_momentum_fails_closed_when_price_linkage_is_incomplete(tmp_path, monkeypatch):
+    data = tmp_path / "data"
+    data.mkdir()
+    monkeypatch.setattr(operationalization, "DATA", data)
+
+    players = [
+        {
+            "element": element,
+            "now_cost": 50,
+            "transfers_in_event": 100,
+            "transfers_out_event": 50,
+        }
+        for element in range(1, 21)
+    ]
+    cache = {str(element): {"now_cost": 50} for element in range(1, 19)}
+    (data / "universe.json").write_text(json.dumps({"players": players}), encoding="utf-8")
+    (data / "price_cache.json").write_text(json.dumps({"players": cache}), encoding="utf-8")
+
+    ok, detail = operationalization._transfer_momentum(load_policy()["capabilities"]["transfer_momentum"])
+
+    assert ok is False
+    assert detail["evidence_state"] == "INSUFFICIENT"
+    assert detail["price_cache_linkage_ratio"] == 0.9
 
 
 def test_package_optimizer_executes_cluster_and_early_season_guardrails():

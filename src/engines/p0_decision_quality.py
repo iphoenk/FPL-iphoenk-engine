@@ -33,7 +33,8 @@ def resolve_locked_chip_context(
     chip_cfg = policy.get("chip_governance") or {}
     planning_gw = int(planning_gw)
     override_target_gw = _target_gw(lock.get("target_gw"))
-    override_matches_planning = override_target_gw == planning_gw
+    target_is_explicit = override_target_gw is not None
+    override_matches_planning = (not target_is_explicit) or override_target_gw == planning_gw
 
     active: str | None = None
     wildcard_requested = bool(
@@ -52,7 +53,7 @@ def resolve_locked_chip_context(
                 used_this_gw.append(str(name))
 
     active_count = len(used_this_gw) + (1 if active and active not in used_this_gw else 0)
-    stale_override_suppressed = bool(wildcard_requested and not override_matches_planning)
+    stale_override_suppressed = bool(wildcard_requested and target_is_explicit and not override_matches_planning)
     return {
         "planning_gw": planning_gw,
         "active_chip": active,
@@ -66,6 +67,7 @@ def resolve_locked_chip_context(
             "planning_chip_is_gw_scoped": True,
             "stale_override_cannot_become_active": True,
             "historical_chip_state_is_not_rewritten": True,
+            "legacy_untargeted_lock_behavior_preserved": True,
         },
     }
 

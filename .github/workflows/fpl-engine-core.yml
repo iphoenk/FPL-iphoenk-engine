@@ -257,6 +257,28 @@ jobs:
           assert a['interpretation']['impact_is_diagnostic_not_health_threshold'] is True, a
           PY
 
+      - name: E2E hot-path hardening benchmark
+        if: inputs.publish == false
+        run: |
+          python -m src.services.hot_orchestrator daily --stats --deep-stats
+          python - <<'PY'
+          import json
+          h=json.load(open('data/hot_orchestration_v4.json'))
+          assert h['status']=='PASS', h
+          assert h['guardrails']['official_fpl_refreshed_this_run'] is True, h
+          assert h['guardrails']['exact_optimizer_search_width_unchanged'] is True, h
+          print({'hot_e2e_ms':h['total_e2e_ms'],'official_ms':h['official_acquisition_ms'],'decision_ms':h['decision_compute_ms'],'cache_hit':h['optimizer_cache_hit'],'targets':h['target_status']})
+          PY
+
+      - name: Upload E2E hot-path benchmark
+        if: inputs.publish == false
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-hot-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: data/hot_orchestration_v4.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Publish ablation diagnostic data
         if: inputs.publish
         shell: bash

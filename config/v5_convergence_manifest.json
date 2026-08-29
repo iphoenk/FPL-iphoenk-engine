@@ -5,7 +5,7 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "547baf91d942901a107b0010b57980b05e6e2b7d",
+    "production_main_sha": "f02933343d275a9e4c34b7f690c4ee34cf822414",
     "production_schema_version": 48,
     "production_runtime": "v3.39-seven-domain-live-safe-reuse-prediction-freeze-recovery",
     "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
@@ -99,6 +99,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is re-anchored to production main 547baf91 after explicit capability reconciliation through V3.39. V3.36-V3.39 add live-safe incremental reuse, write-set isolation/observability, competitive-load consolidation and overdue prediction-freeze recovery from genuine predeadline evidence; V5 preserves these semantics within existing bounded-context owners and forbids retroactive prediction reconstruction. Frozen football-truth baseline remains V3.20. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
+    "reason": "V5.0.0-beta.4 is re-anchored to production main f0293334 after explicit capability reconciliation through V3.39. The latest V3.39 delta only consolidates legacy test ownership and preserves all regression assertions, with no football formula or authority change. Earlier V3.36-V3.39 runtime hardening adds live-safe incremental reuse, write-set isolation/observability, competitive-load consolidation and overdue prediction-freeze recovery from genuine predeadline evidence; V5 preserves these semantics within existing bounded-context owners and forbids retroactive prediction reconstruction. Frozen football-truth baseline remains V3.20. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
   }
 }

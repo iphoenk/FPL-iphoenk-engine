@@ -1,86 +1,24 @@
-name: FPL iphoenk V4 prediction gate
+name: FPL iphoenk V4 production scheduler
 
 on:
   workflow_dispatch:
   schedule:
-    # Master Monitor hourly evaluation. GitHub cron is UTC; minute :30 is also :30 WIB.
+    # Default-branch dispatcher for the canonical V4 :30 WIB master evaluation.
+    # Scheduled workflows only execute from the repository default branch.
     - cron: "30 * * * *"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: fpl-iphoenk-v4-gate
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  validate-v4:
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    steps:
-      - name: Checkout V4 prediction branch
-        uses: actions/checkout@v4
-        with:
-          ref: v4-prediction-engine
-          fetch-depth: 1
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install --disable-pip-version-check -r requirements.txt pytest
-
-      - name: Unit and acceptance tests
-        env: {PYTHONPATH: "${{ github.workspace }}"}
-        run: python -m pytest -q
-
-      - name: Mandatory FPL 2026/27 rules compliance audit
-        env: {PYTHONPATH: "${{ github.workspace }}"}
-        run: python -m src.engines.compliance_audit
-
-      - name: Generate V4 point-in-time prediction snapshot
-        env: {PYTHONPATH: "${{ github.workspace }}"}
-        run: python -m src.engine daily --stats
-
-      - name: Persist forward-valid deadline snapshot and reconcile finished GW when available
-        env: {PYTHONPATH: "${{ github.workspace }}"}
-        run: python -m src.engines.v4_validation_cycle cycle
-
-      - name: Framework health PRE-FLIGHT - Gate0 DSS50 Extensions Enhancements
-        env: {PYTHONPATH: "${{ github.workspace }}"}
-        run: python -m src.engines.framework_health_audit --phase preflight
-
-      - name: V4.6.2 high-performance unified decision and evidence pipeline
-        env: {PYTHONPATH: "${{ github.workspace }}"}
-        run: python -m src.engines.v4_decision_pipeline
-
-      - name: Framework health POST-FLIGHT - final decision readiness
-        env: {PYTHONPATH: "${{ github.workspace }}"}
-        run: python -m src.engines.framework_health_audit --phase postflight
-
-      - name: V4.6.3 framework-aware acceptance and quality gate
-        env: {PYTHONPATH: "${{ github.workspace }}"}
-        run: python -m src.engines.v4_quality_gate
-
-      - name: Package V4 quality-test inputs
-        if: always()
-        run: |
-          mkdir -p v4-artifact
-          cp data/predictions_v4.json data/latest.json data/live.json data/universe.json data/team.json \
-             data/compliance_audit.json data/wc_decision_v4.json data/wc_package_audit_v4.json \
-             data/lineup_decision_v4.json data/recommendation_sanity_v4.json data/decision_pipeline_v4.json \
-             data/framework_health_preflight_v4.json data/framework_health_v4.json v4-artifact/ 2>/dev/null || true
-          cp config/manual_lineup.json config/dss_core_registry.json config/dss_extension_registry.json \
-             config/enhancement_layers_registry.json config/gate0_registry.json v4-artifact/ 2>/dev/null || true
-          if [ -d data/validation ]; then cp -R data/validation v4-artifact/; fi
-
-      - name: Upload V4 prediction artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: v4-prediction-quality-inputs
-          path: v4-artifact/
-          if-no-files-found: error
-          retention-days: 30
+  core:
+    uses: iphoenk/FPL-iphoenk-engine/.github/workflows/fpl-engine-core.yml@v4-prediction-engine
+    permissions:
+      contents: write
+    with:
+      ref: v4-prediction-engine
+      publish: true

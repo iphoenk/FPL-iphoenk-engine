@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "registry": "EXTERNAL_BENCHMARK_CONSENSUS_V1",
-  "owner": "source_layer.external_consensus",
+  "owner": "governance.external_consensus",
   "authority": {
     "native_engine_runs_first": true,
     "official_fpl_remains_fact_authority": true,

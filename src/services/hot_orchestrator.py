@@ -74,17 +74,12 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     _assert_digest(SNAPSHOT, snapshot_sha, "snapshot")
     enrichment_sha = file_digest(ENRICHMENT)
 
-    # Benchmark-only wiring: reuse the canonical base prediction output only when
-    # every semantic model input is identical. prediction_service still owns all
-    # current-run freshness, live, price, team and xMins evidence assembly.
-    canonical_builder = prediction_service.build_predictions
-    prediction_service.build_predictions = prediction_model_cache.build_predictions_cached
-    try:
-        t = perf_counter()
-        prediction_service.run()
-        service_ms["prediction"] = round((perf_counter() - t) * 1000.0, 2)
-    finally:
-        prediction_service.build_predictions = canonical_builder
+    # prediction_service owns exact base-prediction reuse in production now. The
+    # hot benchmark only observes that status; it no longer monkey-patches runtime
+    # behavior, which keeps benchmark and production semantics identical.
+    t = perf_counter()
+    prediction_service.run()
+    service_ms["prediction"] = round((perf_counter() - t) * 1000.0, 2)
     prediction_cache = prediction_model_cache.last_status()
     _assert_digest(SNAPSHOT, snapshot_sha, "snapshot")
     _assert_digest(ENRICHMENT, enrichment_sha, "enrichment")
@@ -137,8 +132,8 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     timings = decision.get("timings") or {}
     latest = read_json(LATEST, {})
     out = {
-        "schema_version": 1,
-        "engine": "v4.9.6-e2e-hot-path-candidate-v1",
+        "schema_version": 2,
+        "engine": "v4.9.6-e2e-hot-path-candidate-v2",
         "generated_at": iso_now(),
         "status": "PASS",
         "mode": mode,
@@ -152,6 +147,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
         "official_acquisition_ms": float(raw.get("duration_ms") or 0.0),
         "enrichment_reported_ms": float((read_json(ENRICHMENT, {}) or {}).get("duration_ms") or 0.0),
         "prediction_reported_ms": float((latest.get("performance") or {}).get("prediction_ms") or 0.0),
+        "base_prediction_ms": float((latest.get("performance") or {}).get("base_prediction_ms") or 0.0),
         "decision_compute_ms": float(timings.get("total_pipeline_ms") or 0.0),
         "optimizer_cache_hit": bool(timings.get("optimizer_exact_cache_hit")),
         "targets": {
@@ -171,6 +167,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
             "exact_optimizer_search_width_unchanged": True,
             "exact_base_prediction_reuse_only": True,
             "fresh_xmins_evidence_attached_after_base_prediction_reuse": True,
+            "benchmark_matches_production_prediction_path": True,
             "user_final_authority_preserved": True,
             "validation_runs_concurrently_not_skipped": True,
             "architecture_guard_runs_first": True,
@@ -187,9 +184,11 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
         "startup_assurance_ms": startup_ms,
         "official_acquisition_ms": out["official_acquisition_ms"],
         "prediction_ms": out["prediction_reported_ms"],
+        "base_prediction_ms": out["base_prediction_ms"],
         "prediction_base_cache_hit": prediction_cache.get("hit"),
         "decision_compute_ms": out["decision_compute_ms"],
         "optimizer_cache_hit": out["optimizer_cache_hit"],
+        "semantic_fingerprint_ms": timings.get("semantic_fingerprint_ms"),
         "targets": out["target_status"],
     }, ensure_ascii=False))
     return out

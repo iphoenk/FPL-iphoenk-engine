@@ -5,6 +5,7 @@ from typing import Any
 from src.v5.evaluation.core import challenger_scorecard, evaluate
 from src.v5.evaluation.evidence_guard import evaluate as evaluate_evidence_guard
 from src.v5.evaluation.owned_challenger_comparator import compare as compare_owned_challenger
+from src.v5.evaluation.owned_challenger_context import enrich_with_decision_context
 from src.v5.evaluation.prediction_settlement import build_settlement_artifact
 from src.v5.evaluation.shadow_parity import compare as compare_shadow
 
@@ -36,7 +37,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         watchlist = payload.get("watchlist") if isinstance(payload.get("watchlist"), dict) else {}
         if not prediction or not team or not watchlist:
             raise ValueError("owned challenger comparator requires prediction, truth team and governed watchlist")
-        return compare_owned_challenger(
+        base = compare_owned_challenger(
             prediction=prediction,
             team=team,
             watchlist=watchlist,
@@ -45,6 +46,10 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             workload_context=payload.get("workload_context") if isinstance(payload.get("workload_context"), dict) else None,
             transfer_state=payload.get("transfer_state") if isinstance(payload.get("transfer_state"), dict) else None,
             external_consensus=payload.get("external_consensus") if isinstance(payload.get("external_consensus"), dict) else None,
+        )
+        return enrich_with_decision_context(
+            base,
+            payload.get("decision_context") if isinstance(payload.get("decision_context"), dict) else None,
         )
     if operation != "build":
         raise KeyError(f"unsupported evaluation operation: {operation}")

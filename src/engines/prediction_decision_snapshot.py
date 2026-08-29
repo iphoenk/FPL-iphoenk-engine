@@ -8,6 +8,8 @@ from src.engines.owned_challenger_comparator import build as build_comparator
 from src.utils import DATA, atomic_json, parse_dt, read_json, utcnow
 
 OUT = DATA / "decision_validation_snapshots.json"
+OWNER = "prediction_evaluation.decision_snapshot_evidence"
+CONTRACT = "DECISION_VALIDATION_SNAPSHOTS_V1"
 
 
 def _now() -> str:
@@ -48,7 +50,10 @@ def run() -> dict[str, Any]:
     phase = latest.get("phase") or {}
     planning_gw = _i(phase.get("planning_gw", lineup.get("planning_gw")), 0)
     deadline = parse_dt(phase.get("deadline_time"))
-    payload = read_json(OUT, {"schema_version": 1, "contract": "DECISION_VALIDATION_SNAPSHOTS_V1", "records": {}})
+    payload = read_json(OUT, {"schema_version": 1, "contract": CONTRACT, "records": {}})
+    payload["schema_version"] = 1
+    payload["contract"] = CONTRACT
+    payload["owner"] = OWNER
     records = payload.setdefault("records", {})
 
     if planning_gw <= 0 or deadline is None or utcnow() >= deadline:
@@ -101,7 +106,6 @@ def run() -> dict[str, Any]:
     }
     records[str(planning_gw)] = record
     payload["updated_at"] = _now()
-    payload["owner"] = "prediction_evaluation.decision_snapshot_evidence"
     atomic_json(OUT, payload)
     return {"status": "PREDEADLINE_CAPTURED", "planning_gw": planning_gw, "xi": len(xi), "owned": len(owned), "comparisons": len(record["comparator"]["comparisons"])}
 

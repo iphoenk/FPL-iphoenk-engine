@@ -1,47 +1,58 @@
 from __future__ import annotations
+
 from datetime import datetime, timezone
+
+from src.engines.leakage_guard import availability_before_deadline
 
 REQUIRED_FILES = ("team", "live", "prices", "health", "universe", "chips")
 
 
 def validate_snapshot(snapshot: dict) -> dict:
-    errors=[]
-    if not isinstance(snapshot, dict): errors.append("snapshot_not_object")
-    for key in ("schema_version","engine_version","generated_at","phase","team_summary","files","meta"):
-        if key not in snapshot: errors.append(f"missing:{key}")
-    files=snapshot.get("files") or {}
+    errors = []
+    if not isinstance(snapshot, dict):
+        errors.append("snapshot_not_object")
+    for key in ("schema_version", "engine_version", "generated_at", "phase", "team_summary", "files", "meta"):
+        if key not in snapshot:
+            errors.append(f"missing:{key}")
+    files = snapshot.get("files") or {}
     for key in REQUIRED_FILES:
-        if not files.get(key): errors.append(f"missing_file_pointer:{key}")
-    ts=snapshot.get("team_summary") or {}
-    for key in ("itb","market_value","sell_value"):
-        if ts.get(key) is None: errors.append(f"missing_team_summary:{key}")
-    if ts.get("market_value",0) < 0 or ts.get("sell_value",0) < 0: errors.append("negative_team_value")
-    return {"ok":not errors,"errors":errors}
+        if not files.get(key):
+            errors.append(f"missing_file_pointer:{key}")
+    summary = snapshot.get("team_summary") or {}
+    if summary.get("itb") is None:
+        errors.append("missing_team_summary:itb")
+    explicit = all(summary.get(key) is not None for key in ("squad_market_value", "total_market_funds", "squad_sell_value", "transferable_funds"))
+    legacy = summary.get("market_value") is not None and summary.get("sell_value") is not None
+    if not explicit and not legacy:
+        errors.append("missing_team_summary:value_semantics")
+    market = summary.get("squad_market_value", summary.get("market_value", 0))
+    sell = summary.get("squad_sell_value", summary.get("sell_value", 0))
+    if market < 0 or sell < 0:
+        errors.append("negative_team_value")
+    return {"ok": not errors, "errors": errors}
 
 
-def source_freshness(health: dict, now: datetime|None=None) -> dict:
-    now=now or datetime.now(timezone.utc)
-    out={}
-    for name,row in (health or {}).items():
-        fetched=(row or {}).get("fetched_at")
-        age=None
+def source_freshness(health: dict, now: datetime | None = None) -> dict:
+    now = now or datetime.now(timezone.utc)
+    out = {}
+    for name, row in (health or {}).items():
+        fetched = (row or {}).get("fetched_at")
+        age = None
         if fetched:
             try:
-                dt=datetime.fromisoformat(fetched.replace("Z","+00:00"))
-                age=max(0,(now-dt).total_seconds())
+                parsed = datetime.fromisoformat(fetched.replace("Z", "+00:00"))
+                age = max(0, (now - parsed).total_seconds())
             except Exception:
                 pass
-        out[name]={"status":(row or {}).get("status"),"http_status":(row or {}).get("http_status"),"fetched_at":fetched,"age_seconds":age}
+        out[name] = {
+            "status": (row or {}).get("status"),
+            "http_status": (row or {}).get("http_status"),
+            "fetched_at": fetched,
+            "age_seconds": age,
+        }
     return out
 
 
-def leakage_allowed(feature_available_at: str|None, target_deadline: str|None) -> bool:
-    """Hard predictive leakage gate. Unknown availability fails closed."""
-    if not feature_available_at or not target_deadline:
-        return False
-    try:
-        a=datetime.fromisoformat(feature_available_at.replace("Z","+00:00"))
-        d=datetime.fromisoformat(target_deadline.replace("Z","+00:00"))
-        return a <= d
-    except Exception:
-        return False
+def leakage_allowed(feature_available_at: str | None, target_deadline: str | None) -> bool:
+    """Compatibility wrapper around the canonical predictive timing gate."""
+    return availability_before_deadline(feature_available_at, target_deadline)

@@ -118,6 +118,8 @@ def inactive_reason(profile_name: str, service_name: str | None = None) -> str |
         eligible = _service_live_opt_in(service_name) if service_name else _any_live_opt_in()
         if eligible:
             return None
+        if service_name is None:
+            return "CURRENT_SCORING_FIXTURE_LIVE"
         return "CURRENT_SCORING_FIXTURE_LIVE_SERVICE_NOT_OPTED_IN"
     return None
 

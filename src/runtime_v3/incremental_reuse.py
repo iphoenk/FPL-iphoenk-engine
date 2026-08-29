@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -169,8 +170,22 @@ def _semantic_json(service_name: str, name: str, value: Any) -> Any:
     return value
 
 
+@lru_cache(maxsize=8)
+def _digest_source_tree(path_text: str) -> str:
+    path = Path(path_text)
+    digest = hashlib.sha256()
+    for child in sorted(p for p in path.rglob("*.py") if p.is_file()):
+        digest.update(str(child.relative_to(path)).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(child.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def _digest_path(service_name: str, name: str) -> str | None:
     path = ROOT / name if name.startswith(("config/", "src/")) else DATA / name
+    if path.is_dir():
+        return _digest_source_tree(str(path.resolve()))
     if not path.is_file():
         return None
     raw = path.read_bytes()

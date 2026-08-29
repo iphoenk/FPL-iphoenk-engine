@@ -227,25 +227,20 @@ def _promote_isolated_domain(
     services: dict[str, Any],
     workspace: Path,
 ) -> dict[str, Any]:
-    copied: list[str] = []
-    copied_bytes = 0
-    for capability in capabilities:
-        spec = services[capability]
-        for relative in spec.get("artifacts") or []:
-            name = str(relative)
-            source = workspace / name
-            if not source.is_file():
-                continue
-            target = DATA / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, target)
-            copied.append(name)
-            copied_bytes += target.stat().st_size
-
     canonical_latest = read_json(DATA / "latest.json", {})
     workspace_latest = read_json(workspace / "latest.json", {})
     if not isinstance(canonical_latest, dict) or not isinstance(workspace_latest, dict):
         raise RuntimeError(f"{domain_name} latest.json fan-in requires object payloads")
+
+    promotion_plan: list[tuple[str, Path]] = []
+    for capability in capabilities:
+        for relative in services[capability].get("artifacts") or []:
+            name = str(relative)
+            source = workspace / name
+            if not source.is_file():
+                raise RuntimeError(f"{domain_name} validated artifact missing before fan-in: {name}")
+            promotion_plan.append((name, source))
+
     canonical_files = canonical_latest.setdefault("files", {})
     workspace_files = workspace_latest.get("files") if isinstance(workspace_latest.get("files"), dict) else {}
     merged_latest_keys: list[str] = []
@@ -262,19 +257,31 @@ def _promote_isolated_domain(
             if key in workspace_files:
                 canonical_files[key] = workspace_files[key]
                 merged_file_keys.append(key)
-    atomic_json(DATA / "latest.json", canonical_latest)
 
     workspace_state = read_json(workspace / "incremental_reuse_state.json", {})
+    canonical_state = read_json(DATA / "incremental_reuse_state.json", {})
+    if not isinstance(canonical_state, dict):
+        canonical_state = {}
     if isinstance(workspace_state, dict) and isinstance(workspace_state.get("services"), dict):
-        canonical_state = read_json(DATA / "incremental_reuse_state.json", {})
-        if not isinstance(canonical_state, dict):
-            canonical_state = {}
         canonical_state.setdefault("schema_version", workspace_state.get("schema_version", 1))
         canonical_state.setdefault("registry", workspace_state.get("registry", "V3_INCREMENTAL_REUSE_STATE_V1"))
         canonical_services = canonical_state.setdefault("services", {})
         for capability in capabilities:
             if capability in workspace_state["services"]:
                 canonical_services[capability] = workspace_state["services"][capability]
+
+    copied: list[str] = []
+    copied_bytes = 0
+    for name, source in promotion_plan:
+        target = DATA / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        staging = target.with_suffix(target.suffix + f".{domain_name.lower()}.fan-in.tmp")
+        shutil.copy2(source, staging)
+        os.replace(staging, target)
+        copied.append(name)
+        copied_bytes += target.stat().st_size
+    atomic_json(DATA / "latest.json", canonical_latest)
+    if canonical_state:
         atomic_json(DATA / "incremental_reuse_state.json", canonical_state)
 
     return {
@@ -419,6 +426,8 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
 
             progressed = False
             for domain_name in list(pending):
+                if domain_name in _PARALLEL_ISOLATED_DOMAINS:
+                    continue
                 domain_spec = domain_registry["domains"][domain_name]
                 if not set(domain_spec.get("depends_on") or []).issubset(completed_domains):
                     continue

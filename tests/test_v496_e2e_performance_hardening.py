@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from datetime import timedelta
 
@@ -23,16 +24,45 @@ def _prediction_row(point_in_time: str, xpts: float = 5.0) -> dict:
             {
                 "event": 3,
                 "xpts": xpts,
+                "lower80": xpts - 1.0,
+                "upper80": xpts + 1.0,
+                "xmins": {
+                    "start_probability": 0.82,
+                    "start_probability_confidence": 0.76,
+                    "bench_probability": 0.13,
+                    "dnp_probability": 0.05,
+                },
                 "provenance": {"point_in_time": point_in_time, "model": "v4.9.2-truthful-health"},
             }
         ],
+        "priors": {"tactical_role": "attacking_midfielder"},
     }
+
+
+def _universe() -> dict:
+    return {
+        "players": [
+            {
+                "element": 1,
+                "name": "Example",
+                "position": "MID",
+                "team_id": 1,
+                "team": "A",
+                "now_cost": 70,
+                "status": "a",
+            }
+        ]
+    }
+
+
+def _locked() -> dict:
+    return {"players": [{"element": 1, "sell_cost": 70}], "planning_gw": 3}
 
 
 def test_semantic_decision_fingerprint_ignores_runtime_timestamps(monkeypatch):
     monkeypatch.setattr(v4_decision_pipeline, "read_json", lambda path, default=None: {})
-    universe = {"players": [{"element": 1, "name": "Example", "position": "MID", "team_id": 1, "team": "A", "now_cost": 70, "status": "a"}]}
-    locked = {"players": [{"element": 1, "sell_cost": 70}], "planning_gw": 3}
+    universe = _universe()
+    locked = _locked()
     first = {"model_version": "v4.9.2-truthful-health", "players": [_prediction_row("2026-08-29T10:00:00+00:00")]}
     second = {"model_version": "v4.9.2-truthful-health", "players": [_prediction_row("2026-08-29T11:00:00+00:00")]}
     assert v4_decision_pipeline._semantic_fingerprint(first, universe, locked) == v4_decision_pipeline._semantic_fingerprint(second, universe, locked)
@@ -40,11 +70,32 @@ def test_semantic_decision_fingerprint_ignores_runtime_timestamps(monkeypatch):
 
 def test_semantic_decision_fingerprint_changes_when_decision_input_changes(monkeypatch):
     monkeypatch.setattr(v4_decision_pipeline, "read_json", lambda path, default=None: {})
-    universe = {"players": [{"element": 1, "name": "Example", "position": "MID", "team_id": 1, "team": "A", "now_cost": 70, "status": "a"}]}
-    locked = {"players": [{"element": 1, "sell_cost": 70}], "planning_gw": 3}
+    universe = _universe()
+    locked = _locked()
     first = {"model_version": "v4.9.2-truthful-health", "players": [_prediction_row("2026-08-29T10:00:00+00:00", 5.0)]}
     changed = {"model_version": "v4.9.2-truthful-health", "players": [_prediction_row("2026-08-29T10:00:00+00:00", 5.1)]}
     assert v4_decision_pipeline._semantic_fingerprint(first, universe, locked) != v4_decision_pipeline._semantic_fingerprint(changed, universe, locked)
+
+
+def test_semantic_decision_fingerprint_changes_on_owned_lineup_xmins(monkeypatch):
+    monkeypatch.setattr(v4_decision_pipeline, "read_json", lambda path, default=None: {})
+    universe = _universe()
+    locked = _locked()
+    first = {"model_version": "v4.9.2-truthful-health", "players": [_prediction_row("2026-08-29T10:00:00+00:00")]}
+    changed = copy.deepcopy(first)
+    changed["players"][0]["fixtures"][0]["xmins"]["start_probability"] = 0.61
+    assert v4_decision_pipeline._semantic_fingerprint(first, universe, locked) != v4_decision_pipeline._semantic_fingerprint(changed, universe, locked)
+
+
+def test_semantic_decision_fingerprint_ignores_nonconsumed_provenance(monkeypatch):
+    monkeypatch.setattr(v4_decision_pipeline, "read_json", lambda path, default=None: {})
+    universe = _universe()
+    locked = _locked()
+    first = {"model_version": "v4.9.2-truthful-health", "players": [_prediction_row("2026-08-29T10:00:00+00:00")]}
+    changed = copy.deepcopy(first)
+    changed["players"][0]["fixtures"][0]["provenance"]["debug_trace"] = {"opaque": [1, 2, 3]}
+    changed["players"][0]["unused_explanation"] = "does not feed cached optimizers"
+    assert v4_decision_pipeline._semantic_fingerprint(first, universe, locked) == v4_decision_pipeline._semantic_fingerprint(changed, universe, locked)
 
 
 def test_optimizer_exact_cache_write_uses_path_artifacts(monkeypatch, tmp_path):
@@ -63,6 +114,8 @@ def test_optimizer_exact_cache_write_uses_path_artifacts(monkeypatch, tmp_path):
     v4_decision_pipeline._write_cache("fingerprint")
     stored = json.loads(cache.read_text(encoding="utf-8"))
     assert stored["fingerprint"] == "fingerprint"
+    assert stored["schema_version"] == 2
+    assert stored["guardrails"]["bounded_consumer_projection_not_full_payload"] is True
     assert set(stored["artifact_sha256"]) == {"wc", "packages", "lineup"}
     assert all(len(value) == 64 for value in stored["artifact_sha256"].values())
 

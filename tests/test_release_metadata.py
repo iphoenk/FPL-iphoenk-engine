@@ -71,6 +71,36 @@ def test_release_metadata_surfaces_are_consistent():
     assert runtime_artifact_registry["registry"] == "RUNTIME_ARTIFACT_CONTRACTS_V2"
 
 
+def test_housekeeping_closeout_metadata_is_explicit_and_non_self_referential():
+    implementation = json.loads((ROOT / "IMPLEMENTATION_STATUS.json").read_text())
+    acceptance = implementation["production_acceptance"]
+    housekeeping = implementation["housekeeping_closeout"]
+    accepted = acceptance["accepted_code_commit"]
+
+    assert re.fullmatch(r"[0-9a-f]{40}", accepted)
+    assert housekeeping["accepted_code_commit"] == accepted
+    assert "code-bearing production-proven merge" in acceptance["accepted_code_commit_semantics"]
+    assert housekeeping["status"] == "COMPLETE_PRODUCTION_PROVEN"
+    assert housekeeping["legacy_version_stamped_test_modules_removed"] == 14
+    assert housekeeping["stable_domain_test_suites"] == 4
+    assert housekeeping["version_stamped_test_module_count"] == 0
+    assert housekeeping["legacy_test_allowlist_removed"] is True
+    assert housekeeping["unit_regression_tests"] == 307
+    assert housekeeping["composite_full_fast_acceptance_pass"] is True
+    assert housekeeping["material_decision_equivalence_pass"] is True
+    assert housekeeping["football_formula_changed"] is False
+    assert housekeeping["official_authority_changed"] is False
+    assert housekeeping["user_authority_changed"] is False
+    assert housekeeping["predictive_validation_claimed"] is False
+    assert implementation["rec_status"]["REC-04"]["status"] == "MONITOR"
+    assert implementation["rec_status"]["REC-07"]["status"] == "MONITOR"
+    assert implementation["rec_status"]["REC-22"]["status"] == "MONITOR"
+    assert implementation["rec_status"]["REC-26"]["status"] == "MONITOR"
+    assert implementation["rec_status"]["REC-13"]["status"] == "DONE_PROD"
+    assert implementation["architecture"]["version_stamped_release_tests_forbidden"] is True
+    assert implementation["architecture"]["metadata_only_closeout_commits_do_not_redefine_behavioral_acceptance"] is True
+
+
 def test_latest_visible_version_stamped_commit_matches_engine_release_lineage():
     result = subprocess.run(
         ["git", "log", "-n", "100", "--format=%s"],

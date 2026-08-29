@@ -84,23 +84,32 @@ def _current_scoring_fixture_live(now: datetime | None = None) -> bool:
     return False
 
 
-def active(profile_name: str) -> bool:
+def _service_live_opt_in(service_name: str | None) -> bool:
+    if not service_name:
+        return False
+    spec = (_registry().get("services") or {}).get(service_name)
+    return isinstance(spec, dict) and spec.get("allow_during_live") is True
+
+
+def active(profile_name: str, service_name: str | None = None) -> bool:
     registry = _registry()
     policy = registry.get("policy") or {}
     if profile_name not in set(policy.get("enabled_profiles") or []):
         return False
     if policy.get("disable_when_current_scoring_fixture_live") is True and _current_scoring_fixture_live():
-        return False
+        return _service_live_opt_in(service_name)
     return True
 
 
-def inactive_reason(profile_name: str) -> str | None:
+def inactive_reason(profile_name: str, service_name: str | None = None) -> str | None:
     registry = _registry()
     policy = registry.get("policy") or {}
     if profile_name not in set(policy.get("enabled_profiles") or []):
         return "PROFILE_DISABLED"
     if policy.get("disable_when_current_scoring_fixture_live") is True and _current_scoring_fixture_live():
-        return "CURRENT_SCORING_FIXTURE_LIVE"
+        if _service_live_opt_in(service_name):
+            return None
+        return "CURRENT_SCORING_FIXTURE_LIVE_SERVICE_NOT_OPTED_IN"
     return None
 
 
@@ -192,8 +201,8 @@ def stored_fingerprint(service_name: str) -> str | None:
 
 
 def diagnose(service_name: str, profile_name: str | None = None) -> dict[str, Any]:
-    if profile_name is not None and not active(profile_name):
-        return {"reason": inactive_reason(profile_name), "current": None, "stored": None, "match": False}
+    if profile_name is not None and not active(profile_name, service_name):
+        return {"reason": inactive_reason(profile_name, service_name), "current": None, "stored": None, "match": False}
     current = fingerprint(service_name)
     stored = stored_fingerprint(service_name)
     if current is None:
@@ -214,7 +223,7 @@ def diagnose(service_name: str, profile_name: str | None = None) -> dict[str, An
 
 def try_reuse(service_name: str, service_spec: dict[str, Any], profile_name: str) -> dict[str, Any] | None:
     registry = _registry()
-    if not active(profile_name):
+    if not active(profile_name, service_name):
         return None
     if service_name not in (registry.get("services") or {}):
         return None
@@ -249,7 +258,7 @@ def try_reuse(service_name: str, service_spec: dict[str, Any], profile_name: str
 
 def record(service_name: str, profile_name: str, fingerprint_value: str | None = None) -> None:
     registry = _registry()
-    if not active(profile_name):
+    if not active(profile_name, service_name):
         return
     if service_name not in (registry.get("services") or {}):
         return

@@ -44,9 +44,8 @@ def _fixture_context(fixture_id: int, team_id: int, fixtures_by_id: dict[int, di
 
 
 def _explain_stats(explain_row: dict) -> dict:
-    stats = explain_row.get("stats") or []
     values: dict[str, float] = {}
-    for row in stats:
+    for row in explain_row.get("stats") or []:
         identifier = str(row.get("identifier") or "")
         try:
             values[identifier] = values.get(identifier, 0.0) + float(row.get("value") or 0)
@@ -127,14 +126,14 @@ def build_competitive_load(snapshot: dict, press_evidence: dict | None = None) -
             },
         })
 
-    current_gw = phase.get("scoring_gw")
     live_available = bool(event_live.get("elements"))
     verified_press = sum(row["press_conference"]["status"] == "VERIFIED" for row in rows)
-    out = {
+    verified_press_teams = len({row["team_id"] for row in rows if row["press_conference"]["status"] == "VERIFIED"})
+    return {
         "schema": "competitive_load.v1",
         "schema_version": 496,
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "scoring_gw": current_gw,
+        "scoring_gw": phase.get("scoring_gw"),
         "coverage": {
             "players": len(rows),
             "official_fpl_current_gw_load": "AVAILABLE" if live_available else "UNAVAILABLE",
@@ -142,8 +141,9 @@ def build_competitive_load(snapshot: dict, press_evidence: dict | None = None) -
             "other_competitions": "REQUIRES_EXTERNAL_EVIDENCE",
             "press_conference_collection": "EXTERNAL_EVIDENCE_REQUIRED",
             "press_conference_verified_players": verified_press,
-            "press_conference_verified_teams": len({row["team_id"] for row in rows if row["press_conference"]["status"] == "VERIFIED"}),
-            "complete_for_visible_report": bool(live_available and verified_press > 0),
+            "press_conference_verified_teams": verified_press_teams,
+            "complete_for_visible_report": False,
+            "completion_reason": "current Premier League load is automated; other competitions and press conferences remain evidence-gated",
         },
         "guardrails": {
             "official_fpl_acquisition_reused_not_refetched": True,
@@ -154,7 +154,6 @@ def build_competitive_load(snapshot: dict, press_evidence: dict | None = None) -
         },
         "players": rows,
     }
-    return out
 
 
 def run() -> dict:
@@ -162,7 +161,7 @@ def run() -> dict:
     if not snapshot:
         raise RuntimeError("competitive load requires raw snapshot contract")
     policy = read_json(POLICY, {})
-    if policy.get("contract") != "RECENT_COMPETITIVE_LOAD_V1":
+    if policy.get("contract") != "RECENT_COMPETITIVE_LOAD_V2":
         raise RuntimeError("recent competitive load policy missing or incompatible")
     press_evidence = read_json(PRESS_EVIDENCE, {})
     out = build_competitive_load(snapshot, press_evidence)

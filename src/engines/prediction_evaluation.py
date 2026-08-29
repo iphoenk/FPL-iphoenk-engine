@@ -241,6 +241,35 @@ def _valid_predeadline_decision_snapshot(snapshot: dict[str, Any] | None, deadli
     return snapshot
 
 
+def _promote_overdue_predeadline_forecasts(records: dict[str, Any], now: datetime) -> dict[str, int]:
+    """Freeze every overdue ledger record from its last genuine pre-deadline snapshot.
+
+    The promotion may happen after the deadline, but the forecast payload itself must have
+    been generated on or before that record's deadline. This closes the state-transition
+    gap when planning advances to the next GW before the previous record is frozen.
+    """
+    promoted = 0
+    missed = 0
+    for record in records.values():
+        if record.get("status") == "SETTLED" or record.get("frozen_forecast"):
+            continue
+        record_deadline = parse_dt(record.get("deadline_time"))
+        if record_deadline is None or now < record_deadline:
+            continue
+        candidate = record.get("latest_pre_deadline_forecast")
+        candidate_time = parse_dt((candidate or {}).get("generated_at"))
+        if candidate and candidate_time and candidate_time <= record_deadline:
+            record["frozen_forecast"] = candidate
+            record["frozen_at"] = now.astimezone(timezone.utc).isoformat()
+            record["freeze_transition"] = "PROMOTED_LAST_PREDEADLINE_SNAPSHOT"
+            record["status"] = "FROZEN_AWAITING_SETTLEMENT"
+            promoted += 1
+        else:
+            record["status"] = "MISSED_PRE_DEADLINE_FREEZE"
+            missed += 1
+    return {"promoted": promoted, "missed": missed}
+
+
 def run() -> dict[str, Any]:
     cfg = load_config()
     latest = read_json(DATA / "latest.json", {})
@@ -252,23 +281,17 @@ def run() -> dict[str, Any]:
     phase = latest.get("phase") or snapshot.get("phase") or {}
     planning_gw = int(phase.get("planning_gw") or projections.get("planning_gw") or 0)
     deadline = parse_dt(phase.get("deadline_time"))
+    now = utcnow()
 
     if planning_gw > 0:
         record = records.setdefault(str(planning_gw), {"gw": planning_gw, "status": "COLLECTING"})
         forecast = {"generated_at": projections.get("generated_at") or _now(), "players": _forecast_rows(projections, planning_gw)}
-        if deadline and utcnow() < deadline:
+        if deadline and now < deadline:
             record["deadline_time"] = phase.get("deadline_time")
             record["latest_pre_deadline_forecast"] = forecast
             record["status"] = "COLLECTING"
-        elif not record.get("frozen_forecast"):
-            candidate = record.get("latest_pre_deadline_forecast")
-            candidate_time = parse_dt((candidate or {}).get("generated_at"))
-            if candidate and candidate_time and deadline and candidate_time <= deadline:
-                record["frozen_forecast"] = candidate
-                record["frozen_at"] = _now()
-                record["status"] = "FROZEN_AWAITING_SETTLEMENT"
-            else:
-                record["status"] = "MISSED_PRE_DEADLINE_FREEZE"
+
+    freeze_recovery = _promote_overdue_predeadline_forecasts(records, now)
 
     bootstrap = snapshot.get("bootstrap") or {}
     bh = endpoint_health(snapshot, "bootstrap")
@@ -334,6 +357,7 @@ def run() -> dict[str, Any]:
         "governance": {
             "accuracy_claim_requires_settled_sample": True,
             "pre_deadline_forecast_is_frozen_before_scoring": True,
+            "overdue_freeze_may_only_promote_predeadline_payload": True,
             "pre_deadline_decision_snapshot_required_for_decision_regret": True,
             "post_deadline_information_cannot_rewrite_frozen_forecast": True,
             "post_deadline_information_cannot_create_retroactive_decision_snapshot": True,
@@ -348,6 +372,7 @@ def run() -> dict[str, Any]:
             "bootstrap_source": "CORE_SNAPSHOT",
             "event_live_snapshot_reused": settled_from_snapshot,
             "historical_event_live_fetched": settled_from_network,
+            "freeze_recovery": freeze_recovery,
         },
     }
     ledger["updated_at"] = _now()
@@ -363,6 +388,7 @@ def run() -> dict[str, Any]:
         "settled_gameweeks": accuracy["settled_gameweeks"],
         "dynamic_weight_eligible": accuracy["dynamic_weight_eligible"],
         "decision_metrics": decision_metrics,
+        "freeze_recovery": freeze_recovery,
         "core_snapshot_consumed": True,
     }
     atomic_json(DATA / "latest.json", latest)

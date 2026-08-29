@@ -34,6 +34,12 @@
       "equals": {"schema_version": 1, "contract": "COMPETITIVE_LOAD_PRIMITIVE_V1", "owner": "governance.competitive_load"},
       "types": {"players": "object", "player_count": "integer", "state_counts": "object", "governance": "object"}
     },
+    "decision_validation_snapshots.json": {
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "records", "updated_at", "owner"],
+      "equals": {"schema_version": 1, "contract": "DECISION_VALIDATION_SNAPSHOTS_V1", "owner": "prediction_evaluation.decision_snapshot_evidence"},
+      "types": {"records": "object"}
+    },
     "fixture_weather.json": {
       "root_type": "object",
       "required_fields": ["schema_version", "model", "provider", "fixtures", "material_fixtures", "governance"],

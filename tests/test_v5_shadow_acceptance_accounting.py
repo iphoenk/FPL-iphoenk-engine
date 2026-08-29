@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 import src.v5.shadow_acceptance as accounting
 
 
@@ -24,7 +26,7 @@ def _cycle(
     cycle_pass: bool = True,
 ) -> dict:
     return {
-        "schema_version": 6,
+        "schema_version": 7,
         "cycle_id": cycle_id,
         "generated_at": f"2026-08-27T00:0{cycle_id[-1]}:00+00:00",
         "mode": "REAL_SHADOW",
@@ -44,6 +46,60 @@ def _cycle(
     }
 
 
+def _with_official_auth_proof(payload: dict, *, valid: bool) -> dict:
+    payload["acceptance_context"].update(
+        {
+            "official_auth_validation_required": True,
+            "official_auth_proof_contract": "V5_OFFICIAL_AUTH_SHADOW_PROOF_V1",
+        }
+    )
+    if valid:
+        payload["v5"].update(
+            {
+                "phase": "PRE_DEADLINE",
+                "squad_authority": "official_authenticated",
+                "decision_squad_authority": "official_authenticated",
+                "authenticated_official": {
+                    "state": "VALID",
+                    "expected_entry": 3462711,
+                    "verified_entry": 3462711,
+                    "draft_integrity": {"matches_authoritative_squad": True},
+                    "raw_authenticated_payload_persisted": False,
+                },
+            }
+        )
+        payload["official_auth_proof"] = {
+            "requirement_active": True,
+            "authority": "official_authenticated",
+            "auth_state": "VALID",
+            "verified_entry": 3462711,
+            "draft_matches_authoritative_squad": True,
+        }
+    else:
+        payload["v5"].update(
+            {
+                "phase": "PRE_DEADLINE",
+                "squad_authority": "user_lock",
+                "decision_squad_authority": "user_lock",
+                "authenticated_official": {
+                    "state": "DISABLED",
+                    "expected_entry": 3462711,
+                    "verified_entry": None,
+                    "draft_integrity": {"matches_authoritative_squad": None},
+                    "raw_authenticated_payload_persisted": False,
+                },
+            }
+        )
+        payload["official_auth_proof"] = {
+            "requirement_active": True,
+            "authority": "user_lock",
+            "auth_state": "DISABLED",
+            "verified_entry": None,
+            "draft_matches_authoritative_squad": None,
+        }
+    return payload
+
+
 def _strict_policy() -> dict:
     return {
         "require_post_validation_pass": True,
@@ -51,6 +107,7 @@ def _strict_policy() -> dict:
         "require_same_production_baseline": True,
         "require_same_release_fingerprint": True,
         "require_prediction_acceptance_for_production_candidate": True,
+        "reject_claimed_official_auth_validation_without_proof": True,
     }
 
 
@@ -111,7 +168,7 @@ def test_finalize_marks_cycle_validated_and_computes_three_of_three_when_predict
     assert summary["production_candidate_eligible"] is True
     assert summary["production_candidate_auto_promoted"] is False
     assert persisted["post_validation"]["status"] == "PASS"
-    assert persisted["post_validation"]["validator_contract"] == "V5_REAL_SHADOW_POSTVALIDATION_V4"
+    assert persisted["post_validation"]["validator_contract"] == "V5_REAL_SHADOW_POSTVALIDATION_V5"
     assert persisted["acceptance_progress"]["counts_as_successful_acceptance_cycle"] is True
     assert persisted["acceptance_progress"]["production_candidate_eligible"] is True
 
@@ -143,3 +200,53 @@ def test_three_operational_cycles_do_not_bypass_prediction_acceptance(tmp_path, 
     assert summary["operational_candidate_eligible"] is True
     assert summary["prediction_candidate_eligible"] is False
     assert summary["production_candidate_eligible"] is False
+
+
+def test_claimed_official_auth_validation_rejects_user_lock_with_disabled_auth(monkeypatch):
+    baseline = "v3.20.0"
+    sha = "abc123"
+    fingerprint = "sha256:test-runtime"
+    monkeypatch.setattr(accounting, "V5_VERSION", "5.0.0-beta.4")
+    monkeypatch.setattr(accounting, "_baseline", lambda: (baseline, sha))
+    monkeypatch.setattr(accounting, "_current_release_fingerprint", lambda: fingerprint)
+    monkeypatch.setattr(accounting, "_accounting_policy", _strict_policy)
+    payload = _with_official_auth_proof(
+        _cycle("c1", v5="5.0.0-beta.4", v3_runtime="3.39.0", baseline=baseline, sha=sha, fingerprint=fingerprint),
+        valid=False,
+    )
+    assert accounting._official_auth_validation_ok(payload) is False
+    assert accounting.validated_cycle_eligible(payload) is False
+
+
+def test_claimed_official_auth_validation_accepts_verified_current_team(monkeypatch):
+    baseline = "v3.20.0"
+    sha = "abc123"
+    fingerprint = "sha256:test-runtime"
+    monkeypatch.setattr(accounting, "V5_VERSION", "5.0.0-beta.4")
+    monkeypatch.setattr(accounting, "_baseline", lambda: (baseline, sha))
+    monkeypatch.setattr(accounting, "_current_release_fingerprint", lambda: fingerprint)
+    monkeypatch.setattr(accounting, "_accounting_policy", _strict_policy)
+    payload = _with_official_auth_proof(
+        _cycle("c1", v5="5.0.0-beta.4", v3_runtime="3.39.0", baseline=baseline, sha=sha, fingerprint=fingerprint),
+        valid=True,
+    )
+    assert accounting._official_auth_validation_ok(payload) is True
+    assert accounting.validated_cycle_eligible(payload) is True
+
+
+def test_finalize_cannot_turn_missing_official_auth_into_postvalidated_pass(tmp_path, monkeypatch):
+    baseline = "v3.20.0"
+    sha = "abc123"
+    fingerprint = "sha256:test-runtime"
+    monkeypatch.setattr(accounting, "V5_VERSION", "5.0.0-beta.4")
+    monkeypatch.setattr(accounting, "_baseline", lambda: (baseline, sha))
+    monkeypatch.setattr(accounting, "_current_release_fingerprint", lambda: fingerprint)
+    monkeypatch.setattr(accounting, "_accounting_policy", _strict_policy)
+    payload = _with_official_auth_proof(
+        _cycle("c1", v5="5.0.0-beta.4", v3_runtime="3.39.0", baseline=baseline, sha=sha, fingerprint=fingerprint, post="PENDING"),
+        valid=False,
+    )
+    latest = tmp_path / "latest_shadow_cycle.json"
+    _write(latest, payload)
+    with pytest.raises(RuntimeError, match="Official-auth validation"):
+        accounting.finalize(str(latest), str(tmp_path))

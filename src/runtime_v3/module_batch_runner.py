@@ -6,16 +6,14 @@ import runpy
 import sys
 from typing import Any
 
-from src.utils import ROOT
+from src.runtime_v3 import registry_compiler
 
-REGISTRY_PATH = ROOT / "config" / "runtime" / "module_batches.json"
+REGISTRY_ID = registry_compiler.DERIVED_BATCH_REGISTRY_ID
 
 
 def _registry() -> dict[str, Any]:
-    payload = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
-    if payload.get("registry") != "V3_MODULE_BATCHES_V1":
-        raise RuntimeError("unexpected module batch registry")
-    return payload
+    """Return a deterministic derived batch view of canonical capability commands."""
+    return registry_compiler.derived_batch_registry()
 
 
 def _expand_args(args: list[Any], context: dict[str, str]) -> list[str]:
@@ -57,7 +55,13 @@ def run_batch(name: str, context: dict[str, str] | None = None) -> dict[str, Any
     finally:
         sys.argv = original_argv
 
-    return {"batch": name, "executed": executed, "count": len(executed)}
+    return {
+        "batch": name,
+        "registry": REGISTRY_ID,
+        "generated_from": "config/v3_service_registry.json#services.*.commands",
+        "executed": executed,
+        "count": len(executed),
+    }
 
 
 def main() -> int:

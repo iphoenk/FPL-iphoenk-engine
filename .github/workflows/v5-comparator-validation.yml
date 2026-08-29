@@ -22,8 +22,8 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt pytest
       - name: Compile comparator path
-        run: python -m py_compile src/v5/evaluation/owned_challenger_comparator.py src/v5/services/evaluation.py src/v5/services/orchestrator_beta.py src/v5/reporting.py
+        run: python -m py_compile src/v5/evaluation/owned_challenger_comparator.py src/v5/evaluation/owned_challenger_context.py src/v5/services/evaluation.py src/v5/services/orchestrator_beta.py src/v5/reporting.py
       - name: Comparator acceptance tests
-        run: python -m pytest -q tests/test_v5_owned_challenger_comparator.py
+        run: python -m pytest -q tests/test_v5_owned_challenger_comparator.py tests/test_v5_owned_challenger_context.py
       - name: Architecture regression
         run: python -m pytest -q tests/test_v5_microservices.py tests/test_v5_reporting_watchlist_performance.py tests/test_v5_v313_reporting_watchlist.py tests/test_v5_beta_composition.py tests/test_v5_persistence_contract.py tests/test_v5_time_schedule_governance.py

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from src.runtime_v3 import incremental_reuse
+from src.runtime_v3 import module_batch_runner
 from src.runtime_v3 import orchestrator as legacy
 from src.utils import DATA, ROOT, atomic_json, read_json
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
@@ -55,6 +56,19 @@ def _profile(mode: str, deep_stats: bool, explicit: str | None) -> tuple[str, di
     return profile_name, profile_cfg
 
 
+def _execution_spec(name: str, spec: dict[str, Any]) -> dict[str, Any]:
+    shared_spec = dict(spec)
+    shared_spec["isolated"] = False
+    batches = module_batch_runner._registry().get("batches") or {}
+    if name in batches:
+        shared_spec["commands"] = [{
+            "module": "src.runtime_v3.module_batch_runner",
+            "args": ["--batch", name, "{stats}", "{deep_stats}", "--mode", "{mode}"],
+        }]
+        shared_spec["single_process_module_batch"] = True
+    return shared_spec
+
+
 def _run_capability(
     name: str,
     spec: dict[str, Any],
@@ -73,8 +87,7 @@ def _run_capability(
         return reused
 
     input_fingerprint_before = incremental_reuse.fingerprint(name)
-    shared_spec = dict(spec)
-    shared_spec["isolated"] = False
+    shared_spec = _execution_spec(name, spec)
     result = legacy._run_service(
         name,
         shared_spec,
@@ -87,6 +100,8 @@ def _run_capability(
     )
     if input_fingerprint_before:
         result["input_fingerprint_before"] = input_fingerprint_before
+    if shared_spec.get("single_process_module_batch"):
+        result["single_process_module_batch"] = True
     if result["status"] != "SUCCESS":
         return result
 
@@ -208,6 +223,13 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                 for name in reuse_registry
             },
         }
+        performance["module_batching"] = {
+            "registry": "V3_MODULE_BATCHES_V1",
+            "batched_services": sorted(
+                name for name, row in capability_results.items()
+                if row.get("single_process_module_batch") is True
+            ),
+        }
         performance["runtime_id"] = DOMAIN_RUNTIME_ID
         performance["architecture"] = domain_registry["architecture"]
         performance["execution_domain_count"] = len(domain_results)
@@ -245,6 +267,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         "capability_owner_count": len(capability_results),
         "domains": domain_results,
         "content_addressed_reuse": performance.get("content_addressed_reuse"),
+        "module_batching": performance.get("module_batching"),
         "resources": performance.get("resources"),
     }, ensure_ascii=False))
     return performance

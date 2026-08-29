@@ -1,12 +1,14 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "contract": "COMPETITIVE_LOAD_PRIMITIVE_V1",
   "owner": "governance.competitive_load",
   "scope": {
     "materialize_all_canonical_players": true,
     "report_owned": 15,
     "report_watchlist": 20,
-    "advisory_only": true
+    "advisory_only": true,
+    "mandatory_before_visible_report": true,
+    "mandatory_on_deadline_day": true
   },
   "states": ["RESTED", "NORMAL", "CONGESTED", "HIGH_ROTATION_RISK", "UNKNOWN"],
   "known_competitions": [
@@ -20,6 +22,36 @@
     "International",
     "Other official competitive first-team fixture"
   ],
+  "source_precedence": [
+    "official_club_match_report_or_lineup",
+    "official_competition_match_centre",
+    "Premier League_or_Official_FPL",
+    "reliable_direct_manager_or_team_news",
+    "pundit_or_community_crosscheck_only"
+  ],
+  "mandatory_player_fields": [
+    "competition",
+    "match_time",
+    "started",
+    "minutes",
+    "sub_on_minute",
+    "sub_off_minute",
+    "position_or_role",
+    "goal_or_assist",
+    "set_piece_or_penalty_role_if_observed",
+    "knock_or_injury_signal",
+    "extra_time_minutes",
+    "travel_context",
+    "rest_hours_to_next_fixture"
+  ],
+  "press_conference_fields": [
+    "manager_quote_or_official_team_news",
+    "availability",
+    "rotation_hint",
+    "fitness_or_knock",
+    "role_or_position_hint",
+    "expected_return_timing_if_relevant"
+  ],
   "classification": {
     "rested_min_hours": 144,
     "congested_rest_hours": 72,
@@ -29,17 +61,73 @@
     "congested_matches_7d": 2,
     "congested_matches_14d": 4
   },
+  "xmins_handoff": {
+    "enabled": true,
+    "application": "REPORT_TIME_EVIDENCE_HANDOFF_ONLY",
+    "direct_xpts_mutation_forbidden": true,
+    "direct_xmins_model_mutation_forbidden_until_calibrated": true,
+    "allowed_targets": [
+      "manager_start_probability",
+      "rotation_risk",
+      "congestion_factor",
+      "availability_challenge",
+      "xmins_confidence"
+    ],
+    "rules": {
+      "started_60plus_with_rest_under_72h": {
+        "rotation_risk_delta": 0.12,
+        "congestion_factor_cap": 0.94
+      },
+      "started_80plus_with_rest_under_72h": {
+        "rotation_risk_delta": 0.18,
+        "congestion_factor_cap": 0.90
+      },
+      "played_extra_time_with_rest_under_96h": {
+        "rotation_risk_delta": 0.10,
+        "congestion_factor_cap": 0.92
+      },
+      "unused_or_short_bench_with_rest_under_72h": {
+        "rotation_risk_delta": -0.05,
+        "congestion_factor_floor": 0.98
+      },
+      "verified_manager_positive_availability": {
+        "manager_start_probability_floor": 0.78
+      },
+      "verified_manager_rotation_warning": {
+        "rotation_risk_delta": 0.15
+      },
+      "verified_manager_doubt_or_knock": {
+        "availability_review_required": true,
+        "confidence_ceiling": "MEDIUM"
+      }
+    },
+    "clamps": {
+      "rotation_risk": [0.0, 1.0],
+      "congestion_factor": [0.75, 1.0],
+      "manager_start_probability": [0.01, 0.99]
+    },
+    "double_count_guard": "same physical load signal may affect xMins evidence once only"
+  },
   "optional_external_observation_contract": "COMPETITIVE_LOAD_OBSERVATIONS_V1",
+  "reporting": {
+    "must_state_if_press_conference_coverage_incomplete": true,
+    "must_state_if_last_competitive_match_not_verified": true,
+    "must_surface_material_player_deltas": true,
+    "technical_tokens_hidden_from_user_report": true
+  },
   "governance": {
     "official_fpl_pl_fixture_facts_are_native": true,
+    "verified_facts_outrank_models": true,
     "non_pl_competitions_require_verified_materialized_observation": true,
     "missing_non_pl_evidence_is_explicit": true,
+    "report_time_pundit_or_community_never_becomes_fact_without_crosscheck": true,
     "no_blanket_fatigue_penalty": true,
     "direct_xpts_mutation_forbidden": true,
     "direct_xmins_mutation_forbidden_until_calibrated": true,
     "allowed_use": ["evidence", "confidence", "tie_breaker", "rotation_review"],
     "coach_rotation_tendency_must_not_be_inferred_without_evidence": true,
     "travel_distance_must_not_be_invented": true,
-    "one_match_does_not_create_buy_or_sell": true
+    "one_match_does_not_create_buy_or_sell": true,
+    "recent_match_load_is_xmins_evidence_not_direct_points_evidence": true
   }
 }

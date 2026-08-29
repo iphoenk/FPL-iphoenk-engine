@@ -4,7 +4,6 @@ import argparse
 import json
 import runpy
 import sys
-from pathlib import Path
 from typing import Any
 
 from src.utils import ROOT
@@ -65,13 +64,13 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch", required=True)
     parser.add_argument("--mode", default="daily")
-    parser.add_argument("--stats-arg", default="--stats")
-    parser.add_argument("--deep-stats-arg", default="")
+    parser.add_argument("--stats", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--deep-stats", action="store_true")
     args = parser.parse_args()
     out = run_batch(args.batch, {
         "mode": args.mode,
-        "stats": args.stats_arg,
-        "deep_stats": args.deep_stats_arg,
+        "stats": "--stats" if args.stats else "--no-stats",
+        "deep_stats": "--deep-stats" if args.deep_stats else "",
     })
     print(json.dumps(out, ensure_ascii=False))
     return 0

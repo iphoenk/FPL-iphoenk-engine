@@ -9,6 +9,7 @@ from src.v5.evaluation.external_consensus import normalize as normalize_external
 from src.v5.evaluation.owned_challenger_comparator import compare as compare_owned_challenger
 from src.v5.evaluation.owned_challenger_context import enrich_with_decision_context
 from src.v5.evaluation.prediction_settlement import build_settlement_artifact
+from src.v5.evaluation.promotion_evidence import build as build_promotion_evidence
 from src.v5.evaluation.shadow_parity import compare as compare_shadow
 
 BASE_CAPABILITIES = [
@@ -22,6 +23,7 @@ BASE_CAPABILITIES = [
     "learning_loop",
     "temporal_backtest",
     "prediction_settlement",
+    "prediction_promotion_evidence",
 ]
 
 
@@ -30,10 +32,15 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         return {
             "status": "ACTIVE",
             "capabilities": list(BASE_CAPABILITIES),
-            "operations": ["build", "compare_owned_challenger", "normalize_external_consensus", "capture_decision_validation", "shadow_compare"],
+            "operations": ["build", "compare_owned_challenger", "normalize_external_consensus", "capture_decision_validation", "promotion_evidence", "shadow_compare"],
         }
     if operation == "shadow_compare":
         return compare_shadow(payload.get("v3") or {}, payload.get("v5") or {})
+    if operation == "promotion_evidence":
+        return build_promotion_evidence(
+            payload.get("ledger") if isinstance(payload.get("ledger"), dict) else {},
+            payload.get("decision_validation") if isinstance(payload.get("decision_validation"), dict) else {},
+        )
     if operation == "normalize_external_consensus":
         return normalize_external_consensus(
             payload.get("observations") if isinstance(payload.get("observations"), dict) else {},

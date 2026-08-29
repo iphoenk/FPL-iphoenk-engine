@@ -9,6 +9,8 @@ def test_beta_composition_adds_watchlist_comparator_reporting_and_persistence(mo
         if "prediction" in calls:
             return {
                 "prediction":{"data":{"planning_gw":2,"players":[],"full_core_enrichment":{"competitive_load":{"status":"ACTIVE","contract":"V5_COMPETITIVE_LOAD_PRIMITIVE_V1","players":{},"player_count":0,"state_counts":{}}}}},
+                "prediction_ledger":{"data":{"schema_version":1,"records":{}}},
+                "prediction_accuracy":{"data":{"overall":{"sample_size":0,"status":"NO_SETTLED_SAMPLE"},"settled_gameweeks":[]}},
                 "report_state":{"data":{}},
                 "decision_validation":{"data":{}},
             }
@@ -24,6 +26,10 @@ def test_beta_composition_adds_watchlist_comparator_reporting_and_persistence(mo
             assert payload["workload_context"]["contract"]=="V5_COMPETITIVE_LOAD_PRIMITIVE_V1"
             return {"data":{"model":"v5_owned_challenger_comparator_v1","status":"ACTIVE_ALPHA","authority":"ADVISORY_ONLY","pair_count":0,"classification_counts":{},"top_comparisons":[]},"elapsed_ms":1,"round_trip_ms":2}
         if service=="evaluation" and operation=="capture_decision_validation":return {"data":{"contract":"V5_DECISION_VALIDATION_SNAPSHOTS_V1","records":{"2":{"status":"PREDEADLINE_CAPTURED"}},"last_capture":{"status":"PREDEADLINE_CAPTURED","planning_gw":2}},"elapsed_ms":1,"round_trip_ms":2}
+        if service=="evaluation" and operation=="promotion_evidence":
+            assert payload["ledger"]["records"]=={}
+            assert payload["decision_validation"]["contract"]=="V5_DECISION_VALIDATION_SNAPSHOTS_V1"
+            return {"data":{"model":"v5_prediction_promotion_evidence_v1","decision_metrics":{"captain_regret":{"status":"NO_GENUINE_PREDEADLINE_SAMPLE","sample_size":0,"mean":None},"xi_regret":{"status":"NO_GENUINE_PREDEADLINE_SAMPLE","sample_size":0,"mean":None},"transfer_comparator_realized_net_gain":{"status":"NO_GENUINE_PREDEADLINE_SAMPLE","sample_size":0,"mean":None}},"flattened_metrics":{"captain_regret":None,"xi_regret":None,"transfer_comparator_realized_net_gain":None},"settled_gameweeks_checked":[],"governance":{"postdeadline_reconstruction_forbidden":True}},"elapsed_ms":1,"round_trip_ms":2}
         if service=="reporting":
             assert payload["owned_challenger_comparator"]["authority"]=="ADVISORY_ONLY"
             assert payload["external_consensus"]["overall"]=="INSUFFICIENT_EVIDENCE"
@@ -36,10 +42,12 @@ def test_beta_composition_adds_watchlist_comparator_reporting_and_persistence(mo
     assert result["competitive_load"]["contract"]=="V5_COMPETITIVE_LOAD_PRIMITIVE_V1"
     assert result["external_consensus"]["advisory_only"] is True
     assert result["decision_validation"]["last_capture"]["status"]=="PREDEADLINE_CAPTURED"
+    assert result["decision_validation"]["promotion_evidence"]["captain_regret"]["sample_size"]==0
     assert result["user_report"]["layer"]=="USER_REPORT"
     assert result["technical_appendix"]["layer"]=="TECHNICAL_APPENDIX"
+    assert "prediction_accuracy" in persisted
     assert "owned_challenger_comparator" in persisted
     assert "competitive_load" in persisted
     assert "external_consensus" in persisted
     assert "decision_validation_snapshots" in persisted
-    assert "beta_composition" in result["service_performance"]
+    assert "prediction_promotion_evidence" in result["service_performance"]["beta_composition"]

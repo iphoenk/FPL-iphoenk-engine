@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "contract": "V5_PREDICTION_BASELINE_PROVENANCE_V1",
+  "state": "PENDING_NO_SETTLED_PRODUCTION_EVIDENCE",
+  "source_requirements": {
+    "source_branch": "main",
+    "artifact_branch": "runtime-data",
+    "production_model": "prediction_evaluation_v1",
+    "source_sha_must_match_accepted_production_main": true,
+    "runtime_engine_version_required": true,
+    "retrospective_proxy_forbidden": true,
+    "counts_toward_predictive_accuracy_required": true,
+    "minimum_settled_gameweeks": 4,
+    "minimum_player_gw_samples": 1000,
+    "minimum_starter_samples": 750,
+    "minimum_clean_sheet_samples": 300,
+    "required_metrics": [
+      "points_mae",
+      "xmins_mae",
+      "starter_brier",
+      "clean_sheet_brier",
+      "spearman"
+    ]
+  },
+  "frozen_baseline": null,
+  "governance": {
+    "manual_metric_entry_without_provenance_forbidden": true,
+    "posthoc_reconstruction_forbidden": true,
+    "proxy_or_formula_correctness_evidence_cannot_be_promoted": true,
+    "baseline_becomes_immutable_after_frozen_acceptance": true,
+    "missing_or_invalid_baseline_fails_non_regression_closed": true
+  }
+}

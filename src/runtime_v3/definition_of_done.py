@@ -5,7 +5,6 @@ import json
 import subprocess
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 from src.utils import DATA, ROOT, parse_dt, read_json
@@ -65,6 +64,33 @@ def _tactical_report_coverage(user: dict[str, Any], watchlist: dict[str, Any]) -
     }
 
 
+def _price_fact_model_contract(prices: dict[str, Any], alerts: dict[str, Any], trajectory: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+    official_fields = prices.get("official_price_fields") or {}
+    authority = str(official_fields.get("authority") or "")
+    model_id = str((prices.get("filter_policy") or {}).get("model_id") or (alerts.get("policy") or {}).get("model_id") or "")
+    players = [row for row in prices.get("players") or [] if isinstance(row, dict)]
+    sampled = players[:25]
+    semantic_separation = bool(sampled) and all(
+        "now_cost" in row
+        and "official_progress_pct" in row
+        and "predicted_change_deadline" in row
+        and "prediction_source" in row
+        for row in sampled
+    )
+    fact_authority = authority == "Official FPL bootstrap native fields"
+    model_declared = model_id == "official_price_radar_v2"
+    trajectory_is_state_cache = isinstance(trajectory.get("players"), dict) and bool(trajectory.get("generated_at"))
+    return fact_authority and model_declared and semantic_separation and trajectory_is_state_cache, {
+        "fact_authority": authority,
+        "model_id": model_id,
+        "sampled_players": len(sampled),
+        "semantic_field_separation": semantic_separation,
+        "fact_fields": ["now_cost", "official_progress_pct", "official_hourly_rate_pct", "official_projections"],
+        "model_fields": ["predicted_change_deadline", "prediction_source", "trajectory_eta_hours", "urgency"],
+        "trajectory_role": "STATE_CACHE" if trajectory_is_state_cache else "UNVERIFIED",
+    }
+
+
 def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str, Any]:
     framework = read_json(DATA / "framework_health.json", {})
     latest = read_json(DATA / "latest.json", {})
@@ -77,6 +103,7 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
     manifest = read_json(DATA / "runtime_manifest.json", {})
     prices = read_json(DATA / "prices.json", {})
     trajectory = read_json(DATA / "price_trajectory.json", {})
+    price_alerts = read_json(DATA / "price_alerts.json", {})
     technical = read_json(DATA / "technical_appendix.json", {})
     accuracy = read_json(DATA / "prediction_accuracy.json", {})
     decision_snapshots = read_json(DATA / "decision_validation_snapshots.json", {})
@@ -122,7 +149,8 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
     _check(rows, "OWNED_15", owned_count == 15, owned_count)
     _check(rows, "WATCHLIST_20_5_PER_POSITION", sum(position_counts.values()) == 20 and all(value == 5 for value in position_counts.values()), position_counts)
 
-    _check(rows, "PRICE_FACT_MODEL_SEPARATED", bool(prices) and bool(trajectory) and prices.get("model") != trajectory.get("model"), {"fact_artifact": "prices.json", "model_artifact": "price_trajectory.json", "prices_model": prices.get("model"), "trajectory_model": trajectory.get("model")})
+    price_separated, price_detail = _price_fact_model_contract(prices, price_alerts, trajectory)
+    _check(rows, "PRICE_FACT_MODEL_SEPARATED", price_separated, price_detail)
 
     no_fabrication = (
         (load.get("governance") or {}).get("travel_distance_must_not_be_invented") is True

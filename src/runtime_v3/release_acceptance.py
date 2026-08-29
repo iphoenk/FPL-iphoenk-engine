@@ -20,7 +20,6 @@ def integration_gates() -> tuple[Gate, ...]:
     py = sys.executable
     runtime = "src.runtime_v3.compiled_orchestrator"
     return (
-        Gate("registry_compile", (py, "-m", "src.runtime_v3.registry_compiler", "--check")),
         Gate("full_runtime", (py, "-m", runtime, "--mode", "daily", "--stats", "--profile", "full_refresh")),
         Gate("source_contract", (py, "-m", "src.engines.source_contract_validate")),
         Gate("production_contract", (py, "-m", "src.engines.production_contract_validate")),

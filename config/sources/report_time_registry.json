@@ -16,7 +16,7 @@
     "last_competitive_match_sweep_required": true,
     "tactical_external_sweep_required": true,
     "tactical_external_sweep_may_enrich_but_never_overwrite_observed_machine_evidence": true,
-    "recent_competitive_load_policy_ref": "config/intelligence/recent_competitive_load.json",
+    "recent_competitive_load_policy_ref": "config/intelligence/competitive_load.json",
     "tactical_matchup_policy_ref": "config/intelligence/tactical_matchup.json"
   },
   "consensus": {

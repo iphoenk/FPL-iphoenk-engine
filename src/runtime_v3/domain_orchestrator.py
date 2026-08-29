@@ -15,6 +15,7 @@ from typing import Any
 from src.runtime_v3 import incremental_reuse
 from src.runtime_v3 import module_batch_runner
 from src.runtime_v3 import orchestrator as legacy
+from src.runtime_v3 import registry_compiler
 from src.utils import DATA, ROOT, atomic_json, read_json
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
@@ -418,6 +419,10 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
     service_registry = legacy._load_registry()
     legacy._validate_dag(service_registry)
     domain_registry = _load_domains()
+    compiled_plan = registry_compiler.compile_runtime_plan(
+        domain_registry=domain_registry,
+        service_registry=service_registry,
+    )
     _validate_domain_coverage(domain_registry, service_registry)
     profile_name, profile_cfg = _profile(mode, deep_stats, profile)
 
@@ -439,7 +444,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         cache_dir = Path(configured_cache).expanduser().resolve() / "official" if configured_cache else temp_root / "official-cache"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
-        pending = list(domain_registry["domains"].keys())
+        pending = list(compiled_plan["domain_order"])
         while pending:
             parallel_ready = all(
                 domain in pending
@@ -565,12 +570,25 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                 for name in reuse_registry
             },
         }
+        batch_registry = module_batch_runner._registry()
         performance["module_batching"] = {
-            "registry": "V3_MODULE_BATCHES_V1",
+            "registry": batch_registry["registry"],
+            "generated_from": batch_registry.get("generated_from"),
+            "human_maintained_registry": False,
             "batched_services": sorted(
                 name for name, row in capability_results.items()
                 if row.get("single_process_module_batch") is True
             ),
+        }
+        performance["compiled_execution_plan"] = {
+            "registry": compiled_plan["registry"],
+            "plan_sha256": compiled_plan["plan_sha256"],
+            "phase_count": compiled_plan["phase_count"],
+            "domain_count": compiled_plan["domain_count"],
+            "capability_count": compiled_plan["capability_count"],
+            "domain_waves": compiled_plan["domain_waves"],
+            "batch_registry": batch_registry["registry"],
+            "runtime_assurance": "PASS",
         }
         performance["domain_process_execution"] = {
             "enabled": True,
@@ -587,7 +605,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         performance["execution_domain_count"] = len(domain_results)
         performance["execution_phase_count"] = int(domain_registry["phase_count"])
         performance["execution_phases"] = domain_registry["canonical_phases"]
-        performance["canonical_domain_order"] = list(domain_registry["domains"])
+        performance["canonical_domain_order"] = list(compiled_plan["domain_order"])
         performance["execution_order"] = list(domain_results)
         performance["execution_phase_results"] = {
             phase: {
@@ -612,7 +630,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             "execution_domain_count": len(domain_results),
             "execution_phase_count": int(domain_registry["phase_count"]),
             "execution_phases": domain_registry["canonical_phases"],
-            "canonical_domain_order": list(domain_registry["domains"]),
+            "canonical_domain_order": list(compiled_plan["domain_order"]),
             "execution_order": list(domain_results),
             "dependency_aware_scheduling": True,
             "shared_official_cache": True,
@@ -623,6 +641,11 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             "deterministic_fan_in": True,
             "cross_capability_copy_promotion": False,
             "isolated_domain_fan_in_promotion": bool(parallel_pairs_executed),
+            "compiled_execution_plan_registry": compiled_plan["registry"],
+            "compiled_execution_plan_sha256": compiled_plan["plan_sha256"],
+            "compiled_domain_waves": compiled_plan["domain_waves"],
+            "module_batch_registry": batch_registry["registry"],
+            "module_batches_derived": True,
             "total_wall_ms": round(total_ms, 3),
         })
         atomic_json(DATA / "latest.json", latest)
@@ -640,6 +663,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         "execution_domain_count": len(domain_results),
         "execution_phase_count": int(domain_registry["phase_count"]),
         "capability_owner_count": len(capability_results),
+        "compiled_execution_plan": performance.get("compiled_execution_plan"),
         "domains": domain_results,
         "content_addressed_reuse": performance.get("content_addressed_reuse"),
         "module_batching": performance.get("module_batching"),

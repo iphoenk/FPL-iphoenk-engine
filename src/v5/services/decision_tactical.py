@@ -14,6 +14,12 @@ def _rebuild_trace(result:dict[str,Any],payload:dict[str,Any])->dict[str,Any]:
     return build_trace(truth=truth,prediction=prediction,price=price,packages=packages,package_governance=package_governance,lineup=lineup,dss=dss,gate0_preflight=gate0)
 
 
+def _owned_prediction(prediction:dict[str,Any],lineup:dict[str,Any])->dict[str,Any]:
+    ids={int(row["element"]) for section in ("starters","bench") for row in lineup.get(section) or [] if isinstance(row,dict) and row.get("element") is not None}
+    if len(ids)!=15: return prediction
+    return {**prediction,"players":[row for row in prediction.get("players") or [] if isinstance(row,dict) and row.get("element") is not None and int(row["element"]) in ids]}
+
+
 def handle(operation:str,payload:dict[str,Any])->Any:
     result=core_handle(operation,payload)
     if operation=="status" and isinstance(result,dict):
@@ -22,9 +28,9 @@ def handle(operation:str,payload:dict[str,Any])->Any:
     prediction=payload.get("prediction") if isinstance(payload.get("prediction"),dict) else {}
     if not prediction: return result
     lineup=result.get("lineup") if isinstance(result.get("lineup"),dict) else {}
-    overlaid=apply_lineup_overlay(lineup,prediction)
+    overlaid=apply_lineup_overlay(lineup,_owned_prediction(prediction,lineup))
     result={**result,"lineup":overlaid}
     if isinstance(result.get("capabilities"),list): result["capabilities"]=sorted({*(result.get("capabilities") or []),"tactical_decision_consumption"})
-    result["governance"]={**(result.get("governance") or {}),"tactical_consumption_contract":"TACTICAL_DECISION_CONSUMPTION_V1","tactical_close_call_only":True,"tactical_direct_xpts_mutation":False}
+    result["governance"]={**(result.get("governance") or {}),"tactical_consumption_contract":"TACTICAL_DECISION_CONSUMPTION_V1","tactical_close_call_only":True,"tactical_direct_xpts_mutation":False,"tactical_owned_universe_only":True}
     if operation in {"finalize","build"}: result["decision_trace"]=_rebuild_trace(result,payload)
     return result

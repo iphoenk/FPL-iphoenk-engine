@@ -3,6 +3,7 @@
   "registry": "V3_INCREMENTAL_REUSE_V1",
   "policy": {
     "enabled_profiles": ["fast_decision", "live"],
+    "disable_when_live_event": true,
     "reuse_requires_matching_input_fingerprint": true,
     "reuse_requires_all_declared_artifacts": true,
     "reuse_never_bypasses_artifact_validation": true,

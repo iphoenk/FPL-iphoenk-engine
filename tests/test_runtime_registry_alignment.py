@@ -60,13 +60,7 @@ def test_registry_compiler_is_deterministic_and_covers_the_runtime_control_plane
         "report_materializer",
     ]
     assert set(first["multi_writer_artifacts"]) == {
-        "health.json",
-        "team.json",
-        "chips.json",
-        "live.json",
         "prices.json",
-        "universe.json",
-        "advanced_stats_sync.json",
         "user_report.json",
     }
     assert first["policy"]["module_batches_are_derived"] is True

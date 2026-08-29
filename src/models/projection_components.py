@@ -25,6 +25,11 @@ def clamp(value: float, low: float, high: float) -> float: return max(low, min(h
 def load_projection_config() -> dict[str, Any]: return json.loads(PROJECTION_CONFIG.read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=1)
+def _team_strength_baseline() -> dict[str, Any]:
+    return (read_json(TEAM_STRENGTH_OUT,{}) or {}).get("baseline") or {}
+
+
 def _blended_rate(player: dict[str, Any], cumulative_field: str, prior: float, shrink_minutes: float) -> tuple[float, str]:
     minutes=max(0.0,_f(player.get("minutes"))); cumulative=max(0.0,_f(player.get(cumulative_field))); observed=cumulative*90.0/minutes if minutes>0 else prior
     blended=(observed*minutes+prior*shrink_minutes)/max(1e-6,minutes+shrink_minutes)
@@ -51,6 +56,7 @@ def _poisson_tail_at_least(threshold: int, expected_count: float) -> float:
     return clamp(1.0-cumulative,0.0,1.0)
 
 
+@lru_cache(maxsize=32)
 def _poisson_rate_for_tail(threshold: int, target_probability: float) -> float:
     target=clamp(target_probability,0.0,0.999999)
     if target<=0.0: return 0.0
@@ -80,7 +86,7 @@ def _p60(xmins: dict[str, Any], cfg: dict[str, Any]) -> float:
 
 def _project_fixture(player: dict[str, Any], xmins: dict[str, Any], matchup: dict[str, Any], home: bool, rate_bundle: dict[str, Any], small_sample: bool) -> dict[str, Any]:
     cfg=load_projection_config(); element_type=int(player.get("element_type") or 4); position=str(player.get("position") or ELEMENT_TYPE_TO_POSITION.get(element_type) or "FWD"); expected_minutes=max(0.0,_f(xmins.get("expected_minutes"))); share=clamp(expected_minutes/90.0,0.0,1.0); p_start=clamp(_f(xmins.get("start_probability")),0.0,1.0); p_bench=clamp(_f(xmins.get("bench_probability")),0.0,1.0-p_start); p_appearance=clamp(p_start+p_bench,0.0,1.0); p60=_p60(xmins,cfg)
-    team_xg=_f(matchup.get("home_expected_goals") if home else matchup.get("away_expected_goals"),1.3); league_base=_f((read_json(TEAM_STRENGTH_OUT,{}).get("baseline") or {}).get("home_goals" if home else "away_goals"),1.3); attack_multiplier=clamp(team_xg/max(0.2,league_base),_f(cfg.get("attack_multiplier_min"),0.55),_f(cfg.get("attack_multiplier_max"),1.75)); cs_prob=clamp(_f(matchup.get("home_clean_sheet_probability") if home else matchup.get("away_clean_sheet_probability")),0.0,1.0)
+    baseline=_team_strength_baseline(); team_xg=_f(matchup.get("home_expected_goals") if home else matchup.get("away_expected_goals"),1.3); league_base=_f(baseline.get("home_goals" if home else "away_goals"),1.3); attack_multiplier=clamp(team_xg/max(0.2,league_base),_f(cfg.get("attack_multiplier_min"),0.55),_f(cfg.get("attack_multiplier_max"),1.75)); cs_prob=clamp(_f(matchup.get("home_clean_sheet_probability") if home else matchup.get("away_clean_sheet_probability")),0.0,1.0)
     appearance=p_start+p_bench+p60; attack=(_f(rate_bundle.get("xg90"))*GOAL_POINTS.get(element_type,4)+_f(rate_bundle.get("xa90"))*ASSIST_POINTS)*share*attack_multiplier; clean_sheet=CLEAN_SHEET_POINTS.get(element_type,0)*cs_prob*p60; saves=(_f(rate_bundle.get("saves90"))/3.0)*share if position=="GK" else 0.0
     threshold=rate_bundle.get("dc_threshold"); count90=rate_bundle.get("dc_count90"); points=_f(rate_bundle.get("dc_points"))
     if position!="GK" and threshold is not None and count90 is not None and p_appearance>0: conditional_minutes=min(90.0,expected_minutes/max(p_appearance,1e-6)); dc=p_appearance*points*_poisson_tail_at_least(int(threshold),_f(count90)*conditional_minutes/90.0)

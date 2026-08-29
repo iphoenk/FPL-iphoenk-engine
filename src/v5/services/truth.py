@@ -40,23 +40,31 @@ def _rules_view() -> dict[str, Any]:
 
 def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None, entry_history: dict[str, Any] | None) -> dict[str, Any]:
     used = (entry_history or {}).get("chips") if isinstance((entry_history or {}).get("chips"), list) else []
-    ledger = build_chip_ledger(used, current_gw=context.planning_gw or context.current_gw or 1)
+    gw = int(context.planning_gw or context.current_gw or 1)
+    ledger = build_chip_ledger(used, current_gw=gw)
     raw_active = None
     source = None
+    submitted_raw = submitted.get("active_chip") if isinstance(submitted, dict) else None
+    submitted_chip = CHIP_API_NAMES.get(str(submitted_raw), str(submitted_raw)) if submitted_raw else None
+    submitted_gw = int(context.submitted_gw) if context.submitted_gw is not None else None
+
     if context.phase.value == "PRE_DEADLINE":
         if bool(lock.get("wildcard_active")):
             raw_active = "wildcard"
             source = "user_lock"
-    elif isinstance(submitted, dict):
-        raw_active = submitted.get("active_chip")
+    elif isinstance(submitted, dict) and submitted_gw == gw:
+        # A submitted chip belongs to the submitted/scoring GW. During LIVE or
+        # POST_GW the planning GW can already be the next GW; never leak the
+        # previous GW chip into the next planning decision.
+        raw_active = submitted_raw
         source = "submitted_picks" if raw_active else None
+
     active_chip = CHIP_API_NAMES.get(str(raw_active), str(raw_active)) if raw_active else None
     current_half = str(ledger.get("current_half") or 1)
     available = set(((ledger.get("halves") or {}).get(current_half) or {}).get("available") or [])
     known = active_chip is None or active_chip in CHIP_DISPLAY_NAMES
     available_now = active_chip is None or active_chip in available
     special_legal = True
-    gw = int(context.planning_gw or context.current_gw or 1)
     if active_chip == "free_hit" and gw == 1 and not bool(CHIP_RULES.get("free_hit_gw1_allowed", False)):
         special_legal = False
     legal = known and available_now and special_legal
@@ -66,6 +74,8 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
         "source": source,
         "planning_gw": gw,
         "submitted_gw": context.submitted_gw,
+        "submitted_active_chip": submitted_chip,
+        "submitted_chip_applies_to_planning_gw": bool(submitted_chip and submitted_gw == gw),
         "current_half": int(current_half),
         "available_this_half": sorted(available),
         "one_chip_per_gameweek": bool(CHIP_RULES.get("one_chip_per_gameweek", True)),

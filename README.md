@@ -1,13 +1,12 @@
-# FPL iphoenk Engine v3.25.0
+# FPL iphoenk Engine v3.39.0
 
 Production-oriented personal FPL decision engine and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current release state
 - Current accepted production release: `3.24.0` / schema `49`.
-- Current release candidate: `3.25.0` / schema `49`, REC-42 Architecture Consolidation, No-Duplicate Ownership Guard & Sub-Second Decision Serving.
-- V3.25 keeps the 20 artifact-owned background microservices and adds 2 bounded interactive microservices: `decision_hotpath` and `instant_gateway`.
-- `decision_hotpath` recomputes governed XI, captain/vice, bench and package legality from fresh canonical projection artifacts without network fetches or duplicate football formulas.
-- `instant_gateway` serves only fresh, validated materialized decisions and fails closed when refresh is required.
+- Current release candidate: `3.39.0` / schema `49`, stabilization of the current V3.39 main lineage after independent QA/QC review.
+- Background execution is organized as 21 artifact-owned capabilities mapped exactly once into 7 execution domains: `ACQUIRE`, `ENRICH`, `MODEL`, `MARKET`, `DECISION`, `GOVERNANCE`, `PUBLISH`.
+- Interactive serving is owned by the single `unified_fastpath` lane; execution domains are orchestration boundaries, not alternate business owners.
 - `config/rec_registry.json` is the canonical REC set. `IMPLEMENTATION_STATUS.json`, Official-first coverage and this documentation are projections/consumers, not competing REC authorities.
 - Runtime state publishes only to the rolling parentless `runtime-data` snapshot; mutable runtime output is not stored on protected `main`.
 - Runtime Artifact Contract Registry: `RUNTIME_ARTIFACT_CONTRACTS_V2`.
@@ -15,6 +14,15 @@ Production-oriented personal FPL decision engine and persisted Official-FPL-deri
 - Report Artifact Registry remains backward-compatible `REPORT_ARTIFACT_REGISTRY_V3`.
 - Release metadata source of truth: `src/version.py`.
 - Canonical roadmap and Definition of Done: `MASTER_TASK_LIST_V3.md`.
+
+## V3.39 Stabilization
+This release line preserves the existing football formulas while tightening runtime, release and governance hygiene.
+
+- Competitive-load runtime and report-time governance use one canonical policy file: `config/intelligence/competitive_load.json`.
+- The legacy duplicate `recent_competitive_load.json` policy is removed only after its report-time rules are migrated into the canonical policy.
+- CI blocks accidental placeholder/probe files such as `x`, `noop` and `probe` from being committed again.
+- Release metadata is aligned with the V3.39 code lineage without claiming predictive validation that has not yet been earned from settled Gameweeks.
+- The 21-capability / 7-domain equivalence guard remains mandatory and prevents execution-domain drift from business capability ownership.
 
 ## V3.25 Architecture Consolidation + Interactive Decision Lane
 REC-42 applies the V4 one-owner/no-duplicate concept and V5 bounded-context/performance principles without changing FPL scoring or prediction formulas.

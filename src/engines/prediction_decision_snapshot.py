@@ -8,7 +8,7 @@ from src.engines.owned_challenger_comparator import build as build_comparator
 from src.utils import DATA, atomic_json, parse_dt, read_json, utcnow
 
 OUT = DATA / "decision_validation_snapshots.json"
-OWNER = "prediction_evaluation.decision_snapshot_evidence"
+OWNER = "reporting.decision_snapshot_evidence"
 CONTRACT = "DECISION_VALIDATION_SNAPSHOTS_V1"
 
 
@@ -116,6 +116,8 @@ def run() -> dict[str, Any]:
             "missing_exact_hit_cost_is_never_invented": True,
             "vice_and_bench_are_captured_only_when_genuinely_available_predeadline": True,
             "historical_snapshots_are_not_retrofitted": True,
+            "reporting_owns_snapshot_capture": True,
+            "prediction_evaluation_is_consumer_only": True,
         },
     }
     records[str(planning_gw)] = record

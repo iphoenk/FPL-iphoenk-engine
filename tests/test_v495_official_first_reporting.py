@@ -93,7 +93,7 @@ def test_report_language_policy_is_cross_engine_and_hides_technical_reasons():
 
 def test_stale_report_is_human_refresh_required_not_technical_excuse():
     policy = json.loads((ROOT / "config/report_language_policy.json").read_text())
-    now, latest, health, sanity, effective, locked, scorecard = _governance_fixture(age_minutes=61)
+    now, latest, health, sanity, effective, locked, scorecard = _governance_fixture(age_minutes=91)
     out = govern_checkpoint(latest, health, sanity, effective, locked, scorecard=scorecard, now=now)
     assert out["action_state"] == "REVIEW"
     assert out["canonical_resolution"]["overall_action"] == "REVIEW"

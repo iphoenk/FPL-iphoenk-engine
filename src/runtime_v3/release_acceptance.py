@@ -17,14 +17,14 @@ class Gate:
 def integration_gates() -> tuple[Gate, ...]:
     py = sys.executable
     return (
-        Gate("full_runtime", (py, "-m", "src.runtime_v3.orchestrator", "--mode", "daily", "--stats", "--profile", "full_refresh")),
+        Gate("full_runtime", (py, "-m", "src.runtime_v3.domain_orchestrator", "--mode", "daily", "--stats", "--profile", "full_refresh")),
         Gate("source_contract", (py, "-m", "src.engines.source_contract_validate")),
         Gate("production_contract", (py, "-m", "src.engines.production_contract_validate")),
         Gate("watchlist_contract", (py, "-m", "src.engines.watchlist_contract_validate")),
         Gate("report_serving_contract", (py, "-m", "src.engines.report_serving_validate")),
         Gate("report_time_contract", (py, "-m", "src.engines.report_time_contract_validate")),
         Gate("full_resource_guard", (py, "-m", "src.runtime_v3.performance_guard", "--profile", "full_refresh")),
-        Gate("fast_runtime", (py, "-m", "src.runtime_v3.orchestrator", "--mode", "daily", "--stats", "--profile", "fast_decision")),
+        Gate("fast_runtime", (py, "-m", "src.runtime_v3.domain_orchestrator", "--mode", "daily", "--stats", "--profile", "fast_decision")),
         Gate("fast_slo_guard", (py, "-m", "src.runtime_v3.performance_guard", "--profile", "fast_decision")),
     )
 
@@ -55,6 +55,7 @@ def run() -> dict:
             "underlying_checks_preserved": True,
             "fail_closed_on_first_failed_gate": True,
             "full_and_fast_profiles_both_required": True,
+            "seven_domain_runtime_required": True,
         },
     }
     print(json.dumps(result, ensure_ascii=False))

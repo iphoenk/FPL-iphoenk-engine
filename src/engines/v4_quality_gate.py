@@ -130,6 +130,7 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
 # Keep the complete pre-existing prediction, legality, report, calibration and
 # actionability gate suite unchanged; only replace the topology-specific check.
 legacy._assert_orchestration = _assert_orchestration
+_assert_version = legacy._assert_version
 run = legacy.run
 
 

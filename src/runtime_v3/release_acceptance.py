@@ -18,8 +18,9 @@ class Gate:
 
 def integration_gates() -> tuple[Gate, ...]:
     py = sys.executable
-    runtime = "src.runtime_v3.domain_orchestrator"
+    runtime = "src.runtime_v3.compiled_orchestrator"
     return (
+        Gate("registry_compile", (py, "-m", "src.runtime_v3.registry_compiler", "--check")),
         Gate("full_runtime", (py, "-m", runtime, "--mode", "daily", "--stats", "--profile", "full_refresh")),
         Gate("source_contract", (py, "-m", "src.engines.source_contract_validate")),
         Gate("production_contract", (py, "-m", "src.engines.production_contract_validate")),
@@ -78,11 +79,12 @@ def run() -> dict:
             "fail_closed_on_first_failed_gate": True,
             "full_and_fast_profiles_both_required": True,
             "cold_then_warm_fast_required": True,
-            "canonical_11_domain_runtime_required": True,
+            "canonical_11_service_runtime_required": True,
             "six_phase_runtime_required": True,
+            "compiled_registry_required": True,
             "same_input_material_equivalence_required": True,
             "definition_of_done_candidate_required": True,
-            "per_capability_timing_is_release_observable": True,
+            "per_implementation_step_timing_is_release_observable": True,
         },
     }
     print(json.dumps(result, ensure_ascii=False))

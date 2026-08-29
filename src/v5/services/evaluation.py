@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 from src.v5.evaluation.core import challenger_scorecard, evaluate
@@ -8,7 +9,7 @@ from src.v5.evaluation.evidence_guard import evaluate as evaluate_evidence_guard
 from src.v5.evaluation.external_consensus import normalize as normalize_external_consensus
 from src.v5.evaluation.owned_challenger_comparator import compare as compare_owned_challenger
 from src.v5.evaluation.owned_challenger_context import enrich_with_decision_context
-from src.v5.evaluation.prediction_settlement import build_settlement_artifact
+from src.v5.evaluation.prediction_settlement import build_settlement_artifact, recover_overdue_predeadline_freezes
 from src.v5.evaluation.promotion_evidence import build as build_promotion_evidence
 from src.v5.evaluation.shadow_parity import compare as compare_shadow
 
@@ -82,12 +83,25 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     truth = payload.get("truth") if isinstance(payload.get("truth"), dict) else {}
     bootstrap = payload.get("bootstrap") if isinstance(payload.get("bootstrap"), dict) else {}
     event_live = payload.get("event_live") if isinstance(payload.get("event_live"), dict) else None
-    ledger = payload.get("ledger") if isinstance(payload.get("ledger"), dict) else None
+    event_live_by_gw = payload.get("event_live_by_gw") if isinstance(payload.get("event_live_by_gw"), dict) else {}
+    event_live_health_by_gw = payload.get("event_live_health_by_gw") if isinstance(payload.get("event_live_health_by_gw"), dict) else {}
+    ledger = payload.get("ledger") if isinstance(payload.get("ledger"), dict) else {"schema_version": 2, "records": {}}
     observations = payload.get("observations") if isinstance(payload.get("observations"), dict) else None
-    result = evaluate(prediction, context, bootstrap, event_live, ledger)
+    recovered_ledger = {**ledger, "records": {key: dict(value) if isinstance(value, dict) else value for key, value in (ledger.get("records") or {}).items()}}
+    freeze_recovery = recover_overdue_predeadline_freezes(recovered_ledger, now=datetime.now(timezone.utc))
+    result = evaluate(
+        prediction,
+        context,
+        bootstrap,
+        event_live,
+        recovered_ledger,
+        event_live_by_gw=event_live_by_gw,
+        event_live_health_by_gw=event_live_health_by_gw,
+    )
     scorecard = challenger_scorecard(prediction, observations, result["accuracy"])
     evidence_guard = evaluate_evidence_guard(prediction, context, truth)
     settlement = build_settlement_artifact(result["ledger"], result["accuracy"])
+    settlement["freeze_recovery"] = freeze_recovery
     capabilities = set(BASE_CAPABILITIES)
     capabilities.update(str(x) for x in evidence_guard.get("capabilities") or [])
     return {

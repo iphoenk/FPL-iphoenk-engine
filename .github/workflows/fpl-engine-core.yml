@@ -88,23 +88,12 @@ jobs:
           print({'pipeline_health':h['pipeline_health'],'capability_coverage':h['capability_coverage'],'gate0':h['gate0']['counts'],'services':o['summary']['services_passed'],'orchestration_ms':o['duration_ms'],'architecture_guard':a['status'],'action':c['action_state']})
           PY
 
-      - name: Advanced enrichment ablation diagnostic gate
-        run: |
-          python -m src.engines.v4_advanced_ablation
-          python - <<'PY'
-          import json
-          a=json.load(open('data/advanced_ablation_v4.json'))
-          assert a['status']=='PASS', a
-          assert a['ablation']['full_shadow_parity']['ok'] is True, a
-          assert a['interpretation']['impact_is_diagnostic_not_health_threshold'] is True, a
-          PY
-
-      - name: Publish atomic V4 runtime snapshot
+      - name: Publish core branch data
         if: inputs.publish
         shell: bash
         run: |
           set -euo pipefail
-          publish_tree="$RUNNER_TEMP/v4-runtime-worktree"
+          publish_tree="$RUNNER_TEMP/v4-runtime-core"
           rm -rf "$publish_tree"
           git config user.name "fpl-iphoenk-bot"
           git config user.email "actions@users.noreply.github.com"
@@ -115,8 +104,38 @@ jobs:
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a "$GITHUB_WORKSPACE/data" ./data
           git add -f data/
-          git commit -m "data(v4): rolling runtime snapshot [skip ci]"
+          git commit -m "data(v4): prediction acceptance snapshot [skip ci]"
           git push --force origin HEAD:"$RUNTIME_BRANCH"
+
+      - name: Advanced enrichment ablation post-publish diagnostic gate
+        run: |
+          python -m src.engines.v4_advanced_ablation
+          python - <<'PY'
+          import json
+          a=json.load(open('data/advanced_ablation_v4.json'))
+          assert a['status']=='PASS', a
+          assert a['ablation']['full_shadow_parity']['ok'] is True, a
+          assert a['interpretation']['impact_is_diagnostic_not_health_threshold'] is True, a
+          PY
+
+      - name: Publish ablation diagnostic data
+        if: inputs.publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          publish_tree="$RUNNER_TEMP/v4-runtime-ablation"
+          rm -rf "$publish_tree"
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          git worktree add --detach "$publish_tree" "origin/${RUNTIME_BRANCH}"
+          mkdir -p "$publish_tree/data"
+          cp "$GITHUB_WORKSPACE/data/advanced_ablation_v4.json" "$publish_tree/data/advanced_ablation_v4.json"
+          cd "$publish_tree"
+          git add data/advanced_ablation_v4.json
+          if git diff --cached --quiet; then echo "No ablation data changes"; exit 0; fi
+          git commit -m "data(v4): advanced ablation diagnostic [skip ci]"
+          git push origin HEAD:"$RUNTIME_BRANCH"
 
       - name: Verify published V4 runtime snapshot
         if: inputs.publish
@@ -126,4 +145,5 @@ jobs:
           git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
           git cat-file -e "origin/${RUNTIME_BRANCH}:data/framework_health_v4.json"
           git cat-file -e "origin/${RUNTIME_BRANCH}:data/latest.json"
+          git cat-file -e "origin/${RUNTIME_BRANCH}:data/advanced_ablation_v4.json"
           echo "Published V4 runtime snapshot to ${RUNTIME_BRANCH}"

@@ -40,14 +40,16 @@ def _forecast_rows(projections: dict[str, Any], gw: int) -> list[dict[str, Any]]
         event = next((x for x in player.get("xpts_by_gw") or [] if int(x.get("gw") or -1) == gw), None)
         if event is None:
             continue
+        xmins = player.get("xmins") or {}
         rows.append({
             "element": int(player["element"]),
             "name": player.get("name"),
             "position": player.get("position"),
             "xpts": round(_f(event.get("mean")), 4),
             "xpts_std": round(_f(event.get("std")), 4),
-            "xmins": round(_f((player.get("xmins") or {}).get("expected_minutes")), 2),
-            "start_probability": round(_f((player.get("xmins") or {}).get("start_probability")), 4),
+            "xmins": round(_f(xmins.get("expected_minutes")), 2),
+            "start_probability": round(_f(xmins.get("start_probability")), 4),
+            "dnp_probability": round(_f(xmins.get("dnp_probability")), 4),
             "clean_sheet_probability": round(_f(event.get("clean_sheet_probability")), 4),
             "projection_confidence": player.get("projection_confidence"),
         })
@@ -59,11 +61,13 @@ def _actual_rows(event_live: dict[str, Any]) -> list[dict[str, Any]]:
     for player in event_live.get("elements") or []:
         stats = player.get("stats") or {}
         starts = stats.get("starts")
+        minutes = _f(stats.get("minutes"))
         rows.append({
             "element": int(player.get("id") or -1),
             "points": _f(stats.get("total_points")),
-            "minutes": _f(stats.get("minutes")),
+            "minutes": minutes,
             "started": int(starts > 0) if starts is not None else None,
+            "dnp": int(minutes <= 0.0),
             "clean_sheet": int(_f(stats.get("clean_sheets")) > 0),
         })
     return rows
@@ -78,6 +82,7 @@ def _metrics(pairs: list[dict[str, Any]]) -> dict[str, Any]:
     actual_minutes = [_f(x["actual"].get("minutes")) for x in pairs]
     sq = [(a - p) ** 2 for a, p in zip(actual_points, pred_points)]
     starter_pairs = [x for x in pairs if x["actual"].get("started") is not None]
+    dnp_pairs = [x for x in pairs if x["forecast"].get("dnp_probability") is not None]
     cs_pairs = [x for x in pairs if x["forecast"].get("position") in {"GK", "DEF", "MID"}]
     rank = spearman_rank(pred_points, actual_points) if len(pairs) >= 2 else None
     return {
@@ -90,6 +95,11 @@ def _metrics(pairs: list[dict[str, Any]]) -> dict[str, Any]:
             [_f(x["actual"].get("started")) for x in starter_pairs],
         ), 4) if starter_pairs else None,
         "starter_sample_size": len(starter_pairs),
+        "dnp_brier": round(brier(
+            [_f(x["forecast"].get("dnp_probability")) for x in dnp_pairs],
+            [_f(x["actual"].get("dnp")) for x in dnp_pairs],
+        ), 4) if dnp_pairs else None,
+        "dnp_sample_size": len(dnp_pairs),
         "clean_sheet_brier": round(brier(
             [_f(x["forecast"].get("clean_sheet_probability")) for x in cs_pairs],
             [_f(x["actual"].get("clean_sheet")) for x in cs_pairs],
@@ -120,7 +130,9 @@ def _legal_xi(rows: tuple[dict[str, Any], ...]) -> bool:
 def _decision_validation(snapshot: dict[str, Any] | None, actual: list[dict[str, Any]]) -> dict[str, Any]:
     missing = {
         "captain_regret": {"status": "NO_GENUINE_PREDEADLINE_SAMPLE", "sample_size": 0, "value": None},
+        "vice_regret": {"status": "NO_GENUINE_PREDEADLINE_SAMPLE", "sample_size": 0, "value": None},
         "xi_regret": {"status": "NO_GENUINE_PREDEADLINE_SAMPLE", "sample_size": 0, "value": None},
+        "bench_first_regret": {"status": "NO_GENUINE_PREDEADLINE_SAMPLE", "sample_size": 0, "value": None},
         "transfer_comparator_realized_net_gain": {"status": "NO_GENUINE_PREDEADLINE_SAMPLE", "sample_size": 0, "value": None},
     }
     if not snapshot:
@@ -140,6 +152,20 @@ def _decision_validation(snapshot: dict[str, Any] | None, actual: list[dict[str,
             "chosen_actual_points": chosen_points,
             "best_candidate_actual_points": best_points,
             "candidate_count": len(cap_pool),
+        }
+
+    chosen_vice = int(lineup.get("vice_captain") or -1)
+    vice_pool = [element for element in cap_pool if element != chosen_cap]
+    if chosen_vice in amap and vice_pool:
+        chosen_points = _f(amap[chosen_vice].get("points"))
+        best_points = max(_f(amap[x].get("points")) for x in vice_pool)
+        missing["vice_regret"] = {
+            "status": "SETTLED",
+            "sample_size": 1,
+            "value": round(max(0.0, best_points - chosen_points), 4),
+            "chosen_actual_points": chosen_points,
+            "best_eligible_actual_points": best_points,
+            "candidate_count": len(vice_pool),
         }
 
     selected_ids = [int(x.get("element") or -1) for x in lineup.get("starting_xi") or []]
@@ -162,6 +188,19 @@ def _decision_validation(snapshot: dict[str, Any] | None, actual: list[dict[str,
                 "best_legal_xi_actual_points": round(best_points, 4),
             }
 
+    bench_order = [int(x) for x in lineup.get("bench_order") or [] if int(x) in amap]
+    if bench_order:
+        first_points = _f(amap[bench_order[0]].get("points"))
+        best_points = max(_f(amap[x].get("points")) for x in bench_order)
+        missing["bench_first_regret"] = {
+            "status": "SETTLED",
+            "sample_size": 1,
+            "value": round(max(0.0, best_points - first_points), 4),
+            "first_bench_actual_points": first_points,
+            "best_outfield_bench_actual_points": best_points,
+            "bench_count": len(bench_order),
+        }
+
     comparison_rows = []
     exact_net = []
     for row in (snapshot.get("comparator") or {}).get("comparisons") or []:
@@ -176,6 +215,7 @@ def _decision_validation(snapshot: dict[str, Any] | None, actual: list[dict[str,
             "player_out": out_id,
             "player_in": in_id,
             "state": row.get("state"),
+            "actionability": row.get("actionability"),
             "realized_gross_points_delta_1gw": round(gross, 4),
             "exact_hit_cost": hit_cost,
             "realized_net_gain_1gw": round(net, 4) if net is not None else None,
@@ -196,7 +236,13 @@ def _decision_validation(snapshot: dict[str, Any] | None, actual: list[dict[str,
 
 
 def _aggregate_decision_metrics(records: dict[str, Any]) -> dict[str, Any]:
-    names = ("captain_regret", "xi_regret", "transfer_comparator_realized_net_gain")
+    names = (
+        "captain_regret",
+        "vice_regret",
+        "xi_regret",
+        "bench_first_regret",
+        "transfer_comparator_realized_net_gain",
+    )
     out: dict[str, Any] = {}
     for name in names:
         rows = []
@@ -216,6 +262,44 @@ def _aggregate_decision_metrics(records: dict[str, Any]) -> dict[str, Any]:
         else:
             out[name] = {"status": "NO_GENUINE_PREDEADLINE_SAMPLE", "sample_size": 0, "mean": None}
     return out
+
+
+def _position_drift(by_position_metrics: dict[str, dict[str, Any]], overall: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
+    policy = cfg.get("position_drift_alert") or {}
+    threshold = _f(policy.get("mae_excess_threshold"), 0.75)
+    minimum = int(policy.get("minimum_samples_per_position") or 8)
+    overall_mae = overall.get("points_mae")
+    if overall_mae is None or int(overall.get("sample_size") or 0) <= 0:
+        return {
+            "status": "NO_SETTLED_SAMPLE",
+            "alerts": [],
+            "minimum_samples_per_position": minimum,
+            "mae_excess_threshold": threshold,
+        }
+    rows = []
+    alerts = []
+    for position, metrics in sorted(by_position_metrics.items()):
+        sample_size = int(metrics.get("sample_size") or 0)
+        position_mae = metrics.get("points_mae")
+        excess = None if position_mae is None else round(_f(position_mae) - _f(overall_mae), 4)
+        row = {
+            "position": position,
+            "sample_size": sample_size,
+            "points_mae": position_mae,
+            "overall_points_mae": overall_mae,
+            "mae_excess": excess,
+            "eligible": sample_size >= minimum,
+        }
+        rows.append(row)
+        if sample_size >= minimum and excess is not None and excess > threshold:
+            alerts.append({**row, "status": "POSITION_DRIFT_ALERT"})
+    return {
+        "status": "ALERT" if alerts else "OK",
+        "alerts": alerts,
+        "positions": rows,
+        "minimum_samples_per_position": minimum,
+        "mae_excess_threshold": threshold,
+    }
 
 
 def _settle_record(record: dict[str, Any], event_live: dict[str, Any], decision_snapshot: dict[str, Any] | None) -> None:
@@ -338,18 +422,23 @@ def run() -> dict[str, Any]:
     overall = _metrics(all_pairs)
     sample_size = int(overall.get("sample_size") or 0)
     decision_metrics = _aggregate_decision_metrics(records)
+    position_metrics = {k: _metrics(v) for k, v in sorted(by_position.items())}
+    position_drift = _position_drift(position_metrics, overall, cfg)
     accuracy = {
         "generated_at": _now(),
         "model": cfg.get("model_id"),
         "freeze_policy": cfg.get("freeze_policy"),
         "overall": overall,
         "confidence": _confidence(sample_size),
-        "by_position": {k: _metrics(v) for k, v in sorted(by_position.items())},
+        "by_position": position_metrics,
         "by_gw": by_gw,
         "decision_metrics": decision_metrics,
+        "position_drift": position_drift,
         "validation_dimensions": {
             "formula_correctness": {"status": "SEPARATE_GOVERNANCE_TRACK", "counts_as_predictive_accuracy": False},
             "predictive_accuracy": {"status": overall.get("status"), "sample_size": sample_size},
+            "dnp_calibration": {"status": overall.get("status"), "sample_size": overall.get("dnp_sample_size", 0), "brier": overall.get("dnp_brier")},
+            "decision_outcomes": {"status": "GENUINE_PREDEADLINE_ONLY", "metrics": list(decision_metrics)},
         },
         "settled_gameweeks": sorted(int(k) for k, v in records.items() if v.get("status") == "SETTLED"),
         "collecting_gameweeks": sorted(int(k) for k, v in records.items() if v.get("status") != "SETTLED"),
@@ -366,6 +455,9 @@ def run() -> dict[str, Any]:
             "optimizer_change_penalty_is_never_used_as_fpl_hit_cost": True,
             "core_snapshot_consumed_before_historical_network": True,
             "early_season_confidence_is_conservative": True,
+            "dnp_calibration_uses_frozen_predeadline_probability_only": True,
+            "vice_and_bench_metrics_require_genuine_predeadline_capture": True,
+            "position_drift_alert_is_diagnostic_not_dynamic_weighting": True,
         },
         "source_health": {
             "bootstrap": bh.get("status"),
@@ -388,6 +480,8 @@ def run() -> dict[str, Any]:
         "settled_gameweeks": accuracy["settled_gameweeks"],
         "dynamic_weight_eligible": accuracy["dynamic_weight_eligible"],
         "decision_metrics": decision_metrics,
+        "dnp_brier": overall.get("dnp_brier"),
+        "position_drift_status": position_drift.get("status"),
         "freeze_recovery": freeze_recovery,
         "core_snapshot_consumed": True,
     }

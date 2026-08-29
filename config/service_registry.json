@@ -14,6 +14,8 @@
       "timeout_seconds": 90,
       "depends_on": [],
       "produces": ["raw_snapshot"],
+      "lock_artifact": "data/runtime/snapshot.v1.json",
+      "snapshot_identity": true,
       "critical": true
     },
     {
@@ -26,6 +28,7 @@
       "timeout_seconds": 90,
       "depends_on": ["raw_snapshot"],
       "produces": ["enrichment"],
+      "lock_artifact": "data/runtime/enrichment.v1.json",
       "critical": true
     },
     {
@@ -37,6 +40,7 @@
       "timeout_seconds": 60,
       "depends_on": ["enrichment"],
       "produces": ["latest_snapshot", "predictions", "team_state", "universe", "source_health"],
+      "lock_artifact": "data/latest.json",
       "critical": true
     },
     {
@@ -117,6 +121,7 @@
     "user_decision_is_final_authority": true,
     "engine_never_auto_overwrites_valid_user_override": true,
     "effective_plan_legality_enforced_post_overlay": true,
+    "engine_effective_plan_legality_reported_separately": true,
     "projection_default_baseline_previous_submitted_gw": true,
     "planning_override_requires_target_gw": true,
     "stale_planning_override_rejected": true,
@@ -125,6 +130,7 @@
     "advanced_ablation_failure_cannot_block_core_publish": true,
     "fail_closed_on_contract_failure": true,
     "lock_after_pass": ["raw_snapshot", "enrichment", "prediction"],
+    "immutable_artifacts_declared_per_service": true,
     "prediction_quality_inputs_consumed": true,
     "truthful_competition_evidence": true,
     "critical_warmup_blocks_unqualified_go": true,
@@ -135,6 +141,8 @@
     "parallel_services_must_have_no_dependency_edge": true,
     "validation_and_optimization_may_parallelize_after_prediction": true,
     "governance_requires_validation_user_plan_and_scorecard": true,
+    "optimizer_may_parallelize_with_validation_before_preflight": true,
+    "postflight_requires_preflight_and_effective_plan": true,
     "human_report_language_governed": true,
     "technical_reason_codes_separate_from_human_report": true,
     "scheduled_checkpoint_recovery_enabled": true,
@@ -152,6 +160,10 @@
     "release_manifest_single_source": true,
     "service_count": 8,
     "validation_boundary_preserves_four_artifact_contracts": true,
-    "governance_boundary_preserves_postflight_and_checkpoint_contracts": true
+    "governance_boundary_preserves_postflight_and_checkpoint_contracts": true,
+    "reconciliation_readiness_process_isolated": false,
+    "reconciliation_readiness_read_only": true,
+    "reconciliation_readiness_no_official_refetch": true,
+    "reconciliation_readiness_reuses_validation_integrity": true
   }
 }

@@ -92,12 +92,15 @@ def _run_command(command: dict[str, Any], context: dict[str, str]) -> dict[str, 
 
 
 def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profile_name: str, profile_cfg: dict[str, Any]) -> dict[str, Any]:
-    reused = legacy._reuse_service(name, spec, DATA, profile_cfg)
     reuse_active = incremental_reuse.active(profile_name, name)
+    reuse_diagnostic_before = incremental_reuse.diagnose(name, profile_name) if name in (incremental_reuse._registry().get("services") or {}) else None
+    reused = legacy._reuse_service(name, spec, DATA, profile_cfg)
     if reused is None and reuse_active:
         reused = incremental_reuse.try_reuse(name, spec, profile_name)
     if reused is not None:
         reused["execution_boundary"] = "DOMAIN_PROCESS"
+        if reuse_diagnostic_before is not None:
+            reused["reuse_diagnostic_before"] = reuse_diagnostic_before
         return reused
 
     input_fingerprint = incremental_reuse.fingerprint(name) if reuse_active else None
@@ -135,6 +138,8 @@ def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profi
             "commands": commands,
             "execution_boundary": "DOMAIN_PROCESS",
         }
+        if reuse_diagnostic_before is not None:
+            result["reuse_diagnostic_before"] = reuse_diagnostic_before
         if batched:
             result["single_process_module_batch"] = True
         if input_fingerprint:
@@ -148,7 +153,7 @@ def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profi
             incremental_reuse.record(name, profile_name, input_fingerprint)
         return result
     except Exception as exc:
-        return {
+        result = {
             "service": name,
             "status": "FAILED",
             "isolated": False,
@@ -161,6 +166,9 @@ def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profi
             "execution_boundary": "DOMAIN_PROCESS",
             "error": f"{type(exc).__name__}: {exc}",
         }
+        if reuse_diagnostic_before is not None:
+            result["reuse_diagnostic_before"] = reuse_diagnostic_before
+        return result
 
 
 def run_domain(domain_name: str, mode: str, stats: bool, deep_stats: bool, profile_name: str) -> dict[str, Any]:

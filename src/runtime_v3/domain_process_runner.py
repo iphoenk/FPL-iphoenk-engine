@@ -93,7 +93,7 @@ def _run_command(command: dict[str, Any], context: dict[str, str]) -> dict[str, 
 
 def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profile_name: str, profile_cfg: dict[str, Any]) -> dict[str, Any]:
     reused = legacy._reuse_service(name, spec, DATA, profile_cfg)
-    reuse_active = incremental_reuse.active(profile_name)
+    reuse_active = incremental_reuse.active(profile_name, name)
     if reused is None and reuse_active:
         reused = incremental_reuse.try_reuse(name, spec, profile_name)
     if reused is not None:

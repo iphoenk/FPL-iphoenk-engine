@@ -397,7 +397,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 94.4,
         "official_hourly_rate_pct": 2.1,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -425,7 +425,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 103.7,
         "official_hourly_rate_pct": 15.32,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -490,7 +490,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -96.6,
         "official_hourly_rate_pct": -2.85,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -503,7 +503,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -95.3,
         "official_hourly_rate_pct": -1.75,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -516,7 +516,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -94.9,
         "official_hourly_rate_pct": -0.23,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -555,7 +555,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -92.0,
         "official_hourly_rate_pct": -2.13,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "LIVE"
@@ -620,7 +620,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -87.8,
         "official_hourly_rate_pct": -0.52,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -2110,7 +2110,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2231,7 +2231,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -2393,7 +2393,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2515,7 +2515,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2671,7 +2671,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -2786,7 +2786,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -2940,7 +2940,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3055,7 +3055,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3213,7 +3213,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3330,7 +3330,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3486,7 +3486,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3603,7 +3603,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3763,7 +3763,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3885,7 +3885,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4041,7 +4041,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -4160,7 +4160,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T08:12:09.445115+00:00",
+              "evidence_timestamp": "2026-08-29T08:15:17.132578+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [

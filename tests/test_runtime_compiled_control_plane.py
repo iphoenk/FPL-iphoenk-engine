@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import copy
 from pathlib import Path
+
+import pytest
 
 from src.runtime_v3 import module_batch_runner, registry_compiler
 
@@ -26,3 +29,30 @@ def test_runtime_batch_metadata_uses_derived_registry() -> None:
     assert plan["source_registries"]["module_batches"] == registry["registry"]
     assert plan["batch_capabilities"] == list(registry["batches"])
     assert plan["policy"]["module_batches_are_derived"] is True
+
+
+def test_registry_compiler_fails_closed_on_domain_cycle() -> None:
+    domains = copy.deepcopy(registry_compiler.load_domain_registry())
+    services = registry_compiler.load_capability_registry()
+    domains["domains"]["official_state"]["depends_on"] = ["serving"]
+
+    with pytest.raises(RuntimeError, match="dependency cycle"):
+        registry_compiler.compile_runtime_plan(domains, services)
+
+
+def test_registry_compiler_fails_closed_on_undeclared_multi_writer_artifact() -> None:
+    domains = copy.deepcopy(registry_compiler.load_domain_registry())
+    services = registry_compiler.load_capability_registry()
+    domains["artifact_writer_exceptions"].pop("user_report.json")
+
+    with pytest.raises(RuntimeError, match="multi-writer artifact exception drift"):
+        registry_compiler.compile_runtime_plan(domains, services)
+
+
+def test_registry_compiler_fails_closed_on_duplicate_capability_assignment() -> None:
+    domains = copy.deepcopy(registry_compiler.load_domain_registry())
+    services = registry_compiler.load_capability_registry()
+    domains["domains"]["market_context"]["capabilities"].append("prediction")
+
+    with pytest.raises(RuntimeError, match="multiple execution domains"):
+        registry_compiler.compile_runtime_plan(domains, services)

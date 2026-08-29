@@ -28,6 +28,7 @@ def _keep_profile(players) -> dict:
     by_pos = {pos: [p for p in ps if p.position == pos] for pos in POSITION_COUNTS}
     gw_sorted = []
     gw_prefix = []
+    gw_elements = []
     for index in range(5):
         sorted_by_pos = {
             pos: sorted((_gw_value(p, index) for p in by_pos[pos]), reverse=True)
@@ -35,17 +36,32 @@ def _keep_profile(players) -> dict:
         }
         gw_sorted.append(sorted_by_pos)
         gw_prefix.append({pos: _prefix(values) for pos, values in sorted_by_pos.items()})
+        gw_elements.append(tuple((p.element, _gw_value(p, index)) for p in ps))
     objective_terms = tuple(p.objective for p in ps)
+    x3_terms = tuple(p.x3 for p in ps)
+    x5_terms = tuple(p.x5 for p in ps)
+    x10_terms = tuple(p.x10 for p in ps)
+    x15_terms = tuple(p.x15 for p in ps)
     return {
         "cost": sum(p.cost for p in ps),
         "objective": sum(objective_terms),
         "objective_terms": objective_terms,
         "objective_elements": tuple((p.element, p.objective) for p in ps),
-        "x3": sum(p.x3 for p in ps),
-        "x5": sum(p.x5 for p in ps),
-        "x10": sum(p.x10 for p in ps),
-        "x15": sum(p.x15 for p in ps),
-        "gw_total": [sum(_gw_value(p, i) for p in ps) for i in range(5)],
+        "x3": sum(x3_terms),
+        "x3_terms": x3_terms,
+        "x3_elements": tuple((p.element, p.x3) for p in ps),
+        "x5": sum(x5_terms),
+        "x5_terms": x5_terms,
+        "x5_elements": tuple((p.element, p.x5) for p in ps),
+        "x10": sum(x10_terms),
+        "x10_terms": x10_terms,
+        "x10_elements": tuple((p.element, p.x10) for p in ps),
+        "x15": sum(x15_terms),
+        "x15_terms": x15_terms,
+        "x15_elements": tuple((p.element, p.x15) for p in ps),
+        "gw_total": [sum(value for _, value in row) for row in gw_elements],
+        "gw_elements": gw_elements,
+        "gw_terms": [tuple(value for _, value in row) for row in gw_elements],
         "gw_sorted": gw_sorted,
         "gw_prefix": gw_prefix,
     }
@@ -56,14 +72,25 @@ def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
 
     CPython 3.12 gives ``sum(float_iterable)`` improved numerical semantics, so a
     baseline-total-minus-outs shortcut is not guaranteed to round identically to the
-    reference target sum. Preserve the ordered objective terms and let ``sum`` see the
-    exact same keep sequence that the reference audit sees.
+    reference target sum. Preserve every ordered scalar/GW term and let ``sum`` see
+    the exact same keep sequence that the reference audit sees.
     """
     outs = tuple(outs)
     out_ids = {p.element for p in outs}
-    objective_terms = tuple(
-        value for element, value in baseline["objective_elements"] if element not in out_ids
-    )
+
+    def kept_terms(key: str) -> tuple[float, ...]:
+        return tuple(value for element, value in baseline[key] if element not in out_ids)
+
+    objective_terms = kept_terms("objective_elements")
+    x3_terms = kept_terms("x3_elements")
+    x5_terms = kept_terms("x5_elements")
+    x10_terms = kept_terms("x10_elements")
+    x15_terms = kept_terms("x15_elements")
+    gw_terms = [
+        tuple(value for element, value in baseline["gw_elements"][index] if element not in out_ids)
+        for index in range(5)
+    ]
+
     out_by_pos = {pos: [p for p in outs if p.position == pos] for pos in POSITION_COUNTS}
     gw_sorted = []
     gw_prefix = []
@@ -87,14 +114,16 @@ def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
         "cost": baseline["cost"] - sum(p.cost for p in outs),
         "objective": sum(objective_terms),
         "objective_terms": objective_terms,
-        "x3": baseline["x3"] - sum(p.x3 for p in outs),
-        "x5": baseline["x5"] - sum(p.x5 for p in outs),
-        "x10": baseline["x10"] - sum(p.x10 for p in outs),
-        "x15": baseline["x15"] - sum(p.x15 for p in outs),
-        "gw_total": [
-            baseline["gw_total"][index] - sum(_gw_value(p, index) for p in outs)
-            for index in range(5)
-        ],
+        "x3": sum(x3_terms),
+        "x3_terms": x3_terms,
+        "x5": sum(x5_terms),
+        "x5_terms": x5_terms,
+        "x10": sum(x10_terms),
+        "x10_terms": x10_terms,
+        "x15": sum(x15_terms),
+        "x15_terms": x15_terms,
+        "gw_total": [sum(terms) for terms in gw_terms],
+        "gw_terms": gw_terms,
         "gw_sorted": gw_sorted,
         "gw_prefix": gw_prefix,
     }
@@ -103,21 +132,35 @@ def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
 def _chosen_profile(chosen) -> dict:
     ps = tuple(chosen)
     gw_by_pos = []
+    gw_terms = []
     for index in range(5):
         row = {pos: [] for pos in POSITION_COUNTS}
+        ordered = []
         for player in ps:
-            row[player.position].append(_gw_value(player, index))
+            value = _gw_value(player, index)
+            row[player.position].append(value)
+            ordered.append(value)
         gw_by_pos.append(row)
+        gw_terms.append(tuple(ordered))
     objective_terms = tuple(p.objective for p in ps)
+    x3_terms = tuple(p.x3 for p in ps)
+    x5_terms = tuple(p.x5 for p in ps)
+    x10_terms = tuple(p.x10 for p in ps)
+    x15_terms = tuple(p.x15 for p in ps)
     return {
         "cost": sum(p.cost for p in ps),
         "objective": sum(objective_terms),
         "objective_terms": objective_terms,
-        "x3": sum(p.x3 for p in ps),
-        "x5": sum(p.x5 for p in ps),
-        "x10": sum(p.x10 for p in ps),
-        "x15": sum(p.x15 for p in ps),
-        "gw_total": [sum(_gw_value(p, i) for p in ps) for i in range(5)],
+        "x3": sum(x3_terms),
+        "x3_terms": x3_terms,
+        "x5": sum(x5_terms),
+        "x5_terms": x5_terms,
+        "x10": sum(x10_terms),
+        "x10_terms": x10_terms,
+        "x15": sum(x15_terms),
+        "x15_terms": x15_terms,
+        "gw_total": [sum(terms) for terms in gw_terms],
+        "gw_terms": gw_terms,
         "gw_by_pos": gw_by_pos,
     }
 
@@ -152,17 +195,21 @@ def _metrics_from_profiles(profile: dict, chosen_profile: dict) -> dict:
             else:
                 prefixes[pos] = profile["gw_prefix"][index][pos]
         xi = _best_xi_from_prefix(prefixes)
-        total = profile["gw_total"][index] + chosen_profile["gw_total"][index]
+        total = sum(profile["gw_terms"][index] + chosen_profile["gw_terms"][index])
         xi5 += xi
         utility5 += xi + .12 * (total - xi)
     objective = sum(profile["objective_terms"] + chosen_profile["objective_terms"])
+    x3 = sum(profile["x3_terms"] + chosen_profile["x3_terms"])
+    x5 = sum(profile["x5_terms"] + chosen_profile["x5_terms"])
+    x10 = sum(profile["x10_terms"] + chosen_profile["x10_terms"])
+    x15 = sum(profile["x15_terms"] + chosen_profile["x15_terms"])
     return {
         "cost": profile["cost"] + chosen_profile["cost"],
         "objective": round(objective, 4),
-        "squad_xpts_3": round(profile["x3"] + chosen_profile["x3"], 2),
-        "squad_xpts_5": round(profile["x5"] + chosen_profile["x5"], 2),
-        "squad_xpts_10": round(profile["x10"] + chosen_profile["x10"], 2),
-        "squad_xpts_15": round(profile["x15"] + chosen_profile["x15"], 2),
+        "squad_xpts_3": round(x3, 2),
+        "squad_xpts_5": round(x5, 2),
+        "squad_xpts_10": round(x10, 2),
+        "squad_xpts_15": round(x15, 2),
         "best_xi_xpts_5": round(xi5, 2),
         "bench_adjusted_utility_5": round(utility5, 2),
     }
@@ -437,6 +484,8 @@ def audit_packages_from_candidates_fast(
             "position_value_reuse": True,
             "small_package_candidate_template_cache": True,
             "exact_reference_float_accumulation": True,
+            "ordered_scalar_terms_preserved": True,
+            "ordered_gw_terms_preserved": True,
             "search_quality_reduction": False,
         },
         "guardrails": {

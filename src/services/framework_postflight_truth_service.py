@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from time import perf_counter
 
 from src.engines import framework_health_audit as audit
 from src.engines.fpl_legality import plan_legality_checks
 from src.release import RELEASE_VERSION
 from src.utils import DATA, atomic_json, read_json
-
 
 
 def _prediction_fixtures(predictions: dict) -> list[dict]:
@@ -18,10 +18,39 @@ def _prediction_fixtures(predictions: dict) -> list[dict]:
     ]
 
 
-def _promote_official_first_capabilities(health: dict) -> dict:
-    latest = read_json(DATA / "latest.json", {})
+def _postflight_audit_single_prediction_parse() -> tuple[dict, dict, float]:
+    """Run postflight health while retaining its immutable prediction snapshot.
+
+    The health audit already has an audit-scoped prediction cache. The old service
+    discarded that cache and parsed the multi-megabyte prediction artifact a second
+    time for Official-FPL-first capability promotion. This wrapper keeps the same
+    immutable object alive only for the duration of this service, then clears the
+    audit globals exactly as the public audit() boundary does.
+    """
+    started = perf_counter()
     predictions = read_json(DATA / "predictions_v4.json", {})
-    universe = read_json(DATA / "universe.json", {})
+    if not (predictions.get("players") or []):
+        raise RuntimeError("postflight truth requires current predictions")
+    audit._PREDICTION_CACHE = predictions
+    audit._PROBE_CACHE = {}
+    try:
+        health = audit._audit_with_cache("postflight", strict=False, started=started)
+    finally:
+        audit._PREDICTION_CACHE = None
+        audit._PROBE_CACHE = None
+    return health, predictions, round((perf_counter() - started) * 1000.0, 2)
+
+
+def _promote_official_first_capabilities(
+    health: dict,
+    *,
+    latest: dict | None = None,
+    predictions: dict | None = None,
+    universe: dict | None = None,
+) -> dict:
+    latest = latest if latest is not None else read_json(DATA / "latest.json", {})
+    predictions = predictions if predictions is not None else read_json(DATA / "predictions_v4.json", {})
+    universe = universe if universe is not None else read_json(DATA / "universe.json", {})
     official = latest.get("official_context") or {}
     fixtures = _prediction_fixtures(predictions)
     players = list(universe.get("players") or [])
@@ -152,8 +181,20 @@ def _promote_official_first_capabilities(health: dict) -> dict:
 
 
 def run() -> dict:
-    health = audit.audit("postflight", strict=False)
-    health = _promote_official_first_capabilities(health)
+    total = perf_counter()
+    health, predictions, audit_ms = _postflight_audit_single_prediction_parse()
+    latest = read_json(DATA / "latest.json", {})
+    universe = read_json(DATA / "universe.json", {})
+
+    started = perf_counter()
+    health = _promote_official_first_capabilities(
+        health,
+        latest=latest,
+        predictions=predictions,
+        universe=universe,
+    )
+    promotion_ms = round((perf_counter() - started) * 1000.0, 2)
+
     engine_plan = read_json(DATA / "lineup_decision_v4.json", {})
     overlay = read_json(DATA / "effective_plan_v4.json", {})
     effective_plan = overlay.get("effective_plan") or {}
@@ -161,6 +202,7 @@ def run() -> dict:
     if not engine_plan or not effective_plan:
         raise RuntimeError("postflight truth service requires engine and effective plans")
 
+    started = perf_counter()
     engine_checks = plan_legality_checks(engine_plan, compliance)
     effective_checks = plan_legality_checks(effective_plan, compliance)
     items = list((health.get("gate0") or {}).get("items") or [])
@@ -191,9 +233,12 @@ def run() -> dict:
         },
         "both_required": True,
     }
+    legality_ms = round((perf_counter() - started) * 1000.0, 2)
+
     health.setdefault("governance", {})["effective_plan_legality_enforced"] = True
     health["governance"]["engine_and_effective_plan_legality_reported_separately"] = True
     health["governance"]["official_fpl_first_when_available"] = True
+    health["governance"]["postflight_prediction_snapshot_single_parse"] = True
     health["release"] = RELEASE_VERSION
 
     if not gate0_pass:
@@ -202,6 +247,14 @@ def run() -> dict:
         health["recommendation_allowed"] = False
         health["go_allowed"] = False
 
+    total_ms = round((perf_counter() - total) * 1000.0, 2)
+    health["postflight_service_performance"] = {
+        "audit_ms": audit_ms,
+        "official_promotion_ms": promotion_ms,
+        "plan_legality_ms": legality_ms,
+        "prediction_snapshot_parse_count": 1,
+        "total_ms": total_ms,
+    }
     atomic_json(DATA / "framework_health_v4.json", health)
     print(json.dumps({
         "service": "framework_postflight",
@@ -212,6 +265,8 @@ def run() -> dict:
         "both_legal": gate0_pass,
         "official_promoted": (health.get("official_fpl_first") or {}).get("promoted_modules"),
         "capability_coverage": health.get("capability_coverage"),
+        "performance_ms": total_ms,
+        "prediction_snapshot_parse_count": 1,
     }, ensure_ascii=False))
     if health.get("overall") == "RED":
         raise SystemExit(2)

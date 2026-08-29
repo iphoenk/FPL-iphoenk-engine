@@ -12,7 +12,8 @@ ARCHIVE_RECDIR = DATA / "validation" / "archive" / "reconciled"
 # Framework health intentionally reads this directory. It is an eligibility view,
 # rebuilt by the validation lifecycle from immutable archived reconciliations.
 RECDIR = DATA / "validation" / "reconciled"
-COMPACT_PROJECTION = "reconciliation_minimal_v1"
+COMPACT_PROJECTION = "reconciliation_minimal_v2"
+LEGACY_COMPACT_PROJECTION = "reconciliation_minimal_v1"
 
 
 def deadline_snapshot_path(gw: int) -> Path:
@@ -37,7 +38,12 @@ def _aware(value: datetime | None) -> bool:
 
 
 def deadline_player_projection(players: list[dict], gw: int) -> tuple[list[dict], int]:
-    """Keep only point-in-time fields consumed by post-GW reconciliation."""
+    """Keep only point-in-time fields consumed by post-GW reconciliation.
+
+    DNP probability and the explicit tactical delta are retained when supplied so
+    newer calibration metrics remain lossless, while older prediction payloads
+    without those optional fields remain valid immutable inputs.
+    """
     projected: list[dict] = []
     target_fixture_rows = 0
     for player in players:
@@ -47,15 +53,22 @@ def deadline_player_projection(players: list[dict], gw: int) -> tuple[list[dict]
         fixtures: list[dict] = []
         if fixture is not None:
             xmins = fixture.get("xmins") or {}
+            components = fixture.get("components") or {}
+            xmins_compact = {
+                "expected_minutes": xmins.get("expected_minutes"),
+                "start_probability": xmins.get("start_probability"),
+                "p60": xmins.get("p60"),
+            }
+            if "dnp_probability" in xmins:
+                xmins_compact["dnp_probability"] = xmins.get("dnp_probability")
             fixtures.append({
                 "event": int(gw),
                 "xpts": fixture.get("xpts"),
                 "lower80": fixture.get("lower80"),
                 "upper80": fixture.get("upper80"),
-                "xmins": {
-                    "expected_minutes": xmins.get("expected_minutes"),
-                    "start_probability": xmins.get("start_probability"),
-                    "p60": xmins.get("p60"),
+                "xmins": xmins_compact,
+                "components": {
+                    "tactical_adjustment": components.get("tactical_adjustment", 0.0),
                 },
             })
             target_fixture_rows += 1
@@ -81,7 +94,7 @@ def snapshot_integrity(snapshot: dict, expected_gw: int | None = None) -> tuple[
         return False, "snapshot_created_after_deadline"
     projection = snapshot.get("projection")
     if projection is not None:
-        if projection != COMPACT_PROJECTION:
+        if projection not in {COMPACT_PROJECTION, LEGACY_COMPACT_PROJECTION}:
             return False, "unknown_snapshot_projection"
         gw = int(snapshot.get("gw") or -1)
         fixture_rows = 0
@@ -94,8 +107,11 @@ def snapshot_integrity(snapshot: dict, expected_gw: int | None = None) -> tuple[
                 if int(fixture.get("event") or -1) != gw:
                     return False, "compact_snapshot_fixture_gw_mismatch"
                 xmins = fixture.get("xmins") or {}
-                if fixture.get("xpts") is None or any(xmins.get(field) is None for field in ("expected_minutes", "start_probability", "p60")):
+                required = ("expected_minutes", "start_probability", "p60")
+                if fixture.get("xpts") is None or any(xmins.get(field) is None for field in required):
                     return False, "compact_snapshot_missing_reconciliation_fields"
+                if projection == COMPACT_PROJECTION and "tactical_adjustment" not in (fixture.get("components") or {}):
+                    return False, "compact_snapshot_missing_tactical_ablation_field"
                 fixture_rows += 1
         if int(snapshot.get("source_players") or -1) != len(snapshot.get("players") or []):
             return False, "compact_snapshot_source_player_count_mismatch"
@@ -136,7 +152,7 @@ def persist_deadline_snapshot(gw: int, deadline_time: str | None, predictions: d
     if target_fixture_rows <= 0:
         raise RuntimeError("prediction snapshot has no target-GW fixtures")
     payload = {
-        "schema_version": 493,
+        "schema_version": 4962,
         "kind": "deadline_prediction_snapshot",
         "gw": int(gw),
         "deadline_time": deadline_time,

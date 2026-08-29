@@ -11,7 +11,7 @@
     {"id":"DSS-X06","name":"Incoming Team-Cluster Penalty","critical":false,"required_files":["src/engines/v4_recommendation_sanity.py"],"operational_probe":"team_cluster_penalty"},
     {"id":"DSS-X07","name":"Early-Season Multi-Change Cap","critical":true,"required_files":["src/engines/v4_recommendation_sanity.py"],"operational_probe":"early_season_change_cap"},
     {"id":"DSS-X08","name":"Package Churn / Change-Count Penalty","critical":false,"required_files":["src/engines/v4_wc_package_audit.py"],"operational_probe":"package_churn_penalty"},
-    {"id":"DSS-X09","name":"Manual Draft Authority","critical":true,"required_files":["config/manual_lineup.json","src/engines/v4_lineup_optimizer.py"],"operational_probe":"manual_authority"},
+    {"id":"DSS-X09","name":"Manual Draft / User Decision Authority","critical":true,"required_files":["config/manual_lineup.json","src/services/user_decision_overlay_service.py","src/engines/v4_lineup_optimizer.py"],"operational_probe":"manual_authority"},
     {"id":"DSS-X10","name":"Lineup Robustness Margin","critical":true,"required_files":["src/engines/v4_lineup_optimizer.py"],"operational_probe":"lineup_robustness"},
     {"id":"DSS-X11","name":"Captain Safe-Pool / DNP Guard","critical":true,"required_files":["src/engines/v4_lineup_optimizer.py"],"operational_probe":"captain_dnp_guard"},
     {"id":"DSS-X12","name":"Calibration, Reconciliation & Backtest Store","critical":true,"required_files":["src/engines/v4_validation_cycle.py","src/engines/v4_backtest_store.py"],"operational_probe":"calibration_store"},

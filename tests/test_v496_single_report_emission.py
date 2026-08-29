@@ -4,12 +4,15 @@ import pytest
 
 from src.engines.checkpoint_policy import resolve_checkpoint
 from src.engines.v4_checkpoint_governance import govern_checkpoint
+from src.engines.v4_decision_arbitration import resolve_decision
 
 
 def _govern(context: dict, now: str) -> dict:
     latest = {
         "generated_at": now,
+        "official_snapshot_at": now,
         "squad_authority": "OFFICIAL_SUBMITTED",
+        "phase": {"planning_gw": 3, "is_live_match": context.get("policy_id") == "MATCHDAY_LIVE"},
         "checkpoint_context": context,
     }
     health = {
@@ -27,37 +30,39 @@ def _govern(context: dict, now: str) -> dict:
     lineup = {
         "status": "MANUAL_DRAFT_ADJUSTABLE",
         "formation": "3-5-2",
+        "formation_state": "DECIDED",
         "captain": {"name": "Captain"},
         "vice_captain": {"name": "Vice"},
         "chip_context": {"active_chip": "NONE"},
+        "gk_selection": {"status": "DECIDED"},
+        "bench_governance": {"status": "DECIDED"},
+        "captaincy_governance": {"status": "DECIDED"},
     }
     locked = {"wildcard_active": False, "players": [{"element": i} for i in range(15)]}
-    return govern_checkpoint(latest, health, sanity, lineup, locked, now=now)
+    canonical = resolve_decision(
+        sanity, lineup, latest,
+        {"squad": locked["players"], "free_transfers": None},
+        {"confirmed_changes": []},
+        {"owned": [], "watchlist": []},
+        now=now,
+    )
+    return govern_checkpoint(latest, health, sanity, lineup, locked, now=now, canonical=canonical)
 
 
 def test_silent_checkpoint_consumes_policy_as_zero_visible_reports():
     now = "2026-08-29T17:00:00+07:00"
-    context = resolve_checkpoint(
-        "daily",
-        "2026-08-29T12:30:00Z",
-        is_live=False,
-        as_of=now,
-    )
+    context = resolve_checkpoint("daily", "2026-08-29T12:30:00Z", is_live=False, as_of=now)
     out = _govern(context, now)
     assert context["policy_id"] == "INTERNAL_HOURLY_SILENT"
     assert out["emission"]["authorized"] is False
     assert out["emission"]["visible_report_count"] == 0
     assert out["emission"]["max_visible_reports"] == 1
+    assert out["action_state"] == "HOLD"
 
 
 def test_deadline_no_change_contract_forces_one_full_visible_report():
     now = "2026-08-29T16:30:00+07:00"
-    context = resolve_checkpoint(
-        "daily",
-        "2026-08-29T11:30:00Z",
-        is_live=False,
-        as_of=now,
-    )
+    context = resolve_checkpoint("daily", "2026-08-29T11:30:00Z", is_live=False, as_of=now)
     out = _govern(context, now)
     emission = out["emission"]
     assert context["policy_id"] == "DEADLINE_MONITOR"
@@ -72,12 +77,7 @@ def test_deadline_no_change_contract_forces_one_full_visible_report():
 
 def test_night_live_collision_is_consumed_as_one_merged_report():
     now = "2026-08-29T21:30:00+07:00"
-    context = resolve_checkpoint(
-        "daily",
-        "2026-09-05T10:00:00Z",
-        is_live=True,
-        as_of=now,
-    )
+    context = resolve_checkpoint("daily", "2026-09-05T10:00:00Z", is_live=True, as_of=now)
     out = _govern(context, now)
     emission = out["emission"]
     assert context["policy_id"] == "MATCHDAY_LIVE"
@@ -91,12 +91,7 @@ def test_night_live_collision_is_consumed_as_one_merged_report():
 
 def test_final_review_live_collision_still_emits_exactly_one_full_report():
     now = "2026-08-29T17:00:00+07:00"
-    context = resolve_checkpoint(
-        "daily",
-        "2026-08-29T11:30:00Z",
-        is_live=True,
-        as_of=now,
-    )
+    context = resolve_checkpoint("daily", "2026-08-29T11:30:00Z", is_live=True, as_of=now)
     out = _govern(context, now)
     emission = out["emission"]
     assert context["policy_id"] == "FINAL_DEADLINE_REVIEW"
@@ -108,11 +103,7 @@ def test_final_review_live_collision_still_emits_exactly_one_full_report():
 
 def test_legacy_post_final_emergency_flag_is_fail_closed_not_second_timing_authority():
     now = "2026-08-29T21:30:00+07:00"
-    context = resolve_checkpoint(
-        "daily",
-        "2026-09-05T10:00:00Z",
-        as_of=now,
-    )
+    context = resolve_checkpoint("daily", "2026-09-05T10:00:00Z", as_of=now)
     context["post_final_emergency_only"] = True
-    with pytest.raises(RuntimeError, match="sole timing authority"):
+    with pytest.raises(RuntimeError, match="legacy post_final_emergency_only is forbidden"):
         _govern(context, now)

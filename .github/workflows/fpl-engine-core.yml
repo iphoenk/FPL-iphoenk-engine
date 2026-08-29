@@ -88,6 +88,10 @@ jobs:
           print({'pipeline_health':h['pipeline_health'],'capability_coverage':h['capability_coverage'],'gate0':h['gate0']['counts'],'services':o['summary']['services_passed'],'orchestration_ms':o['duration_ms'],'architecture_guard':a['status'],'action':c['action_state']})
           PY
 
+      - name: Stamp runtime publication freshness
+        if: inputs.publish
+        run: python -m src.services.runtime_publish_stamp
+
       - name: Publish core branch data
         if: inputs.publish
         shell: bash
@@ -146,4 +150,13 @@ jobs:
           git cat-file -e "origin/${RUNTIME_BRANCH}:data/framework_health_v4.json"
           git cat-file -e "origin/${RUNTIME_BRANCH}:data/latest.json"
           git cat-file -e "origin/${RUNTIME_BRANCH}:data/advanced_ablation_v4.json"
+          git cat-file -e "origin/${RUNTIME_BRANCH}:data/serving_payload_v4.json"
+          git cat-file -e "origin/${RUNTIME_BRANCH}:data/serving_benchmark_v4.json"
+          python - <<'PY'
+          import json, subprocess
+          raw=subprocess.check_output(['git','show','origin/runtime-data-v4:data/latest.json'],text=True)
+          latest=json.loads(raw)
+          assert latest.get('runtime_publish_at'), latest
+          assert latest.get('freshness_state') in {'FRESH','PARTIAL','STALE','UNKNOWN'}, latest
+          PY
           echo "Published V4 runtime snapshot to ${RUNTIME_BRANCH}"

@@ -2,16 +2,15 @@ name: FPL V4 production gate
 
 on:
   workflow_dispatch:
-  schedule:
-    # Master Monitor governance: evaluate every hour at minute :30 WIB.
-    # GitHub cron is UTC; the minute field remains :30 after timezone conversion.
-    - cron: "30 * * * *"
   push:
     branches: [v4-prediction-engine]
     paths-ignore: ['data/**']
   pull_request:
     branches: [v4-prediction-engine]
 
+# The hourly :30 scheduler lives on the repository default branch and dispatches
+# this branch's reusable core. GitHub scheduled workflows do not execute from a
+# non-default branch, so keeping a cron here would be misleading dead config.
 permissions:
   contents: write
 
@@ -25,5 +24,5 @@ jobs:
     permissions:
       contents: write
     with:
-      ref: ${{ github.event_name == 'schedule' && 'v4-prediction-engine' || github.sha }}
+      ref: ${{ github.sha }}
       publish: ${{ github.event_name != 'pull_request' }}

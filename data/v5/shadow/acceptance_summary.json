@@ -1,14 +1,14 @@
 {
   "schema_version": 3,
   "model": "v5_postvalidated_shadow_acceptance_v3",
-  "generated_at": "2026-08-27T04:11:28.730592+00:00",
+  "generated_at": "2026-08-29T02:27:19.984093+00:00",
   "v5_version": "5.0.0-beta.4",
-  "release_fingerprint": "sha256:09e22fd578a3afbf12b27826bd82479d6262911c8a0ee4991f7f28a0f88298b2",
+  "release_fingerprint": "sha256:66e0946b64daa8bc6cfbc3d3a5d0e2d17b88d0e1fbe37e28df5ad9c3c3b78adf",
   "production_baseline_version": "v3.20.0",
-  "production_main_sha": "15e75599045f901958753c2bcb275fceacc94d7c",
+  "production_main_sha": "0ee0e51d03ae85b593db8294f3f7e04cd4bc3108",
   "required_validated_cycles": 3,
-  "validated_successful_cycles": 2,
-  "remaining_validated_cycles": 1,
+  "validated_successful_cycles": 0,
+  "remaining_validated_cycles": 3,
   "operational_candidate_eligible": false,
   "prediction_candidate_eligible": false,
   "prediction_acceptance": {
@@ -31,22 +31,5 @@
   "production_candidate_eligible": false,
   "production_candidate_auto_promoted": false,
   "production_promotion_requires_explicit_manual_action": true,
-  "validated_cycles": [
-    {
-      "cycle_id": "20260827T040644.341701+0000",
-      "generated_at": "2026-08-27T04:06:44.341701+00:00",
-      "validated_at": "2026-08-27T04:06:44.497359+00:00",
-      "v3_engine_version": "3.20.0",
-      "v5_engine_version": "5.0.0-beta.4",
-      "release_fingerprint": "sha256:09e22fd578a3afbf12b27826bd82479d6262911c8a0ee4991f7f28a0f88298b2"
-    },
-    {
-      "cycle_id": "20260827T041128.575687+0000",
-      "generated_at": "2026-08-27T04:11:28.575687+00:00",
-      "validated_at": "2026-08-27T04:11:28.730592+00:00",
-      "v3_engine_version": "3.20.0",
-      "v5_engine_version": "5.0.0-beta.4",
-      "release_fingerprint": "sha256:09e22fd578a3afbf12b27826bd82479d6262911c8a0ee4991f7f28a0f88298b2"
-    }
-  ]
+  "validated_cycles": []
 }

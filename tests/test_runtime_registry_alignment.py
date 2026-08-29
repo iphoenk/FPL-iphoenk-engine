@@ -88,20 +88,26 @@ def test_lineup_governance_latest_file_contract_is_preserved() -> None:
     assert service["latest_file_keys"] == ["lineup_decision", "package_decision"]
 
 
-def test_active_v3_workflow_and_domains_have_single_runtime_owner() -> None:
-    domains = _json("config/runtime/execution_domains.json")
-    services = _json("config/v3_service_registry.json")["services"]
-    assigned = [name for spec in domains["domains"].values() for name in spec.get("capabilities", [])]
+def test_active_v3_workflow_has_single_coarse_runtime_owner_registry() -> None:
+    execution = _json("config/runtime/execution_registry.json")
+    ownership = _json("config/runtime/capability_ownership.json")
+    legacy_domains = _json("config/runtime/execution_domains.json")
+    implementation = _json("config/v3_service_registry.json")["services"]
+    steps = [step for spec in execution["services"].values() for step in spec["implementation_steps"]]
 
-    assert domains["phase_count"] == 6
-    assert len(domains["domains"]) == 11
-    assert len(services) == 21
-    assert len(assigned) == len(set(assigned)) == len(services)
-    assert set(assigned) == set(services)
+    assert execution["phase_count"] == 6
+    assert execution["service_count"] == 11
+    assert len(execution["services"]) == 11
+    assert set(execution["services"]) == set(ownership["runtime_owners"])
+    assert len(steps) == len(set(steps)) == len(implementation) == 21
+    assert set(steps) == set(implementation)
+    for service_id, spec in execution["services"].items():
+        assert legacy_domains["domains"][service_id]["capabilities"] == spec["implementation_steps"]
 
     runtime = (ROOT / ".github/workflows/v3-runtime.yml").read_text(encoding="utf-8")
     compat = (ROOT / ".github/workflows/fpl-engine.yml").read_text(encoding="utf-8")
-    assert "python -m src.runtime_v3.domain_orchestrator" in runtime
+    assert "python -m src.runtime_v3.compiled_orchestrator" in runtime
+    assert "python -m src.runtime_v3.registry_compiler --check" in runtime
     assert "schedule:" in runtime
     assert "schedule:" not in compat
     assert "Inert compatibility marker" in compat

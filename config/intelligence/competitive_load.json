@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "contract": "COMPETITIVE_LOAD_PRIMITIVE_V1",
+  "owner": "governance.competitive_load",
+  "scope": {
+    "materialize_all_canonical_players": true,
+    "report_owned": 15,
+    "report_watchlist": 20,
+    "advisory_only": true
+  },
+  "states": ["RESTED", "NORMAL", "CONGESTED", "HIGH_ROTATION_RISK", "UNKNOWN"],
+  "known_competitions": [
+    "Premier League",
+    "FA Cup",
+    "EFL Cup",
+    "UEFA Champions League",
+    "UEFA Europa League",
+    "UEFA Conference League",
+    "Community Shield",
+    "International",
+    "Other official competitive first-team fixture"
+  ],
+  "classification": {
+    "rested_min_hours": 144,
+    "congested_rest_hours": 72,
+    "high_rotation_rest_hours": 72,
+    "high_rotation_minutes": 80,
+    "extra_time_high_risk_rest_hours": 96,
+    "congested_matches_7d": 2,
+    "congested_matches_14d": 4
+  },
+  "optional_external_observation_contract": "COMPETITIVE_LOAD_OBSERVATIONS_V1",
+  "governance": {
+    "official_fpl_pl_fixture_facts_are_native": true,
+    "non_pl_competitions_require_verified_materialized_observation": true,
+    "missing_non_pl_evidence_is_explicit": true,
+    "no_blanket_fatigue_penalty": true,
+    "direct_xpts_mutation_forbidden": true,
+    "direct_xmins_mutation_forbidden_until_calibrated": true,
+    "allowed_use": ["evidence", "confidence", "tie_breaker", "rotation_review"],
+    "coach_rotation_tendency_must_not_be_inferred_without_evidence": true,
+    "travel_distance_must_not_be_invented": true,
+    "one_match_does_not_create_buy_or_sell": true
+  }
+}

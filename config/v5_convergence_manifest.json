@@ -8,6 +8,8 @@
     "production_main_sha": "0ee0e51d03ae85b593db8294f3f7e04cd4bc3108",
     "production_schema_version": 48,
     "production_runtime": "v3.27-unified-fastpath",
+    "production_runtime_engine_version": "3.25.0",
+    "production_runtime_schema_version": 49,
     "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
   },
   "operating_model": {
@@ -72,6 +74,7 @@
     "release_attestation_required": true,
     "all_business_capabilities_owned_by_exactly_one_service": true,
     "baseline_sha_must_match_main": true,
+    "accepted_runtime_engine_and_schema_must_match_shadow_reference": true,
     "all_dss_core_active_required": true,
     "all_dss_extensions_active_required": true,
     "real_shadow_cycle_counts_only_after_postvalidation": true,
@@ -86,6 +89,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is re-anchored to current production main 0ee0e51 after explicit capability reconciliation through V3.27 runtime hardening. Settled V3.20 football truth remains the frozen scoring baseline. Comparator, tactical consumption, truthful transfer momentum, sub-second interactive serving and material-decision equivalence must pass full Unified Gate plus fresh exact-fingerprint shadow cycles before promotion."
+    "reason": "V5.0.0-beta.4 is re-anchored to current production main 0ee0e51 after explicit capability reconciliation through V3.27 runtime hardening. Settled V3.20 football truth remains the frozen scoring baseline while the accepted V3 runtime implementation is engine 3.25.0/schema 49 at the anchored production SHA. Comparator, tactical consumption, truthful transfer momentum, sub-second interactive serving and material-decision equivalence must pass full Unified Gate plus fresh exact-fingerprint shadow cycles before promotion."
   }
 }

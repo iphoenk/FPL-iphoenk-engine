@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import Any
 
 from src.runtime_v3 import orchestrator as legacy
-from src.runtime_v3.artifact_contracts import validate_artifact
 from src.utils import DATA, ROOT, atomic_json, read_json
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
 PERFORMANCE_PATH = DATA / "runtime_performance.json"
+DOMAIN_RUNTIME_ID = "v3-domain-pipeline-v1"
 
 
 def _load_domains() -> dict[str, Any]:
@@ -187,6 +187,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             profile_cfg,
             temp_root,
         )
+        performance["runtime_id"] = DOMAIN_RUNTIME_ID
         performance["architecture"] = domain_registry["architecture"]
         performance["execution_domain_count"] = len(domain_results)
         performance["capability_owner_count"] = len(capability_results)
@@ -198,7 +199,9 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         latest = read_json(DATA / "latest.json", {})
         runtime_meta = latest.setdefault("runtime_architecture", {})
         runtime_meta.update({
+            "id": DOMAIN_RUNTIME_ID,
             "architecture": domain_registry["architecture"],
+            "service_count": len(domain_results),
             "execution_domain_count": len(domain_results),
             "capability_owner_count": len(capability_results),
             "shared_canonical_domain_workspace": True,
@@ -208,7 +211,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         atomic_json(DATA / "latest.json", latest)
 
     print(json.dumps({
-        "runtime": "v3-domain-pipeline-v1",
+        "runtime": DOMAIN_RUNTIME_ID,
         "architecture": domain_registry["architecture"],
         "engine_version": ENGINE_VERSION,
         "schema_version": SCHEMA_VERSION,

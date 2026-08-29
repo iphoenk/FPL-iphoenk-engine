@@ -18,7 +18,12 @@ def _freshness(latest: dict, now: datetime) -> dict:
     if not generated:
         return {"pass": False, "age_minutes": None, "max_age_minutes": maximum, "reason": "generated_at_missing"}
     age = max(0.0, (now - generated).total_seconds() / 60.0)
-    return {"pass": age <= maximum, "age_minutes": round(age, 2), "max_age_minutes": maximum, "reason": None if age <= maximum else "snapshot_stale"}
+    return {
+        "pass": age <= maximum,
+        "age_minutes": round(age, 2),
+        "max_age_minutes": maximum,
+        "reason": None if age <= maximum else "snapshot_stale",
+    }
 
 
 def _action_definition(action: str, actions: dict) -> dict:
@@ -46,7 +51,9 @@ def _planning_authority(locked: dict, scorecard: dict) -> dict:
         baseline_gw = None
         planning_gw = None
     active_chip = str(planning.get("active_chip") or "NONE").upper()
-    wildcard_for_planning = active_chip == "WILDCARD" or (override_applied and bool(locked.get("wildcard_active")))
+    wildcard_for_planning = active_chip == "WILDCARD" or (
+        override_applied and bool(locked.get("wildcard_active"))
+    )
     return {
         "expected_authority": expected,
         "override_applied": override_applied,
@@ -83,11 +90,6 @@ def _plain_reasoning(
         ]
     if action == "SIMULATION_ONLY":
         return ["Hasil ini hanya simulasi dan tidak digunakan sebagai instruksi perubahan tim nyata."]
-    if action == "EMERGENCY_UPDATE_ONLY":
-        return [
-            "Tahap final review sudah lewat, jadi struktur tim sebaiknya dipertahankan.",
-            "Perubahan hanya layak dilakukan jika muncul kabar baru yang benar-benar memengaruhi peluang bermain atau kelayakan pemain.",
-        ]
 
     if action == "HOLD":
         reasons.append("Struktur tim saat ini masih cukup layak untuk dipertahankan.")
@@ -98,24 +100,28 @@ def _plain_reasoning(
         else:
             reasons.append("Belum ada peningkatan yang cukup jelas untuk membenarkan perubahan struktur saat ini.")
         if isinstance(delta, (int, float)):
-            reasons.append(f"Perbedaan proyeksi XI saat ini terhadap alternatif sekitar {abs(float(delta)):.2f} poin, sehingga masih masuk wilayah keputusan yang bisa dipengaruhi preferensi dan informasi terbaru.")
-        if not str(lineup.get("status") or "").upper() == "FINAL_LOCKED":
+            reasons.append(
+                f"Perbedaan proyeksi XI saat ini terhadap alternatif sekitar {abs(float(delta)):.2f} poin, "
+                "sehingga masih masuk wilayah keputusan yang bisa dipengaruhi preferensi dan informasi terbaru."
+            )
+        if str(lineup.get("status") or "").upper() != "FINAL_LOCKED":
             reasons.append("XI, bench, kapten, dan vice-captain masih dapat disesuaikan sampai final review.")
         if wildcard_active:
             reasons.append("Karena Wildcard sedang aktif, fokusnya adalah memilih kombinasi 15 pemain terbaik tanpa mempertimbangkan biaya hit.")
         return reasons
 
     if action == "REVIEW_REQUIRED":
-        reasons.extend([
+        return [
             "Ada kandidat perubahan yang layak dibandingkan kembali sebelum keputusan final.",
             "Manfaatnya belum cukup kuat untuk langsung dijalankan tanpa mengecek starter security, team news, dan horizon fixture terbaru.",
-        ])
-        return reasons
+        ]
 
     if action == "GO":
         reasons.append("Perbandingan terbaru menunjukkan paket perubahan yang cukup kuat untuk menjadi pilihan utama.")
         if recommended.get("replacements"):
-            reasons.append(f"Paket yang disarankan melibatkan {int(recommended['replacements'])} perubahan dan tetap harus dikonfirmasi pada final lock.")
+            reasons.append(
+                f"Paket yang disarankan melibatkan {int(recommended['replacements'])} perubahan dan tetap harus dikonfirmasi pada final lock."
+            )
         return reasons
 
     return ["Pertahankan keputusan saat ini sampai informasi berikutnya memberikan alasan yang lebih kuat untuk berubah."]
@@ -129,8 +135,14 @@ def _plain_actions(action: str, lineup: dict, wildcard_active: bool) -> list[str
     if action == "GO":
         if str(lineup.get("status") or "").upper() == "FINAL_LOCKED":
             return ["Pertahankan final lock kecuali muncul berita material baru."]
-        return ["Bandingkan paket rekomendasi dengan preferensi user.", "Berikan final lock hanya setelah XI, bench, kapten, vice, dan chip dikonfirmasi."]
-    actions = ["Pertahankan struktur saat ini.", "Pantau team news, starter security, harga, dan challenger sampai checkpoint berikutnya."]
+        return [
+            "Bandingkan paket rekomendasi dengan preferensi user.",
+            "Berikan final lock hanya setelah XI, bench, kapten, vice, dan chip dikonfirmasi.",
+        ]
+    actions = [
+        "Pertahankan struktur saat ini.",
+        "Pantau team news, starter security, harga, dan challenger sampai checkpoint berikutnya.",
+    ]
     if wildcard_active:
         actions.append("Gunakan fleksibilitas Wildcard untuk memperbaiki struktur hanya jika ada peningkatan yang benar-benar material.")
     return actions
@@ -142,6 +154,47 @@ def _validate_plain_language(reasoning: list[str], actions: list[str], policy: d
     leaking = [value for value in forbidden if value and value in combined]
     if leaking:
         raise RuntimeError(f"technical language leaked into primary report reasoning: {leaking}")
+
+
+def _emission_contract(context: dict) -> dict:
+    """Consume checkpoint policy into a fail-closed, single-visible-report contract."""
+    if context.get("post_final_emergency_only") is True:
+        raise RuntimeError(
+            "legacy post_final_emergency_only is forbidden; checkpoint_policy is the sole timing authority"
+        )
+
+    authorized = bool(context.get("visible_output_authorized"))
+    duplicate_forbidden = context.get("duplicate_report_forbidden") is not False
+    if not duplicate_forbidden:
+        raise RuntimeError("checkpoint policy must forbid duplicate visible reports")
+
+    policy_id = str(context.get("policy_id") or "INTERNAL_HOURLY_SILENT")
+    full_required = bool(context.get("full_visible_report_required"))
+    no_change_required = bool(context.get("no_material_change_must_still_report"))
+    if policy_id in {"DEADLINE_MONITOR", "FINAL_DEADLINE_REVIEW"}:
+        if not authorized or not full_required or not no_change_required:
+            raise RuntimeError(f"deadline report contract incomplete for {policy_id}")
+
+    absorbed = list(context.get("absorbed_policy_ids") or [])
+    report_scope = list(dict.fromkeys(context.get("report_scope") or []))
+    visible_count = 1 if authorized else 0
+    return {
+        "status": "VISIBLE_AUTHORIZED" if authorized else "SILENT",
+        "authorized": authorized,
+        "visible_report_count": visible_count,
+        "max_visible_reports": 1,
+        "single_consolidated_report": True,
+        "duplicate_reports_forbidden": True,
+        "policy_id": policy_id,
+        "collision_merged": bool(context.get("collision_merged")),
+        "absorbed_policy_ids": absorbed,
+        "full_report_required": full_required,
+        "must_report_when_no_material_change": no_change_required,
+        "fresh_source_sweep_required": bool(context.get("fresh_source_sweep_required")),
+        "price_radar_required": bool(context.get("price_radar_required")),
+        "report_scope": report_scope,
+        "suppression_allowed": not (authorized and no_change_required),
+    }
 
 
 def govern_checkpoint(
@@ -166,12 +219,12 @@ def govern_checkpoint(
     language_policy = read_json(LANGUAGE_POLICY, {})
     scorecard = scorecard or {}
     context = dict(latest.get("checkpoint_context") or {})
+    emission = _emission_contract(context)
     freshness = _freshness(latest, evaluated_at)
     gate0_pass = (health.get("gate0") or {}).get("pass") is True
     framework_red = health.get("overall") == "RED"
     health_go = health.get("go_allowed") is True
     simulation = context.get("is_simulation") is True
-    post_final = context.get("post_final_emergency_only") is True
     authority = _planning_authority(locked, scorecard)
     wildcard_active = authority["wildcard_active"]
     expected_authority = authority["expected_authority"]
@@ -202,8 +255,6 @@ def govern_checkpoint(
         action = "REFRESH_REQUIRED"
     elif simulation:
         action = "SIMULATION_ONLY"
-    elif post_final:
-        action = "EMERGENCY_UPDATE_ONLY"
     elif not health_go:
         action = "HOLD"
     elif verdict == "MATERIAL_UPGRADE" and (sanity.get("recommended_package") or {}).get("material_eligible") is True:
@@ -225,15 +276,24 @@ def govern_checkpoint(
         reasons.append("USER_FINAL_LOCK_REQUIRED")
 
     planning_scorecard = scorecard.get("planning_gw") or {}
-    human_reasoning = _plain_reasoning(action, verdict, freshness, lineup, planning_scorecard, recommended, wildcard_active)
+    human_reasoning = _plain_reasoning(
+        action,
+        verdict,
+        freshness,
+        lineup,
+        planning_scorecard,
+        recommended,
+        wildcard_active,
+    )
     human_actions = _plain_actions(action, lineup, wildcard_active)
     _validate_plain_language(human_reasoning, human_actions, language_policy)
 
     return {
-        "schema_version": 495,
-        "engine": "v4.9.5-checkpoint-governance-human-report",
+        "schema_version": 496,
+        "engine": "v4.9.6-checkpoint-governance-single-report",
         "evaluated_at": evaluated_at.isoformat(),
         "checkpoint_context": context,
+        "emission": emission,
         "action_state": action,
         "headline": action_definition.get("headline"),
         "summary": action_definition.get("summary"),
@@ -305,7 +365,7 @@ def govern_checkpoint(
             "critical_warmup": critical_warmup,
             "reasons": reasons,
         },
-        "report_scope": list(context.get("report_scope") or []),
+        "report_scope": list(emission.get("report_scope") or []),
         "guardrails": {
             "raw_optimizer_not_authoritative": True,
             "optional_improvement_is_not_automatic_go": True,
@@ -321,6 +381,10 @@ def govern_checkpoint(
             "go_never_auto_executes_without_user_final_lock": True,
             "primary_report_plain_fpl_language": True,
             "technical_reason_codes_separate_from_human_reasoning": True,
+            "checkpoint_policy_is_sole_timing_authority": True,
+            "legacy_post_final_emergency_path_forbidden": True,
+            "visible_report_count_never_exceeds_one": True,
+            "collision_scopes_consumed_from_checkpoint_policy": True,
         },
     }
 
@@ -340,17 +404,23 @@ def run(now: str | None = None) -> dict:
         now=now,
     )
     atomic_json(OUTFILE, out)
-    print(json.dumps({
-        "checkpoint": (out.get("checkpoint_context") or {}).get("policy_id"),
-        "action": out.get("action_state"),
-        "headline": out.get("headline"),
-        "governed_verdict": (out.get("decision") or {}).get("governed_verdict"),
-        "decision_authority": (out.get("lineup") or {}).get("decision_authority"),
-        "previous_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("previous"),
-        "planning_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("planning"),
-        "squad_basis": (out.get("squad") or {}).get("authority_source"),
-        "human_reason_count": len((out.get("human_report") or {}).get("why") or []),
-    }, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "checkpoint": (out.get("checkpoint_context") or {}).get("policy_id"),
+                "visible_report_count": (out.get("emission") or {}).get("visible_report_count"),
+                "action": out.get("action_state"),
+                "headline": out.get("headline"),
+                "governed_verdict": (out.get("decision") or {}).get("governed_verdict"),
+                "decision_authority": (out.get("lineup") or {}).get("decision_authority"),
+                "previous_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("previous"),
+                "planning_gw": ((out.get("personal_gw_scorecard") or {}).get("headline") or {}).get("planning"),
+                "squad_basis": (out.get("squad") or {}).get("authority_source"),
+                "human_reason_count": len((out.get("human_report") or {}).get("why") or []),
+            },
+            ensure_ascii=False,
+        )
+    )
     return out
 
 

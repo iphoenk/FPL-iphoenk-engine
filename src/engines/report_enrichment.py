@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.engines.owned_challenger_comparator import build as build_owned_challenger_comparator
 from src.engines.report_time_intelligence import run as run_report_time_intelligence
 from src.utils import DATA, atomic_json, read_json
 
@@ -129,6 +130,30 @@ def _external_consensus_user_block(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _comparator_user_block(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": payload.get("status"),
+        "advisory_only": True,
+        "owned_count": payload.get("owned_count"),
+        "governed_watchlist_count": payload.get("governed_watchlist_count"),
+        "emerging_candidate_count": payload.get("emerging_candidate_count"),
+        "state_counts": payload.get("state_counts") or {},
+        "top_comparisons": [
+            {
+                "player_out": row.get("player_out"),
+                "player_in": row.get("player_in"),
+                "challenger_type": row.get("challenger_type"),
+                "state": row.get("state"),
+                "horizon_5gw": (row.get("horizons") or {}).get("5"),
+                "missing_critical_evidence": row.get("missing_critical_evidence") or [],
+                "confidence": row.get("confidence"),
+            }
+            for row in (payload.get("top_comparisons") or [])[:8]
+        ],
+        "catatan": "Comparator reuses canonical xPts/xMins/tactical/price/package evidence. It is advisory-only and cannot overwrite XI, C/VC, chip, watchlist, or canonical transfer decision.",
+    }
+
+
 def _action_class(subject: str) -> str:
     return "FACT_CONSTRAINT" if subject == "Chip" else "MODEL_DERIVED"
 
@@ -198,6 +223,7 @@ def run() -> dict[str, Any]:
     watchlist = read_json(DATA / "dss_watchlist.json", {})
     source_health = read_json(DATA / "source_health.json", {})
     external_consensus = read_json(DATA / "external_consensus.json", {})
+    comparator = build_owned_challenger_comparator()
     report_time = run_report_time_intelligence()
 
     ledger = {int(row.get("element") or -1): row for row in team.get("team_value_ledger") or []}
@@ -235,6 +261,7 @@ def run() -> dict[str, Any]:
     user["source_availability"] = _source_availability(source_health)
     user["report_time_intelligence"] = _report_time_user_block(report_time)
     user["external_consensus"] = _external_consensus_user_block(external_consensus)
+    user["owned_vs_challenger"] = _comparator_user_block(comparator)
     tech["source_capability_health"] = {
         "source_overall": source_health.get("overall"),
         "capabilities": source_health.get("capability_health") or [],
@@ -245,6 +272,7 @@ def run() -> dict[str, Any]:
     }
     tech["report_time_intelligence"] = report_time
     tech["external_consensus"] = external_consensus
+    tech["owned_challenger_comparator"] = comparator
     tech["runtime"] = {
         "current_run_ref": "data/runtime_performance.json",
         "embedded_during_report_stage": False,
@@ -258,6 +286,8 @@ def run() -> dict[str, Any]:
     tech["audit"]["external_consensus_is_advisory_only"] = bool((external_consensus.get("governance") or {}).get("advisory_only", True))
     tech["audit"]["external_consensus_never_majority_votes"] = not bool((external_consensus.get("governance") or {}).get("majority_vote_used", False))
     tech["audit"]["external_consensus_does_not_mutate_native_truth"] = not bool((external_consensus.get("governance") or {}).get("native_truth_mutated", False))
+    tech["audit"]["owned_challenger_comparator_is_advisory_only"] = bool(comparator.get("advisory_only"))
+    tech["audit"]["owned_challenger_comparator_reuses_governed_watchlist"] = int(comparator.get("governed_watchlist_count") or 0) == 20
     _apply_readiness_and_actionability(user, tech, latest, report_time)
 
     atomic_json(DATA / "user_report.json", user)

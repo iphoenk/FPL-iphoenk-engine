@@ -1,0 +1,70 @@
+{
+  "schema_version": 2,
+  "contract": "OWNED_CHALLENGER_COMPARATOR_V2",
+  "owner": "reporting.owned_challenger_comparator",
+  "capability_status": "ADVISORY_ONLY",
+  "horizons": [1, 2, 3, 5],
+  "strategic_horizons": [10, 15],
+  "output_states": ["HOLD", "WATCH", "REVIEW", "LEAN_TRANSFER", "STRONG_TRANSFER"],
+  "challenger_types": ["GOVERNED_WATCHLIST", "EMERGING_CHALLENGER"],
+  "owned_targeting": {
+    "same_position_required": true,
+    "max_owned_targets_per_challenger": 3,
+    "prefer_direct_swap_affordability": true
+  },
+  "emerging_screen": {
+    "max_candidates": 12,
+    "allowed_statuses": ["a", "d"],
+    "minimum_expected_minutes": 50.0,
+    "minimum_start_probability": 0.45,
+    "maximum_dnp_probability": 0.35,
+    "minimum_h5_points": 12.0,
+    "strong_match_return_trigger": 2,
+    "strong_xgi_trigger": 0.75,
+    "shots_trigger": 4,
+    "box_touches_trigger": 8,
+    "chances_created_trigger": 4,
+    "sustainable_minimum_trigger_count": 2,
+    "sustainable_minimum_start_probability": 0.60
+  },
+  "decision": {
+    "review_gain_5gw": 1.0,
+    "lean_gain_5gw": 3.0,
+    "strong_gain_5gw": 5.0,
+    "lean_minimum_signal_to_noise": 0.55,
+    "strong_minimum_signal_to_noise": 0.85,
+    "minimum_start_probability_for_transfer": 0.60,
+    "strong_minimum_start_probability": 0.75,
+    "strong_requires_complete_critical_evidence": true,
+    "missing_critical_evidence_caps_at": "REVIEW"
+  },
+  "critical_evidence": [
+    "canonical_projection",
+    "canonical_xmins",
+    "same_position",
+    "exact_sell_value",
+    "affordability",
+    "club_legality",
+    "tactical_context",
+    "competitive_load",
+    "external_consensus"
+  ],
+  "governance": {
+    "reuse_canonical_projection_xpts": true,
+    "reuse_canonical_xmins": true,
+    "reuse_canonical_tactical_matchup": true,
+    "reuse_canonical_package_legality_and_scoring": true,
+    "reuse_canonical_price_state": true,
+    "reuse_governed_watchlist": true,
+    "one_match_haul_is_trigger_not_buy": true,
+    "positive_projected_edge_is_not_sufficient_alone": true,
+    "no_majority_vote_across_external_models": true,
+    "may_not_overwrite_canonical_transfer_recommendation": true,
+    "may_not_overwrite_starting_xi": true,
+    "may_not_overwrite_captain_or_vice": true,
+    "may_not_overwrite_watchlist": true,
+    "may_not_overwrite_chip_decision": true,
+    "missing_evidence_is_explicit": true,
+    "advisory_until_calibrated": true
+  }
+}

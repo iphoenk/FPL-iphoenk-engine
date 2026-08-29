@@ -1,12 +1,14 @@
 {
-  "schema_version": 4,
-  "model": "v5_v3_v4_capability_parity_v4",
+  "schema_version": 5,
+  "model": "v5_v3_v4_capability_parity_v5",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "main@7af907fc1f994f32c7c65d8fbf7eb3e40436c39a",
-    "current_production_code_commit": "83873ea33ca631344212a792a57911fad7e1575b",
+    "current_production_runtime": "main@018099be08f755e0f45b2c7526309ccc76818e4d",
+    "current_production_code_commit": "018099be08f755e0f45b2c7526309ccc76818e4d",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
+    "current_production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
+    "current_production_compiled_plan_sha256": "e013d5ccb9428382f87ba29b0c1c752b7e21758106e6ed6e81380074775e7538",
     "research_reference": "v4",
     "candidate": "v5.0.0-beta.4"
   },
@@ -53,8 +55,8 @@
     "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "7af907fc1f994f32c7c65d8fbf7eb3e40436c39a",
-    "production_code_commit": "83873ea33ca631344212a792a57911fad7e1575b",
+    "production_main_sha": "018099be08f755e0f45b2c7526309ccc76818e4d",
+    "production_code_commit": "018099be08f755e0f45b2c7526309ccc76818e4d",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,
@@ -62,10 +64,36 @@
     "v3_topology": {
       "phase_count": 6,
       "domain_count": 11,
+      "capability_count": 21,
       "registry": "V3_EXECUTION_DOMAINS_V2",
-      "business_capability_contract_unchanged_by_topology_refactor": true,
-      "service_registry_unchanged_by_topology_refactor": true,
-      "production_closeout_metadata_only_after_code_commit": true
+      "compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
+      "compiled_plan_sha256": "e013d5ccb9428382f87ba29b0c1c752b7e21758106e6ed6e81380074775e7538",
+      "module_batch_registry": "V3_MODULE_BATCHES_DERIVED_V2",
+      "business_capability_contract_unchanged_by_control_plane_refactor": true,
+      "football_formula_unchanged_by_control_plane_refactor": true,
+      "decision_logic_unchanged_by_control_plane_refactor": true
+    },
+    "control_plane_equivalence": {
+      "canonical_orchestration_registry": {
+        "v5_owner": "orchestrator",
+        "evidence": "config/v5_orchestrator_registry.json",
+        "semantics": "V5 routing and parallel groups are registry-owned; V3 compiled plan is reconciled as a control-plane guarantee, not copied implementation."
+      },
+      "single_service_module_ownership": {
+        "v5_owner": "governance",
+        "evidence": "config/v5_service_registry.json",
+        "semantics": "Registered modules have exactly one bounded-context service owner."
+      },
+      "artifact_persistence_contract": {
+        "v5_owner": "snapshot",
+        "evidence": "config/v5_persistence_registry.json",
+        "semantics": "Persisted artifacts are explicitly registered; undeclared ownership is not accepted."
+      },
+      "dependency_and_parallelism_contract": {
+        "v5_owner": "orchestrator",
+        "evidence": "config/v5_orchestrator_registry.json",
+        "semantics": "Execution dependencies and parallel groups are explicit and deterministic without a second human-maintained batch truth."
+      }
     },
     "capability_equivalence": {
       "gw_scoped_chip_override": {"v5_owner": "truth", "evidence": "src/v5/services/truth.py::_lock_chip_scope"},
@@ -93,6 +121,8 @@
     "predeadline_validation_must_be_genuine_not_reconstructed": true,
     "reanchor_requires_full_v5_gate": true,
     "reanchor_does_not_change_frozen_football_truth_baseline": true,
-    "topology_name_parity_does_not_require_service_name_identity": true
+    "topology_name_parity_does_not_require_service_name_identity": true,
+    "compiled_v3_control_plane_does_not_create_v5_service_or_business_authority": true,
+    "duplicate_human_maintained_execution_truth_forbidden": true
   }
 }

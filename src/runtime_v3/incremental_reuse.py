@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -84,23 +85,42 @@ def _current_scoring_fixture_live(now: datetime | None = None) -> bool:
     return False
 
 
-def active(profile_name: str) -> bool:
+def _service_live_opt_in(service_name: str | None) -> bool:
+    if not service_name:
+        return False
+    spec = (_registry().get("services") or {}).get(service_name)
+    return isinstance(spec, dict) and spec.get("allow_during_live") is True
+
+
+def _any_live_opt_in() -> bool:
+    return any(
+        isinstance(spec, dict) and spec.get("allow_during_live") is True
+        for spec in (_registry().get("services") or {}).values()
+    )
+
+
+def active(profile_name: str, service_name: str | None = None) -> bool:
     registry = _registry()
     policy = registry.get("policy") or {}
     if profile_name not in set(policy.get("enabled_profiles") or []):
         return False
     if policy.get("disable_when_current_scoring_fixture_live") is True and _current_scoring_fixture_live():
-        return False
+        return _service_live_opt_in(service_name) if service_name else _any_live_opt_in()
     return True
 
 
-def inactive_reason(profile_name: str) -> str | None:
+def inactive_reason(profile_name: str, service_name: str | None = None) -> str | None:
     registry = _registry()
     policy = registry.get("policy") or {}
     if profile_name not in set(policy.get("enabled_profiles") or []):
         return "PROFILE_DISABLED"
     if policy.get("disable_when_current_scoring_fixture_live") is True and _current_scoring_fixture_live():
-        return "CURRENT_SCORING_FIXTURE_LIVE"
+        eligible = _service_live_opt_in(service_name) if service_name else _any_live_opt_in()
+        if eligible:
+            return None
+        if service_name is None:
+            return "CURRENT_SCORING_FIXTURE_LIVE"
+        return "CURRENT_SCORING_FIXTURE_LIVE_SERVICE_NOT_OPTED_IN"
     return None
 
 
@@ -152,8 +172,22 @@ def _semantic_json(service_name: str, name: str, value: Any) -> Any:
     return value
 
 
+@lru_cache(maxsize=8)
+def _digest_source_tree(path_text: str) -> str:
+    path = Path(path_text)
+    digest = hashlib.sha256()
+    for child in sorted(p for p in path.rglob("*.py") if p.is_file()):
+        digest.update(str(child.relative_to(path)).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(child.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def _digest_path(service_name: str, name: str) -> str | None:
     path = ROOT / name if name.startswith(("config/", "src/")) else DATA / name
+    if path.is_dir():
+        return _digest_source_tree(str(path.resolve()))
     if not path.is_file():
         return None
     raw = path.read_bytes()
@@ -192,8 +226,8 @@ def stored_fingerprint(service_name: str) -> str | None:
 
 
 def diagnose(service_name: str, profile_name: str | None = None) -> dict[str, Any]:
-    if profile_name is not None and not active(profile_name):
-        return {"reason": inactive_reason(profile_name), "current": None, "stored": None, "match": False}
+    if profile_name is not None and not active(profile_name, service_name):
+        return {"reason": inactive_reason(profile_name, service_name), "current": None, "stored": None, "match": False}
     current = fingerprint(service_name)
     stored = stored_fingerprint(service_name)
     if current is None:
@@ -214,7 +248,7 @@ def diagnose(service_name: str, profile_name: str | None = None) -> dict[str, An
 
 def try_reuse(service_name: str, service_spec: dict[str, Any], profile_name: str) -> dict[str, Any] | None:
     registry = _registry()
-    if not active(profile_name):
+    if not active(profile_name, service_name):
         return None
     if service_name not in (registry.get("services") or {}):
         return None
@@ -249,7 +283,7 @@ def try_reuse(service_name: str, service_spec: dict[str, Any], profile_name: str
 
 def record(service_name: str, profile_name: str, fingerprint_value: str | None = None) -> None:
     registry = _registry()
-    if not active(profile_name):
+    if not active(profile_name, service_name):
         return
     if service_name not in (registry.get("services") or {}):
         return

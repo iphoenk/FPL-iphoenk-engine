@@ -5,9 +5,9 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "1d7bfea3f3f8762f7424553c42b8978348bb2dfc",
+    "production_main_sha": "f02933343d275a9e4c34b7f690c4ee34cf822414",
     "production_schema_version": 48,
-    "production_runtime": "v3.35-seven-domain-fastpath-dod",
+    "production_runtime": "v3.39-seven-domain-live-safe-reuse-prediction-freeze-recovery",
     "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
   },
   "operating_model": {
@@ -26,6 +26,7 @@
     "projection": "prediction service",
     "competitive_load": "prediction service -> config/v5_competitive_load.json",
     "prediction_evaluation": "evaluation service",
+    "prediction_freeze_recovery": "evaluation service -> genuine predeadline snapshot only",
     "external_consensus": "evaluation service -> config/v5_external_consensus.json",
     "decision_validation_snapshot": "evaluation service",
     "owned_challenger_comparator": "evaluation service",
@@ -63,6 +64,9 @@
     "competitive_load_advisory_only": true,
     "deep_tactical_missing_evidence_explicit": true,
     "genuine_predeadline_decision_validation_required": true,
+    "overdue_prediction_freeze_recovery_genuine_predeadline_only": true,
+    "runtime_write_set_isolation_required": true,
+    "live_safe_incremental_reuse_semantics_required": true,
     "production_definition_of_done_executable_required": true,
     "price_fact_vs_model_semantic_authority_required": true
   },
@@ -95,6 +99,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is re-anchored to production main 1d7bfea after explicit capability reconciliation through V3.35: fastpath/reuse semantics, governed external consensus, native owned-vs-challenger comparator parity, competitive-load evidence, truthful deep tactical/system-fit evidence, genuine predeadline decision validation, executable definition-of-done semantics, and FACT-vs-MODEL price authority. Frozen football-truth baseline remains V3.20. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
+    "reason": "V5.0.0-beta.4 is re-anchored to production main f0293334 after explicit capability reconciliation through V3.39. The latest V3.39 delta only consolidates legacy test ownership and preserves all regression assertions, with no football formula or authority change. Earlier V3.36-V3.39 runtime hardening adds live-safe incremental reuse, write-set isolation/observability, competitive-load consolidation and overdue prediction-freeze recovery from genuine predeadline evidence; V5 preserves these semantics within existing bounded-context owners and forbids retroactive prediction reconstruction. Frozen football-truth baseline remains V3.20. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
   }
 }

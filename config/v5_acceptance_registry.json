@@ -1,5 +1,5 @@
 {
-  "version": 22,
+  "version": 23,
   "module_policy": {
     "minimum_registered_modules": 48,
     "required_truth_modules": ["rules", "source_authority", "public_api", "official_authenticated", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
@@ -24,8 +24,8 @@
   },
   "convergence": {
     "production_baseline": "v3.20.0",
-    "production_main_sha": "1d7bfea3f3f8762f7424553c42b8978348bb2dfc",
-    "production_runtime": "v3.35-seven-domain-fastpath-dod",
+    "production_main_sha": "f02933343d275a9e4c34b7f690c4ee34cf822414",
+    "production_runtime": "v3.39-seven-domain-live-safe-reuse-prediction-freeze-recovery",
     "configuration_ownership_required": true,
     "p0_capabilities_required": ["P0-1_prediction_calibration_backtest", "P0-2_xmins_role_v2", "P0-3_team_strength_fixture_probability", "P0-4_multi_horizon_package_optimizer", "P0-5_external_challenger_scorecard"],
     "decision_bridge_only_forbidden": true,
@@ -49,6 +49,12 @@
     "system_formation_fit_must_not_invent_true_formation": true,
     "genuine_predeadline_decision_validation_required": true,
     "retroactive_decision_snapshot_reconstruction_forbidden": true,
+    "overdue_prediction_freeze_recovery_required": true,
+    "overdue_prediction_freeze_recovery_owner": "evaluation",
+    "overdue_prediction_freeze_recovery_genuine_predeadline_only": true,
+    "postdeadline_prediction_substitution_forbidden": true,
+    "live_safe_incremental_reuse_semantics_required": true,
+    "runtime_write_set_isolation_required": true,
     "exact_hit_cost_required_for_realized_transfer_net_gain": true,
     "tactical_decision_consumption_required": true,
     "tactical_direct_xpts_mutation_forbidden": true,

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "registry": "V3_EXECUTION_DOMAINS_V1",
+  "architecture": "V3_DOMAIN_PIPELINE",
+  "domain_count": 7,
+  "policy": {
+    "capability_ownership_remains_in_v3_architecture_ownership_registry": true,
+    "execution_domains_are_process_orchestration_boundaries_not_business_owners": true,
+    "one_domain_run_may_execute_multiple_capability_modules": true,
+    "shared_canonical_state_replaces_cross_service_copy_promotion_where_safe": true,
+    "artifact_contract_validation_is_preserved": true,
+    "gate0_and_dss_strictness_are_preserved": true,
+    "official_network_ownership_is_preserved": true,
+    "no_capability_is_removed_by_domain_grouping": true
+  },
+  "domains": {
+    "ACQUIRE": {
+      "depends_on": [],
+      "capabilities": ["official_snapshot", "rules", "team_state", "market_state", "live_state"]
+    },
+    "ENRICH": {
+      "depends_on": ["ACQUIRE"],
+      "capabilities": ["advanced_stats", "base_snapshot", "authenticated_official", "historical_prior", "tactical_context", "source_layer"]
+    },
+    "MODEL": {
+      "depends_on": ["ENRICH"],
+      "capabilities": ["prediction", "prediction_evaluation"]
+    },
+    "MARKET": {
+      "depends_on": ["ENRICH"],
+      "capabilities": ["price", "official_detail"]
+    },
+    "DECISION": {
+      "depends_on": ["MODEL", "ENRICH"],
+      "capabilities": ["lineup_governance", "challenger"]
+    },
+    "GOVERNANCE": {
+      "depends_on": ["MODEL", "MARKET", "DECISION"],
+      "capabilities": ["governance", "watchlist"]
+    },
+    "PUBLISH": {
+      "depends_on": ["GOVERNANCE", "MARKET", "DECISION"],
+      "capabilities": ["reporting", "report_materializer"]
+    }
+  }
+}

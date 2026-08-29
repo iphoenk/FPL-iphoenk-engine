@@ -46,10 +46,19 @@ def classify_stage(*, before_deadline: bool, submitted_picks_ready: bool, finish
     return "ACTUALS_REFRESH_REQUIRED"
 
 
-def run() -> dict:
-    raw = read_json(RAW_SNAPSHOT, {})
-    lifecycle = read_json(LIFECYCLE, {})
-    ownership = read_json(OWNERSHIP, {})
+def run(raw: dict | None = None, lifecycle: dict | None = None, ownership: dict | None = None) -> dict:
+    """Audit reconciliation readiness against optional preloaded immutable evidence.
+
+    Standalone callers keep the file-backed behavior. The consolidated validation
+    boundary may pass the exact raw snapshot and lifecycle object it already owns,
+    avoiding duplicate JSON parsing while preserving the same readiness contract.
+    """
+    raw_preloaded = raw is not None
+    lifecycle_preloaded = lifecycle is not None
+    ownership_preloaded = ownership is not None
+    raw = raw if raw is not None else read_json(RAW_SNAPSHOT, {})
+    lifecycle = lifecycle if lifecycle is not None else read_json(LIFECYCLE, {})
+    ownership = ownership if ownership is not None else read_json(OWNERSHIP, {})
     target = _target_gw()
     blockers: list[str] = []
     pending: list[str] = []
@@ -156,6 +165,11 @@ def run() -> dict:
         },
         "blockers": blockers,
         "pending": sorted(set(pending)),
+        "input_reuse": {
+            "raw_snapshot_preloaded": raw_preloaded,
+            "lifecycle_preloaded": lifecycle_preloaded,
+            "ownership_preloaded": ownership_preloaded,
+        },
         "guardrails": {
             "read_only_audit": True,
             "official_api_refetch": False,
@@ -165,10 +179,11 @@ def run() -> dict:
             "official_fpl_single_acquisition_owner": True,
             "expected_future_state_is_pending_not_failure": True,
             "logical_owner_preserved_inside_consolidated_boundary": True,
+            "preloaded_input_contract_equivalent": True,
         },
     }
     atomic_json(OUTFILE, out)
-    print(json.dumps({"service": "reconciliation_readiness", "status": out["status"], "target_gw": target, "stage": stage, "blockers": blockers, "pending": out["pending"]}, ensure_ascii=False))
+    print(json.dumps({"service": "reconciliation_readiness", "status": out["status"], "target_gw": target, "stage": stage, "blockers": blockers, "pending": out["pending"], "input_reuse": out["input_reuse"]}, ensure_ascii=False))
     if blockers:
         raise SystemExit(2)
     return out

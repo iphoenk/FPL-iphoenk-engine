@@ -6,7 +6,7 @@
   "baselines": {
     "production_truth": "v3.20.0",
     "production_main_sha": "1d7bfea3f3f8762f7424553c42b8978348bb2dfc",
-    "production_schema_version": 49,
+    "production_schema_version": 48,
     "production_runtime": "v3.35-seven-domain-fastpath-dod",
     "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
   },

@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime, timezone
 
 import pytest
@@ -9,7 +10,15 @@ from src.v5.acceptance import run_bootstrap_acceptance
 from src.v5.authenticated_official import safe_finance, summarize_authenticated_payloads
 from src.v5.contracts import Confidence, DecisionTrace, EvidenceRef
 from src.v5.finance import affordability_cost, resolve_sell_value, sell_cost
-from src.v5.official_auth import AuthMaterial, AuthPolicyError, allowed_routes, expected_team_id, safe_get
+from src.v5.official_auth import (
+    AuthConfigurationError,
+    AuthMaterial,
+    AuthPolicyError,
+    allowed_routes,
+    auth_material_from_env,
+    expected_team_id,
+    safe_get,
+)
 from src.v5.price_trajectory import classify, risk_direction, trajectory_eta, urgency
 from src.v5.public_api import FetchSpec
 from src.v5.source_authority import primary_authority as source_primary_authority
@@ -69,7 +78,7 @@ def test_phase_authority_changes_across_gameweek_lifecycle():
     assert resolve_phase(deadline_time=deadline, now="2026-08-29T10:00:01Z") is Phase.POST_DEADLINE
     assert resolve_phase(deadline_time=deadline, now="2026-08-29T10:00:01Z", live_started=True) is Phase.LIVE
     assert resolve_phase(deadline_time=deadline, now=datetime.now(timezone.utc), finished=True) is Phase.POST_GW
-    assert phase_primary_authority(Phase.PRE_DEADLINE, "squad") == "user_lock"
+    assert phase_primary_authority(Phase.PRE_DEADLINE, "squad") == "official_authenticated"
     assert phase_primary_authority(Phase.POST_DEADLINE, "squad") == "official_public"
     assert phase_primary_authority(Phase.LIVE, "scoring") == "official_public_event_live"
     assert phase_primary_authority(Phase.POST_GW, "scoring") == "official_final_history"
@@ -107,6 +116,32 @@ def test_authenticated_official_routes_are_registry_driven_and_allowlisted():
     assert routes["transfers_latest"] == f"entry/{team_id}/transfers-latest/"
     with pytest.raises(AuthPolicyError):
         safe_get("arbitrary", AuthMaterial(mode="test", headers={}))
+
+
+def test_authenticated_mode_auto_detects_single_session_secret(monkeypatch):
+    monkeypatch.delenv("FPL_AUTH_MODE", raising=False)
+    monkeypatch.setenv("FPL_SESSION_B64", base64.b64encode(b"sessionid=test-session").decode("ascii"))
+    monkeypatch.delenv("FPL_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("FPL_REFRESH_TOKEN", raising=False)
+    material = auth_material_from_env()
+    assert material is not None
+    assert material.mode == "session_cookie"
+    assert material.headers["Cookie"] == "sessionid=test-session"
+
+
+def test_authenticated_mode_explicit_disabled_wins(monkeypatch):
+    monkeypatch.setenv("FPL_AUTH_MODE", "disabled")
+    monkeypatch.setenv("FPL_SESSION_B64", base64.b64encode(b"sessionid=test-session").decode("ascii"))
+    assert auth_material_from_env() is None
+
+
+def test_authenticated_mode_ambiguous_secrets_fail_closed(monkeypatch):
+    monkeypatch.delenv("FPL_AUTH_MODE", raising=False)
+    monkeypatch.setenv("FPL_SESSION_B64", base64.b64encode(b"sessionid=test-session").decode("ascii"))
+    monkeypatch.setenv("FPL_ACCESS_TOKEN", "token")
+    monkeypatch.delenv("FPL_REFRESH_TOKEN", raising=False)
+    with pytest.raises(AuthConfigurationError):
+        auth_material_from_env()
 
 
 def test_authenticated_finance_extracts_only_authoritative_squad():
@@ -200,12 +235,33 @@ def _fake_squad_inputs():
     return bootstrap, lock, picks
 
 
-def test_squad_authority_switches_by_phase_and_reconciles():
+def test_squad_authority_prefers_authenticated_official_predeadline():
+    bootstrap, lock, picks = _fake_squad_inputs()
+    authenticated = {
+        "picks": [
+            {"element": row["element"], "purchase_price": 50, "selling_price": 50}
+            for row in picks["picks"]
+        ]
+    }
+    pre = select_squad(
+        phase=Phase.PRE_DEADLINE,
+        bootstrap=bootstrap,
+        locked_squad=lock,
+        authenticated_my_team=authenticated,
+        submitted_picks=None,
+    )
+    assert pre["authority"] == "official_authenticated"
+    assert [row["element"] for row in pre["squad"]] == [row["element"] for row in picks["picks"]]
+    assert pre["validation"]["passed"] is True
+
+
+def test_squad_authority_falls_back_to_user_lock_when_auth_unavailable_and_reconciles():
     bootstrap, lock, picks = _fake_squad_inputs()
     pre = select_squad(
         phase=Phase.PRE_DEADLINE,
         bootstrap=bootstrap,
         locked_squad=lock,
+        authenticated_my_team=None,
         submitted_picks=picks,
     )
     post = select_squad(

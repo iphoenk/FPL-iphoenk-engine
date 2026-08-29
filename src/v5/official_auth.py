@@ -97,9 +97,33 @@ def _refresh_access_token(refresh_token: str, mode_cfg: dict[str, Any]) -> str:
     return str(token)
 
 
+def _resolve_auth_mode(modes: dict[str, Any]) -> str:
+    raw = os.getenv("FPL_AUTH_MODE")
+    if raw is not None and raw.strip():
+        return raw.strip().lower()
+
+    resolution = _policy().get("mode_resolution") or {}
+    if not bool(resolution.get("auto_detect_single_secret_when_mode_unset", False)):
+        return "disabled"
+
+    candidates: list[str] = []
+    for name, cfg in modes.items():
+        if name == "disabled" or not isinstance(cfg, dict):
+            continue
+        secret_env = str(cfg.get("secret_env") or "").strip()
+        if secret_env and os.getenv(secret_env, "").strip():
+            candidates.append(str(name))
+
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1 and bool(resolution.get("ambiguous_multiple_credentials_fail_closed", True)):
+        raise AuthConfigurationError("multiple FPL auth credentials are present while FPL_AUTH_MODE is unset")
+    return "disabled"
+
+
 def auth_material_from_env() -> AuthMaterial | None:
     modes = _policy()["auth_modes"]
-    mode = os.getenv("FPL_AUTH_MODE", "disabled").strip().lower() or "disabled"
+    mode = _resolve_auth_mode(modes)
     cfg = modes.get(mode)
     if not isinstance(cfg, dict):
         raise AuthConfigurationError(f"unsupported FPL auth mode: {mode}")

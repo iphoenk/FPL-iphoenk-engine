@@ -28,6 +28,37 @@ def _sigmoid(x: float) -> float:
     return 1.0 / (1.0 + math.exp(-x))
 
 
+def _probability_contract(
+    *,
+    start_probability: float,
+    bench_probability: float,
+    dnp_probability: float,
+    starter_minutes: float,
+    bench_minutes: float,
+    expected_minutes: float,
+) -> dict[str, Any]:
+    probability_sum = start_probability + bench_probability + dnp_probability
+    if abs(probability_sum - 1.0) > 0.002:
+        raise RuntimeError(f"V5 xMins probability decomposition invalid: sum={probability_sum:.6f}")
+    start_contribution = start_probability * starter_minutes
+    bench_contribution = bench_probability * bench_minutes
+    derived_expected = start_contribution + bench_contribution
+    if abs(derived_expected - expected_minutes) > 0.2:
+        raise RuntimeError(
+            "V5 xMins expected_minutes does not reconcile with explicit probabilities: "
+            f"derived={derived_expected:.3f} published={expected_minutes:.3f}"
+        )
+    return {
+        "probability_sum": round(probability_sum, 4),
+        "expected_minutes_if_start": round(starter_minutes, 1),
+        "expected_minutes_components": {
+            "start_minutes_contribution": round(start_contribution, 2),
+            "bench_minutes_contribution": round(bench_contribution, 2),
+            "dnp_minutes_contribution": 0.0,
+        },
+    }
+
+
 def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None) -> dict[str, Any]:
     cfg = load_json_config(CONFIG)
     context = context or {}
@@ -60,11 +91,6 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
     raw_start = _sigmoid(weighted_logit / max(1e-6, total_weight))
 
     observed_rotation_risk = clamp(_f(context.get("rotation_risk"), 0.0), 0.0, 1.0)
-    # Role-start probability and role-derived rotation risk are two views of the
-    # same evidence family. Applying both would double-penalize a player. Rotation
-    # risk only becomes a second multiplicative penalty when the caller explicitly
-    # certifies that it comes from independent evidence (for example manager news,
-    # verified congestion/rest information, or another separately governed source).
     rotation_risk_independent = bool(context.get("rotation_risk_independent_evidence", False))
     effective_rotation_risk = observed_rotation_risk if rotation_risk_independent else 0.0
     congestion_factor = clamp(_f(context.get("congestion_factor"), 1.0), 0.0, 1.0)
@@ -101,6 +127,14 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
     )
     bench_minutes = clamp(_f(context.get("bench_minutes_prior"), fallback_bench), 1.0, 45.0)
     expected_minutes = start_probability * starter_minutes + bench_probability * bench_minutes
+    contract = _probability_contract(
+        start_probability=start_probability,
+        bench_probability=bench_probability,
+        dnp_probability=dnp_probability,
+        starter_minutes=starter_minutes,
+        bench_minutes=bench_minutes,
+        expected_minutes=expected_minutes,
+    )
 
     small_sample = matches < int(cfg.get("small_sample_matches") or 3)
     uncertainty = cfg.get("uncertainty") or {}
@@ -150,6 +184,10 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
         "expected_minutes": round(expected_minutes, 1),
         "starter_minutes_if_start": round(starter_minutes, 1),
         "bench_minutes_if_used": round(bench_minutes, 1),
+        "expected_minutes_if_start": contract["expected_minutes_if_start"],
+        "overall_availability": round(availability, 4),
+        "probability_sum": contract["probability_sum"],
+        "expected_minutes_components": contract["expected_minutes_components"],
         "start_probability_interval": [
             round(clamp(start_probability - half_width, 0.0, 1.0), 4),
             round(clamp(start_probability + half_width, 0.0, 1.0), 4),
@@ -182,5 +220,9 @@ def estimate_xmins(player: dict[str, Any], context: dict[str, Any] | None = None
             "missing_historical_prior_is_not_fabricated": True,
             "role_probability_and_role_rotation_risk_not_double_counted": True,
             "independent_rotation_evidence_required_for_second_penalty": True,
+            "expected_minutes_derived_from_explicit_probabilities": True,
+            "start_bench_dnp_probabilities_are_mutually_exclusive": True,
+            "availability_published_separately": True,
+            "compatibility_expected_minutes_preserved": True,
         },
     }

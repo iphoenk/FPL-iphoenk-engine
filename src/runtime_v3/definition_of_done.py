@@ -118,7 +118,21 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
 
     runtime_ok = runtime.get("execution_profile") == "fast_decision" and runtime.get("within_target_slo") is True and float(runtime.get("total_wall_ms") or 1e9) < 10000.0
     _check(rows, "RUNTIME_FAST_GREEN", runtime_ok, {"profile": runtime.get("execution_profile"), "wall_ms": runtime.get("total_wall_ms"), "target_ms": runtime.get("target_wall_ms")})
-    _check(rows, "SEVEN_DOMAIN_RUNTIME", int(runtime.get("execution_domain_count") or 0) == 7 and int(runtime.get("capability_owner_count") or 0) == 21, {"domains": runtime.get("execution_domain_count"), "owners": runtime.get("capability_owner_count")})
+    canonical_runtime = (
+        int(runtime.get("execution_domain_count") or 0) == 11
+        and int(runtime.get("execution_phase_count") or 0) == 6
+        and int(runtime.get("capability_owner_count") or 0) == 21
+    )
+    _check(
+        rows,
+        "CANONICAL_11_DOMAIN_6_PHASE_RUNTIME",
+        canonical_runtime,
+        {
+            "domains": runtime.get("execution_domain_count"),
+            "phases": runtime.get("execution_phase_count"),
+            "owners": runtime.get("capability_owner_count"),
+        },
+    )
 
     age = _freshness_seconds(latest)
     _check(rows, "FRESH_RUNTIME_DATA", age is not None and age <= 900.0, {"age_seconds": round(age, 3) if age is not None else None, "max_seconds": 900})

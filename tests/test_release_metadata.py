@@ -62,8 +62,9 @@ def test_release_metadata_surfaces_are_consistent():
     assert service_registry["production_contract"].startswith("v3.22-")
     assert "tactical_context" in service_registry["services"]
     assert service_registry["policy"]["service_boundaries_follow_artifact_ownership_not_file_size"] is True
-    assert execution_domains["registry"] == "V3_EXECUTION_DOMAINS_V1"
-    assert execution_domains["domain_count"] == 7
+    assert execution_domains["registry"] == "V3_EXECUTION_DOMAINS_V2"
+    assert execution_domains["domain_count"] == 11
+    assert execution_domains["phase_count"] == 6
     assert interactive_registry["registry"] == "V3_INTERACTIVE_SERVICES_V1"
     assert interactive_registry["architecture"] == "UNIFIED_INTERACTIVE_FASTPATH"
     assert len(interactive_registry["services"]) == 1

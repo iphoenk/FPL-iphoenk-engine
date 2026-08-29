@@ -107,7 +107,7 @@ jobs:
           echo "extra=$extra" >> "$GITHUB_OUTPUT"
           echo "selected profile=$profile mode=$mode visible=${{ steps.cadence.outputs.visible_mode }}"
 
-      - name: Run governed seven-domain execution profile
+      - name: Run governed eleven-domain / six-phase execution profile
         if: steps.cadence.outputs.should_collect == 'true'
         shell: bash
         env:

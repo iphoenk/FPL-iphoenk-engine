@@ -32,24 +32,43 @@ def _validate_runtime_service_states(runtime_performance: dict) -> None:
 
 
 def _validate_runtime_architecture(snapshot_runtime: dict, runtime_performance: dict) -> None:
-    assert snapshot_runtime.get("id") == "v3-domain-pipeline-v1", snapshot_runtime
-    assert snapshot_runtime.get("architecture") == "V3_DOMAIN_PIPELINE", snapshot_runtime
+    canonical_domains = [
+        "official_state",
+        "personal_team_state",
+        "football_context",
+        "market_context",
+        "prediction",
+        "squad_decision",
+        "challenger_analysis",
+        "framework_governance",
+        "prediction_validation",
+        "reporting",
+        "serving",
+    ]
+    assert snapshot_runtime.get("id") == "v3-domain-pipeline-v2", snapshot_runtime
+    assert snapshot_runtime.get("architecture") == "V3_CANONICAL_DOMAIN_PIPELINE", snapshot_runtime
     assert snapshot_runtime.get("dependency_aware_scheduling") is True
     assert snapshot_runtime.get("shared_official_cache") is True
     assert snapshot_runtime.get("shared_canonical_domain_workspace") is True
     assert snapshot_runtime.get("cross_capability_copy_promotion") is False
-    assert int(snapshot_runtime.get("execution_domain_count") or 0) == 7
-    assert int(snapshot_runtime.get("service_count") or 0) == 7
+    assert int(snapshot_runtime.get("execution_domain_count") or 0) == 11
+    assert int(snapshot_runtime.get("execution_phase_count") or 0) == 6
+    assert int(snapshot_runtime.get("service_count") or 0) == 11
     assert int(snapshot_runtime.get("capability_owner_count") or 0) == 21
 
-    assert runtime_performance.get("runtime_id") == "v3-domain-pipeline-v1", runtime_performance
-    assert runtime_performance.get("architecture") == "V3_DOMAIN_PIPELINE", runtime_performance
-    assert int(runtime_performance.get("execution_domain_count") or 0) == 7
+    assert runtime_performance.get("runtime_id") == "v3-domain-pipeline-v2", runtime_performance
+    assert runtime_performance.get("architecture") == "V3_CANONICAL_DOMAIN_PIPELINE", runtime_performance
+    assert int(runtime_performance.get("execution_domain_count") or 0) == 11
+    assert int(runtime_performance.get("execution_phase_count") or 0) == 6
     assert int(runtime_performance.get("capability_owner_count") or 0) == 21
     assert runtime_performance.get("cross_capability_copy_promotion") is False
+    assert runtime_performance.get("canonical_domain_order") == canonical_domains, runtime_performance
     domains = runtime_performance.get("execution_domains") or {}
-    assert list(domains) == ["ACQUIRE", "ENRICH", "MODEL", "MARKET", "DECISION", "GOVERNANCE", "PUBLISH"], domains
+    assert set(domains) == set(canonical_domains), domains
     assert all((row or {}).get("status") == "SUCCESS" for row in domains.values())
+    phase_results = runtime_performance.get("execution_phase_results") or {}
+    assert list(phase_results) == ["ACQUIRE", "ENRICH", "MODEL", "DECISION", "GOVERNANCE", "PUBLISH"]
+    assert all((row or {}).get("status") == "SUCCESS" for row in phase_results.values())
     assert len(runtime_performance.get("services") or {}) == 21
 
 

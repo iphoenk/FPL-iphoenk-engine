@@ -93,7 +93,8 @@ def test_active_v3_workflow_and_domains_have_single_runtime_owner() -> None:
     services = _json("config/v3_service_registry.json")["services"]
     assigned = [name for spec in domains["domains"].values() for name in spec.get("capabilities", [])]
 
-    assert len(domains["domains"]) == 7
+    assert domains["phase_count"] == 6
+    assert len(domains["domains"]) == 11
     assert len(services) == 21
     assert len(assigned) == len(set(assigned)) == len(services)
     assert set(assigned) == set(services)

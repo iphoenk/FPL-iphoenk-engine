@@ -8,7 +8,7 @@ Production acceptance: COMPLETE
 Latest production-proven code-bearing merge: `f02933343d275a9e4c34b7f690c4ee34cf822414`  
 FAST refresh target: **<10 seconds**  
 Validated warm serving hard ceiling: **<1 second**  
-Active background capabilities: **21**, grouped into **7 execution domains**
+Active background capabilities: **21**, mapped into the **11-domain / 6-phase candidate topology**; accepted production evidence remains on the predecessor 7-domain topology until merge and runtime publication
 
 This file is the single human-readable roadmap for the operational V3 stream. Git history preserves historical release notes; this file represents the **current canonical state**. Metadata-only closeout commits may follow the latest accepted code-bearing merge without redefining behavioral acceptance.
 
@@ -55,7 +55,7 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 32. REC-41 tactical/system evidence remains advisory-only and may not mutate xMins or xPts without a later calibrated model opt-in.
 33. Stale artifacts may never be presented as fresh merely to meet a latency target.
 34. Network/source refresh latency and warm-serving latency are measured separately.
-35. The 7 execution domains must cover all 21 background capabilities exactly once and may not become alternate business owners.
+35. The 11 canonical execution domains across 6 phases must cover all 21 background capabilities exactly once and may not become alternate business owners.
 36. Runtime and report-time competitive-load governance must use one canonical policy; duplicated policy files are forbidden.
 37. Version-stamped commits must not drift from `src/version.py`; release metadata surfaces must stay synchronized.
 38. Accidental placeholder/probe files are prohibited from protected release branches.
@@ -71,7 +71,7 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 | Validated warm serving | <1000ms hard ceiling, 500ms target | V3.39 housekeeping candidate median 7.595ms, max 157.275ms |
 | Runtime publication | rolling parentless snapshot | V3.39 published from `f0293334…` |
 | Official-first | closed explicit matrix | production |
-| Architecture ownership | 21 capabilities mapped exactly once into 7 domains | production guard |
+| Architecture ownership | 21 capabilities mapped exactly once into 11 domains / 6 phases | candidate guard; predecessor 7-domain runtime remains latest production evidence |
 | Competitive-load policy | one canonical runtime/report-time config | V3.39 production |
 | Repository hygiene | no placeholder/probe files; zero version-stamped release tests | V3.39 production CI guard |
 | Prediction freeze state machine | overdue genuine pre-deadline forecast recovery | production PR #148 |
@@ -251,5 +251,5 @@ A task is DONE only when implementation, deterministic tests, documentation and 
 2. Continue REC-04 settled prediction collection and evaluate genuinely frozen forecasts as GW samples settle.
 3. Keep REC-07, REC-22, REC-23, REC-26, REC-33 and REC-41 maturity monitors yellow until evidence supports promotion.
 4. Any future version-stamped change must update `src/version.py` and release metadata surfaces in the same release flow.
-5. Preserve one canonical competitive-load policy, zero version-stamped release tests, and the 21-capability/7-domain equivalence gate.
+5. Preserve one canonical competitive-load policy, zero version-stamped release tests, and the 21-capability/11-domain/6-phase equivalence gate.
 6. Do not treat runtime GREEN as proof of predictive accuracy.

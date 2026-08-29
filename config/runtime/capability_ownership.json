@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "registry": "V3_COARSE_CAPABILITY_OWNERSHIP_V1",
+  "principle": "ONE_RUNTIME_OWNER_PER_COARSE_CAPABILITY_INTERNAL_MODULES_REMAIN_MODULAR",
+  "policy": {
+    "coarse_services_are_runtime_owners": true,
+    "legacy_service_ids_are_implementation_steps_only": true,
+    "compatibility_modules_may_not_be_runtime_owners": true,
+    "staged_artifact_multiwriter_requires_explicit_declaration": true,
+    "prediction_does_not_own_decision": true,
+    "challenger_does_not_overwrite_canonical_decision": true,
+    "reporting_owns_predeadline_snapshot_capture": true,
+    "prediction_validation_consumes_snapshot_only": true
+  },
+  "runtime_owners": [
+    "official_state",
+    "personal_team_state",
+    "football_context",
+    "market_context",
+    "prediction",
+    "squad_decision",
+    "challenger_analysis",
+    "framework_governance",
+    "prediction_validation",
+    "reporting",
+    "serving"
+  ],
+  "legacy_owner_map": {
+    "official_snapshot": "official_state",
+    "rules": "official_state",
+    "team_state": "personal_team_state",
+    "market_state": "personal_team_state",
+    "live_state": "personal_team_state",
+    "advanced_stats": "personal_team_state",
+    "base_snapshot": "personal_team_state",
+    "authenticated_official": "personal_team_state",
+    "historical_prior": "football_context",
+    "tactical_context": "football_context",
+    "source_layer": "football_context",
+    "price": "market_context",
+    "official_detail": "market_context",
+    "prediction": "prediction",
+    "lineup_governance": "squad_decision",
+    "prediction_evaluation": "prediction_validation",
+    "challenger": "challenger_analysis",
+    "governance": "framework_governance",
+    "watchlist": "reporting",
+    "reporting": "reporting",
+    "report_materializer": "serving"
+  },
+  "staged_artifacts": {
+    "health.json": {"canonical_owner": "personal_team_state", "allowed_writers": ["official_state", "personal_team_state"]},
+    "prices.json": {"canonical_owner": "market_context", "allowed_writers": ["personal_team_state", "market_context"]},
+    "user_report.json": {"canonical_owner": "serving", "allowed_writers": ["reporting", "serving"]}
+  },
+  "compatibility_only_modules": [
+    "src.engine",
+    "src.engines.decision_intelligence_v313",
+    "src.engines.decision_hotpath_service",
+    "src.runtime_v3.instant_serving",
+    "src.runtime_v3.domain_process_runner"
+  ],
+  "notes": {
+    "personal_team_state": "This runtime boundary retains base-state fan-in, market seed, live seed and advanced-feature hydration during the safe migration. It does not transfer semantic football or market methodology ownership away from their canonical internal modules.",
+    "reporting": "Watchlist remains inside reporting because its current contract requires postflight framework state. Moving it earlier into squad_decision would change dependency semantics.",
+    "legacy_catalog": "config/v3_service_registry.json remains an internal implementation-step compatibility catalog during migration and is not the runtime scheduling SSOT."
+  }
+}

@@ -1,26 +1,63 @@
-# V4.9.2 service architecture
+# V4.9.6 service architecture
 
-V4.9.2 runs eight **independent**, process-isolated services on one host. The orchestrator owns dependency ordering, contract validation, immutable-artifact locks, and the final fail-closed state.
+V4.9.6 is the canonical production release on `v4-prediction-engine`. `config/release_manifest.json` is the release-identity source of truth. The production engine runs 13 independent, process-isolated services on one host under a dependency-ready DAG orchestrator. Mutable runtime state is published separately to `runtime-data-v4`, so the protected canonical code branch is not used as a rolling data store.
 
-1. `raw_snapshot` is the only service permitted to call the Official FPL API. It also conditionally fetches GW1 picks and reconstructs purchase prices before publishing `snapshot.v1`.
-2. `enrichment` reads the locked raw contract, optionally refreshes community statistics, and publishes `enrichment.v1` with the raw SHA-256 in its lineage.
-3. `prediction` reads both locked contracts and runs the V4.9.2 prediction-quality model. Its latest output records both SHA-256 digests.
-4. `rules_compliance` validates FPL rules.
-5. `framework_preflight` runs checkpoint-aware PRE-FLIGHT governance.
-6. `optimization` runs the sell-cost-correct optimizer with a bounded value term and the unified decision pipeline.
-7. `framework_postflight` runs the 16-check POST-FLIGHT gate.
-8. `report_governance` emits the checkpoint-aware V4.9.2 decision.
+## Service graph
 
-Every registry boundary is `INDEPENDENT`. A successful raw, enrichment, or prediction process is locked immediately; any later digest mismatch stops orchestration. Runtime contracts are written beneath `data/runtime/` and are intentionally excluded from Git.
+1. `architecture_guard` validates ownership, registry uniqueness, release coherence, canonical rule ownership, Official FPL fetch ownership, and duplicate implementation guardrails.
+2. `raw_snapshot` is the sole service permitted to acquire Official FPL snapshot data and publishes the immutable raw contract.
+3. `enrichment` consumes the raw contract, optionally refreshes community statistics, and publishes enrichment evidence with lineage.
+4. `prediction` consumes the locked raw and enrichment contracts and publishes the current V4.9.6 prediction/runtime surface.
+5. `validation_lifecycle` freezes genuine point-in-time deadline snapshots and manages the immutable reconciliation lifecycle without retroactive backfilling.
+6. `reconciliation_readiness` audits the frozen-snapshot to submitted-picks to finished-GW to reconciliation chain without performing Official FPL refetches.
+7. `rules_compliance` validates the canonical FPL 2026/27 rules contract.
+8. `framework_preflight` runs the checkpoint-aware PRE-FLIGHT health and governance audit.
+9. `optimization` runs the deterministic decision-compute path, Wildcard/package evaluation, lineup optimization, and recommendation sanity checks.
+10. `user_decision_overlay` applies a legal target-GW user decision without overwriting the advisory engine recommendation.
+11. `personal_gw_scorecard` produces immutable finished-GW scorecards and planning-GW projected team points from the effective plan.
+12. `framework_postflight` validates both engine and effective plans, promotes evidence-backed Official-FPL-first capabilities, and finalizes framework health.
+13. `report_governance` emits the checkpoint-governed decision/report state after post-flight and scorecard evidence are available.
 
-The prediction boundary continues to publish the V4.8.0 operational surface (`live.json`, `prices.json`, `price_cache.json`, `health.json`, `chips.json`, the per-GW archive, and append-only `history.jsonl`). `latest.json` keeps pointers to every artifact consumed by reliability and governance checks.
+Every service boundary remains `INDEPENDENT`. Dependency edges determine execution order, while services with no dependency edge may run concurrently. Raw snapshot, enrichment, and prediction artifacts are lineage-locked after PASS; mutation or contract mismatch fails closed.
 
-The raw boundary validates the actual authoritative squad, whether locked or officially submitted, before publishing: 15 unique elements, exact 2 GK/5 DEF/5 MID/3 FWD composition, identity/position consistency, and no more than three players per club. The live artifact retains team, position, captain, and vice-captain fields. Endpoint health distinguishes unavailable picks and idle event-live data from genuinely live data.
+## Authority and invariants
 
-Independent community enrichment requests are submitted together and then collected. Component timings remain visible as `raw_snapshot_ms`, `enrichment_ms`, and `prediction_ms`, while `engine_before_snapshot_write_ms` is preserved for workflow compatibility.
+Official FPL factual state is acquired only by `raw_snapshot`. Downstream services consume contracts rather than refetching the same authority. The engine recommendation remains advisory. A valid user override may change the legal squad, XI, formation, captain, vice-captain, or chip for its declared target GW, while the model alternative and comparison evidence remain preserved.
 
-The centralized V4.9.2 quality gate verifies 8/8 service evidence, lineage, decision equivalence, sell-cost correctness, Gate 0 (16), DSS Core (50), DSS Extension (16), and Enhancement Layers (8).
+Squad and plan legality remain fail-closed. The authoritative 15-player structure must retain exact 2 GK / 5 DEF / 5 MID / 3 FWD composition, unique elements, position identity, affordability, and the three-per-club limit. XI, captaincy, vice-captaincy, chip, and formation legality are checked again after the human overlay.
 
-Operational health and predictive readiness are separate contracts. `pipeline_health` covers source availability, freshness, registry integrity, rules, contracts, and Gate 0. `prediction_health` covers critical model capabilities. `capability_health` preserves the full registry view, including honest `PARTIAL` optional inputs and `WARMUP` calibration stores. A critical WARMUP produces AMBER prediction health and a PROVISIONAL decision engine: recommendations remain visible, but automatic GO is held until calibration has an eligible reconciled post-GW sample.
+The validation lifecycle is point-in-time and immutable. Retroactive deadline snapshots are rejected, finished-GW reconciliation is idempotent, and starter truth is taken from Official FPL `stats.starts` rather than inferred from minutes.
 
-The canonical service workflow runs at 04.30, 12.30, and 21.30 Asia/Jakarta. It uses the process-isolated orchestrator with deep statistics enabled and supersedes the old scheduled monolith. `live_service.py` also calls this orchestrator: refresh is token-protected and SSE clients consume one shared polling broadcaster.
+## Health semantics
+
+`pipeline_health`, `prediction_health`, and `capability_health` are intentionally separate. `pipeline_health` describes operational integrity such as source availability, freshness, registries, contracts, rules, and Gate 0. `prediction_health` describes readiness of critical predictive capabilities. `capability_health` exposes the complete registry state, including truthful `PARTIAL` and `WARMUP` capabilities.
+
+Therefore a production run may legitimately have a GREEN operational pipeline while prediction health remains AMBER and the decision engine remains PROVISIONAL. In that state governed recommendations may still be available, but `go_allowed` remains false until the predictive readiness requirements are satisfied. Operational GREEN must not be misreported as predictive GREEN.
+
+## Protected code and runtime publication
+
+The canonical code branch is `v4-prediction-engine` and remains protected by the required `core / validate-v4` check. Generated production data must not push directly to that branch.
+
+The reusable production workflow hydrates prior mutable state from `runtime-data-v4` when it exists. It then runs deterministic tests, the 13-service orchestrator, the centralized quality gate, and the core acceptance summary. Only after those checks pass may the core runtime snapshot be published to `runtime-data-v4`.
+
+Advanced-enrichment ablation remains a strict diagnostic after core publication. Full-shadow parity is still required for that diagnostic. Successful ablation evidence is then committed to the same runtime branch, followed by a publication verification that confirms the expected runtime artifacts exist.
+
+This separation preserves branch protection while retaining rolling persistence. Recovery also reads the dedicated V4 runtime branch rather than depending on mutable data commits to the canonical code branch.
+
+## Scheduling and visibility governance
+
+The production gate performs the master internal evaluation every hour at minute `:30` WIB. GitHub cron is UTC, and the minute component remains `:30` after timezone conversion. The checkpoint policy, not the cron expression alone, determines whether a run is internal-only or authorized to emit a visible report, and it governs deadline-day, live-match, price-alert, and permitted emergency modes.
+
+The recovery workflow remains a scheduled safety net for stale runtime checkpoints. Manual deep-stats execution delegates to the same reusable production core instead of maintaining a second implementation path.
+
+## Release status
+
+Canonical release: `4.9.6`
+
+Canonical code branch: `v4-prediction-engine`
+
+Mutable runtime branch: `runtime-data-v4`
+
+Release status: `CANONICAL_PRODUCTION_GREEN`
+
+Required canonical check: `core / validate-v4`

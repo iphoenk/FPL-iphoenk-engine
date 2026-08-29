@@ -21,9 +21,9 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: pip install -r requirements.txt pytest
-      - name: Compile comparator and tactical parity path
-        run: python -m py_compile src/v5/evaluation/owned_challenger_comparator.py src/v5/evaluation/owned_challenger_context.py src/v5/intelligence/observed_tactical_context.py src/v5/intelligence/tactical_matchup.py src/v5/intelligence/full_core_enrichment.py src/v5/decision/tactical_consumption.py src/v5/services/prediction.py src/v5/services/evaluation.py src/v5/services/decision_tactical.py src/v5/services/watchlist.py src/v5/services/orchestrator_beta.py src/v5/reporting.py
-      - name: Comparator and tactical acceptance tests
-        run: python -m pytest -q tests/test_v5_owned_challenger_comparator.py tests/test_v5_owned_challenger_context.py tests/test_v5_owned_challenger_scenarios.py tests/test_v5_observed_tactical_context.py tests/test_v5_tactical_decision_consumption.py
+      - name: Compile comparator, tactical and market parity paths
+        run: python -m py_compile src/v5/evaluation/owned_challenger_comparator.py src/v5/evaluation/owned_challenger_context.py src/v5/intelligence/observed_tactical_context.py src/v5/intelligence/tactical_matchup.py src/v5/intelligence/full_core_enrichment.py src/v5/decision/tactical_consumption.py src/v5/price_service.py src/v5/services/price.py src/v5/services/prediction.py src/v5/services/evaluation.py src/v5/services/decision_tactical.py src/v5/services/watchlist.py src/v5/services/orchestrator_beta.py src/v5/reporting.py
+      - name: Comparator tactical and DSS-42 acceptance tests
+        run: python -m pytest -q tests/test_v5_owned_challenger_comparator.py tests/test_v5_owned_challenger_context.py tests/test_v5_owned_challenger_scenarios.py tests/test_v5_observed_tactical_context.py tests/test_v5_tactical_decision_consumption.py tests/test_v5_transfer_momentum.py
       - name: Architecture regression
         run: python -m pytest -q tests/test_v5_microservices.py tests/test_v5_reporting_watchlist_performance.py tests/test_v5_v313_reporting_watchlist.py tests/test_v5_beta_composition.py tests/test_v5_persistence_contract.py tests/test_v5_time_schedule_governance.py

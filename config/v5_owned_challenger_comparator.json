@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_owned_challenger_comparator_v1",
+  "status": "ACTIVE_ALPHA",
+  "authority": "ADVISORY_ONLY",
+  "bounded_context_owner": "evaluation",
+  "candidate_sources": ["GOVERNED_WATCHLIST", "EMERGING_CHALLENGER"],
+  "horizons_gw": [1, 2, 3, 5],
+  "strategic_horizons_gw": [10, 15],
+  "pairing": {
+    "same_position_required": true,
+    "max_owned_targets_per_challenger": 3,
+    "max_pairs_total": 24,
+    "price_band_tenths": 20,
+    "rank_owned_by": ["xpts_5_asc", "start_probability_asc", "sell_value_desc"]
+  },
+  "eligibility": {
+    "minimum_start_probability": 0.45,
+    "maximum_dnp_probability": 0.35,
+    "minimum_projection_confidence": ["LOW", "MEDIUM", "HIGH"],
+    "block_unavailable_status": true
+  },
+  "signal": {
+    "interesting_gain_5gw": 0.75,
+    "strong_gain_5gw": 2.5,
+    "sustainable_gain_5gw": 4.0,
+    "minimum_signal_to_noise": 0.75
+  },
+  "decision": {
+    "watch_gain_5gw": 0.75,
+    "review_gain_5gw": 1.5,
+    "lean_gain_5gw": 3.0,
+    "strong_gain_5gw": 5.0,
+    "minimum_lean_signal_to_noise": 0.8,
+    "minimum_strong_signal_to_noise": 1.1,
+    "cap_to_review_when_critical_evidence_missing": true,
+    "missing_critical_evidence": ["future_tactical", "workload_context"],
+    "wildcard_zero_transfer_cost": true,
+    "free_hit_permanent_transfer_cap": "REVIEW",
+    "unknown_ft_cost_cap": "REVIEW"
+  },
+  "structural_cost": {
+    "normal_hit_cost_points": 4.0,
+    "apply_hit_only_when_authoritative_transfer_state_confirms": true,
+    "unknown_transfer_state": "PENDING"
+  },
+  "evidence": {
+    "future_tactical_required_for_transfer_actionability": true,
+    "workload_required_for_transfer_actionability": true,
+    "missing_is_unverified_not_zero": true,
+    "single_match_haul_is_discovery_only": true,
+    "external_consensus_is_advisory_not_majority_vote": true
+  },
+  "governance": {
+    "never_mutate_canonical_transfer_decision": true,
+    "never_mutate_starting_xi": true,
+    "never_mutate_captaincy": true,
+    "never_mutate_chip": true,
+    "never_mutate_watchlist_membership": true,
+    "reuse_canonical_prediction": true,
+    "reuse_canonical_finance": true,
+    "reuse_canonical_watchlist": true,
+    "reuse_canonical_legality": true,
+    "no_network_fetch": true
+  }
+}

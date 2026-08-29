@@ -45,6 +45,7 @@ def handle(operation:str,payload:dict[str,Any])->Any:
         "truth":truth,
         "prediction":prediction,
         "watchlist":watchlist,
+        "decision_context":decision,
         "emerging_candidates":payload.get("emerging_candidates") if isinstance(payload.get("emerging_candidates"),list) else [],
         "workload_context":payload.get("workload_context") if isinstance(payload.get("workload_context"),dict) else {},
         "transfer_state":payload.get("transfer_state") if isinstance(payload.get("transfer_state"),dict) else {},

@@ -16,6 +16,7 @@ def test_composite_release_gate_preserves_all_underlying_integrations():
         "fast_runtime",
         "fast_slo_guard",
         "material_equivalence",
+        "definition_of_done",
     ]
     commands = [" ".join(gate.command) for gate in gates]
     assert any("domain_orchestrator --mode daily --stats --profile full_refresh" in command for command in commands)
@@ -29,3 +30,4 @@ def test_composite_release_gate_preserves_all_underlying_integrations():
     assert len(fast_commands) == 2
     assert any("performance_guard --profile fast_decision" in command for command in commands)
     assert any("equivalence_acceptance" in command for command in commands)
+    assert any("definition_of_done --scope candidate" in command for command in commands)

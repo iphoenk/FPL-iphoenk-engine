@@ -28,7 +28,18 @@ def test_every_registered_service_has_real_module_matching_command_and_contracts
     contracts = json.loads((ROOT / "config/service_contract_registry.json").read_text())["contracts"]
     services = registry["services"]
 
-    assert len(services) == registry["guardrails"]["service_count"] == 13
+    expected_ids = [
+        "raw_snapshot",
+        "enrichment",
+        "prediction",
+        "validation",
+        "optimization",
+        "user_decision_overlay",
+        "personal_gw_scorecard",
+        "governance",
+    ]
+    assert [row["id"] for row in services] == expected_ids
+    assert len(services) == registry["guardrails"]["service_count"] == 8
     assert len({row["id"] for row in services}) == len(services)
 
     for service in services:
@@ -52,6 +63,15 @@ def test_registered_contract_producers_are_unique_and_complete():
     assert all((contracts[name].get("path") or "").strip() for name in produced)
 
 
+def test_architecture_guard_is_pre_orchestration_assurance_not_runtime_microservice():
+    registry = json.loads((ROOT / "config/service_registry.json").read_text())
+    registered = {row["module"] for row in registry["services"]}
+    assert "src.services.architecture_guard_service" not in registered
+    core = (ROOT / ".github/workflows/fpl-engine-core.yml").read_text(encoding="utf-8")
+    assert "python -m src.services.architecture_guard_service" in core
+    assert core.index("python -m src.services.architecture_guard_service") < core.index("python -m src.services.orchestrator")
+
+
 def test_support_modules_are_not_accidental_business_microservices():
     registry = json.loads((ROOT / "config/service_registry.json").read_text())
     registered = {row["module"] for row in registry["services"]}
@@ -61,8 +81,26 @@ def test_support_modules_are_not_accidental_business_microservices():
         "src.services.checkpoint_timing_probe",
         "src.services.runtime_publish_stamp",
         "src.services.competitive_load_service",
+        "src.services.architecture_guard_service",
     }
     assert not (registered & support_only)
+
+
+def test_validation_boundary_preserves_old_artifact_contracts():
+    registry = json.loads((ROOT / "config/service_registry.json").read_text())
+    row = next(item for item in registry["services"] if item["id"] == "validation")
+    assert set(row["produces"]) == {
+        "validation_lifecycle",
+        "reconciliation_readiness",
+        "compliance",
+        "framework_preflight",
+    }
+
+
+def test_governance_boundary_preserves_old_artifact_contracts():
+    registry = json.loads((ROOT / "config/service_registry.json").read_text())
+    row = next(item for item in registry["services"] if item["id"] == "governance")
+    assert set(row["produces"]) == {"framework_postflight", "checkpoint_decision"}
 
 
 def test_manual_authority_registry_points_to_user_overlay_owner():

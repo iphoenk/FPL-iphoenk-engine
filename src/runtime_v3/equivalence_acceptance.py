@@ -117,7 +117,7 @@ def _copy_seed(source: Path, target: Path) -> None:
         shutil.copy2(item, destination)
 
 
-def _run(module: str, data_dir: Path, cache_root: Path) -> dict[str, Any]:
+def _run(module: str, data_dir: Path, cache_root: Path, profile: str) -> dict[str, Any]:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT)
     env["FPL_DATA_DIR"] = str(data_dir)
@@ -131,57 +131,107 @@ def _run(module: str, data_dir: Path, cache_root: Path) -> dict[str, Any]:
         "daily",
         "--stats",
         "--profile",
-        "fast_decision",
+        profile,
     ]
     proc = subprocess.run(command, cwd=ROOT, env=env, text=True, capture_output=True, check=False)
     result = {
         "module": module,
+        "profile": profile,
         "returncode": proc.returncode,
-        "stdout_tail": (proc.stdout or "")[-2000:],
-        "stderr_tail": (proc.stderr or "")[-2000:],
+        "stdout_tail": (proc.stdout or "")[-3000:],
+        "stderr_tail": (proc.stderr or "")[-3000:],
     }
     if proc.returncode != 0:
         raise RuntimeError(json.dumps(result, ensure_ascii=False))
     return result
 
 
+def _differences(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: {"left": left.get(key), "right": right.get(key)}
+        for key in left
+        if left.get(key) != right.get(key)
+    }
+
+
 def run() -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="fpl-v3-equivalence-") as tmp:
         root = Path(tmp)
-        legacy_data = root / "legacy"
-        domain_data = root / "domain"
-        shared_cache = root / "cache"
-        _copy_seed(DATA, legacy_data)
-        _copy_seed(DATA, domain_data)
+        predecessor_data = root / "predecessor-fast"
+        compiled_fast_data = root / "compiled-fast"
+        compiled_full_data = root / "compiled-full"
+        profile_fast_data = root / "profile-fast"
+        predecessor_cache = root / "predecessor-cache"
+        profile_cache = root / "profile-cache"
 
-        legacy_run = _run("src.runtime_v3.orchestrator", legacy_data, shared_cache)
-        domain_run = _run("src.runtime_v3.domain_orchestrator", domain_data, shared_cache)
-        legacy_signature = material_signature(legacy_data)
-        domain_signature = material_signature(domain_data)
+        for target in (predecessor_data, compiled_fast_data, compiled_full_data, profile_fast_data):
+            _copy_seed(DATA, target)
 
-        if legacy_signature != domain_signature:
-            differences = {
-                key: {"legacy": legacy_signature.get(key), "domain": domain_signature.get(key)}
-                for key in legacy_signature
-                if legacy_signature.get(key) != domain_signature.get(key)
-            }
+        predecessor_run = _run(
+            "src.runtime_v3.domain_orchestrator",
+            predecessor_data,
+            predecessor_cache,
+            "fast_decision",
+        )
+        compiled_fast_run = _run(
+            "src.runtime_v3.compiled_orchestrator",
+            compiled_fast_data,
+            predecessor_cache,
+            "fast_decision",
+        )
+        predecessor_signature = material_signature(predecessor_data)
+        compiled_signature = material_signature(compiled_fast_data)
+        predecessor_differences = _differences(predecessor_signature, compiled_signature)
+        if predecessor_differences:
             result = {
                 "status": "FAIL",
-                "contract": "V3_MATERIAL_DECISION_EQUIVALENCE_V1",
-                "differences": differences,
-                "legacy_run": legacy_run,
-                "domain_run": domain_run,
+                "contract": "V3_COMPILED_CONTROL_PLANE_EQUIVALENCE_V2",
+                "failed_comparison": "PRODUCTION_PREDECESSOR_VS_COMPILED_FAST",
+                "differences": predecessor_differences,
+                "predecessor_run": predecessor_run,
+                "compiled_fast_run": compiled_fast_run,
+            }
+            print(json.dumps(result, ensure_ascii=False))
+            raise SystemExit(1)
+
+        compiled_full_run = _run(
+            "src.runtime_v3.compiled_orchestrator",
+            compiled_full_data,
+            profile_cache,
+            "full_refresh",
+        )
+        profile_fast_run = _run(
+            "src.runtime_v3.compiled_orchestrator",
+            profile_fast_data,
+            profile_cache,
+            "fast_decision",
+        )
+        full_signature = material_signature(compiled_full_data)
+        fast_signature = material_signature(profile_fast_data)
+        profile_differences = _differences(full_signature, fast_signature)
+        if profile_differences:
+            result = {
+                "status": "FAIL",
+                "contract": "V3_COMPILED_CONTROL_PLANE_EQUIVALENCE_V2",
+                "failed_comparison": "COMPILED_FULL_VS_FAST",
+                "differences": profile_differences,
+                "compiled_full_run": compiled_full_run,
+                "profile_fast_run": profile_fast_run,
             }
             print(json.dumps(result, ensure_ascii=False))
             raise SystemExit(1)
 
         result = {
             "status": "PASS",
-            "contract": "V3_MATERIAL_DECISION_EQUIVALENCE_V1",
+            "contract": "V3_COMPILED_CONTROL_PLANE_EQUIVALENCE_V2",
             "same_input_seed": True,
-            "shared_official_cache": True,
-            "compared": list(legacy_signature),
-            "signature": domain_signature,
+            "shared_official_cache_per_comparison": True,
+            "compared": list(compiled_signature),
+            "comparisons": {
+                "production_predecessor_vs_compiled_fast": "PASS",
+                "compiled_full_vs_fast": "PASS",
+            },
+            "signature": compiled_signature,
         }
         print(json.dumps(result, ensure_ascii=False))
         return result

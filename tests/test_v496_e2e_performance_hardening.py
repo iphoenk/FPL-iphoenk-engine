@@ -1,0 +1,91 @@
+from __future__ import annotations
+
+import json
+from datetime import timedelta
+
+from src.engines import v4_decision_pipeline
+from src.services import enrichment_service
+from src.sources import official_fpl
+from src.utils import iso_now, utcnow
+
+
+def _prediction_row(point_in_time: str, xpts: float = 5.0) -> dict:
+    return {
+        "element": 1,
+        "name": "Example",
+        "position": "MID",
+        "xpts_3": xpts,
+        "xpts_5": xpts,
+        "xpts_10": xpts,
+        "xpts_15": xpts,
+        "uncertainty": 0.2,
+        "fixtures": [
+            {
+                "event": 3,
+                "xpts": xpts,
+                "provenance": {"point_in_time": point_in_time, "model": "v4.9.2-truthful-health"},
+            }
+        ],
+    }
+
+
+def test_semantic_decision_fingerprint_ignores_runtime_timestamps(monkeypatch):
+    monkeypatch.setattr(v4_decision_pipeline, "read_json", lambda path, default=None: {})
+    universe = {"players": [{"element": 1, "name": "Example", "position": "MID", "team_id": 1, "team": "A", "now_cost": 70, "status": "a"}]}
+    locked = {"players": [{"element": 1, "sell_cost": 70}], "planning_gw": 3}
+    first = {"model_version": "v4.9.2-truthful-health", "players": [_prediction_row("2026-08-29T10:00:00+00:00")]}
+    second = {"model_version": "v4.9.2-truthful-health", "players": [_prediction_row("2026-08-29T11:00:00+00:00")]}
+    assert v4_decision_pipeline._semantic_fingerprint(first, universe, locked) == v4_decision_pipeline._semantic_fingerprint(second, universe, locked)
+
+
+def test_semantic_decision_fingerprint_changes_when_decision_input_changes(monkeypatch):
+    monkeypatch.setattr(v4_decision_pipeline, "read_json", lambda path, default=None: {})
+    universe = {"players": [{"element": 1, "name": "Example", "position": "MID", "team_id": 1, "team": "A", "now_cost": 70, "status": "a"}]}
+    locked = {"players": [{"element": 1, "sell_cost": 70}], "planning_gw": 3}
+    first = {"model_version": "v4.9.2-truthful-health", "players": [_prediction_row("2026-08-29T10:00:00+00:00", 5.0)]}
+    changed = {"model_version": "v4.9.2-truthful-health", "players": [_prediction_row("2026-08-29T10:00:00+00:00", 5.1)]}
+    assert v4_decision_pipeline._semantic_fingerprint(first, universe, locked) != v4_decision_pipeline._semantic_fingerprint(changed, universe, locked)
+
+
+def test_fresh_enrichment_cache_is_reused_without_network(monkeypatch, tmp_path):
+    monkeypatch.setattr(enrichment_service, "STATS", tmp_path)
+    payload = {
+        "source": "FPL-Core-Insights",
+        "schema_valid": True,
+        "row_count": 1,
+        "rows": [{"id": 1}],
+        "fetched_at": iso_now(),
+    }
+    (tmp_path / "core_insights_gw2.json").write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(enrichment_service.core_insights, "sync_gw", lambda gw: (_ for _ in ()).throw(AssertionError("network refresh should not run")))
+    out = enrichment_service._core_insights_task(2, 60)
+    assert out["runtime_reused"] is True
+    assert out["row_count"] == 1
+
+
+def test_stale_enrichment_cache_refreshes(monkeypatch, tmp_path):
+    monkeypatch.setattr(enrichment_service, "STATS", tmp_path)
+    stale = (utcnow() - timedelta(minutes=61)).isoformat()
+    payload = {
+        "source": "FPL-Core-Insights",
+        "schema_valid": True,
+        "row_count": 1,
+        "rows": [{"id": 1}],
+        "fetched_at": stale,
+    }
+    (tmp_path / "core_insights_gw2.json").write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(
+        enrichment_service.core_insights,
+        "sync_gw",
+        lambda gw: {"source": "FPL-Core-Insights", "schema_valid": True, "row_count": 2, "rows": [{"id": 1}, {"id": 2}], "fetched_at": iso_now()},
+    )
+    out = enrichment_service._core_insights_task(2, 60)
+    assert out["runtime_reused"] is False
+    assert out["row_count"] == 2
+
+
+def test_official_fpl_http_session_is_reused():
+    first = official_fpl._session()
+    second = official_fpl._session()
+    assert first is second
+    assert first.headers.get("Connection") == "keep-alive"

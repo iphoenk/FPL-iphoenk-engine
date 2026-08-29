@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "registry": "V3_MODULE_BATCHES_V1",
+  "policy": {
+    "preserve_declared_order": true,
+    "single_process_per_batch": true,
+    "same_module_entrypoints": true,
+    "same_artifact_contracts": true,
+    "fail_closed_on_nonzero_module_exit": true,
+    "no_business_logic_in_batch_runner": true
+  },
+  "batches": {
+    "advanced_stats": [
+      {"module":"src.engines.advanced_stats_service","args":["{stats}","{deep_stats}"]},
+      {"module":"src.engines.player_features","args":[]}
+    ],
+    "official_detail": [
+      {"module":"src.engines.official_expansion","args":[]},
+      {"module":"src.engines.official_history_reconciliation","args":[]}
+    ],
+    "governance": [
+      {"module":"src.engines.framework_health_service","args":["--phase","preflight","--strict"]},
+      {"module":"src.engines.framework_health_service","args":["--phase","postflight","--strict"]},
+      {"module":"src.engines.p0_framework_health_overlay","args":[]},
+      {"module":"src.engines.lineup_framework_health_overlay","args":[]},
+      {"module":"src.engines.decision_quality_overlay","args":[]},
+      {"module":"src.engines.source_framework_overlay","args":[]},
+      {"module":"src.engines.dss_operationalization_overlay","args":[]},
+      {"module":"src.engines.dss_evidence_maturity","args":[]}
+    ],
+    "watchlist": [
+      {"module":"src.engines.dss_watchlist","args":[]},
+      {"module":"src.engines.watchlist_public_sanitize","args":[]}
+    ],
+    "reporting": [
+      {"module":"src.engines.report_architecture","args":[]},
+      {"module":"src.engines.report_enrichment","args":[]}
+    ],
+    "report_materializer": [
+      {"module":"src.engines.report_materializer","args":[]},
+      {"module":"src.engines.report_transparency_overlay","args":[]},
+      {"module":"src.engines.report_serving_validate","args":[]}
+    ]
+  }
+}

@@ -55,10 +55,21 @@ def test_dormant_modules_are_registry_classified_and_not_production_imported():
 def test_recent_competitive_load_contract_is_truthful_about_runtime_consumption():
     cfg = json.loads((ROOT / "config/recent_competitive_load.json").read_text())
     status = cfg["runtime_consumption"]
-    assert status["status"] == "EXTERNAL_REPORT_EVIDENCE_REQUIRED"
-    assert status["automated_python_consumer"] is None
+    assert status["status"] == "PARTIALLY_AUTOMATED"
+    assert "src.services.enrichment_service" in status["automated_python_consumer"]
+    assert "Premier League" in status["automated_scope"]
+    assert status["decision_mutation"] == "NOT_AUTOMATED"
     assert status["visible_report_executor_must_verify"] is True
-    assert status["future_automation_requires_new_registered_consumer"] is True
+    assert status["future_full_automation_requires_verified_external_source_adapters"] is True
+
+    ownership = json.loads((ROOT / "config/architecture_ownership_registry.json").read_text())
+    responsibilities = {row["id"]: row for row in ownership["responsibilities"]}
+    assert responsibilities["RECENT_COMPETITIVE_LOAD_EVIDENCE"]["owner"] == "enrichment"
+    assert responsibilities["RECENT_COMPETITIVE_LOAD_EVIDENCE"]["implementation"] == "src.services.competitive_load_service.build_competitive_load"
+
+    enrichment = (ROOT / "src/services/enrichment_service.py").read_text()
+    assert "build_competitive_load" in enrichment
+    assert "COMPETITIVE_LOAD_OUT" in enrichment
 
 
 def test_release_manifest_points_to_current_ownership_registry():

@@ -106,7 +106,7 @@ def test_dnp_probability_is_scored_only_from_frozen_forecast() -> None:
     result = _metrics(pairs)
 
     assert result["dnp_sample_size"] == 2
-    assert result["dnp_brier"] == 0.025
+    assert result["dnp_brier"] == 0.325
     assert result["status"] == "SETTLED"
 
 

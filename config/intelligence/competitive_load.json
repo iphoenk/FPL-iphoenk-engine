@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "contract": "COMPETITIVE_LOAD_PRIMITIVE_V1",
-  "owner": "reporting.competitive_load",
+  "owner": "governance.competitive_load",
   "scope": {
     "materialize_all_canonical_players": true,
     "report_owned": 15,

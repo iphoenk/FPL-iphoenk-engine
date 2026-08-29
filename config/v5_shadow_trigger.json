@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "v5.0.0-beta.4-baseline-provenance-1",
-  "requested_at": "2026-08-29T13:16:00Z",
+  "requested_cycle": "v5.0.0-beta.4-baseline-provenance-2",
+  "requested_at": "2026-08-29T13:18:00Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "accepted_production_baseline_from_manifest",
   "v5_role": "shadow_only",

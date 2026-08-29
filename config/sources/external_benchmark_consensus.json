@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "registry": "EXTERNAL_BENCHMARK_CONSENSUS_V1",
+  "owner": "source_layer.external_consensus",
+  "authority": {
+    "native_engine_runs_first": true,
+    "official_fpl_remains_fact_authority": true,
+    "external_is_advisory_only": true,
+    "majority_vote_forbidden": true,
+    "external_may_not_overwrite_native_truth": true,
+    "factual_divergence_requires_official_refresh": true,
+    "all_sources_unavailable_is_fail_neutral": true
+  },
+  "sources": [
+    {"id":"livefpl","role":"LIVE_EO_RANK_CHALLENGER","capabilities":["live_rank","effective_ownership","live_average","rank_tier_context"],"preferred_modes":["MATCH_MODE"],"authority_ceiling":"ADVISORY"},
+    {"id":"onefpl","role":"MARKET_PLANNER_CHALLENGER","capabilities":["transfer_trends","market_momentum","price_prediction","planner_context","captaincy_context"],"preferred_modes":["PRICE","DEADLINE","NORMAL"],"authority_ceiling":"ADVISORY"},
+    {"id":"fffix","role":"PROJECTION_LINEUP_PRICE_CHALLENGER","capabilities":["predicted_points","predicted_lineup","xmins","price_prediction","rotation","player_comparison"],"preferred_modes":["NORMAL","DEADLINE"],"authority_ceiling":"ADVISORY"},
+    {"id":"ffhub","role":"AI_DECISION_CHALLENGER","capabilities":["predicted_points","transfer_decision","fixture_comparison","player_comparison","starting_xi","captaincy"],"preferred_modes":["NORMAL","DEADLINE"],"authority_ceiling":"ADVISORY"},
+    {"id":"ffscout","role":"EDITORIAL_TACTICAL_CHALLENGER","capabilities":["rmt_projection","predicted_lineup","team_news","player_comparison","tactical_context","captaincy"],"preferred_modes":["NORMAL","DEADLINE"],"authority_ceiling":"ADVISORY"}
+  ],
+  "availability_states": ["AVAILABLE","PARTIAL","STALE","UNAVAILABLE","NO_MATERIAL_UPDATE"],
+  "directions": ["SUPPORT_NATIVE","OPPOSE_NATIVE","NEUTRAL","INSUFFICIENT_EVIDENCE"],
+  "classifications": ["ALIGN","DIVERGE","REVIEW_DIVERGENCE","NEUTRAL","INSUFFICIENT_EVIDENCE"],
+  "normalized_observation_fields": ["source","source_role","observed_at","freshness","availability","subject","horizon","signal","native_metric_if_visible","normalized_direction","confidence","evidence_note"],
+  "policy": {
+    "native_multi_gw_projection_primary": true,
+    "owned_vs_watchlist_overlay_allowed": true,
+    "owned_vs_emerging_challenger_overlay_allowed": true,
+    "single_haul_only_discovers_emerging_challenger": true,
+    "post_match_sustainability_screen_required": true,
+    "official_current_price_is_fact": true,
+    "predicted_price_eta_is_model": true,
+    "popularity_never_automatically_wins_captaincy": true,
+    "external_calls_forbidden_from_warm_interactive_path": true,
+    "missing_or_paywalled_player_signal_must_not_be_invented": true
+  }
+}

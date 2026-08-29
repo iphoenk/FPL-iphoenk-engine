@@ -51,7 +51,21 @@ def _allowed_price_urgencies() -> set[str]:
     return {str(value).upper() for value in cfg.get("allowed_urgencies") or []}
 
 
-def _state(decision: dict[str, Any], price: dict[str, Any], governance: dict[str, Any]) -> dict[str, Any]:
+def _comparator_state(comparator: dict[str, Any]) -> list[tuple[Any, ...]]:
+    rows = comparator.get("top_comparisons") if isinstance(comparator.get("top_comparisons"), list) else []
+    return [
+        (
+            (row.get("owned") or {}).get("element"),
+            (row.get("challenger") or {}).get("element"),
+            row.get("classification"),
+            ((row.get("horizons") or {}).get("5") or {}).get("raw_gain"),
+        )
+        for row in rows[:5]
+        if isinstance(row, dict)
+    ]
+
+
+def _state(decision: dict[str, Any], price: dict[str, Any], governance: dict[str, Any], comparator: dict[str, Any]) -> dict[str, Any]:
     lineup = decision.get("lineup") or {}
     xi = sorted(int(x.get("element")) for x in _starters(lineup) if x.get("element") is not None)
     allowed = _allowed_price_urgencies()
@@ -68,6 +82,7 @@ def _state(decision: dict[str, Any], price: dict[str, Any], governance: dict[str
         "vice_captain": (lineup.get("vice_captain") or {}).get("element"),
         "chip": (lineup.get("chip_context") or {}).get("active_chip"),
         "price": price_state,
+        "owned_vs_challenger": _comparator_state(comparator),
         "critical_health": {"overall": governance.get("overall"), "go_allowed": governance.get("go_allowed")},
     }
 
@@ -134,6 +149,41 @@ def _price(price: dict[str, Any], watchlist: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _comparator_view(comparator: dict[str, Any], compact: bool) -> dict[str, Any]:
+    rows = comparator.get("top_comparisons") if isinstance(comparator.get("top_comparisons"), list) else []
+    visible = []
+    for row in rows[:3 if compact else 8]:
+        if not isinstance(row, dict):
+            continue
+        h = row.get("horizons") if isinstance(row.get("horizons"), dict) else {}
+        visible.append(
+            {
+                "owned": row.get("owned"),
+                "challenger": row.get("challenger"),
+                "classification": row.get("classification"),
+                "confidence": row.get("confidence"),
+                "performance_signal": row.get("performance_signal"),
+                "gain_1gw": ((h.get("1") or {}).get("raw_gain")),
+                "gain_2gw": ((h.get("2") or {}).get("raw_gain")),
+                "gain_3gw": ((h.get("3") or {}).get("raw_gain")),
+                "gain_5gw": ((h.get("5") or {}).get("raw_gain")),
+                "affordability": row.get("affordability"),
+                "evidence": row.get("evidence"),
+                "reasons": row.get("reasons"),
+                "risks": row.get("risks"),
+                "reversal_triggers": row.get("reversal_triggers"),
+            }
+        )
+    return {
+        "status": comparator.get("status") or "UNAVAILABLE",
+        "authority": comparator.get("authority") or "ADVISORY_ONLY",
+        "pair_count": int(comparator.get("pair_count") or 0),
+        "classification_counts": comparator.get("classification_counts") or {},
+        "comparisons": visible,
+        "canonical_decision_mutation": False,
+    }
+
+
 def build_report(payload: dict[str, Any]) -> dict[str, Any]:
     cfg = load_json_config(CONFIG)
     decision = payload.get("decision") if isinstance(payload.get("decision"), dict) else {}
@@ -141,12 +191,13 @@ def build_report(payload: dict[str, Any]) -> dict[str, Any]:
     prediction = payload.get("prediction") if isinstance(payload.get("prediction"), dict) else {}
     price = payload.get("price") if isinstance(payload.get("price"), dict) else {}
     governance = payload.get("governance") if isinstance(payload.get("governance"), dict) else {}
+    comparator = payload.get("owned_challenger_comparator") if isinstance(payload.get("owned_challenger_comparator"), dict) else {}
     previous = payload.get("previous_report_state") if isinstance(payload.get("previous_report_state"), dict) else {}
     report_request = payload.get("report_request") if isinstance(payload.get("report_request"), dict) else {}
     schedule = payload.get("schedule_decision") if isinstance(payload.get("schedule_decision"), dict) else {}
     if not decision or not truth:
         raise ValueError("reporting requires decision and truth payloads")
-    current = _state(decision, price, governance)
+    current = _state(decision, price, governance, comparator)
     changes = _changes(current, previous)
     schedule_force_full = bool(schedule.get("force_full_report", False))
     force_full = bool(payload.get("force_full_report", False) or schedule_force_full)
@@ -194,6 +245,7 @@ def build_report(payload: dict[str, Any]) -> dict[str, Any]:
         "chip": lineup.get("chip_context") or {},
         "price_radar": _price(price, watchlist),
         "external_watchlist": watchlist,
+        "owned_vs_challenger": _comparator_view(comparator, compact),
         "engine_line": {
             "status": governance.get("overall") or governance.get("status") or "UNKNOWN",
             "review_only": not bool(governance.get("go_allowed", False)),
@@ -215,6 +267,7 @@ def build_report(payload: dict[str, Any]) -> dict[str, Any]:
         "schedule_governance": schedule,
         "decision_trace": trace,
         "dss": decision.get("dss") or {},
+        "owned_challenger_comparator": comparator,
         "prediction_quality": prediction.get("prediction_quality") or {},
         "source_fusion": ((prediction.get("full_core_enrichment") or {}).get("source_fusion") if isinstance(prediction.get("full_core_enrichment"), dict) else {}),
         "gate0_preflight_pass": decision.get("gate0_preflight_pass"),
@@ -224,6 +277,7 @@ def build_report(payload: dict[str, Any]) -> dict[str, Any]:
             "ruleset_id": decision.get("ruleset_id"),
             "prediction_model": prediction.get("model_version"),
             "decision_model": decision.get("model"),
+            "owned_challenger_model": comparator.get("model"),
         },
     }
     state = {"fingerprint": _fingerprint(current), "state": current}

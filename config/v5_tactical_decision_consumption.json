@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "contract": "TACTICAL_DECISION_CONSUMPTION_V1",
+  "model_id": "v5_tactical_decision_consumption_v1",
+  "authority": "ADVISORY_TIEBREAKER_ONLY",
+  "lineup": {
+    "close_score_gap": 0.35,
+    "enabled_for_xi": true,
+    "enabled_for_bench": true,
+    "enabled_for_captain_vc": true
+  },
+  "watchlist": {
+    "close_dss_score_gap": 0.05,
+    "rerank_screened_pool_only": true,
+    "membership_promotion_forbidden": true
+  },
+  "confidence_rank": {"NONE": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3},
+  "governance": {
+    "never_mutate_xpts": true,
+    "missing_tactical_is_neutral": true,
+    "close_call_only": true,
+    "never_override_legality": true,
+    "never_create_watchlist_membership": true
+  }
+}

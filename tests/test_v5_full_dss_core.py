@@ -30,7 +30,7 @@ def test_full_core_enrichment_uses_real_advanced_stats_and_fail_neutral_missing_
     assert result["status"] == "ACTIVE"
     assert set(result["capabilities"]) == {
         "advanced_stats_sync", "european_congestion", "domestic_cup_congestion", "international_load",
-        "rest_days", "preseason_prior", "current_form", "source_fusion",
+        "rest_days", "preseason_prior", "current_form", "source_fusion", "observed_tactical_context",
     }
     assert result["governance"]["missing_external_evidence_is_unavailable_not_zero"] is True
     assert result["governance"]["official_fpl_identity_price_rules_never_overridden"] is True
@@ -62,13 +62,49 @@ def test_v316_source_authority_keeps_official_native_fields_authoritative():
     assert source_spec("core_insights").kind == "enrichment"
 
 
+def _runtime_price_capabilities() -> list[str]:
+    # Static service status deliberately does not claim DSS-42. Build a real governed
+    # runtime price snapshot from Official-style rows so transfer momentum becomes
+    # ACTIVE only when event transfer counts and current prices are fully linked.
+    elements = [
+        {
+            "id": element,
+            "web_name": f"P{element}",
+            "team": (element % 20) + 1,
+            "element_type": 3,
+            "now_cost": 50 + (element % 10),
+            "selected_by_percent": "1.0",
+            "transfers_in_event": element * 10,
+            "transfers_out_event": element * 3,
+            "cost_change_event": 0,
+            "cost_change_start": 0,
+            "status": "a",
+        }
+        for element in range(1, 41)
+    ]
+    built = price_handle(
+        "build",
+        {
+            "bootstrap": {"elements": elements, "total_players": 40},
+            "previous_state": {},
+            "owned_ids": list(range(1, 16)),
+            "now": "2026-08-29T01:00:00+00:00",
+        },
+    )
+    assert built["transfer_momentum"]["evidence_state"] == "AVAILABLE"
+    assert "transfer_momentum" in built["capabilities"]
+    return list(built["capabilities"])
+
+
 def test_all_50_core_and_16_extensions_have_runtime_capability_contracts():
     truth_caps = truth_capabilities(
         {"validation": {"passed": True}, "finance": {"sell_value_complete": True}},
         {"legal": True},
     )
     prediction_caps = prediction_handle("status", {})["capabilities"]
-    price_caps = price_handle("status", {})["capabilities"]
+    static_price_caps = price_handle("status", {})["capabilities"]
+    assert "transfer_momentum" not in static_price_caps
+    price_caps = _runtime_price_capabilities()
     decision_caps = decision_handle("status", {})["capabilities"]
     evaluation_caps = evaluation_handle("status", {})["capabilities"]
     guard = evaluate_evidence_guard(

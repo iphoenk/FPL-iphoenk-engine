@@ -1,8 +1,9 @@
 {
-  "schema_version": 1,
-  "model": "v5_v3_v4_capability_parity_v1",
+  "schema_version": 2,
+  "model": "v5_v3_v4_capability_parity_v2",
   "authorities": {
-    "production": "v3.20.0",
+    "football_truth_baseline": "v3.20.0",
+    "current_production_runtime": "main",
     "research_reference": "v4",
     "candidate": "v5.0.0-beta.4"
   },
@@ -11,17 +12,22 @@
     "official_fpl_authority",
     "finance_sell_value",
     "price_radar",
+    "transfer_momentum_truthful_evidence",
     "xmins_role",
+    "observed_tactical_context",
+    "tactical_decision_consumption",
     "team_strength",
     "multi_horizon_projection",
     "package_optimizer",
     "lineup_optimizer",
+    "owned_challenger_comparator",
     "watchlist_full_dss",
     "captaincy",
     "decision_trace",
     "prediction_evaluation",
     "source_health",
     "reporting",
+    "interactive_subsecond_serving",
     "degraded_mode"
   ],
   "advanced_candidate_domains": [
@@ -35,6 +41,8 @@
   "governance": {
     "v4_is_reference_not_authority": true,
     "missing_parity_evidence_blocks_promotion": true,
-    "new_advanced_domains_require_settled_evidence_before_authority": true
+    "new_advanced_domains_require_settled_evidence_before_authority": true,
+    "runtime_hardening_is_reconciled_by_capability_not_code_merge": true,
+    "execution_domains_are_not_business_owners": true
   }
 }

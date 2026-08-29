@@ -36,7 +36,9 @@ jobs:
       - name: V5 bootstrap tests
         run: python -m pytest -q tests/test_v5_bootstrap.py
       - name: V5 architecture and performance gates
-        run: python -m pytest -q tests/test_v5_architecture_principles.py tests/test_v5_config_cache.py tests/test_v5_reporting_watchlist_performance.py
+        run: python -m pytest -q tests/test_v5_architecture_principles.py tests/test_v5_config_cache.py tests/test_v5_reporting_watchlist_performance.py tests/test_v5_interactive_performance.py
+      - name: V5 comparator tactical and market parity gates
+        run: python -m pytest -q tests/test_v5_owned_challenger_comparator.py tests/test_v5_owned_challenger_context.py tests/test_v5_owned_challenger_scenarios.py tests/test_v5_observed_tactical_context.py tests/test_v5_tactical_decision_consumption.py tests/test_v5_transfer_momentum.py
       - name: V5 microservice topology and contract gates
         run: python -m pytest -q tests/test_v5_microservices.py
       - name: V5 service transport resilience
@@ -53,7 +55,7 @@ jobs:
         run: python -m pytest -q tests/test_v5_v312_decision_parity.py
       - name: V5 V3.14 reporting and full DSS watchlist parity
         run: python -m pytest -q tests/test_v5_v313_reporting_watchlist.py
-      - name: V5 V3.20 production baseline convergence
+      - name: V5 V3.20 football-truth baseline convergence
         run: python -m pytest -q tests/test_v5_v3181_convergence.py
       - name: V5 structural shadow parity
         run: python -m pytest -q tests/test_v5_shadow_parity.py tests/test_v5_shadow_acceptance_accounting.py

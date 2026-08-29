@@ -41,17 +41,28 @@ def handle(operation:str,payload:dict[str,Any])->Any:
         "source_observations":payload.get("source_observations") if isinstance(payload.get("source_observations"),dict) else {},
     },cid); schedule=schedule_env["data"]
     watch_env=_invoke("watchlist_build",{"truth":truth,"price":price,"prediction":prediction,"dss":decision.get("dss") or {}},cid); watchlist=watch_env["data"]
+    comparator_env=_invoke("owned_challenger_compare",{
+        "truth":truth,
+        "prediction":prediction,
+        "watchlist":watchlist,
+        "decision_context":decision,
+        "emerging_candidates":payload.get("emerging_candidates") if isinstance(payload.get("emerging_candidates"),list) else [],
+        "workload_context":payload.get("workload_context") if isinstance(payload.get("workload_context"),dict) else {},
+        "transfer_state":payload.get("transfer_state") if isinstance(payload.get("transfer_state"),dict) else {},
+        "external_consensus":payload.get("external_consensus") if isinstance(payload.get("external_consensus"),dict) else {},
+    },cid); comparator=comparator_env["data"]
     request=payload.get("report_request") if isinstance(payload.get("report_request"),dict) else {}
     request={**request,"schedule_mode":schedule.get("active_mode"),"visible_authorized":schedule.get("visible_authorized")}
-    report_payload={"truth":truth,"price":price,"prediction":prediction,"decision":decision,"governance":governance,"watchlist":watchlist,"previous_report_state":states["report_state"]["data"] or {},"performance":snapshot.get("service_performance") or {},"force_full_report":bool(payload.get("force_full_report",False) or schedule.get("force_full_report",False)),"report_request":request,"schedule_decision":schedule}
+    report_payload={"truth":truth,"price":price,"prediction":prediction,"decision":decision,"governance":governance,"watchlist":watchlist,"owned_challenger_comparator":comparator,"previous_report_state":states["report_state"]["data"] or {},"performance":snapshot.get("service_performance") or {},"force_full_report":bool(payload.get("force_full_report",False) or schedule.get("force_full_report",False)),"report_request":request,"schedule_decision":schedule}
     report_env=_invoke("reporting_build",report_payload,cid); report=report_env["data"]
     write_service,write_operation=_route("artifact_write"); mapping=load_json_config(CONFIG).get("artifact_mapping") or {}
-    writes=invoke_parallel_envelopes({"watchlist":(write_service,write_operation,{"name":mapping["watchlist"],"data":watchlist}),"user_report":(write_service,write_operation,{"name":mapping["user_report"],"data":report["user_report"]}),"technical_appendix":(write_service,write_operation,{"name":mapping["technical_appendix"],"data":report["technical_appendix"]}),"report_state":(write_service,write_operation,{"name":mapping["report_state"],"data":report["report_state"]})},correlation_id=cid)
+    writes=invoke_parallel_envelopes({"watchlist":(write_service,write_operation,{"name":mapping["watchlist"],"data":watchlist}),"owned_challenger_comparator":(write_service,write_operation,{"name":mapping["owned_challenger_comparator"],"data":comparator}),"user_report":(write_service,write_operation,{"name":mapping["user_report"],"data":report["user_report"]}),"technical_appendix":(write_service,write_operation,{"name":mapping["technical_appendix"],"data":report["technical_appendix"]}),"report_state":(write_service,write_operation,{"name":mapping["report_state"],"data":report["report_state"]})},correlation_id=cid)
     snapshot["schedule_decision"]=schedule
     snapshot["match_state"]=match_state
     snapshot["watchlist_summary"]={"status":watchlist.get("status"),"candidate_count":watchlist.get("candidate_count"),"screening_contract":watchlist.get("screening_contract")}
+    snapshot["owned_challenger_comparator"]={"status":comparator.get("status"),"authority":comparator.get("authority"),"pair_count":comparator.get("pair_count"),"classification_counts":comparator.get("classification_counts"),"top_comparisons":comparator.get("top_comparisons")}
     snapshot["user_report"]=report["user_report"]
     snapshot["technical_appendix"]=report["technical_appendix"]
     snapshot["report_state"]=report["report_state"]
-    snapshot.setdefault("service_performance",{})["beta_composition"]={"schedule":{"service_compute_ms":schedule_env.get("elapsed_ms"),"round_trip_ms":schedule_env.get("round_trip_ms")},"watchlist":{"service_compute_ms":watch_env.get("elapsed_ms"),"round_trip_ms":watch_env.get("round_trip_ms")},"reporting":{"service_compute_ms":report_env.get("elapsed_ms"),"round_trip_ms":report_env.get("round_trip_ms")},"persistence":{k:{"service_compute_ms":v.get("elapsed_ms"),"round_trip_ms":v.get("round_trip_ms")} for k,v in writes.items()}}
+    snapshot.setdefault("service_performance",{})["beta_composition"]={"schedule":{"service_compute_ms":schedule_env.get("elapsed_ms"),"round_trip_ms":schedule_env.get("round_trip_ms")},"watchlist":{"service_compute_ms":watch_env.get("elapsed_ms"),"round_trip_ms":watch_env.get("round_trip_ms")},"owned_challenger_comparator":{"service_compute_ms":comparator_env.get("elapsed_ms"),"round_trip_ms":comparator_env.get("round_trip_ms")},"reporting":{"service_compute_ms":report_env.get("elapsed_ms"),"round_trip_ms":report_env.get("round_trip_ms")},"persistence":{k:{"service_compute_ms":v.get("elapsed_ms"),"round_trip_ms":v.get("round_trip_ms")} for k,v in writes.items()}}
     return snapshot

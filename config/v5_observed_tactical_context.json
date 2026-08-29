@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "model_id": "v5_observed_tactical_context_v1",
+  "contract": "TACTICAL_OBSERVED_CONTEXT_V1",
+  "source": "FPL-Core-Insights",
+  "recent_gw_window": 5,
+  "policy": {
+    "observed_metrics_are_evidence_not_true_coach_tactics": true,
+    "pressing_is_never_inferred_from_defensive_activity_proxy": true,
+    "possession_is_never_inferred_without_possession_data": true,
+    "opponent_vulnerability_requires_observed_concession": true,
+    "player_return_routes_require_observed_player_events": true,
+    "rolling_history_is_deduplicated_by_gw_match_team": true,
+    "one_match_sample_is_low_confidence": true,
+    "no_direct_xpts_mutation": true,
+    "no_network_fetch": true
+  },
+  "classification": {
+    "high_percentile": 0.75,
+    "maximum_team_signals": 3,
+    "maximum_zone_signals": 2,
+    "confidence_by_matches": {"1": "LOW", "2": "MEDIUM", "4": "HIGH"}
+  },
+  "shot_zones": {
+    "close_distance_max": 12.0,
+    "box_distance_max": 18.0,
+    "central_y_min": 35.0,
+    "central_y_max": 65.0
+  },
+  "canonical_routes": [
+    "box_pressure",
+    "shot_volume",
+    "chance_creation",
+    "final_third_progression",
+    "wide_delivery",
+    "set_piece_activity",
+    "transition_threat",
+    "penalty_route"
+  ]
+}

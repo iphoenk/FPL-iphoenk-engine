@@ -43,6 +43,7 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     orchestrator_cfg = load_json_config(ORCHESTRATOR_CONFIG)
     gate0_cfg = load_json_config(GATE0_CONFIG)
     source_registry_cfg = load_json_config(SOURCE_CONFIG)
+    performance_cfg = load_json_config("config/v5_performance_budgets.json")
     metadata = ruleset_metadata()
     modules = module_specs()
     module_policy = acceptance["module_policy"]
@@ -66,6 +67,9 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     decision_source = (ROOT / "src/v5/services/decision.py").read_text()
     watchlist_source = (ROOT / "src/v5/services/watchlist.py").read_text()
     reporting_source = (ROOT / "src/v5/reporting.py").read_text()
+    public_api_source = (ROOT / "src/v5/public_api.py").read_text()
+    price_service_source = (ROOT / "src/v5/services/price.py").read_text()
+    tactical_consumption_source = (ROOT / "src/v5/decision/tactical_consumption.py").read_text()
     baseline = str(convergence.get("production_baseline") or "")
     baseline_sha = str(convergence.get("production_main_sha") or "")
     manifest_baselines = manifest.get("baselines") or {}
@@ -75,19 +79,28 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     understat = source_rows.get("understat") or {}
     attestation = release_attestation()
     parity_cfg = load_json_config("config/v5_capability_parity_registry.json")
+    parity_domains = {str(x) for x in parity_cfg.get("required_domains") or []}
+    budgets = performance_cfg.get("budgets") or {}
+    comparator_domains = {"owned_challenger_comparator", "observed_tactical_context", "tactical_decision_consumption", "transfer_momentum_truthful_evidence", "interactive_subsecond_serving"}
     checks = (
         AcceptanceCheck("v5_manifest", manifest.get("version") == V5_VERSION, Plane.GOVERNANCE, "package version matches convergence manifest"),
-        AcceptanceCheck("production_baseline_declared", manifest_baselines.get("production_truth") == baseline and manifest_baselines.get("production_main_sha") == baseline_sha and bool(baseline_sha), Plane.TRUTH, "production baseline version and SHA are registry-driven and consistent"),
-        AcceptanceCheck("production_schema_48", int(manifest_baselines.get("production_schema_version") or 0) == 48, Plane.TRUTH, "V3.20 production schema 48 is explicit"),
-        AcceptanceCheck("prediction_baseline_declared", baseline in str(manifest_baselines.get("prediction_intelligence") or ""), Plane.INTELLIGENCE, "prediction convergence references accepted production baseline"),
+        AcceptanceCheck("production_baseline_declared", manifest_baselines.get("production_truth") == baseline and manifest_baselines.get("production_main_sha") == baseline_sha and bool(baseline_sha), Plane.TRUTH, "football-truth baseline and current production runtime SHA are registry-driven and consistent"),
+        AcceptanceCheck("production_schema_48", int(manifest_baselines.get("production_schema_version") or 0) == 48, Plane.TRUTH, "settled V3.20 football-truth schema 48 remains explicit"),
+        AcceptanceCheck("prediction_baseline_declared", baseline in str(manifest_baselines.get("prediction_intelligence") or ""), Plane.INTELLIGENCE, "prediction convergence references accepted football-truth baseline"),
         AcceptanceCheck("rules_registry_active", RULESET_ID == "FPL_2026_27" and RULESET_SEASON == "2026/27", Plane.TRUTH, "verified season rules remain single authority"),
         AcceptanceCheck("goalkeeper_goal_rule", GOAL_POINTS.get(1) == 10, Plane.TRUTH, "goalkeeper goal scoring remains 10"),
         AcceptanceCheck("rules_fingerprint_present", bool(metadata.get("fingerprint_sha256")), Plane.GOVERNANCE, "ruleset exposes auditable fingerprint"),
         AcceptanceCheck("prediction_consumes_truth_contract", 'payload.get("rules")' in prediction_source and "from src.rules import" not in prediction_source, Plane.INTELLIGENCE, "prediction consumes truth rules contract"),
         AcceptanceCheck("native_decision", "build_packages" in decision_source and "optimize_lineup" in decision_source and "build_trace" in decision_source and "build_watchlist" not in decision_source, Plane.DECISION, "decision owns package/lineup/trace without importing watchlist authority"),
         AcceptanceCheck("native_watchlist_service", convergence.get("full_dss_watchlist_required") is True and "build_watchlist" in watchlist_source and "FULL_DSS" not in decision_source, Plane.DECISION, "full DSS external screening is an independent service"),
+        AcceptanceCheck("native_owned_challenger_comparator", convergence.get("owned_challenger_comparator_required") is True and (ROOT / "src/v5/evaluation/owned_challenger_comparator.py").exists(), Plane.INTELLIGENCE, "generic OWNED-vs-Challenger comparator is native V5 Evaluation authority"),
+        AcceptanceCheck("tactical_close_call_consumption", convergence.get("tactical_decision_consumption_required") is True and "tactical_direct_xpts_mutation" in tactical_consumption_source and "close_group_sort" in tactical_consumption_source, Plane.DECISION, "tactical context is consumed only as close-call evidence without xPts mutation"),
+        AcceptanceCheck("truthful_transfer_momentum", convergence.get("transfer_momentum_requires_official_counts_and_price_linkage") is True and 'CAPABILITIES = ["price_intelligence"]' in price_service_source, Plane.INTELLIGENCE, "DSS-42 is not advertised statically; capability requires runtime Official-count and current-price evidence"),
+        AcceptanceCheck("official_parallel_fanout", convergence.get("official_independent_endpoint_fanout_required") is True and "ThreadPoolExecutor" in public_api_source and "def fetch_many" in public_api_source and "deduplicating paths" in public_api_source, Plane.TRUTH, "independent Official endpoint fan-out is parallel under one ingestion authority"),
+        AcceptanceCheck("interactive_subsecond_budget", convergence.get("interactive_subsecond_serving_required") is True and float(budgets.get("interactive_target_seconds") or 99) <= 1.0 and float(budgets.get("interactive_decision_regeneration_ms") or 99999) < 1000 and float(budgets.get("owned_challenger_comparator_ms") or 99999) <= 50, Plane.GOVERNANCE, "interactive and comparator performance guardrails are explicit and promotion-blocking"),
+        AcceptanceCheck("reconciled_capability_parity", comparator_domains.issubset(parity_domains) and parity_cfg.get("governance", {}).get("runtime_hardening_is_reconciled_by_capability_not_code_merge") is True, Plane.GOVERNANCE, "current production runtime hardening is reconciled by capability without importing V3 business ownership"),
         AcceptanceCheck("native_reporting", convergence.get("decision_first_reporting_required") is True and "USER_REPORT" in reporting_source and "TECHNICAL_APPENDIX" in reporting_source and "COMPACT_DELTA" in reporting_source, Plane.GOVERNANCE, "reporting separates user, technical and delta layers"),
-        AcceptanceCheck("v320_source_policy", source_policy.get("source_network_locations_are_registry_owned") is True and source_policy.get("source_ingestion_timeouts_are_registry_owned") is True and source_policy.get("active_artifact_aliases_must_not_embed_gameweek") is True, Plane.INTELLIGENCE, "V3.20 source ownership semantics are preserved"),
+        AcceptanceCheck("v320_source_policy", source_policy.get("source_network_locations_are_registry_owned") is True and source_policy.get("source_ingestion_timeouts_are_registry_owned") is True and source_policy.get("active_artifact_aliases_must_not_embed_gameweek") is True, Plane.INTELLIGENCE, "settled source ownership semantics are preserved"),
         AcceptanceCheck("onefpl_report_time_boundary", onefpl.get("enabled") is False and onefpl.get("adapter") == "disabled" and onefpl.get("delegated_to") == convergence.get("onefpl_report_time_delegation_required"), Plane.INTELLIGENCE, "OneFPL automated collector remains disabled and report-time delegated"),
         AcceptanceCheck("understat_scrape_disabled", understat.get("enabled") is False and understat.get("adapter") == "disabled", Plane.INTELLIGENCE, "Understat direct scrape stays disabled by production source policy"),
         AcceptanceCheck("release_attestation", attestation.get("contract") == "V5_RELEASE_ATTESTATION_V1" and bool(attestation.get("attestation")) and attestation.get("production_main_sha") == baseline_sha, Plane.GOVERNANCE, "candidate release attestation binds version, baseline and runtime fingerprint"),

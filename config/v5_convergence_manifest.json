@@ -5,8 +5,9 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "64475fa6b04a697e9b1265fa3b9e3d903d5087a6",
+    "production_main_sha": "0ee0e51d03ae85b593db8294f3f7e04cd4bc3108",
     "production_schema_version": 48,
+    "production_runtime": "v3.27-unified-fastpath",
     "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
   },
   "operating_model": {
@@ -24,6 +25,7 @@
     "price": "price service",
     "projection": "prediction service",
     "prediction_evaluation": "evaluation service",
+    "owned_challenger_comparator": "evaluation service",
     "shadow_parity": "evaluation service",
     "shadow_acceptance_accounting": "postvalidation finalizer -> config/v5_shadow_parity_registry.json",
     "release_fingerprint": "governance contract -> config/v5_release_integrity_registry.json",
@@ -49,10 +51,15 @@
     "correlated_simulation_shadow_only": true,
     "v3_v4_capability_parity_audit_required": true,
     "no_additional_microservice_without_new_bounded_context": true,
-    "team_review_isolated_context_required": true
+    "team_review_isolated_context_required": true,
+    "production_runtime_hardening_reconciled_by_capability_not_code_merge": true,
+    "interactive_refresh_and_serving_separated": true,
+    "official_independent_endpoint_fanout_parallel": true,
+    "material_decision_equivalence_required": true
   },
   "acceptance": {
     "no_regression_vs_v3_20_0_truth": true,
+    "no_regression_vs_current_production_runtime": true,
     "no_regression_vs_v3_20_0_configuration_ownership": true,
     "no_regression_vs_v4_research_where_adopted": true,
     "no_duplicate_authority": true,
@@ -68,7 +75,8 @@
     "all_dss_core_active_required": true,
     "all_dss_extensions_active_required": true,
     "real_shadow_cycle_counts_only_after_postvalidation": true,
-    "on_demand_reporting_uses_current_production_authority": true
+    "on_demand_reporting_uses_current_production_authority": true,
+    "interactive_preferred_target_ms": 1000
   },
   "production_promotion": {
     "allowed": false,
@@ -78,6 +86,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is anchored to the current production main commit while preserving the settled V3.20 football-truth baseline. The current production line includes later architecture/runtime hardening without changing football scoring formulas. Fresh exact-fingerprint cycles and settled non-regression evidence are required before promotion."
+    "reason": "V5.0.0-beta.4 is re-anchored to current production main 0ee0e51 after explicit capability reconciliation through V3.27 runtime hardening. Settled V3.20 football truth remains the frozen scoring baseline. Comparator, tactical consumption, truthful transfer momentum, sub-second interactive serving and material-decision equivalence must pass full Unified Gate plus fresh exact-fingerprint shadow cycles before promotion."
   }
 }

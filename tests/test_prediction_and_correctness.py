@@ -6,9 +6,94 @@ import pytest
 
 from src.engines import lineup_governance
 from src.models import package_optimizer_v2, projection_components
+from src.models.package_optimizer_v2 import _f, _gw_row, best_lineup, load_config, score_package
 from src.runtime_v3.orchestrator import _attempt_promotion, _clear_failed_service_outputs
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _package_players():
+    positions = ["GK", "GK"] + ["DEF"] * 5 + ["MID"] * 5 + ["FWD"] * 3
+    rows = []
+    for idx, position in enumerate(positions, start=1):
+        rows.append({
+            "element": idx,
+            "position": position,
+            "team_id": ((idx - 1) % 8) + 1,
+            "now_cost": 45 + idx,
+            "sell_cost": 45 + idx,
+            "status": "a",
+            "xpts_by_gw": [
+                {"gw": gw, "mean": round(1.0 + idx * 0.11 + (gw - 2) * 0.07, 3), "std": round(0.8 + idx * 0.013, 3)}
+                for gw in range(2, 17)
+            ],
+        })
+    return rows
+
+
+def _reference_score(players, planning_gw, changes=0):
+    cfg = load_config()
+    horizons = [int(x) for x in cfg.get("horizons") or [3, 5, 10, 15]]
+    bench_weight = _f(cfg.get("bench_utility_weight"), 0.10)
+    captain_weight = _f(cfg.get("captain_bonus_weight"), 1.0)
+    horizon_results = {}
+    for horizon in horizons:
+        total_mean = 0.0
+        total_var = 0.0
+        valid = True
+        for offset in range(horizon):
+            gw = planning_gw + offset
+            lineup = best_lineup(players, gw)
+            if not lineup["valid"]:
+                valid = False
+                break
+            starter_ids = set(lineup["starters"])
+            bench = [p for p in players if int(p["element"]) not in starter_ids]
+            bench_mean = sum(_f(_gw_row(p, gw).get("mean")) for p in bench)
+            bench_var = sum(_f(_gw_row(p, gw).get("std")) ** 2 for p in bench)
+            starter_rows = [_gw_row(p, gw) for p in players if int(p["element"]) in starter_ids]
+            captain_row = max(starter_rows, key=lambda row: _f(row.get("mean")), default={})
+            captain_mean = _f(captain_row.get("mean"))
+            captain_var = _f(captain_row.get("std")) ** 2
+            total_mean += lineup["mean"] + bench_weight * bench_mean + captain_weight * captain_mean
+            total_var += (
+                lineup["variance"]
+                + (bench_weight ** 2) * bench_var
+                + ((1.0 + captain_weight) ** 2 - 1.0) * captain_var
+            )
+        horizon_results[str(horizon)] = {
+            "valid": valid,
+            "mean": round(total_mean, 3) if valid else None,
+            "std": round(math.sqrt(total_var), 3) if valid else None,
+        }
+    weights = {str(k): _f(v) for k, v in (cfg.get("horizon_weights") or {}).items()}
+    available = [(h, horizon_results[str(h)]) for h in horizons if horizon_results[str(h)]["valid"]]
+    weight_sum = sum(weights.get(str(h), 0.0) for h, _ in available)
+    objective_mean = sum(weights.get(str(h), 0.0) * row["mean"] for h, row in available) / weight_sum
+    objective_var = sum((weights.get(str(h), 0.0) / weight_sum) ** 2 * row["std"] ** 2 for h, row in available)
+    objective_std = math.sqrt(objective_var)
+    robust = objective_mean - _f(cfg.get("risk_aversion"), 0.12) * objective_std - changes * _f(cfg.get("change_penalty_points"), 0.20)
+    return {
+        "valid": True,
+        "horizons": horizon_results,
+        "objective_mean": round(objective_mean, 3),
+        "objective_std": round(objective_std, 3),
+        "robust_score": round(robust, 3),
+    }
+
+
+def _assert_reference_equivalent(actual, reference):
+    for key, value in reference.items():
+        assert actual[key] == value, key
+    assert actual["guardrails"]["team_cluster_penalty_enabled"] is True
+    assert actual["guardrails"]["early_season_change_cap_enabled"] is True
+    assert actual["team_cluster_penalty_points"] == 0.0
+
+
+def test_optimized_package_score_preserves_reference_numerics_with_guardrail_metadata():
+    players = _package_players()
+    _assert_reference_equivalent(score_package(players, 2, changes=0), _reference_score(players, 2, changes=0))
+    _assert_reference_equivalent(score_package(players, 2, changes=2), _reference_score(players, 2, changes=2))
 
 
 def _projection_cfg() -> dict:
@@ -68,8 +153,6 @@ def test_project_fixture_appearance_uses_unconditional_p60_once(monkeypatch):
         _zero_rates(),
         False,
     )
-    # p60 = 0.5 * 1.0 = 0.5, already unconditional.
-    # Expected appearance = p_start + p_bench + p60 = 1.2.
     assert row["components"]["appearance"] == pytest.approx(1.2)
     assert row["mean"] == pytest.approx(1.2)
 
@@ -121,29 +204,18 @@ def test_package_captain_variance_includes_covariance_and_same_captain_row(monke
         "change_penalty_points": 0.0,
     }
     monkeypatch.setattr(package_optimizer_v2, "load_config", lambda: cfg)
-
     players = [
-        _optimizer_player(1, "GK", 5.0, 1.0, 1),
-        _optimizer_player(2, "GK", 0.0, 1.0, 2),
-        _optimizer_player(3, "DEF", 5.0, 1.0, 3),
-        _optimizer_player(4, "DEF", 5.0, 1.0, 4),
-        _optimizer_player(5, "DEF", 5.0, 1.0, 5),
-        _optimizer_player(6, "DEF", 5.0, 1.0, 6),
-        _optimizer_player(7, "DEF", 0.0, 1.0, 7),
-        _optimizer_player(8, "MID", 5.0, 1.0, 8),
-        _optimizer_player(9, "MID", 5.0, 1.0, 9),
-        _optimizer_player(10, "MID", 5.0, 1.0, 10),
-        _optimizer_player(11, "MID", 5.0, 1.0, 11),
-        _optimizer_player(12, "MID", 0.0, 1.0, 12),
-        _optimizer_player(13, "FWD", 10.0, 3.0, 13),
-        _optimizer_player(14, "FWD", 5.0, 1.0, 14),
+        _optimizer_player(1, "GK", 5.0, 1.0, 1), _optimizer_player(2, "GK", 0.0, 1.0, 2),
+        _optimizer_player(3, "DEF", 5.0, 1.0, 3), _optimizer_player(4, "DEF", 5.0, 1.0, 4),
+        _optimizer_player(5, "DEF", 5.0, 1.0, 5), _optimizer_player(6, "DEF", 5.0, 1.0, 6),
+        _optimizer_player(7, "DEF", 0.0, 1.0, 7), _optimizer_player(8, "MID", 5.0, 1.0, 8),
+        _optimizer_player(9, "MID", 5.0, 1.0, 9), _optimizer_player(10, "MID", 5.0, 1.0, 10),
+        _optimizer_player(11, "MID", 5.0, 1.0, 11), _optimizer_player(12, "MID", 0.0, 1.0, 12),
+        _optimizer_player(13, "FWD", 10.0, 3.0, 13), _optimizer_player(14, "FWD", 5.0, 1.0, 14),
         _optimizer_player(15, "FWD", 0.0, 1.0, 15),
     ]
     score = package_optimizer_v2.score_package(players, planning_gw=2)
     assert score["valid"] is True
-    # 11 starters: captain variance 9 + ten others variance 1 = 19.
-    # Doubling captain means total captain contribution is 2X, so the extra
-    # variance beyond the already-counted X is (4 - 1) * 9 = 27. Total = 46.
     assert score["horizons"]["1"]["std"] == pytest.approx(math.sqrt(46.0), abs=1e-3)
 
 
@@ -199,8 +271,6 @@ def test_promotion_failure_becomes_service_failure_and_discards_stale_outputs(tm
 def test_challenger_source_outage_and_scorecard_integrity_are_distinct_contracts():
     registry = json.loads((ROOT / "config" / "v3_service_registry.json").read_text())
     assert registry["policy"]["challenger_source_failure_does_not_block_decisions"] is True
-    # Source outages are normalized/fail-soft before this deterministic artifact.
-    # A crash of the internal scorecard itself remains an engine-integrity failure.
     assert registry["services"]["challenger"]["critical"] is True
 
 

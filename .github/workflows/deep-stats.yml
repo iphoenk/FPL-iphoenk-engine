@@ -8,6 +8,9 @@ permissions:
 
 jobs:
   deep:
+    concurrency:
+      group: fpl-iphoenk-v4-gate
+      cancel-in-progress: false
     uses: ./.github/workflows/fpl-engine-core.yml
     permissions:
       contents: write

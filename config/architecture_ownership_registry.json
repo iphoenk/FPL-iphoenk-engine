@@ -1,188 +1,40 @@
 {
-  "schema_version": 4,
-  "registry": "fpl_v4_9_6_architecture_ownership_v4",
+  "schema_version": 5,
+  "registry": "fpl_v4_9_6_architecture_ownership_v5",
   "release": "4.9.6",
   "principle": "ONE_OWNER_PER_RESPONSIBILITY_SHARED_PRIMITIVES_REUSED_NOT_REIMPLEMENTED",
   "responsibilities": [
-    {
-      "id": "OFFICIAL_FPL_ACQUISITION",
-      "owner": "raw_snapshot",
-      "implementation": "src.services.raw_snapshot_service"
-    },
-    {
-      "id": "FPL_RULES_CONSTANTS",
-      "owner": "domain_rules",
-      "implementation": "src.engines.fpl_rules_2026"
-    },
-    {
-      "id": "PLAN_AND_SQUAD_LEGALITY",
-      "owner": "domain_legality",
-      "implementation": "src.engines.fpl_legality"
-    },
-    {
-      "id": "PLAYER_PREDICTION",
-      "owner": "prediction",
-      "implementation": "src.services.prediction_service"
-    },
-    {
-      "id": "VALIDATION_STORE",
-      "owner": "validation_store",
-      "implementation": "src.engines.v4_backtest_store"
-    },
-    {
-      "id": "RECONCILIATION_TRUTH",
-      "owner": "reconciliation_truth",
-      "implementation": "src.engines.v4_reconciliation_truth"
-    },
-    {
-      "id": "VALIDATION_LIFECYCLE",
-      "owner": "validation_lifecycle",
-      "implementation": "src.engines.v4_validation_cycle"
-    },
-    {
-      "id": "ENGINE_RECOMMENDATION",
-      "owner": "optimization",
-      "implementation": "src.services.optimization_slo_service"
-    },
-    {
-      "id": "EFFECTIVE_USER_PLAN",
-      "owner": "user_decision_overlay",
-      "implementation": "src.services.user_decision_overlay_service"
-    },
-    {
-      "id": "PERSONAL_GW_SCORECARD",
-      "owner": "personal_gw_scorecard",
-      "implementation": "src.services.gw_scorecard_service"
-    },
-    {
-      "id": "POSTFLIGHT_TRUTH",
-      "owner": "framework_postflight",
-      "implementation": "src.services.framework_postflight_truth_service"
-    },
-    {
-      "id": "HUMAN_REPORT_DECISION",
-      "owner": "report_governance",
-      "implementation": "src.engines.v4_checkpoint_governance"
-    },
-    {
-      "id": "RECONCILIATION_READINESS",
-      "owner": "reconciliation_readiness",
-      "implementation": "src.services.reconciliation_readiness_service"
-    }
+    {"id":"OFFICIAL_FPL_ACQUISITION","owner":"raw_snapshot","implementation":"src.services.raw_snapshot_service"},
+    {"id":"FPL_RULES_CONSTANTS","owner":"domain_rules","implementation":"src.engines.fpl_rules_2026"},
+    {"id":"PLAN_AND_SQUAD_LEGALITY","owner":"domain_legality","implementation":"src.engines.fpl_legality"},
+    {"id":"PLAYER_PREDICTION","owner":"prediction","implementation":"src.services.prediction_service"},
+    {"id":"VALIDATION_STORE","owner":"validation_store","implementation":"src.engines.v4_backtest_store"},
+    {"id":"RECONCILIATION_TRUTH","owner":"reconciliation_truth","implementation":"src.engines.v4_reconciliation_truth"},
+    {"id":"VALIDATION_LIFECYCLE","owner":"validation_lifecycle","implementation":"src.engines.v4_validation_cycle"},
+    {"id":"ENGINE_RECOMMENDATION","owner":"optimization","implementation":"src.services.optimization_slo_service"},
+    {"id":"EFFECTIVE_USER_PLAN","owner":"user_decision_overlay","implementation":"src.services.user_decision_overlay_service"},
+    {"id":"PERSONAL_GW_SCORECARD","owner":"personal_gw_scorecard","implementation":"src.services.gw_scorecard_service"},
+    {"id":"POSTFLIGHT_TRUTH","owner":"framework_postflight","implementation":"src.services.framework_postflight_truth_service"},
+    {"id":"HUMAN_REPORT_DECISION","owner":"report_governance","implementation":"src.engines.v4_checkpoint_governance"},
+    {"id":"RECONCILIATION_READINESS","owner":"reconciliation_readiness","implementation":"src.services.reconciliation_readiness_service"}
   ],
   "shared_primitives": [
-    {
-      "id": "XMINS_DISTRIBUTION",
-      "owner": "prediction",
-      "consumers": [
-        "DSS-05",
-        "DSS-06",
-        "DSS-X10",
-        "DSS-X11"
-      ]
-    },
-    {
-      "id": "ADVANCED_ATTACKING_EVIDENCE",
-      "owner": "prediction",
-      "consumers": [
-        "DSS-12",
-        "DSS-13",
-        "DSS-14",
-        "DSS-15",
-        "DSS-16",
-        "DSS-38"
-      ]
-    },
-    {
-      "id": "MULTI_HORIZON_PROJECTION",
-      "owner": "prediction",
-      "consumers": [
-        "DSS-25",
-        "DSS-26",
-        "DSS-27",
-        "DSS-28",
-        "ENH-04"
-      ]
-    },
-    {
-      "id": "PRICE_MARKET_EVIDENCE",
-      "owner": "prediction",
-      "consumers": [
-        "DSS-39",
-        "DSS-40",
-        "DSS-41",
-        "DSS-42",
-        "DSS-43",
-        "DSS-X15",
-        "ENH-05"
-      ]
-    },
-    {
-      "id": "RECONCILIATION_EVIDENCE",
-      "owner": "reconciliation_truth",
-      "consumers": [
-        "DSS-44",
-        "DSS-X12",
-        "ENH-03"
-      ]
-    },
-    {
-      "id": "OPTIMIZER_GW_VALUE",
-      "owner": "optimizer_primitives",
-      "implementation": "src.engines.v4_optimizer_primitives.gw_value",
-      "consumers": [
-        "v4_wc_optimizer_fast",
-        "v4_wc_package_audit_fast"
-      ]
-    },
-    {
-      "id": "CSV_HTTP_FETCH",
-      "owner": "source_transport",
-      "implementation": "src.sources.csv_fetch.fetch_csv",
-      "consumers": [
-        "core_insights",
-        "vaastav"
-      ]
-    },
-    {
-      "id": "NUMERIC_COERCION",
-      "owner": "prediction_model",
-      "implementation": "src.models.v4_prediction.f",
-      "consumers": [
-        "v4_prediction",
-        "v4_runner"
-      ]
-    },
-    {
-      "id": "VALIDATION_INTEGRITY",
-      "owner": "validation_store",
-      "implementation": "src.engines.v4_backtest_store.snapshot_integrity+reconciled_integrity",
-      "consumers": [
-        "validation_lifecycle",
-        "reconciliation_truth",
-        "reconciliation_readiness"
-      ]
-    },
-    {
-      "id": "RATE_SHRINKAGE_SUSTAINABILITY",
-      "owner": "prediction_model",
-      "implementation": "src.models.v4_prediction.rates",
-      "consumers": [
-        "DSS-16",
-        "DSS-38"
-      ]
-    },
-    {
-      "id": "FIXTURE_RUN_SUMMARY",
-      "owner": "prediction_model",
-      "implementation": "src.models.v4_prediction.fixture_run_summary",
-      "consumers": [
-        "DSS-25",
-        "DSS-26",
-        "DSS-27",
-        "DSS-28",
-        "DSS-29"
-      ]
-    }
-  ]
+    {"id":"XMINS_DISTRIBUTION","owner":"prediction","consumers":["DSS-05","DSS-06","DSS-X10","DSS-X11"]},
+    {"id":"ADVANCED_ATTACKING_EVIDENCE","owner":"prediction","consumers":["DSS-12","DSS-13","DSS-14","DSS-15","DSS-16","DSS-38"]},
+    {"id":"MULTI_HORIZON_PROJECTION","owner":"prediction","consumers":["DSS-25","DSS-26","DSS-27","DSS-28","ENH-04"]},
+    {"id":"PRICE_MARKET_EVIDENCE","owner":"prediction","consumers":["DSS-39","DSS-40","DSS-41","DSS-42","DSS-43","DSS-X15","ENH-05"]},
+    {"id":"RECONCILIATION_EVIDENCE","owner":"reconciliation_truth","consumers":["DSS-44","DSS-X12","ENH-03"]},
+    {"id":"OPTIMIZER_GW_VALUE","owner":"optimizer_primitives","implementation":"src.engines.v4_optimizer_primitives.gw_value","consumers":["v4_wc_optimizer_fast","v4_wc_package_audit_fast"]},
+    {"id":"CSV_HTTP_FETCH","owner":"source_transport","implementation":"src.sources.csv_fetch.fetch_csv","consumers":["core_insights","vaastav"]},
+    {"id":"NUMERIC_COERCION","owner":"prediction_model","implementation":"src.models.v4_prediction.f","consumers":["v4_prediction","v4_runner"]},
+    {"id":"VALIDATION_INTEGRITY","owner":"validation_store","implementation":"src.engines.v4_backtest_store.snapshot_integrity+reconciled_integrity","consumers":["validation_lifecycle","reconciliation_truth","reconciliation_readiness"]},
+    {"id":"RATE_SHRINKAGE_SUSTAINABILITY","owner":"prediction_model","implementation":"src.models.v4_prediction.rates","consumers":["DSS-16","DSS-38"]},
+    {"id":"FIXTURE_RUN_SUMMARY","owner":"prediction_model","implementation":"src.models.v4_prediction.fixture_run_summary","consumers":["DSS-25","DSS-26","DSS-27","DSS-28","DSS-29"]},
+    {"id":"MODEL_EVALUATION_METRICS","owner":"model_metrics","implementation":"src.models.metrics","consumers":["src.models.model_registry","src.models.v4_calibration"]},
+    {"id":"PREDICTIVE_LEAKAGE_TIMING","owner":"leakage_guard","implementation":"src.engines.leakage_guard.availability_before_deadline","consumers":["src.engines.reliability","src.models.v4_calibration"]}
+  ],
+  "module_lifecycle": [
+    {"module":"src.models.rank_sim","status":"DORMANT_EXPERIMENTAL","production_import_allowed":false,"reason":"retained for future rank-simulation roadmap; not part of canonical V4 decision chain"}
+  ],
+  "forbidden_legacy_modules": ["src.engines.v4_wc_decision"]
 }

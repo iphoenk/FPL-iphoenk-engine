@@ -513,7 +513,8 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         performance["execution_domain_count"] = len(domain_results)
         performance["capability_owner_count"] = len(capability_results)
         performance["execution_domains"] = domain_results
-        performance["cross_capability_copy_promotion"] = bool(parallel_pairs_executed)
+        performance["cross_capability_copy_promotion"] = False
+        performance["isolated_domain_fan_in_promotion"] = bool(parallel_pairs_executed)
         performance["ephemeral_artifacts_removed"] = legacy._cleanup_ephemeral(service_registry, DATA)
         atomic_json(PERFORMANCE_PATH, performance)
 
@@ -529,7 +530,8 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             "one_process_per_execution_domain": True,
             "isolated_parallel_domains": list(_PARALLEL_ISOLATED_DOMAINS),
             "deterministic_fan_in": True,
-            "cross_capability_copy_promotion": bool(parallel_pairs_executed),
+            "cross_capability_copy_promotion": False,
+            "isolated_domain_fan_in_promotion": bool(parallel_pairs_executed),
             "total_wall_ms": round(total_ms, 3),
         })
         atomic_json(DATA / "latest.json", latest)

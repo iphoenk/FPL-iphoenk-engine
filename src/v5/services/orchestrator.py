@@ -94,6 +94,30 @@ def _source_fusion_summary(source_fusion: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _empty_settlement_result(gameweeks: list[int], outcome: dict[str, Any] | None = None) -> dict[str, Any]:
+    error_type = (outcome or {}).get("error_type")
+    error = (outcome or {}).get("error")
+    return {
+        "contract": "V5_HISTORICAL_SETTLEMENT_EVENT_LIVE_V1",
+        "requested_gameweeks": list(gameweeks),
+        "request_count": len(gameweeks),
+        "payloads_by_gw": {},
+        "fetched_gameweeks": [],
+        "health_by_gw": {
+            str(gw): {
+                "status": "UNAVAILABLE",
+                "error_type": error_type,
+                "error": error,
+            }
+            for gw in gameweeks
+        },
+        "governance": {
+            "missing_payload_is_unavailable_not_zero": True,
+            "settlement_remains_pending": True,
+        },
+    }
+
+
 def handle(operation: str, payload: dict[str, Any]) -> Any:
     if operation == "cluster_health":
         return cluster_health("orchestrator")
@@ -189,39 +213,59 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     )
     performance["state_hydration"] = {key: _metric(value) for key, value in states.items()}
 
+    current_event_live = (dynamic_result.get("payloads") or {}).get("event_live")
+    settlement_targets_env = _call(
+        "prediction_settlement_targets",
+        {
+            "ledger": states["prediction_ledger"]["data"] or {},
+            "bootstrap": bootstrap,
+            "scoring_gw": context.get("scoring_gw"),
+            "current_event_live_available": isinstance(current_event_live, dict),
+        },
+        correlation_id,
+    )
+    settlement_plan = settlement_targets_env["data"]
+    settlement_gameweeks = [int(gw) for gw in settlement_plan.get("gameweeks") or []]
+    performance["prediction_settlement_targets"] = _metric(settlement_targets_env)
+
     price_service, price_operation = _route("price_build")
     prediction_service, prediction_operation = _route("prediction_build")
     prediction_horizon = int(runner_cfg["prediction_horizon_gws"])
     owned_ids = (truth.get("team") or {}).get("owned_ids") or []
-    intelligence_outcomes = invoke_parallel_outcomes(
-        {
-            "price": (
-                price_service,
-                price_operation,
-                {
-                    "bootstrap": bootstrap,
-                    "previous_state": states["price_trajectory"]["data"] or {},
-                    "owned_ids": owned_ids,
-                },
-            ),
-            "prediction": (
-                prediction_service,
-                prediction_operation,
-                {
-                    "bootstrap": bootstrap,
-                    "fixtures": base.get("fixtures") or [],
-                    "rules": truth["rules"],
-                    "planning_gw": context.get("planning_gw"),
-                    "horizon": prediction_horizon,
-                    "owned_ids": owned_ids,
-                    "historical_prior": states["historical_prior"]["data"] or {},
-                    "allow_historical_prior_refresh": bool(feature_switches.get("historical_prior_network_refresh", False)),
-                    "source_fusion": source_fusion,
-                },
-            ),
-        },
-        correlation_id=correlation_id,
-    )
+    intelligence_requests: dict[str, tuple[str, str, dict[str, Any]]] = {
+        "price": (
+            price_service,
+            price_operation,
+            {
+                "bootstrap": bootstrap,
+                "previous_state": states["price_trajectory"]["data"] or {},
+                "owned_ids": owned_ids,
+            },
+        ),
+        "prediction": (
+            prediction_service,
+            prediction_operation,
+            {
+                "bootstrap": bootstrap,
+                "fixtures": base.get("fixtures") or [],
+                "rules": truth["rules"],
+                "planning_gw": context.get("planning_gw"),
+                "horizon": prediction_horizon,
+                "owned_ids": owned_ids,
+                "historical_prior": states["historical_prior"]["data"] or {},
+                "allow_historical_prior_refresh": bool(feature_switches.get("historical_prior_network_refresh", False)),
+                "source_fusion": source_fusion,
+            },
+        ),
+    }
+    if settlement_gameweeks:
+        settlement_service, settlement_operation = _route("settlement_collection")
+        intelligence_requests["settlement"] = (
+            settlement_service,
+            settlement_operation,
+            {"gameweeks": settlement_gameweeks},
+        )
+    intelligence_outcomes = invoke_parallel_outcomes(intelligence_requests, correlation_id=correlation_id)
 
     prediction_outcome = intelligence_outcomes["prediction"]
     if not prediction_outcome.get("ok"):
@@ -239,9 +283,32 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         price_bundle = fallback_for(price_service, price_operation, price_outcome)
         price_metric = _degraded_metric(price_outcome, price_bundle["degraded_context"])
 
+    settlement_result = _empty_settlement_result(settlement_gameweeks)
+    settlement_metric: dict[str, Any] = {
+        "status": "NOT_REQUIRED" if not settlement_gameweeks else "UNAVAILABLE",
+        "requested_gameweeks": settlement_gameweeks,
+    }
+    settlement_outcome = intelligence_outcomes.get("settlement")
+    if settlement_outcome is not None:
+        if settlement_outcome.get("ok"):
+            settlement_env = settlement_outcome["envelope"]
+            settlement_result = settlement_env["data"]
+            settlement_metric = _metric(settlement_env)
+        else:
+            settlement_result = _empty_settlement_result(settlement_gameweeks, settlement_outcome)
+            settlement_metric = {
+                "status": "DEGRADED_FAIL_NEUTRAL",
+                "service_id": settlement_outcome.get("service_id"),
+                "operation": settlement_outcome.get("operation"),
+                "error_type": settlement_outcome.get("error_type"),
+                "error": settlement_outcome.get("error"),
+                "requested_gameweeks": settlement_gameweeks,
+            }
+
     performance["intelligence"] = {
         "price": price_metric,
         "prediction": _metric(prediction_env),
+        "historical_settlement": settlement_metric,
     }
 
     evaluation_service, evaluation_operation = _route("evaluation_build")
@@ -256,7 +323,9 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                     "prediction": prediction,
                     "context": context,
                     "bootstrap": bootstrap,
-                    "event_live": (dynamic_result.get("payloads") or {}).get("event_live"),
+                    "event_live": current_event_live,
+                    "event_live_by_gw": settlement_result.get("payloads_by_gw") or {},
+                    "settlement_health": settlement_result,
                     "ledger": states["prediction_ledger"]["data"],
                     "observations": states["challenger_observations"]["data"],
                 },
@@ -324,6 +393,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     prediction_quality = prediction.get("prediction_quality") if isinstance(prediction.get("prediction_quality"), dict) else {}
     historical_prior = prediction.get("historical_prior_artifact") if isinstance(prediction.get("historical_prior_artifact"), dict) else {}
     degraded_context_rows = framework.get("degraded_contexts") if isinstance(framework.get("degraded_contexts"), list) else []
+    settlement_source_health = accuracy.get("settlement_source_health") if isinstance(accuracy.get("settlement_source_health"), dict) else {}
     snapshot = {
         "schema_version": int(runner_cfg["snapshot"]["schema_version"]),
         "engine_version": V5_VERSION,
@@ -367,6 +437,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "sample_size": (accuracy.get("overall") or {}).get("sample_size", 0),
             "confidence": accuracy.get("confidence"),
             "challenger_status": scorecard.get("status"),
+            "settled_gameweeks": accuracy.get("settled_gameweeks") or [],
+            "settlement_source_health": settlement_source_health,
         },
         "decision_summary": {
             **decision,
@@ -376,6 +448,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "endpoint_health": {
             "base": base_result.get("health", {}),
             "dynamic": dynamic_result.get("health", {}),
+            "historical_settlement": settlement_result.get("health_by_gw", {}),
         },
         "authenticated_official": {
             "state": auth_summary.get("state"),
@@ -391,6 +464,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "degraded_contexts": degraded_context_rows,
             "degraded_blocks_unqualified_go": framework.get("degraded_blocks_unqualified_go"),
             "prediction_quality_status": prediction_quality.get("status"),
+            "historical_settlement_fail_neutral": True,
             "microservices_required": True,
             "raw_authenticated_payload_persisted": False,
         },

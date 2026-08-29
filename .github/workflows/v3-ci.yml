@@ -36,6 +36,8 @@ jobs:
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
       - name: Validate architecture ownership contract
         run: python -m src.engines.architecture_contract_validate
+      - name: Compile and validate canonical execution registry
+        run: python -m src.runtime_v3.registry_compiler --check
       - name: Enforce no-duplicate architecture and REC ownership
         run: python -m src.engines.v3_architecture_ownership_guard
       - name: Full unit and regression suite

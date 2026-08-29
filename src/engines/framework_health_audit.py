@@ -10,6 +10,7 @@ from typing import Any, Callable
 from src.engines.team_value import sell_cost
 from src.engines.fpl_rules_2026 import MAX_PER_CLUB, POSITION_COUNTS
 from src.engines.fpl_legality import formation_from_rows, plan_legality_checks
+from src.release import RELEASE_VERSION
 from src.utils import CONFIG, DATA, atomic_json, parse_dt, read_json, utcnow
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -778,7 +779,7 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
     else:
         rules_ok = True
 
-    # V4.9.2 separates service/pipeline availability from predictive capability.
+    # Truthful health separates service/pipeline availability from predictive capability.
     # A truthful PARTIAL prediction module must restrict decision readiness, but
     # it must not make a healthy API, contract, freshness and Gate-0 pipeline look
     # operationally broken.
@@ -809,7 +810,7 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
     go_allowed = pipeline_health == "GREEN" and prediction_health == "GREEN" and gate0["pass"] and postflight_complete
     out = {
         "schema_version": 492,
-        "engine": "v4.9.2-truthful-health",
+        "engine": f"v{RELEASE_VERSION}-truthful-health",
         "phase": phase,
         "checkpoint_context": read_json(DATA / "latest.json", {}).get("checkpoint_context") or {},
         "overall": overall,

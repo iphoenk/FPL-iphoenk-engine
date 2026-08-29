@@ -410,7 +410,7 @@
         "urgency": "HIGH",
         "official_progress_pct": 85.7,
         "official_hourly_rate_pct": -0.7,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "LIVE"
@@ -425,7 +425,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 105.1,
         "official_hourly_rate_pct": 14.44,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -438,7 +438,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -102.0,
         "official_hourly_rate_pct": -0.17,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -503,7 +503,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -95.9,
         "official_hourly_rate_pct": -1.57,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -555,7 +555,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -92.2,
         "official_hourly_rate_pct": -1.88,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "LIVE"
@@ -568,7 +568,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 81.3,
         "official_hourly_rate_pct": 2.32,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-29T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "LIVE"
@@ -594,7 +594,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -88.2,
         "official_hourly_rate_pct": -0.44,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "LIVE"
@@ -607,7 +607,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -86.6,
         "official_hourly_rate_pct": -0.55,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -646,7 +646,7 @@
         "urgency": "HIGH",
         "official_progress_pct": -84.9,
         "official_hourly_rate_pct": -0.17,
-        "trajectory": "ACCELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -2110,7 +2110,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2231,7 +2231,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -2393,7 +2393,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2515,7 +2515,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2671,7 +2671,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -2786,7 +2786,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -2940,7 +2940,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3055,7 +3055,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3213,7 +3213,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3330,7 +3330,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3486,7 +3486,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3603,7 +3603,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3763,7 +3763,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3885,7 +3885,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4041,7 +4041,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -4160,7 +4160,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-29T09:52:17.854117+00:00",
+              "evidence_timestamp": "2026-08-29T09:55:32.072370+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [

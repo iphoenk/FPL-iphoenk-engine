@@ -47,6 +47,26 @@ def test_semantic_decision_fingerprint_changes_when_decision_input_changes(monke
     assert v4_decision_pipeline._semantic_fingerprint(first, universe, locked) != v4_decision_pipeline._semantic_fingerprint(changed, universe, locked)
 
 
+def test_optimizer_exact_cache_write_uses_path_artifacts(monkeypatch, tmp_path):
+    wc = tmp_path / "wc.json"
+    packages = tmp_path / "packages.json"
+    lineup = tmp_path / "lineup.json"
+    cache = tmp_path / "cache.json"
+    for path, payload in ((wc, {"ok": "wc"}), (packages, {"ok": "packages"}), (lineup, {"ok": "lineup"})):
+        path.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(v4_decision_pipeline, "WC_OUTFILE", wc)
+    monkeypatch.setattr(v4_decision_pipeline, "PACKAGE_OUTFILE", packages)
+    monkeypatch.setattr(v4_decision_pipeline, "LINEUP_OUTFILE", lineup)
+    monkeypatch.setattr(v4_decision_pipeline, "DECISION_CACHE", cache)
+    artifacts = v4_decision_pipeline._cache_artifacts()
+    assert all(hasattr(path, "open") for path in artifacts.values())
+    v4_decision_pipeline._write_cache("fingerprint")
+    stored = json.loads(cache.read_text(encoding="utf-8"))
+    assert stored["fingerprint"] == "fingerprint"
+    assert set(stored["artifact_sha256"]) == {"wc", "packages", "lineup"}
+    assert all(len(value) == 64 for value in stored["artifact_sha256"].values())
+
+
 def test_fresh_enrichment_cache_is_reused_without_network(monkeypatch, tmp_path):
     monkeypatch.setattr(enrichment_service, "STATS", tmp_path)
     payload = {

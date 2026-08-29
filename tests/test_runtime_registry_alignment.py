@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from src.runtime_v3 import module_batch_runner, registry_compiler
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -14,13 +16,61 @@ def _module_path(module: str) -> Path:
     return ROOT / (module.replace(".", "/") + ".py")
 
 
-def test_module_batches_match_service_registry_entrypoints_exactly() -> None:
+def test_module_batches_are_derived_from_capability_commands_exactly() -> None:
     services = _json("config/v3_service_registry.json")["services"]
-    batches = _json("config/runtime/module_batches.json")["batches"]
+    derived = registry_compiler.derived_batch_registry()
+    expected = {
+        service_name: spec["commands"]
+        for service_name, spec in services.items()
+        if len(spec.get("commands") or []) > 1
+    }
 
-    for service_name, batch_commands in batches.items():
-        assert service_name in services, service_name
-        assert services[service_name].get("commands") == batch_commands, service_name
+    assert derived["registry"] == "V3_MODULE_BATCHES_DERIVED_V2"
+    assert derived["generated_from"] == "config/v3_service_registry.json#services.*.commands"
+    assert derived["batches"] == expected
+    assert module_batch_runner._registry() == derived
+    assert not (ROOT / "config/runtime/module_batches.json").exists()
+
+
+def test_registry_compiler_is_deterministic_and_covers_the_runtime_control_plane() -> None:
+    services = _json("config/v3_service_registry.json")["services"]
+    domains = _json("config/runtime/execution_domains.json")
+    first = registry_compiler.compile_runtime_plan()
+    second = registry_compiler.compile_runtime_plan()
+
+    assert first == second
+    assert first["registry"] == "V3_COMPILED_EXECUTION_PLAN_V1"
+    assert len(first["plan_sha256"]) == 64
+    assert first["phase_count"] == 6
+    assert first["domain_count"] == 11
+    assert first["capability_count"] == 21
+    assert list(first["capability_owner"]) == list(services)
+    assert set(first["capability_owner"]) == set(services)
+    assert first["domain_order"] == [
+        name
+        for phase in domains["canonical_phases"].values()
+        for name in phase
+    ]
+    assert first["batch_capabilities"] == [
+        "advanced_stats",
+        "official_detail",
+        "governance",
+        "watchlist",
+        "reporting",
+        "report_materializer",
+    ]
+    assert set(first["multi_writer_artifacts"]) == {
+        "health.json",
+        "team.json",
+        "chips.json",
+        "live.json",
+        "prices.json",
+        "universe.json",
+        "advanced_stats_sync.json",
+        "user_report.json",
+    }
+    assert first["policy"]["module_batches_are_derived"] is True
+    assert first["policy"]["human_maintained_module_batch_registry"] is False
 
 
 def test_all_active_service_command_modules_exist_and_exclude_retired_business_modules() -> None:
@@ -98,6 +148,9 @@ def test_active_v3_workflow_and_domains_have_single_runtime_owner() -> None:
     assert len(services) == 21
     assert len(assigned) == len(set(assigned)) == len(services)
     assert set(assigned) == set(services)
+    assert domains["control_plane"]["compiler"] == "src.runtime_v3.registry_compiler"
+    assert domains["control_plane"]["module_batch_registry"] == "DERIVED_FROM_CAPABILITY_COMMANDS"
+    assert domains["control_plane"]["human_maintained_module_batch_registry"] is False
 
     runtime = (ROOT / ".github/workflows/v3-runtime.yml").read_text(encoding="utf-8")
     compat = (ROOT / ".github/workflows/fpl-engine.yml").read_text(encoding="utf-8")

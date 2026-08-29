@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from statistics import NormalDist
 from typing import Any
 
-from src.models.package_optimizer_v2 import affordable_package, legal_squad, load_config as load_optimizer_config, score_package, simulate_objective
+from src.models.package_optimizer_v2 import _scoring_context, affordable_package, legal_squad, load_config as load_optimizer_config, score_package, simulate_objective
 from src.rules import RULESET_ID
 
 
@@ -37,6 +37,7 @@ def _optimizer_row(proj: dict[str, Any], sell_cost_value: int | None = None) -> 
 def build_package_optimizer(projections: dict[str, Any], team: dict[str, Any]) -> dict[str, Any]:
     cfg = load_optimizer_config()
     planning_gw = int(projections.get("planning_gw") or 1)
+    scoring_context = _scoring_context(cfg, planning_gw)
     pmap = {int(p["element"]): p for p in projections.get("players") or []}
     ledger = list(team.get("team_value_ledger") or [])
     current = []
@@ -76,7 +77,7 @@ def build_package_optimizer(projections: dict[str, Any], team: dict[str, Any]) -
         rows.sort(key=lambda r: (r["candidate_score"], -r["now_cost"]), reverse=True)
         candidate_pool[position] = rows[:max_candidates]
 
-    hold_score = score_package(current, planning_gw, changes=0)
+    hold_score = score_package(current, planning_gw, changes=0, scoring_context=scoring_context)
     packages = [{
         "id": "HOLD",
         "changes": 0,
@@ -97,7 +98,7 @@ def build_package_optimizer(projections: dict[str, Any], team: dict[str, Any]) -
             candidate = [p for p in current if p["element"] != out["element"]] + [incoming]
             if not legal_squad(candidate):
                 continue
-            score = score_package(candidate, planning_gw, changes=1)
+            score = score_package(candidate, planning_gw, changes=1, scoring_context=scoring_context)
             move = {"out": out, "in": incoming, "candidate": candidate, "finance": finance, "score": score}
             single_moves.append(move)
             packages.append({
@@ -131,7 +132,7 @@ def build_package_optimizer(projections: dict[str, Any], team: dict[str, Any]) -
                 candidate = [p for p in current if p["element"] not in out_ids] + ins
                 if not legal_squad(candidate):
                     continue
-                score = score_package(candidate, planning_gw, changes=2)
+                score = score_package(candidate, planning_gw, changes=2, scoring_context=scoring_context)
                 packages.append({
                     "id": f"2:{outs[0]['element']},{outs[1]['element']}->{ins[0]['element']},{ins[1]['element']}",
                     "changes": 2,

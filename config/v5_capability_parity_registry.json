@@ -1,9 +1,11 @@
 {
-  "schema_version": 3,
-  "model": "v5_v3_v4_capability_parity_v3",
+  "schema_version": 4,
+  "model": "v5_v3_v4_capability_parity_v4",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "main@1d7bfea",
+    "current_production_runtime": "main@83873ea33ca631344212a792a57911fad7e1575b",
+    "current_production_runtime_schema": 49,
+    "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "research_reference": "v4",
     "candidate": "v5.0.0-beta.4"
   },
@@ -49,6 +51,34 @@
     "release_attestation",
     "isolated_team_review"
   ],
+  "current_production_reanchor": {
+    "production_main_sha": "83873ea33ca631344212a792a57911fad7e1575b",
+    "runtime_manifest_source_commit_required": true,
+    "runtime_manifest_verified": true,
+    "runtime_schema_version": 49,
+    "production_engine_version": "3.39.0",
+    "v3_topology": {
+      "phase_count": 6,
+      "domain_count": 11,
+      "registry": "V3_EXECUTION_DOMAINS_V2",
+      "business_capability_contract_unchanged_by_topology_refactor": true,
+      "service_registry_unchanged_by_topology_refactor": true
+    },
+    "capability_equivalence": {
+      "gw_scoped_chip_override": {"v5_owner": "truth", "evidence": "src/v5/services/truth.py::_lock_chip_scope"},
+      "authenticated_official_predeadline_team": {"v5_owner": "truth", "evidence": "config/v5_phase_authority_registry.json"},
+      "explicit_xmins_probability_decomposition": {"v5_owner": "prediction", "evidence": "src/v5/intelligence/xmins.py::_probability_contract"},
+      "projection_component_observability": {"v5_owner": "prediction", "evidence": "src/v5/intelligence/projection.py::_position_projection_diagnostics"},
+      "tactical_xpts_immutability": {"v5_owner": "decision", "evidence": "src/v5/decision/tactical_consumption.py"},
+      "governed_lineup_uncertainty": {"v5_owner": "decision", "evidence": "src/v5/decision/lineup_optimizer.py"},
+      "captain_safe_pool_and_independent_vice": {"v5_owner": "decision", "evidence": "src/v5/decision/lineup_optimizer.py"},
+      "close_call_lineup_arbitration": {"v5_owner": "decision", "evidence": "src/v5/decision/lineup_optimizer.py"},
+      "genuine_predeadline_decision_snapshot": {"v5_owner": "evaluation", "evidence": "src/v5/evaluation/decision_validation.py"},
+      "owned_challenger_comparator": {"v5_owner": "evaluation", "evidence": "src/v5/evaluation/owned_challenger_comparator.py"},
+      "historical_prediction_settlement": {"v5_owner": "evaluation", "evidence": "src/v5/evaluation/prediction_settlement.py"},
+      "final_governed_publication": {"v5_owner": "governance", "evidence": "src/v5/services/governance.py"}
+    }
+  },
   "governance": {
     "v4_is_reference_not_authority": true,
     "missing_parity_evidence_blocks_promotion": true,
@@ -57,6 +87,9 @@
     "execution_domains_are_not_business_owners": true,
     "external_consensus_is_advisory_only": true,
     "competitive_load_direct_prediction_mutation_forbidden_until_calibrated": true,
-    "predeadline_validation_must_be_genuine_not_reconstructed": true
+    "predeadline_validation_must_be_genuine_not_reconstructed": true,
+    "reanchor_requires_full_v5_gate": true,
+    "reanchor_does_not_change_frozen_football_truth_baseline": true,
+    "topology_name_parity_does_not_require_service_name_identity": true
   }
 }

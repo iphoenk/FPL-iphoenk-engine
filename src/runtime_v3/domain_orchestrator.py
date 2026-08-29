@@ -83,12 +83,15 @@ def _run_capability(
     profile_cfg: dict[str, Any],
 ) -> dict[str, Any]:
     """Compatibility primitive retained for tests and controlled fallback paths."""
-    reuse_active = incremental_reuse.active(profile_name)
+    reuse_active = incremental_reuse.active(profile_name, name)
+    reuse_diagnostic_before = incremental_reuse.diagnose(name, profile_name) if name in (incremental_reuse._registry().get("services") or {}) else None
     reused = legacy._reuse_service(name, spec, DATA, profile_cfg)
     if reused is None and reuse_active:
         reused = incremental_reuse.try_reuse(name, spec, profile_name)
     if reused is not None:
         reused["execution_boundary"] = "DOMAIN_SHARED_CANONICAL"
+        if reuse_diagnostic_before is not None:
+            reused["reuse_diagnostic_before"] = reuse_diagnostic_before
         return reused
 
     input_fingerprint_before = incremental_reuse.fingerprint(name) if reuse_active else None
@@ -103,6 +106,8 @@ def _run_capability(
         timeout=timeout,
         submitted_at=time.perf_counter(),
     )
+    if reuse_diagnostic_before is not None:
+        result["reuse_diagnostic_before"] = reuse_diagnostic_before
     if input_fingerprint_before:
         result["input_fingerprint_before"] = input_fingerprint_before
     if shared_spec.get("single_process_module_batch"):
@@ -188,6 +193,24 @@ def _run_domain_process(
     payload["process_stdout_tail"] = (proc.stdout or "")[-4000:]
     payload["process_stderr_tail"] = (proc.stderr or "")[-4000:]
     return payload
+
+
+def _reuse_diagnostic_summary(name: str, capability_results: dict[str, dict[str, Any]], profile_name: str) -> dict[str, Any]:
+    row = capability_results.get(name) or {}
+    before = row.get("reuse_diagnostic_before")
+    if isinstance(before, dict):
+        return {
+            **before,
+            "decision_time": True,
+            "execution_status": row.get("status"),
+            "reuse_mode": row.get("reuse_mode"),
+        }
+    return {
+        **incremental_reuse.diagnose(name, profile_name),
+        "decision_time": False,
+        "execution_status": row.get("status"),
+        "reuse_mode": row.get("reuse_mode"),
+    }
 
 
 def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profile: str | None = None) -> dict[str, Any]:
@@ -286,8 +309,9 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                 name for name, row in capability_results.items()
                 if row.get("reuse_mode") == "CONTENT_ADDRESSED"
             ),
+            "diagnostics_semantics": "PRE_EXECUTION_DECISION_STATE_WHEN_AVAILABLE",
             "diagnostics": {
-                name: incremental_reuse.diagnose(name, profile_name)
+                name: _reuse_diagnostic_summary(name, capability_results, profile_name)
                 for name in reuse_registry
             },
         }

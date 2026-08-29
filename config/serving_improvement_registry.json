@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "registry": "fpl_v4_9_6_serving_improvement_v1",
+  "decision_semantics": {
+    "HOLD": "no actionable change now",
+    "REVIEW": "material candidate or close call exists but evidence, timing, freshness, or actionability is insufficient",
+    "CHANGE": "executable recommendation now"
+  },
+  "transfer_candidate_states": [
+    "WATCH",
+    "REVIEW",
+    "MATERIAL_UPGRADE_NON_ACTIONABLE",
+    "ACTIONABLE_CHANGE"
+  ],
+  "freshness": {
+    "timezone": "Asia/Jakarta",
+    "master_minute": 30,
+    "normal_max_age_minutes": 90,
+    "deadline_day_max_age_minutes": 30,
+    "match_mode_max_age_minutes": 10,
+    "partial_fraction": 0.75,
+    "states": ["FRESH", "PARTIAL", "STALE", "UNKNOWN"]
+  },
+  "xmins": {
+    "single_soft_signal_max_delta": 0.22,
+    "team_news_half_life_hours": 18,
+    "confidence_high": 0.78,
+    "confidence_medium": 0.58
+  },
+  "lineup": {
+    "formation_open_margin": 0.35,
+    "gk_open_raw_xpts_margin": 0.15,
+    "gk_open_selection_margin": 0.12,
+    "bench_open_score_margin": 0.15,
+    "captain_close_margin": 0.30
+  },
+  "tactical": {
+    "material_confidence": 0.78,
+    "tiebreak_confidence": 0.60,
+    "unverified_delta_must_be_zero": true,
+    "verbose_evidence_external_artifact": true,
+    "quick_payload_compact_only": true
+  },
+  "watchlist": {
+    "exact_per_position": 5,
+    "positions": ["GK", "DEF", "MID", "FWD"],
+    "exclude_owned": true,
+    "tactical_signal_cannot_independently_promote": true
+  },
+  "consensus": {
+    "statuses": ["ACCESSIBLE", "PARTIAL", "STALE", "NO_MATERIAL_UPDATE", "UNAVAILABLE"],
+    "states": ["ALIGN", "DIVERGE", "REVIEW_DIVERGENCE", "NEUTRAL"],
+    "tier1_cannot_be_overridden": true
+  },
+  "performance": {
+    "quick_serving_target_ms": 1000,
+    "decision_compute_hard_limit_ms": 5000,
+    "latency_regression_warn_fraction": 0.20
+  }
+}

@@ -41,7 +41,7 @@ jobs:
       - name: Full unit and regression suite
         run: python -m pytest -q
       - name: Hydrate operational LKG for release acceptance
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
@@ -61,8 +61,8 @@ jobs:
             fi
           done < "$RUNNER_TEMP/hydrate-paths.txt"
       - name: Composite FULL + FAST release acceptance
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: python -m src.runtime_v3.release_acceptance
       - name: Benchmark unified interactive fastpath under 2s, prefer 1s
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: python -m src.runtime_v3.unified_fastpath --benchmark

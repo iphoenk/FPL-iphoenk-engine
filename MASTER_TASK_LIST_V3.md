@@ -5,10 +5,10 @@ Canonical roadmap owner: V3 operational stream
 Current production release: V3.39.0  
 Current production schema: 49  
 Production acceptance: COMPLETE  
-Latest production-proven code-bearing merge: `f02933343d275a9e4c34b7f690c4ee34cf822414`  
+Latest production-proven code-bearing merge: `83873ea33ca631344212a792a57911fad7e1575b`
 FAST refresh target: **<10 seconds**  
 Validated warm serving hard ceiling: **<1 second**  
-Active background capabilities: **21**, mapped into the **11-domain / 6-phase candidate topology**; accepted production evidence remains on the predecessor 7-domain topology until merge and runtime publication
+Active background capabilities: **21**, mapped exactly once into the production-proven **11-domain / 6-phase topology**
 
 This file is the single human-readable roadmap for the operational V3 stream. Git history preserves historical release notes; this file represents the **current canonical state**. Metadata-only closeout commits may follow the latest accepted code-bearing merge without redefining behavioral acceptance.
 
@@ -67,11 +67,11 @@ This file is the single human-readable roadmap for the operational V3 stream. Gi
 | --- | --- | --- |
 | Gate0 | 16/16 PASS | V3.39 production proven |
 | DSS | 50 / 16 / 8 ACTIVE | V3.39 production proven |
-| FAST refresh | <10s | V3.39 latest code-bearing publication 4.834s |
+| FAST refresh | <10s | V3.39 11-domain publication 6.256s |
 | Validated warm serving | <1000ms hard ceiling, 500ms target | V3.39 housekeeping candidate median 7.595ms, max 157.275ms |
-| Runtime publication | rolling parentless snapshot | V3.39 published from `f0293334…` |
+| Runtime publication | rolling parentless snapshot | V3.39 published from `83873ea3…` |
 | Official-first | closed explicit matrix | production |
-| Architecture ownership | 21 capabilities mapped exactly once into 11 domains / 6 phases | candidate guard; predecessor 7-domain runtime remains latest production evidence |
+| Architecture ownership | 21 capabilities mapped exactly once into 11 domains / 6 phases | production-proven by PR #161, CI #406 and Runtime #29 |
 | Competitive-load policy | one canonical runtime/report-time config | V3.39 production |
 | Repository hygiene | no placeholder/probe files; zero version-stamped release tests | V3.39 production CI guard |
 | Prediction freeze state machine | overdue genuine pre-deadline forecast recovery | production PR #148 |

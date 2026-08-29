@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "resource_policy": {
     "allowed_method": "GET",
     "allow_redirects": false,
@@ -18,6 +18,11 @@
     "team_id_config": "config/engine.json",
     "team_id_key": "team_id",
     "team_id_env_override": "FPL_TEAM_ID"
+  },
+  "mode_resolution": {
+    "auto_detect_single_secret_when_mode_unset": true,
+    "explicit_disabled_remains_disabled": true,
+    "ambiguous_multiple_credentials_fail_closed": true
   },
   "routes": {
     "me": "me/",

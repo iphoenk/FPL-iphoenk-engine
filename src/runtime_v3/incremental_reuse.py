@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -34,16 +35,62 @@ def _registry() -> dict[str, Any]:
     return payload
 
 
+def _parse_utc(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        text = str(value).strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        parsed = datetime.fromisoformat(text)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    except (TypeError, ValueError):
+        return None
+
+
+def _current_scoring_fixture_live(now: datetime | None = None) -> bool:
+    snapshot = read_json(DATA / "official_snapshot.json", {})
+    if not isinstance(snapshot, dict):
+        return False
+    phase = snapshot.get("phase") if isinstance(snapshot.get("phase"), dict) else {}
+    scoring_gw = phase.get("scoring_gw")
+    if scoring_gw is None:
+        latest = read_json(DATA / "latest.json", {})
+        latest_phase = latest.get("phase") if isinstance(latest, dict) and isinstance(latest.get("phase"), dict) else {}
+        scoring_gw = latest_phase.get("scoring_gw")
+    try:
+        scoring_gw = int(scoring_gw)
+    except (TypeError, ValueError):
+        return False
+
+    current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    for fixture in snapshot.get("fixtures") or []:
+        if not isinstance(fixture, dict):
+            continue
+        try:
+            event = int(fixture.get("event"))
+        except (TypeError, ValueError):
+            continue
+        if event != scoring_gw:
+            continue
+        if fixture.get("started") is not True or fixture.get("finished") is True:
+            continue
+        kickoff = _parse_utc(fixture.get("kickoff_time"))
+        if kickoff is None or kickoff > current:
+            continue
+        return True
+    return False
+
+
 def active(profile_name: str) -> bool:
     registry = _registry()
     policy = registry.get("policy") or {}
     if profile_name not in set(policy.get("enabled_profiles") or []):
         return False
-    if policy.get("disable_when_live_event") is True:
-        latest = read_json(DATA / "latest.json", {})
-        phase = latest.get("phase") if isinstance(latest, dict) and isinstance(latest.get("phase"), dict) else {}
-        if phase.get("is_live_event") is True:
-            return False
+    if policy.get("disable_when_current_scoring_fixture_live") is True and _current_scoring_fixture_live():
+        return False
     return True
 
 
@@ -52,11 +99,8 @@ def inactive_reason(profile_name: str) -> str | None:
     policy = registry.get("policy") or {}
     if profile_name not in set(policy.get("enabled_profiles") or []):
         return "PROFILE_DISABLED"
-    if policy.get("disable_when_live_event") is True:
-        latest = read_json(DATA / "latest.json", {})
-        phase = latest.get("phase") if isinstance(latest, dict) and isinstance(latest.get("phase"), dict) else {}
-        if phase.get("is_live_event") is True:
-            return "LIVE_EVENT_DISABLED"
+    if policy.get("disable_when_current_scoring_fixture_live") is True and _current_scoring_fixture_live():
+        return "CURRENT_SCORING_FIXTURE_LIVE"
     return None
 
 

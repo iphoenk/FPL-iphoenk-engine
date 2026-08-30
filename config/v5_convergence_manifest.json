@@ -5,8 +5,8 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "ac4e14abf2a844804007e0fb3cac7c7c54213679",
-    "production_code_commit": "ac4e14abf2a844804007e0fb3cac7c7c54213679",
+    "production_main_sha": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
+    "production_code_commit": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
@@ -87,6 +87,8 @@
     "v3_canonical_capability_telemetry_reconciled_without_v5_authority_change": true,
     "v3_sub3s_fast_lane_reconciled_as_runtime_hardening": true,
     "v3_semantic_prediction_reuse_reconciled_as_runtime_hardening": true,
+    "v3_gameweek_lifecycle_reporting_hardening_reconciled_without_prediction_or_decision_authority_change": true,
+    "v3_bounded_warm_retry_reconciled_as_runtime_workflow_hardening": true,
     "strict_all_dss_active_governance_required": true,
     "unique_service_handler_and_bounded_context_authority_required": true
   },

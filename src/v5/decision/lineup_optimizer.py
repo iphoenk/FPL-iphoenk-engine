@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+from collections import Counter
 from typing import Any, Iterable, Mapping
 
 from src.v5.config_cache import load_json_config
@@ -181,14 +182,75 @@ def _select_formation(players: list[dict[str, Any]], gw: int, lineup_rules: dict
     return best
 
 
+
+def _defensive_route_proxy(player: dict[str, Any], gw: int) -> float:
+    for row in player.get("xpts_by_gw") or []:
+        if not isinstance(row, dict) or int(row.get("gw") or -1) != int(gw):
+            continue
+        total = 0.0
+        for fixture in row.get("fixtures") or []:
+            components = fixture.get("components") if isinstance(fixture.get("components"), dict) else {}
+            total += _f(components.get("clean_sheet"))
+            total += _f(components.get("saves"))
+            total += _f(components.get("defensive_contribution"))
+        return max(0.0, total)
+    return 0.0
+
+
+def _lineup_risk_adjustment(
+    starters: list[dict[str, Any]],
+    bench_rows: list[dict[str, Any]],
+    gw: int,
+    lineup_cfg: Mapping[str, Any],
+) -> dict[str, Any]:
+    cfg = lineup_cfg.get("lineup_risk") if isinstance(lineup_cfg.get("lineup_risk"), dict) else {}
+    if not bool(cfg.get("enabled", False)):
+        return {"adjustment": 0.0, "enabled": False}
+
+    defensive = [row for row in starters if row.get("position") in {"GK", "DEF"}]
+    team_counts = Counter(int(row.get("team_id") or -1) for row in defensive if int(row.get("team_id") or -1) > 0)
+    clustered_extras = sum(max(0, count - 1) for count in team_counts.values())
+    cluster_penalty = clustered_extras * _f(cfg.get("same_team_defensive_cluster_penalty"), 0.08)
+
+    defensive_route_points = sum(_defensive_route_proxy(row, gw) for row in starters)
+    total_points = sum(max(0.0, _cached_metrics(row, gw, "player_score", lineup_cfg)["mean"]) for row in starters)
+    route_share = defensive_route_points / total_points if total_points > 1e-9 else 0.0
+    concentration_penalty = max(0.0, route_share - 0.50) * _f(cfg.get("defensive_route_concentration_penalty"), 0.06)
+
+    usable_bench = [row for row in bench_rows if row.get("position") != "GK"]
+    bench_scores = [max(0.0, _cached_metrics(row, gw, "bench_score", lineup_cfg)["score"]) for row in usable_bench[:3]]
+    bench_utility = sum(bench_scores) / max(1, len(bench_scores))
+    bench_bonus = min(0.12, _f(cfg.get("bench_utility_weight"), 0.03) * bench_utility / 5.0)
+
+    raw_adjustment = -cluster_penalty - concentration_penalty + bench_bonus
+    limit = max(0.0, _f(cfg.get("maximum_close_call_adjustment"), 0.30))
+    adjustment = max(-limit, min(limit, raw_adjustment))
+    return {
+        "enabled": True,
+        "adjustment": round(adjustment, 4),
+        "defensive_cluster_penalty": round(cluster_penalty, 4),
+        "defensive_route_concentration_penalty": round(concentration_penalty, 4),
+        "bench_utility_bonus": round(bench_bonus, 4),
+        "same_team_defensive_cluster_extras": clustered_extras,
+        "defensive_route_share": round(route_share, 4),
+        "bench_utility_proxy": round(bench_utility, 4),
+        "governance": {
+            "bounded_decision_adjustment_only": True,
+            "raw_xpts_unchanged": True,
+            "no_artificial_attacking_formation_bonus": True,
+        },
+    }
+
 def _enumerate_final_candidates(players: list[dict[str, Any]], gw: int, lineup_rules: dict[str, Any]) -> list[dict[str, Any]]:
     context = _selection_context(players, gw)
     indexed = context["players"]
     metrics = context["metrics"]
+    lineup_cfg = _cfg()["lineup"]
     starting_size = _required_int(lineup_rules, "starting_xi_size", "rules.lineup")
     required_gk = _required_int(lineup_rules, "starting_goalkeepers", "rules.lineup")
     legal_formations = {str(value) for value in lineup_rules.get("legal_formations") or ()}
     candidates: list[dict[str, Any]] = []
+    all_ids = {int(player["element"]) for player in indexed}
     for combo in itertools.combinations(indexed, starting_size):
         rows = list(combo)
         if sum(1 for player in rows if player.get("position") == "GK") != required_gk:
@@ -201,17 +263,33 @@ def _enumerate_final_candidates(players: list[dict[str, Any]], gw: int, lineup_r
         if formation not in legal_formations:
             continue
         starter_metrics = [metrics[int(player["element"])] for player in rows]
+        base_score = sum(item["score"] for item in starter_metrics)
+        starter_ids = {int(player["element"]) for player in rows}
+        bench_rows = [player for player in indexed if int(player["element"]) in all_ids - starter_ids]
+        risk = _lineup_risk_adjustment(rows, bench_rows, gw, lineup_cfg)
+        decision_score = base_score + _f(risk.get("adjustment"))
         candidates.append(
             {
                 "formation": formation,
                 "starters": rows,
-                "selection_score": round(sum(item["score"] for item in starter_metrics), 4),
+                "selection_score": round(decision_score, 4),
+                "base_score": round(base_score, 4),
+                "risk_adjustment": risk,
                 "mean": round(sum(item["mean"] for item in starter_metrics), 4),
                 "variance": round(sum(item["variance"] for item in starter_metrics), 4),
             }
         )
-    candidates.sort(key=lambda row: (row["selection_score"], row["mean"], row["formation"]), reverse=True)
-    return candidates
+
+    base_sorted = sorted(candidates, key=lambda row: (row["base_score"], row["mean"], row["formation"]), reverse=True)
+    risk_cfg = lineup_cfg.get("lineup_risk") if isinstance(lineup_cfg.get("lineup_risk"), dict) else {}
+    if not bool(risk_cfg.get("enabled", False)) or not base_sorted:
+        return base_sorted
+    anchor = _f(base_sorted[0].get("base_score"))
+    gap = max(0.0, _f(risk_cfg.get("close_call_rerank_gap"), 0.75))
+    close = [row for row in base_sorted if anchor - _f(row.get("base_score")) <= gap + 1e-9]
+    distant = [row for row in base_sorted if row not in close]
+    close.sort(key=lambda row: (row["selection_score"], row["base_score"], row["mean"]), reverse=True)
+    return close + distant
 
 
 def best_lineup(players: list[dict[str, Any]], gw: int, lineup_rules: dict[str, Any]) -> dict[str, Any]:

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from src.v5.config_cache import load_json_config
+from src.v5.intelligence.robust_rates import robust_attack_rate, validate_config as validate_robust_rate_config
 from src.v5.intelligence.role_intelligence import build_role_intelligence
 from src.v5.intelligence.team_strength import build_team_strength
 from src.v5.intelligence.xmins import estimate_xmins
@@ -128,6 +129,8 @@ def build_predictions(
     historical_prior: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cfg = load_json_config(CONFIG)
+    robust_cfg = cfg.get("early_season_robust_rates") if isinstance(cfg.get("early_season_robust_rates"), dict) else {}
+    validate_robust_rate_config(robust_cfg)
     strength = build_team_strength(bootstrap, fixtures)
     teams = {int(t["id"]): t.get("name") for t in bootstrap.get("teams") or []}
     positions = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
@@ -157,6 +160,7 @@ def build_predictions(
     league_baseline = strength.get("baseline") or {}
     players = []
     historical_used = 0
+    robust_winsorized_players = 0
 
     for player in bootstrap.get("elements") or []:
         element_id = int(player["id"])
@@ -173,8 +177,9 @@ def build_predictions(
         xa_prior, xa_prior_source, _ = _historical_rate_prior(
             _f(position_prior.get("xa90")), historical, "xa90"
         )
-        xg90, xg_source = _blended_rate(player, "expected_goals", xg_prior, shrink)
-        xa90, xa_source = _blended_rate(player, "expected_assists", xa_prior, shrink)
+        xg90, xg_source, xg_robust = robust_attack_rate(player, "expected_goals", xg_prior, robust_cfg)
+        xa90, xa_source, xa_robust = robust_attack_rate(player, "expected_assists", xa_prior, robust_cfg)
+        robust_winsorized_players += int(bool(xg_robust.get("winsorized") or xa_robust.get("winsorized")))
         bonus90, bonus_source = _blended_rate(player, "bonus", _f(position_prior.get("bonus90")), shrink)
         saves90, saves_source = _blended_rate(player, "saves", _f(position_prior.get("saves90")), shrink)
         dc90 = _f(position_prior.get("dc90"))
@@ -182,10 +187,10 @@ def build_predictions(
         team_id = int(player.get("team") or -1)
         role = role_rows.get(element_id) if isinstance(role_rows, dict) else None
         role = role if isinstance(role, dict) else {}
+        # Role intelligence remains published evidence but is not an independent
+        # quantitative xMins authority. Passing it here double-counted starter evidence.
         xmins_context = {
             "team_matches_played": int((team_rows.get(team_id) or {}).get("matches_played") or 0),
-            "role_start_probability": role.get("role_start_probability"),
-            "rotation_risk": role.get("rotation_risk"),
         }
         if historical:
             xmins_context.update(
@@ -224,11 +229,11 @@ def build_predictions(
                     1.0,
                 )
                 appearance = _f(xmins.get("start_probability")) * (1.0 + p60) + _f(xmins.get("bench_probability"))
-                set_piece_multiplier = 1.0 + _f(role_adjustment.get("set_piece_assist_uplift"), 0.08) * _f(role.get("set_piece_share"))
-                penalty_multiplier = 1.0 + _f(role_adjustment.get("penalty_goal_uplift"), 0.18) * _f(role.get("penalty_share"))
+                # Role/set-piece evidence is retained for reporting and close-call
+                # context only; it does not silently mutate quantitative xPts.
                 attack = (
-                    xg90 * penalty_multiplier * goal_points.get(element_type, 4)
-                    + xa90 * set_piece_multiplier * assist_points
+                    xg90 * goal_points.get(element_type, 4)
+                    + xa90 * assist_points
                 ) * share * attack_multiplier
                 clean = cs_points.get(element_type, 0) * cs_prob * p60
                 saves = (saves90 / 3.0) * share if position == "GK" else 0.0
@@ -344,6 +349,7 @@ def build_predictions(
                         "dc90": "position_prior",
                     },
                     "historical_attacking_prior_weight": round(attack_weight, 4),
+                    "robust_rate_diagnostics": {"xg90": xg_robust, "xa90": xa_robust},
                 },
                 "projection_confidence": xmins.get("confidence"),
             }
@@ -364,6 +370,13 @@ def build_predictions(
             "players_used": historical_used,
         },
         "team_strength": strength,
+        "robust_attack_rate_model": robust_cfg.get("model"),
+        "robust_rate_winsorized_players": robust_winsorized_players,
+        "role_projection_governance": {
+            "role_evidence_is_advisory_for_quantitative_xpts": True,
+            "role_start_probability_not_double_counted_in_xmins": True,
+            "set_piece_and_penalty_role_do_not_directly_mutate_xpts": True,
+        },
         "role_intelligence": {
             "model": roles.get("model"),
             "capabilities": roles.get("capabilities"),

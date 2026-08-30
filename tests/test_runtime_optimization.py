@@ -60,10 +60,7 @@ def test_profile_aware_production_contract_accepts_only_validated_declared_reuse
 
 
 def test_production_contract_accepts_canonical_11_domain_6_phase_runtime():
-    canonical_domains = [
-        "official_state", "personal_team_state", "football_context", "market_context", "prediction",
-        "squad_decision", "challenger_analysis", "framework_governance", "prediction_validation", "reporting", "serving",
-    ]
+    canonical_domains = ["official_state","personal_team_state","football_context","market_context","prediction","squad_decision","challenger_analysis","framework_governance","prediction_validation","reporting","serving"]
     snapshot = {"id":"v3-domain-pipeline-v2","architecture":"V3_CANONICAL_DOMAIN_PIPELINE","dependency_aware_scheduling":True,"shared_official_cache":True,"shared_canonical_domain_workspace":True,"cross_capability_copy_promotion":False,"execution_domain_count":11,"execution_phase_count":6,"service_count":11,"capability_owner_count":21}
     runtime = {"runtime_id":"v3-domain-pipeline-v2","architecture":"V3_CANONICAL_DOMAIN_PIPELINE","execution_domain_count":11,"execution_phase_count":6,"capability_owner_count":21,"cross_capability_copy_promotion":False,"canonical_domain_order":canonical_domains,"execution_domains":{name:{"status":"SUCCESS"} for name in canonical_domains},"execution_phase_results":{phase:{"status":"SUCCESS"} for phase in ["ACQUIRE","ENRICH","MODEL","DECISION","GOVERNANCE","PUBLISH"]},"services":{f"capability_{index}":{} for index in range(21)}}
     _validate_runtime_architecture(snapshot, runtime)
@@ -110,6 +107,13 @@ def test_workflows_are_unified_shallow_and_runtime_data_is_rolling():
     schedules=collector["schedules"]
     hydrate=set(publish["hydrate_paths"])
     assert {"source_health.json","source_registry_runtime.json","challenger_observations.json","fixture_weather.json"}.issubset(hydrate)
-    assert "v3-ci.yml" in compat and "v3-runtime.yml" in compat
+    assert "schedule:" not in compat
+    assert f'cron: "{schedules["primary"]}"' in runtime
+    assert f'cron: "{schedules["adaptive"]}"' in runtime
+    assert "NORMAL_DEEP_REVIEW" in runtime and 'profile="deep_stats"' in runtime
+    assert not (ROOT/".github/workflows/v3-runtime-fast.yml").exists()
+    assert not (ROOT/".github/workflows/v3-refresh-full.yml").exists()
+    assert "fetch-depth: 0" not in ci+runtime
     assert "fetch-depth: 1" in ci and "fetch-depth: 1" in runtime
-    assert schedules
+    assert "git push --force origin HEAD:\"$RUNTIME_BRANCH\"" in runtime
+    assert "runtime_publish_registry.json" in runtime and "/data/**" in (ROOT/".gitignore").read_text()

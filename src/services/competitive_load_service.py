@@ -258,12 +258,12 @@ def build_competitive_load(
             "press_conference_verified_teams": verified_press_teams,
             "complete_for_visible_report": False,
             "completion_reason": "Premier League load is Official-automated; verified optional external evidence is consumed when materialized and otherwise remains evidence-gated",
-            "capability_implementation": {
-                "EUROPEAN": "ACTIVE",
-                "DOMESTIC_CUP": "ACTIVE",
-                "INTERNATIONAL": "ACTIVE",
-                "REST_RECOVERY": "ACTIVE",
-            },
+            "implemented_dimensions": [
+                "EUROPEAN",
+                "DOMESTIC_CUP",
+                "INTERNATIONAL",
+                "REST_RECOVERY",
+            ],
         },
         "guardrails": {
             "official_fpl_acquisition_reused_not_refetched": True,

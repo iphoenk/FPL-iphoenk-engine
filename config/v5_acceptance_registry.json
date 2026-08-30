@@ -26,8 +26,8 @@
   },
   "convergence": {
     "production_baseline": "v3.20.0",
-    "production_main_sha": "a6f983af575f33329ada456ef8c6e8e971921696",
-    "production_code_commit": "a6f983af575f33329ada456ef8c6e8e971921696",
+    "production_main_sha": "a40d0e19ff3d1da580e0d94983f829397aab81f2",
+    "production_code_commit": "a40d0e19ff3d1da580e0d94983f829397aab81f2",
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
     "production_runtime_schema_version": 49,
     "production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
@@ -140,6 +140,7 @@
     "v3_authenticated_official_production_readiness_reconciled_as_runtime_hardening": true,
     "v3_fingerprint_only_prediction_reuse_reconciled_as_runtime_hardening": true,
     "v3_runtime_reuse_contract_migration_reconciled_as_runtime_hardening": true,
+    "v3_official_player_detail_enrichment_reconciled_as_fail_soft_public_enrichment": true,
     "v3_public_mini_league_reporting_reconciled_without_prediction_or_decision_authority_change": true,
     "v3_profile_aware_production_dod_reconciled_as_runtime_governance_hardening": true,
     "v3_atomic_runtime_publication_reconciled_as_runtime_governance_hardening": true,

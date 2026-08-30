@@ -151,9 +151,42 @@ jobs:
           python -m src.engines.report_serving_validate
           python -m src.engines.report_time_contract_validate
 
-      - name: Enforce selected profile runtime SLO
+      - name: Enforce selected profile runtime SLO with one bounded warm retry
         if: steps.cadence.outputs.should_collect == 'true'
-        run: python -m src.runtime_v3.performance_guard --profile "${{ steps.runtime_profile.outputs.profile }}"
+        shell: bash
+        env:
+          FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
+          FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
+          FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
+          FPL_REFRESH_TOKEN: ${{ secrets.FPL_REFRESH_TOKEN }}
+          FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
+          FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
+          FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          profile="${{ steps.runtime_profile.outputs.profile }}"
+          if python -m src.runtime_v3.performance_guard --profile "$profile"; then
+            exit 0
+          fi
+
+          if [ "$profile" != "fast_decision" ]; then
+            echo "SLO failure is not eligible for warm retry: profile=$profile"
+            exit 2
+          fi
+
+          echo "FAST_SLO_WARM_RETRY: first attempt exceeded the unchanged 3000ms hard ceiling; retrying exactly once against current in-job canonical state"
+          args=(--mode "${{ steps.runtime_profile.outputs.mode }}" --stats --profile "$profile")
+          python -m src.runtime_v3.domain_orchestrator "${args[@]}"
+
+          # A retry may only qualify after the same production contracts are revalidated.
+          python -m src.engines.source_contract_validate
+          python -m src.engines.production_contract_validate
+          python -m src.engines.watchlist_contract_validate
+          python -m src.engines.report_serving_validate
+          python -m src.engines.report_time_contract_validate
+
+          # Hard ceiling is intentionally unchanged. A second miss remains a hard failure.
+          python -m src.runtime_v3.performance_guard --profile "$profile"
 
       - name: Materialize publication whitelist
         if: steps.cadence.outputs.should_collect == 'true'

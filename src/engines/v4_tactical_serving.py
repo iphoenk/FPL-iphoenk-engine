@@ -84,6 +84,7 @@ def _compact_tactical(pred: dict, universe_row: dict, external: dict) -> dict:
         "role_vs_opponent_fit": role_fit,
         "tactical_edge_risk": evidence.get("tactical_edge_risk"),
         "evidence_state": state,
+        "external_evidence_state": "VERIFIED" if verified and opponent_system else "EVIDENCE_GATED",
         "evidence_source": evidence.get("source"),
         "evidence_verified_at": evidence.get("verified_at"),
         "tactical_delta_applied": round(tactical_delta, 4),
@@ -207,7 +208,7 @@ def build_tactical_serving(predictions: dict, universe: dict, team: dict, extern
             "unverified_tactical_delta_is_zero": all(
                 row["tactical"]["tactical_delta_applied"] == 0.0
                 for row in [*owned_rows, *watch_rows]
-                if row["tactical"]["evidence_state"] != "VERIFIED"
+                if row["tactical"]["external_evidence_state"] != "VERIFIED"
             ),
             "no_fabricated_opponent_system_evidence": True,
         },

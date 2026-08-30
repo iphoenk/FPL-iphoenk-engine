@@ -1,5 +1,3 @@
-import pytest
-
 from src.v5.squad import select_squad
 from src.v5.state import Phase, authority_chain
 
@@ -42,7 +40,7 @@ def _authenticated():
 
 
 def test_predeadline_chain_allows_scoped_capture_then_public():
-    assert authority_chain(Phase.PRE_DEADLINE, "squad") == ("user_lock", "official_public")
+    assert authority_chain(Phase.PRE_DEADLINE, "squad") == ("user_capture", "official_public")
     assert "official_authenticated" not in authority_chain(Phase.PRE_DEADLINE, "squad")
 
 
@@ -56,7 +54,7 @@ def test_current_capture_beats_authenticated_overlay_and_public_submitted():
         planning_gw=3,
         submitted_gw=2,
     )
-    assert resolved["authority"] == "user_lock"
+    assert resolved["authority"] == "user_capture"
     assert resolved["projection_baseline"]["primary_authority_model"] == "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE"
     assert resolved["projection_baseline"]["override_applied"] is True
     assert resolved["projection_baseline"]["authenticated_official_is_private_enrichment_only"] is True
@@ -91,19 +89,22 @@ def test_postdeadline_public_reclaims_even_when_capture_targets_same_gw():
     assert resolved["projection_baseline"]["post_deadline_official_reclaims_authority"] is True
 
 
-def test_active_capture_requires_exact_target_scope_and_fails_closed_without_it():
+def test_active_capture_without_exact_target_scope_is_rejected_and_public_remains_authority():
     capture = _capture(3)
     capture.pop("target_gw")
-    with pytest.raises(RuntimeError, match="requires target_gw"):
-        select_squad(
-            phase=Phase.PRE_DEADLINE,
-            bootstrap=_bootstrap(),
-            locked_squad=capture,
-            authenticated_my_team=_authenticated(),
-            submitted_picks=_submitted(),
-            planning_gw=3,
-            submitted_gw=2,
-        )
+    resolved = select_squad(
+        phase=Phase.PRE_DEADLINE,
+        bootstrap=_bootstrap(),
+        locked_squad=capture,
+        authenticated_my_team=_authenticated(),
+        submitted_picks=_submitted(),
+        planning_gw=3,
+        submitted_gw=2,
+    )
+    assert resolved["authority"] == "official_public"
+    assert resolved["projection_baseline"]["override_applied"] is False
+    assert resolved["projection_baseline"]["override_rejection_reason"] == "MISSING_TARGET_GW"
+    assert resolved["projection_baseline"]["stale_override_rejected"] is True
 
 
 def test_authenticated_official_is_not_squad_authority_when_no_capture():

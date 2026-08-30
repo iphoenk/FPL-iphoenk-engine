@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-from src.utils import CONFIG, ROOT, iso_now, parse_dt
+from src.utils import CONFIG, ROOT, parse_dt
 
 CONFIG_PATH = CONFIG / "intelligence" / "weather_context.json"
 
@@ -26,8 +26,13 @@ PLAYER_DIMENSIONS = {
     "FWD": ["acceleration", "dribbling", "transition_threat", "error_exploitation", "finishing_environment"],
 }
 INCIDENT_TYPES = {
-    "SLIP", "HANDLING_ERROR", "MISCONTROL", "BALL_SKID", "CLEARANCE_ERROR",
-    "REPEATED_TURNOVER", "SET_PIECE_DISRUPTION",
+    "SLIP",
+    "HANDLING_ERROR",
+    "MISCONTROL",
+    "BALL_SKID",
+    "CLEARANCE_ERROR",
+    "REPEATED_TURNOVER",
+    "SET_PIECE_DISRUPTION",
 }
 
 
@@ -248,6 +253,33 @@ def select_weather_evidence(
     return forecasts[0] if forecasts else None
 
 
+def _reusable_weather_evidence(
+    history: list[dict[str, Any]],
+    *,
+    kickoff: datetime,
+    now: datetime,
+    policy: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return governed evidence that is fresh enough to avoid a redundant provider call.
+
+    Reuse never changes evidence precedence or freshness. The retained timestamp is
+    re-evaluated on every runtime invocation, so evidence naturally becomes STALE
+    and triggers a provider refresh once the configured freshness window expires.
+    """
+    selected = select_weather_evidence(history, kickoff=kickoff, now=now, policy=policy)
+    if not selected:
+        return None
+    kind = str(selected.get("source_kind") or "")
+    if kind in {"LIVE_OBSERVED", "CLOSEST_TO_KICKOFF_OBSERVATION"}:
+        return selected
+    if kind != "FRESH_FORECAST":
+        return None
+    forecast_for = _dt(selected.get("forecast_for"))
+    if forecast_for is not None and abs((forecast_for - kickoff).total_seconds()) > 3600:
+        return None
+    return selected
+
+
 def player_weather_sensitivity(position: str, selected: dict[str, Any] | None, role: str | None = None) -> dict[str, Any]:
     position = str(position or "").upper()
     dimensions = PLAYER_DIMENSIONS.get(position, [])
@@ -453,9 +485,14 @@ def collect_weather_context(
 
     future_jobs: dict[Any, int] = {}
     fetched: dict[int, dict[str, Any]] = {}
+    reused_indices: set[int] = set()
     max_workers = max(1, min(int((cfg.get("api") or {}).get("max_concurrency") or 4), len(fixture_rows) or 1))
     with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="v4-weather") as pool:
-        for idx, (fixture, kickoff, _home, _away, venue, _history) in enumerate(fixture_rows):
+        for idx, (_fixture, kickoff, _home, _away, venue, history) in enumerate(fixture_rows):
+            reusable = _reusable_weather_evidence(history, kickoff=kickoff, now=current, policy=cfg)
+            if reusable is not None:
+                reused_indices.add(idx)
+                continue
             if venue is not None and kickoff >= current:
                 future_jobs[pool.submit(_forecast_for_fixture, venue, kickoff, fetcher=fetcher, now=current)] = idx
         for future in as_completed(future_jobs):
@@ -488,6 +525,8 @@ def collect_weather_context(
             "venue": (venue or {}).get("venue"),
             "venue_status": "RESOLVED" if venue else "UNAVAILABLE",
             "fetch_error": fetch_error,
+            "provider_fetch_performed": idx in fetched,
+            "fresh_evidence_reused": idx in reused_indices,
             "selected_evidence": selected,
             "evidence_state": (selected or {}).get("source_kind") or "UNAVAILABLE",
             "severity": (selected or {}).get("severity") or "NORMAL",
@@ -513,6 +552,8 @@ def collect_weather_context(
         "fixture_count": len(rows),
         "available_count": sum(row.get("selected_evidence") is not None for row in rows),
         "material_count": sum(row.get("severity") in {"NOTABLE", "ADVERSE", "EXTREME"} for row in rows),
+        "provider_fetch_count": len(fetched),
+        "fresh_evidence_reuse_count": len(reused_indices),
         "fixtures": rows,
         "governance": {
             **dict(cfg.get("governance") or {}),
@@ -520,6 +561,8 @@ def collect_weather_context(
             "player_archetype_specific": True,
             "system_interaction_required_for_tactical_interpretation": True,
             "uncertainty_first": True,
+            "fresh_forecast_reuse_is_freshness_governed": True,
+            "stale_forecast_triggers_refresh": True,
             "expected_xpts_mean_adjustment": 0.0,
             "numeric_weather_coefficient_applied": False,
         },

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from src.engines import v4_checkpoint_governance
+from src.engines import v4_checkpoint_governance, v4_serving_contract
 from src.services import architecture_guard_service
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,6 +71,20 @@ def test_serving_contract_has_no_decision_or_official_acquisition_imports():
     assert "src.engines.v4_decision_arbitration" not in modules
     assert "src.engines.v4_lineup_optimizer" not in modules
     assert "src.models.v4_prediction" not in modules
+
+
+def test_warm_serving_benchmark_reports_repeated_median_and_p95(monkeypatch):
+    monkeypatch.setattr(v4_serving_contract, "read_json", lambda path, default=None: {})
+    samples = [0.5 + index * 0.01 for index in range(v4_serving_contract.WARM_BENCHMARK_RUNS)]
+    out = v4_serving_contract.build_benchmark({"quick_serving_ms": samples[0]}, {}, orchestration={}, warm_samples_ms=samples)
+    warm = out["warm_serving"]
+    assert warm["runs"] == v4_serving_contract.WARM_BENCHMARK_RUNS
+    assert warm["median_ms"] > 0
+    assert warm["p95_ms"] >= warm["median_ms"]
+    assert warm["target_p95_ms"] == 1000.0
+    assert warm["status"] == "PASS"
+    assert warm["production_sized_materialized_inputs"] is True
+    assert warm["decision_semantics_recomputed"] is False
 
 
 def test_release_manifest_names_current_ownership_registry():

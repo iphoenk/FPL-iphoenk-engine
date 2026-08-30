@@ -78,7 +78,7 @@ def test_phase_authority_changes_across_gameweek_lifecycle():
     assert resolve_phase(deadline_time=deadline, now="2026-08-29T10:00:01Z") is Phase.POST_DEADLINE
     assert resolve_phase(deadline_time=deadline, now="2026-08-29T10:00:01Z", live_started=True) is Phase.LIVE
     assert resolve_phase(deadline_time=deadline, now=datetime.now(timezone.utc), finished=True) is Phase.POST_GW
-    assert phase_primary_authority(Phase.PRE_DEADLINE, "squad") == "user_lock"
+    assert phase_primary_authority(Phase.PRE_DEADLINE, "squad") == "user_capture"
     assert phase_primary_authority(Phase.POST_DEADLINE, "squad") == "official_public"
     assert phase_primary_authority(Phase.LIVE, "scoring") == "official_public_event_live"
     assert phase_primary_authority(Phase.POST_GW, "scoring") == "official_final_history"
@@ -254,7 +254,7 @@ def test_squad_authority_prefers_current_user_capture_predeadline_even_with_auth
         planning_gw=3,
         submitted_gw=2,
     )
-    assert pre["authority"] == "user_lock"
+    assert pre["authority"] == "user_capture"
     assert [row["element"] for row in pre["squad"]] == list(range(1, 16))
     assert [row["element"] for row in authenticated["picks"]] != [row["element"] for row in pre["squad"]]
     assert pre["validation"]["passed"] is True
@@ -302,5 +302,5 @@ def test_squad_authority_uses_current_capture_when_public_unavailable():
         planning_gw=3,
         submitted_gw=2,
     )
-    assert pre["authority"] == "user_lock"
+    assert pre["authority"] == "user_capture"
     assert pre["validation"]["passed"] is True

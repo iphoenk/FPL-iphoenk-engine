@@ -64,12 +64,13 @@ def resolve_submitted_squad(picks: dict, bootstrap: dict) -> tuple[dict, ...]:
 
 
 def resolve_authenticated_draft(my_team: dict, bootstrap: dict) -> tuple[dict, ...]:
+    """Legacy parser retained for private diagnostics; authenticated draft is not squad authority."""
     players, teams = bootstrap_maps(bootstrap)
     out = []
     for pick in my_team.get("picks", []) or []:
         player = players.get(int(pick["element"]))
         if player is not None:
-            out.append(_row(player, teams, "official_authenticated", pick.get("purchase_price")))
+            out.append(_row(player, teams, "official_authenticated_enrichment", pick.get("purchase_price")))
     return tuple(out)
 
 
@@ -94,18 +95,93 @@ def validate_squad(squad: Iterable[dict]) -> dict[str, Any]:
     return result
 
 
-def select_squad(*, phase, bootstrap: dict, locked_squad=None, authenticated_my_team=None, submitted_picks=None):
+def planning_override_state(
+    lock: dict | None,
+    *,
+    planning_gw: int | None,
+    submitted_gw: int | None,
+) -> dict[str, Any]:
+    """Resolve whether target-GW user capture may replace the Official submitted baseline."""
+    lock = lock if isinstance(lock, dict) else {}
+    wildcard = bool(lock.get("wildcard_active"))
+    free_hit = bool(lock.get("free_hit_active"))
+    manual = bool(lock.get("planning_override_active"))
+    requested = wildcard or free_hit or manual
+    target_raw = lock.get("target_gw")
+    if requested and target_raw is None:
+        raise RuntimeError("V5 FAIL CLOSED: active user planning override requires target_gw")
+    try:
+        target_gw = int(target_raw) if target_raw is not None else None
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("V5 FAIL CLOSED: invalid target_gw in user planning override") from exc
+    planning = int(planning_gw) if planning_gw is not None else None
+    submitted = int(submitted_gw) if submitted_gw is not None else None
+    applied = bool(
+        requested
+        and planning is not None
+        and target_gw == planning
+        and planning != submitted
+    )
+    if wildcard:
+        kind = "WILDCARD"
+    elif free_hit:
+        kind = "FREE_HIT"
+    elif manual:
+        kind = "USER_LOCK"
+    else:
+        kind = "NONE"
+    return {
+        "planning_gw": planning,
+        "baseline_gw": submitted,
+        "primary_authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+        "default_authority": "official_public",
+        "override_requested": requested,
+        "override_kind": kind,
+        "override_target_gw": target_gw,
+        "override_applied": applied,
+        "effective_authority": "user_lock" if applied else "official_public",
+        "authority_source": (lock.get("authority_source") or "USER_PLANNING_OVERRIDE") if applied else "OFFICIAL_FPL_PICKS",
+        "stale_override_rejected": bool(requested and not applied and target_gw != planning),
+        "post_deadline_official_reclaims_authority": bool(requested and planning == submitted),
+        "authenticated_official_is_private_enrichment_only": True,
+    }
+
+
+def select_squad(
+    *,
+    phase,
+    bootstrap: dict,
+    locked_squad=None,
+    authenticated_my_team=None,
+    submitted_picks=None,
+    planning_gw: int | None = None,
+    submitted_gw: int | None = None,
+):
+    baseline = planning_override_state(
+        locked_squad,
+        planning_gw=planning_gw,
+        submitted_gw=submitted_gw,
+    )
     for authority in phase_authority_chain(phase, "squad"):
-        if authority == "user_lock" and locked_squad:
+        if authority == "user_lock":
+            if not baseline.get("override_applied") or not locked_squad:
+                continue
             squad = resolve_locked_squad(locked_squad, bootstrap)
-        elif authority == "official_authenticated" and authenticated_my_team:
-            squad = resolve_authenticated_draft(authenticated_my_team, bootstrap)
         elif authority == "official_public" and submitted_picks:
             squad = resolve_submitted_squad(submitted_picks, bootstrap)
+        elif authority == "official_authenticated":
+            # Authenticated Official is optional private enrichment in the current production contract.
+            # Never allow it to become V5 squad, lineup or captaincy authority.
+            continue
         else:
             continue
         if squad:
-            return {"authority": authority, "squad": squad, "validation": validate_squad(squad)}
+            return {
+                "authority": authority,
+                "squad": squad,
+                "validation": validate_squad(squad),
+                "projection_baseline": baseline,
+            }
     raise RuntimeError(f"no usable V5 squad authority for phase {phase}")
 
 

@@ -26,7 +26,7 @@
     "contract": "V5_PREDEADLINE_AUTHORITY_SHADOW_PROOF_V3",
     "primary_authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
     "required_phase": "PRE_DEADLINE",
-    "allowed_decision_squad_authorities": ["official_public", "user_lock"],
+    "allowed_decision_squad_authorities": ["official_public", "user_capture"],
     "official_public_submitted_is_default_planning_baseline": true,
     "user_capture_requires_exact_target_gw": true,
     "user_capture_requires_active_wc_fh_or_planning_override": true,

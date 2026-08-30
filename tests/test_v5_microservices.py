@@ -3,14 +3,19 @@ from pathlib import Path
 
 from src.v5 import service_health
 from src.v5.module_registry import module_specs
-from src.v5.service_registry import module_owners, service_specs, validate_registry
-from src.v5.services.decision import handle as decision_handle
+from src.v5.service_registry import get_service, module_owners, service_specs, validate_registry
 from src.v5.services.evaluation import handle as evaluation_handle
 from src.v5.services.governance import handle as governance_handle
 from src.v5.services.prediction import handle as prediction_handle
 from src.v5.services.truth import handle as truth_handle
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _canonical_handler(service_id: str):
+    spec = get_service(service_id)
+    module_name, function_name = spec.handler.split(":", 1)
+    return getattr(importlib.import_module(module_name), function_name)
 
 
 def test_microservice_registry_is_valid_and_covers_every_module_once():
@@ -24,8 +29,7 @@ def test_microservice_registry_is_valid_and_covers_every_module_once():
 
 def test_all_registered_service_handlers_are_importable():
     for service in service_specs():
-        module_name, function_name = service.handler.split(":", 1)
-        handler = getattr(importlib.import_module(module_name), function_name)
+        handler = _canonical_handler(service.service_id)
         assert callable(handler), service.service_id
 
 
@@ -72,10 +76,22 @@ def test_truth_context_runs_without_network_and_exposes_rules_contract():
     assert rules["goal_points"]["1"] == 10
 
 
-def test_decision_service_is_not_bridge_only():
+def test_decision_service_is_not_bridge_only_and_uses_canonical_handler():
+    spec = get_service("decision")
+    decision_handle = _canonical_handler("decision")
     status = decision_handle("status", {})
+    assert spec.handler == "src.v5.services.decision_tactical:handle"
     assert status["status"] == "ACTIVE"
     assert status["bridge_only"] is False
+    assert "tactical_decision_consumption" in status["capabilities"]
+    assert status["tactical_consumption_contract"] == "TACTICAL_DECISION_CONSUMPTION_V1"
+
+
+def test_core_decision_handler_is_not_registered_as_a_second_service_authority():
+    handlers = {service.service_id: service.handler for service in service_specs()}
+    assert handlers["decision"] == "src.v5.services.decision_tactical:handle"
+    assert "src.v5.services.decision:handle" not in handlers.values()
+    assert len(handlers) == len(set(handlers.values()))
 
 
 def test_p0_prediction_service_owns_xmins_and_team_strength_without_v4_bridge():

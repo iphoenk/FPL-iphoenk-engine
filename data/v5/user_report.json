@@ -396,9 +396,9 @@
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
         "official_progress_pct": 95.4,
-        "official_hourly_rate_pct": 0.27,
-        "trajectory": "STEADY",
-        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "official_hourly_rate_pct": 0.21,
+        "trajectory": "DECELERATING",
+        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "LIVE"
       }
@@ -410,8 +410,8 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -101.1,
-        "official_hourly_rate_pct": -0.86,
+        "official_progress_pct": -101.3,
+        "official_hourly_rate_pct": -0.82,
         "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
@@ -423,9 +423,9 @@
         "owned": false,
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
-        "official_progress_pct": 98.7,
-        "official_hourly_rate_pct": 17.75,
-        "trajectory": "STEADY",
+        "official_progress_pct": 99.2,
+        "official_hourly_rate_pct": 15.49,
+        "trajectory": "DECELERATING",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -437,10 +437,10 @@
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
         "official_progress_pct": -98.6,
-        "official_hourly_rate_pct": -0.03,
-        "trajectory": "STEADY",
-        "predicted_change_deadline": "2026-09-01T23:00:00+00:00",
-        "prediction_source": "TRAJECTORY_RATE",
+        "official_hourly_rate_pct": 0.01,
+        "trajectory": "REVERSING",
+        "predicted_change_deadline": null,
+        "prediction_source": null,
         "official_projection_health": "LIVE"
       },
       {
@@ -449,8 +449,8 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -98.0,
-        "official_hourly_rate_pct": -0.21,
+        "official_progress_pct": -98.1,
+        "official_hourly_rate_pct": -0.18,
         "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
@@ -463,10 +463,10 @@
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
         "official_progress_pct": -96.9,
-        "official_hourly_rate_pct": 0.0,
+        "official_hourly_rate_pct": -0.01,
         "trajectory": "STEADY",
-        "predicted_change_deadline": null,
-        "prediction_source": null,
+        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
       {
@@ -476,9 +476,9 @@
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
         "official_progress_pct": -95.9,
-        "official_hourly_rate_pct": -1.75,
-        "trajectory": "STEADY",
-        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
+        "official_hourly_rate_pct": -1.4,
+        "trajectory": "DECELERATING",
+        "predicted_change_deadline": "2026-09-01T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
@@ -488,7 +488,7 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -93.6,
+        "official_progress_pct": -93.8,
         "official_hourly_rate_pct": -0.05,
         "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
@@ -501,10 +501,10 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -93.0,
-        "official_hourly_rate_pct": -0.74,
-        "trajectory": "STEADY",
-        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "official_progress_pct": -93.1,
+        "official_hourly_rate_pct": -0.68,
+        "trajectory": "DECELERATING",
+        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
@@ -514,8 +514,8 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -92.8,
-        "official_hourly_rate_pct": -0.25,
+        "official_progress_pct": -92.9,
+        "official_hourly_rate_pct": -0.24,
         "trajectory": "STEADY",
         "predicted_change_deadline": "2026-09-01T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
@@ -540,10 +540,10 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -90.5,
-        "official_hourly_rate_pct": -0.49,
-        "trajectory": "STEADY",
-        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "official_progress_pct": -90.7,
+        "official_hourly_rate_pct": -0.33,
+        "trajectory": "DECELERATING",
+        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
@@ -554,8 +554,8 @@
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
         "official_progress_pct": 86.8,
-        "official_hourly_rate_pct": 1.09,
-        "trajectory": "STEADY",
+        "official_hourly_rate_pct": 0.92,
+        "trajectory": "DECELERATING",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "LIVE"
@@ -566,9 +566,9 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -85.7,
-        "official_hourly_rate_pct": -3.46,
-        "trajectory": "STEADY",
+        "official_progress_pct": -86.1,
+        "official_hourly_rate_pct": -3.16,
+        "trajectory": "DECELERATING",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -579,11 +579,24 @@
         "owned": false,
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
-        "official_progress_pct": 78.5,
-        "official_hourly_rate_pct": 1.48,
-        "trajectory": "STEADY",
+        "official_progress_pct": 78.6,
+        "official_hourly_rate_pct": 1.56,
+        "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
+        "official_projection_health": "LIVE"
+      },
+      {
+        "element": 407,
+        "name": "Echeverri",
+        "owned": false,
+        "risk_direction": "FALL",
+        "urgency": "CRITICAL",
+        "official_progress_pct": -75.3,
+        "official_hourly_rate_pct": -0.03,
+        "trajectory": "STEADY",
+        "predicted_change_deadline": "2026-08-30T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
       {
@@ -592,9 +605,9 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "HIGH",
-        "official_progress_pct": -89.4,
-        "official_hourly_rate_pct": -0.31,
-        "trajectory": "STEADY",
+        "official_progress_pct": -89.5,
+        "official_hourly_rate_pct": -0.37,
+        "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
         "official_projection_health": "LIVE"
@@ -605,9 +618,9 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "HIGH",
-        "official_progress_pct": -89.0,
-        "official_hourly_rate_pct": -2.78,
-        "trajectory": "STEADY",
+        "official_progress_pct": -89.1,
+        "official_hourly_rate_pct": -2.46,
+        "trajectory": "DECELERATING",
         "predicted_change_deadline": "2026-09-01T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -618,8 +631,8 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "HIGH",
-        "official_progress_pct": -89.0,
-        "official_hourly_rate_pct": -0.13,
+        "official_progress_pct": -89.1,
+        "official_hourly_rate_pct": -0.12,
         "trajectory": "STEADY",
         "predicted_change_deadline": "2026-09-02T23:00:00+00:00",
         "prediction_source": "TRAJECTORY_RATE",
@@ -632,23 +645,10 @@
         "risk_direction": "FALL",
         "urgency": "HIGH",
         "official_progress_pct": -87.5,
-        "official_hourly_rate_pct": -0.06,
+        "official_hourly_rate_pct": -0.04,
         "trajectory": "STEADY",
         "predicted_change_deadline": null,
         "prediction_source": null,
-        "official_projection_health": "LIVE"
-      },
-      {
-        "element": 232,
-        "name": "O'Brien",
-        "owned": false,
-        "risk_direction": "FALL",
-        "urgency": "HIGH",
-        "official_progress_pct": -86.4,
-        "official_hourly_rate_pct": -0.17,
-        "trajectory": "STEADY",
-        "predicted_change_deadline": "2026-09-01T23:00:00+00:00",
-        "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       }
     ],
@@ -1294,7 +1294,7 @@
             "xpts_5": 26.077,
             "xpts_15": 75.751,
             "now_cost": 76,
-            "ownership_pct": 15.3,
+            "ownership_pct": 15.4,
             "projection_confidence": "MEDIUM",
             "role_available": true,
             "historical_prior_available": true,
@@ -2109,7 +2109,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2230,7 +2230,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -2392,7 +2392,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2513,7 +2513,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2675,7 +2675,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2797,7 +2797,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2955,7 +2955,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3072,7 +3072,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3226,7 +3226,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3341,7 +3341,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3497,7 +3497,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3614,7 +3614,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3770,7 +3770,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3885,7 +3885,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4047,7 +4047,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4164,7 +4164,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T01:41:11.631167+00:00",
+              "evidence_timestamp": "2026-08-30T01:54:21.124246+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [

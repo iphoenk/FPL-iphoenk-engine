@@ -101,7 +101,10 @@ jobs:
           o=json.load(open('data/service_orchestration_v4.json'))
           a=json.load(open('data/architecture_ownership_v4.json'))
           c=json.load(open('data/checkpoint_decision_v4.json'))
-          print({'pipeline_health':h['pipeline_health'],'capability_coverage':h['capability_coverage'],'gate0':h['gate0']['counts'],'services':o['summary']['services_passed'],'orchestration_ms':o['duration_ms'],'architecture_guard':a['status'],'action':c['action_state']})
+          telemetry=(h.get('capability_telemetry') or {})
+          assert len((telemetry.get('capabilities') or {})) == 17, telemetry
+          assert telemetry.get('false_green_forbidden') is True, telemetry
+          print({'pipeline_health':h['pipeline_health'],'capability_coverage':h['capability_coverage'],'capability_telemetry':telemetry.get('summary'),'gate0':h['gate0']['counts'],'services':o['summary']['services_passed'],'orchestration_ms':o['duration_ms'],'architecture_guard':a['status'],'action':c['action_state']})
           PY
 
       - name: Build before-after decision diagnostic
@@ -257,17 +260,70 @@ jobs:
           assert a['interpretation']['impact_is_diagnostic_not_health_threshold'] is True, a
           PY
 
-      - name: E2E hot-path hardening benchmark
+      - name: Repeated FAST and warm-serving p95 benchmark
         if: inputs.publish == false
+        shell: bash
         run: |
-          python -m src.services.hot_orchestrator daily --stats --deep-stats
+          set -euo pipefail
           python - <<'PY'
           import json
-          h=json.load(open('data/hot_orchestration_v4.json'))
-          assert h['status']=='PASS', h
-          assert h['guardrails']['official_fpl_refreshed_this_run'] is True, h
-          assert h['guardrails']['exact_optimizer_search_width_unchanged'] is True, h
-          print({'hot_e2e_ms':h['total_e2e_ms'],'official_ms':h['official_acquisition_ms'],'decision_ms':h['decision_compute_ms'],'cache_hit':h['optimizer_cache_hit'],'targets':h['target_status']})
+          import math
+          import statistics
+          import subprocess
+          from pathlib import Path
+
+          runs=[]
+          repeat_count=5
+          for index in range(repeat_count):
+              subprocess.run(['python','-m','src.services.hot_orchestrator','daily','--stats','--deep-stats'], check=True)
+              h=json.load(open('data/hot_orchestration_v4.json'))
+              assert h['status']=='PASS', h
+              assert h['guardrails']['official_fpl_refreshed_this_run'] is True, h
+              assert h['guardrails']['exact_optimizer_search_width_unchanged'] is True, h
+              runs.append({
+                  'run': index + 1,
+                  'total_e2e_ms': float(h['total_e2e_ms']),
+                  'serving_e2e_ms': float(h['serving_e2e_excluding_startup_assurance_ms']),
+                  'decision_ms': float(h['decision_compute_ms']),
+                  'official_ms': float(h['official_acquisition_ms']),
+                  'optimizer_cache_hit': bool(h['optimizer_cache_hit']),
+              })
+
+          def p95(values):
+              ordered=sorted(values)
+              return ordered[max(0, min(len(ordered)-1, math.ceil(0.95*len(ordered))-1))]
+
+          serving=[row['serving_e2e_ms'] for row in runs]
+          total=[row['total_e2e_ms'] for row in runs]
+          warm=json.load(open('data/serving_benchmark_v4.json')).get('warm_serving') or {}
+          result={
+              'schema_version': 1,
+              'runs': runs,
+              'fast_serving': {
+                  'run_count': repeat_count,
+                  'median_ms': round(statistics.median(serving), 2),
+                  'p95_ms': round(p95(serving), 2),
+                  'target_p95_ms': 3000.0,
+              },
+              'full_hot_path': {
+                  'median_ms': round(statistics.median(total), 2),
+                  'p95_ms': round(p95(total), 2),
+              },
+              'warm_serving': warm,
+              'guardrails': {
+                  'repeated_production_sized_runs': True,
+                  'official_refreshed_each_fast_run': True,
+                  'decision_intelligence_preserved': True,
+                  'optimizer_search_width_unchanged': True,
+              },
+          }
+          result['fast_serving']['status']='PASS' if result['fast_serving']['p95_ms'] < 3000.0 else 'FAIL'
+          Path('data/hot_orchestration_benchmark_v4.json').write_text(json.dumps(result,indent=2)+'\n')
+          assert result['fast_serving']['status']=='PASS', result
+          assert int(warm.get('runs') or 0) >= 25, warm
+          assert float(warm.get('p95_ms') or 1e9) < 1000.0, warm
+          assert warm.get('status') == 'PASS', warm
+          print(json.dumps({'fast':result['fast_serving'],'warm':warm},ensure_ascii=False))
           PY
 
       - name: Upload E2E hot-path benchmark
@@ -275,7 +331,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: v4-hot-e2e-${{ github.run_id }}-${{ github.run_attempt }}
-          path: data/hot_orchestration_v4.json
+          path: |
+            data/hot_orchestration_v4.json
+            data/hot_orchestration_benchmark_v4.json
+            data/serving_benchmark_v4.json
           if-no-files-found: error
           retention-days: 14
 
@@ -315,5 +374,13 @@ jobs:
           latest=json.loads(raw)
           assert latest.get('runtime_publish_at'), latest
           assert latest.get('freshness_state') in {'FRESH','PARTIAL','STALE','UNKNOWN'}, latest
+          health=json.loads(subprocess.check_output(['git','show','origin/runtime-data-v4:data/framework_health_v4.json'],text=True))
+          telemetry=health.get('capability_telemetry') or {}
+          assert len(telemetry.get('capabilities') or {}) == 17, telemetry
+          assert telemetry.get('false_green_forbidden') is True, telemetry
+          benchmark=json.loads(subprocess.check_output(['git','show','origin/runtime-data-v4:data/serving_benchmark_v4.json'],text=True))
+          warm=benchmark.get('warm_serving') or {}
+          assert int(warm.get('runs') or 0) >= 25, warm
+          assert float(warm.get('p95_ms') or 1e9) < 1000.0, warm
           PY
           echo "Published V4 runtime snapshot to ${RUNTIME_BRANCH}"

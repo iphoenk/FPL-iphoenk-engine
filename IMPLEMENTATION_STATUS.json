@@ -1,11 +1,12 @@
 {
   "engine": "FPL iphoenk Engine",
   "v5_version": "5.0.0-beta.4",
-  "state": "ADVANCED_BETA4_IMPLEMENTATION_PUBLISHED_ACCEPTANCE_PENDING",
+  "state": "ADVANCED_BETA4_OPERATIONALLY_ACCEPTED_PREDICTION_ACCEPTANCE_PENDING",
   "production_authority": {
-    "version": "v3.20.0",
-    "main_sha": "15e75599045f901958753c2bcb275fceacc94d7c",
-    "schema_version": 48
+    "truth_baseline": "v3.20.0",
+    "runtime_version": "3.39.0",
+    "main_sha": "ac4e14abf2a844804007e0fb3cac7c7c54213679",
+    "runtime_schema_version": 49
   },
   "advanced_beta4": {
     "runtime_release_fingerprint": true,
@@ -17,20 +18,26 @@
     "frozen_baseline_non_regression": true,
     "correlated_monte_carlo_shadow": true,
     "isolated_team_review": true,
-    "v3_v4_capability_parity_registry": true
+    "v3_v4_capability_parity_registry": true,
+    "predeadline_revision_append_only": true,
+    "official_submitted_predeadline_fallback": true
   },
   "acceptance": {
-    "fresh_postvalidated_real_shadow_cycles": 0,
+    "release_fingerprint": "sha256:98cc221c103c38d157abf73cc0a835f59c945c68252167a3a42e912c1be884c1",
+    "fresh_postvalidated_real_shadow_cycles": 3,
     "required_postvalidated_real_shadow_cycles": 3,
-    "prediction_acceptance": "BLOCKED_PENDING_SETTLED_EVIDENCE_AND_FROZEN_BASELINE",
+    "operational_candidate_eligible": true,
+    "prediction_acceptance": "BLOCKED_PENDING_GENUINE_SETTLED_EVIDENCE_AND_FROZEN_BASELINE_NON_REGRESSION",
+    "prediction_candidate_eligible": false,
     "production_candidate_eligible": false,
     "production_promotion_allowed": false,
     "manual_production_promotion_required": true
   },
   "notes": [
-    "Advanced prediction remains a shadow overlay and does not replace base authoritative xPts during beta.4.",
-    "Correlated simulation is implemented for shadow evidence and is not decision authority until calibrated.",
+    "Operational acceptance is complete only for the exact recorded V5 release fingerprint and does not imply prediction or production eligibility.",
+    "Advanced prediction remains beta/shadow authority until empirical prediction-calibration gates pass on genuine settled evidence.",
+    "Correlated simulation remains shadow-only and is not decision authority until calibrated.",
     "Team review is isolated and read-only; it cannot mutate decision authority.",
-    "Production remains V3.20.0 until all operational and empirical prediction gates pass and a separate explicit manual promotion occurs."
+    "Production remains the accepted V3 runtime on main while frozen football-truth comparison remains V3.20.0; V5 production promotion requires prediction acceptance plus a separate explicit manual action."
   ]
 }

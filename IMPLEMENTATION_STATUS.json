@@ -5,7 +5,7 @@
   "production_authority": {
     "truth_baseline": "v3.20.0",
     "runtime_version": "3.39.0",
-    "main_sha": "96a0d5a65e8ba055c3001ac91cb0c6a63f94e65e",
+    "main_sha": "0e7973b5e43530c512c634d5c3ade8354dbb1e68",
     "runtime_schema_version": 49
   },
   "advanced_beta4": {
@@ -31,6 +31,7 @@
     "v3_profile_aware_production_dod_reconciled": true,
     "v3_atomic_runtime_publication_reconciled": true,
     "v3_structured_user_capture_authority_reconciled": true,
+    "v3_current_contract_metadata_closeout_reconciled": true,
     "deadline_aware_evidence_scheduler": true,
     "compact_prediction_analytics_mart": true,
     "raw_actions_artifact_retention_days": 14,
@@ -72,18 +73,18 @@
     "external_dwh_trigger": "MULTI_SEASON_OR_GT_100000_PLAYER_GW_FACT_ROWS"
   },
   "notes": [
-    "The last validated 3/3 strict-DSS operational acceptance remains historical evidence only; deployed production is now 96a0d5a65e8ba055c3001ac91cb0c6a63f94e65e, so exact-fingerprint operational evidence must restart from 0/3.",
+    "The last validated 3/3 strict-DSS operational acceptance remains historical evidence only; deployed production is now 0e7973b5e43530c512c634d5c3ade8354dbb1e68, so exact-fingerprint operational evidence must restart from 0/3.",
     "PRE_DEADLINE planning authority is PUBLIC_OFFICIAL_PLUS_USER_CAPTURE: Official public submitted team is the default baseline, while user capture is a scoped override only for the exact target GW with an active WC/FH/planning override.",
     "Authenticated Official is optional private enrichment only and must never become squad, lineup, or captaincy authority.",
-    "Current V3 structured own-team capture is now phase-aware and DoD-governed with stale-GW rejection and post-deadline Official reclaim; this matches the V5 PUBLIC_OFFICIAL_PLUS_USER_CAPTURE governance and does not create authenticated Official authority.",
+    "Current V3 structured own-team capture is phase-aware and DoD-governed with stale-GW rejection and post-deadline Official reclaim; this matches V5 PUBLIC_OFFICIAL_PLUS_USER_CAPTURE governance and does not create authenticated Official authority.",
     "Strict DSS governance still requires every configured core and extension module to be ACTIVE before unqualified GO.",
     "Service-registry validation still rejects duplicate handlers and duplicate bounded-context authority.",
     "Current V3 public mini-league membership/rank publication is reconciled natively from the Official public entry payload and is presentation truth only.",
     "Current V3 fingerprint-only prediction reuse is reconciled as runtime hardening; it does not grant V3 prediction state authority inside V5.",
-    "Current V3 profile-aware Definition-of-Done and atomic runtime publication are reconciled as fail-closed runtime governance only; they do not alter football, prediction, optimizer, or decision authority.",
+    "Current V3 profile-aware Definition-of-Done, atomic runtime publication, and current-contract metadata closeout are reconciled as fail-closed runtime/governance hardening only; they do not alter football, prediction, optimizer, or decision authority.",
     "The acceptance baseline is the SHA actually deployed in runtime-data; a newer unpublished main HEAD may be ahead only if the deployed SHA remains its ancestor.",
     "Raw GitHub Actions evidence expires after 14 days. Canonical frozen prediction evidence and compact analytics remain for the current season.",
-    "history.jsonl is explicitly noncanonical and is now bounded by 14 days, 128 records, and a 32 MiB safety ceiling so repeated shadow cycles cannot grow it without bound.",
+    "history.jsonl is explicitly noncanonical and is bounded by 14 days, 128 records, and a 32 MiB safety ceiling so repeated shadow cycles cannot grow it without bound.",
     "Weather intelligence remains SHADOW_ADVISORY_ONLY with zero production decision authority until empirical validation and explicit governance promotion.",
     "Prediction acceptance remains independently locked until genuine settled evidence satisfies the empirical calibration gate.",
     "Production remains V3; V5 promotion requires fresh operational revalidation, prediction acceptance, and a separate explicit manual action."

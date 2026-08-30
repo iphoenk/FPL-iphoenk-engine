@@ -47,8 +47,17 @@ def _severity(weather: dict[str, Any], cfg: dict[str, Any]) -> tuple[str, list[s
 
 def _source_kind(snapshot: dict[str, Any]) -> str:
     raw = str(snapshot.get("source_kind") or snapshot.get("observation_kind") or "FRESH_FORECAST").upper()
-    aliases = {"FORECAST_ADVISORY": "FRESH_FORECAST", "LIVE_OBSERVED_ADVISORY": "LIVE_OBSERVED", "CLOSEST_TO_KICKOFF": "CLOSEST_TO_KICKOFF_OBSERVATION"}
+    aliases = {
+        "FORECAST_ADVISORY": "FRESH_FORECAST",
+        "LIVE_OBSERVED_ADVISORY": "LIVE_OBSERVED",
+        "CLOSEST_TO_KICKOFF": "CLOSEST_TO_KICKOFF_OBSERVATION",
+    }
     return aliases.get(raw, raw)
+
+
+def _recency(snapshot: dict[str, Any]) -> float:
+    parsed = _dt(snapshot.get("evidence_timestamp") or snapshot.get("timestamp"))
+    return parsed.astimezone(timezone.utc).timestamp() if parsed else 0.0
 
 
 def select_governed_snapshot(snapshots: list[dict[str, Any]] | None) -> dict[str, Any] | None:
@@ -58,7 +67,7 @@ def select_governed_snapshot(snapshots: list[dict[str, Any]] | None) -> dict[str
     valid = [dict(item) for item in (snapshots or []) if isinstance(item, dict)]
     if not valid:
         return None
-    valid.sort(key=lambda item: (ranked.get(_source_kind(item), len(ranked)), -(_dt(item.get("evidence_timestamp") or item.get("timestamp")) or datetime.min.replace(tzinfo=timezone.utc)).timestamp()))
+    valid.sort(key=lambda item: (ranked.get(_source_kind(item), len(ranked)), -_recency(item)))
     return valid[0]
 
 
@@ -76,7 +85,11 @@ def classify_weather(observation: dict[str, Any] | None, *, now: datetime | None
     stale = kind == "STALE_FORECAST" or (age_h is not None and age_h > 12 and "FORECAST" in kind)
     confidence = _float(raw.get("confidence"))
     health = "UNAVAILABLE" if not observation else ("STALE" if stale else ("PARTIAL" if confidence is not None and confidence < 0.5 else "PASS"))
-    state = {"LIVE_OBSERVED": "LIVE_OBSERVED", "CLOSEST_TO_KICKOFF_OBSERVATION": "CLOSEST_TO_KICKOFF", "POST_MATCH_RECONCILED": "POST_MATCH_RECONCILED"}.get(kind, "FORECAST")
+    state = {
+        "LIVE_OBSERVED": "LIVE_OBSERVED",
+        "CLOSEST_TO_KICKOFF_OBSERVATION": "CLOSEST_TO_KICKOFF",
+        "POST_MATCH_RECONCILED": "POST_MATCH_RECONCILED",
+    }.get(kind, "FORECAST")
     return {
         "status": "AVAILABLE" if observation else "UNAVAILABLE",
         "health": health,
@@ -101,11 +114,22 @@ def classify_weather(observation: dict[str, Any] | None, *, now: datetime | None
     }
 
 
-def build_weather_shadow_evidence(*, snapshots: list[dict[str, Any]] | None = None, observed_effects: dict[str, Any] | None = None, interactions: dict[str, Any] | None = None, confounders: dict[str, Any] | None = None, calibration: dict[str, Any] | None = None) -> dict[str, Any]:
+def build_weather_shadow_evidence(
+    *,
+    snapshots: list[dict[str, Any]] | None = None,
+    observed_effects: dict[str, Any] | None = None,
+    interactions: dict[str, Any] | None = None,
+    confounders: dict[str, Any] | None = None,
+    calibration: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     cfg = load_json_config(CONFIG)
     selected = select_governed_snapshot(snapshots)
     context = classify_weather(selected)
-    effects = {name: (observed_effects or {}).get(name) for name in cfg.get("observed_match_effects") or [] if (observed_effects or {}).get(name) is not None}
+    effects = {
+        name: (observed_effects or {}).get(name)
+        for name in cfg.get("observed_match_effects") or []
+        if (observed_effects or {}).get(name) is not None
+    }
     required_confounders = list((cfg.get("governance") or {}).get("alternative_explanations_required") or [])
     controlled = {name: (confounders or {}).get(name) for name in required_confounders}
     cal = dict(calibration or {})
@@ -134,12 +158,23 @@ def build_weather_shadow_evidence(*, snapshots: list[dict[str, Any]] | None = No
         "calibration": {"matched_non_weather_baseline_required": True, "checks": checks, **cal},
         "research_state": research_state,
         "sustainability": {name: None for name in (cfg.get("governance") or {}).get("sustainability_dimensions") or []},
-        "promotion_gate": {"state": "SHADOW_ADVISORY_ONLY", "quantitative_signal_authorized": False, "requires_all_validation_and_explicit_governance": True},
+        "promotion_gate": {
+            "state": "SHADOW_ADVISORY_ONLY",
+            "quantitative_signal_authorized": False,
+            "requires_all_validation_and_explicit_governance": True,
+        },
     }
 
 
 def assert_advisory_governance() -> None:
     g = load_json_config(CONFIG).get("governance") or {}
-    forbidden = ("may_directly_change_xpts", "may_directly_change_xmins", "may_directly_change_captaincy", "may_directly_change_starting_xi", "may_directly_change_transfer_decision", "may_directly_change_watchlist_membership")
+    forbidden = (
+        "may_directly_change_xpts",
+        "may_directly_change_xmins",
+        "may_directly_change_captaincy",
+        "may_directly_change_starting_xi",
+        "may_directly_change_transfer_decision",
+        "may_directly_change_watchlist_membership",
+    )
     if not g.get("advisory_only") or g.get("production_decision_authority") or g.get("weather_caused_label_allowed") or any(bool(g.get(key)) for key in forbidden):
         raise RuntimeError("V5 weather must remain shadow/advisory-only")

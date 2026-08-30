@@ -19,9 +19,9 @@ def test_private_finance_uses_current_private_squad_not_previous_submitted_squad
     finance = _safe_finance(payload, authoritative)
 
     assert finance["private_squad_coverage"] == {"expected": 15, "covered": 15, "complete": True}
-    assert finance["exact_sell_total"] is not None
-    assert finance["exact_purchase_total"] is not None
-    assert finance["authoritative_submitted_coverage"]["complete"] is False
+    assert finance["private_exact_sell_total"] is not None
+    assert finance["private_exact_purchase_total"] is not None
+    assert finance["coverage"]["complete"] is False
     assert len(finance["prices_for_private_squad"]) == 15
 
 
@@ -42,8 +42,8 @@ def test_configured_auth_requires_exact_entry_endpoints_and_private_state():
         },
         "safe_finance": {
             "private_squad_coverage": {"expected": 15, "covered": 15, "complete": True},
-            "exact_sell_total": 995,
-            "exact_purchase_total": 1000,
+            "private_exact_sell_total": 995,
+            "private_exact_purchase_total": 1000,
         },
         "chip_state": {"available": True, "chips": []},
         "transfers_latest": {"available": True, "count": 0},

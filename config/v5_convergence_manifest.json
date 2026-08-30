@@ -109,14 +109,29 @@
     "on_demand_reporting_uses_current_production_authority": true,
     "interactive_preferred_target_ms": 1000
   },
+  "operational_acceptance_evidence": {
+    "status": "COMPLETE",
+    "source_branch": "v5-shadow-runtime",
+    "evidence_contract": "v5_postvalidated_shadow_acceptance_v5",
+    "evidence_path": "data/v5/shadow/acceptance_summary.json",
+    "release_fingerprint": "sha256:98cc221c103c38d157abf73cc0a835f59c945c68252167a3a42e912c1be884c1",
+    "validated_real_shadow_cycles": 3,
+    "required_real_shadow_cycles": 3,
+    "remaining_validated_cycles": 0,
+    "latest_validated_at": "2026-08-30T05:16:11.666366+00:00",
+    "operational_candidate_eligible": true,
+    "prediction_candidate_eligible": false,
+    "production_candidate_eligible": false,
+    "note": "Operational acceptance is postvalidated for the exact release fingerprint. Prediction acceptance remains independently locked until genuine settled evidence meets the calibration gate."
+  },
   "production_promotion": {
     "allowed": false,
     "beta": true,
     "production_candidate": false,
-    "validated_real_shadow_cycles": 0,
+    "validated_real_shadow_cycles": 3,
     "required_real_shadow_cycles": 3,
-    "operational_acceptance_complete": false,
+    "operational_acceptance_complete": true,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is capability-reanchored to production main ac4e14a / V3.39 runtime schema 49. V3 PR #178 semantic prediction-reuse fingerprinting is runtime-only hardening with xPts/xMins and material decision semantics unchanged and the compiled-plan fingerprint unchanged. Frozen football-truth baseline remains V3.20. PRE_DEADLINE authority uses authenticated Official when available, otherwise last confirmed Official submitted picks before stale persistent user locks. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
+    "reason": "V5.0.0-beta.4 completed three postvalidated REAL_SHADOW cycles for release fingerprint sha256:98cc221c103c38d157abf73cc0a835f59c945c68252167a3a42e912c1be884c1 and is operational-candidate eligible. Production promotion remains locked because prediction acceptance has no sufficient genuine settled sample yet; no retrospective reconstruction, threshold relaxation, or automatic promotion is permitted."
   }
 }

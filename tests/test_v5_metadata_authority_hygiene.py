@@ -11,6 +11,7 @@ def _load(path: str):
 def test_implementation_status_matches_current_revalidation_state():
     status = _load("IMPLEMENTATION_STATUS.json")
     manifest = _load("config/v5_convergence_manifest.json")
+    persistence = _load("config/v5_persistence_registry.json")
     evidence = manifest["operational_acceptance_evidence"]
     production = manifest["production_promotion"]
 
@@ -23,14 +24,22 @@ def test_implementation_status_matches_current_revalidation_state():
     assert evidence["status"] == "SUPERSEDED_BY_PRODUCTION_REANCHOR_PENDING_REVALIDATION"
     assert evidence["release_fingerprint"] is None
     assert evidence["remaining_validated_cycles"] == 3
-    assert evidence["superseded_evidence"]["validated_real_shadow_cycles"] == 2
+    assert evidence["superseded_evidence"]["validated_real_shadow_cycles"] == 3
     assert evidence["superseded_evidence"]["release_fingerprint"].startswith("sha256:")
-    assert status["acceptance"]["previous_operational_acceptance"]["postvalidated_real_shadow_cycles"] == 2
+    assert status["acceptance"]["previous_operational_acceptance"]["postvalidated_real_shadow_cycles"] == 3
     assert status["acceptance"]["previous_operational_acceptance"]["release_fingerprint"] == evidence["superseded_evidence"]["release_fingerprint"]
     assert status["acceptance"]["prediction_candidate_eligible"] is False
     assert production["prediction_acceptance_complete"] is False
     assert status["acceptance"]["production_candidate_eligible"] is False
     assert status["acceptance"]["production_promotion_allowed"] is False
+
+    storage = status["evidence_storage"]
+    retention = persistence["write_policy"]["history_retention"]
+    assert storage["rolling_history_canonical"] is False
+    assert storage["rolling_history_max_age_days"] == retention["max_age_days"]
+    assert storage["rolling_history_max_records"] == retention["max_records"]
+    assert storage["rolling_history_max_bytes"] == retention["max_bytes"]
+    assert storage["actions_raw_artifact_retention_days"] == persistence["evidence_storage"]["raw_actions_artifact_retention_days"]
 
 
 def test_registry_catalog_does_not_describe_active_v5_domains_as_pending():

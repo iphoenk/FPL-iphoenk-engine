@@ -3,7 +3,7 @@
   "registry": "V3_EXECUTION_DOMAINS_V2",
   "architecture": "V3_CANONICAL_DOMAIN_PIPELINE",
   "phase_count": 6,
-  "domain_count": 12,
+  "domain_count": 11,
   "canonical_phases": {
     "ACQUIRE": [
       "official_state",
@@ -11,8 +11,7 @@
     ],
     "ENRICH": [
       "football_context",
-      "market_context",
-      "weather_context"
+      "market_context"
     ],
     "MODEL": [
       "prediction"
@@ -49,8 +48,7 @@
         "personal_team_state"
       ],
       "ENRICH": [
-        "football_context",
-        "weather_context"
+        "football_context"
       ],
       "MODEL": [
         "prediction"
@@ -84,6 +82,8 @@
     "prediction_and_market_context_use_isolated_workspaces": true,
     "prediction_and_market_context_may_execute_in_parallel": true,
     "weather_context_is_governed_enrichment_without_decision_authority": true,
+    "weather_context_reuses_football_context_execution_domain": true,
+    "weather_context_does_not_add_process_startup_boundary": true,
     "parallel_domain_fan_in_uses_declared_artifacts_and_latest_keys_only": true,
     "parallel_domain_fan_in_is_deterministic": true,
     "phase_membership_is_a_responsibility_taxonomy_not_a_strict_execution_barrier": true,
@@ -144,7 +144,8 @@
       "capabilities": [
         "historical_prior",
         "tactical_context",
-        "source_layer"
+        "source_layer",
+        "weather_context"
       ]
     },
     "market_context": {
@@ -157,19 +158,10 @@
         "official_detail"
       ]
     },
-    "weather_context": {
-      "phase": "ENRICH",
-      "depends_on": [
-        "football_context"
-      ],
-      "capabilities": [
-        "weather_context"
-      ]
-    },
     "prediction": {
       "phase": "MODEL",
       "depends_on": [
-        "weather_context"
+        "football_context"
       ],
       "capabilities": [
         "prediction"
@@ -198,7 +190,6 @@
       "phase": "GOVERNANCE",
       "depends_on": [
         "market_context",
-        "weather_context",
         "prediction_validation",
         "squad_decision",
         "challenger_analysis"

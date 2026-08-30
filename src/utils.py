@@ -9,7 +9,15 @@ _data_override = os.getenv("FPL_DATA_DIR")
 DATA = Path(_data_override).expanduser().resolve() if _data_override else ROOT / "data"
 CONFIG = ROOT / "config"
 _JSON_READ_CACHE: dict[Path, tuple[int, int, Any]] = {}
-_COMPACT_JSON_ARTIFACTS = {"decision_brief.json"}
+# Machine-only high-volume artifacts are compacted to remove serialization/I/O cost.
+# This is representation-only: parsed JSON values and decision semantics are identical.
+_COMPACT_JSON_ARTIFACTS = {
+    "decision_brief.json",
+    "projections.json",
+    "package_optimizer.json",
+    "team_strength.json",
+    "prediction_quality.json",
+}
 
 def utcnow():
     return datetime.now(timezone.utc)

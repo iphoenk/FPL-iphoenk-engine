@@ -59,8 +59,7 @@ def detect_phase(bootstrap: dict, fixtures: list[dict] | None = None, as_of=None
         if current_gw and int(fixture.get("event") or 0) == int(current_gw)
     ]
     live_fixtures = [
-        fixture
-        for fixture in current_gw_fixtures
+        fixture for fixture in current_gw_fixtures
         if fixture.get("started") is True
         and fixture.get("finished") is not True
         and fixture.get("finished_provisional") is not True
@@ -73,9 +72,7 @@ def detect_phase(bootstrap: dict, fixtures: list[dict] | None = None, as_of=None
             match_day_fixtures.append(fixture)
 
     just_passed_current_deadline = bool(
-        current
-        and current_deadline
-        and current_deadline <= now <= current_deadline + timedelta(hours=2)
+        current and current_deadline and current_deadline <= now <= current_deadline + timedelta(hours=2)
         and not current.get("finished")
     )
 
@@ -136,11 +133,7 @@ def _validate_authoritative_squad(squad: list[dict], by_id: dict[int, dict]) -> 
         if declared_team is not None and int(declared_team) != int(player.get("team") or 0):
             raise RuntimeError(f"FAIL CLOSED: team mismatch {element}")
         normalized.append({**row, "team_id": int(player.get("team") or 0)})
-    failed = {
-        name: detail
-        for name, (passed, detail) in squad_legality_checks(normalized).items()
-        if not passed
-    }
+    failed = {name: detail for name, (passed, detail) in squad_legality_checks(normalized).items() if not passed}
     if failed:
         raise RuntimeError(f"FAIL CLOSED: authoritative squad illegal {failed}")
 
@@ -153,7 +146,7 @@ def _normalize_endpoint_health(health: dict, payloads: dict, submitted_gw: int |
 
 
 def _projection_baseline_authority(lock: dict, phase: dict) -> dict:
-    """Resolve planning squad authority without allowing a stale draft into later GWs."""
+    """Resolve public Official + user-capture planning authority without stale-draft leakage."""
     planning_gw = int(phase.get("planning_gw") or 0) or None
     submitted_gw = int(phase.get("submitted_gw") or 0) or None
     override_requested = bool(lock.get("planning_override_active") or lock.get("wildcard_active"))
@@ -162,8 +155,13 @@ def _projection_baseline_authority(lock: dict, phase: dict) -> dict:
         raise RuntimeError("FAIL CLOSED: active planning override missing target_gw")
     target_gw = int(target_raw) if target_raw is not None else None
     override_applied = bool(override_requested and planning_gw is not None and target_gw == planning_gw and planning_gw != submitted_gw)
-    source = str(lock.get("authority_source") or "USER_PLANNING_OVERRIDE") if override_applied else "OFFICIAL_FPL_PICKS"
+    source = str(lock.get("authority_source") or "USER_CAPTURED_PREDEADLINE_DRAFT") if override_applied else "OFFICIAL_FPL_PICKS"
     return {
+        "authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+        "public_official_role": "UNIVERSAL_FACTUAL_BACKBONE",
+        "user_capture_role": "PRIVATE_PREDEADLINE_OVERRIDE",
+        "authenticated_official_role": "OPTIONAL_PRIVATE_ENRICHMENT",
+        "authenticated_official_production_blocking": False,
         "planning_gw": planning_gw,
         "baseline_gw": submitted_gw,
         "default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
@@ -171,7 +169,7 @@ def _projection_baseline_authority(lock: dict, phase: dict) -> dict:
         "override_requested": override_requested,
         "override_target_gw": target_gw,
         "override_applied": override_applied,
-        "effective_authority": "LOCKED_PRE_DEADLINE" if override_applied else "OFFICIAL_SUBMITTED",
+        "effective_authority": "USER_CAPTURE_PREDEADLINE" if override_applied else "OFFICIAL_SUBMITTED",
         "authority_source": source,
         "stale_override_rejected": bool(override_requested and not override_applied and target_gw != planning_gw),
     }
@@ -202,12 +200,8 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
 
     phase = detect_phase(bootstrap, fixtures, report_as_of or utcnow())
     checkpoint = resolve_checkpoint(
-        mode,
-        phase.get("deadline_time"),
-        phase.get("is_live_match", False),
-        as_of=report_as_of,
-        simulated=report_as_of is not None,
-        post_deadline_reconciliation=bool(phase.get("post_deadline_reconciliation")),
+        mode, phase.get("deadline_time"), phase.get("is_live_match", False), as_of=report_as_of,
+        simulated=report_as_of is not None, post_deadline_reconciliation=bool(phase.get("post_deadline_reconciliation")),
     )
     submitted_gw, scoring_gw = phase["submitted_gw"], phase["scoring_gw"]
 
@@ -233,27 +227,12 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
     if use_lock:
         for row in lock.get("players", []):
             player = resolve_locked_player(row, by_id, teams, positions)
-            squad.append({
-                "element": player["id"],
-                "name": player["web_name"],
-                "team_id": player["team"],
-                "position": positions[player["element_type"]],
-                "purchase_cost": row.get("purchase_cost"),
-                "source": "locked_squad_element_id",
-            })
+            squad.append({"element": player["id"], "name": player["web_name"], "team_id": player["team"], "position": positions[player["element_type"]], "purchase_cost": row.get("purchase_cost"), "source": "user_capture_element_id"})
     else:
         for pick in (payloads.get("picks") or {}).get("picks", []):
             player = by_id.get(pick["element"])
             if player:
-                squad.append({
-                    "element": player["id"],
-                    "name": player["web_name"],
-                    "team_id": player["team"],
-                    "position": positions[player["element_type"]],
-                    "purchase_cost": pick.get("purchase_price"),
-                    "selling_price": pick.get("selling_price"),
-                    "source": "official_picks",
-                })
+                squad.append({"element": player["id"], "name": player["web_name"], "team_id": player["team"], "position": positions[player["element_type"]], "purchase_cost": pick.get("purchase_price"), "selling_price": pick.get("selling_price"), "source": "official_picks"})
     _validate_authoritative_squad(squad, by_id)
 
     spells = build_transfer_spells(payloads.get("transfers") or [])
@@ -279,24 +258,12 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         selling = row.get("selling_price")
         if selling is None and purchase is not None:
             selling = sell_cost(player["now_cost"], int(purchase))
-        ledger.append({
-            "element": player["id"],
-            "name": player["web_name"],
-            "team": teams[player["team"]],
-            "team_id": player["team"],
-            "position": positions[player["element_type"]],
-            "purchase_cost": purchase,
-            "now_cost": player["now_cost"],
-            "sell_cost": selling,
-            "purchase_source": source,
-            "ownership": player.get("selected_by_percent"),
-            "status": player.get("status"),
-        })
+        ledger.append({"element": player["id"], "name": player["web_name"], "team": teams[player["team"]], "team_id": player["team"], "position": positions[player["element_type"]], "purchase_cost": purchase, "now_cost": player["now_cost"], "sell_cost": selling, "purchase_source": source, "ownership": player.get("selected_by_percent"), "status": player.get("status")})
 
     total_ms = round((perf_counter() - started) * 1000, 2)
     out = {
         "schema": "snapshot.v1",
-        "schema_version": 496,
+        "schema_version": 497,
         "generated_at": iso_now(),
         "mode": mode,
         "as_of": as_of,
@@ -305,6 +272,7 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         "team_id": TEAM_ID,
         "official": payloads,
         "endpoint_health": health,
+        "authority_policy": {"primary": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE", "public_official": "UNIVERSAL_FACTUAL_BACKBONE", "user_capture": "PRIVATE_PREDEADLINE_OVERRIDE", "authenticated_official": "OPTIONAL_PRIVATE_ENRICHMENT", "authenticated_official_production_blocking": False},
         "squad_authority": projection_baseline["effective_authority"],
         "projection_baseline": projection_baseline,
         "squad": squad,
@@ -323,21 +291,7 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         "duration_ms": total_ms,
     }
     atomic_json(OUTFILE, out)
-    print(json.dumps({
-        "service": "raw_snapshot",
-        "schema": "snapshot.v1",
-        "duration_ms": out["duration_ms"],
-        "initial_parallel_ms": initial_wave_ms,
-        "dependent_parallel_ms": dependent_wave_ms,
-        "planning_gw": projection_baseline["planning_gw"],
-        "baseline_gw": projection_baseline["baseline_gw"],
-        "squad_authority": out["squad_authority"],
-        "override_applied": projection_baseline["override_applied"],
-        "checkpoint_policy": checkpoint.get("policy_id"),
-        "visible_output_authorized": checkpoint.get("visible_output_authorized"),
-        "match_day_active": phase.get("match_day_active"),
-        "active_live_fixture_count": phase.get("active_live_fixture_count"),
-    }))
+    print(json.dumps({"service": "raw_snapshot", "schema": "snapshot.v1", "duration_ms": out["duration_ms"], "initial_parallel_ms": initial_wave_ms, "dependent_parallel_ms": dependent_wave_ms, "planning_gw": projection_baseline["planning_gw"], "baseline_gw": projection_baseline["baseline_gw"], "squad_authority": out["squad_authority"], "override_applied": projection_baseline["override_applied"], "checkpoint_policy": checkpoint.get("policy_id"), "visible_output_authorized": checkpoint.get("visible_output_authorized"), "match_day_active": phase.get("match_day_active"), "active_live_fixture_count": phase.get("active_live_fixture_count")}))
     return out
 
 

@@ -1,10 +1,10 @@
 {
-  "schema_version": 6,
-  "model": "v5_v3_v4_capability_parity_v6",
+  "schema_version": 7,
+  "model": "v5_v3_v4_capability_parity_v7",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "main@5538147b7f6dc51b6a3641befb72f6a8ff77e447",
-    "current_production_code_commit": "5538147b7f6dc51b6a3641befb72f6a8ff77e447",
+    "current_production_runtime": "main@91301fb46a8f66ee41b27571e5d01c191c676104",
+    "current_production_code_commit": "91301fb46a8f66ee41b27571e5d01c191c676104",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "current_production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
@@ -14,50 +14,21 @@
     "candidate": "v5.0.0-beta.4"
   },
   "required_domains": [
-    "phase_aware_truth",
-    "planning_vs_scoring_phase_separation",
-    "official_fpl_authority",
-    "finance_sell_value",
-    "price_radar",
-    "price_fact_vs_model_semantic_authority",
-    "transfer_momentum_truthful_evidence",
-    "xmins_role",
-    "observed_tactical_context",
-    "deep_tactical_evidence_matrix",
-    "truthful_system_formation_fit",
-    "tactical_decision_consumption",
-    "competitive_load",
-    "team_strength",
-    "multi_horizon_projection",
-    "package_optimizer",
-    "lineup_optimizer",
-    "owned_challenger_comparator",
-    "external_benchmark_consensus",
-    "watchlist_full_dss",
-    "captaincy",
-    "decision_trace",
-    "genuine_predeadline_decision_validation",
-    "prediction_evaluation",
-    "source_health",
-    "reporting",
-    "interactive_subsecond_serving",
-    "production_definition_of_done",
-    "degraded_mode"
+    "phase_aware_truth", "planning_vs_scoring_phase_separation", "official_fpl_authority", "finance_sell_value",
+    "price_radar", "price_fact_vs_model_semantic_authority", "transfer_momentum_truthful_evidence", "xmins_role",
+    "observed_tactical_context", "deep_tactical_evidence_matrix", "truthful_system_formation_fit", "tactical_decision_consumption",
+    "competitive_load", "team_strength", "multi_horizon_projection", "package_optimizer", "lineup_optimizer",
+    "owned_challenger_comparator", "external_benchmark_consensus", "watchlist_full_dss", "captaincy", "decision_trace",
+    "genuine_predeadline_decision_validation", "prediction_evaluation", "source_health", "reporting",
+    "interactive_subsecond_serving", "production_definition_of_done", "degraded_mode"
   ],
   "advanced_candidate_domains": [
-    "truthful_feature_bundle",
-    "temporal_backtest",
-    "prediction_settlement",
-    "captain_regret",
-    "xi_regret",
-    "transfer_comparator_realized_net_gain",
-    "correlated_simulation_shadow",
-    "release_attestation",
-    "isolated_team_review"
+    "truthful_feature_bundle", "temporal_backtest", "prediction_settlement", "captain_regret", "xi_regret",
+    "transfer_comparator_realized_net_gain", "correlated_simulation_shadow", "release_attestation", "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "5538147b7f6dc51b6a3641befb72f6a8ff77e447",
-    "production_code_commit": "5538147b7f6dc51b6a3641befb72f6a8ff77e447",
+    "production_main_sha": "91301fb46a8f66ee41b27571e5d01c191c676104",
+    "production_code_commit": "91301fb46a8f66ee41b27571e5d01c191c676104",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,
@@ -73,7 +44,8 @@
       "module_batch_registry": "V3_MODULE_BATCHES_DERIVED_V2",
       "business_capability_contract_unchanged_by_control_plane_refactor": true,
       "football_formula_unchanged_by_control_plane_refactor": true,
-      "decision_logic_unchanged_by_control_plane_refactor": true
+      "decision_logic_unchanged_by_control_plane_refactor": true,
+      "sub3s_fast_lane_runtime_hardening_only": true
     },
     "control_plane_equivalence": {
       "canonical_orchestration_registry": {
@@ -110,11 +82,17 @@
         "v5_owner": "governance",
         "evidence": "config/v5_service_registry.json",
         "semantics": "V3 canonical capability telemetry is observational. V5 keeps its own service health and module ownership evidence and does not import telemetry as decision authority."
+      },
+      "sub3s_fast_lane_contract": {
+        "v5_owner": "orchestrator",
+        "evidence": "config/v5_orchestrator_registry.json",
+        "semantics": "V3 PR #174 coalesced FAST-lane, trusted artifact validation and compute-positive reuse are runtime hardening only; V5 preserves its bounded-context execution and decision semantics."
       }
     },
     "capability_equivalence": {
       "gw_scoped_chip_override": {"v5_owner": "truth", "evidence": "src/v5/services/truth.py::_lock_chip_scope"},
       "authenticated_official_predeadline_team": {"v5_owner": "truth", "evidence": "config/v5_phase_authority_registry.json"},
+      "official_submitted_predeadline_fallback": {"v5_owner": "truth", "evidence": "config/v5_phase_authority_registry.json"},
       "explicit_xmins_probability_decomposition": {"v5_owner": "prediction", "evidence": "src/v5/intelligence/xmins.py::_probability_contract"},
       "projection_component_observability": {"v5_owner": "prediction", "evidence": "src/v5/intelligence/projection.py::_position_projection_diagnostics"},
       "verified_competitive_load_observation_validation": {"v5_owner": "prediction", "evidence": "src/v5/intelligence/competitive_load.py::_validated_observations"},
@@ -143,6 +121,7 @@
     "topology_name_parity_does_not_require_service_name_identity": true,
     "compiled_v3_control_plane_does_not_create_v5_service_or_business_authority": true,
     "duplicate_human_maintained_execution_truth_forbidden": true,
-    "v3_capability_telemetry_is_observational_not_decision_authority": true
+    "v3_capability_telemetry_is_observational_not_decision_authority": true,
+    "v3_sub3s_fast_lane_is_runtime_hardening_not_decision_authority": true
   }
 }

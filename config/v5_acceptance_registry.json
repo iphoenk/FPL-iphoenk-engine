@@ -26,8 +26,8 @@
   },
   "convergence": {
     "production_baseline": "v3.20.0",
-    "production_main_sha": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
-    "production_code_commit": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
+    "production_main_sha": "856600536f20720c1e62e831b7ef918d47d8725a",
+    "production_code_commit": "856600536f20720c1e62e831b7ef918d47d8725a",
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
     "production_runtime_schema_version": 49,
     "production_execution_registry": "V3_EXECUTION_DOMAINS_V2",

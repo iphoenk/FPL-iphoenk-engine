@@ -49,7 +49,7 @@ def resolve_locked_squad(lock: dict, bootstrap: dict) -> tuple[dict, ...]:
             raise RuntimeError(f"locked name mismatch: {eid}")
         if source_row.get("expected_team") and source_row["expected_team"] != team:
             raise RuntimeError(f"locked team mismatch: {eid}")
-        out.append(_row(player, teams, "user_lock", source_row.get("purchase_cost")))
+        out.append(_row(player, teams, "user_capture", source_row.get("purchase_cost")))
     return tuple(out)
 
 
@@ -94,18 +94,61 @@ def validate_squad(squad: Iterable[dict]) -> dict[str, Any]:
     return result
 
 
-def select_squad(*, phase, bootstrap: dict, locked_squad=None, authenticated_my_team=None, submitted_picks=None):
+def _capture_is_current(lock: dict | None, planning_gw: int | None, submitted_gw: int | None) -> bool:
+    if not isinstance(lock, dict) or not lock.get("players"):
+        return False
+    override_requested = bool(lock.get("planning_override_active") or lock.get("wildcard_active"))
+    if not override_requested:
+        return False
+    target = lock.get("target_gw")
+    if target is None:
+        return False
+    try:
+        target_gw = int(target)
+    except (TypeError, ValueError):
+        return False
+    return bool(planning_gw and target_gw == int(planning_gw) and (submitted_gw is None or target_gw != int(submitted_gw)))
+
+
+def select_squad(
+    *,
+    phase,
+    bootstrap: dict,
+    locked_squad=None,
+    authenticated_my_team=None,
+    submitted_picks=None,
+    planning_gw: int | None = None,
+    submitted_gw: int | None = None,
+):
+    capture_current = _capture_is_current(locked_squad, planning_gw, submitted_gw)
     for authority in phase_authority_chain(phase, "squad"):
-        if authority == "user_lock" and locked_squad:
+        if authority in {"user_capture", "user_lock"} and capture_current:
             squad = resolve_locked_squad(locked_squad, bootstrap)
-        elif authority == "official_authenticated" and authenticated_my_team:
-            squad = resolve_authenticated_draft(authenticated_my_team, bootstrap)
+            effective_authority = "user_capture"
         elif authority == "official_public" and submitted_picks:
             squad = resolve_submitted_squad(submitted_picks, bootstrap)
+            effective_authority = "official_public"
+        elif authority == "official_authenticated" and authenticated_my_team:
+            # Kept only for backwards compatibility with historical registry snapshots.
+            # Current V5 governance does not place this in the squad authority chain.
+            squad = resolve_authenticated_draft(authenticated_my_team, bootstrap)
+            effective_authority = "official_authenticated"
         else:
             continue
         if squad:
-            return {"authority": authority, "squad": squad, "validation": validate_squad(squad)}
+            return {
+                "authority": effective_authority,
+                "squad": squad,
+                "validation": validate_squad(squad),
+                "authority_policy": {
+                    "model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+                    "public_official": "UNIVERSAL_FACTUAL_BACKBONE",
+                    "user_capture": "PRIVATE_PREDEADLINE_OVERRIDE",
+                    "authenticated_official": "OPTIONAL_PRIVATE_ENRICHMENT",
+                    "authenticated_official_production_blocking": False,
+                    "capture_current": capture_current,
+                },
+            }
     raise RuntimeError(f"no usable V5 squad authority for phase {phase}")
 
 

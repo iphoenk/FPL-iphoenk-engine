@@ -5,13 +5,13 @@ import json
 from pathlib import Path
 from time import perf_counter
 
-from src.engines.v4_preseason_evidence import EVIDENCE as PRESEASON_EVIDENCE, attach_preseason_evidence
+from src.engines.v4_preseason_evidence import EVIDENCE as PRESEASON_EVIDENCE
 from src.engines.v4_runner import build_predictions as canonical_build_predictions
 from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
 
 CACHE = DATA / "predictions_base_hot_cache_v4.json"
-ALGORITHM = "v4.9.6-exact-base-prediction-cache-v5"
+ALGORITHM = "v4.9.6-exact-base-prediction-cache-v6"
 _LAST_STATUS: dict = {}
 
 # Official FPL exposes market counters that can change minute-to-minute but are
@@ -74,9 +74,9 @@ def _prediction_elements(elements: list[dict]) -> list[dict]:
 def semantic_fingerprint(bootstrap: dict, fixtures: list[dict], stats_gw: int | None) -> str:
     """Fingerprint every semantic input consumed by canonical base prediction.
 
-    Verified preseason evidence is attached after base-cache retrieval and is
-    explicitly forbidden from mutating xPts, so it does not invalidate the base
-    model cache. Its current state is always re-read by ``_attach_current_evidence``.
+    Verified preseason role evidence is consumed before projection, so its digest
+    must invalidate the exact base cache. Missing evidence hashes as None and
+    remains an explicit evidence-gated zero signal.
     """
     payload = {
         "algorithm": ALGORITHM,
@@ -88,6 +88,7 @@ def semantic_fingerprint(bootstrap: dict, fixtures: list[dict], stats_gw: int | 
         "fixtures": fixtures,
         "stats_gw": stats_gw,
         "stats_digests": _stats_digests(stats_gw),
+        "preseason_evidence_digest": _digest_if_exists(PRESEASON_EVIDENCE),
         "source_digests": _source_digest(),
     }
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str).encode("utf-8")
@@ -110,10 +111,6 @@ def _restamp(value, generated_at: str):
     return _restamp_prediction_contract(value, generated_at)
 
 
-def _attach_current_evidence(predictions: dict) -> dict:
-    return attach_preseason_evidence(predictions)
-
-
 def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at: str, stats_gw: int | None = None) -> dict:
     global _LAST_STATUS
     started = perf_counter()
@@ -126,7 +123,7 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
     cache_read_ms = round((perf_counter() - t) * 1000.0, 2)
     if cached.get("algorithm") == ALGORITHM and cached.get("fingerprint") == fingerprint and (cached.get("predictions") or {}).get("players"):
         t = perf_counter()
-        predictions = _attach_current_evidence(_restamp_prediction_contract(cached["predictions"], generated_at))
+        predictions = _restamp_prediction_contract(cached["predictions"], generated_at)
         restamp_ms = round((perf_counter() - t) * 1000.0, 2)
         _LAST_STATUS = {
             "hit": True,
@@ -145,7 +142,7 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
     canonical_build_ms = round((perf_counter() - t) * 1000.0, 2)
     t = perf_counter()
     atomic_json(CACHE, {
-        "schema_version": 5,
+        "schema_version": 6,
         "algorithm": ALGORITHM,
         "fingerprint": fingerprint,
         "predictions": predictions,
@@ -157,14 +154,13 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
             "prediction_contract_timestamp_restamp_only": True,
             "boolean_point_in_time_truth_preserved": True,
             "competitive_load_and_team_news_attached_after_base_cache": True,
-            "preseason_evidence_attached_after_base_cache": True,
-            "preseason_evidence_re_read_every_request": True,
+            "preseason_evidence_consumed_before_projection": True,
+            "preseason_evidence_digest_invalidates_base_cache": True,
             "preseason_evidence_never_fabricated": True,
             "preseason_direct_xpts_mutation": False,
         },
     })
     cache_write_ms = round((perf_counter() - t) * 1000.0, 2)
-    predictions = _attach_current_evidence(predictions)
     _LAST_STATUS = {
         "hit": False,
         "reason": "CACHE_MISS_REBUILT_CANONICAL",

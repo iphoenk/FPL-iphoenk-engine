@@ -246,9 +246,12 @@ def test_weather_domain_and_publish_contract_are_canonical() -> None:
     publish = json.loads((ROOT / "config" / "runtime" / "runtime_publish_registry.json").read_text(encoding="utf-8"))
     contracts = json.loads((ROOT / "config" / "runtime" / "artifact_contracts.json").read_text(encoding="utf-8"))
 
-    assert domains["canonical_phases"]["ENRICH"] == ["football_context", "market_context", "weather_context"]
-    assert domains["domains"]["weather_context"]["capabilities"] == ["weather_context"]
-    assert domains["domains"]["prediction"]["depends_on"] == ["weather_context"]
+    assert domains["domain_count"] == 11
+    assert domains["canonical_phases"]["ENRICH"] == ["football_context", "market_context"]
+    assert "weather_context" in domains["domains"]["football_context"]["capabilities"]
+    assert "weather_context" not in domains["domains"]
+    assert domains["domains"]["prediction"]["depends_on"] == ["football_context"]
+    assert domains["policy"]["weather_context_does_not_add_process_startup_boundary"] is True
     assert {"weather_context.json", "weather_context_health.json"} <= set(publish["hydrate_paths"])
     assert {"weather_context.json", "weather_context_health.json"} <= set(publish["publish_paths"])
     assert contracts["contracts"]["fixture_weather.json"]["equals"]["schema_version"] == 2

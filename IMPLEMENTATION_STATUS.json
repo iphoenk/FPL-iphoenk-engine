@@ -36,7 +36,9 @@
     "raw_actions_artifact_retention_days": 14,
     "rolling_history_retention_bounded": true,
     "public_official_plus_user_capture_predeadline_authority": true,
-    "authenticated_official_optional_private_enrichment": true
+    "authenticated_official_optional_private_enrichment": true,
+    "weather_shadow_research": true,
+    "weather_production_decision_authority": false
   },
   "acceptance": {
     "release_fingerprint": "PENDING_REVALIDATION_AFTER_PRODUCTION_REANCHOR",
@@ -82,6 +84,7 @@
     "The acceptance baseline is the SHA actually deployed in runtime-data; a newer unpublished main HEAD may be ahead only if the deployed SHA remains its ancestor.",
     "Raw GitHub Actions evidence expires after 14 days. Canonical frozen prediction evidence and compact analytics remain for the current season.",
     "history.jsonl is explicitly noncanonical and is now bounded by 14 days, 128 records, and a 32 MiB safety ceiling so repeated shadow cycles cannot grow it without bound.",
+    "Weather intelligence remains SHADOW_ADVISORY_ONLY with zero production decision authority until empirical validation and explicit governance promotion.",
     "Prediction acceptance remains independently locked until genuine settled evidence satisfies the empirical calibration gate.",
     "Production remains V3; V5 promotion requires fresh operational revalidation, prediction acceptance, and a separate explicit manual action."
   ]

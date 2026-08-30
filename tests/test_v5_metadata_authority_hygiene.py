@@ -2,8 +2,10 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEPLOYED_SHA = "5175f9bc68354100a8bc3a36a3b97e853e90b73d"
+DEPLOYED_SHA = "80fe400888f7a4979f4537971cbc8eef6470dbe6"
 STALE_DEPLOYED_SHAS = {
+    "794d45d37782b3b47617d80384589a7a0cc55730",
+    "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
     "9f483a2eb2cd346fa014dfdb8a2b8edb7456906d",
     "892dd783b2fa0199cecf74e5a6548bb0619816dd",
     "9a76a6231bdd747a247eabc8867a2312a188317a",
@@ -65,9 +67,18 @@ def test_owned_metadata_is_reanchored_to_the_one_deployed_runtime_sha():
     assert acceptance["convergence"]["production_main_sha"] == DEPLOYED_SHA
     assert acceptance["convergence"]["production_code_commit"] == DEPLOYED_SHA
     assert parity["authorities"]["current_production_code_commit"] == DEPLOYED_SHA
+    assert parity["authorities"]["current_production_runtime"] == f"deployed@{DEPLOYED_SHA}"
     assert parity["current_production_reanchor"]["production_main_sha"] == DEPLOYED_SHA
     assert parity["current_production_reanchor"]["production_code_commit"] == DEPLOYED_SHA
     assert status["production_authority"]["main_sha"] == DEPLOYED_SHA
+
+    assert manifest["baselines"]["production_truth"] == "v3.20.0"
+    assert acceptance["convergence"]["production_baseline"] == "v3.20.0"
+    assert parity["authorities"]["football_truth_baseline"] == "v3.20.0"
+    assert manifest["advanced_v5"]["v3_atomic_runtime_publication_reconciled_as_runtime_governance_hardening"] is True
+    assert acceptance["convergence"]["v3_atomic_runtime_publication_reconciled_as_runtime_governance_hardening"] is True
+    assert parity["current_production_reanchor"]["v3_topology"]["atomic_runtime_publication_runtime_governance_only"] is True
+    assert parity["governance"]["v3_atomic_runtime_publication_is_runtime_governance_not_v5_prediction_or_decision_authority"] is True
 
     for path in OWNED_METADATA:
         text = (ROOT / path).read_text(encoding="utf-8")

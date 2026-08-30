@@ -1,6 +1,6 @@
 {
-  "schema_version": 11,
-  "registry": "fpl_v4_9_6_microservice_registry_v11",
+  "schema_version": 12,
+  "registry": "fpl_v4_9_6_microservice_registry_v12",
   "architecture_version": "4.9.6",
   "execution_model": "process_isolated_dag_parallel_single_host",
   "services": [
@@ -62,7 +62,7 @@
       "command": ["{python}", "-m", "src.services.optimization_slo_service"],
       "timeout_seconds": 45,
       "depends_on": ["prediction"],
-      "produces": ["wc_decision", "wc_package", "lineup", "recommendation_sanity", "decision_pipeline"],
+      "produces": ["wc_decision", "wc_package", "lineup", "recommendation_sanity", "tactical_serving", "decision_arbitration", "decision_pipeline"],
       "critical": true
     },
     {
@@ -95,7 +95,7 @@
       "command": ["{python}", "-m", "src.services.governance_service"],
       "timeout_seconds": 30,
       "depends_on": ["validation", "user_decision_overlay", "personal_gw_scorecard"],
-      "produces": ["framework_postflight", "checkpoint_decision"],
+      "produces": ["framework_postflight", "checkpoint_decision", "serving_payload", "serving_benchmark"],
       "critical": true
     }
   ],
@@ -160,10 +160,14 @@
     "release_manifest_single_source": true,
     "service_count": 8,
     "validation_boundary_preserves_four_artifact_contracts": true,
-    "governance_boundary_preserves_postflight_and_checkpoint_contracts": true,
+    "governance_boundary_preserves_postflight_checkpoint_and_serving_contracts": true,
     "reconciliation_readiness_process_isolated": false,
     "reconciliation_readiness_read_only": true,
     "reconciliation_readiness_no_official_refetch": true,
-    "reconciliation_readiness_reuses_validation_integrity": true
+    "reconciliation_readiness_reuses_validation_integrity": true,
+    "reporting_composition_only": true,
+    "canonical_decision_artifact_required_for_reporting": true,
+    "fast_p95_benchmark_repeated": true,
+    "warm_serving_p95_benchmark_repeated": true
   }
 }

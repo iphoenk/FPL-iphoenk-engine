@@ -3,8 +3,8 @@
   "model": "v5_v3_v4_capability_parity_v10",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "main@5175f9bc68354100a8bc3a36a3b97e853e90b73d",
-    "current_production_code_commit": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
+    "current_production_runtime": "main@856600536f20720c1e62e831b7ef918d47d8725a",
+    "current_production_code_commit": "856600536f20720c1e62e831b7ef918d47d8725a",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "current_production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
@@ -27,8 +27,8 @@
     "transfer_comparator_realized_net_gain", "correlated_simulation_shadow", "release_attestation", "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
-    "production_code_commit": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
+    "production_main_sha": "856600536f20720c1e62e831b7ef918d47d8725a",
+    "production_code_commit": "856600536f20720c1e62e831b7ef918d47d8725a",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,

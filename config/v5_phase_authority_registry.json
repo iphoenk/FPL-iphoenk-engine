@@ -1,10 +1,11 @@
 {
-  "version": 3,
+  "version": 4,
+  "authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
   "phases": {
     "PRE_DEADLINE": {
-      "squad": ["official_authenticated", "official_public", "user_lock"],
-      "lineup": ["official_authenticated", "official_public", "user_lock"],
-      "captaincy": ["official_authenticated", "official_public", "user_lock"],
+      "squad": ["user_capture", "official_public"],
+      "lineup": ["user_capture", "official_public"],
+      "captaincy": ["user_capture", "official_public"],
       "finance": ["official_authenticated", "public_reconstruction"],
       "scoring": ["official_public"]
     },
@@ -36,11 +37,14 @@
     "submitted_picks_become_baseline": true
   },
   "pre_deadline_governance": {
-    "official_authenticated_is_default_current_team_authority": true,
-    "official_public_submitted_is_default_fallback_when_authenticated_unavailable": true,
+    "public_official_is_universal_factual_backbone": true,
+    "user_capture_is_current_private_draft_authority_when_target_gw_matches": true,
+    "user_capture_must_be_target_gw_scoped": true,
+    "official_public_submitted_is_fallback_when_no_current_capture": true,
     "official_public_submitted_represents_last_confirmed_team_not_unsubmitted_draft": true,
-    "user_lock_is_last_resort_or_explicit_override_only": true,
-    "stale_persistent_lock_must_not_mask_live_authenticated_team": true,
-    "stale_persistent_lock_must_not_mask_last_confirmed_official_submitted_team": true
+    "authenticated_official_is_optional_private_enrichment": true,
+    "authenticated_official_is_production_blocking": false,
+    "authenticated_official_must_not_override_user_capture": true,
+    "stale_persistent_capture_must_not_mask_last_confirmed_official_submitted_team": true
   }
 }

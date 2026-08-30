@@ -147,27 +147,56 @@ def _ownership_evidence(latest: dict, universe: dict) -> tuple[bool, dict]:
 
 def _recount(health: dict) -> None:
     totals = Counter()
+    critical_failed: list[str] = []
+    critical_partial: list[str] = []
+    critical_warmup: list[str] = []
+
     for section in ("dss_core", "dss_extensions", "enhancements"):
         block = health.get(section) or {}
-        counts = Counter(row.get("status") for row in block.get("items") or [])
+        items = list(block.get("items") or [])
+        counts = Counter(row.get("status") for row in items)
         block["counts"] = dict(counts)
         totals.update(counts)
+        for row in items:
+            if not row.get("critical"):
+                continue
+            status = row.get("status")
+            module_id = row.get("id")
+            if status == "FAILED":
+                critical_failed.append(module_id)
+            elif status == "PARTIAL":
+                critical_partial.append(module_id)
+            elif status == "WARMUP":
+                critical_warmup.append(module_id)
+
     active = totals.get("ACTIVE", 0)
     partial = totals.get("PARTIAL", 0)
     warmup = totals.get("WARMUP", 0)
     failed = totals.get("FAILED", 0)
     declared = active + partial + warmup + failed
-    health["capability_coverage"] = {"active": active, "warmup": warmup, "partial": partial, "failed": failed, "declared": declared, "active_ratio": round(active / max(1, declared), 4)}
-    health["capability_health"] = "GREEN" if partial == 0 and failed == 0 else "AMBER" if failed == 0 else "RED"
-    if failed > 0:
+
+    health["critical_failed"] = critical_failed
+    health["critical_partial"] = critical_partial
+    health["critical_warmup"] = critical_warmup
+    health["capability_coverage"] = {
+        "active": active,
+        "warmup": warmup,
+        "partial": partial,
+        "failed": failed,
+        "declared": declared,
+        "active_ratio": round(active / max(1, declared), 4),
+    }
+    health["capability_health"] = "RED" if failed else "AMBER" if partial or warmup else "GREEN"
+
+    if critical_failed:
         health["prediction_health"] = "RED"
         health["decision_engine"] = "BLOCKED"
         health["go_allowed"] = False
-    elif partial > 0:
+    elif critical_partial:
         health["prediction_health"] = "AMBER"
         health["decision_engine"] = "DEGRADED"
         health["go_allowed"] = False
-    elif warmup > 0:
+    elif critical_warmup:
         health["prediction_health"] = "AMBER"
         health["decision_engine"] = "PROVISIONAL"
         health["go_allowed"] = False
@@ -208,13 +237,14 @@ def reconcile(health: dict | None = None) -> dict:
 
     _recount(health)
     health["maturity_reconciliation"] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "promoted_modules": promotions,
         "promoted_count": len(promotions),
         "false_green_forbidden": True,
         "evidence_gaps_remain_visible": True,
+        "critical_lists_rebuilt_after_promotions": True,
         "critical_warmup_blocks_unqualified_go": True,
-        "note": "Engineering capability readiness is separated from current external-evidence completeness; data-dependent warmup remains truthful.",
+        "note": "Engineering capability readiness is separated from current external-evidence completeness; critical readiness is recomputed from the post-promotion module state and data-dependent warmup remains truthful.",
     }
     atomic_json(HEALTH, health)
     return health

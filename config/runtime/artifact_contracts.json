@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "registry": "RUNTIME_ARTIFACT_CONTRACTS_V2",
   "policy": {
     "validate_declared_json_before_acceptance": true,
@@ -7,7 +7,9 @@
     "unknown_json_contract": "PARSE_ONLY",
     "malformed_json_is_integrity_failure": true,
     "valid_empty_external_observations_are_allowed": true,
-    "valid_empty_weather_window_is_allowed": true
+    "valid_empty_weather_window_is_allowed": true,
+    "weather_probability_and_intensity_are_distinct_fields": true,
+    "weather_context_outputs_are_contract_validated": true
   },
   "contracts": {
     "challenger_observations.json": {
@@ -48,9 +50,21 @@
     },
     "fixture_weather.json": {
       "root_type": "object",
-      "required_fields": ["schema_version", "model", "provider", "fixtures", "material_fixtures", "governance"],
-      "equals": {"schema_version": 1, "model": "weather_context_observational_v1", "provider": "open_meteo"},
-      "types": {"fixtures": "list", "material_fixtures": "list", "governance": "object", "fixture_count": "integer", "available_count": "integer", "material_count": "integer"}
+      "required_fields": ["schema_version", "model", "provider", "fixtures", "material_fixtures", "governance", "evidence_precedence"],
+      "equals": {"schema_version": 2, "model": "weather_context_observational_v1", "provider": "open_meteo"},
+      "types": {"fixtures": "list", "material_fixtures": "list", "governance": "object", "evidence_precedence": "list", "fixture_count": "integer", "available_count": "integer", "observed_count": "integer", "stale_count": "integer", "material_count": "integer"}
+    },
+    "weather_context.json": {
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "owner", "generated_at", "status", "fixtures", "health", "governance"],
+      "equals": {"schema_version": 1, "contract": "WEATHER_CONTEXT_V3_V1", "owner": "weather_context"},
+      "types": {"fixtures": "list", "health": "object", "governance": "object"}
+    },
+    "weather_context_health.json": {
+      "root_type": "object",
+      "required_fields": ["schema_version", "contract", "generated_at", "status", "allowed_statuses", "fixture_count", "available_count", "stale_count", "unavailable_count", "tactical_context_complete", "decision_blocking", "reasons"],
+      "equals": {"schema_version": 1, "contract": "WEATHER_CONTEXT_HEALTH_V1", "decision_blocking": false},
+      "types": {"allowed_statuses": "list", "fixture_count": "integer", "available_count": "integer", "stale_count": "integer", "unavailable_count": "integer", "tactical_context_complete": "boolean", "reasons": "list"}
     },
     "player_features.json": {
       "root_type": "object",

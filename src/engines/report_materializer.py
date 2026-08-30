@@ -6,6 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from src.engines.gameweek_lifecycle_intelligence import build_gameweek_lifecycle
 from src.engines.personal_gameweek_context import build_personal_gameweek_context
 from src.utils import DATA, ROOT, atomic_json, read_json
 
@@ -250,26 +251,51 @@ def run() -> dict[str, Any]:
     latest = read_json(DATA / "latest.json", {})
     official = read_json(DATA / "official_detail.json", {})
     official_snapshot = read_json(DATA / "official_snapshot.json", {})
+    live = read_json(DATA / "live.json", {})
+    prediction_accuracy = read_json(DATA / "prediction_accuracy.json", {})
+    auth = read_json(DATA / "auth.json", {})
 
     owned = _owned_rows(user, team, projections)
     watch_summary = _watchlist_summary(watchlist, deep=False)
     watch_deep = _watchlist_summary(watchlist, deep=True)
     gameweek_context = build_personal_gameweek_context(team, projections, lineup, official, official_snapshot)
+    gameweek_lifecycle = build_gameweek_lifecycle(
+        gameweek_context=gameweek_context,
+        team=team,
+        live=live,
+        official_snapshot=official_snapshot,
+        prediction_accuracy=prediction_accuracy,
+        auth=auth,
+        price_model_health=latest.get("price_model_health") or {},
+    )
+    serving_contract = {
+        "owned": len(owned),
+        "watchlist": watch_summary["count"],
+        "watchlist_per_position": watch_summary["per_position"],
+        "personal_gameweek_context": True,
+        "gameweek_lifecycle": True,
+        "counterfactual_pnl": True,
+        "actual_vs_predicted_learning": True,
+        "authenticated_official_readiness": True,
+        "price_calibration_readiness": True,
+    }
 
     user.setdefault("owned_squad", {})["count"] = len(owned)
     user["owned_squad"]["facts"] = owned
     user["owned_squad"]["compact_summary"] = None
     user["external_watchlist"] = {"status": watch_summary["status"], "decision": "WATCH", "count": watch_summary["count"], "positions": watch_summary["positions"]}
     user["gameweek_context"] = gameweek_context
-    user["serving_contract"] = {"owned": len(owned), "watchlist": watch_summary["count"], "watchlist_per_position": watch_summary["per_position"], "personal_gameweek_context": True}
+    user["gameweek_lifecycle"] = gameweek_lifecycle
+    user["serving_contract"] = serving_contract
     atomic_json(USER_OUT, user)
 
     brief = {
         "decision": user.get("decision"),
         "generated_at": _now(),
         "planning_gw": user.get("planning_gw"),
-        "serving_contract": {"owned": len(owned), "watchlist": watch_summary["count"], "watchlist_per_position": watch_summary["per_position"], "personal_gameweek_context": True},
+        "serving_contract": serving_contract,
         "gameweek_context": gameweek_context,
+        "gameweek_lifecycle": gameweek_lifecycle,
         "finance": _finance(team),
         "owned_15": owned,
         "changes_since_last_report": user.get("changes_since_last_report"),
@@ -284,7 +310,7 @@ def run() -> dict[str, Any]:
     }
     deep = {
         **brief,
-        "payload_type": "DEEP_REVIEW_PAYLOAD_V2",
+        "payload_type": "DEEP_REVIEW_PAYLOAD_V3_LIFECYCLE",
         "watchlist_20": watch_deep["positions"],
         "captaincy": _captain(user, deep=True),
         "starting_xi": user.get("starting_xi"),
@@ -296,6 +322,9 @@ def run() -> dict[str, Any]:
             "official_detail_full": "data/official_detail.json",
             "official_detail_owned": "data/official_detail_owned.json",
             "official_detail_watchlist": "data/official_detail_watchlist.json",
+            "prediction_accuracy": "data/prediction_accuracy.json",
+            "authenticated_official": "data/auth.json",
+            "price_model_health": "data/latest.json#price_model_health",
         },
     }
     atomic_json(WATCH_OUT, watch_summary)
@@ -324,22 +353,37 @@ def run() -> dict[str, Any]:
         "watchlist_count": watch_summary["count"],
         "watchlist_per_position": watch_summary["per_position"],
         "personal_gameweek_context": True,
+        "gameweek_lifecycle": True,
+        "counterfactual_pnl": True,
+        "actual_vs_predicted_learning": True,
+        "authenticated_official_readiness": True,
+        "price_calibration_readiness": True,
         "report_time_intelligence": True,
         "technical_lazy_load": True,
     }
     atomic_json(DATA / "latest.json", latest)
     sizes = _enforce_sizes()
-    return {"decision_brief": brief, "deep_review_payload": deep, "watchlist_summary": watch_summary, "gameweek_context": gameweek_context, "artifact_sizes": sizes}
+    return {
+        "decision_brief": brief,
+        "deep_review_payload": deep,
+        "watchlist_summary": watch_summary,
+        "gameweek_context": gameweek_context,
+        "gameweek_lifecycle": gameweek_lifecycle,
+        "artifact_sizes": sizes,
+    }
 
 
 if __name__ == "__main__":
     out = run()
     planning = (out.get("gameweek_context") or {}).get("planning") or {}
+    lifecycle = out.get("gameweek_lifecycle") or {}
     print(json.dumps({
         "owned": out["decision_brief"]["serving_contract"]["owned"],
         "watchlist": out["decision_brief"]["serving_contract"]["watchlist"],
         "planning_gw": planning.get("gw"),
         "estimated_points": planning.get("estimated_points"),
         "decision_authority": planning.get("decision_authority"),
+        "lifecycle_status": lifecycle.get("status"),
+        "counterfactual_status": (lifecycle.get("counterfactual_pnl") or {}).get("status"),
         "artifact_sizes": out["artifact_sizes"],
     }, ensure_ascii=False))

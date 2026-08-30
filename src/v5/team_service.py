@@ -36,6 +36,8 @@ def build_team_state(
     submitted_picks: dict | None,
     transfers: list[dict] | None,
     entry: dict | None,
+    planning_gw: int | None = None,
+    submitted_gw: int | None = None,
 ) -> dict[str, Any]:
     resolved = select_squad(
         phase=phase,
@@ -43,6 +45,8 @@ def build_team_state(
         locked_squad=locked_squad,
         authenticated_my_team=authenticated_my_team,
         submitted_picks=submitted_picks,
+        planning_gw=planning_gw,
+        submitted_gw=submitted_gw,
     )
     squad = tuple(resolved["squad"])
     owned_ids = tuple(int(row["element"]) for row in squad)
@@ -50,6 +54,8 @@ def build_team_state(
         "bank": None,
         "coverage": {"expected": len(owned_ids), "covered": 0, "complete": False},
         "prices_for_authoritative_squad": [],
+        "private_squad_coverage": {"expected": 15, "covered": 0, "complete": False},
+        "prices_for_private_squad": [],
     }
     ledger = build_squad_ledger(
         squad,
@@ -65,13 +71,21 @@ def build_team_state(
         bank = entry.get("last_deadline_bank")
     return {
         "authority": resolved["authority"],
+        "projection_baseline": resolved.get("projection_baseline") or {},
         "squad": list(squad),
         "validation": resolved["validation"],
         "finance": {
             **ledger,
             "bank": bank,
             "authenticated_coverage": auth_finance.get("coverage", {}),
+            "private_enrichment_coverage": auth_finance.get("private_squad_coverage", {}),
         },
         "owned_ids": list(owned_ids),
         "mini_leagues": public_mini_league_memberships(entry),
+        "governance": {
+            "primary_squad_authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+            "authenticated_official_is_optional_private_enrichment": True,
+            "authenticated_official_must_not_select_squad": True,
+            "user_capture_requires_exact_target_gw": True,
+        },
     }

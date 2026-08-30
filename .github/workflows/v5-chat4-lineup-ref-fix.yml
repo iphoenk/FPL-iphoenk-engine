@@ -18,6 +18,11 @@ jobs:
         with:
           ref: codex/v5-chat4-current-lineup-parity
           fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install focused test dependency
+        run: python -m pip install pytest
       - name: Apply lineup metric reference fix
         run: python tools/v5_fix_lineup_metric_refs.py
       - name: Run focused regression and commit

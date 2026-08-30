@@ -8,7 +8,7 @@ from src.v5.intelligence.xmins import estimate_xmins
 from src.v5.state import Phase, primary_authority
 
 ROOT = Path(__file__).resolve().parents[1]
-MAIN_SHA = "91301fb46a8f66ee41b27571e5d01c191c676104"
+MAIN_SHA = "ac4e14abf2a844804007e0fb3cac7c7c54213679"
 CODE_SHA = MAIN_SHA
 COMPILED_PLAN = "V3_COMPILED_EXECUTION_PLAN_V1"
 COMPILED_PLAN_SHA = "af929aa55483f0e8959247a9d1794e70f7840d32f7bf6e5a7bc9d4ceac59e467"
@@ -41,6 +41,7 @@ def test_current_production_reanchor_is_exact_and_keeps_frozen_truth_baseline():
     assert parity["current_production_reanchor"]["v3_topology"]["compiled_plan_sha256"] == COMPILED_PLAN_SHA
     assert parity["current_production_reanchor"]["v3_topology"]["capability_telemetry_registry"] == "V3_CAPABILITY_TELEMETRY_V1"
     assert parity["current_production_reanchor"]["v3_topology"]["sub3s_fast_lane_runtime_hardening_only"] is True
+    assert parity["current_production_reanchor"]["v3_topology"]["semantic_prediction_reuse_runtime_hardening_only"] is True
     assert parity["governance"]["reanchor_requires_full_v5_gate"] is True
     assert parity["governance"]["reanchor_does_not_change_frozen_football_truth_baseline"] is True
 
@@ -57,6 +58,7 @@ def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_t
         "canonical_terminology_contract",
         "capability_telemetry_contract",
         "sub3s_fast_lane_contract",
+        "semantic_prediction_reuse_contract",
     }
     assert required <= set(control)
     for row in control.values():
@@ -66,6 +68,7 @@ def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_t
     assert parity["governance"]["duplicate_human_maintained_execution_truth_forbidden"] is True
     assert parity["governance"]["v3_capability_telemetry_is_observational_not_decision_authority"] is True
     assert parity["governance"]["v3_sub3s_fast_lane_is_runtime_hardening_not_decision_authority"] is True
+    assert parity["governance"]["v3_semantic_prediction_reuse_is_runtime_hardening_not_decision_authority"] is True
 
 
 def test_predeadline_current_team_prefers_authenticated_then_official_submitted():

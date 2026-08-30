@@ -88,6 +88,10 @@ jobs:
         if: steps.cadence.outputs.should_collect == 'true'
         run: python -m src.engines.architecture_contract_validate
 
+      - name: Validate canonical capability telemetry
+        if: steps.cadence.outputs.should_collect == 'true'
+        run: python -m src.runtime_v3.capability_telemetry
+
       - name: Select execution profile
         if: steps.cadence.outputs.should_collect == 'true'
         id: runtime_profile

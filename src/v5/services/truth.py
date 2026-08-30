@@ -39,30 +39,27 @@ def _rules_view() -> dict[str, Any]:
 
 
 def _lock_chip_scope(lock: dict[str, Any], *, planning_gw: int, submitted_gw: int | None) -> tuple[bool, str]:
-    """Return whether a pre-deadline chip flag in a persistent squad lock applies now.
-
-    Squad composition may remain the planning authority across gameweeks, but a chip
-    activation is a one-GW decision. Prefer an explicit lock GW if present. Legacy
-    locks without an explicit GW may only carry their chip flag while the planning
-    GW is still the submitted/current GW for which the lock was created. Once the
-    next GW becomes the planning target, the old chip flag is stale and must not be
-    reactivated.
-    """
-    explicit = lock.get("planning_gw")
+    """Return whether a target-GW user-capture chip flag applies to the planning GW."""
+    explicit = lock.get("target_gw")
+    if explicit is None:
+        explicit = lock.get("planning_gw")
     if explicit is None:
         explicit = lock.get("gameweek")
     if explicit is None:
         explicit = lock.get("gw")
     if explicit is not None:
         try:
-            applies = int(explicit) == int(planning_gw)
+            applies = int(explicit) == int(planning_gw) and (
+                submitted_gw is None or int(planning_gw) != int(submitted_gw)
+            )
         except (TypeError, ValueError):
             return False, "INVALID_EXPLICIT_GW"
-        return applies, "EXPLICIT_GW_MATCH" if applies else "EXPLICIT_GW_MISMATCH"
-    if submitted_gw is None:
-        return True, "LEGACY_LOCK_NO_SUBMITTED_GW"
-    applies = int(submitted_gw) == int(planning_gw)
-    return applies, "LEGACY_LOCK_CURRENT_GW" if applies else "STALE_PREVIOUS_GW_IGNORED"
+        if applies:
+            return True, "EXACT_TARGET_GW_MATCH"
+        if submitted_gw is not None and int(planning_gw) == int(submitted_gw):
+            return False, "POST_DEADLINE_OFFICIAL_RECLAIMS_AUTHORITY"
+        return False, "EXPLICIT_GW_MISMATCH"
+    return False, "UNSCOPED_USER_CAPTURE_REJECTED"
 
 
 def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None, entry_history: dict[str, Any] | None) -> dict[str, Any]:
@@ -74,17 +71,14 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
     submitted_raw = submitted.get("active_chip") if isinstance(submitted, dict) else None
     submitted_chip = CHIP_API_NAMES.get(str(submitted_raw), str(submitted_raw)) if submitted_raw else None
     submitted_gw = int(context.submitted_gw) if context.submitted_gw is not None else None
-    lock_chip_requested = bool(lock.get("wildcard_active"))
+    lock_chip_requested = bool(lock.get("wildcard_active") or lock.get("free_hit_active"))
     lock_chip_applies, lock_chip_scope = _lock_chip_scope(lock, planning_gw=gw, submitted_gw=submitted_gw)
 
     if context.phase.value == "PRE_DEADLINE":
         if lock_chip_requested and lock_chip_applies:
-            raw_active = "wildcard"
+            raw_active = "freehit" if bool(lock.get("free_hit_active")) else "wildcard"
             source = "user_lock"
     elif isinstance(submitted, dict) and submitted_gw == gw:
-        # A submitted chip belongs to the submitted/scoring GW. During LIVE or
-        # POST_GW the planning GW can already be the next GW; never leak the
-        # previous GW chip into the next planning decision.
         raw_active = submitted_raw
         source = "submitted_picks" if raw_active else None
 
@@ -118,9 +112,10 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
         "legal": legal,
         "ledger": ledger,
         "governance": {
-            "squad_lock_may_persist_across_gws": True,
+            "public_official_plus_user_capture_primary": True,
             "chip_activation_is_gameweek_scoped": True,
-            "stale_lock_chip_never_reactivated": True,
+            "user_capture_requires_exact_target_gw": True,
+            "stale_or_unscoped_lock_chip_never_reactivated": True,
         },
     }
 
@@ -206,6 +201,8 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         submitted_picks=submitted,
         transfers=base.get("entry_transfers") if isinstance(base.get("entry_transfers"), list) else [],
         entry=base.get("entry") if isinstance(base.get("entry"), dict) else None,
+        planning_gw=context.planning_gw,
+        submitted_gw=context.submitted_gw,
     )
     match_state = _match_state(base.get("fixtures") if isinstance(base.get("fixtures"), list) else [], context.scoring_gw)
     live = personalized_live_score(

@@ -2,8 +2,9 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEPLOYED_SHA = "80fe400888f7a4979f4537971cbc8eef6470dbe6"
+DEPLOYED_SHA = "96a0d5a65e8ba055c3001ac91cb0c6a63f94e65e"
 STALE_DEPLOYED_SHAS = {
+    "80fe400888f7a4979f4537971cbc8eef6470dbe6",
     "794d45d37782b3b47617d80384589a7a0cc55730",
     "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
     "9f483a2eb2cd346fa014dfdb8a2b8edb7456906d",
@@ -79,6 +80,10 @@ def test_owned_metadata_is_reanchored_to_the_one_deployed_runtime_sha():
     assert acceptance["convergence"]["v3_atomic_runtime_publication_reconciled_as_runtime_governance_hardening"] is True
     assert parity["current_production_reanchor"]["v3_topology"]["atomic_runtime_publication_runtime_governance_only"] is True
     assert parity["governance"]["v3_atomic_runtime_publication_is_runtime_governance_not_v5_prediction_or_decision_authority"] is True
+    assert manifest["advanced_v5"]["v3_structured_user_capture_authority_reconciled_without_v5_auth_authority_change"] is True
+    assert acceptance["convergence"]["v3_structured_user_capture_authority_reconciled_without_v5_auth_authority_change"] is True
+    assert parity["current_production_reanchor"]["v3_topology"]["structured_user_capture_phase_authority_governance_only"] is True
+    assert parity["governance"]["v3_structured_user_capture_authority_matches_public_plus_capture_and_does_not_create_auth_authority"] is True
 
     for path in OWNED_METADATA:
         text = (ROOT / path).read_text(encoding="utf-8")

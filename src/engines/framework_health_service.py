@@ -170,12 +170,67 @@ def _publish_gate0_registry_contract(expected: dict[str, int]) -> None:
         audit_engine.atomic_json(path, payload)
 
 
+def _optional_auth_health() -> dict:
+    auth = read_json(DATA / "auth.json", {})
+    if not isinstance(auth, dict) or not auth:
+        return {
+            "class": "OPTIONAL_PRIVATE_ENRICHMENT",
+            "required": False,
+            "ready": False,
+            "status": "UNAVAILABLE",
+            "state": "SERVICE_UNAVAILABLE",
+            "decision_blocking": False,
+            "reasons": ["auth_artifact_unavailable"],
+            "finance": {
+                "exact_private": False,
+                "provenance": "PUBLIC_RECONSTRUCTION_NON_EXACT",
+            },
+        }
+
+    reported = auth.get("enhancement_health") or auth.get("production_readiness") or {}
+    finance = auth.get("safe_finance") or {}
+    exact_private = (
+        auth.get("state") == "VALID"
+        and auth.get("verified_entry") == auth.get("expected_entry")
+        and finance.get("private_exact_sell_total") is not None
+        and finance.get("private_exact_purchase_total") is not None
+    )
+    return {
+        "class": "OPTIONAL_PRIVATE_ENRICHMENT",
+        "required": False,
+        "ready": bool(reported.get("ready")),
+        "status": str(reported.get("status") or "DEGRADED"),
+        "state": auth.get("state"),
+        "decision_blocking": False,
+        "reasons": list(reported.get("reasons") or []),
+        "finance": {
+            "exact_private": exact_private,
+            "provenance": "AUTHENTICATED_OFFICIAL" if exact_private else "PUBLIC_RECONSTRUCTION_NON_EXACT",
+        },
+    }
+
+
+def _publish_optional_private_enrichment_health() -> None:
+    health = _optional_auth_health()
+    for path in (audit_engine.PRE_OUT, audit_engine.OUT):
+        if not path.exists():
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload["service_classes"] = {
+            "REQUIRED_CORE": {"failure_policy": "FAIL_CLOSED", "decision_blocking": True},
+            "OPTIONAL_PRIVATE_ENRICHMENT": {"failure_policy": "FAIL_SOFT", "decision_blocking": False},
+        }
+        payload["optional_private_enrichment"] = {"authenticated_official": health}
+        audit_engine.atomic_json(path, payload)
+
+
 def run() -> None:
     expected = activate_registry_contract()
     activate_freshness_contract()
     activate_canonical_probe_contracts()
     audit_engine.run()
     _publish_gate0_registry_contract(expected)
+    _publish_optional_private_enrichment_health()
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEPLOYED_SHA = "96a0d5a65e8ba055c3001ac91cb0c6a63f94e65e"
+DEPLOYED_SHA = "0e7973b5e43530c512c634d5c3ade8354dbb1e68"
 STALE_DEPLOYED_SHAS = {
     "80fe400888f7a4979f4537971cbc8eef6470dbe6",
     "794d45d37782b3b47617d80384589a7a0cc55730",
@@ -10,6 +10,7 @@ STALE_DEPLOYED_SHAS = {
     "9f483a2eb2cd346fa014dfdb8a2b8edb7456906d",
     "892dd783b2fa0199cecf74e5a6548bb0619816dd",
     "9a76a6231bdd747a247eabc8867a2312a188317a",
+    "96a0d5a65e8ba055c3001ac91cb0c6a63f94e65e",
 }
 OWNED_METADATA = (
     "config/v5_convergence_manifest.json",
@@ -111,15 +112,15 @@ def test_predeadline_governance_is_public_official_plus_scoped_capture_only():
     for domain in ("squad", "lineup", "captaincy"):
         assert "official_authenticated" not in phase["phases"]["PRE_DEADLINE"][domain]
     assert squad["pre_deadline"]["default_authority"] == "official_public"
-    assert squad["pre_deadline"]["conditional_override_authority"] == "user_lock"
+    assert squad["pre_deadline"]["conditional_override_authority"] == "user_capture"
     assert squad["pre_deadline"]["override_requires_exact_target_gw"] is True
     assert squad["pre_deadline"]["override_requires_active_wc_fh_or_planning_override"] is True
     assert squad["pre_deadline"]["authenticated_official_is_squad_authority"] is False
-    assert source["domains"]["pre_deadline_locked_squad"] == ["official_public", "user_lock"]
+    assert source["domains"]["pre_deadline_locked_squad"] == ["official_public", "user_capture"]
 
     proof = shadow["predeadline_authority_validation"]
     assert proof["primary_authority_model"] == "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE"
-    assert set(proof["allowed_decision_squad_authorities"]) == {"official_public", "user_lock"}
+    assert set(proof["allowed_decision_squad_authorities"]) == {"official_public", "user_capture"}
     assert proof["authenticated_official_must_not_select_squad_lineup_or_captaincy"] is True
     assert trigger["require_authenticated_official_predeadline"] is False
     assert trigger["require_official_submitted_predeadline"] is False

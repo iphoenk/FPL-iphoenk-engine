@@ -1,0 +1,128 @@
+# Temporary final acceptance workflow for the V4 cold-orchestration performance branch.
+name: V4 cold orchestration final acceptance
+
+on:
+  push:
+    branches: [codex/v4-cold-orchestration-under-5s]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v4-cold-final-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install --disable-pip-version-check -r requirements.txt pytest
+
+      - name: Full deterministic suite
+        run: python -m pytest -q --tb=short
+
+      - name: Exact package parity and search width
+        run: python tools/v4_prefix_parity.py
+
+      - name: Forced-miss hotspot probe
+        run: python tools/v4_hotspot_probe.py
+
+      - name: Package audit cProfile
+        run: python tools/v4_package_cprofile.py
+
+      - name: Deep production acceptance benchmark
+        run: >-
+          python tools/v4_cold_profile.py
+          --cold-runs 10
+          --forced-miss-runs 10
+          --fast-runs 25
+          --trace-json-opens
+
+      - name: Enforce production SLOs
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = json.loads(Path("profile-output/v4-cold-profile.json").read_text())
+          forced = p["forced_semantic_cache_miss"]
+          cold = p["cold"]
+          fast = p["fast"]
+          warm = fast["warm_serving_artifact"]
+          checks = {
+              "forced_ex_network_p95_lt_5s": forced["wall_excluding_external_network"]["p95"] < 5000.0,
+              "forced_decision_compute_p95_lt_5s": forced["decision_pipeline_compute"]["p95"] < 5000.0,
+              "cold_full_wall_p95_lt_5s": cold["full_wall"]["p95"] < 5000.0,
+              "fast_serving_p95_lt_3s": fast["serving_e2e"]["p95"] < 3000.0,
+              "warm_serving_p95_lt_1s": float(warm["p95_ms"]) < 1000.0,
+          }
+          print(json.dumps({
+              "checks": checks,
+              "forced_full_wall": forced["full_wall"],
+              "forced_ex_network": forced["wall_excluding_external_network"],
+              "forced_decision_compute": forced["decision_pipeline_compute"],
+              "cold_full_wall": cold["full_wall"],
+              "cold_ex_network": cold["wall_excluding_external_network"],
+              "fast_serving": fast["serving_e2e"],
+              "warm_serving": warm,
+          }, ensure_ascii=False))
+          failed = [name for name, ok in checks.items() if not ok]
+          if failed:
+              raise SystemExit("production SLO failure: " + ", ".join(failed))
+          PY
+
+      - name: Checkout canonical V4 for exact parity
+        uses: actions/checkout@v4
+        with:
+          ref: v4-prediction-engine
+          path: .parity/base
+          fetch-depth: 1
+
+      - name: Checkout candidate V4 for exact parity
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .parity/candidate
+          fetch-depth: 1
+
+      - name: Seed identical runtime data for parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          rsync -a --delete data/ .parity/base/data/
+          rsync -a --delete data/ .parity/candidate/data/
+          test -s .parity/base/data/runtime/snapshot.v1.json
+          test -s .parity/candidate/data/runtime/snapshot.v1.json
+          cmp data/runtime/snapshot.v1.json .parity/base/data/runtime/snapshot.v1.json
+          cmp data/runtime/snapshot.v1.json .parity/candidate/data/runtime/snapshot.v1.json
+
+      - name: Exact canonical end-to-end decision parity
+        run: >-
+          python tools/v4_e2e_parity.py
+          --base-root .parity/base
+          --candidate-root .parity/candidate
+          --output profile-output/e2e_parity.json
+
+      - name: Upload acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-cold-final-${{ github.run_id }}-${{ github.run_attempt }}
+          path: profile-output/
+          if-no-files-found: warn
+          retention-days: 7

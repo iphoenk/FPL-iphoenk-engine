@@ -1,5 +1,5 @@
 {
-  "version": 29,
+  "version": 30,
   "module_policy": {
     "minimum_registered_modules": 48,
     "required_truth_modules": ["rules", "source_authority", "public_api", "official_authenticated", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
@@ -26,8 +26,8 @@
   },
   "convergence": {
     "production_baseline": "v3.20.0",
-    "production_main_sha": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
-    "production_code_commit": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
+    "production_main_sha": "892dd783b2fa0199cecf74e5a6548bb0619816dd",
+    "production_code_commit": "892dd783b2fa0199cecf74e5a6548bb0619816dd",
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
     "production_runtime_schema_version": 49,
     "production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
@@ -139,7 +139,8 @@
     "noncritical_dss_partial_allowed_for_unqualified_go": false,
     "critical_enhancement_partial_allowed": false,
     "v3_gameweek_lifecycle_reporting_hardening_reconciled_without_prediction_or_decision_authority_change": true,
-    "v3_bounded_warm_retry_reconciled_as_runtime_workflow_hardening": true
+    "v3_bounded_warm_retry_reconciled_as_runtime_workflow_hardening": true,
+    "v3_official_phase_independent_fetch_overlap_reconciled_as_runtime_hardening": true
   },
   "prediction_calibration_gate": {
     "required_for_production_promotion": true,

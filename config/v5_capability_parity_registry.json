@@ -149,7 +149,7 @@
       },
       "official_player_detail_enrichment_contract": {
         "v5_owner": "ingestion",
-        "evidence": "config/v5_public_api_registry.json#endpoints.element_summary",
+        "evidence": "config/v5_public_api_registry.json::endpoints.element_summary",
         "semantics": "Current V3 adds fail-soft Official element-summary factual enrichment. V5 already owns the Official element-summary transport route under ingestion; the V3 enrichment is reconciled as factual/runtime hardening and cannot become V5 prediction or decision authority."
       },
       "gameweek_lifecycle_reporting_contract": {

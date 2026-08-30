@@ -6155,7 +6155,7 @@
       "gw": 3,
       "deadline_time": "2026-09-04T17:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-08-30T01:38:34.167394+00:00",
+        "generated_at": "2026-08-30T01:41:11.573697+00:00",
         "players": [
           {
             "element": 1,
@@ -12392,6 +12392,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-08-30T01:38:35.134274+00:00",
+  "updated_at": "2026-08-30T01:41:12.477569+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

@@ -216,6 +216,77 @@ def _price_fact_model_contract(prices: dict[str, Any], alerts: dict[str, Any], t
     }
 
 
+def _user_capture_authority_contract(baseline: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+    """Validate phase-scoped own-team authority without requiring stale rejection.
+
+    A valid exact-GW pre-deadline capture must be applied as LOCKED_PRE_DEADLINE.
+    Official authority is also valid when there is no capture, when a stale or
+    wrong-GW capture was safely rejected, or when Official reclaimed authority
+    after the deadline. Invalid exact-GW capture evidence remains fail-closed.
+    """
+
+    authority = str(baseline.get("effective_authority") or "")
+    requested = baseline.get("override_requested") is True
+    applied = baseline.get("override_applied") is True
+    rejection = baseline.get("capture_rejection_reason")
+    evidence = baseline.get("capture_evidence")
+    canonical_capture = str(
+        baseline.get("canonical_user_capture_authority") or "LOCKED_PRE_DEADLINE"
+    )
+
+    if authority == canonical_capture:
+        evidence_ok = (
+            isinstance(evidence, dict)
+            and evidence.get("contract") == "STRUCTURED_USER_CAPTURE_V1"
+            and evidence.get("valid") is True
+            and evidence.get("timestamp_valid") is True
+            and evidence.get("own_team") is True
+            and evidence.get("identity_validated") is True
+            and evidence.get("squad_legal") is True
+            and (evidence.get("lineup") or {}).get("valid") is True
+        )
+        passed = bool(
+            requested
+            and applied
+            and baseline.get("capture_target_gw_matches") is True
+            and baseline.get("capture_pre_deadline_phase") is True
+            and baseline.get("capture_evidence_required") is True
+            and rejection is None
+            and baseline.get("stale_override_rejected") is not True
+            and baseline.get("post_deadline_official_reclaims_authority") is not True
+            and evidence_ok
+        )
+    elif authority == "OFFICIAL_SUBMITTED":
+        if applied:
+            passed = False
+        elif not requested:
+            passed = True
+        elif rejection in {
+            "STALE_TARGET_GW",
+            "WRONG_FUTURE_TARGET_GW",
+            "POST_DEADLINE_OFFICIAL_RECLAIM",
+            "NOT_PRE_DEADLINE_PHASE",
+        }:
+            passed = True
+        else:
+            passed = False
+    else:
+        passed = False
+
+    return passed, {
+        "effective_authority": authority,
+        "canonical_user_capture_authority": canonical_capture,
+        "override_requested": requested,
+        "override_applied": applied,
+        "capture_target_gw_matches": baseline.get("capture_target_gw_matches"),
+        "capture_pre_deadline_phase": baseline.get("capture_pre_deadline_phase"),
+        "capture_rejection_reason": rejection,
+        "stale_override_rejected": baseline.get("stale_override_rejected"),
+        "post_deadline_official_reclaims_authority": baseline.get("post_deadline_official_reclaims_authority"),
+        "capture_evidence": evidence,
+    }
+
+
 def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str, Any]:
     framework = read_json(DATA / "framework_health.json", {})
     latest = read_json(DATA / "latest.json", {})
@@ -299,8 +370,8 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
     _check(rows, "NO_FABRICATED_EVIDENCE", no_fabrication, {"load_status": load.get("status"), "prediction_confidence": accuracy.get("confidence")})
 
     baseline = team.get("projection_baseline") or {}
-    user_authority_ok = baseline.get("stale_override_rejected") is True and baseline.get("effective_authority") in {"OFFICIAL_SUBMITTED", "USER_OVERRIDE"}
-    _check(rows, "USER_OVERRIDE_PHASE_AUTHORITY_GOVERNED", user_authority_ok, baseline)
+    user_authority_ok, user_authority_detail = _user_capture_authority_contract(baseline)
+    _check(rows, "USER_OVERRIDE_PHASE_AUTHORITY_GOVERNED", user_authority_ok, user_authority_detail)
 
     benchmark_ok, benchmark = _run_json_module("src.runtime_v3.unified_fastpath", "--benchmark")
     interactive_ms = benchmark.get("median_ms")

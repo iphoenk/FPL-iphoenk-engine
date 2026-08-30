@@ -8,17 +8,23 @@ def _load(path: str):
     return json.loads((ROOT / path).read_text(encoding="utf-8"))
 
 
-def test_implementation_status_matches_canonical_operational_acceptance():
+def test_implementation_status_matches_current_revalidation_state():
     status = _load("IMPLEMENTATION_STATUS.json")
     manifest = _load("config/v5_convergence_manifest.json")
+    evidence = manifest["operational_acceptance_evidence"]
     production = manifest["production_promotion"]
 
     assert status["production_authority"]["main_sha"] == manifest["baselines"]["production_main_sha"]
     assert status["production_authority"]["runtime_schema_version"] == manifest["baselines"]["production_runtime_schema_version"]
-    assert status["acceptance"]["fresh_postvalidated_real_shadow_cycles"] == production["validated_real_shadow_cycles"] == 3
+    assert status["acceptance"]["fresh_postvalidated_real_shadow_cycles"] == production["validated_real_shadow_cycles"] == 0
     assert status["acceptance"]["required_postvalidated_real_shadow_cycles"] == production["required_real_shadow_cycles"] == 3
-    assert status["acceptance"]["operational_candidate_eligible"] is True
-    assert production["operational_acceptance_complete"] is True
+    assert status["acceptance"]["operational_candidate_eligible"] is False
+    assert production["operational_acceptance_complete"] is False
+    assert evidence["status"] == "SUPERSEDED_BY_CODE_CHANGE_PENDING_REVALIDATION"
+    assert evidence["release_fingerprint"] is None
+    assert evidence["remaining_validated_cycles"] == 3
+    assert evidence["superseded_evidence"]["validated_real_shadow_cycles"] == 3
+    assert evidence["superseded_evidence"]["release_fingerprint"].startswith("sha256:")
     assert status["acceptance"]["prediction_candidate_eligible"] is False
     assert production["prediction_acceptance_complete"] is False
     assert status["acceptance"]["production_candidate_eligible"] is False

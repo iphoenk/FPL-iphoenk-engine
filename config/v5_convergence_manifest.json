@@ -5,8 +5,8 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "91301fb46a8f66ee41b27571e5d01c191c676104",
-    "production_code_commit": "91301fb46a8f66ee41b27571e5d01c191c676104",
+    "production_main_sha": "ac4e14abf2a844804007e0fb3cac7c7c54213679",
+    "production_code_commit": "ac4e14abf2a844804007e0fb3cac7c7c54213679",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
@@ -85,7 +85,8 @@
     "compiled_wave_parallelism_reconciled_by_capability": true,
     "v3_rules_drift_and_artifact_ownership_reconciled_as_control_plane": true,
     "v3_canonical_capability_telemetry_reconciled_without_v5_authority_change": true,
-    "v3_sub3s_fast_lane_reconciled_as_runtime_hardening": true
+    "v3_sub3s_fast_lane_reconciled_as_runtime_hardening": true,
+    "v3_semantic_prediction_reuse_reconciled_as_runtime_hardening": true
   },
   "acceptance": {
     "no_regression_vs_v3_20_0_truth": true,
@@ -116,6 +117,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is capability-reanchored to production main 91301fb / V3.39 runtime schema 49. V3 PR #174 sub-3s FAST-lane work is reconciled as runtime/control-plane hardening with no material decision drift and unchanged compiled-plan fingerprint. Frozen football-truth baseline remains V3.20. PRE_DEADLINE authority now uses authenticated Official when available, otherwise last confirmed Official submitted picks before stale persistent user locks. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
+    "reason": "V5.0.0-beta.4 is capability-reanchored to production main ac4e14a / V3.39 runtime schema 49. V3 PR #178 semantic prediction-reuse fingerprinting is runtime-only hardening with xPts/xMins and material decision semantics unchanged and the compiled-plan fingerprint unchanged. Frozen football-truth baseline remains V3.20. PRE_DEADLINE authority uses authenticated Official when available, otherwise last confirmed Official submitted picks before stale persistent user locks. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
   }
 }

@@ -40,6 +40,8 @@ jobs:
         run: python -m src.engines.architecture_contract_validate
       - name: Enforce no-duplicate architecture and REC ownership
         run: python -m src.engines.v3_architecture_ownership_guard
+      - name: Validate canonical capability telemetry
+        run: python -m src.runtime_v3.capability_telemetry
       - name: Full unit and regression suite
         run: python -m pytest -q
       - name: Hydrate operational LKG for release acceptance

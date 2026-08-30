@@ -67,8 +67,8 @@ def test_decision_trace_requires_evidence_and_constraints():
     trace.validate()
 
 
-def test_source_authority_prefers_user_lock_pre_deadline():
-    assert source_primary_authority("pre_deadline_locked_squad").name == "user_lock"
+def test_source_authority_defaults_to_official_public_pre_deadline():
+    assert source_primary_authority("pre_deadline_locked_squad").name == "official_public"
     assert source_primary_authority("player_identity").name == "official_public"
 
 
@@ -78,7 +78,7 @@ def test_phase_authority_changes_across_gameweek_lifecycle():
     assert resolve_phase(deadline_time=deadline, now="2026-08-29T10:00:01Z") is Phase.POST_DEADLINE
     assert resolve_phase(deadline_time=deadline, now="2026-08-29T10:00:01Z", live_started=True) is Phase.LIVE
     assert resolve_phase(deadline_time=deadline, now=datetime.now(timezone.utc), finished=True) is Phase.POST_GW
-    assert phase_primary_authority(Phase.PRE_DEADLINE, "squad") == "user_capture"
+    assert phase_primary_authority(Phase.PRE_DEADLINE, "squad") == "user_lock"
     assert phase_primary_authority(Phase.POST_DEADLINE, "squad") == "official_public"
     assert phase_primary_authority(Phase.LIVE, "scoring") == "official_public_event_live"
     assert phase_primary_authority(Phase.POST_GW, "scoring") == "official_final_history"
@@ -254,7 +254,7 @@ def test_squad_authority_prefers_current_user_capture_predeadline_even_with_auth
         planning_gw=3,
         submitted_gw=2,
     )
-    assert pre["authority"] == "user_capture"
+    assert pre["authority"] == "user_lock"
     assert [row["element"] for row in pre["squad"]] == list(range(1, 16))
     assert pre["authority_policy"]["authenticated_official_production_blocking"] is False
     assert pre["validation"]["passed"] is True
@@ -302,5 +302,5 @@ def test_squad_authority_uses_current_capture_when_public_unavailable():
         planning_gw=3,
         submitted_gw=2,
     )
-    assert pre["authority"] == "user_capture"
+    assert pre["authority"] == "user_lock"
     assert pre["validation"]["passed"] is True

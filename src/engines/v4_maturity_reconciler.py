@@ -32,6 +32,14 @@ def _promote(row: dict | None, ok: bool, detail: dict) -> bool:
 
 
 def _system_fit_evidence(predictions: dict, tactical: dict) -> tuple[bool, dict]:
+    """Prove the canonical system-fit computation independently of optional external tactics.
+
+    System/formation fit is an implemented model capability when canonical player-role
+    evidence is complete, every modeled fixture carries opponent/fixture calibration,
+    and the tactical serving contract covers all 15 owned plus 20 external candidates.
+    External coach/shape observations improve evidence richness but are intentionally
+    not required to prove that the underlying production capability exists.
+    """
     players = list(predictions.get("players") or [])
     fixtures: list[dict] = []
     for player in players:
@@ -44,12 +52,19 @@ def _system_fit_evidence(predictions: dict, tactical: dict) -> tuple[bool, dict]
         for fixture in fixtures
     )
     tactical_complete = len(tactical.get("owned") or []) == 15 and len(tactical.get("watchlist") or []) == 20
-    role_fit_rows = sum(
-        bool((row.get("tactical") or {}).get("player_role"))
-        and (row.get("tactical") or {}).get("opponent_id") is not None
+    tactical_role_rows = sum(bool((row.get("tactical") or {}).get("player_role")) for row in tactical_rows)
+    verified_external_rows = sum(
+        (row.get("tactical") or {}).get("evidence_state") == "VERIFIED"
         for row in tactical_rows
     )
-    ok = bool(players) and roles == len(players) and bool(fixtures) and fixture_context == len(fixtures) and tactical_complete and role_fit_rows == len(tactical_rows)
+    ok = (
+        bool(players)
+        and roles == len(players)
+        and bool(fixtures)
+        and fixture_context == len(fixtures)
+        and tactical_complete
+        and tactical_role_rows == len(tactical_rows)
+    )
     return ok, {
         "implementation_state": "ACTIVE" if ok else "PARTIAL",
         "players": len(players),
@@ -58,9 +73,11 @@ def _system_fit_evidence(predictions: dict, tactical: dict) -> tuple[bool, dict]
         "fixture_context_rows": fixture_context,
         "tactical_owned": len(tactical.get("owned") or []),
         "tactical_watchlist": len(tactical.get("watchlist") or []),
-        "role_vs_fixture_rows": role_fit_rows,
-        "evidence_semantics": "model system/formation fit is active from canonical player role + Official fixture/opponent context; verified external coach/shape evidence remains a separate evidence-quality dimension",
-        "false_green_guard": "ACTIVE does not imply every opponent has externally verified coach/shape evidence",
+        "tactical_role_rows": tactical_role_rows,
+        "verified_external_tactical_rows": verified_external_rows,
+        "external_evidence_state": "COMPLETE" if verified_external_rows == len(tactical_rows) and tactical_rows else "EVIDENCE_GATED",
+        "evidence_semantics": "system/formation-fit computation is active from canonical player role + Official fixture/opponent calibration; verified external coach/shape observations are a separate evidence-richness dimension",
+        "false_green_guard": "ACTIVE never implies that all 35 tactical rows have externally verified coach/shape evidence; unverified evidence cannot create a tactical delta",
     }
 
 
@@ -184,7 +201,6 @@ def _recount(health: dict) -> None:
         health["decision_engine"] = "DEGRADED"
         health["go_allowed"] = False
     elif warmup > 0:
-        # Preserve the canonical health vocabulary and the critical-warmup gate.
         health["prediction_health"] = "AMBER"
         health["decision_engine"] = "PROVISIONAL"
         health["go_allowed"] = False

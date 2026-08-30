@@ -20,7 +20,8 @@
   "require_source_fusion_observability": true,
   "require_api_football_live_attempt": true,
   "require_authenticated_official_predeadline": false,
-  "require_official_submitted_predeadline": true,
+  "require_official_submitted_predeadline": false,
+  "require_public_official_plus_user_capture_predeadline": true,
   "understat_role": "challenger",
   "api_football_role": "cross_competition_enrichment"
 }

@@ -10,13 +10,13 @@ def _manifest():
     return json.loads(MANIFEST.read_text(encoding="utf-8"))
 
 
-def test_code_bearing_change_supersedes_old_operational_acceptance():
+def test_production_reanchor_supersedes_incomplete_operational_acceptance():
     manifest = _manifest()
     evidence = manifest["operational_acceptance_evidence"]
     promotion = manifest["production_promotion"]
     old = evidence["superseded_evidence"]
 
-    assert evidence["status"] == "SUPERSEDED_BY_CODE_CHANGE_PENDING_REVALIDATION"
+    assert evidence["status"] == "SUPERSEDED_BY_PRODUCTION_REANCHOR_PENDING_REVALIDATION"
     assert evidence["release_fingerprint"] is None
     assert evidence["validated_real_shadow_cycles"] == 0
     assert evidence["required_real_shadow_cycles"] == 3
@@ -24,8 +24,9 @@ def test_code_bearing_change_supersedes_old_operational_acceptance():
     assert evidence["operational_candidate_eligible"] is False
 
     assert old["release_fingerprint"].startswith("sha256:")
-    assert old["validated_real_shadow_cycles"] == 3
+    assert old["validated_real_shadow_cycles"] == 2
     assert old["latest_validated_at"]
+    assert "Production main moved" in old["reason"]
 
     assert promotion["validated_real_shadow_cycles"] == 0
     assert promotion["required_real_shadow_cycles"] == 3

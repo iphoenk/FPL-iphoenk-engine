@@ -1,11 +1,11 @@
 {
   "engine": "FPL iphoenk Engine",
   "v5_version": "5.0.0-beta.4",
-  "state": "ADVANCED_BETA4_CODE_CHANGED_OPERATIONAL_REVALIDATION_PENDING",
+  "state": "ADVANCED_BETA4_PRODUCTION_REANCHOR_OPERATIONAL_REVALIDATION_PENDING",
   "production_authority": {
     "truth_baseline": "v3.20.0",
     "runtime_version": "3.39.0",
-    "main_sha": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
+    "main_sha": "892dd783b2fa0199cecf74e5a6548bb0619816dd",
     "runtime_schema_version": 49
   },
   "advanced_beta4": {
@@ -24,7 +24,8 @@
     "strict_all_dss_active_governance": true,
     "unique_service_authority_validation": true,
     "v3_gameweek_lifecycle_reporting_hardening_reconciled": true,
-    "v3_bounded_warm_retry_runtime_hardening_reconciled": true
+    "v3_bounded_warm_retry_runtime_hardening_reconciled": true,
+    "v3_official_phase_independent_fetch_overlap_runtime_hardening_reconciled": true
   },
   "acceptance": {
     "release_fingerprint": "PENDING_REVALIDATION",
@@ -37,17 +38,18 @@
     "production_promotion_allowed": false,
     "manual_production_promotion_required": true,
     "previous_operational_acceptance": {
-      "release_fingerprint": "sha256:98cc221c103c38d157abf73cc0a835f59c945c68252167a3a42e912c1be884c1",
-      "postvalidated_real_shadow_cycles": 3,
-      "status": "SUPERSEDED_BY_CODE_CHANGE"
+      "release_fingerprint": "sha256:72bd3a00e1bdf4f10b37967902bca236b740fd3fdb07e1c0935544c4a663d1f8",
+      "postvalidated_real_shadow_cycles": 2,
+      "status": "SUPERSEDED_BY_PRODUCTION_REANCHOR"
     }
   },
   "notes": [
-    "The previous 3/3 operational acceptance remains historical evidence only; it cannot qualify this code-bearing build because the runtime release fingerprint changes.",
-    "Strict DSS governance now requires every configured core and extension module to be ACTIVE before unqualified GO when the canonical policy requires all-active coverage.",
+    "The prior 2/3 strict-DSS operational acceptance remains historical evidence only because production main moved and the exact V5 release fingerprint must be revalidated against the new production SHA.",
+    "Strict DSS governance requires every configured core and extension module to be ACTIVE before unqualified GO when the canonical policy requires all-active coverage.",
     "Service-registry validation rejects duplicate handlers and duplicate bounded-context authority.",
     "Current V3 production lifecycle intelligence is reconciled as report/lifecycle hardening and does not alter V5 football prediction or decision authority.",
     "Current V3 bounded warm retry preserves the unchanged 3000 ms hard ceiling and is reconciled as runtime workflow hardening only.",
+    "Current V3 overlaps phase-independent Official requests with bootstrap while keeping bootstrap as phase authority; this is reconciled as runtime latency hardening only.",
     "Prediction acceptance remains independently locked until genuine settled evidence satisfies the empirical calibration gate.",
     "Production remains the accepted V3 runtime on main; V5 promotion requires fresh operational revalidation, prediction acceptance, and a separate explicit manual action."
   ]

@@ -189,6 +189,15 @@ def _decision_dss(decision: dict[str, Any], section: str) -> dict[str, Any]:
     }
 
 
+def _all_dss_active(core: dict[str, Any], extensions: dict[str, Any]) -> bool:
+    for block in (core, extensions):
+        expected = int(block.get("expected") or 0)
+        active = int((block.get("counts") or {}).get("ACTIVE") or 0)
+        if expected <= 0 or not bool(block.get("integrity_ok")) or active != expected:
+            return False
+    return True
+
+
 def build_health(
     truth: dict[str, Any],
     prediction: dict[str, Any],
@@ -222,9 +231,17 @@ def build_health(
         degraded_policy.get("degraded_context_blocks_unqualified_go", True)
         and any(bool(row.get("blocks_unqualified_go")) for row in degraded)
     )
+    dss_governance = _dss_policy().get("governance") or {}
+    all_dss_active = _all_dss_active(core, extensions)
+    require_all_dss_active = bool(dss_governance.get("all_modules_active_for_unqualified_go", True))
     decision_ready = decision.get("status") == "READY"
     recommendation_allowed = bool(gate.get("pass") and registry_integrity and decision_ready)
-    go_allowed = bool(recommendation_allowed and not critical_partial and not degraded_blocks)
+    go_allowed = bool(
+        recommendation_allowed
+        and not critical_partial
+        and not degraded_blocks
+        and (not require_all_dss_active or all_dss_active)
+    )
     overall = "RED" if not recommendation_allowed else ("GREEN" if go_allowed else "AMBER")
 
     gate_contract = _gate_contract()
@@ -234,14 +251,16 @@ def build_health(
     service_registry = load_json_config(SERVICE_REGISTRY)
 
     return {
-        "framework_schema": 8,
+        "framework_schema": 9,
         "generated_at": _now(),
-        "auditor": "v5-microservice-governance-v4",
+        "auditor": "v5-microservice-governance-v5",
         "overall": overall,
         "decision_engine": "HEALTHY" if go_allowed else ("DEGRADED" if recommendation_allowed else "BLOCKED"),
         "recommendation_allowed": recommendation_allowed,
         "go_allowed": go_allowed,
         "registry_integrity": registry_integrity,
+        "all_dss_active": all_dss_active,
+        "all_dss_active_required_for_unqualified_go": require_all_dss_active,
         "degraded_contexts": degraded,
         "degraded_blocks_unqualified_go": degraded_blocks,
         "rules_registry": {
@@ -265,6 +284,7 @@ def build_health(
             "enhancement_authority": "governance-service",
             "dss_core_required_count": int(dss_registries["core"]["expected_count"]),
             "dss_extension_required_count": int(dss_registries["extensions"]["expected_count"]),
+            "all_dss_active_required_for_unqualified_go": require_all_dss_active,
             "enhancement_required_count": int(enhancement_contract["expected_count"]),
             "degraded_context_blocks_unqualified_go": bool(
                 degraded_policy.get("degraded_context_blocks_unqualified_go", True)

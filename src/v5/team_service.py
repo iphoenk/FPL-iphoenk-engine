@@ -5,6 +5,7 @@ from typing import Any
 from src.v5.authenticated_official import safe_finance
 from src.v5.finance import build_squad_ledger
 from src.v5.identity import ElementIndex
+from src.v5.mini_league import public_mini_league_memberships
 from src.v5.squad import select_squad
 
 
@@ -53,6 +54,8 @@ def build_team_state(
         "bank": None,
         "coverage": {"expected": len(owned_ids), "covered": 0, "complete": False},
         "prices_for_authoritative_squad": [],
+        "private_squad_coverage": {"expected": 15, "covered": 0, "complete": False},
+        "prices_for_private_squad": [],
     }
     ledger = build_squad_ledger(
         squad,
@@ -69,13 +72,23 @@ def build_team_state(
     return {
         "authority": resolved["authority"],
         "authority_policy": resolved.get("authority_policy", {}),
+        "projection_baseline": resolved.get("projection_baseline") or {},
         "squad": list(squad),
         "validation": resolved["validation"],
         "finance": {
             **ledger,
             "bank": bank,
             "authenticated_coverage": auth_finance.get("coverage", {}),
+            "private_enrichment_coverage": auth_finance.get("private_squad_coverage", {}),
             "authenticated_role": "OPTIONAL_PRIVATE_ENRICHMENT",
         },
         "owned_ids": list(owned_ids),
+        "mini_leagues": public_mini_league_memberships(entry),
+        "governance": {
+            "primary_squad_authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+            "authenticated_official_is_optional_private_enrichment": True,
+            "authenticated_official_must_not_select_squad": True,
+            "authenticated_official_production_blocking": False,
+            "user_capture_requires_exact_target_gw": True,
+        },
     }

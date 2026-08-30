@@ -15,6 +15,7 @@ def test_production_reanchor_supersedes_prior_operational_acceptance():
     evidence = manifest["operational_acceptance_evidence"]
     promotion = manifest["production_promotion"]
     old = evidence["superseded_evidence"]
+    deployed_sha = manifest["baselines"]["production_main_sha"]
 
     assert evidence["status"] == "SUPERSEDED_BY_PRODUCTION_REANCHOR_PENDING_REVALIDATION"
     assert evidence["release_fingerprint"] is None
@@ -26,7 +27,9 @@ def test_production_reanchor_supersedes_prior_operational_acceptance():
     assert old["release_fingerprint"].startswith("sha256:")
     assert old["validated_real_shadow_cycles"] == 3
     assert old["latest_validated_at"]
-    assert "Production main moved" in old["reason"]
+    assert deployed_sha in old["reason"]
+    assert "exact-fingerprint shadow acceptance must restart" in old["reason"].lower()
+    assert "0/3" in old["reason"]
 
     assert promotion["validated_real_shadow_cycles"] == 0
     assert promotion["required_real_shadow_cycles"] == 3

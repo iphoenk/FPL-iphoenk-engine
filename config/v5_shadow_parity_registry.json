@@ -1,6 +1,6 @@
 {
-  "schema_version": 5,
-  "model_id": "v5_shadow_parity_v5",
+  "schema_version": 6,
+  "model_id": "v5_shadow_parity_v6",
   "required_cycles_before_production_candidate": 3,
   "tolerances": {
     "starting_xi_symmetric_difference_max": 2,
@@ -16,22 +16,23 @@
     "require_prediction_acceptance_for_production_candidate": true,
     "reject_claimed_official_auth_validation_without_proof": true
   },
-  "official_auth_validation": {
-    "contract": "V5_OFFICIAL_AUTH_SHADOW_PROOF_V1",
-    "applies_when_trigger_requires_authenticated_official_predeadline": true,
-    "required_phase": "PRE_DEADLINE",
-    "required_decision_squad_authority": "official_authenticated",
-    "required_authenticated_state": "VALID",
-    "verified_entry_must_match_expected_entry": true,
-    "draft_must_match_authoritative_squad": true,
-    "raw_authenticated_payload_persistence_forbidden": true,
-    "missing_or_disabled_credentials_fail_validation": true,
-    "fallback_user_lock_may_run_engine_but_cannot_satisfy_official_auth_proof": true
-  },
   "production_candidate_policy": {
     "operational_acceptance": "three postvalidated REAL_SHADOW cycles on exact V5 version, production baseline and runtime release fingerprint",
     "prediction_acceptance": "settled frozen forecasts pass temporal guard, sample thresholds and frozen-baseline non-regression",
     "auto_promotion": false,
     "explicit_manual_action_required": true
+  },
+  "predeadline_authority_validation": {
+    "contract": "V5_PREDEADLINE_AUTHORITY_SHADOW_PROOF_V3",
+    "primary_authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+    "required_phase": "PRE_DEADLINE",
+    "allowed_decision_squad_authorities": ["official_public", "user_capture"],
+    "official_public_submitted_is_default_planning_baseline": true,
+    "user_capture_requires_exact_target_gw": true,
+    "user_capture_requires_active_wc_fh_or_planning_override": true,
+    "stale_or_unscoped_user_capture_must_not_mask_official_submitted_team": true,
+    "authenticated_official_is_optional_private_enrichment": true,
+    "authenticated_official_must_not_select_squad_lineup_or_captaincy": true,
+    "raw_authenticated_payload_persistence_forbidden": true
   }
 }

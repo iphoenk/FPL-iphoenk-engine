@@ -1,10 +1,12 @@
 {
   "team_id": 3462711,
   "authoritative_phase": "pre_deadline_wc",
-  "target_gw": 2,
   "locked_at": "2026-08-25T03:44:30Z",
   "itb_tenths": 5,
   "wildcard_active": true,
+  "planning_override_active": true,
+  "target_gw": 2,
+  "authority_source": "USER_LOCKED_SCREENSHOT_WC_DRAFT",
   "players": [
     {"name":"Tzolakis","position":"GK","purchase_cost":45,"element":572,"expected_web_name":"Tzolakis","expected_team":"Hull City"},
     {"name":"Verbruggen","position":"GK","purchase_cost":45,"element":109,"expected_web_name":"Verbruggen","expected_team":"Brighton"},
@@ -23,5 +25,5 @@
     {"name":"Calvert-Lewin","position":"FWD","purchase_cost":60,"element":346,"expected_web_name":"Calvert-Lewin","expected_team":"Leeds"}
   ],
   "identity_authority": "official_fpl_element_id",
-  "identity_schema_version": 2
+  "identity_schema_version": 3
 }

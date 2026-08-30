@@ -42,38 +42,58 @@ def _draft_fingerprint(elements: list[int]) -> str | None:
     return hashlib.sha256(raw).hexdigest()[:16]
 
 
+def _policy() -> dict[str, Any]:
+    return {
+        "role": "OPTIONAL_PRIVATE_ENRICHMENT",
+        "primary_authority": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+        "resource_methods": ["GET"],
+        "production_blocking": False,
+        "configured_mode_requires_production_validation": False,
+        "raw_authenticated_payload_persisted": False,
+    }
+
+
 def safe_finance(my_team: dict | None, allowed_elements: Iterable[int]) -> dict:
     allowed = {int(x) for x in allowed_elements}
     payload = my_team or {}
     transfers = payload.get("transfers") if isinstance(payload.get("transfers"), dict) else {}
     picks = payload.get("picks") if isinstance(payload.get("picks"), list) else []
-    prices = []
+    private_prices = []
+    authoritative_prices = []
     for row in picks:
         try:
             eid = int(row.get("element"))
         except (TypeError, ValueError):
-            continue
-        if eid not in allowed:
             continue
         item = {"element": eid}
         for key in ("purchase_price", "selling_price"):
             value = row.get(key)
             if value is not None:
                 item[key] = int(value)
-        prices.append(item)
+        private_prices.append(item)
+        if eid in allowed:
+            authoritative_prices.append(dict(item))
+
     expected = len(allowed)
-    covered = len({x["element"] for x in prices})
-    exact_complete = bool(expected) and covered == expected and all("selling_price" in x for x in prices)
-    purchase_complete = bool(expected) and covered == expected and all("purchase_price" in x for x in prices)
+    covered = len({x["element"] for x in authoritative_prices})
+    exact_complete = bool(expected) and covered == expected and all("selling_price" in x for x in authoritative_prices)
+    purchase_complete = bool(expected) and covered == expected and all("purchase_price" in x for x in authoritative_prices)
+    private_covered = len({x["element"] for x in private_prices})
+    private_sell_complete = len(picks) == 15 and private_covered == 15 and all("selling_price" in x for x in private_prices)
+    private_purchase_complete = len(picks) == 15 and private_covered == 15 and all("purchase_price" in x for x in private_prices)
     return {
         "bank": transfers.get("bank"),
         "value": transfers.get("value"),
         "transfers_made": transfers.get("made"),
         "transfer_cost": transfers.get("cost"),
         "coverage": {"expected": expected, "covered": covered, "complete": exact_complete},
-        "exact_sell_total": sum(x["selling_price"] for x in prices) if exact_complete else None,
-        "exact_purchase_total": sum(x["purchase_price"] for x in prices) if purchase_complete else None,
-        "prices_for_authoritative_squad": prices,
+        "exact_sell_total": sum(x["selling_price"] for x in authoritative_prices) if exact_complete else None,
+        "exact_purchase_total": sum(x["purchase_price"] for x in authoritative_prices) if purchase_complete else None,
+        "prices_for_authoritative_squad": authoritative_prices,
+        "private_squad_coverage": {"expected": 15, "covered": private_covered, "complete": private_covered == 15},
+        "private_exact_sell_total": sum(x["selling_price"] for x in private_prices) if private_sell_complete else None,
+        "private_exact_purchase_total": sum(x["purchase_price"] for x in private_prices) if private_purchase_complete else None,
+        "prices_for_private_squad": private_prices,
     }
 
 
@@ -121,6 +141,12 @@ def summarize_authenticated_payloads(
         },
         "transfers_latest": transfer_summary,
         "raw_authenticated_payload_persisted": False,
+        "enhancement_health": {
+            "required": False,
+            "ready": state == "VALID",
+            "status": "AVAILABLE" if state == "VALID" else "DEGRADED",
+        },
+        "policy": _policy(),
     }
 
 
@@ -135,29 +161,63 @@ def _base_summary(state: str = "DISABLED") -> dict:
         "draft_integrity": {"count": None, "fingerprint": None, "matches_authoritative_squad": None},
         "transfers_latest": {"available": False, "count": None},
         "raw_authenticated_payload_persisted": False,
+        "enhancement_health": {
+            "required": False,
+            "ready": True,
+            "status": "NOT_CONFIGURED" if state == "DISABLED" else "DEGRADED",
+        },
+        "policy": _policy(),
     }
 
 
 def collect_runtime(authoritative_elements: Iterable[int] = ()) -> dict[str, Any]:
-    """Return safe summary plus in-memory draft payload. Callers must never persist runtime_payloads."""
+    """Return safe private enrichment plus in-memory payload; auth never owns production squad truth."""
     base = _base_summary()
     try:
         material = auth_material_from_env()
     except AuthConfigurationError:
-        return {"summary": {**base, "state": "MISCONFIGURED"}, "my_team": None}
+        return {
+            "summary": {
+                **base,
+                "state": "MISCONFIGURED",
+                "enhancement_health": {"required": False, "ready": False, "status": "DEGRADED"},
+            },
+            "my_team": None,
+        }
     if material is None:
         return {"summary": base, "my_team": None}
     try:
         me, health_me = safe_get("me", material)
     except AuthPolicyError:
-        return {"summary": {**base, "state": "POLICY_BLOCKED"}, "my_team": None}
+        return {
+            "summary": {
+                **base,
+                "state": "POLICY_BLOCKED",
+                "enhancement_health": {"required": False, "ready": False, "status": "DEGRADED"},
+            },
+            "my_team": None,
+        }
     health = {"me": health_me}
     if health_me.get("status") == "AUTH_REJECTED":
-        return {"summary": {**base, "state": "EXPIRED_OR_REJECTED", "endpoint_health": health}, "my_team": None}
+        return {
+            "summary": {
+                **base,
+                "state": "EXPIRED_OR_REJECTED",
+                "endpoint_health": health,
+                "enhancement_health": {"required": False, "ready": False, "status": "DEGRADED"},
+            },
+            "my_team": None,
+        }
     verified = _entry_from_me(me)
     if verified != expected_team_id():
         return {
-            "summary": {**base, "state": "ENTRY_MISMATCH", "verified_entry": verified, "endpoint_health": health},
+            "summary": {
+                **base,
+                "state": "ENTRY_MISMATCH",
+                "verified_entry": verified,
+                "endpoint_health": health,
+                "enhancement_health": {"required": False, "ready": False, "status": "DEGRADED"},
+            },
             "my_team": None,
         }
     my_team, health_team = safe_get("my_team", material)
@@ -172,6 +232,7 @@ def collect_runtime(authoritative_elements: Iterable[int] = ()) -> dict[str, Any
     )
     if health_team.get("status") == "AUTH_REJECTED" or health_latest.get("status") == "AUTH_REJECTED":
         summary["state"] = "PARTIAL_AUTH_REJECTED"
+        summary["enhancement_health"] = {"required": False, "ready": False, "status": "DEGRADED"}
     return {"summary": summary, "my_team": my_team if isinstance(my_team, dict) else None}
 
 

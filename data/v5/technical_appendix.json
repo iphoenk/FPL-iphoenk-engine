@@ -8,12 +8,12 @@
     "schema_version": 1,
     "model": "v5_master_time_schedule_governance_v1",
     "timezone": "Asia/Jakarta",
-    "evaluated_at": "2026-08-30T09:32:47.849515+00:00",
-    "local_evaluated_at": "2026-08-30T16:32:47.849515+07:00",
+    "evaluated_at": "2026-08-30T09:59:52.728769+00:00",
+    "local_evaluated_at": "2026-08-30T16:59:52.728769+07:00",
     "hourly_checkpoint": false,
     "official_deadline_time": "2026-09-04T17:30:00+00:00",
     "local_deadline_time": "2026-09-05T00:30:00+07:00",
-    "minutes_to_deadline": 7677.203,
+    "minutes_to_deadline": 7650.121,
     "deadline_day_active": false,
     "final_review_target": "2026-09-04T21:30:00+07:00",
     "final_review_due": false,
@@ -52,7 +52,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 59 active price alerts"
+      "market timing context contains 57 active price alerts"
     ],
     "evidence": [
       {
@@ -1239,7 +1239,7 @@
   "owned_challenger_comparator": {
     "schema_version": 1,
     "model": "v5_owned_challenger_comparator_v1",
-    "generated_at": "2026-08-30T09:32:48.396885+00:00",
+    "generated_at": "2026-08-30T09:59:53.194719+00:00",
     "status": "ACTIVE_ALPHA",
     "authority": "ADVISORY_ONLY",
     "planning_gw": 3,
@@ -1357,7 +1357,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -1478,7 +1478,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -1889,7 +1889,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2010,7 +2010,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2421,7 +2421,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2543,7 +2543,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2950,7 +2950,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3067,7 +3067,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3085,10 +3085,10 @@
         "horizons": {
           "1": {
             "owned_xpts": 4.045,
-            "challenger_xpts": 4.492,
-            "raw_gain": 0.447,
-            "combined_uncertainty": 4.603,
-            "signal_to_noise": 0.097,
+            "challenger_xpts": 4.519,
+            "raw_gain": 0.474,
+            "combined_uncertainty": 4.612,
+            "signal_to_noise": 0.103,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -3105,17 +3105,17 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               }
             ]
           },
           "2": {
             "owned_xpts": 7.356,
-            "challenger_xpts": 8.164,
-            "raw_gain": 0.808,
-            "combined_uncertainty": 6.193,
-            "signal_to_noise": 0.13,
+            "challenger_xpts": 8.22,
+            "raw_gain": 0.864,
+            "combined_uncertainty": 6.204,
+            "signal_to_noise": 0.139,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -3140,25 +3140,25 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               }
             ]
           },
           "3": {
             "owned_xpts": 11.401,
-            "challenger_xpts": 12.656,
-            "raw_gain": 1.255,
-            "combined_uncertainty": 7.716,
-            "signal_to_noise": 0.163,
+            "challenger_xpts": 12.739,
+            "raw_gain": 1.338,
+            "combined_uncertainty": 7.731,
+            "signal_to_noise": 0.173,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -3191,33 +3191,33 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               }
             ]
           },
           "5": {
             "owned_xpts": 18.077,
-            "challenger_xpts": 20.161,
-            "raw_gain": 2.084,
-            "combined_uncertainty": 9.714,
-            "signal_to_noise": 0.215,
+            "challenger_xpts": 20.292,
+            "raw_gain": 2.215,
+            "combined_uncertainty": 9.733,
+            "signal_to_noise": 0.228,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -3266,40 +3266,40 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.833,
-                "std": 3.021
+                "xpts": 3.852,
+                "std": 3.03
               }
             ]
           }
@@ -3357,7 +3357,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 2.084,
+          "raw_gain_5gw": 2.215,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -3470,7 +3470,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3585,7 +3585,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3603,10 +3603,10 @@
         "horizons": {
           "1": {
             "owned_xpts": 4.033,
-            "challenger_xpts": 4.492,
-            "raw_gain": 0.459,
-            "combined_uncertainty": 4.597,
-            "signal_to_noise": 0.1,
+            "challenger_xpts": 4.519,
+            "raw_gain": 0.486,
+            "combined_uncertainty": 4.606,
+            "signal_to_noise": 0.106,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -3623,17 +3623,17 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               }
             ]
           },
           "2": {
             "owned_xpts": 7.318,
-            "challenger_xpts": 8.164,
-            "raw_gain": 0.846,
-            "combined_uncertainty": 6.181,
-            "signal_to_noise": 0.137,
+            "challenger_xpts": 8.22,
+            "raw_gain": 0.902,
+            "combined_uncertainty": 6.193,
+            "signal_to_noise": 0.146,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -3658,25 +3658,25 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               }
             ]
           },
           "3": {
             "owned_xpts": 11.351,
-            "challenger_xpts": 12.656,
-            "raw_gain": 1.305,
-            "combined_uncertainty": 7.704,
-            "signal_to_noise": 0.169,
+            "challenger_xpts": 12.739,
+            "raw_gain": 1.388,
+            "combined_uncertainty": 7.719,
+            "signal_to_noise": 0.18,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -3709,33 +3709,33 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               }
             ]
           },
           "5": {
             "owned_xpts": 18.083,
-            "challenger_xpts": 20.161,
-            "raw_gain": 2.078,
-            "combined_uncertainty": 9.71,
-            "signal_to_noise": 0.214,
+            "challenger_xpts": 20.292,
+            "raw_gain": 2.209,
+            "combined_uncertainty": 9.729,
+            "signal_to_noise": 0.227,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -3784,40 +3784,40 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.833,
-                "std": 3.021
+                "xpts": 3.852,
+                "std": 3.03
               }
             ]
           }
@@ -3875,7 +3875,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 2.078,
+          "raw_gain_5gw": 2.209,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -3990,7 +3990,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4107,7 +4107,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4512,7 +4512,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -4627,7 +4627,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -5038,7 +5038,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -5155,7 +5155,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -5562,7 +5562,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -5683,7 +5683,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -6088,7 +6088,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -6207,7 +6207,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -6614,7 +6614,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -6735,7 +6735,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -7140,7 +7140,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -7259,7 +7259,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -7666,7 +7666,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -7788,7 +7788,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -8193,7 +8193,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -8313,7 +8313,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -8718,7 +8718,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -8839,7 +8839,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -9248,7 +9248,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -9369,7 +9369,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -9774,7 +9774,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -9896,7 +9896,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -10305,7 +10305,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -10427,7 +10427,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -10832,7 +10832,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -10953,7 +10953,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -11362,7 +11362,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -11483,7 +11483,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -11888,7 +11888,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -12007,7 +12007,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -12416,7 +12416,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -12535,7 +12535,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -12940,7 +12940,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -13063,7 +13063,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -13472,7 +13472,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -13595,7 +13595,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -14008,7 +14008,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -14129,7 +14129,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -14540,7 +14540,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -14661,7 +14661,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -15072,7 +15072,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -15194,7 +15194,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -15601,7 +15601,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -15718,7 +15718,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -15736,10 +15736,10 @@
         "horizons": {
           "1": {
             "owned_xpts": 4.045,
-            "challenger_xpts": 4.492,
-            "raw_gain": 0.447,
-            "combined_uncertainty": 4.603,
-            "signal_to_noise": 0.097,
+            "challenger_xpts": 4.519,
+            "raw_gain": 0.474,
+            "combined_uncertainty": 4.612,
+            "signal_to_noise": 0.103,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -15756,17 +15756,17 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               }
             ]
           },
           "2": {
             "owned_xpts": 7.356,
-            "challenger_xpts": 8.164,
-            "raw_gain": 0.808,
-            "combined_uncertainty": 6.193,
-            "signal_to_noise": 0.13,
+            "challenger_xpts": 8.22,
+            "raw_gain": 0.864,
+            "combined_uncertainty": 6.204,
+            "signal_to_noise": 0.139,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -15791,25 +15791,25 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               }
             ]
           },
           "3": {
             "owned_xpts": 11.401,
-            "challenger_xpts": 12.656,
-            "raw_gain": 1.255,
-            "combined_uncertainty": 7.716,
-            "signal_to_noise": 0.163,
+            "challenger_xpts": 12.739,
+            "raw_gain": 1.338,
+            "combined_uncertainty": 7.731,
+            "signal_to_noise": 0.173,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -15842,33 +15842,33 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               }
             ]
           },
           "5": {
             "owned_xpts": 18.077,
-            "challenger_xpts": 20.161,
-            "raw_gain": 2.084,
-            "combined_uncertainty": 9.714,
-            "signal_to_noise": 0.215,
+            "challenger_xpts": 20.292,
+            "raw_gain": 2.215,
+            "combined_uncertainty": 9.733,
+            "signal_to_noise": 0.228,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -15917,40 +15917,40 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.833,
-                "std": 3.021
+                "xpts": 3.852,
+                "std": 3.03
               }
             ]
           }
@@ -16008,7 +16008,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 2.084,
+          "raw_gain_5gw": 2.215,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -16121,7 +16121,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -16236,7 +16236,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -16254,10 +16254,10 @@
         "horizons": {
           "1": {
             "owned_xpts": 4.033,
-            "challenger_xpts": 4.492,
-            "raw_gain": 0.459,
-            "combined_uncertainty": 4.597,
-            "signal_to_noise": 0.1,
+            "challenger_xpts": 4.519,
+            "raw_gain": 0.486,
+            "combined_uncertainty": 4.606,
+            "signal_to_noise": 0.106,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -16274,17 +16274,17 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               }
             ]
           },
           "2": {
             "owned_xpts": 7.318,
-            "challenger_xpts": 8.164,
-            "raw_gain": 0.846,
-            "combined_uncertainty": 6.181,
-            "signal_to_noise": 0.137,
+            "challenger_xpts": 8.22,
+            "raw_gain": 0.902,
+            "combined_uncertainty": 6.193,
+            "signal_to_noise": 0.146,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -16309,25 +16309,25 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               }
             ]
           },
           "3": {
             "owned_xpts": 11.351,
-            "challenger_xpts": 12.656,
-            "raw_gain": 1.305,
-            "combined_uncertainty": 7.704,
-            "signal_to_noise": 0.169,
+            "challenger_xpts": 12.739,
+            "raw_gain": 1.388,
+            "combined_uncertainty": 7.719,
+            "signal_to_noise": 0.18,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -16360,33 +16360,33 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               }
             ]
           },
           "5": {
             "owned_xpts": 18.083,
-            "challenger_xpts": 20.161,
-            "raw_gain": 2.078,
-            "combined_uncertainty": 9.71,
-            "signal_to_noise": 0.214,
+            "challenger_xpts": 20.292,
+            "raw_gain": 2.209,
+            "combined_uncertainty": 9.729,
+            "signal_to_noise": 0.227,
             "owned_fixtures": [
               {
                 "gw": 3,
@@ -16435,40 +16435,40 @@
                 "home": true,
                 "opponent": 19,
                 "kickoff_time": "2026-09-05T14:00:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 4,
                 "home": false,
                 "opponent": 2,
                 "kickoff_time": "2026-09-12T14:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 5,
                 "home": true,
                 "opponent": 7,
                 "kickoff_time": "2026-09-19T16:30:00Z",
-                "xpts": 4.492,
-                "std": 3.298
+                "xpts": 4.519,
+                "std": 3.31
               },
               {
                 "gw": 6,
                 "home": false,
                 "opponent": 8,
                 "kickoff_time": "2026-10-11T13:00:00Z",
-                "xpts": 3.672,
-                "std": 2.954
+                "xpts": 3.701,
+                "std": 2.966
               },
               {
                 "gw": 7,
                 "home": true,
                 "opponent": 1,
                 "kickoff_time": "2026-10-18T15:30:00Z",
-                "xpts": 3.833,
-                "std": 3.021
+                "xpts": 3.852,
+                "std": 3.03
               }
             ]
           }
@@ -16526,7 +16526,7 @@
         },
         "transfer_economics": {
           "status": "UNVERIFIED",
-          "raw_gain_5gw": 2.078,
+          "raw_gain_5gw": 2.209,
           "net_transfer_value": null,
           "basis": "PENDING_CANONICAL_PACKAGE_EVIDENCE",
           "opportunity_cost": "PENDING",
@@ -16641,7 +16641,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -16758,7 +16758,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -17163,7 +17163,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -17278,7 +17278,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -17689,7 +17689,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -17806,7 +17806,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-30T09:32:44.356964+00:00",
+              "evidence_timestamp": "2026-08-30T09:59:49.863798+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -18262,7 +18262,7 @@
   "gate0_preflight_pass": true,
   "governance": {
     "framework_schema": 9,
-    "generated_at": "2026-08-30T09:32:46.245033+00:00",
+    "generated_at": "2026-08-30T09:59:51.416613+00:00",
     "auditor": "v5-microservice-governance-v5",
     "overall": "GREEN",
     "decision_engine": "HEALTHY",
@@ -19834,9 +19834,9 @@
     "base_collection": {
       "service_id": "ingestion",
       "operation": "collect_base",
-      "service_compute_ms": 370.264,
-      "round_trip_ms": 420.812,
-      "transport_overhead_ms": 50.548,
+      "service_compute_ms": 394.212,
+      "round_trip_ms": 433.66,
+      "transport_overhead_ms": 39.448,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -19849,9 +19849,9 @@
     "event_context": {
       "service_id": "truth",
       "operation": "context",
-      "service_compute_ms": 0.072,
-      "round_trip_ms": 36.293,
-      "transport_overhead_ms": 36.221,
+      "service_compute_ms": 0.075,
+      "round_trip_ms": 30.21,
+      "transport_overhead_ms": 30.135,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -19865,9 +19865,9 @@
       "auth": {
         "service_id": "ingestion",
         "operation": "collect_authenticated",
-        "service_compute_ms": 0.07,
-        "round_trip_ms": 18.836,
-        "transport_overhead_ms": 18.766,
+        "service_compute_ms": 0.057,
+        "round_trip_ms": 16.525,
+        "transport_overhead_ms": 16.468,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19880,9 +19880,9 @@
       "enrichment": {
         "service_id": "ingestion",
         "operation": "collect_enrichment",
-        "service_compute_ms": 2.813,
-        "round_trip_ms": 39.669,
-        "transport_overhead_ms": 36.856,
+        "service_compute_ms": 1.583,
+        "round_trip_ms": 32.727,
+        "transport_overhead_ms": 31.144,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19895,9 +19895,9 @@
       "dynamic": {
         "service_id": "ingestion",
         "operation": "collect_dynamic",
-        "service_compute_ms": 59.902,
-        "round_trip_ms": 91.231,
-        "transport_overhead_ms": 31.329,
+        "service_compute_ms": 97.315,
+        "round_trip_ms": 121.016,
+        "transport_overhead_ms": 23.701,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19911,9 +19911,9 @@
     "truth_assembly": {
       "service_id": "truth",
       "operation": "assemble",
-      "service_compute_ms": 1.281,
-      "round_trip_ms": 76.102,
-      "transport_overhead_ms": 74.821,
+      "service_compute_ms": 1.049,
+      "round_trip_ms": 65.007,
+      "transport_overhead_ms": 63.958,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -19924,12 +19924,12 @@
       }
     },
     "state_hydration": {
-      "price_trajectory": {
+      "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 6.025,
-        "round_trip_ms": 23.295,
-        "transport_overhead_ms": 17.27,
+        "service_compute_ms": 3.688,
+        "round_trip_ms": 18.475,
+        "transport_overhead_ms": 14.787,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19942,9 +19942,24 @@
       "challenger_observations": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 0.072,
-        "round_trip_ms": 21.443,
-        "transport_overhead_ms": 21.371,
+        "service_compute_ms": 1.785,
+        "round_trip_ms": 19.739,
+        "transport_overhead_ms": 17.954,
+        "transport_attempts": 1,
+        "transport_retry_policy": "idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "price_trajectory": {
+        "service_id": "snapshot",
+        "operation": "read",
+        "service_compute_ms": 1.527,
+        "round_trip_ms": 22.994,
+        "transport_overhead_ms": 21.467,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19957,24 +19972,9 @@
       "historical_prior": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 2.605,
-        "round_trip_ms": 24.52,
-        "transport_overhead_ms": 21.915,
-        "transport_attempts": 1,
-        "transport_retry_policy": "idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "prediction_ledger": {
-        "service_id": "snapshot",
-        "operation": "read",
-        "service_compute_ms": 13.95,
-        "round_trip_ms": 27.896,
-        "transport_overhead_ms": 13.946,
+        "service_compute_ms": 3.976,
+        "round_trip_ms": 23.125,
+        "transport_overhead_ms": 19.149,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -19988,9 +19988,9 @@
     "prediction_settlement_targets": {
       "service_id": "evaluation",
       "operation": "settlement_targets",
-      "service_compute_ms": 0.024,
-      "round_trip_ms": 39.87,
-      "transport_overhead_ms": 39.846,
+      "service_compute_ms": 0.028,
+      "round_trip_ms": 33.258,
+      "transport_overhead_ms": 33.23,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -20004,9 +20004,9 @@
       "price": {
         "service_id": "price",
         "operation": "build",
-        "service_compute_ms": 24.57,
-        "round_trip_ms": 115.454,
-        "transport_overhead_ms": 90.884,
+        "service_compute_ms": 15.293,
+        "round_trip_ms": 96.413,
+        "transport_overhead_ms": 81.12,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -20019,9 +20019,9 @@
       "prediction": {
         "service_id": "prediction",
         "operation": "build",
-        "service_compute_ms": 326.596,
-        "round_trip_ms": 698.689,
-        "transport_overhead_ms": 372.093,
+        "service_compute_ms": 254.378,
+        "round_trip_ms": 537.939,
+        "transport_overhead_ms": 283.561,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -20040,9 +20040,9 @@
       "gate0_preflight": {
         "service_id": "governance",
         "operation": "gate0_preflight",
-        "service_compute_ms": 0.557,
-        "round_trip_ms": 160.349,
-        "transport_overhead_ms": 159.792,
+        "service_compute_ms": 0.779,
+        "round_trip_ms": 13.163,
+        "transport_overhead_ms": 12.384,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -20055,9 +20055,9 @@
       "evaluation": {
         "service_id": "evaluation",
         "operation": "build",
-        "service_compute_ms": 3.842,
-        "round_trip_ms": 424.525,
-        "transport_overhead_ms": 420.683,
+        "service_compute_ms": 4.529,
+        "round_trip_ms": 347.37,
+        "transport_overhead_ms": 342.841,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -20070,9 +20070,9 @@
       "decision_prepare": {
         "service_id": "decision",
         "operation": "prepare",
-        "service_compute_ms": 527.231,
-        "round_trip_ms": 942.533,
-        "transport_overhead_ms": 415.302,
+        "service_compute_ms": 402.032,
+        "round_trip_ms": 736.152,
+        "transport_overhead_ms": 334.12,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -20086,9 +20086,9 @@
     "decision_finalize": {
       "service_id": "decision",
       "operation": "finalize",
-      "service_compute_ms": 1.804,
-      "round_trip_ms": 243.932,
-      "transport_overhead_ms": 242.128,
+      "service_compute_ms": 1.394,
+      "round_trip_ms": 223.901,
+      "transport_overhead_ms": 222.507,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -20101,9 +20101,9 @@
     "governance": {
       "service_id": "governance",
       "operation": "audit",
-      "service_compute_ms": 0.855,
-      "round_trip_ms": 257.515,
-      "transport_overhead_ms": 256.66,
+      "service_compute_ms": 0.737,
+      "round_trip_ms": 230.578,
+      "transport_overhead_ms": 229.841,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -20117,24 +20117,9 @@
       "source_fusion": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 5.59,
-        "round_trip_ms": 153.049,
-        "transport_overhead_ms": 147.459,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "challenger_scorecard": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 12.427,
-        "round_trip_ms": 59.123,
-        "transport_overhead_ms": 46.696,
+        "service_compute_ms": 3.425,
+        "round_trip_ms": 127.078,
+        "transport_overhead_ms": 123.653,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20147,24 +20132,9 @@
       "prediction_accuracy": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 11.988,
-        "round_trip_ms": 62.261,
-        "transport_overhead_ms": 50.273,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "historical_prior": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 12.402,
-        "round_trip_ms": 211.749,
-        "transport_overhead_ms": 199.347,
+        "service_compute_ms": 10.175,
+        "round_trip_ms": 60.355,
+        "transport_overhead_ms": 50.18,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20177,9 +20147,39 @@
       "team_strength": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 12.942,
-        "round_trip_ms": 72.383,
-        "transport_overhead_ms": 59.441,
+        "service_compute_ms": 10.374,
+        "round_trip_ms": 68.049,
+        "transport_overhead_ms": 57.675,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "challenger_scorecard": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 11.151,
+        "round_trip_ms": 59.883,
+        "transport_overhead_ms": 48.732,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "historical_prior": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 11.054,
+        "round_trip_ms": 173.872,
+        "transport_overhead_ms": 162.818,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20192,9 +20192,9 @@
       "prediction_quality": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 12.963,
-        "round_trip_ms": 73.747,
-        "transport_overhead_ms": 60.784,
+        "service_compute_ms": 17.397,
+        "round_trip_ms": 72.534,
+        "transport_overhead_ms": 55.137,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20207,9 +20207,9 @@
       "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 17.744,
-        "round_trip_ms": 76.57,
-        "transport_overhead_ms": 58.826,
+        "service_compute_ms": 13.669,
+        "round_trip_ms": 68.17,
+        "transport_overhead_ms": 54.501,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20222,24 +20222,9 @@
       "package_optimizer": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 30.848,
-        "round_trip_ms": 67.298,
-        "transport_overhead_ms": 36.45,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "framework_health": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 1.636,
-        "round_trip_ms": 72.569,
-        "transport_overhead_ms": 70.933,
+        "service_compute_ms": 3.909,
+        "round_trip_ms": 61.811,
+        "transport_overhead_ms": 57.902,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20252,9 +20237,24 @@
       "price_trajectory": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 4.128,
-        "round_trip_ms": 68.278,
-        "transport_overhead_ms": 64.15,
+        "service_compute_ms": 5.734,
+        "round_trip_ms": 51.964,
+        "transport_overhead_ms": 46.23,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "framework_health": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 2.673,
+        "round_trip_ms": 67.748,
+        "transport_overhead_ms": 65.075,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20267,9 +20267,9 @@
       "price_alerts": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 6.641,
-        "round_trip_ms": 65.221,
-        "transport_overhead_ms": 58.58,
+        "service_compute_ms": 3.373,
+        "round_trip_ms": 57.736,
+        "transport_overhead_ms": 54.363,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20282,9 +20282,9 @@
       "prices": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 36.627,
-        "round_trip_ms": 111.047,
-        "transport_overhead_ms": 74.42,
+        "service_compute_ms": 26.9,
+        "round_trip_ms": 95.671,
+        "transport_overhead_ms": 68.771,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20297,9 +20297,9 @@
       "predictions": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 592.781,
-        "round_trip_ms": 966.818,
-        "transport_overhead_ms": 374.037,
+        "service_compute_ms": 465.507,
+        "round_trip_ms": 774.701,
+        "transport_overhead_ms": 309.194,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -20313,9 +20313,9 @@
     "snapshot_write": {
       "service_id": "snapshot",
       "operation": "snapshot",
-      "service_compute_ms": 17.228,
-      "round_trip_ms": 22.864,
-      "transport_overhead_ms": 5.636,
+      "service_compute_ms": 13.971,
+      "round_trip_ms": 19.224,
+      "transport_overhead_ms": 5.253,
       "transport_attempts": 1,
       "transport_retry_policy": "non_idempotent",
       "transport_circuit": {
@@ -20325,7 +20325,7 @@
         "cooldown_seconds": 10.0
       }
     },
-    "orchestrator_wall_ms": 4009.375
+    "orchestrator_wall_ms": 3398.113
   },
   "provenance": {
     "ruleset_id": "FPL_2026_27",

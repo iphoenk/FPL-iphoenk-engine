@@ -6155,7 +6155,7 @@
       "gw": 3,
       "deadline_time": "2026-09-04T17:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-08-30T09:32:44.299399+00:00",
+        "generated_at": "2026-08-30T09:59:49.821158+00:00",
         "players": [
           {
             "element": 1,
@@ -11441,8 +11441,8 @@
             "element": 167,
             "name": "Delap",
             "position": "FWD",
-            "xpts": 2.644,
-            "xpts_std": 2.737,
+            "xpts": 2.649,
+            "xpts_std": 2.739,
             "xmins": 61.5,
             "start_probability": 0.6358,
             "clean_sheet_probability": 0.4928
@@ -11471,8 +11471,8 @@
             "element": 469,
             "name": "N.Williams",
             "position": "DEF",
-            "xpts": 4.492,
-            "xpts_std": 3.298,
+            "xpts": 4.519,
+            "xpts_std": 3.31,
             "xmins": 77.5,
             "start_probability": 0.851,
             "clean_sheet_probability": 0.4928
@@ -11601,8 +11601,8 @@
             "element": 483,
             "name": "Ndoye",
             "position": "MID",
-            "xpts": 3.623,
-            "xpts_std": 3.042,
+            "xpts": 3.503,
+            "xpts_std": 2.992,
             "xmins": 66.2,
             "start_probability": 0.7597,
             "clean_sheet_probability": 0.4928
@@ -11681,8 +11681,8 @@
             "element": 491,
             "name": "Igor Jesus",
             "position": "FWD",
-            "xpts": 3.017,
-            "xpts_std": 2.747,
+            "xpts": 2.889,
+            "xpts_std": 2.693,
             "xmins": 67.6,
             "start_probability": 0.7969,
             "clean_sheet_probability": 0.4928
@@ -11701,8 +11701,8 @@
             "element": 558,
             "name": "Schlager",
             "position": "MID",
-            "xpts": 3.113,
-            "xpts_std": 2.835,
+            "xpts": 3.103,
+            "xpts_std": 2.831,
             "xmins": 62.2,
             "start_probability": 0.7524,
             "clean_sheet_probability": 0.4928
@@ -12392,6 +12392,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-08-30T09:32:45.230676+00:00",
+  "updated_at": "2026-08-30T09:59:50.570959+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

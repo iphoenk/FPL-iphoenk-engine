@@ -2168,7 +2168,7 @@
         "element": 469,
         "name": "N.Williams",
         "now_cost": 50,
-        "candidate_score": 19.327
+        "candidate_score": 19.455
       }
     ],
     "MID": [
@@ -4466,7 +4466,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 59 active price alerts"
+      "market timing context contains 57 active price alerts"
     ],
     "evidence": [
       {
@@ -4569,7 +4569,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 59
+    "alert_count": 57
   },
   "governance": {
     "candidate_generation_only": true,

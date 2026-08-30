@@ -35,7 +35,27 @@ def _assert_framework_health() -> tuple[dict, dict]:
     assert pre["gate0"]["counts"].get("PASS", 0) + pre["gate0"]["counts"].get("DEFERRED", 0) == 16
     assert post["gate0"]["counts"].get("PASS", 0) == 16
     assert post.get("pipeline_health") == "GREEN"
-    assert post.get("capability_coverage", {}).get("declared") == 74
+    coverage = post.get("capability_coverage") or {}
+    assert coverage == {
+        "active": 72,
+        "warmup": 2,
+        "partial": 0,
+        "failed": 0,
+        "declared": 74,
+        "active_ratio": 0.973,
+    }
+    assert post.get("capability_health") == "AMBER"
+    assert post.get("prediction_health") == "AMBER"
+    assert post.get("decision_engine") == "PROVISIONAL"
+    assert post.get("go_allowed") is False
+    assert post.get("critical_partial") == []
+    assert post.get("critical_warmup") == ["DSS-44", "DSS-X12"]
+    maturity = post.get("maturity_reconciliation") or {}
+    assert maturity.get("failed_proof_demotes_active_to_partial") is True
+    assert set(maturity.get("active_modules") or []) == {
+        "DSS-08", "DSS-09", "DSS-30", "DSS-31", "DSS-32",
+        "DSS-33", "DSS-34", "DSS-36", "DSS-41",
+    }
     plan_truth = post.get("gate0", {}).get("plan_authority_validation") or {}
     assert (plan_truth.get("engine_plan") or {}).get("legal") is True
     assert (plan_truth.get("effective_plan") or {}).get("legal") is True
@@ -54,12 +74,16 @@ def _assert_framework_health() -> tuple[dict, dict]:
     core = {row["id"]: row for row in post["dss_core"]["items"]}
     for module_id in ("DSS-18", "DSS-20", "DSS-21", "DSS-22", "DSS-23", "DSS-38"):
         assert core[module_id]["status"] == "ACTIVE", (module_id, core[module_id])
-    assert core["DSS-41"]["status"] in {"ACTIVE", "PARTIAL"}
+    for module_id in ("DSS-08", "DSS-09", "DSS-30", "DSS-31", "DSS-32", "DSS-33", "DSS-34", "DSS-36", "DSS-41"):
+        assert core[module_id]["status"] == "ACTIVE", (module_id, core[module_id])
+        assert (core[module_id].get("detail") or {}).get("implementation_state") == "ACTIVE"
+    for module_id in ("DSS-30", "DSS-31", "DSS-32"):
+        assert (core[module_id].get("detail") or {}).get("evidence_state") in {"VERIFIED", "EVIDENCE_GATED"}
+    assert (core["DSS-34"].get("detail") or {}).get("evidence_state") in {"VERIFIED", "EVIDENCE_GATED"}
     ownership_detail = core["DSS-41"].get("detail") or {}
     assert ownership_detail.get("effective_ownership_available_from_official_fpl") is False
-    if core["DSS-41"]["status"] == "ACTIVE":
-        assert ownership_detail.get("implementation_state") == "ACTIVE"
-        assert int(ownership_detail.get("ownership_rows") or 0) == int(ownership_detail.get("players") or 0) > 0
+    assert ownership_detail.get("effective_ownership_state") == "OPTIONAL_EXTERNAL_ADVISORY"
+    assert int(ownership_detail.get("ownership_rows") or 0) == int(ownership_detail.get("players") or 0) > 0
 
     critical_partial = list(post.get("critical_partial") or [])
     critical_warmup = list(post.get("critical_warmup") or [])

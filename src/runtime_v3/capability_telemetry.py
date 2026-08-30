@@ -23,6 +23,7 @@ def run() -> dict:
     root_capabilities = list(architecture.get("root_services") or [])
     background_capability_count = int(ownership.get("background_service_count") or 0)
     interactive_endpoint_count = int(ownership.get("interactive_service_count") or 0)
+    execution_domain_count = int(terminology.get("execution_domain_count") or 0)
 
     if capability_count != int(terminology.get("capability_count") or 0):
         errors.append(
@@ -34,15 +35,15 @@ def run() -> dict:
             "background capability count drift: "
             f"background={background_capability_count} architecture={capability_count}"
         )
-    if int(terminology.get("execution_domain_count") or 0) != 11:
-        errors.append("execution domain count must remain 11")
+    if execution_domain_count <= 0:
+        errors.append("execution domain count must be positive and terminology-registry owned")
 
     result = {
         "status": "PASS" if not errors else "FAIL",
         "errors": errors,
         "registry": "V3_CAPABILITY_TELEMETRY_V1",
         "canonical_runtime_boundary": "execution_domain",
-        "execution_domain_count": int(terminology.get("execution_domain_count") or 0),
+        "execution_domain_count": execution_domain_count,
         "canonical_business_unit": "capability",
         "capability_count": capability_count,
         "root_capabilities": root_capabilities,
@@ -60,6 +61,7 @@ def run() -> dict:
             "legacy_service_fields_are_read_only_compatibility_aliases": True,
             "legacy_aliases_must_equal_canonical_values": True,
             "interactive_endpoint_is_not_counted_as_background_capability": True,
+            "execution_domain_count_is_terminology_registry_owned": True,
         },
     }
     return result

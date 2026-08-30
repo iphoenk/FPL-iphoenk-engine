@@ -115,5 +115,6 @@ def test_workflows_are_unified_shallow_and_runtime_data_is_rolling():
     assert not (ROOT/".github/workflows/v3-refresh-full.yml").exists()
     assert "fetch-depth: 0" not in ci+runtime
     assert "fetch-depth: 1" in ci and "fetch-depth: 1" in runtime
-    assert "git push --force origin HEAD:\"$RUNTIME_BRANCH\"" in runtime
+    assert '--force-with-lease="refs/heads/${RUNTIME_BRANCH}:${RUNTIME_BASE_SHA}"' in runtime
+    assert "git push --force origin" not in runtime
     assert "runtime_publish_registry.json" in runtime and "/data/**" in (ROOT/".gitignore").read_text()

@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import os
 import re
+import subprocess
 from pathlib import Path
 
 from src.engines.v4_freshness import evaluate_freshness
@@ -28,37 +29,50 @@ def _sha256(path: Path) -> str | None:
     return digest.hexdigest()
 
 
+def _checked_out_sha() -> str | None:
+    try:
+        value = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL, text=True
+        ).strip().lower()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return value if _SHA_RE.fullmatch(value) else None
+
+
 def provenance_from_env(*, required: bool = False) -> dict:
-    source_sha = (os.getenv("V4_CANONICAL_SOURCE_SHA") or "").strip().lower()
-    run_id = (os.getenv("V4_PUBLISH_RUN_ID") or "").strip()
-    run_attempt = (os.getenv("V4_PUBLISH_RUN_ATTEMPT") or "").strip()
-    workflow = (os.getenv("V4_PUBLISH_WORKFLOW") or "").strip()
-    event = (os.getenv("V4_PUBLISH_EVENT") or "").strip()
-    actor = (os.getenv("V4_PUBLISH_ACTOR") or "").strip()
-    repository = (os.getenv("V4_PUBLISH_REPOSITORY") or "").strip()
+    # In a reusable workflow GITHUB_SHA belongs to the caller (for example
+    # `main`), not necessarily the canonical V4 checkout. HEAD is therefore the
+    # authoritative source identity after actions/checkout resolves inputs.ref.
+    source_sha = (os.getenv("V4_CANONICAL_SOURCE_SHA") or "").strip().lower() or _checked_out_sha()
+    run_id = (os.getenv("V4_PUBLISH_RUN_ID") or os.getenv("GITHUB_RUN_ID") or "").strip()
+    run_attempt = (os.getenv("V4_PUBLISH_RUN_ATTEMPT") or os.getenv("GITHUB_RUN_ATTEMPT") or "").strip()
+    workflow = (os.getenv("V4_PUBLISH_WORKFLOW") or os.getenv("GITHUB_WORKFLOW") or "").strip()
+    event = (os.getenv("V4_PUBLISH_EVENT") or os.getenv("GITHUB_EVENT_NAME") or "").strip()
+    actor = (os.getenv("V4_PUBLISH_ACTOR") or os.getenv("GITHUB_ACTOR") or "").strip()
+    repository = (os.getenv("V4_PUBLISH_REPOSITORY") or os.getenv("GITHUB_REPOSITORY") or "").strip()
 
     if required:
         missing = [
             key
             for key, value in {
-                "V4_CANONICAL_SOURCE_SHA": source_sha,
-                "V4_PUBLISH_RUN_ID": run_id,
-                "V4_PUBLISH_RUN_ATTEMPT": run_attempt,
-                "V4_PUBLISH_WORKFLOW": workflow,
-                "V4_PUBLISH_EVENT": event,
-                "V4_PUBLISH_ACTOR": actor,
-                "V4_PUBLISH_REPOSITORY": repository,
+                "canonical checked-out source SHA": source_sha,
+                "GITHUB_RUN_ID": run_id,
+                "GITHUB_RUN_ATTEMPT": run_attempt,
+                "GITHUB_WORKFLOW": workflow,
+                "GITHUB_EVENT_NAME": event,
+                "GITHUB_ACTOR": actor,
+                "GITHUB_REPOSITORY": repository,
             }.items()
             if not value
         ]
         if missing:
             raise RuntimeError(f"runtime publication provenance missing: {', '.join(missing)}")
     if source_sha and not _SHA_RE.fullmatch(source_sha):
-        raise RuntimeError("V4_CANONICAL_SOURCE_SHA must be an exact 40-char lowercase git SHA")
+        raise RuntimeError("runtime canonical source must be an exact 40-char lowercase git SHA")
     if run_id and not run_id.isdigit():
-        raise RuntimeError("V4_PUBLISH_RUN_ID must be numeric")
+        raise RuntimeError("runtime publication workflow run id must be numeric")
     if run_attempt and not run_attempt.isdigit():
-        raise RuntimeError("V4_PUBLISH_RUN_ATTEMPT must be numeric")
+        raise RuntimeError("runtime publication workflow run attempt must be numeric")
 
     return {
         "canonical_source_sha": source_sha or None,
@@ -79,7 +93,15 @@ def _validate_provenance(provenance: dict, *, require_complete: bool) -> None:
     if source_sha and not _SHA_RE.fullmatch(str(source_sha)):
         raise RuntimeError("runtime provenance canonical_source_sha is invalid")
     if require_complete:
-        for key in ("workflow_run_id", "workflow_run_attempt", "workflow", "event", "actor", "repository", "runtime_branch"):
+        for key in (
+            "workflow_run_id",
+            "workflow_run_attempt",
+            "workflow",
+            "event",
+            "actor",
+            "repository",
+            "runtime_branch",
+        ):
             if provenance.get(key) in (None, ""):
                 raise RuntimeError(f"runtime provenance requires {key}")
 
@@ -147,15 +169,21 @@ def stamp_runtime_publish(
     }
 
 
-def verify_runtime_provenance(*, expected_source_sha: str | None = None, expected_run_id: int | None = None) -> dict:
+def verify_runtime_provenance(
+    *, expected_source_sha: str | None = None, expected_run_id: int | None = None
+) -> dict:
     latest = read_json(LATEST, {})
     provenance = read_json(PROVENANCE, {})
     if not latest or not provenance:
-        raise RuntimeError("runtime provenance verification requires latest.json and runtime_provenance_v4.json")
+        raise RuntimeError(
+            "runtime provenance verification requires latest.json and runtime_provenance_v4.json"
+        )
     _validate_provenance(provenance, require_complete=True)
     embedded = latest.get("runtime_provenance") or {}
     if embedded != provenance:
-        raise RuntimeError("latest.json runtime_provenance does not match runtime_provenance_v4.json")
+        raise RuntimeError(
+            "latest.json runtime_provenance does not match runtime_provenance_v4.json"
+        )
     if latest.get("runtime_publish_at") != provenance.get("runtime_publish_at"):
         raise RuntimeError("runtime publication timestamp provenance mismatch")
     if expected_source_sha and provenance.get("canonical_source_sha") != expected_source_sha.lower():
@@ -176,10 +204,22 @@ def main() -> None:
     parser.add_argument("--expected-run-id", type=int)
     args = parser.parse_args()
     if args.verify:
-        print(verify_runtime_provenance(expected_source_sha=args.expected_source_sha, expected_run_id=args.expected_run_id))
+        print(
+            verify_runtime_provenance(
+                expected_source_sha=args.expected_source_sha,
+                expected_run_id=args.expected_run_id,
+            )
+        )
         return
-    require = os.getenv("V4_PROVENANCE_REQUIRED") == "1"
-    print(stamp_runtime_publish(require_provenance=require))
+
+    require = os.getenv("V4_PROVENANCE_REQUIRED") == "1" or os.getenv("GITHUB_ACTIONS") == "true"
+    result = stamp_runtime_publish(require_provenance=require)
+    if require:
+        verify_runtime_provenance(
+            expected_source_sha=result["canonical_source_sha"],
+            expected_run_id=result["workflow_run_id"],
+        )
+    print(result)
 
 
 if __name__ == "__main__":

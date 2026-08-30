@@ -1,10 +1,10 @@
 {
-  "schema_version": 9,
-  "model": "v5_v3_v4_capability_parity_v9",
+  "schema_version": 10,
+  "model": "v5_v3_v4_capability_parity_v10",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "main@892dd783b2fa0199cecf74e5a6548bb0619816dd",
-    "current_production_code_commit": "892dd783b2fa0199cecf74e5a6548bb0619816dd",
+    "current_production_runtime": "main@9a76a6231bdd747a247eabc8867a2312a188317a",
+    "current_production_code_commit": "9a76a6231bdd747a247eabc8867a2312a188317a",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "current_production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
@@ -27,8 +27,8 @@
     "transfer_comparator_realized_net_gain", "correlated_simulation_shadow", "release_attestation", "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "892dd783b2fa0199cecf74e5a6548bb0619816dd",
-    "production_code_commit": "892dd783b2fa0199cecf74e5a6548bb0619816dd",
+    "production_main_sha": "9a76a6231bdd747a247eabc8867a2312a188317a",
+    "production_code_commit": "9a76a6231bdd747a247eabc8867a2312a188317a",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,
@@ -49,7 +49,8 @@
       "semantic_prediction_reuse_runtime_hardening_only": true,
       "gameweek_lifecycle_reporting_hardening_only": true,
       "bounded_warm_retry_runtime_workflow_hardening_only": true,
-      "official_phase_independent_fetch_overlap_runtime_hardening_only": true
+      "official_phase_independent_fetch_overlap_runtime_hardening_only": true,
+      "authenticated_official_production_readiness_runtime_hardening_only": true
     },
     "control_plane_equivalence": {
       "canonical_orchestration_registry": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V5 routing and parallel groups are registry-owned; V3 compiled plan is reconciled as a control-plane guarantee, not copied implementation."},
@@ -63,7 +64,8 @@
       "semantic_prediction_reuse_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 semantic prediction reuse is runtime hardening only."},
       "gameweek_lifecycle_reporting_contract": {"v5_owner": "reporting", "evidence": "config/v5_team_review_registry.json", "semantics": "V3 Previous/Current/Next GW lifecycle enriches reporting and learning evidence only."},
       "bounded_warm_retry_runtime_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 bounded warm retry keeps the 3000 ms hard ceiling and is workflow hardening only."},
-      "official_fetch_overlap_runtime_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 overlaps phase-independent Official requests with bootstrap while bootstrap remains phase authority and phase-scoped endpoints remain gated; this is latency hardening only."}
+      "official_fetch_overlap_runtime_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 overlaps phase-independent Official requests with bootstrap while bootstrap remains phase authority and phase-scoped endpoints remain gated; this is latency hardening only."},
+      "authenticated_official_readiness_contract": {"v5_owner": "truth", "evidence": "config/v5_phase_authority_registry.json", "semantics": "V3 authenticated Official readiness hardening strengthens current production retrieval/fallback behavior without creating a new V5 prediction or decision authority."}
     },
     "capability_equivalence": {
       "gw_scoped_chip_override": {"v5_owner": "truth", "evidence": "src/v5/services/truth.py::_lock_chip_scope"},
@@ -102,6 +104,7 @@
     "v3_semantic_prediction_reuse_is_runtime_hardening_not_decision_authority": true,
     "v3_gameweek_lifecycle_reporting_is_not_v5_prediction_or_decision_authority": true,
     "v3_bounded_warm_retry_is_runtime_workflow_hardening_not_decision_authority": true,
-    "v3_official_phase_independent_fetch_overlap_is_runtime_hardening_not_decision_authority": true
+    "v3_official_phase_independent_fetch_overlap_is_runtime_hardening_not_decision_authority": true,
+    "v3_authenticated_official_readiness_is_runtime_truth_hardening_not_v5_prediction_or_decision_authority": true
   }
 }

@@ -39,4 +39,6 @@ def test_enriched_official_detail_satisfies_reuse_contract(tmp_path):
     }
     _write(path, payload)
     result = validate_artifact(path, "official_detail.json")
-    assert result["status"] == "PASS"
+    assert result["artifact"] == "official_detail.json"
+    assert result["validation"] == "CONTRACT_VALID"
+    assert result["contract_registry"] == "RUNTIME_ARTIFACT_CONTRACTS_V2"

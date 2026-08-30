@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
   "phases": {
     "PRE_DEADLINE": {
@@ -33,17 +33,25 @@
   },
   "reconciliation": {
     "after_deadline": true,
-    "compare": ["latest_pre_deadline_authority", "submitted_picks"],
+    "compare": ["target_gw_user_capture_if_active", "submitted_picks"],
     "submitted_picks_become_baseline": true
   },
   "pre_deadline_governance": {
+    "primary_authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+    "official_public_submitted_is_default_planning_baseline": true,
+    "user_capture_may_override_only_for_explicit_target_gw": true,
+    "user_capture_requires_active_wc_fh_or_planning_override": true,
+    "stale_or_unscoped_user_capture_must_not_mask_official_submitted_team": true,
+    "post_deadline_official_submission_reclaims_authority": true,
+    "authenticated_official_is_optional_private_enrichment": true,
+    "authenticated_official_is_production_blocking": false,
+    "authenticated_official_must_not_be_squad_lineup_or_captaincy_authority": true,
+    "authenticated_official_failure_must_not_block_public_production_path": true,
     "public_official_is_universal_factual_backbone": true,
     "user_capture_is_current_private_draft_authority_when_target_gw_matches": true,
     "user_capture_must_be_target_gw_scoped": true,
     "official_public_submitted_is_fallback_when_no_current_capture": true,
     "official_public_submitted_represents_last_confirmed_team_not_unsubmitted_draft": true,
-    "authenticated_official_is_optional_private_enrichment": true,
-    "authenticated_official_is_production_blocking": false,
     "authenticated_official_must_not_override_user_capture": true,
     "stale_persistent_capture_must_not_mask_last_confirmed_official_submitted_team": true
   }

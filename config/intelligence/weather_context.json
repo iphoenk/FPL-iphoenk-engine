@@ -1,17 +1,61 @@
 {
-  "schema_version": 2,
-  "model_id": "weather_context_advisory_v2",
+  "schema_version": 3,
+  "model_id": "weather_context_advisory_v3",
   "provider_source_id": "open_meteo",
   "venue_registry": "config/venues/premier_league_2026_27.json",
   "api": {
     "forecast_url": "https://api.open-meteo.com/v1/forecast",
     "request_timeout_seconds": 10,
-    "hourly_fields": ["temperature_2m", "precipitation_probability", "precipitation", "wind_speed_10m", "wind_gusts_10m", "weather_code"]
+    "max_concurrency": 4,
+    "hourly_fields": [
+      "temperature_2m",
+      "precipitation_probability",
+      "precipitation",
+      "wind_speed_10m",
+      "wind_gusts_10m",
+      "weather_code"
+    ]
+  },
+  "forecast_policy": {
+    "max_horizon_days": 7,
+    "post_match_retention_hours": 72,
+    "retain_evidence_per_fixture": 12
+  },
+  "evidence_policy": {
+    "precedence": [
+      "LIVE_OBSERVED",
+      "CLOSEST_TO_KICKOFF_OBSERVATION",
+      "FRESH_FORECAST",
+      "STALE_FORECAST"
+    ],
+    "live_observed_max_age_minutes": 90,
+    "fresh_forecast_max_age_minutes": 360
   },
   "severity": {
-    "NOTABLE": {"wind_speed_kmh": 22, "wind_gust_kmh": 35, "precipitation_mm_h": 2.0, "cold_c": 5, "heat_c": 27},
-    "ADVERSE": {"wind_speed_kmh": 30, "wind_gust_kmh": 45, "precipitation_mm_h": 4.0, "cold_c": 3, "heat_c": 30},
-    "EXTREME": {"wind_speed_kmh": 45, "wind_gust_kmh": 65, "precipitation_mm_h": 8.0, "cold_c": 0, "heat_c": 35}
+    "NOTABLE": {
+      "wind_speed_kmh": 22,
+      "wind_gust_kmh": 35,
+      "precipitation_mm_h": 2.0,
+      "cold_c": 5,
+      "heat_c": 27
+    },
+    "ADVERSE": {
+      "wind_speed_kmh": 30,
+      "wind_gust_kmh": 45,
+      "precipitation_mm_h": 4.0,
+      "cold_c": 3,
+      "heat_c": 30
+    },
+    "EXTREME": {
+      "wind_speed_kmh": 45,
+      "wind_gust_kmh": 65,
+      "precipitation_mm_h": 8.0,
+      "cold_c": 0,
+      "heat_c": 35
+    }
+  },
+  "health": {
+    "required_for_tactical_context": true
   },
   "governance": {
     "advisory_only": true,
@@ -22,9 +66,21 @@
     "may_directly_change_transfer_decision": false,
     "may_directly_change_watchlist_membership": false,
     "rain_probability_is_not_rain_intensity": true,
-    "prefer_closest_to_kickoff_or_live_observation": true,
     "post_match_attribution_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+    "one_incident_confidence": "LOW",
+    "repeated_pattern_state": "MATERIAL_ADVISORY",
+    "observed_return_separate_from_repeatable_signal": true,
     "causal_claim_requires_calibrated_evidence": true,
-    "alternative_explanations_required": ["opponent_strength", "tactical_change", "game_state", "red_cards", "injury", "rotation", "role_change", "venue", "sample_noise"]
+    "alternative_explanations_required": [
+      "opponent_strength",
+      "tactical_change",
+      "game_state",
+      "red_cards",
+      "injury",
+      "rotation",
+      "role_change",
+      "venue",
+      "sample_noise"
+    ]
   }
 }

@@ -5,6 +5,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 
+from src.intelligence.weather_advisory import collect_weather_context
 from src.services.competitive_load_service import OUT as COMPETITIVE_LOAD_OUT
 from src.services.competitive_load_service import (
     EXTERNAL_COMPETITIVE_EVIDENCE,
@@ -18,6 +19,8 @@ from src.utils import CONFIG, DATA, atomic_json, iso_now, parse_dt, read_json, u
 RUNTIME = DATA / "runtime"
 SNAPSHOT = RUNTIME / "snapshot.v1.json"
 OUTFILE = RUNTIME / "enrichment.v1.json"
+WEATHER_OUT = DATA / "weather_context_v4.json"
+LIVE_WEATHER_EVIDENCE = DATA / "weather_live_evidence_v4.json"
 STATS = DATA / "stats"
 
 
@@ -158,6 +161,8 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
     bootstrap = (raw.get("official") or {}).get("bootstrap") or {}
     phase = raw.get("phase") or {}
     stats_gw = phase.get("current_gw") or phase.get("last_finished_gw")
+    previous_weather = read_json(WEATHER_OUT, {})
+    live_weather_evidence = read_json(LIVE_WEATHER_EVIDENCE, {})
     advanced = {}
     if sync_stats and stats_gw:
         reuse = _reuse_policy()
@@ -168,10 +173,16 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
             "core_insights": lambda: _core_insights_task(int(stats_gw), current_ttl),
             "vaastav": lambda: _vaastav_task(int(stats_gw), current_ttl),
             "last_season": lambda: _previous_season_task(previous_ttl),
+            "weather_context": lambda: collect_weather_context(
+                raw,
+                previous=previous_weather,
+                live_evidence=live_weather_evidence,
+            ),
         }
         if deep_stats:
             tasks["deep"] = lambda: _deep_task(int(stats_gw), deep_ttl)
         results = _run_parallel(tasks)
+        weather_context = results.pop("weather_context")
         advanced = {
             "core_insights": {
                 "ok": bool(results["core_insights"].get("schema_valid")),
@@ -197,11 +208,19 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
                 "previous_season_ttl_minutes": previous_ttl,
                 "official_fpl_excluded": True,
                 "volatile_team_news_excluded": True,
+                "weather_source_refresh_bounded_and_fail_soft": True,
             },
         }
         if deep_stats:
             advanced["deep"] = results["deep"]
+    else:
+        weather_context = collect_weather_context(
+            raw,
+            previous=previous_weather,
+            live_evidence=live_weather_evidence,
+        )
 
+    atomic_json(WEATHER_OUT, weather_context)
     teams = {team["id"]: team["name"] for team in bootstrap.get("teams", [])}
     positions = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
     universe = [_official_player_row(player, teams, positions) for player in bootstrap.get("elements", [])]
@@ -213,13 +232,30 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
     )
     atomic_json(COMPETITIVE_LOAD_OUT, competitive_load)
 
+    weather_health = weather_context.get("health") or {}
     out = {
         "schema": "enrichment.v1",
-        "schema_version": 495,
+        "schema_version": 498,
         "generated_at": iso_now(),
         "lineage": {"snapshot_schema": "snapshot.v1", "snapshot_sha256": file_digest(SNAPSHOT)},
         "stats_gw": stats_gw,
         "advanced_stats_sync": advanced,
+        "weather_context": {
+            "artifact": "data/weather_context_v4.json",
+            "contract": weather_context.get("contract"),
+            "model": weather_context.get("model"),
+            "provider": weather_context.get("provider"),
+            "health": weather_health.get("status"),
+            "reason": weather_health.get("reason"),
+            "required_for_tactical_context": weather_health.get("required_for_tactical_context"),
+            "tactical_context_completeness": weather_health.get("tactical_context_completeness"),
+            "fixture_count": weather_context.get("fixture_count"),
+            "available_count": weather_context.get("available_count"),
+            "material_count": weather_context.get("material_count"),
+            "evidence_precedence": weather_context.get("evidence_precedence"),
+            "advisory_only": (weather_context.get("governance") or {}).get("advisory_only"),
+            "expected_xpts_mean_adjustment": 0.0,
+        },
         "competitive_load": {
             "artifact": str(COMPETITIVE_LOAD_OUT.relative_to(DATA.parent)),
             "schema": competitive_load.get("schema"),
@@ -251,6 +287,9 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         "stats_reused": {key: value.get("reused") for key, value in advanced.items() if isinstance(value, dict) and "reused" in value},
         "competitive_load_rows": competitive_load.get("coverage", {}).get("observed_player_fixture_rows"),
         "competitive_load_complete_for_visible_report": competitive_load.get("coverage", {}).get("complete_for_visible_report"),
+        "weather_context": weather_health.get("status"),
+        "weather_tactical_completeness": weather_health.get("tactical_context_completeness"),
+        "weather_material_fixtures": weather_context.get("material_count"),
     }))
     return out
 

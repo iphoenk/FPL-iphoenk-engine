@@ -54,14 +54,9 @@ def _assert_framework_health() -> tuple[dict, dict]:
     core = {row["id"]: row for row in post["dss_core"]["items"]}
     for module_id in ("DSS-18", "DSS-20", "DSS-21", "DSS-22", "DSS-23", "DSS-38"):
         assert core[module_id]["status"] == "ACTIVE", (module_id, core[module_id])
-    # Official ownership percentage is a complete production capability even though
-    # effective ownership is not supplied by Official FPL. If the maturity reconciler
-    # proves full Official coverage, DSS-41 may be ACTIVE while EO remains explicitly
-    # unavailable; otherwise the legacy PARTIAL state is still valid.
     assert core["DSS-41"]["status"] in {"ACTIVE", "PARTIAL"}
     ownership_detail = core["DSS-41"].get("detail") or {}
-    eo_available = ownership_detail.get("effective_ownership_available_from_official_fpl")
-    assert eo_available is False
+    assert ownership_detail.get("effective_ownership_available_from_official_fpl") is False
     if core["DSS-41"]["status"] == "ACTIVE":
         assert ownership_detail.get("implementation_state") == "ACTIVE"
         assert int(ownership_detail.get("ownership_rows") or 0) == int(ownership_detail.get("players") or 0) > 0
@@ -117,74 +112,147 @@ def _assert_competition_evidence(players: list[dict], evidence: dict) -> None:
 
 
 def _assert_prediction_and_validation(health: dict) -> tuple[dict, dict]:
-    return legacy._assert_prediction_and_validation(health)
+    lifecycle = legacy._load("validation/lifecycle_v4.json")
+    readiness = legacy._load("validation/reconciliation_readiness_v4.json")
+    predictions = legacy._load("predictions_v4.json")
+    assert readiness.get("status") == "PASS"
+    assert readiness.get("blockers") == []
+    assert (readiness.get("checks") or {}).get("snapshot_integrity", {}).get("pass") is True
+    assert (readiness.get("checks") or {}).get("ownership_chain", {}).get("pass") is True
+    assert (readiness.get("guardrails") or {}).get("read_only_audit") is True
+    assert (readiness.get("guardrails") or {}).get("official_api_refetch") is False
+    assert (readiness.get("guardrails") or {}).get("reconciliation_truth_not_reimplemented") is True
+    legacy._assert_version(lifecycle, "validation lifecycle", 4943, "v4.9.3-validation-lifecycle")
+    legacy._assert_version(predictions, "predictions", 492, "v4.9.2-truthful-health", field="model_version")
+    assert lifecycle.get("status") == "PASS"
+    lifecycle_guardrails = lifecycle.get("guardrails") or {}
+    assert lifecycle_guardrails.get("started_from_official_stats_starts_only") is True
+    assert lifecycle_guardrails.get("minutes_never_infer_started") is True
+    assert lifecycle_guardrails.get("missing_starts_excluded_from_start_brier") is True
+    assert predictions.get("point_in_time") is True
+    players = predictions.get("players") or []
+    assert len(players) >= 500
+    assert lifecycle.get("eligibility", {}).get("model_version") == predictions.get("model_version")
+    core = {row["id"]: row for row in health["dss_core"]["items"]}
+    extensions = {row["id"]: row for row in health["dss_extensions"]["items"]}
+    assert core["DSS-16"]["status"] == "ACTIVE", core["DSS-16"]
+    assert core["DSS-29"]["status"] == "ACTIVE", core["DSS-29"]
+    eligible = lifecycle.get("eligibility", {}).get("eligible_samples")
+    if eligible is not None:
+        if int(eligible) == 0:
+            assert core["DSS-44"]["status"] == "WARMUP"
+            assert extensions["DSS-X12"]["status"] == "WARMUP"
+        else:
+            assert core["DSS-44"]["status"] == "ACTIVE"
+            assert extensions["DSS-X12"]["status"] == "ACTIVE"
+    coverage = predictions.get("input_coverage") or {}
+    assert coverage.get("advanced_matched", 0) > 0
+    assert coverage.get("last_season_matched", 0) > 0
+    assert coverage.get("advanced_decision_used_ratio", 0) >= 0.25
+    evidence = predictions.get("capability_evidence") or {}
+    assert evidence.get("dynamic_opponent_fixtures", 0) > 0
+    _assert_competition_evidence(players, evidence)
+    fixture_run_complete = sum(
+        (row.get("fixture_run") or {}).get("source") == "official_fpl_fixture_adjustment"
+        and (row.get("fixture_run") or {}).get("decision_usage") == "multi_horizon_projection_context"
+        for row in players
+    )
+    assert fixture_run_complete == len(players)
+    all_x = [fx["xpts"] for row in players for fx in row.get("fixtures", [])]
+    assert all_x and statistics.median(all_x) < 8
+    assert sum(x > 15 for x in all_x) / len(all_x) < 0.03
+    return lifecycle, predictions
 
 
-def _assert_decision_artifacts() -> tuple[dict, dict, dict, dict]:
-    return legacy._assert_decision_artifacts()
+def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
+    """Validate the simplified execution topology without weakening other gates."""
+    orchestration = legacy._load("service_orchestration_v4.json")
+    legacy._assert_version(orchestration, "orchestration", 496, "v4.9.6-service-orchestrator-8-boundary")
+    assert orchestration.get("status") == "PASS"
+    assert orchestration.get("stats_enabled") is True
+    assert orchestration.get("deep_stats_enabled") is True
+    assert orchestration.get("execution_model") == "process_isolated_dag_parallel_single_host"
+
+    services = orchestration.get("services") or []
+    ids = [row.get("id") for row in services]
+    registry = json.loads((CONFIG / "service_registry.json").read_text(encoding="utf-8"))
+    expected_ids = [row.get("id") for row in registry.get("services") or []]
+    assert expected_ids == ["raw_snapshot", "enrichment", "prediction", "validation", "optimization", "user_decision_overlay", "personal_gw_scorecard", "governance"]
+    assert len(services) == len(expected_ids) == 8
+    assert set(ids) == set(expected_ids), (ids, expected_ids)
+    assert all(row.get("status") == "PASS" for row in services), services
+    assert all(row.get("boundary_state") == "INDEPENDENT" for row in services)
+    assert all(all(contract.get("valid") for contract in row.get("contracts") or []) for row in services)
+
+    assurance = orchestration.get("startup_assurance") or {}
+    assert assurance.get("service") == "architecture_guard"
+    assert assurance.get("status") == "PASS"
+    assert assurance.get("runtime_microservice") is False
+    assert "architecture_guard" not in ids
+
+    levels = orchestration.get("execution_levels") or []
+    assert levels and levels[0] == ["raw_snapshot"]
+    level_index = {service_id: idx for idx, level in enumerate(levels) for service_id in level}
+    for row in registry.get("services") or []:
+        for dependency in row.get("depends_on") or []:
+            assert level_index[dependency] < level_index[row["id"]], (dependency, row["id"], levels)
+    assert level_index["validation"] == level_index["optimization"]
+    assert level_index["governance"] > level_index["validation"]
+    assert level_index["governance"] > level_index["personal_gw_scorecard"]
+
+    summary = orchestration.get("summary") or {}
+    assert summary.get("services_passed") == 8
+    assert summary.get("services_total") == 8
+    assert summary.get("runtime_boundaries_reduced_from") == 13
+    assert summary.get("runtime_boundaries_reduced_to") == 8
+    assert summary.get("scheduler_barrier_free") is True
+    assert summary.get("fail_closed") is True
+
+    assert orchestration.get("snapshot_identity", {}).get("sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
+    assert latest.get("lineage", {}).get("snapshot_sha256") == file_digest(DATA / "runtime/snapshot.v1.json")
+    assert latest.get("lineage", {}).get("enrichment_sha256") == file_digest(DATA / "runtime/enrichment.v1.json")
+
+    guardrails = orchestration.get("guardrails") or {}
+    required_true = (
+        "validation_lifecycle_no_official_refetch", "deadline_snapshot_immutable", "retroactive_snapshot_rejected",
+        "reconciliation_archive_immutable", "reconciliation_idempotent", "health_view_current_model_only",
+        "personal_gw_scorecard_no_official_refetch", "finished_gw_archive_immutable", "scorecard_simulation_never_mutates_archive",
+        "scorecard_projection_from_effective_plan_contract", "user_decision_overlay_process_isolated", "engine_is_advisory",
+        "user_decision_is_final_authority", "engine_never_auto_overwrites_valid_user_override",
+        "projection_default_baseline_previous_submitted_gw", "planning_override_requires_target_gw", "stale_planning_override_rejected",
+        "optimizer_search_width_unchanged", "reconciliation_started_from_official_stats_starts", "minutes_never_infer_started",
+        "missing_starts_excluded_from_brier", "effective_plan_legality_enforced_post_overlay",
+        "engine_effective_plan_legality_reported_separately", "decision_compute_slo_excludes_external_network_io",
+        "official_fpl_first_when_field_available", "dag_parallel_ready_services", "parallel_services_must_have_no_dependency_edge",
+        "validation_and_optimization_may_parallelize_after_prediction", "governance_requires_validation_user_plan_and_scorecard",
+        "human_report_language_governed", "technical_reason_codes_separate_from_human_report", "scheduled_checkpoint_recovery_enabled",
+        "architecture_guard_runs_before_orchestration", "immutable_artifacts_declared_per_service",
+        "validation_boundary_preserves_four_artifact_contracts", "governance_boundary_preserves_postflight_and_checkpoint_contracts",
+    )
+    for key in required_true:
+        assert guardrails.get(key) is True, (key, guardrails.get(key))
+    assert guardrails.get("reconciliation_readiness_process_isolated") is False
+    assert guardrails.get("reconciliation_readiness_read_only") is True
+    assert guardrails.get("decision_compute_slo_ms") == 5000
+    assert guardrails.get("official_fpl_api_authority") == "raw_snapshot_only"
+    assert guardrails.get("gate0_checks_unchanged") == 16
+    assert guardrails.get("service_count") == 8
+
+    target = orchestration.get("runtime_target") or {}
+    assert float(target.get("target_ms") or 0) == 5000.0
+    assert target.get("hard_gate") is False
+
+    architecture = legacy._load("architecture_ownership_v4.json")
+    assert architecture.get("status") == "PASS"
+    assert all(row.get("pass") for row in (architecture.get("checks") or {}).values())
+    return orchestration, services
 
 
-def _assert_advanced_ablation() -> dict:
-    return legacy._assert_advanced_ablation()
-
-
-def _assert_service_orchestration() -> dict:
-    return legacy._assert_service_orchestration()
-
-
-def _assert_release_and_architecture() -> tuple[dict, dict]:
-    return legacy._assert_release_and_architecture()
-
-
-def _assert_serving_contract() -> tuple[dict, dict]:
-    return legacy._assert_serving_contract()
-
-
-def _assert_performance() -> tuple[dict, dict]:
-    return legacy._assert_performance()
-
-
-def run() -> dict:
-    pre, health = _assert_framework_health()
-    predictions, validation = _assert_prediction_and_validation(health)
-    evidence = predictions.get("evidence") or {}
-    _assert_competition_evidence(list(predictions.get("players") or []), evidence)
-    wc, package, lineup, sanity = _assert_decision_artifacts()
-    ablation = _assert_advanced_ablation()
-    orchestration = _assert_service_orchestration()
-    release, architecture = _assert_release_and_architecture()
-    serving, serving_benchmark = _assert_serving_contract()
-    performance, perf_benchmark = _assert_performance()
-
-    result = {
-        "status": "PASS",
-        "framework": {
-            "preflight": pre.get("overall"),
-            "postflight": health.get("overall"),
-            "prediction_health": health.get("prediction_health"),
-            "capability_health": health.get("capability_health"),
-            "coverage": health.get("capability_coverage"),
-        },
-        "validation": validation.get("status"),
-        "decision": {
-            "wc": wc.get("overall_verdict"),
-            "package": package.get("overall_verdict"),
-            "formation": lineup.get("formation"),
-            "sanity": sanity.get("status"),
-        },
-        "ablation": ablation.get("status"),
-        "orchestration": orchestration.get("status"),
-        "release": release.get("release"),
-        "architecture": architecture.get("status"),
-        "serving": serving.get("contract"),
-        "performance": {
-            "pipeline": performance,
-            "benchmark": perf_benchmark,
-            "serving_benchmark": serving_benchmark,
-        },
-    }
-    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
-    return result
+legacy._assert_framework_health = _assert_framework_health
+legacy._assert_prediction_and_validation = _assert_prediction_and_validation
+legacy._assert_orchestration = _assert_orchestration
+_assert_version = legacy._assert_version
+run = legacy.run
 
 
 if __name__ == "__main__":

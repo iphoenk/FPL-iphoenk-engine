@@ -3,8 +3,8 @@
   "model": "v5_v3_v4_capability_parity_v10",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "main@9a76a6231bdd747a247eabc8867a2312a188317a",
-    "current_production_code_commit": "9a76a6231bdd747a247eabc8867a2312a188317a",
+    "current_production_runtime": "main@5175f9bc68354100a8bc3a36a3b97e853e90b73d",
+    "current_production_code_commit": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "current_production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
@@ -27,8 +27,8 @@
     "transfer_comparator_realized_net_gain", "correlated_simulation_shadow", "release_attestation", "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "9a76a6231bdd747a247eabc8867a2312a188317a",
-    "production_code_commit": "9a76a6231bdd747a247eabc8867a2312a188317a",
+    "production_main_sha": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
+    "production_code_commit": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,
@@ -65,7 +65,7 @@
       "gameweek_lifecycle_reporting_contract": {"v5_owner": "reporting", "evidence": "config/v5_team_review_registry.json", "semantics": "V3 Previous/Current/Next GW lifecycle enriches reporting and learning evidence only."},
       "bounded_warm_retry_runtime_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 bounded warm retry keeps the 3000 ms hard ceiling and is workflow hardening only."},
       "official_fetch_overlap_runtime_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 overlaps phase-independent Official requests with bootstrap while bootstrap remains phase authority and phase-scoped endpoints remain gated; this is latency hardening only."},
-      "authenticated_official_readiness_contract": {"v5_owner": "truth", "evidence": "config/v5_phase_authority_registry.json", "semantics": "V3 authenticated Official readiness hardening strengthens current production retrieval/fallback behavior without creating a new V5 prediction or decision authority."}
+      "authenticated_official_readiness_contract": {"v5_owner": "truth", "evidence": "config/v5_phase_authority_registry.json", "semantics": "V3 authenticated Official readiness is reconciled as optional private-enrichment hardening; it does not create V5 squad, prediction, decision, or production-gate authority."}
     },
     "capability_equivalence": {
       "gw_scoped_chip_override": {"v5_owner": "truth", "evidence": "src/v5/services/truth.py::_lock_chip_scope"},

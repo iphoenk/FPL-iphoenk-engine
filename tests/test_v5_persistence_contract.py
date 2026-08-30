@@ -49,6 +49,7 @@ def test_history_is_bounded_and_explicitly_noncanonical() -> None:
     assert 0 < int(retention.get("max_age_days") or 0) <= 14
     assert 0 < int(retention.get("max_records") or 0) <= 128
     assert 0 < int(retention.get("max_bytes") or 0) <= 32 * 1024 * 1024
+    assert retention.get("preserve_newest_record") is False
     assert storage.get("history_jsonl_is_canonical") is False
     assert storage.get("canonical_prediction_ledger") == "prediction_ledger.json"
     assert storage.get("canonical_prediction_ledger_retention") == "CURRENT_2026_27_SEASON"
@@ -75,3 +76,24 @@ def test_history_compaction_keeps_recent_bounded_tail(tmp_path: Path) -> None:
     assert all(row["id"] != "old" for row in retained)
     assert retained[-1]["id"] == 139
     assert result["after_bytes"] <= 32 * 1024 * 1024
+
+
+def test_history_byte_ceiling_can_drop_oversized_noncanonical_record(tmp_path: Path, monkeypatch) -> None:
+    path = tmp_path / "history.jsonl"
+    path.write_text(json.dumps({"generated_at": "2026-08-30T12:00:00+00:00", "payload": "x" * 1024}) + "\n", encoding="utf-8")
+    monkeypatch.setattr(
+        v5p,
+        "_history_retention",
+        lambda: {
+            "max_age_days": 0,
+            "max_records": 0,
+            "max_bytes": 64,
+            "preserve_newest_record": False,
+        },
+    )
+
+    result = v5p._compact_history(path, now=datetime(2026, 8, 30, 12, 0, tzinfo=timezone.utc))
+
+    assert result["after_records"] == 0
+    assert result["after_bytes"] == 0
+    assert path.read_text(encoding="utf-8") == ""

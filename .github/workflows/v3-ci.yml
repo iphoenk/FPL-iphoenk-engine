@@ -34,6 +34,8 @@ jobs:
         run: pip install -r requirements.txt pytest
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
+      - name: Validate capability terminology contract
+        run: python -m src.runtime_v3.capability_terminology_validate
       - name: Validate architecture ownership contract
         run: python -m src.engines.architecture_contract_validate
       - name: Enforce no-duplicate architecture and REC ownership

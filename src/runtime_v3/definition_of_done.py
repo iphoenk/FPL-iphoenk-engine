@@ -314,10 +314,13 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
 
     runtime_ok, runtime_detail = _selected_profile_runtime_contract(runtime)
     _check(rows, "SELECTED_PROFILE_RUNTIME_GREEN", runtime_ok, runtime_detail)
+    capability_registry = read_json(ROOT / "config" / "v3_service_registry.json", {})
+    expected_capability_count = len(capability_registry.get("services") or {})
     canonical_runtime = (
         int(runtime.get("execution_domain_count") or 0) == 11
         and int(runtime.get("execution_phase_count") or 0) == 6
-        and int(runtime.get("capability_owner_count") or 0) == 21
+        and expected_capability_count > 0
+        and int(runtime.get("capability_owner_count") or 0) == expected_capability_count
     )
     _check(
         rows,
@@ -327,6 +330,7 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
             "domains": runtime.get("execution_domain_count"),
             "phases": runtime.get("execution_phase_count"),
             "owners": runtime.get("capability_owner_count"),
+            "expected_owners": expected_capability_count,
         },
     )
 

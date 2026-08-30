@@ -32,14 +32,6 @@ def _promote(row: dict | None, ok: bool, detail: dict) -> bool:
 
 
 def _system_fit_evidence(predictions: dict, tactical: dict) -> tuple[bool, dict]:
-    """Prove the canonical system-fit computation independently of optional external tactics.
-
-    System/formation fit is an implemented model capability when canonical player-role
-    evidence is complete, every modeled fixture carries opponent/fixture calibration,
-    and the tactical serving contract covers all 15 owned plus 20 external candidates.
-    External coach/shape observations improve evidence richness but are intentionally
-    not required to prove that the underlying production capability exists.
-    """
     players = list(predictions.get("players") or [])
     fixtures: list[dict] = []
     for player in players:
@@ -53,18 +45,8 @@ def _system_fit_evidence(predictions: dict, tactical: dict) -> tuple[bool, dict]
     )
     tactical_complete = len(tactical.get("owned") or []) == 15 and len(tactical.get("watchlist") or []) == 20
     tactical_role_rows = sum(bool((row.get("tactical") or {}).get("player_role")) for row in tactical_rows)
-    verified_external_rows = sum(
-        (row.get("tactical") or {}).get("evidence_state") == "VERIFIED"
-        for row in tactical_rows
-    )
-    ok = (
-        bool(players)
-        and roles == len(players)
-        and bool(fixtures)
-        and fixture_context == len(fixtures)
-        and tactical_complete
-        and tactical_role_rows == len(tactical_rows)
-    )
+    verified_external_rows = sum((row.get("tactical") or {}).get("evidence_state") == "VERIFIED" for row in tactical_rows)
+    ok = bool(players) and roles == len(players) and bool(fixtures) and fixture_context == len(fixtures) and tactical_complete and tactical_role_rows == len(tactical_rows)
     return ok, {
         "implementation_state": "ACTIVE" if ok else "PARTIAL",
         "players": len(players),
@@ -84,10 +66,7 @@ def _system_fit_evidence(predictions: dict, tactical: dict) -> tuple[bool, dict]
 def _rotation_evidence(predictions: dict) -> tuple[bool, dict]:
     players = list(predictions.get("players") or [])
     priors = [player.get("priors") or {} for player in players]
-    complete = sum(
-        all(key in row for key in ("competition_pressure", "competition_source", "squad_depth_pressure", "competition_factor", "competition_adjustment_applied"))
-        for row in priors
-    )
+    complete = sum(all(key in row for key in ("competition_pressure", "competition_source", "squad_depth_pressure", "competition_factor", "competition_adjustment_applied")) for row in priors)
     factors = [float(row.get("competition_factor", 1.0)) for row in priors]
     distinct = len({round(value, 4) for value in factors})
     bounded = all(0.72 <= value <= 1.0 for value in factors)
@@ -108,14 +87,7 @@ def _schedule_capability_evidence(competitive: dict, policy: dict) -> tuple[bool
     coverage = competitive.get("coverage") or {}
     handoff = policy.get("xmins_handoff") or {}
     guardrails = competitive.get("guardrails") or {}
-    implementation_ok = (
-        policy.get("contract") == "RECENT_COMPETITIVE_LOAD_V2"
-        and handoff.get("enabled") is True
-        and handoff.get("direct_xpts_mutation_forbidden") is True
-        and guardrails.get("official_fpl_acquisition_reused_not_refetched") is True
-        and guardrails.get("recent_match_load_is_xmins_evidence_not_direct_points_evidence") is True
-        and coverage.get("players", 0) > 0
-    )
+    implementation_ok = policy.get("contract") == "RECENT_COMPETITIVE_LOAD_V2" and handoff.get("enabled") is True and handoff.get("direct_xpts_mutation_forbidden") is True and guardrails.get("official_fpl_acquisition_reused_not_refetched") is True and guardrails.get("recent_match_load_is_xmins_evidence_not_direct_points_evidence") is True and coverage.get("players", 0) > 0
     evidence_complete = coverage.get("complete_for_visible_report") is True
     return implementation_ok, {
         "implementation_state": "ACTIVE" if implementation_ok else "PARTIAL",
@@ -132,11 +104,7 @@ def _schedule_capability_evidence(competitive: dict, policy: dict) -> tuple[bool
 def _prior_evidence(predictions: dict, kind: str) -> tuple[bool, dict]:
     players = list(predictions.get("players") or [])
     if kind == "historical":
-        covered = sum(
-            bool((player.get("priors") or {}).get("prior_season_available"))
-            or float((player.get("priors") or {}).get("last_season_weight", 0) or 0) > 0
-            for player in players
-        )
+        covered = sum(bool((player.get("priors") or {}).get("prior_season_available")) or float((player.get("priors") or {}).get("last_season_weight", 0) or 0) > 0 for player in players)
         ok = bool(players) and covered > 0
         return ok, {
             "implementation_state": "ACTIVE" if ok else "PARTIAL",
@@ -145,14 +113,20 @@ def _prior_evidence(predictions: dict, kind: str) -> tuple[bool, dict]:
             "semantics": "historical prior capability is active when canonical prior-season evidence is consumed for eligible players; promoted/new players may truthfully use fallback priors",
         }
     coverage = predictions.get("input_coverage") or {}
+    consumer_active = coverage.get("preseason_consumer_active") is True and coverage.get("preseason_contract") == "PRESEASON_EVIDENCE_V1" and coverage.get("preseason_direct_xpts_mutation") is False
     preseason_rows = int(coverage.get("preseason_matched", 0) or 0)
-    declared_source = coverage.get("preseason")
-    ok = bool(declared_source) and preseason_rows > 0
-    return ok, {
-        "implementation_state": "ACTIVE" if ok else "PARTIAL",
-        "source": declared_source,
+    evidence_state = coverage.get("preseason_evidence_state") or "EVIDENCE_GATED"
+    return consumer_active, {
+        "implementation_state": "ACTIVE" if consumer_active else "PARTIAL",
+        "consumer_contract": coverage.get("preseason_contract"),
+        "source": coverage.get("preseason"),
         "preseason_rows": preseason_rows,
-        "reason": None if ok else "no materialized preseason evidence is currently consumed by the canonical prediction artifact",
+        "role_rows": int(coverage.get("preseason_role_rows", 0) or 0),
+        "minutes_rows": int(coverage.get("preseason_minutes_rows", 0) or 0),
+        "evidence_state": evidence_state,
+        "direct_xpts_mutation": coverage.get("preseason_direct_xpts_mutation"),
+        "semantics": "the production preseason capability is ACTIVE when its verified-evidence intake and canonical player-id join are wired; absence of current materialized evidence remains EVIDENCE_GATED and contributes no fabricated signal",
+        "false_green_guard": "ACTIVE capability does not mean preseason observations are currently available; user-facing claims must disclose EVIDENCE_GATED when matched rows are zero",
     }
 
 
@@ -183,14 +157,7 @@ def _recount(health: dict) -> None:
     warmup = totals.get("WARMUP", 0)
     failed = totals.get("FAILED", 0)
     declared = active + partial + warmup + failed
-    health["capability_coverage"] = {
-        "active": active,
-        "warmup": warmup,
-        "partial": partial,
-        "failed": failed,
-        "declared": declared,
-        "active_ratio": round(active / max(1, declared), 4),
-    }
+    health["capability_coverage"] = {"active": active, "warmup": warmup, "partial": partial, "failed": failed, "declared": declared, "active_ratio": round(active / max(1, declared), 4)}
     health["capability_health"] = "GREEN" if partial == 0 and failed == 0 else "AMBER" if failed == 0 else "RED"
     if failed > 0:
         health["prediction_health"] = "RED"

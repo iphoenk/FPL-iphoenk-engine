@@ -43,9 +43,10 @@ def test_registry_compiler_is_deterministic_and_covers_the_runtime_control_plane
     assert len(first["plan_sha256"]) == 64
     assert first["phase_count"] == 6
     assert first["domain_count"] == 11
-    assert first["capability_count"] == 21
+    assert first["capability_count"] == 22
     assert list(first["capability_owner"]) == list(services)
     assert set(first["capability_owner"]) == set(services)
+    assert first["capability_owner"]["weather_context"] == "football_context"
     assert first["domain_order"] == [
         name
         for phase in domains["canonical_phases"].values()
@@ -139,9 +140,10 @@ def test_active_v3_workflow_and_domains_have_single_runtime_owner() -> None:
 
     assert domains["phase_count"] == 6
     assert len(domains["domains"]) == 11
-    assert len(services) == 21
+    assert len(services) == 22
     assert len(assigned) == len(set(assigned)) == len(services)
     assert set(assigned) == set(services)
+    assert "weather_context" in domains["domains"]["football_context"]["capabilities"]
     assert domains["control_plane"]["compiler"] == "src.runtime_v3.registry_compiler"
     assert domains["control_plane"]["module_batch_registry"] == "DERIVED_FROM_CAPABILITY_COMMANDS"
     assert domains["control_plane"]["human_maintained_module_batch_registry"] is False

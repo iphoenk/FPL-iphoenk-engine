@@ -18,7 +18,7 @@
     "authenticated_official_must_not_be_squad_lineup_or_captaincy_authority": true
   },
   "sources": {
-    "user_lock": {"tier": 0, "kind": "user_authority", "enabled": true},
+    "user_capture": {"tier": 0, "kind": "user_authority", "enabled": true},
     "official_authenticated": {"tier": 1, "kind": "official_private_read_only", "enabled": true},
     "official_public": {"tier": 1, "kind": "official_public", "enabled": true},
     "core_insights": {"tier": 2, "kind": "enrichment", "enabled": true},
@@ -38,7 +38,7 @@
     "live_scoring": ["official_public"],
     "authenticated_draft": ["official_authenticated"],
     "exact_owned_finance": ["official_authenticated"],
-    "pre_deadline_locked_squad": ["official_public", "user_lock"],
+    "pre_deadline_locked_squad": ["official_public", "user_capture"],
     "advanced_player_stats": ["core_insights", "ffscout", "vaastav", "understat"],
     "historical_priors": ["vaastav", "core_insights"],
     "price_prediction_challengers": ["livefpl", "onefpl", "fffix"],

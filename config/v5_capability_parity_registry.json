@@ -3,8 +3,8 @@
   "model": "v5_v3_v4_capability_parity_v7",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "main@91301fb46a8f66ee41b27571e5d01c191c676104",
-    "current_production_code_commit": "91301fb46a8f66ee41b27571e5d01c191c676104",
+    "current_production_runtime": "main@ac4e14abf2a844804007e0fb3cac7c7c54213679",
+    "current_production_code_commit": "ac4e14abf2a844804007e0fb3cac7c7c54213679",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "current_production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
@@ -27,8 +27,8 @@
     "transfer_comparator_realized_net_gain", "correlated_simulation_shadow", "release_attestation", "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "91301fb46a8f66ee41b27571e5d01c191c676104",
-    "production_code_commit": "91301fb46a8f66ee41b27571e5d01c191c676104",
+    "production_main_sha": "ac4e14abf2a844804007e0fb3cac7c7c54213679",
+    "production_code_commit": "ac4e14abf2a844804007e0fb3cac7c7c54213679",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,
@@ -45,7 +45,8 @@
       "business_capability_contract_unchanged_by_control_plane_refactor": true,
       "football_formula_unchanged_by_control_plane_refactor": true,
       "decision_logic_unchanged_by_control_plane_refactor": true,
-      "sub3s_fast_lane_runtime_hardening_only": true
+      "sub3s_fast_lane_runtime_hardening_only": true,
+      "semantic_prediction_reuse_runtime_hardening_only": true
     },
     "control_plane_equivalence": {
       "canonical_orchestration_registry": {
@@ -87,6 +88,11 @@
         "v5_owner": "orchestrator",
         "evidence": "config/v5_orchestrator_registry.json",
         "semantics": "V3 PR #174 coalesced FAST-lane, trusted artifact validation and compute-positive reuse are runtime hardening only; V5 preserves its bounded-context execution and decision semantics."
+      },
+      "semantic_prediction_reuse_contract": {
+        "v5_owner": "orchestrator",
+        "evidence": "config/v5_orchestrator_registry.json",
+        "semantics": "V3 PR #178 narrows prediction reuse fingerprints to material team-state fields and is reconciled as runtime hardening only; football formulas and decision semantics remain unchanged."
       }
     },
     "capability_equivalence": {
@@ -122,6 +128,7 @@
     "compiled_v3_control_plane_does_not_create_v5_service_or_business_authority": true,
     "duplicate_human_maintained_execution_truth_forbidden": true,
     "v3_capability_telemetry_is_observational_not_decision_authority": true,
-    "v3_sub3s_fast_lane_is_runtime_hardening_not_decision_authority": true
+    "v3_sub3s_fast_lane_is_runtime_hardening_not_decision_authority": true,
+    "v3_semantic_prediction_reuse_is_runtime_hardening_not_decision_authority": true
   }
 }

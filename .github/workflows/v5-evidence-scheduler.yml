@@ -15,6 +15,7 @@ concurrency:
 
 env:
   V5_SHADOW_BRANCH: v5-shadow-runtime
+  V3_RUNTIME_BRANCH: runtime-data
   TZ_AUTHORITY: Asia/Jakarta
 
 jobs:
@@ -27,11 +28,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Hydrate compact V5 evidence ledger
+      - name: Hydrate compact V5 evidence ledger and production refs
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin "$V5_SHADOW_BRANCH" || true
+          git fetch origin main "$V3_RUNTIME_BRANCH" "$V5_SHADOW_BRANCH" || true
           if git cat-file -e "origin/${V5_SHADOW_BRANCH}:data/v5/prediction_ledger.json" 2>/dev/null; then
             git show "origin/${V5_SHADOW_BRANCH}:data/v5/prediction_ledger.json" > "$RUNNER_TEMP/v5_prediction_ledger.json"
           else
@@ -48,8 +49,9 @@ jobs:
           python - <<'PY'
           import json
           import os
+          import subprocess
           import urllib.request
-          from datetime import datetime, timezone, timedelta
+          from datetime import datetime, timezone
           from pathlib import Path
           from zoneinfo import ZoneInfo
 
@@ -60,84 +62,113 @@ jobs:
           ledger = json.loads(ledger_path.read_text(encoding='utf-8'))
           records = ledger.get('records') if isinstance(ledger.get('records'), dict) else {}
 
-          req = urllib.request.Request(
-              'https://fantasy.premierleague.com/api/bootstrap-static/',
-              headers={'User-Agent': 'fpl-iphoenk-v5-evidence-scheduler/1.0'},
+          manifest = json.loads(Path('config/v5_convergence_manifest.json').read_text(encoding='utf-8'))
+          expected_runtime_sha = str((manifest.get('baselines') or {}).get('production_main_sha') or '')
+          repository_main_sha = subprocess.check_output(['git', 'rev-parse', 'origin/main'], text=True).strip()
+          runtime_raw = subprocess.check_output(
+              ['git', 'show', f"origin/{os.environ.get('V3_RUNTIME_BRANCH', 'runtime-data')}:data/runtime_manifest.json"],
+              text=True,
           )
-          with urllib.request.urlopen(req, timeout=20) as response:
-              bootstrap = json.load(response)
-          events = [row for row in bootstrap.get('events') or [] if isinstance(row, dict)]
+          runtime_manifest = json.loads(runtime_raw)
+          deployed_runtime_sha = str(runtime_manifest.get('source_commit') or '')
+          ancestor_ok = subprocess.run(
+              ['git', 'merge-base', '--is-ancestor', expected_runtime_sha, 'origin/main'],
+              check=False,
+          ).returncode == 0 if expected_runtime_sha else False
+          baseline_ready = bool(
+              expected_runtime_sha
+              and expected_runtime_sha == deployed_runtime_sha
+              and ancestor_ok
+          )
 
-          def parse_dt(value):
-              if not value:
-                  return None
-              return datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+          details = {
+              'accepted_deployed_runtime_sha': expected_runtime_sha,
+              'deployed_runtime_sha': deployed_runtime_sha,
+              'repository_main_sha': repository_main_sha,
+              'accepted_runtime_is_ancestor_of_main': ancestor_ok,
+              'baseline_ready': baseline_ready,
+          }
 
           reasons = []
-          details = {}
+          if baseline_ready:
+              req = urllib.request.Request(
+                  'https://fantasy.premierleague.com/api/bootstrap-static/',
+                  headers={'User-Agent': 'fpl-iphoenk-v5-evidence-scheduler/1.1'},
+              )
+              with urllib.request.urlopen(req, timeout=20) as response:
+                  bootstrap = json.load(response)
+              events = [row for row in bootstrap.get('events') or [] if isinstance(row, dict)]
 
-          if event_name == 'workflow_dispatch':
-              reasons.append('MANUAL_SCHEDULER_DISPATCH')
+              def parse_dt(value):
+                  if not value:
+                      return None
+                  return datetime.fromisoformat(str(value).replace('Z', '+00:00'))
 
-          if local.hour == 4:
-              reasons.append('DAILY_0430_WIB_EVIDENCE_REFRESH')
+              if event_name == 'workflow_dispatch':
+                  reasons.append('MANUAL_SCHEDULER_DISPATCH')
 
-          future = []
-          passed_unfinished = []
-          finished_ids = set()
-          for event in events:
-              gw = int(event.get('id') or 0)
-              deadline = parse_dt(event.get('deadline_time'))
-              if event.get('finished') is True:
-                  finished_ids.add(gw)
-              if deadline is None:
-                  continue
-              if deadline > now:
-                  future.append((deadline, gw))
-              elif event.get('finished') is not True:
-                  passed_unfinished.append((deadline, gw))
+              if local.hour == 4:
+                  reasons.append('DAILY_0430_WIB_EVIDENCE_REFRESH')
 
-          if future:
-              next_deadline, next_gw = min(future)
-              hours_to_deadline = (next_deadline - now).total_seconds() / 3600.0
-              details['next_gw'] = next_gw
-              details['hours_to_deadline'] = round(hours_to_deadline, 2)
-              if 0 < hours_to_deadline <= 24:
-                  reasons.append(f'DEADLINE_WINDOW_GW{next_gw}_T24H')
+              future = []
+              passed_unfinished = []
+              finished_ids = set()
+              for event in events:
+                  gw = int(event.get('id') or 0)
+                  deadline = parse_dt(event.get('deadline_time'))
+                  if event.get('finished') is True:
+                      finished_ids.add(gw)
+                  if deadline is None:
+                      continue
+                  if deadline > now:
+                      future.append((deadline, gw))
+                  elif event.get('finished') is not True:
+                      passed_unfinished.append((deadline, gw))
 
-          if passed_unfinished:
-              last_deadline, live_gw = max(passed_unfinished)
-              hours_since_deadline = (now - last_deadline).total_seconds() / 3600.0
-              details['active_postdeadline_gw'] = live_gw
-              details['hours_since_deadline'] = round(hours_since_deadline, 2)
-              if 0 <= hours_since_deadline <= 6:
-                  reasons.append(f'POSTDEADLINE_FREEZE_GUARD_GW{live_gw}')
-              elif local.hour % 3 == 0:
-                  reasons.append(f'MATCH_MODE_3H_GW{live_gw}')
+              if future:
+                  next_deadline, next_gw = min(future)
+                  hours_to_deadline = (next_deadline - now).total_seconds() / 3600.0
+                  details['next_gw'] = next_gw
+                  details['hours_to_deadline'] = round(hours_to_deadline, 2)
+                  if 0 < hours_to_deadline <= 24:
+                      reasons.append(f'DEADLINE_WINDOW_GW{next_gw}_T24H')
 
-          for key, record in records.items():
-              if not isinstance(record, dict):
-                  continue
-              try:
-                  gw = int(record.get('gw') or key)
-              except (TypeError, ValueError):
-                  continue
-              if record.get('status') == 'SETTLED':
-                  continue
-              deadline = parse_dt(record.get('deadline_time'))
-              if deadline and deadline <= now and not isinstance(record.get('frozen_forecast'), dict):
-                  candidate = record.get('latest_pre_deadline_forecast')
-                  generated = parse_dt((candidate or {}).get('generated_at')) if isinstance(candidate, dict) else None
-                  if candidate and generated and generated <= deadline:
-                      reasons.append(f'FREEZE_RECOVERY_PENDING_GW{gw}')
-              if gw in finished_ids and isinstance(record.get('frozen_forecast'), dict):
-                  reasons.append(f'SETTLEMENT_PENDING_GW{gw}')
+              if passed_unfinished:
+                  last_deadline, live_gw = max(passed_unfinished)
+                  hours_since_deadline = (now - last_deadline).total_seconds() / 3600.0
+                  details['active_postdeadline_gw'] = live_gw
+                  details['hours_since_deadline'] = round(hours_since_deadline, 2)
+                  if 0 <= hours_since_deadline <= 6:
+                      reasons.append(f'POSTDEADLINE_FREEZE_GUARD_GW{live_gw}')
+                  elif local.hour % 3 == 0:
+                      reasons.append(f'MATCH_MODE_3H_GW{live_gw}')
+
+              for key, record in records.items():
+                  if not isinstance(record, dict):
+                      continue
+                  try:
+                      gw = int(record.get('gw') or key)
+                  except (TypeError, ValueError):
+                      continue
+                  if record.get('status') == 'SETTLED':
+                      continue
+                  deadline = parse_dt(record.get('deadline_time'))
+                  if deadline and deadline <= now and not isinstance(record.get('frozen_forecast'), dict):
+                      candidate = record.get('latest_pre_deadline_forecast')
+                      generated = parse_dt((candidate or {}).get('generated_at')) if isinstance(candidate, dict) else None
+                      if candidate and generated and generated <= deadline:
+                          reasons.append(f'FREEZE_RECOVERY_PENDING_GW{gw}')
+                  if gw in finished_ids and isinstance(record.get('frozen_forecast'), dict):
+                      reasons.append(f'SETTLEMENT_PENDING_GW{gw}')
+          else:
+              details['blocked_reason'] = 'DEPLOYED_PRODUCTION_BASELINE_NOT_RECONCILED'
 
           reasons = sorted(set(reasons))
-          should_run = bool(reasons)
+          should_run = baseline_ready and bool(reasons)
           output = Path(os.environ['GITHUB_OUTPUT'])
           with output.open('a', encoding='utf-8') as handle:
               handle.write(f"should_run={'true' if should_run else 'false'}\n")
+              handle.write(f"baseline_ready={'true' if baseline_ready else 'false'}\n")
               handle.write(f"reason_count={len(reasons)}\n")
               handle.write('reasons=' + ','.join(reasons) + '\n')
 
@@ -145,6 +176,7 @@ jobs:
           summary.write_text(
               '# V5 Evidence Scheduler\n\n'
               f'- Time authority: `{local.isoformat()}`\n'
+              f'- Deployed baseline ready: **{baseline_ready}**\n'
               f'- Scheduled heavy cycle: **{should_run}**\n'
               f'- Reasons: `{", ".join(reasons) if reasons else "NONE"}`\n'
               f'- Details: `{json.dumps(details, sort_keys=True)}`\n',
@@ -163,6 +195,6 @@ jobs:
           gh workflow run v5-shadow-cycle.yml --ref v5-unified-engine
           echo "Dispatched V5 shadow cycle: ${{ steps.gate.outputs.reasons }}"
 
-      - name: No-op outside governed evidence windows
+      - name: No-op outside governed evidence windows or during baseline drift
         if: steps.gate.outputs.should_run != 'true'
-        run: echo "No heavy V5 cycle required at this checkpoint."
+        run: echo "No heavy V5 cycle required; either outside evidence window or deployed production baseline is not reconciled."

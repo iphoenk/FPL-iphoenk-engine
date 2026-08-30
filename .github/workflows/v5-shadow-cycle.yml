@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: v5-real-shadow-cycle
+  cancel-in-progress: false
+
 env:
   PYTHONPATH: ${{ github.workspace }}
   V3_SOURCE_BRANCH: main
@@ -274,6 +278,139 @@ jobs:
         id: finalize_acceptance
         run: python -m src.v5.shadow_acceptance
 
+      - name: Build compact season analytics mart
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          root = Path('data/v5')
+          analytics = root / 'analytics'
+          analytics.mkdir(parents=True, exist_ok=True)
+          ledger_path = root / 'prediction_ledger.json'
+          accuracy_path = root / 'prediction_accuracy.json'
+          acceptance_path = Path('config/v5_acceptance_registry.json')
+
+          ledger = json.loads(ledger_path.read_text(encoding='utf-8')) if ledger_path.exists() else {'records': {}}
+          accuracy = json.loads(accuracy_path.read_text(encoding='utf-8')) if accuracy_path.exists() else {}
+          acceptance = json.loads(acceptance_path.read_text(encoding='utf-8'))
+          gate = acceptance.get('prediction_calibration_gate') or {}
+          records = ledger.get('records') if isinstance(ledger.get('records'), dict) else {}
+
+          facts = []
+          gw_metrics = []
+          for key, record in records.items():
+              if not isinstance(record, dict) or record.get('status') != 'SETTLED':
+                  continue
+              gw = int(record.get('gw') or key)
+              forecast = (record.get('frozen_forecast') or {}).get('players') or []
+              actual = (record.get('actual') or {}).get('players') or []
+              amap = {int(row.get('element')): row for row in actual if isinstance(row, dict) and row.get('element') is not None}
+              metrics = record.get('metrics') if isinstance(record.get('metrics'), dict) else {}
+              gw_metrics.append({'gw': gw, **metrics})
+              for row in forecast:
+                  if not isinstance(row, dict) or row.get('element') is None:
+                      continue
+                  element = int(row['element'])
+                  observed = amap.get(element)
+                  if observed is None:
+                      continue
+                  xpts = float(row.get('xpts') or 0.0)
+                  xmins = float(row.get('xmins') or 0.0)
+                  points = float(observed.get('points') or 0.0)
+                  minutes = float(observed.get('minutes') or 0.0)
+                  start_probability = float(row.get('start_probability') or 0.0)
+                  clean_sheet_probability = float(row.get('clean_sheet_probability') or 0.0)
+                  started = observed.get('started')
+                  clean_sheet = observed.get('clean_sheet')
+                  facts.append({
+                      'gw': gw,
+                      'element': element,
+                      'name': row.get('name'),
+                      'position': row.get('position'),
+                      'xpts': xpts,
+                      'actual_points': points,
+                      'points_error': round(points - xpts, 4),
+                      'points_abs_error': round(abs(points - xpts), 4),
+                      'xmins': xmins,
+                      'actual_minutes': minutes,
+                      'xmins_error': round(minutes - xmins, 2),
+                      'xmins_abs_error': round(abs(minutes - xmins), 2),
+                      'start_probability': start_probability,
+                      'started': started,
+                      'starter_brier_component': round((start_probability - float(started)) ** 2, 6) if started is not None else None,
+                      'clean_sheet_probability': clean_sheet_probability,
+                      'clean_sheet': clean_sheet,
+                      'clean_sheet_brier_component': round((clean_sheet_probability - float(clean_sheet)) ** 2, 6) if clean_sheet is not None else None,
+                      'forecast_generated_at': (record.get('frozen_forecast') or {}).get('generated_at'),
+                      'settled_at': (record.get('actual') or {}).get('settled_at'),
+                  })
+
+          facts.sort(key=lambda row: (row['gw'], row['element']))
+          gw_metrics.sort(key=lambda row: row['gw'])
+          with (analytics / 'player_gw_fact.jsonl').open('w', encoding='utf-8') as handle:
+              for row in facts:
+                  handle.write(json.dumps(row, sort_keys=True, separators=(',', ':')) + '\n')
+          (analytics / 'gw_metrics.json').write_text(json.dumps({'rows': gw_metrics}, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+
+          overall = accuracy.get('overall') if isinstance(accuracy.get('overall'), dict) else {}
+          settled = accuracy.get('settled_gameweeks') if isinstance(accuracy.get('settled_gameweeks'), list) else []
+          readiness = {
+              'settled_gameweeks': len(settled),
+              'minimum_settled_gameweeks': int(gate.get('minimum_settled_gameweeks') or 0),
+              'player_gw_samples': int(overall.get('sample_size') or 0),
+              'minimum_player_gw_samples': int(gate.get('minimum_player_gw_samples') or 0),
+              'starter_samples': int(overall.get('starter_sample_size') or 0),
+              'minimum_starter_samples': int(gate.get('minimum_starter_samples') or 0),
+              'clean_sheet_samples': int(overall.get('clean_sheet_sample_size') or 0),
+              'minimum_clean_sheet_samples': int(gate.get('minimum_clean_sheet_samples') or 0),
+              'temporal_guard_pass': bool((accuracy.get('temporal_guard') or {}).get('pass')),
+              'frozen_baseline_non_regression': bool((accuracy.get('baseline_comparison') or {}).get('pass')),
+          }
+          readiness['sample_thresholds_pass'] = (
+              readiness['settled_gameweeks'] >= readiness['minimum_settled_gameweeks']
+              and readiness['player_gw_samples'] >= readiness['minimum_player_gw_samples']
+              and readiness['starter_samples'] >= readiness['minimum_starter_samples']
+              and readiness['clean_sheet_samples'] >= readiness['minimum_clean_sheet_samples']
+          )
+          summary = {
+              'schema_version': 1,
+              'generated_at': datetime.now(timezone.utc).isoformat(),
+              'model': 'V5_COMPACT_PREDICTION_ANALYTICS_MART_V1',
+              'fact_rows': len(facts),
+              'settled_gameweeks': settled,
+              'readiness': readiness,
+              'overall_metrics': overall,
+              'governance': {
+                  'derived_from_canonical_frozen_prediction_ledger': True,
+                  'retroactive_prediction_reconstruction_forbidden': True,
+                  'mart_is_derived_not_prediction_authority': True,
+              },
+          }
+          (analytics / 'summary.json').write_text(json.dumps(summary, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          storage = {
+              'schema_version': 1,
+              'policy': 'V5_EVIDENCE_STORAGE_POLICY_V1',
+              'raw_actions_artifact_retention_days': 14,
+              'canonical_shadow_state_retention': 'CURRENT_2026_27_SEASON',
+              'compact_analytics_mart_retention': 'CURRENT_2026_27_SEASON',
+              'postseason_review_window_days': 90,
+              'dwh_mode': 'NOT_REQUIRED_AT_CURRENT_SCALE',
+              'dwh_escalation_trigger': 'MULTI_SEASON_OR_GT_100000_PLAYER_GW_FACT_ROWS',
+              'expected_single_season_player_gw_rows': 'approximately 25000-30000',
+              'notes': [
+                  'Actions artifacts auto-expire; do not use them as canonical evidence.',
+                  'Canonical frozen ledger and derived compact analytics remain on v5-shadow-runtime for the season.',
+                  'The analytics mart is rebuildable from the canonical ledger and may be deleted/rebuilt without changing prediction authority.'
+              ],
+          }
+          (analytics / 'storage_policy.json').write_text(json.dumps(storage, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print({'fact_rows': len(facts), 'settled_gameweeks': settled, 'readiness': readiness, 'raw_retention_days': 14})
+          PY
+
       - name: Upload shadow-cycle evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -283,6 +420,7 @@ jobs:
             .shadow/v3_latest.json
             .shadow/v3_lineup_decision.json
             data/v5/shadow/
+            data/v5/analytics/
             data/v5/source_fusion.json
             data/v5/source_cache/
             data/v5/user_report.json
@@ -291,7 +429,7 @@ jobs:
             data/v5/dss_watchlist.json
             data/v5/owned_challenger_comparator.json
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 14
 
       - name: Publish isolated V5 shadow state
         shell: bash

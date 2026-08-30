@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "v5.0.0-beta.4-gw3-post-reanchor-official-auth-proof-1",
-  "requested_at": "2026-08-30T00:31:00Z",
+  "requested_cycle": "v5.0.0-beta.4-gw3-official-submitted-fallback-proof-1",
+  "requested_at": "2026-08-30T01:03:00Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "accepted_production_baseline_from_manifest",
   "v5_role": "shadow_only",
@@ -19,7 +19,8 @@
   "require_source_fusion_fail_neutral": true,
   "require_source_fusion_observability": true,
   "require_api_football_live_attempt": true,
-  "require_authenticated_official_predeadline": true,
+  "require_authenticated_official_predeadline": false,
+  "require_official_submitted_predeadline": true,
   "understat_role": "challenger",
   "api_football_role": "cross_competition_enrichment"
 }

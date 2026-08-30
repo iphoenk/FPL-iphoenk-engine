@@ -2,7 +2,7 @@
   "schema_version": 2,
   "release": "4.9.6",
   "track": "V4",
-  "status": "HARDENING_CANDIDATE",
+  "status": "CANONICAL_PRODUCTION_GREEN",
   "canonical_branch": "v4-prediction-engine",
   "runtime_branch": "runtime-data-v4",
   "required_check": "core / validate-v4",

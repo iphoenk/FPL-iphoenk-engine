@@ -188,7 +188,27 @@ jobs:
           # Hard ceiling is intentionally unchanged. A second miss remains a hard failure.
           python -m src.runtime_v3.performance_guard --profile "$profile"
 
-      - name: Materialize publication whitelist
+      - name: Verify V3 candidate definition of done before publication
+        if: steps.cadence.outputs.should_collect == 'true'
+        run: python -m src.runtime_v3.definition_of_done --scope candidate --source-commit "$GITHUB_SHA"
+
+      - name: Assert source main is still canonical before publication
+        if: steps.cadence.outputs.should_collect == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin \
+            "+refs/heads/main:refs/remotes/origin/main" \
+            "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          canonical_main="$(git rev-parse refs/remotes/origin/main)"
+          if [ "$canonical_main" != "$GITHUB_SHA" ]; then
+            echo "Refusing stale runtime publication: run_source=$GITHUB_SHA canonical_main=$canonical_main"
+            exit 1
+          fi
+          runtime_base="$(git rev-parse refs/remotes/origin/${RUNTIME_BRANCH})"
+          echo "RUNTIME_BASE_SHA=$runtime_base" >> "$GITHUB_ENV"
+
+      - name: Materialize and validate publication whitelist
         if: steps.cadence.outputs.should_collect == 'true'
         shell: bash
         run: |
@@ -199,8 +219,12 @@ jobs:
             --output-dir "$RUNNER_TEMP/runtime-publish" \
             --profile "${{ steps.runtime_profile.outputs.profile }}" \
             --source-commit "$GITHUB_SHA"
+          python -m src.runtime_v3.publication_verify \
+            --data-dir "$RUNNER_TEMP/runtime-publish/data" \
+            --profile "${{ steps.runtime_profile.outputs.profile }}" \
+            --source-commit "$GITHUB_SHA"
 
-      - name: Publish rolling runtime snapshot
+      - name: Publish rolling runtime snapshot atomically
         if: steps.cadence.outputs.should_collect == 'true'
         shell: bash
         run: |
@@ -217,8 +241,38 @@ jobs:
           cp -a "$RUNNER_TEMP/runtime-publish/data" ./data
           git add -f data/
           git commit -m "data: rolling FPL runtime snapshot [skip ci]"
-          git push --force origin HEAD:"$RUNTIME_BRANCH"
+          published_sha="$(git rev-parse HEAD)"
+          git push \
+            --force-with-lease="refs/heads/${RUNTIME_BRANCH}:${RUNTIME_BASE_SHA}" \
+            origin "HEAD:refs/heads/${RUNTIME_BRANCH}"
+          echo "PUBLISHED_RUNTIME_SHA=$published_sha" >> "$GITHUB_ENV"
 
-      - name: Verify V3 production definition of done
+      - name: Verify published runtime provenance and exact whitelist
         if: steps.cadence.outputs.should_collect == 'true'
-        run: python -m src.runtime_v3.definition_of_done --scope production --source-commit "$GITHUB_SHA"
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          published_head="$(git rev-parse refs/remotes/origin/${RUNTIME_BRANCH})"
+          if [ "$published_head" != "$PUBLISHED_RUNTIME_SHA" ]; then
+            echo "Published runtime HEAD mismatch: expected=$PUBLISHED_RUNTIME_SHA actual=$published_head"
+            exit 1
+          fi
+
+          verify_tree="$RUNNER_TEMP/runtime-verify"
+          rm -rf "$verify_tree"
+          git worktree add --detach "$verify_tree" "refs/remotes/origin/${RUNTIME_BRANCH}"
+
+          unauthorized_root="$(git -C "$verify_tree" ls-files | grep -v '^data/' || true)"
+          if [ -n "$unauthorized_root" ]; then
+            echo "Unauthorized files outside data/:"
+            echo "$unauthorized_root"
+            exit 1
+          fi
+
+          python -m src.runtime_v3.publication_verify \
+            --data-dir "$verify_tree/data" \
+            --profile "${{ steps.runtime_profile.outputs.profile }}" \
+            --source-commit "$GITHUB_SHA"
+
+          diff -qr "$RUNNER_TEMP/runtime-publish/data" "$verify_tree/data"

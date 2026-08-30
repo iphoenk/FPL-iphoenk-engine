@@ -49,7 +49,7 @@ def resolve_locked_squad(lock: dict, bootstrap: dict) -> tuple[dict, ...]:
             raise RuntimeError(f"locked name mismatch: {eid}")
         if source_row.get("expected_team") and source_row["expected_team"] != team:
             raise RuntimeError(f"locked team mismatch: {eid}")
-        out.append(_row(player, teams, "user_lock", source_row.get("purchase_cost")))
+        out.append(_row(player, teams, "user_capture", source_row.get("purchase_cost")))
     return tuple(out)
 
 
@@ -64,7 +64,7 @@ def resolve_submitted_squad(picks: dict, bootstrap: dict) -> tuple[dict, ...]:
 
 
 def resolve_authenticated_draft(my_team: dict, bootstrap: dict) -> tuple[dict, ...]:
-    """Legacy parser retained for private diagnostics; authenticated draft is not squad authority."""
+    """Parse private draft diagnostics only. Authenticated Official is never squad authority."""
     players, teams = bootstrap_maps(bootstrap)
     out = []
     for pick in my_team.get("picks", []) or []:
@@ -101,33 +101,44 @@ def planning_override_state(
     planning_gw: int | None,
     submitted_gw: int | None,
 ) -> dict[str, Any]:
-    """Resolve whether target-GW user capture may replace the Official submitted baseline."""
+    """Resolve exact-target user-capture eligibility without masking Official public truth."""
     lock = lock if isinstance(lock, dict) else {}
     wildcard = bool(lock.get("wildcard_active"))
     free_hit = bool(lock.get("free_hit_active"))
     manual = bool(lock.get("planning_override_active"))
     requested = wildcard or free_hit or manual
+    has_players = bool(lock.get("players"))
     target_raw = lock.get("target_gw")
-    if requested and target_raw is None:
-        raise RuntimeError("V5 FAIL CLOSED: active user planning override requires target_gw")
-    try:
-        target_gw = int(target_raw) if target_raw is not None else None
-    except (TypeError, ValueError) as exc:
-        raise RuntimeError("V5 FAIL CLOSED: invalid target_gw in user planning override") from exc
+    target_gw = None
+    rejection_reason = None
+
+    if requested and not has_players:
+        rejection_reason = "NO_CAPTURE_PLAYERS"
+    elif requested and target_raw is None:
+        rejection_reason = "MISSING_TARGET_GW"
+    elif target_raw is not None:
+        try:
+            target_gw = int(target_raw)
+        except (TypeError, ValueError):
+            rejection_reason = "INVALID_TARGET_GW" if requested else None
+
     planning = int(planning_gw) if planning_gw is not None else None
     submitted = int(submitted_gw) if submitted_gw is not None else None
-    applied = bool(
-        requested
-        and planning is not None
-        and target_gw == planning
-        and planning != submitted
-    )
+    if requested and rejection_reason is None:
+        if planning is None:
+            rejection_reason = "UNKNOWN_PLANNING_GW"
+        elif target_gw != planning:
+            rejection_reason = "TARGET_GW_MISMATCH"
+        elif submitted is not None and planning == submitted:
+            rejection_reason = "OFFICIAL_SUBMITTED_RECLAIMS_AUTHORITY"
+
+    applied = bool(requested and has_players and rejection_reason is None and target_gw == planning)
     if wildcard:
         kind = "WILDCARD"
     elif free_hit:
         kind = "FREE_HIT"
     elif manual:
-        kind = "USER_LOCK"
+        kind = "PLANNING_OVERRIDE"
     else:
         kind = "NONE"
     return {
@@ -135,16 +146,23 @@ def planning_override_state(
         "baseline_gw": submitted,
         "primary_authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
         "default_authority": "official_public",
+        "conditional_override_authority": "user_capture",
         "override_requested": requested,
         "override_kind": kind,
         "override_target_gw": target_gw,
         "override_applied": applied,
-        "effective_authority": "user_lock" if applied else "official_public",
-        "authority_source": (lock.get("authority_source") or "USER_PLANNING_OVERRIDE") if applied else "OFFICIAL_FPL_PICKS",
-        "stale_override_rejected": bool(requested and not applied and target_gw != planning),
-        "post_deadline_official_reclaims_authority": bool(requested and planning == submitted),
+        "override_rejection_reason": rejection_reason,
+        "effective_authority": "user_capture" if applied else "official_public",
+        "stale_override_rejected": bool(requested and not applied),
+        "post_deadline_official_reclaims_authority": rejection_reason == "OFFICIAL_SUBMITTED_RECLAIMS_AUTHORITY",
         "authenticated_official_is_private_enrichment_only": True,
     }
+
+
+def _capture_is_current(lock: dict | None, planning_gw: int | None, submitted_gw: int | None) -> bool:
+    return bool(
+        planning_override_state(lock, planning_gw=planning_gw, submitted_gw=submitted_gw).get("override_applied")
+    )
 
 
 def select_squad(
@@ -162,27 +180,54 @@ def select_squad(
         planning_gw=planning_gw,
         submitted_gw=submitted_gw,
     )
+    capture_error = None
     for authority in phase_authority_chain(phase, "squad"):
-        if authority == "user_lock":
+        validation = None
+        if authority in {"user_capture", "user_lock"}:
             if not baseline.get("override_applied") or not locked_squad:
                 continue
-            squad = resolve_locked_squad(locked_squad, bootstrap)
+            try:
+                squad = resolve_locked_squad(locked_squad, bootstrap)
+                validation = validate_squad(squad)
+            except (KeyError, TypeError, ValueError, RuntimeError) as exc:
+                capture_error = str(exc)
+                baseline = {
+                    **baseline,
+                    "override_applied": False,
+                    "effective_authority": "official_public",
+                    "invalid_override_rejected": True,
+                    "override_rejection_reason": "INVALID_USER_CAPTURE",
+                    "override_validation_error": capture_error,
+                }
+                continue
+            effective_authority = "user_capture"
         elif authority == "official_public" and submitted_picks:
             squad = resolve_submitted_squad(submitted_picks, bootstrap)
+            validation = validate_squad(squad) if squad else None
+            effective_authority = "official_public"
         elif authority == "official_authenticated":
-            # Authenticated Official is optional private enrichment in the current production contract.
-            # Never allow it to become V5 squad, lineup or captaincy authority.
+            # Historical registry snapshots may still contain this label. It is never decision authority.
             continue
         else:
             continue
         if squad:
             return {
-                "authority": authority,
+                "authority": effective_authority,
                 "squad": squad,
-                "validation": validate_squad(squad),
+                "validation": validation or validate_squad(squad),
                 "projection_baseline": baseline,
+                "authority_policy": {
+                    "model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+                    "public_official": "DEFAULT_SUBMITTED_PLANNING_BASELINE",
+                    "user_capture": "EXACT_TARGET_PREDEADLINE_OVERRIDE",
+                    "authenticated_official": "OPTIONAL_PRIVATE_ENRICHMENT",
+                    "authenticated_official_production_blocking": False,
+                    "authenticated_official_must_not_select_squad": True,
+                    "capture_current": bool(baseline.get("override_applied")),
+                },
             }
-    raise RuntimeError(f"no usable V5 squad authority for phase {phase}")
+    detail = f"; rejected user capture: {capture_error}" if capture_error else ""
+    raise RuntimeError(f"no usable V5 squad authority for phase {phase}{detail}")
 
 
 def reconcile_baseline(pre_deadline_squad: Iterable[dict], submitted_squad: Iterable[dict]) -> dict[str, Any]:

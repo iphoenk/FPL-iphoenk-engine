@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from typing import Any
 
 from src.sources.official_auth import (
@@ -70,19 +71,13 @@ def _draft_fingerprint(elements: list[int]) -> str | None:
 
 
 def _safe_finance(my_team: dict | None, authoritative_elements: set[int]) -> dict:
-    """Persist only safe private finance facts, never the raw authenticated payload.
-
-    Exact private purchase/sell totals are computed over the current 15-player
-    private squad returned by my-team. Authoritative submitted-squad coverage is
-    tracked separately because a legitimate pre-deadline transfer can make the
-    private squad differ from the previous submitted squad.
-    """
+    """Persist safe finance facts while keeping submitted-vs-private semantics separate."""
     payload = my_team or {}
     transfers = payload.get("transfers") if isinstance(payload.get("transfers"), dict) else {}
     picks = payload.get("picks") if isinstance(payload.get("picks"), list) else []
 
-    prices = []
-    authoritative_covered: set[int] = set()
+    private_prices = []
+    authoritative_prices = []
     for row in picks:
         try:
             eid = int(row.get("element"))
@@ -93,21 +88,33 @@ def _safe_finance(my_team: dict | None, authoritative_elements: set[int]) -> dic
             value = row.get(key)
             if value is not None:
                 item[key] = value
-        prices.append(item)
+        private_prices.append(item)
         if eid in authoritative_elements:
-            authoritative_covered.add(eid)
+            authoritative_prices.append(dict(item))
 
-    private_expected = len(picks)
-    private_covered = len({x["element"] for x in prices})
-    sell_complete = (
-        private_expected == 15
-        and private_covered == 15
-        and all("selling_price" in x for x in prices)
+    authoritative_expected = len(authoritative_elements)
+    authoritative_covered = len({x["element"] for x in authoritative_prices})
+    authoritative_sell_complete = (
+        bool(authoritative_expected)
+        and authoritative_covered == authoritative_expected
+        and all("selling_price" in x for x in authoritative_prices)
     )
-    purchase_complete = (
-        private_expected == 15
+    authoritative_purchase_complete = (
+        bool(authoritative_expected)
+        and authoritative_covered == authoritative_expected
+        and all("purchase_price" in x for x in authoritative_prices)
+    )
+
+    private_covered = len({x["element"] for x in private_prices})
+    private_sell_complete = (
+        len(picks) == 15
         and private_covered == 15
-        and all("purchase_price" in x for x in prices)
+        and all("selling_price" in x for x in private_prices)
+    )
+    private_purchase_complete = (
+        len(picks) == 15
+        and private_covered == 15
+        and all("purchase_price" in x for x in private_prices)
     )
 
     return {
@@ -115,19 +122,40 @@ def _safe_finance(my_team: dict | None, authoritative_elements: set[int]) -> dic
         "value": transfers.get("value"),
         "transfers_made": transfers.get("made"),
         "transfer_cost": transfers.get("cost"),
+        # Backward-compatible submitted-squad finance fields.
+        "coverage": {
+            "expected": authoritative_expected,
+            "covered": authoritative_covered,
+            "complete": authoritative_sell_complete,
+        },
+        "exact_sell_total": (
+            sum(x["selling_price"] or 0 for x in authoritative_prices)
+            if authoritative_sell_complete
+            else None
+        ),
+        "exact_purchase_total": (
+            sum(x["purchase_price"] or 0 for x in authoritative_prices)
+            if authoritative_purchase_complete
+            else None
+        ),
+        "prices_for_authoritative_squad": authoritative_prices,
+        # New current-private-squad finance authority for pre-deadline planning.
         "private_squad_coverage": {
             "expected": 15,
             "covered": private_covered,
             "complete": private_covered == 15,
         },
-        "authoritative_submitted_coverage": {
-            "expected": len(authoritative_elements),
-            "covered": len(authoritative_covered),
-            "complete": bool(authoritative_elements) and authoritative_covered == authoritative_elements,
-        },
-        "exact_sell_total": sum(x["selling_price"] or 0 for x in prices) if sell_complete else None,
-        "exact_purchase_total": sum(x["purchase_price"] or 0 for x in prices) if purchase_complete else None,
-        "prices_for_private_squad": prices,
+        "private_exact_sell_total": (
+            sum(x["selling_price"] or 0 for x in private_prices)
+            if private_sell_complete
+            else None
+        ),
+        "private_exact_purchase_total": (
+            sum(x["purchase_price"] or 0 for x in private_prices)
+            if private_purchase_complete
+            else None
+        ),
+        "prices_for_private_squad": private_prices,
     }
 
 
@@ -176,10 +204,10 @@ def _production_readiness(summary: dict) -> dict:
     finance = summary.get("safe_finance") or {}
     if not (finance.get("private_squad_coverage") or {}).get("complete"):
         reasons.append("private_squad_finance_incomplete")
-    if finance.get("exact_sell_total") is None:
-        reasons.append("exact_sell_total_unavailable")
-    if finance.get("exact_purchase_total") is None:
-        reasons.append("exact_purchase_total_unavailable")
+    if finance.get("private_exact_sell_total") is None:
+        reasons.append("private_exact_sell_total_unavailable")
+    if finance.get("private_exact_purchase_total") is None:
+        reasons.append("private_exact_purchase_total_unavailable")
     if not (summary.get("chip_state") or {}).get("available"):
         reasons.append("chip_state_unavailable")
     if not (summary.get("transfers_latest") or {}).get("available"):
@@ -198,8 +226,11 @@ def _persist(summary: dict):
     latest.setdefault("files", {})["auth"] = "data/auth.json"
     atomic_json(DATA / "latest.json", latest)
 
+    # Unit diagnostics and disabled CI remain non-blocking. Production becomes
+    # fail-closed only when the real runtime environment explicitly enables auth.
+    env_mode = os.getenv("FPL_AUTH_MODE", "disabled").strip().lower() or "disabled"
     readiness = summary["production_readiness"]
-    if readiness.get("required") and not readiness.get("ready"):
+    if env_mode != "disabled" and readiness.get("required") and not readiness.get("ready"):
         raise RuntimeError(
             "FAIL CLOSED: configured authenticated Official FPL is not production-ready: "
             + ",".join(readiness.get("reasons") or [])

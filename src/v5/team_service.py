@@ -65,12 +65,13 @@ def build_team_state(
         initial_purchase_costs=_initial_purchase_costs(locked_squad),
     )
     bank = auth_finance.get("bank")
-    if bank is None and resolved["authority"] == "user_lock" and locked_squad:
+    if bank is None and resolved["authority"] == "user_capture" and locked_squad:
         bank = locked_squad.get("itb_tenths")
     if bank is None and isinstance(entry, dict):
         bank = entry.get("last_deadline_bank")
     return {
         "authority": resolved["authority"],
+        "authority_policy": resolved.get("authority_policy", {}),
         "projection_baseline": resolved.get("projection_baseline") or {},
         "squad": list(squad),
         "validation": resolved["validation"],
@@ -79,6 +80,7 @@ def build_team_state(
             "bank": bank,
             "authenticated_coverage": auth_finance.get("coverage", {}),
             "private_enrichment_coverage": auth_finance.get("private_squad_coverage", {}),
+            "authenticated_role": "OPTIONAL_PRIVATE_ENRICHMENT",
         },
         "owned_ids": list(owned_ids),
         "mini_leagues": public_mini_league_memberships(entry),
@@ -86,6 +88,7 @@ def build_team_state(
             "primary_squad_authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
             "authenticated_official_is_optional_private_enrichment": True,
             "authenticated_official_must_not_select_squad": True,
+            "authenticated_official_production_blocking": False,
             "user_capture_requires_exact_target_gw": True,
         },
     }

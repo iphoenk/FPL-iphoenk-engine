@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "locked_squad_config": "config/locked_squad.json",
   "validation": {
     "fail_closed": true,
@@ -11,11 +11,15 @@
   "pre_deadline": {
     "primary_authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
     "default_authority": "official_public",
-    "conditional_override_authority": "user_lock",
+    "conditional_override_authority": "user_capture",
+    "fallback_authority": "official_public",
     "override_requires_exact_target_gw": true,
     "override_requires_active_wc_fh_or_planning_override": true,
+    "user_capture_must_match_planning_gw": true,
     "stale_override_rejected": true,
-    "authenticated_official_role": "OPTIONAL_PRIVATE_ENRICHMENT",
+    "stale_capture_must_not_mask_official_submitted": true,
+    "authenticated_official_role": "optional_private_enrichment",
+    "authenticated_official_production_blocking": false,
     "authenticated_official_is_squad_authority": false
   },
   "reconciliation": {

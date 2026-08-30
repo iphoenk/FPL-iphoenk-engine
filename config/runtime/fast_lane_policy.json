@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "registry": "V3_FAST_LANE_POLICY_V1",
+  "profiles": ["fast_decision"],
+  "execution_boundary": "IN_PROCESS_COALESCED",
+  "hard_wall_ms": 3000,
+  "warning_wall_ms": 2800,
+  "required_execution_domains": 11,
+  "required_capability_owners": 21,
+  "consecutive_candidate_runs": 3,
+  "fail_closed_after_partial_execution": true,
+  "fallback_to_multi_process_allowed": false,
+  "preserve_capability_order": true,
+  "preserve_artifact_validation": true,
+  "preserve_material_decision_semantics": true,
+  "preserve_full_deep_live_paths": true,
+  "donor_patterns": {
+    "v4_hot_orchestrator": "ADOPTED_SINGLE_PROCESS_BOUNDARY",
+    "v4_immutable_stage_guard": "PARTIAL_EXISTING_ARTIFACT_VALIDATION",
+    "v5_config_cache": "DEFERRED_UNTIL_MEASURED_BENEFIT",
+    "v5_degraded_mode": "ADOPT_FAIL_CLOSED_PRINCIPLE_NOT_STATIC_FALLBACK_PAYLOADS",
+    "v5_release_attestation": "ALREADY_COVERED_BY_V3_EXACT_SOURCE_DOD"
+  }
+}

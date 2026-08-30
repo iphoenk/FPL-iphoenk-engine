@@ -5,12 +5,13 @@ import json
 from pathlib import Path
 from time import perf_counter
 
+from src.engines.v4_preseason_evidence import EVIDENCE as PRESEASON_EVIDENCE, attach_preseason_evidence
 from src.engines.v4_runner import build_predictions as canonical_build_predictions
 from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
 
 CACHE = DATA / "predictions_base_hot_cache_v4.json"
-ALGORITHM = "v4.9.6-exact-base-prediction-cache-v3"
+ALGORITHM = "v4.9.6-exact-base-prediction-cache-v4"
 _LAST_STATUS: dict = {}
 
 
@@ -25,6 +26,7 @@ def _source_digest() -> dict:
         "inputs": ROOT / "src/models/v4_prediction_inputs.py",
         "identity": ROOT / "src/models/player_identity.py",
         "quality": CONFIG / "prediction_quality_registry.json",
+        "preseason_consumer": ROOT / "src/engines/v4_preseason_evidence.py",
     }
     return {name: _digest_if_exists(path) for name, path in paths.items()}
 
@@ -37,6 +39,7 @@ def _stats_digests(stats_gw: int | None) -> dict:
         "core": stats / f"core_insights_{suffix}.json" if suffix else stats / "__missing_core__",
         "shots": stats / f"shots_{suffix}.json" if suffix else stats / "__missing_shots__",
         "matches": stats / f"playermatchstats_{suffix}.json" if suffix else stats / "__missing_matches__",
+        "preseason": PRESEASON_EVIDENCE,
     }
     return {name: _digest_if_exists(path) for name, path in paths.items()}
 
@@ -60,14 +63,7 @@ def semantic_fingerprint(bootstrap: dict, fixtures: list[dict], stats_gw: int | 
 
 
 def _restamp_prediction_contract(predictions: dict, generated_at: str) -> dict:
-    """Restamp only timestamp fields defined by the prediction output contract.
-
-    ``read_json`` already returns a newly parsed mutable object. Rebuilding the
-    entire multi-megabyte prediction tree (and previously deepcopying it first)
-    provided no isolation benefit and dominated cache-hit latency. Canonical model
-    output has one root ``generated_at`` and one string ``provenance.point_in_time``
-    per projected fixture; the root boolean ``point_in_time`` remains untouched.
-    """
+    """Restamp only timestamp fields defined by the prediction output contract."""
     predictions["generated_at"] = generated_at
     for player in predictions.get("players") or []:
         for fixture in player.get("fixtures") or []:
@@ -77,12 +73,18 @@ def _restamp_prediction_contract(predictions: dict, generated_at: str) -> dict:
     return predictions
 
 
-# Backward-compatible helper name for focused tests/callers. It intentionally
-# applies the prediction-contract restamp rather than recursively rewriting keys.
 def _restamp(value, generated_at: str):
     if not isinstance(value, dict):
         return value
     return _restamp_prediction_contract(value, generated_at)
+
+
+def _attach_current_evidence(predictions: dict) -> dict:
+    # Preseason is a governed optional evidence layer. It is deliberately attached
+    # after base-cache retrieval so missing evidence never invalidates canonical
+    # model truth, while a verified evidence-file digest still participates in the
+    # semantic fingerprint and therefore invalidates stale cache state when supplied.
+    return attach_preseason_evidence(predictions)
 
 
 def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at: str, stats_gw: int | None = None) -> dict:
@@ -97,7 +99,7 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
     cache_read_ms = round((perf_counter() - t) * 1000.0, 2)
     if cached.get("algorithm") == ALGORITHM and cached.get("fingerprint") == fingerprint and (cached.get("predictions") or {}).get("players"):
         t = perf_counter()
-        predictions = _restamp_prediction_contract(cached["predictions"], generated_at)
+        predictions = _attach_current_evidence(_restamp_prediction_contract(cached["predictions"], generated_at))
         restamp_ms = round((perf_counter() - t) * 1000.0, 2)
         _LAST_STATUS = {
             "hit": True,
@@ -116,7 +118,7 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
     canonical_build_ms = round((perf_counter() - t) * 1000.0, 2)
     t = perf_counter()
     atomic_json(CACHE, {
-        "schema_version": 3,
+        "schema_version": 4,
         "algorithm": ALGORITHM,
         "fingerprint": fingerprint,
         "predictions": predictions,
@@ -127,9 +129,13 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
             "prediction_contract_timestamp_restamp_only": True,
             "boolean_point_in_time_truth_preserved": True,
             "competitive_load_and_team_news_attached_after_base_cache": True,
+            "preseason_evidence_attached_after_base_cache": True,
+            "preseason_evidence_never_fabricated": True,
+            "preseason_direct_xpts_mutation": False,
         },
     })
     cache_write_ms = round((perf_counter() - t) * 1000.0, 2)
+    predictions = _attach_current_evidence(predictions)
     _LAST_STATUS = {
         "hit": False,
         "reason": "CACHE_MISS_REBUILT_CANONICAL",

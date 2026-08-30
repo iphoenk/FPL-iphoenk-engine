@@ -58,10 +58,13 @@ def test_release_metadata_surfaces_are_consistent():
     assert artifact_registry["consumer_contract"]["personal_gameweek_context_required"] is True
     assert artifact_registry["consumer_contract"]["natural_user_presentation_required"] is True
     assert artifact_registry["consumer_contract"]["report_checkpoint_required"] is True
-    assert service_registry["schema_version"] == 16
-    assert service_registry["production_contract"].startswith("v3.22-")
+    assert service_registry["schema_version"] == 17
+    assert service_registry["production_contract"].startswith("v3.39-")
     assert "tactical_context" in service_registry["services"]
+    assert "weather_context" in service_registry["services"]
     assert service_registry["policy"]["service_boundaries_follow_artifact_ownership_not_file_size"] is True
+    assert service_registry["policy"]["weather_acquisition_lives_inside_source_layer"] is True
+    assert service_registry["policy"]["weather_context_is_separate_governed_enrichment_capability"] is True
     assert service_registry["policy"]["required_core_and_optional_private_enrichment_are_distinct"] is True
     assert service_registry["policy"]["optional_private_enrichment_never_blocks_required_core"] is True
     assert execution_domains["registry"] == "V3_EXECUTION_DOMAINS_V2"

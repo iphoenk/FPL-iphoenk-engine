@@ -13,7 +13,6 @@ def replace_once(path: Path, old: str, new: str) -> None:
     path.write_text(text.replace(old, new), encoding='utf-8')
 
 
-# 1) Coalesced FAST lane in domain orchestrator.
 p = ROOT / 'src/runtime_v3/domain_orchestrator.py'
 replace_once(
     p,
@@ -25,16 +24,12 @@ replace_once(
     'PERFORMANCE_PATH = DATA / "runtime_performance.json"\nDOMAIN_RUNTIME_ID = "v3-domain-pipeline-v2"\n',
     'PERFORMANCE_PATH = DATA / "runtime_performance.json"\nFAST_LANE_POLICY_PATH = ROOT / "config" / "runtime" / "fast_lane_policy.json"\nDOMAIN_RUNTIME_ID = "v3-domain-pipeline-v2"\n',
 )
-insert_after = '''def _run_domain_process(\n    domain_name: str,\n    *,\n    mode: str,\n    stats: bool,\n    deep_stats: bool,\n    profile_name: str,\n    cache_dir: Path,\n    cache_ttl: int,\n    timeout: int,\n    data_dir: Path = DATA,\n) -> dict[str, Any]:\n'''
 text = p.read_text(encoding='utf-8')
-idx = text.index(insert_after)
-# insert helper before next def _domain_seed_paths by textual boundary
-marker = '\n\ndef _domain_seed_paths('
-pos = text.index(marker, idx)
+idx = text.index('def _run_domain_process(')
+pos = text.index('\n\ndef _domain_seed_paths(', idx)
 helper = '''\n\ndef _fast_lane_policy() -> dict[str, Any]:\n    payload = json.loads(FAST_LANE_POLICY_PATH.read_text(encoding="utf-8"))\n    if payload.get("registry") != "V3_FAST_LANE_POLICY_V1":\n        raise RuntimeError("unexpected V3 fast-lane policy registry")\n    return payload\n\n\ndef _run_domain_in_process(\n    domain_name: str,\n    *,\n    mode: str,\n    stats: bool,\n    deep_stats: bool,\n    profile_name: str,\n    cache_dir: Path,\n    cache_ttl: int,\n) -> dict[str, Any]:\n    started = time.perf_counter()\n    previous = {\n        key: os.environ.get(key)\n        for key in ("FPL_HTTP_CACHE_DIR", "FPL_HTTP_CACHE_TTL_SECONDS", "FPL_EXECUTION_PROFILE")\n    }\n    os.environ["FPL_HTTP_CACHE_DIR"] = str(cache_dir)\n    os.environ["FPL_HTTP_CACHE_TTL_SECONDS"] = str(cache_ttl)\n    os.environ["FPL_EXECUTION_PROFILE"] = profile_name\n    try:\n        payload = domain_process_runner.run_domain(domain_name, mode, stats, deep_stats, profile_name)\n    finally:\n        for key, value in previous.items():\n            if value is None:\n                os.environ.pop(key, None)\n            else:\n                os.environ[key] = value\n    payload["process_elapsed_ms"] = round((time.perf_counter() - started) * 1000.0, 3)\n    payload["execution_boundary"] = "IN_PROCESS_COALESCED"\n    return payload\n'''
 text = text[:pos] + helper + text[pos:]
 p.write_text(text, encoding='utf-8')
-
 replace_once(
     p,
     '        pending = list(compiled_plan["domain_order"])\n        parallel_waves = [\n',
@@ -56,7 +51,6 @@ replace_once(
     '            "one_process_per_execution_domain": not coalesced_fast,\n            "coalesced_fast_lane": coalesced_fast,\n            "execution_boundary": "IN_PROCESS_COALESCED" if coalesced_fast else "DOMAIN_PROCESS",\n            "isolated_parallel_domains": sorted(parallel_wave_domains),\n',
 )
 
-# 2) Tighten FAST SLO to hard 3s.
 p = ROOT / 'config/runtime/performance_slo.json'
 data = json.loads(p.read_text(encoding='utf-8'))
 fast = data['profiles']['fast_decision']
@@ -68,17 +62,3 @@ fast.update({
     'consistency_requirement': '3 fresh-process candidate runs must each be <=3000ms',
 })
 p.write_text(json.dumps(data, indent=2) + '\n', encoding='utf-8')
-
-# 3) Add consistency acceptance step to CI.
-p = ROOT / '.github/workflows/v3-ci.yml'
-replace_once(
-    p,
-    '      - name: Benchmark unified interactive fastpath under 2s, prefer 1s\n',
-    '      - name: Prove FAST decision runtime consistently under 3s\n        if: github.event_name == \'pull_request\' || github.ref == \'refs/heads/main\'\n        run: python -m src.runtime_v3.fast_consistency_acceptance\n      - name: Benchmark unified interactive fastpath under 2s, prefer 1s\n',
-)
-
-# 4) Remove temporary bootstrap artifacts from final branch.
-for rel in ('.github/workflows/v3-sub3s-bootstrap.yml', 'tools/apply_v3_sub3s_hardening.py'):
-    q = ROOT / rel
-    if q.exists():
-        q.unlink()

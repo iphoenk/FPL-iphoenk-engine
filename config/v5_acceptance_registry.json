@@ -1,5 +1,5 @@
 {
-  "version": 30,
+  "version": 31,
   "module_policy": {
     "minimum_registered_modules": 48,
     "required_truth_modules": ["rules", "source_authority", "public_api", "official_authenticated", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
@@ -26,8 +26,8 @@
   },
   "convergence": {
     "production_baseline": "v3.20.0",
-    "production_main_sha": "9a76a6231bdd747a247eabc8867a2312a188317a",
-    "production_code_commit": "9a76a6231bdd747a247eabc8867a2312a188317a",
+    "production_main_sha": "9f483a2eb2cd346fa014dfdb8a2b8edb7456906d",
+    "production_code_commit": "9f483a2eb2cd346fa014dfdb8a2b8edb7456906d",
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
     "production_runtime_schema_version": 49,
     "production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
@@ -87,7 +87,8 @@
     "degraded_context_must_block_unqualified_go": true,
     "critical_service_failure_must_fail_closed": true,
     "cluster_health_must_be_on_demand_only": true,
-    "baseline_sha_must_match_main": true,
+    "baseline_sha_must_match_deployed_runtime_source": true,
+    "deployed_baseline_must_be_ancestor_of_main": true,
     "official_fpl_only_native_external_authority": true,
     "challenger_never_overrides_official_native": true,
     "missing_enrichment_never_fabricated": true,
@@ -140,7 +141,12 @@
     "critical_enhancement_partial_allowed": false,
     "v3_gameweek_lifecycle_reporting_hardening_reconciled_without_prediction_or_decision_authority_change": true,
     "v3_bounded_warm_retry_reconciled_as_runtime_workflow_hardening": true,
-    "v3_official_phase_independent_fetch_overlap_reconciled_as_runtime_hardening": true
+    "v3_official_phase_independent_fetch_overlap_reconciled_as_runtime_hardening": true,
+    "v3_authenticated_official_production_readiness_reconciled_as_runtime_hardening": true,
+    "v3_fingerprint_only_prediction_reuse_reconciled_as_runtime_hardening": true,
+    "v3_public_mini_league_reporting_reconciled_without_prediction_or_decision_authority_change": true,
+    "bounded_snapshot_history_retention_required": true,
+    "canonical_evidence_must_not_depend_on_history_jsonl": true
   },
   "prediction_calibration_gate": {
     "required_for_production_promotion": true,

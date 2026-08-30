@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "policy": "Official FPL remains the only native external authority. User LOCK remains authoritative where phase policy permits. Challenger and enrichment sources may add evidence or fill explicitly missing non-native fields, but never silently override Official FPL native fields, never fabricate missing data, and never confuse source reachability with capability health.",
+  "version": 4,
+  "policy": "Official FPL remains the only native external authority. PRE_DEADLINE planning follows PUBLIC_OFFICIAL_PLUS_USER_CAPTURE: the Official public submitted team is the default baseline and user capture may override only when exactly scoped to the target GW with an active WC/FH/planning override. Authenticated Official is optional private enrichment only. Challenger and enrichment sources may add evidence or fill explicitly missing non-native fields, but never silently override Official FPL native fields, never fabricate missing data, and never confuse source reachability with capability health.",
   "source_registry": "config/sources/registry.json",
   "governance": {
     "official_fpl_only_native_external_authority": true,
@@ -9,7 +9,13 @@
     "source_failure_isolated_by_default": true,
     "source_reachability_is_separate_from_capability_health": true,
     "stale_observations_are_never_silently_current": true,
-    "challenger_observation_contract": "challenger_observation_v2"
+    "challenger_observation_contract": "challenger_observation_v2",
+    "predeadline_primary_authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+    "official_public_submitted_is_default_planning_baseline": true,
+    "user_capture_requires_exact_target_gw_and_active_planning_override": true,
+    "stale_or_unscoped_user_capture_must_not_mask_official_submitted_team": true,
+    "authenticated_official_is_optional_private_enrichment": true,
+    "authenticated_official_must_not_be_squad_lineup_or_captaincy_authority": true
   },
   "sources": {
     "user_lock": {"tier": 0, "kind": "user_authority", "enabled": true},
@@ -32,7 +38,7 @@
     "live_scoring": ["official_public"],
     "authenticated_draft": ["official_authenticated"],
     "exact_owned_finance": ["official_authenticated"],
-    "pre_deadline_locked_squad": ["user_lock", "official_authenticated"],
+    "pre_deadline_locked_squad": ["official_public", "user_lock"],
     "advanced_player_stats": ["core_insights", "ffscout", "vaastav", "understat"],
     "historical_priors": ["vaastav", "core_insights"],
     "price_prediction_challengers": ["livefpl", "onefpl", "fffix"],

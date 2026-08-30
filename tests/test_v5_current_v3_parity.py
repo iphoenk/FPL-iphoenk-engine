@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -8,10 +9,9 @@ from src.v5.intelligence.xmins import estimate_xmins
 from src.v5.state import Phase, primary_authority
 
 ROOT = Path(__file__).resolve().parents[1]
-MAIN_SHA = "9a76a6231bdd747a247eabc8867a2312a188317a"
-CODE_SHA = MAIN_SHA
 COMPILED_PLAN = "V3_COMPILED_EXECUTION_PLAN_V1"
 COMPILED_PLAN_SHA = "af929aa55483f0e8959247a9d1794e70f7840d32f7bf6e5a7bc9d4ceac59e467"
+SHA40 = re.compile(r"^[0-9a-f]{40}$")
 
 
 def _load(path: str):
@@ -22,21 +22,26 @@ def test_current_production_reanchor_is_exact_and_keeps_frozen_truth_baseline():
     manifest = _load("config/v5_convergence_manifest.json")
     acceptance = _load("config/v5_acceptance_registry.json")
     parity = _load("config/v5_capability_parity_registry.json")
+    status = _load("IMPLEMENTATION_STATUS.json")
 
+    deployed_sha = manifest["baselines"]["production_main_sha"]
+    assert SHA40.fullmatch(deployed_sha), deployed_sha
     assert manifest["baselines"]["production_truth"] == "v3.20.0"
-    assert manifest["baselines"]["production_main_sha"] == MAIN_SHA
-    assert manifest["baselines"]["production_code_commit"] == CODE_SHA
+    assert manifest["baselines"]["production_code_commit"] == deployed_sha
     assert manifest["baselines"]["production_runtime_schema_version"] == 49
     assert manifest["baselines"]["production_execution_registry"] == "V3_EXECUTION_DOMAINS_V2"
     assert manifest["baselines"]["production_compiled_plan_registry"] == COMPILED_PLAN
     assert manifest["baselines"]["production_compiled_plan_sha256"] == COMPILED_PLAN_SHA
     assert manifest["baselines"]["production_capability_telemetry_registry"] == "V3_CAPABILITY_TELEMETRY_V1"
-    assert acceptance["convergence"]["production_main_sha"] == MAIN_SHA
-    assert acceptance["convergence"]["production_code_commit"] == CODE_SHA
+    assert acceptance["convergence"]["production_main_sha"] == deployed_sha
+    assert acceptance["convergence"]["production_code_commit"] == deployed_sha
     assert acceptance["convergence"]["production_compiled_plan_registry"] == COMPILED_PLAN
     assert acceptance["convergence"]["production_compiled_plan_sha256"] == COMPILED_PLAN_SHA
-    assert parity["current_production_reanchor"]["production_main_sha"] == MAIN_SHA
-    assert parity["current_production_reanchor"]["production_code_commit"] == CODE_SHA
+    assert parity["current_production_reanchor"]["production_main_sha"] == deployed_sha
+    assert parity["current_production_reanchor"]["production_code_commit"] == deployed_sha
+    assert parity["authorities"]["current_production_code_commit"] == deployed_sha
+    assert status["production_authority"]["main_sha"] == deployed_sha
+
     topology = parity["current_production_reanchor"]["v3_topology"]
     assert topology["compiled_plan_registry"] == COMPILED_PLAN
     assert topology["compiled_plan_sha256"] == COMPILED_PLAN_SHA
@@ -47,8 +52,12 @@ def test_current_production_reanchor_is_exact_and_keeps_frozen_truth_baseline():
     assert topology["bounded_warm_retry_runtime_workflow_hardening_only"] is True
     assert topology["official_phase_independent_fetch_overlap_runtime_hardening_only"] is True
     assert topology["authenticated_official_production_readiness_runtime_hardening_only"] is True
+    assert topology["fingerprint_only_prediction_reuse_runtime_hardening_only"] is True
+    assert topology["public_mini_league_membership_reporting_only"] is True
     assert parity["governance"]["reanchor_requires_full_v5_gate"] is True
     assert parity["governance"]["reanchor_does_not_change_frozen_football_truth_baseline"] is True
+    assert parity["governance"]["reanchor_binds_to_deployed_runtime_not_unpublished_main_head"] is True
+    assert parity["governance"]["deployed_runtime_must_be_ancestor_of_main"] is True
 
 
 def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_truth():
@@ -64,24 +73,30 @@ def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_t
         "capability_telemetry_contract",
         "sub3s_fast_lane_contract",
         "semantic_prediction_reuse_contract",
+        "fingerprint_only_prediction_reuse_contract",
         "gameweek_lifecycle_reporting_contract",
         "bounded_warm_retry_runtime_contract",
         "official_fetch_overlap_runtime_contract",
         "authenticated_official_readiness_contract",
+        "public_mini_league_reporting_contract",
     }
     assert required <= set(control)
     for row in control.values():
         assert row["v5_owner"]
-        assert (ROOT / row["evidence"]).exists()
+        evidence_path = str(row["evidence"]).split("::", 1)[0]
+        assert (ROOT / evidence_path).exists(), evidence_path
     assert parity["governance"]["compiled_v3_control_plane_does_not_create_v5_service_or_business_authority"] is True
     assert parity["governance"]["duplicate_human_maintained_execution_truth_forbidden"] is True
     assert parity["governance"]["v3_capability_telemetry_is_observational_not_decision_authority"] is True
     assert parity["governance"]["v3_sub3s_fast_lane_is_runtime_hardening_not_decision_authority"] is True
     assert parity["governance"]["v3_semantic_prediction_reuse_is_runtime_hardening_not_decision_authority"] is True
+    assert parity["governance"]["v3_fingerprint_only_prediction_reuse_is_runtime_hardening_not_decision_authority"] is True
     assert parity["governance"]["v3_gameweek_lifecycle_reporting_is_not_v5_prediction_or_decision_authority"] is True
     assert parity["governance"]["v3_bounded_warm_retry_is_runtime_workflow_hardening_not_decision_authority"] is True
     assert parity["governance"]["v3_official_phase_independent_fetch_overlap_is_runtime_hardening_not_decision_authority"] is True
     assert parity["governance"]["v3_authenticated_official_readiness_is_runtime_truth_hardening_not_v5_prediction_or_decision_authority"] is True
+    assert parity["governance"]["v3_public_mini_league_membership_is_reporting_truth_not_prediction_or_decision_authority"] is True
+    assert parity["governance"]["history_jsonl_is_noncanonical_and_must_be_bounded"] is True
 
 
 def test_predeadline_current_team_prefers_authenticated_then_official_submitted():
@@ -126,7 +141,7 @@ def test_current_v3_capability_reanchor_has_explicit_equivalence_evidence():
     evidence = parity["current_production_reanchor"]["capability_equivalence"]
     required = {
         "gw_scoped_chip_override", "authenticated_official_predeadline_team", "official_submitted_predeadline_fallback",
-        "explicit_xmins_probability_decomposition", "projection_component_observability",
+        "public_mini_league_membership", "explicit_xmins_probability_decomposition", "projection_component_observability",
         "verified_competitive_load_observation_validation", "tactical_xpts_immutability", "governed_lineup_uncertainty",
         "captain_safe_pool_and_independent_vice", "close_call_lineup_arbitration", "genuine_predeadline_decision_snapshot",
         "owned_challenger_comparator", "historical_prediction_settlement", "final_governed_publication",
@@ -134,3 +149,4 @@ def test_current_v3_capability_reanchor_has_explicit_equivalence_evidence():
     assert required <= set(evidence)
     assert all(value.get("v5_owner") and value.get("evidence") for value in evidence.values())
     assert (ROOT / "src/v5/intelligence/competitive_load.py").exists()
+    assert (ROOT / "src/v5/mini_league.py").exists()

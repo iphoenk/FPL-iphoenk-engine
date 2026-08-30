@@ -1,0 +1,149 @@
+name: V5 Chat3 Reanchor Helper
+
+on:
+  push:
+    branches:
+      - codex/v5-chat3-final-reanchor-a40d
+    paths:
+      - .github/workflows/v5-chat3-reanchor-helper.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reanchor:
+    if: ${{ !contains(github.event.head_commit.message, '[reanchor-done]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v5-chat3-final-reanchor-a40d
+          fetch-depth: 0
+      - name: Reanchor V5 metadata to deployed runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main runtime-data --quiet
+          python - <<'PY'
+          import json
+          import re
+          import subprocess
+          from pathlib import Path
+
+          runtime = json.loads(subprocess.check_output(
+              ["git", "show", "origin/runtime-data:data/runtime_manifest.json"], text=True
+          ))
+          deployed = str(runtime["source_commit"])
+          main = subprocess.check_output(["git", "rev-parse", "origin/main"], text=True).strip()
+          subprocess.run(["git", "merge-base", "--is-ancestor", deployed, "origin/main"], check=True)
+          print(f"deployed={deployed} main={main}")
+
+          def load(path):
+              return json.loads(Path(path).read_text(encoding="utf-8"))
+
+          def dump(path, obj):
+              Path(path).write_text(json.dumps(obj, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+          status = load("IMPLEMENTATION_STATUS.json")
+          old_status_sha = str(status["production_authority"].get("main_sha") or "")
+          status["production_authority"]["main_sha"] = deployed
+          adv = status["advanced_beta4"]
+          adv["v3_official_player_detail_enrichment_reconciled"] = True
+          adv["v3_official_player_detail_reuse_migration_reconciled"] = True
+          notes = status.get("notes") or []
+          if notes:
+              notes[0] = (
+                  "The last validated 3/3 strict-DSS operational acceptance remains historical evidence only; "
+                  f"deployed production is now {deployed}, so exact-fingerprint operational evidence must restart from 0/3."
+              )
+          player_detail_note = (
+              "Current V3 Official player-detail enrichment and its reuse-migration hardening are reconciled as "
+              "fail-soft public factual enrichment: missing/partial external evidence is non-blocking, invalid reusable "
+              "artifacts refresh through the owning capability, and no V3 prediction, optimizer, lineup, captaincy, or decision authority is imported into V5."
+          )
+          if not any("player-detail enrichment" in str(x) for x in notes):
+              notes.insert(8 if len(notes) >= 8 else len(notes), player_detail_note)
+          status["notes"] = notes
+          dump("IMPLEMENTATION_STATUS.json", status)
+
+          manifest = load("config/v5_convergence_manifest.json")
+          manifest["baselines"]["production_main_sha"] = deployed
+          manifest["baselines"]["production_code_commit"] = deployed
+          mav = manifest["advanced_v5"]
+          mav["v3_official_player_detail_enrichment_reconciled_as_runtime_hardening"] = True
+          mav["v3_official_player_detail_reuse_migration_reconciled_as_runtime_hardening"] = True
+          ev = manifest["operational_acceptance_evidence"]
+          ev["superseded_evidence"]["reason"] = (
+              "The previous validated 3/3 REAL_SHADOW evidence belongs to a superseded release fingerprint. "
+              f"Production has materially reanchored again to deployed runtime {deployed}, so that evidence is historical only "
+              "and exact-fingerprint shadow acceptance must restart from 0/3."
+          )
+          ev["note"] = f"Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required against deployed production {deployed}."
+          dump("config/v5_convergence_manifest.json", manifest)
+
+          acceptance = load("config/v5_acceptance_registry.json")
+          conv = acceptance["convergence"]
+          conv["production_main_sha"] = deployed
+          conv["production_code_commit"] = deployed
+          conv["v3_official_player_detail_enrichment_reconciled_as_runtime_hardening"] = True
+          conv["v3_official_player_detail_reuse_migration_reconciled_as_runtime_hardening"] = True
+          dump("config/v5_acceptance_registry.json", acceptance)
+
+          parity = load("config/v5_capability_parity_registry.json")
+          parity["authorities"]["current_production_runtime"] = f"deployed@{deployed}"
+          parity["authorities"]["current_production_code_commit"] = deployed
+          reanchor = parity["current_production_reanchor"]
+          reanchor["production_main_sha"] = deployed
+          reanchor["production_code_commit"] = deployed
+          topo = reanchor["v3_topology"]
+          topo["official_player_detail_enrichment_runtime_hardening_only"] = True
+          topo["official_player_detail_reuse_migration_runtime_hardening_only"] = True
+          cpe = reanchor["control_plane_equivalence"]
+          cpe["official_player_detail_enrichment_contract"] = {
+              "v5_owner": "ingestion",
+              "evidence": "config/v5_public_api_registry.json#endpoints.element_summary",
+              "semantics": "Current V3 adds fail-soft Official element-summary factual enrichment. V5 already owns the Official element-summary transport route under ingestion; the V3 enrichment is reconciled as factual/runtime hardening and cannot become V5 prediction or decision authority."
+          }
+          cpe["official_player_detail_reuse_migration_contract"] = {
+              "v5_owner": "orchestrator",
+              "evidence": "config/v5_orchestrator_registry.json",
+              "semantics": "Current V3 invalidates pre-migration reusable official-detail artifacts against the active contract and refreshes safely. V5 reconciles this as cache/reuse integrity hardening only, with no imported V3 decision state."
+          }
+          gov = parity["governance"]
+          gov["v3_official_player_detail_enrichment_is_factual_runtime_hardening_not_prediction_or_decision_authority"] = True
+          gov["v3_official_player_detail_reuse_migration_is_runtime_hardening_not_decision_authority"] = True
+          dump("config/v5_capability_parity_registry.json", parity)
+
+          test_path = Path("tests/test_v5_metadata_authority_hygiene.py")
+          text = test_path.read_text(encoding="utf-8")
+          m = re.search(r'DEPLOYED_SHA = "([0-9a-f]{40})"', text)
+          previous = m.group(1) if m else old_status_sha
+          text = re.sub(r'DEPLOYED_SHA = "[0-9a-f]{40}"', f'DEPLOYED_SHA = "{deployed}"', text, count=1)
+          marker = "STALE_DEPLOYED_SHAS = {\n"
+          additions = []
+          for stale in (previous, old_status_sha):
+              if stale and stale != deployed and f'"{stale}"' not in text:
+                  additions.append(f'    "{stale}",\n')
+          if additions:
+              text = text.replace(marker, marker + "".join(additions), 1)
+          anchor = '    assert parity["governance"]["v3_runtime_reuse_contract_migration_is_runtime_hardening_not_decision_authority"] is True\n'
+          extra = (
+              '    assert manifest["advanced_v5"]["v3_official_player_detail_enrichment_reconciled_as_runtime_hardening"] is True\n'
+              '    assert manifest["advanced_v5"]["v3_official_player_detail_reuse_migration_reconciled_as_runtime_hardening"] is True\n'
+              '    assert acceptance["convergence"]["v3_official_player_detail_enrichment_reconciled_as_runtime_hardening"] is True\n'
+              '    assert acceptance["convergence"]["v3_official_player_detail_reuse_migration_reconciled_as_runtime_hardening"] is True\n'
+              '    assert parity["current_production_reanchor"]["v3_topology"]["official_player_detail_enrichment_runtime_hardening_only"] is True\n'
+              '    assert parity["current_production_reanchor"]["v3_topology"]["official_player_detail_reuse_migration_runtime_hardening_only"] is True\n'
+              '    assert parity["governance"]["v3_official_player_detail_enrichment_is_factual_runtime_hardening_not_prediction_or_decision_authority"] is True\n'
+              '    assert parity["governance"]["v3_official_player_detail_reuse_migration_is_runtime_hardening_not_decision_authority"] is True\n'
+          )
+          if "v3_official_player_detail_enrichment_reconciled_as_runtime_hardening" not in text:
+              text = text.replace(anchor, anchor + extra, 1)
+          test_path.write_text(text, encoding="utf-8")
+          PY
+          git rm .github/workflows/v5-chat3-reanchor-helper.yml
+          git config user.name "iphoenk"
+          git config user.email "103485057+iphoenk@users.noreply.github.com"
+          git add IMPLEMENTATION_STATUS.json config/v5_convergence_manifest.json config/v5_acceptance_registry.json config/v5_capability_parity_registry.json tests/test_v5_metadata_authority_hygiene.py
+          git commit -m "V5 Chat 3: reanchor to deployed runtime [reanchor-done]"
+          git push origin HEAD:codex/v5-chat3-final-reanchor-a40d

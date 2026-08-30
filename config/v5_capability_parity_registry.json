@@ -1,10 +1,10 @@
 {
-  "schema_version": 8,
-  "model": "v5_v3_v4_capability_parity_v8",
+  "schema_version": 9,
+  "model": "v5_v3_v4_capability_parity_v9",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "main@72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
-    "current_production_code_commit": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
+    "current_production_runtime": "main@892dd783b2fa0199cecf74e5a6548bb0619816dd",
+    "current_production_code_commit": "892dd783b2fa0199cecf74e5a6548bb0619816dd",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "current_production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
@@ -27,8 +27,8 @@
     "transfer_comparator_realized_net_gain", "correlated_simulation_shadow", "release_attestation", "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
-    "production_code_commit": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
+    "production_main_sha": "892dd783b2fa0199cecf74e5a6548bb0619816dd",
+    "production_code_commit": "892dd783b2fa0199cecf74e5a6548bb0619816dd",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,
@@ -48,20 +48,22 @@
       "sub3s_fast_lane_runtime_hardening_only": true,
       "semantic_prediction_reuse_runtime_hardening_only": true,
       "gameweek_lifecycle_reporting_hardening_only": true,
-      "bounded_warm_retry_runtime_workflow_hardening_only": true
+      "bounded_warm_retry_runtime_workflow_hardening_only": true,
+      "official_phase_independent_fetch_overlap_runtime_hardening_only": true
     },
     "control_plane_equivalence": {
       "canonical_orchestration_registry": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V5 routing and parallel groups are registry-owned; V3 compiled plan is reconciled as a control-plane guarantee, not copied implementation."},
       "single_service_module_ownership": {"v5_owner": "governance", "evidence": "config/v5_service_registry.json", "semantics": "Registered modules have exactly one bounded-context service owner."},
       "artifact_persistence_contract": {"v5_owner": "snapshot", "evidence": "config/v5_persistence_registry.json", "semantics": "Persisted artifacts are explicitly registered; V3 artifact-writer metadata cleanup does not create V5 authority."},
       "dependency_and_parallelism_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 compiled wave parallelism is reconciled by deterministic V5 dependency and parallel-group guarantees without copying the V3 scheduler."},
-      "rules_drift_governance_contract": {"v5_owner": "truth", "evidence": "config/rules/registry.json", "semantics": "V3 persisted Official-rules drift observability is a governance hardening; V5 preserves its own rules authority and does not infer a rules change from telemetry."},
-      "canonical_terminology_contract": {"v5_owner": "governance", "evidence": "config/v5_architecture_principles.json", "semantics": "V3 execution-domain/capability terminology normalization is acknowledged without renaming V5 bounded contexts or duplicating business ownership."},
-      "capability_telemetry_contract": {"v5_owner": "governance", "evidence": "config/v5_service_registry.json", "semantics": "V3 canonical capability telemetry is observational. V5 keeps its own service health and module ownership evidence and does not import telemetry as decision authority."},
-      "sub3s_fast_lane_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 coalesced FAST-lane, trusted artifact validation and compute-positive reuse are runtime hardening only; V5 preserves its bounded-context execution and decision semantics."},
-      "semantic_prediction_reuse_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 semantic prediction reuse narrows fingerprints to material team-state fields and is reconciled as runtime hardening only; football formulas and decision semantics remain unchanged."},
-      "gameweek_lifecycle_reporting_contract": {"v5_owner": "reporting", "evidence": "config/v5_team_review_registry.json", "semantics": "V3 governed Previous/Current/Next GW lifecycle and counterfactual P&L enrich reporting and learning evidence only; they do not become V5 projection, lineup or transfer decision authority."},
-      "bounded_warm_retry_runtime_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 permits at most one in-job warm retry for FAST runtime under the unchanged 3000 ms hard ceiling and full contract revalidation; this is workflow reliability hardening, not football authority."}
+      "rules_drift_governance_contract": {"v5_owner": "truth", "evidence": "config/rules/registry.json", "semantics": "V3 persisted Official-rules drift observability is governance hardening only."},
+      "canonical_terminology_contract": {"v5_owner": "governance", "evidence": "config/v5_architecture_principles.json", "semantics": "V3 execution-domain/capability terminology normalization does not rename V5 bounded contexts."},
+      "capability_telemetry_contract": {"v5_owner": "governance", "evidence": "config/v5_service_registry.json", "semantics": "V3 canonical capability telemetry is observational, not V5 decision authority."},
+      "sub3s_fast_lane_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 FAST-lane runtime hardening preserves V5 bounded-context semantics."},
+      "semantic_prediction_reuse_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 semantic prediction reuse is runtime hardening only."},
+      "gameweek_lifecycle_reporting_contract": {"v5_owner": "reporting", "evidence": "config/v5_team_review_registry.json", "semantics": "V3 Previous/Current/Next GW lifecycle enriches reporting and learning evidence only."},
+      "bounded_warm_retry_runtime_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 bounded warm retry keeps the 3000 ms hard ceiling and is workflow hardening only."},
+      "official_fetch_overlap_runtime_contract": {"v5_owner": "orchestrator", "evidence": "config/v5_orchestrator_registry.json", "semantics": "V3 overlaps phase-independent Official requests with bootstrap while bootstrap remains phase authority and phase-scoped endpoints remain gated; this is latency hardening only."}
     },
     "capability_equivalence": {
       "gw_scoped_chip_override": {"v5_owner": "truth", "evidence": "src/v5/services/truth.py::_lock_chip_scope"},
@@ -99,6 +101,7 @@
     "v3_sub3s_fast_lane_is_runtime_hardening_not_decision_authority": true,
     "v3_semantic_prediction_reuse_is_runtime_hardening_not_decision_authority": true,
     "v3_gameweek_lifecycle_reporting_is_not_v5_prediction_or_decision_authority": true,
-    "v3_bounded_warm_retry_is_runtime_workflow_hardening_not_decision_authority": true
+    "v3_bounded_warm_retry_is_runtime_workflow_hardening_not_decision_authority": true,
+    "v3_official_phase_independent_fetch_overlap_is_runtime_hardening_not_decision_authority": true
   }
 }

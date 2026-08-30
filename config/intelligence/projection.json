@@ -2,6 +2,19 @@
   "schema_version": 3,
   "model_id": "player_projection_v5_historical_prior",
   "rate_shrinkage_minutes": 450.0,
+  "early_season_robust_rates": {
+    "model": "adaptive_shrinkage_winsor_v1",
+    "absolute_upper_rate90": 1.5,
+    "tiers": [
+      {"max_minutes": 90, "shrink_minutes": 900, "upper_prior_multiplier": 2.5},
+      {"max_minutes": 270, "shrink_minutes": 675, "upper_prior_multiplier": 3.5},
+      {"max_minutes": 450, "shrink_minutes": 525, "upper_prior_multiplier": 4.5},
+      {"max_minutes": null, "shrink_minutes": 450, "upper_prior_multiplier": 6.0}
+    ],
+    "zero_observation_is_allowed": true,
+    "cap_relaxes_with_evidence": true,
+    "breakout_protection": "upper bound relaxes as evidence minutes accumulate"
+  },
   "position_priors": {
     "GK": {"xg90": 0.01, "xa90": 0.01, "bonus90": 0.20, "dc90": 0.00, "saves90": 3.0},
     "DEF": {"xg90": 0.08, "xa90": 0.10, "bonus90": 0.25, "dc90": 0.55, "saves90": 0.0},

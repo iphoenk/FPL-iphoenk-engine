@@ -161,7 +161,7 @@ def _schedule_capability_evidence(
         and guardrails.get("verified_external_competitive_intake_wired") is True
         and guardrails.get("unverified_external_competitive_signal_is_zero") is True
         and guardrails.get("recent_match_load_is_xmins_evidence_not_direct_points_evidence") is True
-        and (coverage.get("capability_implementation") or {}).get(dimension) == "ACTIVE"
+        and dimension in set(coverage.get("implemented_dimensions") or [])
         and prediction_capability.get("competitive_load_consumer_active") is True
         and prediction_guardrails.get("competitive_load_direct_xpts_mutation_forbidden") is True
         and prediction_guardrails.get("competitive_load_direct_start_probability_mutation_forbidden") is True

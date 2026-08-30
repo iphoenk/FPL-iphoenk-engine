@@ -5,8 +5,8 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
-    "production_code_commit": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
+    "production_main_sha": "892dd783b2fa0199cecf74e5a6548bb0619816dd",
+    "production_code_commit": "892dd783b2fa0199cecf74e5a6548bb0619816dd",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
@@ -89,6 +89,7 @@
     "v3_semantic_prediction_reuse_reconciled_as_runtime_hardening": true,
     "v3_gameweek_lifecycle_reporting_hardening_reconciled_without_prediction_or_decision_authority_change": true,
     "v3_bounded_warm_retry_reconciled_as_runtime_workflow_hardening": true,
+    "v3_official_phase_independent_fetch_overlap_reconciled_as_runtime_hardening": true,
     "strict_all_dss_active_governance_required": true,
     "unique_service_handler_and_bounded_context_authority_required": true
   },
@@ -114,7 +115,7 @@
     "interactive_preferred_target_ms": 1000
   },
   "operational_acceptance_evidence": {
-    "status": "SUPERSEDED_BY_CODE_CHANGE_PENDING_REVALIDATION",
+    "status": "SUPERSEDED_BY_PRODUCTION_REANCHOR_PENDING_REVALIDATION",
     "source_branch": "v5-shadow-runtime",
     "evidence_contract": "v5_postvalidated_shadow_acceptance_v5",
     "evidence_path": "data/v5/shadow/acceptance_summary.json",
@@ -126,12 +127,12 @@
     "prediction_candidate_eligible": false,
     "production_candidate_eligible": false,
     "superseded_evidence": {
-      "release_fingerprint": "sha256:98cc221c103c38d157abf73cc0a835f59c945c68252167a3a42e912c1be884c1",
-      "validated_real_shadow_cycles": 3,
-      "latest_validated_at": "2026-08-30T05:16:11.666366+00:00",
-      "reason": "A code-bearing strict-DSS governance and service-authority validation change modifies the runtime release fingerprint; prior operational evidence remains historical but cannot qualify the new build."
+      "release_fingerprint": "sha256:72bd3a00e1bdf4f10b37967902bca236b740fd3fdb07e1c0935544c4a663d1f8",
+      "validated_real_shadow_cycles": 2,
+      "latest_validated_at": "2026-08-30T09:59:53.729438+00:00",
+      "reason": "Production main moved from 72d2981bb74d6794f8dca8c8dfb5decb40d13d15 to 892dd783b2fa0199cecf74e5a6548bb0619816dd for V3 Official-fetch runtime hardening; exact-fingerprint shadow acceptance must restart."
     },
-    "note": "Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required before operational eligibility can be restored."
+    "note": "Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required against the reanchored production SHA."
   },
   "production_promotion": {
     "allowed": false,
@@ -141,6 +142,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "Operational acceptance was intentionally reset because code-bearing strict-DSS fail-closed governance and service-authority validation change the V5 runtime release fingerprint. Prior 3/3 evidence is preserved as superseded history; three fresh postvalidated cycles plus independent prediction acceptance remain mandatory."
+    "reason": "Production reanchor changes the V5 release fingerprint. Prior 2/3 evidence is preserved as superseded history; three fresh postvalidated cycles plus independent prediction acceptance remain mandatory."
   }
 }

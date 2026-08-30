@@ -24,12 +24,53 @@ CANONICAL_SYMBOLS = {
     "LEGAL_FORMATIONS",
     "LEGAL_FORMATION_TUPLES",
 }
+MOVING_OPERATIONAL_SYMBOLS = {"CURRENT_GW", "CURRENT_SEASON", "CURRENT_DEADLINE", "SOURCE_COMMIT", "RELEASE_VERSION"}
+REQUIRED_CAPABILITIES = {
+    "OFFICIAL_PUBLIC_ACQUISITION",
+    "AUTHENTICATED_PERSONAL_STATE",
+    "PHASE_GW_DEADLINE_AUTHORITY",
+    "SUBMITTED_LIVE_STATE",
+    "IDENTITY_RESOLVER",
+    "HISTORICAL_PRIORS",
+    "ADVANCED_STATS",
+    "XMINS_START_DNP",
+    "XPTS",
+    "OPPONENT_MODEL",
+    "TACTICAL_SYSTEM_FIT",
+    "COMPETITIVE_LOAD",
+    "SET_PIECES_PENALTIES",
+    "PRICE_SELL_VALUE_AFFORDABILITY",
+    "WATCHLIST_DISCOVERY",
+    "OWNED_VS_CHALLENGER_COMPARATOR",
+    "PACKAGE_OPTIMIZER",
+    "XI_BENCH",
+    "CAPTAINCY",
+    "CHIP",
+    "EXTERNAL_CONSENSUS",
+    "VALIDATION_CALIBRATION",
+    "LEGALITY_RULES",
+    "REPORTING_SERVING",
+    "BASE_PREDICTION_CACHE",
+    "DECISION_ARTIFACT_CACHE",
+    "HEALTH_TELEMETRY",
+    "SCHEDULING",
+}
+VALID_OVERLAP_ACTIONS = {
+    "KEEP_CANONICAL",
+    "MERGE_INTO_CANONICAL",
+    "RETIRE_LEGACY",
+    "READ_ONLY_ALIAS_REQUIRED",
+    "NO_ACTION",
+}
 CANONICAL_RULE_MODULE = ROOT / "src/engines/fpl_rules_2026.py"
 RAW_SNAPSHOT_MODULE = ROOT / "src/services/raw_snapshot_service.py"
 OFFICIAL_CLIENT_MODULE = ROOT / "src/sources/official_fpl.py"
 BACKTEST_STORE_MODULE = ROOT / "src/engines/v4_backtest_store.py"
 RECONCILIATION_MODULE = ROOT / "src/engines/v4_reconciliation_truth.py"
 LEGACY_ENGINE_MODULE = ROOT / "src/engine.py"
+REPORT_GOVERNANCE_MODULE = ROOT / "src/engines/v4_checkpoint_governance.py"
+SERVING_MODULE = ROOT / "src/engines/v4_serving_contract.py"
+RELEASE_MODULE = ROOT / "src/release.py"
 SKIP_DUP_FN_NAMES = {"main", "run", "cli", "_f", "check", "write", "load", "dump"}
 
 
@@ -60,6 +101,17 @@ def _top_level_functions(path: Path) -> set[str]:
         for node in _tree(path).body
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
+
+
+def _called_names(path: Path) -> set[str]:
+    names: set[str] = set()
+    for node in ast.walk(_tree(path)):
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                names.add(node.func.id)
+            elif isinstance(node.func, ast.Attribute):
+                names.add(node.func.attr)
+    return names
 
 
 def _imports(path: Path) -> set[str]:
@@ -110,6 +162,17 @@ def _official_fetch_violations() -> list[str]:
     return violations
 
 
+def _moving_operational_literal_violations() -> list[dict]:
+    violations: list[dict] = []
+    for path in sorted((ROOT / "src").rglob("*.py")):
+        if path.resolve() in {GUARD_PATH, RELEASE_MODULE.resolve()}:
+            continue
+        overlap = sorted(_assignment_names(path) & MOVING_OPERATIONAL_SYMBOLS)
+        if overlap:
+            violations.append({"file": str(path.relative_to(ROOT)), "symbols": overlap})
+    return violations
+
+
 def run() -> dict:
     services = read_json(CONFIG / "service_registry.json", {})
     contracts = read_json(CONFIG / "service_contract_registry.json", {})
@@ -147,6 +210,25 @@ def run() -> dict:
     checks["unique_shared_primitive_ids"] = _unique(primitive_ids)
     missing_owners = [row.get("id") for row in responsibilities + shared_primitives if not row.get("owner")]
     checks["all_responsibilities_have_one_owner"] = (not missing_owners, missing_owners)
+
+    matrix = list(ownership.get("capability_matrix") or [])
+    capability_ids = [row.get("capability") for row in matrix]
+    matrix_unique, matrix_duplicates = _unique(capability_ids)
+    missing_capabilities = sorted(REQUIRED_CAPABILITIES - set(capability_ids))
+    missing_fields = []
+    invalid_actions = []
+    for row in matrix:
+        capability = row.get("capability")
+        required = ("current_owner", "input_contract", "output_artifact", "consumers", "duplicates_overlap", "action")
+        missing = [field for field in required if not row.get(field)]
+        if missing:
+            missing_fields.append({"capability": capability, "fields": missing})
+        if row.get("action") not in VALID_OVERLAP_ACTIONS:
+            invalid_actions.append({"capability": capability, "action": row.get("action")})
+    checks["capability_matrix_unique"] = (matrix_unique, matrix_duplicates)
+    checks["capability_matrix_required_coverage"] = (not missing_capabilities, missing_capabilities)
+    checks["capability_matrix_contract_complete"] = (not missing_fields, missing_fields)
+    checks["capability_matrix_overlap_actions_governed"] = (not invalid_actions, invalid_actions)
 
     duplicate_rule_defs = []
     for path in sorted((ROOT / "src").rglob("*.py")):
@@ -187,14 +269,32 @@ def run() -> dict:
     )
 
     raw_text = RAW_SNAPSHOT_MODULE.read_text(encoding="utf-8")
-    raw_uses_canonical_legality = "squad_legality_checks" in raw_text and not ({"POSITION_COUNTS", "MAX_PER_CLUB", "SQUAD_SIZE"} & _imports(RAW_SNAPSHOT_MODULE))
-    # Imports are module names, so assignment scan is the reliable check for redefined rule constants.
+    raw_uses_canonical_legality = "squad_legality_checks" in raw_text
     raw_redefined_rules = sorted(_assignment_names(RAW_SNAPSHOT_MODULE) & {"POSITION_COUNTS", "MAX_PER_CLUB", "SQUAD_SIZE"})
     raw_uses_canonical_legality = raw_uses_canonical_legality and not raw_redefined_rules
     checks["raw_snapshot_reuses_canonical_legality"] = (
         raw_uses_canonical_legality,
         [] if raw_uses_canonical_legality else raw_redefined_rules or ["squad_legality_checks missing"],
     )
+
+    report_calls = _called_names(REPORT_GOVERNANCE_MODULE)
+    serving_imports = _imports(SERVING_MODULE)
+    serving_text = SERVING_MODULE.read_text(encoding="utf-8")
+    forbidden_serving_imports = sorted(module for module in serving_imports if module.startswith("src.sources.official_fpl") or module in {
+        "src.models.v4_prediction",
+        "src.engines.v4_lineup_optimizer",
+        "src.engines.v4_wc_optimizer",
+        "src.engines.v4_wc_package_audit_fast",
+        "src.engines.v4_decision_arbitration",
+    })
+    reporting_ok = "resolve_decision" not in report_calls and not forbidden_serving_imports and "fantasy.premierleague.com/api/" not in serving_text
+    checks["reporting_composition_only"] = (
+        reporting_ok,
+        [] if reporting_ok else [{"governance_forbidden_calls": sorted(report_calls & {"resolve_decision"}), "serving_forbidden_imports": forbidden_serving_imports}],
+    )
+
+    moving_literals = _moving_operational_literal_violations()
+    checks["moving_operational_identity_single_owner"] = (not moving_literals, moving_literals)
 
     main = (ROOT / ".github/workflows/fpl-engine.yml").read_text(encoding="utf-8")
     recovery = (ROOT / ".github/workflows/fpl-engine-recovery.yml").read_text(encoding="utf-8")
@@ -208,20 +308,27 @@ def run() -> dict:
     )
     checks["single_reusable_production_workflow"] = (workflow_ok, [] if workflow_ok else ["main/recovery must call reusable core"])
 
-    release_ok = release.get("release") == RELEASE_VERSION == services.get("architecture_version") == ownership.get("release")
+    registries = release.get("registries") or {}
+    release_ok = (
+        release.get("release") == RELEASE_VERSION == services.get("architecture_version") == ownership.get("release")
+        and registries.get("services") == services.get("registry")
+        and registries.get("contracts") == contracts.get("registry")
+        and registries.get("ownership") == ownership.get("registry")
+    )
     checks["release_single_source_coherent"] = (
         release_ok,
-        [] if release_ok else [release.get("release"), RELEASE_VERSION, services.get("architecture_version"), ownership.get("release")],
+        [] if release_ok else [{"manifest": release.get("release"), "runtime": RELEASE_VERSION, "service_release": services.get("architecture_version"), "ownership_release": ownership.get("release"), "registry_manifest": registries, "service_registry": services.get("registry"), "contract_registry": contracts.get("registry"), "ownership_registry": ownership.get("registry")}],
     )
 
     normalized = {name: {"pass": bool(value[0]), "detail": value[1]} for name, value in checks.items()}
     passed = all(row["pass"] for row in normalized.values())
     out = {
-        "schema_version": 496,
+        "schema_version": 497,
         "release": RELEASE_VERSION,
         "service": "architecture_guard",
         "status": "PASS" if passed else "FAIL",
         "checks": normalized,
+        "ownership_matrix": matrix,
         "guardrails": {
             "one_owner_per_artifact": True,
             "one_owner_per_rule": True,
@@ -230,6 +337,9 @@ def run() -> dict:
             "reconciliation_single_owner": True,
             "legacy_entrypoint_adapter_only": True,
             "reusable_workflow_single_pipeline": True,
+            "audit_first_capability_matrix_enforced": True,
+            "reporting_composition_only": True,
+            "moving_operational_identity_single_owner": True,
         },
     }
     atomic_json(OUT, out)

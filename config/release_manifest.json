@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "release": "4.9.6",
   "track": "V4",
   "status": "CANONICAL_PRODUCTION_GREEN",
@@ -9,8 +9,16 @@
   "architecture": "process_isolated_dag_parallel_single_host",
   "ruleset": "FPL-2026-27",
   "registries": {
-    "services": "fpl_v4_9_6_microservice_registry_v11",
-    "contracts": "fpl_v4_9_6_service_contracts_v8",
-    "ownership": "fpl_v4_9_6_architecture_ownership_v8"
-  }
+    "services": "fpl_v4_9_6_microservice_registry_v12",
+    "contracts": "fpl_v4_9_6_service_contracts_v9",
+    "ownership": "fpl_v4_9_6_architecture_ownership_v9"
+  },
+  "production_acceptance_lifecycle": [
+    "IMPLEMENTED",
+    "TESTED",
+    "GATE_GREEN",
+    "RUNTIME_PUBLISHED",
+    "RUNTIME_VALIDATED",
+    "PRODUCTION_ACCEPTED"
+  ]
 }

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.engines.v4_checkpoint_governance import govern_checkpoint
+from src.engines.v4_decision_arbitration import resolve_decision
 from src.services.orchestrator import _service_levels
 
 
@@ -71,15 +72,16 @@ def _governance_fixture(age_minutes=0):
             },
         },
     }
-    return now, latest, health, sanity, effective, locked, scorecard
+    canonical = resolve_decision(sanity, effective, latest, {}, {}, {}, now=now)
+    return now, latest, health, sanity, effective, locked, scorecard, canonical
 
 
 def test_report_language_policy_is_cross_engine_and_hides_technical_reasons():
     policy = json.loads((ROOT / "config/report_language_policy.json").read_text())
     assert policy["cross_engine_scope"] == ["V3", "V4", "V5"]
     assert policy["guardrails"]["primary_reasoning_plain_fpl_language"] is True
-    now, latest, health, sanity, effective, locked, scorecard = _governance_fixture()
-    out = govern_checkpoint(latest, health, sanity, effective, locked, scorecard=scorecard, now=now)
+    now, latest, health, sanity, effective, locked, scorecard, canonical = _governance_fixture()
+    out = govern_checkpoint(latest, health, sanity, effective, locked, scorecard=scorecard, now=now, canonical=canonical)
     assert out["action_state"] == "REVIEW"
     assert out["canonical_resolution"]["overall_action"] == "REVIEW"
     assert "CRITICAL_PREDICTION_WARMUP" in out["readiness"]["reasons"]
@@ -93,8 +95,8 @@ def test_report_language_policy_is_cross_engine_and_hides_technical_reasons():
 
 def test_stale_report_is_human_refresh_required_not_technical_excuse():
     policy = json.loads((ROOT / "config/report_language_policy.json").read_text())
-    now, latest, health, sanity, effective, locked, scorecard = _governance_fixture(age_minutes=91)
-    out = govern_checkpoint(latest, health, sanity, effective, locked, scorecard=scorecard, now=now)
+    now, latest, health, sanity, effective, locked, scorecard, canonical = _governance_fixture(age_minutes=91)
+    out = govern_checkpoint(latest, health, sanity, effective, locked, scorecard=scorecard, now=now, canonical=canonical)
     assert out["action_state"] == "REVIEW"
     assert out["canonical_resolution"]["overall_action"] == "REVIEW"
     assert "SNAPSHOT_STALE" in out["readiness"]["reasons"]

@@ -9,6 +9,6 @@ def test_capability_terminology_contract_is_canonical_and_complete() -> None:
     assert result["canonical_runtime_boundary"] == "execution_domain"
     assert result["canonical_business_unit"] == "capability"
     assert result["execution_domain_count"] == 11
-    assert result["capability_count"] == 21
+    assert result["capability_count"] == 22
     assert result["legacy_collection_key"] == "services"
     assert result["legacy_collection_status"] == "LEGACY_COMPATIBILITY_ALIAS"

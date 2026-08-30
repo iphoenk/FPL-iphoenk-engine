@@ -45,9 +45,11 @@ def run() -> dict:
     assert weather_registry.get("class") == "ENRICHMENT"
     assert weather_registry.get("critical") is False
     assert weather_registry.get("adapter") == "weather_artifact"
+    assert weather.get("schema_version") == 2
     assert weather.get("provider") == "open_meteo"
-    assert weather.get("model") == "weather_context_observational_v1"
+    assert weather.get("model") == "weather_context_governed_v2"
     assert (weather.get("governance") or {}).get("advisory_only") is True
+    assert (weather.get("governance") or {}).get("rain_probability_is_not_rain_intensity") is True
     assert weather_runtime.get("status") in {"LIVE", "PARTIAL"}
     weather_states = set((weather_runtime.get("capabilities") or {}).values())
     assert weather_states <= {"AVAILABLE", "NO_FORECAST_IN_WINDOW", "UNAVAILABLE"}, weather_states

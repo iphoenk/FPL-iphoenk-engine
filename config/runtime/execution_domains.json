@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "registry": "V3_EXECUTION_DOMAINS_V2",
   "architecture": "V3_CANONICAL_DOMAIN_PIPELINE",
   "phase_count": 6,
@@ -40,7 +40,7 @@
   "compatibility": {
     "previous_registry": "V3_EXECUTION_DOMAINS_V1",
     "previous_domain_count": 7,
-    "business_capability_contract_unchanged": true,
+    "business_capability_contract_unchanged": false,
     "service_registry_unchanged": false,
     "legacy_domain_aliases": {
       "ACQUIRE": [
@@ -81,6 +81,9 @@
     "no_capability_is_removed_by_domain_grouping": true,
     "prediction_and_market_context_use_isolated_workspaces": true,
     "prediction_and_market_context_may_execute_in_parallel": true,
+    "weather_context_is_governed_enrichment_without_decision_authority": true,
+    "weather_context_reuses_football_context_execution_domain": true,
+    "weather_context_does_not_add_process_startup_boundary": true,
     "parallel_domain_fan_in_uses_declared_artifacts_and_latest_keys_only": true,
     "parallel_domain_fan_in_is_deterministic": true,
     "phase_membership_is_a_responsibility_taxonomy_not_a_strict_execution_barrier": true,
@@ -141,7 +144,8 @@
       "capabilities": [
         "historical_prior",
         "tactical_context",
-        "source_layer"
+        "source_layer",
+        "weather_context"
       ]
     },
     "market_context": {

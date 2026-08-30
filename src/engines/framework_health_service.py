@@ -224,6 +224,41 @@ def _publish_optional_private_enrichment_health() -> None:
         audit_engine.atomic_json(path, payload)
 
 
+def _weather_context_health() -> dict:
+    health = read_json(DATA / "weather_context_health.json", {})
+    allowed = {"PASS", "PARTIAL", "STALE", "UNAVAILABLE"}
+    status = str(health.get("status") or "UNAVAILABLE")
+    if status not in allowed:
+        status = "UNAVAILABLE"
+    return {
+        "status": status,
+        "allowed_statuses": sorted(allowed),
+        "fixture_count": int(health.get("fixture_count") or 0),
+        "available_count": int(health.get("available_count") or 0),
+        "stale_count": int(health.get("stale_count") or 0),
+        "unavailable_count": int(health.get("unavailable_count") or 0),
+        "decision_blocking": False,
+        "tactical_context_complete": status == "PASS",
+        "reasons": list(health.get("reasons") or (["weather_context_health_unavailable"] if not health else [])),
+    }
+
+
+def _publish_weather_context_health() -> None:
+    weather = _weather_context_health()
+    for path in (audit_engine.PRE_OUT, audit_engine.OUT):
+        if not path.exists():
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload["weather_context"] = weather
+        payload["tactical_context_completeness"] = {
+            "status": "COMPLETE" if weather["tactical_context_complete"] else "INCOMPLETE",
+            "complete": bool(weather["tactical_context_complete"]),
+            "weather_status": weather["status"],
+            "rule": "COMPLETE_REQUIRES_WEATHER_CONTEXT_PASS",
+        }
+        audit_engine.atomic_json(path, payload)
+
+
 def run() -> None:
     expected = activate_registry_contract()
     activate_freshness_contract()
@@ -231,6 +266,7 @@ def run() -> None:
     audit_engine.run()
     _publish_gate0_registry_contract(expected)
     _publish_optional_private_enrichment_health()
+    _publish_weather_context_health()
 
 
 if __name__ == "__main__":

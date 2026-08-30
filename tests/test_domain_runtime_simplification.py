@@ -35,14 +35,16 @@ def test_canonical_domains_cover_every_background_capability_exactly_once():
     ]
     _validate_domain_coverage(domains, services)
     assigned = [cap for spec in domains["domains"].values() for cap in spec["capabilities"]]
-    assert len(assigned) == 21
-    assert len(set(assigned)) == 21
+    assert len(assigned) == 22
+    assert len(set(assigned)) == 22
     assert set(assigned) == set(services["services"])
 
 
 def test_canonical_domain_boundaries_prevent_responsibility_leakage():
     registry = json.loads((ROOT / "config/runtime/execution_domains.json").read_text())
     domains = registry["domains"]
+    assert "weather_context" in domains["football_context"]["capabilities"]
+    assert "weather_context" not in domains
     assert domains["prediction"]["capabilities"] == ["prediction"]
     assert domains["squad_decision"]["capabilities"] == ["lineup_governance"]
     assert domains["challenger_analysis"]["capabilities"] == ["challenger"]
@@ -55,6 +57,7 @@ def test_canonical_domain_boundaries_prevent_responsibility_leakage():
     assert registry["policy"]["prediction_validation_gates_publication"] is True
     assert registry["policy"]["phase_membership_is_a_responsibility_taxonomy_not_a_strict_execution_barrier"] is True
     assert registry["policy"]["dependency_dag_controls_execution_order"] is True
+    assert registry["policy"]["weather_context_does_not_add_process_startup_boundary"] is True
 
 
 def test_domain_dependency_dag_is_acyclic_and_covers_capability_dependencies():

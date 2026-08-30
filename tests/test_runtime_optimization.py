@@ -61,8 +61,10 @@ def test_profile_aware_production_contract_accepts_only_validated_declared_reuse
 
 def test_production_contract_accepts_canonical_11_domain_6_phase_runtime():
     canonical_domains = ["official_state","personal_team_state","football_context","market_context","prediction","squad_decision","challenger_analysis","framework_governance","prediction_validation","reporting","serving"]
-    snapshot = {"id":"v3-domain-pipeline-v2","architecture":"V3_CANONICAL_DOMAIN_PIPELINE","dependency_aware_scheduling":True,"shared_official_cache":True,"shared_canonical_domain_workspace":True,"cross_capability_copy_promotion":False,"execution_domain_count":11,"execution_phase_count":6,"service_count":11,"capability_owner_count":21}
-    runtime = {"runtime_id":"v3-domain-pipeline-v2","architecture":"V3_CANONICAL_DOMAIN_PIPELINE","execution_domain_count":11,"execution_phase_count":6,"capability_owner_count":21,"cross_capability_copy_promotion":False,"canonical_domain_order":canonical_domains,"execution_domains":{name:{"status":"SUCCESS"} for name in canonical_domains},"execution_phase_results":{phase:{"status":"SUCCESS"} for phase in ["ACQUIRE","ENRICH","MODEL","DECISION","GOVERNANCE","PUBLISH"]},"services":{f"capability_{index}":{} for index in range(21)}}
+    capability_count = len(json.loads((ROOT / "config/v3_service_registry.json").read_text())["services"])
+    assert capability_count == 22
+    snapshot = {"id":"v3-domain-pipeline-v2","architecture":"V3_CANONICAL_DOMAIN_PIPELINE","dependency_aware_scheduling":True,"shared_official_cache":True,"shared_canonical_domain_workspace":True,"cross_capability_copy_promotion":False,"execution_domain_count":11,"execution_phase_count":6,"service_count":11,"capability_owner_count":capability_count}
+    runtime = {"runtime_id":"v3-domain-pipeline-v2","architecture":"V3_CANONICAL_DOMAIN_PIPELINE","execution_domain_count":11,"execution_phase_count":6,"capability_owner_count":capability_count,"cross_capability_copy_promotion":False,"canonical_domain_order":canonical_domains,"execution_domains":{name:{"status":"SUCCESS"} for name in canonical_domains},"execution_phase_results":{phase:{"status":"SUCCESS"} for phase in ["ACQUIRE","ENRICH","MODEL","DECISION","GOVERNANCE","PUBLISH"]},"services":{f"capability_{index}":{} for index in range(capability_count)}}
     _validate_runtime_architecture(snapshot, runtime)
 
 

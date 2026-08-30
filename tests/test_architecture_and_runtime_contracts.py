@@ -209,8 +209,9 @@ def test_runtime_registry_is_dependency_aware_and_artifact_owned():
         "report_materializer_is_serving_only", "report_serving_requires_15_owned_and_20_external_watchlist",
         "source_registry_is_separate_infrastructure_layer", "official_fpl_remains_native_authority",
         "challenger_source_failure_does_not_block_decisions", "source_reachability_is_separate_from_capability_data_health",
-        "version_neutral_service_entrypoints", "weather_enrichment_lives_inside_source_layer_not_new_microservice",
-        "weather_is_observational_and_advisory_only", "weather_never_directly_mutates_xpts_or_decisions",
+        "version_neutral_service_entrypoints", "weather_acquisition_lives_inside_source_layer",
+        "weather_context_is_separate_governed_enrichment_capability", "weather_is_observational_and_advisory_only",
+        "weather_never_directly_mutates_xpts_xmins_or_decisions", "weather_context_health_propagates_to_framework",
         "owned_report_rows_require_current_gw_xpts", "settled_prediction_validation_is_exposed_to_reports",
         "tactical_context_is_separate_bounded_evidence_service", "tactical_context_never_infers_missing_coach_style_or_true_pressing",
         "tactical_context_rolling_history_is_service_owned", "required_core_and_optional_private_enrichment_are_distinct",
@@ -218,14 +219,13 @@ def test_runtime_registry_is_dependency_aware_and_artifact_owned():
     ):
         assert policy[key] is True, key
     services = registry["services"]
-    assert len(services) == 21
+    assert len(services) == 22
     assert set(services) == {
         "official_snapshot", "rules", "team_state", "market_state", "live_state", "advanced_stats", "tactical_context", "base_snapshot",
-        "historical_prior", "source_layer", "price", "prediction", "authenticated_official", "official_detail",
+        "historical_prior", "source_layer", "weather_context", "price", "prediction", "authenticated_official", "official_detail",
         "prediction_evaluation", "lineup_governance", "challenger", "governance", "watchlist", "reporting", "report_materializer",
     }
     assert "collector" not in services
-    assert not any("weather" in name.lower() for name in services)
     assert services["official_snapshot"]["depends_on"] == []
     assert services["rules"]["depends_on"] == []
     assert services["team_state"]["depends_on"] == ["official_snapshot"]
@@ -236,8 +236,10 @@ def test_runtime_registry_is_dependency_aware_and_artifact_owned():
     assert {"official_snapshot.json", "player_features.json", "stats/shots_current.json", "stats/playermatchstats_current.json", "recent_tactical_form.json"} <= set(services["tactical_context"]["inputs"])
     assert set(services["base_snapshot"]["depends_on"]) == {"official_snapshot", "team_state", "market_state", "live_state", "advanced_stats"}
     assert set(services["historical_prior"]["depends_on"]) == {"base_snapshot", "official_snapshot"}
-    assert set(services["prediction"]["depends_on"]) == {"historical_prior", "official_snapshot", "tactical_context"}
+    assert set(services["weather_context"]["depends_on"]) == {"source_layer", "tactical_context"}
+    assert set(services["prediction"]["depends_on"]) == {"historical_prior", "official_snapshot", "tactical_context", "weather_context"}
     assert {"official_snapshot.json", "tactical_team_profiles.json", "player_role_profiles.json", "recent_tactical_form.json"} <= set(services["prediction"]["inputs"])
+    assert {"fixture_weather.json", "weather_context.json", "weather_context_health.json"}.isdisjoint(set(services["prediction"]["inputs"]))
     assert set(services["source_layer"]["depends_on"]) == {"base_snapshot", "historical_prior", "official_snapshot"}
     assert "official_snapshot.json" in services["source_layer"]["inputs"]
     assert "fixture_weather.json" in services["source_layer"]["artifacts"]
@@ -246,16 +248,17 @@ def test_runtime_registry_is_dependency_aware_and_artifact_owned():
     assert set(services["prediction_evaluation"]["depends_on"]) == {"prediction", "official_snapshot"}
     assert services["lineup_governance"]["depends_on"] == ["prediction"]
     assert set(services["challenger"]["depends_on"]) == {"prediction_evaluation", "source_layer"}
-    assert set(services["governance"]["depends_on"]) == {"source_layer", "price", "prediction", "rules", "official_detail", "prediction_evaluation", "lineup_governance", "challenger"}
+    assert set(services["governance"]["depends_on"]) == {"source_layer", "weather_context", "price", "prediction", "rules", "official_detail", "prediction_evaluation", "lineup_governance", "challenger"}
     assert services["authenticated_official"]["critical"] is False
     assert services["authenticated_official"]["criticality_class"] == "OPTIONAL_PRIVATE_ENRICHMENT"
     assert services["authenticated_official"]["failure_policy"] == "FAIL_SOFT"
     assert services["watchlist"]["depends_on"] == ["governance"]
     assert services["reporting"]["depends_on"] == ["watchlist"]
-    assert set(services["report_materializer"]["depends_on"]) == {"reporting", "official_detail", "source_layer", "lineup_governance", "prediction_evaluation"}
+    assert set(services["report_materializer"]["depends_on"]) == {"reporting", "official_detail", "source_layer", "lineup_governance", "prediction_evaluation", "weather_context"}
     assert services["official_snapshot"]["commands"] == [{"module": "src.engines.official_snapshot_service", "args": []}]
     assert services["tactical_context"]["commands"] == [{"module": "src.engines.tactical_context_service", "args": []}]
     assert services["source_layer"]["commands"] == [{"module": "src.engines.source_layer", "args": []}]
+    assert services["weather_context"]["commands"] == [{"module": "src.engines.weather_context", "args": []}]
     assert services["price"]["commands"] == [{"module": "src.engines.price_service", "args": []}]
     assert services["prediction"]["commands"] == [{"module": "src.engines.prediction_service", "args": []}]
     assert services["report_materializer"]["commands"] == [

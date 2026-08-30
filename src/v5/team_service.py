@@ -35,6 +35,8 @@ def build_team_state(
     submitted_picks: dict | None,
     transfers: list[dict] | None,
     entry: dict | None,
+    planning_gw: int | None = None,
+    submitted_gw: int | None = None,
 ) -> dict[str, Any]:
     resolved = select_squad(
         phase=phase,
@@ -42,6 +44,8 @@ def build_team_state(
         locked_squad=locked_squad,
         authenticated_my_team=authenticated_my_team,
         submitted_picks=submitted_picks,
+        planning_gw=planning_gw,
+        submitted_gw=submitted_gw,
     )
     squad = tuple(resolved["squad"])
     owned_ids = tuple(int(row["element"]) for row in squad)
@@ -58,18 +62,20 @@ def build_team_state(
         initial_purchase_costs=_initial_purchase_costs(locked_squad),
     )
     bank = auth_finance.get("bank")
-    if bank is None and resolved["authority"] == "user_lock" and locked_squad:
+    if bank is None and resolved["authority"] == "user_capture" and locked_squad:
         bank = locked_squad.get("itb_tenths")
     if bank is None and isinstance(entry, dict):
         bank = entry.get("last_deadline_bank")
     return {
         "authority": resolved["authority"],
+        "authority_policy": resolved.get("authority_policy", {}),
         "squad": list(squad),
         "validation": resolved["validation"],
         "finance": {
             **ledger,
             "bank": bank,
             "authenticated_coverage": auth_finance.get("coverage", {}),
+            "authenticated_role": "OPTIONAL_PRIVATE_ENRICHMENT",
         },
         "owned_ids": list(owned_ids),
     }

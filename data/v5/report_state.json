@@ -1,5 +1,5 @@
 {
-  "fingerprint": "de7b12479b31994b",
+  "fingerprint": "6948f6ee2f397aa1",
   "state": {
     "squad": "HOLD",
     "starting_xi": [
@@ -21,11 +21,6 @@
     "chip": null,
     "price": [
       [
-        40,
-        "RISE",
-        "HIGH"
-      ],
-      [
         557,
         "RISE",
         "CRITICAL"
@@ -40,6 +35,12 @@
       ],
       [
         8,
+        229,
+        "REVIEW",
+        2.701
+      ],
+      [
+        8,
         84,
         "REVIEW",
         2.68
@@ -48,19 +49,13 @@
         254,
         469,
         "REVIEW",
-        2.049
+        2.084
       ],
       [
         473,
         469,
         "REVIEW",
-        2.043
-      ],
-      [
-        254,
-        116,
-        "REVIEW",
-        2.015
+        2.078
       ]
     ],
     "critical_health": {

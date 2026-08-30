@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "contract": "V5_EXTERNAL_CONSENSUS_V1",
-  "generated_at": "2026-08-29T15:37:07.918864+00:00",
+  "generated_at": "2026-08-30T01:35:28.712948+00:00",
   "owner": "evaluation.external_consensus",
   "native_conclusion_frozen_before_overlay": true,
   "native_snapshot": {
@@ -16,11 +16,11 @@
           "name": "Tzolakis",
           "position": "GK",
           "team_id": 11,
-          "mean": 4.588,
-          "std": 3.444,
+          "mean": 4.828,
+          "std": 3.544,
           "start_probability": 0.7632,
           "dnp_probability": 0.0829,
-          "score": 4.6095
+          "score": 4.8395
         },
         {
           "element": 115,
@@ -54,28 +54,6 @@
           "start_probability": 0.851,
           "dnp_probability": 0.0522,
           "score": 5.1787
-        },
-        {
-          "element": 254,
-          "name": "Robinson",
-          "position": "DEF",
-          "team_id": 10,
-          "mean": 4.045,
-          "std": 3.211,
-          "start_probability": 0.7678,
-          "dnp_probability": 0.0813,
-          "score": 4.0933
-        },
-        {
-          "element": 473,
-          "name": "Aina",
-          "position": "DEF",
-          "team_id": 18,
-          "mean": 4.033,
-          "std": 3.203,
-          "start_probability": 0.7707,
-          "dnp_probability": 0.0803,
-          "score": 4.0844
         },
         {
           "element": 426,
@@ -131,6 +109,28 @@
           "start_probability": 0.8131,
           "dnp_probability": 0.0654,
           "score": 4.0619
+        },
+        {
+          "element": 254,
+          "name": "Robinson",
+          "position": "DEF",
+          "team_id": 10,
+          "mean": 4.045,
+          "std": 3.211,
+          "start_probability": 0.7678,
+          "dnp_probability": 0.0813,
+          "score": 4.0933
+        },
+        {
+          "element": 473,
+          "name": "Aina",
+          "position": "DEF",
+          "team_id": 18,
+          "mean": 4.033,
+          "std": 3.203,
+          "start_probability": 0.7707,
+          "dnp_probability": 0.0803,
+          "score": 4.0844
         }
       ],
       "bench": [
@@ -414,7 +414,7 @@
           "team_id": 11,
           "start_probability": 0.7632,
           "dnp_probability": 0.0829,
-          "score": 5.6675,
+          "score": 5.9256,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 2,
@@ -512,9 +512,9 @@
         {
           "rank": 1,
           "formation": "5-3-2",
-          "selection_score": 49.3376,
-          "mean": 48.645,
-          "std": 11.08,
+          "selection_score": 49.5676,
+          "mean": 48.885,
+          "std": 11.112,
           "element_ids": [
             8,
             15,
@@ -532,9 +532,9 @@
         {
           "rank": 2,
           "formation": "5-3-2",
-          "selection_score": 49.2896,
-          "mean": 48.687,
-          "std": 11.116,
+          "selection_score": 49.5196,
+          "mean": 48.927,
+          "std": 11.148,
           "element_ids": [
             8,
             15,
@@ -552,9 +552,9 @@
         {
           "rank": 3,
           "formation": "5-3-2",
-          "selection_score": 49.2163,
-          "mean": 48.53,
-          "std": 11.07,
+          "selection_score": 49.4463,
+          "mean": 48.77,
+          "std": 11.102,
           "element_ids": [
             8,
             40,
@@ -570,8 +570,8 @@
           ]
         }
       ],
-      "expected_starting_xi_mean": 48.645,
-      "selection_score": 49.338,
+      "expected_starting_xi_mean": 48.885,
+      "selection_score": 49.568,
       "authority": "v5_decision_lineup_optimizer",
       "performance": {
         "projection_lookup": "indexed_o1",

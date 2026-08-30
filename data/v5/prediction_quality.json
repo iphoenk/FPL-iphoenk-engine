@@ -15,9 +15,9 @@
       "pass": true
     },
     "starter_xmins_dispersion": {
-      "value": 0.0632,
+      "value": 0.0578,
       "threshold": 0.035,
-      "sample": 228,
+      "sample": 235,
       "minimum_sample": 40,
       "pass": true
     },

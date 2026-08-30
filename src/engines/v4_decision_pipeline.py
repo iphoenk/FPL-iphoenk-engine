@@ -115,13 +115,6 @@ def _run_parallel_decisions(candidates, locked, predictions, universe):
 
 
 def _candidate_semantics(candidates) -> list[dict]:
-    """Compact exact semantics consumed by WC/package optimizers.
-
-    The Candidate object is already the canonical normalization boundary for those
-    optimizers. Hashing it avoids recursively serializing prediction provenance that
-    cannot affect WC/package outputs while preserving exact cache invalidation for
-    every field the optimizers can read.
-    """
     return [
         {
             "element": row.element,
@@ -143,13 +136,6 @@ def _candidate_semantics(candidates) -> list[dict]:
 
 
 def _lineup_semantics(predictions: dict, universe: dict, locked: dict) -> list[dict]:
-    """Hash exactly the fields consumed by optimize_lineup(manual=None).
-
-    This deliberately excludes timestamps, provenance blobs, external tactical
-    serving evidence and unowned player detail because none can affect the cached
-    lineup artifact. Sanity, tactical serving and arbitration are never cached and
-    still consume the full current prediction/universe payload every run.
-    """
     pmap = {int(row.get("element") or 0): row for row in predictions.get("players") or [] if row.get("element") is not None}
     umap = {int(row.get("element") or 0): row for row in universe.get("players") or [] if row.get("element") is not None}
     rows = []
@@ -177,13 +163,6 @@ def _lineup_semantics(predictions: dict, universe: dict, locked: dict) -> list[d
 
 
 def _semantic_fingerprint(predictions: dict, universe: dict, locked: dict, candidates=None) -> str:
-    """Hash exact inputs of cached WC/package/lineup artifacts, not whole payloads.
-
-    Candidate normalization covers WC/package semantics. A separate owned-player
-    projection covers lineup semantics. This reduces fingerprint complexity from a
-    recursive full-payload walk to a bounded compact projection while remaining
-    exact for the three cached artifacts.
-    """
     normalized_candidates = candidates if candidates is not None else build_candidates(predictions, universe)
     serving_policy = read_json(CONFIG / "serving_improvement_registry.json", {}) or {}
     payload = {
@@ -199,11 +178,7 @@ def _semantic_fingerprint(predictions: dict, universe: dict, locked: dict, candi
 
 
 def _cache_artifacts() -> dict[str, Path]:
-    return {
-        "wc": WC_OUTFILE,
-        "packages": PACKAGE_OUTFILE,
-        "lineup": LINEUP_OUTFILE,
-    }
+    return {"wc": WC_OUTFILE, "packages": PACKAGE_OUTFILE, "lineup": LINEUP_OUTFILE}
 
 
 def _cache_hit(fingerprint: str) -> tuple[bool, str]:
@@ -282,12 +257,7 @@ def run():
         "package_audit_cpu_ms": statuses["packages"]["ms"],
         "lineup_cpu_ms": statuses["lineup"]["ms"],
         "decision_parallel_wall_ms": parallel_wall,
-        "parallel_speedup_estimate": (
-            0.0 if hit else round(
-                (statuses["wc"]["ms"] + statuses["packages"]["ms"] + statuses["lineup"]["ms"]) / max(1.0, parallel_wall),
-                3,
-            )
-        ),
+        "parallel_speedup_estimate": 0.0 if hit else round((statuses["wc"]["ms"] + statuses["packages"]["ms"] + statuses["lineup"]["ms"]) / max(1.0, parallel_wall), 3),
     })
 
     wc = read_json(WC_OUTFILE, {})
@@ -326,18 +296,14 @@ def run():
             "wildcard_active": locked.get("wildcard_active"),
         },
         "timings": timings,
-        "canonical_resolution": arbitration,
         "results": {
-            "wc_raw": wc.get("classification"),
-            "package_raw": packages.get("overall_verdict"),
-            "recommendation_final": sanity.get("final_verdict"),
-            "recommended_replacements": (sanity.get("recommended_package") or {}).get("replacements"),
-            "transfer_candidate_state": ((arbitration.get("dimensions") or {}).get("transfer") or {}).get("candidate_state"),
-            "overall_action": arbitration.get("overall_action"),
-            "lineup_governance": (lineup.get("governance") or {}).get("decision"),
-            "formation": lineup.get("formation"),
-            "formation_state": lineup.get("formation_state"),
-            "captain": (lineup.get("captain") or {}).get("name"),
+            "wc": wc,
+            "packages": packages,
+            "lineup": lineup,
+            "sanity": sanity,
+            "tactical": tactical,
+            "arbitration": arbitration,
+            "transfer_candidate_state": arbitration.get("transfer_candidate_state"),
         },
         "performance_guardrails": {
             "shared_json_loaded_once": True,
@@ -368,11 +334,8 @@ def run():
         "transfer_state": out["results"]["transfer_candidate_state"],
         "formation": lineup.get("formation"),
         "optimizer_cache_hit": hit,
-        "semantic_fingerprint_ms": fingerprint_ms,
-        "decision_parallel_wall_ms": parallel_wall,
-        "package_audit_cpu_ms": statuses["packages"]["ms"],
-        "lineup_cpu_ms": statuses["lineup"]["ms"],
-        "total_pipeline_ms": timings["total_pipeline_ms"],
+        "optimizer_cache_reason": cache_reason,
+        "timings": timings,
     }, ensure_ascii=False))
     return out
 

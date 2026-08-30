@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, os
+import hashlib, json, os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -9,6 +9,7 @@ _data_override = os.getenv("FPL_DATA_DIR")
 DATA = Path(_data_override).expanduser().resolve() if _data_override else ROOT / "data"
 CONFIG = ROOT / "config"
 _JSON_READ_CACHE: dict[Path, tuple[int, int, Any]] = {}
+_JSON_WRITE_PROOF_CACHE: dict[Path, tuple[int, int, str, Any]] = {}
 # Machine-only high-volume artifacts are compacted to remove serialization/I/O cost.
 # This is representation-only: parsed JSON values and decision semantics are identical.
 _COMPACT_JSON_ARTIFACTS = {
@@ -40,6 +41,24 @@ def read_json(path: Path, default=None):
     except Exception:
         return {} if default is None else default
 
+def trusted_atomic_json(path: Path) -> tuple[bool, Any]:
+    """Return an atomic-writer payload only when current bytes match its SHA-256 proof exactly."""
+    try:
+        stat = path.stat()
+    except OSError:
+        return False, None
+    proof = _JSON_WRITE_PROOF_CACHE.get(path)
+    if proof is None or proof[0] != stat.st_mtime_ns or proof[1] != stat.st_size:
+        return False, None
+    try:
+        current_digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return False, None
+    if current_digest != proof[2]:
+        _JSON_WRITE_PROOF_CACHE.pop(path, None)
+        return False, None
+    return True, proof[3]
+
 def atomic_json(path: Path, payload: Any):
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
@@ -47,19 +66,28 @@ def atomic_json(path: Path, payload: Any):
         serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     else:
         serialized = json.dumps(payload, ensure_ascii=False, indent=2)
-    tmp.write_text(serialized, encoding="utf-8")
+    encoded = serialized.encode("utf-8")
+    tmp.write_bytes(encoded)
     os.replace(tmp, path)
     try:
         stat = path.stat()
         _JSON_READ_CACHE[path] = (stat.st_mtime_ns, stat.st_size, payload)
+        _JSON_WRITE_PROOF_CACHE[path] = (
+            stat.st_mtime_ns,
+            stat.st_size,
+            hashlib.sha256(encoded).hexdigest(),
+            payload,
+        )
     except OSError:
         _JSON_READ_CACHE.pop(path, None)
+        _JSON_WRITE_PROOF_CACHE.pop(path, None)
 
 def append_jsonl(path: Path, payload: Any):
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(payload, ensure_ascii=False) + "\n")
     _JSON_READ_CACHE.pop(path, None)
+    _JSON_WRITE_PROOF_CACHE.pop(path, None)
 
 def parse_dt(value: str | None):
     if not value:

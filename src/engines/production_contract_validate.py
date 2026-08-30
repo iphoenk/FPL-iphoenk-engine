@@ -45,6 +45,10 @@ def _validate_runtime_architecture(snapshot_runtime: dict, runtime_performance: 
         "reporting",
         "serving",
     ]
+    capability_registry = load_config("config/v3_service_registry.json")
+    expected_capability_count = len(capability_registry.get("services") or {})
+    assert expected_capability_count > 0
+
     assert snapshot_runtime.get("id") == "v3-domain-pipeline-v2", snapshot_runtime
     assert snapshot_runtime.get("architecture") == "V3_CANONICAL_DOMAIN_PIPELINE", snapshot_runtime
     assert snapshot_runtime.get("dependency_aware_scheduling") is True
@@ -54,13 +58,13 @@ def _validate_runtime_architecture(snapshot_runtime: dict, runtime_performance: 
     assert int(snapshot_runtime.get("execution_domain_count") or 0) == 11
     assert int(snapshot_runtime.get("execution_phase_count") or 0) == 6
     assert int(snapshot_runtime.get("service_count") or 0) == 11
-    assert int(snapshot_runtime.get("capability_owner_count") or 0) == 21
+    assert int(snapshot_runtime.get("capability_owner_count") or 0) == expected_capability_count
 
     assert runtime_performance.get("runtime_id") == "v3-domain-pipeline-v2", runtime_performance
     assert runtime_performance.get("architecture") == "V3_CANONICAL_DOMAIN_PIPELINE", runtime_performance
     assert int(runtime_performance.get("execution_domain_count") or 0) == 11
     assert int(runtime_performance.get("execution_phase_count") or 0) == 6
-    assert int(runtime_performance.get("capability_owner_count") or 0) == 21
+    assert int(runtime_performance.get("capability_owner_count") or 0) == expected_capability_count
     assert runtime_performance.get("cross_capability_copy_promotion") is False
     assert runtime_performance.get("canonical_domain_order") == canonical_domains, runtime_performance
     domains = runtime_performance.get("execution_domains") or {}
@@ -69,7 +73,7 @@ def _validate_runtime_architecture(snapshot_runtime: dict, runtime_performance: 
     phase_results = runtime_performance.get("execution_phase_results") or {}
     assert list(phase_results) == ["ACQUIRE", "ENRICH", "MODEL", "DECISION", "GOVERNANCE", "PUBLISH"]
     assert all((row or {}).get("status") == "SUCCESS" for row in phase_results.values())
-    assert len(runtime_performance.get("services") or {}) == 21
+    assert len(runtime_performance.get("services") or {}) == expected_capability_count
 
 
 def run() -> dict:

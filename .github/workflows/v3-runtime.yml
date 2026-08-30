@@ -92,6 +92,10 @@ jobs:
         if: steps.cadence.outputs.should_collect == 'true'
         run: python -m src.runtime_v3.capability_telemetry
 
+      - name: Validate hardened FAST lane contract
+        if: steps.cadence.outputs.should_collect == 'true'
+        run: python -m src.runtime_v3.fast_lane_contract_validate
+
       - name: Select execution profile
         if: steps.cadence.outputs.should_collect == 'true'
         id: runtime_profile

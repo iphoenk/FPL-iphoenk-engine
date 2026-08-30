@@ -12,14 +12,27 @@
     "reuse_is_invalidated_by_source_tree_change": true,
     "full_refresh_and_deep_stats_never_use_fingerprint_reuse": true,
     "missing_or_invalid_fingerprint_falls_back_to_execution": true,
+    "reuse_only_when_avoided_compute_exceeds_fingerprint_cost": true,
+    "cheap_decision_consumers_execute_and_validate_directly": true,
     "football_formulas_unchanged": true
   },
   "services": {
-    "prediction": {"allow_during_live": true, "inputs": ["src/","official_snapshot.json","team.json","prior_season.json","player_features.json","tactical_team_profiles.json","player_role_profiles.json","recent_tactical_form.json","config/locked_squad.json","config/intelligence/projection.json","config/intelligence/team_strength.json","config/intelligence/xmins_v2.json"]},
-    "lineup_governance": {"allow_during_live": true, "inputs": ["src/","team.json","chips.json","projections.json","package_optimizer.json","config/locked_squad.json","config/intelligence/lineup_governance.json"]},
-    "challenger": {"allow_during_live": true, "inputs": ["src/","projections.json","prediction_ledger.json","challenger_observations.json","source_health.json","config/intelligence/challenger_registry.json"]},
-    "watchlist": {"allow_during_live": false, "inputs": ["src/","team.json","projections.json","package_optimizer.json","prices.json","price_alerts.json","framework_health.json","config/intelligence/dss_watchlist.json"]},
-    "reporting": {"allow_during_live": false, "inputs": ["src/","team.json","lineup_decision.json","package_decision.json","projections.json","price_alerts.json","prediction_quality.json","framework_health.json","challenger_scorecard.json","dss_watchlist.json","source_health.json","dss_operational_evidence.json","config/intelligence/reporting.json"]},
-    "report_materializer": {"allow_during_live": false, "inputs": ["src/","official_snapshot.json","user_report.json","technical_appendix.json","team.json","projections.json","lineup_decision.json","dss_watchlist.json","official_detail.json","source_health.json","fixture_weather.json","config/report_artifact_registry.json"]}
+    "prediction": {
+      "allow_during_live": true,
+      "inputs": [
+        "src/",
+        "official_snapshot.json",
+        "team.json",
+        "prior_season.json",
+        "player_features.json",
+        "tactical_team_profiles.json",
+        "player_role_profiles.json",
+        "recent_tactical_form.json",
+        "config/locked_squad.json",
+        "config/intelligence/projection.json",
+        "config/intelligence/team_strength.json",
+        "config/intelligence/xmins_v2.json"
+      ]
+    }
   }
 }

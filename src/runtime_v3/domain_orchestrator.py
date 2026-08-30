@@ -14,6 +14,7 @@ from typing import Any
 
 from src.runtime_v3 import incremental_reuse
 from src.runtime_v3 import module_batch_runner
+from src.runtime_v3 import domain_process_runner
 from src.runtime_v3 import orchestrator as legacy
 from src.runtime_v3 import registry_compiler
 from src.utils import DATA, ROOT, atomic_json, read_json
@@ -21,6 +22,7 @@ from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
 PERFORMANCE_PATH = DATA / "runtime_performance.json"
+FAST_LANE_POLICY_PATH = ROOT / "config" / "runtime" / "fast_lane_policy.json"
 DOMAIN_RUNTIME_ID = "v3-domain-pipeline-v2"
 _DOMAIN_RESULT_PREFIX = "V3_DOMAIN_RESULT="
 _CANONICAL_PHASES = ("ACQUIRE", "ENRICH", "MODEL", "DECISION", "GOVERNANCE", "PUBLISH")
@@ -268,6 +270,44 @@ def _run_domain_process(
     return payload
 
 
+def _fast_lane_policy() -> dict[str, Any]:
+    payload = json.loads(FAST_LANE_POLICY_PATH.read_text(encoding="utf-8"))
+    if payload.get("registry") != "V3_FAST_LANE_POLICY_V1":
+        raise RuntimeError("unexpected V3 fast-lane policy registry")
+    return payload
+
+
+def _run_domain_in_process(
+    domain_name: str,
+    *,
+    mode: str,
+    stats: bool,
+    deep_stats: bool,
+    profile_name: str,
+    cache_dir: Path,
+    cache_ttl: int,
+) -> dict[str, Any]:
+    started = time.perf_counter()
+    previous = {
+        key: os.environ.get(key)
+        for key in ("FPL_HTTP_CACHE_DIR", "FPL_HTTP_CACHE_TTL_SECONDS", "FPL_EXECUTION_PROFILE")
+    }
+    os.environ["FPL_HTTP_CACHE_DIR"] = str(cache_dir)
+    os.environ["FPL_HTTP_CACHE_TTL_SECONDS"] = str(cache_ttl)
+    os.environ["FPL_EXECUTION_PROFILE"] = profile_name
+    try:
+        payload = domain_process_runner.run_domain(domain_name, mode, stats, deep_stats, profile_name)
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+    payload["process_elapsed_ms"] = round((time.perf_counter() - started) * 1000.0, 3)
+    payload["execution_boundary"] = "IN_PROCESS_COALESCED"
+    return payload
+
+
 def _domain_seed_paths(capabilities: list[str], services: dict[str, Any]) -> list[str]:
     paths = {"latest.json", "incremental_reuse_state.json"}
     for capability in capabilities:
@@ -485,7 +525,9 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         pending = list(compiled_plan["domain_order"])
-        parallel_waves = [
+        fast_policy = _fast_lane_policy()
+        coalesced_fast = profile_name in set(fast_policy.get("profiles") or [])
+        parallel_waves = [] if coalesced_fast else [
             tuple(str(domain) for domain in wave)
             for wave in compiled_plan["domain_waves"]
             if len(wave) > 1
@@ -591,16 +633,27 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                             f"domain ordering violates capability dependency: {domain_name}:{capability} missing={missing}"
                         )
 
-                domain_payload = _run_domain_process(
-                    domain_name,
-                    mode=mode,
-                    stats=stats,
-                    deep_stats=deep_stats,
-                    profile_name=profile_name,
-                    cache_dir=cache_dir,
-                    cache_ttl=cache_ttl,
-                    timeout=timeout,
-                )
+                if coalesced_fast:
+                    domain_payload = _run_domain_in_process(
+                        domain_name,
+                        mode=mode,
+                        stats=stats,
+                        deep_stats=deep_stats,
+                        profile_name=profile_name,
+                        cache_dir=cache_dir,
+                        cache_ttl=cache_ttl,
+                    )
+                else:
+                    domain_payload = _run_domain_process(
+                        domain_name,
+                        mode=mode,
+                        stats=stats,
+                        deep_stats=deep_stats,
+                        profile_name=profile_name,
+                        cache_dir=cache_dir,
+                        cache_ttl=cache_ttl,
+                        timeout=timeout,
+                    )
                 _accept_domain_result(
                     domain_name,
                     domain_payload,
@@ -663,10 +716,14 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             "runtime_assurance": "PASS",
         }
         performance["domain_process_execution"] = {
-            "enabled": True,
-            "process_count": len(domain_results),
+            "enabled": not coalesced_fast,
+            "process_count": 0 if coalesced_fast else len(domain_results),
             "phase_count": int(domain_registry["phase_count"]),
-            "one_process_per_execution_domain": True,
+            "one_process_per_execution_domain": not coalesced_fast,
+            "coalesced_fast_lane": coalesced_fast,
+            "execution_boundary": "IN_PROCESS_COALESCED" if coalesced_fast else "DOMAIN_PROCESS",
+            "fail_closed_after_partial_execution": bool(fast_policy.get("fail_closed_after_partial_execution", True)) if coalesced_fast else True,
+            "fallback_to_multi_process_allowed": bool(fast_policy.get("fallback_to_multi_process_allowed", False)) if coalesced_fast else True,
             "business_ownership_unchanged": True,
             "isolated_parallel_domains": sorted(parallel_wave_domains),
             "parallel_pairs_executed": parallel_pairs_executed,
@@ -710,7 +767,9 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
             "shared_official_cache": True,
             "capability_owner_count": len(capability_results),
             "shared_canonical_domain_workspace": True,
-            "one_process_per_execution_domain": True,
+            "one_process_per_execution_domain": not coalesced_fast,
+            "coalesced_fast_lane": coalesced_fast,
+            "execution_boundary": "IN_PROCESS_COALESCED" if coalesced_fast else "DOMAIN_PROCESS",
             "isolated_parallel_domains": sorted(parallel_wave_domains),
             "compiled_parallel_waves": [list(wave) for wave in parallel_waves],
             "parallel_wave_scheduler": "COMPILED_ISOLATION_SAFE",

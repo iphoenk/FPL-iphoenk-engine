@@ -9,6 +9,7 @@ import runpy
 import shutil
 import sys
 import time
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -20,11 +21,22 @@ from src.utils import DATA, ROOT
 DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
 
 
+@lru_cache(maxsize=1)
 def _domains() -> dict[str, Any]:
     payload = json.loads(DOMAIN_PATH.read_text(encoding="utf-8"))
     if payload.get("registry") != "V3_EXECUTION_DOMAINS_V2":
         raise RuntimeError("unexpected execution domain registry")
     return payload.get("domains") or {}
+
+
+@lru_cache(maxsize=1)
+def _service_registry() -> dict[str, Any]:
+    return legacy._load_registry()
+
+
+@lru_cache(maxsize=1)
+def _profiles() -> dict[str, Any]:
+    return legacy._load_profiles()
 
 
 def _expand_args(values: list[Any], context: dict[str, str]) -> list[str]:
@@ -172,8 +184,8 @@ def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profi
 
 
 def run_domain(domain_name: str, mode: str, stats: bool, deep_stats: bool, profile_name: str) -> dict[str, Any]:
-    registry = legacy._load_registry()
-    profile_cfg = (legacy._load_profiles().get("profiles") or {}).get(profile_name)
+    registry = _service_registry()
+    profile_cfg = (_profiles().get("profiles") or {}).get(profile_name)
     if not isinstance(profile_cfg, dict):
         raise RuntimeError(f"unknown execution profile: {profile_name}")
     domain = _domains().get(domain_name)

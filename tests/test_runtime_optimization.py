@@ -25,8 +25,9 @@ def test_fast_profile_and_slo_are_registry_owned():
     assert set(fast["reuse_services"]) >= {"advanced_stats", "historical_prior", "source_layer", "official_detail"}
     assert profiles["policy"]["reused_service_latest_state_is_carried_forward"] is True
     assert profiles["policy"]["parallelism_follows_v5_bounded_fanout_principle"] is True
-    assert slo["profiles"]["fast_decision"]["target_wall_ms"] == 10000
-    assert slo["profiles"]["fast_decision"]["legacy_ceiling_ms"] == 45000
+    assert slo["profiles"]["fast_decision"]["target_wall_ms"] == 3000
+    assert slo["profiles"]["fast_decision"]["legacy_ceiling_ms"] == 3000
+    assert slo["profiles"]["fast_decision"]["enforcement"] == "HARD_CEILING"
     assert slo["profiles"]["instant_serving"]["target_wall_ms"] == 500
     assert slo["profiles"]["instant_serving"]["legacy_ceiling_ms"] == 1000
     assert slo["policy"]["sub_second_target_applies_to_validated_warm_serving"] is True
@@ -59,46 +60,9 @@ def test_profile_aware_production_contract_accepts_only_validated_declared_reuse
 
 
 def test_production_contract_accepts_canonical_11_domain_6_phase_runtime():
-    canonical_domains = [
-        "official_state",
-        "personal_team_state",
-        "football_context",
-        "market_context",
-        "prediction",
-        "squad_decision",
-        "challenger_analysis",
-        "framework_governance",
-        "prediction_validation",
-        "reporting",
-        "serving",
-    ]
-    snapshot = {
-        "id": "v3-domain-pipeline-v2",
-        "architecture": "V3_CANONICAL_DOMAIN_PIPELINE",
-        "dependency_aware_scheduling": True,
-        "shared_official_cache": True,
-        "shared_canonical_domain_workspace": True,
-        "cross_capability_copy_promotion": False,
-        "execution_domain_count": 11,
-        "execution_phase_count": 6,
-        "service_count": 11,
-        "capability_owner_count": 21,
-    }
-    runtime = {
-        "runtime_id": "v3-domain-pipeline-v2",
-        "architecture": "V3_CANONICAL_DOMAIN_PIPELINE",
-        "execution_domain_count": 11,
-        "execution_phase_count": 6,
-        "capability_owner_count": 21,
-        "cross_capability_copy_promotion": False,
-        "canonical_domain_order": canonical_domains,
-        "execution_domains": {name: {"status": "SUCCESS"} for name in canonical_domains},
-        "execution_phase_results": {
-            phase: {"status": "SUCCESS"}
-            for phase in ["ACQUIRE", "ENRICH", "MODEL", "DECISION", "GOVERNANCE", "PUBLISH"]
-        },
-        "services": {f"capability_{index}": {} for index in range(21)},
-    }
+    canonical_domains = ["official_state","personal_team_state","football_context","market_context","prediction","squad_decision","challenger_analysis","framework_governance","prediction_validation","reporting","serving"]
+    snapshot = {"id":"v3-domain-pipeline-v2","architecture":"V3_CANONICAL_DOMAIN_PIPELINE","dependency_aware_scheduling":True,"shared_official_cache":True,"shared_canonical_domain_workspace":True,"cross_capability_copy_promotion":False,"execution_domain_count":11,"execution_phase_count":6,"service_count":11,"capability_owner_count":21}
+    runtime = {"runtime_id":"v3-domain-pipeline-v2","architecture":"V3_CANONICAL_DOMAIN_PIPELINE","execution_domain_count":11,"execution_phase_count":6,"capability_owner_count":21,"cross_capability_copy_promotion":False,"canonical_domain_order":canonical_domains,"execution_domains":{name:{"status":"SUCCESS"} for name in canonical_domains},"execution_phase_results":{phase:{"status":"SUCCESS"} for phase in ["ACQUIRE","ENRICH","MODEL","DECISION","GOVERNANCE","PUBLISH"]},"services":{f"capability_{index}":{} for index in range(21)}}
     _validate_runtime_architecture(snapshot, runtime)
 
 
@@ -116,15 +80,15 @@ def test_rec32_carries_only_registry_owned_reusable_latest_state(monkeypatch):
 
 
 def test_publish_snapshot_is_whitelist_only_and_generates_manifest(tmp_path):
-    source=tmp_path/"source"; output=tmp_path/"publish"; source.mkdir(); (source/"latest.json").write_text("{}"); (source/"history.jsonl").write_text("should-not-publish\n"); (source/"runtime_performance.json").write_text(json.dumps({"total_wall_ms":9000,"target_wall_ms":10000,"within_target_slo":True,"within_legacy_ceiling":True,"resources":{"peak_rss_kb":1000,"child_peak_rss_kb":2000}}))
+    source=tmp_path/"source"; output=tmp_path/"publish"; source.mkdir(); (source/"latest.json").write_text("{}"); (source/"history.jsonl").write_text("should-not-publish\n"); (source/"runtime_performance.json").write_text(json.dumps({"total_wall_ms":2900,"target_wall_ms":3000,"within_target_slo":True,"within_legacy_ceiling":True,"resources":{"peak_rss_kb":1000,"child_peak_rss_kb":2000}}))
     manifest=materialize(source,output,"fast_decision","deadbeef")
     assert (output/"data/latest.json").exists() and (output/"data/runtime_performance.json").exists() and (output/"data/runtime_manifest.json").exists() and not (output/"data/history.jsonl").exists()
     assert manifest["source_commit"]=="deadbeef" and manifest["publication"]["rolling_snapshot_intended"] is True
 
 
 def test_performance_guard_transition_semantics():
-    slo=json.loads((ROOT/"config/runtime/performance_slo.json").read_text()); performance={"total_wall_ms":12000,"resources":{"peak_rss_kb":1,"child_peak_rss_kb":1,"temporary_bytes":1,"seed_input_bytes":1,"promoted_output_bytes":1}}; result=evaluate(performance,slo,"fast_decision")
-    assert result["within_target_slo"] is False and result["within_legacy_ceiling"] is True and result["resource_observability_complete"] is True
+    slo=json.loads((ROOT/"config/runtime/performance_slo.json").read_text()); performance={"total_wall_ms":3200,"resources":{"peak_rss_kb":1,"child_peak_rss_kb":1,"temporary_bytes":1,"seed_input_bytes":1,"promoted_output_bytes":1}}; result=evaluate(performance,slo,"fast_decision")
+    assert result["within_target_slo"] is False and result["within_legacy_ceiling"] is False and result["resource_observability_complete"] is True
 
 
 def test_player_features_are_consumed_only_after_explicit_rec01_activation():

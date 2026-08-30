@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from src.utils import ROOT
+from src.utils import ROOT, trusted_atomic_json
 
 CONFIG_PATH = ROOT / "config" / "runtime" / "artifact_contracts.json"
 EXPECTED_REGISTRY = "RUNTIME_ARTIFACT_CONTRACTS_V2"
@@ -22,6 +22,9 @@ def load_registry() -> dict[str, Any]:
 
 
 def _strict_json(path: Path) -> Any:
+    trusted, payload = trusted_atomic_json(path)
+    if trusted:
+        return payload
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:

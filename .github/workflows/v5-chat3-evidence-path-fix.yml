@@ -1,0 +1,41 @@
+name: V5 Chat3 Evidence Path Fix
+
+on:
+  push:
+    branches:
+      - codex/v5-chat3-final-reanchor-a40d
+    paths:
+      - .github/workflows/v5-chat3-evidence-path-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ !contains(github.event.head_commit.message, '[evidence-path-fixed]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v5-chat3-final-reanchor-a40d
+          fetch-depth: 0
+      - name: Fix capability evidence path syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('config/v5_capability_parity_registry.json')
+          text = path.read_text(encoding='utf-8')
+          old = 'config/v5_public_api_registry.json#endpoints.element_summary'
+          new = 'config/v5_public_api_registry.json::endpoints.element_summary'
+          if old not in text:
+              raise SystemExit('expected evidence path not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          git rm .github/workflows/v5-chat3-evidence-path-fix.yml
+          git config user.name "iphoenk"
+          git config user.email "103485057+iphoenk@users.noreply.github.com"
+          git add config/v5_capability_parity_registry.json
+          git commit -m "fix(v5): use canonical evidence path syntax [evidence-path-fixed]"
+          git push origin HEAD:codex/v5-chat3-final-reanchor-a40d

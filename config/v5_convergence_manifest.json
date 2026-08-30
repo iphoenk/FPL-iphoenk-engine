@@ -5,8 +5,8 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "9a76a6231bdd747a247eabc8867a2312a188317a",
-    "production_code_commit": "9a76a6231bdd747a247eabc8867a2312a188317a",
+    "production_main_sha": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
+    "production_code_commit": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
@@ -76,8 +76,11 @@
     "live_safe_incremental_reuse_semantics_required": true,
     "production_definition_of_done_executable_required": true,
     "price_fact_vs_model_semantic_authority_required": true,
-    "authenticated_official_predeadline_team_required_when_available": true,
-    "official_submitted_predeadline_fallback_required_when_auth_unavailable": true,
+    "public_official_universal_backbone_required": true,
+    "user_capture_predeadline_authority_when_current_required": true,
+    "authenticated_official_optional_private_enrichment_only": true,
+    "authenticated_official_production_blocking": false,
+    "official_submitted_predeadline_fallback_required_when_capture_unavailable": true,
     "explicit_xmins_probability_decomposition_required": true,
     "projection_component_observability_required": true,
     "current_v3_execution_topology_reconciled_by_capability": true,
@@ -90,7 +93,7 @@
     "v3_gameweek_lifecycle_reporting_hardening_reconciled_without_prediction_or_decision_authority_change": true,
     "v3_bounded_warm_retry_reconciled_as_runtime_workflow_hardening": true,
     "v3_official_phase_independent_fetch_overlap_reconciled_as_runtime_hardening": true,
-    "v3_authenticated_official_production_readiness_reconciled_as_runtime_hardening": true,
+    "v3_authenticated_official_production_readiness_reconciled_as_optional_enrichment": true,
     "strict_all_dss_active_governance_required": true,
     "unique_service_handler_and_bounded_context_authority_required": true
   },
@@ -131,7 +134,7 @@
       "release_fingerprint": "sha256:26707030c759b35315ac224ecb6065df1803f31fe0a2ef1e76dd84c9bcdb0aa8",
       "validated_real_shadow_cycles": 3,
       "latest_validated_at": "2026-08-30T11:07:53.409496+00:00",
-      "reason": "Production main moved from 892dd783b2fa0199cecf74e5a6548bb0619816dd to 9a76a6231bdd747a247eabc8867a2312a188317a for V3 authenticated Official production-readiness hardening; exact-fingerprint shadow acceptance must restart."
+      "reason": "Production main advanced to 5175f9bc68354100a8bc3a36a3b97e853e90b73d with the public Official plus user capture authority contract; exact-fingerprint shadow acceptance must restart against the deployed runtime."
     },
     "note": "Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required against the reanchored production SHA."
   },
@@ -143,6 +146,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "Production reanchor changes the V5 release fingerprint. Prior 3/3 evidence is preserved as superseded history; three fresh postvalidated cycles plus independent prediction acceptance remain mandatory."
+    "reason": "Production reanchor changes the V5 release fingerprint. Prior evidence is preserved as superseded history; three fresh postvalidated cycles plus independent prediction acceptance remain mandatory."
   }
 }

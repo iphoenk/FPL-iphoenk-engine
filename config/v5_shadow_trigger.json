@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "v5.0.0-beta.4-official-auth-gw3-proof",
-  "requested_at": "2026-08-29T18:58:19Z",
+  "requested_cycle": "v5.0.0-beta.4-gw3-post-reanchor-official-auth-proof-1",
+  "requested_at": "2026-08-30T00:31:00Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "accepted_production_baseline_from_manifest",
   "v5_role": "shadow_only",

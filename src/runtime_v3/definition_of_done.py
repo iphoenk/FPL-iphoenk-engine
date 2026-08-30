@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import subprocess
 import sys
 from datetime import datetime, timezone
 from typing import Any
 
 from src.utils import DATA, ROOT, parse_dt, read_json
+
+SLO_PATH = ROOT / "config" / "runtime" / "performance_slo.json"
 
 
 def _check(rows: list[dict[str, Any]], name: str, passed: bool, detail: Any = None, *, external: bool = False) -> None:
@@ -47,6 +50,128 @@ def _freshness_seconds(payload: dict[str, Any]) -> float | None:
 def _framework_counts(framework: dict[str, Any], key: str, state: str) -> int:
     block = framework.get(key) or {}
     return int((block.get("counts") or {}).get(state) or 0)
+
+
+def _finite_number(value: Any, *, allow_zero: bool = False) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    if not math.isfinite(number):
+        return None
+    if number < 0.0 or (number == 0.0 and not allow_zero):
+        return None
+    return number
+
+
+def _selected_profile_runtime_contract(
+    runtime: dict[str, Any],
+    slo_registry: dict[str, Any] | None = None,
+) -> tuple[bool, dict[str, Any]]:
+    detail: dict[str, Any] = {
+        "profile": runtime.get("execution_profile") if isinstance(runtime, dict) else None,
+        "wall_ms": runtime.get("total_wall_ms") if isinstance(runtime, dict) else None,
+        "target_ms": runtime.get("target_wall_ms") if isinstance(runtime, dict) else None,
+        "ceiling_ms": runtime.get("legacy_ceiling_ms") if isinstance(runtime, dict) else None,
+    }
+    if not isinstance(runtime, dict) or not runtime:
+        detail["reason"] = "MISSING_RUNTIME_TELEMETRY"
+        return False, detail
+
+    if slo_registry is None:
+        try:
+            slo_registry = json.loads(SLO_PATH.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            detail["reason"] = "INVALID_SLO_REGISTRY"
+            detail["error"] = f"{type(exc).__name__}: {exc}"
+            return False, detail
+
+    if not isinstance(slo_registry, dict) or slo_registry.get("registry") != "RUNTIME_PERFORMANCE_SLO_V1":
+        detail["reason"] = "INVALID_SLO_REGISTRY"
+        return False, detail
+    profiles = slo_registry.get("profiles")
+    if not isinstance(profiles, dict):
+        detail["reason"] = "INVALID_SLO_REGISTRY"
+        return False, detail
+
+    profile = runtime.get("execution_profile")
+    if not isinstance(profile, str) or not profile:
+        detail["reason"] = "MISSING_EXECUTION_PROFILE"
+        return False, detail
+    profile_cfg = profiles.get(profile)
+    if not isinstance(profile_cfg, dict):
+        detail["reason"] = "UNKNOWN_EXECUTION_PROFILE"
+        return False, detail
+
+    wall_ms = _finite_number(runtime.get("total_wall_ms"), allow_zero=True)
+    runtime_target_ms = _finite_number(runtime.get("target_wall_ms"))
+    runtime_ceiling_ms = _finite_number(runtime.get("legacy_ceiling_ms"))
+    runtime_budget_ms = _finite_number(runtime.get("performance_budget_ms"))
+    canonical_target_ms = _finite_number(profile_cfg.get("target_wall_ms"))
+    canonical_ceiling_ms = _finite_number(profile_cfg.get("legacy_ceiling_ms"))
+    if canonical_ceiling_ms is None:
+        canonical_ceiling_ms = canonical_target_ms
+
+    required_numbers = {
+        "total_wall_ms": wall_ms,
+        "target_wall_ms": runtime_target_ms,
+        "legacy_ceiling_ms": runtime_ceiling_ms,
+        "performance_budget_ms": runtime_budget_ms,
+        "canonical_target_wall_ms": canonical_target_ms,
+        "canonical_legacy_ceiling_ms": canonical_ceiling_ms,
+    }
+    malformed = [name for name, value in required_numbers.items() if value is None]
+    if malformed:
+        detail["reason"] = "MALFORMED_TIMING_TELEMETRY"
+        detail["malformed_fields"] = malformed
+        return False, detail
+
+    within_target_claim = runtime.get("within_target_slo")
+    within_budget_claim = runtime.get("within_target_budget")
+    if not isinstance(within_target_claim, bool) or not isinstance(within_budget_claim, bool):
+        detail["reason"] = "MALFORMED_SLO_CLAIMS"
+        return False, detail
+
+    enforcement = profile_cfg.get("enforcement")
+    if enforcement not in {"HARD_CEILING", "TARGET_WITH_LEGACY_CEILING", "CEILING"}:
+        detail["reason"] = "UNKNOWN_SLO_ENFORCEMENT"
+        detail["enforcement"] = enforcement
+        return False, detail
+
+    target_config_match = runtime_target_ms == canonical_target_ms
+    ceiling_config_match = runtime_ceiling_ms == canonical_ceiling_ms
+    budget_config_match = runtime_budget_ms == canonical_ceiling_ms
+    computed_within_target = wall_ms <= canonical_target_ms
+    computed_within_budget = wall_ms <= canonical_ceiling_ms
+    target_claim_match = within_target_claim is computed_within_target
+    budget_claim_match = within_budget_claim is computed_within_budget
+
+    detail.update({
+        "profile": profile,
+        "wall_ms": wall_ms,
+        "target_ms": canonical_target_ms,
+        "ceiling_ms": canonical_ceiling_ms,
+        "enforcement": enforcement,
+        "within_target_slo": computed_within_target,
+        "within_contract_ceiling": computed_within_budget,
+        "target_claim_match": target_claim_match,
+        "budget_claim_match": budget_claim_match,
+        "target_config_match": target_config_match,
+        "ceiling_config_match": ceiling_config_match,
+        "budget_config_match": budget_config_match,
+    })
+
+    if not target_config_match or not ceiling_config_match or not budget_config_match:
+        detail["reason"] = "RUNTIME_SLO_CONFIG_MISMATCH"
+        return False, detail
+    if not target_claim_match or not budget_claim_match:
+        detail["reason"] = "FALSE_SLO_CLAIM"
+        return False, detail
+    if not computed_within_budget:
+        detail["reason"] = "PROFILE_CEILING_BREACH"
+        return False, detail
+
+    detail["reason"] = "WITHIN_SELECTED_PROFILE_CONTRACT"
+    return True, detail
 
 
 def _tactical_report_coverage(user: dict[str, Any], watchlist: dict[str, Any]) -> dict[str, Any]:
@@ -116,8 +241,8 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
     _check(rows, "DSS_EXTENSIONS_16_16", _framework_counts(framework, "dss_extensions", "ACTIVE") == 16, (framework.get("dss_extensions") or {}).get("counts"))
     _check(rows, "ENHANCEMENTS_8_HEALTHY", _framework_counts(framework, "enhancements", "ACTIVE") == 8, (framework.get("enhancements") or {}).get("counts"))
 
-    runtime_ok = runtime.get("execution_profile") == "fast_decision" and runtime.get("within_target_slo") is True and float(runtime.get("total_wall_ms") or 1e9) < 10000.0
-    _check(rows, "RUNTIME_FAST_GREEN", runtime_ok, {"profile": runtime.get("execution_profile"), "wall_ms": runtime.get("total_wall_ms"), "target_ms": runtime.get("target_wall_ms")})
+    runtime_ok, runtime_detail = _selected_profile_runtime_contract(runtime)
+    _check(rows, "SELECTED_PROFILE_RUNTIME_GREEN", runtime_ok, runtime_detail)
     canonical_runtime = (
         int(runtime.get("execution_domain_count") or 0) == 11
         and int(runtime.get("execution_phase_count") or 0) == 6

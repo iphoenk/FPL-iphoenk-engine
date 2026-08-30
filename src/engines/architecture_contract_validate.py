@@ -72,7 +72,12 @@ def run() -> dict:
     weather_policy = _load(WEATHER_POLICY)
     venues = _load(VENUE_REGISTRY)
     report_registry = _load(REPORT_REGISTRY)
-    framework_registries = {"dss_core": _load(DSS_CORE), "dss_extensions": _load(DSS_EXT), "enhancements": _load(ENHANCEMENTS), "gate0": _load(GATE0)}
+    framework_registries = {
+        "dss_core": _load(DSS_CORE),
+        "dss_extensions": _load(DSS_EXT),
+        "enhancements": _load(ENHANCEMENTS),
+        "gate0": _load(GATE0),
+    }
     workflow_text = WORKFLOW.read_text(encoding="utf-8")
 
     if (ROOT / "config" / "sources.json").exists():
@@ -81,12 +86,20 @@ def run() -> dict:
     if sources.get("registry") != "SOURCE_REGISTRY_V4":
         errors.append("canonical source registry must be SOURCE_REGISTRY_V4")
     source_policy = sources.get("policy") or {}
-    for key in ("source_network_locations_are_registry_owned", "source_ingestion_timeouts_are_registry_owned", "weather_is_advisory_enrichment_only"):
+    for key in (
+        "source_network_locations_are_registry_owned",
+        "source_ingestion_timeouts_are_registry_owned",
+        "weather_is_advisory_enrichment_only",
+    ):
         if source_policy.get(key) is not True:
             errors.append(f"source policy missing {key}=true")
     source_rows = {str(row.get("id")): row for row in sources.get("sources") or []}
     weather_source = source_rows.get("open_meteo") or {}
-    if weather_source.get("class") != "ENRICHMENT" or weather_source.get("critical") is not False or weather_source.get("adapter") != "weather_artifact":
+    if (
+        weather_source.get("class") != "ENRICHMENT"
+        or weather_source.get("critical") is not False
+        or weather_source.get("adapter") != "weather_artifact"
+    ):
         errors.append("open_meteo must be noncritical WEATHER_ENRICHMENT via weather_artifact")
     for row in sources.get("sources") or []:
         for path in row.get("artifact_paths") or []:
@@ -96,11 +109,26 @@ def run() -> dict:
     weather_governance = weather_policy.get("governance") or {}
     if weather_governance.get("advisory_only") is not True:
         errors.append("weather must remain advisory_only")
-    for key in ("may_directly_change_xpts", "may_directly_change_captaincy", "may_directly_change_starting_xi", "may_directly_change_transfer_decision", "may_directly_change_watchlist_membership"):
+    for key in (
+        "may_directly_change_xpts",
+        "may_directly_change_xmins",
+        "may_directly_change_starting_xi",
+        "may_directly_change_bench_order",
+        "may_directly_change_captaincy",
+        "may_directly_change_vice_captaincy",
+        "may_directly_change_transfer_decision",
+        "may_directly_change_hit_decision",
+        "may_directly_change_chip_decision",
+        "may_directly_change_watchlist_membership",
+    ):
         if weather_governance.get(key) is not False:
             errors.append(f"weather decision mutation must remain false: {key}")
     if weather_governance.get("rain_probability_is_not_rain_intensity") is not True:
         errors.append("weather policy must distinguish rain probability from intensity")
+    if weather_governance.get("post_match_attribution_label") != "POSSIBLE_CONTRIBUTING_FACTOR":
+        errors.append("weather attribution must remain POSSIBLE_CONTRIBUTING_FACTOR")
+    if weather_governance.get("causal_claim_requires_calibrated_evidence") is not True:
+        errors.append("weather causality must require calibrated evidence")
     venue_rows = venues.get("venues") or []
     venue_names = [str(row.get("team_name") or "") for row in venue_rows]
     if len(venue_rows) < 20 or len(venue_names) != len(set(venue_names)) or any(not name for name in venue_names):
@@ -109,20 +137,52 @@ def run() -> dict:
     if artifact_contracts.get("registry") != "RUNTIME_ARTIFACT_CONTRACTS_V2":
         errors.append("runtime artifact contract registry must be RUNTIME_ARTIFACT_CONTRACTS_V2")
     artifact_policy = artifact_contracts.get("policy") or {}
-    for key in ("validate_declared_json_before_acceptance", "validate_latest_sidecar_when_present", "malformed_json_is_integrity_failure", "valid_empty_external_observations_are_allowed", "valid_empty_weather_window_is_allowed"):
+    for key in (
+        "validate_declared_json_before_acceptance",
+        "validate_latest_sidecar_when_present",
+        "malformed_json_is_integrity_failure",
+        "valid_empty_external_observations_are_allowed",
+        "valid_empty_weather_window_is_allowed",
+    ):
         if artifact_policy.get(key) is not True:
             errors.append(f"runtime artifact policy missing {key}=true")
     challenger_contract = (artifact_contracts.get("contracts") or {}).get("challenger_observations.json") or {}
-    if (challenger_contract.get("equals") or {}).get("schema_version") != 2 or (challenger_contract.get("equals") or {}).get("contract") != "challenger_observation_v2" or (challenger_contract.get("types") or {}).get("observations") != "list":
+    if (
+        (challenger_contract.get("equals") or {}).get("schema_version") != 2
+        or (challenger_contract.get("equals") or {}).get("contract") != "challenger_observation_v2"
+        or (challenger_contract.get("types") or {}).get("observations") != "list"
+    ):
         errors.append("challenger_observations artifact contract drift")
     weather_contract = (artifact_contracts.get("contracts") or {}).get("fixture_weather.json") or {}
-    if (weather_contract.get("equals") or {}).get("model") != "weather_context_observational_v1" or (weather_contract.get("types") or {}).get("fixtures") != "list":
+    if (
+        (weather_contract.get("equals") or {}).get("schema_version") != 2
+        or (weather_contract.get("equals") or {}).get("model") != "weather_context_governed_v2"
+        or (weather_contract.get("types") or {}).get("fixtures") != "list"
+    ):
         errors.append("fixture_weather artifact contract missing or invalid")
+    weather_context_contract = (artifact_contracts.get("contracts") or {}).get("weather_context.json") or {}
+    if (
+        (weather_context_contract.get("equals") or {}).get("contract") != "WEATHER_CONTEXT_V3_V1"
+        or (weather_context_contract.get("equals") or {}).get("owner") != "weather_context"
+    ):
+        errors.append("weather_context artifact contract missing or invalid")
+    weather_health_contract = (artifact_contracts.get("contracts") or {}).get("weather_context_health.json") or {}
+    if (
+        (weather_health_contract.get("equals") or {}).get("contract") != "WEATHER_CONTEXT_HEALTH_V1"
+        or (weather_health_contract.get("equals") or {}).get("decision_blocking") is not False
+    ):
+        errors.append("weather_context_health artifact contract missing or invalid")
 
     report_contract = report_registry.get("consumer_contract") or {}
     if report_registry.get("registry") != "REPORT_ARTIFACT_REGISTRY_V3":
         errors.append("report artifact registry must be V3")
-    for key in ("owned_rows_require_current_gw_xpts", "owned_rows_require_lineup_status", "owned_rows_require_choice_state", "model_validation_required", "weather_context_required"):
+    for key in (
+        "owned_rows_require_current_gw_xpts",
+        "owned_rows_require_lineup_status",
+        "owned_rows_require_choice_state",
+        "model_validation_required",
+        "weather_context_required",
+    ):
         if report_contract.get(key) is not True:
             errors.append(f"report transparency contract missing {key}=true")
 
@@ -136,21 +196,57 @@ def run() -> dict:
     missing_base = sorted(required_base - set(service_map))
     if missing_base:
         errors.append(f"missing owned base services: {missing_base}")
-    if any("weather" in name.lower() for name in service_map):
-        errors.append("weather must not create a standalone microservice")
     policy = services.get("policy") or {}
-    for key in ("generic_root_service_scheduling", "service_boundaries_follow_artifact_ownership_not_file_size", "single_owner_for_standard_official_network_fetches", "declared_json_artifacts_are_validated_before_acceptance", "artifact_contract_registry_owned", "malformed_internal_artifact_is_integrity_failure", "valid_empty_external_observations_remain_fail_soft", "weather_enrichment_lives_inside_source_layer_not_new_microservice", "weather_is_observational_and_advisory_only", "weather_never_directly_mutates_xpts_or_decisions"):
+    for key in (
+        "generic_root_service_scheduling",
+        "service_boundaries_follow_artifact_ownership_not_file_size",
+        "single_owner_for_standard_official_network_fetches",
+        "declared_json_artifacts_are_validated_before_acceptance",
+        "artifact_contract_registry_owned",
+        "malformed_internal_artifact_is_integrity_failure",
+        "valid_empty_external_observations_remain_fail_soft",
+        "weather_acquisition_lives_inside_source_layer",
+        "weather_context_is_separate_governed_enrichment_capability",
+        "weather_is_observational_and_advisory_only",
+        "weather_never_directly_mutates_xpts_xmins_or_decisions",
+        "weather_context_health_propagates_to_framework",
+    ):
         if policy.get(key) is not True:
             errors.append(f"service policy missing {key}=true")
 
     source_service = service_map.get("source_layer") or {}
     if "official_snapshot.json" not in (source_service.get("inputs") or []) or "fixture_weather.json" not in (source_service.get("artifacts") or []):
-        errors.append("source_layer must own weather enrichment while consuming Official snapshot")
+        errors.append("source_layer must own weather acquisition while consuming Official snapshot")
+    weather_service = service_map.get("weather_context") or {}
+    weather_modules = [str(command.get("module")) for command in weather_service.get("commands") or [] if command.get("module")]
+    if weather_modules != ["src.engines.weather_context"]:
+        errors.append("weather_context capability must be materialized by src.engines.weather_context")
+    if set(weather_service.get("depends_on") or []) != {"source_layer", "tactical_context"}:
+        errors.append("weather_context capability dependency drift")
+    if set(weather_service.get("artifacts") or []) != {"weather_context.json", "weather_context_health.json"}:
+        errors.append("weather_context capability artifact ownership drift")
+    if "fixture_weather.json" in (weather_service.get("artifacts") or []):
+        errors.append("weather_context must consume, not reacquire, fixture_weather")
+    if "fixture_weather.json" not in (weather_service.get("inputs") or []):
+        errors.append("weather_context must consume governed fixture_weather evidence")
+
+    prediction_service = service_map.get("prediction") or {}
+    forbidden_weather_inputs = {"fixture_weather.json", "weather_context.json", "weather_context_health.json"}
+    if forbidden_weather_inputs & set(prediction_service.get("inputs") or []):
+        errors.append("prediction must not consume weather artifacts as direct xPts/xMins inputs")
+    if "weather_context" not in (prediction_service.get("depends_on") or []):
+        errors.append("prediction must wait for governed weather enrichment before normal model chain")
+    for decision_service_name in ("lineup_governance", "watchlist"):
+        if forbidden_weather_inputs & set((service_map.get(decision_service_name) or {}).get("inputs") or []):
+            errors.append(f"{decision_service_name} must not consume weather artifacts directly")
+
     report_service = service_map.get("report_materializer") or {}
     report_modules = [str(command.get("module")) for command in report_service.get("commands") or [] if command.get("module")]
     expected_order = ["src.engines.report_materializer", "src.engines.report_transparency_overlay", "src.engines.report_serving_validate"]
     if report_modules != expected_order:
         errors.append(f"report materializer command order drift: {report_modules}")
+    if not {"weather_context.json", "weather_context_health.json"}.issubset(set(report_service.get("inputs") or [])):
+        errors.append("report serving must receive governed weather context and health")
 
     active_modules: list[str] = []
     for service_name, spec in service_map.items():
@@ -200,7 +296,7 @@ def run() -> dict:
     if battle_threshold_value <= 0:
         errors.append("lineup battle close_margin_threshold must be positive and config-owned")
     lineup_text = (ROOT / "src" / "engines" / "lineup_governance.py").read_text(encoding="utf-8")
-    if 'margin < 0.75' in lineup_text:
+    if "margin < 0.75" in lineup_text:
         errors.append("lineup battle threshold is hardcoded instead of config-owned")
 
     orchestrator_text = (ROOT / "src" / "runtime_v3" / "orchestrator.py").read_text(encoding="utf-8")

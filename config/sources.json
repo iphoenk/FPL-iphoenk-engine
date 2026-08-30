@@ -13,7 +13,8 @@
   "vaastav": {
     "enabled": true,
     "tier": 3,
-    "raw_base": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data"
+    "raw_base": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data",
+    "historical_depth": 2
   },
   "understat": {
     "enabled": false,

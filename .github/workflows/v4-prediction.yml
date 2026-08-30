@@ -1,5 +1,7 @@
 name: FPL iphoenk V4 production scheduler
 
+run-name: V4 master scheduler | target :30 WIB | ${{ github.event_name }}
+
 on:
   workflow_dispatch:
   schedule:
@@ -8,17 +10,63 @@ on:
     - cron: "30 * * * *"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: fpl-iphoenk-v4-gate
   cancel-in-progress: false
 
 jobs:
+  resolve-canonical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      canonical_sha: ${{ steps.resolve.outputs.canonical_sha }}
+      execution_observed: ${{ steps.resolve.outputs.execution_observed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Resolve current canonical V4 SHA
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          canonical_sha="$(git ls-remote origin refs/heads/v4-prediction-engine | awk '{print $1}')"
+          test -n "$canonical_sha"
+          observed="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          echo "canonical_sha=$canonical_sha" >> "$GITHUB_OUTPUT"
+          echo "execution_observed=$observed" >> "$GITHUB_OUTPUT"
+          {
+            echo "### V4 master scheduler dispatch"
+            echo "- SCHEDULE_TARGET=:30 WIB"
+            echo "- EXECUTION_OBSERVED=$observed"
+            echo "- RECOVERY_REQUIRED=false"
+            echo "- CANONICAL_V4_SHA=$canonical_sha"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   core:
+    needs: resolve-canonical
     uses: iphoenk/FPL-iphoenk-engine/.github/workflows/fpl-engine-core.yml@v4-prediction-engine
     permissions:
       contents: write
     with:
-      ref: v4-prediction-engine
+      ref: ${{ needs.resolve-canonical.outputs.canonical_sha }}
       publish: true
+
+  observability:
+    needs: [resolve-canonical, core]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Record target versus observed execution
+        run: |
+          {
+            echo "### V4 scheduler outcome"
+            echo "- SCHEDULE_TARGET=:30 WIB"
+            echo "- EXECUTION_OBSERVED=${{ needs.resolve-canonical.outputs.execution_observed }}"
+            echo "- RECOVERY_REQUIRED=false"
+            echo "- CANONICAL_V4_SHA=${{ needs.resolve-canonical.outputs.canonical_sha }}"
+            echo "- PRODUCTION_RESULT=${{ needs.core.result }}"
+          } >> "$GITHUB_STEP_SUMMARY"

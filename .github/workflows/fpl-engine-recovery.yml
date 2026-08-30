@@ -1,0 +1,109 @@
+name: FPL V4 runtime freshness recovery
+
+run-name: V4 runtime watchdog | ${{ github.event_name }}
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Recovery-only watchdog. It is not a second master evaluation cron.
+    # Four off-minute wake-ups reduce time-to-recovery after STALE without
+    # running the engine unless the freshness contract actually requires it.
+    - cron: "7,22,37,52 * * * *"
+
+permissions:
+  contents: read
+
+# The freshness check waits behind any active production run. Once it owns the
+# lock it re-reads runtime-data-v4, so a completed scheduler run makes recovery
+# a no-op instead of a duplicate publication.
+concurrency:
+  group: fpl-iphoenk-v4-gate
+  cancel-in-progress: false
+
+env:
+  RUNTIME_BRANCH: runtime-data-v4
+  CANONICAL_V4_REF: v4-prediction-engine
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      recovery_required: ${{ steps.watchdog.outputs.recovery_required }}
+      freshness_state: ${{ steps.watchdog.outputs.freshness_state }}
+      age_minutes: ${{ steps.watchdog.outputs.age_minutes }}
+      missed_checkpoint_count: ${{ steps.watchdog.outputs.missed_checkpoint_count }}
+      canonical_sha: ${{ steps.watchdog.outputs.canonical_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Hydrate authoritative runtime publication metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest="$RUNNER_TEMP/v4-latest.json"
+          printf '{}\n' > "$latest"
+          if git ls-remote --exit-code --heads origin "$RUNTIME_BRANCH" >/dev/null 2>&1; then
+            git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+            if git cat-file -e "origin/${RUNTIME_BRANCH}:data/latest.json" 2>/dev/null; then
+              git show "origin/${RUNTIME_BRANCH}:data/latest.json" > "$latest"
+            fi
+          fi
+
+      - name: Evaluate operational freshness and resolve canonical V4
+        id: watchdog
+        shell: bash
+        run: |
+          set -euo pipefail
+          canonical_sha="$(git ls-remote origin "refs/heads/${CANONICAL_V4_REF}" | awk '{print $1}')"
+          test -n "$canonical_sha"
+          python .github/scripts/v4_runtime_watchdog.py \
+            --latest "$RUNNER_TEMP/v4-latest.json" \
+            --report "$RUNNER_TEMP/v4-runtime-watchdog.json" \
+            --github-output "$GITHUB_OUTPUT" \
+            --github-summary "$GITHUB_STEP_SUMMARY" \
+            --canonical-ref "$CANONICAL_V4_REF" \
+            --canonical-sha "$canonical_sha" \
+            --runtime-branch "$RUNTIME_BRANCH"
+
+      - name: Upload freshness evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-runtime-watchdog-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/v4-runtime-watchdog.json
+          if-no-files-found: error
+          retention-days: 14
+
+  recover:
+    needs: freshness
+    if: needs.freshness.outputs.recovery_required == 'true'
+    uses: iphoenk/FPL-iphoenk-engine/.github/workflows/fpl-engine-core.yml@v4-prediction-engine
+    permissions:
+      contents: write
+    with:
+      # The workflow implementation comes from the canonical branch and the
+      # engine checkout is pinned to the SHA resolved after acquiring the lock.
+      ref: ${{ needs.freshness.outputs.canonical_sha }}
+      publish: true
+
+  observability:
+    needs: [freshness, recover]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Record recovery outcome
+        run: |
+          {
+            echo "### V4 recovery outcome"
+            echo "- SCHEDULE_TARGET=:30 WIB"
+            echo "- EXECUTION_OBSERVED=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "- FRESHNESS_STATE=${{ needs.freshness.outputs.freshness_state }}"
+            echo "- AGE_MINUTES=${{ needs.freshness.outputs.age_minutes }}"
+            echo "- MISSED_CHECKPOINTS=${{ needs.freshness.outputs.missed_checkpoint_count }}"
+            echo "- RECOVERY_REQUIRED=${{ needs.freshness.outputs.recovery_required }}"
+            echo "- RECOVERY_RESULT=${{ needs.recover.result }}"
+            echo "- CANONICAL_V4_SHA=${{ needs.freshness.outputs.canonical_sha }}"
+          } >> "$GITHUB_STEP_SUMMARY"

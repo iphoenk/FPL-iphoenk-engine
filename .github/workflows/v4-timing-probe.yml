@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: fpl-iphoenk-v4-timing-probe
-  cancel-in-progress: true
+  group: fpl-iphoenk-v4-gate
+  cancel-in-progress: false
 
 jobs:
   probe:
@@ -22,6 +22,7 @@ jobs:
       run_full: ${{ steps.timing.outputs.run_full }}
       policy_id: ${{ steps.timing.outputs.policy_id }}
       reason: ${{ steps.timing.outputs.reason }}
+      canonical_sha: ${{ steps.canonical.outputs.canonical_sha }}
     steps:
       - name: Checkout canonical V4
         uses: actions/checkout@v4
@@ -40,6 +41,10 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python -m src.services.checkpoint_timing_probe
+      - name: Capture canonical V4 SHA
+        id: canonical
+        shell: bash
+        run: echo "canonical_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Probe summary
         run: echo "policy=${{ steps.timing.outputs.policy_id }} reason=${{ steps.timing.outputs.reason }} run_full=${{ steps.timing.outputs.run_full }}"
 
@@ -50,5 +55,5 @@ jobs:
       contents: write
     uses: iphoenk/FPL-iphoenk-engine/.github/workflows/fpl-engine-core.yml@v4-prediction-engine
     with:
-      ref: v4-prediction-engine
+      ref: ${{ needs.probe.outputs.canonical_sha }}
       publish: true

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from src.engines.v4_preseason_evidence import load_verified_preseason_evidence
 from src.models.player_identity import build_identity_index
 from src.models.v4_prediction import XA_PRIOR, XG_PRIOR, clamp, competition_adjustment, f, project_horizon, team_strength
 from src.models.v4_prediction_inputs import load_prediction_enrichment
@@ -261,11 +262,19 @@ def team_defence_prior(team):
     return clamp(0.30 + (strength - 1000) / 4000, 0.18, 0.48)
 
 
-def minutes_contexts(elements, last_season, finished_events, advanced=None, quality=None):
+def minutes_contexts(elements, last_season, finished_events, advanced=None, quality=None, preseason=None):
     advanced = advanced or {}
+    preseason = preseason or {}
     quality = quality or _quality_config()
     competition_cfg = quality.get("competition") or {}
-    roles = {player["id"]: tactical_role(player, advanced.get(player["id"])) for player in elements}
+    roles = {}
+    for player in elements:
+        inferred_role, inferred_source = tactical_role(player, advanced.get(player["id"]))
+        verified = preseason.get(player["id"]) or {}
+        if verified.get("role"):
+            roles[player["id"]] = (verified["role"], "verified_preseason_role")
+        else:
+            roles[player["id"]] = (inferred_role, inferred_source)
     by_group = defaultdict(list)
     for player in elements:
         by_group[(player.get("team"), roles[player["id"]][0])].append(player)
@@ -332,6 +341,11 @@ def minutes_contexts(elements, last_season, finished_events, advanced=None, qual
             "squad_depth_source": "credible_squad_count_diagnostic_only",
             "avg_minutes_when_start": average_start_minutes,
             "xmins_prior_source": source,
+            "preseason_evidence_state": "VERIFIED" if player["id"] in preseason else "EVIDENCE_GATED",
+            "preseason_role": (preseason.get(player["id"]) or {}).get("role"),
+            "preseason_source": (preseason.get(player["id"]) or {}).get("source"),
+            "preseason_verified_at": (preseason.get(player["id"]) or {}).get("verified_at"),
+            "preseason_role_consumed": role_source == "verified_preseason_role",
         }
         competition_factor, competition_uncertainty = competition_adjustment(context, current_rate)
         context["competition_factor"] = round(competition_factor, 4)
@@ -364,8 +378,16 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
     advanced = enrichment["advanced"]
     last_season = enrichment["last_season"]
     quality = _quality_config()
+    preseason, preseason_meta = load_verified_preseason_evidence()
     finished_events = sum(bool(event.get("finished")) for event in bootstrap.get("events", []))
-    xmins_context = minutes_contexts(elements, last_season, max(1, finished_events), advanced, quality)
+    xmins_context = minutes_contexts(
+        elements,
+        last_season,
+        max(1, finished_events),
+        advanced,
+        quality,
+        preseason=preseason,
+    )
     role_priors = team_role_priors(elements, advanced, quality)
     defence_ratings = opponent_defence_ratings(teams, fixtures, quality)
     rows = []
@@ -430,6 +452,7 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
             "advanced_decision_used": advanced_decision_used,
             "advanced_decision_used_ratio": round(advanced_decision_used / max(1, len(elements)), 4),
             "last_season_matched": len(last_season),
+            **preseason_meta,
             **enrichment["meta"],
         },
         "capability_evidence": {
@@ -444,6 +467,17 @@ def build_predictions(bootstrap, fixtures, generated_at, stats_gw=None):
             ),
             "value_coverage": sum(bool(row.get("value")) for row in rows),
             "advanced_decision_coverage": advanced_decision_used,
+            "preseason_role_consumed": sum(
+                bool((row.get("priors") or {}).get("preseason_role_consumed")) for row in rows
+            ),
+            "official_ownership_rows": sum(player.get("selected_by_percent") is not None for player in elements),
+            "ownership_context_consumed_players": len(rows),
+        },
+        "guardrails": {
+            "preseason_identity_join": "official_element_id",
+            "preseason_unverified_signal_zero": True,
+            "preseason_direct_xpts_mutation": False,
+            "ownership_source": "official_fpl_bootstrap_selected_by_percent",
         },
         "players": rows,
     }

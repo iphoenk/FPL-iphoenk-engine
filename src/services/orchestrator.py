@@ -247,6 +247,8 @@ def orchestrate(
             "hard_gate": False,
             "reason": "full orchestration includes Official/community network latency; deterministic decision compute remains the hard <5s gate",
         }
+        service_timings = {row["id"]: row.get("duration_ms") for row in report["services"]}
+        report["performance_breakdown_ms"] = service_timings
         report["summary"] = {
             "services_passed": len(services),
             "services_total": len(services),
@@ -268,6 +270,7 @@ def orchestrate(
             "scheduler": report["scheduler"],
             "duration_ms": report["duration_ms"],
             "runtime_target": report["runtime_target"]["status"],
+            "service_ms": service_timings,
             "snapshot": (report.get("snapshot_identity") or {}).get("sha256"),
             "simulated": report["simulated"],
             "stats": stats,

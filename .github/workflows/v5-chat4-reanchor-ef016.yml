@@ -1,0 +1,34 @@
+name: V5 Chat4 Reanchor ef016
+
+on:
+  push:
+    branches:
+      - codex/v5-chat4-current-lineup-parity
+    paths:
+      - .github/workflows/v5-chat4-reanchor-ef016.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reanchor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v5-chat4-current-lineup-parity
+          fetch-depth: 0
+      - name: Reanchor V5 metadata to deployed runtime
+        run: python tools/v5_reanchor_ef016.py
+      - name: Validate JSON and commit
+        run: |
+          python -m json.tool config/v5_convergence_manifest.json >/dev/null
+          python -m json.tool config/v5_acceptance_registry.json >/dev/null
+          python -m json.tool config/v5_capability_parity_registry.json >/dev/null
+          python -m json.tool IMPLEMENTATION_STATUS.json >/dev/null
+          git config user.name "iphoenk"
+          git config user.email "103485057+iphoenk@users.noreply.github.com"
+          git add config/v5_convergence_manifest.json config/v5_acceptance_registry.json config/v5_capability_parity_registry.json IMPLEMENTATION_STATUS.json
+          git diff --cached --check
+          git commit -m "chore(v5): reanchor Chat 4 to deployed ef016111 runtime"
+          git push origin HEAD:codex/v5-chat4-current-lineup-parity

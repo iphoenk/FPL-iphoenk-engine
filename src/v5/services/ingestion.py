@@ -68,5 +68,17 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         bootstrap = payload.get("bootstrap")
         if not isinstance(bootstrap, dict):
             raise ValueError("collect_enrichment requires bootstrap")
-        return collect_source_fusion(bootstrap)
+        fixtures = payload.get("fixtures")
+        fixture_health: dict[str, Any] = {}
+        if not isinstance(fixtures, list):
+            fixture_payloads, fixture_health = fetch_many({"weather_fixtures": FetchSpec(route="fixtures")})
+            fixtures = fixture_payloads.get("weather_fixtures") if isinstance(fixture_payloads.get("weather_fixtures"), list) else []
+        result = collect_source_fusion(bootstrap, fixtures)
+        result["weather_fixture_acquisition"] = {
+            "status": "REUSED_CALLER_FIXTURES" if isinstance(payload.get("fixtures"), list) else "FETCHED_BY_INGESTION",
+            "fixture_count": len(fixtures),
+            "health": fixture_health,
+            "governance": {"network_owner": "ingestion", "weather_shadow_only": True},
+        }
+        return result
     raise KeyError(f"unsupported ingestion operation: {operation}")

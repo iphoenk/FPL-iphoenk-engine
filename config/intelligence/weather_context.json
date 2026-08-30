@@ -1,21 +1,141 @@
 {
-  "schema_version": 2,
-  "model_id": "weather_context_advisory_v2",
+  "schema_version": 3,
+  "model_id": "weather_context_shadow_research_v3",
   "provider_source_id": "open_meteo",
   "venue_registry": "config/venues/premier_league_2026_27.json",
   "api": {
     "forecast_url": "https://api.open-meteo.com/v1/forecast",
     "request_timeout_seconds": 10,
-    "hourly_fields": ["temperature_2m", "precipitation_probability", "precipitation", "wind_speed_10m", "wind_gusts_10m", "weather_code"]
+    "max_parallel_requests": 4,
+    "hourly_fields": [
+      "temperature_2m",
+      "precipitation_probability",
+      "precipitation",
+      "wind_speed_10m",
+      "wind_gusts_10m",
+      "weather_code"
+    ]
+  },
+  "forecast_policy": {
+    "max_horizon_days": 7,
+    "retain_forecast_snapshots_per_fixture": 12,
+    "post_match_retention_hours": 72,
+    "freshness_hours": {
+      "HIGH": 6,
+      "MEDIUM": 24,
+      "LOW": 72
+    },
+    "confidence_by_horizon_days": {
+      "0": "HIGH",
+      "1": "HIGH",
+      "2": "MEDIUM",
+      "3": "MEDIUM",
+      "4": "LOW",
+      "5": "LOW",
+      "6": "LOW",
+      "7": "LOW"
+    }
+  },
+  "evidence_contract": {
+    "precedence": [
+      "LIVE_OBSERVED",
+      "CLOSEST_TO_KICKOFF_OBSERVATION",
+      "FRESH_FORECAST",
+      "STALE_FORECAST"
+    ],
+    "states": [
+      "FORECAST",
+      "CLOSEST_TO_KICKOFF",
+      "LIVE_OBSERVED",
+      "POST_MATCH_RECONCILED"
+    ],
+    "forecast_provider_is_not_observed_weather": true,
+    "missing_observation_remains_missing": true
   },
   "severity": {
-    "NOTABLE": {"wind_speed_kmh": 22, "wind_gust_kmh": 35, "precipitation_mm_h": 2.0, "cold_c": 5, "heat_c": 27},
-    "ADVERSE": {"wind_speed_kmh": 30, "wind_gust_kmh": 45, "precipitation_mm_h": 4.0, "cold_c": 3, "heat_c": 30},
-    "EXTREME": {"wind_speed_kmh": 45, "wind_gust_kmh": 65, "precipitation_mm_h": 8.0, "cold_c": 0, "heat_c": 35}
+    "NOTABLE": {
+      "wind_speed_kmh": 22,
+      "wind_gust_kmh": 35,
+      "precipitation_mm_h": 2.0,
+      "cold_c": 5,
+      "heat_c": 27
+    },
+    "ADVERSE": {
+      "wind_speed_kmh": 30,
+      "wind_gust_kmh": 45,
+      "precipitation_mm_h": 4.0,
+      "cold_c": 3,
+      "heat_c": 30
+    },
+    "EXTREME": {
+      "wind_speed_kmh": 45,
+      "wind_gust_kmh": 65,
+      "precipitation_mm_h": 8.0,
+      "cold_c": 0,
+      "heat_c": 35
+    }
+  },
+  "research": {
+    "observed_match_effects": [
+      "slips",
+      "handling_errors",
+      "miscontrols",
+      "turnovers",
+      "clearance_errors",
+      "ball_skid_events",
+      "passing_control_changes",
+      "crossing_set_piece_changes",
+      "gk_saves_rebounds",
+      "transition_frequency",
+      "tempo_changes"
+    ],
+    "interactions": [
+      "position",
+      "player_archetype",
+      "team_system",
+      "opponent_system",
+      "venue",
+      "home_away",
+      "game_state",
+      "competitive_load_rest"
+    ],
+    "confounders": [
+      "opponent_strength",
+      "tactical_change",
+      "venue",
+      "red_cards",
+      "injury",
+      "rotation",
+      "role_change",
+      "game_state",
+      "sample_noise"
+    ],
+    "candidate_signals": [
+      "variance_modifier",
+      "error_risk_modifier",
+      "transition_volatility_modifier",
+      "set_piece_variance",
+      "gk_handling_risk",
+      "passing_control_volatility"
+    ],
+    "validation": {
+      "minimum_weather_matches": 30,
+      "minimum_matched_controls": 30,
+      "minimum_distinct_venues": 4,
+      "minimum_distinct_gameweeks": 4,
+      "require_repeatability": true,
+      "require_out_of_sample_validation": true,
+      "require_calibration_improvement": true,
+      "require_non_regression": true
+    }
   },
   "governance": {
     "advisory_only": true,
     "shadow_evidence_allowed": true,
+    "v5_production_decision_authority": false,
+    "quantitative_weather_signal_consumption": false,
+    "promotion_authorized": false,
+    "promotion_requires_explicit_governance_authorization": true,
     "may_directly_change_xpts": false,
     "may_directly_change_xmins": false,
     "may_directly_change_captaincy": false,
@@ -25,7 +145,18 @@
     "rain_probability_is_not_rain_intensity": true,
     "prefer_closest_to_kickoff_or_live_observation": true,
     "post_match_attribution_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+    "weather_caused_label_allowed": false,
     "causal_claim_requires_calibrated_evidence": true,
-    "alternative_explanations_required": ["opponent_strength", "tactical_change", "game_state", "red_cards", "injury", "rotation", "role_change", "venue", "sample_noise"]
+    "alternative_explanations_required": [
+      "opponent_strength",
+      "tactical_change",
+      "game_state",
+      "red_cards",
+      "injury",
+      "rotation",
+      "role_change",
+      "venue",
+      "sample_noise"
+    ]
   }
 }

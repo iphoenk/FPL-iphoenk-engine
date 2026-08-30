@@ -29,8 +29,6 @@ def compare(v3: dict[str, Any], v5: dict[str, Any]) -> dict[str, Any]:
 
     v3_rows = v3.get("starting_xi") or (v3.get("lineup") or {}).get("starting_xi") or []
     v5_lineup = _v5_lineup(v5)
-    # Native V5 calls the XI `starters`; legacy bridges may still expose
-    # `starting_xi`. Missing XI evidence is a parity failure, never a pass.
     v5_rows = v5_lineup.get("starters") or v5_lineup.get("starting_xi") or v5.get("starting_xi") or []
     v3_xi = _ids(v3_rows)
     v5_xi = _ids(v5_rows)
@@ -42,18 +40,29 @@ def compare(v3: dict[str, Any], v5: dict[str, Any]) -> dict[str, Any]:
     v3_lock = str(v3.get("captain_state") or "").upper() == "LOCK"
     v5_lock = str(((v5.get("user_report") or {}).get("captaincy") or {}).get("decision") or "").upper() == "LOCK"
 
-    # Shadow parity is a DECISION-parity contract. A live production snapshot can
-    # legitimately have OFFICIAL_SUBMITTED as scoring authority while its next-GW
-    # planning decision still comes from a pre-deadline user lock. Prefer the
-    # explicit decision authority when present; falling back to generic squad
-    # authority is only for older artifacts that do not expose the distinction.
     v3_authority = str(v3.get("decision_squad_authority") or v3.get("squad_authority") or "").lower()
-    v3_manual = bool(v3.get("manual_lock_authoritative")) or v3_authority in {
-        "pre_deadline_wc",
-        "user_lock",
-        "manual_lock",
-    }
     v5_authority = str(v5.get("decision_squad_authority") or v5.get("squad_authority") or "").lower()
+    submitted_authority = str(v3.get("submitted_baseline_authority") or "").upper()
+    submitted_ids = _ids(v3.get("submitted_baseline_squad") or [])
+    v5_owned_ids = _ids(((v5.get("team_summary") or {}).get("squad") or []))
+    if not v5_owned_ids:
+        v5_owned_ids = {int(x) for x in ((v5.get("team_summary") or {}).get("owned_ids") or [])}
+    submitted_identity_complete = len(submitted_ids) == 15 and len(v5_owned_ids) == 15
+    submitted_identity_match = submitted_identity_complete and submitted_ids == v5_owned_ids
+
+    explicit_v3_manual = bool(v3.get("manual_lock_authoritative")) or v3_authority in {"user_lock", "manual_lock"}
+    legacy_predeadline_label = v3_authority == "pre_deadline_wc"
+    legacy_label_resolved_to_submitted = (
+        legacy_predeadline_label
+        and submitted_authority == "OFFICIAL_SUBMITTED"
+        and submitted_identity_match
+        and v5_authority == "official_public"
+    )
+    manual_authority_parity = (
+        v5_authority == "user_lock" if explicit_v3_manual else
+        (v5_authority == "user_lock" or legacy_label_resolved_to_submitted) if legacy_predeadline_label else
+        True
+    )
 
     v5_gate0 = (v5.get("framework_health") or {}).get("gate0") or {}
     v5_legality_known = v5_gate0.get("pass") is not None
@@ -67,7 +76,7 @@ def compare(v3: dict[str, Any], v5: dict[str, Any]) -> dict[str, Any]:
             or v3_cap == v5_cap
         ),
         "ruleset": bool(v3.get("ruleset_id")) and bool(v5.get("ruleset_id")) and v3.get("ruleset_id") == v5.get("ruleset_id"),
-        "manual_lock": (not v3_manual) or v5_authority == "user_lock",
+        "manual_lock": manual_authority_parity,
         "legality": v3_legal and v5_legality_known and v5_legal,
     }
     return {
@@ -78,5 +87,11 @@ def compare(v3: dict[str, Any], v5: dict[str, Any]) -> dict[str, Any]:
         "starting_xi_evidence_complete": xi_available,
         "captain": {"v3": v3_cap, "v5": v5_cap},
         "authority": {"v3": v3_authority or None, "v5": v5_authority or None},
+        "submitted_baseline": {
+            "authority": submitted_authority or None,
+            "identity_complete": submitted_identity_complete,
+            "identity_match": submitted_identity_match,
+            "legacy_predeadline_label_resolved_to_submitted": legacy_label_resolved_to_submitted,
+        },
         "required_real_cycles": int(cfg.get("required_cycles_before_production_candidate") or 3),
     }

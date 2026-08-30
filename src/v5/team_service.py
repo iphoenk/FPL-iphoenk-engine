@@ -5,6 +5,7 @@ from typing import Any
 from src.v5.authenticated_official import safe_finance
 from src.v5.finance import build_squad_ledger
 from src.v5.identity import ElementIndex
+from src.v5.mini_league import public_mini_league_memberships
 from src.v5.squad import select_squad
 
 
@@ -72,4 +73,5 @@ def build_team_state(
             "authenticated_coverage": auth_finance.get("coverage", {}),
         },
         "owned_ids": list(owned_ids),
+        "mini_leagues": public_mini_league_memberships(entry),
     }

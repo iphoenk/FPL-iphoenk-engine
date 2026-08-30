@@ -11,8 +11,28 @@ from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
 
 CACHE = DATA / "predictions_base_hot_cache_v4.json"
-ALGORITHM = "v4.9.6-exact-base-prediction-cache-v4"
+ALGORITHM = "v4.9.6-exact-base-prediction-cache-v5"
 _LAST_STATUS: dict = {}
+
+# Official FPL exposes market counters that can change minute-to-minute but are
+# not read anywhere by the canonical prediction builder. Hashing them forced an
+# unnecessary full model rebuild on an otherwise semantically identical refresh.
+# They remain available to the market/price layers; they are excluded only from
+# the *base prediction* fingerprint.
+NON_MODEL_ELEMENT_FIELDS = {
+    "transfers_in",
+    "transfers_out",
+    "transfers_in_event",
+    "transfers_out_event",
+    "cost_change_event",
+    "cost_change_event_fall",
+    "cost_change_start",
+    "cost_change_start_fall",
+    "ep_next",
+    "ep_this",
+    "in_dreamteam",
+    "dreamteam_count",
+}
 
 
 def _digest_if_exists(path: Path) -> str | None:
@@ -39,17 +59,29 @@ def _stats_digests(stats_gw: int | None) -> dict:
         "core": stats / f"core_insights_{suffix}.json" if suffix else stats / "__missing_core__",
         "shots": stats / f"shots_{suffix}.json" if suffix else stats / "__missing_shots__",
         "matches": stats / f"playermatchstats_{suffix}.json" if suffix else stats / "__missing_matches__",
-        "preseason": PRESEASON_EVIDENCE,
     }
     return {name: _digest_if_exists(path) for name, path in paths.items()}
 
 
+def _prediction_elements(elements: list[dict]) -> list[dict]:
+    """Retain all Official element fields except proven non-model market counters."""
+    return [
+        {key: value for key, value in player.items() if key not in NON_MODEL_ELEMENT_FIELDS}
+        for player in elements
+    ]
+
+
 def semantic_fingerprint(bootstrap: dict, fixtures: list[dict], stats_gw: int | None) -> str:
-    """Fingerprint every semantic input consumed by canonical build_predictions."""
+    """Fingerprint every semantic input consumed by canonical base prediction.
+
+    Verified preseason evidence is attached after base-cache retrieval and is
+    explicitly forbidden from mutating xPts, so it does not invalidate the base
+    model cache. Its current state is always re-read by ``_attach_current_evidence``.
+    """
     payload = {
         "algorithm": ALGORITHM,
         "bootstrap": {
-            "elements": bootstrap.get("elements") or [],
+            "elements": _prediction_elements(bootstrap.get("elements") or []),
             "teams": bootstrap.get("teams") or [],
             "events": bootstrap.get("events") or [],
         },
@@ -63,7 +95,6 @@ def semantic_fingerprint(bootstrap: dict, fixtures: list[dict], stats_gw: int | 
 
 
 def _restamp_prediction_contract(predictions: dict, generated_at: str) -> dict:
-    """Restamp only timestamp fields defined by the prediction output contract."""
     predictions["generated_at"] = generated_at
     for player in predictions.get("players") or []:
         for fixture in player.get("fixtures") or []:
@@ -80,10 +111,6 @@ def _restamp(value, generated_at: str):
 
 
 def _attach_current_evidence(predictions: dict) -> dict:
-    # Preseason is a governed optional evidence layer. It is deliberately attached
-    # after base-cache retrieval so missing evidence never invalidates canonical
-    # model truth, while a verified evidence-file digest still participates in the
-    # semantic fingerprint and therefore invalidates stale cache state when supplied.
     return attach_preseason_evidence(predictions)
 
 
@@ -118,18 +145,20 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
     canonical_build_ms = round((perf_counter() - t) * 1000.0, 2)
     t = perf_counter()
     atomic_json(CACHE, {
-        "schema_version": 4,
+        "schema_version": 5,
         "algorithm": ALGORITHM,
         "fingerprint": fingerprint,
         "predictions": predictions,
         "guardrails": {
             "canonical_builder_on_miss": True,
             "all_semantic_prediction_inputs_hashed": True,
+            "non_model_market_counters_excluded_from_base_fingerprint": True,
             "model_source_digest_invalidates_cache": True,
             "prediction_contract_timestamp_restamp_only": True,
             "boolean_point_in_time_truth_preserved": True,
             "competitive_load_and_team_news_attached_after_base_cache": True,
             "preseason_evidence_attached_after_base_cache": True,
+            "preseason_evidence_re_read_every_request": True,
             "preseason_evidence_never_fabricated": True,
             "preseason_direct_xpts_mutation": False,
         },

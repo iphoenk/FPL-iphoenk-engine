@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import math
+from statistics import median
 from time import perf_counter
 from typing import Any
 
@@ -11,6 +13,7 @@ OUTFILE = DATA / "serving_payload_v4.json"
 BENCHMARK = DATA / "serving_benchmark_v4.json"
 EXTERNAL_SOURCE_EVIDENCE = DATA / "external_source_evidence.json"
 WEATHER_EVIDENCE = DATA / "weather_evidence.json"
+WARM_BENCHMARK_RUNS = 25
 
 SOURCE_DISPLAY = {
     "official_fpl_native": "Official FPL",
@@ -247,13 +250,22 @@ def build_serving_payload(
             "exact_11_xi": len(starting) == 11,
             "exact_4_bench": len(bench_rows) == 4,
             "tier1_external_consensus_cannot_override_official": True,
+            "composition_only_no_model_recompute": True,
         },
     }
     payload["quick_serving_ms"] = round((perf_counter() - start) * 1000.0, 3)
     return payload
 
 
-def build_benchmark(payload: dict, latest: dict, orchestration: dict | None = None) -> dict:
+def _p95(samples: list[float]) -> float:
+    if not samples:
+        return 0.0
+    ordered = sorted(float(value) for value in samples)
+    index = max(0, min(len(ordered) - 1, math.ceil(0.95 * len(ordered)) - 1))
+    return round(ordered[index], 3)
+
+
+def build_benchmark(payload: dict, latest: dict, orchestration: dict | None = None, warm_samples_ms: list[float] | None = None) -> dict:
     policy = (read_json(POLICY, {}) or {}).get("performance") or {}
     orchestration = orchestration or read_json(DATA / "service_orchestration_v4.json", {})
     quick_ms = float(payload.get("quick_serving_ms") or 0.0)
@@ -261,10 +273,22 @@ def build_benchmark(payload: dict, latest: dict, orchestration: dict | None = No
     raw_ms = float((latest.get("performance") or {}).get("raw_snapshot_ms") or 0.0)
     total_ms = float(orchestration.get("total_wall_ms") or orchestration.get("wall_ms") or 0.0)
     mode = str(latest.get("mode") or "daily").upper()
+    samples = [float(value) for value in (warm_samples_ms or [quick_ms])]
+    warm_median = round(float(median(samples)), 3)
+    warm_p95 = _p95(samples)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": iso_now(),
         "quick_serving": {"actual_ms": quick_ms, "target_ms": target, "status": "PASS" if quick_ms < target else "WARN"},
+        "warm_serving": {
+            "runs": len(samples),
+            "median_ms": warm_median,
+            "p95_ms": warm_p95,
+            "target_p95_ms": target,
+            "status": "PASS" if len(samples) >= WARM_BENCHMARK_RUNS and warm_p95 < target else "WARN",
+            "production_sized_materialized_inputs": True,
+            "decision_semantics_recomputed": False,
+        },
         "deep_review": {"actual_ms": total_ms if total_ms else None, "source": "service_orchestration_v4.total_wall_ms", "status": "MEASURED" if total_ms else "UNAVAILABLE"},
         "match_mode_refresh": {"actual_ms": raw_ms if mode == "LIVE" else None, "source": "raw_snapshot.duration_ms", "status": "MEASURED_CURRENT_RUN" if mode == "LIVE" else "NOT_CURRENT_MODE"},
         "deadline_day_refresh": {"actual_ms": raw_ms if mode == "DEADLINE" else None, "source": "raw_snapshot.duration_ms", "status": "MEASURED_CURRENT_RUN" if mode == "DEADLINE" else "NOT_CURRENT_MODE"},
@@ -275,6 +299,10 @@ def build_benchmark(payload: dict, latest: dict, orchestration: dict | None = No
 
 def write_serving_payload(decision: dict, effective_plan: dict, team: dict, tactical: dict, lineup: dict, prices: dict, latest: dict, competitive: dict) -> dict:
     payload = build_serving_payload(decision, effective_plan, team, tactical, lineup, prices, latest, competitive)
+    samples = [float(payload.get("quick_serving_ms") or 0.0)]
+    for _ in range(WARM_BENCHMARK_RUNS - 1):
+        measured = build_serving_payload(decision, effective_plan, team, tactical, lineup, prices, latest, competitive)
+        samples.append(float(measured.get("quick_serving_ms") or 0.0))
     atomic_json(OUTFILE, payload)
-    atomic_json(BENCHMARK, build_benchmark(payload, latest))
+    atomic_json(BENCHMARK, build_benchmark(payload, latest, warm_samples_ms=samples))
     return payload

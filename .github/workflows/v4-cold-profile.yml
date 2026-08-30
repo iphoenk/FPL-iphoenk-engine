@@ -1,4 +1,5 @@
 # Temporary final acceptance workflow for the V4 cold-orchestration performance branch.
+# Post-reuse acceptance trigger for attested source 9d3efc1389106e90e46f982b5b867c27d011c435.
 name: V4 cold orchestration final acceptance
 
 on:

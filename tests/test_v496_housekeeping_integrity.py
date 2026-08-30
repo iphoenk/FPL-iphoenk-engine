@@ -99,10 +99,29 @@ def test_validation_boundary_preserves_old_artifact_contracts():
     }
 
 
-def test_governance_boundary_preserves_old_artifact_contracts():
+def test_optimization_boundary_declares_all_decision_artifacts():
+    registry = json.loads((ROOT / "config/service_registry.json").read_text())
+    row = next(item for item in registry["services"] if item["id"] == "optimization")
+    assert set(row["produces"]) == {
+        "wc_decision",
+        "wc_package",
+        "lineup",
+        "recommendation_sanity",
+        "tactical_serving",
+        "decision_arbitration",
+        "decision_pipeline",
+    }
+
+
+def test_governance_boundary_preserves_and_declares_serving_artifact_contracts():
     registry = json.loads((ROOT / "config/service_registry.json").read_text())
     row = next(item for item in registry["services"] if item["id"] == "governance")
-    assert set(row["produces"]) == {"framework_postflight", "checkpoint_decision"}
+    assert set(row["produces"]) == {
+        "framework_postflight",
+        "checkpoint_decision",
+        "serving_payload",
+        "serving_benchmark",
+    }
 
 
 def test_manual_authority_registry_points_to_user_overlay_owner():

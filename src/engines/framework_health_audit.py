@@ -10,7 +10,6 @@ from typing import Any, Callable
 from src.engines.team_value import sell_cost
 from src.engines.fpl_rules_2026 import MAX_PER_CLUB, POSITION_COUNTS
 from src.engines.fpl_legality import formation_from_rows, plan_legality_checks
-from src.release import RELEASE_VERSION
 from src.utils import CONFIG, DATA, atomic_json, parse_dt, read_json, utcnow
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -514,6 +513,33 @@ def _probe_runtime() -> tuple[bool, dict]:
     return float(timings.get("total_pipeline_ms") or 0) > 0, {"timings": timings}
 
 
+def _probe_historical_prior() -> tuple[bool, dict]:
+    obj = read_json(DATA / "predictions_v4.json", {})
+    coverage = obj.get("input_coverage") or {}
+    players = list(obj.get("players") or [])
+    seasons = list(coverage.get("historical_seasons") or [])
+    consumed_rows = [
+        row for row in players
+        if (row.get("priors") or {}).get("historical_prior_consumed") is True
+        and float((row.get("priors") or {}).get("historical_weight") or 0) > 0
+        and len((row.get("priors") or {}).get("historical_seasons") or []) >= 2
+    ]
+    ok = (
+        len(seasons) >= 2
+        and int(coverage.get("historical_matched") or 0) > 0
+        and int(coverage.get("historical_fallback_consumed") or 0) == len(consumed_rows)
+        and len(consumed_rows) > 0
+    )
+    return ok, {
+        "source": coverage.get("historical_source"),
+        "seasons": seasons,
+        "historical_matched": coverage.get("historical_matched"),
+        "fallback_consumed_players": len(consumed_rows),
+        "usage": "thin_or_missing_last_season_fallback_only",
+        "canonical_owner": "src.models.v4_prediction_inputs.build_historical_index + src.engines.v4_runner.player_priors",
+    }
+
+
 def _probe_learning_loop() -> tuple[str, dict]:
     reconciled = DATA / "validation" / "reconciled"
     samples = list(reconciled.glob("gw*.json")) if reconciled.exists() else []
@@ -575,6 +601,7 @@ def _operational_probe(name: str | None, phase: str) -> tuple[str, dict]:
         "fixture_swing": _probe_fixture_swing,
         "opponent_defence_dynamic": _probe_opponent_defence,
         "last_season_integration": _probe_last_season,
+        "historical_prior": _probe_historical_prior,
         "defcon_rules": _probe_defcon,
         "clean_sheet_probability": lambda: _probe_prediction_component("clean_sheet"),
         "horizon_3": lambda: _probe_horizon("xpts_3"),
@@ -612,7 +639,7 @@ def _operational_probe(name: str | None, phase: str) -> tuple[str, dict]:
         "bonus_route", "team_defensive_risk", "team_attacking_strength",
         "team_defensive_strength", "fixture_context",
         "european_congestion", "domestic_cup_congestion", "international_load", "rest_days",
-        "preseason_prior", "historical_prior", "regression_risk",
+        "preseason_prior", "regression_risk",
         "ownership_context",
     }
     if name in known_partial:
@@ -779,7 +806,7 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
     else:
         rules_ok = True
 
-    # Truthful health separates service/pipeline availability from predictive capability.
+    # V4.9.2 separates service/pipeline availability from predictive capability.
     # A truthful PARTIAL prediction module must restrict decision readiness, but
     # it must not make a healthy API, contract, freshness and Gate-0 pipeline look
     # operationally broken.
@@ -810,7 +837,7 @@ def _audit_with_cache(phase: str = "postflight", strict: bool = False, started: 
     go_allowed = pipeline_health == "GREEN" and prediction_health == "GREEN" and gate0["pass"] and postflight_complete
     out = {
         "schema_version": 492,
-        "engine": f"v{RELEASE_VERSION}-truthful-health",
+        "engine": "v4.9.2-truthful-health",
         "phase": phase,
         "checkpoint_context": read_json(DATA / "latest.json", {}).get("checkpoint_context") or {},
         "overall": overall,

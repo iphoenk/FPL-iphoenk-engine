@@ -24,14 +24,25 @@ def _season_candidates():
     return out
 
 
-def previous_season():
-    """Return vaastav's short label for the season before the configured one."""
+def season_before(offset: int = 1):
+    """Return Vaastav's short label for a completed season before the configured season."""
     configured = str(_cfg().get("season", "2026-2027"))
     try:
-        start = int(configured[:4]) - 1
+        start = int(configured[:4]) - int(offset)
     except (TypeError, ValueError):
-        start = 2025
+        start = 2026 - int(offset)
     return f"{start}-{str(start + 1)[-2:]}"
+
+
+def previous_season():
+    return season_before(1)
+
+
+def historical_seasons(depth: int | None = None):
+    """Older completed seasons used only as a bounded fallback behind last season."""
+    configured_depth = int((_cfg().get("vaastav") or {}).get("historical_depth", 2))
+    count = max(0, int(configured_depth if depth is None else depth))
+    return [season_before(offset) for offset in range(2, 2 + count)]
 
 
 def _base():
@@ -104,9 +115,14 @@ def sync_gw(gw: int):
     return failure
 
 
-def sync_previous_season():
-    """Fetch a dedicated prior-season snapshot, never a current-season fallback."""
-    season = previous_season()
+def _sync_completed_season(season: str, outfile: str, data_mode: str):
+    """Fetch or reuse an immutable completed-season snapshot from the canonical Vaastav adapter."""
+    CACHE.mkdir(parents=True, exist_ok=True)
+    path = CACHE / outfile
+    cached = read_json(path, {})
+    if cached.get("status") == "LIVE" and cached.get("season") == season and cached.get("rows"):
+        return {**cached, "cache_reused": True}
+
     last_error = None
     for filename in ("players_raw.csv", "cleaned_players.csv"):
         url = f"{_base()}/{season}/{filename}"
@@ -115,7 +131,7 @@ def sync_previous_season():
             if not rows:
                 raise RuntimeError("empty CSV")
             columns = set(rows[0])
-            required = {"first_name", "second_name", "minutes"}
+            required = {"first_name", "second_name", "minutes", "code", "starts"}
             if not required.issubset(columns):
                 raise RuntimeError(f"schema missing required columns: {sorted(required - columns)}")
             payload = {
@@ -125,13 +141,13 @@ def sync_previous_season():
                 "available_at": iso_now(),
                 "source_url": url,
                 "row_count": len(rows),
-                "data_mode": "PREVIOUS_SEASON_SNAPSHOT",
+                "data_mode": data_mode,
                 "status": "LIVE",
                 "schema_columns": sorted(columns),
+                "immutable_completed_season": True,
                 "rows": rows,
             }
-            CACHE.mkdir(parents=True, exist_ok=True)
-            atomic_json(CACHE / "vaastav_previous_season.json", payload)
+            atomic_json(path, payload)
             return payload
         except Exception as exc:
             last_error = f"{type(exc).__name__}: {exc}"
@@ -142,6 +158,24 @@ def sync_previous_season():
         "status": "FAILED",
         "error": last_error,
     }
-    CACHE.mkdir(parents=True, exist_ok=True)
-    atomic_json(CACHE / "vaastav_previous_season_error.json", failure)
+    atomic_json(CACHE / f"{path.stem}_error.json", failure)
     return failure
+
+
+def sync_previous_season():
+    return _sync_completed_season(
+        previous_season(),
+        "vaastav_previous_season.json",
+        "PREVIOUS_SEASON_SNAPSHOT",
+    )
+
+
+def sync_historical_season(season: str):
+    if season not in historical_seasons():
+        raise ValueError(f"historical season outside configured depth: {season}")
+    safe = season.replace("-", "_")
+    return _sync_completed_season(
+        season,
+        f"vaastav_historical_{safe}.json",
+        "HISTORICAL_SEASON_SNAPSHOT",
+    )

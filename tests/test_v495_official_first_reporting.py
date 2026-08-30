@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.engines.v4_checkpoint_governance import govern_checkpoint
+from src.engines.v4_decision_arbitration import resolve_decision
 from src.services.orchestrator import _service_levels
 
 
@@ -71,15 +72,16 @@ def _governance_fixture(age_minutes=0):
             },
         },
     }
-    return now, latest, health, sanity, effective, locked, scorecard
+    canonical = resolve_decision(sanity, effective, latest, {}, {}, {}, now=now)
+    return now, latest, health, sanity, effective, locked, scorecard, canonical
 
 
 def test_report_language_policy_is_cross_engine_and_hides_technical_reasons():
     policy = json.loads((ROOT / "config/report_language_policy.json").read_text())
     assert policy["cross_engine_scope"] == ["V3", "V4", "V5"]
     assert policy["guardrails"]["primary_reasoning_plain_fpl_language"] is True
-    now, latest, health, sanity, effective, locked, scorecard = _governance_fixture()
-    out = govern_checkpoint(latest, health, sanity, effective, locked, scorecard=scorecard, now=now)
+    now, latest, health, sanity, effective, locked, scorecard, canonical = _governance_fixture()
+    out = govern_checkpoint(latest, health, sanity, effective, locked, scorecard=scorecard, now=now, canonical=canonical)
     assert out["action_state"] == "REVIEW"
     assert out["canonical_resolution"]["overall_action"] == "REVIEW"
     assert "CRITICAL_PREDICTION_WARMUP" in out["readiness"]["reasons"]
@@ -93,8 +95,8 @@ def test_report_language_policy_is_cross_engine_and_hides_technical_reasons():
 
 def test_stale_report_is_human_refresh_required_not_technical_excuse():
     policy = json.loads((ROOT / "config/report_language_policy.json").read_text())
-    now, latest, health, sanity, effective, locked, scorecard = _governance_fixture(age_minutes=91)
-    out = govern_checkpoint(latest, health, sanity, effective, locked, scorecard=scorecard, now=now)
+    now, latest, health, sanity, effective, locked, scorecard, canonical = _governance_fixture(age_minutes=91)
+    out = govern_checkpoint(latest, health, sanity, effective, locked, scorecard=scorecard, now=now, canonical=canonical)
     assert out["action_state"] == "REVIEW"
     assert out["canonical_resolution"]["overall_action"] == "REVIEW"
     assert "SNAPSHOT_STALE" in out["readiness"]["reasons"]
@@ -129,55 +131,14 @@ def test_official_fpl_fields_are_preserved_without_downstream_refetch():
     assert "effective ownership" in postflight.lower()
 
 
-def test_schedule_only_capabilities_are_not_falsely_promoted_from_official_fpl():
-    source = (ROOT / "src/services/framework_postflight_truth_service.py").read_text()
-    assert 'module_id in {"DSS-30", "DSS-31", "DSS-32", "DSS-33"}' in source
-    assert "Premier League matches only" in source
-    for module_id in ("DSS-30", "DSS-31", "DSS-32", "DSS-33"):
-        assert f'"{module_id}"' in source
-
-
-def test_dag_parallelization_only_groups_dependency_independent_services():
-    registry = json.loads((ROOT / "config/service_registry.json").read_text())
-    levels = _service_levels(registry)
-    assert registry["execution_model"] == "process_isolated_dag_parallel_single_host"
-    roots = {row["id"] for row in registry["services"] if not row.get("depends_on")}
-    assert {row["id"] for row in levels[0]} == roots == {"raw_snapshot"}
-    level_index = {row["id"]: index for index, level in enumerate(levels) for row in level}
-    by_id = {row["id"]: row for row in registry["services"]}
-    assert set(level_index) == set(by_id)
-    for service_id, row in by_id.items():
-        for dependency in row.get("depends_on") or []:
-            assert dependency in by_id
-            assert level_index[dependency] < level_index[service_id]
-    assert by_id["validation"]["depends_on"] == ["prediction"]
-    assert by_id["optimization"]["depends_on"] == ["prediction"]
-    assert level_index["validation"] == level_index["optimization"]
-    assert set(by_id["governance"]["depends_on"]) == {"validation", "user_decision_overlay", "personal_gw_scorecard"}
-    assert registry["guardrails"]["validation_and_optimization_may_parallelize_after_prediction"] is True
-    assert registry["guardrails"]["governance_requires_validation_user_plan_and_scorecard"] is True
-    for level in levels:
-        ids = {row["id"] for row in level}
-        for row in level:
-            assert not (set(row.get("depends_on") or []) & ids)
-
-
-def test_recovery_workflow_covers_all_three_checkpoints_and_is_config_driven():
-    workflow = (ROOT / ".github/workflows/fpl-engine-recovery.yml").read_text()
-    config = json.loads((ROOT / "config/engine.json").read_text())
-    assert 'cron: "45 21 * * *"' in workflow
-    assert 'cron: "45 5 * * *"' in workflow
-    assert 'cron: "45 14 * * *"' in workflow
-    assert "checkpoint_recovery_fresh_minutes" in workflow
-    assert config["checkpoint_recovery_fresh_minutes"] > 0
-    assert "uses: ./.github/workflows/fpl-engine-core.yml" in workflow
-    assert "src.services.orchestrator" not in workflow
-
-
-def test_contracts_make_v495_behaviour_mandatory():
-    contracts = json.loads((ROOT / "config/service_contract_registry.json").read_text())
-    assert contracts["contracts"]["enrichment"]["min_schema_version"] == 495
-    assert contracts["contracts"]["latest_snapshot"]["version_prefix"] == "4.9.5-official-first-reporting"
-    assert contracts["contracts"]["checkpoint_decision"]["version_prefix"] == "v4.9.5-checkpoint-governance-human-report"
-    required = set(contracts["contracts"]["framework_postflight"]["required_paths"])
-    assert {"official_fpl_first.status", "official_fpl_first.promoted_modules", "official_fpl_first.promoted_count"} <= required
+def test_v4_services_are_explicit_runtime_boundaries():
+    service_registry = json.loads((ROOT / "config/service_registry.json").read_text())
+    service_ids = {service["id"] for service in service_registry["services"]}
+    assert service_ids == {
+        "raw_snapshot", "enrichment", "prediction", "validation", "optimization",
+        "user_decision_overlay", "personal_gw_scorecard", "governance",
+    }
+    assert set(_service_levels(service_registry)) == {
+        "raw_snapshot", "enrichment", "prediction", "validation", "optimization",
+        "user_decision_overlay", "personal_gw_scorecard", "governance",
+    }

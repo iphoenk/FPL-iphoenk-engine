@@ -5,8 +5,8 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "a40d0e19ff3d1da580e0d94983f829397aab81f2",
-    "production_code_commit": "a40d0e19ff3d1da580e0d94983f829397aab81f2",
+    "production_main_sha": "84b1577f4fc84ce00a4e8c5e8139644c8f9fff51",
+    "production_code_commit": "84b1577f4fc84ce00a4e8c5e8139644c8f9fff51",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
@@ -51,7 +51,19 @@
     "persistence": "snapshot service -> config/v5_persistence_registry.json",
     "orchestration": "orchestrator service"
   },
-  "microservices": ["ingestion","truth","price","prediction","evaluation","decision","governance","watchlist","reporting","snapshot","orchestrator"],
+  "microservices": [
+    "ingestion",
+    "truth",
+    "price",
+    "prediction",
+    "evaluation",
+    "decision",
+    "governance",
+    "watchlist",
+    "reporting",
+    "snapshot",
+    "orchestrator"
+  ],
   "advanced_v5": {
     "truthful_feature_use_required": true,
     "prediction_promotion_requires_settled_evidence": true,
@@ -101,7 +113,9 @@
     "public_official_plus_user_capture_predeadline_authority_required": true,
     "official_public_submitted_default_planning_baseline_required": true,
     "user_capture_override_requires_exact_target_gw_and_active_planning_context": true,
-    "authenticated_official_optional_private_enrichment_only": true
+    "authenticated_official_optional_private_enrichment_only": true,
+    "v3_official_player_detail_enrichment_reconciled_as_runtime_hardening": true,
+    "v3_official_player_detail_reuse_migration_reconciled_as_runtime_hardening": true
   },
   "acceptance": {
     "no_regression_vs_v3_20_0_truth": true,
@@ -141,9 +155,9 @@
       "release_fingerprint": "sha256:26707030c759b35315ac224ecb6065df1803f31fe0a2ef1e76dd84c9bcdb0aa8",
       "validated_real_shadow_cycles": 3,
       "latest_validated_at": "2026-08-30T11:07:53.409496+00:00",
-      "reason": "The previous validated 3/3 REAL_SHADOW evidence belongs to a superseded release fingerprint. Production has materially reanchored again to deployed runtime a40d0e19ff3d1da580e0d94983f829397aab81f2, so that evidence is historical only and exact-fingerprint shadow acceptance must restart from 0/3."
+      "reason": "The previous validated 3/3 REAL_SHADOW evidence belongs to a superseded release fingerprint. Production has materially reanchored again to deployed runtime 84b1577f4fc84ce00a4e8c5e8139644c8f9fff51, so that evidence is historical only and exact-fingerprint shadow acceptance must restart from 0/3."
     },
-    "note": "Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required against deployed production a40d0e19ff3d1da580e0d94983f829397aab81f2."
+    "note": "Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required against deployed production 84b1577f4fc84ce00a4e8c5e8139644c8f9fff51."
   },
   "production_promotion": {
     "allowed": false,

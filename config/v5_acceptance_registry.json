@@ -1,5 +1,5 @@
 {
-  "version": 31,
+  "version": 32,
   "module_policy": {
     "minimum_registered_modules": 48,
     "required_truth_modules": ["rules", "source_authority", "public_api", "official_authenticated", "event_context", "identity", "phase_state", "squad", "finance", "team_service", "live_scoring"],
@@ -26,8 +26,8 @@
   },
   "convergence": {
     "production_baseline": "v3.20.0",
-    "production_main_sha": "9f483a2eb2cd346fa014dfdb8a2b8edb7456906d",
-    "production_code_commit": "9f483a2eb2cd346fa014dfdb8a2b8edb7456906d",
+    "production_main_sha": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
+    "production_code_commit": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
     "production_runtime_schema_version": 49,
     "production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
@@ -116,11 +116,6 @@
     "canonical_capability_telemetry_reconciled_required": true,
     "duplicate_execution_truth_forbidden": true,
     "artifact_writer_contract_fail_closed_required": true,
-    "authenticated_official_predeadline_team_required_when_available": true,
-    "official_submitted_predeadline_fallback_required_when_auth_unavailable": true,
-    "stale_persistent_user_lock_must_not_mask_authenticated_team": true,
-    "stale_persistent_user_lock_must_not_mask_official_submitted_team": true,
-    "official_auth_shadow_claim_requires_runtime_proof": true,
     "xmins_explicit_probability_decomposition_required": true,
     "xmins_probability_sum_fail_closed_required": true,
     "projection_component_observability_required": true,
@@ -146,7 +141,15 @@
     "v3_fingerprint_only_prediction_reuse_reconciled_as_runtime_hardening": true,
     "v3_public_mini_league_reporting_reconciled_without_prediction_or_decision_authority_change": true,
     "bounded_snapshot_history_retention_required": true,
-    "canonical_evidence_must_not_depend_on_history_jsonl": true
+    "canonical_evidence_must_not_depend_on_history_jsonl": true,
+    "public_official_plus_user_capture_predeadline_authority_required": true,
+    "official_public_submitted_default_planning_baseline_required": true,
+    "user_capture_override_requires_exact_target_gw_required": true,
+    "user_capture_override_requires_active_wc_fh_or_planning_override_required": true,
+    "stale_or_unscoped_user_capture_must_not_mask_official_submitted_team": true,
+    "authenticated_official_optional_private_enrichment_only": true,
+    "authenticated_official_must_not_be_squad_lineup_or_captaincy_authority": true,
+    "authenticated_official_enrichment_claim_requires_runtime_proof": true
   },
   "prediction_calibration_gate": {
     "required_for_production_promotion": true,

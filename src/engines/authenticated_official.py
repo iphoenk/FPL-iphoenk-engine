@@ -69,18 +69,24 @@ def _draft_fingerprint(elements: list[int]) -> str | None:
     return hashlib.sha256(raw).hexdigest()[:16]
 
 
-def _safe_finance(my_team: dict | None, allowed_elements: set[int]) -> dict:
+def _safe_finance(my_team: dict | None, authoritative_elements: set[int]) -> dict:
+    """Persist only safe private finance facts, never the raw authenticated payload.
+
+    Exact private purchase/sell totals are computed over the current 15-player
+    private squad returned by my-team.  Authoritative submitted-squad coverage is
+    tracked separately because a legitimate pre-deadline transfer can make the
+    private squad differ from the previous submitted squad.
+    """
     payload = my_team or {}
     transfers = payload.get("transfers") if isinstance(payload.get("transfers"), dict) else {}
     picks = payload.get("picks") if isinstance(payload.get("picks"), list) else []
 
     prices = []
+    authoritative_covered: set[int] = set()
     for row in picks:
         try:
             eid = int(row.get("element"))
         except Exception:
-            continue
-        if eid not in allowed_elements:
             continue
         item = {"element": eid}
         for key in ("purchase_price", "selling_price"):
@@ -88,23 +94,40 @@ def _safe_finance(my_team: dict | None, allowed_elements: set[int]) -> dict:
             if value is not None:
                 item[key] = value
         prices.append(item)
+        if eid in authoritative_elements:
+            authoritative_covered.add(eid)
 
-    expected = len(allowed_elements)
-    covered = len({x["element"] for x in prices})
-    complete = bool(expected) and covered == expected and all("selling_price" in x for x in prices)
-    exact_sell_total = sum(x["selling_price"] or 0 for x in prices) if complete else None
-    purchase_complete = bool(expected) and covered == expected and all("purchase_price" in x for x in prices)
-    exact_purchase_total = sum(x["purchase_price"] or 0 for x in prices) if purchase_complete else None
+    private_expected = len(picks)
+    private_covered = len({x["element"] for x in prices})
+    sell_complete = (
+        private_expected == 15
+        and private_covered == 15
+        and all("selling_price" in x for x in prices)
+    )
+    purchase_complete = (
+        private_expected == 15
+        and private_covered == 15
+        and all("purchase_price" in x for x in prices)
+    )
 
     return {
         "bank": transfers.get("bank"),
         "value": transfers.get("value"),
         "transfers_made": transfers.get("made"),
         "transfer_cost": transfers.get("cost"),
-        "coverage": {"expected": expected, "covered": covered, "complete": complete},
-        "exact_sell_total": exact_sell_total,
-        "exact_purchase_total": exact_purchase_total,
-        "prices_for_authoritative_squad": prices,
+        "private_squad_coverage": {
+            "expected": 15,
+            "covered": private_covered,
+            "complete": private_covered == 15,
+        },
+        "authoritative_submitted_coverage": {
+            "expected": len(authoritative_elements),
+            "covered": len(authoritative_covered),
+            "complete": bool(authoritative_elements) and authoritative_covered == authoritative_elements,
+        },
+        "exact_sell_total": sum(x["selling_price"] or 0 for x in prices) if sell_complete else None,
+        "exact_purchase_total": sum(x["purchase_price"] or 0 for x in prices) if purchase_complete else None,
+        "prices_for_private_squad": prices,
     }
 
 
@@ -172,7 +195,8 @@ def run() -> dict:
             "allowed_endpoints": ["me", "my-team", "transfers-latest"],
             "redirects_followed": False,
             "redirects_rejected": True,
-            "fail_soft": True,
+            "fail_soft_when_disabled": True,
+            "configured_mode_requires_production_validation": True,
         },
     }
 

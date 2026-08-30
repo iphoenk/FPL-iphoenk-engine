@@ -30,6 +30,7 @@ _PREDICTION_FIXTURE_FIELDS = (
 )
 
 
+@lru_cache(maxsize=1)
 def _registry() -> dict[str, Any]:
     payload = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
     if payload.get("registry") != "V3_INCREMENTAL_REUSE_V1":
@@ -223,26 +224,69 @@ def _digest_source_tree(path_text: str) -> str:
     return digest.hexdigest()
 
 
+def _semantic_hash(value: Any, *, top_level: bool = False) -> str:
+    """Canonical structural hash without rebuilding/serializing a normalized JSON copy."""
+    digest = hashlib.sha256()
+
+    def visit(item: Any, is_top: bool = False) -> None:
+        if isinstance(item, dict):
+            digest.update(b"{")
+            for key in sorted(item, key=lambda value: str(value)):
+                text = str(key)
+                if text in _VOLATILE_KEYS:
+                    continue
+                if is_top and text == "endpoint_health":
+                    continue
+                digest.update(b"K")
+                digest.update(text.encode("utf-8"))
+                digest.update(b"\0")
+                visit(item[key], False)
+            digest.update(b"}")
+            return
+        if isinstance(item, list):
+            digest.update(b"[")
+            for value in item:
+                visit(value, False)
+            digest.update(b"]")
+            return
+        if item is None:
+            digest.update(b"N")
+        elif item is True:
+            digest.update(b"T")
+        elif item is False:
+            digest.update(b"F")
+        elif isinstance(item, str):
+            digest.update(b"S")
+            digest.update(item.encode("utf-8"))
+            digest.update(b"\0")
+        elif isinstance(item, int):
+            digest.update(b"I")
+            digest.update(str(item).encode("ascii"))
+            digest.update(b"\0")
+        elif isinstance(item, float):
+            digest.update(b"R")
+            digest.update(json.dumps(item, allow_nan=True, separators=(",", ":")).encode("ascii"))
+            digest.update(b"\0")
+        else:
+            digest.update(b"J")
+            digest.update(json.dumps(item, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str).encode("utf-8"))
+            digest.update(b"\0")
+
+    visit(value, top_level)
+    return digest.hexdigest()
+
+
 @lru_cache(maxsize=128)
 def _digest_file_cached(profile: str, path_text: str, size: int, mtime_ns: int) -> str:
     del size, mtime_ns
     path = Path(path_text)
-    raw = path.read_bytes()
     if profile in {"GENERIC_JSON", "PREDICTION_OFFICIAL_SNAPSHOT"}:
-        try:
-            value = json.loads(raw.decode("utf-8"))
-            normalized = _normalize(value, top_level=True)
-            if profile == "PREDICTION_OFFICIAL_SNAPSHOT" and isinstance(normalized, dict):
-                normalized = _prediction_official_snapshot(normalized)
-            raw = json.dumps(
-                normalized,
-                sort_keys=True,
-                separators=(",", ":"),
-                ensure_ascii=False,
-            ).encode("utf-8")
-        except Exception:
-            pass
-    return hashlib.sha256(raw).hexdigest()
+        value = read_json(path, None)
+        if value is not None:
+            if profile == "PREDICTION_OFFICIAL_SNAPSHOT" and isinstance(value, dict):
+                value = _prediction_official_snapshot(value)
+            return _semantic_hash(value, top_level=True)
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _digest_path(service_name: str, name: str) -> str | None:

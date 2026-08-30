@@ -3,12 +3,20 @@
   "model_id": "v5_native_decision_governance_v9",
   "lineup": {
     "positions": ["GK", "DEF", "MID", "FWD"],
-    "player_score": {"mean_weight": 1.0, "risk_std_penalty": 0.10, "start_probability_weight": 0.55, "dnp_probability_penalty": 0.65},
+    "player_score": {"mean_weight": 1.0, "risk_std_penalty": 0.12, "start_probability_weight": 0.0, "dnp_probability_penalty": 2.0},
     "captain_score": {"mean_weight": 1.0, "ceiling_std_weight": 0.18, "start_probability_weight": 0.70, "dnp_probability_penalty": 0.90},
     "vice_score": {"mean_weight": 1.0, "risk_std_penalty": 0.08, "start_probability_weight": 0.85, "dnp_probability_penalty": 1.00},
     "bench_score": {"mean_weight": 1.0, "start_probability_weight": 0.25, "dnp_probability_penalty": 0.50},
     "captain_safety": {"minimum_start_probability": 0.70, "maximum_dnp_probability": 0.15, "safe_pool_size": 5, "minimum_pool_size": 2, "fallback_to_all_starters": true},
     "alternatives": {"enumerate_all_legal_xi_for_final_squad": true, "publish_top_n": 3, "close_margin_threshold": 0.75},
+    "lineup_risk": {
+      "enabled": true,
+      "close_call_rerank_gap": 0.75,
+      "same_team_defensive_cluster_penalty": 0.08,
+      "defensive_route_concentration_penalty": 0.06,
+      "bench_utility_weight": 0.03,
+      "maximum_close_call_adjustment": 0.30
+    },
     "tie_breakers": ["mean", "start_probability", "lower_cost", "element_id"]
   },
   "package_selection": {

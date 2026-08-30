@@ -66,6 +66,58 @@ def _reusable_state_from_previous(previous: dict) -> tuple[dict, dict, dict]:
     return carried, carried_files, audit
 
 
+def _league_row(kind: str, row: dict) -> dict:
+    rank = row.get("entry_rank")
+    last_rank = row.get("entry_last_rank")
+    try:
+        rank_delta = int(last_rank) - int(rank) if rank is not None and last_rank is not None else None
+    except (TypeError, ValueError):
+        rank_delta = None
+    return {
+        "kind": kind,
+        "league_id": row.get("id"),
+        "league_name": row.get("name"),
+        "rank": rank,
+        "last_rank": last_rank,
+        "rank_delta": rank_delta,
+        "entry_can_leave": row.get("entry_can_leave") is True,
+        "entry_can_admin": row.get("entry_can_admin") is True,
+        "entry_can_invite": row.get("entry_can_invite") is True,
+    }
+
+
+def _public_mini_league_memberships(official: dict) -> dict:
+    """Discover user-created/public mini-league memberships from the public entry payload.
+
+    Classic system leagues (Overall, country, club, starting-GW, partner badge leagues) do
+    not expose private-management signals, so they are kept out of the mini-league list.
+    H2H memberships are included directly because Official FPL does not set the same
+    leave/admin/invite flags consistently for H2H leagues.
+    """
+    entry = official.get("entry") if isinstance(official, dict) else {}
+    leagues = (entry or {}).get("leagues") or {}
+    classic_rows = [row for row in (leagues.get("classic") or []) if isinstance(row, dict)]
+    h2h_rows = [row for row in (leagues.get("h2h") or []) if isinstance(row, dict)]
+
+    classic_private = [
+        _league_row("classic", row)
+        for row in classic_rows
+        if any(row.get(key) is True for key in ("entry_can_leave", "entry_can_admin", "entry_can_invite"))
+    ]
+    h2h = [_league_row("h2h", row) for row in h2h_rows]
+    memberships = classic_private + h2h
+    memberships.sort(key=lambda row: (0 if row.get("kind") == "classic" else 1, str(row.get("league_name") or "").lower()))
+    return {
+        "authority": "PUBLIC_OFFICIAL_ENTRY",
+        "entry_id": TEAM_ID,
+        "classic_private_count": len(classic_private),
+        "h2h_count": len(h2h),
+        "membership_count": len(memberships),
+        "system_classic_excluded_count": max(0, len(classic_rows) - len(classic_private)),
+        "memberships": memberships,
+    }
+
+
 def run(mode: str = "daily") -> dict:
     previous = read_json(DATA / "latest.json", {})
     official = read_json(DATA / "official_snapshot.json", {})
@@ -98,6 +150,7 @@ def run(mode: str = "daily") -> dict:
     submitted = phase.get("submitted_gw")
     used_chips = list(chips.get("used") or [])
     ruleset = ruleset_metadata()
+    mini_leagues = _public_mini_league_memberships(official)
     native = {
         "entry": entry_summary,
         "history": {
@@ -107,6 +160,7 @@ def run(mode: str = "daily") -> dict:
         },
         "transfers": transfers,
         "picks": {"gw": submitted, "payload": picks} if submitted else None,
+        "mini_leagues": mini_leagues,
     }
     provenance = {
         key: source_meta(health, key)
@@ -136,6 +190,7 @@ def run(mode: str = "daily") -> dict:
         "entry": entry_summary,
         "squad_authority": team.get("squad_authority"),
         "advanced_stats_sync": advanced,
+        "mini_league_summary": mini_leagues,
         "team_summary": {
             "itb": totals.get("itb"),
             "market_value": totals.get("market_value"),
@@ -166,6 +221,8 @@ def run(mode: str = "daily") -> dict:
             "advanced_stats_are_community_enrichment": True,
             "leakage_guard_required_for_predictive_training": True,
             "base_snapshot_is_fan_in_only": True,
+            "mini_league_membership_from_public_entry": True,
+            "mini_league_membership_requires_no_auth": True,
             "reused_latest_state_profile": os.getenv("FPL_EXECUTION_PROFILE", "").strip() or None,
             "reused_latest_state_carried_forward": carry_audit,
         },
@@ -199,6 +256,7 @@ def main() -> int:
         "schema_version": out.get("schema_version"),
         "planning_gw": (out.get("phase") or {}).get("planning_gw"),
         "snapshot_id": out.get("snapshot_id"),
+        "mini_league_memberships": (out.get("mini_league_summary") or {}).get("membership_count"),
         "reused_latest_state_carried_forward": (out.get("meta") or {}).get("reused_latest_state_carried_forward"),
     }, ensure_ascii=False))
     return 0

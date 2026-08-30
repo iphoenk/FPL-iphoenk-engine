@@ -1,12 +1,14 @@
 {
-  "framework_schema": 8,
-  "generated_at": "2026-08-30T05:16:08.917646+00:00",
-  "auditor": "v5-microservice-governance-v4",
+  "framework_schema": 9,
+  "generated_at": "2026-08-30T09:32:46.245033+00:00",
+  "auditor": "v5-microservice-governance-v5",
   "overall": "GREEN",
   "decision_engine": "HEALTHY",
   "recommendation_allowed": true,
   "go_allowed": true,
   "registry_integrity": true,
+  "all_dss_active": true,
+  "all_dss_active_required_for_unqualified_go": true,
   "degraded_contexts": [],
   "degraded_blocks_unqualified_go": false,
   "rules_registry": {
@@ -358,6 +360,7 @@
       "ACTIVE": 50
     },
     "coverage_ratio": 1.0,
+    "all_active": true,
     "critical_partial": [],
     "items": [
       {
@@ -975,6 +978,7 @@
       "ACTIVE": 16
     },
     "coverage_ratio": 1.0,
+    "all_active": true,
     "critical_partial": [],
     "items": [
       {
@@ -1555,6 +1559,7 @@
     "enhancement_authority": "governance-service",
     "dss_core_required_count": 50,
     "dss_extension_required_count": 16,
+    "all_dss_active_required_for_unqualified_go": true,
     "enhancement_required_count": 8,
     "degraded_context_blocks_unqualified_go": true,
     "service_boundary_enforced": true,

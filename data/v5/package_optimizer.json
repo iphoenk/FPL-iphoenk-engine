@@ -3350,7 +3350,7 @@
     }
   },
   "dss": {
-    "schema_version": 3,
+    "schema_version": 4,
     "evaluation_model": "capability_contract_dss_v317",
     "core": {
       "expected": 50,
@@ -3363,6 +3363,7 @@
         "ACTIVE": 50
       },
       "coverage_ratio": 1.0,
+      "all_active": true,
       "critical_partial": [],
       "items": [
         {
@@ -3980,6 +3981,7 @@
         "ACTIVE": 16
       },
       "coverage_ratio": 1.0,
+      "all_active": true,
       "critical_partial": [],
       "items": [
         {
@@ -4445,6 +4447,8 @@
       ]
     },
     "registry_integrity": true,
+    "all_modules_active": true,
+    "all_modules_active_required_for_unqualified_go": true,
     "critical_partial_count": 0,
     "critical_partial": [],
     "unqualified_go_allowed": true
@@ -4462,7 +4466,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 50 active price alerts"
+      "market timing context contains 59 active price alerts"
     ],
     "evidence": [
       {
@@ -4565,7 +4569,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 50
+    "alert_count": 59
   },
   "governance": {
     "candidate_generation_only": true,

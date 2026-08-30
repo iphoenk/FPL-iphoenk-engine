@@ -39,27 +39,19 @@ def _rules_view() -> dict[str, Any]:
 
 
 def _lock_chip_scope(lock: dict[str, Any], *, planning_gw: int, submitted_gw: int | None) -> tuple[bool, str]:
-    """Return whether a target-GW user-capture chip flag applies to the planning GW."""
+    """Apply user-capture chip flags only to their explicit target_gw."""
     explicit = lock.get("target_gw")
     if explicit is None:
-        explicit = lock.get("planning_gw")
-    if explicit is None:
-        explicit = lock.get("gameweek")
-    if explicit is None:
-        explicit = lock.get("gw")
-    if explicit is not None:
-        try:
-            applies = int(explicit) == int(planning_gw) and (
-                submitted_gw is None or int(planning_gw) != int(submitted_gw)
-            )
-        except (TypeError, ValueError):
-            return False, "INVALID_EXPLICIT_GW"
-        if applies:
-            return True, "EXACT_TARGET_GW_MATCH"
-        if submitted_gw is not None and int(planning_gw) == int(submitted_gw):
-            return False, "POST_DEADLINE_OFFICIAL_RECLAIMS_AUTHORITY"
-        return False, "EXPLICIT_GW_MISMATCH"
-    return False, "UNSCOPED_USER_CAPTURE_REJECTED"
+        return False, "UNSCOPED_USER_CAPTURE_REJECTED"
+    try:
+        target_gw = int(explicit)
+    except (TypeError, ValueError):
+        return False, "INVALID_EXPLICIT_GW"
+    if submitted_gw is not None and int(planning_gw) == int(submitted_gw):
+        return False, "POST_DEADLINE_OFFICIAL_RECLAIMS_AUTHORITY"
+    if target_gw == int(planning_gw):
+        return True, "EXACT_TARGET_GW_MATCH"
+    return False, "EXPLICIT_GW_MISMATCH"
 
 
 def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None, entry_history: dict[str, Any] | None) -> dict[str, Any]:
@@ -77,7 +69,7 @@ def _chip_state(context, lock: dict[str, Any], submitted: dict[str, Any] | None,
     if context.phase.value == "PRE_DEADLINE":
         if lock_chip_requested and lock_chip_applies:
             raw_active = "freehit" if bool(lock.get("free_hit_active")) else "wildcard"
-            source = "user_lock"
+            source = "user_capture"
     elif isinstance(submitted, dict) and submitted_gw == gw:
         raw_active = submitted_raw
         source = "submitted_picks" if raw_active else None

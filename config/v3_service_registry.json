@@ -1,7 +1,7 @@
 {
   "schema_version": 17,
   "architecture": "V3_BOUNDED_PROCESS_MICROSERVICES",
-  "production_contract": "v3.22-runtime-optimization-fast-under-10s",
+  "production_contract": "v3.39-profile-aware-slo-fast-3s-atomic-publication",
   "transport": "isolated-filesystem-contract",
   "policy": {
     "coarse_grained_services": true,
@@ -85,7 +85,7 @@
     "service_timeout_seconds": 180,
     "http_cache_ttl_seconds": 180,
     "performance_budget_seconds": 45,
-    "performance_target": "legacy full-refresh ceiling; profile-specific runtime SLO is owned by config/runtime/performance_slo.json"
+    "performance_target": "profile-specific runtime SLO is canonical in config/runtime/performance_slo.json; FAST hard ceiling remains 3000ms"
   },
   "services": {
     "official_snapshot": {"stage":"base-source","depends_on":[],"critical":true,"isolated":true,"inputs":[],"commands":[{"module":"src.engines.official_snapshot_service","args":[]}],"artifacts":["official_snapshot.json","health.json"],"ephemeral_artifacts":["official_snapshot.json"],"latest_keys":[],"latest_file_keys":[]},

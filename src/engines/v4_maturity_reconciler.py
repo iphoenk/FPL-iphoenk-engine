@@ -149,7 +149,7 @@ def _ownership_evidence(latest: dict, universe: dict) -> tuple[bool, dict]:
         "source": "Official FPL bootstrap-static elements.selected_by_percent",
         "players": len(players),
         "ownership_rows": ownership_rows,
-        "effective_ownership_available": False,
+        "effective_ownership_available_from_official_fpl": False,
         "semantics": "ownership context is active; effective ownership remains an optional external/advisory field and is not required to prove Official ownership capability",
     }
 
@@ -184,14 +184,13 @@ def _recount(health: dict) -> None:
         health["decision_engine"] = "DEGRADED"
         health["go_allowed"] = False
     elif warmup > 0:
-        # Implementation can be complete while outcome-dependent validation is still warming up.
-        # Service-registry policy explicitly forbids an unqualified GO while critical warmup remains.
+        # Preserve the canonical health vocabulary and the critical-warmup gate.
         health["prediction_health"] = "AMBER"
-        health["decision_engine"] = "WARMUP"
+        health["decision_engine"] = "PROVISIONAL"
         health["go_allowed"] = False
     else:
         health["prediction_health"] = "GREEN"
-        health["decision_engine"] = "READY"
+        health["decision_engine"] = "HEALTHY"
         health["go_allowed"] = True
 
 

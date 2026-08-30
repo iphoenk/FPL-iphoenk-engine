@@ -1,11 +1,11 @@
 {
   "engine": "FPL iphoenk Engine",
   "v5_version": "5.0.0-beta.4",
-  "state": "ADVANCED_BETA4_MAIN9A76_PRODUCTION_REANCHOR_OPERATIONAL_REVALIDATION_PENDING",
+  "state": "ADVANCED_BETA4_MAIN5175_PRODUCTION_REANCHOR_OPERATIONAL_REVALIDATION_PENDING",
   "production_authority": {
     "truth_baseline": "v3.20.0",
     "runtime_version": "3.39.0",
-    "main_sha": "9a76a6231bdd747a247eabc8867a2312a188317a",
+    "main_sha": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
     "runtime_schema_version": 49
   },
   "advanced_beta4": {
@@ -20,7 +20,11 @@
     "isolated_team_review": true,
     "v3_v4_capability_parity_registry": true,
     "predeadline_revision_append_only": true,
+    "public_official_universal_backbone": true,
+    "user_capture_predeadline_authority_when_current": true,
     "official_submitted_predeadline_fallback": true,
+    "authenticated_official_optional_private_enrichment": true,
+    "authenticated_official_production_blocking": false,
     "strict_all_dss_active_governance": true,
     "unique_service_authority_validation": true,
     "v3_gameweek_lifecycle_reporting_hardening_reconciled": true,
@@ -32,7 +36,7 @@
     "raw_actions_artifact_retention_days": 14
   },
   "acceptance": {
-    "release_fingerprint": "PENDING_REVALIDATION_AFTER_MAIN9A76_REANCHOR",
+    "release_fingerprint": "PENDING_REVALIDATION_AFTER_MAIN5175_REANCHOR",
     "fresh_postvalidated_real_shadow_cycles": 0,
     "required_postvalidated_real_shadow_cycles": 3,
     "operational_candidate_eligible": false,
@@ -44,7 +48,7 @@
     "previous_operational_acceptance": {
       "release_fingerprint": "sha256:26707030c759b35315ac224ecb6065df1803f31fe0a2ef1e76dd84c9bcdb0aa8",
       "postvalidated_real_shadow_cycles": 3,
-      "status": "SUPERSEDED_BY_MAIN9A76_PRODUCTION_REANCHOR"
+      "status": "SUPERSEDED_BY_MAIN5175_PRODUCTION_REANCHOR"
     }
   },
   "evidence_storage": {
@@ -58,13 +62,14 @@
     "external_dwh_trigger": "MULTI_SEASON_OR_GT_100000_PLAYER_GW_FACT_ROWS"
   },
   "notes": [
-    "The prior 3/3 strict-DSS operational acceptance remains historical evidence only because production main moved to 9a76a6231bdd747a247eabc8867a2312a188317a and the exact V5 release fingerprint must be revalidated against the new production SHA.",
+    "The prior 3/3 strict-DSS operational acceptance remains historical evidence only because production main moved to 5175f9bc68354100a8bc3a36a3b97e853e90b73d and the exact V5 release fingerprint must be revalidated against the new production SHA.",
+    "Public Official is the universal factual backbone; a current GW-scoped user capture is the private pre-deadline squad authority, with Official submitted picks as fallback and post-deadline authority.",
+    "Authenticated Official is optional private enrichment for exact finance/private metadata only; it is not squad authority and cannot block V5 core production readiness.",
     "Strict DSS governance requires every configured core and extension module to be ACTIVE before unqualified GO when the canonical policy requires all-active coverage.",
     "Service-registry validation rejects duplicate handlers and duplicate bounded-context authority.",
     "Current V3 production lifecycle intelligence is reconciled as report/lifecycle hardening and does not alter V5 football prediction or decision authority.",
     "Current V3 bounded warm retry preserves the unchanged 3000 ms hard ceiling and is reconciled as runtime workflow hardening only.",
     "Current V3 overlaps phase-independent Official requests with bootstrap while keeping bootstrap as phase authority; this is reconciled as runtime latency hardening only.",
-    "Current V3 authenticated Official production-readiness change is reconciled as truth/runtime hardening and does not import V3 prediction or decision ownership into V5.",
     "Deadline-aware evidence capture dispatches heavy V5 cycles only in governed windows rather than running the full cluster blindly every hour.",
     "Raw GitHub Actions evidence expires after 14 days; canonical frozen evidence and its compact derived analytics mart remain for the current season and are sufficient at current data scale.",
     "Prediction acceptance remains independently locked until genuine settled evidence satisfies the empirical calibration gate.",

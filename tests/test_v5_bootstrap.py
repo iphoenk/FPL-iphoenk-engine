@@ -256,7 +256,7 @@ def test_squad_authority_prefers_current_user_capture_predeadline_even_with_auth
     )
     assert pre["authority"] == "user_lock"
     assert [row["element"] for row in pre["squad"]] == list(range(1, 16))
-    assert pre["authority_policy"]["authenticated_official_production_blocking"] is False
+    assert [row["element"] for row in authenticated["picks"]] != [row["element"] for row in pre["squad"]]
     assert pre["validation"]["passed"] is True
 
 

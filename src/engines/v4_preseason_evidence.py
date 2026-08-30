@@ -47,8 +47,7 @@ def load_verified_preseason_evidence(path: Path = EVIDENCE) -> tuple[dict[int, d
             element <= 0
             or not row.get("source")
             or verified_at is None
-            or (role is not None and role not in ALLOWED_ROLES)
-            or not any(row.get(field) is not None for field in ("role", "minutes", "starts"))
+            or role not in ALLOWED_ROLES
         ):
             rejected += 1
             continue

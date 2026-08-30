@@ -28,7 +28,8 @@ def test_production_reanchor_supersedes_prior_operational_acceptance():
     assert old["validated_real_shadow_cycles"] == 3
     assert old["latest_validated_at"]
     assert deployed_sha in old["reason"]
-    assert "Exact-fingerprint shadow acceptance must restart" in old["reason"]
+    assert "exact-fingerprint shadow acceptance must restart" in old["reason"].lower()
+    assert "0/3" in old["reason"]
 
     assert promotion["validated_real_shadow_cycles"] == 0
     assert promotion["required_real_shadow_cycles"] == 3

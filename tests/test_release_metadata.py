@@ -59,7 +59,7 @@ def test_release_metadata_surfaces_are_consistent():
     assert artifact_registry["consumer_contract"]["natural_user_presentation_required"] is True
     assert artifact_registry["consumer_contract"]["report_checkpoint_required"] is True
     assert service_registry["schema_version"] == 16
-    assert service_registry["production_contract"].startswith("v3.22-")
+    assert service_registry["production_contract"] == "v3.39-profile-aware-slo-fast-3s-atomic-publication"
     assert "tactical_context" in service_registry["services"]
     assert service_registry["policy"]["service_boundaries_follow_artifact_ownership_not_file_size"] is True
     assert service_registry["policy"]["required_core_and_optional_private_enrichment_are_distinct"] is True
@@ -82,7 +82,7 @@ def test_housekeeping_closeout_metadata_is_explicit_and_non_self_referential():
 
     assert re.fullmatch(r"[0-9a-f]{40}", accepted)
     assert housekeeping["accepted_code_commit"] == accepted
-    assert "code-bearing production-proven merge" in acceptance["accepted_code_commit_semantics"]
+    assert "Historical V3.39 release-lineage anchor" in acceptance["accepted_code_commit_semantics"]
     assert housekeeping["status"] == "COMPLETE_PRODUCTION_PROVEN"
     assert housekeeping["legacy_version_stamped_test_modules_removed"] == 14
     assert housekeeping["stable_domain_test_suites"] == 4

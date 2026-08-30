@@ -6,21 +6,27 @@
     "status": "COMPLETE",
     "accepted_version": "3.39.0",
     "accepted_code_commit": "83873ea33ca631344212a792a57911fad7e1575b",
-    "accepted_code_commit_semantics": "Latest code-bearing production-proven merge. Later metadata-only closeout commits do not constitute release-lineage drift.",
+    "accepted_code_commit_semantics": "Historical V3.39 release-lineage anchor only. Current production execution/provenance is authoritative from main plus runtime-data/runtime_manifest.json and must not be inferred from this historical anchor.",
     "runtime_branch": "runtime-data",
-    "fast_target_ms": 10000,
+    "runtime_evidence_authority": "runtime-data/data/runtime_manifest.json",
+    "canonical_performance_slo": "config/runtime/performance_slo.json",
+    "fast_target_ms": 3000,
     "schema_changed": false,
     "rolling_runtime_data_proven": true,
     "history_jsonl_published": false,
     "master_monitor_synced": true,
     "current_operational_evidence": {
-      "source_commit": "83873ea33ca631344212a792a57911fad7e1575b",
+      "integration_baseline_commit": "96a0d5a65e8ba055c3001ac91cb0c6a63f94e65e",
+      "integration_baseline_semantics": "Phase 1-4 combined production baseline. Later main commits must be validated by exact-sha CI/runtime before being treated as new production evidence.",
       "runtime_engine_version": "3.39.0",
-      "runtime_profile": "fast_decision",
-      "fast_runtime_ms": 6255.574,
+      "latest_verified_fast_profile": "fast_decision",
+      "latest_verified_fast_runtime_ms": 2905.966,
+      "fast_target_ms": 3000,
+      "latest_verified_live_profile": "live",
+      "latest_verified_live_runtime_ms": 4464.131,
+      "live_target_ms": 10000,
       "runtime_snapshot_file_count": 55,
-      "runtime_snapshot_bytes": 26785623,
-      "within_fast_slo": true,
+      "within_selected_profile_slo": true,
       "framework_green": true,
       "prediction_quality_healthy": true,
       "gate0_pass": 16,
@@ -36,24 +42,23 @@
       "natural_user_presentation": true,
       "scheduled_report_checkpoint_tracking": true,
       "official_first_integrity": true,
-      "rec41_tactical_fields_published": true,
-      "rec41_decision_influence": "ADVISORY_ONLY",
-      "prediction_freeze_recovery_proven": true,
-      "physical_legacy_test_consolidation_complete": true,
-      "version_stamped_test_module_count": 0,
-      "main_ci_run": 33259791237,
-      "runtime_run": 33259791179
+      "profile_aware_definition_of_done": true,
+      "structured_user_capture_authority": true,
+      "optional_auth_fail_soft": true,
+      "atomic_runtime_publication": true,
+      "predictive_validation_claimed": false
     }
   },
   "release_closeout": {
     "version": "3.39.0",
     "schema_version": 49,
     "status": "PRODUCTION_ACCEPTED",
-    "scope": "Claude QA stabilization plus REC-04 overdue-freeze recovery and behavior-neutral test/metadata housekeeping; canonical competitive-load governance, repository hygiene and 21-capability/7-domain ownership remain intact.",
+    "scope": "Historical V3.39 release closeout. Current canonical topology is 21 capabilities across 11 execution domains and 6 phases; profile-specific SLOs are owned by config/runtime/performance_slo.json.",
     "production_merge_complete": true,
     "runtime_publication_complete": true,
     "active_background_capability_count": 21,
-    "execution_domain_count": 7,
+    "execution_domain_count": 11,
+    "execution_phase_count": 6,
     "football_formula_changed": false,
     "official_authority_changed": false,
     "user_authority_changed": false,
@@ -68,7 +73,7 @@
     "candidate_ci_run": 33238691899,
     "main_ci_run": 33238768506,
     "runtime_run": 33238768480,
-    "scope": "Independent QA stabilization: release metadata alignment, canonical competitive-load governance, placeholder/probe CI guard, preserve 21-capability/7-domain equivalence",
+    "scope": "Historical stabilization candidate evidence retained for lineage only; superseded runtime SLO/topology claims must not be treated as current authority.",
     "compile_pass": true,
     "architecture_pass": true,
     "no_duplicate_ownership_pass": true,
@@ -80,7 +85,7 @@
     "fast_runtime_ms": 4641.982,
     "interactive_median_ms": 9.022,
     "interactive_max_ms": 165.394,
-    "within_fast_slo": true,
+    "within_fast_slo_at_time": true,
     "within_instant_serving_slo": true,
     "football_formula_changed": false,
     "official_authority_changed": false,
@@ -89,7 +94,7 @@
     "runtime_publication_complete": true,
     "schema_changed": false,
     "active_background_capability_count": 21,
-    "execution_domain_count": 7,
+    "execution_domain_count_at_time": 7,
     "legacy_recent_competitive_load_policy_removed": true,
     "repository_placeholder_guard_added": true,
     "historical_v325_candidate_evidence_relabelled_as_v339": false
@@ -125,7 +130,7 @@
     "official_authority_changed": false,
     "user_authority_changed": false,
     "predictive_validation_claimed": false,
-    "note": "Metadata-only commits after this accepted code-bearing merge are closeout documentation and do not redefine the accepted behavioral code commit."
+    "note": "Historical performance values above are retained as provenance only and are not current SLO authority."
   },
   "rec_status": {
     "REC-01": {"status": "DONE_PROD"},
@@ -169,16 +174,8 @@
     "REC-38": {"status": "DONE_PROD"},
     "REC-39": {"status": "DONE_PROD"},
     "REC-40": {"status": "DONE_PROD"},
-    "REC-41": {
-      "status": "DONE_PROD",
-      "summary": "Observed tactical attacking-role profiles and team FPL-position starter-shape evidence are production-published through the Player Feature Contract. Evidence remains advisory-only; no xMins or xPts adjustment is applied."
-    },
-    "REC-42": {
-      "status": "CANDIDATE",
-      "pr": 106,
-      "feature_ci_run": 33171209718,
-      "summary": "Historical V3.25 candidate evidence for architecture consolidation and sub-second warm serving; retained as evidence and not relabelled as V3.39 acceptance."
-    }
+    "REC-41": {"status": "DONE_PROD", "summary": "Observed tactical attacking-role profiles and team FPL-position starter-shape evidence are production-published through the Player Feature Contract. Evidence remains advisory-only; no xMins or xPts adjustment is applied."},
+    "REC-42": {"status": "CANDIDATE", "pr": 106, "feature_ci_run": 33171209718, "summary": "Historical V3.25 candidate evidence for architecture consolidation and sub-second warm serving; retained as evidence and not relabelled as V3.39 acceptance."}
   },
   "claude_qa_stabilization": {
     "source_review_date": "2026-08-27",
@@ -205,8 +202,8 @@
     "execution_domain_count": 11,
     "execution_phase_count": 6,
     "background_capability_count": 21,
-    "published_fast_runtime_ms": 6255.574,
-    "within_fast_slo": true,
+    "historical_published_fast_runtime_ms": 6255.574,
+    "historical_within_fast_slo_at_time": true,
     "framework_green": true,
     "gate0_pass": 16,
     "dss_core_active": 50,
@@ -219,13 +216,17 @@
     "predictive_validation_claimed": false
   },
   "calibration_monitors": {
-    "settled_prediction_validation": "MONITOR",
+    "settled_prediction_validation": "MONITOR_GENUINE_EVIDENCE_ONLY",
     "confidence_distribution": "MONITOR",
     "price_direction_and_timing": "MONITOR",
     "authenticated_private_precision": "MONITOR_OPTIONAL",
     "weather_full_refresh_latency": "MONITOR",
     "model_actionability": "MONITOR_UNTIL_DYNAMIC_WEIGHT_ELIGIBLE",
-    "tactical_role_evidence_maturity": "MONITOR_BEFORE_MODEL_OPT_IN"
+    "tactical_role_evidence_maturity": "MONITOR_BEFORE_MODEL_OPT_IN",
+    "set_piece_role_evidence": "MONITOR_NO_FABRICATION",
+    "penalty_role_evidence": "MONITOR_NO_FABRICATION",
+    "historical_prior_coverage": "MONITOR_REAL_MATCHED_EVIDENCE_ONLY",
+    "fast_runtime_headroom": "MONITOR_WITHOUT_CEILING_INCREASE"
   },
   "architecture": {
     "active_background_capability_count": 21,
@@ -255,7 +256,8 @@
     "metadata_only_closeout_commits_do_not_redefine_behavioral_acceptance": true,
     "warm_serving_separate_from_source_refresh": true,
     "instant_serving_hard_ceiling_ms": 1000,
-    "fast_slo_ms": 10000,
+    "fast_slo_ms": 3000,
+    "performance_slo_registry": "config/runtime/performance_slo.json",
     "runtime_data_branch": "runtime-data",
     "runtime_git_history_is_not_database": true
   }

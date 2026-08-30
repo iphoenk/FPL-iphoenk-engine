@@ -23,9 +23,9 @@ def test_implementation_status_matches_current_revalidation_state():
     assert evidence["status"] == "SUPERSEDED_BY_PRODUCTION_REANCHOR_PENDING_REVALIDATION"
     assert evidence["release_fingerprint"] is None
     assert evidence["remaining_validated_cycles"] == 3
-    assert evidence["superseded_evidence"]["validated_real_shadow_cycles"] == 2
+    assert evidence["superseded_evidence"]["validated_real_shadow_cycles"] == 3
     assert evidence["superseded_evidence"]["release_fingerprint"].startswith("sha256:")
-    assert status["acceptance"]["previous_operational_acceptance"]["postvalidated_real_shadow_cycles"] == 2
+    assert status["acceptance"]["previous_operational_acceptance"]["postvalidated_real_shadow_cycles"] == 3
     assert status["acceptance"]["previous_operational_acceptance"]["release_fingerprint"] == evidence["superseded_evidence"]["release_fingerprint"]
     assert status["acceptance"]["prediction_candidate_eligible"] is False
     assert production["prediction_acceptance_complete"] is False

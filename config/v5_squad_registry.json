@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "locked_squad_config": "config/locked_squad.json",
   "validation": {
     "fail_closed": true,
@@ -9,10 +9,12 @@
     "require_club_limit": true
   },
   "pre_deadline": {
-    "default_authority": "official_authenticated",
-    "fallback_authority": "user_lock",
-    "last_resort_authority": "official_public",
-    "persistent_user_lock_must_not_mask_authenticated_current_team": true
+    "default_authority": "user_capture",
+    "fallback_authority": "official_public",
+    "authenticated_official_role": "optional_private_enrichment",
+    "authenticated_official_production_blocking": false,
+    "user_capture_must_match_planning_gw": true,
+    "stale_capture_must_not_mask_official_submitted": true
   },
   "reconciliation": {
     "enabled": true,

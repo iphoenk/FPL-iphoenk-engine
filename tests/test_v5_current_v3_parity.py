@@ -8,7 +8,7 @@ from src.v5.intelligence.xmins import estimate_xmins
 from src.v5.state import Phase, primary_authority
 
 ROOT = Path(__file__).resolve().parents[1]
-MAIN_SHA = "9a76a6231bdd747a247eabc8867a2312a188317a"
+MAIN_SHA = "5175f9bc68354100a8bc3a36a3b97e853e90b73d"
 CODE_SHA = MAIN_SHA
 COMPILED_PLAN = "V3_COMPILED_EXECUTION_PLAN_V1"
 COMPILED_PLAN_SHA = "af929aa55483f0e8959247a9d1794e70f7840d32f7bf6e5a7bc9d4ceac59e467"
@@ -84,15 +84,18 @@ def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_t
     assert parity["governance"]["v3_authenticated_official_readiness_is_runtime_truth_hardening_not_v5_prediction_or_decision_authority"] is True
 
 
-def test_predeadline_current_team_prefers_authenticated_then_official_submitted():
+def test_predeadline_current_team_uses_current_capture_then_public_submitted():
     registry = _load("config/v5_phase_authority_registry.json")
     governance = registry["pre_deadline_governance"]
-    assert governance["official_authenticated_is_default_current_team_authority"] is True
-    assert governance["official_public_submitted_is_default_fallback_when_authenticated_unavailable"] is True
+    assert governance["user_capture_is_current_private_draft_authority_when_target_gw_matches"] is True
+    assert governance["user_capture_must_be_target_gw_scoped"] is True
+    assert governance["official_public_submitted_is_fallback_when_no_current_capture"] is True
     assert governance["official_public_submitted_represents_last_confirmed_team_not_unsubmitted_draft"] is True
-    assert governance["user_lock_is_last_resort_or_explicit_override_only"] is True
-    assert primary_authority(Phase.PRE_DEADLINE, "squad") == "official_authenticated"
-    assert registry["phases"]["PRE_DEADLINE"]["squad"][:3] == ["official_authenticated", "official_public", "user_lock"]
+    assert governance["authenticated_official_is_optional_private_enrichment"] is True
+    assert governance["authenticated_official_is_production_blocking"] is False
+    assert governance["authenticated_official_must_not_override_user_capture"] is True
+    assert primary_authority(Phase.PRE_DEADLINE, "squad") == "user_capture"
+    assert registry["phases"]["PRE_DEADLINE"]["squad"][:2] == ["user_capture", "official_public"]
 
 
 def test_xmins_explicit_probabilities_and_expected_minutes_reconcile():

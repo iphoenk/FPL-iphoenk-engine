@@ -113,12 +113,12 @@ def test_predeadline_authority_is_public_official_plus_scoped_user_capture():
     assert governance["authenticated_official_is_optional_private_enrichment"] is True
     assert governance["authenticated_official_must_not_be_squad_lineup_or_captaincy_authority"] is True
     assert squad_registry["pre_deadline"]["default_authority"] == "official_public"
-    assert squad_registry["pre_deadline"]["conditional_override_authority"] == "user_lock"
+    assert squad_registry["pre_deadline"]["conditional_override_authority"] == "user_capture"
     assert squad_registry["pre_deadline"]["override_requires_exact_target_gw"] is True
-    assert squad_registry["pre_deadline"]["authenticated_official_role"] == "OPTIONAL_PRIVATE_ENRICHMENT"
+    assert squad_registry["pre_deadline"]["authenticated_official_role"] == "optional_private_enrichment"
     assert squad_registry["pre_deadline"]["authenticated_official_is_squad_authority"] is False
     chain = authority_chain(Phase.PRE_DEADLINE, "squad")
-    assert chain[:2] == ("user_lock", "official_public")
+    assert chain[:2] == ("user_capture", "official_public")
     assert "official_authenticated" not in chain
 
 

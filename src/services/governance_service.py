@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from time import perf_counter
 
-from src.engines import v4_checkpoint_governance, v4_maturity_reconciler, v4_warmup_governance
+from src.engines import v4_checkpoint_governance, v4_maturity_reconciler
 from src.services import framework_postflight_truth_service
 
 
@@ -13,8 +13,7 @@ def run() -> dict:
     POST-FLIGHT truth and visible checkpoint/report governance are sequential
     phases of the same final-governance domain. Capability maturity reconciliation
     runs between them so engineering readiness is measured from concrete runtime
-    evidence while current external-evidence gaps and calibration warmup remain
-    explicitly visible.
+    evidence while current external-evidence gaps remain explicitly visible.
     """
     total = perf_counter()
     started = perf_counter()
@@ -23,7 +22,6 @@ def run() -> dict:
 
     started = perf_counter()
     maturity = v4_maturity_reconciler.reconcile(postflight)
-    maturity = v4_warmup_governance.reconcile(maturity)
     maturity_ms = round((perf_counter() - started) * 1000.0, 2)
 
     started = perf_counter()
@@ -36,7 +34,6 @@ def run() -> dict:
         "components": {
             "framework_postflight": maturity.get("overall"),
             "capability_maturity": maturity.get("capability_health"),
-            "calibration_maturity": (maturity.get("warmup_governance") or {}).get("detail", {}).get("maturity_state"),
             "report_governance": checkpoint.get("action_state"),
         },
         "timings_ms": {
@@ -50,7 +47,6 @@ def run() -> dict:
             "user_final_authority": True,
             "visible_output_policy_preserved": True,
             "maturity_does_not_fabricate_external_evidence": True,
-            "calibration_file_presence_alone_never_promotes": True,
             "data_dependent_warmup_remains_truthful": True,
             "fail_closed": True,
         },

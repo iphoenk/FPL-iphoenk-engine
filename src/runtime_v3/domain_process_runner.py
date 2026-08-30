@@ -103,16 +103,50 @@ def _run_command(command: dict[str, Any], context: dict[str, str]) -> dict[str, 
     return _run_module(module, _expand_args(list(command.get("args") or []), context))
 
 
+def _reuse_candidate(
+    mode: str,
+    loader: Any,
+    service_name: str,
+    spec: dict[str, Any],
+    profile_name: str,
+    profile_cfg: dict[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Load reusable state, converting schema/contract drift into a cache miss.
+
+    Reuse is an optimization only. A stale artifact that no longer satisfies the
+    current artifact contract must never be accepted, but it also must not block
+    the owning capability from refreshing the artifact under the new contract.
+    """
+    try:
+        if mode == "TTL":
+            return loader(service_name, spec, DATA, profile_cfg), None
+        return loader(service_name, spec, profile_name), None
+    except Exception as exc:
+        return None, {
+            "mode": mode,
+            "reason": "ARTIFACT_CONTRACT_REJECTED",
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+
 def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profile_name: str, profile_cfg: dict[str, Any]) -> dict[str, Any]:
     reuse_active = incremental_reuse.active(profile_name, name)
     reuse_diagnostic_before = incremental_reuse.diagnose(name, profile_name) if name in (incremental_reuse._registry().get("services") or {}) else None
-    reused = legacy._reuse_service(name, spec, DATA, profile_cfg)
+    reuse_rejections: list[dict[str, Any]] = []
+
+    reused, rejected = _reuse_candidate("TTL", legacy._reuse_service, name, spec, profile_name, profile_cfg)
+    if rejected is not None:
+        reuse_rejections.append(rejected)
     if reused is None and reuse_active:
-        reused = incremental_reuse.try_reuse(name, spec, profile_name)
+        reused, rejected = _reuse_candidate("CONTENT_ADDRESSED", incremental_reuse.try_reuse, name, spec, profile_name, profile_cfg)
+        if rejected is not None:
+            reuse_rejections.append(rejected)
     if reused is not None:
         reused["execution_boundary"] = "DOMAIN_PROCESS"
         if reuse_diagnostic_before is not None:
             reused["reuse_diagnostic_before"] = reuse_diagnostic_before
+        if reuse_rejections:
+            reused["reuse_rejections"] = reuse_rejections
         return reused
 
     input_fingerprint = incremental_reuse.fingerprint(name) if reuse_active else None
@@ -152,6 +186,8 @@ def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profi
         }
         if reuse_diagnostic_before is not None:
             result["reuse_diagnostic_before"] = reuse_diagnostic_before
+        if reuse_rejections:
+            result["reuse_rejections"] = reuse_rejections
         if batched:
             result["single_process_module_batch"] = True
         if input_fingerprint:
@@ -180,6 +216,8 @@ def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profi
         }
         if reuse_diagnostic_before is not None:
             result["reuse_diagnostic_before"] = reuse_diagnostic_before
+        if reuse_rejections:
+            result["reuse_rejections"] = reuse_rejections
         return result
 
 

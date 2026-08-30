@@ -213,7 +213,8 @@ def test_runtime_registry_is_dependency_aware_and_artifact_owned():
         "weather_is_observational_and_advisory_only", "weather_never_directly_mutates_xpts_or_decisions",
         "owned_report_rows_require_current_gw_xpts", "settled_prediction_validation_is_exposed_to_reports",
         "tactical_context_is_separate_bounded_evidence_service", "tactical_context_never_infers_missing_coach_style_or_true_pressing",
-        "tactical_context_rolling_history_is_service_owned",
+        "tactical_context_rolling_history_is_service_owned", "required_core_and_optional_private_enrichment_are_distinct",
+        "optional_private_enrichment_never_blocks_required_core",
     ):
         assert policy[key] is True, key
     services = registry["services"]
@@ -245,7 +246,10 @@ def test_runtime_registry_is_dependency_aware_and_artifact_owned():
     assert set(services["prediction_evaluation"]["depends_on"]) == {"prediction", "official_snapshot"}
     assert services["lineup_governance"]["depends_on"] == ["prediction"]
     assert set(services["challenger"]["depends_on"]) == {"prediction_evaluation", "source_layer"}
-    assert set(services["governance"]["depends_on"]) == {"source_layer", "price", "prediction", "authenticated_official", "rules", "official_detail", "prediction_evaluation", "lineup_governance", "challenger"}
+    assert set(services["governance"]["depends_on"]) == {"source_layer", "price", "prediction", "rules", "official_detail", "prediction_evaluation", "lineup_governance", "challenger"}
+    assert services["authenticated_official"]["critical"] is False
+    assert services["authenticated_official"]["criticality_class"] == "OPTIONAL_PRIVATE_ENRICHMENT"
+    assert services["authenticated_official"]["failure_policy"] == "FAIL_SOFT"
     assert services["watchlist"]["depends_on"] == ["governance"]
     assert services["reporting"]["depends_on"] == ["watchlist"]
     assert set(services["report_materializer"]["depends_on"]) == {"reporting", "official_detail", "source_layer", "lineup_governance", "prediction_evaluation"}

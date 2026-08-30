@@ -78,6 +78,24 @@ def _previous_season_task(ttl: float) -> dict:
     return {**fresh, "runtime_reused": False, "cache_age_minutes": 0.0}
 
 
+def _historical_season_task(season: str, ttl: float) -> dict:
+    safe = season.replace("-", "_")
+    cached, age = _fresh_cached(
+        STATS / f"vaastav_historical_{safe}.json",
+        ttl,
+        lambda payload: (
+            bool(payload.get("rows"))
+            and payload.get("status") == "LIVE"
+            and payload.get("season") == season
+            and payload.get("immutable_completed_season") is True
+        ),
+    )
+    if cached:
+        return {**cached, "runtime_reused": True, "cache_age_minutes": age}
+    fresh = vaastav.sync_historical_season(season)
+    return {**fresh, "runtime_reused": False, "cache_age_minutes": 0.0}
+
+
 def _deep_task(gw: int, ttl: float) -> dict:
     names = ("shots", "playermatchstats")
     cached_rows = {}
@@ -160,11 +178,14 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         current_ttl = float(reuse.get("current_gw_stats_ttl_minutes") or 60)
         deep_ttl = float(reuse.get("deep_stats_ttl_minutes") or 180)
         previous_ttl = float(reuse.get("previous_season_ttl_minutes") or 10080)
+        history_seasons = vaastav.historical_seasons()
         tasks = {
             "core_insights": lambda: _core_insights_task(int(stats_gw), current_ttl),
             "vaastav": lambda: _vaastav_task(int(stats_gw), current_ttl),
             "last_season": lambda: _previous_season_task(previous_ttl),
         }
+        for season in history_seasons:
+            tasks[f"historical:{season}"] = lambda season=season: _historical_season_task(season, previous_ttl)
         if deep_stats:
             tasks["deep"] = lambda: _deep_task(int(stats_gw), deep_ttl)
         results = _run_parallel(tasks)
@@ -187,10 +208,20 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
                 "reused": bool(results["last_season"].get("runtime_reused")),
                 "cache_age_minutes": results["last_season"].get("cache_age_minutes"),
             },
+            "historical_seasons": {
+                season: {
+                    "ok": bool(results[f"historical:{season}"].get("rows")),
+                    "rows": results[f"historical:{season}"].get("row_count"),
+                    "reused": bool(results[f"historical:{season}"].get("runtime_reused")),
+                    "cache_age_minutes": results[f"historical:{season}"].get("cache_age_minutes"),
+                }
+                for season in history_seasons
+            },
             "reuse_policy": {
                 "current_gw_stats_ttl_minutes": current_ttl,
                 "deep_stats_ttl_minutes": deep_ttl,
                 "previous_season_ttl_minutes": previous_ttl,
+                "historical_completed_seasons_immutable": True,
                 "official_fpl_excluded": True,
                 "volatile_team_news_excluded": True,
             },
@@ -241,6 +272,7 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         "duration_ms": out["duration_ms"],
         "official_players": len(universe),
         "stats_reused": {key: value.get("reused") for key, value in advanced.items() if isinstance(value, dict) and "reused" in value},
+        "historical_seasons": sorted((advanced.get("historical_seasons") or {}).keys()),
         "competitive_load_rows": competitive_load.get("coverage", {}).get("observed_player_fixture_rows"),
         "competitive_load_complete_for_visible_report": competitive_load.get("coverage", {}).get("complete_for_visible_report"),
     }))

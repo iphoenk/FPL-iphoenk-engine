@@ -1,14 +1,15 @@
 {
-  "schema_version": 5,
-  "model": "v5_v3_v4_capability_parity_v5",
+  "schema_version": 6,
+  "model": "v5_v3_v4_capability_parity_v6",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "main@018099be08f755e0f45b2c7526309ccc76818e4d",
-    "current_production_code_commit": "018099be08f755e0f45b2c7526309ccc76818e4d",
+    "current_production_runtime": "main@5538147b7f6dc51b6a3641befb72f6a8ff77e447",
+    "current_production_code_commit": "5538147b7f6dc51b6a3641befb72f6a8ff77e447",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "current_production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
-    "current_production_compiled_plan_sha256": "e013d5ccb9428382f87ba29b0c1c752b7e21758106e6ed6e81380074775e7538",
+    "current_production_compiled_plan_sha256": "af929aa55483f0e8959247a9d1794e70f7840d32f7bf6e5a7bc9d4ceac59e467",
+    "current_production_capability_telemetry_registry": "V3_CAPABILITY_TELEMETRY_V1",
     "research_reference": "v4",
     "candidate": "v5.0.0-beta.4"
   },
@@ -55,8 +56,8 @@
     "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "018099be08f755e0f45b2c7526309ccc76818e4d",
-    "production_code_commit": "018099be08f755e0f45b2c7526309ccc76818e4d",
+    "production_main_sha": "5538147b7f6dc51b6a3641befb72f6a8ff77e447",
+    "production_code_commit": "5538147b7f6dc51b6a3641befb72f6a8ff77e447",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,
@@ -67,7 +68,8 @@
       "capability_count": 21,
       "registry": "V3_EXECUTION_DOMAINS_V2",
       "compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
-      "compiled_plan_sha256": "e013d5ccb9428382f87ba29b0c1c752b7e21758106e6ed6e81380074775e7538",
+      "compiled_plan_sha256": "af929aa55483f0e8959247a9d1794e70f7840d32f7bf6e5a7bc9d4ceac59e467",
+      "capability_telemetry_registry": "V3_CAPABILITY_TELEMETRY_V1",
       "module_batch_registry": "V3_MODULE_BATCHES_DERIVED_V2",
       "business_capability_contract_unchanged_by_control_plane_refactor": true,
       "football_formula_unchanged_by_control_plane_refactor": true,
@@ -87,12 +89,27 @@
       "artifact_persistence_contract": {
         "v5_owner": "snapshot",
         "evidence": "config/v5_persistence_registry.json",
-        "semantics": "Persisted artifacts are explicitly registered; undeclared ownership is not accepted."
+        "semantics": "Persisted artifacts are explicitly registered; V3 artifact-writer metadata cleanup does not create V5 authority."
       },
       "dependency_and_parallelism_contract": {
         "v5_owner": "orchestrator",
         "evidence": "config/v5_orchestrator_registry.json",
-        "semantics": "Execution dependencies and parallel groups are explicit and deterministic without a second human-maintained batch truth."
+        "semantics": "V3 compiled wave parallelism is reconciled by deterministic V5 dependency and parallel-group guarantees without copying the V3 scheduler."
+      },
+      "rules_drift_governance_contract": {
+        "v5_owner": "truth",
+        "evidence": "config/rules/registry.json",
+        "semantics": "V3 persisted Official-rules drift observability is a governance hardening; V5 preserves its own rules authority and does not infer a rules change from telemetry."
+      },
+      "canonical_terminology_contract": {
+        "v5_owner": "governance",
+        "evidence": "config/v5_architecture_principles.json",
+        "semantics": "V3 execution-domain/capability terminology normalization is acknowledged without renaming V5 bounded contexts or duplicating business ownership."
+      },
+      "capability_telemetry_contract": {
+        "v5_owner": "governance",
+        "evidence": "config/v5_service_registry.json",
+        "semantics": "V3 canonical capability telemetry is observational. V5 keeps its own service health and module ownership evidence and does not import telemetry as decision authority."
       }
     },
     "capability_equivalence": {
@@ -100,6 +117,7 @@
       "authenticated_official_predeadline_team": {"v5_owner": "truth", "evidence": "config/v5_phase_authority_registry.json"},
       "explicit_xmins_probability_decomposition": {"v5_owner": "prediction", "evidence": "src/v5/intelligence/xmins.py::_probability_contract"},
       "projection_component_observability": {"v5_owner": "prediction", "evidence": "src/v5/intelligence/projection.py::_position_projection_diagnostics"},
+      "verified_competitive_load_observation_validation": {"v5_owner": "prediction", "evidence": "src/v5/intelligence/competitive_load.py::_validated_observations"},
       "tactical_xpts_immutability": {"v5_owner": "decision", "evidence": "src/v5/decision/tactical_consumption.py"},
       "governed_lineup_uncertainty": {"v5_owner": "decision", "evidence": "src/v5/decision/lineup_optimizer.py"},
       "captain_safe_pool_and_independent_vice": {"v5_owner": "decision", "evidence": "src/v5/decision/lineup_optimizer.py"},
@@ -118,11 +136,13 @@
     "execution_domains_are_not_business_owners": true,
     "external_consensus_is_advisory_only": true,
     "competitive_load_direct_prediction_mutation_forbidden_until_calibrated": true,
+    "competitive_load_external_observations_fail_closed_per_row": true,
     "predeadline_validation_must_be_genuine_not_reconstructed": true,
     "reanchor_requires_full_v5_gate": true,
     "reanchor_does_not_change_frozen_football_truth_baseline": true,
     "topology_name_parity_does_not_require_service_name_identity": true,
     "compiled_v3_control_plane_does_not_create_v5_service_or_business_authority": true,
-    "duplicate_human_maintained_execution_truth_forbidden": true
+    "duplicate_human_maintained_execution_truth_forbidden": true,
+    "v3_capability_telemetry_is_observational_not_decision_authority": true
   }
 }

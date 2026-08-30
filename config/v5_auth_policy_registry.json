@@ -1,5 +1,8 @@
 {
-  "version": 2,
+  "version": 3,
+  "capability_role": "OPTIONAL_PRIVATE_ENRICHMENT",
+  "production_blocking": false,
+  "may_supply_squad_authority": false,
   "resource_policy": {
     "allowed_method": "GET",
     "allow_redirects": false,

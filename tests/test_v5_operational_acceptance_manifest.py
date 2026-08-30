@@ -10,25 +10,29 @@ def _manifest():
     return json.loads(MANIFEST.read_text(encoding="utf-8"))
 
 
-def test_operational_acceptance_closeout_is_internally_consistent():
+def test_code_bearing_change_supersedes_old_operational_acceptance():
     manifest = _manifest()
     evidence = manifest["operational_acceptance_evidence"]
     promotion = manifest["production_promotion"]
+    old = evidence["superseded_evidence"]
 
-    assert evidence["status"] == "COMPLETE"
-    assert evidence["validated_real_shadow_cycles"] >= evidence["required_real_shadow_cycles"]
-    assert evidence["remaining_validated_cycles"] == 0
-    assert evidence["operational_candidate_eligible"] is True
-    assert evidence["release_fingerprint"].startswith("sha256:")
-    assert evidence["evidence_contract"] == "v5_postvalidated_shadow_acceptance_v5"
-    assert evidence["source_branch"] == "v5-shadow-runtime"
+    assert evidence["status"] == "SUPERSEDED_BY_CODE_CHANGE_PENDING_REVALIDATION"
+    assert evidence["release_fingerprint"] is None
+    assert evidence["validated_real_shadow_cycles"] == 0
+    assert evidence["required_real_shadow_cycles"] == 3
+    assert evidence["remaining_validated_cycles"] == 3
+    assert evidence["operational_candidate_eligible"] is False
 
-    assert promotion["validated_real_shadow_cycles"] == evidence["validated_real_shadow_cycles"]
-    assert promotion["required_real_shadow_cycles"] == evidence["required_real_shadow_cycles"]
-    assert promotion["operational_acceptance_complete"] is True
+    assert old["release_fingerprint"].startswith("sha256:")
+    assert old["validated_real_shadow_cycles"] == 3
+    assert old["latest_validated_at"]
+
+    assert promotion["validated_real_shadow_cycles"] == 0
+    assert promotion["required_real_shadow_cycles"] == 3
+    assert promotion["operational_acceptance_complete"] is False
 
 
-def test_operational_acceptance_does_not_bypass_prediction_or_production_gates():
+def test_operational_revalidation_does_not_bypass_prediction_or_production_gates():
     manifest = _manifest()
     evidence = manifest["operational_acceptance_evidence"]
     promotion = manifest["production_promotion"]

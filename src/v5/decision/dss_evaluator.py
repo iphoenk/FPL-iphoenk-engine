@@ -104,6 +104,7 @@ def _audit(
         "integrity_ok": integrity_ok,
         "counts": dict(counts),
         "coverage_ratio": round(active_count / max(1, len(rows)), 4),
+        "all_active": bool(integrity_ok and active_count == expected_count),
         "critical_partial": critical_partial,
         "items": items,
     }
@@ -131,16 +132,24 @@ def evaluate_dss(
     critical_partial = core["critical_partial"] + extensions["critical_partial"]
     governance = _policy().get("governance") or {}
     registry_integrity = bool(core["integrity_ok"] and extensions["integrity_ok"])
+    all_modules_active = bool(core["all_active"] and extensions["all_active"])
     block_on_partial = bool(governance.get("critical_partial_blocks_unqualified_go", True))
     require_integrity = bool(governance.get("registry_integrity_required", True))
-    unqualified_go = (not require_integrity or registry_integrity) and (not block_on_partial or not critical_partial)
+    require_all_active = bool(governance.get("all_modules_active_for_unqualified_go", True))
+    unqualified_go = (
+        (not require_integrity or registry_integrity)
+        and (not block_on_partial or not critical_partial)
+        and (not require_all_active or all_modules_active)
+    )
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "evaluation_model": _policy().get("evaluation_model"),
         "core": core,
         "extensions": extensions,
         "capability_sources": sources,
         "registry_integrity": registry_integrity,
+        "all_modules_active": all_modules_active,
+        "all_modules_active_required_for_unqualified_go": require_all_active,
         "critical_partial_count": len(critical_partial),
         "critical_partial": critical_partial,
         "unqualified_go_allowed": bool(unqualified_go),

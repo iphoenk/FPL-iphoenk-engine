@@ -89,12 +89,20 @@ def validate_registry() -> list[str]:
     specs = service_specs()
     ids = {s.service_id for s in specs}
     ports = [s.port for s in specs]
+    handlers = [s.handler for s in specs]
+    bounded_contexts = [s.bounded_context for s in specs]
     if len(ports) != len(set(ports)):
         errors.append("duplicate service ports")
+    if len(handlers) != len(set(handlers)):
+        errors.append("duplicate service handlers")
+    if len(bounded_contexts) != len(set(bounded_contexts)):
+        errors.append("duplicate bounded-context authority")
     ownership_count: dict[str, int] = {}
     for spec in specs:
         if not spec.handler or ":" not in spec.handler:
             errors.append(f"{spec.service_id}: invalid handler")
+        if not spec.bounded_context:
+            errors.append(f"{spec.service_id}: empty bounded context")
         if not spec.owns_modules:
             errors.append(f"{spec.service_id}: owns no modules")
         for module in spec.owns_modules:

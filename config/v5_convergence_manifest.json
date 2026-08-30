@@ -5,8 +5,8 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "ac4e14abf2a844804007e0fb3cac7c7c54213679",
-    "production_code_commit": "ac4e14abf2a844804007e0fb3cac7c7c54213679",
+    "production_main_sha": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
+    "production_code_commit": "72d2981bb74d6794f8dca8c8dfb5decb40d13d15",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
@@ -86,7 +86,11 @@
     "v3_rules_drift_and_artifact_ownership_reconciled_as_control_plane": true,
     "v3_canonical_capability_telemetry_reconciled_without_v5_authority_change": true,
     "v3_sub3s_fast_lane_reconciled_as_runtime_hardening": true,
-    "v3_semantic_prediction_reuse_reconciled_as_runtime_hardening": true
+    "v3_semantic_prediction_reuse_reconciled_as_runtime_hardening": true,
+    "v3_gameweek_lifecycle_reporting_hardening_reconciled_without_prediction_or_decision_authority_change": true,
+    "v3_bounded_warm_retry_reconciled_as_runtime_workflow_hardening": true,
+    "strict_all_dss_active_governance_required": true,
+    "unique_service_handler_and_bounded_context_authority_required": true
   },
   "acceptance": {
     "no_regression_vs_v3_20_0_truth": true,
@@ -110,28 +114,33 @@
     "interactive_preferred_target_ms": 1000
   },
   "operational_acceptance_evidence": {
-    "status": "COMPLETE",
+    "status": "SUPERSEDED_BY_CODE_CHANGE_PENDING_REVALIDATION",
     "source_branch": "v5-shadow-runtime",
     "evidence_contract": "v5_postvalidated_shadow_acceptance_v5",
     "evidence_path": "data/v5/shadow/acceptance_summary.json",
-    "release_fingerprint": "sha256:98cc221c103c38d157abf73cc0a835f59c945c68252167a3a42e912c1be884c1",
-    "validated_real_shadow_cycles": 3,
+    "release_fingerprint": null,
+    "validated_real_shadow_cycles": 0,
     "required_real_shadow_cycles": 3,
-    "remaining_validated_cycles": 0,
-    "latest_validated_at": "2026-08-30T05:16:11.666366+00:00",
-    "operational_candidate_eligible": true,
+    "remaining_validated_cycles": 3,
+    "operational_candidate_eligible": false,
     "prediction_candidate_eligible": false,
     "production_candidate_eligible": false,
-    "note": "Operational acceptance is postvalidated for the exact release fingerprint. Prediction acceptance remains independently locked until genuine settled evidence meets the calibration gate."
+    "superseded_evidence": {
+      "release_fingerprint": "sha256:98cc221c103c38d157abf73cc0a835f59c945c68252167a3a42e912c1be884c1",
+      "validated_real_shadow_cycles": 3,
+      "latest_validated_at": "2026-08-30T05:16:11.666366+00:00",
+      "reason": "A code-bearing strict-DSS governance and service-authority validation change modifies the runtime release fingerprint; prior operational evidence remains historical but cannot qualify the new build."
+    },
+    "note": "Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required before operational eligibility can be restored."
   },
   "production_promotion": {
     "allowed": false,
     "beta": true,
     "production_candidate": false,
-    "validated_real_shadow_cycles": 3,
+    "validated_real_shadow_cycles": 0,
     "required_real_shadow_cycles": 3,
-    "operational_acceptance_complete": true,
+    "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 completed three postvalidated REAL_SHADOW cycles for release fingerprint sha256:98cc221c103c38d157abf73cc0a835f59c945c68252167a3a42e912c1be884c1 and is operational-candidate eligible. Production promotion remains locked because prediction acceptance has no sufficient genuine settled sample yet; no retrospective reconstruction, threshold relaxation, or automatic promotion is permitted."
+    "reason": "Operational acceptance was intentionally reset because code-bearing strict-DSS fail-closed governance and service-authority validation change the V5 runtime release fingerprint. Prior 3/3 evidence is preserved as superseded history; three fresh postvalidated cycles plus independent prediction acceptance remain mandatory."
   }
 }

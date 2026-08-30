@@ -87,11 +87,13 @@ def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_t
 def test_predeadline_current_team_uses_current_capture_then_public_submitted():
     registry = _load("config/v5_phase_authority_registry.json")
     governance = registry["pre_deadline_governance"]
-    assert governance["user_capture_is_private_current_team_authority_when_current"] is True
+    assert governance["user_capture_is_current_private_draft_authority_when_target_gw_matches"] is True
+    assert governance["user_capture_must_be_target_gw_scoped"] is True
     assert governance["official_public_submitted_is_fallback_when_no_current_capture"] is True
     assert governance["official_public_submitted_represents_last_confirmed_team_not_unsubmitted_draft"] is True
-    assert governance["authenticated_official_is_optional_private_enrichment_not_squad_authority"] is True
-    assert governance["authenticated_official_production_blocking"] is False
+    assert governance["authenticated_official_is_optional_private_enrichment"] is True
+    assert governance["authenticated_official_is_production_blocking"] is False
+    assert governance["authenticated_official_must_not_override_user_capture"] is True
     assert primary_authority(Phase.PRE_DEADLINE, "squad") == "user_capture"
     assert registry["phases"]["PRE_DEADLINE"]["squad"][:2] == ["user_capture", "official_public"]
 

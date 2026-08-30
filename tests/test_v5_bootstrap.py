@@ -78,7 +78,7 @@ def test_phase_authority_changes_across_gameweek_lifecycle():
     assert resolve_phase(deadline_time=deadline, now="2026-08-29T10:00:01Z") is Phase.POST_DEADLINE
     assert resolve_phase(deadline_time=deadline, now="2026-08-29T10:00:01Z", live_started=True) is Phase.LIVE
     assert resolve_phase(deadline_time=deadline, now=datetime.now(timezone.utc), finished=True) is Phase.POST_GW
-    assert phase_primary_authority(Phase.PRE_DEADLINE, "squad") == "official_authenticated"
+    assert phase_primary_authority(Phase.PRE_DEADLINE, "squad") == "user_capture"
     assert phase_primary_authority(Phase.POST_DEADLINE, "squad") == "official_public"
     assert phase_primary_authority(Phase.LIVE, "scoring") == "official_public_event_live"
     assert phase_primary_authority(Phase.POST_GW, "scoring") == "official_final_history"
@@ -219,6 +219,8 @@ def _fake_squad_inputs():
     bootstrap = {"elements": elements, "teams": teams}
     locked_ids = list(range(1, 16))
     lock = {
+        "planning_override_active": True,
+        "target_gw": 3,
         "players": [
             {
                 "element": eid,
@@ -228,14 +230,14 @@ def _fake_squad_inputs():
                 "purchase_cost": 50,
             }
             for eid in locked_ids
-        ]
+        ],
     }
     submitted_ids = list(range(1, 15)) + [16]
     picks = {"picks": [{"element": eid} for eid in submitted_ids]}
     return bootstrap, lock, picks
 
 
-def test_squad_authority_prefers_authenticated_official_predeadline():
+def test_squad_authority_prefers_current_user_capture_predeadline_even_with_auth():
     bootstrap, lock, picks = _fake_squad_inputs()
     authenticated = {
         "picks": [
@@ -248,27 +250,35 @@ def test_squad_authority_prefers_authenticated_official_predeadline():
         bootstrap=bootstrap,
         locked_squad=lock,
         authenticated_my_team=authenticated,
-        submitted_picks=None,
+        submitted_picks=picks,
+        planning_gw=3,
+        submitted_gw=2,
     )
-    assert pre["authority"] == "official_authenticated"
-    assert [row["element"] for row in pre["squad"]] == [row["element"] for row in picks["picks"]]
+    assert pre["authority"] == "user_capture"
+    assert [row["element"] for row in pre["squad"]] == list(range(1, 16))
+    assert pre["authority_policy"]["authenticated_official_production_blocking"] is False
     assert pre["validation"]["passed"] is True
 
 
-def test_squad_authority_prefers_official_submitted_when_auth_unavailable():
+def test_squad_authority_prefers_official_submitted_when_capture_is_stale():
     bootstrap, lock, picks = _fake_squad_inputs()
+    lock["target_gw"] = 2
     pre = select_squad(
         phase=Phase.PRE_DEADLINE,
         bootstrap=bootstrap,
         locked_squad=lock,
         authenticated_my_team=None,
         submitted_picks=picks,
+        planning_gw=3,
+        submitted_gw=2,
     )
     post = select_squad(
         phase=Phase.POST_DEADLINE,
         bootstrap=bootstrap,
         locked_squad=lock,
         submitted_picks=picks,
+        planning_gw=3,
+        submitted_gw=3,
     )
     assert pre["authority"] == "official_public"
     assert post["authority"] == "official_public"
@@ -281,7 +291,7 @@ def test_squad_authority_prefers_official_submitted_when_auth_unavailable():
     assert reconciliation["submitted_becomes_baseline"] is True
 
 
-def test_squad_authority_uses_user_lock_only_when_auth_and_public_unavailable():
+def test_squad_authority_uses_current_capture_when_public_unavailable():
     bootstrap, lock, _ = _fake_squad_inputs()
     pre = select_squad(
         phase=Phase.PRE_DEADLINE,
@@ -289,6 +299,8 @@ def test_squad_authority_uses_user_lock_only_when_auth_and_public_unavailable():
         locked_squad=lock,
         authenticated_my_team=None,
         submitted_picks=None,
+        planning_gw=3,
+        submitted_gw=2,
     )
-    assert pre["authority"] == "user_lock"
+    assert pre["authority"] == "user_capture"
     assert pre["validation"]["passed"] is True

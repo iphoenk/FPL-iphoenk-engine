@@ -2,8 +2,10 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEPLOYED_SHA = "a6f983af575f33329ada456ef8c6e8e971921696"
+DEPLOYED_SHA = "84b1577f4fc84ce00a4e8c5e8139644c8f9fff51"
 STALE_DEPLOYED_SHAS = {
+    "a6f983af575f33329ada456ef8c6e8e971921696",
+    "a40d0e19ff3d1da580e0d94983f829397aab81f2",
     "80fe400888f7a4979f4537971cbc8eef6470dbe6",
     "794d45d37782b3b47617d80384589a7a0cc55730",
     "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
@@ -90,6 +92,14 @@ def test_owned_metadata_is_reanchored_to_the_one_deployed_runtime_sha():
     assert acceptance["convergence"]["v3_runtime_reuse_contract_migration_reconciled_as_runtime_hardening"] is True
     assert parity["current_production_reanchor"]["v3_topology"]["runtime_reuse_contract_migration_runtime_hardening_only"] is True
     assert parity["governance"]["v3_runtime_reuse_contract_migration_is_runtime_hardening_not_decision_authority"] is True
+    assert manifest["advanced_v5"]["v3_official_player_detail_enrichment_reconciled_as_runtime_hardening"] is True
+    assert manifest["advanced_v5"]["v3_official_player_detail_reuse_migration_reconciled_as_runtime_hardening"] is True
+    assert acceptance["convergence"]["v3_official_player_detail_enrichment_reconciled_as_runtime_hardening"] is True
+    assert acceptance["convergence"]["v3_official_player_detail_reuse_migration_reconciled_as_runtime_hardening"] is True
+    assert parity["current_production_reanchor"]["v3_topology"]["official_player_detail_enrichment_runtime_hardening_only"] is True
+    assert parity["current_production_reanchor"]["v3_topology"]["official_player_detail_reuse_migration_runtime_hardening_only"] is True
+    assert parity["governance"]["v3_official_player_detail_enrichment_is_factual_runtime_hardening_not_prediction_or_decision_authority"] is True
+    assert parity["governance"]["v3_official_player_detail_reuse_migration_is_runtime_hardening_not_decision_authority"] is True
 
     for path in OWNED_METADATA:
         text = (ROOT / path).read_text(encoding="utf-8")

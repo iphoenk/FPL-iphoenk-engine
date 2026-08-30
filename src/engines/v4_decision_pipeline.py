@@ -239,7 +239,7 @@ def _write_cache(fingerprint: str) -> None:
     })
 
 
-def run():
+def run(*, runtime_context: dict | None = None):
     t0 = perf_counter()
     predictions = read_json(DATA / "predictions_v4.json", {})
     universe = read_json(DATA / "universe.json", {})
@@ -361,6 +361,12 @@ def run():
             "optimizer_cache_artifact_digest_verified": True,
         },
     }
+    if runtime_context is not None:
+        # Same-process immutable reuse only. These objects were parsed from
+        # the governed prediction/universe artifacts above; the weather
+        # overlay would otherwise parse the identical files again.
+        runtime_context["predictions"] = predictions
+        runtime_context["universe"] = universe
     atomic_json(OUTFILE, out)
     print(json.dumps({
         "engine": out["engine"],

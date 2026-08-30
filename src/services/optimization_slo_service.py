@@ -12,10 +12,14 @@ DECISION_COMPUTE_SLO_MS = 5000.0
 
 def run() -> dict:
     wall_started = perf_counter()
-    out = run_decision_pipeline()
+    runtime_context: dict = {}
+    out = run_decision_pipeline(runtime_context=runtime_context)
 
     weather_started = perf_counter()
-    tactical = apply_weather_overlay()
+    tactical = apply_weather_overlay(
+        predictions=runtime_context.get("predictions"),
+        universe=runtime_context.get("universe"),
+    )
     weather_ms = round((perf_counter() - weather_started) * 1000.0, 2)
 
     base_compute_ms = float((out.get("timings") or {}).get("total_pipeline_ms") or float("inf"))

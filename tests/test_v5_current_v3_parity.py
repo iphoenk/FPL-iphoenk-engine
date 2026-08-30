@@ -8,7 +8,7 @@ from src.v5.intelligence.xmins import estimate_xmins
 from src.v5.state import Phase, primary_authority
 
 ROOT = Path(__file__).resolve().parents[1]
-MAIN_SHA = "892dd783b2fa0199cecf74e5a6548bb0619816dd"
+MAIN_SHA = "9a76a6231bdd747a247eabc8867a2312a188317a"
 CODE_SHA = MAIN_SHA
 COMPILED_PLAN = "V3_COMPILED_EXECUTION_PLAN_V1"
 COMPILED_PLAN_SHA = "af929aa55483f0e8959247a9d1794e70f7840d32f7bf6e5a7bc9d4ceac59e467"
@@ -46,6 +46,7 @@ def test_current_production_reanchor_is_exact_and_keeps_frozen_truth_baseline():
     assert topology["gameweek_lifecycle_reporting_hardening_only"] is True
     assert topology["bounded_warm_retry_runtime_workflow_hardening_only"] is True
     assert topology["official_phase_independent_fetch_overlap_runtime_hardening_only"] is True
+    assert topology["authenticated_official_production_readiness_runtime_hardening_only"] is True
     assert parity["governance"]["reanchor_requires_full_v5_gate"] is True
     assert parity["governance"]["reanchor_does_not_change_frozen_football_truth_baseline"] is True
 
@@ -66,6 +67,7 @@ def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_t
         "gameweek_lifecycle_reporting_contract",
         "bounded_warm_retry_runtime_contract",
         "official_fetch_overlap_runtime_contract",
+        "authenticated_official_readiness_contract",
     }
     assert required <= set(control)
     for row in control.values():
@@ -79,6 +81,7 @@ def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_t
     assert parity["governance"]["v3_gameweek_lifecycle_reporting_is_not_v5_prediction_or_decision_authority"] is True
     assert parity["governance"]["v3_bounded_warm_retry_is_runtime_workflow_hardening_not_decision_authority"] is True
     assert parity["governance"]["v3_official_phase_independent_fetch_overlap_is_runtime_hardening_not_decision_authority"] is True
+    assert parity["governance"]["v3_authenticated_official_readiness_is_runtime_truth_hardening_not_v5_prediction_or_decision_authority"] is True
 
 
 def test_predeadline_current_team_prefers_authenticated_then_official_submitted():

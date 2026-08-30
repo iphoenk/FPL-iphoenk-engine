@@ -7,6 +7,13 @@ from src.engines import v4_checkpoint_governance, v4_maturity_reconciler
 from src.services import framework_postflight_truth_service
 
 
+def _assert_no_critical_failure_erasure(before: set[str], maturity: dict) -> None:
+    after = set(maturity.get("critical_failed") or [])
+    erased = sorted(before - after)
+    if erased:
+        raise RuntimeError(f"maturity reconciliation cannot erase critical FAILED state: {erased}")
+
+
 def run() -> dict:
     """Run the final governed decision boundary in one process.
 
@@ -19,9 +26,11 @@ def run() -> dict:
     started = perf_counter()
     postflight = framework_postflight_truth_service.run()
     postflight_ms = round((perf_counter() - started) * 1000.0, 2)
+    critical_failed_before = set(postflight.get("critical_failed") or [])
 
     started = perf_counter()
     maturity = v4_maturity_reconciler.reconcile(postflight)
+    _assert_no_critical_failure_erasure(critical_failed_before, maturity)
     maturity_ms = round((perf_counter() - started) * 1000.0, 2)
 
     started = perf_counter()
@@ -47,6 +56,7 @@ def run() -> dict:
             "user_final_authority": True,
             "visible_output_policy_preserved": True,
             "maturity_does_not_fabricate_external_evidence": True,
+            "maturity_cannot_erase_critical_failure": True,
             "data_dependent_warmup_remains_truthful": True,
             "fail_closed": True,
         },

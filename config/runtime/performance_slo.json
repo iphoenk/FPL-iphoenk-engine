@@ -20,10 +20,11 @@
       "scope": "validated precomputed decision/report serving only; no external source refresh"
     },
     "fast_decision": {
-      "target_wall_ms": 10000,
-      "warning_wall_ms": 7500,
-      "legacy_ceiling_ms": 45000,
-      "enforcement": "TARGET_WITH_LEGACY_CEILING"
+      "target_wall_ms": 3000,
+      "warning_wall_ms": 2800,
+      "legacy_ceiling_ms": 3000,
+      "enforcement": "HARD_CEILING",
+      "consistency_requirement": "3 fresh-process candidate runs must each be <=3000ms"
     },
     "live": {
       "target_wall_ms": 10000,

@@ -277,18 +277,27 @@ def _load(path: str):
     return json.loads((ROOT / path).read_text(encoding="utf-8"))
 
 
-def test_weather_is_optional_enrichment_not_new_microservice():
+def test_weather_acquisition_is_optional_enrichment_and_context_is_governed_capability():
     sources = _load("config/sources/registry.json")
-    services = _load("config/v3_service_registry.json")
+    registry = _load("config/v3_service_registry.json")
+    services = registry["services"]
     source_map = {row["id"]: row for row in sources["sources"]}
     weather = source_map["open_meteo"]
     assert weather["class"] == "ENRICHMENT"
     assert weather["critical"] is False
     assert weather["adapter"] == "weather_artifact"
-    assert not any("weather" in name.lower() for name in services["services"])
-    source_layer = services["services"]["source_layer"]
+    assert registry["policy"]["weather_acquisition_lives_inside_source_layer"] is True
+    assert registry["policy"]["weather_context_is_separate_governed_enrichment_capability"] is True
+    assert "weather_context" in services
+    source_layer = services["source_layer"]
+    context = services["weather_context"]
+    assert source_layer["commands"] == [{"module": "src.engines.source_layer", "args": []}]
     assert "official_snapshot.json" in source_layer["inputs"]
     assert "fixture_weather.json" in source_layer["artifacts"]
+    assert context["commands"] == [{"module": "src.engines.weather_context", "args": []}]
+    assert "fixture_weather.json" in context["inputs"]
+    assert "weather_context.json" in context["artifacts"]
+    assert "weather_context_health.json" in context["artifacts"]
 
 
 def test_weather_policy_cannot_directly_mutate_decisions():

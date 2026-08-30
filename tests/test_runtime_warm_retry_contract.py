@@ -19,7 +19,7 @@ def test_fast_runtime_retry_is_bounded_and_keeps_hard_slo():
 def test_warm_retry_revalidates_production_contracts_before_publication():
     text = WORKFLOW.read_text(encoding="utf-8")
     retry = text.index("FAST_SLO_WARM_RETRY")
-    publish = text.index("Materialize publication whitelist")
+    publish = text.index("Materialize and validate publication whitelist")
     segment = text[retry:publish]
 
     for command in (

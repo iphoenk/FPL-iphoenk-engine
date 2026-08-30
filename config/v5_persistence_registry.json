@@ -46,7 +46,7 @@
       "max_age_days": 14,
       "max_records": 128,
       "max_bytes": 33554432,
-      "preserve_newest_record": true
+      "preserve_newest_record": false
     }
   },
   "evidence_storage": {

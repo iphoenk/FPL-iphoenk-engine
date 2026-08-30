@@ -7,8 +7,8 @@ on:
     paths-ignore:
       - 'data/**'
   schedule:
+    # Canonical hourly evaluation checkpoint, aligned with V4/V5 and the Master Monitor.
     - cron: "30 * * * *"
-    - cron: "0,15,45 * * * *"
 
 permissions:
   contents: write

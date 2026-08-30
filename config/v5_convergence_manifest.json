@@ -5,8 +5,8 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
-    "production_code_commit": "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
+    "production_main_sha": "794d45d37782b3b47617d80384589a7a0cc55730",
+    "production_code_commit": "794d45d37782b3b47617d80384589a7a0cc55730",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
@@ -103,6 +103,7 @@
     "v3_authenticated_official_production_readiness_reconciled_as_runtime_hardening": true,
     "v3_fingerprint_only_prediction_reuse_reconciled_as_runtime_hardening": true,
     "v3_public_mini_league_reporting_reconciled_without_prediction_or_decision_authority_change": true,
+    "v3_profile_aware_production_dod_reconciled_as_runtime_governance_hardening": true,
     "strict_all_dss_active_governance_required": true,
     "unique_service_handler_and_bounded_context_authority_required": true,
     "public_official_plus_user_capture_predeadline_authority_required": true,
@@ -148,9 +149,9 @@
       "release_fingerprint": "sha256:26707030c759b35315ac224ecb6065df1803f31fe0a2ef1e76dd84c9bcdb0aa8",
       "validated_real_shadow_cycles": 3,
       "latest_validated_at": "2026-08-30T11:07:53.409496+00:00",
-      "reason": "The previous validated 3/3 REAL_SHADOW evidence belongs to a superseded release fingerprint. Production has materially reanchored to deployed runtime 5175f9bc68354100a8bc3a36a3b97e853e90b73d, so that evidence is historical only and exact-fingerprint shadow acceptance must restart from 0/3."
+      "reason": "The previous validated 3/3 REAL_SHADOW evidence belongs to a superseded release fingerprint. Production has materially reanchored again to the currently deployed runtime, so that evidence is historical only and exact-fingerprint shadow acceptance must restart from 0/3."
     },
-    "note": "Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required against deployed production 5175f9bc68354100a8bc3a36a3b97e853e90b73d."
+    "note": "Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required against the currently deployed production source commit."
   },
   "production_promotion": {
     "allowed": false,

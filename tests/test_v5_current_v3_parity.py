@@ -8,7 +8,7 @@ from src.v5.intelligence.xmins import estimate_xmins
 from src.v5.state import Phase, primary_authority
 
 ROOT = Path(__file__).resolve().parents[1]
-MAIN_SHA = "5538147b7f6dc51b6a3641befb72f6a8ff77e447"
+MAIN_SHA = "91301fb46a8f66ee41b27571e5d01c191c676104"
 CODE_SHA = MAIN_SHA
 COMPILED_PLAN = "V3_COMPILED_EXECUTION_PLAN_V1"
 COMPILED_PLAN_SHA = "af929aa55483f0e8959247a9d1794e70f7840d32f7bf6e5a7bc9d4ceac59e467"
@@ -40,6 +40,7 @@ def test_current_production_reanchor_is_exact_and_keeps_frozen_truth_baseline():
     assert parity["current_production_reanchor"]["v3_topology"]["compiled_plan_registry"] == COMPILED_PLAN
     assert parity["current_production_reanchor"]["v3_topology"]["compiled_plan_sha256"] == COMPILED_PLAN_SHA
     assert parity["current_production_reanchor"]["v3_topology"]["capability_telemetry_registry"] == "V3_CAPABILITY_TELEMETRY_V1"
+    assert parity["current_production_reanchor"]["v3_topology"]["sub3s_fast_lane_runtime_hardening_only"] is True
     assert parity["governance"]["reanchor_requires_full_v5_gate"] is True
     assert parity["governance"]["reanchor_does_not_change_frozen_football_truth_baseline"] is True
 
@@ -55,6 +56,7 @@ def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_t
         "rules_drift_governance_contract",
         "canonical_terminology_contract",
         "capability_telemetry_contract",
+        "sub3s_fast_lane_contract",
     }
     assert required <= set(control)
     for row in control.values():
@@ -63,13 +65,22 @@ def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_t
     assert parity["governance"]["compiled_v3_control_plane_does_not_create_v5_service_or_business_authority"] is True
     assert parity["governance"]["duplicate_human_maintained_execution_truth_forbidden"] is True
     assert parity["governance"]["v3_capability_telemetry_is_observational_not_decision_authority"] is True
+    assert parity["governance"]["v3_sub3s_fast_lane_is_runtime_hardening_not_decision_authority"] is True
 
 
-def test_predeadline_current_team_prefers_authenticated_official():
+def test_predeadline_current_team_prefers_authenticated_then_official_submitted():
     registry = _load("config/v5_phase_authority_registry.json")
-    assert registry["pre_deadline_governance"]["official_authenticated_is_default_current_team_authority"] is True
+    governance = registry["pre_deadline_governance"]
+    assert governance["official_authenticated_is_default_current_team_authority"] is True
+    assert governance["official_public_submitted_is_default_fallback_when_authenticated_unavailable"] is True
+    assert governance["official_public_submitted_represents_last_confirmed_team_not_unsubmitted_draft"] is True
+    assert governance["user_lock_is_last_resort_or_explicit_override_only"] is True
     assert primary_authority(Phase.PRE_DEADLINE, "squad") == "official_authenticated"
-    assert registry["phases"]["PRE_DEADLINE"]["squad"][:2] == ["official_authenticated", "user_lock"]
+    assert registry["phases"]["PRE_DEADLINE"]["squad"][:3] == [
+        "official_authenticated",
+        "official_public",
+        "user_lock",
+    ]
 
 
 def test_xmins_explicit_probabilities_and_expected_minutes_reconcile():
@@ -136,6 +147,7 @@ def test_current_v3_capability_reanchor_has_explicit_equivalence_evidence():
     required = {
         "gw_scoped_chip_override",
         "authenticated_official_predeadline_team",
+        "official_submitted_predeadline_fallback",
         "explicit_xmins_probability_decomposition",
         "projection_component_observability",
         "verified_competitive_load_observation_validation",

@@ -255,7 +255,7 @@ def test_squad_authority_prefers_authenticated_official_predeadline():
     assert pre["validation"]["passed"] is True
 
 
-def test_squad_authority_falls_back_to_user_lock_when_auth_unavailable_and_reconciles():
+def test_squad_authority_prefers_official_submitted_when_auth_unavailable():
     bootstrap, lock, picks = _fake_squad_inputs()
     pre = select_squad(
         phase=Phase.PRE_DEADLINE,
@@ -270,12 +270,25 @@ def test_squad_authority_falls_back_to_user_lock_when_auth_unavailable_and_recon
         locked_squad=lock,
         submitted_picks=picks,
     )
-    assert pre["authority"] == "user_lock"
+    assert pre["authority"] == "official_public"
     assert post["authority"] == "official_public"
     assert pre["validation"]["passed"] is True
     assert post["validation"]["passed"] is True
     reconciliation = reconcile_baseline(pre["squad"], post["squad"])
-    assert reconciliation["changed"] is True
-    assert reconciliation["removals"] == [15]
-    assert reconciliation["additions"] == [16]
+    assert reconciliation["changed"] is False
+    assert reconciliation["removals"] == []
+    assert reconciliation["additions"] == []
     assert reconciliation["submitted_becomes_baseline"] is True
+
+
+def test_squad_authority_uses_user_lock_only_when_auth_and_public_unavailable():
+    bootstrap, lock, _ = _fake_squad_inputs()
+    pre = select_squad(
+        phase=Phase.PRE_DEADLINE,
+        bootstrap=bootstrap,
+        locked_squad=lock,
+        authenticated_my_team=None,
+        submitted_picks=None,
+    )
+    assert pre["authority"] == "user_lock"
+    assert pre["validation"]["passed"] is True

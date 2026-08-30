@@ -5,8 +5,8 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "5538147b7f6dc51b6a3641befb72f6a8ff77e447",
-    "production_code_commit": "5538147b7f6dc51b6a3641befb72f6a8ff77e447",
+    "production_main_sha": "91301fb46a8f66ee41b27571e5d01c191c676104",
+    "production_code_commit": "91301fb46a8f66ee41b27571e5d01c191c676104",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
@@ -77,13 +77,15 @@
     "production_definition_of_done_executable_required": true,
     "price_fact_vs_model_semantic_authority_required": true,
     "authenticated_official_predeadline_team_required_when_available": true,
+    "official_submitted_predeadline_fallback_required_when_auth_unavailable": true,
     "explicit_xmins_probability_decomposition_required": true,
     "projection_component_observability_required": true,
     "current_v3_execution_topology_reconciled_by_capability": true,
     "compiled_control_plane_reconciled_without_duplicate_v5_execution_truth": true,
     "compiled_wave_parallelism_reconciled_by_capability": true,
     "v3_rules_drift_and_artifact_ownership_reconciled_as_control_plane": true,
-    "v3_canonical_capability_telemetry_reconciled_without_v5_authority_change": true
+    "v3_canonical_capability_telemetry_reconciled_without_v5_authority_change": true,
+    "v3_sub3s_fast_lane_reconciled_as_runtime_hardening": true
   },
   "acceptance": {
     "no_regression_vs_v3_20_0_truth": true,
@@ -114,6 +116,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is capability-reanchored to production main 5538147 / V3.39 runtime schema 49. V3 PRs #165/#167/#170/#171/#172 are reconciled as control-plane, governance, ownership, terminology and telemetry guarantees without importing V3 implementation authority into V5. V3 PR #169 strict verified competitive-load observation validation is adopted in V5's existing prediction.competitive_load owner, while competitive load remains advisory-only with direct xPts and uncalibrated direct xMins mutation forbidden. Frozen football-truth baseline remains V3.20. Authenticated Official FPL remains required for the current GW3 Official-auth shadow proof. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
+    "reason": "V5.0.0-beta.4 is capability-reanchored to production main 91301fb / V3.39 runtime schema 49. V3 PR #174 sub-3s FAST-lane work is reconciled as runtime/control-plane hardening with no material decision drift and unchanged compiled-plan fingerprint. Frozen football-truth baseline remains V3.20. PRE_DEADLINE authority now uses authenticated Official when available, otherwise last confirmed Official submitted picks before stale persistent user locks. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
   }
 }

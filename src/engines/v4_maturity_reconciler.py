@@ -376,15 +376,21 @@ def _recount(health: dict) -> None:
         health["go_allowed"] = True
 
 
-def reconcile(health: dict | None = None) -> dict:
+def reconcile(
+    health: dict | None = None,
+    *,
+    predictions: dict | None = None,
+    latest: dict | None = None,
+    universe: dict | None = None,
+) -> dict:
     health = health if health is not None else read_json(HEALTH, {})
     if not health:
         raise RuntimeError("maturity reconciliation requires framework health artifact")
-    predictions = read_json(PREDICTIONS, {})
+    predictions = predictions if predictions is not None else read_json(PREDICTIONS, {})
     tactical = read_json(TACTICAL, {})
     competitive = read_json(COMPETITIVE_LOAD, {})
-    latest = read_json(LATEST, {})
-    universe = read_json(UNIVERSE, {})
+    latest = latest if latest is not None else read_json(LATEST, {})
+    universe = universe if universe is not None else read_json(UNIVERSE, {})
     policy = read_json(POLICY, {})
 
     active: list[str] = []

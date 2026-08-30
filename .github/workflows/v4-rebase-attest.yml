@@ -1,0 +1,64 @@
+name: V4 rebased architecture attestation
+
+on:
+  push:
+    branches: [codex/v4-cold-orchestration-under-5s]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v4-rebase-attest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install --disable-pip-version-check -r requirements.txt pytest
+
+      - name: Full architecture scan and attestation rebuild
+        run: python tools/v4_architecture_guard_attest.py
+
+      - name: Verify content-addressed runtime guard
+        run: |
+          python - <<'PY'
+          from src.services import architecture_guard_service as guard
+          attested = guard._attested_result()
+          assert attested is not None
+          assert attested["status"] == "PASS"
+          assert guard.run() == attested
+          print({"attestation_fast_path": True, "status": attested["status"]})
+          PY
+
+      - name: Full deterministic suite on rebased canonical
+        run: python -m pytest -q --tb=short
+
+      - name: Exact package parity and unchanged search width
+        run: python tools/v4_prefix_parity.py
+
+      - name: Commit rebased architecture attestation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add config/architecture_guard_attestation.json
+          if git diff --cached --quiet; then
+            echo "Attestation already current"
+            exit 0
+          fi
+          git commit -m "perf(v4): attest rebased canonical architecture"
+          git push origin HEAD:codex/v4-cold-orchestration-under-5s

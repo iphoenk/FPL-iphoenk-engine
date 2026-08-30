@@ -13,10 +13,19 @@ RAW_SNAPSHOT = DATA / "runtime" / "snapshot.v1.json"
 PREDICTIONS = DATA / "predictions_v4.json"
 
 
-def _preflight_worker(conn) -> None:
+def _preflight_worker(conn, predictions_snapshot: dict) -> None:
     started = perf_counter()
     try:
-        out = framework_health_audit.audit("preflight", strict=True)
+        # This worker is forked only after the parent has loaded the immutable
+        # prediction contract. Reuse that exact copy-on-write snapshot instead of
+        # reopening/parsing the ~66 MB artifact a second time in the child.
+        framework_health_audit._PREDICTION_CACHE = predictions_snapshot
+        framework_health_audit._PROBE_CACHE = {}
+        try:
+            out = framework_health_audit._audit_with_cache("preflight", strict=True, started=started)
+        finally:
+            framework_health_audit._PREDICTION_CACHE = None
+            framework_health_audit._PROBE_CACHE = None
         conn.send({
             "ok": True,
             "overall": out.get("overall"),
@@ -40,8 +49,9 @@ def run() -> dict:
     PRE-FLIGHT health depends on the immutable raw/enrichment/prediction snapshot but
     not on lifecycle/readiness output. It therefore runs in a forked worker while the
     parent performs lifecycle then reconciliation-readiness in their required order.
-    The parent loads raw/prediction evidence once and reuses those exact objects for
-    lifecycle/readiness. Logical ownership and all artifacts remain unchanged.
+    The parent loads raw/prediction evidence once and the fork inherits that immutable
+    prediction object copy-on-write; lifecycle/readiness receive the same parent
+    objects directly. Logical ownership and all artifacts remain unchanged.
     """
     total = perf_counter()
     timings = {}
@@ -57,7 +67,11 @@ def run() -> dict:
 
     ctx = get_context("fork")
     recv, send = ctx.Pipe(duplex=False)
-    preflight_process = ctx.Process(target=_preflight_worker, args=(send,), name="v496-validation-preflight")
+    preflight_process = ctx.Process(
+        target=_preflight_worker,
+        args=(send, predictions_snapshot),
+        name="v496-validation-preflight",
+    )
     preflight_started = perf_counter()
     preflight_process.start()
     send.close()

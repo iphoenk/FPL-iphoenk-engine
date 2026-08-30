@@ -6,6 +6,7 @@ from time import perf_counter
 from src.engines import v4_checkpoint_governance, v4_maturity_reconciler
 from src.services import framework_postflight_truth_service
 from src.services.weather_health_overlay import apply_weather_health
+from src.utils import DATA, read_json
 
 
 def _assert_no_critical_failure_erasure(before: set[str], maturity: dict) -> None:
@@ -24,14 +25,31 @@ def run() -> dict:
     evidence while current external-evidence gaps remain explicitly visible.
     """
     total = perf_counter()
+    # These governance phases consume the same immutable prediction/latest/universe
+    # contracts. Parse them once and hand the exact objects through postflight and
+    # maturity reconciliation. Weather health remains a separate governed overlay
+    # on postflight truth and is never hidden inside xPts.
+    predictions = read_json(DATA / "predictions_v4.json", {})
+    latest = read_json(DATA / "latest.json", {})
+    universe = read_json(DATA / "universe.json", {})
+
     started = perf_counter()
-    postflight = framework_postflight_truth_service.run()
+    postflight = framework_postflight_truth_service.run(
+        predictions=predictions,
+        latest=latest,
+        universe=universe,
+    )
     postflight = apply_weather_health(postflight)
     postflight_ms = round((perf_counter() - started) * 1000.0, 2)
     critical_failed_before = set(postflight.get("critical_failed") or [])
 
     started = perf_counter()
-    maturity = v4_maturity_reconciler.reconcile(postflight)
+    maturity = v4_maturity_reconciler.reconcile(
+        postflight,
+        predictions=predictions,
+        latest=latest,
+        universe=universe,
+    )
     _assert_no_critical_failure_erasure(critical_failed_before, maturity)
     maturity_ms = round((perf_counter() - started) * 1000.0, 2)
 

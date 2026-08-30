@@ -1,7 +1,7 @@
 {
   "engine": "FPL iphoenk Engine",
   "v5_version": "5.0.0-beta.4",
-  "state": "ADVANCED_BETA4_OPERATIONALLY_ACCEPTED_PREDICTION_ACCEPTANCE_PENDING",
+  "state": "ADVANCED_BETA4_CODE_CHANGED_OPERATIONAL_REVALIDATION_PENDING",
   "production_authority": {
     "truth_baseline": "v3.20.0",
     "runtime_version": "3.39.0",
@@ -20,24 +20,31 @@
     "isolated_team_review": true,
     "v3_v4_capability_parity_registry": true,
     "predeadline_revision_append_only": true,
-    "official_submitted_predeadline_fallback": true
+    "official_submitted_predeadline_fallback": true,
+    "strict_all_dss_active_governance": true,
+    "unique_service_authority_validation": true
   },
   "acceptance": {
-    "release_fingerprint": "sha256:98cc221c103c38d157abf73cc0a835f59c945c68252167a3a42e912c1be884c1",
-    "fresh_postvalidated_real_shadow_cycles": 3,
+    "release_fingerprint": "PENDING_REVALIDATION",
+    "fresh_postvalidated_real_shadow_cycles": 0,
     "required_postvalidated_real_shadow_cycles": 3,
-    "operational_candidate_eligible": true,
+    "operational_candidate_eligible": false,
     "prediction_acceptance": "BLOCKED_PENDING_GENUINE_SETTLED_EVIDENCE_AND_FROZEN_BASELINE_NON_REGRESSION",
     "prediction_candidate_eligible": false,
     "production_candidate_eligible": false,
     "production_promotion_allowed": false,
-    "manual_production_promotion_required": true
+    "manual_production_promotion_required": true,
+    "previous_operational_acceptance": {
+      "release_fingerprint": "sha256:98cc221c103c38d157abf73cc0a835f59c945c68252167a3a42e912c1be884c1",
+      "postvalidated_real_shadow_cycles": 3,
+      "status": "SUPERSEDED_BY_CODE_CHANGE"
+    }
   },
   "notes": [
-    "Operational acceptance is complete only for the exact recorded V5 release fingerprint and does not imply prediction or production eligibility.",
-    "Advanced prediction remains beta/shadow authority until empirical prediction-calibration gates pass on genuine settled evidence.",
-    "Correlated simulation remains shadow-only and is not decision authority until calibrated.",
-    "Team review is isolated and read-only; it cannot mutate decision authority.",
-    "Production remains the accepted V3 runtime on main while frozen football-truth comparison remains V3.20.0; V5 production promotion requires prediction acceptance plus a separate explicit manual action."
+    "The previous 3/3 operational acceptance remains historical evidence only; it cannot qualify this code-bearing build because the runtime release fingerprint changes.",
+    "Strict DSS governance now requires every configured core and extension module to be ACTIVE before unqualified GO when the canonical policy requires all-active coverage.",
+    "Service-registry validation rejects duplicate handlers and duplicate bounded-context authority.",
+    "Prediction acceptance remains independently locked until genuine settled evidence satisfies the empirical calibration gate.",
+    "Production remains the accepted V3 runtime on main; V5 promotion requires fresh operational revalidation, prediction acceptance, and a separate explicit manual action."
   ]
 }

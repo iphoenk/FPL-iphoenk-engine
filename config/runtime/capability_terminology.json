@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "registry": "V3_CAPABILITY_TERMINOLOGY_V1",
+  "canonical_runtime_boundary": "execution_domain",
+  "canonical_business_unit": "capability",
+  "execution_domain_count": 11,
+  "capability_count": 21,
+  "contract_source": {
+    "path": "config/v3_service_registry.json",
+    "collection_key": "services",
+    "status": "LEGACY_COMPATIBILITY_ALIAS",
+    "canonical_semantics": "capabilities"
+  },
+  "policy": {
+    "services_key_is_compatibility_only": true,
+    "capabilities_are_not_processes": true,
+    "execution_domains_are_process_boundaries": true,
+    "capability_ownership_is_preserved": true,
+    "legacy_filename_does_not_define_runtime_topology": true,
+    "new_runtime_telemetry_must_use_capability_terminology": true,
+    "big_bang_registry_rename_is_forbidden_without_migration_proof": true
+  }
+}

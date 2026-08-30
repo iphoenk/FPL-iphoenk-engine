@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from collections import Counter
 
-from src.engines.v4_backtest_store import reconciled_integrity
-from src.engines.v4_validation import promotion_gate
 from src.utils import CONFIG, DATA, atomic_json, read_json
 
 HEALTH = DATA / "framework_health_v4.json"
@@ -13,10 +11,7 @@ COMPETITIVE_LOAD = DATA / "competitive_load_v4.json"
 LATEST = DATA / "latest.json"
 UNIVERSE = DATA / "universe.json"
 POLICY = CONFIG / "recent_competitive_load.json"
-RECONCILED = DATA / "validation" / "reconciled"
 MATURE_MODULES = ("DSS-08", "DSS-09", "DSS-30", "DSS-31", "DSS-32", "DSS-33", "DSS-34", "DSS-36", "DSS-41")
-CALIBRATION_WARMUP_MODULES = ("DSS-44", "DSS-X12")
-CALIBRATION_MINIMUM_N = 300
 
 
 def _find_module(health: dict, module_id: str) -> dict | None:
@@ -259,66 +254,6 @@ def _ownership_evidence(latest: dict, universe: dict, predictions: dict) -> tupl
     }
 
 
-def _calibration_maturity_evidence(predictions: dict) -> tuple[bool, dict]:
-    model_version = predictions.get("model_version")
-    paths = sorted(RECONCILED.glob("gw*.json")) if RECONCILED.exists() else []
-    eligible: list[dict] = []
-    rejected: list[dict] = []
-    passing: list[dict] = []
-    best_observed_n = 0
-
-    for path in paths:
-        sample = read_json(path, {})
-        ok, reason = reconciled_integrity(sample, model_version=model_version)
-        if not ok:
-            rejected.append({"file": path.name, "reason": reason})
-            continue
-        gw = int(sample.get("gw") or 0)
-        metrics = ((sample.get("report") or {}).get("metrics") or {})
-        observed_n = int(metrics.get("n") or 0)
-        best_observed_n = max(best_observed_n, observed_n)
-        gate = promotion_gate(sample.get("report") or {}, minimum_n=CALIBRATION_MINIMUM_N)
-        row = {
-            "file": path.name,
-            "gw": gw,
-            "n": observed_n,
-            "mae": metrics.get("mae"),
-            "spearman": (metrics.get("ranking") or {}).get("spearman"),
-            "interval80_coverage": metrics.get("interval80_coverage"),
-            "promotion": gate,
-        }
-        eligible.append(row)
-        if gate.get("promote") is True:
-            passing.append(row)
-
-    active = bool(passing)
-    return active, {
-        "implementation_state": "ACTIVE" if active else "WARMUP",
-        "model_version": model_version,
-        "eligible_reconciled_samples": len(eligible),
-        "eligible_gws": [row["gw"] for row in eligible],
-        "rejected_samples": rejected,
-        "passing_gws": [row["gw"] for row in passing],
-        "best_observed_n": best_observed_n,
-        "minimum_n": CALIBRATION_MINIMUM_N,
-        "promotion_rule": "at least one immutable current-model reconciliation must pass canonical v4_validation.promotion_gate",
-        "quality_requirements": {
-            "mae_max": 3.5,
-            "spearman_min": 0.15,
-            "interval80_coverage_if_present": [0.65, 0.92],
-        },
-        "evidence_artifact": "data/validation/reconciled/gw*.json",
-        "immutable_archive": "data/validation/archive/reconciled/gw*.json",
-        "completed_gw_reconciliation_feeds_evidence": True,
-        "deterministic_promotion": True,
-        "synthetic_or_invalid_samples_rejected_by_integrity_check": True,
-        "official_start_truth": "raw_snapshot.official.event_live.stats.starts",
-        "missing_starts_excluded_from_start_brier": True,
-        "retrospective_mutation_prevented": True,
-        "reason": None if active else "calibration implementation is ready but genuine immutable production evidence has not yet passed the canonical promotion gate",
-    }
-
-
 def _recount(health: dict) -> None:
     totals = Counter()
     critical_failed: list[str] = []
@@ -405,28 +340,19 @@ def reconcile(health: dict | None = None) -> dict:
         else:
             partial.append(module_id)
 
-    calibration_active, calibration_detail = _calibration_maturity_evidence(predictions)
-    for module_id in CALIBRATION_WARMUP_MODULES:
-        row = _find_module(health, module_id)
-        if row is None:
-            continue
-        row["status"] = "ACTIVE" if calibration_active else "WARMUP"
-        row["detail"] = {**calibration_detail, "module_id": module_id}
-
     _recount(health)
     health["maturity_reconciliation"] = {
         "schema_version": 4,
         "evaluated_modules": list(MATURE_MODULES),
         "active_modules": active,
         "partial_modules": partial,
-        "warmup_modules": list(CALIBRATION_WARMUP_MODULES) if not calibration_active else [],
         "false_green_forbidden": True,
         "failed_proof_demotes_active_to_partial": True,
         "evidence_gaps_remain_visible": True,
         "critical_lists_rebuilt_after_reconciliation": True,
         "critical_warmup_blocks_unqualified_go": True,
-        "calibration_promotion_gate_enforced": True,
-        "note": "Capability readiness is recomputed from concrete producer-consumer evidence; current optional external evidence remains a separate evidence-state dimension, and calibration warmup promotes only on immutable current-model evidence that passes the canonical quality gate.",
+        "warmup_maturity_single_owner": "src.engines.v4_warmup_governance",
+        "note": "Capability readiness is recomputed from concrete producer-consumer evidence. Current optional external evidence remains a separate evidence-state dimension; calibration/sample maturity is reconciled by the single dedicated warmup-governance owner.",
     }
     atomic_json(HEALTH, health)
     return health

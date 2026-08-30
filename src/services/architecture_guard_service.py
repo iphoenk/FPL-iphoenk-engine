@@ -4,6 +4,7 @@ import ast
 import hashlib
 import json
 from collections import Counter
+from functools import lru_cache
 from pathlib import Path
 
 from src.release import RELEASE_VERSION
@@ -72,6 +73,23 @@ REPORT_GOVERNANCE_MODULE = ROOT / "src/engines/v4_checkpoint_governance.py"
 SERVING_MODULE = ROOT / "src/engines/v4_serving_contract.py"
 RELEASE_MODULE = ROOT / "src/release.py"
 SKIP_DUP_FN_NAMES = {"main", "run", "cli", "_f", "check", "write", "load", "dump"}
+ATTESTATION_PATH = CONFIG / "architecture_guard_attestation.json"
+ATTESTATION_SCHEMA_VERSION = 1
+ATTESTED_CONFIG_PATHS = (
+    CONFIG / "service_registry.json",
+    CONFIG / "service_contract_registry.json",
+    CONFIG / "dss_core_registry.json",
+    CONFIG / "dss_extension_registry.json",
+    CONFIG / "enhancement_layers_registry.json",
+    CONFIG / "gate0_registry.json",
+    CONFIG / "architecture_ownership_registry.json",
+    CONFIG / "release_manifest.json",
+)
+ATTESTED_WORKFLOW_PATHS = (
+    ROOT / ".github/workflows/fpl-engine.yml",
+    ROOT / ".github/workflows/fpl-engine-recovery.yml",
+    ROOT / ".github/workflows/fpl-engine-core.yml",
+)
 
 
 def _unique(values):
@@ -80,48 +98,105 @@ def _unique(values):
     return len(values) == len(set(values)), duplicates
 
 
+def _attestation_inputs() -> tuple[Path, ...]:
+    paths = list((ROOT / "src").rglob("*.py"))
+    paths.extend(ATTESTED_CONFIG_PATHS)
+    paths.extend(ATTESTED_WORKFLOW_PATHS)
+    return tuple(sorted(paths, key=lambda path: path.relative_to(ROOT).as_posix()))
+
+
+def repository_fingerprint() -> str:
+    """Cryptographically bind the build-time guard result to every governed byte."""
+    digest = hashlib.sha256()
+    for path in _attestation_inputs():
+        relative = path.relative_to(ROOT).as_posix().encode("utf-8")
+        payload = path.read_bytes()
+        digest.update(relative)
+        digest.update(b"\0")
+        digest.update(len(payload).to_bytes(8, "big"))
+        digest.update(payload)
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _attested_result() -> dict | None:
+    attestation = read_json(ATTESTATION_PATH, {})
+    if attestation.get("schema_version") != ATTESTATION_SCHEMA_VERSION:
+        return None
+    if attestation.get("release") != RELEASE_VERSION:
+        return None
+    if attestation.get("fingerprint") != repository_fingerprint():
+        return None
+    result = attestation.get("result")
+    if not isinstance(result, dict) or result.get("status") != "PASS":
+        return None
+    checks = result.get("checks") or {}
+    if not checks or not all(isinstance(row, dict) and row.get("pass") is True for row in checks.values()):
+        return None
+    return result
+
+
+@lru_cache(maxsize=None)
+def _text(path: Path) -> str:
+    """Read immutable repository source once during a single guard invocation."""
+    return path.read_text(encoding="utf-8")
+
+
+@lru_cache(maxsize=None)
 def _tree(path: Path) -> ast.Module:
-    return ast.parse(path.read_text(encoding="utf-8"))
+    """Parse each immutable Python source at most once per guard invocation."""
+    return ast.parse(_text(path))
 
 
-def _assignment_names(path: Path) -> set[str]:
-    names: set[str] = set()
-    for node in ast.walk(_tree(path)):
+@lru_cache(maxsize=None)
+def _analysis(path: Path) -> dict[str, frozenset[str]]:
+    """Derive common AST facts in one walk per immutable source file."""
+    tree = _tree(path)
+    assignment_names: set[str] = set()
+    called_names: set[str] = set()
+    imported: set[str] = set()
+    top_level_functions = {
+        node.name
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    for node in ast.walk(tree):
         if isinstance(node, (ast.Assign, ast.AnnAssign)):
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
             for target in targets:
                 if isinstance(target, ast.Name):
-                    names.add(target.id)
-    return names
-
-
-def _top_level_functions(path: Path) -> set[str]:
-    return {
-        node.name
-        for node in _tree(path).body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-    }
-
-
-def _called_names(path: Path) -> set[str]:
-    names: set[str] = set()
-    for node in ast.walk(_tree(path)):
-        if isinstance(node, ast.Call):
+                    assignment_names.add(target.id)
+        elif isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name):
-                names.add(node.func.id)
+                called_names.add(node.func.id)
             elif isinstance(node.func, ast.Attribute):
-                names.add(node.func.attr)
-    return names
-
-
-def _imports(path: Path) -> set[str]:
-    imported: set[str] = set()
-    for node in ast.walk(_tree(path)):
-        if isinstance(node, ast.Import):
+                called_names.add(node.func.attr)
+        elif isinstance(node, ast.Import):
             imported.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module)
-    return imported
+    return {
+        "assignments": frozenset(assignment_names),
+        "top_level_functions": frozenset(top_level_functions),
+        "called_names": frozenset(called_names),
+        "imports": frozenset(imported),
+    }
+
+
+def _assignment_names(path: Path) -> set[str]:
+    return set(_analysis(path)["assignments"])
+
+
+def _top_level_functions(path: Path) -> set[str]:
+    return set(_analysis(path)["top_level_functions"])
+
+
+def _called_names(path: Path) -> set[str]:
+    return set(_analysis(path)["called_names"])
+
+
+def _imports(path: Path) -> set[str]:
+    return set(_analysis(path)["imports"])
 
 
 def _duplicate_functions() -> list[dict]:
@@ -156,7 +231,7 @@ def _official_fetch_violations() -> list[str]:
         if resolved == GUARD_PATH or resolved in allowed:
             continue
         imported = _imports(path)
-        text = path.read_text(encoding="utf-8")
+        text = _text(path)
         if "src.sources.official_fpl" in imported or "fantasy.premierleague.com/api/" in text:
             violations.append(str(path.relative_to(ROOT)))
     return violations
@@ -173,7 +248,27 @@ def _moving_operational_literal_violations() -> list[dict]:
     return violations
 
 
-def run() -> dict:
+def run(*, force_full_scan: bool = False) -> dict:
+    if not force_full_scan:
+        attested = _attested_result()
+        if attested is not None:
+            atomic_json(OUT, attested)
+            print(json.dumps({
+                "service": "architecture_guard",
+                "status": attested["status"],
+                "checks": {name: row["pass"] for name, row in (attested.get("checks") or {}).items()},
+                "failed_detail": {},
+                "attestation": "CONTENT_ADDRESS_MATCH",
+            }, ensure_ascii=False))
+            return attested
+
+    # Repository source can never become stale inside one guard run, but clear the
+    # memoized source/AST view before every invocation so a subsequent invocation
+    # still observes any real checkout/source change.
+    _analysis.cache_clear()
+    _tree.cache_clear()
+    _text.cache_clear()
+
     services = read_json(CONFIG / "service_registry.json", {})
     contracts = read_json(CONFIG / "service_contract_registry.json", {})
     core = read_json(CONFIG / "dss_core_registry.json", {})
@@ -268,7 +363,7 @@ def run() -> dict:
         [] if not duplicate_reconciliation and not truth_missing else [{"store_duplicates": duplicate_reconciliation, "truth_missing": truth_missing}],
     )
 
-    raw_text = RAW_SNAPSHOT_MODULE.read_text(encoding="utf-8")
+    raw_text = _text(RAW_SNAPSHOT_MODULE)
     raw_uses_canonical_legality = "squad_legality_checks" in raw_text
     raw_redefined_rules = sorted(_assignment_names(RAW_SNAPSHOT_MODULE) & {"POSITION_COUNTS", "MAX_PER_CLUB", "SQUAD_SIZE"})
     raw_uses_canonical_legality = raw_uses_canonical_legality and not raw_redefined_rules
@@ -279,7 +374,7 @@ def run() -> dict:
 
     report_calls = _called_names(REPORT_GOVERNANCE_MODULE)
     serving_imports = _imports(SERVING_MODULE)
-    serving_text = SERVING_MODULE.read_text(encoding="utf-8")
+    serving_text = _text(SERVING_MODULE)
     forbidden_serving_imports = sorted(module for module in serving_imports if module.startswith("src.sources.official_fpl") or module in {
         "src.models.v4_prediction",
         "src.engines.v4_lineup_optimizer",

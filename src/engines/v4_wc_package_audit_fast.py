@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from heapq import heappush, heapreplace
-from itertools import combinations
+from itertools import accumulate, combinations
 
 from src.engines import v4_wc_package_audit as base
 from src.engines.v4_optimizer_primitives import gw_value as _gw_value
@@ -10,10 +10,8 @@ from src.engines.v4_wc_optimizer import MAX_PER_CLUB, POSITION_COUNTS, reconcile
 
 
 def _prefix(values) -> list[float]:
-    out = [0.0]
-    for value in values:
-        out.append(out[-1] + value)
-    return out
+    """Exact sequential prefix sums using the C-level itertools iterator."""
+    return list(accumulate(values, initial=0.0))
 
 
 def _club_signature(players) -> int:
@@ -42,6 +40,10 @@ def _keep_profile(players) -> dict:
     x5_terms = tuple(p.x5 for p in ps)
     x10_terms = tuple(p.x10 for p in ps)
     x15_terms = tuple(p.x15 for p in ps)
+    position_keys = {
+        pos: tuple(sorted(p.element for p in by_pos[pos]))
+        for pos in POSITION_COUNTS
+    }
     return {
         "cost": sum(p.cost for p in ps),
         "objective": sum(objective_terms),
@@ -64,6 +66,7 @@ def _keep_profile(players) -> dict:
         "gw_terms": [tuple(value for _, value in row) for row in gw_elements],
         "gw_sorted": gw_sorted,
         "gw_prefix": gw_prefix,
+        "position_keys": position_keys,
     }
 
 
@@ -82,16 +85,17 @@ def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
         return tuple(value for element, value in baseline[key] if element not in out_ids)
 
     objective_terms = kept_terms("objective_elements")
-    x3_terms = kept_terms("x3_elements")
-    x5_terms = kept_terms("x5_elements")
-    x10_terms = kept_terms("x10_elements")
-    x15_terms = kept_terms("x15_elements")
     gw_terms = [
         tuple(value for element, value in baseline["gw_elements"][index] if element not in out_ids)
         for index in range(5)
     ]
 
     out_by_pos = {pos: [p for p in outs if p.position == pos] for pos in POSITION_COUNTS}
+    out_ids_by_pos = {pos: {p.element for p in out_by_pos[pos]} for pos in POSITION_COUNTS}
+    position_keys = {
+        pos: tuple(element for element in baseline["position_keys"][pos] if element not in out_ids_by_pos[pos])
+        for pos in POSITION_COUNTS
+    }
     gw_sorted = []
     gw_prefix = []
     for index in range(5):
@@ -114,18 +118,12 @@ def _keep_profile_from_baseline(baseline: dict, outs) -> dict:
         "cost": baseline["cost"] - sum(p.cost for p in outs),
         "objective": sum(objective_terms),
         "objective_terms": objective_terms,
-        "x3": sum(x3_terms),
-        "x3_terms": x3_terms,
-        "x5": sum(x5_terms),
-        "x5_terms": x5_terms,
-        "x10": sum(x10_terms),
-        "x10_terms": x10_terms,
-        "x15": sum(x15_terms),
-        "x15_terms": x15_terms,
-        "gw_total": [sum(terms) for terms in gw_terms],
         "gw_terms": gw_terms,
+        "baseline": baseline,
+        "out_ids": frozenset(out_ids),
         "gw_sorted": gw_sorted,
         "gw_prefix": gw_prefix,
+        "position_keys": position_keys,
     }
 
 
@@ -143,25 +141,18 @@ def _chosen_profile(chosen) -> dict:
         gw_by_pos.append(row)
         gw_terms.append(tuple(ordered))
     objective_terms = tuple(p.objective for p in ps)
-    x3_terms = tuple(p.x3 for p in ps)
-    x5_terms = tuple(p.x5 for p in ps)
-    x10_terms = tuple(p.x10 for p in ps)
-    x15_terms = tuple(p.x15 for p in ps)
     return {
         "cost": sum(p.cost for p in ps),
         "objective": sum(objective_terms),
         "objective_terms": objective_terms,
-        "x3": sum(x3_terms),
-        "x3_terms": x3_terms,
-        "x5": sum(x5_terms),
-        "x5_terms": x5_terms,
-        "x10": sum(x10_terms),
-        "x10_terms": x10_terms,
-        "x15": sum(x15_terms),
-        "x15_terms": x15_terms,
-        "gw_total": [sum(terms) for terms in gw_terms],
         "gw_terms": gw_terms,
+        "players": ps,
+        "uncertainty": sum(p.uncertainty for p in ps),
         "gw_by_pos": gw_by_pos,
+        "position_keys": {
+            pos: tuple(sorted(p.element for p in ps if p.position == pos))
+            for pos in POSITION_COUNTS
+        },
     }
 
 
@@ -182,7 +173,13 @@ def _best_xi_from_prefix(prefix: dict[str, list[float]]) -> float:
     )
 
 
-def _metrics_from_profiles(profile: dict, chosen_profile: dict) -> dict:
+def _metrics_from_profiles(
+    profile: dict,
+    chosen_profile: dict,
+    *,
+    include_horizons: bool = True,
+    position_prefix_cache: dict | None = None,
+) -> dict:
     xi5 = 0.0
     utility5 = 0.0
     for index in range(5):
@@ -190,8 +187,23 @@ def _metrics_from_profiles(profile: dict, chosen_profile: dict) -> dict:
         additions = chosen_profile["gw_by_pos"][index]
         for pos in POSITION_COUNTS:
             if additions[pos]:
+                cache_key = None
+                if position_prefix_cache is not None:
+                    cache_key = (
+                        index,
+                        pos,
+                        profile["position_keys"][pos],
+                        chosen_profile["position_keys"][pos],
+                    )
+                    cached = position_prefix_cache.get(cache_key)
+                    if cached is not None:
+                        prefixes[pos] = cached
+                        continue
                 merged = sorted(profile["gw_sorted"][index][pos] + additions[pos], reverse=True)
-                prefixes[pos] = _prefix(merged)
+                prefix = _prefix(merged)
+                prefixes[pos] = prefix
+                if cache_key is not None:
+                    position_prefix_cache[cache_key] = prefix
             else:
                 prefixes[pos] = profile["gw_prefix"][index][pos]
         xi = _best_xi_from_prefix(prefixes)
@@ -199,20 +211,42 @@ def _metrics_from_profiles(profile: dict, chosen_profile: dict) -> dict:
         xi5 += xi
         utility5 += xi + .12 * (total - xi)
     objective = sum(profile["objective_terms"] + chosen_profile["objective_terms"])
-    x3 = sum(profile["x3_terms"] + chosen_profile["x3_terms"])
-    x5 = sum(profile["x5_terms"] + chosen_profile["x5_terms"])
-    x10 = sum(profile["x10_terms"] + chosen_profile["x10_terms"])
-    x15 = sum(profile["x15_terms"] + chosen_profile["x15_terms"])
-    return {
+    out = {
         "cost": profile["cost"] + chosen_profile["cost"],
         "objective": round(objective, 4),
-        "squad_xpts_3": round(x3, 2),
-        "squad_xpts_5": round(x5, 2),
-        "squad_xpts_10": round(x10, 2),
-        "squad_xpts_15": round(x15, 2),
         "best_xi_xpts_5": round(xi5, 2),
         "bench_adjusted_utility_5": round(utility5, 2),
     }
+    if include_horizons:
+        # These four horizon totals are presentation outputs only. They do not
+        # participate in candidate rank, risk penalty, classification, legality,
+        # beam width, or tie semantics, so defer them until the exact top packages
+        # have been selected from the unchanged candidate stream.
+        chosen_players = chosen_profile["players"]
+        if "baseline" in profile:
+            baseline = profile["baseline"]
+            out_ids = profile["out_ids"]
+
+            def horizon_total(element_key: str, attr: str) -> float:
+                kept = tuple(value for element, value in baseline[element_key] if element not in out_ids)
+                incoming = tuple(getattr(player, attr) for player in chosen_players)
+                return sum(kept + incoming)
+        else:
+            def horizon_total(element_key: str, attr: str) -> float:
+                incoming = tuple(getattr(player, attr) for player in chosen_players)
+                return sum(profile[f"{attr}_terms"] + incoming)
+
+        x3 = horizon_total("x3_elements", "x3")
+        x5 = horizon_total("x5_elements", "x5")
+        x10 = horizon_total("x10_elements", "x10")
+        x15 = horizon_total("x15_elements", "x15")
+        out.update({
+            "squad_xpts_3": round(x3, 2),
+            "squad_xpts_5": round(x5, 2),
+            "squad_xpts_10": round(x10, 2),
+            "squad_xpts_15": round(x15, 2),
+        })
+    return out
 
 
 def _small_candidate_template(need: Counter, bp: dict) -> list[tuple]:
@@ -246,30 +280,37 @@ def _legal_small_candidates(template: list[tuple], keep_cost: int, clubs: int, b
     return legal
 
 
-def _bounded_candidate_states(need: Counter, bp: dict, keep_cost: int, clubs: int, budget: int, beam: int) -> list[tuple]:
-    """Exact bounded-beam semantics with precomputed baseline cost/club signature."""
+def _bounded_candidate_states(need: Counter, beam_rows: dict, keep_cost: int, clubs: int, budget: int, beam: int) -> list[tuple]:
+    """Exact bounded-beam semantics with immutable frontier metadata reuse.
+
+    ``used_mask`` is an exact compact representation of the selected element set.
+    It replaces repeated set construction and sorted-element dedup keys while
+    preserving generation order, stable sort/tie behavior, budget checks, club
+    checks, beam width and every selected Candidate object.
+    """
     slots = []
     for pos, count in need.items():
         slots += [pos] * count
-    states = [(tuple(), keep_cost, clubs, 0.0)]
+    states = [(tuple(), keep_cost, clubs, 0.0, 0)]
     for pos in slots:
         nxt = []
-        for chosen, cost, signature, score in states:
-            used = {p.element for p in chosen}
-            for player in bp[pos]:
-                shift = (player.team_id - 1) * 2
-                if player.element in used or cost + player.cost > budget or ((signature >> shift) & 0b11) >= MAX_PER_CLUB:
+        rows = beam_rows[pos]
+        for chosen, cost, signature, score, used_mask in states:
+            for player, player_cost, shift, element_bit, score_term in rows:
+                next_cost = cost + player_cost
+                if used_mask & element_bit or next_cost > budget or ((signature >> shift) & 0b11) >= MAX_PER_CLUB:
                     continue
                 nxt.append((
                     chosen + (player,),
-                    cost + player.cost,
+                    next_cost,
                     signature + (1 << shift),
-                    score + player.objective - .12 * player.uncertainty,
+                    score + score_term,
+                    used_mask | element_bit,
                 ))
         nxt.sort(key=lambda state: (state[3], -state[1]), reverse=True)
         dedup, seen = [], set()
         for state in nxt:
-            key = tuple(sorted(p.element for p in state[0]))
+            key = state[4]
             if key in seen:
                 continue
             seen.add(key)
@@ -333,6 +374,20 @@ def audit_packages_from_candidates_fast(
 
     fr = base.frontier(cands, ids, per_position_frontier)
     bp = {pos: [p for p in fr if p.position == pos] for pos in POSITION_COUNTS}
+    frontier_bits = {player.element: 1 << index for index, player in enumerate(fr)}
+    beam_rows = {
+        pos: tuple(
+            (
+                player,
+                player.cost,
+                (player.team_id - 1) * 2,
+                frontier_bits[player.element],
+                player.objective - .12 * player.uncertainty,
+            )
+            for player in bp[pos]
+        )
+        for pos in POSITION_COUNTS
+    }
     cm = base._fast_metrics(cur, include_detail=True)
     basecost = cm["cost"]
     baseline_profile = _keep_profile(cur)
@@ -346,6 +401,7 @@ def audit_packages_from_candidates_fast(
     bounded_state_hits = 0
     chosen_profiles: dict[tuple[int, ...], dict] = {}
     chosen_profile_hits = 0
+    position_prefix_cache: dict[tuple, list[float]] = {}
 
     for k in range(1, max_replacements + 1):
         heap: list[tuple] = []
@@ -375,7 +431,7 @@ def audit_packages_from_candidates_fast(
                 state_key = (need_key, keep_cost, keep_clubs)
                 candidate_states = bounded_states.get(state_key)
                 if candidate_states is None:
-                    candidate_states = _bounded_candidate_states(need, bp, keep_cost, keep_clubs, budget, beam_size)
+                    candidate_states = _bounded_candidate_states(need, beam_rows, keep_cost, keep_clubs, budget, beam_size)
                     bounded_states[state_key] = candidate_states
                 else:
                     bounded_state_hits += 1
@@ -390,11 +446,16 @@ def audit_packages_from_candidates_fast(
                     chosen_profiles[chosen_key] = chosen_profile
                 else:
                     chosen_profile_hits += 1
-                tm = _metrics_from_profiles(profile, chosen_profile)
+                tm = _metrics_from_profiles(
+                    profile,
+                    chosen_profile,
+                    include_horizons=False,
+                    position_prefix_cache=position_prefix_cache,
+                )
                 evaluated += 1
                 dxi = tm["best_xi_xpts_5"] - cm["best_xi_xpts_5"]
                 du = tm["bench_adjusted_utility_5"] - cm["bench_adjusted_utility_5"]
-                risk_delta = sum(p.uncertainty for p in chosen) - out_unc
+                risk_delta = chosen_profile["uncertainty"] - out_unc
                 risk_penalty = max(0, risk_delta) * .35 + max(0, k - 1) * .20
                 adj_xi = dxi - risk_penalty
                 adj_util = du - risk_penalty
@@ -407,7 +468,7 @@ def audit_packages_from_candidates_fast(
                     budget - tm["cost"],
                     -sequence,
                 )
-                compact = (tuple(outs), tuple(chosen), tm, dxi, du, risk_delta, risk_penalty, adj_xi, adj_util)
+                compact = (tuple(outs), tuple(chosen), tm, dxi, du, risk_delta, risk_penalty, adj_xi, adj_util, profile, chosen_profile)
                 entry = (*rank, compact)
                 sequence += 1
                 if len(heap) < top_per_size:
@@ -417,8 +478,15 @@ def audit_packages_from_candidates_fast(
 
         selected = []
         for entry in sorted(heap, key=lambda row: row[:5], reverse=True):
-            row = _materialize_package(entry[5], k, basecost, budget)
-            tm = entry[5][2]
+            compact = entry[5]
+            full_tm = _metrics_from_profiles(
+                compact[9],
+                compact[10],
+                position_prefix_cache=position_prefix_cache,
+            )
+            materialized = (*compact[:2], full_tm, *compact[3:9])
+            row = _materialize_package(materialized, k, basecost, budget)
+            tm = full_tm
             row["delta_objective"] = round(tm["objective"] - cm["objective"], 4)
             row["delta_squad_xpts_3"] = round(tm["squad_xpts_3"] - cm["squad_xpts_3"], 2)
             row["delta_squad_xpts_5"] = round(tm["squad_xpts_5"] - cm["squad_xpts_5"], 2)
@@ -462,16 +530,24 @@ def audit_packages_from_candidates_fast(
             "bounded_state_cache_hits": bounded_state_hits,
             "chosen_profile_cache_entries": len(chosen_profiles),
             "chosen_profile_cache_hits": chosen_profile_hits,
+            "position_prefix_cache_entries": len(position_prefix_cache),
             "target_metrics_cache_removed": True,
+            "position_pair_prefix_reuse": True,
             "baseline_keep_profile_reuse": True,
             "precomputed_baseline_club_signature": True,
             "bounded_state_structural_cache": True,
+            "bounded_beam_frontier_metadata_reuse": True,
+            "bounded_beam_exact_element_bitmask": True,
             "sorted_keep_position_prefixes": True,
             "unaffected_position_prefix_reuse": True,
             "frontier_per_position": per_position_frontier,
             "beam_size": beam_size,
             "single_pass_metrics": True,
             "score_only_hotloop": True,
+            "deferred_horizon_aggregation_top_packages_only": True,
+            "deferred_keep_horizon_terms": True,
+            "deferred_chosen_horizon_terms": True,
+            "chosen_uncertainty_reuse": True,
             "redundant_target_validation_removed": True,
             "candidate_reuse_supported": True,
             "packed_club_signature": True,

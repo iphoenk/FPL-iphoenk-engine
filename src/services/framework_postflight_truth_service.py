@@ -20,10 +20,10 @@ def _prediction_fixtures(predictions: dict) -> list[dict]:
     ]
 
 
-def _postflight_audit_single_prediction_parse() -> tuple[dict, dict, float]:
-    """Run postflight health while retaining its immutable prediction snapshot."""
+def _postflight_audit_single_prediction_parse(predictions: dict | None = None) -> tuple[dict, dict, float]:
+    """Run postflight health over one immutable prediction snapshot."""
     started = perf_counter()
-    predictions = read_json(DATA / "predictions_v4.json", {})
+    predictions = predictions if predictions is not None else read_json(DATA / "predictions_v4.json", {})
     if not (predictions.get("players") or []):
         raise RuntimeError("postflight truth requires current predictions")
     audit._PREDICTION_CACHE = predictions
@@ -200,11 +200,16 @@ def _canonical_capability_telemetry(health: dict, latest: dict, predictions: dic
     }
 
 
-def run() -> dict:
+def run(
+    *,
+    predictions: dict | None = None,
+    latest: dict | None = None,
+    universe: dict | None = None,
+) -> dict:
     total = perf_counter()
-    health, predictions, audit_ms = _postflight_audit_single_prediction_parse()
-    latest = read_json(DATA / "latest.json", {})
-    universe = read_json(DATA / "universe.json", {})
+    health, predictions, audit_ms = _postflight_audit_single_prediction_parse(predictions)
+    latest = latest if latest is not None else read_json(DATA / "latest.json", {})
+    universe = universe if universe is not None else read_json(DATA / "universe.json", {})
 
     started = perf_counter()
     health = _promote_official_first_capabilities(health, latest=latest, predictions=predictions, universe=universe)

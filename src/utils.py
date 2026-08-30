@@ -15,6 +15,14 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 CONFIG = ROOT / "config"
 
+# These two runtime artifacts are large machine-only contracts. Compact JSON keeps
+# their decoded object/schema identical while avoiding tens of MB of indentation
+# that every downstream isolated process would otherwise read and parse again.
+_COMPACT_MACHINE_ARTIFACTS = frozenset({
+    "predictions_v4.json",
+    "predictions_base_hot_cache_v4.json",
+})
+
 
 def utcnow():
     return datetime.now(timezone.utc)
@@ -56,15 +64,18 @@ def read_json(path: Path, default=None):
 
 
 def atomic_json(path: Path, payload: Any):
-    """Atomic pretty JSON write using orjson when installed.
+    """Atomically write JSON without changing the decoded artifact contract.
 
-    Pretty UTF-8 output is retained for repository artifacts. The optional codec
-    changes only serialization plumbing; object structure and service contracts
-    remain unchanged. The stdlib path is deliberately retained as a safe fallback.
+    Normal repository/runtime artifacts stay human-readable. The two very large
+    prediction machine artifacts use compact JSON because whitespace is not part of
+    their contract and repeatedly carrying it across process boundaries is costly.
+    Both codecs preserve the same Python object structure and UTF-8 semantics, with
+    stdlib fallbacks retained for minimal environments.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_bytes(_dumps_pretty(payload))
+    dump = _dumps_compact if path.name in _COMPACT_MACHINE_ARTIFACTS else _dumps_pretty
+    tmp.write_bytes(dump(payload))
     os.replace(tmp, path)
 
 

@@ -14,7 +14,7 @@ from src.utils import DATA, ROOT, atomic_json, read_json
 REGISTRY_PATH = ROOT / "config" / "runtime" / "incremental_reuse.json"
 STATE_PATH = DATA / "incremental_reuse_state.json"
 
-_VOLATILE_KEYS = {"generated_at", "runtime_architecture"}
+_VOLATILE_KEYS = {"generated_at", "fetched_at", "runtime_architecture"}
 _PREDICTION_TEAM_FIELDS = (
     "id", "name", "strength_attack_home", "strength_attack_away",
     "strength_defence_home", "strength_defence_away",
@@ -167,10 +167,35 @@ def _prediction_official_snapshot(value: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _prediction_team_state(value: dict[str, Any]) -> dict[str, Any]:
+    """Exact subset consumed by build_package_optimizer().
+
+    Entry rank/event points/fetch timestamps and other presentation state are deliberately
+    excluded because prediction_service never reads them. Any owned element, sell value,
+    or ITB change remains material and invalidates reuse.
+    """
+    ledger = []
+    for row in value.get("team_value_ledger") or []:
+        if not isinstance(row, dict):
+            continue
+        ledger.append({
+            "element": row.get("element"),
+            "sell_cost": row.get("sell_cost"),
+        })
+    ledger.sort(key=lambda row: int(row.get("element") or 0))
+    totals = value.get("totals") if isinstance(value.get("totals"), dict) else {}
+    return {
+        "team_value_ledger": ledger,
+        "itb": totals.get("itb"),
+    }
+
+
 def _semantic_json(service_name: str, name: str, value: Any) -> Any:
     value = _normalize(value, top_level=True)
     if service_name == "prediction" and name == "official_snapshot.json" and isinstance(value, dict):
         return _prediction_official_snapshot(value)
+    if service_name == "prediction" and name == "team.json" and isinstance(value, dict):
+        return _prediction_team_state(value)
     return value
 
 
@@ -179,6 +204,8 @@ def _semantic_profile(service_name: str, name: str, suffix: str) -> str:
         return "RAW"
     if service_name == "prediction" and name == "official_snapshot.json":
         return "PREDICTION_OFFICIAL_SNAPSHOT"
+    if service_name == "prediction" and name == "team.json":
+        return "PREDICTION_TEAM_STATE"
     return "GENERIC_JSON"
 
 
@@ -280,11 +307,13 @@ def _semantic_hash(value: Any, *, top_level: bool = False) -> str:
 def _digest_file_cached(profile: str, path_text: str, size: int, mtime_ns: int) -> str:
     del size, mtime_ns
     path = Path(path_text)
-    if profile in {"GENERIC_JSON", "PREDICTION_OFFICIAL_SNAPSHOT"}:
+    if profile in {"GENERIC_JSON", "PREDICTION_OFFICIAL_SNAPSHOT", "PREDICTION_TEAM_STATE"}:
         value = read_json(path, None)
         if value is not None:
             if profile == "PREDICTION_OFFICIAL_SNAPSHOT" and isinstance(value, dict):
                 value = _prediction_official_snapshot(value)
+            elif profile == "PREDICTION_TEAM_STATE" and isinstance(value, dict):
+                value = _prediction_team_state(value)
             return _semantic_hash(value, top_level=True)
     return hashlib.sha256(path.read_bytes()).hexdigest()
 

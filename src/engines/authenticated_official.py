@@ -73,7 +73,7 @@ def _safe_finance(my_team: dict | None, authoritative_elements: set[int]) -> dic
     """Persist only safe private finance facts, never the raw authenticated payload.
 
     Exact private purchase/sell totals are computed over the current 15-player
-    private squad returned by my-team.  Authoritative submitted-squad coverage is
+    private squad returned by my-team. Authoritative submitted-squad coverage is
     tracked separately because a legitimate pre-deadline transfer can make the
     private squad differ from the previous submitted squad.
     """
@@ -158,12 +158,52 @@ def _safe_transfers_latest(payload: Any) -> dict:
     return {"available": False, "count": None}
 
 
+def _production_readiness(summary: dict) -> dict:
+    if summary.get("mode") == "disabled":
+        return {"required": False, "ready": True, "reasons": []}
+
+    reasons: list[str] = []
+    if summary.get("state") != "VALID":
+        reasons.append(f"state={summary.get('state')}")
+    if summary.get("verified_entry") != EXPECTED_TEAM_ID:
+        reasons.append("entry_not_verified")
+
+    health = summary.get("endpoint_health") or {}
+    for key in ("me", "my_team", "transfers_latest"):
+        if (health.get(key) or {}).get("status") != "LIVE":
+            reasons.append(f"endpoint_{key}_not_live")
+
+    finance = summary.get("safe_finance") or {}
+    if not (finance.get("private_squad_coverage") or {}).get("complete"):
+        reasons.append("private_squad_finance_incomplete")
+    if finance.get("exact_sell_total") is None:
+        reasons.append("exact_sell_total_unavailable")
+    if finance.get("exact_purchase_total") is None:
+        reasons.append("exact_purchase_total_unavailable")
+    if not (summary.get("chip_state") or {}).get("available"):
+        reasons.append("chip_state_unavailable")
+    if not (summary.get("transfers_latest") or {}).get("available"):
+        reasons.append("transfers_latest_unavailable")
+    if summary.get("raw_authenticated_payload_persisted") is not False:
+        reasons.append("raw_payload_policy_violation")
+
+    return {"required": True, "ready": not reasons, "reasons": reasons}
+
+
 def _persist(summary: dict):
+    summary["production_readiness"] = _production_readiness(summary)
     atomic_json(DATA / "auth.json", summary)
     latest = _load("latest.json", {})
     latest["authenticated_official"] = summary
     latest.setdefault("files", {})["auth"] = "data/auth.json"
     atomic_json(DATA / "latest.json", latest)
+
+    readiness = summary["production_readiness"]
+    if readiness.get("required") and not readiness.get("ready"):
+        raise RuntimeError(
+            "FAIL CLOSED: configured authenticated Official FPL is not production-ready: "
+            + ",".join(readiness.get("reasons") or [])
+        )
     return summary
 
 

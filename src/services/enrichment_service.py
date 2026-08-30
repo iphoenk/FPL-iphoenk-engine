@@ -6,7 +6,11 @@ from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 
 from src.services.competitive_load_service import OUT as COMPETITIVE_LOAD_OUT
-from src.services.competitive_load_service import PRESS_EVIDENCE, build_competitive_load
+from src.services.competitive_load_service import (
+    EXTERNAL_COMPETITIVE_EVIDENCE,
+    PRESS_EVIDENCE,
+    build_competitive_load,
+)
 from src.services.contracts import file_digest
 from src.sources import core_insights, vaastav
 from src.utils import CONFIG, DATA, atomic_json, iso_now, parse_dt, read_json, utcnow
@@ -202,7 +206,11 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
     positions = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
     universe = [_official_player_row(player, teams, positions) for player in bootstrap.get("elements", [])]
 
-    competitive_load = build_competitive_load(raw, read_json(PRESS_EVIDENCE, {}))
+    competitive_load = build_competitive_load(
+        raw,
+        read_json(PRESS_EVIDENCE, {}),
+        read_json(EXTERNAL_COMPETITIVE_EVIDENCE, {}),
+    )
     atomic_json(COMPETITIVE_LOAD_OUT, competitive_load)
 
     out = {

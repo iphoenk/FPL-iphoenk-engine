@@ -160,6 +160,7 @@
     "release_manifest_single_source": true,
     "service_count": 8,
     "validation_boundary_preserves_four_artifact_contracts": true,
+    "governance_boundary_preserves_postflight_and_checkpoint_contracts": true,
     "governance_boundary_preserves_postflight_checkpoint_and_serving_contracts": true,
     "reconciliation_readiness_process_isolated": false,
     "reconciliation_readiness_read_only": true,

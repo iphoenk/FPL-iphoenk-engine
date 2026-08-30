@@ -14,10 +14,8 @@ def _my_team():
 
 def test_private_finance_uses_current_private_squad_not_previous_submitted_squad():
     payload = _my_team()
-    # Previous submitted squad deliberately differs by one element.
     authoritative = set(range(1, 15)) | {99}
     finance = _safe_finance(payload, authoritative)
-
     assert finance["private_squad_coverage"] == {"expected": 15, "covered": 15, "complete": True}
     assert finance["private_exact_sell_total"] is not None
     assert finance["private_exact_purchase_total"] is not None
@@ -27,47 +25,37 @@ def test_private_finance_uses_current_private_squad_not_previous_submitted_squad
 
 def test_disabled_auth_remains_non_blocking():
     readiness = _production_readiness({"mode": "disabled", "state": "DISABLED"})
-    assert readiness == {"required": False, "ready": True, "reasons": []}
+    assert readiness == {
+        "required": False,
+        "ready": True,
+        "status": "NOT_CONFIGURED",
+        "reasons": [],
+    }
 
 
-def test_configured_auth_requires_exact_entry_endpoints_and_private_state():
+def test_valid_configured_auth_is_available_but_not_required():
     summary = {
         "mode": "session_cookie",
         "state": "VALID",
         "verified_entry": 3462711,
-        "endpoint_health": {
-            "me": {"status": "LIVE"},
-            "my_team": {"status": "LIVE"},
-            "transfers_latest": {"status": "LIVE"},
-        },
-        "safe_finance": {
-            "private_squad_coverage": {"expected": 15, "covered": 15, "complete": True},
-            "private_exact_sell_total": 995,
-            "private_exact_purchase_total": 1000,
-        },
-        "chip_state": {"available": True, "chips": []},
-        "transfers_latest": {"available": True, "count": 0},
         "raw_authenticated_payload_persisted": False,
     }
     readiness = _production_readiness(summary)
-    assert readiness["required"] is True
+    assert readiness["required"] is False
     assert readiness["ready"] is True
+    assert readiness["status"] == "AVAILABLE"
     assert readiness["reasons"] == []
 
 
-def test_configured_auth_rejects_partial_or_incomplete_state():
+def test_invalid_configured_auth_is_degraded_but_never_production_blocking():
     summary = {
         "mode": "session_cookie",
         "state": "PARTIAL",
         "verified_entry": None,
-        "endpoint_health": {},
-        "safe_finance": {},
-        "chip_state": {"available": False},
-        "transfers_latest": {"available": False},
         "raw_authenticated_payload_persisted": False,
     }
     readiness = _production_readiness(summary)
-    assert readiness["required"] is True
+    assert readiness["required"] is False
     assert readiness["ready"] is False
+    assert readiness["status"] == "DEGRADED"
     assert "entry_not_verified" in readiness["reasons"]
-    assert "private_squad_finance_incomplete" in readiness["reasons"]

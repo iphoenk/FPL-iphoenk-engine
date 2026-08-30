@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from typing import Any
 
 from src.sources.official_auth import (
@@ -136,7 +137,7 @@ def _safe_transfers_latest(payload: Any) -> dict:
 
 def _enhancement_health(summary: dict) -> dict:
     """Report authenticated enrichment health without gating public production."""
-    if summary.get("mode") == "disabled":
+    if summary.get("mode") == "disabled" and summary.get("state") == "DISABLED":
         return {"required": False, "ready": True, "status": "NOT_CONFIGURED", "reasons": []}
     reasons: list[str] = []
     if summary.get("state") != "VALID":
@@ -145,6 +146,8 @@ def _enhancement_health(summary: dict) -> dict:
         reasons.append("entry_not_verified")
     if summary.get("raw_authenticated_payload_persisted") is not False:
         reasons.append("raw_payload_policy_violation")
+    if summary.get("failure_reason"):
+        reasons.append(str(summary["failure_reason"]))
     return {
         "required": False,
         "ready": not reasons,
@@ -174,9 +177,8 @@ def _transport_rejected(*health_rows: dict) -> bool:
     return any(row.get("status") == "REDIRECT_REJECTED" for row in health_rows if isinstance(row, dict))
 
 
-def run() -> dict:
-    authoritative = _authoritative_elements()
-    base = {
+def _base_summary() -> dict:
+    return {
         "checked_at": iso_now(),
         "expected_entry": EXPECTED_TEAM_ID,
         "state": "DISABLED",
@@ -199,6 +201,11 @@ def run() -> dict:
             "configured_mode_requires_production_validation": False,
         },
     }
+
+
+def _run_once() -> dict:
+    authoritative = _authoritative_elements()
+    base = _base_summary()
 
     try:
         material = auth_material_from_env()
@@ -257,6 +264,25 @@ def run() -> dict:
     base["chip_state"] = _safe_chip_state(my_team)
     base["transfers_latest"] = _safe_transfers_latest(latest)
     return _persist(base)
+
+
+def run() -> dict:
+    """Run optional private enrichment and always leave deterministic safe health.
+
+    Known auth/transport states are handled explicitly by _run_once(). Any unexpected
+    service-layer exception degrades only this optional enrichment. Error text is not
+    persisted because it could contain transport internals; required public core keeps
+    its independent fail-closed policy.
+    """
+    try:
+        return _run_once()
+    except Exception:
+        base = _base_summary()
+        mode = os.getenv("FPL_AUTH_MODE", "disabled").strip().lower() or "disabled"
+        base["mode"] = mode
+        base["state"] = "UNAVAILABLE"
+        base["failure_reason"] = "SERVICE_FAILURE"
+        return _persist(base)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@
   "production_authority": {
     "truth_baseline": "v3.20.0",
     "runtime_version": "3.39.0",
-    "main_sha": "80fe400888f7a4979f4537971cbc8eef6470dbe6",
+    "main_sha": "96a0d5a65e8ba055c3001ac91cb0c6a63f94e65e",
     "runtime_schema_version": 49
   },
   "advanced_beta4": {
@@ -30,6 +30,7 @@
     "v3_public_mini_league_membership_reconciled": true,
     "v3_profile_aware_production_dod_reconciled": true,
     "v3_atomic_runtime_publication_reconciled": true,
+    "v3_structured_user_capture_authority_reconciled": true,
     "deadline_aware_evidence_scheduler": true,
     "compact_prediction_analytics_mart": true,
     "raw_actions_artifact_retention_days": 14,
@@ -69,9 +70,10 @@
     "external_dwh_trigger": "MULTI_SEASON_OR_GT_100000_PLAYER_GW_FACT_ROWS"
   },
   "notes": [
-    "The last validated 3/3 strict-DSS operational acceptance remains historical evidence only; deployed production is now 80fe400888f7a4979f4537971cbc8eef6470dbe6, so exact-fingerprint operational evidence must restart from 0/3.",
+    "The last validated 3/3 strict-DSS operational acceptance remains historical evidence only; deployed production is now 96a0d5a65e8ba055c3001ac91cb0c6a63f94e65e, so exact-fingerprint operational evidence must restart from 0/3.",
     "PRE_DEADLINE planning authority is PUBLIC_OFFICIAL_PLUS_USER_CAPTURE: Official public submitted team is the default baseline, while user capture is a scoped override only for the exact target GW with an active WC/FH/planning override.",
     "Authenticated Official is optional private enrichment only and must never become squad, lineup, or captaincy authority.",
+    "Current V3 structured own-team capture is now phase-aware and DoD-governed with stale-GW rejection and post-deadline Official reclaim; this matches the V5 PUBLIC_OFFICIAL_PLUS_USER_CAPTURE governance and does not create authenticated Official authority.",
     "Strict DSS governance still requires every configured core and extension module to be ACTIVE before unqualified GO.",
     "Service-registry validation still rejects duplicate handlers and duplicate bounded-context authority.",
     "Current V3 public mini-league membership/rank publication is reconciled natively from the Official public entry payload and is presentation truth only.",

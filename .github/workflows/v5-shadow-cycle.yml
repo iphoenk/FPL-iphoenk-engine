@@ -58,7 +58,11 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin "$V3_SOURCE_BRANCH" "$V3_RUNTIME_BRANCH" "$V5_SHADOW_BRANCH"
-          test "$(git rev-parse origin/$V3_SOURCE_BRANCH)" = "$V3_SOURCE_SHA"
+          MAIN_HEAD="$(git rev-parse origin/$V3_SOURCE_BRANCH)"
+          git merge-base --is-ancestor "$V3_SOURCE_SHA" "origin/$V3_SOURCE_BRANCH"
+          if [ "$V3_SOURCE_SHA" != "$MAIN_HEAD" ]; then
+            echo "Repository main is ahead of deployed production; shadow reference stays anchored to deployed runtime source $V3_SOURCE_SHA until runtime-data advances."
+          fi
 
           runtime_manifest_tmp="$(mktemp)"
           git show "origin/${V3_RUNTIME_BRANCH}:data/runtime_manifest.json" > "$runtime_manifest_tmp"
@@ -293,11 +297,15 @@ jobs:
           ledger_path = root / 'prediction_ledger.json'
           accuracy_path = root / 'prediction_accuracy.json'
           acceptance_path = Path('config/v5_acceptance_registry.json')
+          persistence_path = Path('config/v5_persistence_registry.json')
 
           ledger = json.loads(ledger_path.read_text(encoding='utf-8')) if ledger_path.exists() else {'records': {}}
           accuracy = json.loads(accuracy_path.read_text(encoding='utf-8')) if accuracy_path.exists() else {}
           acceptance = json.loads(acceptance_path.read_text(encoding='utf-8'))
+          persistence = json.loads(persistence_path.read_text(encoding='utf-8'))
           gate = acceptance.get('prediction_calibration_gate') or {}
+          storage_cfg = persistence.get('evidence_storage') or {}
+          history_retention = (persistence.get('write_policy') or {}).get('history_retention') or {}
           records = ledger.get('records') if isinstance(ledger.get('records'), dict) else {}
 
           facts = []
@@ -392,23 +400,28 @@ jobs:
           }
           (analytics / 'summary.json').write_text(json.dumps(summary, indent=2, sort_keys=True) + '\n', encoding='utf-8')
           storage = {
-              'schema_version': 1,
-              'policy': 'V5_EVIDENCE_STORAGE_POLICY_V1',
-              'raw_actions_artifact_retention_days': 14,
-              'canonical_shadow_state_retention': 'CURRENT_2026_27_SEASON',
-              'compact_analytics_mart_retention': 'CURRENT_2026_27_SEASON',
-              'postseason_review_window_days': 90,
-              'dwh_mode': 'NOT_REQUIRED_AT_CURRENT_SCALE',
-              'dwh_escalation_trigger': 'MULTI_SEASON_OR_GT_100000_PLAYER_GW_FACT_ROWS',
+              'schema_version': 2,
+              'policy': 'V5_EVIDENCE_STORAGE_POLICY_V2',
+              'raw_actions_artifact_retention_days': int(storage_cfg.get('raw_actions_artifact_retention_days') or 0),
+              'canonical_shadow_state_retention': storage_cfg.get('canonical_prediction_ledger_retention'),
+              'compact_analytics_mart_retention': storage_cfg.get('compact_analytics_mart_retention'),
+              'rolling_history_canonical': bool(storage_cfg.get('history_jsonl_is_canonical', False)),
+              'rolling_history_max_age_days': int(history_retention.get('max_age_days') or 0),
+              'rolling_history_max_records': int(history_retention.get('max_records') or 0),
+              'rolling_history_max_bytes': int(history_retention.get('max_bytes') or 0),
+              'postseason_review_window_days': int(storage_cfg.get('postseason_review_window_days') or 0),
+              'dwh_mode': 'NOT_REQUIRED_AT_CURRENT_SCALE' if storage_cfg.get('external_dwh_required_now') is False else 'REQUIRED',
+              'dwh_escalation_trigger': storage_cfg.get('external_dwh_trigger'),
               'expected_single_season_player_gw_rows': 'approximately 25000-30000',
               'notes': [
                   'Actions artifacts auto-expire; do not use them as canonical evidence.',
                   'Canonical frozen ledger and derived compact analytics remain on v5-shadow-runtime for the season.',
+                  'Rolling history is noncanonical and bounded independently from canonical prediction evidence.',
                   'The analytics mart is rebuildable from the canonical ledger and may be deleted/rebuilt without changing prediction authority.'
               ],
           }
           (analytics / 'storage_policy.json').write_text(json.dumps(storage, indent=2, sort_keys=True) + '\n', encoding='utf-8')
-          print({'fact_rows': len(facts), 'settled_gameweeks': settled, 'readiness': readiness, 'raw_retention_days': 14})
+          print({'fact_rows': len(facts), 'settled_gameweeks': settled, 'readiness': readiness, 'storage': storage})
           PY
 
       - name: Upload shadow-cycle evidence

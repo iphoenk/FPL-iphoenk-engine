@@ -11,14 +11,14 @@ from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
 
 CACHE = DATA / "predictions_base_hot_cache_v4.json"
-ALGORITHM = "v4.9.6-exact-base-prediction-cache-v6"
+ALGORITHM = "v4.9.6-exact-base-prediction-cache-v7"
 _LAST_STATUS: dict = {}
 
-# Official FPL exposes market counters that can change minute-to-minute but are
-# not read anywhere by the canonical prediction builder. Hashing them forced an
-# unnecessary full model rebuild on an otherwise semantically identical refresh.
-# They remain available to the market/price layers; they are excluded only from
-# the *base prediction* fingerprint.
+# Official FPL exposes fields that can change minute-to-minute but are not read
+# anywhere by the canonical prediction builder. Hashing them forced unnecessary
+# full model rebuilds on otherwise semantically identical refreshes. They remain
+# available to their factual/market layers and are excluded only from the exact
+# base-prediction fingerprint.
 NON_MODEL_ELEMENT_FIELDS = {
     "transfers_in",
     "transfers_out",
@@ -33,6 +33,31 @@ NON_MODEL_ELEMENT_FIELDS = {
     "in_dreamteam",
     "dreamteam_count",
 }
+
+# v4_runner/opponent_defence_ratings/fixture_map consume only these fixture
+# dimensions. Runtime-only fixture metadata (pulse ids, stats arrays, etc.) is
+# intentionally not allowed to invalidate the prediction cache.
+MODEL_FIXTURE_FIELDS = (
+    "event",
+    "finished",
+    "team_h",
+    "team_a",
+    "team_h_score",
+    "team_a_score",
+    "kickoff_time",
+    "team_h_difficulty",
+    "team_a_difficulty",
+)
+
+# The canonical runner consumes the team id plus these four strength fields.
+# Team names/codes are reporting identity, not prediction mathematics.
+MODEL_TEAM_FIELDS = (
+    "id",
+    "strength_defence_home",
+    "strength_defence_away",
+    "strength_overall_home",
+    "strength_overall_away",
+)
 
 
 def _digest_if_exists(path: Path) -> str | None:
@@ -71,21 +96,46 @@ def _prediction_elements(elements: list[dict]) -> list[dict]:
     ]
 
 
+def _prediction_teams(teams: list[dict]) -> list[dict]:
+    return [
+        {field: team.get(field) for field in MODEL_TEAM_FIELDS}
+        for team in teams
+    ]
+
+
+def _prediction_fixtures(fixtures: list[dict]) -> list[dict]:
+    return [
+        {field: fixture.get(field) for field in MODEL_FIXTURE_FIELDS}
+        for fixture in fixtures
+    ]
+
+
+def _prediction_event_state(events: list[dict]) -> dict:
+    # v4_runner uses only the number of finished events to size early-season
+    # xMins priors. Scores, chip counters, most-selected ids and similar event
+    # telemetry cannot affect a canonical prediction.
+    return {
+        "events": len(events),
+        "finished_events": sum(bool(event.get("finished")) for event in events),
+    }
+
+
 def semantic_fingerprint(bootstrap: dict, fixtures: list[dict], stats_gw: int | None) -> str:
     """Fingerprint every semantic input consumed by canonical base prediction.
 
     Verified preseason role evidence is consumed before projection, so its digest
-    must invalidate the exact base cache. Missing evidence hashes as None and
-    remains an explicit evidence-gated zero signal.
+    invalidates the exact base cache. Official event/fixture/team payloads are
+    projected to the exact fields read by v4_runner; volatile non-model metadata
+    therefore cannot create a false miss, while every consumed field still can.
     """
     payload = {
         "algorithm": ALGORITHM,
         "bootstrap": {
             "elements": _prediction_elements(bootstrap.get("elements") or []),
-            "teams": bootstrap.get("teams") or [],
-            "events": bootstrap.get("events") or [],
+            "teams": _prediction_teams(bootstrap.get("teams") or []),
+            "event_state": _prediction_event_state(bootstrap.get("events") or []),
         },
-        "fixtures": fixtures,
+        "fixtures": _prediction_fixtures(fixtures),
         "stats_gw": stats_gw,
         "stats_digests": _stats_digests(stats_gw),
         "preseason_evidence_digest": _digest_if_exists(PRESEASON_EVIDENCE),
@@ -142,7 +192,7 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
     canonical_build_ms = round((perf_counter() - t) * 1000.0, 2)
     t = perf_counter()
     atomic_json(CACHE, {
-        "schema_version": 6,
+        "schema_version": 7,
         "algorithm": ALGORITHM,
         "fingerprint": fingerprint,
         "predictions": predictions,
@@ -150,6 +200,9 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
             "canonical_builder_on_miss": True,
             "all_semantic_prediction_inputs_hashed": True,
             "non_model_market_counters_excluded_from_base_fingerprint": True,
+            "official_team_fixture_event_fields_projected_to_exact_model_consumption": True,
+            "volatile_non_model_official_metadata_cannot_invalidate_cache": True,
+            "consumed_official_fields_still_invalidate_cache": True,
             "model_source_digest_invalidates_cache": True,
             "prediction_contract_timestamp_restamp_only": True,
             "boolean_point_in_time_truth_preserved": True,

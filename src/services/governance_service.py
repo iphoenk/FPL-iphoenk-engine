@@ -5,6 +5,7 @@ from time import perf_counter
 
 from src.engines import v4_checkpoint_governance, v4_maturity_reconciler
 from src.services import framework_postflight_truth_service
+from src.services.weather_health_overlay import apply_weather_health
 
 
 def _assert_no_critical_failure_erasure(before: set[str], maturity: dict) -> None:
@@ -25,6 +26,7 @@ def run() -> dict:
     total = perf_counter()
     started = perf_counter()
     postflight = framework_postflight_truth_service.run()
+    postflight = apply_weather_health(postflight)
     postflight_ms = round((perf_counter() - started) * 1000.0, 2)
     critical_failed_before = set(postflight.get("critical_failed") or [])
 
@@ -43,6 +45,7 @@ def run() -> dict:
         "components": {
             "framework_postflight": maturity.get("overall"),
             "capability_maturity": maturity.get("capability_health"),
+            "weather_context": (maturity.get("weather_context") or {}).get("status"),
             "report_governance": checkpoint.get("action_state"),
         },
         "timings_ms": {
@@ -58,6 +61,8 @@ def run() -> dict:
             "maturity_does_not_fabricate_external_evidence": True,
             "maturity_cannot_erase_critical_failure": True,
             "data_dependent_warmup_remains_truthful": True,
+            "weather_health_propagated_before_maturity": True,
+            "weather_cannot_mutate_expected_xpts_mean": True,
             "fail_closed": True,
         },
     }

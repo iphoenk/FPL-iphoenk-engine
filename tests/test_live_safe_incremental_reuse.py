@@ -27,18 +27,21 @@ def test_prediction_semantic_fingerprint_changes_on_material_score_change():
     assert left != right
 
 
-def test_live_reuse_is_explicit_and_limited_to_planning_services():
+def test_live_reuse_is_explicit_compute_positive_and_prediction_only():
     registry = incremental_reuse._registry()
     policy = registry["policy"]
     assert policy["live_reuse_requires_explicit_service_opt_in"] is True
     assert policy["disable_when_current_scoring_fixture_live"] is True
     assert policy["reuse_is_invalidated_by_source_tree_change"] is True
+    assert policy["reuse_only_when_avoided_compute_exceeds_fingerprint_cost"] is True
+    assert policy["cheap_decision_consumers_execute_and_validate_directly"] is True
     services = registry["services"]
-    assert {name for name, spec in services.items() if spec.get("allow_during_live") is True} == {
-        "prediction",
-        "lineup_governance",
-        "challenger",
-    }
+    assert {name for name, spec in services.items() if spec.get("allow_during_live") is True} == {"prediction"}
+    assert "lineup_governance" not in services
+    assert "challenger" not in services
+    assert "watchlist" not in services
+    assert "reporting" not in services
+    assert "report_materializer" not in services
     assert all("src/" in spec.get("inputs", []) for spec in services.values())
 
 

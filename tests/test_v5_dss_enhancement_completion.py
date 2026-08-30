@@ -46,7 +46,7 @@ def test_evidence_guard_rejects_future_timestamp_and_ruleset_mismatch():
     assert result["reliability"]["pass"] is False
 
 
-def test_no_critical_dss_partial_with_native_v5_capabilities():
+def test_no_critical_partial_still_blocks_go_when_noncritical_dss_is_partial():
     truth = {"capabilities": [
         "universe_identity", "universe_price_position", "universe_registration", "availability",
         "manual_authority", "defcon_rules", "sell_cost_affordability", "chip_context", "structural_fit",
@@ -71,7 +71,9 @@ def test_no_critical_dss_partial_with_native_v5_capabilities():
     report = evaluate_dss(truth, price, prediction, local_capabilities=local, external_capability_sources=external)
     assert report["registry_integrity"] is True
     assert report["critical_partial_count"] == 0, report["critical_partial"]
-    assert report["unqualified_go_allowed"] is True
+    assert report["all_modules_active_required_for_unqualified_go"] is True
+    assert report["all_modules_active"] is False
+    assert report["unqualified_go_allowed"] is False
 
 
 def test_all_critical_enhancement_layers_have_runtime_evidence():

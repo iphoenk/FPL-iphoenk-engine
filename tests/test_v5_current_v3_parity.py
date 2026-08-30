@@ -6,7 +6,7 @@ import pytest
 
 from src.v5.intelligence.projection import _position_projection_diagnostics
 from src.v5.intelligence.xmins import estimate_xmins
-from src.v5.state import Phase, primary_authority
+from src.v5.state import Phase, authority_chain
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPILED_PLAN = "V3_COMPILED_EXECUTION_PLAN_V1"
@@ -95,19 +95,31 @@ def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_t
     assert parity["governance"]["v3_bounded_warm_retry_is_runtime_workflow_hardening_not_decision_authority"] is True
     assert parity["governance"]["v3_official_phase_independent_fetch_overlap_is_runtime_hardening_not_decision_authority"] is True
     assert parity["governance"]["v3_authenticated_official_readiness_is_runtime_truth_hardening_not_v5_prediction_or_decision_authority"] is True
+    assert parity["governance"]["v3_authenticated_official_readiness_does_not_create_squad_lineup_or_captaincy_authority"] is True
     assert parity["governance"]["v3_public_mini_league_membership_is_reporting_truth_not_prediction_or_decision_authority"] is True
     assert parity["governance"]["history_jsonl_is_noncanonical_and_must_be_bounded"] is True
 
 
-def test_predeadline_current_team_prefers_authenticated_then_official_submitted():
+def test_predeadline_authority_is_public_official_plus_scoped_user_capture():
     registry = _load("config/v5_phase_authority_registry.json")
     governance = registry["pre_deadline_governance"]
-    assert governance["official_authenticated_is_default_current_team_authority"] is True
-    assert governance["official_public_submitted_is_default_fallback_when_authenticated_unavailable"] is True
-    assert governance["official_public_submitted_represents_last_confirmed_team_not_unsubmitted_draft"] is True
-    assert governance["user_lock_is_last_resort_or_explicit_override_only"] is True
-    assert primary_authority(Phase.PRE_DEADLINE, "squad") == "official_authenticated"
-    assert registry["phases"]["PRE_DEADLINE"]["squad"][:3] == ["official_authenticated", "official_public", "user_lock"]
+    squad_registry = _load("config/v5_squad_registry.json")
+
+    assert governance["primary_authority_model"] == "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE"
+    assert governance["official_public_submitted_is_default_planning_baseline"] is True
+    assert governance["user_capture_may_override_only_for_explicit_target_gw"] is True
+    assert governance["user_capture_requires_active_wc_fh_or_planning_override"] is True
+    assert governance["stale_or_unscoped_user_capture_must_not_mask_official_submitted_team"] is True
+    assert governance["authenticated_official_is_optional_private_enrichment"] is True
+    assert governance["authenticated_official_must_not_be_squad_lineup_or_captaincy_authority"] is True
+    assert squad_registry["pre_deadline"]["default_authority"] == "official_public"
+    assert squad_registry["pre_deadline"]["conditional_override_authority"] == "user_lock"
+    assert squad_registry["pre_deadline"]["override_requires_exact_target_gw"] is True
+    assert squad_registry["pre_deadline"]["authenticated_official_role"] == "OPTIONAL_PRIVATE_ENRICHMENT"
+    assert squad_registry["pre_deadline"]["authenticated_official_is_squad_authority"] is False
+    chain = authority_chain(Phase.PRE_DEADLINE, "squad")
+    assert chain[:2] == ("user_lock", "official_public")
+    assert "official_authenticated" not in chain
 
 
 def test_xmins_explicit_probabilities_and_expected_minutes_reconcile():
@@ -140,13 +152,16 @@ def test_current_v3_capability_reanchor_has_explicit_equivalence_evidence():
     parity = _load("config/v5_capability_parity_registry.json")
     evidence = parity["current_production_reanchor"]["capability_equivalence"]
     required = {
-        "gw_scoped_chip_override", "authenticated_official_predeadline_team", "official_submitted_predeadline_fallback",
-        "public_mini_league_membership", "explicit_xmins_probability_decomposition", "projection_component_observability",
+        "gw_scoped_chip_override", "public_official_predeadline_default_baseline", "scoped_user_capture_predeadline_override",
+        "authenticated_official_optional_private_enrichment", "public_mini_league_membership",
+        "explicit_xmins_probability_decomposition", "projection_component_observability",
         "verified_competitive_load_observation_validation", "tactical_xpts_immutability", "governed_lineup_uncertainty",
         "captain_safe_pool_and_independent_vice", "close_call_lineup_arbitration", "genuine_predeadline_decision_snapshot",
         "owned_challenger_comparator", "historical_prediction_settlement", "final_governed_publication",
     }
     assert required <= set(evidence)
+    assert "authenticated_official_predeadline_team" not in evidence
+    assert "official_submitted_predeadline_fallback" not in evidence
     assert all(value.get("v5_owner") and value.get("evidence") for value in evidence.values())
     assert (ROOT / "src/v5/intelligence/competitive_load.py").exists()
     assert (ROOT / "src/v5/mini_league.py").exists()

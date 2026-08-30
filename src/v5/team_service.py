@@ -69,6 +69,7 @@ def build_team_state(
     return {
         "authority": resolved["authority"],
         "authority_policy": resolved.get("authority_policy", {}),
+        "projection_baseline": resolved.get("projection_baseline", {}),
         "squad": list(squad),
         "validation": resolved["validation"],
         "finance": {

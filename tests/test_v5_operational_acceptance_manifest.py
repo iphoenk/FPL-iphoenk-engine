@@ -10,7 +10,7 @@ def _manifest():
     return json.loads(MANIFEST.read_text(encoding="utf-8"))
 
 
-def test_production_reanchor_supersedes_incomplete_operational_acceptance():
+def test_production_reanchor_supersedes_prior_operational_acceptance():
     manifest = _manifest()
     evidence = manifest["operational_acceptance_evidence"]
     promotion = manifest["production_promotion"]
@@ -24,7 +24,7 @@ def test_production_reanchor_supersedes_incomplete_operational_acceptance():
     assert evidence["operational_candidate_eligible"] is False
 
     assert old["release_fingerprint"].startswith("sha256:")
-    assert old["validated_real_shadow_cycles"] == 2
+    assert old["validated_real_shadow_cycles"] == 3
     assert old["latest_validated_at"]
     assert "Production main moved" in old["reason"]
 

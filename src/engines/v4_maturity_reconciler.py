@@ -21,14 +21,6 @@ def _find_module(health: dict, module_id: str) -> dict | None:
     return None
 
 
-def _fixtures(predictions: dict) -> list[dict]:
-    return [
-        fixture
-        for player in (predictions.get("players") or [])
-        for fixture in (player.get("fixtures") or [])[:3]
-    ]
-
-
 def _promote(row: dict | None, ok: bool, detail: dict) -> bool:
     if row is None:
         return False
@@ -41,7 +33,9 @@ def _promote(row: dict | None, ok: bool, detail: dict) -> bool:
 
 def _system_fit_evidence(predictions: dict, tactical: dict) -> tuple[bool, dict]:
     players = list(predictions.get("players") or [])
-    fixtures = _fixtures(predictions)
+    fixtures: list[dict] = []
+    for player in players:
+        fixtures.extend(list(player.get("fixtures") or [])[:3])
     tactical_rows = [*(tactical.get("owned") or []), *(tactical.get("watchlist") or [])]
     roles = sum(bool((player.get("priors") or {}).get("tactical_role")) for player in players)
     fixture_context = sum(
@@ -181,8 +175,22 @@ def _recount(health: dict) -> None:
         "active_ratio": round(active / max(1, declared), 4),
     }
     health["capability_health"] = "GREEN" if partial == 0 and failed == 0 else "AMBER" if failed == 0 else "RED"
-    health["prediction_health"] = "GREEN" if health["capability_health"] == "GREEN" else health.get("prediction_health", "AMBER")
-    if health.get("prediction_health") == "GREEN" and health.get("capability_health") == "GREEN" and failed == 0:
+    if failed > 0:
+        health["prediction_health"] = "RED"
+        health["decision_engine"] = "BLOCKED"
+        health["go_allowed"] = False
+    elif partial > 0:
+        health["prediction_health"] = "AMBER"
+        health["decision_engine"] = "DEGRADED"
+        health["go_allowed"] = False
+    elif warmup > 0:
+        # Implementation can be complete while outcome-dependent validation is still warming up.
+        # Service-registry policy explicitly forbids an unqualified GO while critical warmup remains.
+        health["prediction_health"] = "AMBER"
+        health["decision_engine"] = "WARMUP"
+        health["go_allowed"] = False
+    else:
+        health["prediction_health"] = "GREEN"
         health["decision_engine"] = "READY"
         health["go_allowed"] = True
 
@@ -223,6 +231,7 @@ def reconcile(health: dict | None = None) -> dict:
         "promoted_count": len(promotions),
         "false_green_forbidden": True,
         "evidence_gaps_remain_visible": True,
+        "critical_warmup_blocks_unqualified_go": True,
         "note": "Engineering capability readiness is separated from current external-evidence completeness; data-dependent warmup remains truthful.",
     }
     atomic_json(HEALTH, health)

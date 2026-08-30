@@ -8,7 +8,9 @@ def _module(monkeypatch, tmp_path, profile: str):
     monkeypatch.setenv("FPL_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("FPL_EXECUTION_PROFILE", profile)
     import src.engines.official_player_detail_enrichment as module
-    return importlib.reload(module)
+    module = importlib.reload(module)
+    monkeypatch.setattr(module, "DATA", tmp_path)
+    return module
 
 
 def test_target_selection_prioritizes_missing_then_rotates(monkeypatch, tmp_path):

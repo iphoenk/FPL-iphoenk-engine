@@ -85,7 +85,8 @@ def test_housekeeping_closeout_metadata_is_explicit_and_non_self_referential():
 
     assert re.fullmatch(r"[0-9a-f]{40}", accepted)
     assert housekeeping["accepted_code_commit"] == accepted
-    assert "code-bearing production-proven merge" in acceptance["accepted_code_commit_semantics"]
+    assert "Historical V3.39 release-lineage anchor only" in acceptance["accepted_code_commit_semantics"]
+    assert acceptance["runtime_evidence_authority"] == "runtime-data/data/runtime_manifest.json"
     assert housekeeping["status"] == "COMPLETE_PRODUCTION_PROVEN"
     assert housekeeping["legacy_version_stamped_test_modules_removed"] == 14
     assert housekeeping["stable_domain_test_suites"] == 4

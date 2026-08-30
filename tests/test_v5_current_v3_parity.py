@@ -8,10 +8,10 @@ from src.v5.intelligence.xmins import estimate_xmins
 from src.v5.state import Phase, primary_authority
 
 ROOT = Path(__file__).resolve().parents[1]
-MAIN_SHA = "018099be08f755e0f45b2c7526309ccc76818e4d"
+MAIN_SHA = "5538147b7f6dc51b6a3641befb72f6a8ff77e447"
 CODE_SHA = MAIN_SHA
 COMPILED_PLAN = "V3_COMPILED_EXECUTION_PLAN_V1"
-COMPILED_PLAN_SHA = "e013d5ccb9428382f87ba29b0c1c752b7e21758106e6ed6e81380074775e7538"
+COMPILED_PLAN_SHA = "af929aa55483f0e8959247a9d1794e70f7840d32f7bf6e5a7bc9d4ceac59e467"
 
 
 def _load(path: str):
@@ -30,6 +30,7 @@ def test_current_production_reanchor_is_exact_and_keeps_frozen_truth_baseline():
     assert manifest["baselines"]["production_execution_registry"] == "V3_EXECUTION_DOMAINS_V2"
     assert manifest["baselines"]["production_compiled_plan_registry"] == COMPILED_PLAN
     assert manifest["baselines"]["production_compiled_plan_sha256"] == COMPILED_PLAN_SHA
+    assert manifest["baselines"]["production_capability_telemetry_registry"] == "V3_CAPABILITY_TELEMETRY_V1"
     assert acceptance["convergence"]["production_main_sha"] == MAIN_SHA
     assert acceptance["convergence"]["production_code_commit"] == CODE_SHA
     assert acceptance["convergence"]["production_compiled_plan_registry"] == COMPILED_PLAN
@@ -38,24 +39,30 @@ def test_current_production_reanchor_is_exact_and_keeps_frozen_truth_baseline():
     assert parity["current_production_reanchor"]["production_code_commit"] == CODE_SHA
     assert parity["current_production_reanchor"]["v3_topology"]["compiled_plan_registry"] == COMPILED_PLAN
     assert parity["current_production_reanchor"]["v3_topology"]["compiled_plan_sha256"] == COMPILED_PLAN_SHA
+    assert parity["current_production_reanchor"]["v3_topology"]["capability_telemetry_registry"] == "V3_CAPABILITY_TELEMETRY_V1"
     assert parity["governance"]["reanchor_requires_full_v5_gate"] is True
     assert parity["governance"]["reanchor_does_not_change_frozen_football_truth_baseline"] is True
 
 
-def test_compiled_v3_control_plane_is_reconciled_without_duplicate_v5_execution_truth():
+def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_truth():
     parity = _load("config/v5_capability_parity_registry.json")
     control = parity["current_production_reanchor"]["control_plane_equivalence"]
-    assert set(control) == {
+    required = {
         "canonical_orchestration_registry",
         "single_service_module_ownership",
         "artifact_persistence_contract",
         "dependency_and_parallelism_contract",
+        "rules_drift_governance_contract",
+        "canonical_terminology_contract",
+        "capability_telemetry_contract",
     }
+    assert required <= set(control)
     for row in control.values():
         assert row["v5_owner"]
         assert (ROOT / row["evidence"]).exists()
     assert parity["governance"]["compiled_v3_control_plane_does_not_create_v5_service_or_business_authority"] is True
     assert parity["governance"]["duplicate_human_maintained_execution_truth_forbidden"] is True
+    assert parity["governance"]["v3_capability_telemetry_is_observational_not_decision_authority"] is True
 
 
 def test_predeadline_current_team_prefers_authenticated_official():
@@ -131,6 +138,7 @@ def test_current_v3_capability_reanchor_has_explicit_equivalence_evidence():
         "authenticated_official_predeadline_team",
         "explicit_xmins_probability_decomposition",
         "projection_component_observability",
+        "verified_competitive_load_observation_validation",
         "tactical_xpts_immutability",
         "governed_lineup_uncertainty",
         "captain_safe_pool_and_independent_vice",
@@ -142,3 +150,4 @@ def test_current_v3_capability_reanchor_has_explicit_equivalence_evidence():
     }
     assert required <= set(evidence)
     assert all(value.get("v5_owner") and value.get("evidence") for value in evidence.values())
+    assert (ROOT / "src/v5/intelligence/competitive_load.py").exists()

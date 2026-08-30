@@ -30,7 +30,21 @@ def test_competitive_load_uses_verified_evidence_and_never_invents_non_pl_contex
     ]
     stats={"rows":[{"player_id":1,"minutes_played":90}]}
     observations={"contract":"COMPETITIVE_LOAD_OBSERVATIONS_V1","observations":[
-        {"element":1,"verified":True,"competition":"International","match_time":"2026-09-02T18:00:00Z","minutes":90,"international":True,"long_haul":True,"travel_context":"LONG_HAUL"},
+        {
+            "element":1,
+            "verified":True,
+            "verification_level":"OFFICIAL_NATIONAL_TEAM",
+            "source":"official national team match centre",
+            "source_url":"https://example.com/international/match-1",
+            "competition":"International",
+            "match_time":"2026-09-02T18:00:00Z",
+            "started":True,
+            "minutes":90,
+            "extra_time_minutes":0,
+            "international":True,
+            "long_haul":True,
+            "travel_context":"LONG_HAUL_AWAY"
+        },
         {"element":2,"verified":False,"competition":"International","match_time":"2026-09-02T18:00:00Z","minutes":90,"international":True},
     ]}
     result=build_competitive_load(bootstrap,fixtures,planning_gw=3,match_stats=stats,verified_observations=observations,now=datetime(2026,9,3,0,0,tzinfo=timezone.utc))
@@ -38,9 +52,12 @@ def test_competitive_load_uses_verified_evidence_and_never_invents_non_pl_contex
     assert one["verified_non_pl_observation_count"] == 1
     assert one["international_evidence"] is True
     assert one["long_haul_evidence"] is True
+    assert one["travel_context"] == "LONG_HAUL_AWAY"
     assert one["state"] in {"CONGESTED","HIGH_ROTATION_RISK"}
     assert two["verified_non_pl_observation_count"] == 0
     assert two["non_pl_evidence_state"] == "UNAVAILABLE"
+    assert result["observation_audit"]["accepted_rows"] == 1
+    assert result["observation_audit"]["rejection_reasons"]["NOT_VERIFIED"] == 1
     assert result["governance"]["direct_xpts_mutation_forbidden"] is True
     assert result["governance"]["direct_xmins_mutation_forbidden_until_calibrated"] is True
 

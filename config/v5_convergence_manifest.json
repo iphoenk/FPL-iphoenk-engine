@@ -5,14 +5,15 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "018099be08f755e0f45b2c7526309ccc76818e4d",
-    "production_code_commit": "018099be08f755e0f45b2c7526309ccc76818e4d",
+    "production_main_sha": "5538147b7f6dc51b6a3641befb72f6a8ff77e447",
+    "production_code_commit": "5538147b7f6dc51b6a3641befb72f6a8ff77e447",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
     "production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
-    "production_compiled_plan_sha256": "e013d5ccb9428382f87ba29b0c1c752b7e21758106e6ed6e81380074775e7538",
+    "production_compiled_plan_sha256": "af929aa55483f0e8959247a9d1794e70f7840d32f7bf6e5a7bc9d4ceac59e467",
+    "production_capability_telemetry_registry": "V3_CAPABILITY_TELEMETRY_V1",
     "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
   },
   "operating_model": {
@@ -67,6 +68,7 @@
     "material_decision_equivalence_required": true,
     "external_benchmark_consensus_advisory_only": true,
     "competitive_load_advisory_only": true,
+    "competitive_load_verified_observation_validation_required": true,
     "deep_tactical_missing_evidence_explicit": true,
     "genuine_predeadline_decision_validation_required": true,
     "overdue_prediction_freeze_recovery_genuine_predeadline_only": true,
@@ -78,7 +80,10 @@
     "explicit_xmins_probability_decomposition_required": true,
     "projection_component_observability_required": true,
     "current_v3_execution_topology_reconciled_by_capability": true,
-    "compiled_control_plane_reconciled_without_duplicate_v5_execution_truth": true
+    "compiled_control_plane_reconciled_without_duplicate_v5_execution_truth": true,
+    "compiled_wave_parallelism_reconciled_by_capability": true,
+    "v3_rules_drift_and_artifact_ownership_reconciled_as_control_plane": true,
+    "v3_canonical_capability_telemetry_reconciled_without_v5_authority_change": true
   },
   "acceptance": {
     "no_regression_vs_v3_20_0_truth": true,
@@ -109,6 +114,6 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "V5.0.0-beta.4 is capability-reanchored to production main 018099be / V3.39 runtime schema 49. V3 PR #164 compiles the 11-domain/21-capability control plane from canonical registries and removes duplicate human-maintained batch truth without changing FPL formulas, xPts/xMins, XI/C/VC/bench/chip/watchlist/report logic or capability ownership. V5 preserves its own bounded-context orchestration authority and reconciles the control-plane guarantees by capability rather than copying V3 implementation. Frozen football-truth baseline remains V3.20. Authenticated Official FPL is required for the current GW3 Official-auth shadow proof. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
+    "reason": "V5.0.0-beta.4 is capability-reanchored to production main 5538147 / V3.39 runtime schema 49. V3 PRs #165/#167/#170/#171/#172 are reconciled as control-plane, governance, ownership, terminology and telemetry guarantees without importing V3 implementation authority into V5. V3 PR #169 strict verified competitive-load observation validation is adopted in V5's existing prediction.competitive_load owner, while competitive load remains advisory-only with direct xPts and uncalibrated direct xMins mutation forbidden. Frozen football-truth baseline remains V3.20. Authenticated Official FPL remains required for the current GW3 Official-auth shadow proof. Fresh exact-fingerprint postvalidated shadow cycles and settled prediction-calibration evidence remain mandatory before promotion."
   }
 }

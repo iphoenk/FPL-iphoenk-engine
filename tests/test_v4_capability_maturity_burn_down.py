@@ -3,13 +3,16 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+from src.engines import v4_maturity_reconciler as maturity
 from src.engines.v4_maturity_reconciler import (
+    _ownership_evidence,
     _prior_evidence,
+    _rotation_evidence,
     _schedule_capability_evidence,
     _set_readiness,
 )
 from src.engines.v4_preseason_evidence import load_verified_preseason_evidence
-from src.engines.v4_runner import minutes_contexts
+from src.engines.v4_runner import minutes_contexts, player_priors
 from src.engines.v4_xmins_evidence import attach_xmins_evidence
 from src.services.competitive_load_service import build_competitive_load
 
@@ -117,6 +120,31 @@ def test_schedule_readiness_requires_producer_consumer_wiring_not_current_extern
     assert ok is False
 
 
+def test_rotation_maturity_does_not_require_any_unadjusted_player() -> None:
+    predictions = {
+        "players": [
+            {"priors": {
+                "competition_pressure": 0.2,
+                "competition_source": "inferred_tactical_role_peer_group",
+                "squad_depth_pressure": 0.1,
+                "competition_factor": 0.94,
+                "competition_adjustment_applied": True,
+            }},
+            {"priors": {
+                "competition_pressure": 0.5,
+                "competition_source": "inferred_tactical_role_peer_group",
+                "squad_depth_pressure": 0.2,
+                "competition_factor": 0.86,
+                "competition_adjustment_applied": True,
+            }},
+        ]
+    }
+    ok, detail = _rotation_evidence(predictions)
+    assert ok is True
+    assert detail["distinct_competition_factors"] == 2
+    assert detail["semantic_consistency_rows"] == 2
+
+
 def test_verified_preseason_role_is_joined_by_official_element_before_projection(tmp_path) -> None:
     path = tmp_path / "preseason.json"
     path.write_text(json.dumps({
@@ -171,3 +199,85 @@ def test_historical_prior_requires_actual_weighted_consumption() -> None:
     ok, detail = _prior_evidence(real, "historical")
     assert ok is True
     assert detail["historical_prior_rows_consumed"] == 1
+
+
+def test_official_ownership_is_material_model_prior_not_flag_only() -> None:
+    low = {
+        "element_type": 3,
+        "now_cost": 70,
+        "selected_by_percent": "1.0",
+        "creativity": "20",
+        "threat": "20",
+    }
+    high = {**low, "selected_by_percent": "35.0"}
+    low_prior = player_priors(low)
+    high_prior = player_priors(high)
+    assert high_prior["role_prior"] > low_prior["role_prior"]
+    assert high_prior["xg90_prior"] > low_prior["xg90_prior"]
+    assert high_prior["xa90_prior"] > low_prior["xa90_prior"]
+
+    latest = {"official_context": {
+        "official_fpl_first": True,
+        "player_field_coverage": {"ownership": 2},
+    }}
+    universe = {"players": [{"ownership": 1.0}, {"ownership": 35.0}]}
+    predictions = {
+        "players": [{}, {}],
+        "capability_evidence": {
+            "official_ownership_rows": 2,
+            "ownership_context_consumed_players": 2,
+        },
+    }
+    ok, detail = _ownership_evidence(latest, universe, predictions)
+    assert ok is True
+    assert detail["effective_ownership_state"] == "OPTIONAL_EXTERNAL_ADVISORY"
+
+
+def test_calibration_warmup_requires_canonical_quality_gate(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(maturity, "RECONCILED", tmp_path)
+    monkeypatch.setattr(maturity, "reconciled_integrity", lambda sample, model_version=None: (True, None))
+    sample = {
+        "gw": 1,
+        "model_version": "v-test",
+        "report": {"metrics": {
+            "status": "PASS",
+            "n": 299,
+            "mae": 2.0,
+            "ranking": {"spearman": 0.4},
+            "interval80_coverage": 0.8,
+        }},
+    }
+    path = tmp_path / "gw01.json"
+    path.write_text(json.dumps(sample))
+
+    ok, detail = maturity._calibration_maturity_evidence({"model_version": "v-test"})
+    assert ok is False
+    assert detail["implementation_state"] == "WARMUP"
+    assert detail["minimum_n"] == 300
+    assert detail["best_observed_n"] == 299
+
+    sample["report"]["metrics"]["n"] = 300
+    path.write_text(json.dumps(sample))
+    ok, detail = maturity._calibration_maturity_evidence({"model_version": "v-test"})
+    assert ok is True
+    assert detail["implementation_state"] == "ACTIVE"
+    assert detail["passing_gws"] == [1]
+
+
+def test_invalid_reconciliation_cannot_promote_warmup(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(maturity, "RECONCILED", tmp_path)
+    monkeypatch.setattr(maturity, "reconciled_integrity", lambda sample, model_version=None: (False, "synthetic_or_invalid"))
+    (tmp_path / "gw01.json").write_text(json.dumps({
+        "gw": 1,
+        "report": {"metrics": {
+            "status": "PASS",
+            "n": 999,
+            "mae": 0.1,
+            "ranking": {"spearman": 0.99},
+            "interval80_coverage": 0.8,
+        }},
+    }))
+    ok, detail = maturity._calibration_maturity_evidence({"model_version": "v-test"})
+    assert ok is False
+    assert detail["eligible_reconciled_samples"] == 0
+    assert detail["rejected_samples"] == [{"file": "gw01.json", "reason": "synthetic_or_invalid"}]

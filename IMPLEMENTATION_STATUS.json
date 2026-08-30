@@ -5,7 +5,7 @@
   "production_authority": {
     "truth_baseline": "v3.20.0",
     "runtime_version": "3.39.0",
-    "main_sha": "0e7973b5e43530c512c634d5c3ade8354dbb1e68",
+    "main_sha": "a6f983af575f33329ada456ef8c6e8e971921696",
     "runtime_schema_version": 49
   },
   "advanced_beta4": {
@@ -27,6 +27,7 @@
     "v3_official_phase_independent_fetch_overlap_runtime_hardening_reconciled": true,
     "v3_authenticated_official_production_readiness_reconciled": true,
     "v3_fingerprint_only_prediction_reuse_reconciled": true,
+    "v3_runtime_reuse_contract_migration_reconciled": true,
     "v3_public_mini_league_membership_reconciled": true,
     "v3_profile_aware_production_dod_reconciled": true,
     "v3_atomic_runtime_publication_reconciled": true,
@@ -73,14 +74,14 @@
     "external_dwh_trigger": "MULTI_SEASON_OR_GT_100000_PLAYER_GW_FACT_ROWS"
   },
   "notes": [
-    "The last validated 3/3 strict-DSS operational acceptance remains historical evidence only; deployed production is now 0e7973b5e43530c512c634d5c3ade8354dbb1e68, so exact-fingerprint operational evidence must restart from 0/3.",
+    "The last validated 3/3 strict-DSS operational acceptance remains historical evidence only; deployed production is now a6f983af575f33329ada456ef8c6e8e971921696, so exact-fingerprint operational evidence must restart from 0/3.",
     "PRE_DEADLINE planning authority is PUBLIC_OFFICIAL_PLUS_USER_CAPTURE: Official public submitted team is the default baseline, while user capture is a scoped override only for the exact target GW with an active WC/FH/planning override.",
     "Authenticated Official is optional private enrichment only and must never become squad, lineup, or captaincy authority.",
     "Current V3 structured own-team capture is phase-aware and DoD-governed with stale-GW rejection and post-deadline Official reclaim; this matches V5 PUBLIC_OFFICIAL_PLUS_USER_CAPTURE governance and does not create authenticated Official authority.",
     "Strict DSS governance still requires every configured core and extension module to be ACTIVE before unqualified GO.",
     "Service-registry validation still rejects duplicate handlers and duplicate bounded-context authority.",
     "Current V3 public mini-league membership/rank publication is reconciled natively from the Official public entry payload and is presentation truth only.",
-    "Current V3 fingerprint-only prediction reuse is reconciled as runtime hardening; it does not grant V3 prediction state authority inside V5.",
+    "Current V3 fingerprint-only prediction reuse and runtime reuse contract migration are reconciled as runtime hardening: invalid reusable artifacts become cache misses and refresh through their owning capability, without granting V3 prediction or decision authority inside V5.",
     "Current V3 profile-aware Definition-of-Done, atomic runtime publication, and current-contract metadata closeout are reconciled as fail-closed runtime/governance hardening only; they do not alter football, prediction, optimizer, or decision authority.",
     "The acceptance baseline is the SHA actually deployed in runtime-data; a newer unpublished main HEAD may be ahead only if the deployed SHA remains its ancestor.",
     "Raw GitHub Actions evidence expires after 14 days. Canonical frozen prediction evidence and compact analytics remain for the current season.",

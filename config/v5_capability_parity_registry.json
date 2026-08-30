@@ -3,8 +3,8 @@
   "model": "v5_v3_v4_capability_parity_v15",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "deployed@84b1577f4fc84ce00a4e8c5e8139644c8f9fff51",
-    "current_production_code_commit": "84b1577f4fc84ce00a4e8c5e8139644c8f9fff51",
+    "current_production_runtime": "deployed@ef0161113a763306419c0c367770e6dcfe6570d1",
+    "current_production_code_commit": "ef0161113a763306419c0c367770e6dcfe6570d1",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "current_production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
@@ -57,8 +57,8 @@
     "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "84b1577f4fc84ce00a4e8c5e8139644c8f9fff51",
-    "production_code_commit": "84b1577f4fc84ce00a4e8c5e8139644c8f9fff51",
+    "production_main_sha": "ef0161113a763306419c0c367770e6dcfe6570d1",
+    "production_code_commit": "ef0161113a763306419c0c367770e6dcfe6570d1",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,
@@ -89,7 +89,8 @@
       "atomic_runtime_publication_runtime_governance_only": true,
       "structured_user_capture_phase_authority_governance_only": true,
       "official_player_detail_enrichment_runtime_hardening_only": true,
-      "official_player_detail_reuse_migration_runtime_hardening_only": true
+      "official_player_detail_reuse_migration_runtime_hardening_only": true,
+      "scheduler_runtime_self_heal_runtime_hardening_only": true
     },
     "control_plane_equivalence": {
       "canonical_orchestration_registry": {
@@ -196,6 +197,11 @@
         "v5_owner": "orchestrator",
         "evidence": "config/v5_orchestrator_registry.json",
         "semantics": "Current V3 invalidates pre-migration reusable official-detail artifacts against the active contract and refreshes safely. V5 reconciles this as cache/reuse integrity hardening only, with no imported V3 decision state."
+      },
+      "scheduler_runtime_self_heal_contract": {
+        "v5_owner": "orchestrator",
+        "evidence": "config/v5_orchestrator_registry.json",
+        "semantics": "Current V3 scheduler watchdog, stale-runtime recovery workflow, cadence and concurrency hardening are operational reliability only. They do not change football, prediction, optimizer, or decision semantics and create no duplicate V5 execution authority."
       }
     },
     "capability_equivalence": {
@@ -299,6 +305,7 @@
     "history_jsonl_is_noncanonical_and_must_be_bounded": true,
     "v3_authenticated_official_readiness_does_not_create_squad_lineup_or_captaincy_authority": true,
     "v3_official_player_detail_enrichment_is_factual_runtime_hardening_not_prediction_or_decision_authority": true,
-    "v3_official_player_detail_reuse_migration_is_runtime_hardening_not_decision_authority": true
+    "v3_official_player_detail_reuse_migration_is_runtime_hardening_not_decision_authority": true,
+    "v3_scheduler_runtime_self_heal_is_runtime_hardening_not_decision_authority": true
   }
 }

@@ -608,7 +608,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 100.6,
         "official_hourly_rate_pct": 18.89,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -621,7 +621,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 94.6,
         "official_hourly_rate_pct": -0.38,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "LIVE"
@@ -636,7 +636,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -99.4,
         "official_hourly_rate_pct": -2.32,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -662,7 +662,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -99.0,
         "official_hourly_rate_pct": -0.04,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -831,7 +831,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": 90.4,
         "official_hourly_rate_pct": 19.0,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -844,7 +844,7 @@
         "urgency": "CRITICAL",
         "official_progress_pct": -89.8,
         "official_hourly_rate_pct": -2.7,
-        "trajectory": "DECELERATING",
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -2314,7 +2314,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2435,7 +2435,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -2593,7 +2593,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2710,7 +2710,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2866,7 +2866,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -2981,7 +2981,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3139,7 +3139,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3256,7 +3256,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3416,7 +3416,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3537,7 +3537,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3693,7 +3693,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3808,7 +3808,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3968,7 +3968,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4085,7 +4085,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4247,7 +4247,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4369,7 +4369,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
+              "evidence_timestamp": "2026-08-31T00:57:20.157848+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [

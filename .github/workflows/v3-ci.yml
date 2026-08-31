@@ -31,8 +31,9 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - name: Install dependencies
-        run: pip install -r requirements.txt pytest
+          cache-dependency-path: requirements-ci.lock
+      - name: Install locked CI dependencies
+        run: pip install --no-deps -r requirements-ci.lock
       - name: Compile runtime modules
         run: python -m compileall -q src live_service.py fpl_daily_tasks.py
       - name: Validate capability terminology contract

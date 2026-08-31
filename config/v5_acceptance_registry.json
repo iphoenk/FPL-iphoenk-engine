@@ -97,8 +97,6 @@
   },
   "convergence": {
     "production_baseline": "v3.20.0",
-    "production_main_sha": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
-    "production_code_commit": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
     "production_runtime_schema_version": 49,
     "production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
@@ -240,7 +238,9 @@
     "v3_official_player_detail_reuse_migration_reconciled_as_runtime_hardening": true,
     "v3_scheduler_runtime_self_heal_reconciled_as_runtime_hardening": true,
     "operational_acceptance_evidence_authority": "v5-shadow-runtime:data/v5/shadow/acceptance_summary.json",
-    "static_acceptance_counters_must_not_be_runtime_authority": true
+    "static_acceptance_counters_must_not_be_runtime_authority": true,
+    "production_source_authority": "runtime-data:data/runtime_manifest.json#source_commit",
+    "production_source_environment": "V5_PRODUCTION_SOURCE_SHA"
   },
   "prediction_calibration_gate": {
     "required_for_production_promotion": true,

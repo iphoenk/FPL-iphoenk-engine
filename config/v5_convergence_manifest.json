@@ -5,8 +5,6 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
-    "production_code_commit": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
@@ -14,7 +12,9 @@
     "production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
     "production_compiled_plan_sha256": "af929aa55483f0e8959247a9d1794e70f7840d32f7bf6e5a7bc9d4ceac59e467",
     "production_capability_telemetry_registry": "V3_CAPABILITY_TELEMETRY_V1",
-    "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research"
+    "prediction_intelligence": "v3.20.0-full-dss-plus-v4-research",
+    "production_source_authority": "runtime-data:data/runtime_manifest.json#source_commit",
+    "production_source_environment": "V5_PRODUCTION_SOURCE_SHA"
   },
   "operating_model": {
     "v3": "production and scheduled-task runtime until V5 acceptance cutover",
@@ -157,9 +157,9 @@
       "release_fingerprint": "sha256:26707030c759b35315ac224ecb6065df1803f31fe0a2ef1e76dd84c9bcdb0aa8",
       "validated_real_shadow_cycles": 3,
       "latest_validated_at": "2026-08-30T11:07:53.409496+00:00",
-      "reason": "The previous validated 3/3 REAL_SHADOW evidence belongs to a superseded release fingerprint. Production has materially reanchored again to deployed runtime d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87, so that evidence is historical only and exact-fingerprint shadow acceptance must restart from 0/3."
+      "reason": "Previous validated REAL_SHADOW evidence belongs to a superseded release identity. The deployed production source is resolved at runtime from runtime-data and any material V5 release or production semantic change requires fresh exact-identity validation."
     },
-    "note": "Runtime acceptance authority is v5-shadow-runtime:data/v5/shadow/acceptance_summary.json. Static counters here are a materialized governance snapshot only. Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required against deployed production d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87.",
+    "note": "Runtime acceptance authority is v5-shadow-runtime:data/v5/shadow/acceptance_summary.json. Production source authority is runtime-data:data/runtime_manifest.json#source_commit; static deployment SHAs are forbidden.",
     "authority": "v5-shadow-runtime:data/v5/shadow/acceptance_summary.json",
     "materialized_status_snapshot_only": true
   },
@@ -171,7 +171,7 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "Production source reanchor invalidates static release attestation and requires fresh runtime evidence. Operational truth is read from v5-shadow-runtime:data/v5/shadow/acceptance_summary.json; prediction acceptance remains independent and mandatory.",
+    "reason": "Operational evidence is resolved from the canonical shadow acceptance summary and production source is resolved dynamically from runtime-data. Prediction acceptance remains independent and mandatory.",
     "operational_evidence_authority": "v5-shadow-runtime:data/v5/shadow/acceptance_summary.json",
     "materialized_status_snapshot_only": true
   }

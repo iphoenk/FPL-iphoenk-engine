@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import urllib.request
 from datetime import datetime, timezone
@@ -40,20 +41,21 @@ def evaluate(event_name: str) -> tuple[bool, list[str], dict, datetime]:
     ledger = load_remote_json(f"origin/{v5_shadow_branch}", "data/v5/prediction_ledger.json", {"records": {}})
     records = ledger.get("records") if isinstance(ledger.get("records"), dict) else {}
     manifest = json.loads(Path("config/v5_convergence_manifest.json").read_text(encoding="utf-8"))
-    expected_runtime_sha = str((manifest.get("baselines") or {}).get("production_main_sha") or "")
+    authority = str((manifest.get("baselines") or {}).get("production_source_authority") or "")
     repository_main_sha = git("rev-parse", "origin/main")
     runtime_manifest = load_remote_json(f"origin/{v3_runtime_branch}", "data/runtime_manifest.json")
-    deployed_runtime_sha = str(runtime_manifest.get("source_commit") or "")
-    ancestor_ok = bool(expected_runtime_sha) and subprocess.run(
-        ["git", "merge-base", "--is-ancestor", expected_runtime_sha, "origin/main"],
+    deployed_runtime_sha = str(runtime_manifest.get("source_commit") or "").lower()
+    sha_valid = bool(re.fullmatch(r"[0-9a-f]{40}", deployed_runtime_sha))
+    ancestor_ok = sha_valid and subprocess.run(
+        ["git", "merge-base", "--is-ancestor", deployed_runtime_sha, "origin/main"],
         check=False,
     ).returncode == 0
-    baseline_ready = bool(expected_runtime_sha and expected_runtime_sha == deployed_runtime_sha and ancestor_ok)
+    baseline_ready = bool(authority == "runtime-data:data/runtime_manifest.json#source_commit" and sha_valid and ancestor_ok)
     details = {
-        "accepted_deployed_runtime_sha": expected_runtime_sha,
+        "production_source_authority": authority,
         "deployed_runtime_sha": deployed_runtime_sha,
         "repository_main_sha": repository_main_sha,
-        "accepted_runtime_is_ancestor_of_main": ancestor_ok,
+        "deployed_runtime_is_ancestor_of_main": ancestor_ok,
         "baseline_ready": baseline_ready,
     }
     reasons: list[str] = []

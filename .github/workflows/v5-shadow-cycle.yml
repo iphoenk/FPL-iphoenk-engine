@@ -39,19 +39,26 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Resolve accepted production baseline
+      - name: Resolve deployed production baseline
         shell: bash
         run: |
           set -euo pipefail
-          BASELINE_SHA=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_main_sha'])")
+          git fetch origin "$V3_SOURCE_BRANCH" "$V3_RUNTIME_BRANCH" --quiet
+          AUTHORITY=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_source_authority'])")
+          test "$AUTHORITY" = "runtime-data:data/runtime_manifest.json#source_commit"
+          BASELINE_SHA=$(git show "origin/${V3_RUNTIME_BRANCH}:data/runtime_manifest.json" | python -c "import json,sys; print(json.load(sys.stdin)['source_commit'])")
+          [[ "$BASELINE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git cat-file -e "${BASELINE_SHA}^{commit}"
+          git merge-base --is-ancestor "$BASELINE_SHA" "origin/$V3_SOURCE_BRANCH"
           TRUTH_BASELINE=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_truth'])")
           RUNTIME_LABEL=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_runtime'])")
           TEAM_ID=$(python -c "import json; print(json.load(open('config/engine.json'))['team_id'])")
           echo "V3_SOURCE_SHA=$BASELINE_SHA" >> "$GITHUB_ENV"
+          echo "V5_PRODUCTION_SOURCE_SHA=$BASELINE_SHA" >> "$GITHUB_ENV"
           echo "V3_TRUTH_BASELINE=$TRUTH_BASELINE" >> "$GITHUB_ENV"
           echo "V3_RUNTIME_LABEL=$RUNTIME_LABEL" >> "$GITHUB_ENV"
           echo "FPL_TEAM_ID=$TEAM_ID" >> "$GITHUB_ENV"
-          echo "accepted_truth=$TRUTH_BASELINE runtime=$RUNTIME_LABEL sha=$BASELINE_SHA team_id=$TEAM_ID"
+          echo "accepted_truth=$TRUTH_BASELINE runtime=$RUNTIME_LABEL deployed_sha=$BASELINE_SHA team_id=$TEAM_ID"
 
       - name: Hydrate prior V5 shadow state and verify V3 runtime snapshot
         shell: bash

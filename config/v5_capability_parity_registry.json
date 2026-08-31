@@ -3,15 +3,15 @@
   "model": "v5_v3_v4_capability_parity_v15",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "deployed@d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
-    "current_production_code_commit": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
+    "current_production_runtime": "deployed@runtime-data:data/runtime_manifest.json#source_commit",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "current_production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
     "current_production_compiled_plan_sha256": "af929aa55483f0e8959247a9d1794e70f7840d32f7bf6e5a7bc9d4ceac59e467",
     "current_production_capability_telemetry_registry": "V3_CAPABILITY_TELEMETRY_V1",
     "research_reference": "v4",
-    "candidate": "v5.0.0-beta.4"
+    "candidate": "v5.0.0-beta.4",
+    "current_production_code_commit_authority": "runtime-data:data/runtime_manifest.json#source_commit"
   },
   "required_domains": [
     "phase_aware_truth",
@@ -57,8 +57,6 @@
     "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
-    "production_code_commit": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,
@@ -269,7 +267,9 @@
         "v5_owner": "truth",
         "evidence": "config/v5_phase_authority_registry.json"
       }
-    }
+    },
+    "production_source_authority": "runtime-data:data/runtime_manifest.json#source_commit",
+    "production_source_environment": "V5_PRODUCTION_SOURCE_SHA"
   },
   "governance": {
     "v4_is_reference_not_authority": true,

@@ -8,6 +8,7 @@ from src.v5.config_cache import ROOT, load_json_config
 from src.v5.contracts import AcceptanceCheck, AcceptanceReport, Plane
 from src.v5.module_registry import module_specs
 from src.v5.release_attestation import release_attestation
+from src.v5.production_baseline import PRODUCTION_SOURCE_AUTHORITY, production_source_contract, production_source_sha
 from src.v5.service_registry import registry as service_registry, service_specs, validate_registry
 
 ACCEPTANCE_CONFIG = "config/v5_acceptance_registry.json"
@@ -71,7 +72,8 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     price_service_source = (ROOT / "src/v5/services/price.py").read_text()
     tactical_consumption_source = (ROOT / "src/v5/decision/tactical_consumption.py").read_text()
     baseline = str(convergence.get("production_baseline") or "")
-    baseline_sha = str(convergence.get("production_main_sha") or "")
+    baseline_sha = production_source_sha()
+    source_contract = production_source_contract()
     manifest_baselines = manifest.get("baselines") or {}
     source_policy = source_registry_cfg.get("policy") or {}
     source_rows = _source_rows(source_registry_cfg)
@@ -84,7 +86,7 @@ def run_bootstrap_acceptance() -> AcceptanceReport:
     comparator_domains = {"owned_challenger_comparator", "observed_tactical_context", "tactical_decision_consumption", "transfer_momentum_truthful_evidence", "interactive_subsecond_serving"}
     checks = (
         AcceptanceCheck("v5_manifest", manifest.get("version") == V5_VERSION, Plane.GOVERNANCE, "package version matches convergence manifest"),
-        AcceptanceCheck("production_baseline_declared", manifest_baselines.get("production_truth") == baseline and manifest_baselines.get("production_main_sha") == baseline_sha and bool(baseline_sha), Plane.TRUTH, "football-truth baseline and current production runtime SHA are registry-driven and consistent"),
+        AcceptanceCheck("production_baseline_declared", manifest_baselines.get("production_truth") == baseline and manifest_baselines.get("production_source_authority") == PRODUCTION_SOURCE_AUTHORITY and convergence.get("production_source_authority") == PRODUCTION_SOURCE_AUTHORITY and source_contract.get("authority") == PRODUCTION_SOURCE_AUTHORITY and bool(baseline_sha), Plane.TRUTH, "football-truth baseline is static while deployed production source is runtime-manifest authoritative"),
         AcceptanceCheck("production_schema_48", int(manifest_baselines.get("production_schema_version") or 0) == 48, Plane.TRUTH, "settled V3.20 football-truth schema 48 remains explicit"),
         AcceptanceCheck("prediction_baseline_declared", baseline in str(manifest_baselines.get("prediction_intelligence") or ""), Plane.INTELLIGENCE, "prediction convergence references accepted football-truth baseline"),
         AcceptanceCheck("rules_registry_active", RULESET_ID == "FPL_2026_27" and RULESET_SEASON == "2026/27", Plane.TRUTH, "verified season rules remain single authority"),

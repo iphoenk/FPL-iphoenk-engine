@@ -99,7 +99,8 @@ def test_live_config_cannot_contain_unproven_frozen_metrics():
     metrics = eval_cfg.get("frozen_baseline_metrics")
     if metrics is not None:
         assert baseline is not None, "frozen metrics may not exist without a provenance record"
-        expected_sha = json.loads(Path("config/v5_convergence_manifest.json").read_text(encoding="utf-8"))["baselines"]["production_main_sha"]
+        from src.v5.production_baseline import production_source_sha
+        expected_sha = production_source_sha()
         result = validate_baseline_registry(registry, expected_production_sha=expected_sha)
         assert result["eligible"] is True, "frozen metrics require provenance PASS"
         assert metrics == result["metrics"], "evaluation baseline metrics must exactly match accepted provenance metrics"

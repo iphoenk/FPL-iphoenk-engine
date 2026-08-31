@@ -18,29 +18,33 @@ def _load(path: str):
     return json.loads((ROOT / path).read_text())
 
 
-def test_current_production_reanchor_is_exact_and_keeps_frozen_truth_baseline():
+def test_current_production_reanchor_is_runtime_manifest_authoritative_and_keeps_frozen_truth_baseline(monkeypatch):
+    from src.v5.production_baseline import production_source_sha
+
     manifest = _load("config/v5_convergence_manifest.json")
     acceptance = _load("config/v5_acceptance_registry.json")
     parity = _load("config/v5_capability_parity_registry.json")
     status = _load("IMPLEMENTATION_STATUS.json")
+    authority = "runtime-data:data/runtime_manifest.json#source_commit"
+    deployed_sha = "b" * 40
+    monkeypatch.setenv("V5_PRODUCTION_SOURCE_SHA", deployed_sha)
 
-    deployed_sha = manifest["baselines"]["production_main_sha"]
-    assert SHA40.fullmatch(deployed_sha), deployed_sha
+    assert production_source_sha() == deployed_sha
     assert manifest["baselines"]["production_truth"] == "v3.20.0"
-    assert manifest["baselines"]["production_code_commit"] == deployed_sha
+    assert manifest["baselines"]["production_source_authority"] == authority
+    assert manifest["baselines"]["production_source_environment"] == "V5_PRODUCTION_SOURCE_SHA"
+    assert "production_main_sha" not in manifest["baselines"]
+    assert "production_code_commit" not in manifest["baselines"]
+    assert acceptance["convergence"]["production_source_authority"] == authority
+    assert "production_main_sha" not in acceptance["convergence"]
+    assert parity["current_production_reanchor"]["production_source_authority"] == authority
+    assert parity["authorities"]["current_production_code_commit_authority"] == authority
+    assert status["production_authority"]["source_commit_authority"] == authority
     assert manifest["baselines"]["production_runtime_schema_version"] == 49
     assert manifest["baselines"]["production_execution_registry"] == "V3_EXECUTION_DOMAINS_V2"
     assert manifest["baselines"]["production_compiled_plan_registry"] == COMPILED_PLAN
     assert manifest["baselines"]["production_compiled_plan_sha256"] == COMPILED_PLAN_SHA
     assert manifest["baselines"]["production_capability_telemetry_registry"] == "V3_CAPABILITY_TELEMETRY_V1"
-    assert acceptance["convergence"]["production_main_sha"] == deployed_sha
-    assert acceptance["convergence"]["production_code_commit"] == deployed_sha
-    assert acceptance["convergence"]["production_compiled_plan_registry"] == COMPILED_PLAN
-    assert acceptance["convergence"]["production_compiled_plan_sha256"] == COMPILED_PLAN_SHA
-    assert parity["current_production_reanchor"]["production_main_sha"] == deployed_sha
-    assert parity["current_production_reanchor"]["production_code_commit"] == deployed_sha
-    assert parity["authorities"]["current_production_code_commit"] == deployed_sha
-    assert status["production_authority"]["main_sha"] == deployed_sha
 
     topology = parity["current_production_reanchor"]["v3_topology"]
     assert topology["compiled_plan_registry"] == COMPILED_PLAN
@@ -58,7 +62,6 @@ def test_current_production_reanchor_is_exact_and_keeps_frozen_truth_baseline():
     assert parity["governance"]["reanchor_does_not_change_frozen_football_truth_baseline"] is True
     assert parity["governance"]["reanchor_binds_to_deployed_runtime_not_unpublished_main_head"] is True
     assert parity["governance"]["deployed_runtime_must_be_ancestor_of_main"] is True
-
 
 def test_current_v3_control_plane_is_reconciled_without_duplicate_v5_execution_truth():
     parity = _load("config/v5_capability_parity_registry.json")

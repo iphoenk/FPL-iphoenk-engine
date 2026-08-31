@@ -1,132 +1,37 @@
 {
   "team_id": 3462711,
-  "authoritative_phase": "pre_deadline_wc",
-  "target_gw": 2,
-  "authority_source": "USER_CAPTURED_WC_DRAFT",
-  "locked_at": "2026-08-25T03:44:30Z",
-  "itb_tenths": 5,
-  "wildcard_active": true,
+  "authoritative_phase": "pre_deadline_transfer",
+  "target_gw": 3,
+  "authority_source": "USER_CONFIRMED_SCREENSHOT_GW3_TRANSFER",
+  "locked_at": "2026-08-31T22:53:24Z",
+  "itb_tenths": 10,
+  "free_transfers": 0,
+  "transfer_cost_points": 0,
+  "wildcard_active": false,
+  "free_hit_active": false,
+  "planning_override_active": true,
+  "latest_user_transfer": {
+    "out": {"name": "Aina", "element": 473},
+    "in": {"name": "Ajayi", "element": 279},
+    "confirmed_from": "USER_SCREENSHOT",
+    "confirmed_at": "2026-08-31T22:53:24Z"
+  },
   "players": [
-    {
-      "name": "Tzolakis",
-      "position": "GK",
-      "purchase_cost": 45,
-      "element": 572,
-      "expected_web_name": "Tzolakis",
-      "expected_team": "Hull City"
-    },
-    {
-      "name": "Verbruggen",
-      "position": "GK",
-      "purchase_cost": 45,
-      "element": 109,
-      "expected_web_name": "Verbruggen",
-      "expected_team": "Brighton"
-    },
-    {
-      "name": "De Cuyper",
-      "position": "DEF",
-      "purchase_cost": 45,
-      "element": 115,
-      "expected_web_name": "De Cuyper",
-      "expected_team": "Brighton"
-    },
-    {
-      "name": "Calafiori",
-      "position": "DEF",
-      "purchase_cost": 55,
-      "element": 8,
-      "expected_web_name": "Calafiori",
-      "expected_team": "Arsenal"
-    },
-    {
-      "name": "Kayode",
-      "position": "DEF",
-      "purchase_cost": 45,
-      "element": 88,
-      "expected_web_name": "Kayode",
-      "expected_team": "Brentford"
-    },
-    {
-      "name": "Robinson",
-      "position": "DEF",
-      "purchase_cost": 45,
-      "element": 254,
-      "expected_web_name": "Robinson",
-      "expected_team": "Fulham"
-    },
-    {
-      "name": "Aina",
-      "position": "DEF",
-      "purchase_cost": 45,
-      "element": 473,
-      "expected_web_name": "Aina",
-      "expected_team": "Nott'm Forest"
-    },
-    {
-      "name": "Bruno Fernandes",
-      "position": "MID",
-      "purchase_cost": 120,
-      "element": 426,
-      "expected_web_name": "B.Fernandes",
-      "expected_team": "Man Utd"
-    },
-    {
-      "name": "Ødegaard",
-      "position": "MID",
-      "purchase_cost": 65,
-      "element": 15,
-      "expected_web_name": "Ødegaard",
-      "expected_team": "Arsenal"
-    },
-    {
-      "name": "Tzolis",
-      "position": "MID",
-      "purchase_cost": 65,
-      "element": 557,
-      "expected_web_name": "Tzolis",
-      "expected_team": "Arsenal"
-    },
-    {
-      "name": "Rogers",
-      "position": "MID",
-      "purchase_cost": 75,
-      "element": 40,
-      "expected_web_name": "Rogers",
-      "expected_team": "Chelsea"
-    },
-    {
-      "name": "Sangaré",
-      "position": "MID",
-      "purchase_cost": 55,
-      "element": 565,
-      "expected_web_name": "M.Sangaré",
-      "expected_team": "Brentford"
-    },
-    {
-      "name": "Haaland",
-      "position": "FWD",
-      "purchase_cost": 155,
-      "element": 411,
-      "expected_web_name": "Haaland",
-      "expected_team": "Man City"
-    },
-    {
-      "name": "João Pedro",
-      "position": "FWD",
-      "purchase_cost": 75,
-      "element": 165,
-      "expected_web_name": "João Pedro",
-      "expected_team": "Chelsea"
-    },
-    {
-      "name": "Calvert-Lewin",
-      "position": "FWD",
-      "purchase_cost": 60,
-      "element": 346,
-      "expected_web_name": "Calvert-Lewin",
-      "expected_team": "Leeds"
-    }
+    {"name":"Tzolakis","position":"GK","purchase_cost":45,"element":572,"expected_web_name":"Tzolakis","expected_team":"Hull City"},
+    {"name":"Verbruggen","position":"GK","purchase_cost":45,"element":109,"expected_web_name":"Verbruggen","expected_team":"Brighton"},
+    {"name":"De Cuyper","position":"DEF","purchase_cost":45,"element":115,"expected_web_name":"De Cuyper","expected_team":"Brighton"},
+    {"name":"Calafiori","position":"DEF","purchase_cost":55,"element":8,"expected_web_name":"Calafiori","expected_team":"Arsenal"},
+    {"name":"Kayode","position":"DEF","purchase_cost":45,"element":88,"expected_web_name":"Kayode","expected_team":"Brentford"},
+    {"name":"Robinson","position":"DEF","purchase_cost":45,"element":254,"expected_web_name":"Robinson","expected_team":"Fulham"},
+    {"name":"Ajayi","position":"DEF","purchase_cost":40,"element":279,"expected_web_name":"Ajayi","expected_team":"Hull City"},
+    {"name":"Bruno Fernandes","position":"MID","purchase_cost":120,"element":426,"expected_web_name":"B.Fernandes","expected_team":"Man Utd"},
+    {"name":"Ødegaard","position":"MID","purchase_cost":65,"element":15,"expected_web_name":"Ødegaard","expected_team":"Arsenal"},
+    {"name":"Tzolis","position":"MID","purchase_cost":65,"element":557,"expected_web_name":"Tzolis","expected_team":"Arsenal"},
+    {"name":"Rogers","position":"MID","purchase_cost":75,"element":40,"expected_web_name":"Rogers","expected_team":"Chelsea"},
+    {"name":"Sangaré","position":"MID","purchase_cost":55,"element":565,"expected_web_name":"M.Sangaré","expected_team":"Brentford"},
+    {"name":"Haaland","position":"FWD","purchase_cost":155,"element":411,"expected_web_name":"Haaland","expected_team":"Man City"},
+    {"name":"João Pedro","position":"FWD","purchase_cost":75,"element":165,"expected_web_name":"João Pedro","expected_team":"Chelsea"},
+    {"name":"Calvert-Lewin","position":"FWD","purchase_cost":60,"element":346,"expected_web_name":"Calvert-Lewin","expected_team":"Leeds"}
   ],
   "identity_authority": "official_fpl_element_id",
   "identity_schema_version": 2

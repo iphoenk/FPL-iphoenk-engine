@@ -16,6 +16,23 @@ def _cfg() -> dict[str, Any]:
     return canonical.load_policy()
 
 
+def canonical_contract() -> dict[str, Any]:
+    policy = canonical.load_policy()
+    return {
+        "model_id": policy.get("model_id"),
+        "schema_version": int(policy.get("schema_version") or canonical.SCHEMA_VERSION),
+        "source_authority": list(policy.get("source_authority") or []),
+        "current_progress_field": "price_change_percent",
+        "projected_progress_field": "price_change_projections",
+        "likelihood_preserved_raw": True,
+        "official_update_clock": f"00:00 {canonical.OFFICIAL_UPDATE_TIMEZONE}",
+        "display_timezone": canonical.DISPLAY_TIMEZONE,
+        "model_threshold_percent": canonical.MODEL_THRESHOLD,
+        "threshold_is_official_rule": False,
+        "no_intra_cycle_crossing_eta": True,
+    }
+
+
 def _market_tz():
     return canonical.UK
 

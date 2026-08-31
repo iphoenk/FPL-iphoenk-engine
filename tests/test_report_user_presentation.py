@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from src.engines.collector_gate import normal_report_mode, should_collect
 from src.engines.report_user_presentation import RAW_DECISION_TOKENS, build_user_presentation, resolve_report_checkpoint
+from src.runtime_v3.execution_profile_resolver import resolve_execution_profile
 
 
 def _policy():
@@ -55,7 +56,79 @@ def test_missed_checkpoint_is_explicit_not_silent():
     checkpoint, _ = resolve_report_checkpoint(now, state, _policy())
     assert checkpoint["completeness"] == "ATTENTION_REQUIRED"
     assert [row["id"] for row in checkpoint["missed_due"]] == ["MIDDAY_CATCHUP"]
+    assert checkpoint["recovered_late"] == []
     assert checkpoint["silent_missing_forbidden"] is True
+
+
+def test_missed_checkpoint_becomes_late_recovered_only_when_execution_confirms_recovery():
+    state = {"checkpoint_history": [_completed("DAILY_DEEP", "2026-08-27")]}
+    now = datetime(2026, 8, 27, 6, 45, tzinfo=timezone.utc)
+    checkpoint, updated = resolve_report_checkpoint(
+        now,
+        state,
+        _policy(),
+        recovered_slot_ids={"MIDDAY_CATCHUP"},
+    )
+    assert checkpoint["completeness"] == "RECOVERED"
+    assert checkpoint["missed_due"] == []
+    assert [row["id"] for row in checkpoint["recovered_late"]] == ["MIDDAY_CATCHUP"]
+    assert checkpoint["current"]["kind"] == "RECOVERED_CHECKPOINT"
+    records = [row for row in updated["checkpoint_history"] if row["slot_id"] == "MIDDAY_CATCHUP"]
+    assert len(records) == 1
+    assert records[0]["status"] == "LATE_RECOVERED"
+    assert records[0]["timeliness"] == "LATE_RECOVERED"
+
+    checkpoint2, updated2 = resolve_report_checkpoint(now, updated, _policy())
+    assert checkpoint2["missed_due"] == []
+    assert checkpoint2["today"][1]["state"] == "LATE_RECOVERED"
+    assert len([row for row in updated2["checkpoint_history"] if row["slot_id"] == "MIDDAY_CATCHUP"]) == 1
+
+
+def test_registry_driven_resolver_upgrades_routine_run_to_deep_for_missed_daily_checkpoint():
+    now = datetime(2026, 8, 31, 0, 53, tzinfo=timezone.utc)
+    result = resolve_execution_profile(
+        visible_mode="SILENT",
+        deadline_intensive=False,
+        match_window=False,
+        post_deadline_reconciliation=False,
+        now_utc=now,
+        report_state={"checkpoint_history": []},
+    )
+    assert result["profile"] == "deep_stats"
+    assert result["mode"] == "daily"
+    assert result["extra"] == "--deep-stats"
+    assert result["recovery_required"] is True
+    assert result["recovery_checkpoint_ids"] == ["DAILY_DEEP"]
+    assert result["recovery_mode"] == "NORMAL_DEEP_REVIEW"
+
+
+def test_checkpoint_recovery_never_overrides_live_or_deadline_mode():
+    now = datetime(2026, 8, 31, 0, 53, tzinfo=timezone.utc)
+    live = resolve_execution_profile(
+        visible_mode="MATCH_MODE",
+        deadline_intensive=False,
+        match_window=True,
+        post_deadline_reconciliation=False,
+        now_utc=now,
+        report_state={"checkpoint_history": []},
+    )
+    assert live["profile"] == "live"
+    assert live["mode"] == "live"
+    assert live["recovery_required"] is False
+    assert live["deferred_recovery"] is True
+
+    deadline = resolve_execution_profile(
+        visible_mode="DEADLINE_DAY",
+        deadline_intensive=True,
+        match_window=False,
+        post_deadline_reconciliation=False,
+        now_utc=now,
+        report_state={"checkpoint_history": []},
+    )
+    assert deadline["profile"] == "fast_decision"
+    assert deadline["mode"] == "deadline"
+    assert deadline["recovery_required"] is False
+    assert deadline["deferred_recovery"] is True
 
 
 def test_natural_presentation_keeps_machine_states_out_of_human_surface():
@@ -86,7 +159,7 @@ def test_natural_presentation_keeps_machine_states_out_of_human_surface():
             },
         },
     }
-    checkpoint = {"current": {"label": "Review malam 21:30 WIB"}, "missed_due": []}
+    checkpoint = {"current": {"label": "Review malam 21:30 WIB"}, "missed_due": [], "recovered_late": []}
     presentation = build_user_presentation(payload, checkpoint)
     text = json.dumps(presentation, ensure_ascii=False)
     assert presentation["language"] == "id-ID"
@@ -102,6 +175,9 @@ def test_normal_report_slots_are_selected_inside_master_hourly_checkpoint_withou
     assert 'cron: "30 * * * *"' in workflow
     assert 'cron: "30 5 * * *"' not in workflow
     assert 'cron: "30 14 * * *"' not in workflow
+    assert "execution_profile_resolver" in workflow
+    assert 'profile="fast_decision"' not in workflow
+    assert "persist-credentials: false" in workflow
 
     checkpoints = (
         (datetime(2026, 8, 27, 5, 30, tzinfo=timezone.utc), "NORMAL_MIDDAY"),

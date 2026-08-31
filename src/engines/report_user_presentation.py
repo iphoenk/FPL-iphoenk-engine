@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Any
@@ -13,6 +14,7 @@ REPORT_STATE = DATA / "report_state.json"
 LATEST = DATA / "latest.json"
 
 RAW_DECISION_TOKENS = ("HOLD", "CHANGE", "REVIEW", "LOCK", "LEAN", "OPEN")
+COMPLETED_CHECKPOINT_STATUSES = {"COMPLETED", "LATE_RECOVERED"}
 
 
 @lru_cache(maxsize=1)
@@ -41,14 +43,44 @@ def _checkpoint_policy(policy: dict[str, Any] | None = None) -> dict[str, Any]:
     return cfg
 
 
+def _recovery_ids(value: str | None = None) -> set[str]:
+    raw = value if value is not None else os.getenv("FPL_RECOVERY_CHECKPOINT_IDS", "")
+    return {item.strip() for item in str(raw or "").split(",") if item.strip()}
+
+
+def _operational_health(checkpoint: dict[str, Any], engine_state: str | None) -> dict[str, Any]:
+    missed = list(checkpoint.get("missed_due") or [])
+    recovered = list(checkpoint.get("recovered_late") or [])
+    checkpoint_health = "RED" if missed else "AMBER" if recovered else "GREEN"
+    engine = str(engine_state or "UNKNOWN").upper()
+    if checkpoint_health == "RED" or engine == "RED":
+        overall = "RED"
+    elif checkpoint_health == "AMBER" or engine in {"AMBER", "YELLOW", "DEGRADED"}:
+        overall = "AMBER"
+    elif engine == "GREEN":
+        overall = "GREEN"
+    else:
+        overall = engine
+    return {
+        "overall": overall,
+        "engine": engine,
+        "checkpoint": checkpoint_health,
+        "missed_checkpoint_ids": [str(row.get("id")) for row in missed],
+        "late_recovered_checkpoint_ids": [str(row.get("id")) for row in recovered],
+        "checkpoint_completeness": checkpoint.get("completeness"),
+    }
+
+
 def resolve_report_checkpoint(
     now_utc: datetime,
     state: dict[str, Any] | None = None,
     policy: dict[str, Any] | None = None,
+    recovered_slot_ids: set[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     cfg = _checkpoint_policy(policy)
     current_state = dict(state or {})
     history = [dict(row) for row in current_state.get("checkpoint_history") or [] if isinstance(row, dict)]
+    recovery_ids = set(recovered_slot_ids or set())
     if not cfg.get("enabled"):
         checkpoint = {
             "schema": "report_checkpoint.v1",
@@ -56,6 +88,7 @@ def resolve_report_checkpoint(
             "current": {"kind": "ROUTINE", "label": "Report rutin"},
             "completeness": "NOT_APPLICABLE",
             "missed_due": [],
+            "recovered_late": [],
         }
         return checkpoint, current_state
 
@@ -68,11 +101,12 @@ def resolve_report_checkpoint(
     cutoff = (local_now.date() - timedelta(days=retain_days)).isoformat()
     history = [row for row in history if str(row.get("local_date") or "") >= cutoff]
 
-    completed_today = {
-        str(row.get("slot_id"))
+    completed_records = {
+        str(row.get("slot_id")): row
         for row in history
-        if row.get("local_date") == local_date and row.get("status") == "COMPLETED"
+        if row.get("local_date") == local_date and str(row.get("status") or "") in COMPLETED_CHECKPOINT_STATUSES
     }
+    completed_today = set(completed_records)
     slots_today: list[dict[str, Any]] = []
     for row in cfg.get("slots") or []:
         hour, minute = _parse_hhmm(str(row.get("time")))
@@ -86,19 +120,42 @@ def resolve_report_checkpoint(
 
     current_slot: dict[str, Any] | None = None
     missed_due: list[dict[str, Any]] = []
+    recovered_late: list[dict[str, Any]] = []
     timeline: list[dict[str, Any]] = []
     for row in slots_today:
         slot_id = row["id"]
         scheduled = row["scheduled"]
         completed = slot_id in completed_today
         if completed:
-            state_label = "COMPLETED"
+            previous_status = str((completed_records.get(slot_id) or {}).get("status") or "COMPLETED")
+            state_label = "LATE_RECOVERED" if previous_status == "LATE_RECOVERED" else "COMPLETED"
         elif local_now < scheduled:
             state_label = "PENDING"
         elif local_now <= scheduled + grace:
             state_label = "DUE"
             if current_slot is None:
                 current_slot = row
+        elif slot_id in recovery_ids:
+            entry = {
+                "slot_id": slot_id,
+                "label": row["label"],
+                "local_date": local_date,
+                "scheduled_local": scheduled.isoformat(),
+                "generated_at_utc": now.isoformat(),
+                "generated_local": local_now.isoformat(),
+                "status": "LATE_RECOVERED",
+                "timeliness": "LATE_RECOVERED",
+            }
+            history.append(entry)
+            completed_today.add(slot_id)
+            completed_records[slot_id] = entry
+            state_label = "LATE_RECOVERED"
+            recovered_late.append({
+                "id": slot_id,
+                "label": row["label"],
+                "scheduled_local": scheduled.isoformat(),
+                "recovered_local": local_now.isoformat(),
+            })
         else:
             state_label = "MISSED"
             missed_due.append({
@@ -141,6 +198,17 @@ def resolve_report_checkpoint(
             "generated_local": local_now.isoformat(),
             "timeliness": "ON_TIME_WINDOW",
         }
+    elif recovered_late:
+        recovered = recovered_late[-1]
+        current = {
+            "kind": "RECOVERED_CHECKPOINT",
+            "id": recovered["id"],
+            "label": recovered["label"],
+            "scheduled_local": recovered["scheduled_local"],
+            "generated_local": local_now.isoformat(),
+            "timeliness": "LATE_RECOVERED",
+            "recovered_checkpoint_ids": [row["id"] for row in recovered_late],
+        }
     else:
         current = {
             "kind": "ROUTINE",
@@ -153,8 +221,9 @@ def resolve_report_checkpoint(
         "enabled": True,
         "timezone": str(tz),
         "current": current,
-        "completeness": "ATTENTION_REQUIRED" if missed_due else "OK",
+        "completeness": "ATTENTION_REQUIRED" if missed_due else "RECOVERED" if recovered_late else "OK",
         "missed_due": missed_due,
+        "recovered_late": recovered_late,
         "today": timeline,
         "silent_missing_forbidden": bool(cfg.get("silent_missing_forbidden", True)),
     }
@@ -267,6 +336,12 @@ def build_user_presentation(payload: dict[str, Any], checkpoint: dict[str, Any])
         override_text += ". Baseline ini tidak boleh terbawa otomatis ke Gameweek berikutnya."
 
     summary_parts = [part for part in (history_text, estimate_text) if part]
+    if checkpoint.get("missed_due"):
+        checkpoint_text = "Ada checkpoint terjadwal yang terlewat dan belum berhasil dipulihkan."
+    elif checkpoint.get("recovered_late"):
+        checkpoint_text = "Checkpoint yang sempat terlewat sudah dipulihkan melalui eksekusi susulan dan dicatat sebagai terlambat."
+    else:
+        checkpoint_text = "Checkpoint report terjadwal yang sudah jatuh tempo tercatat lengkap."
     presentation = {
         "schema": "user_report_presentation.v1",
         "language": "id-ID",
@@ -283,7 +358,7 @@ def build_user_presentation(payload: dict[str, Any], checkpoint: dict[str, Any])
         "latest_finished_gameweek": history_text,
         "user_override_note": override_text,
         "checkpoint_label": ((checkpoint.get("current") or {}).get("label")),
-        "checkpoint_completeness": "Ada checkpoint terjadwal yang terlewat dan perlu diperiksa." if checkpoint.get("missed_due") else "Checkpoint report terjadwal yang sudah jatuh tempo tercatat lengkap.",
+        "checkpoint_completeness": checkpoint_text,
         "raw_decision_state_available_for_audit": True,
     }
     serialized = json.dumps(presentation, ensure_ascii=False)
@@ -296,17 +371,27 @@ def build_user_presentation(payload: dict[str, Any], checkpoint: dict[str, Any])
 def run(now_utc: datetime | None = None) -> dict[str, Any]:
     now = (now_utc or datetime.now(timezone.utc)).astimezone(timezone.utc)
     state = read_json(REPORT_STATE, {})
-    checkpoint, updated_state = resolve_report_checkpoint(now, state)
+    checkpoint, updated_state = resolve_report_checkpoint(
+        now,
+        state,
+        recovered_slot_ids=_recovery_ids(),
+    )
+    engine_state = (((updated_state.get("state") or {}).get("critical_health") or {}).get("overall"))
+    operational_health = _operational_health(checkpoint, engine_state)
+    updated_state["operational_health"] = operational_health
+
     paths = [DATA / "user_report.json", DATA / "decision_brief.json", DATA / "deep_review_payload.json"]
     result: dict[str, Any] = {}
     for path in paths:
         payload = read_json(path, {})
         payload["report_checkpoint"] = checkpoint
+        payload["operational_health"] = operational_health
         payload["user_presentation"] = build_user_presentation(payload, checkpoint)
         atomic_json(path, payload)
         result[path.name] = {
             "presentation": True,
             "checkpoint": (checkpoint.get("current") or {}).get("id") or "ROUTINE",
+            "operational_health": operational_health.get("overall"),
         }
     atomic_json(REPORT_STATE, updated_state)
 
@@ -314,8 +399,9 @@ def run(now_utc: datetime | None = None) -> dict[str, Any]:
     latest.setdefault("report_serving", {})["natural_user_presentation"] = True
     latest["report_serving"]["report_checkpoint"] = True
     latest["report_checkpoint"] = checkpoint
+    latest["operational_health"] = operational_health
     atomic_json(LATEST, latest)
-    return {"checkpoint": checkpoint, "artifacts": result}
+    return {"checkpoint": checkpoint, "operational_health": operational_health, "artifacts": result}
 
 
 if __name__ == "__main__":

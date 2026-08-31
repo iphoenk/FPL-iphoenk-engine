@@ -105,14 +105,17 @@ def test_workflows_are_unified_shallow_and_runtime_data_is_rolling():
     ci=(ROOT/".github/workflows/v3-ci.yml").read_text()
     runtime=(ROOT/".github/workflows/v3-runtime.yml").read_text()
     collector=json.loads((ROOT/"config/runtime/collector_policy.json").read_text())
+    profile_policy=json.loads((ROOT/"config/runtime/execution_profile_policy.json").read_text())
     publish=json.loads((ROOT/"config/runtime/runtime_publish_registry.json").read_text())
     schedules=collector["schedules"]
     hydrate=set(publish["hydrate_paths"])
+    deep=profile_policy["visible_modes"]["NORMAL_DEEP_REVIEW"]
     assert {"source_health.json","source_registry_runtime.json","challenger_observations.json","fixture_weather.json"}.issubset(hydrate)
     assert "schedule:" not in compat
     assert f'cron: "{schedules["primary"]}"' in runtime
     assert f'cron: "{schedules["adaptive"]}"' in runtime
-    assert "NORMAL_DEEP_REVIEW" in runtime and 'profile="deep_stats"' in runtime
+    assert deep["profile"] == "deep_stats" and deep["extra"] == "--deep-stats"
+    assert "execution_profile_resolver" in runtime and 'profile="deep_stats"' not in runtime
     assert not (ROOT/".github/workflows/v3-runtime-fast.yml").exists()
     assert not (ROOT/".github/workflows/v3-refresh-full.yml").exists()
     assert "fetch-depth: 0" not in ci+runtime

@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "registry": "V3_EXECUTION_PROFILE_POLICY_V1",
+  "default": {
+    "profile": "fast_decision",
+    "mode": "daily",
+    "extra": "",
+    "rank": 10
+  },
+  "visible_modes": {
+    "NORMAL_DEEP_REVIEW": {
+      "profile": "deep_stats",
+      "mode": "daily",
+      "extra": "--deep-stats",
+      "rank": 30
+    },
+    "NORMAL_MIDDAY": {
+      "profile": "fast_decision",
+      "mode": "daily",
+      "extra": "",
+      "rank": 10
+    },
+    "NORMAL_NIGHT": {
+      "profile": "fast_decision",
+      "mode": "daily",
+      "extra": "",
+      "rank": 10
+    },
+    "DEADLINE_DAY": {
+      "profile": "fast_decision",
+      "mode": "deadline",
+      "extra": "",
+      "rank": 20
+    },
+    "DEADLINE_DAY_FINAL_REVIEW": {
+      "profile": "fast_decision",
+      "mode": "deadline",
+      "extra": "",
+      "rank": 20
+    },
+    "MATCH_MODE": {
+      "profile": "live",
+      "mode": "live",
+      "extra": "",
+      "rank": 20
+    },
+    "POST_DEADLINE_RECONCILIATION": {
+      "profile": "fast_decision",
+      "mode": "daily",
+      "extra": "",
+      "rank": 10
+    },
+    "CRITICAL_PRICE_ALERT": {
+      "profile": "fast_decision",
+      "mode": "daily",
+      "extra": "",
+      "rank": 10
+    },
+    "PERMITTED_EMERGENCY": {
+      "profile": "fast_decision",
+      "mode": "daily",
+      "extra": "",
+      "rank": 10
+    }
+  },
+  "condition_modes": {
+    "deadline_intensive": "DEADLINE_DAY",
+    "match_window": "MATCH_MODE",
+    "post_deadline_reconciliation": "POST_DEADLINE_RECONCILIATION"
+  },
+  "checkpoint_recovery": {
+    "DAILY_DEEP": {
+      "enabled": true,
+      "visible_mode": "NORMAL_DEEP_REVIEW"
+    },
+    "MIDDAY_CATCHUP": {
+      "enabled": true,
+      "visible_mode": "NORMAL_MIDDAY"
+    },
+    "EVENING_CHECK": {
+      "enabled": true,
+      "visible_mode": "NORMAL_NIGHT"
+    }
+  },
+  "recovery": {
+    "enabled": true,
+    "recover_all_overdue_with_single_run": true,
+    "allowed_base_modes": ["daily"],
+    "never_downgrade_selected_profile": true,
+    "record_only_after_successful_execution": true
+  },
+  "governance": {
+    "workflow_must_not_reimplement_profile_selection": true,
+    "checkpoint_recovery_is_registry_driven": true,
+    "deadline_and_live_modes_are_not_overridden_by_late_recovery": true
+  }
+}

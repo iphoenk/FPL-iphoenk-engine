@@ -2,13 +2,14 @@ from src.v5.services import orchestrator_beta
 
 
 def test_beta_composition_adds_watchlist_comparator_reporting_and_persistence(monkeypatch):
-    base={"correlation_id":"c1","team_summary":{"authority":"user_lock","owned_ids":[1],"team_value_ledger":[{"element":1}]},"phase":{"phase":"PRE_DEADLINE","planning_gw":2,"deadline_time":"2026-09-04T17:30:00Z"},"price_summary":{"alerts":[]},"decision_summary":{"dss":{},"lineup":{},"selected_package_id":"HOLD"},"framework_health":{"go_allowed":False},"service_performance":{}}
+    base={"correlation_id":"c1","team_summary":{"authority":"user_capture","owned_ids":[1],"team_value_ledger":[{"element":1}]},"phase":{"phase":"PRE_DEADLINE","planning_gw":2,"deadline_time":"2026-09-04T17:30:00Z"},"price_summary":{"alerts":[]},"decision_summary":{"dss":{},"lineup":{},"selected_package_id":"HOLD"},"framework_health":{"go_allowed":False},"service_performance":{}}
     monkeypatch.setattr(orchestrator_beta,"core_handle",lambda operation,payload:dict(base))
     persisted=[]
     def parallel(calls,correlation_id):
         if "prediction" in calls:
             return {
                 "prediction":{"data":{"planning_gw":2,"players":[],"full_core_enrichment":{"competitive_load":{"status":"ACTIVE","contract":"V5_COMPETITIVE_LOAD_PRIMITIVE_V1","players":{},"player_count":0,"state_counts":{}}}}},
+                "prices":{"data":{}},
                 "prediction_ledger":{"data":{"schema_version":1,"records":{}}},
                 "prediction_accuracy":{"data":{"overall":{"sample_size":0,"status":"NO_SETTLED_SAMPLE"},"settled_gameweeks":[]}},
                 "report_state":{"data":{}},

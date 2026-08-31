@@ -26,17 +26,50 @@ def test_optimization_reuses_decision_prediction_context(monkeypatch):
         return {"weather_context": {"status": "NORMAL"}}
 
     def fake_load_price_context():
-        prices = {
+        return {
             "health": {"status": "PASS"},
             "source": "OFFICIAL_FPL",
             "contract": "OFFICIAL_FPL_PRICE_PREDICTOR_V1",
             "all15_actionable_price_radar": [{} for _ in range(15)],
+            "players": [],
         }
-        return prices, [{} for _ in range(20)]
+
+    discovery = {
+        "contract": "V4_PROJECTED_VALUE_MARKET_DISCOVERY_V1",
+        "full_universe_scanned": True,
+        "eligible_non_owned_count": 0,
+        "identity_pass_count": 0,
+        "tainted_or_blocked_count": 0,
+        "mandatory_candidate_ids": [],
+        "candidates": [],
+    }
+    tactical = {"watchlist": [], "weather_context": {"status": "NORMAL"}}
+    challenger = {
+        "status": "READY",
+        "contract": "OWNED_CHALLENGER_DECISION_ENGINE_V1",
+        "owned_count": 15,
+        "governed_watchlist_count": 20,
+        "comparison_count": 0,
+        "main_transfer_battles": [],
+        "multi_transfer_packages": [],
+        "challenge_signal": "HOLD",
+        "overall_decision": "REVIEW",
+        "decision_authority": "CANONICAL_DECISION_ARBITRATION_V1",
+        "execution_authorized": False,
+        "projected_value_market_discovery": {
+            "mandatory_candidate_ids": [],
+            "mandatory_candidate_coverage_complete": True,
+        },
+    }
 
     monkeypatch.setattr(service, "run_decision_pipeline", fake_pipeline)
     monkeypatch.setattr(service, "apply_weather_overlay", fake_overlay)
     monkeypatch.setattr(service, "_load_price_context", fake_load_price_context)
+    monkeypatch.setattr(service, "discover", lambda **kwargs: discovery)
+    monkeypatch.setattr(service, "rerank_visible_watchlist", lambda payload, **kwargs: tactical)
+    monkeypatch.setattr(service, "_watchlist_price_evidence", lambda prices, tactical: [{} for _ in range(20)])
+    monkeypatch.setattr(service, "run_owned_challenger_decision", lambda **kwargs: challenger)
+    monkeypatch.setattr(service, "augment_challenger", lambda payload, **kwargs: payload)
     monkeypatch.setattr(service, "atomic_json", lambda *args, **kwargs: None)
 
     out = service.run()

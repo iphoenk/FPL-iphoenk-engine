@@ -1,9 +1,9 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "registry": "V3_CAPABILITY_TERMINOLOGY_V1",
   "canonical_runtime_boundary": "execution_domain",
   "canonical_business_unit": "capability",
-  "execution_domain_count": 11,
+  "execution_domain_count": 12,
   "capability_count": 22,
   "contract_source": {
     "path": "config/v3_service_registry.json",
@@ -20,6 +20,7 @@
     "new_runtime_telemetry_must_use_capability_terminology": true,
     "big_bang_registry_rename_is_forbidden_without_migration_proof": true,
     "weather_context_is_governed_enrichment_capability": true,
-    "weather_context_does_not_require_a_dedicated_execution_domain": true
+    "weather_context_requires_dedicated_enrich_execution_domain": true,
+    "weather_context_does_not_require_a_dedicated_execution_domain": false
   }
 }

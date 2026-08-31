@@ -1,0 +1,55 @@
+name: One-shot V4 architecture attestation refresh
+
+on:
+  push:
+    branches: [codex/v4-ops-hardening-final]
+    paths-ignore:
+      - 'config/architecture_guard_attestation.json'
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v4-ops-hardening-final
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Full Architecture Guard and write content-address attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from src.services import architecture_guard_service as guard
+          result = guard.run(force_full_scan=True)
+          if result.get('status') != 'PASS':
+              raise SystemExit('full Architecture Guard scan failed')
+          payload = {
+              'schema_version': guard.ATTESTATION_SCHEMA_VERSION,
+              'fingerprint': guard.repository_fingerprint(),
+              'release': guard.RELEASE_VERSION,
+              'guard_schema_version': result.get('schema_version'),
+              'result': result,
+          }
+          Path('config/architecture_guard_attestation.json').write_text(
+              json.dumps(payload, indent=2, ensure_ascii=False) + '\n', encoding='utf-8'
+          )
+          print(payload['fingerprint'])
+          PY
+      - name: Commit attestation only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'fpl-iphoenk-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add config/architecture_guard_attestation.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'chore(v4): refresh architecture attestation'
+          git push origin HEAD:codex/v4-ops-hardening-final

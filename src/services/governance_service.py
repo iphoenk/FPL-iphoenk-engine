@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from time import perf_counter
 
+from src import utils as runtime_utils
 from src.engines import v4_checkpoint_governance, v4_maturity_reconciler
 from src.services import framework_postflight_truth_service
 from src.services.weather_health_overlay import apply_weather_health
@@ -139,7 +140,9 @@ def run() -> dict:
     )
     maturity = apply_weather_health(maturity, write=False)
 
-    readiness = read_json(DATA / "validation" / "reconciliation_readiness_v4.json", {})
+    # Reconciliation readiness is a separate validation artifact, not part of the
+    # immutable prediction-context read set reused above.
+    readiness = runtime_utils.read_json(DATA / "validation" / "reconciliation_readiness_v4.json", {})
     production_health = _production_operational_health(maturity, readiness)
     maturity["production_health"] = production_health["status"]
     maturity["production_operational_health"] = production_health

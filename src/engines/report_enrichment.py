@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from src.engines.decision_arbitration import arbitrate_decisions, assert_decision_consistency
-from src.engines.owned_challenger_comparator import build as build_owned_challenger_comparator
 from src.engines.report_time_intelligence import run as run_report_time_intelligence
 from src.utils import DATA, atomic_json, read_json
 
@@ -68,30 +67,10 @@ _DATA_STATE_ID = {
 
 
 def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
-    sources = {str(row.get("id")): row for row in source_health.get("sources") or []}
-    capability_rows = source_health.get("capability_health") or []
-    selected = []
-    for source_id in ("livefpl",):
-        source = sources.get(source_id) or {}
-        price = next(
-            (row for row in capability_rows if row.get("source_id") == source_id and row.get("capability") == "price_prediction"),
-            {},
-        )
-        state = str(price.get("data_state") or "UNAVAILABLE")
-        selected.append({
-            "source": source.get("name") or source_id,
-            "source_id": source_id,
-            "terjangkau": bool(source.get("reachable")),
-            "status_sumber": source.get("status"),
-            "status_data_harga": _DATA_STATE_ID.get(state, "status data belum dikenali"),
-            "structured_state": state,
-            "observasi_baru": int(price.get("fresh_observations") or 0),
-        })
     return {
         "otoritas": "Official FPL tetap menjadi sumber native resmi",
-        "collector_challenger": selected,
+        "collector_challenger": [],
         "report_time": {
-            "livefpl": "EO/live-rank challenger, terutama MATCH MODE",
             "onefpl": "dicek melalui web saat report terjadwal atau on-demand untuk transfer trends, market momentum, price/planner context",
             "fffix": "predicted points, predicted lineup/xMins, price dan rotation challenger",
             "ffhub": "AI transfer/decision, fixture/player comparison, XI/captain challenger",
@@ -100,7 +79,7 @@ def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
             "pundit_consensus": "FPL Harry, FPL Focal, Let's Talk FPL, BigManBakar, dan Scout editorial dibandingkan dengan DSS",
             "community": "Reddit r/FantasyPL dipakai sebagai sinyal komunitas yang wajib cross-check",
         },
-        "catatan": "External benchmark dan source report-time tidak mengubah native truth/DSS. Consensus hanya evidence overlay; factual divergence memicu refresh Official, bukan overwrite external.",
+        "catatan": "LiveFPL retired dari V3. External benchmark dan source report-time tidak mengubah native truth/DSS. Consensus hanya evidence overlay; factual divergence memicu refresh Official, bukan overwrite external.",
     }
 
 
@@ -132,31 +111,49 @@ def _external_consensus_user_block(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _comparator_user_block(payload: dict[str, Any]) -> dict[str, Any]:
+    decision = payload.get("decision") or {}
     return {
         "status": payload.get("status"),
-        "advisory_only": True,
+        "contract": payload.get("contract"),
+        "owner": payload.get("owner"),
+        "capability_status": payload.get("capability_status"),
         "owned_count": payload.get("owned_count"),
         "governed_watchlist_count": payload.get("governed_watchlist_count"),
-        "emerging_candidate_count": payload.get("emerging_candidate_count"),
+        "full_universe_material_count": payload.get("full_universe_material_count"),
+        "mandatory_review_count": payload.get("mandatory_review_count"),
+        "comparison_count": payload.get("comparison_count"),
+        "challenged_owned": payload.get("challenged_owned") or [],
+        "decision": decision,
+        "main_transfer_battles": payload.get("main_transfer_battles") or [],
+        "multi_transfer_alternatives": payload.get("multi_transfer_alternatives") or [],
+        "publication_validation": payload.get("publication_validation") or {},
         "state_counts": payload.get("state_counts") or {},
         "actionability_counts": payload.get("actionability_counts") or {},
-        "top_comparisons": [
-            {
-                "player_out": row.get("player_out"),
-                "player_in": row.get("player_in"),
-                "challenger_type": row.get("challenger_type"),
-                "state": row.get("state"),
-                "horizon_3gw": (row.get("horizons") or {}).get("3"),
-                "horizon_5gw": (row.get("horizons") or {}).get("5"),
-                "actionability": row.get("actionability") or {},
-                "reason": row.get("reason"),
-                "missing_critical_evidence": row.get("missing_critical_evidence") or [],
-                "confidence": row.get("confidence"),
-            }
-            for row in (payload.get("top_comparisons") or [])[:8]
-        ],
-        "catatan": "Comparator reuses canonical xPts/xMins/tactical/price/package evidence. It is advisory-only and cannot overwrite XI, C/VC, chip, watchlist, or canonical transfer decision.",
+        "v3_view": payload.get("v3_view") or {},
+        "catatan": "Keputusan challenger dihitung sekali pada capability DECISION/watchlist, memakai canonical xPts/xMins/tactical/price/package evidence. Reporting hanya mengonsumsi hasil persisted; XI, C/VC dan chip tetap pada owner canonical masing-masing.",
     }
+
+
+def _apply_transfer_decision(user: dict[str, Any], comparator: dict[str, Any]) -> None:
+    governed = str((comparator.get("decision") or {}).get("state") or "HOLD").upper()
+    decision = user.setdefault("decision", {})
+    current = str(decision.get("squad") or "HOLD").upper()
+    if governed == "BLOCKED":
+        raise RuntimeError("governed owned challenger decision is BLOCKED")
+    if governed == "CHANGE":
+        decision["squad"] = "CHANGE"
+        if str(decision.get("overall") or "").upper() not in {"REVIEW", "REVIEW_DIVERGENCE"}:
+            decision["overall"] = "CHANGE"
+    elif governed in {"REVIEW", "REVIEW_NOW"} and current == "HOLD":
+        decision["squad"] = "REVIEW"
+        decision["overall"] = "REVIEW"
+    decision["challenger_state"] = governed
+    decision["challenger_execution_authorized"] = bool((comparator.get("decision") or {}).get("execution_authorized"))
+    for item in user.get("action_board") or []:
+        if str(item.get("subject") or "") == "Squad":
+            item["action"] = decision.get("squad")
+            item["trigger"] = "ikuti Main Transfer Battles; eksekusi tetap memerlukan keputusan pengguna"
+            break
 
 
 def _action_class(subject: str) -> str:
@@ -228,7 +225,11 @@ def run() -> dict[str, Any]:
     watchlist = read_json(DATA / "dss_watchlist.json", {})
     source_health = read_json(DATA / "source_health.json", {})
     external_consensus = read_json(DATA / "external_consensus.json", {})
-    comparator = build_owned_challenger_comparator()
+    comparator = watchlist.get("owned_challenger_decision") or {}
+    if comparator.get("contract") != "OWNED_CHALLENGER_DECISION_V3":
+        raise RuntimeError("persisted governed owned challenger decision missing from watchlist capability")
+    if ((comparator.get("publication_validation") or {}).get("status")) != "PASS":
+        raise RuntimeError("persisted governed owned challenger decision failed publication validation")
     report_time = run_report_time_intelligence()
 
     ledger = {int(row.get("element") or -1): row for row in team.get("team_value_ledger") or []}
@@ -263,10 +264,12 @@ def run() -> dict[str, Any]:
     model_battle["challenger_metrics"] = challenger
     model_battle["main_reasons"] = _battle_reasons(leader, challenger) if leader and challenger else []
 
+    _apply_transfer_decision(user, comparator)
     user["source_availability"] = _source_availability(source_health)
     user["report_time_intelligence"] = _report_time_user_block(report_time)
     user["external_consensus"] = _external_consensus_user_block(external_consensus)
     user["owned_vs_challenger"] = _comparator_user_block(comparator)
+    user["main_transfer_battles"] = comparator.get("main_transfer_battles") or []
     tech["source_capability_health"] = {
         "source_overall": source_health.get("overall"),
         "capabilities": source_health.get("capability_health") or [],
@@ -277,7 +280,7 @@ def run() -> dict[str, Any]:
     }
     tech["report_time_intelligence"] = report_time
     tech["external_consensus"] = external_consensus
-    tech["owned_challenger_comparator"] = comparator
+    tech["owned_challenger_decision"] = comparator
     tech["runtime"] = {
         "current_run_ref": "data/runtime_performance.json",
         "embedded_during_report_stage": False,
@@ -291,8 +294,10 @@ def run() -> dict[str, Any]:
     tech["audit"]["external_consensus_is_advisory_only"] = bool((external_consensus.get("governance") or {}).get("advisory_only", True))
     tech["audit"]["external_consensus_never_majority_votes"] = not bool((external_consensus.get("governance") or {}).get("majority_vote_used", False))
     tech["audit"]["external_consensus_does_not_mutate_native_truth"] = not bool((external_consensus.get("governance") or {}).get("native_truth_mutated", False))
-    tech["audit"]["owned_challenger_comparator_is_advisory_only"] = bool(comparator.get("advisory_only"))
-    tech["audit"]["owned_challenger_comparator_reuses_governed_watchlist"] = int(comparator.get("governed_watchlist_count") or 0) == 20
+    tech["audit"]["owned_challenger_decision_is_governed"] = comparator.get("capability_status") == "GOVERNED_DECISION"
+    tech["audit"]["owned_challenger_decision_reuses_governed_watchlist"] = int(comparator.get("governed_watchlist_count") or 0) == 20
+    tech["audit"]["owned_challenger_reporting_recomputation_forbidden"] = True
+    tech["audit"]["livefpl_retired_from_v3_reporting"] = True
     _apply_readiness_and_actionability(user, tech, latest, report_time)
 
     arbitration = arbitrate_decisions(user, lineup, comparator)

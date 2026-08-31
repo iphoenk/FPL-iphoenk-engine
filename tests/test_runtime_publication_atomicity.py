@@ -51,7 +51,7 @@ def test_runtime_workflow_orders_every_candidate_gate_before_publication() -> No
     text = WORKFLOW.read_text(encoding="utf-8")
 
     ordered_markers = [
-        "Run governed eleven-domain / six-phase execution profile",
+        "Run governed canonical domain execution profile",
         "Validate production decision contracts",
         "Enforce selected profile runtime SLO with one bounded warm retry",
         "Verify V3 candidate definition of done before publication",

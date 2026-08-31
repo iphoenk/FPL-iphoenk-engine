@@ -159,7 +159,7 @@ jobs:
           FPL_POST_DEADLINE_RECONCILIATION: ${{ steps.cadence.outputs.post_deadline_reconciliation }}
         run: python -m src.runtime_v3.execution_profile_resolver
 
-      - name: Run governed eleven-domain / six-phase execution profile
+      - name: Run governed canonical domain execution profile
         if: steps.cadence.outputs.should_collect == 'true'
         shell: bash
         env:

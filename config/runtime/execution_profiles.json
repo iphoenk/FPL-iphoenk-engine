@@ -14,13 +14,15 @@
     "prediction_age_reuse_forbidden": true,
     "prediction_content_addressed_reuse_requires_exact_fingerprint_match": true,
     "ttl_reuse_uses_semantic_artifact_timestamps_not_filesystem_mtime": true,
-    "non_positive_ttl_disables_age_reuse": true
+    "non_positive_ttl_disables_age_reuse": true,
+    "fast_same_job_official_snapshot_reuse_is_bounded_and_semantic": true
   },
   "profiles": {
     "fast_decision": {
-      "description": "Interactive decision regeneration. REC-41 tactical-role/system fields are already published in runtime-data, so the temporary migration fence is closed and advanced player features may use the normal six-hour freshness window. Historical priors are still re-indexed every run so current Official club identity is reconciled against cached previous-season evidence. Prediction is declared with zero age so only exact content-addressed fingerprint reuse can qualify; stale age-based prediction reuse remains impossible.",
+      "description": "Interactive decision regeneration. A fresh Official snapshot may be reused for at most 60 seconds inside the same working directory so a bounded warm retry does not refetch and perturb its own canonical evidence. Because official_snapshot.json is ephemeral and never hydrated from runtime-data, a new production job still performs a fresh Official pull. REC-41 tactical-role/system fields are already published in runtime-data, so the temporary migration fence is closed and advanced player features may use the normal six-hour freshness window. Historical priors are still re-indexed every run so current Official club identity is reconciled against cached previous-season evidence. Prediction is declared with zero age so only exact content-addressed fingerprint reuse can qualify; stale age-based prediction reuse remains impossible.",
       "max_parallel_services": 5,
       "reuse_services": {
+        "official_snapshot": {"max_age_seconds": 60, "freshness_artifact": "official_snapshot.json", "freshness_field": "generated_at"},
         "advanced_stats": {"max_age_seconds": 21600, "freshness_artifact": "advanced_stats_sync.json", "freshness_field": "generated_at"},
         "historical_prior": {"max_age_seconds": 0},
         "source_layer": {"max_age_seconds": 1800, "freshness_artifact": "source_health.json", "freshness_field": "generated_at"},

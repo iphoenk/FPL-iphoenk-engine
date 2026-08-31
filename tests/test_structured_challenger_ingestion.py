@@ -7,28 +7,12 @@ import pytest
 import src.sources.manager as manager
 import src.sources.onefpl as onefpl
 from src.sources.base import SourceResult, SourceSpec
-from src.sources.livefpl import parse_price_observations as parse_livefpl
 from src.sources.manager import _disagreement_states, _reconcile_observations
-from src.sources.observations import ChallengerObservation, OBSERVATION_CONTRACT
+from src.sources.observations import ChallengerObservation
 from src.sources.onefpl import parse_price_observations as parse_onefpl
 from src.sources.structured_web import FetchedDocument
 
 NOW = "2026-08-26T21:00:00+00:00"
-
-
-def test_livefpl_price_parser_requires_observed_values():
-    html = "<html><body>Bowen FWD £7.8 59.1% 180.03% Tonight +10.53%</body></html>"
-    rows = parse_livefpl(html, source_url="https://www.livefpl.net/prices", fetched_at=NOW, ttl_seconds=1800)
-    assert len(rows) == 1
-    row = rows[0]
-    assert row["contract"] == OBSERVATION_CONTRACT
-    assert row["provider"] == "livefpl"
-    assert row["capability"] == "price_prediction"
-    assert row["value"]["player"] == "Bowen"
-    assert row["value"]["direction"] == "RISE"
-    assert row["value"]["predicted_pct"] == pytest.approx(180.03)
-    assert row["value"]["per_hour_pct"] == pytest.approx(10.53)
-    assert row["stale"] is False
 
 
 def test_onefpl_price_parser_and_loading_page_no_fabrication():
@@ -137,10 +121,10 @@ def test_available_observation_cannot_have_missing_value():
 
 def _prior_row(observed_at: str, ttl: int) -> dict:
     return ChallengerObservation(
-        source_id="livefpl",
+        source_id="fffix",
         capability="price_prediction",
         value={"player": "Bowen", "direction": "RISE"},
-        source_url="https://www.livefpl.net/prices",
+        source_url="https://www.fantasyfootballfix.com/",
         fetched_at=observed_at,
         observed_at=observed_at,
         ttl_seconds=ttl,
@@ -173,7 +157,7 @@ def test_recent_prior_becomes_last_known_good_but_not_current():
 
 
 def test_cross_source_direction_disagreement_is_explicit():
-    live = _prior_row(NOW, 1800)
+    fffix = _prior_row(NOW, 1800)
     one = ChallengerObservation(
         source_id="onefpl",
         capability="price_prediction",
@@ -185,33 +169,33 @@ def test_cross_source_direction_disagreement_is_explicit():
         parser_version="test-v1",
         subject={"player": "Bowen"},
     ).as_dict()
-    states = _disagreement_states([live, one])
+    states = _disagreement_states([fffix, one])
     assert states == [{
         "subject_key": "bowen",
         "player": "Bowen",
         "capability": "price_prediction",
         "state": "DISAGREEMENT",
-        "providers": ["livefpl", "onefpl"],
+        "providers": ["fffix", "onefpl"],
         "directions": ["FALL", "RISE"],
     }]
 
 
 def test_challenger_exception_is_isolated_and_nonblocking(monkeypatch, tmp_path):
-    official = SourceSpec("official_fpl", "Official FPL", "AUTHORITATIVE", 1, True, True, "runtime_official", ("prices",), {})
-    challenger = SourceSpec("livefpl", "LiveFPL", "CHALLENGER", 2, True, False, "livefpl", ("price_prediction",), {})
+    official = SourceSpec("official_fpl", "Official FPL", "AUTHORITATIVE", 1, True, True, "runtime_official", ("prices", "price_prediction"), {})
+    challenger = SourceSpec("fffix", "Fantasy Football Fix", "CHALLENGER", 2, True, False, "public_web", ("price_prediction",), {})
     monkeypatch.setattr(manager, "source_specs", lambda: (official, challenger))
     monkeypatch.setattr(manager, "load_source_registry", lambda: {"policy": {"default_timeout_seconds": 0.1, "max_workers": 2}})
     monkeypatch.setattr(manager, "registry_integrity", lambda: {"integrity_ok": True})
 
     def fake_run(spec, data_dir, timeout):
-        if spec.source_id == "livefpl":
+        if spec.source_id == "fffix":
             raise RuntimeError("challenger unavailable")
-        return SourceResult("official_fpl", "LIVE", True, 1.0, 0, {"prices": "AUTHORITATIVE_NATIVE"}, {})
+        return SourceResult("official_fpl", "LIVE", True, 1.0, 0, {"prices": "AUTHORITATIVE_NATIVE", "price_prediction": "AUTHORITATIVE_NATIVE"}, {})
 
     monkeypatch.setattr(manager, "_run_one", fake_run)
     result = manager.collect_sources(tmp_path)
     assert result["decision_blocking"] is False
     assert result["overall"] == "AMBER"
-    live = next(row for row in result["sources"] if row["id"] == "livefpl")
-    assert live["status"] == "UNAVAILABLE"
-    assert live["detail"]["isolated_failure"] is True
+    fffix = next(row for row in result["sources"] if row["id"] == "fffix")
+    assert fffix["status"] == "UNAVAILABLE"
+    assert fffix["detail"]["isolated_failure"] is True

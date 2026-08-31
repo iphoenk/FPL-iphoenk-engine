@@ -1,17 +1,24 @@
 {
-  "schema_version": 3,
-  "contract": "OWNED_CHALLENGER_COMPARATOR_V3",
-  "owner": "reporting.owned_challenger_comparator",
-  "capability_status": "ADVISORY_ONLY",
+  "schema_version": 4,
+  "contract": "OWNED_CHALLENGER_DECISION_ENGINE_V1",
+  "owner": "squad_decision.challenger_analysis.owned_challenger_evaluation",
+  "capability_status": "GOVERNED_DECISION_ENRICHMENT",
   "horizons": [1, 2, 3, 5],
   "strategic_horizons": [10, 15],
-  "output_states": ["HOLD", "WATCH", "REVIEW", "LEAN_TRANSFER", "STRONG_TRANSFER"],
-  "actionability_states": ["WATCH", "REVIEW", "MATERIAL_UPGRADE", "ACTIONABLE_CHANGE"],
-  "challenger_types": ["GOVERNED_WATCHLIST", "EMERGING_CHALLENGER"],
+  "lifecycle_states": ["UNCHALLENGED", "CHALLENGED_OWNED", "EMERGING_CHALLENGER", "ACTIVE_CHALLENGER"],
+  "output_states": ["HOLD", "REVIEW", "REVIEW_NOW", "CHANGE", "BLOCKED"],
   "owned_targeting": {
     "same_position_required": true,
-    "max_owned_targets_per_challenger": 3,
-    "prefer_direct_swap_affordability": true
+    "max_owned_targets_per_challenger": 15,
+    "full_owned_15_screen_required": true,
+    "never_hardcode_player_out": true
+  },
+  "owned_ranking": {
+    "h5_weight": 1.0,
+    "h3_weight": 0.35,
+    "start_probability_weight": 3.0,
+    "dnp_probability_weight": 2.0,
+    "uncertainty_weight": 0.25
   },
   "emerging_screen": {
     "max_candidates": 12,
@@ -30,28 +37,22 @@
   },
   "decision": {
     "review_gain_5gw": 1.0,
-    "lean_gain_5gw": 3.0,
-    "strong_gain_5gw": 5.0,
-    "minimum_positive_3gw_for_material": 0.5,
-    "lean_minimum_signal_to_noise": 0.55,
-    "strong_minimum_signal_to_noise": 0.85,
-    "minimum_start_probability_for_transfer": 0.60,
-    "strong_minimum_start_probability": 0.75,
-    "strong_requires_complete_critical_evidence": true,
-    "missing_critical_evidence_caps_at": "REVIEW",
-    "actionable_change_requires_explicit_timing_evidence": true
+    "review_now_gain_5gw": 3.0,
+    "change_gain_5gw": 5.0,
+    "minimum_positive_3gw_for_change": 0.5,
+    "change_minimum_signal_to_noise": 0.85,
+    "minimum_start_probability_for_change": 0.60,
+    "missing_critical_evidence_caps_change": true,
+    "change_requires_canonical_package": true,
+    "market_actionable_urgencies": ["CRITICAL", "HIGH"]
   },
-  "critical_evidence": [
-    "canonical_projection",
-    "canonical_xmins",
-    "same_position",
-    "exact_sell_value",
-    "affordability",
-    "club_legality",
-    "tactical_context",
-    "competitive_load",
-    "external_consensus"
-  ],
+  "publication": {
+    "max_main_transfer_battles": 8,
+    "max_multi_transfer_packages": 8,
+    "exact_owned_required": 15,
+    "exact_watchlist_required": 20,
+    "fail_closed_on_fact_incompleteness": true
+  },
   "governance": {
     "reuse_canonical_projection_xpts": true,
     "reuse_canonical_xmins": true,
@@ -59,17 +60,20 @@
     "reuse_canonical_package_legality_and_scoring": true,
     "reuse_canonical_price_state": true,
     "reuse_governed_watchlist": true,
+    "weather_contextual_only": true,
+    "market_timing_subordinate_to_football": true,
     "one_match_haul_is_trigger_not_buy": true,
     "positive_projected_edge_is_not_sufficient_alone": true,
-    "three_to_five_gw_net_benefit_required_for_material_upgrade": true,
-    "actionable_change_requires_affordability_starter_security_tactical_fit_and_timing": true,
-    "no_majority_vote_across_external_models": true,
+    "multi_gw_net_benefit_required": true,
     "may_not_overwrite_canonical_transfer_recommendation": true,
     "may_not_overwrite_starting_xi": true,
     "may_not_overwrite_captain_or_vice": true,
     "may_not_overwrite_watchlist": true,
     "may_not_overwrite_chip_decision": true,
+    "execution_authority_preserved": true,
     "missing_evidence_is_explicit": true,
-    "advisory_until_calibrated": true
+    "data_join_defect_is_internal_only": true,
+    "reporting_must_not_recompute_decision": true,
+    "cross_engine_consensus_requires_both_governed_artifacts": true
   }
 }

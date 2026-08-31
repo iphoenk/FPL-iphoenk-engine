@@ -1,0 +1,45 @@
+name: V4 temporary red-audit hardening
+
+on:
+  push:
+    branches:
+      - codex/v4-red-audit-hardening
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v4-red-audit-hardening-temp
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: codex/v4-red-audit-hardening
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Apply guarded hardening migration
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python tools/v4_red_audit_hardening_apply.py
+      - name: Rebuild architecture attestation from final governed bytes
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: python tools/v4_architecture_guard_attest.py
+      - name: Remove temporary migration machinery
+        run: git rm tools/v4_red_audit_hardening_apply.py .github/workflows/v4-red-audit-hardening-temp.yml
+      - name: Commit hardening
+        run: |
+          set -euo pipefail
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: close V4 audit red authority gaps"
+          git push origin HEAD:codex/v4-red-audit-hardening

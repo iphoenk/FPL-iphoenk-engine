@@ -46,7 +46,9 @@ def test_quality_gate_runner_uses_explicit_dependencies_without_module_monkeypat
 
 def test_optimizer_runtime_owner_is_fast_and_reference_is_equivalence_only():
     registry = _json("config/optimizer_equivalence_registry.json")
+    manifest = _json("config/release_manifest.json")
     decision_source = _text("src/engines/v4_decision_pipeline.py")
+    assert manifest["registries"]["optimizer_equivalence"] == registry["registry"]
     assert "from src.engines.v4_wc_optimizer_fast import decision_report_from_candidates_fast" in decision_source
     assert "from src.engines.v4_wc_package_audit_fast import audit_packages_from_candidates_fast" in decision_source
     assert "decision_report_from_candidates_fast(" in decision_source
@@ -61,9 +63,12 @@ def test_optimizer_runtime_owner_is_fast_and_reference_is_equivalence_only():
 
 def test_runtime_artifact_authority_is_separate_from_source_seed():
     policy = _json("config/runtime_artifact_policy.json")
+    manifest = _json("config/release_manifest.json")
     workflow = _text(".github/workflows/fpl-engine-core.yml")
     gitignore = _text(".gitignore")
 
+    assert manifest["registries"]["runtime_artifact_authority"] == policy["registry"]
+    assert manifest["runtime_branch"] == policy["runtime_branch"]["branch"]
     assert policy["source_branch"]["mutable_runtime_freshness_authority"] is False
     assert policy["runtime_branch"]["branch"] == "runtime-data-v4"
     assert policy["runtime_branch"]["mutable_runtime_freshness_authority"] is True

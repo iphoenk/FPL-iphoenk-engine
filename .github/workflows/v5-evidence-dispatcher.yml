@@ -1,0 +1,48 @@
+name: V5 Evidence Dispatcher
+
+on:
+  schedule:
+    # Default-branch scheduler. The V5 branch itself intentionally has no cron.
+    - cron: "30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v5-evidence-dispatcher
+  cancel-in-progress: true
+
+env:
+  V5_CODE_BRANCH: v5-unified-engine
+  V5_SHADOW_BRANCH: v5-shadow-runtime
+  V3_RUNTIME_BRANCH: runtime-data
+  TZ_AUTHORITY: Asia/Jakarta
+
+jobs:
+  evidence-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout V5 scheduler authority
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: v5-unified-engine
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Evaluate governed evidence window
+        id: gate
+        shell: bash
+        run: python scripts/v5_evidence_scheduler_gate.py --event-name "$GITHUB_EVENT_NAME"
+
+      - name: Trigger governed V5 shadow evidence cycle
+        if: steps.gate.outputs.should_run == 'true'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/v5_dispatch_shadow_trigger.py --reasons "${{ steps.gate.outputs.reasons }}"
+
+      - name: No-op outside governed evidence windows or during baseline drift
+        if: steps.gate.outputs.should_run != 'true'
+        run: echo "No heavy V5 cycle required; either outside an evidence window or deployed production baseline is not reconciled."

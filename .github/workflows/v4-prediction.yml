@@ -24,7 +24,7 @@ jobs:
       canonical_sha: ${{ steps.resolve.outputs.canonical_sha }}
       execution_observed: ${{ steps.resolve.outputs.execution_observed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
       - name: Resolve current canonical V4 SHA

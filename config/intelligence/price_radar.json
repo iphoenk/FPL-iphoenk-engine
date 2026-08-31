@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "model_id": "official_price_radar_v3",
   "source_authority": [
     "OFFICIAL_FPL",
@@ -23,6 +23,9 @@
     "minimum_abs_net_transfers": 5000,
     "high_confidence_abs_net_transfers": 25000
   },
+  "transfer_momentum_evidence": {
+    "minimum_coverage_ratio": 0.95
+  },
   "urgency": {
     "critical_progress_pct": 90.0,
     "high_progress_pct": 75.0,
@@ -31,6 +34,11 @@
       "CRITICAL",
       "HIGH"
     ]
+  },
+  "squeeze_policy": {
+    "scenario_steps_tenths": [1, 2],
+    "material_urgency_levels": ["HIGH", "CRITICAL"],
+    "worst_reasonable_short_horizon_tenths": 2
   },
   "calibration": {
     "minimum_samples_for_calibrated_health": 20,
@@ -42,6 +50,8 @@
     "max_events": 250
   },
   "serving": {
+    "price_pressure_list_size": 25,
+    "price_summary_list_size": 20,
     "market_watch_capacity": 50,
     "alert_summary_size": 20
   },
@@ -54,6 +64,8 @@
     "confirmed_and_predicted_price_changes_are_separate": true,
     "missing_values_are_never_coerced_to_zero": true,
     "calibration_and_lock_semantics_are_explicit": true,
-    "official_update_clock_is_dst_safe": true
+    "official_update_clock_is_dst_safe": true,
+    "price_business_authority_owned_by_price_service": true,
+    "cross_service_price_consumption_must_use_versioned_service_contract": true
   }
 }

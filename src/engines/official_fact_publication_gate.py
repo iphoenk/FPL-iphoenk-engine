@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 from src.engines.official_fact_completeness import (
@@ -100,14 +99,6 @@ def _patch_report_payload(payload: dict[str, Any], facts: dict[int, dict[str, An
     return out
 
 
-def _patch_watchlist_source(path: Path, facts: dict[int, dict[str, Any]]) -> None:
-    payload = read_json(path, {})
-    if not payload:
-        return
-    payload["positions"] = _apply_position_rows(payload.get("positions") or {}, facts)
-    atomic_json(path, payload)
-
-
 def _predictor_health(latest: dict[str, Any]) -> str:
     direct = latest.get("price_model_health") or {}
     if not direct:
@@ -157,7 +148,6 @@ def run() -> dict[str, Any]:
 
     require_complete_user_report(integrity)
     facts = _fact_map(integrity)
-    _patch_watchlist_source(DATA / "dss_watchlist.json", facts)
     for path in REPORT_FILES:
         payload = read_json(path, {})
         if payload:

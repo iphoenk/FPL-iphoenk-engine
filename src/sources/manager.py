@@ -29,7 +29,26 @@ def _parse_dt(value: Any) -> datetime | None:
 
 def _official_result(spec: SourceSpec, data_dir: Path) -> SourceResult:
     health = read_json(data_dir / "health.json", {})
-    critical = ("bootstrap", "fixtures", "entry", "history", "transfers")
+    critical = tuple(
+        str(name).strip()
+        for name in (spec.config.get("health_endpoints") or ())
+        if str(name).strip()
+    )
+    if not critical:
+        return SourceResult(
+            spec.source_id,
+            "DEGRADED",
+            False,
+            None,
+            0,
+            {cap: "DEGRADED" for cap in spec.capabilities},
+            {
+                "critical_endpoints": {},
+                "authority": "Official FPL",
+                "reused_collector_health": True,
+                "registry_error": "missing health_endpoints",
+            },
+        )
     states = {name: (health.get(name) or {}).get("status") for name in critical}
     live = all(states.get(name) == "LIVE" for name in critical)
     latencies = [(health.get(name) or {}).get("latency_ms") for name in critical]
@@ -45,12 +64,17 @@ def _artifact_result(spec: SourceSpec, data_dir: Path) -> SourceResult:
 
 
 def _weather_artifact_result(spec: SourceSpec, data_dir: Path) -> SourceResult:
-    payload = read_json(data_dir / "fixture_weather.json", {})
+    paths = [str(x).strip() for x in spec.config.get("artifact_paths") or [] if str(x).strip()]
+    artifact = paths[0] if len(paths) == 1 else None
+    payload = read_json(data_dir / artifact, {}) if artifact else {}
     exists = bool(payload)
     available = int(payload.get("available_count") or 0)
     fixtures = int(payload.get("fixture_count") or 0)
     material = int(payload.get("material_count") or 0)
-    if not exists:
+    if artifact is None:
+        status = "PARTIAL"
+        state = "UNAVAILABLE"
+    elif not exists:
         status = "PARTIAL"
         state = "UNAVAILABLE"
     elif available > 0:
@@ -59,6 +83,15 @@ def _weather_artifact_result(spec: SourceSpec, data_dir: Path) -> SourceResult:
     else:
         status = "LIVE"
         state = "NO_FORECAST_IN_WINDOW"
+    detail = {
+        "artifact": artifact,
+        "fixture_count": fixtures,
+        "available_count": available,
+        "material_count": material,
+        "advisory_only": bool((payload.get("governance") or {}).get("advisory_only")),
+    }
+    if artifact is None:
+        detail["registry_error"] = "weather_artifact requires exactly one artifact_paths entry"
     return SourceResult(
         spec.source_id,
         status,
@@ -66,13 +99,7 @@ def _weather_artifact_result(spec: SourceSpec, data_dir: Path) -> SourceResult:
         0.0,
         available,
         {cap: state for cap in spec.capabilities},
-        {
-            "artifact": "fixture_weather.json",
-            "fixture_count": fixtures,
-            "available_count": available,
-            "material_count": material,
-            "advisory_only": bool((payload.get("governance") or {}).get("advisory_only")),
-        },
+        detail,
     )
 
 

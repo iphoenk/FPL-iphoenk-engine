@@ -11,7 +11,7 @@ from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
 
 CACHE = DATA / "predictions_base_hot_cache_v4.json"
-ALGORITHM = "v4.9.6-exact-base-prediction-cache-v7"
+ALGORITHM = "v4.9.6-exact-base-prediction-cache-v8"
 _LAST_STATUS: dict = {}
 
 # Official FPL exposes fields that can change minute-to-minute but are not read
@@ -19,6 +19,11 @@ _LAST_STATUS: dict = {}
 # full model rebuilds on otherwise semantically identical refreshes. They remain
 # available to their factual/market layers and are excluded only from the exact
 # base-prediction fingerprint.
+#
+# The governed Official price-predictor fields deliberately live in market_context
+# and may influence timing/affordability/optionality only. They must not invalidate
+# xPts or silently become prediction-model inputs merely because their live values
+# change between two Official refreshes.
 NON_MODEL_ELEMENT_FIELDS = {
     "transfers_in",
     "transfers_out",
@@ -28,6 +33,11 @@ NON_MODEL_ELEMENT_FIELDS = {
     "cost_change_event_fall",
     "cost_change_start",
     "cost_change_start_fall",
+    "price_change_percent",
+    "price_change_hourly_rate",
+    "price_change_projections",
+    "price_change_locked_until",
+    "price_change_calibrating",
     "ep_next",
     "ep_this",
     "in_dreamteam",
@@ -192,7 +202,7 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
     canonical_build_ms = round((perf_counter() - t) * 1000.0, 2)
     t = perf_counter()
     atomic_json(CACHE, {
-        "schema_version": 7,
+        "schema_version": 8,
         "algorithm": ALGORITHM,
         "fingerprint": fingerprint,
         "predictions": predictions,
@@ -200,6 +210,8 @@ def build_predictions_cached(bootstrap: dict, fixtures: list[dict], generated_at
             "canonical_builder_on_miss": True,
             "all_semantic_prediction_inputs_hashed": True,
             "non_model_market_counters_excluded_from_base_fingerprint": True,
+            "official_price_predictor_fields_excluded_from_xpts_fingerprint": True,
+            "price_predictor_remains_market_context_only": True,
             "official_team_fixture_event_fields_projected_to_exact_model_consumption": True,
             "volatile_non_model_official_metadata_cannot_invalidate_cache": True,
             "consumed_official_fields_still_invalidate_cache": True,

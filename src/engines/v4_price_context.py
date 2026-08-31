@@ -246,33 +246,34 @@ def squeeze_for_pairs(prices: dict, pairs: Iterable[tuple[int, int]], ledger: li
     return out
 
 
-def refresh_price_context() -> dict:
+def refresh_price_context(*, raw: dict | None = None, team: dict | None = None, data_dir=None) -> dict:
     """Prediction-stage owner for the canonical price artifact.
 
-    This function may write only the governed price cache/artifact. It deliberately
-    does not mutate data/latest.json, which is locked after Prediction completes.
-    The current DSS watchlist is discovered later by Optimization and is joined
-    read-only through serve_price_evidence().
+    Prediction passes its already-loaded governed snapshot and team payload so this
+    path does not re-read or refetch Official facts. Standalone invocation may fall
+    back to the canonical snapshot file. This function writes only the price cache
+    and price artifact; it never mutates data/latest.json.
     """
-    raw = read_json(SNAPSHOT, {})
-    team = read_json(DATA / "team.json", {})
-    bootstrap = ((raw.get("official") or {}).get("bootstrap") or {})
+    target_data = data_dir or DATA
+    raw_payload = raw if raw is not None else read_json(SNAPSHOT, {})
+    team_payload = team if team is not None else read_json(target_data / "team.json", {})
+    bootstrap = ((raw_payload.get("official") or {}).get("bootstrap") or {})
     if not bootstrap.get("elements"):
         raise RuntimeError("Official bootstrap required for V4 price context")
 
-    owned_ids = {int(row.get("element") or 0) for row in team.get("squad") or [] if row.get("element") is not None}
-    previous_cache = read_json(DATA / "price_cache.json", {})
+    owned_ids = {int(row.get("element") or 0) for row in team_payload.get("squad") or [] if row.get("element") is not None}
+    previous_cache = read_json(target_data / "price_cache.json", {})
     context = build_market_context(
         bootstrap,
-        observed_at=raw.get("generated_at"),
+        observed_at=raw_payload.get("generated_at"),
         now=utcnow(),
         previous_cache=previous_cache,
         owned_ids=owned_ids,
         watchlist_ids=(),
-        transport_health=((raw.get("endpoint_health") or {}).get("bootstrap") or {"status": "SNAPSHOT_DERIVED"}),
+        transport_health=((raw_payload.get("endpoint_health") or {}).get("bootstrap") or {"status": "SNAPSHOT_DERIVED"}),
     )
-    atomic_json(DATA / "price_cache.json", context.pop("price_cache"))
-    atomic_json(DATA / "prices.json", context)
+    atomic_json(target_data / "price_cache.json", context.pop("price_cache"))
+    atomic_json(target_data / "prices.json", context)
     return context
 
 

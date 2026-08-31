@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from src.engines import official_snapshot_service
 from src.runtime_v3 import reuse_freshness
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +18,16 @@ def _stub_validation(monkeypatch):
         "validate_artifact",
         lambda path, artifact: {"artifact": artifact, "valid": True},
     )
+
+
+def _patch_snapshot_paths(monkeypatch, tmp_path):
+    out = tmp_path / "official_snapshot.json"
+    retry = tmp_path / "official_snapshot.retry.json"
+    health = tmp_path / "health.json"
+    monkeypatch.setattr(official_snapshot_service, "OUT", out)
+    monkeypatch.setattr(official_snapshot_service, "RETRY_OUT", retry)
+    monkeypatch.setattr(official_snapshot_service, "HEALTH_OUT", health)
+    return out, retry, health
 
 
 def test_fast_warm_retry_reuses_only_fresh_same_workspace_official_snapshot(monkeypatch, tmp_path):
@@ -100,6 +111,74 @@ def test_fast_warm_retry_restores_ephemeral_snapshot_from_fresh_workspace_mirror
     )
     assert stale is None
     assert not (tmp_path / "official_snapshot.json").exists()
+
+
+def test_fresh_official_pull_writes_exact_workspace_retry_mirror(monkeypatch, tmp_path):
+    out_path, retry_path, health_path = _patch_snapshot_paths(monkeypatch, tmp_path)
+    fetched_at = "2026-08-31T08:00:00+00:00"
+
+    def fake_get_json(path, retries=None):
+        health = {"status": "LIVE", "fetched_at": fetched_at}
+        if path == "bootstrap-static/":
+            return {"elements": [{"id": 1}], "events": []}, health
+        if path == "fixtures/":
+            return [], health
+        if path.endswith("/transfers/"):
+            return [], health
+        return {}, health
+
+    monkeypatch.setattr(official_snapshot_service, "get_json", fake_get_json)
+    monkeypatch.setattr(
+        official_snapshot_service,
+        "detect_phase",
+        lambda bootstrap: {
+            "planning_gw": 3,
+            "submitted_gw": None,
+            "scoring_gw": None,
+            "is_live_event": False,
+        },
+    )
+
+    result = official_snapshot_service.run()
+    assert result["official_freshness"]["state"] == "FRESH"
+    assert out_path.exists()
+    assert retry_path.exists()
+    assert health_path.exists()
+    assert json.loads(retry_path.read_text(encoding="utf-8")) == json.loads(out_path.read_text(encoding="utf-8"))
+    assert result["governance"]["workspace_retry_mirror_created_only_from_fresh_pull"] is True
+    assert result["governance"]["workspace_retry_mirror_has_zero_publication_authority"] is True
+
+
+def test_failed_fresh_pull_clears_retry_mirror_before_fallback(monkeypatch, tmp_path):
+    out_path, retry_path, _ = _patch_snapshot_paths(monkeypatch, tmp_path)
+    verified_at = "2026-08-31T07:50:00+00:00"
+    previous = {
+        "generated_at": verified_at,
+        "bootstrap": {"elements": [{"id": 1}]},
+        "endpoint_health": {"bootstrap": {"status": "LIVE", "fetched_at": verified_at}},
+        "official_freshness": {
+            "state": "FRESH",
+            "fallback": False,
+            "snapshot_id": f"bootstrap-static@{verified_at}",
+            "last_verified_at": verified_at,
+        },
+    }
+    out_path.write_text(json.dumps(previous), encoding="utf-8")
+    retry_path.write_text(json.dumps({"generated_at": "2026-08-31T08:00:00+00:00"}), encoding="utf-8")
+
+    def failed_get_json(path, retries=None):
+        return None, {
+            "status": "UNAVAILABLE",
+            "fetched_at": "2026-08-31T08:01:00+00:00",
+            "error": "simulated failure",
+        }
+
+    monkeypatch.setattr(official_snapshot_service, "get_json", failed_get_json)
+    result = official_snapshot_service.run()
+    assert result["official_freshness"]["state"] == "FALLBACK"
+    assert result["official_freshness"]["fallback"] is True
+    assert not retry_path.exists()
+    assert result["governance"]["workspace_retry_mirror_created_only_from_fresh_pull"] is True
 
 
 def test_official_snapshot_warm_reuse_cannot_cross_production_jobs():

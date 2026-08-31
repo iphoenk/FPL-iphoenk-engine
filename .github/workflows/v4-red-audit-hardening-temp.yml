@@ -33,8 +33,6 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python tools/v4_architecture_guard_attest.py
-      - name: Remove temporary migration machinery
-        run: git rm tools/v4_red_audit_hardening_apply.py .github/workflows/v4-red-audit-hardening-temp.yml
       - name: Commit hardening
         run: |
           set -euo pipefail

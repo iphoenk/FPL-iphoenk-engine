@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any
 
 from src.engines import collector_gate
@@ -13,10 +12,6 @@ MANIFEST_PATH = DATA / "runtime_manifest.json"
 PRECOMPUTE_ROLE = "PRECOMPUTE_NEXT_CHECKPOINT"
 LATE_PRECOMPUTE_ROLE = "LATE_PRECOMPUTE_RECOVERY"
 PRIMARY_FALLBACK_ROLE = "PRIMARY_FALLBACK_CURRENT_CHECKPOINT"
-
-
-def _truthy(value: Any) -> bool:
-    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _parse_dt(value: Any) -> datetime | None:
@@ -69,9 +64,8 @@ def _local_tz():
 def target_checkpoint_for_precompute(now_utc: datetime) -> datetime:
     """Resolve the logical :30 target for a physical :15 precompute.
 
-    The scheduled run may start late. Until :44 local we keep the current-hour
-    :30 target so lateness is visible rather than silently relabeling the run
-    as next hour. At :45 or later the next :30 becomes the only honest target.
+    Until :44 local, retain the current-hour :30 target so scheduler lateness
+    remains visible. At :45 or later, the next :30 is the only honest target.
     """
     local = now_utc.astimezone(timezone.utc).astimezone(_local_tz())
     target_minute = int(_policy().get("visible_checkpoint_minute") or 30)
@@ -97,6 +91,11 @@ def _manifest_precompute_valid(
     target_utc: datetime,
     source_commit: str,
 ) -> bool:
+    """Validate a precompute already observed on the runtime branch.
+
+    Presence of this manifest in hydrated runtime-data is the publication proof;
+    the materialized manifest itself never claims that a future push completed.
+    """
     checkpoint = manifest.get("checkpoint") or {}
     generated_at = _parse_dt(manifest.get("generated_at"))
     target = _parse_dt(checkpoint.get("target_checkpoint"))
@@ -106,9 +105,9 @@ def _manifest_precompute_valid(
         return False
     if generated_at is None or generated_at > target_utc.astimezone(timezone.utc):
         return False
-    if str(manifest.get("source_commit") or "") != str(source_commit or ""):
+    if checkpoint.get("generated_before_or_at_target") is not True:
         return False
-    if checkpoint.get("publication_complete") is False:
+    if str(manifest.get("source_commit") or "") != str(source_commit or ""):
         return False
     return True
 

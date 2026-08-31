@@ -24,7 +24,7 @@
     "price_radar_requires_mandatory_challenger_detail": true
   },
   "artifacts": {
-    "decision_brief": {"path":"data/decision_brief.json","consumer":"chatgpt-fast","priority":"P0","lazy_load":false,"max_bytes":80000,"required_owned_count":15,"required_watchlist_count":20,"required_sections":["user_presentation","report_checkpoint","gameweek_context","report_time_intelligence","model_validation","weather_context"]},
+    "decision_brief": {"path":"data/decision_brief.json","consumer":"chatgpt-fast","priority":"P0","lazy_load":false,"max_bytes":100000,"required_owned_count":15,"required_watchlist_count":20,"required_sections":["user_presentation","report_checkpoint","gameweek_context","report_time_intelligence","model_validation","weather_context"]},
     "deep_review_payload": {"path":"data/deep_review_payload.json","consumer":"chatgpt-deep-review","priority":"P0","lazy_load":false,"max_bytes":225000,"required_owned_count":15,"required_watchlist_count":20,"required_sections":["user_presentation","report_checkpoint","gameweek_context","report_time_intelligence","model_validation","weather_context"]},
     "user_report": {"path":"data/user_report.json","consumer":"human-report-contract","priority":"P0","lazy_load":false,"max_bytes":225000,"required_owned_count":15,"required_watchlist_count":20,"required_sections":["user_presentation","report_checkpoint","gameweek_context","report_time_intelligence","model_validation","weather_context"]},
     "watchlist_summary": {"path":"data/dss_watchlist_summary.json","consumer":"chatgpt-watchlist","priority":"P0","lazy_load":false,"max_bytes":32000,"required_watchlist_count":20},

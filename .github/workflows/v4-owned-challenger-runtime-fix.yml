@@ -61,16 +61,24 @@ jobs:
           if import_line not in text:
               text = text.replace(import_anchor, import_anchor + import_line)
           call_anchor = '    checkpoint_ms = round((perf_counter() - started) * 1000.0, 2)\n\n    integrity = _publication_integrity_state()'
-          call_replacement = '    checkpoint_ms = round((perf_counter() - started) * 1000.0, 2)\n\n    challenger_serving = compose_challenger_serving()\n\n    integrity = _publication_integrity_state()'
+          call_replacement = '''    checkpoint_ms = round((perf_counter() - started) * 1000.0, 2)
+
+              if (DATA / "owned_challenger_decision_v4.json").exists() and (DATA / "serving_payload_v4.json").exists():
+                  challenger_serving = compose_challenger_serving()
+              else:
+                  challenger_serving = {"status": "NOT_MATERIALIZED"}
+
+              integrity = _publication_integrity_state()'''
+          call_replacement = '\n'.join(line[10:] if line.startswith('          ') else line for line in call_replacement.splitlines())
           if call_anchor not in text:
               raise SystemExit('governance composition anchor not found')
           text = text.replace(call_anchor, call_replacement, 1)
           governance.write_text(text, encoding='utf-8')
           PY
-      - name: Full regression suite
-        run: python -m pytest -q
       - name: Refresh governed architecture attestation
         run: python tools/v4_architecture_guard_attest.py
+      - name: Full regression suite
+        run: python -m pytest -q
       - name: Commit runtime fix and attestation
         shell: bash
         run: |

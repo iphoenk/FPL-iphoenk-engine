@@ -332,7 +332,7 @@ def _normalise_player(
     stale = freshness_seconds is None or freshness_seconds > OFFICIAL_MAX_AGE_SECONDS
 
     if errors:
-        evidence_state = "SCHEMA_CHANGED" if any("SCHEMA_CHANGED" in item for item in errors) else "FIELD_MISSING"
+        evidence_state = "FIELD_MISSING" if all(item.endswith("FIELD_MISSING") for item in errors) else "SCHEMA_CHANGED"
         confidence = "LOW"
         fallback_reason = ";".join(sorted(set(errors)))
     elif stale:

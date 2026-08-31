@@ -2,12 +2,19 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 from urllib.request import Request, urlopen
 
 
 POLICY_PATH = Path("config/runtime/main_provenance_policy.json")
+_SHA40 = re.compile(r"^[0-9a-f]{40}$")
+_REQUIRED_TRUE_POLICY_FLAGS = (
+    "require_anchor_in_first_parent_history",
+    "require_each_first_parent_commit_after_anchor_from_merged_pr",
+    "fail_closed_on_github_api_error",
+)
 
 
 def _github_json(url: str, token: str) -> Any:
@@ -156,15 +163,25 @@ def _load_policy(path: Path = POLICY_PATH) -> dict[str, Any]:
         raise RuntimeError("MAIN_PROVENANCE_POLICY_UNREADABLE") from exc
     if not isinstance(payload, dict):
         raise RuntimeError("MAIN_PROVENANCE_POLICY_INVALID")
-    if payload.get("registry") != "V3_MAIN_PROVENANCE_POLICY_V1":
+    if payload.get("registry") != "V3_MAIN_PROVENANCE_POLICY_V1" or payload.get("schema_version") != 1:
         raise RuntimeError("MAIN_PROVENANCE_POLICY_REGISTRY_MISMATCH")
+    if payload.get("branch") != "main":
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_BRANCH_INVALID")
+    anchor = payload.get("trust_anchor_sha")
+    if not isinstance(anchor, str) or not _SHA40.fullmatch(anchor):
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_ANCHOR_INVALID")
+    max_depth = payload.get("max_first_parent_commits")
+    if not isinstance(max_depth, int) or isinstance(max_depth, bool) or not 1 <= max_depth <= 4096:
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_MAX_DEPTH_INVALID")
+    if any(payload.get(flag) is not True for flag in _REQUIRED_TRUE_POLICY_FLAGS):
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_INSECURE")
     return payload
 
 
 def run() -> dict[str, Any]:
     policy = _load_policy()
     branch = os.environ.get("GITHUB_REF_NAME", "")
-    policy_branch = str(policy.get("branch") or "")
+    policy_branch = str(policy["branch"])
     if branch != policy_branch:
         raise RuntimeError(
             f"MAIN_PROVENANCE_BRANCH_POLICY_MISMATCH runtime={branch} policy={policy_branch}"
@@ -176,8 +193,8 @@ def run() -> dict[str, Any]:
         sha=os.environ.get("GITHUB_SHA", ""),
         branch=branch,
         token=os.environ.get("GH_TOKEN", ""),
-        trust_anchor_sha=str(policy.get("trust_anchor_sha") or ""),
-        max_first_parent_commits=int(policy.get("max_first_parent_commits") or 256),
+        trust_anchor_sha=str(policy["trust_anchor_sha"]),
+        max_first_parent_commits=int(policy["max_first_parent_commits"]),
     )
     print(json.dumps(result, sort_keys=True))
     return result

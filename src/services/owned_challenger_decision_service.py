@@ -732,8 +732,7 @@ def build() -> dict[str, Any]:
 def run() -> dict[str, Any]:
     out = build()
     atomic_json(OUT, out)
-    latest = read_json(DATA / "latest.json", {})
-    latest["owned_challenger_decision_v4"] = {
+    print(json.dumps({
         "status": out.get("status"),
         "owned_count": out.get("owned_count"),
         "governed_watchlist_count": out.get("governed_watchlist_count"),
@@ -742,12 +741,8 @@ def run() -> dict[str, Any]:
         "multi_transfer_package_count": len(out.get("multi_transfer_packages") or []),
         "overall_decision": out.get("overall_decision"),
         "execution_authorized": out.get("execution_authorized"),
-    }
-    latest.setdefault("files", {})["owned_challenger_decision_v4"] = "data/owned_challenger_decision_v4.json"
-    atomic_json(DATA / "latest.json", latest)
-    print(json.dumps(latest["owned_challenger_decision_v4"], ensure_ascii=False))
+    }, ensure_ascii=False))
     return out
-
 
 if __name__ == "__main__":
     run()

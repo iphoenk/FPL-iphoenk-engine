@@ -6,6 +6,7 @@ from time import perf_counter
 
 from src import utils as runtime_utils
 from src.engines import v4_checkpoint_governance, v4_maturity_reconciler
+from src.engines.v4_challenger_serving_composition import compose as compose_challenger_serving
 from src.services import framework_postflight_truth_service
 from src.services.weather_health_overlay import apply_weather_health
 from src.utils import DATA, atomic_json, read_json
@@ -260,6 +261,11 @@ def run() -> dict:
             atomic_json(DATA / "framework_health_v4.json", maturity)
         raise
     checkpoint_ms = round((perf_counter() - started) * 1000.0, 2)
+
+    if (DATA / "owned_challenger_decision_v4.json").exists() and (DATA / "serving_payload_v4.json").exists():
+        challenger_serving = compose_challenger_serving()
+    else:
+        challenger_serving = {"status": "NOT_MATERIALIZED"}
 
     integrity = _publication_integrity_state()
     if integrity:

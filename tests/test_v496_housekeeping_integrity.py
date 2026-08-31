@@ -121,6 +121,7 @@ def test_governance_boundary_preserves_and_declares_serving_artifact_contracts()
         "checkpoint_decision",
         "serving_payload",
         "serving_benchmark",
+        "publication_integrity",
     }
 
 

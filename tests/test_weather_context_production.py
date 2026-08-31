@@ -253,9 +253,9 @@ def test_weather_domain_and_publish_contract_are_canonical() -> None:
     assert domains["domains"]["weather_context"]["capabilities"] == ["weather_context"]
     assert "weather_context" not in domains["domains"]["football_context"]["capabilities"]
     assert domains["domains"]["prediction"]["depends_on"] == ["weather_context"]
-    assert domains["policy"]["weather_context_is_explicit_execution_domain"] is True
-    assert domains["policy"]["weather_context_has_no_direct_decision_authority"] is True
-    assert domains["policy"]["prediction_waits_for_governed_weather_context"] is True
+    assert domains["policy"]["weather_context_has_explicit_enrich_execution_domain"] is True
+    assert domains["policy"]["weather_context_is_governed_enrichment_without_decision_authority"] is True
+    assert domains["policy"]["market_context_and_weather_context_may_execute_in_parallel"] is True
     assert {"weather_context.json", "weather_context_health.json"} <= set(publish["hydrate_paths"])
     assert {"weather_context.json", "weather_context_health.json"} <= set(publish["publish_paths"])
     assert contracts["contracts"]["fixture_weather.json"]["equals"]["schema_version"] == 2

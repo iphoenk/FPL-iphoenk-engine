@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from src.engines import framework_health_audit as audit_engine
+from src.engines import p0_framework_health_overlay as p0_overlay
 from src.engines.framework_health_audit import EXPECTED_COUNTS, REGISTRIES, _gate0, _registry_integrity
 from src.utils import read_json
 
@@ -65,3 +66,52 @@ def test_every_framework_item_declares_criticality_and_probe_for_intelligence_la
         for row in obj[key]:
             assert isinstance(row.get("critical"), bool)
             assert row.get("operational_probe"), row["id"]
+
+
+def _write_challenger_scorecard(tmp_path, providers):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(exist_ok=True)
+    (data_dir / "challenger_scorecard.json").write_text(json.dumps({
+        "status": "ACTIVE_INTERNAL_ONLY_EXTERNAL_DATA_ABSENT",
+        "providers": providers,
+        "current_comparisons": [],
+        "structured_fresh_count": 0,
+        "auto_scrape": False,
+    }), encoding="utf-8")
+    return data_dir
+
+
+def test_challenger_health_is_partial_when_external_advisory_data_is_absent(tmp_path, monkeypatch):
+    data_dir = _write_challenger_scorecard(tmp_path, [
+        {"id": "internal", "state": "ACTIVE"},
+        {"id": "fffix", "state": "NO_OBSERVATION"},
+        {"id": "ffhub", "state": "NO_OBSERVATION"},
+    ])
+    monkeypatch.setattr(p0_overlay, "DATA", data_dir)
+    status, detail = p0_overlay._challenger_probe()
+    assert status == "PARTIAL"
+    assert detail["external_active"] == []
+    assert "no fabrication" in detail["reason"]
+
+
+def test_challenger_health_accepts_active_structured_state(tmp_path, monkeypatch):
+    data_dir = _write_challenger_scorecard(tmp_path, [
+        {"id": "internal", "state": "ACTIVE"},
+        {"id": "fffix", "state": "ACTIVE_STRUCTURED_OBSERVATION"},
+        {"id": "ffhub", "state": "NO_OBSERVATION"},
+    ])
+    monkeypatch.setattr(p0_overlay, "DATA", data_dir)
+    status, detail = p0_overlay._challenger_probe()
+    assert status == "ACTIVE"
+    assert detail["external_active"] == ["fffix"]
+
+
+def test_challenger_health_fails_closed_on_registry_provider_mismatch(tmp_path, monkeypatch):
+    data_dir = _write_challenger_scorecard(tmp_path, [
+        {"id": "internal", "state": "ACTIVE"},
+        {"id": "fffix", "state": "NO_OBSERVATION"},
+    ])
+    monkeypatch.setattr(p0_overlay, "DATA", data_dir)
+    status, detail = p0_overlay._challenger_probe()
+    assert status == "FAILED"
+    assert detail["missing"] == ["ffhub"]

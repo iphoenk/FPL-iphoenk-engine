@@ -67,9 +67,11 @@ def run() -> dict[str, Any]:
         if payload.get("topology_semantics") != "HISTORICAL_AT_TIME":
             errors.append(f"{block} topology must be explicitly HISTORICAL_AT_TIME")
 
-    retired = {str(value) for value in ownership.get("legacy_business_implementations_to_retire") or []}
+    retired = {str(value) for value in ownership.get("retired_business_implementations") or []}
     if not retired:
         errors.append("retired business implementation tombstone set is missing")
+    if ownership.get("policy", {}).get("retired_business_implementations_are_tombstones") is not True:
+        errors.append("retired business implementation tombstone policy disabled")
     existing_retired = sorted(module for module in retired if _module_path(module).is_file())
     if existing_retired:
         errors.append(f"retired duplicate business implementations still exist: {existing_retired}")

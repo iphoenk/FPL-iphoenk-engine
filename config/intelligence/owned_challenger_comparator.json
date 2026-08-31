@@ -1,20 +1,24 @@
 {
-  "schema_version": 3,
-  "contract": "OWNED_CHALLENGER_COMPARATOR_V3",
-  "owner": "reporting.owned_challenger_comparator",
-  "capability_status": "ADVISORY_ONLY",
+  "schema_version": 4,
+  "contract": "OWNED_CHALLENGER_DECISION_V3",
+  "owner": "decision.owned_challenger_evaluation",
+  "capability_status": "GOVERNED_DECISION",
   "horizons": [1, 2, 3, 5],
   "strategic_horizons": [10, 15],
-  "output_states": ["HOLD", "WATCH", "REVIEW", "LEAN_TRANSFER", "STRONG_TRANSFER"],
+  "pair_states": ["HOLD", "WATCH", "REVIEW", "LEAN_TRANSFER", "STRONG_TRANSFER"],
+  "decision_states": ["HOLD", "REVIEW", "REVIEW_NOW", "CHANGE", "BLOCKED"],
+  "owned_states": ["UNCHALLENGED", "CHALLENGED_OWNED"],
+  "challenger_states": ["DISCOVERED", "EMERGING_CHALLENGER", "ACTIVE_CHALLENGER"],
   "actionability_states": ["WATCH", "REVIEW", "MATERIAL_UPGRADE", "ACTIONABLE_CHANGE"],
-  "challenger_types": ["GOVERNED_WATCHLIST", "EMERGING_CHALLENGER"],
+  "challenger_types": ["FULL_UNIVERSE_DISCOVERY", "GOVERNED_WATCHLIST", "EMERGING_CHALLENGER", "MANDATORY_VALUE_MARKET_REVIEW"],
   "owned_targeting": {
     "same_position_required": true,
-    "max_owned_targets_per_challenger": 3,
-    "prefer_direct_swap_affordability": true
+    "max_owned_targets_per_challenger": 5,
+    "prefer_direct_swap_affordability": true,
+    "never_preselect_out_player": true
   },
   "emerging_screen": {
-    "max_candidates": 12,
+    "max_candidates": 20,
     "allowed_statuses": ["a", "d"],
     "minimum_expected_minutes": 50.0,
     "minimum_start_probability": 0.45,
@@ -28,6 +32,24 @@
     "sustainable_minimum_trigger_count": 2,
     "sustainable_minimum_start_probability": 0.60
   },
+  "projected_value_market_discovery": {
+    "max_predictor_freshness_seconds": 21600,
+    "material_urgencies": ["HIGH", "CRITICAL"],
+    "minimum_position_value_percentile": 0.75,
+    "value_min_xpts5_per_million": 2.4,
+    "value_min_h5": 12.0,
+    "value_min_start_probability": 0.65,
+    "value_min_expected_minutes": 65.0,
+    "football_min_h5": 14.0,
+    "football_min_start_probability": 0.60,
+    "football_min_expected_minutes": 60.0,
+    "structural_min_xpts5_per_million": 2.2,
+    "structural_min_start_probability": 0.65,
+    "mandatory_review_is_not_auto_buy": true,
+    "stale_predictor_cannot_create_review_now": true,
+    "price_only_signal_cannot_create_change": true,
+    "next_update_window_is_not_player_change_eta": true
+  },
   "decision": {
     "review_gain_5gw": 1.0,
     "lean_gain_5gw": 3.0,
@@ -39,7 +61,8 @@
     "strong_minimum_start_probability": 0.75,
     "strong_requires_complete_critical_evidence": true,
     "missing_critical_evidence_caps_at": "REVIEW",
-    "actionable_change_requires_explicit_timing_evidence": true
+    "review_now_requires_fresh_market_urgency": true,
+    "change_requires_robust_football_net_gain": true
   },
   "critical_evidence": [
     "canonical_projection",
@@ -48,9 +71,9 @@
     "exact_sell_value",
     "affordability",
     "club_legality",
+    "official_identity_sanity",
     "tactical_context",
-    "competitive_load",
-    "external_consensus"
+    "competitive_load"
   ],
   "governance": {
     "reuse_canonical_projection_xpts": true,
@@ -58,18 +81,22 @@
     "reuse_canonical_tactical_matchup": true,
     "reuse_canonical_package_legality_and_scoring": true,
     "reuse_canonical_price_state": true,
-    "reuse_governed_watchlist": true,
+    "full_universe_discovery_precedes_visible_watchlist": true,
     "one_match_haul_is_trigger_not_buy": true,
     "positive_projected_edge_is_not_sufficient_alone": true,
     "three_to_five_gw_net_benefit_required_for_material_upgrade": true,
-    "actionable_change_requires_affordability_starter_security_tactical_fit_and_timing": true,
+    "market_timing_changes_timing_not_football_authority": true,
+    "mandatory_value_market_candidate_must_be_evaluated_before_publication": true,
+    "official_identity_mismatch_blocks_downstream_projection_use": true,
     "no_majority_vote_across_external_models": true,
-    "may_not_overwrite_canonical_transfer_recommendation": true,
+    "canonical_transfer_recommendation_may_consume_this_decision": true,
     "may_not_overwrite_starting_xi": true,
     "may_not_overwrite_captain_or_vice": true,
-    "may_not_overwrite_watchlist": true,
     "may_not_overwrite_chip_decision": true,
+    "external_fpl_mutation_never_automatic": true,
     "missing_evidence_is_explicit": true,
-    "advisory_until_calibrated": true
+    "data_join_defect_internal_only": true,
+    "weather_alone_cannot_transfer": true,
+    "no_player_specific_out_hardcode": true
   }
 }

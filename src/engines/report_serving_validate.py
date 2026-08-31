@@ -31,9 +31,35 @@ def _validate_owned_transparency(name: str, rows: list[dict], expected: int, con
         assert all(row.get("choice_state") in {"OPEN", "CURRENT"} for row in rows), (name, "invalid_choice_state")
 
 
+def _validate_compact_personal_gameweek_context(payload_name: str, payload: dict, context: dict) -> None:
+    assert payload_name == "brief", (payload_name, "compact context only allowed on fast brief")
+    assert context.get("fast_surface_compacted") is True, payload_name
+    assert context.get("detail_ref") == "data/deep_review_payload.json#gameweek_context", payload_name
+    planning = context.get("planning") or {}
+    assert planning.get("status") == "PROJECTION", (payload_name, planning)
+    assert planning.get("estimated_points") is not None, payload_name
+    assert planning.get("decision_authority") in {"ENGINE_RECOMMENDATION", "USER_OVERRIDE"}, payload_name
+    assert isinstance(planning.get("starting_xi"), list) and len(planning.get("starting_xi") or []) == 11, payload_name
+    assert isinstance(planning.get("bench"), list) and len(planning.get("bench") or []) == 4, payload_name
+    assert isinstance(planning.get("captain"), dict) and planning.get("captain"), payload_name
+    assert isinstance(planning.get("vice_captain"), dict) and planning.get("vice_captain"), payload_name
+    if planning.get("user_override_active"):
+        assert planning.get("decision_authority") == "USER_OVERRIDE", payload_name
+    historical = context.get("historical") or []
+    assert len(historical) <= 2, (payload_name, len(historical))
+    for row in historical:
+        assert row.get("status") == "FINAL", (payload_name, row)
+        assert row.get("authority") == "PUBLIC_OFFICIAL_POST_DEADLINE", (payload_name, row)
+        assert row.get("actual_points") is not None, (payload_name, row)
+
+
 def _validate_personal_gameweek_context(payload_name: str, payload: dict) -> None:
     context = payload.get("gameweek_context") or {}
     assert context.get("schema") == "personal_gameweek_context.v1", (payload_name, context.get("schema"))
+    if context.get("fast_surface_compacted") is True:
+        _validate_compact_personal_gameweek_context(payload_name, payload, context)
+        return
+
     planning = context.get("planning") or {}
     assert planning.get("status") == "PROJECTION", (payload_name, planning)
     assert planning.get("estimated_points") is not None, payload_name
@@ -56,7 +82,6 @@ def _validate_personal_gameweek_context(payload_name: str, payload: dict) -> Non
 
 
 def _normalise_public_tactical_fields(value):
-    """Remove misleading public aliases without changing internal evidence semantics."""
     if isinstance(value, list):
         return [_normalise_public_tactical_fields(item) for item in value]
     if not isinstance(value, dict):
@@ -76,7 +101,6 @@ def _battle_dict(payload: dict) -> dict:
 
 
 def _sync_battle_outcome(payload: dict, lineup: dict) -> None:
-    """Keep displayed starter/challenger aligned with the post-tiebreak legal XI."""
     battle = _battle_dict(payload)
     if not battle:
         return
@@ -85,9 +109,7 @@ def _sync_battle_outcome(payload: dict, lineup: dict) -> None:
     if not starter or not challenger:
         return
     final_starters = {str(row.get("name") or "") for row in lineup.get("starting_xi") or []}
-    starter_in = starter in final_starters
-    challenger_in = challenger in final_starters
-    if challenger_in and not starter_in:
+    if challenger in final_starters and starter not in final_starters:
         battle["starter"], battle["challenger"] = challenger, starter
         leader = battle.get("leader_metrics")
         challenger_metrics = battle.get("challenger_metrics")
@@ -140,8 +162,7 @@ def _tactical_presentation_note(payload: dict) -> str:
         lead_note = _first_highlight(leader)
         challenge_note = _first_highlight(challenge)
         if starter and challenger and (lead_note or challenge_note):
-            detail = lead_note or challenge_note
-            notes.append(f"Battle XI {starter} vs {challenger}: {detail}")
+            notes.append(f"Battle XI {starter} vs {challenger}: {lead_note or challenge_note}")
 
     authority, active_captain = _authority_captain(payload)
     active_name = str(active_captain.get("name") or "")
@@ -181,13 +202,123 @@ def _tactical_presentation_note(payload: dict) -> str:
     return f"Matchup lawan sudah diperiksa untuk seluruh skuad; evidence cukup pada {enough} pemain dan masih terbatas pada {limited} pemain. Tidak ada klaim taktis yang dipaksakan saat evidence belum cukup."
 
 
+def _compact_tactical_for_fast(raw: object) -> dict:
+    row = raw if isinstance(raw, dict) else {}
+    out = {
+        "evidence_state": row.get("evidence_state"),
+        "opponent_team_id": row.get("opponent_team_id"),
+        "player_role": row.get("player_role"),
+        "route_vulnerability_overlap": list(row.get("route_vulnerability_overlap") or [])[:1],
+        "highlights": list(row.get("highlights") or [])[:1],
+    }
+    return {key: value for key, value in out.items() if value not in (None, [], {})}
+
+
+def _compact_fast_transfer_battle(raw: object) -> dict:
+    row = raw if isinstance(raw, dict) else {}
+    edge = row.get("v3_edge") if isinstance(row.get("v3_edge"), dict) else {}
+    predictor = row.get("predictor") if isinstance(row.get("predictor"), dict) else {}
+    structural = row.get("structural_impact") if isinstance(row.get("structural_impact"), dict) else {}
+    return {
+        "owned": row.get("owned") or {},
+        "challenger": row.get("challenger") or {},
+        "v3_edge": {"3gw": edge.get("3gw") or {}, "5gw": edge.get("5gw") or {}},
+        "xmins_start": row.get("xmins_start") or {},
+        "official_price": row.get("official_price") or {},
+        "official_ownership": row.get("official_ownership") or {},
+        "predictor": {
+            key: predictor.get(key)
+            for key in ("direction", "urgency", "progress_percent", "predicted_player_change_eta", "evidence_state", "fresh", "imminent")
+            if predictor.get(key) is not None
+        },
+        "structural_impact": {
+            key: structural.get(key)
+            for key in ("exact_sell_cost", "incoming_now_cost", "itb", "affordable", "switching_cost", "net_projected_gain")
+            if structural.get(key) is not None
+        },
+        "risk": list(row.get("risk") or [])[:2],
+        "confidence": row.get("confidence"),
+        "decision": row.get("decision"),
+        "reason": row.get("reason"),
+        "flip_conditions": list(row.get("flip_conditions") or [])[:2],
+        "evidence_ref": "data/dss_watchlist.json#owned_challenger_decision",
+    }
+
+
+def _compact_fast_comparator(raw: object) -> dict:
+    row = raw if isinstance(raw, dict) else {}
+    decision = row.get("decision") if isinstance(row.get("decision"), dict) else {}
+    validation = row.get("publication_validation") if isinstance(row.get("publication_validation"), dict) else {}
+    return {
+        "status": row.get("status"),
+        "contract": row.get("contract"),
+        "owner": row.get("owner"),
+        "capability_status": row.get("capability_status"),
+        "owned_count": row.get("owned_count"),
+        "governed_watchlist_count": row.get("governed_watchlist_count"),
+        "material_candidate_count": row.get("material_candidate_count"),
+        "mandatory_review_count": row.get("mandatory_review_count"),
+        "comparison_count": row.get("comparison_count"),
+        "decision": {
+            "state": decision.get("state"),
+            "execution_authorized": bool(decision.get("execution_authorized")),
+            "reason": decision.get("reason"),
+        },
+        "main_transfer_battle_count": row.get("main_transfer_battle_count"),
+        "publication_validation": {"status": validation.get("status")},
+        "state_counts": row.get("state_counts") or {},
+        "actionability_counts": row.get("actionability_counts") or {},
+        "technical_evidence_ref": "data/dss_watchlist.json#owned_challenger_decision",
+        "fast_surface_compacted": True,
+    }
+
+
+def _compact_fast_surface(payload: dict) -> dict:
+    if not bool((payload.get("serving_contract") or {}).get("fast_context_compacted")):
+        return payload
+
+    for row in payload.get("owned_15") or []:
+        if isinstance(row, dict):
+            row["tactical_matchup"] = _compact_tactical_for_fast(row.get("tactical_matchup"))
+    for rows in (payload.get("watchlist_20") or {}).values():
+        for row in rows or []:
+            if isinstance(row, dict):
+                row["tactical_matchup"] = _compact_tactical_for_fast(row.get("tactical_matchup"))
+
+    battle = payload.get("main_starting_xi_battle")
+    if isinstance(battle, dict):
+        for key in ("leader_metrics", "challenger_metrics"):
+            metrics = battle.get(key)
+            if isinstance(metrics, dict):
+                metrics["tactical_matchup"] = _compact_tactical_for_fast(metrics.get("tactical_matchup"))
+
+    captaincy = payload.get("captaincy")
+    if isinstance(captaincy, dict):
+        comparison = captaincy.get("tactical_comparison")
+        if isinstance(comparison, dict):
+            for key in ("captain", "vice"):
+                comparison[key] = _compact_tactical_for_fast(comparison.get(key))
+
+    payload["main_transfer_battles"] = [
+        _compact_fast_transfer_battle(row)
+        for row in (payload.get("main_transfer_battles") or [])[:3]
+    ]
+    payload["owned_vs_challenger"] = _compact_fast_comparator(payload.get("owned_vs_challenger"))
+    payload.setdefault("serving_contract", {}).update({
+        "fast_final_surface_compacted": True,
+        "main_transfer_battles_visible": len(payload["main_transfer_battles"]),
+        "full_transfer_evidence_ref": "data/dss_watchlist.json#owned_challenger_decision",
+    })
+    return payload
+
+
 def _finalise_public_tactical(payload: dict, lineup: dict) -> dict:
     _sync_battle_outcome(payload, lineup)
     presentation = payload.get("user_presentation")
     if isinstance(presentation, dict):
         presentation["tactical_matchup"] = _tactical_presentation_note(payload)
     payload = _normalise_public_tactical_fields(payload)
-    return payload
+    return _compact_fast_surface(payload)
 
 
 def _validate_tactical(payload_name: str, payload: dict, expected_owned: int, expected_watch: int) -> None:
@@ -219,8 +350,6 @@ def _validate_tactical(payload_name: str, payload: dict, expected_owned: int, ex
 
 
 def run() -> dict:
-    # Tactical serving decoration is the final consumer overlay. It reuses the
-    # projection-owned matchup and never recalculates or mutates xPts.
     tactical_overlay = apply_report_overlay()
     lineup = _load(DATA / "lineup_decision.json")
     for name in ("user_report.json", "decision_brief.json", "deep_review_payload.json"):
@@ -264,10 +393,14 @@ def run() -> dict:
         assert len(ids) == expected_watch and len(set(ids)) == expected_watch, (payload_name, len(ids), len(set(ids)))
         assert not (owned_ids & set(ids)), (payload_name, sorted(owned_ids & set(ids)))
 
-    assert (user.get("serving_contract") or {}).get("owned") == expected_owned
-    assert (user.get("serving_contract") or {}).get("watchlist") == expected_watch
-    assert (brief.get("serving_contract") or {}).get("owned") == expected_owned
-    assert (brief.get("serving_contract") or {}).get("watchlist") == expected_watch
+    for payload in (user, brief):
+        assert (payload.get("serving_contract") or {}).get("owned") == expected_owned
+        assert (payload.get("serving_contract") or {}).get("watchlist") == expected_watch
+
+    assert (brief.get("serving_contract") or {}).get("fast_final_surface_compacted") is True
+    assert int((brief.get("serving_contract") or {}).get("main_transfer_battles_visible") or 0) <= 3
+    assert (brief.get("owned_vs_challenger") or {}).get("fast_surface_compacted") is True
+    assert (brief.get("owned_vs_challenger") or {}).get("technical_evidence_ref") == "data/dss_watchlist.json#owned_challenger_decision"
 
     for payload_name, payload in (("brief", brief), ("deep", deep), ("user", user)):
         _validate_tactical(payload_name, payload, expected_owned, expected_watch)
@@ -301,6 +434,8 @@ def run() -> dict:
     assert latest.get("report_serving", {}).get("personal_gameweek_context") is True
     assert latest.get("report_serving", {}).get("report_time_intelligence") is True
     assert latest.get("report_serving", {}).get("technical_lazy_load") is True
+    assert latest.get("report_serving", {}).get("fast_context_compacted") is True
+    assert latest.get("report_serving", {}).get("deep_context_full_fidelity") is True
 
     sizes = {}
     for name, spec in (registry.get("artifacts") or {}).items():
@@ -331,6 +466,9 @@ def run() -> dict:
         "weather_context": contract.get("weather_context_required"),
         "report_time_intelligence": contract.get("report_time_intelligence_required"),
         "personal_gameweek_context": contract.get("personal_gameweek_context_required"),
+        "fast_context_compacted": True,
+        "fast_final_surface_compacted": True,
+        "deep_context_full_fidelity": True,
         "sizes": sizes,
         "default_fast": latest.get("report_serving", {}).get("default_fast_review_artifact") or latest.get("report_serving", {}).get("default_fast_artifact"),
         "default_deep": latest.get("report_serving", {}).get("default_deep_review_artifact"),

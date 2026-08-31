@@ -287,6 +287,33 @@ def _user_capture_authority_contract(baseline: dict[str, Any]) -> tuple[bool, di
     }
 
 
+def _canonical_comparator_contract(watchlist: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+    comparator = watchlist.get("owned_challenger_decision") or {}
+    decision = comparator.get("decision") or {}
+    validation = comparator.get("publication_validation") or {}
+    governance = comparator.get("governance") or {}
+    passed = bool(
+        comparator.get("contract") == "OWNED_CHALLENGER_DECISION_V3"
+        and comparator.get("owner") == "decision.owned_challenger_evaluation"
+        and comparator.get("status") == "READY"
+        and validation.get("status") == "PASS"
+        and decision.get("execution_authorized") is False
+        and governance.get("reporting_recomputation_forbidden") is True
+        and governance.get("canonical_transfer_recommendation_may_consume_this_decision") is True
+    )
+    return passed, {
+        "contract": comparator.get("contract"),
+        "owner": comparator.get("owner"),
+        "status": comparator.get("status"),
+        "publication_validation": validation.get("status"),
+        "decision_state": decision.get("state"),
+        "execution_authorized": decision.get("execution_authorized"),
+        "reporting_recomputation_forbidden": governance.get("reporting_recomputation_forbidden"),
+        "canonical_transfer_recommendation_may_consume_this_decision": governance.get("canonical_transfer_recommendation_may_consume_this_decision"),
+        "canonical_ref": "data/dss_watchlist.json#owned_challenger_decision",
+    }
+
+
 def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str, Any]:
     framework = read_json(DATA / "framework_health.json", {})
     latest = read_json(DATA / "latest.json", {})
@@ -353,8 +380,8 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
     schedule_ok = 'cron: "30 * * * *"' in workflow_text and 'cron: "0,15,45 * * * *"' in workflow_text and "collector_gate" in workflow_text
     _check(rows, "SCHEDULE_GOVERNANCE_PROVEN", schedule_ok, {"master_hourly_30": 'cron: "30 * * * *"' in workflow_text, "adaptive_support": 'cron: "0,15,45 * * * *"' in workflow_text})
 
-    comparator = technical.get("owned_challenger_comparator") or {}
-    _check(rows, "COMPARATOR_CANONICAL", comparator.get("contract") in {"OWNED_CHALLENGER_COMPARATOR_V1", "OWNED_CHALLENGER_COMPARATOR_V2", "OWNED_CHALLENGER_COMPARATOR_V3"} and comparator.get("advisory_only") is True, {"contract": comparator.get("contract"), "advisory_only": comparator.get("advisory_only")})
+    comparator_ok, comparator_detail = _canonical_comparator_contract(watchlist)
+    _check(rows, "COMPARATOR_CANONICAL", comparator_ok, comparator_detail)
 
     tactical = _tactical_report_coverage(user, watchlist)
     _check(rows, "TACTICAL_EVIDENCE_ALL_35", tactical == {"owned": 15, "owned_with_tactical": 15, "watchlist": 20, "watchlist_with_tactical": 20}, tactical)

@@ -23,16 +23,24 @@ def _proj(element: int, position: str, team_id: int, mean: float, *, start: floa
 def test_owned_screening_is_not_lowest_xpts_only():
     stable = {"element": 1, "name": "stable", "position": "MID", "projection": _proj(1, "MID", 1, 2.0, start=0.95, dnp=0.01)}
     risky = {"element": 2, "name": "risky", "position": "MID", "projection": _proj(2, "MID", 2, 2.5, start=0.45, dnp=0.30)}
-    challenger = {"player_in": {"element": 9, "name": "C"}, "horizons": {"3": {"projected_edge": 0.2}, "5": {"projected_edge": 0.5}}, "finance": {"affordable": True}, "legality": {"club_limit_legal": True}, "actionability": {"level": "REVIEW"}, "state": "REVIEW", "confidence": "MEDIUM"}
+    challenger = {
+        "player_in": {"element": 9, "name": "C"},
+        "horizons": {"3": {"projected_edge": 0.2}, "5": {"projected_edge": 0.5}},
+        "finance": {"affordable": True, "net_projected_gain": 0.5},
+        "legality": {"club_limit_legal": True, "same_position": True},
+        "actionability": {"level": "REVIEW"},
+        "state": "REVIEW",
+        "confidence": "MEDIUM",
+    }
     stable_pair = {**challenger, "player_out": {"element": 1}}
     risky_pair = {**challenger, "player_out": {"element": 2}}
-    rows = comp._screen_owned([stable, risky], [stable_pair, risky_pair])
+    rows = comp._owned_screen([stable, risky], [stable_pair, risky_pair])
     assert rows[0]["element"] == 2
     assert rows[0]["ranking_basis"].endswith("xPts alone forbidden")
 
 
 def test_price_threshold_never_becomes_confirmation():
-    evidence = comp._price_evidence({
+    evidence = comp._market({
         "current_progress_percent": 105.0,
         "projection_offset_0_percent": 110.0,
         "evidence_state": "AVAILABLE",
@@ -41,15 +49,21 @@ def test_price_threshold_never_becomes_confirmation():
         "direction": "RISE",
         "confirmed_price_change": False,
     })
-    assert evidence["timing_state"] == "PRICE_ACTIONABLE"
+    assert evidence["fresh"] is True
+    assert evidence["imminent"] is True
     assert evidence["confirmed_price_change"] is False
     assert evidence["threshold_crossing_is_not_confirmation"] is True
 
 
 def test_stale_predictor_cannot_create_urgency():
-    evidence = comp._price_evidence({"evidence_state": "STALE", "freshness_seconds": 999999, "model_urgency": "CRITICAL", "direction": "RISE"})
-    assert evidence["timing_state"] == "MODEL_CONTEXT_ONLY"
-    assert evidence["stale_cannot_create_urgency"] is True
+    evidence = comp._market({
+        "evidence_state": "STALE",
+        "freshness_seconds": 999999,
+        "model_urgency": "CRITICAL",
+        "direction": "RISE",
+    })
+    assert evidence["fresh"] is False
+    assert evidence["imminent"] is False
 
 
 def test_package_alternatives_preserve_zero_one_two_and_multi():
@@ -61,8 +75,9 @@ def test_package_alternatives_preserve_zero_one_two_and_multi():
     assert [row["replacements"] for row in comp._package_alternatives(payload)] == [0, 1, 2, 4]
 
 
-def test_no_player_specific_out_hardcode_in_governance(monkeypatch):
-    assert comp.load_policy()["owner"] == "reporting.owned_challenger_comparator"
+def test_governance_has_decision_owner_and_no_player_specific_out_hardcode():
+    assert comp.load_policy()["owner"] == "decision.owned_challenger_evaluation"
+    assert comp.load_policy()["governance"]["no_player_specific_out_hardcode"] is True
     source = open(comp.__file__, encoding="utf-8").read()
     for name in ("Aina", "Ødegaard", "Rogers"):
         assert name not in source

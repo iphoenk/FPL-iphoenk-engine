@@ -189,12 +189,171 @@ def _captain(user: dict[str, Any], *, deep: bool = False) -> dict[str, Any]:
 
 def _price(user: dict[str, Any]) -> dict[str, Any]:
     section = user.get("price_radar") or {}
-    keys = ("element", "name", "price", "direction", "urgency", "progress_pct", "estimated_change_time", "confidence_note", "action")
+    keys = ("element", "name", "price", "official_price", "official_ownership", "direction", "urgency", "progress_pct", "predicted_change_at", "eta_human", "confidence", "action")
 
     def compact(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return [{key: row.get(key) for key in keys if row.get(key) is not None} for row in rows]
 
-    return {"decision": section.get("decision"), "owned": compact(list(section.get("owned") or [])), "external_watchlist": compact(list(section.get("external_watchlist") or []))}
+    return {
+        "decision": section.get("decision"),
+        "owned": compact(list(section.get("owned") or [])),
+        "mandatory_high_value_challengers": compact(list(section.get("mandatory_high_value_challengers") or [])),
+        "external_watchlist": compact(list(section.get("external_watchlist") or [])),
+    }
+
+
+def _player_ref(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    return {
+        key: row.get(key)
+        for key in ("element", "name", "team", "position", "xpts", "pick_position", "multiplier")
+        if row.get(key) is not None
+    }
+
+
+def _compact_planning(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    recommendation = dict(row.get("engine_recommendation") or {})
+    comparison = dict(row.get("comparison") or {})
+    return {
+        "status": row.get("status"),
+        "gw": row.get("gw"),
+        "decision_authority": row.get("decision_authority"),
+        "source": row.get("source"),
+        "formation": row.get("formation"),
+        "active_chip": row.get("active_chip"),
+        "starting_xi": [_player_ref(item) for item in row.get("starting_xi") or []],
+        "bench": [_player_ref(item) for item in row.get("bench") or []],
+        "captain": _player_ref(row.get("captain")),
+        "vice_captain": _player_ref(row.get("vice_captain")),
+        "xi_xpts": row.get("xi_xpts"),
+        "bench_xpts": row.get("bench_xpts"),
+        "estimated_points": row.get("estimated_points"),
+        "user_override_active": bool(row.get("user_override_active")),
+        "engine_recommendation": {
+            key: recommendation.get(key)
+            for key in ("formation", "captain", "vice_captain", "active_chip", "estimated_points")
+            if recommendation.get(key) is not None
+        },
+        "comparison": {
+            key: comparison.get(key)
+            for key in ("user_minus_engine_estimated_points", "formation_changed", "captain_changed", "vice_changed", "chip_changed")
+            if comparison.get(key) is not None
+        },
+    }
+
+
+def _compact_historical(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    return {
+        "gw": row.get("gw"),
+        "status": row.get("status"),
+        "authority": row.get("authority"),
+        "actual_points": row.get("actual_points"),
+        "transfer_cost": row.get("transfer_cost"),
+        "points_on_bench": row.get("points_on_bench"),
+        "overall_rank": row.get("overall_rank"),
+        "event_rank": row.get("event_rank"),
+        "chip": row.get("chip"),
+        "formation": row.get("formation"),
+        "captain": _player_ref(row.get("captain")),
+        "vice_captain": _player_ref(row.get("vice_captain")),
+    }
+
+
+def _compact_gameweek_context(payload: dict[str, Any]) -> dict[str, Any]:
+    historical = list(payload.get("historical") or [])
+    return {
+        "schema": payload.get("schema"),
+        "historical": [_compact_historical(row) for row in historical[-2:]],
+        "planning": _compact_planning(payload.get("planning")),
+        "detail_ref": "data/deep_review_payload.json#gameweek_context",
+        "fast_surface_compacted": True,
+    }
+
+
+def _compact_transition(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    ins = [_player_ref(item) for item in row.get("ins") or []]
+    outs = [_player_ref(item) for item in row.get("outs") or []]
+    return {
+        "from_gw": row.get("from_gw"),
+        "to_gw": row.get("to_gw"),
+        "kept_count": len(row.get("kept") or []),
+        "ins": ins,
+        "outs": outs,
+    }
+
+
+def _compact_current_gw(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    return {
+        key: row.get(key)
+        for key in ("gw", "status", "gross_points", "hit", "net_points")
+        if row.get(key) is not None
+    }
+
+
+def _compact_counterfactual(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    current = dict(row.get("current_squad") or {})
+    old = dict(row.get("old_squad_counterfactual") or {})
+    return {
+        "status": row.get("status"),
+        "policy": row.get("policy"),
+        "current_squad": {key: current.get(key) for key in ("gw", "status", "gross_points", "hit", "net_points") if current.get(key) is not None},
+        "old_squad_counterfactual": {key: old.get(key) for key in ("status", "points", "hit", "net_points") if old.get(key) is not None},
+        "realized_or_live_pnl": row.get("realized_or_live_pnl"),
+        "verdict": row.get("verdict"),
+    }
+
+
+def _compact_learning(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    validation = dict(row.get("decision_validation") or {})
+    return {
+        "status": row.get("status"),
+        "sample_size": row.get("sample_size"),
+        "points_mae": row.get("points_mae"),
+        "xmins_mae": row.get("xmins_mae"),
+        "decision_validation": {
+            key: {
+                "status": (value or {}).get("status"),
+                "sample_size": (value or {}).get("sample_size"),
+                "mean": (value or {}).get("mean"),
+            }
+            for key, value in validation.items()
+            if isinstance(value, dict)
+        },
+    }
+
+
+def _compact_gameweek_lifecycle(payload: dict[str, Any]) -> dict[str, Any]:
+    previous = dict(payload.get("previous_gw") or {})
+    authenticated = dict(payload.get("authenticated_official") or {})
+    calibration = dict(payload.get("price_calibration") or {})
+    return {
+        "schema": payload.get("schema"),
+        "status": payload.get("status"),
+        "previous_gw": _compact_historical(previous),
+        "transition": _compact_transition(payload.get("transition")),
+        "current_gw": _compact_current_gw(payload.get("current_gw")),
+        "counterfactual_pnl": _compact_counterfactual(payload.get("counterfactual_pnl")),
+        "learning": _compact_learning(payload.get("learning")),
+        "authenticated_official": {
+            key: authenticated.get(key)
+            for key in ("health", "state", "verified_entry", "chip_state_available", "transfers_latest_available", "exact_finance_coverage_complete", "authority_upgrade_allowed")
+            if authenticated.get(key) is not None
+        },
+        "price_calibration": {
+            key: calibration.get(key)
+            for key in ("status", "actionability", "direction_samples", "direction_accuracy", "timing_samples", "price_alone_can_trigger_transfer")
+            if calibration.get(key) is not None
+        },
+        "next_gw": _compact_planning(payload.get("next_gw")),
+        "detail_ref": "data/deep_review_payload.json#gameweek_lifecycle",
+        "fast_surface_compacted": True,
+    }
 
 
 def _official_partition(full: dict[str, Any], ids: set[int]) -> dict[str, Any]:
@@ -278,6 +437,8 @@ def run() -> dict[str, Any]:
         "actual_vs_predicted_learning": True,
         "authenticated_official_readiness": True,
         "price_calibration_readiness": True,
+        "fast_context_compacted": True,
+        "deep_context_full_fidelity": True,
     }
 
     user.setdefault("owned_squad", {})["count"] = len(owned)
@@ -294,8 +455,8 @@ def run() -> dict[str, Any]:
         "generated_at": _now(),
         "planning_gw": user.get("planning_gw"),
         "serving_contract": serving_contract,
-        "gameweek_context": gameweek_context,
-        "gameweek_lifecycle": gameweek_lifecycle,
+        "gameweek_context": _compact_gameweek_context(gameweek_context),
+        "gameweek_lifecycle": _compact_gameweek_lifecycle(gameweek_lifecycle),
         "finance": _finance(team),
         "owned_15": owned,
         "changes_since_last_report": user.get("changes_since_last_report"),
@@ -311,6 +472,8 @@ def run() -> dict[str, Any]:
     deep = {
         **brief,
         "payload_type": "DEEP_REVIEW_PAYLOAD_V2",
+        "gameweek_context": gameweek_context,
+        "gameweek_lifecycle": gameweek_lifecycle,
         "watchlist_20": watch_deep["positions"],
         "captaincy": _captain(user, deep=True),
         "starting_xi": user.get("starting_xi"),
@@ -360,6 +523,8 @@ def run() -> dict[str, Any]:
         "price_calibration_readiness": True,
         "report_time_intelligence": True,
         "technical_lazy_load": True,
+        "fast_context_compacted": True,
+        "deep_context_full_fidelity": True,
     }
     atomic_json(DATA / "latest.json", latest)
     sizes = _enforce_sizes()

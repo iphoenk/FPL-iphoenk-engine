@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from src.engines.decision_arbitration import arbitrate_decisions, assert_decision_consistency
-from src.engines.owned_challenger_comparator import build as build_owned_challenger_comparator
 from src.engines.report_time_intelligence import run as run_report_time_intelligence
 from src.utils import DATA, atomic_json, read_json
 
@@ -56,19 +55,7 @@ def _battle_reasons(leader: dict[str, Any], challenger: dict[str, Any]) -> list[
     return reasons[:3]
 
 
-_DATA_STATE_ID = {
-    "AVAILABLE": "data terstruktur tersedia",
-    "CACHED_LAST_KNOWN_GOOD": "hanya cache terakhir; tidak dipakai sebagai data saat ini",
-    "STALE": "data kedaluwarsa; tidak dipakai sebagai data saat ini",
-    "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION": "situs terjangkau, tetapi data terstruktur belum tersedia",
-    "SOURCE_REACHABLE_NOT_INGESTED": "situs terjangkau, tetapi capability ini belum di-ingest",
-    "UNAVAILABLE": "tidak tersedia",
-    "DISABLED": "tidak dijalankan oleh collector",
-}
-
-
 def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
-    # LiveFPL is retired. Do not request, ingest or present it as V3 evidence.
     sources = {str(row.get("id")): row for row in source_health.get("sources") or []}
     capability_rows = source_health.get("capability_health") or []
     selected = []
@@ -103,7 +90,7 @@ def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
             "pundit_consensus": "FPL Harry, FPL Focal, Let's Talk FPL, BigManBakar, dan Scout editorial dibandingkan dengan DSS",
             "community": "Reddit r/FantasyPL dipakai sebagai sinyal komunitas yang wajib cross-check",
         },
-        "catatan": "External benchmark tidak mengubah native truth/DSS. Consensus hanya evidence overlay; factual divergence memicu refresh Official, bukan overwrite external.",
+        "catatan": "External benchmark tidak mengubah native truth/DSS. Sumber yang telah dipensiunkan tidak ditampilkan sebagai evidence V3; factual divergence memicu refresh Official, bukan overwrite external.",
     }
 
 
@@ -134,32 +121,170 @@ def _external_consensus_user_block(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _player_ref(raw: Any, *, cost_key: str) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    return {
+        "element": row.get("element"),
+        "name": row.get("name"),
+        "position": row.get("position"),
+        cost_key: row.get(cost_key),
+        "official_ownership": row.get("official_ownership"),
+    }
+
+
+def _tactical_side(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    return {
+        key: row.get(key)
+        for key in (
+            "evidence_state", "status", "classification", "fixture_id", "opponent_team_id",
+            "opponent", "venue", "matchup_state", "confidence",
+        )
+        if row.get(key) is not None
+    }
+
+
+def _load_side(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    return {
+        key: row.get(key)
+        for key in ("state", "status", "days_rest", "rest_days", "fixture_count", "load_state", "confidence")
+        if row.get(key) is not None
+    }
+
+
+def _serving_package(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    return {
+        "replacements": row.get("replacements"),
+        "out": row.get("out") or [],
+        "in": row.get("in") or [],
+        "classification": row.get("classification"),
+        "robust_gain_vs_hold": row.get("robust_gain_vs_hold"),
+        "net_gain_3gw": row.get("net_gain_3gw"),
+        "net_gain_5gw": row.get("net_gain_5gw"),
+        "net_gain_10gw": row.get("net_gain_10gw"),
+        "net_gain_15gw": row.get("net_gain_15gw"),
+        "hit_cost": row.get("hit_cost"),
+        "legal": row.get("legal"),
+        "affordability": row.get("affordability") or {},
+    }
+
+
+def _serving_decision(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    return {
+        "state": row.get("state"),
+        "execution_authorized": bool(row.get("execution_authorized")),
+        "reason": row.get("reason"),
+        "no_transfer_recommended": bool(row.get("no_transfer_recommended")),
+        "no_transfer_message": row.get("no_transfer_message"),
+        "selected_package_evidence": _serving_package(row.get("selected_package_evidence")),
+        "market_timing_is_not_football_authority": bool(row.get("market_timing_is_not_football_authority", True)),
+        "package_optimizer_is_transfer_structure_authority": bool(row.get("package_optimizer_is_transfer_structure_authority", True)),
+    }
+
+
+def _serving_battle(raw: Any) -> dict[str, Any]:
+    row = dict(raw or {}) if isinstance(raw, dict) else {}
+    v3_edge = row.get("v3_edge") or {}
+    tactical = row.get("next_matchup") or {}
+    load = row.get("rest_congestion") or {}
+    predictor = row.get("predictor") or {}
+    challenger_market = predictor.get("challenger") or {}
+    structural = row.get("structural_impact") or {}
+    return {
+        "owned": _player_ref(row.get("owned"), cost_key="sell_cost"),
+        "challenger": _player_ref(row.get("challenger"), cost_key="now_cost"),
+        "v3_edge": {
+            "3gw": v3_edge.get("3gw") or {},
+            "5gw": v3_edge.get("5gw") or {},
+            "10_15gw": v3_edge.get("10_15gw") or {},
+        },
+        "xmins_start": row.get("xmins_start") or {},
+        "role": row.get("role") or {},
+        "next_matchup": {
+            "owned": _tactical_side(tactical.get("owned")),
+            "challenger": _tactical_side(tactical.get("challenger")),
+        },
+        "rest_congestion": {
+            "owned": _load_side(load.get("owned")),
+            "challenger": _load_side(load.get("challenger")),
+        },
+        "route_to_points": row.get("route_to_points") or {},
+        "official_price": row.get("official_price") or {},
+        "official_ownership": row.get("official_ownership") or {},
+        "predictor": {
+            key: challenger_market.get(key)
+            for key in (
+                "direction", "urgency", "progress_percent", "trajectory", "predicted_player_change_eta",
+                "next_official_price_update_window", "eta_narrative_id", "freshness_seconds", "evidence_state",
+                "fresh", "imminent", "confirmed_price_change",
+            )
+            if challenger_market.get(key) is not None
+        },
+        "structural_impact": {
+            key: structural.get(key)
+            for key in (
+                "exact_sell_cost", "purchase_cost", "incoming_now_cost", "itb", "affordable",
+                "switching_cost", "net_projected_gain",
+            )
+            if structural.get(key) is not None
+        },
+        "risk": row.get("risk") or [],
+        "confidence": row.get("confidence"),
+        "decision": row.get("decision"),
+        "reason": row.get("reason"),
+        "flip_conditions": row.get("flip_conditions") or [],
+    }
+
+
 def _comparator_user_block(payload: dict[str, Any]) -> dict[str, Any]:
+    battles = list(payload.get("main_transfer_battles") or [])
+    alternatives = list(payload.get("multi_transfer_alternatives") or [])
     return {
         "status": payload.get("status"),
-        "advisory_only": True,
+        "contract": payload.get("contract"),
+        "owner": payload.get("owner"),
+        "capability_status": payload.get("capability_status") or "GOVERNED_DECISION",
         "owned_count": payload.get("owned_count"),
         "governed_watchlist_count": payload.get("governed_watchlist_count"),
-        "emerging_candidate_count": payload.get("emerging_candidate_count"),
+        "material_candidate_count": payload.get("material_candidate_count"),
+        "mandatory_review_count": payload.get("mandatory_review_count"),
+        "comparison_count": payload.get("comparison_count"),
+        "challenged_owned": payload.get("challenged_owned") or [],
+        "decision": _serving_decision(payload.get("decision")),
+        "main_transfer_battle_count": len(battles),
+        "multi_transfer_alternatives": [_serving_package(row) for row in alternatives[:8]],
+        "publication_validation": payload.get("publication_validation") or {},
         "state_counts": payload.get("state_counts") or {},
         "actionability_counts": payload.get("actionability_counts") or {},
-        "top_comparisons": [
-            {
-                "player_out": row.get("player_out"),
-                "player_in": row.get("player_in"),
-                "challenger_type": row.get("challenger_type"),
-                "state": row.get("state"),
-                "horizon_3gw": (row.get("horizons") or {}).get("3"),
-                "horizon_5gw": (row.get("horizons") or {}).get("5"),
-                "actionability": row.get("actionability") or {},
-                "reason": row.get("reason"),
-                "missing_critical_evidence": row.get("missing_critical_evidence") or [],
-                "confidence": row.get("confidence"),
-            }
-            for row in (payload.get("top_comparisons") or [])[:8]
-        ],
-        "catatan": "Comparator reuses canonical xPts/xMins/tactical/price/package evidence. It is advisory-only and cannot overwrite XI, C/VC, chip, watchlist, or canonical transfer decision.",
+        "v3_view": payload.get("v3_view") or {},
+        "technical_evidence_ref": "data/dss_watchlist.json#owned_challenger_decision",
+        "catatan": "Keputusan challenger dihitung sekali pada capability DECISION/watchlist. Surface user hanya membawa evidence ringkas; detail teknis tetap pada artifact canonical dan tidak dihitung ulang oleh reporting.",
     }
+
+
+def _apply_transfer_decision(user: dict[str, Any], comparator: dict[str, Any]) -> None:
+    governed = str((comparator.get("decision") or {}).get("state") or "HOLD").upper()
+    decision = user.setdefault("decision", {})
+    current = str(decision.get("squad") or "HOLD").upper()
+    if governed == "BLOCKED":
+        raise RuntimeError("governed owned challenger decision is BLOCKED")
+    if governed == "CHANGE":
+        decision["squad"] = "CHANGE"
+        if str(decision.get("overall") or "").upper() not in {"REVIEW", "REVIEW_DIVERGENCE"}:
+            decision["overall"] = "CHANGE"
+    elif governed in {"REVIEW", "REVIEW_NOW"} and current == "HOLD":
+        decision["squad"] = "REVIEW"
+        decision["overall"] = "REVIEW"
+    decision["challenger_state"] = governed
+    decision["challenger_execution_authorized"] = bool((comparator.get("decision") or {}).get("execution_authorized"))
+    for item in user.get("action_board") or []:
+        if str(item.get("subject") or "") == "Squad":
+            item["action"] = decision.get("squad")
+            item["trigger"] = "ikuti Main Transfer Battles; eksekusi tetap memerlukan keputusan pengguna"
+            break
 
 
 def _action_class(subject: str) -> str:
@@ -227,8 +352,14 @@ def _mandatory_challenger_ids(comparator: dict[str, Any], market_watch: list[dic
             continue
         actionability = str((pair.get("actionability") or {}).get("level") or "")
         state = str(pair.get("state") or "")
-        challenger_type = str(pair.get("challenger_type") or "")
-        if actionability in {"REVIEW", "MATERIAL_UPGRADE", "ACTIONABLE_CHANGE"} or state in {"REVIEW", "LEAN_TRANSFER", "STRONG_TRANSFER"} or challenger_type == "EMERGING_CHALLENGER":
+        challenger_types = set(pair.get("challenger_types") or [])
+        if pair.get("challenger_type"):
+            challenger_types.add(str(pair.get("challenger_type")))
+        if (
+            actionability in {"REVIEW", "MATERIAL_UPGRADE", "ACTIONABLE_CHANGE"}
+            or state in {"REVIEW", "LEAN_TRANSFER", "STRONG_TRANSFER"}
+            or challenger_types & {"EMERGING_CHALLENGER", "MANDATORY_VALUE_MARKET_REVIEW", "FULL_UNIVERSE_DISCOVERY"}
+        ):
             mandatory[element] = "GOVERNED_CHALLENGER"
     for row in market_watch:
         element = row.get("element_id") if row.get("element_id") is not None else row.get("element")
@@ -407,7 +538,11 @@ def run() -> dict[str, Any]:
     price_alerts = read_json(DATA / "price_alerts.json", {})
     source_health = read_json(DATA / "source_health.json", {})
     external_consensus = read_json(DATA / "external_consensus.json", {})
-    comparator = build_owned_challenger_comparator()
+    comparator = watchlist.get("owned_challenger_decision") or {}
+    if comparator.get("contract") != "OWNED_CHALLENGER_DECISION_V3":
+        raise RuntimeError("persisted governed owned challenger decision missing from watchlist capability")
+    if ((comparator.get("publication_validation") or {}).get("status")) != "PASS":
+        raise RuntimeError("persisted governed owned challenger decision failed publication validation")
     report_time = run_report_time_intelligence()
 
     price_coverage = _hydrate_price_radar(user, team, prices, price_alerts, watchlist, comparator)
@@ -424,10 +559,12 @@ def run() -> dict[str, Any]:
     model_battle["challenger_metrics"] = challenger
     model_battle["main_reasons"] = _battle_reasons(leader, challenger) if leader and challenger else []
 
+    _apply_transfer_decision(user, comparator)
     user["source_availability"] = _source_availability(source_health)
     user["report_time_intelligence"] = _report_time_user_block(report_time)
     user["external_consensus"] = _external_consensus_user_block(external_consensus)
     user["owned_vs_challenger"] = _comparator_user_block(comparator)
+    user["main_transfer_battles"] = [_serving_battle(row) for row in (comparator.get("main_transfer_battles") or [])[:10]]
     tech["source_capability_health"] = {
         "source_overall": source_health.get("overall"),
         "capabilities": source_health.get("capability_health") or [],
@@ -438,7 +575,7 @@ def run() -> dict[str, Any]:
     }
     tech["report_time_intelligence"] = report_time
     tech["external_consensus"] = external_consensus
-    tech["owned_challenger_comparator"] = comparator
+    tech["owned_challenger_decision"] = comparator
     tech["price_radar_serving_coverage"] = price_coverage
     tech["runtime"] = {
         "current_run_ref": "data/runtime_performance.json",
@@ -449,7 +586,6 @@ def run() -> dict[str, Any]:
     tech["audit"]["price_radar_owned_predictor_detail_is_all15"] = bool(price_coverage.get("owned_complete"))
     tech["audit"]["price_radar_includes_mandatory_challengers"] = True
     tech["audit"]["price_update_window_is_not_change_confirmation"] = True
-    tech["audit"]["livefpl_retired_from_v3_serving"] = True
     tech["audit"]["starting_xi_battle_has_decision_evidence"] = True
     tech["audit"]["source_reachability_is_separate_from_structured_data"] = True
     tech["audit"]["report_time_sources_do_not_mutate_dss"] = True
@@ -457,8 +593,11 @@ def run() -> dict[str, Any]:
     tech["audit"]["external_consensus_is_advisory_only"] = bool((external_consensus.get("governance") or {}).get("advisory_only", True))
     tech["audit"]["external_consensus_never_majority_votes"] = not bool((external_consensus.get("governance") or {}).get("majority_vote_used", False))
     tech["audit"]["external_consensus_does_not_mutate_native_truth"] = not bool((external_consensus.get("governance") or {}).get("native_truth_mutated", False))
-    tech["audit"]["owned_challenger_comparator_is_advisory_only"] = bool(comparator.get("advisory_only"))
-    tech["audit"]["owned_challenger_comparator_reuses_governed_watchlist"] = int(comparator.get("governed_watchlist_count") or 0) == 20
+    tech["audit"]["owned_challenger_decision_is_governed"] = comparator.get("owner") == "decision.owned_challenger_evaluation"
+    tech["audit"]["owned_challenger_decision_reuses_governed_watchlist"] = int(comparator.get("governed_watchlist_count") or 0) == 20
+    tech["audit"]["owned_challenger_reporting_recomputation_forbidden"] = True
+    tech["audit"]["challenger_user_serving_is_bounded_summary"] = True
+    tech["audit"]["livefpl_retired_from_v3_serving"] = True
     _apply_readiness_and_actionability(user, tech, latest, report_time)
 
     arbitration = arbitrate_decisions(user, lineup, comparator)

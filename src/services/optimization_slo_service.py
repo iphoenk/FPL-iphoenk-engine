@@ -44,7 +44,7 @@ def run() -> dict:
     weather_ms = round((perf_counter() - weather_started) * 1000.0, 2)
 
     challenger_started = perf_counter()
-    challenger = run_owned_challenger_decision()
+    challenger = run_owned_challenger_decision(canonical_arbitration=out.get("canonical_resolution"))
     challenger_ms = round((perf_counter() - challenger_started) * 1000.0, 2)
 
     base_compute_ms = float((out.get("timings") or {}).get("total_pipeline_ms") or float("inf"))

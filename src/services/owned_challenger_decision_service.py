@@ -575,7 +575,7 @@ def _multi_packages(
     return out[: max(0, int(limit))]
 
 
-def build() -> dict[str, Any]:
+def build(*, canonical_arbitration: dict[str, Any] | None = None) -> dict[str, Any]:
     cfg = load_policy()
     predictions = read_json(DATA / "predictions_v4.json", {})
     universe = read_json(DATA / "universe.json", {})
@@ -585,7 +585,11 @@ def build() -> dict[str, Any]:
     prices_payload = read_json(DATA / "prices.json", {})
     package_audit = read_json(DATA / "wc_package_audit_v4.json", {})
     decision_pipeline = read_json(DATA / "decision_pipeline_v4.json", {})
-    decision_arbitration = read_json(DATA / "decision_arbitration_v4.json", {})
+    decision_arbitration = (
+        canonical_arbitration
+        if isinstance(canonical_arbitration, dict)
+        else read_json(DATA / "decision_arbitration_v4.json", {})
+    )
 
     configured_lock = read_json(CONFIG / "locked_squad.json", {})
     locked = effective_planning_squad(team, configured_lock, latest)
@@ -741,8 +745,8 @@ def build() -> dict[str, Any]:
     }
 
 
-def run() -> dict[str, Any]:
-    out = build()
+def run(*, canonical_arbitration: dict[str, Any] | None = None) -> dict[str, Any]:
+    out = build(canonical_arbitration=canonical_arbitration)
     atomic_json(OUT, out)
     print(json.dumps({
         "status": out.get("status"),

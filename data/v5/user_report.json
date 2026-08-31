@@ -21,10 +21,6 @@
     "initial_report": false,
     "material_change": true,
     "changed": [
-      "starting_xi",
-      "formation",
-      "captain",
-      "vice_captain",
       "price",
       "owned_vs_challenger"
     ]
@@ -610,9 +606,9 @@
         "owned": true,
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
-        "official_progress_pct": 100.4,
-        "official_hourly_rate_pct": 20.19,
-        "trajectory": "ACCELERATING",
+        "official_progress_pct": 100.6,
+        "official_hourly_rate_pct": 18.89,
+        "trajectory": "DECELERATING",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -624,8 +620,8 @@
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
         "official_progress_pct": 94.6,
-        "official_hourly_rate_pct": -0.7,
-        "trajectory": "REVERSING",
+        "official_hourly_rate_pct": -0.38,
+        "trajectory": "DECELERATING",
         "predicted_change_deadline": null,
         "prediction_source": null,
         "official_projection_health": "LIVE"
@@ -633,27 +629,27 @@
     ],
     "external": [
       {
+        "element": 140,
+        "name": "Sánchez",
+        "owned": false,
+        "risk_direction": "FALL",
+        "urgency": "CRITICAL",
+        "official_progress_pct": -99.4,
+        "official_hourly_rate_pct": -2.32,
+        "trajectory": "DECELERATING",
+        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
+        "official_projection_health": "LIVE"
+      },
+      {
         "element": 463,
         "name": "Woltemade",
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
         "official_progress_pct": -99.3,
-        "official_hourly_rate_pct": -0.41,
+        "official_hourly_rate_pct": -0.37,
         "trajectory": "STEADY",
-        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
-        "prediction_source": "OFFICIAL_PROJECTION",
-        "official_projection_health": "LIVE"
-      },
-      {
-        "element": 140,
-        "name": "Sánchez",
-        "owned": false,
-        "risk_direction": "FALL",
-        "urgency": "CRITICAL",
-        "official_progress_pct": -99.2,
-        "official_hourly_rate_pct": -2.59,
-        "trajectory": "ACCELERATING",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -665,8 +661,8 @@
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
         "official_progress_pct": -99.0,
-        "official_hourly_rate_pct": -0.18,
-        "trajectory": "REVERSING",
+        "official_hourly_rate_pct": -0.04,
+        "trajectory": "DECELERATING",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -678,7 +674,20 @@
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
         "official_progress_pct": -97.0,
-        "official_hourly_rate_pct": -0.02,
+        "official_hourly_rate_pct": -0.01,
+        "trajectory": "STEADY",
+        "predicted_change_deadline": "2026-09-01T23:00:00+00:00",
+        "prediction_source": "OFFICIAL_PROJECTION",
+        "official_projection_health": "LIVE"
+      },
+      {
+        "element": 484,
+        "name": "Hutchinson",
+        "owned": false,
+        "risk_direction": "FALL",
+        "urgency": "CRITICAL",
+        "official_progress_pct": -96.8,
+        "official_hourly_rate_pct": -0.08,
         "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
@@ -691,20 +700,7 @@
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
         "official_progress_pct": -96.7,
-        "official_hourly_rate_pct": -0.08,
-        "trajectory": "STEADY",
-        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
-        "prediction_source": "OFFICIAL_PROJECTION",
-        "official_projection_health": "LIVE"
-      },
-      {
-        "element": 484,
-        "name": "Hutchinson",
-        "owned": false,
-        "risk_direction": "FALL",
-        "urgency": "CRITICAL",
-        "official_progress_pct": -96.7,
-        "official_hourly_rate_pct": -0.08,
+        "official_hourly_rate_pct": -0.07,
         "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
@@ -716,9 +712,9 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -96.2,
-        "official_hourly_rate_pct": -0.33,
-        "trajectory": "ACCELERATING",
+        "official_progress_pct": -96.3,
+        "official_hourly_rate_pct": -0.32,
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -729,10 +725,10 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -95.4,
-        "official_hourly_rate_pct": -0.03,
-        "trajectory": "REVERSING",
-        "predicted_change_deadline": "2026-09-02T23:00:00+00:00",
+        "official_progress_pct": -95.5,
+        "official_hourly_rate_pct": -0.04,
+        "trajectory": "STEADY",
+        "predicted_change_deadline": "2026-09-01T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
@@ -742,9 +738,9 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -95.1,
-        "official_hourly_rate_pct": -0.67,
-        "trajectory": "DECELERATING",
+        "official_progress_pct": -95.2,
+        "official_hourly_rate_pct": -0.63,
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -755,11 +751,24 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -93.4,
-        "official_hourly_rate_pct": -0.04,
+        "official_progress_pct": -93.5,
+        "official_hourly_rate_pct": -0.06,
         "trajectory": "STEADY",
         "predicted_change_deadline": "2026-09-01T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
+        "official_projection_health": "LIVE"
+      },
+      {
+        "element": 218,
+        "name": "Doucouré",
+        "owned": false,
+        "risk_direction": "FALL",
+        "urgency": "CRITICAL",
+        "official_progress_pct": -92.0,
+        "official_hourly_rate_pct": 0.01,
+        "trajectory": "STEADY",
+        "predicted_change_deadline": null,
+        "prediction_source": null,
         "official_projection_health": "LIVE"
       },
       {
@@ -789,28 +798,15 @@
         "official_projection_health": "LIVE"
       },
       {
-        "element": 218,
-        "name": "Doucouré",
-        "owned": false,
-        "risk_direction": "FALL",
-        "urgency": "CRITICAL",
-        "official_progress_pct": -91.8,
-        "official_hourly_rate_pct": 0.02,
-        "trajectory": "REVERSING",
-        "predicted_change_deadline": null,
-        "prediction_source": null,
-        "official_projection_health": "LIVE"
-      },
-      {
         "element": 207,
         "name": "Mingueza",
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
         "official_progress_pct": -91.4,
-        "official_hourly_rate_pct": -0.04,
+        "official_hourly_rate_pct": -0.05,
         "trajectory": "STEADY",
-        "predicted_change_deadline": "2026-09-01T23:00:00+00:00",
+        "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
       },
@@ -820,7 +816,7 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -90.5,
+        "official_progress_pct": -90.9,
         "official_hourly_rate_pct": -0.04,
         "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
@@ -833,9 +829,9 @@
         "owned": false,
         "risk_direction": "RISE",
         "urgency": "CRITICAL",
-        "official_progress_pct": 90.1,
-        "official_hourly_rate_pct": 20.31,
-        "trajectory": "ACCELERATING",
+        "official_progress_pct": 90.4,
+        "official_hourly_rate_pct": 19.0,
+        "trajectory": "DECELERATING",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -846,9 +842,9 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -89.7,
-        "official_hourly_rate_pct": -2.85,
-        "trajectory": "ACCELERATING",
+        "official_progress_pct": -89.8,
+        "official_hourly_rate_pct": -2.7,
+        "trajectory": "DECELERATING",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -859,9 +855,9 @@
         "owned": false,
         "risk_direction": "FALL",
         "urgency": "CRITICAL",
-        "official_progress_pct": -89.5,
-        "official_hourly_rate_pct": -1.08,
-        "trajectory": "ACCELERATING",
+        "official_progress_pct": -89.7,
+        "official_hourly_rate_pct": -1.05,
+        "trajectory": "STEADY",
         "predicted_change_deadline": "2026-08-31T23:00:00+00:00",
         "prediction_source": "OFFICIAL_PROJECTION",
         "official_projection_health": "LIVE"
@@ -2318,7 +2314,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2439,7 +2435,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -2597,7 +2593,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2714,7 +2710,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -2870,7 +2866,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -2985,7 +2981,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3143,7 +3139,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3260,7 +3256,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3420,7 +3416,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3541,7 +3537,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3697,7 +3693,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3812,7 +3808,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -3972,7 +3968,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4089,7 +4085,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4251,7 +4247,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4373,7 +4369,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-08-31T00:48:03.183886+00:00",
+              "evidence_timestamp": "2026-08-31T00:51:55.460618+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [

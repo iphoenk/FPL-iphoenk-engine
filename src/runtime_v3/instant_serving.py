@@ -12,6 +12,7 @@ from typing import Any
 from src.utils import DATA, ROOT, read_json
 
 CONFIG_PATH = ROOT / "config" / "runtime" / "instant_serving.json"
+CANONICAL_SLO_PATH = "config/runtime/performance_slo.json"
 
 
 def _config() -> dict[str, Any]:
@@ -19,6 +20,27 @@ def _config() -> dict[str, Any]:
     if payload.get("registry") != "V3_INSTANT_SERVING_V1":
         raise RuntimeError("unexpected instant-serving registry")
     return payload
+
+
+def _performance_contract(cfg: dict[str, Any]) -> dict[str, Any]:
+    performance = cfg.get("performance") if isinstance(cfg.get("performance"), dict) else {}
+    registry_path = str(performance.get("slo_registry") or "")
+    profile = str(performance.get("slo_profile") or "")
+    if registry_path != CANONICAL_SLO_PATH or profile != "instant_serving":
+        raise RuntimeError(
+            f"INSTANT_SERVING_SLO_AUTHORITY_DRIFT registry={registry_path!r} profile={profile!r}"
+        )
+    slo = json.loads((ROOT / registry_path).read_text(encoding="utf-8"))
+    if slo.get("registry") != "RUNTIME_PERFORMANCE_SLO_V1":
+        raise RuntimeError("unexpected canonical performance SLO registry")
+    contract = (slo.get("profiles") or {}).get(profile)
+    if not isinstance(contract, dict):
+        raise RuntimeError(f"missing canonical performance SLO profile: {profile}")
+    target = float(contract.get("target_wall_ms") or 0)
+    ceiling = float(contract.get("legacy_ceiling_ms") or 0)
+    if target <= 0 or ceiling <= 0 or target > ceiling:
+        raise RuntimeError(f"invalid canonical performance SLO profile: {profile}")
+    return {**contract, "profile": profile, "target_wall_ms": target, "hard_ceiling_ms": ceiling}
 
 
 def _parse_dt(value: Any) -> datetime | None:
@@ -105,6 +127,7 @@ def serve(data_dir: str | Path | None = None) -> dict[str, Any]:
     started = time.perf_counter()
     root = Path(data_dir or os.getenv("FPL_DATA_DIR") or DATA)
     cfg = _config()
+    performance = _performance_contract(cfg)
     _require_files(cfg, root)
 
     latest = read_json(root / "latest.json", {})
@@ -115,7 +138,7 @@ def serve(data_dir: str | Path | None = None) -> dict[str, Any]:
     freshness = _validate_contract(cfg, latest, brief, framework, watchlist)
 
     elapsed_ms = round((time.perf_counter() - started) * 1000.0, 3)
-    hard_ceiling = float((cfg.get("performance") or {}).get("hard_ceiling_ms") or 1000)
+    hard_ceiling = float(performance["hard_ceiling_ms"])
     if elapsed_ms > hard_ceiling:
         raise RuntimeError(f"INSTANT_SERVING_SLO_BREACH: {elapsed_ms}ms > {hard_ceiling}ms")
 
@@ -125,9 +148,10 @@ def serve(data_dir: str | Path | None = None) -> dict[str, Any]:
         "refresh_required": False,
         "performance": {
             "elapsed_ms": elapsed_ms,
-            "target_wall_ms": float((cfg.get("performance") or {}).get("target_wall_ms") or 500),
+            "target_wall_ms": float(performance["target_wall_ms"]),
             "hard_ceiling_ms": hard_ceiling,
             "within_hard_ceiling": True,
+            "slo_profile": performance["profile"],
         },
         "freshness": freshness,
         "planning_gw": brief.get("planning_gw"),
@@ -155,19 +179,22 @@ def serve(data_dir: str | Path | None = None) -> dict[str, Any]:
 
 def benchmark(data_dir: str | Path | None = None, repetitions: int | None = None) -> dict[str, Any]:
     cfg = _config()
+    performance = _performance_contract(cfg)
     count = int(repetitions or (cfg.get("performance") or {}).get("benchmark_repetitions") or 5)
     times: list[float] = []
     last: dict[str, Any] | None = None
     for _ in range(max(1, count)):
         last = serve(data_dir)
         times.append(float((last.get("performance") or {}).get("elapsed_ms") or 0.0))
-    ceiling = float((cfg.get("performance") or {}).get("hard_ceiling_ms") or 1000)
+    ceiling = float(performance["hard_ceiling_ms"])
     result = {
         "repetitions": len(times),
         "min_ms": round(min(times), 3),
         "median_ms": round(statistics.median(times), 3),
         "max_ms": round(max(times), 3),
+        "target_wall_ms": float(performance["target_wall_ms"]),
         "hard_ceiling_ms": ceiling,
+        "slo_profile": performance["profile"],
         "pass": max(times) <= ceiling,
         "freshness": (last or {}).get("freshness"),
     }

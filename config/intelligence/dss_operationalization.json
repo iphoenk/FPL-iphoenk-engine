@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "model_id": "v3_dss_operational_evidence_v1",
   "policy": {
     "module_health_means_evaluator_executed": true,
@@ -24,6 +24,7 @@
       "price_value": "DERIVED",
       "ownership_context": "NATIVE",
       "transfer_momentum": "DERIVED",
+      "price_intelligence": "NATIVE",
       "learning_loop": "DERIVED",
       "lineup_output": "DERIVED",
       "package_guardrail": "DERIVED"
@@ -56,6 +57,7 @@
     "price_value": {"owner":"projection","evaluator":"price_value","fallback":"Official current price divided against governed multi-GW projection"},
     "ownership_context": {"owner":"projection","evaluator":"ownership_context","fallback":"Official selected-by percentage; EO is not invented when unavailable"},
     "transfer_momentum": {"owner":"market_state","evaluator":"transfer_momentum","fallback":"no momentum inference when Official transfer counts or current-price linkage are insufficient"},
+    "price_intelligence": {"owner":"price","evaluator":"price_intelligence","fallback":"retain explicit PARTIAL/STALE state and suppress predictor-driven urgency when fresh valid Official predictor evidence is unavailable"},
     "learning_loop": {"owner":"prediction_evaluation","evaluator":"learning_loop","fallback":"ARMED_NO_SETTLED_SAMPLE until a reconciled post-GW sample exists"},
     "bench_utility": {"owner":"lineup_governance","evaluator":"lineup_output","fallback":"governed bench ordering and autosub utility"},
     "captaincy": {"owner":"lineup_governance","evaluator":"lineup_output","fallback":"governed captain safe-pool with DNP guard"},

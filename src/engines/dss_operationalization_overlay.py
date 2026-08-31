@@ -282,6 +282,63 @@ def _transfer_momentum(spec: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     }
 
 
+def _price_intelligence(spec: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+    prices = read_json(DATA / "prices.json", {})
+    rows = list(prices.get("players") or [])
+    health = prices.get("official_price_predictor_health") or {}
+    contract = prices.get("official_price_predictor_contract") or {}
+    alerts = read_json(DATA / "price_alerts.json", {})
+
+    covered, ratio = _coverage(
+        rows,
+        lambda p: p.get("element_id") is not None
+        and p.get("current_price") is not None
+        and p.get("ownership_percent") is not None
+        and "current_progress_percent" in p
+        and "projection_offset_0_percent" in p
+        and "projection_offset_0_likelihood" in p
+        and p.get("source") == "OFFICIAL_FPL"
+        and p.get("next_official_price_update_at") is not None
+        and p.get("trajectory_eta_hours") is None
+        and p.get("trajectory_predicted_change_deadline") is None,
+    )
+    contract_ok = (
+        bool(contract.get("model_id"))
+        and contract.get("current_progress_field") == "price_change_percent"
+        and contract.get("projected_progress_field") == "price_change_projections"
+        and contract.get("likelihood_preserved_raw") is True
+        and contract.get("threshold_is_official_rule") is False
+        and contract.get("no_intra_cycle_crossing_eta") is True
+    )
+    health_status = str(health.get("status") or "FAIL")
+    governed_signal_state = health_status in {"PASS", "PARTIAL", "STALE"}
+    ok = bool(rows) and ratio >= _minimum_ratio() and contract_ok and governed_signal_state
+    if health_status == "PASS" and ok:
+        evidence_state = "AVAILABLE"
+    elif ok:
+        evidence_state = "UNAVAILABLE_WITH_SAFE_FALLBACK"
+    else:
+        evidence_state = "INSUFFICIENT"
+
+    return ok, {
+        "evidence_state": evidence_state,
+        "predictor_health": health_status,
+        "players": len(rows),
+        "covered": covered,
+        "coverage_ratio": round(ratio, 4),
+        "source": health.get("source"),
+        "model_id": contract.get("model_id"),
+        "likelihood_preserved_raw": contract.get("likelihood_preserved_raw") is True,
+        "threshold_is_official_rule": contract.get("threshold_is_official_rule"),
+        "no_intra_cycle_crossing_eta": contract.get("no_intra_cycle_crossing_eta") is True,
+        "owned_price_radar_count": alerts.get("owned_price_radar_count"),
+        "fallback": spec.get("fallback"),
+        "module_health_separate_from_signal_availability": True,
+        "fresh_official_signal": health_status == "PASS",
+        "external_predictor_override_allowed": False,
+    }
+
+
 def _learning_loop(spec: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     accuracy = read_json(DATA / "prediction_accuracy.json", {})
     ledger = read_json(DATA / "prediction_ledger.json", {})
@@ -355,6 +412,7 @@ EVALUATORS: dict[str, Callable[[dict[str, Any]], tuple[bool, dict[str, Any]]]] =
     "price_value": _price_value,
     "ownership_context": _ownership_context,
     "transfer_momentum": _transfer_momentum,
+    "price_intelligence": _price_intelligence,
     "learning_loop": _learning_loop,
     "lineup_output": _lineup_output,
     "package_guardrail": _package_guardrail,

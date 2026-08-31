@@ -10,7 +10,6 @@ from src.engines.official_fact_completeness import (
 )
 from src.utils import DATA, atomic_json, read_json
 
-INTEGRITY_OUT = DATA / "official_fact_integrity.json"
 REPORT_FILES = (
     DATA / "user_report.json",
     DATA / "decision_brief.json",
@@ -125,7 +124,6 @@ def run() -> dict[str, Any]:
         personal_auth=latest.get("authenticated_official") or {},
     )
     integrity.setdefault("health", {})["Predictor Freshness"] = _predictor_health(latest)
-    atomic_json(INTEGRITY_OUT, integrity)
 
     gate = integrity.get("publication_integrity") or {}
     latest["official_fact_integrity"] = {
@@ -141,7 +139,6 @@ def run() -> dict[str, Any]:
         "health": integrity.get("health"),
         "reasons": gate.get("reasons") or [],
     }
-    latest.setdefault("files", {})["official_fact_integrity"] = "data/official_fact_integrity.json"
     latest.setdefault("report_serving", {})["official_fact_integrity"] = gate.get("status")
     latest["report_serving"]["publication_integrity_gate"] = "PASS" if gate.get("complete_user_report_allowed") else "BLOCKED"
     atomic_json(DATA / "latest.json", latest)

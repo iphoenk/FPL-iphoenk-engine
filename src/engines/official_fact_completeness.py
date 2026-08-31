@@ -34,6 +34,12 @@ def _snapshot_metadata(snapshot: dict[str, Any]) -> dict[str, Any]:
     health_status = str(health.get("status") or "UNKNOWN").upper()
     fallback = bool(freshness.get("fallback")) or str(freshness.get("state") or "").upper() == "FALLBACK"
     fresh_pull_succeeded = bool(bootstrap) and health_status in {"LIVE", "FRESH"} and not fallback
+    verified_fallback = bool(
+        fallback
+        and bootstrap
+        and freshness.get("last_verified_at")
+        and str(freshness.get("confidence") or "").upper() == "DOWNGRADED"
+    )
     fetched_at = health.get("fetched_at") or freshness.get("last_verified_at") or snapshot.get("generated_at")
     snapshot_id = str(freshness.get("snapshot_id") or f"bootstrap-static@{fetched_at or 'unknown'}")
     return {
@@ -43,12 +49,14 @@ def _snapshot_metadata(snapshot: dict[str, Any]) -> dict[str, Any]:
         "snapshot_generated_at": snapshot.get("generated_at"),
         "fetched_at": fetched_at,
         "fresh_pull_succeeded": fresh_pull_succeeded,
-        "freshness_state": "FALLBACK" if fallback else "FRESH" if fresh_pull_succeeded else "UNAVAILABLE",
-        "fallback": fallback,
-        "fallback_banner": FALLBACK_BANNER if fallback else None,
+        "verified_fallback": verified_fallback,
+        "trusted_snapshot": fresh_pull_succeeded or verified_fallback,
+        "freshness_state": "FALLBACK" if verified_fallback else "FRESH" if fresh_pull_succeeded else "UNAVAILABLE",
+        "fallback": verified_fallback,
+        "fallback_banner": FALLBACK_BANNER if verified_fallback else None,
         "last_verified_at": freshness.get("last_verified_at"),
         "age_seconds": freshness.get("age_seconds"),
-        "confidence": freshness.get("confidence") or ("DOWNGRADED" if fallback else "HIGH" if fresh_pull_succeeded else "UNKNOWN"),
+        "confidence": freshness.get("confidence") or ("DOWNGRADED" if verified_fallback else "HIGH" if fresh_pull_succeeded else "UNKNOWN"),
         "bootstrap_health": health_status,
     }
 
@@ -198,6 +206,12 @@ def build_public_official_fact_integrity(
     watch_hydration = _hydrate(watch_ids, snapshot, scope="watchlist")
     defects = [*structural_defects, *owned_hydration["defects"], *watch_hydration["defects"]]
 
+    if not meta["trusted_snapshot"]:
+        defects.append({
+            "scope": "publication",
+            "code": "OFFICIAL_SOURCE_UNAVAILABLE",
+            "message": "publication requires a fresh Official snapshot or a previously verified fallback snapshot",
+        })
     if len(owned) != EXPECTED_OWNED or len(set(owned)) != EXPECTED_OWNED:
         defects.append({
             "scope": "owned",
@@ -247,20 +261,21 @@ def build_public_official_fact_integrity(
         and watch_hydration["resolved"] == EXPECTED_WATCHLIST
         and watch_hydration["official_fact_complete"] == EXPECTED_WATCHLIST
     )
-    publication_ok = owned_ok and watch_ok and not defects
+    complete_and_trusted = owned_ok and watch_ok and meta["trusted_snapshot"] and not defects
+    publication_status = "PASS" if complete_and_trusted and meta["fresh_pull_succeeded"] else "DEGRADED" if complete_and_trusted and meta["verified_fallback"] else "BLOCKED"
 
     auth = personal_auth or {}
     auth_status = str(auth.get("status") or auth.get("state") or "UNAVAILABLE").upper()
     health = {
-        "Official public pull": "PASS" if meta["fresh_pull_succeeded"] else "DEGRADED" if meta["fallback"] else "BLOCKED",
+        "Official public pull": "PASS" if meta["fresh_pull_succeeded"] else "DEGRADED" if meta["verified_fallback"] else "BLOCKED",
         "Personal authenticated pull": auth_status,
         "Element-ID Resolver": "PASS" if owned_hydration["resolved"] == EXPECTED_OWNED and watch_hydration["resolved"] == EXPECTED_WATCHLIST else "BLOCKED",
-        "Official Fact Join": "PASS" if not any(row.get("code") in {"DATA_JOIN_DEFECT", "MIXED_OFFICIAL_SNAPSHOT"} for row in defects) else "BLOCKED",
+        "Official Fact Join": "PASS" if not any(row.get("code") in {"DATA_JOIN_DEFECT", "MIXED_OFFICIAL_SNAPSHOT", "OFFICIAL_SOURCE_UNAVAILABLE"} for row in defects) else "BLOCKED",
         "Owned Fact Completeness": "PASS" if owned_ok else "BLOCKED",
         "Watchlist Fact Completeness": "PASS" if watch_ok else "BLOCKED",
-        "Publication Integrity Gate": "PASS" if publication_ok else "BLOCKED",
-        "Reporting": "READY" if publication_ok else "BLOCKED",
-        "Serving": "READY" if publication_ok else "BLOCKED",
+        "Publication Integrity Gate": publication_status,
+        "Reporting": "READY" if publication_status == "PASS" else "DEGRADED" if publication_status == "DEGRADED" else "BLOCKED",
+        "Serving": "READY" if publication_status == "PASS" else "DEGRADED" if publication_status == "DEGRADED" else "BLOCKED",
     }
 
     return {
@@ -288,8 +303,8 @@ def build_public_official_fact_integrity(
             "rows": watch_hydration["rows"],
         },
         "publication_integrity": {
-            "status": "PASS" if publication_ok else "BLOCKED",
-            "complete_user_report_allowed": publication_ok,
+            "status": publication_status,
+            "complete_user_report_allowed": publication_status in {"PASS", "DEGRADED"},
             "reasons": defects,
             "reason_counts": dict(Counter(str(row.get("code")) for row in defects)),
         },
@@ -299,7 +314,7 @@ def build_public_official_fact_integrity(
 
 def require_complete_user_report(integrity: dict[str, Any]) -> None:
     gate = integrity.get("publication_integrity") or {}
-    if gate.get("complete_user_report_allowed") is True and gate.get("status") == "PASS":
+    if gate.get("complete_user_report_allowed") is True and gate.get("status") in {"PASS", "DEGRADED"}:
         return
     reasons = [str(row.get("code")) for row in gate.get("reasons") or []]
     raise RuntimeError(f"USER_REPORT BLOCKED: Official FACT completeness failed: {reasons}")

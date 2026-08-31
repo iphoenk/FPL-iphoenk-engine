@@ -248,3 +248,18 @@ def test_snapshot_hash_is_deterministic_and_transport_freshness_is_explicit():
     assert first["source_snapshot_id"] == second["source_snapshot_id"]
     assert first["freshness"] == "FRESH"
     assert first["fetched_at"] == FETCHED
+
+
+
+def test_publication_integrity_is_registered_as_governance_contract():
+    import json
+    from src.utils import CONFIG
+
+    services = json.loads((CONFIG / "service_registry.json").read_text(encoding="utf-8"))
+    contracts = json.loads((CONFIG / "service_contract_registry.json").read_text(encoding="utf-8"))
+    governance = next(row for row in services["services"] if row["id"] == "governance")
+    assert "publication_integrity" in governance["produces"]
+    contract = contracts["contracts"]["publication_integrity"]
+    assert contract["path"] == "data/publication_integrity_v4.json"
+    assert contract["equals"]["status"] == "PASS"
+    assert services["guardrails"]["publication_failure_cannot_leave_green_visible_health"] is True

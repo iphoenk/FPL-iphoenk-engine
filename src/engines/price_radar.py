@@ -294,6 +294,25 @@ def _normalise_player(
         confidence = "HIGH"
         fallback_reason = None
 
+    if evidence_state in {"SCHEMA_CHANGED", "FIELD_MISSING"}:
+        predictor_serving_state = "UNAVAILABLE"
+    elif evidence_state == "STALE":
+        predictor_serving_state = "STALE"
+    elif cycle == "NONE":
+        predictor_serving_state = "NO_SIGNAL"
+    else:
+        predictor_serving_state = "AVAILABLE"
+
+    fetched_at_iso = observed_at.astimezone(timezone.utc).isoformat() if observed_at is not None else None
+    freshness_state = "UNAVAILABLE" if observed_at is None else "STALE" if stale else "FRESH"
+    trajectory_basis = {
+        "current_progress_percent": current_progress,
+        "price_change_hourly_rate": hourly_rate,
+        "projection_offsets": [0, 1, 2],
+        "model_threshold_percent": MODEL_THRESHOLD,
+        "predicted_change_cycle": cycle,
+    }
+
     def projection_value(offset: int, key: str) -> Any:
         return (pmap.get(offset) or {}).get(key)
 
@@ -329,8 +348,16 @@ def _normalise_player(
         "predicted_change_at": predicted_at.astimezone(WIB).isoformat() if predicted_at is not None else None,
         "model_urgency": urgency,
         "source": "OFFICIAL_FPL",
+        "provider": "OFFICIAL_FPL",
         "observed_at": observed_at.astimezone(timezone.utc).isoformat() if observed_at is not None else None,
+        "fetched_at": fetched_at_iso,
+        "fetched_at_distinct": False,
+        "age_seconds": freshness_seconds,
         "freshness_seconds": freshness_seconds,
+        "freshness_state": freshness_state,
+        "trajectory_basis": trajectory_basis,
+        "predictor_serving_state": predictor_serving_state,
+        "raw_evidence_state": evidence_state,
         "schema_version": SCHEMA_VERSION,
         "raw_payload_hash": raw_payload_hash,
         "confidence": confidence,
@@ -400,6 +427,8 @@ def _overall_health(rows: list[dict[str, Any]], transport: dict[str, Any]) -> di
         "model_threshold_percent": MODEL_THRESHOLD,
         "threshold_is_official_rule": False,
         "no_intra_cycle_crossing_eta": True,
+        "publication_state_vocabulary": ["AVAILABLE", "NO_SIGNAL", "UNAVAILABLE", "STALE"],
+        "raw_evidence_state_preserved": True,
     }
 
 
@@ -424,9 +453,10 @@ def _served_evidence(row: dict[str, Any], *, owned: bool) -> dict[str, Any]:
         "projection_offset_2_percent", "projection_offset_2_likelihood", "projection_offset_2_at",
         "price_change_locked_until", "price_change_calibrating", "direction",
         "next_official_price_update_at", "eta_to_next_price_update_seconds", "eta_human",
-        "predicted_change_cycle", "predicted_change_at", "model_urgency", "source", "observed_at",
-        "freshness_seconds", "schema_version", "raw_payload_hash", "confidence", "fallback_reason",
-        "evidence_state", "narrative",
+        "predicted_change_cycle", "predicted_change_at", "model_urgency", "source", "provider", "observed_at",
+        "fetched_at", "fetched_at_distinct", "age_seconds", "freshness_seconds", "freshness_state",
+        "trajectory_basis", "predictor_serving_state", "raw_evidence_state",
+        "schema_version", "raw_payload_hash", "confidence", "fallback_reason", "evidence_state", "narrative",
     )
     served = {key: row.get(key) for key in keys}
     served.update({"element": row.get("element_id"), "name": row.get("player_name"), "owned": owned, "sell_value_relevance": sell_relevance, "action": action})

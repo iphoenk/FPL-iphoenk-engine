@@ -157,8 +157,48 @@ def run() -> dict:
     maturity_ms = round((perf_counter() - started) * 1000.0, 2)
 
     started = perf_counter()
-    checkpoint = v4_checkpoint_governance.run()
+    try:
+        checkpoint = v4_checkpoint_governance.run()
+    except RuntimeError:
+        integrity = read_json(DATA / "publication_integrity_v4.json", {})
+        if integrity.get("status") == "BLOCKED":
+            maturity["publication_integrity"] = integrity
+            maturity["publication_integrity_health"] = "BLOCKED"
+            maturity["reporting_health"] = "BLOCKED"
+            maturity["serving_health"] = "BLOCKED"
+            maturity["overall"] = "RED"
+            maturity["production_health"] = "RED"
+            operational = maturity.setdefault("production_operational_health", {})
+            operational["status"] = "RED"
+            operational["operationally_ready"] = False
+            blockers = operational.setdefault("hard_blockers", [])
+            if "PUBLICATION_INTEGRITY_BLOCKED" not in blockers:
+                blockers.append("PUBLICATION_INTEGRITY_BLOCKED")
+            atomic_json(DATA / "framework_health_v4.json", maturity)
+        raise
     checkpoint_ms = round((perf_counter() - started) * 1000.0, 2)
+
+    integrity = read_json(DATA / "publication_integrity_v4.json", {})
+    if integrity:
+        capabilities = integrity.get("capabilities") or {}
+        maturity["publication_integrity"] = integrity
+        maturity["publication_integrity_health"] = capabilities.get("publication_integrity") or integrity.get("status")
+        maturity["reporting_health"] = capabilities.get("reporting") or "UNAVAILABLE"
+        maturity["serving_health"] = capabilities.get("serving") or "UNAVAILABLE"
+        maturity.setdefault("governance", {}).update({
+            "publication_integrity_registered": True,
+            "publication_failure_cannot_leave_visible_health_green": True,
+        })
+        if integrity.get("status") != "PASS":
+            maturity["overall"] = "RED"
+            maturity["production_health"] = "RED"
+            operational = maturity.setdefault("production_operational_health", {})
+            operational["status"] = "RED"
+            operational["operationally_ready"] = False
+            blockers = operational.setdefault("hard_blockers", [])
+            if "PUBLICATION_INTEGRITY_BLOCKED" not in blockers:
+                blockers.append("PUBLICATION_INTEGRITY_BLOCKED")
+        atomic_json(DATA / "framework_health_v4.json", maturity)
 
     out = {
         "service": "governance",
@@ -169,6 +209,7 @@ def run() -> dict:
             "capability_maturity": maturity.get("capability_health"),
             "weather_context": (maturity.get("weather_context") or {}).get("status"),
             "report_governance": checkpoint.get("action_state"),
+            "publication_integrity": (integrity.get("capabilities") or {}).get("publication_integrity") or integrity.get("status") or "UNAVAILABLE",
         },
         "timings_ms": {
             "framework_postflight_ms": postflight_ms,

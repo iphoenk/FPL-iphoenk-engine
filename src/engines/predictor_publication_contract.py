@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 UNAVAILABLE_STATES = {"FIELD_MISSING", "SCHEMA_CHANGED", "UNAVAILABLE"}
+SUPPORTED_SIGNAL_CYCLES = {"NEXT_UPDATE", "PLUS_1_UPDATE", "PLUS_2_UPDATE"}
 
 
 def _is_predictor_observation(row: dict[str, Any]) -> bool:
@@ -17,10 +18,14 @@ def predictor_signal_state(row: dict[str, Any]) -> str:
     evidence = str(row.get("evidence_state") or "UNAVAILABLE").upper()
     if evidence in UNAVAILABLE_STATES:
         return "UNAVAILABLE"
-    source = row.get("prediction_source")
+
     cycle = str(row.get("predicted_change_cycle") or "NONE").upper()
-    if not source or cycle == "NONE":
+    if cycle == "NONE":
         return "NO_SIGNAL"
+    if cycle not in SUPPORTED_SIGNAL_CYCLES:
+        return "UNAVAILABLE"
+    if not row.get("predicted_change_at"):
+        return "UNAVAILABLE"
     return "SIGNAL"
 
 
@@ -38,8 +43,8 @@ def decorate_predictor_observation(row: dict[str, Any]) -> dict[str, Any]:
         "progress": row.get("current_progress_percent"),
         "trajectory": row.get("trajectory"),
         "direction": row.get("direction"),
-        "eta": predicted_at if signal_state == "SIGNAL" and predicted_at else None,
-        "eta_supported": bool(signal_state == "SIGNAL" and predicted_at),
+        "eta": predicted_at if signal_state == "SIGNAL" else None,
+        "eta_supported": bool(signal_state == "SIGNAL"),
         "current_claim_allowed": freshness_state not in {"STALE", "UNAVAILABLE", "FIELD_MISSING", "SCHEMA_CHANGED"},
     })
     return out

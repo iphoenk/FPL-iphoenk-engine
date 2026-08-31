@@ -6,11 +6,14 @@ from statistics import median
 from time import perf_counter
 from typing import Any
 
+from src.engines.v4_official_fact_integrity import build_publication_integrity, extract_public_fact
 from src.utils import CONFIG, DATA, atomic_json, iso_now, read_json
 
 POLICY = CONFIG / "serving_improvement_registry.json"
 OUTFILE = DATA / "serving_payload_v4.json"
 BENCHMARK = DATA / "serving_benchmark_v4.json"
+PUBLICATION_INTEGRITY = DATA / "publication_integrity_v4.json"
+FRAMEWORK_HEALTH = DATA / "framework_health_v4.json"
 EXTERNAL_SOURCE_EVIDENCE = DATA / "external_source_evidence.json"
 WEATHER_EVIDENCE = DATA / "weather_evidence.json"
 WARM_BENCHMARK_RUNS = 25
@@ -99,18 +102,20 @@ def build_source_panel(latest: dict, external: dict | None = None) -> dict:
     }
 
 
-def _owned_rows(team: dict) -> list[dict]:
+def _owned_rows(team: dict, tactical: dict) -> list[dict]:
     ledger = {int(row.get("element") or 0): row for row in team.get("team_value_ledger") or []}
+    public = {
+        int(row.get("element_id") or row.get("element") or 0): row
+        for row in tactical.get("owned") or []
+    }
     out = []
     for row in team.get("squad") or []:
         element = int(row.get("element") or 0)
+        fact = extract_public_fact(public.get(element) or {}, expected_element=element)
         value = ledger.get(element) or {}
         out.append({
-            "element": element,
-            "name": row.get("name") or value.get("name"),
-            "position": row.get("position") or value.get("position"),
-            "team": value.get("team"),
-            "now_cost": value.get("now_cost"),
+            **fact,
+            "purchase_cost": value.get("purchase_cost"),
             "sell_cost": value.get("sell_cost"),
         })
     if len(out) != 15:
@@ -177,10 +182,12 @@ def build_serving_payload(
     start = perf_counter()
     source_panel = source_panel or build_source_panel(latest)
     weather = weather if weather is not None else read_json(WEATHER_EVIDENCE, {})
-    owned = _owned_rows(team)
+    owned = _owned_rows(team, tactical)
     watchlist = list(tactical.get("watchlist") or [])
     if len(watchlist) != 20:
         raise RuntimeError(f"serving contract requires exact 20 watchlist, got {len(watchlist)}")
+    for row in watchlist:
+        extract_public_fact(row, expected_element=int(row.get("element") or 0))
     effective = effective_plan.get("effective_plan") or {}
     starting = list(effective.get("starting_xi") or [])
     bench = effective.get("bench") or {}
@@ -192,7 +199,7 @@ def build_serving_payload(
 
     values = team.get("totals") or {}
     payload = {
-        "schema_version": 4962,
+        "schema_version": 4963,
         "contract": "V4_HUMAN_SERVING_V1",
         "generated_at": iso_now(),
         "canonical_resolution_id": decision.get("resolution_id"),
@@ -220,6 +227,20 @@ def build_serving_payload(
         "fixture_rest_context": _rest_context(competitive, {row["element"] for row in owned}),
         "main_starting_xi_battle": _main_battle(lineup),
         "price_radar": {
+            "fact": {
+                "confirmed_official_price_changes": prices.get("confirmed_changes") or [],
+                "current_price_and_ownership_source": "owned_15/watchlist_20 canonical Official FACT rows",
+            },
+            "model": {
+                "provider": prices.get("source"),
+                "health": prices.get("health") or {},
+                "contract": prices.get("contract") or {},
+                "top_buy_pressure": (prices.get("top_buy_pressure") or [])[:10],
+                "top_sell_pressure": (prices.get("top_sell_pressure") or [])[:10],
+                "unavailable_semantics": "UNAVAILABLE",
+                "no_signal_semantics": "NO_SIGNAL",
+                "stale_semantics": "STALE_WITH_TIMESTAMP_AND_AGE",
+            },
             "confirmed_changes": prices.get("confirmed_changes") or [],
             "top_buy_pressure": (prices.get("top_buy_pressure") or [])[:10],
             "top_sell_pressure": (prices.get("top_sell_pressure") or [])[:10],
@@ -251,6 +272,10 @@ def build_serving_payload(
             "exact_4_bench": len(bench_rows) == 4,
             "tier1_external_consensus_cannot_override_official": True,
             "composition_only_no_model_recompute": True,
+            "report_specific_fact_hydration_forbidden": True,
+            "official_fact_completeness_required_before_publication": True,
+            "publication_integrity_independent_of_execution_authority": True,
+            "price_fact_and_model_evidence_separated": True,
         },
     }
     payload["quick_serving_ms"] = round((perf_counter() - start) * 1000.0, 3)
@@ -297,11 +322,74 @@ def build_benchmark(payload: dict, latest: dict, orchestration: dict | None = No
     }
 
 
+def _blocked_payload(integrity: dict) -> dict:
+    return {
+        "schema_version": 1,
+        "contract": "V4_HUMAN_SERVING_BLOCKED_V1",
+        "generated_at": iso_now(),
+        "status": "BLOCKED",
+        "user_report": None,
+        "publication_integrity": integrity,
+        "reason": "OFFICIAL_FACT_COMPLETENESS_FAIL_CLOSED",
+        "stale_complete_report_reuse_forbidden": True,
+    }
+
+
 def write_serving_payload(decision: dict, effective_plan: dict, team: dict, tactical: dict, lineup: dict, prices: dict, latest: dict, competitive: dict) -> dict:
-    payload = build_serving_payload(decision, effective_plan, team, tactical, lineup, prices, latest, competitive)
+    weather = read_json(WEATHER_EVIDENCE, {})
+    integrity = build_publication_integrity(
+        tactical,
+        latest,
+        prices,
+        decision,
+        framework_health=read_json(FRAMEWORK_HEALTH, {}),
+        weather=weather,
+    )
+    atomic_json(PUBLICATION_INTEGRITY, integrity)
+    if integrity.get("status") != "PASS":
+        blocked = _blocked_payload(integrity)
+        atomic_json(OUTFILE, blocked)
+        atomic_json(BENCHMARK, {
+            "schema_version": 2,
+            "generated_at": iso_now(),
+            "status": "BLOCKED",
+            "reason": "OFFICIAL_FACT_COMPLETENESS_FAIL_CLOSED",
+            "publication_integrity": integrity.get("status"),
+        })
+        raise RuntimeError(
+            "PUBLICATION_INTEGRITY_BLOCKED: complete USER_REPORT forbidden; "
+            f"owned={integrity.get('owned')} watchlist={integrity.get('watchlist')} "
+            f"defects={len(integrity.get('defects') or [])}"
+        )
+
+    source_panel = build_source_panel(latest)
+    payload = build_serving_payload(
+        decision,
+        effective_plan,
+        team,
+        tactical,
+        lineup,
+        prices,
+        latest,
+        competitive,
+        source_panel=source_panel,
+        weather=weather,
+    )
+    payload["publication_integrity"] = integrity
     samples = [float(payload.get("quick_serving_ms") or 0.0)]
     for _ in range(WARM_BENCHMARK_RUNS - 1):
-        measured = build_serving_payload(decision, effective_plan, team, tactical, lineup, prices, latest, competitive)
+        measured = build_serving_payload(
+            decision,
+            effective_plan,
+            team,
+            tactical,
+            lineup,
+            prices,
+            latest,
+            competitive,
+            source_panel=source_panel,
+            weather=weather,
+        )
         samples.append(float(measured.get("quick_serving_ms") or 0.0))
     atomic_json(OUTFILE, payload)
     atomic_json(BENCHMARK, build_benchmark(payload, latest, warm_samples_ms=samples))

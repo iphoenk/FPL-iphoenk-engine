@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+from src.engines.v4_official_fact_integrity import extract_public_fact
 from src.utils import CONFIG, DATA, read_json
 
 POLICY = CONFIG / "serving_improvement_registry.json"
@@ -116,11 +117,9 @@ def governed_watchlist(predictions: dict, universe: dict, owned_ids: set[int], p
         position = uni.get("position") or pred.get("position")
         if position not in positions:
             continue
+        fact = extract_public_fact(uni, expected_element=element)
         groups[position].append({
-            "element": element,
-            "name": uni.get("name") or pred.get("name") or str(element),
-            "position": position,
-            "team": uni.get("team") or pred.get("team"),
+            **fact,
             "score": round(_prediction_score(pred), 4),
             "xpts_5": round(_f(pred.get("xpts_5")), 3),
             "xpts_15": round(_f(pred.get("xpts_15")), 3),
@@ -165,18 +164,19 @@ def build_tactical_serving(predictions: dict, universe: dict, team: dict, extern
     for element in sorted(owned_ids):
         pred, uni = pmap.get(element), umap.get(element)
         if not pred or not uni:
-            raise RuntimeError(f"owned tactical row missing prediction/universe evidence for {element}")
+            raise RuntimeError(f"DATA_JOIN_DEFECT: owned tactical row missing prediction/universe evidence for element_id={element}")
+        fact = extract_public_fact(uni, expected_element=element)
         owned_rows.append({
-            "element": element,
-            "name": uni.get("name") or pred.get("name"),
-            "position": uni.get("position") or pred.get("position"),
-            "team": uni.get("team") or pred.get("team"),
+            **fact,
             "tactical": _compact_tactical(pred, uni, external),
         })
     watch_rows = []
     for row in watch["watchlist"]:
         element = row["element"]
-        pred, uni = pmap[element], umap[element]
+        pred, uni = pmap.get(element), umap.get(element)
+        if not pred or not uni:
+            raise RuntimeError(f"DATA_JOIN_DEFECT: watchlist row missing prediction/universe evidence for element_id={element}")
+        fact = extract_public_fact(row, expected_element=element)
         same_pos = [p for p in owned_rows if p["position"] == row["position"]]
         owned_candidates = []
         for owned in same_pos:
@@ -186,6 +186,7 @@ def build_tactical_serving(predictions: dict, universe: dict, team: dict, extern
         reference_x5 = _f(pmap[reference["element"]].get("xpts_5")) if reference else 0.0
         watch_rows.append({
             **row,
+            **fact,
             "replacement_context": {
                 "owned_element": reference.get("element") if reference else None,
                 "owned_name": reference.get("name") if reference else None,
@@ -204,6 +205,9 @@ def build_tactical_serving(predictions: dict, universe: dict, team: dict, extern
             "exact_15_owned": len(owned_rows) == 15,
             "exact_20_watchlist": len(watch_rows) == 20,
             "owned_excluded_from_watchlist": watch["owned_excluded"],
+            "official_fact_hydration_element_id_based": True,
+            "official_fact_hydration_from_canonical_universe": True,
+            "report_specific_fact_hydration_forbidden": True,
             "tactical_external_signal_cannot_independently_promote": True,
             "unverified_tactical_delta_is_zero": all(
                 row["tactical"]["tactical_delta_applied"] == 0.0

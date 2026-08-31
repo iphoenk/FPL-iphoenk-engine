@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "policy_id": "V4_RUNTIME_OPERATIONAL_POLICY_V1",
+  "timezone": "Asia/Jakarta",
+  "master_checkpoint_minute": 30,
+  "fresh_max_minutes": 60,
+  "stale_after_minutes": 90,
+  "max_reported_misses": 48,
+  "runtime_branch": "runtime-data-v4",
+  "canonical_ref": "v4-prediction-engine",
+  "production_concurrency_group": "fpl-iphoenk-v4-gate"
+}

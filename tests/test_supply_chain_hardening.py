@@ -4,6 +4,11 @@ from pathlib import Path
 RUNTIME_WORKFLOW = Path(".github/workflows/v3-runtime.yml")
 CI_WORKFLOW = Path(".github/workflows/v3-ci.yml")
 
+CHECKOUT_SHA = "3d3c42e5aac5ba805825da76410c181273ba90b1"  # v7.0.1
+SETUP_PYTHON_SHA = "5fda3b95a4ea91299a34e894583c3862153e4b97"  # v7.0.0
+UPLOAD_ARTIFACT_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0"  # v7.0.1
+DOWNLOAD_ARTIFACT_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"  # v8.0.1
+
 
 def test_runtime_compute_is_read_only_and_publication_is_isolated():
     workflow = RUNTIME_WORKFLOW.read_text(encoding="utf-8")
@@ -12,18 +17,18 @@ def test_runtime_compute_is_read_only_and_publication_is_isolated():
     assert "    permissions:\n      contents: write\n      actions: read\n" in workflow
     assert "persist-credentials: false" in workflow
     assert "GH_TOKEN: ${{ github.token }}" in workflow
-    assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in workflow
-    assert "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093" in workflow
+    assert f"actions/upload-artifact@{UPLOAD_ARTIFACT_SHA}" in workflow
+    assert f"actions/download-artifact@{DOWNLOAD_ARTIFACT_SHA}" in workflow
 
 
 def test_workflows_use_full_sha_pins_and_locked_dependencies():
     runtime = RUNTIME_WORKFLOW.read_text(encoding="utf-8")
     ci = CI_WORKFLOW.read_text(encoding="utf-8")
     for workflow in (runtime, ci):
-        assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in workflow
-        assert "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" in workflow
-        assert "actions/checkout@v4" not in workflow
-        assert "actions/setup-python@v5" not in workflow
+        assert f"actions/checkout@{CHECKOUT_SHA}" in workflow
+        assert f"actions/setup-python@{SETUP_PYTHON_SHA}" in workflow
+        assert "actions/checkout@v7" not in workflow
+        assert "actions/setup-python@v7" not in workflow
         assert "persist-credentials: false" in workflow
     assert "pip install --no-deps -r requirements.lock" in runtime
     assert "pip install --no-deps -r requirements-ci.lock" in ci

@@ -4,12 +4,14 @@ import json
 from datetime import datetime, timezone
 from functools import lru_cache
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from src.utils import DATA, ROOT, atomic_json, read_json
 
 POLICY_PATH = ROOT / "config" / "intelligence" / "owned_challenger_comparator.json"
 OUT = DATA / "challenger_discovery.json"
 POSITIONS = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
+WIB = ZoneInfo("Asia/Jakarta")
 
 
 @lru_cache(maxsize=1)
@@ -32,8 +34,9 @@ def _i(value: Any, default: int = -1) -> int:
 
 
 def _horizon(proj: dict[str, Any], horizon: int) -> float:
-    if proj.get("horizons"):
-        return _f(((proj.get("horizons") or {}).get(str(horizon)) or {}).get("mean"))
+    direct = ((proj.get("horizons") or {}).get(str(horizon)) or {}).get("mean")
+    if direct is not None:
+        return round(_f(direct), 3)
     return round(sum(_f(row.get("mean")) for row in list(proj.get("xpts_by_gw") or [])[:horizon]), 3)
 
 
@@ -48,15 +51,14 @@ def _official_map(snapshot: dict[str, Any]) -> dict[int, dict[str, Any]]:
 def _fixture_context(snapshot: dict[str, Any]) -> dict[int, list[dict[str, Any]]]:
     out: dict[int, list[dict[str, Any]]] = {}
     for row in snapshot.get("fixtures") or []:
-        event = row.get("event")
-        if event is None:
+        if row.get("event") is None:
             continue
         for team_key, opp_key, home in (("team_h", "team_a", True), ("team_a", "team_h", False)):
             team_id = _i(row.get(team_key))
             if team_id <= 0:
                 continue
             out.setdefault(team_id, []).append({
-                "event": event,
+                "event": row.get("event"),
                 "opponent_team_id": _i(row.get(opp_key)),
                 "home": home,
                 "kickoff_time": row.get("kickoff_time"),
@@ -69,36 +71,55 @@ def _fixture_context(snapshot: dict[str, Any]) -> dict[int, list[dict[str, Any]]
 
 
 def _price_index(prices: dict[str, Any]) -> dict[int, dict[str, Any]]:
-    out: dict[int, dict[str, Any]] = {}
-    for row in prices.get("players") or []:
-        eid = _i(row.get("element_id", row.get("element")))
-        if eid > 0:
-            out[eid] = row
-    return out
+    return {
+        _i(row.get("element_id", row.get("element"))): row
+        for row in prices.get("players") or []
+        if _i(row.get("element_id", row.get("element"))) > 0
+    }
+
+
+def _format_eta(value: Any, direction: str) -> str | None:
+    if not value:
+        return None
+    text = str(value)
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        local = parsed.astimezone(WIB)
+        months = ("Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember")
+        noun = "kenaikan" if direction == "RISE" else "penurunan"
+        return f"Memungkinkan {noun} harga {local.day} {months[local.month - 1]} {local.year} sekitar pukul {local:%H:%M} WIB, jika trajectory bertahan."
+    except ValueError:
+        noun = "kenaikan" if direction == "RISE" else "penurunan"
+        return f"Memungkinkan {noun} harga sekitar {text}, jika trajectory bertahan."
 
 
 def _fresh_market(row: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     state = str(row.get("evidence_state") or row.get("status") or "UNAVAILABLE").upper()
     freshness = _f(row.get("freshness_seconds"), 10**9)
-    stale_after = _f(cfg.get("max_predictor_freshness_seconds"), 21600)
-    stale = state in {"STALE", "UNAVAILABLE", "SCHEMA_CHANGED", "FIELD_MISSING", "CALIBRATING"} or freshness > stale_after
+    stale = (
+        state in {"STALE", "UNAVAILABLE", "SCHEMA_CHANGED", "FIELD_MISSING", "CALIBRATING"}
+        or freshness > _f(cfg.get("max_predictor_freshness_seconds"), 21600)
+    )
     direction = str(row.get("direction") or row.get("risk_direction") or "STABLE").upper()
     urgency = str(row.get("model_urgency") or row.get("urgency") or "LOW").upper()
     progress = row.get("current_progress_percent", row.get("official_progress_pct"))
     trajectory = row.get("trajectory") or row.get("trajectory_state")
     eta = row.get("eta_human") or row.get("predicted_change_deadline")
     next_window = row.get("next_official_price_update_at")
-    imminent = (not stale) and direction in {"RISE", "FALL"} and urgency in set(cfg.get("material_urgencies") or ["HIGH", "CRITICAL"])
-    if stale or direction not in {"RISE", "FALL"}:
-        eta_text = "Belum ada estimasi perubahan harga yang cukup reliable."
-    elif eta:
-        verb = "kenaikan" if direction == "RISE" else "penurunan"
-        eta_text = f"Memungkinkan {verb} harga sekitar {eta}, jika trajectory bertahan."
-    elif imminent:
-        verb = "naik" if direction == "RISE" else "turun"
-        eta_text = f"Berpeluang {verb} dalam 1–2 update harga berikutnya."
-    else:
-        eta_text = "Belum ada estimasi perubahan harga yang cukup reliable."
+    imminent = (
+        not stale
+        and direction in {"RISE", "FALL"}
+        and urgency in set(cfg.get("material_urgencies") or ["HIGH", "CRITICAL"])
+    )
+    narrative = _format_eta(eta, direction) if (not stale and direction in {"RISE", "FALL"}) else None
+    if not narrative:
+        if imminent:
+            verb = "naik" if direction == "RISE" else "turun"
+            narrative = f"Berpeluang {verb} dalam 1–2 update harga berikutnya."
+        else:
+            narrative = "Belum ada estimasi perubahan harga yang cukup reliable."
     return {
         "direction": direction,
         "urgency": urgency,
@@ -106,12 +127,14 @@ def _fresh_market(row: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
         "trajectory": trajectory,
         "predicted_player_change_eta": eta,
         "next_official_price_update_window": next_window,
-        "eta_narrative_id": eta_text,
+        "eta_narrative_id": narrative,
         "freshness_seconds": row.get("freshness_seconds"),
         "evidence_state": state,
         "fresh": not stale,
         "imminent": imminent,
+        "confirmed_price_change": row.get("confirmed_price_change"),
         "threshold_crossing_is_not_confirmed_change": True,
+        "next_update_window_is_not_player_change_eta": True,
     }
 
 
@@ -121,7 +144,7 @@ def _identity_sanity(
     fixtures_by_team: dict[int, list[dict[str, Any]]],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     if not official:
-        return proj, {
+        return dict(proj), {
             "status": "BLOCKED",
             "reason": "OFFICIAL_ELEMENT_ID_MISSING",
             "repaired_fields": [],
@@ -132,7 +155,7 @@ def _identity_sanity(
     official_team = _i(official.get("team"))
     local_team = _i(proj.get("team_id", proj.get("team")))
     local_position = str(proj.get("position") or "")
-    hard_mismatch = (
+    team_or_position_mismatch = (
         (official_team > 0 and local_team > 0 and official_team != local_team)
         or (official_position and local_position and official_position != local_position)
     )
@@ -147,14 +170,13 @@ def _identity_sanity(
     }
     for key, value in replacements.items():
         if value is not None and p.get(key) != value:
-            if key not in {"team_id", "position"} or not hard_mismatch:
-                p[key] = value
-                repaired.append(key)
+            p[key] = value
+            repaired.append(key)
     p["official_fixture_context"] = (fixtures_by_team.get(official_team) or [])[:5]
-    if hard_mismatch:
+    if team_or_position_mismatch:
         return p, {
-            "status": "BLOCKED",
-            "reason": "IDENTITY_MAPPING_MISMATCH",
+            "status": "REPAIRED_BUT_TAINTED",
+            "reason": "IDENTITY_MAPPING_MISMATCH_REPAIRED_FROM_OFFICIAL",
             "local_team_id": local_team,
             "official_team_id": official_team,
             "local_position": local_position,
@@ -185,7 +207,7 @@ def _position_value_percentiles(rows: list[dict[str, Any]]) -> None:
 
 def build() -> dict[str, Any]:
     cfg = load_policy()
-    discovery_cfg = cfg.get("projected_value_market_discovery") or {}
+    dc = cfg.get("projected_value_market_discovery") or {}
     projections = read_json(DATA / "projections.json", {})
     snapshot = read_json(DATA / "official_snapshot.json", {})
     prices = read_json(DATA / "prices.json", {})
@@ -206,33 +228,35 @@ def build() -> dict[str, Any]:
         if eid <= 0 or eid in owned:
             continue
         p, identity = _identity_sanity(raw, official.get(eid), fixtures_by_team)
-        if identity["status"] != "PASS":
-            blocked_identity.append({"element": eid, "name": p.get("name"), **identity})
+        if identity["downstream_projection_trusted"] is False:
+            blocked_identity.append({
+                "element": eid,
+                "name": p.get("name"),
+                **identity,
+            })
             continue
+
         xmins = p.get("xmins") or {}
-        h3 = _horizon(p, 3)
-        h5 = _horizon(p, 5)
-        h10 = _horizon(p, 10)
-        h15 = _horizon(p, 15)
+        h3, h5, h10, h15 = (_horizon(p, h) for h in (3, 5, 10, 15))
         price_m = max(_f(p.get("now_cost")) / 10.0, 0.1)
         value = h5 / price_m
-        market = _fresh_market(price_map.get(eid) or {}, discovery_cfg)
+        market = _fresh_market(price_map.get(eid) or {}, dc)
         start = _f(xmins.get("start_probability"))
         expected_minutes = _f(xmins.get("expected_minutes"))
-        status_ok = str(p.get("status") or "") in set(cfg.get("emerging_screen", {}).get("allowed_statuses") or ["a", "d"])
+        status_ok = str(p.get("status") or "") in set((cfg.get("emerging_screen") or {}).get("allowed_statuses") or ["a", "d"])
 
         football_edge = (
             status_ok
-            and start >= _f(discovery_cfg.get("football_min_start_probability"), 0.60)
-            and expected_minutes >= _f(discovery_cfg.get("football_min_expected_minutes"), 60)
-            and h5 >= _f(discovery_cfg.get("football_min_h5"), 14.0)
+            and start >= _f(dc.get("football_min_start_probability"), 0.60)
+            and expected_minutes >= _f(dc.get("football_min_expected_minutes"), 60)
+            and h5 >= _f(dc.get("football_min_h5"), 14.0)
         )
         structural_edge = (
             status_ok
-            and start >= _f(discovery_cfg.get("structural_min_start_probability"), 0.65)
-            and value >= _f(discovery_cfg.get("structural_min_xpts5_per_million"), 2.2)
+            and start >= _f(dc.get("structural_min_start_probability"), 0.65)
+            and value >= _f(dc.get("structural_min_xpts5_per_million"), 2.2)
         )
-        row = {
+        rows.append({
             "element": eid,
             "name": p.get("name"),
             "team_id": p.get("team_id"),
@@ -260,9 +284,7 @@ def build() -> dict[str, Any]:
             },
             "mandatory_challenger_review": False,
             "price_only_hype_rejected": False,
-            "projection": p,
-        }
-        rows.append(row)
+        })
 
     _position_value_percentiles(rows)
     mandatory: list[int] = []
@@ -270,10 +292,11 @@ def build() -> dict[str, Any]:
         pv = row["projected_value"]
         market = row["market"]
         value_material = (
-            _f(pv.get("position_value_percentile")) >= _f(discovery_cfg.get("minimum_position_value_percentile"), 0.75)
-            and _f(pv.get("xpts5_per_million")) >= _f(discovery_cfg.get("value_min_xpts5_per_million"), 2.4)
-            and _f((row.get("xmins") or {}).get("start_probability")) >= _f(discovery_cfg.get("value_min_start_probability"), 0.65)
-            and _f((row.get("horizons") or {}).get("5")) >= _f(discovery_cfg.get("value_min_h5"), 12.0)
+            _f(pv.get("position_value_percentile")) >= _f(dc.get("minimum_position_value_percentile"), 0.75)
+            and _f(pv.get("xpts5_per_million")) >= _f(dc.get("value_min_xpts5_per_million"), 2.4)
+            and _f((row.get("xmins") or {}).get("start_probability")) >= _f(dc.get("value_min_start_probability"), 0.65)
+            and _f((row.get("xmins") or {}).get("expected_minutes")) >= _f(dc.get("value_min_expected_minutes"), 65.0)
+            and _f((row.get("horizons") or {}).get("5")) >= _f(dc.get("value_min_h5"), 12.0)
         )
         route = bool(value_material and market.get("imminent") and market.get("fresh"))
         row["routes"]["VALUE_MARKET_URGENCY"] = route
@@ -294,7 +317,7 @@ def build() -> dict[str, Any]:
     )
     material = [row for row in rows if any((row.get("routes") or {}).values())]
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "contract": "V3_CHALLENGER_DISCOVERY_V1",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "owner": "decision.owned_challenger_evaluation",
@@ -310,11 +333,14 @@ def build() -> dict[str, Any]:
         "governance": {
             "full_universe_scanned": True,
             "official_identity_sanity_required": True,
+            "fresh_official_fields_repair_local_identity": True,
+            "team_or_position_mismatch_taints_projection_context": True,
             "position_budget_aware_projected_value": True,
             "market_urgency_changes_timing_not_football_truth": True,
             "price_only_hype_never_auto_transfer": True,
             "stale_predictor_cannot_create_mandatory_review": True,
             "threshold_crossing_is_not_confirmed_change": True,
+            "next_update_window_is_not_player_change_eta": True,
             "no_player_specific_out_hardcode": True,
         },
     }
@@ -323,16 +349,6 @@ def build() -> dict[str, Any]:
 def run() -> dict[str, Any]:
     payload = build()
     atomic_json(OUT, payload)
-    latest = read_json(DATA / "latest.json", {})
-    latest.setdefault("files", {})["challenger_discovery"] = "data/challenger_discovery.json"
-    latest["challenger_discovery_summary"] = {
-        "status": "READY" if not payload.get("blocked_identity_count") else "PARTIAL",
-        "universe_count": payload.get("universe_count"),
-        "material_candidate_count": payload.get("material_candidate_count"),
-        "mandatory_review_count": payload.get("mandatory_review_count"),
-        "blocked_identity_count": payload.get("blocked_identity_count"),
-    }
-    atomic_json(DATA / "latest.json", latest)
     return payload
 
 

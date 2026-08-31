@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "purpose": "Catalog of V5 domains that must resolve through a shared module or registry instead of duplicated implementation logic.",
   "domains": {
     "official_rules": {"authority": "config/rules/registry.json", "status": "ACTIVE"},
@@ -10,6 +10,7 @@
     "gate0": {"authority": "config/gate0_registry.json", "status": "ACTIVE"},
     "performance_budgets": {"authority": "config/v5_performance_budgets.json", "status": "ACTIVE"},
     "architecture_principles": {"authority": "config/v5_architecture_principles.json", "status": "ACTIVE"},
+    "canonical_provenance": {"authority": "config/v5_canonical_provenance_registry.json", "runtime_enforcer": "src/v5/canonical_provenance.py", "status": "ACTIVE"},
     "finance": {"authority": "src/v5/finance.py + config/v5_finance_registry.json", "status": "ACTIVE"},
     "phase_authority": {"authority": "src/v5/state.py + config/v5_phase_authority_registry.json", "status": "ACTIVE"},
     "price_trajectory": {"authority": "src/v5/price_trajectory.py + config/v5_price_trajectory_registry.json", "status": "ACTIVE"},

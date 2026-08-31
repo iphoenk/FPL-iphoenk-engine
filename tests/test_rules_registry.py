@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from src.engines.rules_compliance_audit import audit
 from src.engines.team_value import sell_cost
-from src.models.optimizer import legal_counts
+from src.models.package_optimizer_v2 import legal_squad
 from src.rules import (
     ACTIVE_RULESET,
     LINEUP_RULES,
@@ -50,7 +50,7 @@ def test_optimizer_legality_reads_active_ruleset():
             players.append({"element": element, "position": position, "team_id": team})
             element += 1
             team = team + 1 if team < 5 else 1
-    assert legal_counts(players) is True
+    assert legal_squad(players) is True
 
 
 def test_rules_compliance_structural_audit_passes_without_remote_mutation():

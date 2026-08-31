@@ -19,13 +19,24 @@ def test_optimization_reuses_decision_prediction_context(monkeypatch):
         seen["universe"] = universe
         return {"weather_context": {"status": "NORMAL"}}
 
+    def fake_price_context():
+        return {
+            "health": {"status": "PASS"},
+            "source": "OFFICIAL_FPL",
+            "contract": "OFFICIAL_FPL_PRICE_PREDICTOR_V1",
+            "all15_actionable_price_radar": [],
+            "all20_external_dss_watchlist": [],
+        }
+
     monkeypatch.setattr(service, "run_decision_pipeline", fake_pipeline)
     monkeypatch.setattr(service, "apply_weather_overlay", fake_overlay)
+    monkeypatch.setattr(service, "refresh_price_context", fake_price_context)
     monkeypatch.setattr(service, "atomic_json", lambda *args, **kwargs: None)
 
     out = service.run()
     assert seen["predictions"] is predictions
     assert seen["universe"] is universe
+    assert out["price_context"]["source"] == "OFFICIAL_FPL"
     assert out["performance_slo"]["status"] == "PASS"
 
 

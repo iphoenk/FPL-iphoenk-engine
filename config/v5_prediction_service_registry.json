@@ -1,16 +1,65 @@
 {
-  "version": 1,
+  "version": 2,
   "default_operation": "build",
   "network_contract": {
     "return_full_predictions_by_default": false,
-    "player_fields": ["element", "name", "position", "stable_key", "xpts_3", "xpts_5", "xpts_10", "xpts_15", "mean_xpts", "uncertainty"],
+    "full_provenance_omitted": true,
+    "player_fields": [
+      "element",
+      "name",
+      "team_id",
+      "position",
+      "now_cost",
+      "status",
+      "ownership_pct",
+      "current_season",
+      "historical_prior",
+      "xmins",
+      "role",
+      "xpts_by_gw",
+      "horizons",
+      "xpts_3",
+      "xpts_5",
+      "xpts_10",
+      "xpts_15",
+      "mean_xpts",
+      "uncertainty",
+      "fixtures",
+      "projection_confidence",
+      "advanced",
+      "tactical_matchup"
+    ],
+    "required_player_fields": [
+      "element",
+      "name",
+      "position",
+      "xmins",
+      "xpts_by_gw",
+      "horizons",
+      "xpts_3",
+      "xpts_5",
+      "xpts_10",
+      "xpts_15",
+      "mean_xpts",
+      "uncertainty",
+      "fixtures"
+    ],
     "fixture_count": 5,
-    "fixture_fields": ["event", "xpts", "lower80", "upper80"],
-    "xmins_fields": ["start_probability", "bench_probability", "dnp_probability", "expected_minutes", "p60"],
-    "prior_fields": ["nailed_prior", "competition_pressure", "manager_rotation_rate", "set_piece_share", "penalty_share", "last_season_weight"]
+    "fixture_fields": [
+      "event",
+      "xpts",
+      "lower80",
+      "upper80",
+      "xmins"
+    ]
   },
   "performance": {
-    "purpose": "avoid retransmitting full per-fixture provenance through orchestrator to decision service",
+    "purpose": "bound prediction transport at the service boundary without mutating projection intelligence",
     "parallel_safe": true
+  },
+  "governance": {
+    "single_network_contract_authority": true,
+    "projection_core_transport_agnostic": true,
+    "missing_or_invalid_contract_fails_closed": true
   }
 }

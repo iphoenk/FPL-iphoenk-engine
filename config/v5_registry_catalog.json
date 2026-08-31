@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "purpose": "Catalog of V5 domains that must resolve through a shared module or registry instead of duplicated implementation logic.",
   "domains": {
     "official_rules": {"authority": "config/rules/registry.json", "status": "ACTIVE"},
@@ -14,6 +14,7 @@
     "phase_authority": {"authority": "src/v5/state.py + config/v5_phase_authority_registry.json", "status": "ACTIVE"},
     "price_trajectory": {"authority": "src/v5/price_trajectory.py + config/v5_price_trajectory_registry.json", "status": "ACTIVE"},
     "projection_parameters": {"authority": "src/v5/intelligence/projection.py + config/intelligence/projection.json", "status": "ACTIVE"},
+    "prediction_network_contract": {"authority": "config/v5_prediction_service_registry.json", "runtime_enforcer": "src/v5/services/prediction.py", "status": "ACTIVE"},
     "xmins": {"authority": "src/v5/intelligence/xmins.py + config/intelligence/xmins_v3.json", "status": "ACTIVE"},
     "xmins_v2_legacy_config": {"authority": "none", "path": "config/intelligence/xmins_v2.json", "status": "DEPRECATED_NOT_AUTHORITY"},
     "decision_service_handler": {"authority": "config/v5_service_registry.json#services.decision.handler", "status": "ACTIVE"},

@@ -1,10 +1,12 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "registry": "RUNTIME_PERFORMANCE_SLO_V1",
   "policy": {
     "interactive_target_is_engine_runtime_not_github_runner_startup": true,
     "profile_specific_slo": true,
     "resource_limits_begin_observe_only_until_baseline_is_collected": true,
+    "resource_observe_only_is_governed_non_blocking_not_missing_control": true,
+    "resource_hard_limits_require_multi_run_production_evidence": true,
     "correctness_must_not_be_traded_for_latency": true,
     "sub_second_target_applies_to_validated_warm_serving": true,
     "external_network_refresh_is_measured_separately": true,
@@ -46,6 +48,12 @@
     }
   },
   "resource_observability": {
+    "state": "BASELINE_COLLECTION_GOVERNED",
+    "baseline_authority": "runtime-data/data/runtime_manifest.json",
+    "rolling_runtime_branch_retains_history": false,
+    "hard_limit_activation": "REQUIRES_MULTI_RUN_PRODUCTION_BASELINE",
+    "false_precision_forbidden": true,
+    "operational_health_effect": "NON_BLOCKING_WHILE_BASELINE_GOVERNANCE_IS_VALID",
     "metrics": [
       "peak_rss_kb",
       "child_peak_rss_kb",

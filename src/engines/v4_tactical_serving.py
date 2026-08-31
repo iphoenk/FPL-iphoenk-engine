@@ -155,6 +155,15 @@ def governed_watchlist(predictions: dict, universe: dict, owned_ids: set[int], p
     }
 
 
+def _owned_reference_score(pred: dict) -> float:
+    """Higher means more exposed to a replacement challenge; xPts alone is never the selector."""
+    x5 = _f(pred.get("xpts_5"))
+    x15 = _f(pred.get("xpts_15")) / 3.0
+    start = _avg_start(pred)
+    uncertainty = max(0.0, _f(pred.get("uncertainty")))
+    return -x5 - 0.15 * x15 + 0.85 * max(0.0, 0.75 - start) + 0.25 * uncertainty
+
+
 def build_tactical_serving(predictions: dict, universe: dict, team: dict, external: dict | None = None, previous: dict | None = None) -> dict:
     external = external if external is not None else read_json(EXTERNAL_EVIDENCE, {})
     pmap = {int(row.get("element") or 0): row for row in predictions.get("players") or [] if row.get("element") is not None}
@@ -182,11 +191,11 @@ def build_tactical_serving(predictions: dict, universe: dict, team: dict, extern
             raise RuntimeError(f"DATA_JOIN_DEFECT: watchlist row missing prediction/universe evidence for element_id={element}")
         fact = extract_public_fact(row, expected_element=element)
         same_pos = [p for p in owned_rows if p["position"] == row["position"]]
-        owned_candidates = []
-        for owned in same_pos:
-            owned_pred = pmap[owned["element"]]
-            owned_candidates.append((_f(owned_pred.get("xpts_5")), owned))
-        reference = min(owned_candidates, key=lambda x: x[0])[1] if owned_candidates else None
+        reference_candidates = [
+            (_owned_reference_score(pmap[owned["element"]]), owned)
+            for owned in same_pos
+        ]
+        reference = max(reference_candidates, key=lambda item: item[0])[1] if reference_candidates else None
         reference_x5 = _f(pmap[reference["element"]].get("xpts_5")) if reference else 0.0
         watch_rows.append({
             **row,
@@ -195,6 +204,7 @@ def build_tactical_serving(predictions: dict, universe: dict, team: dict, extern
                 "owned_element": reference.get("element") if reference else None,
                 "owned_name": reference.get("name") if reference else None,
                 "xpts5_delta": round(_f(pred.get("xpts_5")) - reference_x5, 3) if reference else None,
+                "selection_basis": "multi_factor_owned_reference",
             },
             "tactical": _compact_tactical(pred, uni, external),
         })
@@ -215,6 +225,7 @@ def build_tactical_serving(predictions: dict, universe: dict, team: dict, extern
             "official_fact_hydration_from_canonical_universe": True,
             "report_specific_fact_hydration_forbidden": True,
             "tactical_external_signal_cannot_independently_promote": True,
+            "weakest_link_is_not_lowest_xpts_alone": True,
             "unverified_tactical_delta_is_zero": all(
                 row["tactical"]["tactical_delta_applied"] == 0.0
                 for row in [*owned_rows, *watch_rows]

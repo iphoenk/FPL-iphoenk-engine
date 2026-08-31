@@ -6,6 +6,7 @@ from time import perf_counter
 from src.engines.v4_decision_pipeline import OUTFILE, run as run_decision_pipeline
 from src.engines.v4_price_context import serve_price_evidence
 from src.engines.v4_weather_tactical_overlay import apply_weather_overlay
+from src.services.owned_challenger_decision_service import run as run_owned_challenger_decision
 from src.utils import DATA, atomic_json, read_json
 
 DECISION_COMPUTE_SLO_MS = 5000.0
@@ -42,13 +43,18 @@ def run() -> dict:
     )
     weather_ms = round((perf_counter() - weather_started) * 1000.0, 2)
 
+    challenger_started = perf_counter()
+    challenger = run_owned_challenger_decision()
+    challenger_ms = round((perf_counter() - challenger_started) * 1000.0, 2)
+
     base_compute_ms = float((out.get("timings") or {}).get("total_pipeline_ms") or float("inf"))
-    compute_ms = base_compute_ms + price_context_ms + weather_ms
+    compute_ms = base_compute_ms + price_context_ms + weather_ms + challenger_ms
     wall_ms = round((perf_counter() - wall_started) * 1000.0, 2)
     status = "PASS" if compute_ms < DECISION_COMPUTE_SLO_MS else "FAIL"
 
     out.setdefault("timings", {})["price_market_context_ms"] = price_context_ms
     out["timings"]["weather_tactical_overlay_ms"] = weather_ms
+    out["timings"]["owned_challenger_decision_ms"] = challenger_ms
     out["timings"]["total_pipeline_ms"] = round(compute_ms, 2)
     out["price_context"] = {
         "status": (price_context.get("health") or {}).get("status"),
@@ -68,6 +74,19 @@ def run() -> dict:
         "decision_chain_effect": "UNCERTAINTY_AND_TACTICAL_ADVISORY_ONLY",
         "expected_xpts_mean_adjustment": 0.0,
     }
+    out["owned_challenger_decision"] = {
+        "status": challenger.get("status"),
+        "contract": challenger.get("contract"),
+        "owned_count": challenger.get("owned_count"),
+        "governed_watchlist_count": challenger.get("governed_watchlist_count"),
+        "comparison_count": challenger.get("comparison_count"),
+        "main_transfer_battle_count": len(challenger.get("main_transfer_battles") or []),
+        "multi_transfer_package_count": len(challenger.get("multi_transfer_packages") or []),
+        "overall_decision": challenger.get("overall_decision"),
+        "execution_authorized": challenger.get("execution_authorized"),
+        "artifact": "data/owned_challenger_decision_v4.json",
+        "owner": "optimization",
+    }
     out["performance_slo"] = {
         "scope": "deterministic_decision_compute_excludes_external_source_network_io",
         "limit_ms": DECISION_COMPUTE_SLO_MS,
@@ -83,6 +102,8 @@ def run() -> dict:
     out["performance_guardrails"]["price_signal_cannot_authorize_football_action"] = True
     out["performance_guardrails"]["weather_network_io_occurs_in_enrichment_not_decision_compute"] = True
     out["performance_guardrails"]["weather_mean_xpts_mutation"] = False
+    out["performance_guardrails"]["owned_challenger_runs_inside_optimization_owner"] = True
+    out["performance_guardrails"]["owned_challenger_creates_no_second_decision_authority"] = True
     atomic_json(OUTFILE, out)
     print(json.dumps({
         "service": "optimization",
@@ -94,6 +115,9 @@ def run() -> dict:
         "all20": len(all20),
         "weather_overlay_ms": weather_ms,
         "weather_context": (tactical.get("weather_context") or {}).get("status"),
+        "owned_challenger_ms": challenger_ms,
+        "owned_challenger_status": challenger.get("status"),
+        "owned_challenger_decision": challenger.get("overall_decision"),
         "limit_ms": DECISION_COMPUTE_SLO_MS,
     }, ensure_ascii=False))
     if status != "PASS":

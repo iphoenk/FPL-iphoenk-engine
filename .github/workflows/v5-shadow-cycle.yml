@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
 
 concurrency:
   group: v5-real-shadow-cycle
@@ -38,6 +39,14 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Enforce V5 canonical merged-PR provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V5_PROVENANCE_BRANCH=v5-unified-engine \
+          V5_PROVENANCE_SHA="$(git rev-parse HEAD)" \
+          python -m src.v5.canonical_provenance
 
       - name: Resolve deployed production baseline
         shell: bash

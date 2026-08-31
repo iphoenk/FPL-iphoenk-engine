@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from src.v5.decision.tactical_consumption import apply_lineup_overlay
+from src.v5.config_cache import load_json_config
+from src.v5.decision.tactical_consumption import apply_lineup_overlay, lineup_gap
 
 
 def _player(element: int, position: str, key: tuple[int, int, int]) -> dict:
@@ -22,6 +23,12 @@ def _player(element: int, position: str, key: tuple[int, int, int]) -> dict:
             "evidence_confidence": confidence,
         },
     }
+
+
+def test_tactical_close_call_surface_matches_deployed_production_depth_and_gap():
+    cfg = load_json_config("config/v5_decision_registry.json")
+    assert int(cfg["lineup"]["alternatives"]["publish_top_n"]) >= 6
+    assert lineup_gap() == 0.75
 
 
 def test_tactical_overlay_can_reach_deeper_close_canonical_alternative():

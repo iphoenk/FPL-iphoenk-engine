@@ -1,0 +1,22 @@
+{
+  "registry": "V5_CANONICAL_PROVENANCE_POLICY_V1",
+  "schema_version": 1,
+  "branch": "v5-unified-engine",
+  "trust_anchor_sha": "14ca0166210576f34eee7da11d7b90d6792ef47a",
+  "max_first_parent_commits": 256,
+  "require_anchor_in_first_parent_history": true,
+  "require_each_code_commit_after_anchor_from_merged_pr": true,
+  "require_merge_commit_sha_match": true,
+  "allow_governed_trigger_commits": true,
+  "allowed_trigger_actor": "github-actions[bot]",
+  "allowed_trigger_paths": [
+    "config/v5_shadow_trigger.json",
+    "config/v5_on_demand_trigger.json"
+  ],
+  "allowed_trigger_message_prefixes": [
+    "chore(v5): dispatch governed shadow evidence",
+    "chore(v5): dispatch governed on-demand report"
+  ],
+  "require_verified_trigger_commit": true,
+  "fail_closed_on_github_api_error": true
+}

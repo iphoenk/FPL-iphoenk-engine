@@ -23,7 +23,9 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install -q pytest requests
       - name: Apply final P0 hardening
-        run: python tools/v4_p0_final_hardening_temp.py
+        run: |
+          python tools/v4_p0_final_hardening_temp.py
+          python tools/v4_p0_manifest_fix_temp.py
       - name: Run targeted regression tests
         run: pytest -q tests/test_v4_official_price_predictor.py tests/test_v4_official_fact_completeness_p0.py tests/test_v4_production_health_semantics.py
       - name: Generate governed architecture attestation
@@ -32,7 +34,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/v4-prod-hardening-temp.yml tools/v4_p0_final_hardening_temp.py
-          git add src/engines/price_radar.py src/services/governance_service.py config/service_registry.json config/service_contract_registry.json config/architecture_guard_attestation.json tests/test_v4_official_price_predictor.py tests/test_v4_official_fact_completeness_p0.py
+          git rm .github/workflows/v4-prod-hardening-temp.yml tools/v4_p0_final_hardening_temp.py tools/v4_p0_manifest_fix_temp.py
+          git add src/engines/price_radar.py src/services/governance_service.py config/service_registry.json config/service_contract_registry.json config/release_manifest.json config/architecture_guard_attestation.json tests/test_v4_official_price_predictor.py tests/test_v4_official_fact_completeness_p0.py
           git commit -m "V4 P0: close production publication governance gaps"
           git push origin "HEAD:${GITHUB_REF_NAME}"

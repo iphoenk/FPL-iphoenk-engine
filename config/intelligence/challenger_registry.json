@@ -8,7 +8,6 @@
   "minimum_sample_for_dynamic_weight": 50,
   "providers": [
     {"id": "internal", "name": "FPL iphoenk Engine", "mode": "native", "enabled": true},
-    {"id": "onefpl", "name": "OneFPL", "mode": "report_time_observation", "enabled": true},
     {"id": "fffix", "name": "Fantasy Football Fix", "mode": "observation_file", "enabled": true},
     {"id": "ffhub", "name": "Fantasy Football Hub", "mode": "observation_file", "enabled": true}
   ],
@@ -19,6 +18,6 @@
     "provider_reputation_is_not_accuracy_evidence": true,
     "structured_price_context_never_overrides_official_price_fields": true,
     "cached_or_stale_structured_observations_are_not_current": true,
-    "report_time_only_provider_must_not_claim_machine_structured_ingestion": true
+    "report_time_only_providers_are_excluded_from_machine_scorecard": true
   }
 }

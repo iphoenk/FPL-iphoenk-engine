@@ -1,0 +1,24 @@
+name: FPL V4 recovery compatibility wrapper
+
+# Scheduling authority lives exclusively on the default branch (`main`).
+# This canonical-branch file is retained only because the Architecture Guard
+# currently attests the reusable production call graph. It has no cron and
+# therefore cannot become a second scheduler/recovery owner.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fpl-iphoenk-v4-gate
+  cancel-in-progress: false
+
+jobs:
+  core:
+    uses: ./.github/workflows/fpl-engine-core.yml
+    permissions:
+      contents: write
+    with:
+      ref: ${{ github.sha }}
+      publish: true

@@ -1,6 +1,6 @@
 {
-  "schema_version": 13,
-  "registry": "fpl_v4_9_6_microservice_registry_v13",
+  "schema_version": 14,
+  "registry": "fpl_v4_9_6_microservice_registry_v14",
   "architecture_version": "4.9.6",
   "execution_model": "process_isolated_dag_parallel_single_host",
   "services": [
@@ -9,20 +9,11 @@
       "name": "Raw Snapshot Service",
       "boundary_state": "INDEPENDENT",
       "module": "src.services.raw_snapshot_service",
-      "command": [
-        "{python}",
-        "-m",
-        "src.services.raw_snapshot_service",
-        "{mode}"
-      ],
-      "runtime_flags": {
-        "as_of": "--as-of"
-      },
+      "command": ["{python}", "-m", "src.services.raw_snapshot_service", "{mode}"],
+      "runtime_flags": {"as_of": "--as-of"},
       "timeout_seconds": 90,
       "depends_on": [],
-      "produces": [
-        "raw_snapshot"
-      ],
+      "produces": ["raw_snapshot"],
       "lock_artifact": "data/runtime/snapshot.v1.json",
       "snapshot_identity": true,
       "critical": true
@@ -32,22 +23,11 @@
       "name": "Enrichment Service",
       "boundary_state": "INDEPENDENT",
       "module": "src.services.enrichment_service",
-      "command": [
-        "{python}",
-        "-m",
-        "src.services.enrichment_service"
-      ],
-      "runtime_flags": {
-        "stats": "--stats",
-        "deep_stats": "--deep-stats"
-      },
+      "command": ["{python}", "-m", "src.services.enrichment_service"],
+      "runtime_flags": {"stats": "--stats", "deep_stats": "--deep-stats"},
       "timeout_seconds": 90,
-      "depends_on": [
-        "raw_snapshot"
-      ],
-      "produces": [
-        "enrichment"
-      ],
+      "depends_on": ["raw_snapshot"],
+      "produces": ["enrichment"],
       "lock_artifact": "data/runtime/enrichment.v1.json",
       "critical": true
     },
@@ -56,22 +36,10 @@
       "name": "Prediction Service",
       "boundary_state": "INDEPENDENT",
       "module": "src.services.prediction_service",
-      "command": [
-        "{python}",
-        "-m",
-        "src.services.prediction_service"
-      ],
+      "command": ["{python}", "-m", "src.services.prediction_service"],
       "timeout_seconds": 60,
-      "depends_on": [
-        "enrichment"
-      ],
-      "produces": [
-        "latest_snapshot",
-        "predictions",
-        "team_state",
-        "universe",
-        "source_health"
-      ],
+      "depends_on": ["enrichment"],
+      "produces": ["latest_snapshot", "predictions", "team_state", "universe", "source_health"],
       "lock_artifact": "data/latest.json",
       "critical": true
     },
@@ -80,21 +48,10 @@
       "name": "Validation & Preflight Assurance Service",
       "boundary_state": "INDEPENDENT",
       "module": "src.services.validation_service",
-      "command": [
-        "{python}",
-        "-m",
-        "src.services.validation_service"
-      ],
+      "command": ["{python}", "-m", "src.services.validation_service"],
       "timeout_seconds": 45,
-      "depends_on": [
-        "prediction"
-      ],
-      "produces": [
-        "validation_lifecycle",
-        "reconciliation_readiness",
-        "compliance",
-        "framework_preflight"
-      ],
+      "depends_on": ["prediction"],
+      "produces": ["validation_lifecycle", "reconciliation_readiness", "compliance", "framework_preflight"],
       "critical": true
     },
     {
@@ -102,24 +59,10 @@
       "name": "Optimization & Decision Service",
       "boundary_state": "INDEPENDENT",
       "module": "src.services.optimization_slo_service",
-      "command": [
-        "{python}",
-        "-m",
-        "src.services.optimization_slo_service"
-      ],
+      "command": ["{python}", "-m", "src.services.optimization_slo_service"],
       "timeout_seconds": 45,
-      "depends_on": [
-        "prediction"
-      ],
-      "produces": [
-        "wc_decision",
-        "wc_package",
-        "lineup",
-        "recommendation_sanity",
-        "tactical_serving",
-        "decision_arbitration",
-        "decision_pipeline"
-      ],
+      "depends_on": ["prediction"],
+      "produces": ["wc_decision", "wc_package", "lineup", "recommendation_sanity", "tactical_serving", "owned_challenger_decision", "decision_arbitration", "decision_pipeline"],
       "critical": true
     },
     {
@@ -127,18 +70,10 @@
       "name": "User Plan Authority Service",
       "boundary_state": "INDEPENDENT",
       "module": "src.services.user_decision_overlay_service",
-      "command": [
-        "{python}",
-        "-m",
-        "src.services.user_decision_overlay_service"
-      ],
+      "command": ["{python}", "-m", "src.services.user_decision_overlay_service"],
       "timeout_seconds": 20,
-      "depends_on": [
-        "optimization"
-      ],
-      "produces": [
-        "effective_plan"
-      ],
+      "depends_on": ["optimization"],
+      "produces": ["effective_plan"],
       "critical": true
     },
     {
@@ -146,18 +81,10 @@
       "name": "Personal GW Scorecard Service",
       "boundary_state": "INDEPENDENT",
       "module": "src.services.gw_scorecard_service",
-      "command": [
-        "{python}",
-        "-m",
-        "src.services.gw_scorecard_service"
-      ],
+      "command": ["{python}", "-m", "src.services.gw_scorecard_service"],
       "timeout_seconds": 20,
-      "depends_on": [
-        "user_decision_overlay"
-      ],
-      "produces": [
-        "gw_scorecard"
-      ],
+      "depends_on": ["user_decision_overlay"],
+      "produces": ["gw_scorecard"],
       "critical": true
     },
     {
@@ -165,24 +92,10 @@
       "name": "Postflight & Report Governance Service",
       "boundary_state": "INDEPENDENT",
       "module": "src.services.governance_service",
-      "command": [
-        "{python}",
-        "-m",
-        "src.services.governance_service"
-      ],
+      "command": ["{python}", "-m", "src.services.governance_service"],
       "timeout_seconds": 30,
-      "depends_on": [
-        "validation",
-        "user_decision_overlay",
-        "personal_gw_scorecard"
-      ],
-      "produces": [
-        "framework_postflight",
-        "checkpoint_decision",
-        "serving_payload",
-        "serving_benchmark",
-        "publication_integrity"
-      ],
+      "depends_on": ["validation", "user_decision_overlay", "personal_gw_scorecard"],
+      "produces": ["framework_postflight", "checkpoint_decision", "serving_payload", "serving_benchmark", "publication_integrity"],
       "critical": true
     }
   ],
@@ -216,11 +129,7 @@
     "advanced_ablation_full_shadow_parity_required": true,
     "advanced_ablation_failure_cannot_block_core_publish": true,
     "fail_closed_on_contract_failure": true,
-    "lock_after_pass": [
-      "raw_snapshot",
-      "enrichment",
-      "prediction"
-    ],
+    "lock_after_pass": ["raw_snapshot", "enrichment", "prediction"],
     "immutable_artifacts_declared_per_service": true,
     "prediction_quality_inputs_consumed": true,
     "truthful_competition_evidence": true,
@@ -238,11 +147,7 @@
     "technical_reason_codes_separate_from_human_report": true,
     "scheduled_checkpoint_recovery_enabled": true,
     "gate0_checks_unchanged": 16,
-    "registry_counts_unchanged": {
-      "dss_core": 50,
-      "dss_extensions": 16,
-      "enhancements": 8
-    },
+    "registry_counts_unchanged": {"dss_core": 50, "dss_extensions": 16, "enhancements": 8},
     "architecture_guard_runs_before_orchestration": true,
     "duplicate_service_ids_rejected": true,
     "duplicate_contract_producers_rejected": true,
@@ -263,6 +168,8 @@
     "reconciliation_readiness_reuses_validation_integrity": true,
     "reporting_composition_only": true,
     "canonical_decision_artifact_required_for_reporting": true,
+    "owned_challenger_decision_owned_by_optimization": true,
+    "owned_challenger_decision_not_a_ninth_microservice": true,
     "fast_p95_benchmark_repeated": true,
     "warm_serving_p95_benchmark_repeated": true,
     "publication_integrity_registered": true,

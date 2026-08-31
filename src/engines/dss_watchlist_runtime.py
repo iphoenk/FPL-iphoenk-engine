@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from src.engines import dss_watchlist as core
+from src.engines.challenger_discovery import build as build_challenger_discovery
 from src.utils import DATA, atomic_json, read_json
 
 
@@ -78,7 +79,13 @@ def _local_rank_rows(
     return rows
 
 
-def _decorate(row: dict[str, Any], position: str, rank: int, previous_rank: dict[int, tuple[str, int]], mandatory: set[int]) -> dict[str, Any]:
+def _decorate(
+    row: dict[str, Any],
+    position: str,
+    rank: int,
+    previous_rank: dict[int, tuple[str, int]],
+    mandatory: set[int],
+) -> dict[str, Any]:
     out = dict(row)
     out["rank"] = rank
     out["lifecycle"] = core._lifecycle(_i(out.get("element")), position, rank, previous_rank)
@@ -92,9 +99,13 @@ def _decorate(row: dict[str, Any], position: str, rank: int, previous_rank: dict
     return out
 
 
-def build() -> dict[str, Any]:
-    payload = core.build()
-    discovery = read_json(DATA / "challenger_discovery.json", {})
+def build(
+    *,
+    base_payload: dict[str, Any] | None = None,
+    discovery: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload = dict(base_payload or core.build())
+    discovery = dict(discovery or build_challenger_discovery())
     if discovery.get("contract") != "V3_CHALLENGER_DISCOVERY_V1":
         raise RuntimeError("challenger discovery contract missing before watchlist publication")
 
@@ -107,7 +118,10 @@ def build() -> dict[str, Any]:
     previous = read_json(DATA / "dss_watchlist.json", {})
 
     core_audit = core._registry_audit(framework, "dss_core", core.load_core_registry())
-    block = bool((core.load_policy().get("admission") or {}).get("block_on_critical_dss_failure", True) and core_audit.get("critical_failed"))
+    block = bool(
+        (core.load_policy().get("admission") or {}).get("block_on_critical_dss_failure", True)
+        and core_audit.get("critical_failed")
+    )
     framework_core = {row["id"]: row["framework_status"] for row in core_audit.get("modules") or []}
     _, owned_by_position = core._owned_context(team, projections)
     package_by_in = core._package_map(package_optimizer)
@@ -159,13 +173,16 @@ def build() -> dict[str, Any]:
     payload.setdefault("screening_audit", {})["challenger_discovery"] = {
         "contract": discovery.get("contract"),
         "universe_count": discovery.get("universe_count"),
+        "eligible_candidate_count": discovery.get("eligible_candidate_count"),
         "material_candidate_count": discovery.get("material_candidate_count"),
         "mandatory_review_count": discovery.get("mandatory_review_count"),
         "blocked_identity_count": discovery.get("blocked_identity_count"),
     }
     payload.setdefault("governance", {})["mandatory_value_market_candidates_can_displace_visible_watchlist"] = True
     payload["governance"]["mandatory_review_never_auto_buy"] = True
-    payload["governance"]["visible_watchlist_exactly_five_per_position"] = all(len(rows) == max_per for rows in final_positions.values())
+    payload["governance"]["visible_watchlist_exactly_five_per_position"] = all(
+        len(rows) == max_per for rows in final_positions.values()
+    )
     if not payload["governance"]["visible_watchlist_exactly_five_per_position"]:
         payload["status"] = "BLOCKED"
     return payload

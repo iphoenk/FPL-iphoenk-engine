@@ -44,7 +44,7 @@ def run() -> dict:
     weather_ms = round((perf_counter() - weather_started) * 1000.0, 2)
 
     challenger_started = perf_counter()
-    challenger = run_owned_challenger_decision()
+    challenger = run_owned_challenger_decision(canonical_arbitration=out.get("canonical_resolution"))
     challenger_ms = round((perf_counter() - challenger_started) * 1000.0, 2)
 
     base_compute_ms = float((out.get("timings") or {}).get("total_pipeline_ms") or float("inf"))
@@ -82,7 +82,9 @@ def run() -> dict:
         "comparison_count": challenger.get("comparison_count"),
         "main_transfer_battle_count": len(challenger.get("main_transfer_battles") or []),
         "multi_transfer_package_count": len(challenger.get("multi_transfer_packages") or []),
+        "challenge_signal": challenger.get("challenge_signal"),
         "overall_decision": challenger.get("overall_decision"),
+        "decision_authority": challenger.get("decision_authority"),
         "execution_authorized": challenger.get("execution_authorized"),
         "artifact": "data/owned_challenger_decision_v4.json",
         "owner": "optimization",
@@ -117,7 +119,8 @@ def run() -> dict:
         "weather_context": (tactical.get("weather_context") or {}).get("status"),
         "owned_challenger_ms": challenger_ms,
         "owned_challenger_status": challenger.get("status"),
-        "owned_challenger_decision": challenger.get("overall_decision"),
+        "owned_challenger_signal": challenger.get("challenge_signal"),
+        "canonical_decision": challenger.get("overall_decision"),
         "limit_ms": DECISION_COMPUTE_SLO_MS,
     }, ensure_ascii=False))
     if status != "PASS":

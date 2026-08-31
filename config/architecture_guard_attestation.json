@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "fingerprint": "da93166dd3e1bda971b1aa00fb6b8ee15a03730d0e988f417832ea9b1479ff0d",
+  "fingerprint": "4d07a0e35ab3538760a167e7bb1c95e8bc71a0c91bce7560ccdcf7f0b9d4aaba",
   "release": "4.9.6",
   "guard_schema_version": 497,
   "result": {
@@ -54,6 +54,10 @@
         "detail": []
       },
       "capability_matrix_overlap_actions_governed": {
+        "pass": true,
+        "detail": []
+      },
+      "owned_challenger_single_decision_authority": {
         "pass": true,
         "detail": []
       },
@@ -297,13 +301,14 @@
       {
         "capability": "OWNED_VS_CHALLENGER_COMPARATOR",
         "current_owner": "optimization",
-        "input_contract": "15 owned + 20 external watchlist + multi-horizon predictions",
-        "output_artifact": "data/tactical_serving_v4.json comparator evidence + canonical decision inputs",
+        "input_contract": "15 owned + 20 external watchlist + emerging challenger evidence + multi-horizon predictions",
+        "output_artifact": "data/tactical_serving_v4.json comparator evidence + data/owned_challenger_decision_v4.json advisory challenge evidence",
         "consumers": [
           "package_optimizer",
-          "decision_arbitration"
+          "decision_arbitration",
+          "serving_payload"
         ],
-        "duplicates_overlap": "No reporting comparator recomputation",
+        "duplicates_overlap": "Owned challenger may rank and classify challenge evidence; CANONICAL_DECISION_ARBITRATION alone owns final HOLD/REVIEW/CHANGE action; reporting may not recompute",
         "action": "KEEP_CANONICAL"
       },
       {
@@ -465,7 +470,8 @@
       "reusable_workflow_single_pipeline": true,
       "audit_first_capability_matrix_enforced": true,
       "reporting_composition_only": true,
-      "moving_operational_identity_single_owner": true
+      "moving_operational_identity_single_owner": true,
+      "owned_challenger_single_decision_authority": true
     }
   }
 }

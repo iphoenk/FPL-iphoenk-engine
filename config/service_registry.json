@@ -1,6 +1,6 @@
 {
-  "schema_version": 13,
-  "registry": "fpl_v4_9_6_microservice_registry_v13",
+  "schema_version": 14,
+  "registry": "fpl_v4_9_6_microservice_registry_v14",
   "architecture_version": "4.9.6",
   "execution_model": "process_isolated_dag_parallel_single_host",
   "services": [
@@ -118,7 +118,8 @@
         "recommendation_sanity",
         "tactical_serving",
         "decision_arbitration",
-        "decision_pipeline"
+        "decision_pipeline",
+        "owned_challenger_decision"
       ],
       "critical": true
     },
@@ -267,6 +268,9 @@
     "warm_serving_p95_benchmark_repeated": true,
     "publication_integrity_registered": true,
     "publication_failure_cannot_leave_green_visible_health": true,
-    "predictor_publication_state_explicit": true
+    "predictor_publication_state_explicit": true,
+    "owned_challenger_inside_optimization_boundary": true,
+    "owned_challenger_advisory_only": true,
+    "single_canonical_decision_authority": "decision_arbitration"
   }
 }

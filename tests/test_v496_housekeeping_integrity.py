@@ -110,6 +110,7 @@ def test_optimization_boundary_declares_all_decision_artifacts():
         "tactical_serving",
         "decision_arbitration",
         "decision_pipeline",
+        "owned_challenger_decision",
     }
 
 

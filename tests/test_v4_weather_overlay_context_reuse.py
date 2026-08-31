@@ -12,7 +12,13 @@ def test_optimization_reuses_decision_prediction_context(monkeypatch):
         assert runtime_context is not None
         runtime_context["predictions"] = predictions
         runtime_context["universe"] = universe
-        return {"timings": {"total_pipeline_ms": 1.0}}
+        return {
+            "timings": {"total_pipeline_ms": 1.0},
+            "canonical_resolution": {
+                "contract": "CANONICAL_DECISION_ARBITRATION_V1",
+                "overall_action": "REVIEW",
+            },
+        }
 
     def fake_overlay(*, predictions=None, universe=None, **kwargs):
         seen["predictions"] = predictions

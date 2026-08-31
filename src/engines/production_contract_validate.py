@@ -31,6 +31,50 @@ def _validate_runtime_service_states(runtime_performance: dict) -> None:
         raise AssertionError({"service": name, "status": status, "runtime": runtime_performance})
 
 
+def _validate_official_runtime_evidence(runtime_performance: dict) -> None:
+    """Require real Official evidence reuse, not an HTTP-cache occupancy proxy."""
+    services = runtime_performance.get("services") or {}
+    official = services.get("official_snapshot") or {}
+    status = official.get("status")
+
+    if status == "SUCCESS":
+        # A cold/fresh run owns the Official network fetch and should populate the
+        # single-run HTTP cache used by downstream Official requests.
+        assert int(runtime_performance.get("shared_official_cache_entries") or 0) > 0, {
+            "reason": "fresh_official_run_without_shared_http_cache",
+            "official_snapshot": official,
+        }
+        return
+
+    assert status == "REUSED", {
+        "reason": "official_snapshot_neither_fresh_success_nor_governed_reuse",
+        "official_snapshot": official,
+    }
+    assert runtime_performance.get("execution_profile") == "fast_decision", runtime_performance
+    profile = runtime_performance.get("profile_config") or {}
+    reuse_cfg = (profile.get("reuse_services") or {}).get("official_snapshot") or {}
+    max_age = float(reuse_cfg.get("max_age_seconds") or 0)
+    age = float(official.get("reuse_age_seconds") or 0)
+
+    assert 0 < max_age <= 60.0, {"reason": "official_reuse_ttl_not_bounded", "config": reuse_cfg}
+    assert 0.0 <= age <= max_age, {"reason": "official_reuse_stale", "age": age, "max_age": max_age}
+    assert official.get("reuse_mode") == "AGE_TTL", official
+    assert official.get("reuse_freshness_source") == "SEMANTIC_TIMESTAMP", official
+    assert official.get("reuse_freshness_artifact") == "official_snapshot.json", official
+    assert official.get("reuse_freshness_field") == "generated_at", official
+    assert official.get("workspace_retry_restored") is True, official
+    assert official.get("workspace_retry_artifact") == "official_snapshot.retry.json", official
+    assert reuse_cfg.get("workspace_retry_artifact") == official.get("workspace_retry_artifact"), {
+        "reason": "official_retry_mirror_not_profile_owned",
+        "config": reuse_cfg,
+        "official_snapshot": official,
+    }
+    assert official.get("artifact_validation"), {
+        "reason": "official_reuse_without_artifact_validation",
+        "official_snapshot": official,
+    }
+
+
 def _validate_runtime_architecture(snapshot_runtime: dict, runtime_performance: dict) -> None:
     domain_registry = load_config("config/runtime/execution_domains.json")
     canonical_phases = domain_registry.get("canonical_phases") or {}
@@ -186,8 +230,8 @@ def run() -> dict:
     runtime = s.get("runtime_architecture", {})
     _validate_runtime_architecture(runtime, rp)
     assert s.get("files", {}).get("runtime_performance") == "data/runtime_performance.json"
-    assert rp.get("shared_official_cache_entries", 0) > 0
     _validate_runtime_service_states(rp)
+    _validate_official_runtime_evidence(rp)
 
     assert s.get("snapshot_id")
     assert s.get("native", {}).get("entry")

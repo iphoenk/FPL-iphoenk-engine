@@ -23,19 +23,29 @@ def test_rec_registry_is_single_canonical_set_and_projections_match():
         assert row["relation"] in rec["allowed_relations"]
 
 
-def test_interactive_lane_is_bounded_and_does_not_duplicate_business_owners():
+def test_interactive_lane_is_bounded_and_uses_canonical_slo_authority():
     background = _load("config/v3_service_registry.json")["services"]
     interactive = _load("config/runtime/interactive_service_registry.json")
+    serving = _load("config/runtime/instant_serving.json")
+    slo = _load("config/runtime/performance_slo.json")
     ownership = _load("config/v3_architecture_ownership_registry.json")
     services = interactive["services"]
+    policy = interactive["policy"]
+
     assert interactive["registry"] == "V3_INTERACTIVE_SERVICES_V1"
     assert set(services) == {"unified_fastpath"}
     assert not (set(background) & set(services))
     assert all(spec["network"] is False for spec in services.values())
     assert all(spec["writes_canonical_artifacts"] is False for spec in services.values())
-    assert interactive["policy"]["preferred_end_to_end_target_ms"] == 1000
-    assert interactive["policy"]["hard_end_to_end_ceiling_ms"] == 2000
-    assert interactive["policy"]["single_pass_artifact_load_and_validation"] is True
+    assert policy["performance_slo_registry"] == "config/runtime/performance_slo.json"
+    assert policy["performance_slo_profile"] == "instant_serving"
+    assert serving["performance"]["slo_registry"] == policy["performance_slo_registry"]
+    assert serving["performance"]["slo_profile"] == policy["performance_slo_profile"]
+    assert policy["performance_slo_profile"] in slo["profiles"]
+    assert "preferred_end_to_end_target_ms" not in policy
+    assert "hard_end_to_end_ceiling_ms" not in policy
+    assert all("preferred_target_ms" not in spec and "hard_ceiling_ms" not in spec for spec in services.values())
+    assert policy["single_pass_artifact_load_and_validation"] is True
     responsibilities = {row["id"]: row for row in ownership["responsibilities"]}
     assert responsibilities["INTERACTIVE_DECISION_REGENERATION"]["owner_service"] == "unified_fastpath"
     assert responsibilities["INTERACTIVE_VALIDATED_GATEWAY"]["owner_service"] == "unified_fastpath"

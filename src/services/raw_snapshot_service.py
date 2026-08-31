@@ -38,7 +38,13 @@ def _parallel_official_get(specs: list[tuple[str, str, int]]) -> dict:
 
 
 def detect_phase(bootstrap: dict, fixtures: list[dict] | None = None, as_of=None) -> dict:
-    """Resolve FPL phase while separating match-day context from a truly live fixture."""
+    """Resolve FPL phase from Official event state with fixture-finality fallback.
+
+    Bootstrap event ``finished`` remains the primary completion authority. Official
+    fixture finality is used only when the current deadline has passed, every
+    current-GW fixture is explicitly ``finished=True``, and bootstrap has not yet
+    advanced the event-level flag. ``finished_provisional`` never qualifies.
+    """
     now = as_of or utcnow()
     fixtures = fixtures or []
     events = bootstrap.get("events", [])
@@ -58,6 +64,22 @@ def detect_phase(bootstrap: dict, fixtures: list[dict] | None = None, as_of=None
         fixture for fixture in fixtures
         if current_gw and int(fixture.get("event") or 0) == int(current_gw)
     ]
+    fixture_finalized_current_gw = bool(
+        current
+        and current_gw
+        and current_deadline
+        and current_deadline <= now
+        and current.get("finished") is not True
+        and current_gw_fixtures
+        and all(fixture.get("finished") is True for fixture in current_gw_fixtures)
+    )
+    bootstrap_last_finished_gw = int(last["id"]) if last else None
+    last_finished_gw = bootstrap_last_finished_gw
+    last_finished_gw_source = "BOOTSTRAP_EVENT_FINISHED" if bootstrap_last_finished_gw else None
+    if fixture_finalized_current_gw and int(current_gw) > int(bootstrap_last_finished_gw or 0):
+        last_finished_gw = int(current_gw)
+        last_finished_gw_source = "OFFICIAL_FIXTURE_FINALITY"
+
     live_fixtures = [
         fixture for fixture in current_gw_fixtures
         if fixture.get("started") is True
@@ -79,7 +101,11 @@ def detect_phase(bootstrap: dict, fixtures: list[dict] | None = None, as_of=None
     return {
         "current_gw": current_gw,
         "next_gw": nxt["id"] if nxt else None,
-        "last_finished_gw": last["id"] if last else None,
+        "last_finished_gw": last_finished_gw,
+        "last_finished_gw_source": last_finished_gw_source,
+        "bootstrap_last_finished_gw": bootstrap_last_finished_gw,
+        "fixture_finalized_current_gw": fixture_finalized_current_gw,
+        "fixture_finality_candidate_count": len(current_gw_fixtures),
         "planning_gw": planning["id"] if planning else None,
         "submitted_gw": (current or last or {}).get("id"),
         "scoring_gw": current_gw,

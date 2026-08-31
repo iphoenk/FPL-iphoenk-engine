@@ -40,7 +40,10 @@ def _snapshot_metadata(snapshot: dict[str, Any]) -> dict[str, Any]:
         and freshness.get("last_verified_at")
         and str(freshness.get("confidence") or "").upper() == "DOWNGRADED"
     )
-    fetched_at = health.get("fetched_at") or freshness.get("last_verified_at") or snapshot.get("generated_at")
+    if verified_fallback:
+        fetched_at = freshness.get("last_verified_at")
+    else:
+        fetched_at = health.get("fetched_at") or freshness.get("last_verified_at") or snapshot.get("generated_at")
     snapshot_id = str(freshness.get("snapshot_id") or f"bootstrap-static@{fetched_at or 'unknown'}")
     return {
         "authority": PUBLIC_OFFICIAL_FACT,
@@ -55,6 +58,7 @@ def _snapshot_metadata(snapshot: dict[str, Any]) -> dict[str, Any]:
         "fallback": verified_fallback,
         "fallback_banner": FALLBACK_BANNER if verified_fallback else None,
         "last_verified_at": freshness.get("last_verified_at"),
+        "fresh_pull_failed_at": freshness.get("fresh_pull_failed_at"),
         "age_seconds": freshness.get("age_seconds"),
         "confidence": freshness.get("confidence") or ("DOWNGRADED" if verified_fallback else "HIGH" if fresh_pull_succeeded else "UNKNOWN"),
         "bootstrap_health": health_status,

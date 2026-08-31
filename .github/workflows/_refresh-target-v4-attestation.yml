@@ -44,3 +44,5 @@ jobs:
           git add config/architecture_guard_attestation.json
           git commit -m 'chore(v4): refresh architecture attestation for atomic publish' || exit 0
           git push origin HEAD:codex/v4-atomic-publish-node24
+
+# rerun after target helper cleanup

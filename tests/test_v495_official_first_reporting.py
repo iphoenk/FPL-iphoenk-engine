@@ -164,16 +164,15 @@ def test_dag_parallelization_only_groups_dependency_independent_services():
             assert not (set(row.get("depends_on") or []) & ids)
 
 
-def test_recovery_workflow_covers_all_three_checkpoints_and_is_config_driven():
+def test_canonical_recovery_wrapper_is_unscheduled_and_reuses_core():
     workflow = (ROOT / ".github/workflows/fpl-engine-recovery.yml").read_text()
-    config = json.loads((ROOT / "config/engine.json").read_text())
-    assert 'cron: "45 21 * * *"' in workflow
-    assert 'cron: "45 5 * * *"' in workflow
-    assert 'cron: "45 14 * * *"' in workflow
-    assert "checkpoint_recovery_fresh_minutes" in workflow
-    assert config["checkpoint_recovery_fresh_minutes"] > 0
+    assert "schedule:" not in workflow
+    assert "cron:" not in workflow
+    assert "workflow_dispatch:" in workflow
     assert "uses: ./.github/workflows/fpl-engine-core.yml" in workflow
     assert "src.services.orchestrator" not in workflow
+    assert "group: fpl-iphoenk-v4-gate" in workflow
+    assert "cancel-in-progress: false" in workflow
 
 
 def test_contracts_make_v495_behaviour_mandatory():

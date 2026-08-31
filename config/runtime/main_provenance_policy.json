@@ -1,0 +1,10 @@
+{
+  "registry": "V3_MAIN_PROVENANCE_POLICY_V1",
+  "schema_version": 1,
+  "branch": "main",
+  "trust_anchor_sha": "d025201abfb4c72bc707956275e77900f05dd87d",
+  "max_first_parent_commits": 256,
+  "require_anchor_in_first_parent_history": true,
+  "require_each_first_parent_commit_after_anchor_from_merged_pr": true,
+  "fail_closed_on_github_api_error": true
+}

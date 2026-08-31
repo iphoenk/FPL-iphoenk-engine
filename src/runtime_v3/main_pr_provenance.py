@@ -2,8 +2,19 @@ from __future__ import annotations
 
 import json
 import os
+import re
+from pathlib import Path
 from typing import Any
 from urllib.request import Request, urlopen
+
+
+POLICY_PATH = Path("config/runtime/main_provenance_policy.json")
+_SHA40 = re.compile(r"^[0-9a-f]{40}$")
+_REQUIRED_TRUE_POLICY_FLAGS = (
+    "require_anchor_in_first_parent_history",
+    "require_each_first_parent_commit_after_anchor_from_merged_pr",
+    "fail_closed_on_github_api_error",
+)
 
 
 def _github_json(url: str, token: str) -> Any:
@@ -19,6 +30,22 @@ def _github_json(url: str, token: str) -> Any:
         return json.loads(response.read().decode("utf-8"))
 
 
+def _select_merged_pr(payload: Any, *, branch: str) -> dict[str, Any]:
+    if not isinstance(payload, list):
+        raise RuntimeError("MAIN_PR_PROVENANCE_INVALID_GITHUB_RESPONSE")
+
+    merged = [
+        pr
+        for pr in payload
+        if pr.get("merged_at")
+        and (pr.get("base") or {}).get("ref") == branch
+        and pr.get("state") == "closed"
+    ]
+    if not merged:
+        raise RuntimeError("MAIN_PR_PROVENANCE_NO_MERGED_PR")
+    return sorted(merged, key=lambda pr: str(pr.get("merged_at") or ""), reverse=True)[0]
+
+
 def verify_main_commit_pr_provenance(
     *,
     api_url: str,
@@ -31,23 +58,15 @@ def verify_main_commit_pr_provenance(
         raise RuntimeError("MAIN_PR_PROVENANCE_MISSING_GITHUB_CONTEXT")
 
     url = f"{api_url.rstrip('/')}/repos/{repository}/commits/{sha}/pulls"
-    payload = _github_json(url, token)
-    if not isinstance(payload, list):
-        raise RuntimeError("MAIN_PR_PROVENANCE_INVALID_GITHUB_RESPONSE")
+    try:
+        chosen = _select_merged_pr(_github_json(url, token), branch=branch)
+    except RuntimeError as exc:
+        if str(exc) == "MAIN_PR_PROVENANCE_NO_MERGED_PR":
+            raise RuntimeError(
+                f"REFUSING_DIRECT_MAIN_PUSH_WITHOUT_MERGED_PR source_commit={sha} branch={branch}"
+            ) from exc
+        raise
 
-    merged = [
-        pr
-        for pr in payload
-        if pr.get("merged_at")
-        and (pr.get("base") or {}).get("ref") == branch
-        and pr.get("state") == "closed"
-    ]
-    if not merged:
-        raise RuntimeError(
-            f"REFUSING_DIRECT_MAIN_PUSH_WITHOUT_MERGED_PR source_commit={sha} branch={branch}"
-        )
-
-    chosen = sorted(merged, key=lambda pr: str(pr.get("merged_at") or ""), reverse=True)[0]
     return {
         "status": "PASS",
         "source_commit": sha,
@@ -57,13 +76,125 @@ def verify_main_commit_pr_provenance(
     }
 
 
+def verify_main_history_pr_provenance(
+    *,
+    api_url: str,
+    repository: str,
+    sha: str,
+    branch: str,
+    token: str,
+    trust_anchor_sha: str,
+    max_first_parent_commits: int = 256,
+) -> dict[str, Any]:
+    if not trust_anchor_sha:
+        raise RuntimeError("MAIN_PROVENANCE_MISSING_TRUST_ANCHOR")
+    if max_first_parent_commits < 1:
+        raise RuntimeError("MAIN_PROVENANCE_INVALID_MAX_DEPTH")
+
+    current = sha
+    verified: list[dict[str, Any]] = []
+    commit_cache: dict[str, Any] = {}
+
+    for _ in range(max_first_parent_commits + 1):
+        if current == trust_anchor_sha:
+            head = verified[0] if verified else None
+            return {
+                "status": "PASS",
+                "source_commit": sha,
+                "branch": branch,
+                "trust_anchor_sha": trust_anchor_sha,
+                "history_enforcement": "FIRST_PARENT_TO_TRUST_ANCHOR",
+                "commits_checked": len(verified),
+                "first_parent_chain_integrity": True,
+                "head_pull_request": head.get("pull_request") if head else None,
+                "verified_pull_requests": verified,
+            }
+
+        try:
+            pr_result = verify_main_commit_pr_provenance(
+                api_url=api_url,
+                repository=repository,
+                sha=current,
+                branch=branch,
+                token=token,
+            )
+        except RuntimeError as exc:
+            if str(exc).startswith("REFUSING_DIRECT_MAIN_PUSH_WITHOUT_MERGED_PR"):
+                raise RuntimeError(
+                    f"MAIN_PROVENANCE_UNTRUSTED_ANCESTOR source_commit={current} branch={branch}"
+                ) from exc
+            raise
+
+        verified.append(
+            {
+                "sha": current,
+                "pull_request": pr_result.get("pull_request"),
+                "merged_at": pr_result.get("merged_at"),
+            }
+        )
+
+        if current not in commit_cache:
+            commit_url = f"{api_url.rstrip('/')}/repos/{repository}/commits/{current}"
+            commit_cache[current] = _github_json(commit_url, token)
+        commit_payload = commit_cache[current]
+        if not isinstance(commit_payload, dict):
+            raise RuntimeError("MAIN_PROVENANCE_INVALID_COMMIT_RESPONSE")
+        parents = commit_payload.get("parents")
+        if not isinstance(parents, list) or not parents:
+            raise RuntimeError(
+                f"MAIN_PROVENANCE_TRUST_ANCHOR_NOT_REACHED source_commit={sha} anchor={trust_anchor_sha}"
+            )
+        first_parent = parents[0]
+        parent_sha = first_parent.get("sha") if isinstance(first_parent, dict) else None
+        if not isinstance(parent_sha, str) or not parent_sha:
+            raise RuntimeError("MAIN_PROVENANCE_INVALID_FIRST_PARENT")
+        current = parent_sha
+
+    raise RuntimeError(
+        "MAIN_PROVENANCE_MAX_DEPTH_EXCEEDED "
+        f"source_commit={sha} anchor={trust_anchor_sha} max={max_first_parent_commits}"
+    )
+
+
+def _load_policy(path: Path = POLICY_PATH) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_UNREADABLE") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_INVALID")
+    if payload.get("registry") != "V3_MAIN_PROVENANCE_POLICY_V1" or payload.get("schema_version") != 1:
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_REGISTRY_MISMATCH")
+    if payload.get("branch") != "main":
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_BRANCH_INVALID")
+    anchor = payload.get("trust_anchor_sha")
+    if not isinstance(anchor, str) or not _SHA40.fullmatch(anchor):
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_ANCHOR_INVALID")
+    max_depth = payload.get("max_first_parent_commits")
+    if not isinstance(max_depth, int) or isinstance(max_depth, bool) or not 1 <= max_depth <= 4096:
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_MAX_DEPTH_INVALID")
+    if any(payload.get(flag) is not True for flag in _REQUIRED_TRUE_POLICY_FLAGS):
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_INSECURE")
+    return payload
+
+
 def run() -> dict[str, Any]:
-    result = verify_main_commit_pr_provenance(
+    policy = _load_policy()
+    branch = os.environ.get("GITHUB_REF_NAME", "")
+    policy_branch = str(policy["branch"])
+    if branch != policy_branch:
+        raise RuntimeError(
+            f"MAIN_PROVENANCE_BRANCH_POLICY_MISMATCH runtime={branch} policy={policy_branch}"
+        )
+
+    result = verify_main_history_pr_provenance(
         api_url=os.environ.get("GITHUB_API_URL", ""),
         repository=os.environ.get("GITHUB_REPOSITORY", ""),
         sha=os.environ.get("GITHUB_SHA", ""),
-        branch=os.environ.get("GITHUB_REF_NAME", ""),
+        branch=branch,
         token=os.environ.get("GH_TOKEN", ""),
+        trust_anchor_sha=str(policy["trust_anchor_sha"]),
+        max_first_parent_commits=int(policy["max_first_parent_commits"]),
     )
     print(json.dumps(result, sort_keys=True))
     return result

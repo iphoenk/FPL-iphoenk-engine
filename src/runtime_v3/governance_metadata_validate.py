@@ -8,9 +8,16 @@ from src.utils import ROOT
 
 STATUS_PATH = ROOT / "IMPLEMENTATION_STATUS.json"
 SERVICE_PATH = ROOT / "config" / "v3_service_registry.json"
+INTERACTIVE_PATH = ROOT / "config" / "runtime" / "interactive_service_registry.json"
 DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
 OWNERSHIP_PATH = ROOT / "config" / "v3_architecture_ownership_registry.json"
 SLO_PATH = ROOT / "config" / "runtime" / "performance_slo.json"
+FRAMEWORK_PATHS = (
+    ROOT / "config" / "dss_core_registry.json",
+    ROOT / "config" / "dss_extension_registry.json",
+    ROOT / "config" / "enhancement_layers_registry.json",
+    ROOT / "config" / "gate0_registry.json",
+)
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -24,15 +31,31 @@ def _module_path(module: str) -> Path:
     return ROOT / (module.replace(".", "/") + ".py")
 
 
+def _required_file_references(payload: Any) -> set[str]:
+    refs: set[str] = set()
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            if key == "required_files" and isinstance(value, list):
+                refs.update(str(item) for item in value)
+            else:
+                refs.update(_required_file_references(value))
+    elif isinstance(payload, list):
+        for value in payload:
+            refs.update(_required_file_references(value))
+    return refs
+
+
 def run() -> dict[str, Any]:
     errors: list[str] = []
     status = _load(STATUS_PATH)
     service = _load(SERVICE_PATH)
+    interactive = _load(INTERACTIVE_PATH)
     domains = _load(DOMAIN_PATH)
     ownership = _load(OWNERSHIP_PATH)
     slo = _load(SLO_PATH)
 
     services = service.get("services") if isinstance(service.get("services"), dict) else {}
+    interactive_services = interactive.get("services") if isinstance(interactive.get("services"), dict) else {}
     capability_count = len(services)
     domain_count = int(domains.get("domain_count") or 0)
     phase_count = int(domains.get("phase_count") or 0)
@@ -75,16 +98,30 @@ def run() -> dict[str, Any]:
     existing_retired = sorted(module for module in retired if _module_path(module).is_file())
     if existing_retired:
         errors.append(f"retired duplicate business implementations still exist: {existing_retired}")
-    active_modules = {
+
+    background_modules = {
         str(command.get("module"))
         for spec in services.values()
         if isinstance(spec, dict)
         for command in spec.get("commands") or []
         if isinstance(command, dict) and command.get("module")
     }
-    reactivated = sorted(retired & active_modules)
+    interactive_modules = {
+        str(spec.get("module"))
+        for spec in interactive_services.values()
+        if isinstance(spec, dict) and spec.get("module")
+    }
+    reactivated = sorted(retired & (background_modules | interactive_modules))
     if reactivated:
-        errors.append(f"retired business implementations reactivated by service registry: {reactivated}")
+        errors.append(f"retired business implementations reactivated by runtime registry: {reactivated}")
+
+    retired_paths = {module.replace(".", "/") + ".py" for module in retired}
+    framework_refs: set[str] = set()
+    for path in FRAMEWORK_PATHS:
+        framework_refs.update(_required_file_references(_load(path)))
+    retired_framework_refs = sorted(retired_paths & framework_refs)
+    if retired_framework_refs:
+        errors.append(f"framework registry still requires retired implementation: {retired_framework_refs}")
 
     resource = slo.get("resource_observability") if isinstance(slo.get("resource_observability"), dict) else {}
     policy = slo.get("policy") if isinstance(slo.get("policy"), dict) else {}
@@ -115,6 +152,8 @@ def run() -> dict[str, Any]:
         },
         "retired_business_implementations": sorted(retired),
         "retired_modules_absent": not existing_retired,
+        "retired_runtime_references_absent": not reactivated,
+        "retired_framework_references_absent": not retired_framework_refs,
         "resource_governance_state": resource.get("state"),
         "resource_limits_evidence_gated": resource.get("hard_limit_activation") == "REQUIRES_MULTI_RUN_PRODUCTION_BASELINE",
     }

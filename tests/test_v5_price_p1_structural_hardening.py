@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 
 from src.engines import price_radar as canonical
@@ -63,7 +64,7 @@ def test_price_squeeze_scenarios_are_registry_driven():
 def test_price_service_advertises_only_runtime_routed_price_operations():
     status = price_service.handle("status", {})
     operations = set(status["operations"])
-    orchestrator = canonical.json.loads(
+    orchestrator = json.loads(
         (ROOT / "config" / "v5_orchestrator_registry.json").read_text(encoding="utf-8")
     )
     routed = {
@@ -94,9 +95,7 @@ def test_p1_removes_dead_package_overlay_and_hardcoded_scenario_table():
         target.id
         for node in ast.walk(tree)
         if isinstance(node, (ast.Assign, ast.AnnAssign))
-        for target in (
-            node.targets if isinstance(node, ast.Assign) else [node.target]
-        )
+        for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
         if isinstance(target, ast.Name)
     }
     assert "annotate_packages" not in function_names

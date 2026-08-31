@@ -76,6 +76,76 @@ def _validate_runtime_architecture(snapshot_runtime: dict, runtime_performance: 
     assert len(runtime_performance.get("services") or {}) == expected_capability_count
 
 
+def _validate_price_predictor_contract(snapshot: dict, prices: dict, trajectory: dict, alerts: dict, watchlist: dict, price_policy: dict) -> None:
+    market_policy = price_policy["market_filter"]
+    serving_policy = price_policy["serving"]
+    min_ownership = float(market_policy["minimum_ownership_pct"])
+    min_abs_net = int(market_policy["minimum_abs_net_transfers"])
+
+    assert snapshot.get("price_summary", {}).get("filter_policy", {}).get("min_ownership_pct") == min_ownership
+    assert all(x.get("ownership_pct", 0) >= min_ownership and abs(x.get("net_transfers", 0)) >= min_abs_net for x in prices.get("top_buy_pressure", []))
+    assert all(x.get("ownership_pct", 0) >= min_ownership and abs(x.get("net_transfers", 0)) >= min_abs_net for x in prices.get("top_sell_pressure", []))
+
+    health = prices.get("official_price_predictor_health") or {}
+    contract = prices.get("official_price_predictor_contract") or {}
+    raw_contract = prices.get("official_predictor_raw_contract") or {}
+    rows = list(prices.get("players") or [])
+
+    assert health.get("status") == "PASS", health
+    assert health.get("source") == "OFFICIAL_FPL"
+    assert health.get("auth_required") is False
+    assert health.get("ui_scraping") is False
+    assert health.get("dedicated_predictor_endpoint") is False
+    assert health.get("threshold_is_official_rule") is False
+    assert health.get("no_intra_cycle_crossing_eta") is True
+    assert int(health.get("schema_invalid_players") or 0) == 0
+    assert int(health.get("stale_players") or 0) == 0
+
+    assert contract.get("model_id") == price_policy.get("model_id")
+    assert contract.get("current_progress_field") == "price_change_percent"
+    assert contract.get("projected_progress_field") == "price_change_projections"
+    assert contract.get("likelihood_preserved_raw") is True
+    assert contract.get("threshold_is_official_rule") is False
+    assert contract.get("no_intra_cycle_crossing_eta") is True
+    assert contract.get("official_update_clock") == "00:00 Europe/London"
+    assert contract.get("display_timezone") == "Asia/Jakarta"
+
+    assert raw_contract.get("source") == "OFFICIAL_FPL"
+    assert raw_contract.get("endpoint") == "bootstrap-static/"
+    assert raw_contract.get("field_names_preserved") is True
+    assert raw_contract.get("auth_required") is False
+    assert raw_contract.get("ui_scraping") is False
+
+    assert rows
+    assert all(row.get("element_id") is not None for row in rows)
+    assert all(row.get("current_price") is not None for row in rows)
+    assert all(row.get("ownership_percent") is not None for row in rows)
+    assert all(row.get("source") == "OFFICIAL_FPL" for row in rows)
+    assert any(row.get("current_progress_percent") is not None for row in rows)
+    assert all("projection_offset_0_percent" in row and "projection_offset_0_likelihood" in row for row in rows)
+    assert all(row.get("trajectory_eta_hours") is None for row in rows)
+    assert all(row.get("trajectory_predicted_change_deadline") is None for row in rows)
+    assert all(row.get("predicted_change_cycle") in {"NEXT_UPDATE", "PLUS_1_UPDATE", "PLUS_2_UPDATE", "NONE"} for row in rows)
+
+    governance = snapshot.get("price_summary", {}).get("governance") or {}
+    assert governance.get("likelihood_raw_only") is True
+    assert governance.get("no_false_crossing_eta") is True
+    assert governance.get("next_update_is_london_midnight_dst_safe") is True
+    assert governance.get("confirmed_and_predicted_are_separate") is True
+
+    assert trajectory.get("players")
+    assert alerts.get("policy", {}).get("watch_capacity") == int(serving_policy["market_watch_capacity"])
+    assert alerts.get("owned_price_radar_count") == int((alerts.get("policy") or {}).get("owned_coverage_required") or 15)
+    assert all(row.get("source") == "OFFICIAL_FPL" for row in alerts.get("owned_price_radar") or [])
+
+    price_evidence = watchlist.get("price_evidence_summary") or {}
+    published = int(price_evidence.get("published_watchlist_rows") or 0)
+    official = int(price_evidence.get("official_price_evidence_rows") or 0)
+    assert published > 0
+    assert official == published
+    assert price_evidence.get("complete") is True
+
+
 def run() -> dict:
     s = load("latest.json")
     p = load("prices.json")
@@ -84,6 +154,7 @@ def run() -> dict:
     a = load("auth.json")
     t = load("price_trajectory.json")
     pa = load("price_alerts.json")
+    dw = load("dss_watchlist.json")
     rr = load("rules_compliance.json")
     fh = load("framework_health.json")
     u = load("universe.json")
@@ -132,20 +203,7 @@ def run() -> dict:
     assert rr.get("ruleset_fingerprint_sha256") == active_ruleset_fingerprint()
     assert rr.get("governance", {}).get("remote_change_never_auto_mutates_rules") is True
 
-    market_policy = price_policy["market_filter"]
-    serving_policy = price_policy["serving"]
-    min_ownership = float(market_policy["minimum_ownership_pct"])
-    min_abs_net = int(market_policy["minimum_abs_net_transfers"])
-    assert s.get("price_summary", {}).get("filter_policy", {}).get("min_ownership_pct") == min_ownership
-    assert all(x.get("ownership_pct", 0) >= min_ownership and abs(x.get("net_transfers", 0)) >= min_abs_net for x in p.get("top_buy_pressure", []))
-    assert all(x.get("ownership_pct", 0) >= min_ownership and abs(x.get("net_transfers", 0)) >= min_abs_net for x in p.get("top_sell_pressure", []))
-    assert p.get("official_price_predictor_health", {}).get("status") == "LIVE"
-    assert p.get("players")
-    assert any(x.get("official_progress_pct") is not None for x in p.get("players", []))
-    assert s.get("price_summary", {}).get("trajectory_features", {}).get("predicted_change_date") is True
-    assert s.get("price_summary", {}).get("trajectory_features", {}).get("acceleration_deceleration") is True
-    assert t.get("players")
-    assert pa.get("policy", {}).get("watch_capacity") == int(serving_policy["market_watch_capacity"])
+    _validate_price_predictor_contract(s, p, t, pa, dw, price_policy)
 
     ods = s.get("official_detail_summary", {})
     assert ods.get("detail_requested", 0) >= 15
@@ -250,6 +308,7 @@ def run() -> dict:
         "runtime_ms": rp.get("total_wall_ms"),
         "framework": fh.get("overall"),
         "prediction_quality": pq.get("status"),
+        "price_predictor": (p.get("official_price_predictor_health") or {}).get("status"),
         "report_decision": user.get("decision", {}).get("overall"),
         "report_mode": user.get("report_mode"),
         "gate0": fh.get("gate0", {}).get("counts"),

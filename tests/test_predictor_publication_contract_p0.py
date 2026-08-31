@@ -50,3 +50,32 @@ def test_model_capability_field_failure_is_explicit_unavailable():
     assert out["model_signal_state"] == "UNAVAILABLE"
     assert out["current_claim_allowed"] is False
     assert out["eta"] is None
+
+
+def test_served_signal_does_not_depend_on_stripped_prediction_source():
+    row = _row()
+    row.pop("prediction_source")
+    out = decorate_predictor_observation(row)
+    assert out["model_signal_state"] == "SIGNAL"
+    assert out["eta"] == "2026-09-01T06:00:00+07:00"
+    assert out["eta_supported"] is True
+
+
+def test_unknown_prediction_cycle_fails_closed():
+    out = decorate_predictor_observation(_row(
+        predicted_change_cycle="SOME_FUTURE_SCHEMA_VALUE",
+        prediction_source=None,
+    ))
+    assert out["model_signal_state"] == "UNAVAILABLE"
+    assert out["eta"] is None
+    assert out["eta_supported"] is False
+
+
+def test_signal_without_eta_fails_closed():
+    out = decorate_predictor_observation(_row(
+        predicted_change_at=None,
+        prediction_source=None,
+    ))
+    assert out["model_signal_state"] == "UNAVAILABLE"
+    assert out["eta"] is None
+    assert out["eta_supported"] is False

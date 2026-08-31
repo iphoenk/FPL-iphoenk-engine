@@ -6,6 +6,16 @@ from typing import Any, Iterable
 from src.engines import price_radar as canonical
 from src.v5.price_trajectory import canonical_contract
 
+PREDICTOR_FIELDS = frozenset(
+    {
+        "price_change_percent",
+        "price_change_hourly_rate",
+        "price_change_projections",
+        "price_change_locked_until",
+        "price_change_calibrating",
+    }
+)
+
 
 def _ratio(numerator: int, denominator: int) -> float:
     return round(numerator / max(1, denominator), 4)
@@ -48,13 +58,85 @@ def _confirmed_changes(raw_rows: list[dict[str, Any]], previous_state: dict[str,
     return confirmed
 
 
+def _official_price_fact_rows(raw_rows: list[dict[str, Any]], positions: dict[int, str]) -> list[dict[str, Any]]:
+    """Build factual Official price/linkage rows without inventing predictor state."""
+    rows: list[dict[str, Any]] = []
+    for raw in raw_rows:
+        element = canonical._int(raw.get("id"))
+        now_cost = canonical._int(raw.get("now_cost"))
+        if element is None:
+            continue
+        element_type = canonical._int(raw.get("element_type"))
+        ownership = canonical._float(raw.get("selected_by_percent"))
+        transfers_in = canonical._int(raw.get("transfers_in_event"))
+        transfers_out = canonical._int(raw.get("transfers_out_event"))
+        rows.append(
+            {
+                "element": element,
+                "element_id": element,
+                "name": raw.get("web_name"),
+                "player_name": raw.get("web_name"),
+                "team_id": canonical._int(raw.get("team")),
+                "element_type": element_type,
+                "position": positions.get(element_type) if element_type is not None else None,
+                "now_cost": now_cost,
+                "current_price": round(now_cost / 10.0, 1) if now_cost is not None else None,
+                "ownership_pct": ownership,
+                "ownership_percent": ownership,
+                "transfers_in_event": transfers_in,
+                "transfers_out_event": transfers_out,
+                "net_transfers": (
+                    transfers_in - transfers_out
+                    if transfers_in is not None and transfers_out is not None
+                    else None
+                ),
+                "source": "OFFICIAL_FPL",
+                "evidence_state": "PREDICTOR_UNAVAILABLE",
+                "confidence": "LOW",
+                "fallback_reason": "PREDICTOR_FIELDS_ABSENT",
+                "current_progress_percent": None,
+                "price_change_hourly_rate": None,
+                "projection_offset_0_percent": None,
+                "projection_offset_0_likelihood": None,
+                "projection_offset_1_percent": None,
+                "projection_offset_1_likelihood": None,
+                "projection_offset_2_percent": None,
+                "projection_offset_2_likelihood": None,
+                "direction": None,
+                "model_urgency": None,
+                "next_official_price_update_at": None,
+                "eta_to_next_price_update_seconds": None,
+                "eta_human": None,
+                "predicted_change_cycle": "NONE",
+                "predicted_change_at": None,
+                "narrative": "Official current price and transfer facts are available; Official predictor fields are unavailable in this snapshot.",
+            }
+        )
+    return rows
+
+
+def _predictor_fields_present(raw_rows: list[dict[str, Any]]) -> bool:
+    return any(any(field in row for field in PREDICTOR_FIELDS) for row in raw_rows)
+
+
+def _transfer_momentum_threshold() -> float:
+    policy = canonical.load_policy()
+    evidence = policy.get("transfer_momentum_evidence") if isinstance(policy.get("transfer_momentum_evidence"), dict) else {}
+    if "minimum_coverage_ratio" not in evidence:
+        raise RuntimeError("price radar policy missing transfer_momentum_evidence.minimum_coverage_ratio")
+    threshold = float(evidence["minimum_coverage_ratio"])
+    if not 0.0 < threshold <= 1.0:
+        raise RuntimeError("transfer momentum minimum coverage ratio must be in (0, 1]")
+    return threshold
+
+
 def build_transfer_momentum_evidence(
     bootstrap: dict[str, Any],
     price_rows: list[dict[str, Any]],
     *,
-    minimum_coverage_ratio: float = 0.95,
+    minimum_coverage_ratio: float | None = None,
 ) -> dict[str, Any]:
-    """Verify transfer-momentum evidence without treating it as predictor authority."""
+    """Verify transfer-momentum evidence independently from predictor availability."""
     elements = [
         row
         for row in bootstrap.get("elements") or []
@@ -90,7 +172,8 @@ def build_transfer_momentum_evidence(
     count_ratio = _ratio(covered, n)
     linkage_ratio = _ratio(linked, n)
     price_match_ratio = _ratio(price_matches, n)
-    available = bool(n) and min(count_ratio, linkage_ratio, price_match_ratio) >= float(minimum_coverage_ratio)
+    threshold = _transfer_momentum_threshold() if minimum_coverage_ratio is None else float(minimum_coverage_ratio)
+    available = bool(n) and min(count_ratio, linkage_ratio, price_match_ratio) >= threshold
     return {
         "evidence_state": "AVAILABLE" if available else "INSUFFICIENT",
         "players": n,
@@ -100,12 +183,14 @@ def build_transfer_momentum_evidence(
         "price_snapshot_linkage_ratio": linkage_ratio,
         "current_price_matches": price_matches,
         "current_price_match_ratio": price_match_ratio,
+        "minimum_coverage_ratio": threshold,
         "players_with_nonzero_net_momentum": active,
         "total_transfers_in_event": total_in,
         "total_transfers_out_event": total_out,
         "net_transfers_event": total_in - total_out,
-        "source": "Official FPL bootstrap transfer counts + governed Official price snapshot",
+        "source": "Official FPL bootstrap transfer counts + governed Official current-price snapshot",
         "supporting_market_evidence_only": True,
+        "predictor_fields_required": False,
         "predictor_direction_inferred_from_transfers": False,
         "external_threshold_invented": False,
         "predicted_price_change_invented": False,
@@ -147,11 +232,7 @@ def build_price_snapshot(
     observed_at: datetime | str | None = None,
     transport_health: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build governed V5 market context from the shared V3/V4 Official provider.
-
-    No independent predictor parsing lives in V5. Price evidence can affect timing,
-    affordability and optionality, but it is not football decision authority.
-    """
+    """Build governed market context while keeping factual and predictor evidence separate."""
     generated_at = now or datetime.now(timezone.utc)
     if generated_at.tzinfo is None:
         generated_at = generated_at.replace(tzinfo=timezone.utc)
@@ -161,30 +242,60 @@ def build_price_snapshot(
     positions = canonical._position_map(bootstrap.get("element_types") or [])
     confirmed = _confirmed_changes(raw_rows, previous_state or {})
     confirmed_by_id = {int(row["element"]): row for row in confirmed}
+    fact_rows = _official_price_fact_rows(raw_rows, positions)
+    transfer_momentum = build_transfer_momentum_evidence(bootstrap, fact_rows)
+    predictor_available = _predictor_fields_present(raw_rows)
 
-    normalised = [
-        canonical._normalise_player(
-            raw,
-            position_by_type=positions,
-            observed_at=observed,
-            now=generated_at,
-            raw_payload_hash=raw_hash,
-            confirmed_change=confirmed_by_id.get(canonical._int(raw.get("id")) or -1),
-        )
-        for raw in raw_rows
-    ]
-    enriched, trajectory_state = canonical.build_trajectory(normalised, previous_state or {}, generated_at)
-    health = canonical._overall_health(enriched, transport_health or {"status": "SNAPSHOT_DERIVED"})
-    health["observed_at_assumed_from_build_time"] = observed_assumed
-    health["canonical_provider"] = "src.engines.price_radar"
-    health["canonical_policy"] = "config/intelligence/price_radar.json"
-    if health.get("status") == "FAIL":
-        raise RuntimeError(f"Official FPL predictor schema unusable: {health}")
+    if predictor_available:
+        normalised = [
+            canonical._normalise_player(
+                raw,
+                position_by_type=positions,
+                observed_at=observed,
+                now=generated_at,
+                raw_payload_hash=raw_hash,
+                confirmed_change=confirmed_by_id.get(canonical._int(raw.get("id")) or -1),
+            )
+            for raw in raw_rows
+        ]
+        enriched, trajectory_state = canonical.build_trajectory(normalised, previous_state or {}, generated_at)
+        health = canonical._overall_health(enriched, transport_health or {"status": "SNAPSHOT_DERIVED"})
+        health["observed_at_assumed_from_build_time"] = observed_assumed
+        health["canonical_provider"] = "src.engines.price_radar"
+        health["canonical_policy"] = "config/intelligence/price_radar.json"
+        health["predictor_fields_present"] = True
+        if health.get("status") == "FAIL":
+            raise RuntimeError(f"Official FPL predictor schema unusable: {health}")
+        served_rows = enriched
+    else:
+        enriched = []
+        served_rows = fact_rows
+        trajectory_state = {"generated_at": generated_at.isoformat(), "players": {}}
+        health = {
+            "status": "UNAVAILABLE",
+            "source": "OFFICIAL_FPL",
+            "reason": "PREDICTOR_FIELDS_ABSENT",
+            "players": len(raw_rows),
+            "schema_invalid_players": 0,
+            "calibrating_players": 0,
+            "stale_players": 0,
+            "transport": transport_health or {"status": "SNAPSHOT_DERIVED"},
+            "auth_required": False,
+            "ui_scraping": False,
+            "dedicated_predictor_endpoint": False,
+            "model_threshold_percent": canonical.MODEL_THRESHOLD,
+            "threshold_is_official_rule": False,
+            "no_intra_cycle_crossing_eta": True,
+            "observed_at_assumed_from_build_time": observed_assumed,
+            "canonical_provider": "src.engines.price_radar",
+            "canonical_policy": "config/intelligence/price_radar.json",
+            "predictor_fields_present": False,
+        }
 
     owned = {int(value) for value in owned_ids}
     by_id = {
         int(row["element_id"]): row
-        for row in enriched
+        for row in served_rows
         if row.get("element_id") is not None
     }
     all15 = [
@@ -192,6 +303,7 @@ def build_price_snapshot(
         for element in sorted(owned)
         if element in by_id
     ]
+
     ranked = sorted(enriched, key=canonical._risk_sort, reverse=True)
     market_watch = [
         canonical._served_evidence(row, owned=False)
@@ -206,10 +318,9 @@ def build_price_snapshot(
     rising = [row for row in ranked if row.get("direction") == "RISE"][: canonical.PRICE_PRESSURE_LIST_SIZE]
     falling = [row for row in ranked if row.get("direction") == "FALL"][: canonical.PRICE_PRESSURE_LIST_SIZE]
     total_players = int(bootstrap.get("total_players") or 0)
-    buys = _market_pressure(enriched, total_players, descending=True)
-    sells = _market_pressure(enriched, total_players, descending=False)
+    buys = _market_pressure(served_rows, total_players, descending=True)
+    sells = _market_pressure(served_rows, total_players, descending=False)
     contract = canonical_contract()
-    transfer_momentum = build_transfer_momentum_evidence(bootstrap, enriched)
     next_update = next(
         (row.get("next_official_price_update_at") for row in enriched if row.get("next_official_price_update_at")),
         None,
@@ -224,7 +335,7 @@ def build_price_snapshot(
         "contract": contract,
         "raw_payload_hash": raw_hash,
         "confirmed_changes": confirmed,
-        "players": enriched,
+        "players": served_rows,
         "top_buy_pressure": buys,
         "top_sell_pressure": sells,
         "top_rise_risk": rising,
@@ -239,6 +350,8 @@ def build_price_snapshot(
             "authenticated_session_required": False,
             "ui_scraping": False,
             "dedicated_predictor_endpoint": False,
+            "current_price_and_transfer_facts_independent_of_predictor_fields": True,
+            "transfer_momentum_does_not_require_predictor_fields": True,
             "current_and_projected_progress_separate": True,
             "raw_likelihood_preserved_without_unverified_mapping": True,
             "null_never_coerced_to_zero": True,
@@ -251,7 +364,11 @@ def build_price_snapshot(
         "status": health.get("status"),
         "contract": contract,
         "prices": prices,
-        "trajectory_state": {**trajectory_state, "contract": "official_price_predictor_state_v3", "raw_payload_hash": raw_hash},
+        "trajectory_state": {
+            **trajectory_state,
+            "contract": "official_price_predictor_state_v3",
+            "raw_payload_hash": raw_hash,
+        },
         "alerts": {
             "generated_at": generated_at.isoformat(),
             "health": health,

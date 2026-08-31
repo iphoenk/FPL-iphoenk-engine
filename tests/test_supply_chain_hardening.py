@@ -12,7 +12,9 @@ DOWNLOAD_ARTIFACT_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"  # v8.0.1
 
 def test_runtime_compute_is_read_only_and_publication_is_isolated():
     workflow = RUNTIME_WORKFLOW.read_text(encoding="utf-8")
-    assert "  compute:\n    permissions:\n      contents: read\n" in workflow
+    compute = workflow.split("  compute:\n", 1)[1].split("\n  publish:\n", 1)[0]
+    assert "permissions:\n      contents: read\n      actions: read\n" in compute
+    assert "contents: write" not in compute
     assert "  publish:\n    needs: compute\n" in workflow
     assert "    permissions:\n      contents: write\n      actions: read\n" in workflow
     assert "persist-credentials: false" in workflow

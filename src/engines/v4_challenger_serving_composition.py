@@ -9,7 +9,7 @@ SERVING = DATA / "serving_payload_v4.json"
 INTEGRITY = DATA / "publication_integrity_v4.json"
 
 
-def _assert_complete(payload: dict[str, Any]) -> None:
+def _assert_complete(payload: dict[str, Any], *, canonical_action: str) -> None:
     completeness = payload.get("official_fact_completeness") or {}
     owned = completeness.get("owned") or {}
     watchlist = completeness.get("watchlist") or {}
@@ -23,6 +23,12 @@ def _assert_complete(payload: dict[str, Any]) -> None:
         raise RuntimeError(f"owned challenger serving requires exact 20 watchlist: {watchlist}")
     if len(payload.get("owned_screening") or []) != 15:
         raise RuntimeError("owned challenger serving requires all-15 screening")
+    if payload.get("decision_authority") != "CANONICAL_DECISION_ARBITRATION_V1":
+        raise RuntimeError("owned challenger serving requires canonical decision authority")
+    if payload.get("overall_decision") != canonical_action:
+        raise RuntimeError(
+            f"owned challenger canonical action mismatch: challenger={payload.get('overall_decision')} serving={canonical_action}"
+        )
 
 
 def compose() -> dict[str, Any]:
@@ -30,13 +36,17 @@ def compose() -> dict[str, Any]:
     serving = read_json(SERVING, {})
     if not serving:
         raise RuntimeError("serving payload missing before challenger composition")
-    _assert_complete(challenger)
+    canonical_action = str(serving.get("overall_action") or "").upper()
+    _assert_complete(challenger, canonical_action=canonical_action)
 
     main_battles = list(challenger.get("main_transfer_battles") or [])
     multi_packages = list(challenger.get("multi_transfer_packages") or [])
     serving["owned_challenger_decision"] = {
         "status": challenger.get("status"),
-        "overall_decision": challenger.get("overall_decision"),
+        "challenge_signal": challenger.get("challenge_signal"),
+        "overall_decision": canonical_action,
+        "decision_authority": challenger.get("decision_authority"),
+        "canonical_authority_consistent": True,
         "execution_authorized": challenger.get("execution_authorized"),
         "owned_count": challenger.get("owned_count"),
         "watchlist_count": challenger.get("governed_watchlist_count"),
@@ -55,6 +65,8 @@ def compose() -> dict[str, Any]:
         "owned_challenger_exact_20_watchlist": True,
         "owned_challenger_reuses_optimization_artifact": True,
         "owned_challenger_reporting_recompute_forbidden": True,
+        "owned_challenger_challenge_signal_advisory_only": True,
+        "single_canonical_decision_authority": True,
     })
     atomic_json(SERVING, serving)
 
@@ -68,6 +80,10 @@ def compose() -> dict[str, Any]:
             "all15_screened": True,
             "main_transfer_battles_published": True,
             "reporting_recompute": False,
+            "challenge_signal": challenger.get("challenge_signal"),
+            "canonical_action": canonical_action,
+            "canonical_authority_consistent": True,
+            "decision_authority": challenger.get("decision_authority"),
         }
         atomic_json(INTEGRITY, integrity)
 
@@ -77,5 +93,6 @@ def compose() -> dict[str, Any]:
         "watchlist": 20,
         "main_transfer_battles": len(main_battles),
         "multi_transfer_packages": len(multi_packages),
-        "overall_decision": challenger.get("overall_decision"),
+        "challenge_signal": challenger.get("challenge_signal"),
+        "overall_decision": canonical_action,
     }

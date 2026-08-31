@@ -1,26 +1,48 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "contract": "OWNED_CHALLENGER_DECISION_ENGINE_V1",
   "engine_view": "V4",
   "owner": "squad_decision.challenger_analysis.owned_challenger_evaluation",
-  "horizons": [1, 2, 3, 5],
-  "strategic_horizons": [10, 15],
-  "lifecycle_states": ["UNCHALLENGED", "CHALLENGED_OWNED", "EMERGING_CHALLENGER", "ACTIVE_CHALLENGER"],
-  "output_states": ["HOLD", "REVIEW", "REVIEW_NOW", "CHANGE", "BLOCKED"],
+  "horizons": [
+    1,
+    2,
+    3,
+    5
+  ],
+  "strategic_horizons": [
+    10,
+    15
+  ],
+  "lifecycle_states": [
+    "UNCHALLENGED",
+    "CHALLENGED_OWNED",
+    "EMERGING_CHALLENGER",
+    "ACTIVE_CHALLENGER"
+  ],
+  "output_states": [
+    "HOLD",
+    "REVIEW",
+    "REVIEW_NOW",
+    "CHANGE",
+    "BLOCKED"
+  ],
   "decision": {
     "review_edge_5gw": 1.0,
     "review_now_edge_5gw": 3.0,
-    "minimum_start_probability": 0.60,
+    "minimum_start_probability": 0.6,
     "minimum_signal_to_noise": 0.75,
     "change_requires_canonical_material_package": true,
     "change_requires_known_hit_cost_or_wildcard": true,
-    "market_actionable_urgencies": ["HIGH", "CRITICAL"]
+    "market_actionable_urgencies": [
+      "HIGH",
+      "CRITICAL"
+    ]
   },
   "emerging": {
     "maximum_candidates": 12,
     "minimum_xpts_5": 12.0,
     "minimum_start_probability": 0.45,
-    "sustainable_start_probability": 0.60,
+    "sustainable_start_probability": 0.6,
     "event_points_trigger": 8,
     "transfers_in_event_trigger": 50000
   },
@@ -50,6 +72,11 @@
     "may_not_overwrite_watchlist": true,
     "execution_authority_preserved": true,
     "missing_evidence_is_explicit": true,
-    "data_join_defect_is_internal_only": true
-  }
+    "data_join_defect_is_internal_only": true,
+    "canonical_decision_authority": "CANONICAL_DECISION_ARBITRATION_V1",
+    "challenger_states_are_advisory": true,
+    "overall_decision_must_equal_canonical_action": true
+  },
+  "registry": "v4_owned_challenger_decision_policy_v2",
+  "decision_authority": "CANONICAL_DECISION_ARBITRATION_V1"
 }

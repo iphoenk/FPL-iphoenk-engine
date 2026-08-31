@@ -84,6 +84,7 @@ ATTESTED_CONFIG_PATHS = (
     CONFIG / "gate0_registry.json",
     CONFIG / "architecture_ownership_registry.json",
     CONFIG / "release_manifest.json",
+    CONFIG / "intelligence/owned_challenger_decision_v4.json",
 )
 ATTESTED_WORKFLOW_PATHS = (
     ROOT / ".github/workflows/fpl-engine.yml",
@@ -277,6 +278,7 @@ def run(*, force_full_scan: bool = False) -> dict:
     gate = read_json(CONFIG / "gate0_registry.json", {})
     ownership = read_json(CONFIG / "architecture_ownership_registry.json", {})
     release = read_json(CONFIG / "release_manifest.json", {})
+    challenger_policy = read_json(CONFIG / "intelligence/owned_challenger_decision_v4.json", {})
     checks: dict[str, tuple[bool, list | str]] = {}
 
     service_rows = services.get("services") or []
@@ -324,6 +326,28 @@ def run(*, force_full_scan: bool = False) -> dict:
     checks["capability_matrix_required_coverage"] = (not missing_capabilities, missing_capabilities)
     checks["capability_matrix_contract_complete"] = (not missing_fields, missing_fields)
     checks["capability_matrix_overlap_actions_governed"] = (not invalid_actions, invalid_actions)
+
+    optimization_row = next((row for row in service_rows if row.get("id") == "optimization"), {})
+    challenger_contract = contract_specs.get("owned_challenger_decision") or {}
+    challenger_responsibility = next((row for row in responsibilities if row.get("id") == "OWNED_CHALLENGER_EVIDENCE"), {})
+    challenger_authority_ok = (
+        challenger_policy.get("decision_authority") == "CANONICAL_DECISION_ARBITRATION_V1"
+        and (challenger_policy.get("governance") or {}).get("canonical_decision_authority") == "CANONICAL_DECISION_ARBITRATION_V1"
+        and "owned_challenger_decision" in (optimization_row.get("produces") or [])
+        and challenger_contract.get("path") == "data/owned_challenger_decision_v4.json"
+        and (challenger_contract.get("equals") or {}).get("decision_authority") == "CANONICAL_DECISION_ARBITRATION_V1"
+        and challenger_responsibility.get("owner") == "optimization"
+        and challenger_responsibility.get("decision_authority") == "CANONICAL_DECISION_ARBITRATION_V1"
+    )
+    checks["owned_challenger_single_decision_authority"] = (
+        challenger_authority_ok,
+        [] if challenger_authority_ok else [{
+            "policy": challenger_policy.get("decision_authority"),
+            "service_produces": optimization_row.get("produces") or [],
+            "contract": challenger_contract,
+            "responsibility": challenger_responsibility,
+        }],
+    )
 
     duplicate_rule_defs = []
     for path in sorted((ROOT / "src").rglob("*.py")):
@@ -409,6 +433,7 @@ def run(*, force_full_scan: bool = False) -> dict:
         and registries.get("services") == services.get("registry")
         and registries.get("contracts") == contracts.get("registry")
         and registries.get("ownership") == ownership.get("registry")
+        and registries.get("owned_challenger_policy") == challenger_policy.get("registry")
     )
     checks["release_single_source_coherent"] = (
         release_ok,
@@ -435,6 +460,7 @@ def run(*, force_full_scan: bool = False) -> dict:
             "audit_first_capability_matrix_enforced": True,
             "reporting_composition_only": True,
             "moving_operational_identity_single_owner": True,
+            "owned_challenger_single_decision_authority": True,
         },
     }
     atomic_json(OUT, out)

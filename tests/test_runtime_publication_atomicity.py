@@ -55,8 +55,10 @@ def test_runtime_workflow_orders_every_candidate_gate_before_publication() -> No
         "Validate production decision contracts",
         "Enforce selected profile runtime SLO with one bounded warm retry",
         "Verify V3 candidate definition of done before publication",
-        "Assert source main is still canonical before publication",
         "Materialize and validate publication whitelist",
+        "Transfer verified runtime snapshot to isolated publisher",
+        "Assert source main is still canonical before publication",
+        "Revalidate transferred publication artifact",
         "Publish rolling runtime snapshot atomically",
         "Verify published runtime provenance and exact whitelist",
     ]
@@ -66,6 +68,7 @@ def test_runtime_workflow_orders_every_candidate_gate_before_publication() -> No
     assert "--scope candidate" in text
     assert "--scope production" not in text
     assert "cancel-in-progress: false" in text
+    assert "needs: compute" in text
 
 
 def test_runtime_publication_uses_exact_source_and_branch_leases() -> None:

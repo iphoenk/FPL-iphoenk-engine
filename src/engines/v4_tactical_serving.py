@@ -5,9 +5,9 @@ from typing import Any
 
 from src.engines.fpl_rules_2026 import POSITION_COUNTS
 from src.engines.v4_official_fact_integrity import extract_public_fact
-from src.utils import CONFIG, DATA, read_json
+from src.engines.v4_serving_policy import watchlist_position_counts
+from src.utils import DATA, read_json
 
-POLICY = CONFIG / "serving_improvement_registry.json"
 EXTERNAL_EVIDENCE = DATA / "tactical_external_evidence.json"
 
 
@@ -104,23 +104,10 @@ def _prediction_score(pred: dict) -> float:
     return x5 + 0.20 * x15 + 0.65 * start + 0.30 * value - 0.35 * uncertainty
 
 
-def _watchlist_policy() -> tuple[int, list[str]]:
-    policy = (read_json(POLICY, {}) or {}).get("watchlist") or {}
-    exact = int(policy.get("exact_per_position") or 0)
-    positions = [str(position) for position in (policy.get("positions") or [])]
-    if exact <= 0 or not positions or len(set(positions)) != len(positions):
-        raise RuntimeError("invalid governed watchlist policy")
-    invalid = [position for position in positions if position not in POSITION_COUNTS]
-    if invalid:
-        raise RuntimeError(f"invalid governed watchlist positions: {invalid}")
-    if policy.get("exclude_owned") is not True:
-        raise RuntimeError("governed watchlist policy must exclude owned players")
-    return exact, positions
-
-
 def governed_watchlist(predictions: dict, universe: dict, owned_ids: set[int], previous: dict | None = None) -> dict:
-    exact, positions = _watchlist_policy()
-    expected_total = exact * len(positions)
+    expected_counts = watchlist_position_counts()
+    expected_total = sum(expected_counts.values())
+    positions = list(expected_counts)
     umap = {int(row.get("element") or 0): row for row in universe.get("players") or [] if row.get("element") is not None}
     groups: dict[str, list[dict]] = defaultdict(list)
     for pred in predictions.get("players") or []:
@@ -129,7 +116,7 @@ def governed_watchlist(predictions: dict, universe: dict, owned_ids: set[int], p
             continue
         uni = umap.get(element) or {}
         position = uni.get("position") or pred.get("position")
-        if position not in positions:
+        if position not in expected_counts:
             continue
         fact = extract_public_fact(uni, expected_element=element)
         groups[position].append({
@@ -144,6 +131,7 @@ def governed_watchlist(predictions: dict, universe: dict, owned_ids: set[int], p
         })
     selected = []
     for position in positions:
+        exact = expected_counts[position]
         rows = sorted(groups.get(position, []), key=lambda row: (row["score"], row["xpts_5"], row["start_probability_5"]), reverse=True)[:exact]
         if len(rows) != exact:
             raise RuntimeError(f"governed watchlist requires exactly {exact} {position}, got {len(rows)}")

@@ -25,11 +25,11 @@ jobs:
       canonical_sha: ${{ steps.canonical.outputs.canonical_sha }}
     steps:
       - name: Checkout canonical V4
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: v4-prediction-engine
           fetch-depth: 1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip

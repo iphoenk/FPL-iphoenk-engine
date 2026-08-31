@@ -63,7 +63,8 @@ def _checkpoint_metadata(
         "target_visible_mode": str(target_visible_mode or "") or None,
         "precomputed": precompute,
         "generated_before_or_at_target": bool(target_dt is not None and generated_at <= target_dt),
-        "publication_complete": True,
+        "materialization_complete": True,
+        "publication_proof": "PRESENCE_ON_RUNTIME_BRANCH",
     }
 
 

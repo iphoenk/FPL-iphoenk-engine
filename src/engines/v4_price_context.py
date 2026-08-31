@@ -17,6 +17,7 @@ from src.utils import DATA, atomic_json, read_json, utcnow
 
 RUNTIME = DATA / "runtime"
 SNAPSHOT = RUNTIME / "snapshot.v1.json"
+OFFICIAL_SOURCE = "OFFICIAL_FPL"
 
 
 def _confirmed_changes(raw_rows: list[dict], previous_cache: dict) -> tuple[list[dict], dict]:
@@ -58,6 +59,56 @@ def _pressure(rows: list[dict], total_players: int) -> tuple[list[dict], list[di
     return buys, sells
 
 
+def _blocked_context(
+    *,
+    reason: str,
+    current: datetime,
+    transport_health: dict | None,
+    previous_cache: dict,
+) -> dict:
+    contract = canonical_contract()
+    return {
+        "schema_version": 1,
+        "contract": contract,
+        "policy_id": contract["model_id"],
+        "generated_at": current.isoformat(),
+        "source": None,
+        "authority_rank": contract["source_authority"],
+        "health": {
+            "status": "BLOCKED",
+            "source": None,
+            "reason": reason,
+            "transport": transport_health or {"status": "UNAVAILABLE"},
+            "auth_required": False,
+            "ui_scraping": False,
+            "dedicated_predictor_endpoint": False,
+        },
+        "players": [],
+        "all15_actionable_price_radar": [],
+        "all20_external_dss_watchlist": [],
+        "confirmed_changes": [],
+        "top_buy_pressure": [],
+        "top_sell_pressure": [],
+        "price_cache": previous_cache,
+        "market_context_role": "TIMING_AFFORDABILITY_OPTIONALITY_ONLY",
+        "football_decision_authority": "SUBORDINATE",
+        "v3_v4_canonical_parity": {
+            "module": "src.engines.price_radar",
+            "model_id": contract["model_id"],
+            "schema_version": contract["schema_version"],
+            "raw_likelihood_preserved": True,
+            "no_intra_cycle_crossing_eta": True,
+            "dst_safe_london_update_clock": True,
+        },
+        "provenance": {
+            "selected_source": None,
+            "fallback_used": False,
+            "fallback_reason": reason,
+            "network_refetch": False,
+        },
+    }
+
+
 def build_market_context(
     bootstrap: dict,
     *,
@@ -67,6 +118,8 @@ def build_market_context(
     owned_ids: set[int] | None = None,
     watchlist_ids: Iterable[int] | None = None,
     transport_health: dict | None = None,
+    source: str = OFFICIAL_SOURCE,
+    fallback_reason: str | None = None,
 ) -> dict:
     current = now or utcnow()
     if current.tzinfo is None:
@@ -88,7 +141,23 @@ def build_market_context(
         )
         for raw in raw_rows
     ]
+
+    is_fallback = source != OFFICIAL_SOURCE
+    if is_fallback:
+        reason = fallback_reason or f"{source}_FALLBACK"
+        for row in rows:
+            row["source"] = source
+            if row.get("confidence") == "HIGH":
+                row["confidence"] = "MEDIUM"
+            if not row.get("fallback_reason"):
+                row["fallback_reason"] = reason
+
     health = _overall_health(rows, transport_health or {"status": "SNAPSHOT_DERIVED"})
+    health["source"] = source
+    if is_fallback and health.get("status") == "PASS":
+        health["status"] = "PARTIAL"
+        health["reason"] = fallback_reason or f"{source}_FALLBACK"
+
     by_id = {int(row["element_id"]): row for row in rows if row.get("element_id") is not None}
     owned_set = {int(element) for element in (owned_ids or set())}
     all15 = [_served_evidence(by_id[element], owned=True) for element in sorted(owned_set) if element in by_id]
@@ -104,7 +173,7 @@ def build_market_context(
         "contract": contract,
         "policy_id": contract["model_id"],
         "generated_at": current.isoformat(),
-        "source": "OFFICIAL_FPL",
+        "source": source,
         "authority_rank": contract["source_authority"],
         "health": health,
         "players": rows,
@@ -123,6 +192,13 @@ def build_market_context(
             "raw_likelihood_preserved": True,
             "no_intra_cycle_crossing_eta": True,
             "dst_safe_london_update_clock": True,
+        },
+        "provenance": {
+            "selected_source": source,
+            "fallback_used": is_fallback,
+            "fallback_reason": fallback_reason if is_fallback else None,
+            "observed_at": observed.astimezone(timezone.utc).isoformat() if observed is not None else None,
+            "network_refetch": False,
         },
     }
 
@@ -246,33 +322,100 @@ def squeeze_for_pairs(prices: dict, pairs: Iterable[tuple[int, int]], ledger: li
     return out
 
 
+def _prematerialized_candidates(raw_payload: dict) -> list[tuple[str, dict, str | datetime | None, dict, str | None]]:
+    """Return lower-authority price evidence already present in the governed snapshot.
+
+    This function never performs network I/O. Source adapters remain outside the
+    price engine; this layer only selects already-materialized evidence according
+    to the shared canonical authority order.
+    """
+    contract = canonical_contract()
+    fallbacks = raw_payload.get("price_predictor_fallbacks") or {}
+    out: list[tuple[str, dict, str | datetime | None, dict, str | None]] = []
+    for source in contract["source_authority"][1:]:
+        entry = fallbacks.get(source) or {}
+        if not isinstance(entry, dict):
+            continue
+        bootstrap = entry.get("bootstrap") or {}
+        if not isinstance(bootstrap, dict) or not bootstrap.get("elements"):
+            continue
+        out.append((
+            str(source),
+            bootstrap,
+            entry.get("observed_at"),
+            entry.get("health") or {"status": "MATERIALIZED_FALLBACK"},
+            entry.get("reason") or f"{source}_FALLBACK",
+        ))
+    return out
+
+
 def refresh_price_context(*, raw: dict | None = None, team: dict | None = None, data_dir=None) -> dict:
     """Prediction-stage owner for the canonical price artifact.
 
     Prediction passes its already-loaded governed snapshot and team payload so this
     path does not re-read or refetch Official facts. Standalone invocation may fall
-    back to the canonical snapshot file. This function writes only the price cache
-    and price artifact; it never mutates data/latest.json.
+    back to the canonical snapshot file. Lower-authority evidence is eligible only
+    when it was already materialized in that same governed snapshot.
     """
     target_data = data_dir or DATA
     raw_payload = raw if raw is not None else read_json(SNAPSHOT, {})
     team_payload = team if team is not None else read_json(target_data / "team.json", {})
-    bootstrap = ((raw_payload.get("official") or {}).get("bootstrap") or {})
-    if not bootstrap.get("elements"):
-        raise RuntimeError("Official bootstrap required for V4 price context")
-
     owned_ids = {int(row.get("element") or 0) for row in team_payload.get("squad") or [] if row.get("element") is not None}
     previous_cache = read_json(target_data / "price_cache.json", {})
-    context = build_market_context(
-        bootstrap,
-        observed_at=raw_payload.get("generated_at"),
-        now=utcnow(),
-        previous_cache=previous_cache,
-        owned_ids=owned_ids,
-        watchlist_ids=(),
-        transport_health=((raw_payload.get("endpoint_health") or {}).get("bootstrap") or {"status": "SNAPSHOT_DERIVED"}),
-    )
-    atomic_json(target_data / "price_cache.json", context.pop("price_cache"))
+    current = utcnow()
+
+    official_bootstrap = ((raw_payload.get("official") or {}).get("bootstrap") or {})
+    official_transport = ((raw_payload.get("endpoint_health") or {}).get("bootstrap") or {"status": "UNAVAILABLE"})
+    degraded_official: dict | None = None
+
+    if official_bootstrap.get("elements"):
+        official_context = build_market_context(
+            official_bootstrap,
+            observed_at=raw_payload.get("generated_at"),
+            now=current,
+            previous_cache=previous_cache,
+            owned_ids=owned_ids,
+            watchlist_ids=(),
+            transport_health=official_transport,
+            source=OFFICIAL_SOURCE,
+        )
+        if (official_context.get("health") or {}).get("status") in {"PASS", "PARTIAL"}:
+            context = official_context
+        else:
+            degraded_official = official_context
+            context = None
+    else:
+        context = None
+
+    if context is None:
+        for source, bootstrap, observed_at, health, reason in _prematerialized_candidates(raw_payload):
+            candidate = build_market_context(
+                bootstrap,
+                observed_at=observed_at,
+                now=current,
+                previous_cache=previous_cache,
+                owned_ids=owned_ids,
+                watchlist_ids=(),
+                transport_health=health,
+                source=source,
+                fallback_reason=reason,
+            )
+            if (candidate.get("health") or {}).get("status") in {"PASS", "PARTIAL"}:
+                context = candidate
+                break
+            if degraded_official is None:
+                degraded_official = candidate
+
+    if context is None:
+        context = degraded_official or _blocked_context(
+            reason="RUNTIME_DEPENDENCY_UNAVAILABLE",
+            current=current,
+            transport_health=official_transport,
+            previous_cache=previous_cache,
+        )
+
+    cache_payload = context.pop("price_cache", previous_cache)
+    atomic_json(target_data / "price_cache.json", cache_payload)
     atomic_json(target_data / "prices.json", context)
     return context
 
@@ -282,6 +425,7 @@ if __name__ == "__main__":
     print({
         "service": "v4_price_context",
         "health": (result.get("health") or {}).get("status"),
+        "source": result.get("source"),
         "players": len(result.get("players") or []),
         "all15": len(result.get("all15_actionable_price_radar") or []),
         "all20": len(result.get("all20_external_dss_watchlist") or []),

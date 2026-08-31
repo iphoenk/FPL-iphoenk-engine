@@ -2,6 +2,7 @@ import importlib
 from pathlib import Path
 
 from src.v5 import service_health
+from src.v5.config_cache import load_json_config
 from src.v5.module_registry import module_specs
 from src.v5.service_registry import get_service, module_owners, service_specs, validate_registry
 from src.v5.services.evaluation import handle as evaluation_handle
@@ -120,3 +121,32 @@ def test_prediction_network_contract_is_bounded_by_service_output_design():
     assert "max_fixture_rows_per_player" in core
     assert "full_provenance_omitted" in core
     assert "rates" not in source
+
+
+def test_price_predictor_and_squeeze_have_exactly_one_price_service_owner():
+    owners = module_owners()
+    assert owners["official_price_predictor"] == "price"
+    assert owners["price_trajectory"] == "price"
+    assert owners["price_service"] == "price"
+    assert owners["price_squeeze"] == "price"
+    price = get_service("price")
+    assert set(price.owns_modules).issuperset({"official_price_predictor", "price_trajectory", "price_service", "price_squeeze"})
+
+
+def test_evaluation_and_watchlist_do_not_import_price_business_implementation():
+    evaluation = (ROOT / "src/v5/services/evaluation.py").read_text(encoding="utf-8")
+    watchlist = (ROOT / "src/v5/services/watchlist.py").read_text(encoding="utf-8")
+    assert "src.v5.price_squeeze" not in evaluation
+    assert "src.v5.price_squeeze" not in watchlist
+    assert "src.engines.price_radar" not in evaluation
+    assert "src.engines.price_radar" not in watchlist
+
+
+def test_orchestrator_routes_cross_context_price_overlays_to_price_service():
+    routes = (load_json_config("config/v5_orchestrator_registry.json").get("routing") or {})
+    assert routes["price_bind_watchlist"] == {"service": "price", "operation": "bind_watchlist_evidence"}
+    assert routes["price_annotate_comparator"] == {"service": "price", "operation": "annotate_comparator"}
+
+
+def test_price_adoption_does_not_restore_v3_global_settings_module():
+    assert not (ROOT / "src/settings.py").exists()

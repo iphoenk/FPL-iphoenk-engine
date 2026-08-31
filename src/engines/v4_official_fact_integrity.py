@@ -6,11 +6,10 @@ from collections import Counter
 from typing import Any, Iterable
 
 from src.engines.fpl_rules_2026 import POSITION_COUNTS
-from src.utils import CONFIG, read_json
+from src.engines.v4_serving_policy import watchlist_position_counts
 
 
 PUBLIC_SOURCE = "bootstrap-static.elements"
-POLICY = CONFIG / "serving_improvement_registry.json"
 REQUIRED_FACT_FIELDS = (
     "element_id",
     "team",
@@ -40,22 +39,6 @@ def _canonical_hash(payload: Any) -> str:
         separators=(",", ":"),
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
-
-
-def _watchlist_contract() -> tuple[dict[str, int], int]:
-    """Read watchlist cardinality from the governed serving registry only."""
-    policy = (read_json(POLICY, {}) or {}).get("watchlist") or {}
-    exact = int(policy.get("exact_per_position") or 0)
-    positions = [str(position) for position in (policy.get("positions") or [])]
-    if exact <= 0 or not positions or len(set(positions)) != len(positions):
-        raise RuntimeError("invalid governed watchlist policy")
-    invalid = [position for position in positions if position not in POSITION_COUNTS]
-    if invalid:
-        raise RuntimeError(f"invalid governed watchlist positions: {invalid}")
-    if policy.get("exclude_owned") is not True:
-        raise RuntimeError("governed watchlist policy must exclude owned players")
-    counts = {position: exact for position in positions}
-    return counts, exact * len(positions)
 
 
 def _positive_ids(values: Iterable[Any]) -> set[int]:
@@ -248,7 +231,8 @@ def build_publication_integrity(
     if authoritative_owned_ids is None:
         authoritative_owned_ids = tactical.get("authoritative_owned_ids")
 
-    watchlist_counts, watchlist_expected = _watchlist_contract()
+    watchlist_counts = watchlist_position_counts()
+    watchlist_expected = sum(watchlist_counts.values())
     owned_expected = sum(int(count) for count in POSITION_COUNTS.values())
     owned_counts, owned_defects = _fact_group(owned, owned_expected)
     watch_counts, watch_defects = _fact_group(watchlist, watchlist_expected)

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from functools import lru_cache
-from pathlib import Path
 from typing import Any
 
 from src.engines.official_fact_publication_gate import run as run_official_fact_gate
@@ -174,9 +173,6 @@ def _sync_current_authority(payload: dict[str, Any], *, compact_captaincy: bool)
     }
     payload["current_team"] = current_team
 
-    # Action Board is part of the human-serving contract. When a user override is
-    # authoritative, it must not surface the engine captain as though it were the
-    # current selection. Keep the challenger in its dedicated comparison field.
     if planning.get("decision_authority") == "USER_OVERRIDE" and captain.get("name"):
         board = []
         for raw in payload.get("action_board") or []:
@@ -209,11 +205,25 @@ def _sync_current_authority(payload: dict[str, Any], *, compact_captaincy: bool)
     payload["captaincy"] = section
 
 
+def _sync_transfer_battles(payload: dict[str, Any], user_source: dict[str, Any]) -> None:
+    battles = list(user_source.get("main_transfer_battles") or [])
+    comparator = dict(user_source.get("owned_vs_challenger") or {})
+    if comparator.get("contract") != "OWNED_CHALLENGER_DECISION_V3":
+        raise RuntimeError("serving requires governed owned challenger decision contract")
+    if ((comparator.get("publication_validation") or {}).get("status")) != "PASS":
+        raise RuntimeError("serving refuses challenger decision without PASS publication validation")
+    payload["main_transfer_battles"] = battles
+    payload["owned_vs_challenger"] = comparator
+    payload.setdefault("serving_contract", {})["main_transfer_battles"] = True
+    payload["serving_contract"]["owned_challenger_decision"] = True
+
+
 def run() -> dict[str, Any]:
     latest = read_json(DATA / "latest.json", {})
     projections = read_json(DATA / "projections.json", {})
     lineup = read_json(DATA / "lineup_decision.json", {})
     weather = read_json(DATA / "fixture_weather.json", {})
+    user_source = read_json(DATA / "user_report.json", {})
     gw = int((latest.get("phase") or {}).get("planning_gw") or projections.get("planning_gw") or 0)
     if gw <= 0:
         raise RuntimeError("report transparency cannot determine planning GW")
@@ -234,9 +244,14 @@ def run() -> dict[str, Any]:
             "settled_prediction": _settled_validation(latest),
         }
         payload["weather_context"] = _weather_context(weather)
+        _sync_transfer_battles(payload, user_source)
         _sync_current_authority(payload, compact_captaincy=path.name != "user_report.json")
         atomic_json(path, payload)
-        result[path.name] = {"owned": len(decorated), "weather": payload["weather_context"]["status"]}
+        result[path.name] = {
+            "owned": len(decorated),
+            "weather": payload["weather_context"]["status"],
+            "transfer_battles": len(payload.get("main_transfer_battles") or []),
+        }
 
     presentation = run_user_presentation()
     result["user_presentation"] = {

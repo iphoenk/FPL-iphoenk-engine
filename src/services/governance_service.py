@@ -19,6 +19,15 @@ def _assert_no_critical_failure_erasure(before: set[str], maturity: dict) -> Non
         raise RuntimeError(f"maturity reconciliation cannot erase critical FAILED state: {erased}")
 
 
+def _publication_integrity_state() -> dict:
+    """Read the publication sidecar when present without coupling earlier governance phases to it."""
+    try:
+        payload = read_json(DATA / "publication_integrity_v4.json", {})
+    except (KeyError, FileNotFoundError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
 def _production_operational_health(maturity: dict, readiness: dict) -> dict:
     """Separate deploy/runtime health from evidence maturity without hiding either.
 
@@ -160,7 +169,7 @@ def run() -> dict:
     try:
         checkpoint = v4_checkpoint_governance.run()
     except RuntimeError:
-        integrity = read_json(DATA / "publication_integrity_v4.json", {})
+        integrity = _publication_integrity_state()
         if integrity.get("status") == "BLOCKED":
             maturity["publication_integrity"] = integrity
             maturity["publication_integrity_health"] = "BLOCKED"
@@ -178,7 +187,7 @@ def run() -> dict:
         raise
     checkpoint_ms = round((perf_counter() - started) * 1000.0, 2)
 
-    integrity = read_json(DATA / "publication_integrity_v4.json", {})
+    integrity = _publication_integrity_state()
     if integrity:
         capabilities = integrity.get("capabilities") or {}
         maturity["publication_integrity"] = integrity

@@ -41,6 +41,7 @@ def run() -> dict:
     candidate_audit = watch.get("candidate_audit") or {}
     published = set()
     position_counts = {}
+    promoted_review_count = 0
     for position in policy.get("positions") or []:
         rows = (watch.get("positions") or {}).get(position) or []
         position_counts[position] = len(rows)
@@ -54,7 +55,14 @@ def run() -> dict:
             published.add(element)
             assert row.get("position") == position
             assert int(row.get("rank") or -1) == expected_rank
-            assert row.get("action") == "WATCH"
+
+            mandatory = row.get("mandatory_challenger_review") is True
+            expected_action = "PROMOTE REVIEW" if mandatory else "WATCH"
+            assert row.get("action") == expected_action, (element, row.get("action"), expected_action)
+            assert bool(technical.get("mandatory_challenger_review")) == mandatory, (element, "mandatory audit mismatch")
+            if mandatory:
+                promoted_review_count += 1
+
             assert row.get("lifecycle") in allowed_lifecycle - {"REMOVE"}
             assert float(row.get("evidence_coverage") or 0) >= min_coverage
             assert len(row.get("reasons") or []) >= 1
@@ -72,7 +80,11 @@ def run() -> dict:
     assert int(summary.get("published_candidates") or 0) == len(published)
     assert len(published) == target_total, ("watchlist_total", len(published), target_total)
     assert len(candidate_audit) == len(published)
+    assert promoted_review_count <= int(summary.get("mandatory_review_candidates") or 0)
     assert watch.get("governance", {}).get("price_is_overlay_not_primary_reason") is True
+    assert watch.get("governance", {}).get("mandatory_value_market_candidates_can_displace_visible_watchlist") is True
+    assert watch.get("governance", {}).get("mandatory_review_never_auto_buy") is True
+    assert watch.get("governance", {}).get("visible_watchlist_exactly_five_per_position") is True
     assert latest.get("files", {}).get("dss_watchlist") == "data/dss_watchlist.json"
     assert latest.get("dss_watchlist_summary", {}).get("status") == "READY"
     assert latest.get("dss_watchlist_summary", {}).get("full_registry_traversal") is True
@@ -84,16 +96,20 @@ def run() -> dict:
     for token in ("SUSPECT_STATIC_OFFSET0", "DSS-", "go_allowed", "package_id", "position_prior"):
         assert token not in serialized_user_watch, token
     for position, rows in (user_watch.get("positions") or {}).items():
-        assert [int(row["element"]) for row in rows] == [int(row["element"]) for row in (watch.get("positions") or {}).get(position, [])]
+        canonical_rows = (watch.get("positions") or {}).get(position, [])
+        assert [int(row["element"]) for row in rows] == [int(row["element"]) for row in canonical_rows]
+        assert [row.get("action") for row in rows] == [row.get("action") for row in canonical_rows]
 
     result = {
         "status": "PASS",
         "owned": len(owned),
         "published": len(published),
+        "promoted_review": promoted_review_count,
         "position_counts": position_counts,
         "core_traversed": (audit.get("dss_core") or {}).get("traversed"),
         "extensions_traversed": (audit.get("dss_extensions") or {}).get("traversed"),
         "public_safe": True,
+        "mandatory_review_never_auto_buy": True,
     }
     print(json.dumps(result, ensure_ascii=False))
     return result

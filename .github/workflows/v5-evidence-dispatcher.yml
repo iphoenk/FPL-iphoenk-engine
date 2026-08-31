@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
 
 concurrency:
   group: v5-evidence-dispatcher
@@ -23,6 +24,9 @@ jobs:
   evidence-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+      reasons: ${{ steps.gate.outputs.reasons }}
     steps:
       - name: Checkout V5 scheduler authority
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,18 +35,28 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Enforce V5 canonical merged-PR provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V5_PROVENANCE_BRANCH=v5-unified-engine \
+          V5_PROVENANCE_SHA="$(git rev-parse HEAD)" \
+          python -m src.v5.canonical_provenance
+
       - name: Evaluate governed evidence window
         id: gate
         shell: bash
         run: python scripts/v5_evidence_scheduler_gate.py --event-name "$GITHUB_EVENT_NAME"
 
-      - name: Trigger governed V5 shadow evidence cycle
-        if: steps.gate.outputs.should_run == 'true'
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python scripts/v5_dispatch_shadow_trigger.py --reasons "${{ steps.gate.outputs.reasons }}"
-
       - name: No-op outside governed evidence windows or during baseline drift
         if: steps.gate.outputs.should_run != 'true'
         run: echo "No heavy V5 cycle required; either outside an evidence window or deployed production baseline is not reconciled."
+
+  shadow-cycle:
+    needs: evidence-gate
+    if: needs.evidence-gate.outputs.should_run == 'true'
+    uses: iphoenk/FPL-iphoenk-engine/.github/workflows/v5-shadow-cycle.yml@v5-unified-engine
+    with:
+      scheduler_reasons: ${{ needs.evidence-gate.outputs.reasons }}
+      scheduler_source: default-branch-reusable-dispatcher
+    secrets: inherit

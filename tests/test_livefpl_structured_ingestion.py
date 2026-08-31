@@ -9,18 +9,10 @@ TABLE_HTML = """
 <html><body>
 <table>
   <tr><th>Player</th><th>Team</th><th>Progress Now</th><th>Prediction</th><th>Progress per hr</th><th>ID</th></tr>
-  <tr>
-    <td><strong>Raya</strong><br>GK £6.0 Raya</td>
-    <td>Arsenal</td><td>9.9%</td><td>10.2% &gt;2 days</td><td>+0.18%</td><td>1</td>
-  </tr>
-  <tr>
-    <td>De Cuyper<br>DEF £4.6 De Cuyper</td>
-    <td>Brighton</td><td>28.7%</td><td>38.6% Tomorrow</td><td>+5.98%</td><td>115</td>
-  </tr>
-  <tr>
-    <td>F.Kadıoğlu<br>DEF £4.5 F.Kadıoğlu</td>
-    <td>Brighton</td><td>-109.2%</td><td>-110.0% Tonight</td><td>-0.48%</td><td>113</td>
-  </tr>
+  <tr><td><strong>Raya</strong><br>GK £6.0 Raya</td><td>Arsenal</td><td>9.9%</td><td>10.2% &gt;2 days</td><td>+0.18%</td><td>1</td></tr>
+  <tr><td>De Cuyper<br>DEF £4.6 De Cuyper</td><td>Brighton</td><td>28.7%</td><td>38.6% Tomorrow</td><td>+5.98%</td><td>115</td></tr>
+  <tr><td>F.Kadıoğlu<br>DEF £4.5 F.Kadıoğlu</td><td>Brighton</td><td>-109.2%</td><td>-110.0% Tonight</td><td>-0.48%</td><td>113</td></tr>
+  <tr><td>Wilson<br>FW £5.5 Wilson</td><td>Brentford</td><td>0.0%</td><td>0.0% &gt;2 days</td><td>0.0%</td><td>108</td></tr>
 </table>
 </body></html>
 """
@@ -46,13 +38,8 @@ def _spec() -> SourceSpec:
 
 
 def test_table_parser_handles_current_livefpl_row_shape_without_cross_row_matching():
-    rows = parse_price_observations(
-        TABLE_HTML,
-        source_url="https://www2.livefpl.net/prices",
-        fetched_at="2026-08-31T04:00:00+00:00",
-        ttl_seconds=1800,
-    )
-    assert len(rows) == 3
+    rows = parse_price_observations(TABLE_HTML, source_url="https://www2.livefpl.net/prices", fetched_at="2026-08-31T04:00:00+00:00", ttl_seconds=1800)
+    assert len(rows) == 4
     by_name = {row["subject"]["player"]: row for row in rows}
 
     raya = by_name["Raya"]
@@ -64,25 +51,22 @@ def test_table_parser_handles_current_livefpl_row_shape_without_cross_row_matchi
     assert raya["value"]["per_hour_pct"] == 0.18
     assert raya["value"]["eta_label"] == ">2 days"
 
-    de_cuyper = by_name["De Cuyper"]
-    assert de_cuyper["value"]["direction"] == "RISE"
-    assert de_cuyper["value"]["eta_label"] == "Tomorrow"
-
-    kadioglu = by_name["F.Kadıoğlu"]
-    assert kadioglu["value"]["direction"] == "FALL"
-    assert kadioglu["value"]["eta_label"] == "Tonight"
+    assert by_name["De Cuyper"]["value"]["direction"] == "RISE"
+    assert by_name["De Cuyper"]["value"]["eta_label"] == "Tomorrow"
+    assert by_name["F.Kadıoğlu"]["value"]["direction"] == "FALL"
+    assert by_name["F.Kadıoğlu"]["value"]["eta_label"] == "Tonight"
+    assert by_name["Wilson"]["value"]["position"] == "FWD"
 
 
 def test_legacy_linear_text_parser_remains_supported():
-    html = "<div>Example Player MID £7.5 98.0% 101.5% Tonight +2.1%</div>"
     rows = parse_price_observations(
-        html,
+        "<div>Example Player FWD £7.5 98.0% 101.5% Tonight +2.1%</div>",
         source_url="https://legacy.invalid/prices",
         fetched_at="2026-08-31T04:00:00+00:00",
         ttl_seconds=1800,
     )
     assert len(rows) == 1
-    assert rows[0]["subject"]["player"] == "Example Player"
+    assert rows[0]["subject"] == {"player": "Example Player", "position": "FWD"}
     assert rows[0]["value"]["predicted_pct"] == 101.5
     assert rows[0]["value"]["direction"] == "RISE"
 
@@ -104,7 +88,7 @@ def test_probe_uses_registry_order_and_falls_back_only_when_needed(monkeypatch):
     assert calls == ["https://primary.invalid/prices", "https://fallback.invalid/prices"]
     assert result.status == "LIVE"
     assert result.reachable is True
-    assert result.observation_count == 3
+    assert result.observation_count == 4
     assert result.capabilities["price_prediction"] == "AVAILABLE"
     assert result.capabilities["effective_ownership"] == "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION"
     assert result.detail["selected_url"] == "https://fallback.invalid/prices"
@@ -122,11 +106,7 @@ def test_probe_does_not_fabricate_when_all_reachable_pages_have_no_rows(monkeypa
     monkeypatch.setattr("src.sources.livefpl.fetch_public_document", fake_fetch)
     result = probe(_spec(), timeout_seconds=1.0)
 
-    assert calls == [
-        "https://primary.invalid/prices",
-        "https://fallback.invalid/prices",
-        "https://probe.invalid/",
-    ]
+    assert calls == ["https://primary.invalid/prices", "https://fallback.invalid/prices"]
     assert result.status == "LIVE"
     assert result.reachable is True
     assert result.observation_count == 0

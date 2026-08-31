@@ -52,7 +52,11 @@ def _tactical() -> dict:
         for _ in range(count):
             watchlist.append(_fact(element, position))
             element += 1
-    return {"owned": owned, "watchlist": watchlist}
+    return {
+        "authoritative_owned_ids": [row["element_id"] for row in owned],
+        "owned": owned,
+        "watchlist": watchlist,
+    }
 
 
 def _latest(*, personal: str = "LIVE") -> dict:
@@ -88,6 +92,7 @@ def test_a_b_c_d_owned_watchlist_complete_exact_positions_and_no_overlap():
     out = _integrity()
     assert out["status"] == "PASS"
     assert out["owned"] == {"expected": 15, "resolved": 15, "official_fact_complete": 15, "status": "PASS"}
+    assert out["owned_authority"]["matches_authoritative_squad"] is True
     assert out["watchlist"]["expected"] == 20
     assert out["watchlist"]["resolved"] == 20
     assert out["watchlist"]["official_fact_complete"] == 20
@@ -250,9 +255,30 @@ def test_snapshot_hash_is_deterministic_and_transport_freshness_is_explicit():
     assert first["fetched_at"] == FETCHED
 
 
+def test_wrong_owned_id_blocks_even_when_cardinality_is_still_fifteen():
+    tactical = _tactical()
+    tactical["owned"][0] = _fact(99, "GK")
+    out = _integrity(tactical)
+    assert out["owned"]["resolved"] == 15
+    assert out["owned_authority"]["matches_authoritative_squad"] is False
+    assert out["owned_authority"]["missing_from_tactical"] == [1]
+    assert out["owned_authority"]["unexpected_in_tactical"] == [99]
+    assert out["capabilities"]["owned_authority_binding"] == "FAIL"
+    assert out["status"] == "BLOCKED"
+
+
+def test_missing_authoritative_owned_binding_blocks_publication():
+    tactical = _tactical()
+    tactical.pop("authoritative_owned_ids")
+    out = _integrity(tactical)
+    assert out["owned_authority"]["required"] is True
+    assert out["owned_authority"]["provided"] is False
+    assert out["capabilities"]["owned_authority_binding"] == "FAIL"
+    assert out["status"] == "BLOCKED"
+    assert any("authoritative_owned_ids" in defect["missing_fields"] for defect in out["defects"])
+
 
 def test_publication_integrity_is_registered_as_governance_contract():
-    import json
     from src.utils import CONFIG
 
     services = json.loads((CONFIG / "service_registry.json").read_text(encoding="utf-8"))

@@ -6,8 +6,10 @@ on:
     workflows: ["V3 CI"]
     types: [completed]
   schedule:
+    # Logical FPL checkpoint remains :30. The :15 run precomputes its snapshot.
     - cron: "30 * * * *"
-    - cron: "0,15,45 * * * *"
+    - cron: "15 * * * *"
+    - cron: "0,45 * * * *"
 
 permissions:
   contents: read
@@ -82,21 +84,23 @@ jobs:
           print(json.dumps({"source_commit": sha, "v3_ci_run_id": valid[0].get("id"), "status": "PASS"}))
           PY
 
-      - name: Fetch current runtime phase snapshot
+      - name: Fetch current runtime phase and precompute metadata
         shell: bash
         run: |
           set -euo pipefail
           git fetch --depth=1 origin "+${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}" || true
           mkdir -p data
-          if git cat-file -e "origin/${RUNTIME_BRANCH}:data/latest.json" 2>/dev/null; then
-            git show "origin/${RUNTIME_BRANCH}:data/latest.json" > data/latest.json
-          fi
+          for file in latest.json runtime_manifest.json; do
+            if git cat-file -e "origin/${RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
+              git show "origin/${RUNTIME_BRANCH}:data/${file}" > "data/${file}"
+            fi
+          done
 
-      - name: Decide governed cadence and mode
+      - name: Decide governed cadence, precompute target and fallback
         id: cadence
         env:
           FPL_SCHEDULE_EXPR: ${{ github.event.schedule }}
-        run: python -m src.engines.collector_gate
+        run: python -m src.runtime_v3.precompute_checkpoint
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         if: steps.cadence.outputs.should_collect == 'true'
@@ -237,7 +241,10 @@ jobs:
             --source-data data \
             --output-dir "$RUNNER_TEMP/runtime-publish" \
             --profile "${{ steps.runtime_profile.outputs.profile }}" \
-            --source-commit "$SOURCE_COMMIT"
+            --source-commit "$SOURCE_COMMIT" \
+            --snapshot-role "${{ steps.cadence.outputs.snapshot_role }}" \
+            --target-checkpoint "${{ steps.cadence.outputs.target_checkpoint_utc }}" \
+            --target-visible-mode "${{ steps.cadence.outputs.target_visible_mode }}"
           python -m src.runtime_v3.publication_verify \
             --data-dir "$RUNNER_TEMP/runtime-publish/data" \
             --profile "${{ steps.runtime_profile.outputs.profile }}" \

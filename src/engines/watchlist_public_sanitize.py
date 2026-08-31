@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from src.engines.challenger_discovery import build as build_challenger_discovery
+from src.engines.dss_watchlist_runtime import build as build_governed_watchlist
+from src.engines.owned_challenger_comparator import build as build_owned_challenger_decision
 from src.engines.price_radar import _served_evidence
 from src.engines.tactical_decision_consumption import apply_watchlist_overlay
 from src.utils import DATA, atomic_json, read_json
@@ -13,17 +16,12 @@ PUBLIC_FIELDS = {
     "element", "name", "team", "team_id", "position", "now_cost", "price", "status",
     "ownership_pct", "projection_confidence", "xmins", "horizons", "direct_replacement_context",
     "evidence_coverage", "critical_dimension_score", "dss_score", "rank", "lifecycle",
-    "reasons", "risks", "action", "tactical_matchup",
+    "reasons", "risks", "action", "tactical_matchup", "mandatory_challenger_review",
 }
 
 
 def _safe_price_context(price: dict[str, Any], official: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Expose governed Official price evidence without leaking unverified UI mappings.
-
-    The full Official evidence is resolved by element id from prices.json. The older
-    DSS price_risk object is retained only as a compatibility fallback when a row
-    cannot be resolved, and it never overrides fresh canonical Official evidence.
-    """
+    """Expose governed Official price evidence without leaking unverified UI mappings."""
     if official:
         return dict(official)
     source = dict(price or {})
@@ -86,6 +84,53 @@ def _official_price_index(prices: dict[str, Any]) -> dict[int, dict[str, Any]]:
     return out
 
 
+def _compact_pair(row: dict[str, Any]) -> dict[str, Any]:
+    out = dict(row)
+    actionability = dict(out.get("actionability") or {})
+    actionability.setdefault("reason", out.get("reason") or "governed pairwise evidence")
+    out["actionability"] = actionability
+    return out
+
+
+def _compact_decision(payload: dict[str, Any]) -> dict[str, Any]:
+    """Persist the governed decision without duplicating the full pairwise matrix.
+
+    The full matrix is computed once inside the canonical watchlist capability. The
+    bounded serving state keeps the ranked top comparisons and all material transfer
+    battles, plus counts and publication proof, so reporting never recomputes a
+    second decision authority.
+    """
+    return {
+        "schema_version": payload.get("schema_version"),
+        "contract": payload.get("contract"),
+        "owner": payload.get("owner"),
+        "capability_status": payload.get("capability_status"),
+        "status": payload.get("status"),
+        "generated_at": payload.get("generated_at"),
+        "owned_count": payload.get("owned_count"),
+        "governed_watchlist_count": payload.get("governed_watchlist_count"),
+        "full_universe_material_count": payload.get("full_universe_material_count"),
+        "mandatory_review_count": payload.get("mandatory_review_count"),
+        "comparison_count": payload.get("comparison_count"),
+        "owned_screening": payload.get("owned_screening") or [],
+        "challenged_owned": payload.get("challenged_owned") or [],
+        "top_comparisons": [_compact_pair(row) for row in (payload.get("top_comparisons") or [])[:40]],
+        "multi_transfer_alternatives": payload.get("multi_transfer_alternatives") or [],
+        "main_transfer_battles": [_compact_pair(row) for row in (payload.get("main_transfer_battles") or [])[:10]],
+        "challenger_lifecycle": payload.get("challenger_lifecycle") or [],
+        "decision": payload.get("decision") or {},
+        "v3_view": payload.get("v3_view") or {},
+        "publication_validation": payload.get("publication_validation") or {},
+        "state_counts": payload.get("state_counts") or {},
+        "actionability_counts": payload.get("actionability_counts") or {},
+        "governance": {
+            **dict(payload.get("governance") or {}),
+            "full_pairwise_matrix_computed_once_before_compaction": True,
+            "reporting_recomputation_forbidden": True,
+        },
+    }
+
+
 def sanitize(payload: dict[str, Any], price_index: dict[int, dict[str, Any]] | None = None) -> dict[str, Any]:
     result = dict(payload or {})
     price_index = price_index or {}
@@ -131,18 +176,39 @@ def sanitize(payload: dict[str, Any], price_index: dict[int, dict[str, Any]] | N
         "tactical_context_is_projection_owned_and_public_safe": True,
         "tactical_shape_is_observational_not_verified_formation": True,
         "tactical_membership_promotion_forbidden": True,
+        "owned_challenger_decision_computed_once_in_watchlist_capability": True,
+        "reporting_is_persisted_decision_consumer_only": True,
     })
     return result
 
 
 def run() -> dict[str, Any]:
-    payload = read_json(WATCHLIST_OUT, {})
-    if not payload:
+    base = read_json(WATCHLIST_OUT, {})
+    if not base:
         raise RuntimeError("dss_watchlist.json unavailable for public sanitization")
-    prices = read_json(DATA / "prices.json", {})
-    price_index = _official_price_index(prices)
+
+    discovery = build_challenger_discovery()
+    payload = build_governed_watchlist(base_payload=base, discovery=discovery)
+    if payload.get("status") == "BLOCKED":
+        raise RuntimeError("FAIL CLOSED: mandatory challenger integration blocked watchlist publication")
+
     payload = apply_watchlist_overlay(payload)
-    clean = sanitize(payload, price_index)
+    decision = build_owned_challenger_decision(watchlist=payload, discovery=discovery, allow_cached=False)
+    validation = decision.get("publication_validation") or {}
+    if validation.get("status") != "PASS":
+        raise RuntimeError(f"FAIL CLOSED: owned challenger publication validation failed: {validation.get('blockers')}")
+    payload["owned_challenger_decision"] = _compact_decision(decision)
+    payload["challenger_discovery_summary"] = {
+        "contract": discovery.get("contract"),
+        "universe_count": discovery.get("universe_count"),
+        "eligible_candidate_count": discovery.get("eligible_candidate_count"),
+        "material_candidate_count": discovery.get("material_candidate_count"),
+        "mandatory_review_count": discovery.get("mandatory_review_count"),
+        "blocked_identity_count": discovery.get("blocked_identity_count"),
+    }
+
+    prices = read_json(DATA / "prices.json", {})
+    clean = sanitize(payload, _official_price_index(prices))
     atomic_json(WATCHLIST_OUT, clean)
 
     latest = read_json(DATA / "latest.json", {})
@@ -152,6 +218,16 @@ def run() -> dict[str, Any]:
     summary["public_sanitized"] = True
     summary["tactical_close_call_consumed"] = True
     summary["price_evidence"] = clean.get("price_evidence_summary")
+    summary["challenger_discovery"] = clean.get("challenger_discovery_summary")
+    summary["owned_challenger_decision"] = {
+        "contract": (clean.get("owned_challenger_decision") or {}).get("contract"),
+        "status": (clean.get("owned_challenger_decision") or {}).get("status"),
+        "decision": (clean.get("owned_challenger_decision") or {}).get("decision"),
+        "owned_count": (clean.get("owned_challenger_decision") or {}).get("owned_count"),
+        "comparison_count": (clean.get("owned_challenger_decision") or {}).get("comparison_count"),
+        "mandatory_review_count": (clean.get("owned_challenger_decision") or {}).get("mandatory_review_count"),
+        "publication_validation": (clean.get("owned_challenger_decision") or {}).get("publication_validation"),
+    }
     latest["dss_watchlist_summary"] = summary
     atomic_json(DATA / "latest.json", latest)
     return clean
@@ -159,11 +235,15 @@ def run() -> dict[str, Any]:
 
 if __name__ == "__main__":
     result = run()
+    decision = result.get("owned_challenger_decision") or {}
     print(json.dumps({
         "status": result.get("status"),
         "screening_contract": result.get("screening_contract"),
-        "public_contract": result.get("public_contract"),
         "candidate_audit_count": len(result.get("candidate_audit") or {}),
         "price_evidence": result.get("price_evidence_summary"),
-        "tactical_reranked_position_count": ((result.get("governance") or {}).get("tactical_reranked_position_count")),
+        "challenger_decision": decision.get("status"),
+        "owned_screened": decision.get("owned_count"),
+        "comparisons": decision.get("comparison_count"),
+        "mandatory_review": decision.get("mandatory_review_count"),
+        "publication_validation": (decision.get("publication_validation") or {}).get("status"),
     }, ensure_ascii=False))

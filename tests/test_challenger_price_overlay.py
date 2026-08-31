@@ -29,8 +29,8 @@ def test_price_overlay_is_context_only_and_preserves_official_fields():
         "top_rise_risk": [{"element": 1, "name": "Bowen", "now_cost": 78, "official_progress_pct": 59.1, "urgency": "HIGH"}],
     }
     observations = {
-        "observations": [_obs("fffix", "RISE"), _obs("ffhub", "RISE")],
-        "cross_source": [{"subject_key": "bowen", "player": "Bowen", "capability": "price_prediction", "state": "AGREEMENT", "providers": ["fffix", "ffhub"], "directions": ["RISE"]}],
+        "observations": [_obs("fffix", "RISE"), _obs("onefpl", "RISE")],
+        "cross_source": [{"subject_key": "bowen", "player": "Bowen", "capability": "price_prediction", "state": "AGREEMENT", "providers": ["fffix", "onefpl"], "directions": ["RISE"]}],
     }
     enriched, summary = apply_context(prices, observations)
     row = enriched["players"][0]
@@ -53,10 +53,24 @@ def test_price_overlay_ignores_stale_observation():
     assert summary["fresh_observation_count"] == 0
 
 
-def test_user_source_availability_keeps_livefpl_retired_and_report_time_separate():
-    rendered = _source_availability({"sources": [], "capability_health": []})
-    assert rendered["collector_challenger"] == []
-    assert "livefpl" not in rendered["report_time"]
+def test_user_source_availability_excludes_retired_livefpl_and_keeps_supported_challengers():
+    source_health = {
+        "sources": [
+            {"id": "livefpl", "name": "LiveFPL", "status": "LIVE", "reachable": True},
+            {"id": "onefpl", "name": "OneFPL", "status": "DISABLED", "reachable": False},
+            {"id": "fffix", "name": "FFFix", "status": "LIVE", "reachable": True},
+        ],
+        "capability_health": [
+            {"source_id": "livefpl", "capability": "price_prediction", "data_state": "AVAILABLE", "fresh_observations": 5},
+            {"source_id": "onefpl", "capability": "price_prediction", "data_state": "DISABLED", "fresh_observations": 0},
+            {"source_id": "fffix", "capability": "price_prediction", "data_state": "AVAILABLE", "fresh_observations": 2},
+        ],
+    }
+    rendered = _source_availability(source_health)
+    ids = {row["source_id"] for row in rendered["collector_challenger"]}
+    assert "livefpl" not in ids
+    assert "onefpl" in ids
+    assert "fffix" in ids
+    assert "livefpl" not in str(rendered).lower()
     assert "onefpl" in rendered["report_time"]
-    assert "on-demand" in rendered["report_time"]["onefpl"]
-    assert "LiveFPL retired" in rendered["catatan"]
+    assert "market momentum" in rendered["report_time"]["onefpl"]

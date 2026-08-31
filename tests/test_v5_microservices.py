@@ -115,13 +115,52 @@ def test_evaluation_and_governance_are_independent_services():
     assert owners["framework_health"] == "governance"
 
 
-def test_prediction_network_contract_is_bounded_by_service_output_design():
+def test_prediction_network_contract_is_registry_driven_and_projection_core_is_transport_agnostic():
+    contract = load_json_config("config/v5_prediction_service_registry.json")["network_contract"]
     source = (ROOT / "src/v5/services/prediction.py").read_text(encoding="utf-8")
     core = (ROOT / "src/v5/intelligence/projection.py").read_text(encoding="utf-8")
-    assert "max_fixture_rows_per_player" in core
-    assert "full_provenance_omitted" in core
-    assert "rates" not in source
+    fields = contract["player_fields"]
+    required = contract["required_player_fields"]
+    fixture_fields = contract["fixture_fields"]
+    assert contract["return_full_predictions_by_default"] is False
+    assert contract["full_provenance_omitted"] is True
+    assert contract["fixture_count"] == 5
+    assert len(fields) == len(set(fields))
+    assert len(fixture_fields) == len(set(fixture_fields))
+    assert set(required).issubset(set(fields))
+    assert {"element", "fixtures"}.issubset(set(required))
+    assert "rates" not in fields
+    assert "SERVICE_CONFIG" in source
+    assert "_compact_player" in source
+    assert "network_fixtures" not in core
+    assert "max_fixture_rows_per_player" not in core
+    assert '"network_contract"' not in core
 
+
+def test_prediction_compactor_enforces_registry_fields_and_fixture_bound():
+    import src.v5.services.prediction as prediction_service
+
+    contract = prediction_service._network_contract()
+    player = {field: f"value:{field}" for field in contract["player_fields"]}
+    player["element"] = 1
+    player["rates"] = {"must_not_leak": True}
+    player["fixtures"] = [
+        {
+            "event": i + 1,
+            "xpts": 1.0,
+            "lower80": 0.0,
+            "upper80": 2.0,
+            "xmins": {"expected_minutes": 90},
+            "must_not_leak": True,
+        }
+        for i in range(int(contract["fixture_count"]) + 2)
+    ]
+    compact = prediction_service._compact_player(player, contract)
+    assert set(compact) == set(contract["player_fields"])
+    assert "rates" not in compact
+    assert len(compact["fixtures"]) == contract["fixture_count"]
+    assert all(set(row) == set(contract["fixture_fields"]) for row in compact["fixtures"])
+    assert all("must_not_leak" not in row for row in compact["fixtures"])
 
 def test_price_predictor_and_squeeze_have_exactly_one_price_service_owner():
     owners = module_owners()

@@ -211,7 +211,7 @@ def build_predictions(
             if planning_gw <= int(m.get("event") or -1) < planning_gw + horizon
         ]
         by_gw = []
-        network_fixtures = []
+        fixture_summaries = []
         for gw in range(planning_gw, planning_gw + horizon):
             details = []
             for matchup in [m for m in team_matchups if int(m.get("event") or -1) == gw]:
@@ -272,19 +272,18 @@ def build_predictions(
                     "component_sum": round(raw_mean, 4),
                 }
                 details.append(row)
-                if len(network_fixtures) < 5:
-                    network_fixtures.append(
-                        {
-                            "event": gw,
-                            "xpts": row["xpts"],
-                            "lower80": round(max(0.0, mean - 1.28 * std), 3),
-                            "upper80": round(mean + 1.28 * std, 3),
-                            "xmins": {
-                                key: xmins.get(key)
-                                for key in ("start_probability", "bench_probability", "dnp_probability", "expected_minutes")
-                            },
-                        }
-                    )
+                fixture_summaries.append(
+                    {
+                        "event": gw,
+                        "xpts": row["xpts"],
+                        "lower80": round(max(0.0, mean - 1.28 * std), 3),
+                        "upper80": round(mean + 1.28 * std, 3),
+                        "xmins": {
+                            key: xmins.get(key)
+                            for key in ("start_probability", "bench_probability", "dnp_probability", "expected_minutes")
+                        },
+                    }
+                )
             gw_mean = sum(_f(x.get("mean")) for x in details)
             gw_std = math.sqrt(sum(_f(x.get("std")) ** 2 for x in details)) if details else 0.0
             by_gw.append(
@@ -330,7 +329,7 @@ def build_predictions(
                 "xpts_15": horizons["15"]["mean"],
                 "mean_xpts": by_gw[0]["mean"] if by_gw else 0.0,
                 "uncertainty": by_gw[0]["std"] if by_gw else 0.0,
-                "fixtures": network_fixtures,
+                "fixtures": fixture_summaries,
                 "role": {
                     "role_start_probability": role.get("role_start_probability"),
                     "competition_pressure": role.get("competition_pressure"),
@@ -384,9 +383,4 @@ def build_predictions(
         },
         "projection_diagnostics": _position_projection_diagnostics(players),
         "players": players,
-        "network_contract": {
-            "bounded": True,
-            "max_fixture_rows_per_player": 5,
-            "full_provenance_omitted": True,
-        },
     }

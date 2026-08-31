@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 5,
   "purpose": "Catalog of V5 domains that must resolve through a shared module or registry instead of duplicated implementation logic.",
   "domains": {
     "official_rules": {"authority": "config/rules/registry.json", "status": "ACTIVE"},
@@ -10,10 +10,12 @@
     "gate0": {"authority": "config/gate0_registry.json", "status": "ACTIVE"},
     "performance_budgets": {"authority": "config/v5_performance_budgets.json", "status": "ACTIVE"},
     "architecture_principles": {"authority": "config/v5_architecture_principles.json", "status": "ACTIVE"},
+    "canonical_provenance": {"authority": "config/v5_canonical_provenance_registry.json", "runtime_enforcer": "src/v5/canonical_provenance.py", "status": "ACTIVE"},
     "finance": {"authority": "src/v5/finance.py + config/v5_finance_registry.json", "status": "ACTIVE"},
     "phase_authority": {"authority": "src/v5/state.py + config/v5_phase_authority_registry.json", "status": "ACTIVE"},
     "price_trajectory": {"authority": "src/v5/price_trajectory.py + config/v5_price_trajectory_registry.json", "status": "ACTIVE"},
     "projection_parameters": {"authority": "src/v5/intelligence/projection.py + config/intelligence/projection.json", "status": "ACTIVE"},
+    "prediction_network_contract": {"authority": "config/v5_prediction_service_registry.json", "runtime_enforcer": "src/v5/services/prediction.py", "status": "ACTIVE"},
     "xmins": {"authority": "src/v5/intelligence/xmins.py + config/intelligence/xmins_v3.json", "status": "ACTIVE"},
     "xmins_v2_legacy_config": {"authority": "none", "path": "config/intelligence/xmins_v2.json", "status": "DEPRECATED_NOT_AUTHORITY"},
     "decision_service_handler": {"authority": "config/v5_service_registry.json#services.decision.handler", "status": "ACTIVE"},

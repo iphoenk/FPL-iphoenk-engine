@@ -11,7 +11,7 @@ from typing import Any
 from src.engines.lineup_governance import build_lineup_decision, build_package_decision
 from src.rules import LINEUP_RULES
 from src.runtime_v3.instant_serving import _config as serving_config
-from src.runtime_v3.instant_serving import _require_files, _validate_contract
+from src.runtime_v3.instant_serving import _performance_contract, _require_files, _validate_contract
 from src.utils import CONFIG, DATA, ROOT, read_json
 
 REGISTRY_PATH = ROOT / "config" / "runtime" / "interactive_service_registry.json"
@@ -21,14 +21,20 @@ def _registry() -> dict[str, Any]:
     payload = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
     if payload.get("registry") != "V3_INTERACTIVE_SERVICES_V1":
         raise RuntimeError("unexpected interactive service registry")
+    policy = payload.get("policy") if isinstance(payload.get("policy"), dict) else {}
+    if policy.get("performance_slo_registry") != "config/runtime/performance_slo.json":
+        raise RuntimeError("interactive performance SLO registry drift")
+    if policy.get("performance_slo_profile") != "instant_serving":
+        raise RuntimeError("interactive performance SLO profile drift")
     return payload
 
 
 def run(data_dir: str | Path | None = None) -> dict[str, Any]:
     started = time.perf_counter()
     root = Path(data_dir or os.getenv("FPL_DATA_DIR") or DATA)
-    registry = _registry()
+    _registry()
     cfg = serving_config()
+    performance = _performance_contract(cfg)
     _require_files(cfg, root)
 
     # Single-pass canonical artifact load. The old decision-hotpath and gateway
@@ -70,10 +76,9 @@ def run(data_dir: str | Path | None = None) -> dict[str, Any]:
     if package.get("gate0_revalidated") is not True:
         raise RuntimeError("UNIFIED_FASTPATH_FAIL: package Gate0 revalidation failed")
 
-    policy = registry.get("policy") or {}
     elapsed_ms = round((time.perf_counter() - started) * 1000.0, 3)
-    target_ms = float(policy.get("preferred_end_to_end_target_ms") or 1000)
-    hard_ceiling_ms = float(policy.get("hard_end_to_end_ceiling_ms") or 2000)
+    target_ms = float(performance["target_wall_ms"])
+    hard_ceiling_ms = float(performance["hard_ceiling_ms"])
     if elapsed_ms > hard_ceiling_ms:
         raise RuntimeError(f"UNIFIED_FASTPATH_SLO_BREACH: {elapsed_ms}ms > {hard_ceiling_ms}ms")
 
@@ -88,6 +93,7 @@ def run(data_dir: str | Path | None = None) -> dict[str, Any]:
             "hard_ceiling_ms": hard_ceiling_ms,
             "within_preferred_target": elapsed_ms <= target_ms,
             "within_hard_ceiling": True,
+            "slo_profile": performance["profile"],
         },
         "freshness": freshness,
         "planning_gw": brief.get("planning_gw"),
@@ -120,14 +126,15 @@ def run(data_dir: str | Path | None = None) -> dict[str, Any]:
 
 
 def benchmark(data_dir: str | Path | None = None, repetitions: int = 7) -> dict[str, Any]:
+    cfg = serving_config()
+    performance = _performance_contract(cfg)
     times: list[float] = []
     last: dict[str, Any] | None = None
     for _ in range(max(1, int(repetitions))):
         last = run(data_dir)
         times.append(float((last.get("performance") or {}).get("elapsed_ms") or 0.0))
-    policy = _registry().get("policy") or {}
-    preferred = float(policy.get("preferred_end_to_end_target_ms") or 1000)
-    ceiling = float(policy.get("hard_end_to_end_ceiling_ms") or 2000)
+    preferred = float(performance["target_wall_ms"])
+    ceiling = float(performance["hard_ceiling_ms"])
     result = {
         "repetitions": len(times),
         "min_ms": round(min(times), 3),
@@ -135,6 +142,7 @@ def benchmark(data_dir: str | Path | None = None, repetitions: int = 7) -> dict[
         "max_ms": round(max(times), 3),
         "preferred_target_ms": preferred,
         "hard_ceiling_ms": ceiling,
+        "slo_profile": performance["profile"],
         "preferred_pass": max(times) <= preferred,
         "hard_pass": max(times) <= ceiling,
         "freshness": (last or {}).get("freshness"),

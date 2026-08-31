@@ -1,3 +1,4 @@
+--require-hashes
 -r requirements.lock
 
 # Test-only dependencies frozen from the successful V3 CI run on 2026-08-31.

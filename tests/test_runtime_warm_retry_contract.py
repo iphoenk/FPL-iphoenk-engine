@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 
@@ -7,13 +8,17 @@ WORKFLOW = ROOT / ".github" / "workflows" / "v3-runtime.yml"
 
 def test_fast_runtime_retry_is_bounded_and_keeps_hard_slo():
     text = WORKFLOW.read_text(encoding="utf-8")
+    slo = json.loads((ROOT / "config/runtime/performance_slo.json").read_text(encoding="utf-8"))
+    fast = slo["profiles"]["fast_decision"]
 
     assert "Enforce selected profile runtime SLO with one bounded warm retry" in text
     assert text.count("FAST_SLO_WARM_RETRY") == 1
     assert 'if [ "$profile" != "fast_decision" ]; then' in text
     assert "retrying exactly once" in text
     assert text.count("python -m src.runtime_v3.performance_guard --profile") == 2
-    assert "Hard ceiling is intentionally unchanged" in text
+    assert fast["target_wall_ms"] == 3000
+    assert fast["legacy_ceiling_ms"] == 3000
+    assert fast["enforcement"] == "HARD_CEILING"
 
 
 def test_warm_retry_revalidates_production_contracts_before_publication():

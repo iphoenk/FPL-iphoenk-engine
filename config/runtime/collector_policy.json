@@ -6,8 +6,7 @@
   "schedules": {
     "primary": "30 * * * *",
     "precompute": "15 * * * *",
-    "adaptive": "0,45 * * * *",
-    "deep_stats": "30 21 * * *"
+    "adaptive": "0,45 * * * *"
   },
   "precompute": {
     "enabled": true,
@@ -165,6 +164,7 @@
     "never_duplicate_visible_reports_on_collision": true,
     "lower_priority_material_is_folded_into_higher_priority_report": true,
     "precompute_target_must_be_explicit_in_runtime_manifest": true,
-    "primary_full_compute_is_recovery_when_precompute_missing": true
+    "primary_full_compute_is_recovery_when_precompute_missing": true,
+    "deep_review_profile_is_resolved_from_logical_target_not_duplicate_cron": true
   }
 }

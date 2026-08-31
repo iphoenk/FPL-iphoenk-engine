@@ -121,6 +121,18 @@ def _changes(current: dict[str, Any], previous: dict[str, Any]) -> dict[str, Any
     return {"initial_report": False, "material_change": bool(changed), "changed": changed}
 
 
+def _preserved_state_extensions(previous: dict[str, Any]) -> dict[str, Any]:
+    cfg = load_policy().get("state_persistence") or {}
+    keys = list(cfg.get("preserve_across_rebuild") or [])
+    if not keys or len(keys) != len(set(keys)) or any(not isinstance(key, str) or not key for key in keys):
+        raise RuntimeError("report state persistence requires unique non-empty preserve_across_rebuild keys")
+    if str(cfg.get("unknown_extension_policy") or "").upper() != "DROP":
+        raise RuntimeError("report state persistence unknown_extension_policy must be DROP")
+    if cfg.get("core_state_is_rebuilt_each_report") is not True:
+        raise RuntimeError("report state persistence must rebuild core state each report")
+    return {key: previous[key] for key in keys if key in previous}
+
+
 def _lineup_section(lineup: dict[str, Any], changes: dict[str, Any], stable_mode: bool) -> dict[str, Any]:
     policy = load_policy().get("starting_xi") or {}
     battle = lineup.get("main_starting_xi_battle") or {}
@@ -443,6 +455,7 @@ def build() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
         },
     }
     state = {
+        **_preserved_state_extensions(previous),
         "generated_at": _now(),
         "fingerprint": _fingerprint(current_state),
         "state": current_state,

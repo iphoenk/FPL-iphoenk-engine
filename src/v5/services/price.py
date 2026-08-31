@@ -6,13 +6,11 @@ from src.v5.price_service import build_price_snapshot
 from src.v5.price_squeeze import annotate_comparator, annotate_packages, attach_watchlist_price_evidence
 from src.v5.services.common import parse_datetime
 
-# Static capability stays intentionally narrow. The Official predictor is an
-# evidence contract inside price_intelligence, while transfer_momentum may only
-# be advertised after runtime Official transfer-count/current-price linkage is
-# proven AVAILABLE. Price squeeze is owned by this same bounded context and is
-# exposed only through service operations so downstream services do not import
-# price business implementation directly.
-STATIC_CAPABILITIES = ["price_intelligence", "price_squeeze"]
+# Base price-intelligence capability remains intentionally narrow for the
+# transfer-momentum truthfulness gate. Price squeeze is a separate static
+# capability in the same price bounded context. transfer_momentum is runtime-only.
+CAPABILITIES = ["price_intelligence"]
+STATIC_CAPABILITIES = [*CAPABILITIES, "price_squeeze"]
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:

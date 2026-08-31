@@ -1,0 +1,43 @@
+name: V5 Chat4 Metadata Test Reanchor
+
+on:
+  push:
+    branches:
+      - codex/v5-chat4-current-lineup-parity
+    paths:
+      - .github/workflows/v5-chat4-metadata-test-reanchor.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v5-chat4-current-lineup-parity
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pytest
+      - name: Reanchor metadata hygiene assertion
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('tests/test_v5_metadata_authority_hygiene.py')
+          s = p.read_text()
+          old = 'DEPLOYED_SHA = "84b1577f4fc84ce00a4e8c5e8139644c8f9fff51"\nSTALE_DEPLOYED_SHAS = {\n'
+          new = 'DEPLOYED_SHA = "ef0161113a763306419c0c367770e6dcfe6570d1"\nSTALE_DEPLOYED_SHAS = {\n    "84b1577f4fc84ce00a4e8c5e8139644c8f9fff51",\n'
+          if s.count(old) != 1:
+              raise SystemExit(f'expected one stale deployed SHA declaration, found {s.count(old)}')
+          p.write_text(s.replace(old, new, 1))
+          PY
+          python -m pytest -q tests/test_v5_metadata_authority_hygiene.py
+          git config user.name "iphoenk"
+          git config user.email "103485057+iphoenk@users.noreply.github.com"
+          git add tests/test_v5_metadata_authority_hygiene.py
+          git diff --cached --check
+          git commit -m "test(v5): reanchor deployed runtime metadata hygiene"
+          git push origin HEAD:codex/v5-chat4-current-lineup-parity

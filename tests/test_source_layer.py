@@ -29,6 +29,14 @@ def test_source_registry_has_single_official_authority_and_named_challengers():
     assert registry["policy"]["weather_is_advisory_enrichment_only"] is True
 
 
+def test_probe_only_sources_share_the_generic_public_web_adapter():
+    specs = {spec.source_id: spec for spec in source_specs()}
+    for source_id in ("fffix", "ffhub", "ffscout"):
+        spec = specs[source_id]
+        assert spec.adapter == "public_web"
+        assert spec.config.get("probe_url", "").startswith("https://")
+
+
 def test_source_manager_keeps_challenger_failure_non_blocking(tmp_path, monkeypatch):
     (tmp_path / "health.json").write_text(json.dumps({
         name: {"status": "LIVE", "latency_ms": 10}

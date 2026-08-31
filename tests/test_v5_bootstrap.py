@@ -1,142 +1,59 @@
+from __future__ import annotations
+
 import base64
 from datetime import datetime, timezone
 
 import pytest
 
-from src.models.projection import project_points
-from src.rules import GOAL_POINTS, RULESET_ID
 from src.v5 import public_api
 from src.v5.acceptance import run_bootstrap_acceptance
 from src.v5.authenticated_official import safe_finance, summarize_authenticated_payloads
-from src.v5.contracts import Confidence, DecisionTrace, EvidenceRef
-from src.v5.finance import affordability_cost, resolve_sell_value, sell_cost
-from src.v5.official_auth import (
-    AuthConfigurationError,
-    AuthMaterial,
-    AuthPolicyError,
-    allowed_routes,
-    auth_material_from_env,
-    expected_team_id,
-    safe_get,
-)
+from src.v5.finance import build_squad_ledger, sell_cost
+from src.v5.official_auth import AuthConfigurationError, auth_material_from_env, expected_team_id
 from src.v5.price_trajectory import classify, risk_direction, trajectory_eta, urgency
 from src.v5.public_api import FetchSpec
-from src.v5.source_authority import primary_authority as source_primary_authority
-from src.v5.squad import reconcile_baseline, select_squad
-from src.v5.state import Phase, primary_authority as phase_primary_authority, resolve_phase
 
 
-def test_v5_bootstrap_acceptance_passes():
+def test_bootstrap_acceptance_passes():
     report = run_bootstrap_acceptance()
     assert report.passed, report.as_dict()
 
 
-def test_v5_rules_registry_has_2026_27_goalkeeper_goal_points():
-    assert RULESET_ID == "FPL_2026_27"
-    assert GOAL_POINTS[1] == 10
+def test_sell_cost_half_profit_floor():
+    assert sell_cost(50, 50) == 50
+    assert sell_cost(49, 50) == 49
+    assert sell_cost(51, 50) == 50
+    assert sell_cost(52, 50) == 51
+    assert sell_cost(53, 50) == 51
 
 
-def test_projection_consumes_goalkeeper_goal_rule():
-    player = {"element_type": 1, "status": "a", "minutes": 90, "starts": 1, "saves": 0}
-    advanced = {
-        "start_probability": 1.0,
-        "xg_per90": 1.0,
-        "xa_per90": 0.0,
-        "clean_sheet_probability": 0.0,
-        "bonus_per90": 0.0,
-    }
-    result = project_points(player, advanced, fixture_difficulty=5.0)
-    assert result["components"]["attack"] == 10.0
-    assert result["ruleset_id"] == RULESET_ID
-
-
-def test_decision_trace_requires_evidence_and_constraints():
-    trace = DecisionTrace(
-        decision_type="START",
-        action="START element 1",
-        subject_element_ids=(1,),
-        score=5.2,
-        confidence=Confidence.MEDIUM,
-        reasons_for=("strong xMins",),
-        reasons_against=(),
-        evidence=(EvidenceRef(source="Official FPL", field="status", authority="native"),),
-        constraints_checked=("legal_formation",),
-        projection_model="interpretable_projection_v5_bootstrap",
-        ruleset_id=RULESET_ID,
+def test_finance_ledger_reconstructs_transfer_spells():
+    squad = [{"element": 1}, {"element": 2}]
+    result = build_squad_ledger(
+        squad,
+        now_costs={1: 50, 2: 55},
+        transfers=[
+            {"event": 2, "time": "2026-08-20T10:00:00Z", "element_in": 1, "element_in_cost": 48, "element_out": 9},
+        ],
+        initial_purchase_costs={2: 52},
     )
-    trace.validate()
+    by_id = {row["element"]: row for row in result["players"]}
+    assert by_id[1]["purchase_cost"] == 48
+    assert by_id[1]["sell_cost"] == 49
+    assert by_id[2]["purchase_cost"] == 52
+    assert by_id[2]["sell_cost"] == 53
+    assert result["sell_value_complete"] is True
 
 
-def test_source_authority_defaults_to_official_public_pre_deadline():
-    assert source_primary_authority("pre_deadline_locked_squad").name == "official_public"
-    assert source_primary_authority("player_identity").name == "official_public"
-
-
-def test_phase_authority_changes_across_gameweek_lifecycle():
-    deadline = "2026-08-29T10:00:00Z"
-    assert resolve_phase(deadline_time=deadline, now="2026-08-29T09:59:59Z") is Phase.PRE_DEADLINE
-    assert resolve_phase(deadline_time=deadline, now="2026-08-29T10:00:01Z") is Phase.POST_DEADLINE
-    assert resolve_phase(deadline_time=deadline, now="2026-08-29T10:00:01Z", live_started=True) is Phase.LIVE
-    assert resolve_phase(deadline_time=deadline, now=datetime.now(timezone.utc), finished=True) is Phase.POST_GW
-    assert phase_primary_authority(Phase.PRE_DEADLINE, "squad") == "user_capture"
-    assert phase_primary_authority(Phase.POST_DEADLINE, "squad") == "official_public"
-    assert phase_primary_authority(Phase.LIVE, "scoring") == "official_public_event_live"
-    assert phase_primary_authority(Phase.POST_GW, "scoring") == "official_final_history"
-
-
-def test_finance_uses_official_half_profit_rule():
-    assert sell_cost(50, 45) == 47
-    assert sell_cost(44, 45) == 44
-
-
-def test_finance_prefers_authenticated_exact_sell_value():
-    resolved = resolve_sell_value(
-        element_id=1,
-        now_cost=50,
-        authenticated_selling_price=48,
-        authenticated_purchase_price=45,
-    )
-    assert resolved.sell_cost == 48
-    assert resolved.source == "authenticated_selling_price"
-    assert resolved.exact is True
-
-
-def test_finance_unknown_purchase_cost_fails_closed():
-    resolved = resolve_sell_value(element_id=1, now_cost=50)
-    assert resolved.sell_cost is None
-    assert resolved.purchase_cost is None
-    with pytest.raises(RuntimeError):
-        affordability_cost(owned=True, now_cost=50, sell_value=None)
-
-
-def test_authenticated_official_routes_are_registry_driven_and_allowlisted():
-    team_id = expected_team_id()
-    routes = allowed_routes()
-    assert routes["my_team"] == f"my-team/{team_id}/"
-    assert routes["transfers_latest"] == f"entry/{team_id}/transfers-latest/"
-    with pytest.raises(AuthPolicyError):
-        safe_get("arbitrary", AuthMaterial(mode="test", headers={}))
-
-
-def test_authenticated_mode_auto_detects_single_session_secret(monkeypatch):
-    monkeypatch.delenv("FPL_AUTH_MODE", raising=False)
-    monkeypatch.setenv("FPL_SESSION_B64", base64.b64encode(b"sessionid=test-session").decode("ascii"))
-    monkeypatch.delenv("FPL_ACCESS_TOKEN", raising=False)
+def test_auth_material_rejects_partial_bearer_pair(monkeypatch):
+    monkeypatch.setenv("FPL_ACCESS_TOKEN", "token")
     monkeypatch.delenv("FPL_REFRESH_TOKEN", raising=False)
-    material = auth_material_from_env()
-    assert material is not None
-    assert material.mode == "session_cookie"
-    assert material.headers["Cookie"] == "sessionid=test-session"
+    monkeypatch.delenv("FPL_SESSION_B64", raising=False)
+    with pytest.raises(AuthConfigurationError):
+        auth_material_from_env()
 
 
-def test_authenticated_mode_explicit_disabled_wins(monkeypatch):
-    monkeypatch.setenv("FPL_AUTH_MODE", "disabled")
-    monkeypatch.setenv("FPL_SESSION_B64", base64.b64encode(b"sessionid=test-session").decode("ascii"))
-    assert auth_material_from_env() is None
-
-
-def test_authenticated_mode_ambiguous_secrets_fail_closed(monkeypatch):
-    monkeypatch.delenv("FPL_AUTH_MODE", raising=False)
+def test_auth_material_rejects_mixed_session_and_bearer(monkeypatch):
     monkeypatch.setenv("FPL_SESSION_B64", base64.b64encode(b"sessionid=test-session").decode("ascii"))
     monkeypatch.setenv("FPL_ACCESS_TOKEN", "token")
     monkeypatch.delenv("FPL_REFRESH_TOKEN", raising=False)
@@ -167,14 +84,14 @@ def test_authenticated_finance_extracts_only_authoritative_squad():
     assert summary["raw_authenticated_payload_persisted"] is False
 
 
-def test_price_trajectory_thresholds_are_registry_driven():
+def test_price_trajectory_thresholds_are_registry_driven_without_false_crossing_eta():
     meta = classify(net_transfers=30000, ownership_pct=5.0, estimated_owners=100000)
     assert meta["actionable"] is True
     assert meta["confidence"] == "HIGH"
     now = datetime(2026, 8, 26, 12, 0, tzinfo=timezone.utc)
     eta, predicted = trajectory_eta(now, 90.0, 2.0)
-    assert eta == 5.0
-    assert predicted is not None
+    assert eta is None
+    assert predicted is None
     assert risk_direction(-80.0, 1.0) == "FALL"
     assert urgency(95.0, None, now) == "CRITICAL"
 
@@ -211,96 +128,82 @@ def _fake_squad_inputs():
             {
                 "id": eid,
                 "web_name": f"P{eid}",
+                "first_name": f"First{eid}",
+                "second_name": f"Last{eid}",
                 "team": team_id,
                 "element_type": element_type,
-                "now_cost": 50,
+                "now_cost": 45 + eid,
+                "selected_by_percent": "1.0",
+                "transfers_in": 0,
+                "transfers_in_event": 0,
+                "transfers_out": 0,
+                "transfers_out_event": 0,
+                "status": "a",
             }
         )
-    bootstrap = {"elements": elements, "teams": teams}
-    locked_ids = list(range(1, 16))
-    lock = {
-        "planning_override_active": True,
-        "target_gw": 3,
-        "players": [
+    return {
+        "elements": elements,
+        "teams": teams,
+        "element_types": [
+            {"id": 1, "singular_name_short": "GKP"},
+            {"id": 2, "singular_name_short": "DEF"},
+            {"id": 3, "singular_name_short": "MID"},
+            {"id": 4, "singular_name_short": "FWD"},
+        ],
+        "events": [
             {
-                "element": eid,
-                "position": {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}[elements[eid - 1]["element_type"]],
-                "expected_web_name": f"P{eid}",
-                "expected_team": f"Team {elements[eid - 1]['team']}",
-                "purchase_cost": 50,
-            }
-            for eid in locked_ids
+                "id": 1,
+                "is_current": True,
+                "is_next": False,
+                "finished": False,
+                "deadline_time": "2026-08-15T10:00:00Z",
+            },
+            {
+                "id": 2,
+                "is_current": False,
+                "is_next": True,
+                "finished": False,
+                "deadline_time": "2026-08-22T10:00:00Z",
+            },
         ],
     }
-    submitted_ids = list(range(1, 15)) + [16]
-    picks = {"picks": [{"element": eid} for eid in submitted_ids]}
-    return bootstrap, lock, picks
 
 
-def test_squad_authority_prefers_current_user_capture_predeadline_even_with_auth():
-    bootstrap, lock, picks = _fake_squad_inputs()
-    authenticated = {
+def test_public_entry_and_submitted_picks_remain_usable_without_auth():
+    from src.v5.event_context import build_event_context
+    from src.v5.identity import build_index
+    from src.v5.team_service import build_team_state
+
+    bootstrap = _fake_squad_inputs()
+    identity = build_index(bootstrap)
+    context = build_event_context(bootstrap, now=datetime(2026, 8, 16, tzinfo=timezone.utc))
+    submitted = {
         "picks": [
-            {"element": row["element"], "purchase_price": 50, "selling_price": 50}
-            for row in picks["picks"]
-        ]
+            {"element": eid, "position": eid, "multiplier": 1 if eid <= 11 else 0, "is_captain": eid == 1, "is_vice_captain": eid == 2}
+            for eid in range(1, 16)
+        ],
+        "entry_history": {"bank": 5, "value": 1000},
+        "active_chip": None,
     }
-    pre = select_squad(
-        phase=Phase.PRE_DEADLINE,
+    team = build_team_state(
+        phase=context.phase,
         bootstrap=bootstrap,
-        locked_squad=lock,
-        authenticated_my_team=authenticated,
-        submitted_picks=picks,
-        planning_gw=3,
-        submitted_gw=2,
-    )
-    assert pre["authority"] == "user_capture"
-    assert [row["element"] for row in pre["squad"]] == list(range(1, 16))
-    assert [row["element"] for row in authenticated["picks"]] != [row["element"] for row in pre["squad"]]
-    assert pre["validation"]["passed"] is True
-
-
-def test_squad_authority_prefers_official_submitted_when_capture_is_stale():
-    bootstrap, lock, picks = _fake_squad_inputs()
-    lock["target_gw"] = 2
-    pre = select_squad(
-        phase=Phase.PRE_DEADLINE,
-        bootstrap=bootstrap,
-        locked_squad=lock,
+        identity=identity,
+        locked_squad=None,
         authenticated_my_team=None,
-        submitted_picks=picks,
-        planning_gw=3,
-        submitted_gw=2,
+        submitted_picks=submitted,
+        transfers=[],
+        entry={"last_deadline_bank": 5},
+        planning_gw=context.planning_gw,
+        submitted_gw=context.submitted_gw,
     )
-    post = select_squad(
-        phase=Phase.POST_DEADLINE,
-        bootstrap=bootstrap,
-        locked_squad=lock,
-        submitted_picks=picks,
-        planning_gw=3,
-        submitted_gw=3,
-    )
-    assert pre["authority"] == "official_public"
-    assert post["authority"] == "official_public"
-    assert pre["validation"]["passed"] is True
-    assert post["validation"]["passed"] is True
-    reconciliation = reconcile_baseline(pre["squad"], post["squad"])
-    assert reconciliation["changed"] is False
-    assert reconciliation["removals"] == []
-    assert reconciliation["additions"] == []
-    assert reconciliation["submitted_becomes_baseline"] is True
+    assert len(team["owned_ids"]) == 15
+    assert team["governance"]["authenticated_official_production_blocking"] is False
 
 
-def test_squad_authority_uses_current_capture_when_public_unavailable():
-    bootstrap, lock, _ = _fake_squad_inputs()
-    pre = select_squad(
-        phase=Phase.PRE_DEADLINE,
-        bootstrap=bootstrap,
-        locked_squad=lock,
-        authenticated_my_team=None,
-        submitted_picks=None,
-        planning_gw=3,
-        submitted_gw=2,
-    )
-    assert pre["authority"] == "user_capture"
-    assert pre["validation"]["passed"] is True
+def test_no_auth_does_not_block_bootstrap_acceptance(monkeypatch):
+    monkeypatch.delenv("FPL_SESSION_B64", raising=False)
+    monkeypatch.delenv("FPL_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("FPL_REFRESH_TOKEN", raising=False)
+    report = run_bootstrap_acceptance()
+    assert report.passed

@@ -5,10 +5,18 @@ import json
 import os
 import re
 import subprocess
+import sys
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.v5 import V5_VERSION
+from src.v5.release_integrity import runtime_fingerprint
 
 
 def git(*args: str, check: bool = True) -> str:
@@ -30,6 +38,45 @@ def load_remote_json(ref: str, path: str, default: dict | None = None) -> dict:
     return payload if isinstance(payload, dict) else dict(default or {})
 
 
+def _int(value, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def operational_revalidation_reasons(
+    summary: dict,
+    *,
+    deployed_runtime_sha: str,
+    current_release_fingerprint: str,
+    current_v5_version: str,
+    required_cycles: int,
+) -> list[str]:
+    """Return fail-closed reasons that require fresh REAL_SHADOW evidence."""
+    if not isinstance(summary, dict) or not summary:
+        return ["OPERATIONAL_ACCEPTANCE_MISSING"]
+
+    reasons: list[str] = []
+    if str(summary.get("production_main_sha") or "").lower() != deployed_runtime_sha.lower():
+        reasons.append("PRODUCTION_REANCHOR_REVALIDATION")
+
+    if (
+        str(summary.get("release_fingerprint") or "") != current_release_fingerprint
+        or str(summary.get("v5_version") or "") != current_v5_version
+    ):
+        reasons.append("V5_RELEASE_REVALIDATION")
+
+    declared_required = _int(summary.get("required_validated_cycles"), -1)
+    validated = _int(summary.get("validated_successful_cycles"), 0)
+    if declared_required != required_cycles:
+        reasons.append("OPERATIONAL_ACCEPTANCE_POLICY_DRIFT")
+    if validated < required_cycles or summary.get("operational_candidate_eligible") is not True:
+        reasons.append("OPERATIONAL_ACCEPTANCE_INCOMPLETE")
+
+    return sorted(set(reasons))
+
+
 def evaluate(event_name: str) -> tuple[bool, list[str], dict, datetime]:
     v3_runtime_branch = os.environ.get("V3_RUNTIME_BRANCH", "runtime-data")
     v5_shadow_branch = os.environ.get("V5_SHADOW_BRANCH", "v5-shadow-runtime")
@@ -41,6 +88,7 @@ def evaluate(event_name: str) -> tuple[bool, list[str], dict, datetime]:
     ledger = load_remote_json(f"origin/{v5_shadow_branch}", "data/v5/prediction_ledger.json", {"records": {}})
     records = ledger.get("records") if isinstance(ledger.get("records"), dict) else {}
     manifest = json.loads(Path("config/v5_convergence_manifest.json").read_text(encoding="utf-8"))
+    parity = json.loads(Path("config/v5_shadow_parity_registry.json").read_text(encoding="utf-8"))
     authority = str((manifest.get("baselines") or {}).get("production_source_authority") or "")
     repository_main_sha = git("rev-parse", "origin/main")
     runtime_manifest = load_remote_json(f"origin/{v3_runtime_branch}", "data/runtime_manifest.json")
@@ -51,30 +99,61 @@ def evaluate(event_name: str) -> tuple[bool, list[str], dict, datetime]:
         check=False,
     ).returncode == 0
     baseline_ready = bool(authority == "runtime-data:data/runtime_manifest.json#source_commit" and sha_valid and ancestor_ok)
+    required_cycles = max(1, _int(parity.get("required_cycles_before_production_candidate"), 3))
+    current_release_fingerprint = str(runtime_fingerprint()["fingerprint"])
+    acceptance_summary = load_remote_json(
+        f"origin/{v5_shadow_branch}",
+        "data/v5/shadow/acceptance_summary.json",
+        {},
+    )
+    revalidation_reasons = operational_revalidation_reasons(
+        acceptance_summary,
+        deployed_runtime_sha=deployed_runtime_sha,
+        current_release_fingerprint=current_release_fingerprint,
+        current_v5_version=V5_VERSION,
+        required_cycles=required_cycles,
+    ) if baseline_ready else []
+
     details = {
         "production_source_authority": authority,
         "deployed_runtime_sha": deployed_runtime_sha,
         "repository_main_sha": repository_main_sha,
         "deployed_runtime_is_ancestor_of_main": ancestor_ok,
         "baseline_ready": baseline_ready,
+        "current_v5_version": V5_VERSION,
+        "current_release_fingerprint": current_release_fingerprint,
+        "required_operational_cycles": required_cycles,
+        "acceptance_summary_present": bool(acceptance_summary),
+        "acceptance_production_sha": str(acceptance_summary.get("production_main_sha") or ""),
+        "acceptance_release_fingerprint": str(acceptance_summary.get("release_fingerprint") or ""),
+        "acceptance_validated_cycles": _int(acceptance_summary.get("validated_successful_cycles"), 0),
+        "acceptance_operational_eligible": acceptance_summary.get("operational_candidate_eligible") is True,
+        "operational_revalidation_required": bool(revalidation_reasons),
     }
     reasons: list[str] = []
     if not baseline_ready:
         details["blocked_reason"] = "DEPLOYED_PRODUCTION_BASELINE_NOT_RECONCILED"
         return False, reasons, details, local
 
-    req = urllib.request.Request(
-        "https://fantasy.premierleague.com/api/bootstrap-static/",
-        headers={"User-Agent": "fpl-iphoenk-v5-evidence-scheduler/2.0"},
-    )
-    with urllib.request.urlopen(req, timeout=20) as response:
-        bootstrap = json.load(response)
-    events = [row for row in bootstrap.get("events") or [] if isinstance(row, dict)]
-
+    reasons.extend(revalidation_reasons)
     if event_name == "workflow_dispatch":
         reasons.append("MANUAL_SCHEDULER_DISPATCH")
     if local.hour == 4:
         reasons.append("DAILY_0430_WIB_EVIDENCE_REFRESH")
+
+    # Revalidation/manual/daily reasons already justify a governed cycle. Avoid an extra
+    # Official bootstrap request when the heavy shadow cycle is going to fetch fresh truth anyway.
+    reasons = sorted(set(reasons))
+    if reasons:
+        return True, reasons, details, local
+
+    req = urllib.request.Request(
+        "https://fantasy.premierleague.com/api/bootstrap-static/",
+        headers={"User-Agent": "fpl-iphoenk-v5-evidence-scheduler/2.1"},
+    )
+    with urllib.request.urlopen(req, timeout=20) as response:
+        bootstrap = json.load(response)
+    events = [row for row in bootstrap.get("events") or [] if isinstance(row, dict)]
 
     future, passed_unfinished, finished_ids = [], [], set()
     for event in events:
@@ -147,6 +226,7 @@ def main() -> int:
             "# V5 Evidence Scheduler\n\n"
             f"- Time authority: `{local.isoformat()}`\n"
             f"- Deployed baseline ready: **{details.get('baseline_ready')}**\n"
+            f"- Operational revalidation required: **{details.get('operational_revalidation_required')}**\n"
             f"- Scheduled heavy cycle: **{should_run}**\n"
             f"- Reasons: `{', '.join(reasons) if reasons else 'NONE'}`\n"
             f"- Details: `{json.dumps(details, sort_keys=True)}`\n",

@@ -5,6 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from src.engines.official_fact_publication_gate import run as run_official_fact_gate
 from src.engines.report_user_presentation import run as run_user_presentation
 from src.utils import DATA, ROOT, atomic_json, read_json
 
@@ -242,6 +243,7 @@ def run() -> dict[str, Any]:
         "checkpoint": ((presentation.get("checkpoint") or {}).get("current") or {}).get("id") or "ROUTINE",
         "completeness": (presentation.get("checkpoint") or {}).get("completeness"),
     }
+    result["official_fact_integrity"] = run_official_fact_gate()
     return result
 
 

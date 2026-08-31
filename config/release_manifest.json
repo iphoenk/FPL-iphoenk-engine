@@ -14,7 +14,7 @@
     "ownership": "fpl_v4_9_6_architecture_ownership_v10",
     "optimizer_equivalence": "v4_optimizer_equivalence_v1",
     "runtime_artifact_authority": "v4_runtime_artifact_authority_v1",
-    "owned_challenger_policy": "v4_owned_challenger_decision_policy_v2"
+    "owned_challenger_policy": "v4_owned_challenger_decision_policy_v3"
   },
   "production_acceptance_lifecycle": [
     "IMPLEMENTED",

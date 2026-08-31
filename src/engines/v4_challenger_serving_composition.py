@@ -13,6 +13,7 @@ def _assert_complete(payload: dict[str, Any], *, canonical_action: str) -> None:
     completeness = payload.get("official_fact_completeness") or {}
     owned = completeness.get("owned") or {}
     watchlist = completeness.get("watchlist") or {}
+    discovery = payload.get("projected_value_market_discovery") or {}
     if payload.get("contract") != "OWNED_CHALLENGER_DECISION_ENGINE_V1":
         raise RuntimeError("owned challenger serving requires canonical contract")
     if payload.get("status") != "READY":
@@ -29,6 +30,15 @@ def _assert_complete(payload: dict[str, Any], *, canonical_action: str) -> None:
         raise RuntimeError(
             f"owned challenger canonical action mismatch: challenger={payload.get('overall_decision')} serving={canonical_action}"
         )
+    if discovery.get("contract") != "V4_PROJECTED_VALUE_MARKET_DISCOVERY_V1":
+        raise RuntimeError("owned challenger serving requires full-universe projected-value discovery contract")
+    if discovery.get("full_universe_scanned") is not True:
+        raise RuntimeError("owned challenger serving requires full-universe projected-value scan")
+    if discovery.get("mandatory_candidate_coverage_complete") is not True:
+        raise RuntimeError(
+            "owned challenger publication blocked: missing mandatory challenger evaluation "
+            f"{discovery.get('missing_mandatory_candidate_ids') or []}"
+        )
 
 
 def compose() -> dict[str, Any]:
@@ -41,6 +51,7 @@ def compose() -> dict[str, Any]:
 
     main_battles = list(challenger.get("main_transfer_battles") or [])
     multi_packages = list(challenger.get("multi_transfer_packages") or [])
+    discovery = challenger.get("projected_value_market_discovery") or {}
     serving["owned_challenger_decision"] = {
         "status": challenger.get("status"),
         "challenge_signal": challenger.get("challenge_signal"),
@@ -55,6 +66,17 @@ def compose() -> dict[str, Any]:
         "all15_screening": challenger.get("owned_screening") or [],
         "main_transfer_battles": main_battles,
         "multi_transfer_packages": multi_packages,
+        "projected_value_market_discovery": {
+            "contract": discovery.get("contract"),
+            "full_universe_scanned": discovery.get("full_universe_scanned"),
+            "eligible_non_owned_count": discovery.get("eligible_non_owned_count"),
+            "mandatory_candidate_ids": discovery.get("mandatory_candidate_ids") or [],
+            "evaluated_mandatory_candidate_ids": discovery.get("evaluated_mandatory_candidate_ids") or [],
+            "mandatory_candidate_coverage_complete": discovery.get("mandatory_candidate_coverage_complete"),
+            "tainted_or_blocked_count": discovery.get("tainted_or_blocked_count"),
+            "market_timing_is_not_football_authority": discovery.get("market_timing_is_not_football_authority"),
+            "mandatory_review_is_not_automatic_buy": discovery.get("mandatory_review_is_not_automatic_buy"),
+        },
         "source": "data/owned_challenger_decision_v4.json",
     }
     serving["main_transfer_battles"] = main_battles
@@ -67,6 +89,9 @@ def compose() -> dict[str, Any]:
         "owned_challenger_reporting_recompute_forbidden": True,
         "owned_challenger_challenge_signal_advisory_only": True,
         "single_canonical_decision_authority": True,
+        "full_universe_projected_value_market_scan_required": True,
+        "mandatory_challenger_coverage_fail_closed": True,
+        "market_urgency_never_auto_buys": True,
     })
     atomic_json(SERVING, serving)
 
@@ -84,6 +109,11 @@ def compose() -> dict[str, Any]:
             "canonical_action": canonical_action,
             "canonical_authority_consistent": True,
             "decision_authority": challenger.get("decision_authority"),
+            "full_universe_projected_value_market_scan": discovery.get("full_universe_scanned") is True,
+            "mandatory_candidate_count": len(discovery.get("mandatory_candidate_ids") or []),
+            "mandatory_candidate_coverage_complete": discovery.get("mandatory_candidate_coverage_complete") is True,
+            "missing_mandatory_candidate_ids": discovery.get("missing_mandatory_candidate_ids") or [],
+            "market_urgency_is_timing_only": True,
         }
         atomic_json(INTEGRITY, integrity)
 
@@ -93,6 +123,8 @@ def compose() -> dict[str, Any]:
         "watchlist": 20,
         "main_transfer_battles": len(main_battles),
         "multi_transfer_packages": len(multi_packages),
+        "mandatory_challengers": len(discovery.get("mandatory_candidate_ids") or []),
+        "mandatory_coverage": discovery.get("mandatory_candidate_coverage_complete"),
         "challenge_signal": challenger.get("challenge_signal"),
         "overall_decision": canonical_action,
     }

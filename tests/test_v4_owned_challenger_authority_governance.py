@@ -25,6 +25,14 @@ def _complete_payload(**overrides):
             "watchlist": {"actual": 20, "complete": True},
         },
         "owned_screening": [{"element": index + 1} for index in range(15)],
+        "projected_value_market_discovery": {
+            "contract": "V4_PROJECTED_VALUE_MARKET_DISCOVERY_V1",
+            "full_universe_scanned": True,
+            "mandatory_candidate_ids": [],
+            "evaluated_mandatory_candidate_ids": [],
+            "missing_mandatory_candidate_ids": [],
+            "mandatory_candidate_coverage_complete": True,
+        },
     }
     payload.update(overrides)
     return payload
@@ -38,6 +46,19 @@ def test_serving_rejects_second_decision_authority():
         _assert_complete(_complete_payload(decision_authority="OWNED_CHALLENGER"), canonical_action="REVIEW")
 
 
+def test_serving_blocks_missing_mandatory_challenger_evaluation():
+    discovery = {
+        "contract": "V4_PROJECTED_VALUE_MARKET_DISCOVERY_V1",
+        "full_universe_scanned": True,
+        "mandatory_candidate_ids": [999],
+        "evaluated_mandatory_candidate_ids": [],
+        "missing_mandatory_candidate_ids": [999],
+        "mandatory_candidate_coverage_complete": False,
+    }
+    with pytest.raises(RuntimeError, match="missing mandatory challenger evaluation"):
+        _assert_complete(_complete_payload(projected_value_market_discovery=discovery), canonical_action="REVIEW")
+
+
 def test_owned_challenger_policy_is_release_and_attestation_governed():
     policy = _load("config/intelligence/owned_challenger_decision_v4.json")
     manifest = _load("config/release_manifest.json")
@@ -45,6 +66,9 @@ def test_owned_challenger_policy_is_release_and_attestation_governed():
     contracts = _load("config/service_contract_registry.json")
     ownership = _load("config/architecture_ownership_registry.json")
     assert manifest["registries"]["owned_challenger_policy"] == policy["registry"]
+    assert policy["projected_value_market_discovery"]["full_universe_scan_required"] is True
+    assert policy["projected_value_market_discovery"]["mandatory_review_is_not_buy"] is True
+    assert policy["projected_value_market_discovery"]["missing_mandatory_candidate_blocks_publication"] is True
     optimization = next(row for row in services["services"] if row["id"] == "optimization")
     assert "owned_challenger_decision" in optimization["produces"]
     contract = contracts["contracts"]["owned_challenger_decision"]

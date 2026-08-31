@@ -10,6 +10,7 @@ from src.engines.p0_decision_quality import (
     projection_signature,
 )
 from src.models.historical_projection import build as build_player_projections
+from src.models.official_role_evidence import attach_official_role_evidence
 from src.models.prediction_quality import evaluate as evaluate_prediction_quality
 from src.models.tactical_matchup import attach_tactical_matchups
 from src.models.team_strength import build_team_strength
@@ -62,6 +63,9 @@ def run() -> dict:
     atomic_json(DATA / "team_strength.json", strength)
 
     projections = build_player_projections(bootstrap, strength, planning_gw, prior, horizon=STRATEGIC_HORIZON_GWS, player_features_payload=player_features)
+    pre_role_signature = projection_signature(projections)
+    official_role_evidence = attach_official_role_evidence(projections, bootstrap)
+    assert_projection_signature_unchanged(pre_role_signature, projections)
     pre_tactical_signature = projection_signature(projections)
     projections = attach_tactical_matchups(projections, planning_gw)
     _annotate_tactical_effect(projections)
@@ -71,6 +75,10 @@ def run() -> dict:
     projections["generated_at"] = _now()
     projections.setdefault("governance", {}).update({
         "official_snapshot_reused": True,
+        "official_set_piece_role_evidence_reused": True,
+        "official_role_evidence_is_advisory_only": True,
+        "official_role_evidence_never_directly_mutates_xpts_or_xmins": True,
+        "official_role_share_or_probability_inference_forbidden": True,
         "rec01_player_feature_model_opt_in": True,
         "player_feature_contract": player_features.get("contract"),
         "defensive_contribution_model": projections.get("defensive_contribution_model"),
@@ -107,6 +115,7 @@ def run() -> dict:
         "historical_prior_model": projections.get("historical_prior_model"), "historical_prior_players_used": projections.get("historical_prior_players_used"),
         "prediction_quality": quality.get("status"), "package_optimizer_status": packages.get("status"), "package_count": packages.get("package_count", 0),
         "best_package": (packages.get("packages") or [{}])[0].get("id") if packages.get("packages") else None, "candidate_generation_only": True,
+        "official_role_evidence": official_role_evidence,
         "tactical_matchup": {
             "status": "READY" if tactical.get("ready") else ("PARTIAL" if tactical.get("partial") else "UNAVAILABLE"), "model": tactical.get("model"),
             "ready_players": tactical.get("ready", 0), "partial_players": tactical.get("partial", 0), "unavailable_players": tactical.get("unavailable", 0),
@@ -126,6 +135,7 @@ if __name__ == "__main__":
     out = run()
     print(json.dumps({
         "projection_players": len(out["projections"].get("players") or []), "historical_prior_players": out["projections"].get("historical_prior_players_used"),
+        "official_role_evidence": out["projections"].get("official_role_evidence"),
         "defensive_contribution_model": out["projections"].get("defensive_contribution_model"), "advanced_defensive_evidence_players_used": out["projections"].get("advanced_defensive_evidence_players_used"),
         "prediction_quality": out["quality"].get("status"), "package_count": out["packages"].get("package_count"),
         "best_package": (out["packages"].get("packages") or [{}])[0].get("id") if out["packages"].get("packages") else None,

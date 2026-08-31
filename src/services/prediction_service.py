@@ -188,7 +188,7 @@ def run():
         })
     atomic_json(DATA / "live.json", live_payload)
 
-    price_context = refresh_price_context()
+    price_context = refresh_price_context(raw=raw, team=team_payload, data_dir=DATA)
     confirmed = price_context.get("confirmed_changes") or []
     momentum = price_context.get("top_buy_pressure") or []
     next_price_update = next(

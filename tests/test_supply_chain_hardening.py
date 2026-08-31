@@ -34,19 +34,30 @@ def test_workflows_use_full_sha_pins_and_locked_dependencies():
     assert "pip install --no-deps -r requirements-ci.lock" in ci
 
 
+def _dependency_lines(path: str) -> tuple[list[str], list[str]]:
+    directives: list[str] = []
+    dependencies: list[str] = []
+    for raw in Path(path).read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line == "--require-hashes" or line.startswith("-r "):
+            directives.append(line)
+            continue
+        dependencies.append(line)
+    return directives, dependencies
+
+
 def test_dependency_locks_are_exact_and_do_not_contain_ranges():
-    runtime_lines = [
-        line.strip()
-        for line in Path("requirements.lock").read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.lstrip().startswith("#")
-    ]
-    ci_lines = [
-        line.strip()
-        for line in Path("requirements-ci.lock").read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.lstrip().startswith("#") and not line.startswith("-r ")
-    ]
+    runtime_directives, runtime_lines = _dependency_lines("requirements.lock")
+    ci_directives, ci_lines = _dependency_lines("requirements-ci.lock")
+
+    assert "--require-hashes" in runtime_directives
+    assert "--require-hashes" in ci_directives
+    assert "-r requirements.lock" in ci_directives
     assert runtime_lines
     assert ci_lines
     assert all("==" in line for line in runtime_lines)
     assert all("==" in line for line in ci_lines)
+    assert all("--hash=sha256:" in line for line in runtime_lines + ci_lines)
     assert all(not any(token in line for token in (">=", "<=", "~=", "!=", "<", ">")) for line in runtime_lines + ci_lines)

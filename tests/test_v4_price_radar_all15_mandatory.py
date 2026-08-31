@@ -101,7 +101,10 @@ def test_v4_mandatory_challengers_come_only_from_canonical_discovery_ids() -> No
     assert radar["mandatory_candidate_ids"] == [88]
     assert [row["element"] for row in radar["mandatory_high_value_challengers"]] == [88]
     assert radar["candidate_authority"] == "V4_PROJECTED_VALUE_MARKET_DISCOVERY_V1"
-    assert radar["mandatory_high_value_challengers"][0]["mandatory_challenger_reason"] == "CANONICAL_PROJECTED_VALUE_MARKET_DISCOVERY"
+    mandatory = radar["mandatory_high_value_challengers"][0]
+    assert mandatory["mandatory_challenger_reason"] == "CANONICAL_PROJECTED_VALUE_MARKET_DISCOVERY"
+    assert mandatory["mandatory_review_is_not_automatic_buy"] is True
+    assert radar["price_only_execution_authorized"] is False
 
 
 def test_v4_mandatory_ids_are_deduplicated_without_reselection() -> None:

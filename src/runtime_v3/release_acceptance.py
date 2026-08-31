@@ -78,7 +78,7 @@ def run() -> dict:
             "fail_closed_on_first_failed_gate": True,
             "full_and_fast_profiles_both_required": True,
             "cold_then_warm_fast_required": True,
-            "canonical_11_domain_runtime_required": True,
+            "registry_owned_domain_runtime_required": True,
             "six_phase_runtime_required": True,
             "same_input_material_equivalence_required": True,
             "definition_of_done_candidate_required": True,

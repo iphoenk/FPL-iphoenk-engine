@@ -16,6 +16,7 @@ from typing import Any
 from src.runtime_v3 import incremental_reuse
 from src.runtime_v3 import module_batch_runner
 from src.runtime_v3 import orchestrator as legacy
+from src.runtime_v3 import reuse_freshness
 from src.utils import DATA, ROOT
 
 DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
@@ -134,7 +135,7 @@ def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profi
     reuse_diagnostic_before = incremental_reuse.diagnose(name, profile_name) if name in (incremental_reuse._registry().get("services") or {}) else None
     reuse_rejections: list[dict[str, Any]] = []
 
-    reused, rejected = _reuse_candidate("TTL", legacy._reuse_service, name, spec, profile_name, profile_cfg)
+    reused, rejected = _reuse_candidate("TTL", reuse_freshness.reuse_service, name, spec, profile_name, profile_cfg)
     if rejected is not None:
         reuse_rejections.append(rejected)
     if reused is None and reuse_active:

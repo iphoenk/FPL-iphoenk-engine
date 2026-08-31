@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 
 from src.engines.v4_freshness import evaluate_freshness
-from src.sources.official_price_predictor import squeeze_for_pairs
+from src.engines.v4_price_context import squeeze_for_pairs
 from src.utils import CONFIG, DATA, atomic_json, parse_dt, read_json, utcnow
 
 POLICY = CONFIG / "serving_improvement_registry.json"

@@ -81,11 +81,48 @@ def test_p04_multi_horizon_package_scoring_is_legal():
 def test_p05_challenger_registry_never_auto_scrapes_or_reputation_weights():
     registry = json.loads((ROOT / "config" / "intelligence" / "challenger_registry.json").read_text())
     ids = {p["id"] for p in registry["providers"]}
-    assert ids == {"internal", "onefpl", "fffix", "ffhub"}
+    assert ids == {"internal", "fffix", "ffhub"}
     assert "livefpl" not in ids
+    assert "onefpl" not in ids
     assert registry["auto_scrape"] is False
     assert registry["governance"]["missing_provider_data_is_not_fabricated"] is True
     assert registry["governance"]["provider_reputation_is_not_accuracy_evidence"] is True
+    assert registry["governance"]["report_time_only_providers_are_excluded_from_machine_scorecard"] is True
+
+
+def test_p05_source_lifecycle_is_consistent_across_registries():
+    source_registry = json.loads((ROOT / "config" / "sources" / "registry.json").read_text())
+    report_registry = json.loads((ROOT / "config" / "sources" / "report_time_registry.json").read_text())
+    challenger_registry = json.loads((ROOT / "config" / "intelligence" / "challenger_registry.json").read_text())
+    collector_policy = json.loads((ROOT / "config" / "runtime" / "collector_policy.json").read_text())
+
+    machine_ids = {row["id"] for row in source_registry["sources"]}
+    report_ids = {row["id"] for row in report_registry["sources"]}
+    challenger_ids = {row["id"] for row in challenger_registry["providers"]}
+    sweep_ids = {
+        source_id
+        for tier in (collector_policy.get("deadline_source_sweep") or {}).get("tiers", {}).values()
+        for source_id in tier
+    }
+    retired = set((source_registry.get("policy") or {}).get("retired_source_ids") or [])
+
+    assert retired
+    assert retired.isdisjoint(machine_ids)
+    assert retired.isdisjoint(report_ids)
+    assert retired.isdisjoint(challenger_ids)
+    assert retired.isdisjoint(sweep_ids)
+
+    onefpl = next(row for row in source_registry["sources"] if row["id"] == "onefpl")
+    assert onefpl["enabled"] is False
+    assert onefpl["adapter"] == "disabled"
+    assert onefpl["delegated_to"] == report_registry["registry"]
+    assert "onefpl" in report_ids
+    assert "onefpl" not in challenger_ids
+
+    official = next(row for row in source_registry["sources"] if row["id"] == "official_fpl")
+    assert official["health_endpoints"] == ["bootstrap", "fixtures", "entry", "history", "transfers"]
+    weather = next(row for row in source_registry["sources"] if row["id"] == "open_meteo")
+    assert weather["artifact_paths"] == ["fixture_weather.json"]
 
 
 def test_p01_prediction_evaluation_registry_freezes_predeadline():

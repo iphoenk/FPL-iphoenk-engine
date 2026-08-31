@@ -9,11 +9,44 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-WIB = ZoneInfo("Asia/Jakarta")
-FRESH_MAX_MINUTES = 60.0
-STALE_AFTER_MINUTES = 90.0
-MASTER_CHECKPOINT_MINUTE = 30
-MAX_REPORTED_MISSES = 48
+ROOT = Path(__file__).resolve().parents[2]
+POLICY_PATH = ROOT / "config" / "runtime" / "v4_operational_policy.json"
+
+
+def _load_policy(path: Path = POLICY_PATH) -> dict:
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    required = {
+        "timezone",
+        "master_checkpoint_minute",
+        "fresh_max_minutes",
+        "stale_after_minutes",
+        "max_reported_misses",
+        "runtime_branch",
+        "canonical_ref",
+        "production_concurrency_group",
+    }
+    missing = sorted(required - raw.keys())
+    if missing:
+        raise RuntimeError(f"V4 operational policy missing keys: {', '.join(missing)}")
+    fresh = float(raw["fresh_max_minutes"])
+    stale = float(raw["stale_after_minutes"])
+    minute = int(raw["master_checkpoint_minute"])
+    misses = int(raw["max_reported_misses"])
+    if not 0 <= minute <= 59:
+        raise RuntimeError("master_checkpoint_minute must be in 0..59")
+    if fresh <= 0 or stale <= fresh:
+        raise RuntimeError("stale_after_minutes must be greater than fresh_max_minutes > 0")
+    if misses <= 0:
+        raise RuntimeError("max_reported_misses must be positive")
+    return raw
+
+
+POLICY = _load_policy()
+WIB = ZoneInfo(str(POLICY["timezone"]))
+FRESH_MAX_MINUTES = float(POLICY["fresh_max_minutes"])
+STALE_AFTER_MINUTES = float(POLICY["stale_after_minutes"])
+MASTER_CHECKPOINT_MINUTE = int(POLICY["master_checkpoint_minute"])
+MAX_REPORTED_MISSES = int(POLICY["max_reported_misses"])
 
 
 def _parse_timestamp(value: object) -> datetime | None:
@@ -88,7 +121,8 @@ def evaluate(
     expected = _latest_expected_checkpoint(now)
     return {
         "schema_version": 1,
-        "timezone_authority": "Asia/Jakarta",
+        "policy_id": POLICY.get("policy_id"),
+        "timezone_authority": str(POLICY["timezone"]),
         "schedule_target": expected.isoformat(),
         "execution_observed": now.astimezone(WIB).isoformat(),
         "runtime_branch": runtime_branch,
@@ -125,6 +159,7 @@ def _write_github_summary(path: Path, report: dict) -> None:
     misses = ", ".join(report["missed_checkpoint_targets"]) or "none"
     lines = [
         "### V4 runtime freshness watchdog",
+        f"- POLICY_ID={report['policy_id']}",
         f"- SCHEDULE_TARGET={report['schedule_target']}",
         f"- EXECUTION_OBSERVED={report['execution_observed']}",
         f"- RUNTIME_PUBLISH_AT={report['runtime_publish_at']}",
@@ -144,9 +179,9 @@ def main() -> None:
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--github-output", type=Path)
     parser.add_argument("--github-summary", type=Path)
-    parser.add_argument("--canonical-ref", required=True)
+    parser.add_argument("--canonical-ref", default=str(POLICY["canonical_ref"]))
     parser.add_argument("--canonical-sha", required=True)
-    parser.add_argument("--runtime-branch", required=True)
+    parser.add_argument("--runtime-branch", default=str(POLICY["runtime_branch"]))
     parser.add_argument("--now", help="ISO timestamp override for deterministic verification")
     args = parser.parse_args()
 

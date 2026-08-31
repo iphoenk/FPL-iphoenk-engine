@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
 from src.engines.price_radar import _normalise_player, _raw_payload_hash, _served_evidence
 from src.engines.v4_decision_arbitration import _attach_price_timing
 from src.engines.v4_price_context import build_market_context, refresh_price_context
+from src.services.prediction_model_cache import semantic_fingerprint
 
 
 def _player(element: int = 1, **overrides) -> dict:
@@ -234,3 +236,34 @@ def test_visible_price_copy_is_natural_and_does_not_leak_internal_identifiers():
         "execution_authorized",
     ):
         assert forbidden not in text
+
+
+def test_price_predictor_changes_do_not_invalidate_xpts_cache_but_model_inputs_do():
+    base = _bootstrap(_player(element=11, now_cost=55))
+    base["teams"] = [{
+        "id": 1,
+        "strength_defence_home": 1200,
+        "strength_defence_away": 1180,
+        "strength_overall_home": 1210,
+        "strength_overall_away": 1190,
+    }]
+    base["events"] = []
+
+    price_only = deepcopy(base)
+    price_only["elements"][0].update({
+        "price_change_percent": 99.9,
+        "price_change_hourly_rate": 8.4,
+        "price_change_projections": [
+            {"offset": 0, "projected_percent": 118.0, "likelihood": 5},
+            {"offset": 1, "projected_percent": 132.0, "likelihood": 5},
+            {"offset": 2, "projected_percent": 145.0, "likelihood": 5},
+        ],
+        "price_change_locked_until": "2026-09-01T00:00:00Z",
+        "price_change_calibrating": True,
+    })
+
+    assert semantic_fingerprint(base, [], None) == semantic_fingerprint(price_only, [], None)
+
+    model_input = deepcopy(base)
+    model_input["elements"][0]["now_cost"] = 56
+    assert semantic_fingerprint(base, [], None) != semantic_fingerprint(model_input, [], None)

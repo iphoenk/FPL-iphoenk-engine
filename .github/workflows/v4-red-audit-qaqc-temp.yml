@@ -25,6 +25,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+      - name: Install test dependencies
+        run: pip install --disable-pip-version-check -r requirements.txt pytest
       - name: Apply QA/QC remediation
         env:
           PYTHONPATH: ${{ github.workspace }}

@@ -7,6 +7,7 @@ on:
 # This workflow remains a manual diagnostic entrypoint and executes the same governed gate script.
 permissions:
   contents: write
+  pull-requests: read
 
 concurrency:
   group: v5-evidence-scheduler
@@ -28,6 +29,14 @@ jobs:
         with:
           ref: v5-unified-engine
           fetch-depth: 0
+
+      - name: Enforce V5 canonical merged-PR provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V5_PROVENANCE_BRANCH=v5-unified-engine \
+          V5_PROVENANCE_SHA="$(git rev-parse HEAD)" \
+          python -m src.v5.canonical_provenance
 
       - name: Evaluate governed evidence window
         id: gate

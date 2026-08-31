@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.v5.price_service import _canonical_contract, build_price_snapshot
+from src.v5.price_service import build_price_snapshot
 from src.v5.price_squeeze import annotate_comparator, attach_watchlist_price_evidence, price_squeeze
-from src.v5.price_trajectory import normalise_projections, trajectory_eta
+from src.v5.price_trajectory import canonical_contract, normalise_projections, trajectory_eta
 
 
 def _player(element: int, **overrides):
@@ -49,7 +49,7 @@ def _bootstrap(count: int = 40):
 
 
 def test_v5_uses_same_canonical_provider_contract_as_v3_v4():
-    contract = _canonical_contract()
+    contract = canonical_contract()
     assert contract["model_id"] == "official_price_radar_v3"
     assert contract["source_authority"] == [
         "OFFICIAL_FPL",

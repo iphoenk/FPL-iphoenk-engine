@@ -6,6 +6,7 @@ from time import perf_counter
 from src.engines.fpl_rules_2026 import POSITION_BY_TYPE
 from src.engines.source_sweep_status import build_source_sweep_status
 from src.engines.v4_freshness import evaluate_freshness
+from src.engines.v4_price_context import refresh_price_context
 from src.engines.v4_xmins_evidence import attach_xmins_evidence
 from src.services.contracts import file_digest
 from src.services.prediction_model_cache import build_predictions_cached, last_status as prediction_cache_status
@@ -31,37 +32,6 @@ def _expanded_live(element_live):
     out = {field: stats.get(field) for field in LIVE_STAT_FIELDS if field in stats}
     out["explain"] = element_live.get("explain")
     return out
-
-
-def _write_price_artifacts(bootstrap, generated):
-    previous = read_json(DATA / "price_cache.json", {}).get("players", {})
-    current, confirmed, momentum = {}, [], []
-    total_players = bootstrap.get("total_players", 0) or 0
-    for player in bootstrap.get("elements", []):
-        key = str(player["id"])
-        current[key] = {"now_cost": player["now_cost"], "ownership": player.get("selected_by_percent")}
-        old = previous.get(key)
-        if old and old.get("now_cost") != player["now_cost"]:
-            confirmed.append({
-                "element": player["id"], "name": player["web_name"], "previous": old["now_cost"],
-                "current": player["now_cost"], "delta": player["now_cost"] - old["now_cost"],
-            })
-        ownership = float(player.get("selected_by_percent") or 0)
-        estimated_owners = max(1, int(total_players * ownership / 100))
-        net = (player.get("transfers_in_event") or 0) - (player.get("transfers_out_event") or 0)
-        momentum.append({
-            "element": player["id"], "name": player["web_name"], "net_transfers": net,
-            "ownership_pct": ownership, "momentum": net / estimated_owners,
-        })
-    momentum.sort(key=lambda row: row["momentum"], reverse=True)
-    atomic_json(DATA / "price_cache.json", {"generated_at": generated, "players": current})
-    atomic_json(DATA / "prices.json", {
-        "generated_at": generated,
-        "confirmed_changes": confirmed,
-        "top_buy_pressure": momentum[:25],
-        "top_sell_pressure": list(reversed(momentum[-25:])),
-    })
-    return confirmed, momentum
 
 
 def _official_context_summary(bootstrap, fixtures):
@@ -218,7 +188,13 @@ def run():
         })
     atomic_json(DATA / "live.json", live_payload)
 
-    confirmed, momentum = _write_price_artifacts(bootstrap, generated)
+    price_context = refresh_price_context()
+    confirmed = price_context.get("confirmed_changes") or []
+    momentum = price_context.get("top_buy_pressure") or []
+    next_price_update = next(
+        (row.get("next_official_price_update_at") for row in price_context.get("players") or [] if row.get("next_official_price_update_at")),
+        None,
+    )
     enrichment_sha = file_digest(ENRICHMENT)
     prediction_ms = round((perf_counter() - started) * 1000, 2)
     raw_snapshot_ms = float(raw.get("duration_ms") or 0)
@@ -251,10 +227,27 @@ def run():
             "net_points": live_payload.get("net_points"), "active_live_fixture_count": phase.get("active_live_fixture_count"),
             "is_live_match": phase.get("is_live_match"),
         },
-        "price_summary": {"confirmed_changes": confirmed, "top_buy_pressure": momentum[:10]},
+        "price_summary": {
+            "health": price_context.get("health"),
+            "confirmed_changes": confirmed,
+            "top_buy_pressure": momentum[:10],
+            "next_official_price_update_wib": next_price_update,
+            "all15": price_context.get("all15_actionable_price_radar") or [],
+            "all20_stage": "JOINED_READ_ONLY_AFTER_GOVERNED_DSS_WATCHLIST_DISCOVERY",
+            "summary": "Harga resmi dipakai untuk timing, affordability, optionality, dan perlindungan sell value; bukan sebagai alasan mandiri untuk BUY/SELL/HIT.",
+        },
+        "market_context": {
+            "price": {
+                "status": (price_context.get("health") or {}).get("status"),
+                "source": price_context.get("source"),
+                "contract": price_context.get("contract"),
+                "policy_id": price_context.get("policy_id"),
+                "next_official_price_update_wib": next_price_update,
+            }
+        },
         "lineage": {"snapshot_sha256": snapshot_sha, "enrichment_sha256": enrichment_sha},
         "files": {
-            "team": "data/team.json", "live": "data/live.json", "prices": "data/prices.json", "health": "data/health.json",
+            "team": "data/team.json", "live": "data/live.json", "prices": "data/prices.json", "price_context": "data/prices.json", "health": "data/health.json",
             "universe": "data/universe.json", "chips": "data/chips.json", "predictions": "data/predictions_v4.json",
             "competitive_load": "data/competitive_load_v4.json", "tactical_serving": "data/tactical_serving_v4.json",
             "decision_arbitration": "data/decision_arbitration_v4.json", "effective_plan": "data/effective_plan_v4.json",
@@ -284,6 +277,11 @@ def run():
             "chip_state_is_phase_aware": True, "submitted_native_match_facts_preserved": True,
             "prediction_base_cache_exact_semantic_only": True,
             "competitive_load_reattached_after_base_cache": True,
+            "official_price_predictor_runtime_wired": True,
+            "price_predictor_no_network_refetch": True,
+            "price_signal_subordinate_to_football": True,
+            "price_predictor_canonical_module": "src.engines.price_radar",
+            "price_artifact_single_writer": "prediction",
         },
     }
     freshness = evaluate_freshness(latest)
@@ -302,6 +300,7 @@ def run():
         "prediction_base_cache_hit": bool(cache_status.get("hit")),
         "base_prediction_ms": base_prediction_ms,
         "xmins_evidence_ms": xmins_evidence_ms,
+        "price_context_health": (price_context.get("health") or {}).get("status"),
         "duration_ms": prediction_ms,
     }))
     return latest

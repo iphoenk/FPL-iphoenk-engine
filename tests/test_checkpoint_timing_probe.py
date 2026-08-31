@@ -80,10 +80,8 @@ def test_probe_does_not_repeat_reconciliation_after_thirty_minutes():
     assert result["reconciliation_age_minutes"] == 30.0
 
 
-def test_probe_workflow_is_top_of_hour_and_full_core_is_conditional():
-    workflow = (ROOT / ".github/workflows/fpl-engine-timing-probe.yml").read_text()
-    assert 'cron: "0 * * * *"' in workflow
-    assert "python -m src.services.checkpoint_timing_probe" in workflow
-    assert "if: needs.probe.outputs.run_full == 'true'" in workflow
-    assert "uses: ./.github/workflows/fpl-engine-core.yml" in workflow
-    assert 'cron: "30 * * * *"' not in workflow
+def test_canonical_branch_does_not_own_a_second_timing_scheduler():
+    # Scheduled workflow authority lives on the repository default branch.
+    # Keep the timing evaluator as a reusable/tested service primitive, but no
+    # second non-default workflow may pretend to be an active scheduler owner.
+    assert not (ROOT / ".github/workflows/fpl-engine-timing-probe.yml").exists()

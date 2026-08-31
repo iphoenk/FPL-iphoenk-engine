@@ -53,6 +53,10 @@ def test_governance_reuses_one_immutable_prediction_context(monkeypatch):
     monkeypatch.setattr(governance.framework_postflight_truth_service, "run", fake_postflight)
     monkeypatch.setattr(governance.v4_maturity_reconciler, "reconcile", fake_reconcile)
     monkeypatch.setattr(governance.v4_checkpoint_governance, "run", lambda: {"action_state": "HOLD"})
+    # This test owns only immutable prediction-context reuse. Challenger serving
+    # has its own strict authority/contract tests and may observe hydrated
+    # runtime artifacts during publish-mode CI, so isolate that dependency here.
+    monkeypatch.setattr(governance, "compose_challenger_serving", lambda: {"status": "READY"})
 
     out = governance.run()
     assert out["status"] == "PASS"

@@ -94,7 +94,7 @@
     "tiers": {
       "1": ["official_fpl_native", "official_fpl_web", "premier_league_official", "official_clubs", "official_manager_team_communications"],
       "2": ["reliable_beat_reporters", "verified_press_conference", "reliable_injury_lineup_reporters"],
-      "3": ["fpl_live", "livefpl", "onefpl", "fffix", "ffhub", "ffscout"],
+      "3": ["fpl_live", "onefpl", "fffix", "ffhub", "ffscout"],
       "4": ["ben_crellin"],
       "5": ["x_twitter", "reddit"]
     }

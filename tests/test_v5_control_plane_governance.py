@@ -37,21 +37,20 @@ def test_on_demand_uses_deployed_runtime_source_and_registry_hydration():
     assert "for stat_file in" not in source
 
 
-def test_v5_branch_scheduler_has_no_dead_cron_and_delegates_policy_to_script():
+def test_v5_branch_scheduler_has_no_dead_cron_and_calls_shadow_workflow_directly():
     workflow = (ROOT / ".github/workflows/v5-evidence-scheduler.yml").read_text(encoding="utf-8")
     gate = (ROOT / "scripts/v5_evidence_scheduler_gate.py").read_text(encoding="utf-8")
-    dispatch = (ROOT / "scripts/v5_dispatch_shadow_trigger.py").read_text(encoding="utf-8")
     assert "  schedule:" not in workflow
     assert "v5_evidence_scheduler_gate.py" in workflow
-    assert "v5_dispatch_shadow_trigger.py" in workflow
+    assert "uses: ./.github/workflows/v5-shadow-cycle.yml" in workflow
+    assert "v5_dispatch_shadow_trigger.py" not in workflow
+    assert "Enforce V5 canonical merged-PR provenance" in workflow
     assert "production_source_authority" in gate
     assert "data/runtime_manifest.json" in gate
     assert "merge-base" in gate
     assert "data/v5/shadow/acceptance_summary.json" in gate
     assert "PRODUCTION_REANCHOR_REVALIDATION" in gate
     assert "OPERATIONAL_ACCEPTANCE_INCOMPLETE" in gate
-    assert "config/v5_shadow_trigger.json" in dispatch
-    assert "default-branch-thin-dispatcher" in dispatch
 
 
 def test_production_source_is_runtime_manifest_authority_not_static_sha():

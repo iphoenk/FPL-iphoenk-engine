@@ -25,7 +25,7 @@ def _requirements(path: Path, seen: set[Path] | None = None) -> list[tuple[str, 
     rows: list[tuple[str, str, str]] = []
     for raw in path.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
-        if not line or line.startswith("#"):
+        if not line or line.startswith("#") or line == "--require-hashes":
             continue
         if line.startswith("-r ") or line.startswith("--requirement "):
             child = line.split(maxsplit=1)[1]

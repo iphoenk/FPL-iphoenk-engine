@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "registry": "V3_INTERACTIVE_SERVICES_V1",
   "architecture": "UNIFIED_INTERACTIVE_FASTPATH",
   "policy": {
@@ -10,8 +10,8 @@
     "decision_regeneration_must_recompute_governed_decision_from_fresh_projections": true,
     "gateway_serves_only_validated_materialized_or_regenerated_decisions": true,
     "single_pass_artifact_load_and_validation": true,
-    "preferred_end_to_end_target_ms": 1000,
-    "hard_end_to_end_ceiling_ms": 2000
+    "performance_slo_registry": "config/runtime/performance_slo.json",
+    "performance_slo_profile": "instant_serving"
   },
   "services": {
     "unified_fastpath": {
@@ -20,9 +20,7 @@
       "owns": ["interactive_lineup_package_regeneration", "interactive_validated_response"],
       "consumes": ["projections.json","package_optimizer.json","team.json","chips.json","latest.json","framework_health.json","dss_watchlist_summary.json","decision_brief.json","user_report.json","config/locked_squad.json"],
       "network": false,
-      "writes_canonical_artifacts": false,
-      "preferred_target_ms": 1000,
-      "hard_ceiling_ms": 2000
+      "writes_canonical_artifacts": false
     }
   },
   "compatibility_entrypoints": {

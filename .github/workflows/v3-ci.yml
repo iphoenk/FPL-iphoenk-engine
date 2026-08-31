@@ -46,6 +46,8 @@ jobs:
         run: python -m src.runtime_v3.capability_terminology_validate
       - name: Validate architecture ownership contract
         run: python -m src.engines.architecture_contract_validate
+      - name: Validate interactive SLO authority contract
+        run: python -m src.runtime_v3.interactive_slo_contract_validate
       - name: Enforce no-duplicate architecture and REC ownership
         run: python -m src.engines.v3_architecture_ownership_guard
       - name: Validate canonical capability telemetry
@@ -80,6 +82,6 @@ jobs:
       - name: Prove FAST decision runtime consistently under 3s
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: python -m src.runtime_v3.fast_consistency_acceptance
-      - name: Benchmark unified interactive fastpath under 2s, prefer 1s
+      - name: Benchmark unified interactive fastpath against canonical instant SLO
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: python -m src.runtime_v3.unified_fastpath --benchmark

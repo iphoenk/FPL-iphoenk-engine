@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "registry": "V3_INSTANT_SERVING_V1",
   "policy": {
     "serve_only_materialized_validated_artifacts": true,
@@ -29,8 +29,8 @@
     "gate0_pass": 16
   },
   "performance": {
-    "target_wall_ms": 500,
-    "hard_ceiling_ms": 1000,
+    "slo_registry": "config/runtime/performance_slo.json",
+    "slo_profile": "instant_serving",
     "benchmark_repetitions": 5
   }
 }

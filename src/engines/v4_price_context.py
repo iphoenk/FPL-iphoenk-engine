@@ -19,19 +19,6 @@ RUNTIME = DATA / "runtime"
 SNAPSHOT = RUNTIME / "snapshot.v1.json"
 
 
-def _watchlist_ids(predictions: dict, owned_ids: set[int], limit: int = 20) -> list[int]:
-    rows = predictions.get("players") or []
-    out: list[int] = []
-    for row in rows:
-        element = int(row.get("element") or 0)
-        if element <= 0 or element in owned_ids or element in out:
-            continue
-        out.append(element)
-        if len(out) >= limit:
-            break
-    return out
-
-
 def _confirmed_changes(raw_rows: list[dict], previous_cache: dict) -> tuple[list[dict], dict]:
     previous = (previous_cache or {}).get("players") or {}
     confirmed: list[dict] = []
@@ -140,6 +127,21 @@ def build_market_context(
     }
 
 
+def serve_price_evidence(prices: dict, element_ids: Iterable[int], *, owned: bool, limit: int | None = None) -> list[dict]:
+    by_id = {int(row["element_id"]): row for row in prices.get("players") or [] if row.get("element_id") is not None}
+    out: list[dict] = []
+    seen: set[int] = set()
+    for raw_element in element_ids:
+        element = int(raw_element or 0)
+        if element <= 0 or element in seen or element not in by_id:
+            continue
+        seen.add(element)
+        out.append(_served_evidence(by_id[element], owned=owned))
+        if limit is not None and len(out) >= limit:
+            break
+    return out
+
+
 def _scenario(
     name: str,
     *,
@@ -245,16 +247,20 @@ def squeeze_for_pairs(prices: dict, pairs: Iterable[tuple[int, int]], ledger: li
 
 
 def refresh_price_context() -> dict:
+    """Prediction-stage owner for the canonical price artifact.
+
+    This function may write only the governed price cache/artifact. It deliberately
+    does not mutate data/latest.json, which is locked after Prediction completes.
+    The current DSS watchlist is discovered later by Optimization and is joined
+    read-only through serve_price_evidence().
+    """
     raw = read_json(SNAPSHOT, {})
     team = read_json(DATA / "team.json", {})
-    predictions = read_json(DATA / "predictions_v4.json", {})
-    latest = read_json(DATA / "latest.json", {})
     bootstrap = ((raw.get("official") or {}).get("bootstrap") or {})
     if not bootstrap.get("elements"):
         raise RuntimeError("Official bootstrap required for V4 price context")
 
     owned_ids = {int(row.get("element") or 0) for row in team.get("squad") or [] if row.get("element") is not None}
-    watchlist_ids = _watchlist_ids(predictions, owned_ids)
     previous_cache = read_json(DATA / "price_cache.json", {})
     context = build_market_context(
         bootstrap,
@@ -262,34 +268,11 @@ def refresh_price_context() -> dict:
         now=utcnow(),
         previous_cache=previous_cache,
         owned_ids=owned_ids,
-        watchlist_ids=watchlist_ids,
-        transport_health=((raw.get("health") or {}).get("bootstrap") or {"status": "SNAPSHOT_DERIVED"}),
+        watchlist_ids=(),
+        transport_health=((raw.get("endpoint_health") or {}).get("bootstrap") or {"status": "SNAPSHOT_DERIVED"}),
     )
     atomic_json(DATA / "price_cache.json", context.pop("price_cache"))
     atomic_json(DATA / "prices.json", context)
-
-    next_update = next((row.get("next_official_price_update_at") for row in context.get("players") or [] if row.get("next_official_price_update_at")), None)
-    latest["price_summary"] = {
-        "health": context.get("health"),
-        "confirmed_changes": context.get("confirmed_changes") or [],
-        "next_official_price_update_wib": next_update,
-        "all15": context.get("all15_actionable_price_radar") or [],
-        "all20": context.get("all20_external_dss_watchlist") or [],
-        "summary": "Harga resmi dipakai untuk timing, affordability, optionality, dan perlindungan sell value; bukan sebagai alasan mandiri untuk BUY/SELL/HIT.",
-    }
-    latest.setdefault("market_context", {})["price"] = {
-        "status": (context.get("health") or {}).get("status"),
-        "source": context.get("source"),
-        "contract": context.get("contract"),
-        "policy_id": context.get("policy_id"),
-        "next_official_price_update_wib": next_update,
-    }
-    latest.setdefault("files", {})["price_context"] = "data/prices.json"
-    latest.setdefault("meta", {})["official_price_predictor_runtime_wired"] = True
-    latest["meta"]["price_predictor_no_network_refetch"] = True
-    latest["meta"]["price_signal_subordinate_to_football"] = True
-    latest["meta"]["price_predictor_canonical_module"] = "src.engines.price_radar"
-    atomic_json(DATA / "latest.json", latest)
     return context
 
 

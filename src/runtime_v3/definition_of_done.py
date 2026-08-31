@@ -203,7 +203,7 @@ def _price_fact_model_contract(prices: dict[str, Any], alerts: dict[str, Any], t
         for row in sampled
     )
     fact_authority = authority == "Official FPL bootstrap native fields"
-    model_declared = model_id == "official_price_radar_v2"
+    model_declared = model_id == "official_price_radar_v3"
     trajectory_is_state_cache = isinstance(trajectory.get("players"), dict) and bool(trajectory.get("generated_at"))
     return fact_authority and model_declared and semantic_separation and trajectory_is_state_cache, {
         "fact_authority": authority,

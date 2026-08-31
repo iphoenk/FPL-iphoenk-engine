@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from src.runtime_v3 import main_pr_provenance as provenance
@@ -165,3 +167,12 @@ def test_policy_is_registry_owned_and_points_to_current_proven_green_anchor():
     assert policy["require_anchor_in_first_parent_history"] is True
     assert policy["require_each_first_parent_commit_after_anchor_from_merged_pr"] is True
     assert policy["fail_closed_on_github_api_error"] is True
+
+
+def test_policy_rejects_security_flag_weakening(tmp_path):
+    policy = provenance._load_policy().copy()
+    policy["fail_closed_on_github_api_error"] = False
+    path = tmp_path / "policy.json"
+    path.write_text(json.dumps(policy), encoding="utf-8")
+    with pytest.raises(RuntimeError, match="MAIN_PROVENANCE_POLICY_INSECURE"):
+        provenance._load_policy(path)

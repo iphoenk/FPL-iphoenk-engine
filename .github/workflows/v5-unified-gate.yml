@@ -28,15 +28,15 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin main runtime-data --quiet
-          EXPECTED=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_main_sha'])")
+          AUTHORITY=$(python -c "import json; print(json.load(open('config/v5_convergence_manifest.json'))['baselines']['production_source_authority'])")
+          test "$AUTHORITY" = "runtime-data:data/runtime_manifest.json#source_commit"
           MAIN_HEAD=$(git rev-parse origin/main)
           RUNTIME_SOURCE=$(git show origin/runtime-data:data/runtime_manifest.json | python -c "import json,sys; print(json.load(sys.stdin)['source_commit'])")
-          echo "accepted_deployed=$EXPECTED runtime_source=$RUNTIME_SOURCE repository_main=$MAIN_HEAD"
-          test "$EXPECTED" = "$RUNTIME_SOURCE"
-          git merge-base --is-ancestor "$EXPECTED" origin/main
-          if [ "$EXPECTED" != "$MAIN_HEAD" ]; then
-            echo "Repository main is ahead of deployed production; V5 remains anchored to the actually deployed runtime until runtime-data advances."
-          fi
+          [[ "$RUNTIME_SOURCE" =~ ^[0-9a-f]{40}$ ]]
+          git cat-file -e "${RUNTIME_SOURCE}^{commit}"
+          git merge-base --is-ancestor "$RUNTIME_SOURCE" origin/main
+          echo "V5_PRODUCTION_SOURCE_SHA=$RUNTIME_SOURCE" >> "$GITHUB_ENV"
+          echo "deployed_runtime_source=$RUNTIME_SOURCE repository_main=$MAIN_HEAD authority=$AUTHORITY"
       - name: V5 bootstrap acceptance
         run: python -m src.v5.acceptance
       - name: V5 bootstrap tests

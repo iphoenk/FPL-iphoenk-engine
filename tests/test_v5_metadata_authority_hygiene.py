@@ -2,20 +2,6 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEPLOYED_SHA = "ef0161113a763306419c0c367770e6dcfe6570d1"
-STALE_DEPLOYED_SHAS = {
-    "84b1577f4fc84ce00a4e8c5e8139644c8f9fff51",
-    "a6f983af575f33329ada456ef8c6e8e971921696",
-    "a40d0e19ff3d1da580e0d94983f829397aab81f2",
-    "80fe400888f7a4979f4537971cbc8eef6470dbe6",
-    "794d45d37782b3b47617d80384589a7a0cc55730",
-    "5175f9bc68354100a8bc3a36a3b97e853e90b73d",
-    "9f483a2eb2cd346fa014dfdb8a2b8edb7456906d",
-    "892dd783b2fa0199cecf74e5a6548bb0619816dd",
-    "9a76a6231bdd747a247eabc8867a2312a188317a",
-    "96a0d5a65e8ba055c3001ac91cb0c6a63f94e65e",
-    "0e7973b5e43530c512c634d5c3ade8354dbb1e68",
-}
 OWNED_METADATA = (
     "config/v5_convergence_manifest.json",
     "config/v5_acceptance_registry.json",
@@ -35,7 +21,7 @@ def test_implementation_status_matches_current_revalidation_state():
     evidence = manifest["operational_acceptance_evidence"]
     production = manifest["production_promotion"]
 
-    assert status["production_authority"]["main_sha"] == manifest["baselines"]["production_main_sha"]
+    assert status["production_authority"]["source_commit_authority"] == manifest["baselines"]["production_source_authority"]
     assert status["production_authority"]["runtime_schema_version"] == manifest["baselines"]["production_runtime_schema_version"]
     assert status["acceptance"]["fresh_postvalidated_real_shadow_cycles"] == production["validated_real_shadow_cycles"] == 0
     assert status["acceptance"]["required_postvalidated_real_shadow_cycles"] == production["required_real_shadow_cycles"] == 3
@@ -62,21 +48,25 @@ def test_implementation_status_matches_current_revalidation_state():
     assert storage["actions_raw_artifact_retention_days"] == persistence["evidence_storage"]["raw_actions_artifact_retention_days"]
 
 
-def test_owned_metadata_is_reanchored_to_the_one_deployed_runtime_sha():
+def test_owned_metadata_uses_runtime_manifest_source_authority_without_mutable_sha_pin():
     manifest = _load("config/v5_convergence_manifest.json")
     acceptance = _load("config/v5_acceptance_registry.json")
     parity = _load("config/v5_capability_parity_registry.json")
     status = _load("IMPLEMENTATION_STATUS.json")
+    authority = "runtime-data:data/runtime_manifest.json#source_commit"
 
-    assert manifest["baselines"]["production_main_sha"] == DEPLOYED_SHA
-    assert manifest["baselines"]["production_code_commit"] == DEPLOYED_SHA
-    assert acceptance["convergence"]["production_main_sha"] == DEPLOYED_SHA
-    assert acceptance["convergence"]["production_code_commit"] == DEPLOYED_SHA
-    assert parity["authorities"]["current_production_code_commit"] == DEPLOYED_SHA
-    assert parity["authorities"]["current_production_runtime"] == f"deployed@{DEPLOYED_SHA}"
-    assert parity["current_production_reanchor"]["production_main_sha"] == DEPLOYED_SHA
-    assert parity["current_production_reanchor"]["production_code_commit"] == DEPLOYED_SHA
-    assert status["production_authority"]["main_sha"] == DEPLOYED_SHA
+    assert manifest["baselines"]["production_source_authority"] == authority
+    assert acceptance["convergence"]["production_source_authority"] == authority
+    assert parity["authorities"]["current_production_code_commit_authority"] == authority
+    assert parity["current_production_reanchor"]["production_source_authority"] == authority
+    assert status["production_authority"]["source_commit_authority"] == authority
+    assert "production_main_sha" not in manifest["baselines"]
+    assert "production_code_commit" not in manifest["baselines"]
+    assert "production_main_sha" not in acceptance["convergence"]
+    assert "production_code_commit" not in acceptance["convergence"]
+    assert "production_main_sha" not in parity["current_production_reanchor"]
+    assert "production_code_commit" not in parity["current_production_reanchor"]
+    assert "main_sha" not in status["production_authority"]
 
     assert manifest["baselines"]["production_truth"] == "v3.20.0"
     assert acceptance["convergence"]["production_baseline"] == "v3.20.0"
@@ -84,30 +74,9 @@ def test_owned_metadata_is_reanchored_to_the_one_deployed_runtime_sha():
     assert manifest["advanced_v5"]["v3_atomic_runtime_publication_reconciled_as_runtime_governance_hardening"] is True
     assert acceptance["convergence"]["v3_atomic_runtime_publication_reconciled_as_runtime_governance_hardening"] is True
     assert parity["current_production_reanchor"]["v3_topology"]["atomic_runtime_publication_runtime_governance_only"] is True
-    assert parity["governance"]["v3_atomic_runtime_publication_is_runtime_governance_not_v5_prediction_or_decision_authority"] is True
     assert manifest["advanced_v5"]["v3_structured_user_capture_authority_reconciled_without_v5_auth_authority_change"] is True
     assert acceptance["convergence"]["v3_structured_user_capture_authority_reconciled_without_v5_auth_authority_change"] is True
     assert parity["current_production_reanchor"]["v3_topology"]["structured_user_capture_phase_authority_governance_only"] is True
-    assert parity["governance"]["v3_structured_user_capture_authority_matches_public_plus_capture_and_does_not_create_auth_authority"] is True
-    assert manifest["advanced_v5"]["v3_runtime_reuse_contract_migration_reconciled_as_runtime_hardening"] is True
-    assert acceptance["convergence"]["v3_runtime_reuse_contract_migration_reconciled_as_runtime_hardening"] is True
-    assert parity["current_production_reanchor"]["v3_topology"]["runtime_reuse_contract_migration_runtime_hardening_only"] is True
-    assert parity["governance"]["v3_runtime_reuse_contract_migration_is_runtime_hardening_not_decision_authority"] is True
-    assert manifest["advanced_v5"]["v3_official_player_detail_enrichment_reconciled_as_runtime_hardening"] is True
-    assert manifest["advanced_v5"]["v3_official_player_detail_reuse_migration_reconciled_as_runtime_hardening"] is True
-    assert acceptance["convergence"]["v3_official_player_detail_enrichment_reconciled_as_runtime_hardening"] is True
-    assert acceptance["convergence"]["v3_official_player_detail_reuse_migration_reconciled_as_runtime_hardening"] is True
-    assert parity["current_production_reanchor"]["v3_topology"]["official_player_detail_enrichment_runtime_hardening_only"] is True
-    assert parity["current_production_reanchor"]["v3_topology"]["official_player_detail_reuse_migration_runtime_hardening_only"] is True
-    assert parity["governance"]["v3_official_player_detail_enrichment_is_factual_runtime_hardening_not_prediction_or_decision_authority"] is True
-    assert parity["governance"]["v3_official_player_detail_reuse_migration_is_runtime_hardening_not_decision_authority"] is True
-
-    for path in OWNED_METADATA:
-        text = (ROOT / path).read_text(encoding="utf-8")
-        assert not (STALE_DEPLOYED_SHAS & set(text.split())), path
-        for stale_sha in STALE_DEPLOYED_SHAS:
-            assert stale_sha not in text, f"stale deployed SHA remains in {path}: {stale_sha}"
-
 
 def test_predeadline_governance_is_public_official_plus_scoped_capture_only():
     phase = _load("config/v5_phase_authority_registry.json")

@@ -10,6 +10,7 @@ from typing import Any
 from src.v5 import V5_VERSION
 from src.v5.config_cache import load_json_config
 from src.v5.release_integrity import runtime_fingerprint
+from src.v5.production_baseline import production_source_sha
 
 MANIFEST_CONFIG = "config/v5_convergence_manifest.json"
 PARITY_CONFIG = "config/v5_shadow_parity_registry.json"
@@ -33,7 +34,7 @@ def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
 
 def _baseline() -> tuple[str, str]:
     baseline = load_json_config(MANIFEST_CONFIG).get("baselines") or {}
-    return str(baseline.get("production_truth") or ""), str(baseline.get("production_main_sha") or "")
+    return str(baseline.get("production_truth") or ""), production_source_sha()
 
 
 def _required_cycles() -> int:

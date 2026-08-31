@@ -4,6 +4,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "config" / "v5_convergence_manifest.json"
+RUNTIME_EVIDENCE_AUTHORITY = "v5-shadow-runtime:data/v5/shadow/acceptance_summary.json"
+PRODUCTION_SOURCE_AUTHORITY = "runtime-data:data/runtime_manifest.json#source_commit"
 
 
 def _manifest():
@@ -15,7 +17,7 @@ def test_production_reanchor_supersedes_prior_operational_acceptance():
     evidence = manifest["operational_acceptance_evidence"]
     promotion = manifest["production_promotion"]
     old = evidence["superseded_evidence"]
-    deployed_sha = manifest["baselines"]["production_main_sha"]
+    authority = manifest["baselines"]["production_source_authority"]
 
     assert evidence["status"] == "SUPERSEDED_BY_PRODUCTION_REANCHOR_PENDING_REVALIDATION"
     assert evidence["release_fingerprint"] is None
@@ -23,17 +25,23 @@ def test_production_reanchor_supersedes_prior_operational_acceptance():
     assert evidence["required_real_shadow_cycles"] == 3
     assert evidence["remaining_validated_cycles"] == 3
     assert evidence["operational_candidate_eligible"] is False
+    assert evidence["authority"] == RUNTIME_EVIDENCE_AUTHORITY
+    assert evidence["materialized_status_snapshot_only"] is True
 
     assert old["release_fingerprint"].startswith("sha256:")
     assert old["validated_real_shadow_cycles"] == 3
     assert old["latest_validated_at"]
-    assert deployed_sha in old["reason"]
-    assert "exact-fingerprint shadow acceptance must restart" in old["reason"].lower()
-    assert "0/3" in old["reason"]
+    assert authority == PRODUCTION_SOURCE_AUTHORITY
+    reason = old["reason"].lower()
+    assert "superseded" in reason
+    assert "runtime-data" in reason
+    assert "fresh exact-identity validation" in reason
 
     assert promotion["validated_real_shadow_cycles"] == 0
     assert promotion["required_real_shadow_cycles"] == 3
     assert promotion["operational_acceptance_complete"] is False
+    assert promotion["operational_evidence_authority"] == RUNTIME_EVIDENCE_AUTHORITY
+    assert promotion["materialized_status_snapshot_only"] is True
 
 
 def test_operational_revalidation_does_not_bypass_prediction_or_production_gates():

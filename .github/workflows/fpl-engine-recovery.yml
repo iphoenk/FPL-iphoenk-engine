@@ -35,7 +35,7 @@ jobs:
       missed_checkpoint_count: ${{ steps.watchdog.outputs.missed_checkpoint_count }}
       canonical_sha: ${{ steps.watchdog.outputs.canonical_sha }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 1
 

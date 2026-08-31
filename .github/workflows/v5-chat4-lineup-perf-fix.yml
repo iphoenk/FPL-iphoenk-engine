@@ -1,0 +1,40 @@
+name: V5 Chat4 Lineup Performance Fix
+
+on:
+  push:
+    branches:
+      - codex/v5-chat4-live-xi-parity-r2
+    paths:
+      - .github/workflows/v5-chat4-lineup-perf-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v5-chat4-live-xi-parity-r2
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+      - name: Apply performance patch
+        run: python tools/v5_chat4_lineup_perf_patch.py
+      - name: Focused correctness and performance regression
+        run: |
+          python -m pytest -q tests/test_v5_decision_governance.py tests/test_v5_current_lineup_parity_semantics.py tests/test_v5_tactical_lineup_candidate_depth.py
+      - name: Commit patch
+        run: |
+          git config user.name "iphoenk"
+          git config user.email "103485057+iphoenk@users.noreply.github.com"
+          git add src/v5/decision/lineup_optimizer.py
+          git diff --cached --check
+          git commit -m "perf(v5): precompute final-XI risk metrics"
+          git push origin HEAD:codex/v5-chat4-live-xi-parity-r2

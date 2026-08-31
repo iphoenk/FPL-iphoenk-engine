@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import itertools
 from collections import Counter
+from functools import lru_cache
 from typing import Any, Iterable, Mapping
 
 from src.v5.config_cache import load_json_config
@@ -10,6 +11,7 @@ from src.v5.decision.projection_index import gw_projection, index_player
 CONFIG = "config/v5_decision_registry.json"
 
 
+@lru_cache(maxsize=1)
 def _cfg() -> dict[str, Any]:
     data = load_json_config(CONFIG)
     if not isinstance(data.get("lineup"), dict):
@@ -251,6 +253,10 @@ def _enumerate_final_candidates(players: list[dict[str, Any]], gw: int, lineup_r
     legal_formations = {str(value) for value in lineup_rules.get("legal_formations") or ()}
     candidates: list[dict[str, Any]] = []
     all_ids = {int(player["element"]) for player in indexed}
+
+    # Enumerate the full legal XI universe using only precomputed base metrics.
+    # Bounded risk arbitration is a close-call tiebreak, so computing it for
+    # every distant candidate is both semantically unnecessary and expensive.
     for combo in itertools.combinations(indexed, starting_size):
         rows = list(combo)
         if sum(1 for player in rows if player.get("position") == "GK") != required_gk:
@@ -264,17 +270,22 @@ def _enumerate_final_candidates(players: list[dict[str, Any]], gw: int, lineup_r
             continue
         starter_metrics = [metrics[int(player["element"])] for player in rows]
         base_score = sum(item["score"] for item in starter_metrics)
-        starter_ids = {int(player["element"]) for player in rows}
-        bench_rows = [player for player in indexed if int(player["element"]) in all_ids - starter_ids]
-        risk = _lineup_risk_adjustment(rows, bench_rows, gw, lineup_cfg)
-        decision_score = base_score + _f(risk.get("adjustment"))
         candidates.append(
             {
                 "formation": formation,
                 "starters": rows,
-                "selection_score": round(decision_score, 4),
+                "selection_score": round(base_score, 4),
                 "base_score": round(base_score, 4),
-                "risk_adjustment": risk,
+                "risk_adjustment": {
+                    "enabled": False,
+                    "reason": "outside_close_call_gap",
+                    "adjustment": 0.0,
+                    "governance": {
+                        "bounded_decision_adjustment_only": True,
+                        "raw_xpts_unchanged": True,
+                        "no_artificial_attacking_formation_bonus": True,
+                    },
+                },
                 "mean": round(sum(item["mean"] for item in starter_metrics), 4),
                 "variance": round(sum(item["variance"] for item in starter_metrics), 4),
             }
@@ -284,10 +295,24 @@ def _enumerate_final_candidates(players: list[dict[str, Any]], gw: int, lineup_r
     risk_cfg = lineup_cfg.get("lineup_risk") if isinstance(lineup_cfg.get("lineup_risk"), dict) else {}
     if not bool(risk_cfg.get("enabled", False)) or not base_sorted:
         return base_sorted
+
     anchor = _f(base_sorted[0].get("base_score"))
     gap = max(0.0, _f(risk_cfg.get("close_call_rerank_gap"), 0.75))
-    close = [row for row in base_sorted if anchor - _f(row.get("base_score")) <= gap + 1e-9]
-    distant = [row for row in base_sorted if row not in close]
+    close: list[dict[str, Any]] = []
+    distant: list[dict[str, Any]] = []
+    for candidate in base_sorted:
+        if anchor - _f(candidate.get("base_score")) > gap + 1e-9:
+            distant.append(candidate)
+            continue
+        rows = candidate["starters"]
+        starter_ids = {int(player["element"]) for player in rows}
+        bench_rows = [player for player in indexed if int(player["element"]) in all_ids - starter_ids]
+        risk = _lineup_risk_adjustment(rows, bench_rows, gw, lineup_cfg)
+        enriched = dict(candidate)
+        enriched["risk_adjustment"] = risk
+        enriched["selection_score"] = round(_f(candidate.get("base_score")) + _f(risk.get("adjustment")), 4)
+        close.append(enriched)
+
     close.sort(key=lambda row: (row["selection_score"], row["base_score"], row["mean"]), reverse=True)
     return close + distant
 

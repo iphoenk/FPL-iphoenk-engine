@@ -213,12 +213,12 @@ def _lineup_risk_adjustment(
     cluster_penalty = clustered_extras * _f(cfg.get("same_team_defensive_cluster_penalty"), 0.08)
 
     defensive_route_points = sum(_defensive_route_proxy(row, gw) for row in starters)
-    total_points = sum(max(0.0, _cached_metrics(row, gw, "player_score", lineup_cfg)["mean"]) for row in starters)
+    total_points = sum(max(0.0, gw_projection(row, gw)["mean"]) for row in starters)
     route_share = defensive_route_points / total_points if total_points > 1e-9 else 0.0
     concentration_penalty = max(0.0, route_share - 0.50) * _f(cfg.get("defensive_route_concentration_penalty"), 0.06)
 
     usable_bench = [row for row in bench_rows if row.get("position") != "GK"]
-    bench_scores = [max(0.0, _cached_metrics(row, gw, "bench_score", lineup_cfg)["score"]) for row in usable_bench[:3]]
+    bench_scores = [max(0.0, player_score(row, gw, "bench_score")) for row in usable_bench[:3]]
     bench_utility = sum(bench_scores) / max(1, len(bench_scores))
     bench_bonus = min(0.12, _f(cfg.get("bench_utility_weight"), 0.03) * bench_utility / 5.0)
 

@@ -12,7 +12,12 @@ from src.sources.official_fpl import get_json
 from src.utils import DATA, atomic_json, iso_now, read_json
 
 OUT = DATA / "official_snapshot.json"
+RETRY_OUT = DATA / "official_snapshot.retry.json"
 HEALTH_OUT = DATA / "health.json"
+
+
+def _clear_retry_mirror() -> None:
+    RETRY_OUT.unlink(missing_ok=True)
 
 
 def _parallel_fetch(requests: list[tuple[str, str, int | None]], health: dict[str, Any]) -> dict[str, Any]:
@@ -108,6 +113,7 @@ def _fallback_snapshot(previous: dict[str, Any], failed_health: dict[str, Any]) 
         "fallback_never_represented_as_fresh": True,
         "fallback_requires_previously_verified_bootstrap": True,
         "fallback_banner_exact": FALLBACK_BANNER,
+        "workspace_retry_mirror_created_only_from_fresh_pull": True,
     })
     out["governance"] = governance
     return out
@@ -143,6 +149,7 @@ def run() -> dict[str, Any]:
         if not bootstrap:
             for future, key in independent_futures.items():
                 _resolve_future(future, health, key)
+            _clear_retry_mirror()
             fallback = _fallback_snapshot(previous, health.get("bootstrap") or {})
             atomic_json(HEALTH_OUT, health)
             if fallback is not None:
@@ -223,9 +230,12 @@ def run() -> dict[str, Any]:
             "fallback_never_represented_as_fresh": True,
             "fallback_requires_previously_verified_bootstrap": True,
             "fallback_banner_exact": FALLBACK_BANNER,
+            "workspace_retry_mirror_created_only_from_fresh_pull": True,
+            "workspace_retry_mirror_has_zero_publication_authority": True,
         },
     }
     atomic_json(OUT, payload)
+    atomic_json(RETRY_OUT, payload)
     atomic_json(HEALTH_OUT, health)
     return payload
 

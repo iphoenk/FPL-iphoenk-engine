@@ -109,11 +109,33 @@ def reconcile_latest_finished(raw: dict | None = None, now: datetime | None = No
     if not deadline_snapshot_path(int(gw)).exists():
         return {"status": "SKIP", "reason": "no_predeadline_snapshot", "gw": int(gw)}
     scoring_gw = phase.get("scoring_gw")
+    source_key = "event_live"
     if int(scoring_gw or -1) != int(gw):
-        return {"status": "SKIP", "reason": "raw_snapshot_does_not_carry_finished_gw_actuals", "gw": int(gw), "scoring_gw": scoring_gw}
-    live = ((raw.get("official") or {}).get("event_live") or {})
+        reconciliation_actuals = raw.get("reconciliation_actuals") or {}
+        if int(reconciliation_actuals.get("event") or -1) != int(gw):
+            return {
+                "status": "SKIP",
+                "reason": "raw_snapshot_reconciliation_actuals_event_mismatch",
+                "gw": int(gw),
+                "scoring_gw": scoring_gw,
+                "actuals_event": reconciliation_actuals.get("event"),
+            }
+        if reconciliation_actuals.get("source_key") != "reconciliation_event_live":
+            return {
+                "status": "SKIP",
+                "reason": "raw_snapshot_reconciliation_actuals_source_invalid",
+                "gw": int(gw),
+                "scoring_gw": scoring_gw,
+            }
+        source_key = "reconciliation_event_live"
+    live = ((raw.get("official") or {}).get(source_key) or {})
     if not list(live.get("elements") or []):
-        return {"status": "SKIP", "reason": "finished_live_unavailable_in_raw_snapshot", "gw": int(gw)}
+        return {
+            "status": "SKIP",
+            "reason": "finished_live_unavailable_in_raw_snapshot",
+            "gw": int(gw),
+            "actuals_source_key": source_key,
+        }
     result = reconcile_finished_gw(int(gw), live, now=now)
     if not result:
         return {"status": "SKIP", "reason": "no_predeadline_snapshot", "gw": int(gw)}
@@ -122,6 +144,7 @@ def reconcile_latest_finished(raw: dict | None = None, now: datetime | None = No
         "status": "PASS", "action": "CREATED", "gw": int(gw), "metrics": metrics,
         "model_version": result.get("model_version"), "actual_elements": result.get("actual_elements"),
         "official_start_evidence_elements": result.get("official_start_evidence_elements"),
+        "actuals_source_key": source_key,
     }
 
 
@@ -176,6 +199,8 @@ def cycle(now: datetime | None = None, raw: dict | None = None, predictions: dic
             "minutes_never_infer_started": True,
             "missing_starts_excluded_from_start_brier": True,
             "preloaded_snapshot_contract_equivalent": True,
+            "rollover_actuals_acquired_by_raw_snapshot_only": True,
+            "rollover_actuals_event_bound": True,
         },
     }
     atomic_json(OUTFILE, out)

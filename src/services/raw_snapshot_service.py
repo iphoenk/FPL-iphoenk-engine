@@ -201,6 +201,25 @@ def _projection_baseline_authority(lock: dict, phase: dict) -> dict:
     }
 
 
+def _pending_reconciliation_actuals_gw(phase: dict) -> int | None:
+    """Return a finished GW whose immutable forecast still needs Official actuals.
+
+    This is acquisition scheduling only. Validation remains the sole lifecycle
+    authority. The raw snapshot may fetch one prior event-live payload after an
+    Official rollover, but only when a leakage-safe deadline snapshot exists and
+    no immutable reconciliation archive has been created yet.
+    """
+    finished_gw = int(phase.get("last_finished_gw") or 0)
+    scoring_gw = int(phase.get("scoring_gw") or 0)
+    if not finished_gw or finished_gw == scoring_gw:
+        return None
+    deadline = DATA / "validation" / "deadline" / f"gw{finished_gw:02d}.json"
+    archive = DATA / "validation" / "archive" / "reconciled" / f"gw{finished_gw:02d}.json"
+    if deadline.exists() and not archive.exists():
+        return finished_gw
+    return None
+
+
 def run(mode: str = "daily", as_of: str | None = None) -> dict:
     """Acquire the sole Official FPL snapshot and finish purchase/sell-value reconstruction."""
     started = perf_counter()
@@ -230,12 +249,15 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         simulated=report_as_of is not None, post_deadline_reconciliation=bool(phase.get("post_deadline_reconciliation")),
     )
     submitted_gw, scoring_gw = phase["submitted_gw"], phase["scoring_gw"]
+    reconciliation_gw = _pending_reconciliation_actuals_gw(phase)
 
     dependent_specs = []
     if submitted_gw:
         dependent_specs.append(("picks", f"entry/{TEAM_ID}/event/{submitted_gw}/picks/", API_RETRIES))
     if scoring_gw:
         dependent_specs.append(("event_live", f"event/{scoring_gw}/live/", API_RETRIES))
+    if reconciliation_gw:
+        dependent_specs.append(("reconciliation_event_live", f"event/{reconciliation_gw}/live/", API_RETRIES))
     wave_started = perf_counter()
     dependent = _parallel_official_get(dependent_specs)
     dependent_wave_ms = round((perf_counter() - wave_started) * 1000, 2)
@@ -244,6 +266,15 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
     payloads = {key: pair[0] for key, pair in fetched.items()}
     health = {key: pair[1] for key, pair in fetched.items()}
     _normalize_endpoint_health(health, payloads, submitted_gw, scoring_gw, bool(phase.get("is_live_match")))
+    reconciliation_actuals = (
+        {
+            "event": int(reconciliation_gw),
+            "source_key": "reconciliation_event_live",
+            "endpoint_status": (health.get("reconciliation_event_live") or {}).get("status"),
+        }
+        if reconciliation_gw
+        else None
+    )
 
     teams, positions, by_id = maps(bootstrap)
     lock = read_json(CONFIG / "locked_squad.json", {})
@@ -298,6 +329,7 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
         "team_id": TEAM_ID,
         "official": payloads,
         "endpoint_health": health,
+        "reconciliation_actuals": reconciliation_actuals,
         "authority_policy": {"primary": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE", "public_official": "UNIVERSAL_FACTUAL_BACKBONE", "user_capture": "PRIVATE_PREDEADLINE_OVERRIDE", "authenticated_official": "OPTIONAL_PRIVATE_ENRICHMENT", "authenticated_official_production_blocking": False},
         "squad_authority": projection_baseline["effective_authority"],
         "projection_baseline": projection_baseline,
@@ -313,6 +345,8 @@ def run(mode: str = "daily", as_of: str | None = None) -> dict:
             "dependent_requests": len(dependent_specs),
             "bootstrap_overlapped_with_independent_official_endpoints": True,
             "official_snapshot_refreshed_this_run": True,
+            "reconciliation_event_live_requested": bool(reconciliation_gw),
+            "reconciliation_event": int(reconciliation_gw) if reconciliation_gw else None,
         },
         "duration_ms": total_ms,
     }

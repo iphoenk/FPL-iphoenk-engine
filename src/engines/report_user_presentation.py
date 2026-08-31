@@ -121,14 +121,23 @@ def resolve_report_checkpoint(
     current_slot: dict[str, Any] | None = None
     missed_due: list[dict[str, Any]] = []
     recovered_late: list[dict[str, Any]] = []
+    newly_recovered_late: list[dict[str, Any]] = []
     timeline: list[dict[str, Any]] = []
     for row in slots_today:
         slot_id = row["id"]
         scheduled = row["scheduled"]
         completed = slot_id in completed_today
         if completed:
-            previous_status = str((completed_records.get(slot_id) or {}).get("status") or "COMPLETED")
+            completed_record = completed_records.get(slot_id) or {}
+            previous_status = str(completed_record.get("status") or "COMPLETED")
             state_label = "LATE_RECOVERED" if previous_status == "LATE_RECOVERED" else "COMPLETED"
+            if previous_status == "LATE_RECOVERED":
+                recovered_late.append({
+                    "id": slot_id,
+                    "label": row["label"],
+                    "scheduled_local": str(completed_record.get("scheduled_local") or scheduled.isoformat()),
+                    "recovered_local": str(completed_record.get("generated_local") or ""),
+                })
         elif local_now < scheduled:
             state_label = "PENDING"
         elif local_now <= scheduled + grace:
@@ -150,12 +159,14 @@ def resolve_report_checkpoint(
             completed_today.add(slot_id)
             completed_records[slot_id] = entry
             state_label = "LATE_RECOVERED"
-            recovered_late.append({
+            recovered_summary = {
                 "id": slot_id,
                 "label": row["label"],
                 "scheduled_local": scheduled.isoformat(),
                 "recovered_local": local_now.isoformat(),
-            })
+            }
+            recovered_late.append(recovered_summary)
+            newly_recovered_late.append(recovered_summary)
         else:
             state_label = "MISSED"
             missed_due.append({
@@ -198,8 +209,8 @@ def resolve_report_checkpoint(
             "generated_local": local_now.isoformat(),
             "timeliness": "ON_TIME_WINDOW",
         }
-    elif recovered_late:
-        recovered = recovered_late[-1]
+    elif newly_recovered_late:
+        recovered = newly_recovered_late[-1]
         current = {
             "kind": "RECOVERED_CHECKPOINT",
             "id": recovered["id"],
@@ -207,7 +218,7 @@ def resolve_report_checkpoint(
             "scheduled_local": recovered["scheduled_local"],
             "generated_local": local_now.isoformat(),
             "timeliness": "LATE_RECOVERED",
-            "recovered_checkpoint_ids": [row["id"] for row in recovered_late],
+            "recovered_checkpoint_ids": [row["id"] for row in newly_recovered_late],
         }
     else:
         current = {

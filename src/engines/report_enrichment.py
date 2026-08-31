@@ -90,7 +90,7 @@ def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
             "pundit_consensus": "FPL Harry, FPL Focal, Let's Talk FPL, BigManBakar, dan Scout editorial dibandingkan dengan DSS",
             "community": "Reddit r/FantasyPL dipakai sebagai sinyal komunitas yang wajib cross-check",
         },
-        "catatan": "External benchmark tidak mengubah native truth/DSS. LiveFPL retired dari V3; factual divergence memicu refresh Official, bukan overwrite external.",
+        "catatan": "External benchmark tidak mengubah native truth/DSS. Sumber yang telah dipensiunkan tidak ditampilkan sebagai evidence V3; factual divergence memicu refresh Official, bukan overwrite external.",
     }
 
 

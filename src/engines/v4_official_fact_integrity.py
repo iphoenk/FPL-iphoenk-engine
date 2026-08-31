@@ -237,7 +237,7 @@ def build_publication_integrity(
     framework_health: dict | None = None,
     weather: dict | None = None,
     authoritative_owned_ids: Iterable[Any] | None = None,
-    require_authoritative_owned_ids: bool = False,
+    require_authoritative_owned_ids: bool = True,
 ) -> dict:
     """Evaluate complete USER_REPORT eligibility without changing decision authority."""
     framework_health = framework_health or {}
@@ -245,6 +245,8 @@ def build_publication_integrity(
     endpoint_health = latest.get("endpoint_health") or {}
     owned = list(tactical.get("owned") or [])
     watchlist = list(tactical.get("watchlist") or [])
+    if authoritative_owned_ids is None:
+        authoritative_owned_ids = tactical.get("authoritative_owned_ids")
 
     watchlist_counts, watchlist_expected = _watchlist_contract()
     owned_expected = sum(int(count) for count in POSITION_COUNTS.values())

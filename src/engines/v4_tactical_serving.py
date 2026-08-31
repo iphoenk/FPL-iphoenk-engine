@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+from src.engines.fpl_rules_2026 import POSITION_COUNTS
 from src.engines.v4_official_fact_integrity import extract_public_fact
 from src.utils import CONFIG, DATA, read_json
 
@@ -103,10 +104,23 @@ def _prediction_score(pred: dict) -> float:
     return x5 + 0.20 * x15 + 0.65 * start + 0.30 * value - 0.35 * uncertainty
 
 
-def governed_watchlist(predictions: dict, universe: dict, owned_ids: set[int], previous: dict | None = None) -> dict:
+def _watchlist_policy() -> tuple[int, list[str]]:
     policy = (read_json(POLICY, {}) or {}).get("watchlist") or {}
-    exact = int(policy.get("exact_per_position") or 5)
-    positions = list(policy.get("positions") or ["GK", "DEF", "MID", "FWD"])
+    exact = int(policy.get("exact_per_position") or 0)
+    positions = [str(position) for position in (policy.get("positions") or [])]
+    if exact <= 0 or not positions or len(set(positions)) != len(positions):
+        raise RuntimeError("invalid governed watchlist policy")
+    invalid = [position for position in positions if position not in POSITION_COUNTS]
+    if invalid:
+        raise RuntimeError(f"invalid governed watchlist positions: {invalid}")
+    if policy.get("exclude_owned") is not True:
+        raise RuntimeError("governed watchlist policy must exclude owned players")
+    return exact, positions
+
+
+def governed_watchlist(predictions: dict, universe: dict, owned_ids: set[int], previous: dict | None = None) -> dict:
+    exact, positions = _watchlist_policy()
+    expected_total = exact * len(positions)
     umap = {int(row.get("element") or 0): row for row in universe.get("players") or [] if row.get("element") is not None}
     groups: dict[str, list[dict]] = defaultdict(list)
     for pred in predictions.get("players") or []:
@@ -134,8 +148,8 @@ def governed_watchlist(predictions: dict, universe: dict, owned_ids: set[int], p
         if len(rows) != exact:
             raise RuntimeError(f"governed watchlist requires exactly {exact} {position}, got {len(rows)}")
         selected.extend(rows)
-    if len(selected) != exact * len(positions):
-        raise RuntimeError("governed watchlist must contain exactly 20 external players")
+    if len(selected) != expected_total:
+        raise RuntimeError(f"governed watchlist must contain exactly {expected_total} external players")
     previous_ids = {int(row.get("element") or 0) for row in (previous or {}).get("watchlist") or []}
     selected_ids = {row["element"] for row in selected}
     exited = sorted(previous_ids - selected_ids)
@@ -147,7 +161,8 @@ def governed_watchlist(predictions: dict, universe: dict, owned_ids: set[int], p
         "watchlist": selected,
         "exited_elements": exited,
         "counts": {position: sum(row["position"] == position for row in selected) for position in positions},
-        "exact_20": len(selected) == 20,
+        "expected_total": expected_total,
+        "exact_20": len(selected) == expected_total,
         "owned_excluded": not bool(selected_ids & owned_ids),
     }
 
@@ -157,8 +172,9 @@ def build_tactical_serving(predictions: dict, universe: dict, team: dict, extern
     pmap = {int(row.get("element") or 0): row for row in predictions.get("players") or [] if row.get("element") is not None}
     umap = {int(row.get("element") or 0): row for row in universe.get("players") or [] if row.get("element") is not None}
     owned_ids = {int(row.get("element") or 0) for row in team.get("squad") or []}
-    if len(owned_ids) != 15:
-        raise RuntimeError(f"tactical serving requires exact 15 owned, got {len(owned_ids)}")
+    owned_expected = sum(int(count) for count in POSITION_COUNTS.values())
+    if len(owned_ids) != owned_expected:
+        raise RuntimeError(f"tactical serving requires exact {owned_expected} owned, got {len(owned_ids)}")
     watch = governed_watchlist(predictions, universe, owned_ids, previous)
     owned_rows = []
     for element in sorted(owned_ids):
@@ -195,15 +211,17 @@ def build_tactical_serving(predictions: dict, universe: dict, team: dict, extern
             "tactical": _compact_tactical(pred, uni, external),
         })
     return {
-        "schema_version": 4961,
+        "schema_version": 4962,
         "contract": "TACTICAL_SERVING_15_20_V1",
+        "authoritative_owned_ids": sorted(owned_ids),
         "owned": owned_rows,
         "watchlist": watch_rows,
         "exited_watchlist_elements": watch["exited_elements"],
         "counts": {"owned": len(owned_rows), "watchlist": len(watch_rows), **watch["counts"]},
         "guardrails": {
-            "exact_15_owned": len(owned_rows) == 15,
-            "exact_20_watchlist": len(watch_rows) == 20,
+            "exact_15_owned": len(owned_rows) == owned_expected,
+            "exact_20_watchlist": len(watch_rows) == watch["expected_total"],
+            "owned_authority_ids_embedded": True,
             "owned_excluded_from_watchlist": watch["owned_excluded"],
             "official_fact_hydration_element_id_based": True,
             "official_fact_hydration_from_canonical_universe": True,

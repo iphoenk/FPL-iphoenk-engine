@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "registry": "REPORT_ARTIFACT_REGISTRY_V3",
   "consumer_contract": {
     "owned_count": 15,
@@ -19,12 +19,14 @@
     "report_checkpoint_required": true,
     "historical_gw_must_be_official_actual": true,
     "planning_gw_must_be_labelled_projection": true,
-    "pundit_consensus_must_include_dss_alignment": true
+    "pundit_consensus_must_include_dss_alignment": true,
+    "price_radar_requires_all15_predictor_detail": true,
+    "price_radar_requires_mandatory_challenger_detail": true
   },
   "artifacts": {
     "decision_brief": {"path":"data/decision_brief.json","consumer":"chatgpt-fast","priority":"P0","lazy_load":false,"max_bytes":80000,"required_owned_count":15,"required_watchlist_count":20,"required_sections":["user_presentation","report_checkpoint","gameweek_context","report_time_intelligence","model_validation","weather_context"]},
-    "deep_review_payload": {"path":"data/deep_review_payload.json","consumer":"chatgpt-deep-review","priority":"P0","lazy_load":false,"max_bytes":155000,"required_owned_count":15,"required_watchlist_count":20,"required_sections":["user_presentation","report_checkpoint","gameweek_context","report_time_intelligence","model_validation","weather_context"]},
-    "user_report": {"path":"data/user_report.json","consumer":"human-report-contract","priority":"P0","lazy_load":false,"max_bytes":155000,"required_owned_count":15,"required_watchlist_count":20,"required_sections":["user_presentation","report_checkpoint","gameweek_context","report_time_intelligence","model_validation","weather_context"]},
+    "deep_review_payload": {"path":"data/deep_review_payload.json","consumer":"chatgpt-deep-review","priority":"P0","lazy_load":false,"max_bytes":225000,"required_owned_count":15,"required_watchlist_count":20,"required_sections":["user_presentation","report_checkpoint","gameweek_context","report_time_intelligence","model_validation","weather_context"]},
+    "user_report": {"path":"data/user_report.json","consumer":"human-report-contract","priority":"P0","lazy_load":false,"max_bytes":225000,"required_owned_count":15,"required_watchlist_count":20,"required_sections":["user_presentation","report_checkpoint","gameweek_context","report_time_intelligence","model_validation","weather_context"]},
     "watchlist_summary": {"path":"data/dss_watchlist_summary.json","consumer":"chatgpt-watchlist","priority":"P0","lazy_load":false,"max_bytes":32000,"required_watchlist_count":20},
     "technical_appendix": {"path":"data/technical_appendix.json","consumer":"debug-audit","priority":"P2","lazy_load":true},
     "full_dss_watchlist": {"path":"data/dss_watchlist.json","consumer":"debug-audit","priority":"P2","lazy_load":true},
@@ -42,6 +44,7 @@
     "technical_artifacts_are_lazy_loaded": true,
     "chatgpt_default_reads_decision_brief_or_deep_review_payload": true,
     "payload_limits_are_fail_closed_for_p0_serving_artifacts": true,
+    "p0_payload_budget_expanded_for_governed_all15_and_mandatory_challenger_price_evidence": true,
     "report_time_sources_are_refreshed_by_chat_report_orchestration_not_collector": true,
     "pundit_consensus_is_advisory_and_never_mutates_dss": true,
     "weather_context_is_advisory_and_never_mutates_dss": true,

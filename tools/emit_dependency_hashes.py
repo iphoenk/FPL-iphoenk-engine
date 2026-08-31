@@ -56,10 +56,19 @@ def emit(lockfiles: list[Path]) -> str:
 
     with tempfile.TemporaryDirectory(prefix="v3-lock-hashes-") as tmp:
         target = Path(tmp)
-        for _, _, spec in requirements.values() if False else []:
-            pass
         specs = list(requirements.values())
-        cmd = [sys.executable, "-m", "pip", "download", "--disable-pip-version-check", "--no-deps", "--only-binary=:all:", "--dest", str(target), *specs]
+        cmd = [
+            sys.executable,
+            "-m",
+            "pip",
+            "download",
+            "--disable-pip-version-check",
+            "--no-deps",
+            "--only-binary=:all:",
+            "--dest",
+            str(target),
+            *specs,
+        ]
         subprocess.run(cmd, check=True)
 
         wheel_hashes: dict[tuple[str, str], str] = {}

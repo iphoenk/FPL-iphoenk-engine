@@ -51,7 +51,7 @@ def effective_planning_squad(team: dict, configured_lock: dict, latest: dict) ->
     target_raw = configured_lock.get("target_gw")
     target_gw = int(target_raw) if target_raw is not None else None
     authority = str(team.get("squad_authority") or "")
-    targeted_override = authority == "LOCKED_PRE_DEADLINE" and target_gw == planning_gw
+    targeted_override = authority in {"LOCKED_PRE_DEADLINE", "USER_CAPTURE_PREDEADLINE"} and target_gw == planning_gw
     wildcard_for_planning = bool(configured_lock.get("wildcard_active")) and targeted_override
     return {
         "players": players,

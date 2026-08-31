@@ -4,7 +4,6 @@ from typing import Any
 
 from src.v5.decision.watchlist import build_watchlist
 from src.v5.decision.tactical_consumption import close_group_sort, compact_tactical, watchlist_gap
-from src.v5.price_squeeze import attach_watchlist_price_evidence
 
 
 def _tactical_overlay(payload: dict[str, Any], prediction: dict[str, Any]) -> dict[str, Any]:
@@ -41,6 +40,8 @@ def _tactical_overlay(payload: dict[str, Any], prediction: dict[str, Any]) -> di
             "tactical_tiebreak_close_screened_pool_only": True,
             "tactical_membership_promotion_forbidden": True,
             "tactical_reranked_position_count": reranked,
+            "price_business_logic_imported": False,
+            "price_evidence_binding_owned_by_price_service": True,
         },
     }
 
@@ -52,7 +53,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "model": "full_dss_watchlist_v5_v3_tactical_consumption",
             "operations": ["build"],
             "tactical_consumption": "CLOSE_CALL_ONLY",
-            "price_evidence": "POST_SELECTION_OVERLAY_ONLY",
+            "price_evidence": "BOUND_BY_PRICE_SERVICE_AFTER_SELECTION",
         }
     if operation != "build":
         raise KeyError(f"unsupported watchlist operation: {operation}")
@@ -60,9 +61,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     truth = payload.get("truth") if isinstance(payload.get("truth"), dict) else {}
     team = truth.get("team") if isinstance(truth.get("team"), dict) else {}
     dss = payload.get("dss") if isinstance(payload.get("dss"), dict) else {}
-    price = payload.get("price") if isinstance(payload.get("price"), dict) else {}
     if not prediction or not team:
         raise ValueError("watchlist service requires prediction and truth team")
     base = build_watchlist(prediction, team, dss)
-    tactical = _tactical_overlay(base, prediction)
-    return attach_watchlist_price_evidence(tactical, price, team.get("owned_ids") or [])
+    return _tactical_overlay(base, prediction)

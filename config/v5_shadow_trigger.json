@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "operational-revalidation-3253b546-cycle-1-20260831T042756Z",
-  "requested_at": "2026-08-31T04:27:56Z",
+  "requested_cycle": "scheduler-33384849068-1788173968",
+  "requested_at": "2026-08-31T10:59:28Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "accepted_production_baseline_from_manifest",
   "v5_role": "shadow_only",
@@ -25,7 +25,8 @@
   "understat_role": "challenger",
   "api_football_role": "cross_competition_enrichment",
   "scheduler_reasons": [
-    "PRODUCTION_REANCHOR_REVALIDATION"
+    "PRODUCTION_REANCHOR_REVALIDATION",
+    "V5_RELEASE_REVALIDATION"
   ],
-  "scheduler_source": "manual-governed-operational-revalidation"
+  "scheduler_source": "default-branch-thin-dispatcher"
 }

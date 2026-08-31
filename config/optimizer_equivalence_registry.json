@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "registry": "v4_optimizer_equivalence_v1",
+  "production": {
+    "decision_optimizer": "src.engines.v4_wc_optimizer_fast.decision_report_from_candidates_fast",
+    "package_audit": "src.engines.v4_wc_package_audit_fast.audit_packages_from_candidates_fast"
+  },
+  "reference": {
+    "decision_optimizer": "src.engines.v4_wc_optimizer.decision_report_from_candidates",
+    "package_audit": "src.engines.v4_wc_package_audit",
+    "runtime_authority": false,
+    "purpose": "read_only_semantic_equivalence_oracle"
+  },
+  "required_equivalence_suites": [
+    "tests/test_v493_wc_optimizer_fast.py",
+    "tests/test_v493_package_audit_fast.py",
+    "tests/test_v493_package_audit_fast_regression.py"
+  ],
+  "guardrails": {
+    "optimizer_search_width_reduction_forbidden": true,
+    "reference_runtime_execution_forbidden": true,
+    "fast_path_semantic_drift_forbidden": true,
+    "stable_tie_semantics_required": true,
+    "affordability_semantics_must_match": true
+  }
+}

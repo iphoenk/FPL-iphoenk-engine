@@ -27,12 +27,20 @@ def _fact_map(integrity: dict[str, Any]) -> dict[int, dict[str, Any]]:
 
 
 def _apply_fact(row: dict[str, Any], facts: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    """Replace public FACT fields while keeping serving provenance compact.
+
+    Detailed source/freshness provenance is carried once at report level. Each
+    player row keeps the canonical element id, authority class and snapshot ref,
+    which is sufficient to audit that all 35 rows came from the same snapshot
+    without duplicating verbose metadata 35 times.
+    """
     if row.get("element") is None:
         return row
     element = int(row["element"])
     fact = facts.get(element)
     if not fact:
         return row
+    provenance = fact.get("official_fact_provenance") or {}
     out = dict(row)
     out.update({
         "element": element,
@@ -41,14 +49,10 @@ def _apply_fact(row: dict[str, Any], facts: dict[int, dict[str, Any]]) -> dict[s
         "team": fact.get("team"),
         "position": fact.get("position"),
         "price": fact.get("current_price"),
-        "current_official_price": fact.get("current_price"),
-        "now_cost": fact.get("now_cost"),
         "ownership_pct": fact.get("current_ownership_pct"),
-        "current_official_ownership_pct": fact.get("current_ownership_pct"),
-        "selected_by_percent": fact.get("selected_by_percent"),
         "status": fact.get("status"),
         "fact_authority": PUBLIC_OFFICIAL_FACT,
-        "official_fact_provenance": fact.get("official_fact_provenance"),
+        "official_fact_snapshot_id": provenance.get("snapshot_id"),
     })
     return out
 
@@ -80,12 +84,21 @@ def _patch_report_payload(payload: dict[str, Any], facts: dict[int, dict[str, An
         out["positions"] = _apply_position_rows(out.get("positions") or {}, facts)
 
     gate = integrity.get("publication_integrity") or {}
+    snapshot = integrity.get("official_snapshot") or {}
     out["official_fact_integrity"] = {
         "status": gate.get("status"),
         "owned": (integrity.get("owned") or {}).get("visible_gate"),
         "watchlist": (integrity.get("watchlist") or {}).get("visible_gate"),
-        "snapshot_id": (integrity.get("official_snapshot") or {}).get("snapshot_id"),
-        "freshness_state": (integrity.get("official_snapshot") or {}).get("freshness_state"),
+        "authority": PUBLIC_OFFICIAL_FACT,
+        "source": snapshot.get("source"),
+        "snapshot_id": snapshot.get("snapshot_id"),
+        "fetched_at": snapshot.get("fetched_at"),
+        "freshness_state": snapshot.get("freshness_state"),
+        "fallback": snapshot.get("fallback"),
+        "fallback_banner": snapshot.get("fallback_banner"),
+        "last_verified_at": snapshot.get("last_verified_at"),
+        "age_seconds": snapshot.get("age_seconds"),
+        "confidence": snapshot.get("confidence"),
         "fact_model_separation": {
             "current_price": "FACT",
             "current_ownership": "FACT",

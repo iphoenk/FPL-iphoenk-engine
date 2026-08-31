@@ -4,7 +4,6 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
-from src.engines.owned_challenger_comparator import build as build_comparator
 from src.utils import DATA, atomic_json, parse_dt, read_json, utcnow
 
 OUT = DATA / "decision_validation_snapshots.json"
@@ -44,6 +43,16 @@ def _compact_comparisons(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return rows[:20]
 
 
+def _persisted_comparator() -> dict[str, Any]:
+    watchlist = read_json(DATA / "dss_watchlist.json", {})
+    comparator = watchlist.get("owned_challenger_decision") or {}
+    if comparator.get("contract") != "OWNED_CHALLENGER_DECISION_V3":
+        raise RuntimeError("prediction snapshot requires persisted governed owned challenger decision")
+    if ((comparator.get("publication_validation") or {}).get("status")) != "PASS":
+        raise RuntimeError("prediction snapshot refuses unvalidated owned challenger decision")
+    return comparator
+
+
 def run() -> dict[str, Any]:
     latest = read_json(DATA / "latest.json", {})
     lineup = read_json(DATA / "lineup_decision.json", {})
@@ -62,7 +71,7 @@ def run() -> dict[str, Any]:
         atomic_json(OUT, payload)
         return {"status": "NO_PREDEADLINE_CAPTURE", "planning_gw": planning_gw}
 
-    comparator = build_comparator()
+    comparator = _persisted_comparator()
     xi = []
     for row in lineup.get("starting_xi") or []:
         element = _i(row.get("element"))
@@ -106,7 +115,8 @@ def run() -> dict[str, Any]:
         },
         "comparator": {
             "contract": comparator.get("contract"),
-            "advisory_only": True,
+            "capability_status": comparator.get("capability_status"),
+            "decision": comparator.get("decision") or {},
             "comparisons": _compact_comparisons(comparator),
         },
         "governance": {
@@ -118,6 +128,7 @@ def run() -> dict[str, Any]:
             "historical_snapshots_are_not_retrofitted": True,
             "reporting_owns_snapshot_capture": True,
             "prediction_evaluation_is_consumer_only": True,
+            "challenger_decision_is_persisted_not_recomputed": True,
         },
     }
     records[str(planning_gw)] = record

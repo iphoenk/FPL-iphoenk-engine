@@ -30,6 +30,7 @@ _CANONICAL_DOMAINS = (
     "official_state",
     "personal_team_state",
     "football_context",
+    "weather_context",
     "market_context",
     "prediction",
     "squad_decision",

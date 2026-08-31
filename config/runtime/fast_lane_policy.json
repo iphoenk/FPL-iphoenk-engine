@@ -1,11 +1,11 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "registry": "V3_FAST_LANE_POLICY_V1",
   "profiles": ["fast_decision"],
   "execution_boundary": "IN_PROCESS_COALESCED",
   "hard_wall_ms": 3000,
   "warning_wall_ms": 2800,
-  "required_execution_domains": 11,
+  "required_execution_domains": 12,
   "required_capability_owners": 22,
   "consecutive_candidate_runs": 3,
   "fail_closed_after_partial_execution": true,
@@ -14,7 +14,8 @@
   "preserve_artifact_validation": true,
   "preserve_material_decision_semantics": true,
   "preserve_full_deep_live_paths": true,
-  "weather_context_reuses_existing_execution_domain": true,
+  "weather_context_is_explicit_execution_domain": true,
+  "weather_context_reuses_existing_execution_domain": false,
   "weather_context_adds_no_fast_lane_process_boundary": true,
   "donor_patterns": {
     "v4_hot_orchestrator": "ADOPTED_SINGLE_PROCESS_BOUNDARY",

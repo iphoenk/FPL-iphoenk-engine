@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from src.engines.official_fact_completeness import (
     FALLBACK_BANNER,
+    RESOLVER_METHOD,
     build_public_official_fact_integrity,
     require_complete_user_report,
 )
-from src.engines.official_fact_publication_gate import _apply_fact
+from src.engines.official_fact_publication_gate import _apply_fact, _fact_map, _patch_report_payload
 from src.engines.official_snapshot_service import _fallback_snapshot
 
 
@@ -79,6 +81,12 @@ def test_15_15_owned_and_20_20_watchlist_happy_path_is_publishable():
     assert integrity["watchlist"]["resolved"] == 20
     assert integrity["watchlist"]["official_fact_complete"] == 20
     assert integrity["watchlist"]["position_counts"] == {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
+    assert integrity["resolver"] == {
+        "method": RESOLVER_METHOD,
+        "expected": 35,
+        "provenance_complete": 35,
+        "status": "PASS",
+    }
     assert integrity["publication_integrity"]["status"] == "PASS"
     assert integrity["publication_integrity"]["complete_user_report_allowed"] is True
     require_complete_user_report(integrity)
@@ -100,6 +108,7 @@ def test_one_owned_row_unresolved_blocks_publication():
     integrity = _integrity(snapshot=snapshot)
     assert integrity["owned"]["resolved"] == 14
     assert "ELEMENT_ID_UNRESOLVED" in _codes(integrity)
+    assert "RESOLVER_PROVENANCE_INCOMPLETE" in _codes(integrity)
     with pytest.raises(RuntimeError, match="USER_REPORT BLOCKED"):
         require_complete_user_report(integrity)
 
@@ -164,6 +173,21 @@ def test_same_snapshot_provenance_is_used_for_all_35_public_fact_rows():
     assert len(rows) == 35
 
 
+def test_element_id_resolver_provenance_is_auditable_for_all_35_rows():
+    integrity = _integrity()
+    rows = integrity["owned"]["rows"] + integrity["watchlist"]["rows"]
+    assert integrity["health"]["Element-ID Resolver"] == "PASS"
+    assert integrity["resolver"]["provenance_complete"] == 35
+    for row in rows:
+        resolver = row["resolver_provenance"]
+        assert resolver["resolver"] == RESOLVER_METHOD
+        assert resolver["lookup_key"] == "element_id"
+        assert resolver["requested_element_id"] == row["element_id"]
+        assert resolver["resolved_element_id"] == row["element_id"]
+        assert resolver["resolved"] is True
+        assert resolver["snapshot_id"] == integrity["official_snapshot"]["snapshot_id"]
+
+
 def test_publication_fact_overlay_overwrites_stale_fact_but_preserves_model_fields():
     integrity = _integrity()
     fact = integrity["owned"]["rows"][0]
@@ -184,6 +208,48 @@ def test_publication_fact_overlay_overwrites_stale_fact_but_preserves_model_fiel
     assert patched["selection_score"] == 7.7
     assert patched["lineup_status"] == "START"
     assert patched["fact_authority"] == "PUBLIC_OFFICIAL_FACT"
+    assert patched["resolver_provenance"]["requested_element_id"] == 1
+    assert patched["resolver_provenance"]["resolved_element_id"] == 1
+
+
+def test_o_fact_hydration_does_not_change_squad_xi_c_vc_chip_or_transfer_semantics():
+    integrity = _integrity()
+    facts = _fact_map(integrity)
+    payload = {
+        "decision": {
+            "squad": "HOLD",
+            "starting_xi": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            "captain": 1,
+            "vice_captain": 2,
+            "chip": "NO_CHIP",
+            "transfer": {"action": "HOLD", "hits": 0},
+        },
+        "captaincy": {"captain": 1, "vice_captain": 2, "confidence": "HIGH"},
+        "chip_strategy": {"recommended_chip": "NO_CHIP", "reason": "structural hold"},
+        "transfer_plan": {"action": "HOLD", "out": [], "in": [], "hit": 0},
+        "owned_15": [
+            {"element": i, "lineup_status": "START" if i <= 11 else "BENCH", "xpts_gw": float(i)}
+            for i in range(1, 16)
+        ],
+        "watchlist_20": deepcopy(_watchlist()),
+    }
+    decision_before = deepcopy(payload["decision"])
+    captaincy_before = deepcopy(payload["captaincy"])
+    chip_before = deepcopy(payload["chip_strategy"])
+    transfer_before = deepcopy(payload["transfer_plan"])
+    lineup_before = {row["element"]: row["lineup_status"] for row in payload["owned_15"]}
+    xpts_before = {row["element"]: row["xpts_gw"] for row in payload["owned_15"]}
+
+    patched = _patch_report_payload(payload, facts, integrity)
+
+    assert patched["decision"] == decision_before
+    assert patched["captaincy"] == captaincy_before
+    assert patched["chip_strategy"] == chip_before
+    assert patched["transfer_plan"] == transfer_before
+    assert {row["element"]: row["lineup_status"] for row in patched["owned_15"]} == lineup_before
+    assert {row["element"]: row["xpts_gw"] for row in patched["owned_15"]} == xpts_before
+    assert all(row["fact_authority"] == "PUBLIC_OFFICIAL_FACT" for row in patched["owned_15"])
+    assert all(row["resolver_provenance"]["resolved_element_id"] == row["element"] for row in patched["owned_15"])
 
 
 def test_verified_fallback_keeps_exact_banner_never_claims_fresh_and_degrades_publication():

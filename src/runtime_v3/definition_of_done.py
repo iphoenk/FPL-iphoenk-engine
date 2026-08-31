@@ -316,19 +316,26 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
     _check(rows, "SELECTED_PROFILE_RUNTIME_GREEN", runtime_ok, runtime_detail)
     capability_registry = read_json(ROOT / "config" / "v3_service_registry.json", {})
     expected_capability_count = len(capability_registry.get("services") or {})
+    domain_registry = read_json(ROOT / "config" / "runtime" / "execution_domains.json", {})
+    expected_domain_count = int(domain_registry.get("domain_count") or 0)
+    expected_phase_count = int(domain_registry.get("phase_count") or 0)
     canonical_runtime = (
-        int(runtime.get("execution_domain_count") or 0) == 11
-        and int(runtime.get("execution_phase_count") or 0) == 6
+        expected_domain_count > 0
+        and expected_phase_count > 0
+        and int(runtime.get("execution_domain_count") or 0) == expected_domain_count
+        and int(runtime.get("execution_phase_count") or 0) == expected_phase_count
         and expected_capability_count > 0
         and int(runtime.get("capability_owner_count") or 0) == expected_capability_count
     )
     _check(
         rows,
-        "CANONICAL_11_DOMAIN_6_PHASE_RUNTIME",
+        "CANONICAL_REGISTRY_OWNED_DOMAIN_PHASE_RUNTIME",
         canonical_runtime,
         {
             "domains": runtime.get("execution_domain_count"),
+            "expected_domains": expected_domain_count,
             "phases": runtime.get("execution_phase_count"),
+            "expected_phases": expected_phase_count,
             "owners": runtime.get("capability_owner_count"),
             "expected_owners": expected_capability_count,
         },

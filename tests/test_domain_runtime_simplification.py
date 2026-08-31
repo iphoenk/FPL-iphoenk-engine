@@ -11,10 +11,10 @@ def test_canonical_domains_cover_every_background_capability_exactly_once():
     services = json.loads((ROOT / "config/v3_service_registry.json").read_text())
     assert domains["registry"] == "V3_EXECUTION_DOMAINS_V2"
     assert domains["phase_count"] == 6
-    assert domains["domain_count"] == 11
+    assert domains["domain_count"] == 12
     assert domains["canonical_phases"] == {
         "ACQUIRE": ["official_state", "personal_team_state"],
-        "ENRICH": ["football_context", "market_context"],
+        "ENRICH": ["football_context", "weather_context", "market_context"],
         "MODEL": ["prediction"],
         "DECISION": ["squad_decision", "challenger_analysis"],
         "GOVERNANCE": ["framework_governance", "prediction_validation"],
@@ -24,6 +24,7 @@ def test_canonical_domains_cover_every_background_capability_exactly_once():
         "official_state",
         "personal_team_state",
         "football_context",
+        "weather_context",
         "market_context",
         "prediction",
         "squad_decision",
@@ -43,8 +44,11 @@ def test_canonical_domains_cover_every_background_capability_exactly_once():
 def test_canonical_domain_boundaries_prevent_responsibility_leakage():
     registry = json.loads((ROOT / "config/runtime/execution_domains.json").read_text())
     domains = registry["domains"]
-    assert "weather_context" in domains["football_context"]["capabilities"]
-    assert "weather_context" not in domains
+    assert "weather_context" not in domains["football_context"]["capabilities"]
+    assert domains["weather_context"]["phase"] == "ENRICH"
+    assert domains["weather_context"]["capabilities"] == ["weather_context"]
+    assert domains["weather_context"]["depends_on"] == ["football_context"]
+    assert domains["prediction"]["depends_on"] == ["weather_context"]
     assert domains["prediction"]["capabilities"] == ["prediction"]
     assert domains["squad_decision"]["capabilities"] == ["lineup_governance"]
     assert domains["challenger_analysis"]["capabilities"] == ["challenger"]
@@ -57,7 +61,10 @@ def test_canonical_domain_boundaries_prevent_responsibility_leakage():
     assert registry["policy"]["prediction_validation_gates_publication"] is True
     assert registry["policy"]["phase_membership_is_a_responsibility_taxonomy_not_a_strict_execution_barrier"] is True
     assert registry["policy"]["dependency_dag_controls_execution_order"] is True
-    assert registry["policy"]["weather_context_does_not_add_process_startup_boundary"] is True
+    assert registry["policy"]["weather_context_has_explicit_enrich_execution_domain"] is True
+    assert registry["policy"]["weather_context_reuses_football_context_execution_domain"] is False
+    assert registry["policy"]["weather_context_does_not_add_process_startup_boundary"] is False
+    assert registry["policy"]["market_context_and_weather_context_may_execute_in_parallel"] is True
 
 
 def test_domain_dependency_dag_is_acyclic_and_covers_capability_dependencies():
@@ -87,7 +94,8 @@ def test_domain_dag_reaches_every_domain_without_phase_order_assumptions():
         ["official_state"],
         ["personal_team_state"],
         ["football_context"],
-        ["market_context", "prediction"],
+        ["weather_context", "market_context"],
+        ["prediction"],
         ["squad_decision", "prediction_validation"],
         ["challenger_analysis"],
         ["framework_governance"],

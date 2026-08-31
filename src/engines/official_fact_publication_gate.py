@@ -27,13 +27,25 @@ def _fact_map(integrity: dict[str, Any]) -> dict[int, dict[str, Any]]:
     return {int(row["element_id"]): row for row in rows if row.get("element_id") is not None}
 
 
+def _compact_resolver_provenance(fact: dict[str, Any]) -> dict[str, Any] | None:
+    resolver = fact.get("resolver_provenance") or {}
+    if not resolver:
+        return None
+    return {
+        "resolver": resolver.get("resolver"),
+        "requested_element_id": resolver.get("requested_element_id"),
+        "resolved_element_id": resolver.get("resolved_element_id"),
+        "snapshot_id": resolver.get("snapshot_id"),
+    }
+
+
 def _apply_fact(row: dict[str, Any], facts: dict[int, dict[str, Any]]) -> dict[str, Any]:
     """Replace public FACT fields while keeping serving provenance compact.
 
     Detailed source/freshness provenance is carried once at report level. Each
-    player row keeps the canonical element id, authority class and snapshot ref,
-    which is sufficient to audit that all 35 rows came from the same snapshot
-    without duplicating verbose metadata 35 times.
+    player row keeps the canonical element id, authority class, snapshot ref and
+    resolver provenance so all 35 joins remain independently auditable without
+    duplicating the verbose snapshot health payload.
     """
     if row.get("element") is None:
         return row
@@ -54,6 +66,7 @@ def _apply_fact(row: dict[str, Any], facts: dict[int, dict[str, Any]]) -> dict[s
         "status": fact.get("status"),
         "fact_authority": PUBLIC_OFFICIAL_FACT,
         "official_fact_snapshot_id": provenance.get("snapshot_id"),
+        "resolver_provenance": _compact_resolver_provenance(fact),
     })
     return out
 
@@ -86,10 +99,17 @@ def _patch_report_payload(payload: dict[str, Any], facts: dict[int, dict[str, An
 
     gate = integrity.get("publication_integrity") or {}
     snapshot = integrity.get("official_snapshot") or {}
+    resolver = integrity.get("resolver") or {}
     out["official_fact_integrity"] = {
         "status": gate.get("status"),
         "owned": (integrity.get("owned") or {}).get("visible_gate"),
         "watchlist": (integrity.get("watchlist") or {}).get("visible_gate"),
+        "resolver": {
+            "method": resolver.get("method"),
+            "expected": resolver.get("expected"),
+            "provenance_complete": resolver.get("provenance_complete"),
+            "status": resolver.get("status"),
+        },
         "authority": PUBLIC_OFFICIAL_FACT,
         "source": snapshot.get("source"),
         "snapshot_id": snapshot.get("snapshot_id"),
@@ -140,14 +160,21 @@ def run() -> dict[str, Any]:
     integrity.setdefault("health", {})["Predictor Freshness"] = _predictor_health(latest)
 
     gate = integrity.get("publication_integrity") or {}
+    resolver = integrity.get("resolver") or {}
     latest["official_fact_integrity"] = {
         "status": gate.get("status"),
         "owned_expected": (integrity.get("owned") or {}).get("expected"),
         "owned_resolved": (integrity.get("owned") or {}).get("resolved"),
+        "owned_resolver_provenance_complete": (integrity.get("owned") or {}).get("resolver_provenance_complete"),
         "owned_official_fact_complete": (integrity.get("owned") or {}).get("official_fact_complete"),
         "watchlist_expected": (integrity.get("watchlist") or {}).get("expected"),
         "watchlist_resolved": (integrity.get("watchlist") or {}).get("resolved"),
+        "watchlist_resolver_provenance_complete": (integrity.get("watchlist") or {}).get("resolver_provenance_complete"),
         "watchlist_official_fact_complete": (integrity.get("watchlist") or {}).get("official_fact_complete"),
+        "resolver_method": resolver.get("method"),
+        "resolver_expected": resolver.get("expected"),
+        "resolver_provenance_complete": resolver.get("provenance_complete"),
+        "resolver_status": resolver.get("status"),
         "snapshot_id": (integrity.get("official_snapshot") or {}).get("snapshot_id"),
         "freshness_state": (integrity.get("official_snapshot") or {}).get("freshness_state"),
         "health": integrity.get("health"),
@@ -170,6 +197,7 @@ def run() -> dict[str, Any]:
         "status": gate.get("status"),
         "owned": (integrity.get("owned") or {}).get("visible_gate"),
         "watchlist": (integrity.get("watchlist") or {}).get("visible_gate"),
+        "resolver": f"{resolver.get('provenance_complete')}/{resolver.get('expected')}",
         "snapshot_id": (integrity.get("official_snapshot") or {}).get("snapshot_id"),
         "predictor_freshness": (integrity.get("health") or {}).get("Predictor Freshness"),
     }

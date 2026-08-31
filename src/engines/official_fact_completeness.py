@@ -8,8 +8,10 @@ from src.engines.base_state import bootstrap_maps
 
 PUBLIC_OFFICIAL_FACT = "PUBLIC_OFFICIAL_FACT"
 PERSONAL_AUTH_FACT = "PERSONAL_AUTH_FACT"
+RESOLVER_METHOD = "OFFICIAL_BOOTSTRAP_ELEMENT_ID"
 EXPECTED_OWNED = 15
 EXPECTED_WATCHLIST = 20
+EXPECTED_RESOLVED_TOTAL = EXPECTED_OWNED + EXPECTED_WATCHLIST
 WATCHLIST_POSITIONS = ("GK", "DEF", "MID", "FWD")
 WATCHLIST_PER_POSITION = 5
 REQUIRED_PUBLIC_FIELDS = (
@@ -73,6 +75,17 @@ def _defect_code(meta: dict[str, Any]) -> str:
     return "DATA_JOIN_DEFECT" if meta.get("fresh_pull_succeeded") else "OFFICIAL_SOURCE_UNAVAILABLE"
 
 
+def _resolver_provenance(element_id: int, meta: dict[str, Any], *, resolved_element_id: int | None) -> dict[str, Any]:
+    return {
+        "resolver": RESOLVER_METHOD,
+        "lookup_key": "element_id",
+        "requested_element_id": element_id,
+        "resolved_element_id": resolved_element_id,
+        "resolved": resolved_element_id is not None,
+        "snapshot_id": meta["snapshot_id"],
+    }
+
+
 def _hydrate(
     element_ids: Iterable[int],
     snapshot: dict[str, Any],
@@ -87,6 +100,7 @@ def _hydrate(
     defects: list[dict[str, Any]] = []
     resolved = 0
     complete = 0
+    resolver_provenance_complete = 0
 
     for element_id in requested:
         player = by_id.get(element_id)
@@ -96,9 +110,23 @@ def _hydrate(
                 "element_id": element_id,
                 "code": "ELEMENT_ID_UNRESOLVED",
                 "message": "canonical Official FPL element_id did not resolve in the governed bootstrap snapshot",
+                "resolver_provenance": _resolver_provenance(element_id, meta, resolved_element_id=None),
             })
             continue
         resolved += 1
+        resolved_element_id = int(player.get("id") if player.get("id") is not None else element_id)
+        resolver_provenance = _resolver_provenance(element_id, meta, resolved_element_id=resolved_element_id)
+        if resolved_element_id != element_id:
+            defects.append({
+                "scope": scope,
+                "element_id": element_id,
+                "code": "ELEMENT_ID_RESOLUTION_MISMATCH",
+                "message": "canonical element-id resolver returned a different Official FPL element id",
+                "resolver_provenance": resolver_provenance,
+            })
+        else:
+            resolver_provenance_complete += 1
+
         team = teams.get(int(player.get("team") or -1))
         position = positions.get(int(player.get("element_type") or -1))
         now_cost = player.get("now_cost")
@@ -121,6 +149,7 @@ def _hydrate(
             "availability_news": player.get("news"),
             "chance_of_playing_next_round": player.get("chance_of_playing_next_round"),
             "fact_authority": PUBLIC_OFFICIAL_FACT,
+            "resolver_provenance": resolver_provenance,
             "official_fact_provenance": {
                 "source": meta["source"],
                 "snapshot_id": meta["snapshot_id"],
@@ -159,6 +188,7 @@ def _hydrate(
     return {
         "requested": len(requested),
         "resolved": resolved,
+        "resolver_provenance_complete": resolver_provenance_complete,
         "official_fact_complete": complete,
         "rows": rows,
         "defects": defects,
@@ -251,6 +281,24 @@ def build_public_official_fact_integrity(
             "snapshot_ids": sorted(str(value) for value in all_snapshot_ids),
         })
 
+    resolver_complete = (
+        int(owned_hydration["resolver_provenance_complete"])
+        + int(watch_hydration["resolver_provenance_complete"])
+    )
+    resolver_ok = (
+        owned_hydration["resolver_provenance_complete"] == EXPECTED_OWNED
+        and watch_hydration["resolver_provenance_complete"] == EXPECTED_WATCHLIST
+        and resolver_complete == EXPECTED_RESOLVED_TOTAL
+    )
+    if not resolver_ok:
+        defects.append({
+            "scope": "publication",
+            "code": "RESOLVER_PROVENANCE_INCOMPLETE",
+            "actual": resolver_complete,
+            "expected": EXPECTED_RESOLVED_TOTAL,
+            "message": "all 35 published Official FACT rows require auditable canonical element-id resolver provenance",
+        })
+
     owned_ok = (
         len(owned) == EXPECTED_OWNED
         and len(set(owned)) == EXPECTED_OWNED
@@ -265,7 +313,7 @@ def build_public_official_fact_integrity(
         and watch_hydration["resolved"] == EXPECTED_WATCHLIST
         and watch_hydration["official_fact_complete"] == EXPECTED_WATCHLIST
     )
-    complete_and_trusted = owned_ok and watch_ok and meta["trusted_snapshot"] and not defects
+    complete_and_trusted = owned_ok and watch_ok and resolver_ok and meta["trusted_snapshot"] and not defects
     publication_status = "PASS" if complete_and_trusted and meta["fresh_pull_succeeded"] else "DEGRADED" if complete_and_trusted and meta["verified_fallback"] else "BLOCKED"
 
     auth = personal_auth or {}
@@ -273,8 +321,8 @@ def build_public_official_fact_integrity(
     health = {
         "Official public pull": "PASS" if meta["fresh_pull_succeeded"] else "DEGRADED" if meta["verified_fallback"] else "BLOCKED",
         "Personal authenticated pull": auth_status,
-        "Element-ID Resolver": "PASS" if owned_hydration["resolved"] == EXPECTED_OWNED and watch_hydration["resolved"] == EXPECTED_WATCHLIST else "BLOCKED",
-        "Official Fact Join": "PASS" if not any(row.get("code") in {"DATA_JOIN_DEFECT", "MIXED_OFFICIAL_SNAPSHOT", "OFFICIAL_SOURCE_UNAVAILABLE"} for row in defects) else "BLOCKED",
+        "Element-ID Resolver": "PASS" if resolver_ok else "BLOCKED",
+        "Official Fact Join": "PASS" if not any(row.get("code") in {"DATA_JOIN_DEFECT", "MIXED_OFFICIAL_SNAPSHOT", "OFFICIAL_SOURCE_UNAVAILABLE", "ELEMENT_ID_RESOLUTION_MISMATCH", "RESOLVER_PROVENANCE_INCOMPLETE"} for row in defects) else "BLOCKED",
         "Owned Fact Completeness": "PASS" if owned_ok else "BLOCKED",
         "Watchlist Fact Completeness": "PASS" if watch_ok else "BLOCKED",
         "Publication Integrity Gate": publication_status,
@@ -291,9 +339,16 @@ def build_public_official_fact_integrity(
             "personal_auth_failure_cannot_erase_public_facts": True,
         },
         "official_snapshot": meta,
+        "resolver": {
+            "method": RESOLVER_METHOD,
+            "expected": EXPECTED_RESOLVED_TOTAL,
+            "provenance_complete": resolver_complete,
+            "status": "PASS" if resolver_ok else "BLOCKED",
+        },
         "owned": {
             "expected": EXPECTED_OWNED,
             "resolved": owned_hydration["resolved"],
+            "resolver_provenance_complete": owned_hydration["resolver_provenance_complete"],
             "official_fact_complete": owned_hydration["official_fact_complete"],
             "visible_gate": f"Owned Official FACT completeness = {owned_hydration['official_fact_complete']}/{EXPECTED_OWNED}",
             "rows": owned_hydration["rows"],
@@ -301,6 +356,7 @@ def build_public_official_fact_integrity(
         "watchlist": {
             "expected": EXPECTED_WATCHLIST,
             "resolved": watch_hydration["resolved"],
+            "resolver_provenance_complete": watch_hydration["resolver_provenance_complete"],
             "official_fact_complete": watch_hydration["official_fact_complete"],
             "position_counts": position_counts,
             "visible_gate": f"Watchlist Official FACT completeness = {watch_hydration['official_fact_complete']}/{EXPECTED_WATCHLIST}",

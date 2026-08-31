@@ -20,7 +20,7 @@ def test_scheduler_derives_isolation_safe_parallel_waves_from_compiled_plan() ->
             tuple(str(domain) for domain in wave), domains, services
         )
     ]
-    assert ("market_context", "prediction") in safe
+    assert ("weather_context", "market_context") in safe
     assert ("squad_decision", "prediction_validation") in safe
 
 

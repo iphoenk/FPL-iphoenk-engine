@@ -97,10 +97,20 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
 
     watch_env = _invoke(
         "watchlist_build",
-        {"truth": truth, "price": price, "prediction": prediction, "dss": decision.get("dss") or {}},
+        {"truth": truth, "prediction": prediction, "dss": decision.get("dss") or {}},
         cid,
     )
-    watchlist = watch_env["data"]
+    watch_base = watch_env["data"]
+    watch_price_env = _invoke(
+        "price_bind_watchlist",
+        {
+            "watchlist": watch_base,
+            "price": price,
+            "owned_ids": truth["team"].get("owned_ids") or [],
+        },
+        cid,
+    )
+    watchlist = watch_price_env["data"]
 
     external_raw = (
         payload.get("external_benchmark_observations")
@@ -129,7 +139,6 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         "owned_challenger_compare",
         {
             "truth": truth,
-            "price": price,
             "prediction": prediction,
             "watchlist": watchlist,
             "decision_context": decision,
@@ -140,7 +149,18 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         },
         cid,
     )
-    comparator = comparator_env["data"]
+    comparator_base = comparator_env["data"]
+    comparator_price_env = _invoke(
+        "price_annotate_comparator",
+        {
+            "comparator": comparator_base,
+            "price": price,
+            "team": truth["team"],
+            "transfer_state": payload.get("transfer_state") if isinstance(payload.get("transfer_state"), dict) else {},
+        },
+        cid,
+    )
+    comparator = comparator_price_env["data"]
     decision_validation_env = _invoke(
         "decision_validation_capture",
         {
@@ -276,8 +296,10 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
     snapshot.setdefault("service_performance", {})["beta_composition"] = {
         "schedule": {"service_compute_ms": schedule_env.get("elapsed_ms"), "round_trip_ms": schedule_env.get("round_trip_ms")},
         "watchlist": {"service_compute_ms": watch_env.get("elapsed_ms"), "round_trip_ms": watch_env.get("round_trip_ms")},
+        "watchlist_price_binding": {"service_compute_ms": watch_price_env.get("elapsed_ms"), "round_trip_ms": watch_price_env.get("round_trip_ms")},
         "external_consensus": {"service_compute_ms": consensus_env.get("elapsed_ms"), "round_trip_ms": consensus_env.get("round_trip_ms")},
         "owned_challenger_comparator": {"service_compute_ms": comparator_env.get("elapsed_ms"), "round_trip_ms": comparator_env.get("round_trip_ms")},
+        "comparator_price_overlay": {"service_compute_ms": comparator_price_env.get("elapsed_ms"), "round_trip_ms": comparator_price_env.get("round_trip_ms")},
         "decision_validation": {"service_compute_ms": decision_validation_env.get("elapsed_ms"), "round_trip_ms": decision_validation_env.get("round_trip_ms")},
         "prediction_promotion_evidence": {"service_compute_ms": promotion_env.get("elapsed_ms"), "round_trip_ms": promotion_env.get("round_trip_ms")},
         "reporting": {"service_compute_ms": report_env.get("elapsed_ms"), "round_trip_ms": report_env.get("round_trip_ms")},

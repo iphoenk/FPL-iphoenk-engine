@@ -1,13 +1,14 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "contract": "TACTICAL_DECISION_CONSUMPTION_V1",
-  "model_id": "v5_tactical_decision_consumption_v1",
+  "model_id": "v5_tactical_decision_consumption_v2",
   "authority": "ADVISORY_TIEBREAKER_ONLY",
   "lineup": {
-    "close_score_gap": 0.35,
+    "close_score_gap": 0.75,
     "enabled_for_xi": true,
     "enabled_for_bench": true,
-    "enabled_for_captain_vc": true
+    "enabled_for_captain_vc": true,
+    "canonical_alternative_depth": 6
   },
   "watchlist": {
     "close_dss_score_gap": 0.05,
@@ -20,6 +21,8 @@
     "missing_tactical_is_neutral": true,
     "close_call_only": true,
     "never_override_legality": true,
-    "never_create_watchlist_membership": true
+    "never_create_watchlist_membership": true,
+    "lineup_close_call_gap_matches_deployed_production": true,
+    "six_canonical_alternatives_match_deployed_production": true
   }
 }

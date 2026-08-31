@@ -26,6 +26,11 @@
     "normal_length_ratio_target": 0.35,
     "material_delta_keys": ["squad", "starting_xi", "captain", "vice_captain", "chip", "price", "critical_health", "report_time_intelligence"]
   },
+  "state_persistence": {
+    "preserve_across_rebuild": ["checkpoint_history", "last_checkpoint", "operational_health"],
+    "unknown_extension_policy": "DROP",
+    "core_state_is_rebuilt_each_report": true
+  },
   "scheduled_report_checkpoints": {
     "enabled": true,
     "timezone": "Asia/Jakarta",

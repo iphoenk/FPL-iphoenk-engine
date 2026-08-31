@@ -2,8 +2,9 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEPLOYED_SHA = "84b1577f4fc84ce00a4e8c5e8139644c8f9fff51"
+DEPLOYED_SHA = "ef0161113a763306419c0c367770e6dcfe6570d1"
 STALE_DEPLOYED_SHAS = {
+    "84b1577f4fc84ce00a4e8c5e8139644c8f9fff51",
     "a6f983af575f33329ada456ef8c6e8e971921696",
     "a40d0e19ff3d1da580e0d94983f829397aab81f2",
     "80fe400888f7a4979f4537971cbc8eef6470dbe6",

@@ -173,8 +173,8 @@ def test_price_trajectory_thresholds_are_registry_driven():
     assert meta["confidence"] == "HIGH"
     now = datetime(2026, 8, 26, 12, 0, tzinfo=timezone.utc)
     eta, predicted = trajectory_eta(now, 90.0, 2.0)
-    assert eta == 5.0
-    assert predicted is not None
+    assert eta is None
+    assert predicted is None
     assert risk_direction(-80.0, 1.0) == "FALL"
     assert urgency(95.0, None, now) == "CRITICAL"
 

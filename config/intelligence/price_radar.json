@@ -1,0 +1,71 @@
+{
+  "schema_version": 4,
+  "model_id": "official_price_radar_v3",
+  "source_authority": [
+    "OFFICIAL_FPL",
+    "OFFICIAL_MIRROR",
+    "EXTERNAL_PREDICTOR",
+    "INTERNAL_MODEL"
+  ],
+  "official_update_timezone": "Europe/London",
+  "display_timezone": "Asia/Jakarta",
+  "freshness": {
+    "official_max_age_seconds": 900
+  },
+  "model_interpretation": {
+    "threshold_percent": 100.0,
+    "stable_epsilon_percent": 0.01,
+    "threshold_is_not_official_rule": true,
+    "no_intra_cycle_crossing_eta": true
+  },
+  "market_filter": {
+    "minimum_ownership_pct": 0.5,
+    "minimum_abs_net_transfers": 5000,
+    "high_confidence_abs_net_transfers": 25000
+  },
+  "transfer_momentum_evidence": {
+    "minimum_coverage_ratio": 0.95
+  },
+  "urgency": {
+    "critical_progress_pct": 90.0,
+    "high_progress_pct": 75.0,
+    "watch_progress_pct": 50.0,
+    "alert_levels": [
+      "CRITICAL",
+      "HIGH"
+    ]
+  },
+  "squeeze_policy": {
+    "scenario_steps_tenths": [1, 2],
+    "material_urgency_levels": ["HIGH", "CRITICAL"],
+    "worst_reasonable_short_horizon_tenths": 2
+  },
+  "calibration": {
+    "minimum_samples_for_calibrated_health": 20,
+    "healthy_direction_accuracy": 0.7,
+    "warning_direction_accuracy": 0.55,
+    "suspect_static_ratio_warning": 0.5,
+    "timing_error_warning_hours": 24.0,
+    "miss_grace_hours": 12.0,
+    "max_events": 250
+  },
+  "serving": {
+    "price_pressure_list_size": 25,
+    "price_summary_list_size": 20,
+    "market_watch_capacity": 50,
+    "alert_summary_size": 20
+  },
+  "governance": {
+    "official_bootstrap_is_primary_authority": true,
+    "downstream_price_service_consumes_snapshot_derived_raw_contract": true,
+    "external_predictors_never_override_fresh_official": true,
+    "likelihood_raw_is_never_mapped_to_unverified_official_wording": true,
+    "current_and_projected_progress_are_separate": true,
+    "confirmed_and_predicted_price_changes_are_separate": true,
+    "missing_values_are_never_coerced_to_zero": true,
+    "calibration_and_lock_semantics_are_explicit": true,
+    "official_update_clock_is_dst_safe": true,
+    "price_business_authority_owned_by_price_service": true,
+    "cross_service_price_consumption_must_use_versioned_service_contract": true
+  }
+}

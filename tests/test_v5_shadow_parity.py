@@ -23,7 +23,7 @@ def test_shadow_parity_accepts_structurally_equivalent_manual_decisions():
         "manual_lock_authoritative": True,
         "legal": True,
     }
-    result = compare(v3, _v5("user_lock"))
+    result = compare(v3, _v5("user_capture"))
     assert result["pass"] is True
     assert result["required_real_cycles"] >= 3
 
@@ -59,7 +59,7 @@ def test_shadow_parity_rejects_legacy_predeadline_label_when_public_squad_differ
     assert result["authority_equivalence"]["full_identity_match"] is False
 
 
-def test_shadow_parity_keeps_explicit_user_lock_fail_closed():
+def test_shadow_parity_maps_historical_v3_user_lock_to_v5_user_capture_only():
     v3 = {
         "starting_xi": [{"element": i} for i in range(1, 12)],
         "squad_rows": [{"element": i} for i in range(1, 16)],
@@ -69,7 +69,8 @@ def test_shadow_parity_keeps_explicit_user_lock_fail_closed():
         "legal": True,
     }
     assert compare(v3, _v5("official_public"))["checks"]["manual_lock"] is False
-    assert compare(v3, _v5("user_lock"))["checks"]["manual_lock"] is True
+    assert compare(v3, _v5("user_capture"))["checks"]["manual_lock"] is True
+    assert compare(v3, _v5("user_lock"))["checks"]["manual_lock"] is False
 
 
 def test_shadow_parity_rejects_locked_captain_mismatch():

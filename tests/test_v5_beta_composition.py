@@ -2,13 +2,14 @@ from src.v5.services import orchestrator_beta
 
 
 def test_beta_composition_adds_watchlist_comparator_reporting_and_persistence(monkeypatch):
-    base={"correlation_id":"c1","team_summary":{"authority":"user_lock","owned_ids":[1],"team_value_ledger":[{"element":1}]},"phase":{"phase":"PRE_DEADLINE","planning_gw":2,"deadline_time":"2026-09-04T17:30:00Z"},"price_summary":{"alerts":[]},"decision_summary":{"dss":{},"lineup":{},"selected_package_id":"HOLD"},"framework_health":{"go_allowed":False},"service_performance":{}}
+    base={"correlation_id":"c1","team_summary":{"authority":"user_capture","owned_ids":[1],"team_value_ledger":[{"element":1}]},"phase":{"phase":"PRE_DEADLINE","planning_gw":2,"deadline_time":"2026-09-04T17:30:00Z"},"price_summary":{"alerts":[]},"decision_summary":{"dss":{},"lineup":{},"selected_package_id":"HOLD"},"framework_health":{"go_allowed":False},"service_performance":{}}
     monkeypatch.setattr(orchestrator_beta,"core_handle",lambda operation,payload:dict(base))
     persisted=[]
     def parallel(calls,correlation_id):
         if "prediction" in calls:
             return {
                 "prediction":{"data":{"planning_gw":2,"players":[],"full_core_enrichment":{"competitive_load":{"status":"ACTIVE","contract":"V5_COMPETITIVE_LOAD_PRIMITIVE_V1","players":{},"player_count":0,"state_counts":{}}}}},
+                "prices":{"data":{}},
                 "prediction_ledger":{"data":{"schema_version":1,"records":{}}},
                 "prediction_accuracy":{"data":{"overall":{"sample_size":0,"status":"NO_SETTLED_SAMPLE"},"settled_gameweeks":[]}},
                 "report_state":{"data":{}},
@@ -20,11 +21,17 @@ def test_beta_composition_adds_watchlist_comparator_reporting_and_persistence(mo
     def one(service,operation,payload,correlation_id):
         if service=="governance" and operation=="schedule":return {"data":{"active_mode":"INTERNAL_ONLY","visible_authorized":False,"force_full_report":False},"elapsed_ms":1,"round_trip_ms":2}
         if service=="watchlist":return {"data":{"status":"INSUFFICIENT_EVIDENCE","candidate_count":0,"screening_contract":"FULL_DSS_SCREEN_V1","positions":{}},"elapsed_ms":1,"round_trip_ms":2}
+        if service=="price" and operation=="bind_watchlist_evidence":
+            assert payload["owned_ids"]==[1]
+            return {"data":dict(payload["watchlist"]),"elapsed_ms":1,"round_trip_ms":2}
         if service=="evaluation" and operation=="normalize_external_consensus":return {"data":{"contract":"V5_EXTERNAL_CONSENSUS_V1","overall":"INSUFFICIENT_EVIDENCE","observations":[],"requires_official_refresh":False,"governance":{"advisory_only":True,"majority_vote_used":False}},"elapsed_ms":1,"round_trip_ms":2}
         if service=="evaluation" and operation=="compare_owned_challenger":
             assert payload["external_consensus"]["governance"]["advisory_only"] is True
             assert payload["workload_context"]["contract"]=="V5_COMPETITIVE_LOAD_PRIMITIVE_V1"
             return {"data":{"model":"v5_owned_challenger_comparator_v1","status":"ACTIVE_ALPHA","authority":"ADVISORY_ONLY","pair_count":0,"classification_counts":{},"top_comparisons":[]},"elapsed_ms":1,"round_trip_ms":2}
+        if service=="price" and operation=="annotate_comparator":
+            assert payload["comparator"]["authority"]=="ADVISORY_ONLY"
+            return {"data":dict(payload["comparator"]),"elapsed_ms":1,"round_trip_ms":2}
         if service=="evaluation" and operation=="capture_decision_validation":return {"data":{"contract":"V5_DECISION_VALIDATION_SNAPSHOTS_V1","records":{"2":{"status":"PREDEADLINE_CAPTURED"}},"last_capture":{"status":"PREDEADLINE_CAPTURED","planning_gw":2}},"elapsed_ms":1,"round_trip_ms":2}
         if service=="evaluation" and operation=="promotion_evidence":
             assert payload["ledger"]["records"]=={}

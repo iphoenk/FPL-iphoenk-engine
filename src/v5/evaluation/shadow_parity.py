@@ -50,7 +50,9 @@ def compare(v3: dict[str, Any], v5: dict[str, Any]) -> dict[str, Any]:
     full_identity_complete = len(v3_full_squad) == 15 and len(v5_owned_ids) == 15
     full_identity_match = full_identity_complete and v3_full_squad == v5_owned_ids
 
-    explicit_v3_manual = bool(v3.get("manual_lock_authoritative")) or v3_authority in {"user_lock", "manual_lock"}
+    # V3 historical/manual labels remain acceptable as comparison evidence, but
+    # V5's active pre-deadline override authority is canonically user_capture.
+    explicit_v3_manual = bool(v3.get("manual_lock_authoritative")) or v3_authority in {"user_lock", "manual_lock", "user_capture"}
     legacy_predeadline_label = v3_authority == "pre_deadline_wc"
     legacy_label_materially_equivalent_to_public = (
         legacy_predeadline_label
@@ -58,9 +60,9 @@ def compare(v3: dict[str, Any], v5: dict[str, Any]) -> dict[str, Any]:
         and v5_authority == "official_public"
     )
     if explicit_v3_manual:
-        manual_authority_parity = v5_authority == "user_lock"
+        manual_authority_parity = v5_authority == "user_capture"
     elif legacy_predeadline_label:
-        manual_authority_parity = v5_authority == "user_lock" or legacy_label_materially_equivalent_to_public
+        manual_authority_parity = v5_authority == "user_capture" or legacy_label_materially_equivalent_to_public
     else:
         manual_authority_parity = True
 

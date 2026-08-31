@@ -47,7 +47,7 @@ def test_shadow_parity_reads_native_v5_starters_and_fails_on_real_difference():
             }
         },
         "ruleset_id": "FPL_2026_27",
-        "squad_authority": "user_lock",
+        "squad_authority": "user_capture",
         "framework_health": {"gate0": {"pass": True}},
     }
     result = compare(v3, v5)
@@ -80,8 +80,8 @@ def test_shadow_parity_uses_planning_decision_authority_not_live_scoring_authori
     aligned = compare(common_v3, {
         "decision_summary": {"lineup": common_lineup},
         "ruleset_id": "FPL_2026_27",
-        "squad_authority": "user_lock",
-        "decision_squad_authority": "user_lock",
+        "squad_authority": "user_capture",
+        "decision_squad_authority": "user_capture",
         "framework_health": {"gate0": {"pass": True}},
     })
     assert aligned["checks"]["manual_lock"] is True

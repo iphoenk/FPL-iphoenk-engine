@@ -41,6 +41,10 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
                 "promotion_evidence",
                 "shadow_compare",
             ],
+            "governance": {
+                "price_business_logic_imported": False,
+                "price_overlay_owned_by_price_service": True,
+            },
         }
     if operation == "shadow_compare":
         return compare_shadow(payload.get("v3") or {}, payload.get("v5") or {})

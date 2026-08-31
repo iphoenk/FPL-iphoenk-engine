@@ -1,116 +1,25 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 import pytest
 
 import src.sources.manager as manager
-import src.sources.onefpl as onefpl
 from src.sources.base import SourceResult, SourceSpec
 from src.sources.manager import _disagreement_states, _reconcile_observations
 from src.sources.observations import ChallengerObservation
-from src.sources.onefpl import parse_price_observations as parse_onefpl
-from src.sources.structured_web import FetchedDocument
 
 NOW = "2026-08-26T21:00:00+00:00"
-
-
-def test_onefpl_price_parser_and_loading_page_no_fabrication():
-    html = "<html><body>SilvaDEF BOU BOU£5.0m 1.3%Drop risk</body></html>"
-    rows = parse_onefpl(html, source_url="https://onefpl.com/prices", fetched_at=NOW, ttl_seconds=1800)
-    assert len(rows) == 1
-    assert rows[0]["provider"] == "onefpl"
-    assert rows[0]["value"]["direction"] == "FALL"
-    assert rows[0]["value"]["pressure_pct"] == pytest.approx(1.3)
-    assert parse_onefpl("<html><body>Loading FPL tool...</body></html>", source_url="https://onefpl.com/prices", fetched_at=NOW, ttl_seconds=1800) == []
-
-
-def test_onefpl_probe_separates_site_reachability_and_uses_approved_fallback(monkeypatch):
-    spec = SourceSpec(
-        "onefpl",
-        "OneFPL",
-        "CHALLENGER",
-        2,
-        True,
-        False,
-        "onefpl",
-        ("price_prediction", "transfer_trends"),
-        {
-            "probe_url": "https://onefpl.com/",
-            "structured_url": "https://onefpl.com/prices",
-            "fallback_structured_urls": ["https://onefpl.vercel.app/prices"],
-            "allowed_hosts": ["onefpl.com", "onefpl.vercel.app"],
-            "observation_ttl_seconds": 1800,
-            "max_fetch_bytes": 1048576,
-        },
-    )
-
-    def fake_fetch(url, timeout_seconds, *, max_bytes, user_agent="FPL-iphoenk-engine structured-public-readonly"):
-        if url == "https://onefpl.com/":
-            return FetchedDocument(url, 200, "text/html", "OneFPL", True, 10.0)
-        if url == "https://onefpl.com/prices":
-            return FetchedDocument(url, 402, None, "", False, 20.0, "HTTPError")
-        if url == "https://onefpl.vercel.app/prices":
-            return FetchedDocument(url, 200, "text/html", "<html><body>SilvaDEF BOU BOU£5.0m 1.3%Drop risk</body></html>", True, 30.0)
-        raise AssertionError(url)
-
-    monkeypatch.setattr(onefpl, "fetch_public_document", fake_fetch)
-    result = onefpl.probe(spec, 0.1)
-    assert result.status == "LIVE"
-    assert result.reachable is True
-    assert result.observation_count == 1
-    assert result.capabilities["price_prediction"] == "AVAILABLE"
-    assert result.detail["structured_fallback_used"] is True
-    assert result.detail["selected_structured_url"] == "https://onefpl.vercel.app/prices"
-    assert result.detail["primary_structured_http_status"] == 402
-    assert result.detail["structured_http_status"] == 200
-    assert result.observations[0]["source_url"] == "https://onefpl.vercel.app/prices"
-
-
-def test_onefpl_reachable_site_with_restricted_structured_endpoint_is_not_source_outage(monkeypatch):
-    spec = SourceSpec(
-        "onefpl",
-        "OneFPL",
-        "CHALLENGER",
-        2,
-        True,
-        False,
-        "onefpl",
-        ("price_prediction",),
-        {
-            "probe_url": "https://onefpl.com/",
-            "structured_url": "https://onefpl.com/prices",
-            "fallback_structured_urls": [],
-            "allowed_hosts": ["onefpl.com"],
-            "observation_ttl_seconds": 1800,
-            "max_fetch_bytes": 1048576,
-        },
-    )
-
-    def fake_fetch(url, timeout_seconds, *, max_bytes, user_agent="FPL-iphoenk-engine structured-public-readonly"):
-        if url == "https://onefpl.com/":
-            return FetchedDocument(url, 200, "text/html", "OneFPL", True, 10.0)
-        return FetchedDocument(url, 402, None, "", False, 20.0, "HTTPError")
-
-    monkeypatch.setattr(onefpl, "fetch_public_document", fake_fetch)
-    result = onefpl.probe(spec, 0.1)
-    assert result.status == "LIVE"
-    assert result.reachable is True
-    assert result.observation_count == 0
-    assert result.capabilities["price_prediction"] == "SOURCE_REACHABLE_STRUCTURED_ACCESS_RESTRICTED"
-    assert result.detail["structured_access_restricted"] is True
-    assert result.detail["primary_structured_http_status"] == 402
-    assert result.detail["structured_http_status"] == 402
-    assert result.detail["http_status"] == 200
 
 
 def test_available_observation_cannot_have_missing_value():
     with pytest.raises(ValueError):
         ChallengerObservation(
-            source_id="onefpl",
+            source_id="fffix",
             capability="price_prediction",
             value=None,
-            source_url="https://onefpl.com/prices",
+            source_url="https://www.fantasyfootballfix.com/",
             fetched_at=NOW,
             observed_at=NOW,
             ttl_seconds=1800,
@@ -158,30 +67,89 @@ def test_recent_prior_becomes_last_known_good_but_not_current():
 
 def test_cross_source_direction_disagreement_is_explicit():
     fffix = _prior_row(NOW, 1800)
-    one = ChallengerObservation(
-        source_id="onefpl",
+    ffhub = ChallengerObservation(
+        source_id="ffhub",
         capability="price_prediction",
         value={"player": "Bowen", "direction": "FALL"},
-        source_url="https://onefpl.com/prices",
+        source_url="https://www.fantasyfootballhub.co.uk/",
         fetched_at=NOW,
         observed_at=NOW,
         ttl_seconds=1800,
         parser_version="test-v1",
         subject={"player": "Bowen"},
     ).as_dict()
-    states = _disagreement_states([fffix, one])
+    states = _disagreement_states([fffix, ffhub])
     assert states == [{
         "subject_key": "bowen",
         "player": "Bowen",
         "capability": "price_prediction",
         "state": "DISAGREEMENT",
-        "providers": ["fffix", "onefpl"],
+        "providers": ["fffix", "ffhub"],
         "directions": ["FALL", "RISE"],
     }]
 
 
+def test_official_health_endpoints_are_registry_driven(tmp_path):
+    (tmp_path / "health.json").write_text(json.dumps({
+        "alpha": {"status": "LIVE", "latency_ms": 4},
+        "beta": {"status": "LIVE", "latency_ms": 9},
+        "ignored": {"status": "DEGRADED", "latency_ms": 1},
+    }))
+    spec = SourceSpec(
+        "official_fpl",
+        "Official FPL",
+        "AUTHORITATIVE",
+        1,
+        True,
+        True,
+        "runtime_official",
+        ("prices",),
+        {"health_endpoints": ["alpha", "beta"]},
+    )
+    result = manager._official_result(spec, tmp_path)
+    assert result.status == "LIVE"
+    assert result.reachable is True
+    assert result.latency_ms == 9.0
+    assert result.detail["critical_endpoints"] == {"alpha": "LIVE", "beta": "LIVE"}
+
+
+def test_official_health_missing_registry_endpoints_fails_closed(tmp_path):
+    (tmp_path / "health.json").write_text("{}")
+    spec = SourceSpec("official_fpl", "Official FPL", "AUTHORITATIVE", 1, True, True, "runtime_official", ("prices",), {})
+    result = manager._official_result(spec, tmp_path)
+    assert result.status == "DEGRADED"
+    assert result.reachable is False
+    assert result.detail["registry_error"] == "missing health_endpoints"
+
+
+def test_weather_artifact_path_is_registry_driven(tmp_path):
+    payload = {
+        "fixture_count": 3,
+        "available_count": 2,
+        "material_count": 1,
+        "governance": {"advisory_only": True},
+    }
+    (tmp_path / "custom-weather.json").write_text(json.dumps(payload))
+    spec = SourceSpec(
+        "open_meteo",
+        "Open-Meteo",
+        "ENRICHMENT",
+        3,
+        True,
+        False,
+        "weather_artifact",
+        ("fixture_weather",),
+        {"artifact_paths": ["custom-weather.json"]},
+    )
+    result = manager._weather_artifact_result(spec, tmp_path)
+    assert result.status == "LIVE"
+    assert result.reachable is True
+    assert result.detail["artifact"] == "custom-weather.json"
+    assert result.observation_count == 2
+
+
 def test_challenger_exception_is_isolated_and_nonblocking(monkeypatch, tmp_path):
-    official = SourceSpec("official_fpl", "Official FPL", "AUTHORITATIVE", 1, True, True, "runtime_official", ("prices", "price_prediction"), {})
+    official = SourceSpec("official_fpl", "Official FPL", "AUTHORITATIVE", 1, True, True, "runtime_official", ("prices", "price_prediction"), {"health_endpoints": ["bootstrap"]})
     challenger = SourceSpec("fffix", "Fantasy Football Fix", "CHALLENGER", 2, True, False, "public_web", ("price_prediction",), {})
     monkeypatch.setattr(manager, "source_specs", lambda: (official, challenger))
     monkeypatch.setattr(manager, "load_source_registry", lambda: {"policy": {"default_timeout_seconds": 0.1, "max_workers": 2}})

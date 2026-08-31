@@ -5,10 +5,11 @@ from collections import Counter
 from datetime import datetime, timezone
 from typing import Any
 
-from src.utils import DATA, atomic_json, read_json
+from src.utils import DATA, ROOT, atomic_json, read_json
 
 HEALTH_PATH = DATA / "framework_health.json"
 PREFLIGHT_PATH = DATA / "framework_health_preflight.json"
+CHALLENGER_REGISTRY_PATH = ROOT / "config" / "intelligence" / "challenger_registry.json"
 
 
 def _now() -> str:
@@ -114,19 +115,45 @@ def _calibration_probe() -> tuple[bool, dict[str, Any]]:
 
 def _challenger_probe() -> tuple[str, dict[str, Any]]:
     score = read_json(DATA / "challenger_scorecard.json", {})
+    registry = read_json(CHALLENGER_REGISTRY_PATH, {})
+    expected = {
+        str(p.get("id"))
+        for p in registry.get("providers") or []
+        if p.get("enabled", True) and p.get("id")
+    }
     providers = list(score.get("providers") or [])
-    provider_ids = {p.get("id") for p in providers}
-    required = {"internal", "onefpl", "fffix", "ffhub"}
-    if not required.issubset(provider_ids):
-        return "FAILED", {"providers": sorted(provider_ids), "required": sorted(required)}
-    external_active = [p.get("id") for p in providers if p.get("id") != "internal" and p.get("state") == "ACTIVE"]
+    provider_ids = {str(p.get("id")) for p in providers if p.get("id")}
+    if not expected or provider_ids != expected:
+        return "FAILED", {
+            "providers": sorted(provider_ids),
+            "required": sorted(expected),
+            "missing": sorted(expected - provider_ids),
+            "unexpected": sorted(provider_ids - expected),
+        }
+
+    states = {str(p.get("id")): str(p.get("state") or "") for p in providers}
+    internal_state = states.get("internal")
+    if internal_state != "ACTIVE":
+        return "FAILED", {
+            "status": score.get("status"),
+            "providers": states,
+            "reason": "internal challenger baseline is not active",
+        }
+
+    external_active = sorted(
+        provider_id
+        for provider_id, state in states.items()
+        if provider_id != "internal" and (state == "ACTIVE" or state.startswith("ACTIVE_"))
+    )
     status = "ACTIVE" if external_active else "PARTIAL"
     return status, {
         "status": score.get("status"),
-        "providers": {p.get("id"): p.get("state") for p in providers},
+        "providers": states,
         "external_active": external_active,
         "current_comparisons": len(score.get("current_comparisons") or []),
+        "structured_fresh_count": int(score.get("structured_fresh_count") or 0),
         "auto_scrape": score.get("auto_scrape"),
+        "reason": None if external_active else "external advisory evidence currently absent; no fabrication allowed",
     }
 
 
@@ -209,6 +236,8 @@ def run() -> dict[str, Any]:
         "external_challenger_missing_data_is_never_fabricated": True,
         "provider_dynamic_weight_requires_observed_accuracy": True,
         "p0_operational_probes_can_upgrade_partial_only_with_runtime_evidence": True,
+        "external_challenger_provider_set_is_registry_owned": True,
+        "external_challenger_absence_is_partial_not_failed_when_internal_baseline_is_active": True,
     })
     health["p0_overlay_generated_at"] = _now()
     _recount(health)

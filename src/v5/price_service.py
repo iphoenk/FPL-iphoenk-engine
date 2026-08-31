@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 
 from src.engines import price_radar as canonical
+from src.v5.price_trajectory import canonical_contract
 
 
 def _ratio(numerator: int, denominator: int) -> float:
@@ -45,23 +46,6 @@ def _confirmed_changes(raw_rows: list[dict[str, Any]], previous_state: dict[str,
             }
         )
     return confirmed
-
-
-def _canonical_contract() -> dict[str, Any]:
-    policy = canonical.load_policy()
-    return {
-        "model_id": policy.get("model_id"),
-        "schema_version": int(policy.get("schema_version") or canonical.SCHEMA_VERSION),
-        "source_authority": list(policy.get("source_authority") or []),
-        "current_progress_field": "price_change_percent",
-        "projected_progress_field": "price_change_projections",
-        "likelihood_preserved_raw": True,
-        "official_update_clock": f"00:00 {canonical.OFFICIAL_UPDATE_TIMEZONE}",
-        "display_timezone": canonical.DISPLAY_TIMEZONE,
-        "model_threshold_percent": canonical.MODEL_THRESHOLD,
-        "threshold_is_official_rule": False,
-        "no_intra_cycle_crossing_eta": True,
-    }
 
 
 def build_transfer_momentum_evidence(
@@ -224,7 +208,7 @@ def build_price_snapshot(
     total_players = int(bootstrap.get("total_players") or 0)
     buys = _market_pressure(enriched, total_players, descending=True)
     sells = _market_pressure(enriched, total_players, descending=False)
-    contract = _canonical_contract()
+    contract = canonical_contract()
     transfer_momentum = build_transfer_momentum_evidence(bootstrap, enriched)
     next_update = next(
         (row.get("next_official_price_update_at") for row in enriched if row.get("next_official_price_update_at")),

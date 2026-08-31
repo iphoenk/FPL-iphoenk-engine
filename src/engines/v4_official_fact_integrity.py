@@ -3,10 +3,14 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import Counter
-from typing import Any
+from typing import Any, Iterable
+
+from src.engines.fpl_rules_2026 import POSITION_COUNTS
+from src.utils import CONFIG, read_json
 
 
 PUBLIC_SOURCE = "bootstrap-static.elements"
+POLICY = CONFIG / "serving_improvement_registry.json"
 REQUIRED_FACT_FIELDS = (
     "element_id",
     "team",
@@ -22,7 +26,6 @@ REQUIRED_PROVENANCE_FIELDS = (
     "observed_at",
     "freshness",
 )
-EXPECTED_WATCHLIST_COUNTS = {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
 
 
 class DataJoinDefect(RuntimeError):
@@ -37,6 +40,34 @@ def _canonical_hash(payload: Any) -> str:
         separators=(",", ":"),
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _watchlist_contract() -> tuple[dict[str, int], int]:
+    """Read watchlist cardinality from the governed serving registry only."""
+    policy = (read_json(POLICY, {}) or {}).get("watchlist") or {}
+    exact = int(policy.get("exact_per_position") or 0)
+    positions = [str(position) for position in (policy.get("positions") or [])]
+    if exact <= 0 or not positions or len(set(positions)) != len(positions):
+        raise RuntimeError("invalid governed watchlist policy")
+    invalid = [position for position in positions if position not in POSITION_COUNTS]
+    if invalid:
+        raise RuntimeError(f"invalid governed watchlist positions: {invalid}")
+    if policy.get("exclude_owned") is not True:
+        raise RuntimeError("governed watchlist policy must exclude owned players")
+    counts = {position: exact for position in positions}
+    return counts, exact * len(positions)
+
+
+def _positive_ids(values: Iterable[Any]) -> set[int]:
+    ids: set[int] = set()
+    for value in values:
+        try:
+            element = int(value)
+        except (TypeError, ValueError):
+            continue
+        if element > 0:
+            ids.add(element)
+    return ids
 
 
 def official_snapshot_metadata(bootstrap: dict, bootstrap_health: dict | None = None) -> dict:
@@ -205,6 +236,8 @@ def build_publication_integrity(
     *,
     framework_health: dict | None = None,
     weather: dict | None = None,
+    authoritative_owned_ids: Iterable[Any] | None = None,
+    require_authoritative_owned_ids: bool = False,
 ) -> dict:
     """Evaluate complete USER_REPORT eligibility without changing decision authority."""
     framework_health = framework_health or {}
@@ -213,15 +246,53 @@ def build_publication_integrity(
     owned = list(tactical.get("owned") or [])
     watchlist = list(tactical.get("watchlist") or [])
 
-    owned_counts, owned_defects = _fact_group(owned, 15)
-    watch_counts, watch_defects = _fact_group(watchlist, 20)
+    watchlist_counts, watchlist_expected = _watchlist_contract()
+    owned_expected = sum(int(count) for count in POSITION_COUNTS.values())
+    owned_counts, owned_defects = _fact_group(owned, owned_expected)
+    watch_counts, watch_defects = _fact_group(watchlist, watchlist_expected)
     defects = [*owned_defects, *watch_defects]
 
-    owned_ids = {int(row.get("element_id") or 0) for row in owned if row.get("element_id") is not None}
-    watch_ids = {int(row.get("element_id") or 0) for row in watchlist if row.get("element_id") is not None}
-    overlap = sorted(element for element in owned_ids & watch_ids if element > 0)
+    owned_ids = _positive_ids(row.get("element_id") for row in owned)
+    watch_ids = _positive_ids(row.get("element_id") for row in watchlist)
+    overlap = sorted(owned_ids & watch_ids)
     position_counts = Counter(str(row.get("position") or "") for row in watchlist)
-    positional_exact = all(position_counts.get(position, 0) == expected for position, expected in EXPECTED_WATCHLIST_COUNTS.items())
+    positional_exact = all(position_counts.get(position, 0) == expected for position, expected in watchlist_counts.items())
+
+    authority_provided = authoritative_owned_ids is not None
+    expected_owned_ids = _positive_ids(authoritative_owned_ids or [])
+    authority_missing = sorted(expected_owned_ids - owned_ids)
+    authority_unexpected = sorted(owned_ids - expected_owned_ids)
+    authority_match = bool(
+        authority_provided
+        and len(expected_owned_ids) == owned_expected
+        and not authority_missing
+        and not authority_unexpected
+    )
+    authority_binding_pass = authority_match if require_authoritative_owned_ids else (not authority_provided or authority_match)
+
+    if require_authoritative_owned_ids and not authority_provided:
+        defects.append(
+            {
+                "classification": "PUBLICATION_CONTRACT_DEFECT",
+                "element_id": None,
+                "missing_fields": ["authoritative_owned_ids"],
+                "detail": "authoritative owned-id binding is required for USER_REPORT publication",
+            }
+        )
+    elif authority_provided and not authority_match:
+        defects.append(
+            {
+                "classification": "PUBLICATION_CONTRACT_DEFECT",
+                "element_id": None,
+                "missing_fields": [],
+                "detail": (
+                    "tactical owned IDs do not match authoritative squad: "
+                    f"missing={authority_missing} unexpected={authority_unexpected} "
+                    f"authoritative_count={len(expected_owned_ids)} expected_count={owned_expected}"
+                ),
+            }
+        )
+
     if overlap:
         defects.append(
             {
@@ -258,7 +329,12 @@ def build_publication_integrity(
         )
 
     public_pull_state = "PASS" if str((endpoint_health.get("bootstrap") or {}).get("status") or "").upper() == "LIVE" else "FAIL"
-    resolver_pass = len(owned_ids) == 15 and len(watch_ids) == 20 and not overlap
+    resolver_pass = (
+        len(owned_ids) == owned_expected
+        and len(watch_ids) == watchlist_expected
+        and not overlap
+        and authority_binding_pass
+    )
     hydration_pass = not owned_defects and not watch_defects and not mixed_snapshots
     factual_gate_pass = (
         public_pull_state == "PASS"
@@ -267,6 +343,7 @@ def build_publication_integrity(
         and positional_exact
         and not overlap
         and hydration_pass
+        and authority_binding_pass
     )
 
     predictor_status = str((prices.get("health") or {}).get("status") or "UNAVAILABLE").upper()
@@ -281,9 +358,17 @@ def build_publication_integrity(
         "status": publication_state,
         "factual_gate_pass": factual_gate_pass,
         "owned": owned_counts,
+        "owned_authority": {
+            "required": require_authoritative_owned_ids,
+            "provided": authority_provided,
+            "matches_authoritative_squad": authority_match if authority_provided else None,
+            "authoritative_count": len(expected_owned_ids) if authority_provided else None,
+            "missing_from_tactical": authority_missing,
+            "unexpected_in_tactical": authority_unexpected,
+        },
         "watchlist": {
             **watch_counts,
-            "position_counts": {position: position_counts.get(position, 0) for position in EXPECTED_WATCHLIST_COUNTS},
+            "position_counts": {position: position_counts.get(position, 0) for position in watchlist_counts},
             "position_cardinality_exact": positional_exact,
             "owned_overlap": overlap,
         },
@@ -297,6 +382,7 @@ def build_publication_integrity(
             "personal_auth_pull": _endpoint_state(endpoint_health, ("entry", "history", "transfers", "picks")),
             "element_id_resolver": "PASS" if resolver_pass else "FAIL",
             "official_fact_hydration": "PASS" if hydration_pass else "FAIL",
+            "owned_authority_binding": "PASS" if authority_binding_pass else "FAIL",
             "owned_fact_completeness": owned_counts["status"],
             "watchlist_fact_completeness": watch_counts["status"],
             "market_predictor_freshness": predictor_state,
@@ -316,5 +402,7 @@ def build_publication_integrity(
             "personal_auth_failure_does_not_erase_public_fact": True,
             "execution_authorized_semantics_unchanged": True,
             "price_predictor_is_model_evidence": True,
+            "watchlist_cardinality_registry_is_single_owner": True,
+            "serving_requires_authoritative_owned_id_binding": True,
         },
     }

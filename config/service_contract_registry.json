@@ -1,32 +1,697 @@
 {
-  "schema_version": 9,
-  "registry": "fpl_v4_9_6_service_contracts_v9",
+  "schema_version": 10,
+  "registry": "fpl_v4_9_6_service_contracts_v10",
   "contracts": {
-    "raw_snapshot": {"path":"data/runtime/snapshot.v1.json","min_schema_version":492,"required_paths":["schema","generated_at","official.bootstrap","official.fixtures","team_value_ledger","projection_baseline.planning_gw","projection_baseline.baseline_gw","projection_baseline.default_rule","projection_baseline.effective_authority","projection_baseline.override_applied"],"equals":{"schema":"snapshot.v1","projection_baseline.default_rule":"PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD"}},
-    "enrichment": {"path":"data/runtime/enrichment.v1.json","min_schema_version":495,"required_paths":["schema","lineage.snapshot_sha256","universe","official_player_evidence.source","official_player_evidence.players","official_player_evidence.ownership","official_player_evidence.expected_goals","official_player_evidence.expected_assists","official_player_evidence.bps","official_player_evidence.starts"],"equals":{"schema":"enrichment.v1","official_player_evidence.source":"raw_snapshot.official.bootstrap.elements"},"min_lengths":{"universe":500}},
-    "latest_snapshot": {"path":"data/latest.json","min_schema_version":495,"version_field":"engine_version","version_prefix":"4.9.5-official-first-reporting","required_paths":["generated_at","phase","checkpoint_context.policy_id","team_summary.sell_value","official_context.source","official_context.official_fpl_first","official_context.teams","official_context.team_strength_rows_complete","official_context.upcoming_fixture_rows","official_context.fixture_context_rows_complete","official_context.player_field_coverage.ownership","official_context.effective_ownership_available_from_official_fpl","files.team","files.live","files.prices","files.health","files.universe","files.chips","files.predictions","files.effective_plan","files.gw_scorecard","files.checkpoint_decision","files.service_orchestration","lineage.snapshot_sha256","lineage.enrichment_sha256","meta.service_contract_compatible","meta.official_fpl_first_for_available_fields"],"equals":{"official_context.source":"raw_snapshot.official.bootstrap+fixtures","official_context.official_fpl_first":true,"official_context.effective_ownership_available_from_official_fpl":false,"meta.official_fpl_first_for_available_fields":true}},
-    "predictions": {"path":"data/predictions_v4.json","min_schema_version":492,"version_field":"model_version","version_prefix":"v4.9.2-truthful-health","required_paths":["generated_at","players","input_coverage.advanced_decision_used_ratio","capability_evidence.role_competition_adjustments","capability_evidence.role_competition_factor_variants"],"min_lengths":{"players":500}},
-    "team_state": {"path":"data/team.json","required_paths":["generated_at","squad_authority","squad","team_value_ledger","totals.sell_value"],"min_lengths":{"squad":15}},
-    "universe": {"path":"data/universe.json","required_paths":["generated_at","players"],"min_lengths":{"players":500}},
-    "source_health": {"path":"data/health.json","required_paths":["bootstrap.status","fixtures.status","entry.status","history.status","transfers.status"]},
-    "validation_lifecycle": {"path":"data/validation/lifecycle_v4.json","min_schema_version":4943,"version_field":"engine","version_prefix":"v4.9.3-validation-lifecycle","required_paths":["status","snapshot.status","reconciliation.status","eligibility.model_version","guardrails.raw_snapshot_only","guardrails.official_api_refetch","guardrails.retroactive_snapshot_rejected","guardrails.deadline_snapshot_immutable","guardrails.reconciliation_archive_immutable","guardrails.reconciliation_idempotent","guardrails.health_view_current_model_only","guardrails.simulation_never_mutates_store","guardrails.started_from_official_stats_starts_only","guardrails.minutes_never_infer_started","guardrails.missing_starts_excluded_from_start_brier"],"equals":{"status":"PASS","guardrails.raw_snapshot_only":true,"guardrails.official_api_refetch":false,"guardrails.retroactive_snapshot_rejected":true,"guardrails.deadline_snapshot_immutable":true,"guardrails.reconciliation_archive_immutable":true,"guardrails.reconciliation_idempotent":true,"guardrails.health_view_current_model_only":true,"guardrails.simulation_never_mutates_store":true,"guardrails.started_from_official_stats_starts_only":true,"guardrails.minutes_never_infer_started":true,"guardrails.missing_starts_excluded_from_start_brier":true}},
-    "compliance": {"path":"data/compliance_audit.json","required_paths":["overall"],"equals":{"overall":"PASS"}},
-    "framework_preflight": {"path":"data/framework_health_preflight_v4.json","min_schema_version":492,"required_paths":["phase","overall","pipeline_health","prediction_health","capability_health","decision_engine","critical_warmup","gate0.pass","checkpoint_context.policy_id"],"equals":{"phase":"preflight","gate0.pass":true}},
-    "wc_decision": {"path":"data/wc_decision_v4.json","min_schema_version":492,"required_paths":["classification","affordability.price_basis","optimized_elements","performance.value_term_consumed"],"min_lengths":{"optimized_elements":15}},
-    "wc_package": {"path":"data/wc_package_audit_v4.json","min_schema_version":472,"required_paths":["overall_verdict","best_by_replacement_count","affordability.price_basis"]},
-    "lineup": {"path":"data/lineup_decision_v4.json","min_schema_version":452,"required_paths":["formation","starting_xi","captain.element","vice_captain.element","governance.decision"],"equals":{"governance.decision":"OPTIMIZER_ONLY"},"min_lengths":{"starting_xi":11}},
-    "recommendation_sanity": {"path":"data/recommendation_sanity_v4.json","min_schema_version":460,"required_paths":["final_verdict","guardrails.raw_optimizer_not_authoritative"]},
-    "tactical_serving": {"path":"data/tactical_serving_v4.json","min_schema_version":4961,"required_paths":["contract","owned","watchlist"],"equals":{"contract":"TACTICAL_SERVING_15_20_V1"},"min_lengths":{"owned":15,"watchlist":20}},
-    "decision_arbitration": {"path":"data/decision_arbitration_v4.json","min_schema_version":4962,"required_paths":["contract","resolution_id","overall_action","headline","dimensions.squad.action","dimensions.transfer.action","dimensions.xi.action","dimensions.captaincy.action","dimensions.chip.action","dimensions.price.action","guardrails.single_canonical_resolution"],"equals":{"contract":"CANONICAL_DECISION_ARBITRATION_V1","guardrails.single_canonical_resolution":true}},
-    "decision_pipeline": {"path":"data/decision_pipeline_v4.json","min_schema_version":473,"required_paths":["checkpoint_context.policy_id","decision_authority","planning_squad.authority","planning_squad.baseline_gw","planning_squad.planning_gw","planning_squad.override_active","planning_squad.authority_source","results.recommendation_final","performance_slo.scope","performance_slo.limit_ms","performance_slo.actual_ms","performance_slo.status","performance_guardrails.search_quality_reduction","performance_guardrails.planning_squad_from_team_contract","performance_guardrails.stale_lock_players_not_direct_optimizer_input","performance_guardrails.engine_lineup_is_advisory_only","performance_guardrails.manual_override_applied_in_separate_microservice","performance_guardrails.decision_compute_hard_slo_lt_5s","performance_guardrails.external_network_latency_reported_separately"],"equals":{"decision_authority":"ENGINE_ADVISORY_ONLY","performance_slo.status":"PASS","performance_guardrails.search_quality_reduction":false,"performance_guardrails.planning_squad_from_team_contract":true,"performance_guardrails.stale_lock_players_not_direct_optimizer_input":true,"performance_guardrails.engine_lineup_is_advisory_only":true,"performance_guardrails.manual_override_applied_in_separate_microservice":true,"performance_guardrails.decision_compute_hard_slo_lt_5s":true,"performance_guardrails.external_network_latency_reported_separately":true}},
-    "effective_plan": {"path":"data/effective_plan_v4.json","min_schema_version":4941,"version_field":"engine","version_prefix":"v4.9.4.1-user-decision-overlay","required_paths":["status","planning_gw","team_authority","engine_recommendation.formation","user_override.active","effective_plan.authority","effective_plan.formation","effective_plan.starting_xi","effective_plan.captain.element","effective_plan.vice_captain.element","effective_plan.chip_context.active_chip","comparison.engine_can_warn_but_not_overwrite","guardrails.process_isolated_microservice","guardrails.official_api_refetch","guardrails.engine_is_advisory","guardrails.user_decision_is_final_authority","guardrails.engine_never_auto_overwrites_valid_user_override","guardrails.target_gw_override_required","guardrails.stale_override_ignored","guardrails.fpl_legality_still_enforced","guardrails.composition_from_effective_team_contract"],"equals":{"status":"PASS","comparison.engine_can_warn_but_not_overwrite":true,"guardrails.process_isolated_microservice":true,"guardrails.official_api_refetch":false,"guardrails.engine_is_advisory":true,"guardrails.user_decision_is_final_authority":true,"guardrails.engine_never_auto_overwrites_valid_user_override":true,"guardrails.target_gw_override_required":true,"guardrails.stale_override_ignored":true,"guardrails.fpl_legality_still_enforced":true,"guardrails.composition_from_effective_team_contract":true},"min_lengths":{"effective_plan.starting_xi":11}},
-    "gw_scorecard": {"path":"data/gw_scorecard_v4.json","min_schema_version":494,"version_field":"engine","version_prefix":"v4.9.4-personal-gw-scorecard","required_paths":["status","team_id","phase","snapshot_sha256","effective_plan_sha256","previous_gw.status","planning_gw.status","planning_gw.decision_authority","planning_gw.human_override_active","planning_gw.squad_basis.planning_gw","planning_gw.squad_basis.baseline_gw","planning_gw.squad_basis.default_rule","planning_gw.squad_basis.effective_authority","planning_gw.squad_basis.override_applied","history","archive.action","archive.immutable","guardrails.raw_snapshot_only","guardrails.official_api_refetch","guardrails.process_isolated_microservice","guardrails.finished_gw_archive_immutable","guardrails.simulation_never_mutates_archive","guardrails.projection_from_effective_plan_contract","guardrails.engine_is_advisory_user_plan_is_effective","guardrails.previous_submitted_gw_is_default_projection_baseline","guardrails.planning_override_target_gw_required","guardrails.projection_is_estimate_not_actual","guardrails.player_intervals_not_naively_summed"],"equals":{"status":"PASS","planning_gw.squad_basis.default_rule":"PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD","archive.immutable":true,"guardrails.raw_snapshot_only":true,"guardrails.official_api_refetch":false,"guardrails.process_isolated_microservice":true,"guardrails.finished_gw_archive_immutable":true,"guardrails.simulation_never_mutates_archive":true,"guardrails.projection_from_effective_plan_contract":true,"guardrails.engine_is_advisory_user_plan_is_effective":true,"guardrails.previous_submitted_gw_is_default_projection_baseline":true,"guardrails.planning_override_target_gw_required":true,"guardrails.projection_is_estimate_not_actual":true,"guardrails.player_intervals_not_naively_summed":true}},
-    "advanced_ablation": {"path":"data/advanced_ablation_v4.json","min_schema_version":493,"version_field":"engine","version_prefix":"v4.9.3-advanced-ablation","required_paths":["status","snapshot_sha256","model_version","ablation.advanced_removed_only","ablation.same_official_snapshot","ablation.same_last_season_priors","ablation.same_quality_config","ablation.same_optimizer_semantics","ablation.full_shadow_parity.ok","prediction_impact.players","prediction_impact.mean_abs_delta_xpts5","prediction_impact.max_abs_rank_shift","decision_impact.decision_changed","interpretation.impact_is_diagnostic_not_health_threshold"],"equals":{"status":"PASS","ablation.advanced_removed_only":true,"ablation.same_official_snapshot":true,"ablation.same_last_season_priors":true,"ablation.same_quality_config":true,"ablation.same_optimizer_semantics":true,"ablation.full_shadow_parity.ok":true,"interpretation.impact_is_diagnostic_not_health_threshold":true}},
-    "framework_postflight": {"path":"data/framework_health_v4.json","min_schema_version":492,"required_paths":["phase","overall","pipeline_health","prediction_health","capability_health","decision_engine","critical_warmup","capability_coverage.active","capability_coverage.partial","gate0.pass","gate0.plan_authority_validation.engine_plan.legal","gate0.plan_authority_validation.effective_plan.legal","governance.effective_plan_legality_enforced","governance.engine_and_effective_plan_legality_reported_separately","governance.official_fpl_first_when_available","official_fpl_first.status","official_fpl_first.source","official_fpl_first.promoted_modules","official_fpl_first.promoted_count","checkpoint_context.policy_id","capability_telemetry.states_allowed","capability_telemetry.capabilities","capability_telemetry.summary","capability_telemetry.false_green_forbidden"],"equals":{"phase":"postflight","gate0.pass":true,"gate0.plan_authority_validation.engine_plan.legal":true,"gate0.plan_authority_validation.effective_plan.legal":true,"governance.effective_plan_legality_enforced":true,"governance.engine_and_effective_plan_legality_reported_separately":true,"governance.official_fpl_first_when_available":true,"official_fpl_first.status":"PASS","capability_telemetry.false_green_forbidden":true}},
-    "checkpoint_decision": {"path":"data/checkpoint_decision_v4.json","min_schema_version":495,"version_field":"engine","version_prefix":"v4.9.5-checkpoint-governance-human-report","required_paths":["action_state","headline","human_report.language_policy","human_report.decision","human_report.summary","human_report.why","human_report.what_to_do","human_report.technical_terms_suppressed_from_primary_reasoning","squad.composition_status","squad.expected_authority","squad.authority_ok","decision.execution_authorized","decision.engine_is_advisory","decision.user_decision_is_final_authority","readiness.critical_warmup","lineup.requires_explicit_final_lock","lineup.decision_authority","personal_gw_scorecard.previous_gw.status","personal_gw_scorecard.planning_gw.status","guardrails.primary_report_plain_fpl_language","guardrails.technical_reason_codes_separate_from_human_reasoning","guardrails.reporting_composition_only","guardrails.canonical_resolution_artifact_required","guardrails.arbitration_recomputation_forbidden"],"equals":{"human_report.language_policy":"fpl_human_report_language_v1","human_report.technical_terms_suppressed_from_primary_reasoning":true,"guardrails.primary_report_plain_fpl_language":true,"guardrails.technical_reason_codes_separate_from_human_reasoning":true,"guardrails.reporting_composition_only":true,"guardrails.canonical_resolution_artifact_required":true,"guardrails.arbitration_recomputation_forbidden":true}},
-    "serving_payload": {"path":"data/serving_payload_v4.json","min_schema_version":4962,"required_paths":["contract","canonical_resolution_id","owned_15","watchlist_20","xi","bench","captain","vice_captain","guardrails.derived_from_canonical_resolved_decision_only","guardrails.exact_15_owned","guardrails.exact_20_watchlist","guardrails.exact_11_xi","guardrails.exact_4_bench","guardrails.composition_only_no_model_recompute"],"equals":{"contract":"V4_HUMAN_SERVING_V1","guardrails.derived_from_canonical_resolved_decision_only":true,"guardrails.exact_15_owned":true,"guardrails.exact_20_watchlist":true,"guardrails.exact_11_xi":true,"guardrails.exact_4_bench":true,"guardrails.composition_only_no_model_recompute":true},"min_lengths":{"owned_15":15,"watchlist_20":20,"xi":11,"bench":4}},
-    "serving_benchmark": {"path":"data/serving_benchmark_v4.json","min_schema_version":2,"required_paths":["quick_serving.actual_ms","warm_serving.runs","warm_serving.median_ms","warm_serving.p95_ms","warm_serving.target_p95_ms","warm_serving.status","warm_serving.production_sized_materialized_inputs","warm_serving.decision_semantics_recomputed"],"equals":{"warm_serving.status":"PASS","warm_serving.production_sized_materialized_inputs":true,"warm_serving.decision_semantics_recomputed":false}},
-    "architecture_guard": {"path":"data/architecture_ownership_v4.json","min_schema_version":497,"version_field":"release","version_prefix":"4.9.6","required_paths":["status","checks.unique_service_ids.pass","checks.unique_contract_producers.pass","checks.unique_contract_paths.pass","checks.unique_registry_ids.pass","checks.canonical_rule_definitions_single_owner.pass","checks.official_fpl_fetch_single_owner.pass","checks.no_exact_nontrivial_function_clones.pass","checks.single_reusable_production_workflow.pass","checks.release_single_source_coherent.pass","checks.capability_matrix_required_coverage.pass","checks.capability_matrix_contract_complete.pass","checks.capability_matrix_overlap_actions_governed.pass","checks.reporting_composition_only.pass","checks.moving_operational_identity_single_owner.pass"],"equals":{"status":"PASS","checks.unique_service_ids.pass":true,"checks.unique_contract_producers.pass":true,"checks.unique_contract_paths.pass":true,"checks.unique_registry_ids.pass":true,"checks.canonical_rule_definitions_single_owner.pass":true,"checks.official_fpl_fetch_single_owner.pass":true,"checks.no_exact_nontrivial_function_clones.pass":true,"checks.single_reusable_production_workflow.pass":true,"checks.release_single_source_coherent.pass":true,"checks.capability_matrix_required_coverage.pass":true,"checks.capability_matrix_contract_complete.pass":true,"checks.capability_matrix_overlap_actions_governed.pass":true,"checks.reporting_composition_only.pass":true,"checks.moving_operational_identity_single_owner.pass":true}},
-    "reconciliation_readiness": {"path":"data/validation/reconciliation_readiness_v4.json","min_schema_version":4961,"version_field":"release","version_prefix":"4.9.6","required_paths":["status","target_gw","stage","ready_for_reconciliation_now","checks.snapshot_integrity.pass","checks.validation_lifecycle.pass","checks.ownership_chain.pass","blockers","pending","guardrails.read_only_audit","guardrails.official_api_refetch","guardrails.reconciliation_truth_not_reimplemented"],"equals":{"status":"PASS","checks.snapshot_integrity.pass":true,"checks.validation_lifecycle.pass":true,"checks.ownership_chain.pass":true,"guardrails.read_only_audit":true,"guardrails.official_api_refetch":false,"guardrails.reconciliation_truth_not_reimplemented":true}}
+    "raw_snapshot": {
+      "path": "data/runtime/snapshot.v1.json",
+      "min_schema_version": 492,
+      "required_paths": [
+        "schema",
+        "generated_at",
+        "official.bootstrap",
+        "official.fixtures",
+        "team_value_ledger",
+        "projection_baseline.planning_gw",
+        "projection_baseline.baseline_gw",
+        "projection_baseline.default_rule",
+        "projection_baseline.effective_authority",
+        "projection_baseline.override_applied"
+      ],
+      "equals": {
+        "schema": "snapshot.v1",
+        "projection_baseline.default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD"
+      }
+    },
+    "enrichment": {
+      "path": "data/runtime/enrichment.v1.json",
+      "min_schema_version": 495,
+      "required_paths": [
+        "schema",
+        "lineage.snapshot_sha256",
+        "universe",
+        "official_player_evidence.source",
+        "official_player_evidence.players",
+        "official_player_evidence.ownership",
+        "official_player_evidence.expected_goals",
+        "official_player_evidence.expected_assists",
+        "official_player_evidence.bps",
+        "official_player_evidence.starts"
+      ],
+      "equals": {
+        "schema": "enrichment.v1",
+        "official_player_evidence.source": "raw_snapshot.official.bootstrap.elements"
+      },
+      "min_lengths": {
+        "universe": 500
+      }
+    },
+    "latest_snapshot": {
+      "path": "data/latest.json",
+      "min_schema_version": 495,
+      "version_field": "engine_version",
+      "version_prefix": "4.9.5-official-first-reporting",
+      "required_paths": [
+        "generated_at",
+        "phase",
+        "checkpoint_context.policy_id",
+        "team_summary.sell_value",
+        "official_context.source",
+        "official_context.official_fpl_first",
+        "official_context.teams",
+        "official_context.team_strength_rows_complete",
+        "official_context.upcoming_fixture_rows",
+        "official_context.fixture_context_rows_complete",
+        "official_context.player_field_coverage.ownership",
+        "official_context.effective_ownership_available_from_official_fpl",
+        "files.team",
+        "files.live",
+        "files.prices",
+        "files.health",
+        "files.universe",
+        "files.chips",
+        "files.predictions",
+        "files.effective_plan",
+        "files.gw_scorecard",
+        "files.checkpoint_decision",
+        "files.service_orchestration",
+        "lineage.snapshot_sha256",
+        "lineage.enrichment_sha256",
+        "meta.service_contract_compatible",
+        "meta.official_fpl_first_for_available_fields"
+      ],
+      "equals": {
+        "official_context.source": "raw_snapshot.official.bootstrap+fixtures",
+        "official_context.official_fpl_first": true,
+        "official_context.effective_ownership_available_from_official_fpl": false,
+        "meta.official_fpl_first_for_available_fields": true
+      }
+    },
+    "predictions": {
+      "path": "data/predictions_v4.json",
+      "min_schema_version": 492,
+      "version_field": "model_version",
+      "version_prefix": "v4.9.2-truthful-health",
+      "required_paths": [
+        "generated_at",
+        "players",
+        "input_coverage.advanced_decision_used_ratio",
+        "capability_evidence.role_competition_adjustments",
+        "capability_evidence.role_competition_factor_variants"
+      ],
+      "min_lengths": {
+        "players": 500
+      }
+    },
+    "team_state": {
+      "path": "data/team.json",
+      "required_paths": [
+        "generated_at",
+        "squad_authority",
+        "squad",
+        "team_value_ledger",
+        "totals.sell_value"
+      ],
+      "min_lengths": {
+        "squad": 15
+      }
+    },
+    "universe": {
+      "path": "data/universe.json",
+      "required_paths": [
+        "generated_at",
+        "players"
+      ],
+      "min_lengths": {
+        "players": 500
+      }
+    },
+    "source_health": {
+      "path": "data/health.json",
+      "required_paths": [
+        "bootstrap.status",
+        "fixtures.status",
+        "entry.status",
+        "history.status",
+        "transfers.status"
+      ]
+    },
+    "validation_lifecycle": {
+      "path": "data/validation/lifecycle_v4.json",
+      "min_schema_version": 4943,
+      "version_field": "engine",
+      "version_prefix": "v4.9.3-validation-lifecycle",
+      "required_paths": [
+        "status",
+        "snapshot.status",
+        "reconciliation.status",
+        "eligibility.model_version",
+        "guardrails.raw_snapshot_only",
+        "guardrails.official_api_refetch",
+        "guardrails.retroactive_snapshot_rejected",
+        "guardrails.deadline_snapshot_immutable",
+        "guardrails.reconciliation_archive_immutable",
+        "guardrails.reconciliation_idempotent",
+        "guardrails.health_view_current_model_only",
+        "guardrails.simulation_never_mutates_store",
+        "guardrails.started_from_official_stats_starts_only",
+        "guardrails.minutes_never_infer_started",
+        "guardrails.missing_starts_excluded_from_start_brier"
+      ],
+      "equals": {
+        "status": "PASS",
+        "guardrails.raw_snapshot_only": true,
+        "guardrails.official_api_refetch": false,
+        "guardrails.retroactive_snapshot_rejected": true,
+        "guardrails.deadline_snapshot_immutable": true,
+        "guardrails.reconciliation_archive_immutable": true,
+        "guardrails.reconciliation_idempotent": true,
+        "guardrails.health_view_current_model_only": true,
+        "guardrails.simulation_never_mutates_store": true,
+        "guardrails.started_from_official_stats_starts_only": true,
+        "guardrails.minutes_never_infer_started": true,
+        "guardrails.missing_starts_excluded_from_start_brier": true
+      }
+    },
+    "compliance": {
+      "path": "data/compliance_audit.json",
+      "required_paths": [
+        "overall"
+      ],
+      "equals": {
+        "overall": "PASS"
+      }
+    },
+    "framework_preflight": {
+      "path": "data/framework_health_preflight_v4.json",
+      "min_schema_version": 492,
+      "required_paths": [
+        "phase",
+        "overall",
+        "pipeline_health",
+        "prediction_health",
+        "capability_health",
+        "decision_engine",
+        "critical_warmup",
+        "gate0.pass",
+        "checkpoint_context.policy_id"
+      ],
+      "equals": {
+        "phase": "preflight",
+        "gate0.pass": true
+      }
+    },
+    "wc_decision": {
+      "path": "data/wc_decision_v4.json",
+      "min_schema_version": 492,
+      "required_paths": [
+        "classification",
+        "affordability.price_basis",
+        "optimized_elements",
+        "performance.value_term_consumed"
+      ],
+      "min_lengths": {
+        "optimized_elements": 15
+      }
+    },
+    "wc_package": {
+      "path": "data/wc_package_audit_v4.json",
+      "min_schema_version": 472,
+      "required_paths": [
+        "overall_verdict",
+        "best_by_replacement_count",
+        "affordability.price_basis"
+      ]
+    },
+    "lineup": {
+      "path": "data/lineup_decision_v4.json",
+      "min_schema_version": 452,
+      "required_paths": [
+        "formation",
+        "starting_xi",
+        "captain.element",
+        "vice_captain.element",
+        "governance.decision"
+      ],
+      "equals": {
+        "governance.decision": "OPTIMIZER_ONLY"
+      },
+      "min_lengths": {
+        "starting_xi": 11
+      }
+    },
+    "recommendation_sanity": {
+      "path": "data/recommendation_sanity_v4.json",
+      "min_schema_version": 460,
+      "required_paths": [
+        "final_verdict",
+        "guardrails.raw_optimizer_not_authoritative"
+      ]
+    },
+    "tactical_serving": {
+      "path": "data/tactical_serving_v4.json",
+      "min_schema_version": 4961,
+      "required_paths": [
+        "contract",
+        "owned",
+        "watchlist"
+      ],
+      "equals": {
+        "contract": "TACTICAL_SERVING_15_20_V1"
+      },
+      "min_lengths": {
+        "owned": 15,
+        "watchlist": 20
+      }
+    },
+    "decision_arbitration": {
+      "path": "data/decision_arbitration_v4.json",
+      "min_schema_version": 4962,
+      "required_paths": [
+        "contract",
+        "resolution_id",
+        "overall_action",
+        "headline",
+        "dimensions.squad.action",
+        "dimensions.transfer.action",
+        "dimensions.xi.action",
+        "dimensions.captaincy.action",
+        "dimensions.chip.action",
+        "dimensions.price.action",
+        "guardrails.single_canonical_resolution"
+      ],
+      "equals": {
+        "contract": "CANONICAL_DECISION_ARBITRATION_V1",
+        "guardrails.single_canonical_resolution": true
+      }
+    },
+    "decision_pipeline": {
+      "path": "data/decision_pipeline_v4.json",
+      "min_schema_version": 473,
+      "required_paths": [
+        "checkpoint_context.policy_id",
+        "decision_authority",
+        "planning_squad.authority",
+        "planning_squad.baseline_gw",
+        "planning_squad.planning_gw",
+        "planning_squad.override_active",
+        "planning_squad.authority_source",
+        "results.recommendation_final",
+        "performance_slo.scope",
+        "performance_slo.limit_ms",
+        "performance_slo.actual_ms",
+        "performance_slo.status",
+        "performance_guardrails.search_quality_reduction",
+        "performance_guardrails.planning_squad_from_team_contract",
+        "performance_guardrails.stale_lock_players_not_direct_optimizer_input",
+        "performance_guardrails.engine_lineup_is_advisory_only",
+        "performance_guardrails.manual_override_applied_in_separate_microservice",
+        "performance_guardrails.decision_compute_hard_slo_lt_5s",
+        "performance_guardrails.external_network_latency_reported_separately"
+      ],
+      "equals": {
+        "decision_authority": "ENGINE_ADVISORY_ONLY",
+        "performance_slo.status": "PASS",
+        "performance_guardrails.search_quality_reduction": false,
+        "performance_guardrails.planning_squad_from_team_contract": true,
+        "performance_guardrails.stale_lock_players_not_direct_optimizer_input": true,
+        "performance_guardrails.engine_lineup_is_advisory_only": true,
+        "performance_guardrails.manual_override_applied_in_separate_microservice": true,
+        "performance_guardrails.decision_compute_hard_slo_lt_5s": true,
+        "performance_guardrails.external_network_latency_reported_separately": true
+      }
+    },
+    "effective_plan": {
+      "path": "data/effective_plan_v4.json",
+      "min_schema_version": 4941,
+      "version_field": "engine",
+      "version_prefix": "v4.9.4.1-user-decision-overlay",
+      "required_paths": [
+        "status",
+        "planning_gw",
+        "team_authority",
+        "engine_recommendation.formation",
+        "user_override.active",
+        "effective_plan.authority",
+        "effective_plan.formation",
+        "effective_plan.starting_xi",
+        "effective_plan.captain.element",
+        "effective_plan.vice_captain.element",
+        "effective_plan.chip_context.active_chip",
+        "comparison.engine_can_warn_but_not_overwrite",
+        "guardrails.process_isolated_microservice",
+        "guardrails.official_api_refetch",
+        "guardrails.engine_is_advisory",
+        "guardrails.user_decision_is_final_authority",
+        "guardrails.engine_never_auto_overwrites_valid_user_override",
+        "guardrails.target_gw_override_required",
+        "guardrails.stale_override_ignored",
+        "guardrails.fpl_legality_still_enforced",
+        "guardrails.composition_from_effective_team_contract"
+      ],
+      "equals": {
+        "status": "PASS",
+        "comparison.engine_can_warn_but_not_overwrite": true,
+        "guardrails.process_isolated_microservice": true,
+        "guardrails.official_api_refetch": false,
+        "guardrails.engine_is_advisory": true,
+        "guardrails.user_decision_is_final_authority": true,
+        "guardrails.engine_never_auto_overwrites_valid_user_override": true,
+        "guardrails.target_gw_override_required": true,
+        "guardrails.stale_override_ignored": true,
+        "guardrails.fpl_legality_still_enforced": true,
+        "guardrails.composition_from_effective_team_contract": true
+      },
+      "min_lengths": {
+        "effective_plan.starting_xi": 11
+      }
+    },
+    "gw_scorecard": {
+      "path": "data/gw_scorecard_v4.json",
+      "min_schema_version": 494,
+      "version_field": "engine",
+      "version_prefix": "v4.9.4-personal-gw-scorecard",
+      "required_paths": [
+        "status",
+        "team_id",
+        "phase",
+        "snapshot_sha256",
+        "effective_plan_sha256",
+        "previous_gw.status",
+        "planning_gw.status",
+        "planning_gw.decision_authority",
+        "planning_gw.human_override_active",
+        "planning_gw.squad_basis.planning_gw",
+        "planning_gw.squad_basis.baseline_gw",
+        "planning_gw.squad_basis.default_rule",
+        "planning_gw.squad_basis.effective_authority",
+        "planning_gw.squad_basis.override_applied",
+        "history",
+        "archive.action",
+        "archive.immutable",
+        "guardrails.raw_snapshot_only",
+        "guardrails.official_api_refetch",
+        "guardrails.process_isolated_microservice",
+        "guardrails.finished_gw_archive_immutable",
+        "guardrails.simulation_never_mutates_archive",
+        "guardrails.projection_from_effective_plan_contract",
+        "guardrails.engine_is_advisory_user_plan_is_effective",
+        "guardrails.previous_submitted_gw_is_default_projection_baseline",
+        "guardrails.planning_override_target_gw_required",
+        "guardrails.projection_is_estimate_not_actual",
+        "guardrails.player_intervals_not_naively_summed"
+      ],
+      "equals": {
+        "status": "PASS",
+        "planning_gw.squad_basis.default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
+        "archive.immutable": true,
+        "guardrails.raw_snapshot_only": true,
+        "guardrails.official_api_refetch": false,
+        "guardrails.process_isolated_microservice": true,
+        "guardrails.finished_gw_archive_immutable": true,
+        "guardrails.simulation_never_mutates_archive": true,
+        "guardrails.projection_from_effective_plan_contract": true,
+        "guardrails.engine_is_advisory_user_plan_is_effective": true,
+        "guardrails.previous_submitted_gw_is_default_projection_baseline": true,
+        "guardrails.planning_override_target_gw_required": true,
+        "guardrails.projection_is_estimate_not_actual": true,
+        "guardrails.player_intervals_not_naively_summed": true
+      }
+    },
+    "advanced_ablation": {
+      "path": "data/advanced_ablation_v4.json",
+      "min_schema_version": 493,
+      "version_field": "engine",
+      "version_prefix": "v4.9.3-advanced-ablation",
+      "required_paths": [
+        "status",
+        "snapshot_sha256",
+        "model_version",
+        "ablation.advanced_removed_only",
+        "ablation.same_official_snapshot",
+        "ablation.same_last_season_priors",
+        "ablation.same_quality_config",
+        "ablation.same_optimizer_semantics",
+        "ablation.full_shadow_parity.ok",
+        "prediction_impact.players",
+        "prediction_impact.mean_abs_delta_xpts5",
+        "prediction_impact.max_abs_rank_shift",
+        "decision_impact.decision_changed",
+        "interpretation.impact_is_diagnostic_not_health_threshold"
+      ],
+      "equals": {
+        "status": "PASS",
+        "ablation.advanced_removed_only": true,
+        "ablation.same_official_snapshot": true,
+        "ablation.same_last_season_priors": true,
+        "ablation.same_quality_config": true,
+        "ablation.same_optimizer_semantics": true,
+        "ablation.full_shadow_parity.ok": true,
+        "interpretation.impact_is_diagnostic_not_health_threshold": true
+      }
+    },
+    "framework_postflight": {
+      "path": "data/framework_health_v4.json",
+      "min_schema_version": 492,
+      "required_paths": [
+        "phase",
+        "overall",
+        "pipeline_health",
+        "prediction_health",
+        "capability_health",
+        "decision_engine",
+        "critical_warmup",
+        "capability_coverage.active",
+        "capability_coverage.partial",
+        "gate0.pass",
+        "gate0.plan_authority_validation.engine_plan.legal",
+        "gate0.plan_authority_validation.effective_plan.legal",
+        "governance.effective_plan_legality_enforced",
+        "governance.engine_and_effective_plan_legality_reported_separately",
+        "governance.official_fpl_first_when_available",
+        "official_fpl_first.status",
+        "official_fpl_first.source",
+        "official_fpl_first.promoted_modules",
+        "official_fpl_first.promoted_count",
+        "checkpoint_context.policy_id",
+        "capability_telemetry.states_allowed",
+        "capability_telemetry.capabilities",
+        "capability_telemetry.summary",
+        "capability_telemetry.false_green_forbidden"
+      ],
+      "equals": {
+        "phase": "postflight",
+        "gate0.pass": true,
+        "gate0.plan_authority_validation.engine_plan.legal": true,
+        "gate0.plan_authority_validation.effective_plan.legal": true,
+        "governance.effective_plan_legality_enforced": true,
+        "governance.engine_and_effective_plan_legality_reported_separately": true,
+        "governance.official_fpl_first_when_available": true,
+        "official_fpl_first.status": "PASS",
+        "capability_telemetry.false_green_forbidden": true
+      }
+    },
+    "checkpoint_decision": {
+      "path": "data/checkpoint_decision_v4.json",
+      "min_schema_version": 495,
+      "version_field": "engine",
+      "version_prefix": "v4.9.5-checkpoint-governance-human-report",
+      "required_paths": [
+        "action_state",
+        "headline",
+        "human_report.language_policy",
+        "human_report.decision",
+        "human_report.summary",
+        "human_report.why",
+        "human_report.what_to_do",
+        "human_report.technical_terms_suppressed_from_primary_reasoning",
+        "squad.composition_status",
+        "squad.expected_authority",
+        "squad.authority_ok",
+        "decision.execution_authorized",
+        "decision.engine_is_advisory",
+        "decision.user_decision_is_final_authority",
+        "readiness.critical_warmup",
+        "lineup.requires_explicit_final_lock",
+        "lineup.decision_authority",
+        "personal_gw_scorecard.previous_gw.status",
+        "personal_gw_scorecard.planning_gw.status",
+        "guardrails.primary_report_plain_fpl_language",
+        "guardrails.technical_reason_codes_separate_from_human_reasoning",
+        "guardrails.reporting_composition_only",
+        "guardrails.canonical_resolution_artifact_required",
+        "guardrails.arbitration_recomputation_forbidden"
+      ],
+      "equals": {
+        "human_report.language_policy": "fpl_human_report_language_v1",
+        "human_report.technical_terms_suppressed_from_primary_reasoning": true,
+        "guardrails.primary_report_plain_fpl_language": true,
+        "guardrails.technical_reason_codes_separate_from_human_reasoning": true,
+        "guardrails.reporting_composition_only": true,
+        "guardrails.canonical_resolution_artifact_required": true,
+        "guardrails.arbitration_recomputation_forbidden": true
+      }
+    },
+    "serving_payload": {
+      "path": "data/serving_payload_v4.json",
+      "min_schema_version": 4962,
+      "required_paths": [
+        "contract",
+        "canonical_resolution_id",
+        "owned_15",
+        "watchlist_20",
+        "xi",
+        "bench",
+        "captain",
+        "vice_captain",
+        "guardrails.derived_from_canonical_resolved_decision_only",
+        "guardrails.exact_15_owned",
+        "guardrails.exact_20_watchlist",
+        "guardrails.exact_11_xi",
+        "guardrails.exact_4_bench",
+        "guardrails.composition_only_no_model_recompute"
+      ],
+      "equals": {
+        "contract": "V4_HUMAN_SERVING_V1",
+        "guardrails.derived_from_canonical_resolved_decision_only": true,
+        "guardrails.exact_15_owned": true,
+        "guardrails.exact_20_watchlist": true,
+        "guardrails.exact_11_xi": true,
+        "guardrails.exact_4_bench": true,
+        "guardrails.composition_only_no_model_recompute": true
+      },
+      "min_lengths": {
+        "owned_15": 15,
+        "watchlist_20": 20,
+        "xi": 11,
+        "bench": 4
+      }
+    },
+    "serving_benchmark": {
+      "path": "data/serving_benchmark_v4.json",
+      "min_schema_version": 2,
+      "required_paths": [
+        "quick_serving.actual_ms",
+        "warm_serving.runs",
+        "warm_serving.median_ms",
+        "warm_serving.p95_ms",
+        "warm_serving.target_p95_ms",
+        "warm_serving.status",
+        "warm_serving.production_sized_materialized_inputs",
+        "warm_serving.decision_semantics_recomputed"
+      ],
+      "equals": {
+        "warm_serving.status": "PASS",
+        "warm_serving.production_sized_materialized_inputs": true,
+        "warm_serving.decision_semantics_recomputed": false
+      }
+    },
+    "architecture_guard": {
+      "path": "data/architecture_ownership_v4.json",
+      "min_schema_version": 497,
+      "version_field": "release",
+      "version_prefix": "4.9.6",
+      "required_paths": [
+        "status",
+        "checks.unique_service_ids.pass",
+        "checks.unique_contract_producers.pass",
+        "checks.unique_contract_paths.pass",
+        "checks.unique_registry_ids.pass",
+        "checks.canonical_rule_definitions_single_owner.pass",
+        "checks.official_fpl_fetch_single_owner.pass",
+        "checks.no_exact_nontrivial_function_clones.pass",
+        "checks.single_reusable_production_workflow.pass",
+        "checks.release_single_source_coherent.pass",
+        "checks.capability_matrix_required_coverage.pass",
+        "checks.capability_matrix_contract_complete.pass",
+        "checks.capability_matrix_overlap_actions_governed.pass",
+        "checks.reporting_composition_only.pass",
+        "checks.moving_operational_identity_single_owner.pass"
+      ],
+      "equals": {
+        "status": "PASS",
+        "checks.unique_service_ids.pass": true,
+        "checks.unique_contract_producers.pass": true,
+        "checks.unique_contract_paths.pass": true,
+        "checks.unique_registry_ids.pass": true,
+        "checks.canonical_rule_definitions_single_owner.pass": true,
+        "checks.official_fpl_fetch_single_owner.pass": true,
+        "checks.no_exact_nontrivial_function_clones.pass": true,
+        "checks.single_reusable_production_workflow.pass": true,
+        "checks.release_single_source_coherent.pass": true,
+        "checks.capability_matrix_required_coverage.pass": true,
+        "checks.capability_matrix_contract_complete.pass": true,
+        "checks.capability_matrix_overlap_actions_governed.pass": true,
+        "checks.reporting_composition_only.pass": true,
+        "checks.moving_operational_identity_single_owner.pass": true
+      }
+    },
+    "reconciliation_readiness": {
+      "path": "data/validation/reconciliation_readiness_v4.json",
+      "min_schema_version": 4961,
+      "version_field": "release",
+      "version_prefix": "4.9.6",
+      "required_paths": [
+        "status",
+        "target_gw",
+        "stage",
+        "ready_for_reconciliation_now",
+        "checks.snapshot_integrity.pass",
+        "checks.validation_lifecycle.pass",
+        "checks.ownership_chain.pass",
+        "blockers",
+        "pending",
+        "guardrails.read_only_audit",
+        "guardrails.official_api_refetch",
+        "guardrails.reconciliation_truth_not_reimplemented"
+      ],
+      "equals": {
+        "status": "PASS",
+        "checks.snapshot_integrity.pass": true,
+        "checks.validation_lifecycle.pass": true,
+        "checks.ownership_chain.pass": true,
+        "guardrails.read_only_audit": true,
+        "guardrails.official_api_refetch": false,
+        "guardrails.reconciliation_truth_not_reimplemented": true
+      }
+    },
+    "publication_integrity": {
+      "path": "data/publication_integrity_v4.json",
+      "min_schema_version": 1,
+      "required_paths": [
+        "contract",
+        "status",
+        "factual_gate_pass",
+        "owned.expected",
+        "owned.resolved",
+        "owned.official_fact_complete",
+        "watchlist.expected",
+        "watchlist.resolved",
+        "watchlist.official_fact_complete",
+        "watchlist.position_counts.GK",
+        "watchlist.position_counts.DEF",
+        "watchlist.position_counts.MID",
+        "watchlist.position_counts.FWD",
+        "watchlist.position_cardinality_exact",
+        "watchlist.owned_overlap",
+        "official_snapshot.single_coherent_snapshot",
+        "capabilities.publication_integrity",
+        "capabilities.reporting",
+        "capabilities.serving",
+        "capabilities.overall",
+        "authority_separation.execution_authorized_semantics_unchanged"
+      ],
+      "equals": {
+        "contract": "V4_OFFICIAL_FACT_PUBLICATION_INTEGRITY_V1",
+        "status": "PASS",
+        "factual_gate_pass": true,
+        "watchlist.position_cardinality_exact": true,
+        "official_snapshot.single_coherent_snapshot": true,
+        "capabilities.publication_integrity": "PASS",
+        "capabilities.reporting": "PASS",
+        "capabilities.serving": "PASS",
+        "capabilities.overall": "PASS",
+        "authority_separation.execution_authorized_semantics_unchanged": true
+      }
+    }
   }
 }

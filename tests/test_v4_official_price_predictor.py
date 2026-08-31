@@ -8,6 +8,7 @@ from src.engines.price_radar import (
     _normalise_player,
     _raw_payload_hash,
     _scheduled_update,
+    _served_evidence,
     canonical_contract,
 )
 from src.engines.v4_decision_arbitration import _attach_price_timing
@@ -216,3 +217,40 @@ def test_price_risk_cannot_promote_hold_to_change():
     assert enriched["execution_authorized"] is False
     assert enriched["price_context"]["price_only_execution_authorized"] is False
     assert enriched["price_context"]["execution_timing"] == "REVIEW_PRICE_SQUEEZE_NO_EXECUTION_AUTHORITY"
+
+
+
+def test_predictor_publication_states_and_provenance_are_explicit():
+    now = datetime(2026, 8, 31, 10, 0, tzinfo=timezone.utc)
+    no_signal = _normalise(_player(
+        price_change_percent=34.3,
+        price_change_projections=[
+            {"offset": 0, "projected_percent": 39.8, "likelihood": 1},
+            {"offset": 1, "projected_percent": 45.0, "likelihood": 1},
+            {"offset": 2, "projected_percent": 50.0, "likelihood": 1},
+        ],
+    ), now=now)
+    served = _served_evidence(no_signal, owned=False)
+    assert served["predictor_serving_state"] == "NO_SIGNAL"
+    assert served["raw_evidence_state"] == "AVAILABLE"
+    assert served["provider"] == "OFFICIAL_FPL"
+    assert served["observed_at"] == served["fetched_at"]
+    assert served["fetched_at_distinct"] is False
+    assert served["age_seconds"] == served["freshness_seconds"]
+    assert served["freshness_state"] == "FRESH"
+    assert served["trajectory_basis"]["current_progress_percent"] == 34.3
+    assert served["trajectory_basis"]["model_threshold_percent"] == MODEL_THRESHOLD
+
+    stale = _normalise(_player(element=2), now=now, observed_at=now - timedelta(hours=3))
+    stale_served = _served_evidence(stale, owned=False)
+    assert stale_served["predictor_serving_state"] == "STALE"
+    assert stale_served["freshness_state"] == "STALE"
+    assert stale_served["age_seconds"] == 10800
+
+    unavailable_player = _player(element=3)
+    unavailable_player.pop("price_change_percent")
+    unavailable = _normalise(unavailable_player, now=now)
+    assert _served_evidence(unavailable, owned=False)["predictor_serving_state"] == "UNAVAILABLE"
+
+    actionable = _normalise(_player(element=4), now=now)
+    assert _served_evidence(actionable, owned=False)["predictor_serving_state"] == "AVAILABLE"

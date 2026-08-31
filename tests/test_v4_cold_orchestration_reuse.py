@@ -31,6 +31,7 @@ def test_governance_reuses_one_immutable_prediction_context(monkeypatch):
         "predictions_v4.json": predictions,
         "latest.json": latest,
         "universe.json": universe,
+        "publication_integrity_v4.json": {},
     }
     reads = []
 
@@ -55,7 +56,11 @@ def test_governance_reuses_one_immutable_prediction_context(monkeypatch):
 
     out = governance.run()
     assert out["status"] == "PASS"
-    assert reads == ["predictions_v4.json", "latest.json", "universe.json"]
+    assert reads[:3] == ["predictions_v4.json", "latest.json", "universe.json"]
+    assert reads.count("predictions_v4.json") == 1
+    assert reads.count("latest.json") == 1
+    assert reads.count("universe.json") == 1
+    assert reads.count("publication_integrity_v4.json") == 1
     for phase in ("postflight", "maturity"):
         assert seen[phase]["predictions"] is predictions
         assert seen[phase]["latest"] is latest

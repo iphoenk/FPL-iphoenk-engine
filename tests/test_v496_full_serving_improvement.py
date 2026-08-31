@@ -20,7 +20,26 @@ def _prediction(element, position, xpts, team="T", start=.9):
 
 
 def _universe(element, position, team="T"):
-    return {"element":element,"name":f"P{element}","position":position,"team":team}
+    fetched = "2026-08-29T09:00:00+00:00"
+    now_cost = 50 + (element % 50)
+    return {
+        "element": element,
+        "element_id": element,
+        "name": f"P{element}",
+        "position": position,
+        "team": team,
+        "club": team,
+        "team_id": (element % 20) + 1,
+        "now_cost": now_cost,
+        "price": round(now_cost / 10.0, 1),
+        "ownership": "1.0",
+        "status": "a",
+        "source": "bootstrap-static.elements",
+        "source_snapshot_id": "fixture-snapshot",
+        "fetched_at": fetched,
+        "observed_at": fetched,
+        "freshness": "FRESH",
+    }
 
 
 def test_chip_phase_history_and_planning_are_separate():
@@ -74,6 +93,9 @@ def test_tactical_serving_is_exact_15_plus_20_and_never_fabricates():
     predictions,universe,team=_serving_fixture_set();out=build_tactical_serving(predictions,universe,team,external={})
     assert out["counts"]["owned"]==15 and out["counts"]["watchlist"]==20
     assert {p:out["counts"][p] for p in ("GK","DEF","MID","FWD")}=={"GK":5,"DEF":5,"MID":5,"FWD":5}
+    assert all(row["element_id"] == row["element"] for row in [*out["owned"],*out["watchlist"]])
+    assert all(row["now_cost"] is not None and row["ownership"] is not None and row["status"] for row in [*out["owned"],*out["watchlist"]])
+    assert all(row["source_snapshot_id"] == "fixture-snapshot" for row in [*out["owned"],*out["watchlist"]])
     assert all(row["tactical"]["tactical_delta_applied"]==0 for row in [*out["owned"],*out["watchlist"]])
     assert all(row["tactical"]["evidence_state"] in {"MODEL_ROLE_ONLY","UNAVAILABLE"} for row in [*out["owned"],*out["watchlist"]])
 

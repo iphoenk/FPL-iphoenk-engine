@@ -5,6 +5,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 
+from src.engines.v4_official_fact_integrity import build_public_fact, fact_defects, official_snapshot_metadata
 from src.intelligence.weather_advisory import collect_weather_context
 from src.services.competitive_load_service import OUT as COMPETITIVE_LOAD_OUT
 from src.services.competitive_load_service import (
@@ -110,17 +111,12 @@ def _deep_task(gw: int, ttl: float) -> dict:
     }
 
 
-def _official_player_row(player: dict, teams: dict, positions: dict) -> dict:
+def _official_player_row(player: dict, teams: dict, positions: dict, snapshot_meta: dict) -> dict:
+    fact = build_public_fact(player, teams, positions, snapshot_meta)
     return {
-        "element": player["id"],
-        "name": player["web_name"],
-        "team": teams[player["team"]],
-        "team_id": player["team"],
-        "position": positions[player["element_type"]],
+        **fact,
         "element_type": player["element_type"],
-        "now_cost": player["now_cost"],
-        "ownership": player.get("selected_by_percent"),
-        "status": player.get("status"),
+        "selected_by_percent": player.get("selected_by_percent"),
         "chance_of_playing_next_round": player.get("chance_of_playing_next_round"),
         "news": player.get("news"),
         "points": player.get("total_points"),
@@ -223,7 +219,15 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
     atomic_json(WEATHER_OUT, weather_context)
     teams = {team["id"]: team["name"] for team in bootstrap.get("teams", [])}
     positions = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
-    universe = [_official_player_row(player, teams, positions) for player in bootstrap.get("elements", [])]
+    official_snapshot = official_snapshot_metadata(
+        bootstrap,
+        ((raw.get("endpoint_health") or {}).get("bootstrap") or {}),
+    )
+    universe = [_official_player_row(player, teams, positions, official_snapshot) for player in bootstrap.get("elements", [])]
+    official_fact_complete = sum(
+        not fact_defects(row, expected_element=int(row.get("element_id") or 0))
+        for row in universe
+    )
 
     competitive_load = build_competitive_load(
         raw,
@@ -240,6 +244,7 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         "lineage": {"snapshot_schema": "snapshot.v1", "snapshot_sha256": file_digest(SNAPSHOT)},
         "stats_gw": stats_gw,
         "advanced_stats_sync": advanced,
+        "official_fact_snapshot": official_snapshot,
         "weather_context": {
             "artifact": "data/weather_context_v4.json",
             "contract": weather_context.get("contract"),
@@ -268,7 +273,11 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         },
         "official_player_evidence": {
             "source": "raw_snapshot.official.bootstrap.elements",
+            "source_snapshot_id": official_snapshot.get("source_snapshot_id"),
+            "fetched_at": official_snapshot.get("fetched_at"),
+            "freshness": official_snapshot.get("freshness"),
             "players": len(universe),
+            "required_public_fact_complete": official_fact_complete,
             "ownership": sum(row.get("ownership") is not None for row in universe),
             "expected_goals": sum(row.get("expected_goals") is not None for row in universe),
             "expected_assists": sum(row.get("expected_assists") is not None for row in universe),
@@ -284,6 +293,8 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         "schema": "enrichment.v1",
         "duration_ms": out["duration_ms"],
         "official_players": len(universe),
+        "official_fact_complete": official_fact_complete,
+        "official_snapshot": official_snapshot.get("source_snapshot_id"),
         "stats_reused": {key: value.get("reused") for key, value in advanced.items() if isinstance(value, dict) and "reused" in value},
         "competitive_load_rows": competitive_load.get("coverage", {}).get("observed_player_fixture_rows"),
         "competitive_load_complete_for_visible_report": competitive_load.get("coverage", {}).get("complete_for_visible_report"),

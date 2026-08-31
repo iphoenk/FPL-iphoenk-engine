@@ -10,11 +10,14 @@ from typing import Any
 from src.v5.config_cache import load_json_config
 from src.v5.evaluation.shadow_parity import compare
 from src.v5.official_auth import expected_team_id
+from src.v5.production_baseline import production_source_sha
 from src.v5.release_integrity import runtime_fingerprint
 from src.v5.services.orchestrator_beta import handle as beta_handle
 
 MANIFEST_CONFIG = "config/v5_convergence_manifest.json"
 TRIGGER_CONFIG = "config/v5_shadow_trigger.json"
+AUTH_PROOF_CONTRACT = "V5_OFFICIAL_AUTH_OPTIONAL_ENRICHMENT_PROOF_V2"
+AUTHORITY_PROOF_CONTRACT = "V5_PREDEADLINE_AUTHORITY_SHADOW_PROOF_V4"
 
 
 def _load(path: str) -> dict[str, Any]:
@@ -60,21 +63,17 @@ def _predeadline_authority_checks(
     auth = v5.get("authenticated_official") if isinstance(v5.get("authenticated_official"), dict) else {}
     expected_entry = _int_or_none(auth.get("expected_entry")) or int(team_id)
     verified_entry = _int_or_none(auth.get("verified_entry"))
-    draft = auth.get("draft_integrity") if isinstance(auth.get("draft_integrity"), dict) else {}
     auth_requirement_active = bool(require_authenticated and phase == "PRE_DEADLINE")
     public_requirement_active = bool(require_official_submitted and phase == "PRE_DEADLINE")
     public_plus_capture_active = bool(require_public_plus_user_capture and phase == "PRE_DEADLINE")
     auth_state = str(auth.get("state") or "")
-
-    if auth_requirement_active and (public_requirement_active or public_plus_capture_active):
-        raise RuntimeError("shadow trigger cannot require authenticated squad authority with public/user-capture PRE_DEADLINE authority")
 
     planning_gw = _int_or_none(baseline.get("planning_gw")) or _int_or_none(phase_block.get("planning_gw"))
     submitted_gw = _int_or_none(baseline.get("baseline_gw")) or _int_or_none(phase_block.get("submitted_gw"))
     target_gw = _int_or_none(baseline.get("override_target_gw"))
     override_applied = baseline.get("override_applied") is True
     valid_scoped_user_capture = bool(
-        authority == "user_lock"
+        authority == "user_capture"
         and override_applied
         and planning_gw is not None
         and target_gw == planning_gw
@@ -82,17 +81,16 @@ def _predeadline_authority_checks(
     )
 
     checks: dict[str, bool] = {
-        "predeadline_authority_resolved": phase != "PRE_DEADLINE" or authority in {"official_public", "user_lock"},
+        "predeadline_authority_resolved": phase != "PRE_DEADLINE" or authority in {"official_public", "user_capture"},
         "authenticated_official_never_primary_squad_authority": phase != "PRE_DEADLINE" or authority != "official_authenticated",
         "raw_authenticated_payload_not_persisted": auth.get("raw_authenticated_payload_persisted") is not True,
     }
     if auth_requirement_active:
         checks.update(
             {
-                "official_authenticated_authority_pre_deadline": authority == "official_authenticated",
-                "official_authenticated_state_valid_pre_deadline": auth_state == "VALID",
-                "official_authenticated_entry_verified_pre_deadline": verified_entry == expected_entry == int(team_id),
-                "official_authenticated_draft_matches_authoritative_squad": draft.get("matches_authoritative_squad") is True,
+                "official_authenticated_optional_enrichment_state_valid_pre_deadline": auth_state == "VALID",
+                "official_authenticated_optional_enrichment_entry_verified_pre_deadline": verified_entry == expected_entry == int(team_id),
+                "official_authenticated_remains_non_authoritative_pre_deadline": authority in {"official_public", "user_capture"},
             }
         )
     if public_requirement_active:
@@ -100,9 +98,9 @@ def _predeadline_authority_checks(
     if public_plus_capture_active:
         checks.update(
             {
-                "public_official_plus_user_capture_authority_pre_deadline": authority in {"official_public", "user_lock"},
+                "public_official_plus_user_capture_authority_pre_deadline": authority in {"official_public", "user_capture"},
                 "official_public_is_default_when_no_scoped_override": authority != "official_public" or not override_applied,
-                "user_capture_requires_exact_target_gw": authority != "user_lock" or valid_scoped_user_capture,
+                "user_capture_requires_exact_target_gw": authority != "user_capture" or valid_scoped_user_capture,
                 "authenticated_state_does_not_select_squad": authority != "official_authenticated",
             }
         )
@@ -110,6 +108,8 @@ def _predeadline_authority_checks(
     proof = {
         "authenticated_required_predeadline": bool(require_authenticated),
         "authenticated_requirement_active": auth_requirement_active,
+        "authenticated_role": "OPTIONAL_PRIVATE_ENRICHMENT",
+        "authenticated_proof_contract": AUTH_PROOF_CONTRACT,
         "official_submitted_required_predeadline": bool(require_official_submitted),
         "official_submitted_requirement_active": public_requirement_active,
         "public_official_plus_user_capture_required_predeadline": bool(require_public_plus_user_capture),
@@ -126,8 +126,6 @@ def _predeadline_authority_checks(
         "auth_state": auth.get("state"),
         "expected_entry": expected_entry,
         "verified_entry": verified_entry,
-        "draft_count": draft.get("count"),
-        "draft_matches_authoritative_squad": draft.get("matches_authoritative_squad"),
         "raw_authenticated_payload_persisted": auth.get("raw_authenticated_payload_persisted"),
         "public_submitted_semantics": "DEFAULT_PLANNING_BASELINE" if authority == "official_public" else None,
         "user_capture_semantics": "EXACT_TARGET_GW_OVERRIDE" if valid_scoped_user_capture else None,
@@ -147,6 +145,7 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
     manifest = load_json_config(MANIFEST_CONFIG)
     trigger = load_json_config(TRIGGER_CONFIG)
     baselines = manifest.get("baselines") if isinstance(manifest.get("baselines"), dict) else {}
+    deployed_source_sha = production_source_sha()
     release = runtime_fingerprint()
 
     v5 = beta_handle("run", {"mode": "daily", "team_id": team_id, "persist": True})
@@ -186,14 +185,15 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
     post_status = "PENDING" if cycle_pass else "NOT_ELIGIBLE"
 
     result = {
-        "schema_version": 9,
+        "schema_version": 10,
         "cycle_id": cycle_id,
         "generated_at": generated_at,
         "mode": "REAL_SHADOW",
         "production_remains_v3": True,
         "acceptance_context": {
             "production_baseline_version": baselines.get("production_truth"),
-            "production_main_sha": baselines.get("production_main_sha"),
+            "production_main_sha": deployed_source_sha,
+            "production_source_authority": baselines.get("production_source_authority"),
             "production_runtime_label": baselines.get("production_runtime"),
             "production_runtime_engine_version": v3_latest.get("engine_version"),
             "production_runtime_schema_version": v3_latest.get("schema_version"),
@@ -202,11 +202,12 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
             "release_fingerprint_contract": release["contract"],
             "release_fingerprint_files": release["files_hashed"],
             "official_auth_validation_required": require_official_auth,
+            "official_auth_proof_contract": AUTH_PROOF_CONTRACT,
             "official_submitted_validation_required": require_official_submitted,
             "public_official_plus_user_capture_validation_required": require_public_plus_capture,
-            "predeadline_authority_proof_contract": "V5_PREDEADLINE_AUTHORITY_SHADOW_PROOF_V3",
+            "predeadline_authority_proof_contract": AUTHORITY_PROOF_CONTRACT,
         },
-        "post_validation": {"status": post_status, "validated_at": None, "validator_contract": "V5_REAL_SHADOW_POSTVALIDATION_V5"},
+        "post_validation": {"status": post_status, "validated_at": None, "validator_contract": "V5_REAL_SHADOW_POSTVALIDATION_V6"},
         "v3": {"engine_version": v3_latest.get("engine_version"), "generated_at": v3_latest.get("generated_at"), "planning_gw": (v3_latest.get("phase") or {}).get("planning_gw"), "formation": v3_lineup.get("formation"), "starting_xi": v3_lineup.get("starting_xi") or [], "captain": v3_lineup.get("captain"), "vice_captain": v3_lineup.get("vice_captain"), "ruleset_id": v3_lineup.get("ruleset_id"), "squad_authority": v3_reference.get("squad_authority"), "decision_squad_authority": v3_reference.get("decision_squad_authority")},
         "v5": {"engine_version": v5.get("engine_version"), "release_fingerprint": release["fingerprint"], "runner_status": v5.get("runner_status"), "planning_gw": (v5.get("phase") or {}).get("planning_gw"), "phase": (v5.get("phase") or {}).get("phase"), "squad_authority": v5.get("squad_authority"), "decision_squad_authority": v5.get("decision_squad_authority"), "owned_count": len(owned_ids), "owned_ids": owned_ids, "team_summary": v5_team, "decision": decision, "watchlist": watch, "user_report": v5.get("user_report") or {}, "source_fusion_health": v5.get("source_fusion_health") or {}, "governance": v5.get("governance") or {}, "framework_health": v5.get("framework_health") or {}, "service_performance": v5.get("service_performance") or {}, "authenticated_official": v5.get("authenticated_official") or {}},
         "predeadline_authority_proof": authority_proof,
@@ -219,7 +220,7 @@ def run(v3_latest_path: str, v3_lineup_path: str, output_dir: str, team_id: int)
     cycle_path = out / "cycles" / f"{cycle_id}.json"
     _atomic_write(cycle_path, result)
     _atomic_write(out / "latest_shadow_cycle.json", result)
-    print(json.dumps({"cycle_id": cycle_id, "cycle_pass": cycle_pass, "post_validation_status": post_status, "parity_pass": parity.get("pass"), "predeadline_authority_proof": authority_proof, "release_fingerprint": release["fingerprint"], "output": str(cycle_path)}, ensure_ascii=False))
+    print(json.dumps({"cycle_id": cycle_id, "cycle_pass": cycle_pass, "post_validation_status": post_status, "parity_pass": parity.get("pass"), "predeadline_authority_proof": authority_proof, "release_fingerprint": release["fingerprint"], "production_source_sha": deployed_source_sha, "output": str(cycle_path)}, ensure_ascii=False))
     return result
 
 

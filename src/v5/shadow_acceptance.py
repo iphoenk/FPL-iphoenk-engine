@@ -9,12 +9,13 @@ from typing import Any
 
 from src.v5 import V5_VERSION
 from src.v5.config_cache import load_json_config
-from src.v5.release_integrity import runtime_fingerprint
 from src.v5.production_baseline import production_source_sha
+from src.v5.release_integrity import runtime_fingerprint
 
 MANIFEST_CONFIG = "config/v5_convergence_manifest.json"
 PARITY_CONFIG = "config/v5_shadow_parity_registry.json"
 ACCEPTANCE_CONFIG = "config/v5_acceptance_registry.json"
+AUTH_PROOF_CONTRACT = "V5_OFFICIAL_AUTH_OPTIONAL_ENRICHMENT_PROOF_V2"
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -57,9 +58,7 @@ def _current_release_fingerprint() -> str:
 
 def _runtime_reference_matches(context: dict[str, Any], v3: dict[str, Any]) -> bool:
     expected = str(context.get("production_runtime_engine_version") or "")
-    if not expected:
-        return False
-    if str(v3.get("engine_version") or "") != expected:
+    if not expected or str(v3.get("engine_version") or "") != expected:
         return False
     expected_schema = context.get("production_runtime_schema_version")
     observed_schema = v3.get("schema_version")
@@ -77,7 +76,7 @@ def _official_auth_validation_ok(payload: dict[str, Any]) -> bool:
     context = payload.get("acceptance_context") if isinstance(payload.get("acceptance_context"), dict) else {}
     if context.get("official_auth_validation_required") is not True:
         return True
-    if str(context.get("official_auth_proof_contract") or "") != "V5_OFFICIAL_AUTH_SHADOW_PROOF_V1":
+    if str(context.get("official_auth_proof_contract") or "") != AUTH_PROOF_CONTRACT:
         return False
 
     v5 = payload.get("v5") if isinstance(payload.get("v5"), dict) else {}
@@ -85,7 +84,6 @@ def _official_auth_validation_ok(payload: dict[str, Any]) -> bool:
         return True
 
     auth = v5.get("authenticated_official") if isinstance(v5.get("authenticated_official"), dict) else {}
-    draft = auth.get("draft_integrity") if isinstance(auth.get("draft_integrity"), dict) else {}
     expected = _int_or_none(auth.get("expected_entry"))
     verified = _int_or_none(auth.get("verified_entry"))
     authority = str(v5.get("decision_squad_authority") or v5.get("squad_authority") or "")
@@ -93,17 +91,19 @@ def _official_auth_validation_ok(payload: dict[str, Any]) -> bool:
 
     return all(
         (
-            authority == "official_authenticated",
+            authority in {"official_public", "user_capture"},
+            authority != "official_authenticated",
             str(auth.get("state") or "") == "VALID",
             expected is not None,
             verified == expected,
-            draft.get("matches_authoritative_squad") is True,
-            proof.get("requirement_active") is True,
-            proof.get("authority") == "official_authenticated",
-            proof.get("auth_state") == "VALID",
+            proof.get("authenticated_requirement_active") is True,
+            proof.get("authenticated_role") == "OPTIONAL_PRIVATE_ENRICHMENT",
+            proof.get("authenticated_proof_contract") == AUTH_PROOF_CONTRACT,
+            proof.get("authority") in {"official_public", "user_capture"},
+            str(proof.get("auth_state") or "") == "VALID",
             _int_or_none(proof.get("verified_entry")) == expected,
-            proof.get("draft_matches_authoritative_squad") is True,
             auth.get("raw_authenticated_payload_persisted") is False,
+            proof.get("raw_authenticated_payload_persisted") is not True,
         )
     )
 
@@ -205,6 +205,42 @@ def _prediction_acceptance(out: Path) -> dict[str, Any]:
     }
 
 
+def effective_acceptance_summary(summary: dict[str, Any]) -> dict[str, Any]:
+    """Return fail-stale current status without mutating historical evidence."""
+    baseline_version, baseline_sha = _baseline()
+    fingerprint = _current_release_fingerprint()
+    required = int(summary.get("required_validated_cycles") or _required_cycles())
+    same_identity = all(
+        (
+            str(summary.get("v5_version") or "") == V5_VERSION,
+            str(summary.get("production_baseline_version") or "") == baseline_version,
+            str(summary.get("production_main_sha") or "") == baseline_sha,
+            str(summary.get("release_fingerprint") or "") == fingerprint,
+        )
+    )
+    out = dict(summary)
+    out["stored_operational_candidate_eligible"] = summary.get("operational_candidate_eligible") is True
+    out["effective_identity_current"] = same_identity
+    if same_identity:
+        out["effective_state"] = "CURRENT"
+        return out
+    out.update(
+        {
+            "effective_state": "SUPERSEDED_BY_CURRENT_BASELINE_OR_FINGERPRINT",
+            "validated_successful_cycles": 0,
+            "remaining_validated_cycles": required,
+            "operational_candidate_eligible": False,
+            "production_candidate_eligible": False,
+            "production_candidate_auto_promoted": False,
+        }
+    )
+    return out
+
+
+def load_effective_acceptance_summary(path: str | Path) -> dict[str, Any]:
+    return effective_acceptance_summary(_load(Path(path)))
+
+
 def finalize(latest_path: str, output_dir: str) -> dict[str, Any]:
     latest_file, out = Path(latest_path), Path(output_dir)
     payload = _load(latest_file)
@@ -219,19 +255,19 @@ def finalize(latest_path: str, output_dir: str) -> dict[str, Any]:
     if str((payload.get("v5") or {}).get("engine_version") or "") != V5_VERSION:
         raise RuntimeError("shadow cycle V5 version does not match current package version")
     if str(context.get("production_baseline_version") or "") != baseline_version or str(context.get("production_main_sha") or "") != baseline_sha:
-        raise RuntimeError("shadow cycle production baseline does not match convergence manifest")
+        raise RuntimeError("shadow cycle production baseline does not match deployed runtime authority")
     if not _runtime_reference_matches(context, v3):
         raise RuntimeError("shadow cycle V3 runtime implementation does not match its declared runtime reference")
     if str(context.get("release_fingerprint") or "") != current_fingerprint:
         raise RuntimeError("shadow cycle release fingerprint does not match current runtime")
     if _accounting_policy().get("reject_claimed_official_auth_validation_without_proof", True) and not _official_auth_validation_ok(payload):
-        raise RuntimeError("shadow cycle claims Official-auth validation without valid authenticated Official proof")
+        raise RuntimeError("shadow cycle claims Official-auth validation without valid optional-enrichment proof")
 
     validated_at = datetime.now(timezone.utc).isoformat()
     payload["post_validation"] = {
         "status": "PASS",
         "validated_at": validated_at,
-        "validator_contract": "V5_REAL_SHADOW_POSTVALIDATION_V5",
+        "validator_contract": "V5_REAL_SHADOW_POSTVALIDATION_V6",
         "workflow_run_number": os.getenv("GITHUB_RUN_NUMBER"),
         "workflow_run_id": os.getenv("GITHUB_RUN_ID"),
         "source_commit": os.getenv("GITHUB_SHA"),
@@ -261,8 +297,8 @@ def finalize(latest_path: str, output_dir: str) -> dict[str, Any]:
     prediction_required = bool(_accounting_policy().get("require_prediction_acceptance_for_production_candidate", True))
     eligible = operational and (prediction.get("eligible") is True or not prediction_required)
     summary = {
-        "schema_version": 5,
-        "model": "v5_postvalidated_shadow_acceptance_v5",
+        "schema_version": 6,
+        "model": "v5_postvalidated_shadow_acceptance_v6",
         "generated_at": validated_at,
         "v5_version": V5_VERSION,
         "release_fingerprint": current_fingerprint,

@@ -5,7 +5,11 @@ from typing import Any
 from src.v5.price_service import build_price_snapshot
 from src.v5.services.common import parse_datetime
 
-STATIC_CAPABILITIES = ["price_intelligence", "official_price_predictor"]
+# Static capability stays intentionally narrow. The Official predictor is an
+# evidence contract inside price_intelligence, while transfer_momentum may only
+# be advertised after runtime Official transfer-count/current-price linkage is
+# proven AVAILABLE.
+STATIC_CAPABILITIES = ["price_intelligence"]
 
 
 def handle(operation: str, payload: dict[str, Any]) -> Any:

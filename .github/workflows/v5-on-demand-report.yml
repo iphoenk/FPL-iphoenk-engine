@@ -39,14 +39,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Resolve current production authority
+      - name: Resolve deployed production authority
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin "$PRODUCTION_SOURCE_BRANCH" "$PRODUCTION_RUNTIME_BRANCH"
-          SOURCE_SHA=$(git rev-parse "origin/$PRODUCTION_SOURCE_BRANCH")
+          MAIN_HEAD=$(git rev-parse "origin/$PRODUCTION_SOURCE_BRANCH")
+          RUNTIME_MANIFEST=$(git show "origin/${PRODUCTION_RUNTIME_BRANCH}:data/runtime_manifest.json")
+          SOURCE_SHA=$(printf '%s' "$RUNTIME_MANIFEST" | python -c "import json,sys; print(json.load(sys.stdin)['source_commit'])")
+          test -n "$SOURCE_SHA"
+          git cat-file -e "${SOURCE_SHA}^{commit}"
+          git merge-base --is-ancestor "$SOURCE_SHA" "origin/$PRODUCTION_SOURCE_BRANCH"
           echo "PRODUCTION_SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
-          echo "production_source=$PRODUCTION_SOURCE_BRANCH sha=$SOURCE_SHA"
+          echo "production_runtime_source=$SOURCE_SHA repository_main=$MAIN_HEAD"
 
       - name: Run fresh production snapshot
         shell: bash
@@ -63,17 +68,20 @@ jobs:
           prod_tree="$(mktemp -d)"
           trap 'git worktree remove --force "$prod_tree" >/dev/null 2>&1 || true; rm -rf "$prod_tree"' EXIT
           git worktree add --detach "$prod_tree" "$PRODUCTION_SOURCE_SHA"
-          mkdir -p "$prod_tree/data/stats"
-          for file in price_cache.json price_trajectory.json rules_source_state.json prediction_ledger.json challenger_observations.json report_state.json dss_watchlist.json; do
+          git show "$PRODUCTION_SOURCE_SHA:config/runtime/runtime_publish_registry.json" > "$RUNNER_TEMP/runtime_publish_registry.json"
+          python - <<'PY' > "$RUNNER_TEMP/hydrate-paths.txt"
+          import json, os
+          cfg=json.load(open(os.path.join(os.environ['RUNNER_TEMP'], 'runtime_publish_registry.json')))
+          for path in cfg.get('hydrate_paths', []):
+              print(path)
+          PY
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
             if git cat-file -e "origin/${PRODUCTION_RUNTIME_BRANCH}:data/${file}" 2>/dev/null; then
+              mkdir -p "$prod_tree/data/$(dirname "$file")"
               git show "origin/${PRODUCTION_RUNTIME_BRANCH}:data/${file}" > "$prod_tree/data/${file}"
             fi
-          done
-          for stat_file in vaastav_previous_season.json shots_gw1.json playermatchstats_gw1.json core_insights_gw1.json; do
-            if git cat-file -e "origin/${PRODUCTION_RUNTIME_BRANCH}:data/stats/${stat_file}" 2>/dev/null; then
-              git show "origin/${PRODUCTION_RUNTIME_BRANCH}:data/stats/${stat_file}" > "$prod_tree/data/stats/${stat_file}"
-            fi
-          done
+          done < "$RUNNER_TEMP/hydrate-paths.txt"
           (
             cd "$prod_tree"
             export PYTHONPATH="$prod_tree"

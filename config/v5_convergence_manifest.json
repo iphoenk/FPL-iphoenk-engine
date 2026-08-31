@@ -5,8 +5,8 @@
   "track": "advanced_microservices_convergence_beta",
   "baselines": {
     "production_truth": "v3.20.0",
-    "production_main_sha": "ef0161113a763306419c0c367770e6dcfe6570d1",
-    "production_code_commit": "ef0161113a763306419c0c367770e6dcfe6570d1",
+    "production_main_sha": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
+    "production_code_commit": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
     "production_schema_version": 48,
     "production_runtime_schema_version": 49,
     "production_runtime": "v3.39-compiled-11-domain-control-plane",
@@ -116,7 +116,8 @@
     "authenticated_official_optional_private_enrichment_only": true,
     "v3_official_player_detail_enrichment_reconciled_as_runtime_hardening": true,
     "v3_official_player_detail_reuse_migration_reconciled_as_runtime_hardening": true,
-    "v3_scheduler_runtime_self_heal_reconciled_as_runtime_hardening": true
+    "v3_scheduler_runtime_self_heal_reconciled_as_runtime_hardening": true,
+    "runtime_acceptance_summary_is_single_evidence_authority": true
   },
   "acceptance": {
     "no_regression_vs_v3_20_0_truth": true,
@@ -156,9 +157,11 @@
       "release_fingerprint": "sha256:26707030c759b35315ac224ecb6065df1803f31fe0a2ef1e76dd84c9bcdb0aa8",
       "validated_real_shadow_cycles": 3,
       "latest_validated_at": "2026-08-30T11:07:53.409496+00:00",
-      "reason": "The previous validated 3/3 REAL_SHADOW evidence belongs to a superseded release fingerprint. Production has materially reanchored again to deployed runtime ef0161113a763306419c0c367770e6dcfe6570d1, so that evidence is historical only and exact-fingerprint shadow acceptance must restart from 0/3."
+      "reason": "The previous validated 3/3 REAL_SHADOW evidence belongs to a superseded release fingerprint. Production has materially reanchored again to deployed runtime d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87, so that evidence is historical only and exact-fingerprint shadow acceptance must restart from 0/3."
     },
-    "note": "Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required against deployed production ef0161113a763306419c0c367770e6dcfe6570d1."
+    "note": "Runtime acceptance authority is v5-shadow-runtime:data/v5/shadow/acceptance_summary.json. Static counters here are a materialized governance snapshot only. Three fresh exact-fingerprint postvalidated REAL_SHADOW cycles are required against deployed production d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87.",
+    "authority": "v5-shadow-runtime:data/v5/shadow/acceptance_summary.json",
+    "materialized_status_snapshot_only": true
   },
   "production_promotion": {
     "allowed": false,
@@ -168,6 +171,8 @@
     "required_real_shadow_cycles": 3,
     "operational_acceptance_complete": false,
     "prediction_acceptance_complete": false,
-    "reason": "Production reanchor changes the V5 release fingerprint. Prior 3/3 evidence remains superseded historical evidence; three fresh postvalidated cycles plus independent prediction acceptance remain mandatory."
+    "reason": "Production source reanchor invalidates static release attestation and requires fresh runtime evidence. Operational truth is read from v5-shadow-runtime:data/v5/shadow/acceptance_summary.json; prediction acceptance remains independent and mandatory.",
+    "operational_evidence_authority": "v5-shadow-runtime:data/v5/shadow/acceptance_summary.json",
+    "materialized_status_snapshot_only": true
   }
 }

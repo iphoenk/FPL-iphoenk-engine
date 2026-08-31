@@ -5,7 +5,7 @@
   "production_authority": {
     "truth_baseline": "v3.20.0",
     "runtime_version": "3.39.0",
-    "main_sha": "ef0161113a763306419c0c367770e6dcfe6570d1",
+    "main_sha": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
     "runtime_schema_version": 49
   },
   "advanced_beta4": {
@@ -59,7 +59,9 @@
       "release_fingerprint": "sha256:26707030c759b35315ac224ecb6065df1803f31fe0a2ef1e76dd84c9bcdb0aa8",
       "postvalidated_real_shadow_cycles": 3,
       "status": "SUPERSEDED_BY_PRODUCTION_REANCHOR"
-    }
+    },
+    "authority": "v5-shadow-runtime:data/v5/shadow/acceptance_summary.json",
+    "materialized_status_snapshot_only": true
   },
   "evidence_storage": {
     "canonical_prediction_ledger": "v5-shadow-runtime:data/v5/prediction_ledger.json",
@@ -77,7 +79,7 @@
     "external_dwh_trigger": "MULTI_SEASON_OR_GT_100000_PLAYER_GW_FACT_ROWS"
   },
   "notes": [
-    "The last validated 3/3 strict-DSS operational acceptance remains historical evidence only; deployed production is now ef0161113a763306419c0c367770e6dcfe6570d1, so exact-fingerprint operational evidence must restart from 0/3.",
+    "The last validated 3/3 strict-DSS operational acceptance remains historical evidence only; deployed production is now d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87, so exact-fingerprint operational evidence must restart from 0/3.",
     "PRE_DEADLINE planning authority is PUBLIC_OFFICIAL_PLUS_USER_CAPTURE: Official public submitted team is the default baseline, while user capture is a scoped override only for the exact target GW with an active WC/FH/planning override.",
     "Authenticated Official is optional private enrichment only and must never become squad, lineup, or captaincy authority.",
     "Current V3 structured own-team capture is phase-aware and DoD-governed with stale-GW rejection and post-deadline Official reclaim; this matches V5 PUBLIC_OFFICIAL_PLUS_USER_CAPTURE governance and does not create authenticated Official authority.",
@@ -93,6 +95,7 @@
     "Weather intelligence remains SHADOW_ADVISORY_ONLY with zero production decision authority until empirical validation and explicit governance promotion.",
     "Prediction acceptance remains independently locked until genuine settled evidence satisfies the empirical calibration gate.",
     "Production remains V3; V5 promotion requires fresh operational revalidation, prediction acceptance, and a separate explicit manual action.",
-    "Current V3 scheduler watchdog and runtime self-heal changes at ef016111 are reconciled as operational runtime hardening only; they do not alter football, prediction, optimizer, decision, or V5 bounded-context authority."
+    "Current V3 scheduler watchdog and runtime self-heal changes at ef016111 are reconciled as operational runtime hardening only; they do not alter football, prediction, optimizer, decision, or V5 bounded-context authority.",
+    "Operational acceptance counters in static metadata are non-authoritative snapshots; the single runtime evidence authority is v5-shadow-runtime:data/v5/shadow/acceptance_summary.json."
   ]
 }

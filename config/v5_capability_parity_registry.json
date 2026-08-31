@@ -1,10 +1,10 @@
 {
-  "schema_version": 15,
+  "schema_version": 16,
   "model": "v5_v3_v4_capability_parity_v15",
   "authorities": {
     "football_truth_baseline": "v3.20.0",
-    "current_production_runtime": "deployed@ef0161113a763306419c0c367770e6dcfe6570d1",
-    "current_production_code_commit": "ef0161113a763306419c0c367770e6dcfe6570d1",
+    "current_production_runtime": "deployed@d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
+    "current_production_code_commit": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
     "current_production_runtime_schema": 49,
     "current_production_execution_registry": "V3_EXECUTION_DOMAINS_V2",
     "current_production_compiled_plan_registry": "V3_COMPILED_EXECUTION_PLAN_V1",
@@ -57,8 +57,8 @@
     "isolated_team_review"
   ],
   "current_production_reanchor": {
-    "production_main_sha": "ef0161113a763306419c0c367770e6dcfe6570d1",
-    "production_code_commit": "ef0161113a763306419c0c367770e6dcfe6570d1",
+    "production_main_sha": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
+    "production_code_commit": "d7fc5dfda0b3522f8b32bcb726d70a86e9fedd87",
     "runtime_manifest_source_commit_required": true,
     "runtime_manifest_verified": true,
     "runtime_schema_version": 49,
@@ -306,6 +306,8 @@
     "v3_authenticated_official_readiness_does_not_create_squad_lineup_or_captaincy_authority": true,
     "v3_official_player_detail_enrichment_is_factual_runtime_hardening_not_prediction_or_decision_authority": true,
     "v3_official_player_detail_reuse_migration_is_runtime_hardening_not_decision_authority": true,
-    "v3_scheduler_runtime_self_heal_is_runtime_hardening_not_decision_authority": true
+    "v3_scheduler_runtime_self_heal_is_runtime_hardening_not_decision_authority": true,
+    "operational_acceptance_evidence_authority": "v5-shadow-runtime:data/v5/shadow/acceptance_summary.json",
+    "static_acceptance_metadata_is_not_runtime_evidence_authority": true
   }
 }

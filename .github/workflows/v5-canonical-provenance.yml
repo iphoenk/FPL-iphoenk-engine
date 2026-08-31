@@ -1,0 +1,32 @@
+name: V5 Canonical Provenance
+
+on:
+  push:
+    branches: [v5-unified-engine]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: v5-canonical-provenance
+  cancel-in-progress: false
+
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout canonical V5
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Enforce first-parent merged-PR provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -m src.v5.canonical_provenance

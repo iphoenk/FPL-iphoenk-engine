@@ -15,5 +15,3 @@ Scope is intentionally limited to the two red findings from the post-PR #276 aud
 Dedicated QA/QC regression tests reject a second decision authority and verify registry/release/attestation bindings.
 
 Yellow cleanup items from the broader audit are intentionally excluded from this change.
-
-<!-- workflow retrigger checkpoint -->

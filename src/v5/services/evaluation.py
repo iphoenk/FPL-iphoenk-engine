@@ -11,6 +11,7 @@ from src.v5.evaluation.owned_challenger_context import enrich_with_decision_cont
 from src.v5.evaluation.prediction_settlement import build_settlement_artifact, settlement_targets
 from src.v5.evaluation.promotion_evidence import build as build_promotion_evidence
 from src.v5.evaluation.shadow_parity import compare as compare_shadow
+from src.v5.price_squeeze import annotate_comparator
 
 BASE_CAPABILITIES = [
     "prediction_evaluation",
@@ -86,8 +87,14 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             transfer_state=payload.get("transfer_state") if isinstance(payload.get("transfer_state"), dict) else None,
             external_consensus=payload.get("external_consensus") if isinstance(payload.get("external_consensus"), dict) else None,
         )
-        return enrich_with_decision_context(
+        with_price = annotate_comparator(
             base,
+            price=payload.get("price") if isinstance(payload.get("price"), dict) else {},
+            team=team,
+            transfer_state=payload.get("transfer_state") if isinstance(payload.get("transfer_state"), dict) else None,
+        )
+        return enrich_with_decision_context(
+            with_price,
             payload.get("decision_context") if isinstance(payload.get("decision_context"), dict) else None,
         )
     if operation != "build":

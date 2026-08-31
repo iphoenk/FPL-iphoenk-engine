@@ -9,7 +9,7 @@ from src.utils import CONFIG, DATA
 
 
 def _assert_framework_health() -> tuple[dict, dict]:
-    """Preserve health checks while matching the engine's FAILED>PARTIAL>WARMUP precedence."""
+    """Preserve fail-closed operational health while keeping lifecycle maturity separate."""
     pre = legacy._load("framework_health_preflight_v4.json")
     post = legacy._load("framework_health_v4.json")
     for obj, phase in ((pre, "preflight"), (post, "postflight")):
@@ -44,8 +44,9 @@ def _assert_framework_health() -> tuple[dict, dict]:
         "declared": 74,
         "active_ratio": 0.973,
     }
-    assert post.get("capability_health") == "AMBER"
-    assert post.get("prediction_health") == "AMBER"
+    assert post.get("capability_health") == "GREEN"
+    assert post.get("prediction_health") == "GREEN"
+    assert post.get("capability_maturity") == "WARMUP"
     assert post.get("decision_engine") == "PROVISIONAL"
     assert post.get("go_allowed") is False
     assert post.get("critical_partial") == []
@@ -92,7 +93,9 @@ def _assert_framework_health() -> tuple[dict, dict]:
         assert post.get("decision_engine") == "DEGRADED"
         assert post.get("go_allowed") is False
     elif critical_warmup:
-        assert post.get("prediction_health") == "AMBER"
+        assert post.get("prediction_health") == "GREEN"
+        assert post.get("capability_health") == "GREEN"
+        assert post.get("capability_maturity") == "WARMUP"
         assert post.get("decision_engine") == "PROVISIONAL"
         assert post.get("go_allowed") is False
     else:

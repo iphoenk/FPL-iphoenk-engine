@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -187,7 +186,7 @@ def test_publication_fact_overlay_overwrites_stale_fact_but_preserves_model_fiel
     assert patched["fact_authority"] == "PUBLIC_OFFICIAL_FACT"
 
 
-def test_verified_fallback_keeps_exact_banner_and_never_claims_fresh():
+def test_verified_fallback_keeps_exact_banner_never_claims_fresh_and_degrades_publication():
     previous = _snapshot()
     previous["generated_at"] = (datetime.now(timezone.utc) - timedelta(minutes=20)).isoformat()
     previous["official_freshness"]["last_verified_at"] = previous["generated_at"]
@@ -206,6 +205,26 @@ def test_verified_fallback_keeps_exact_banner_and_never_claims_fresh():
     integrity = _integrity(snapshot=fallback)
     assert integrity["official_snapshot"]["freshness_state"] == "FALLBACK"
     assert integrity["official_snapshot"]["fresh_pull_succeeded"] is False
+    assert integrity["official_snapshot"]["verified_fallback"] is True
+    assert integrity["publication_integrity"]["status"] == "DEGRADED"
+    assert integrity["publication_integrity"]["complete_user_report_allowed"] is True
+    assert integrity["health"]["Official public pull"] == "DEGRADED"
+    assert integrity["health"]["Reporting"] == "DEGRADED"
+    assert integrity["health"]["Serving"] == "DEGRADED"
+    require_complete_user_report(integrity)
+
+
+def test_complete_but_untrusted_snapshot_cannot_publish():
+    snapshot = _snapshot()
+    snapshot["endpoint_health"]["bootstrap"]["status"] = "FAILED"
+    snapshot.pop("official_freshness", None)
+    integrity = _integrity(snapshot=snapshot)
+    assert integrity["owned"]["official_fact_complete"] == 15
+    assert integrity["watchlist"]["official_fact_complete"] == 20
+    assert "OFFICIAL_SOURCE_UNAVAILABLE" in _codes(integrity)
+    assert integrity["publication_integrity"]["status"] == "BLOCKED"
+    with pytest.raises(RuntimeError, match="OFFICIAL_SOURCE_UNAVAILABLE"):
+        require_complete_user_report(integrity)
 
 
 def test_unverified_previous_snapshot_is_not_accepted_as_fallback():

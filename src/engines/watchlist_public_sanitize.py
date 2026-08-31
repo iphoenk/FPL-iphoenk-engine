@@ -27,14 +27,22 @@ def _safe_price_context(price: dict[str, Any], official: dict[str, Any] | None =
     if official:
         return dict(official)
     source = dict(price or {})
+    health = str(source.pop("official_projection_health", "") or "")
+    prediction_source = str(source.pop("prediction_source", "") or "")
     out = {
         key: source.get(key)
         for key in (
             "official_progress_pct", "official_hourly_rate_pct", "risk_direction", "urgency",
-            "predicted_change_deadline", "prediction_source", "official_projection_health",
+            "predicted_change_deadline",
         )
         if source.get(key) is not None
     }
+    if health == "SUSPECT_STATIC_OFFSET0":
+        out["projection_confidence_note"] = "proyeksi waktu perubahan harga belum cukup yakin"
+    elif prediction_source == "TRAJECTORY_RATE":
+        out["projection_confidence_note"] = "arah tekanan harga jelas, waktu perubahan masih estimasi"
+    elif out:
+        out["projection_confidence_note"] = "sinyal harga tersedia"
     if out:
         out["narrative"] = "Sinyal harga tersedia sebagai fallback kompatibilitas; bukti Official lengkap tidak berhasil di-resolve untuk baris ini."
         out["source"] = "LEGACY_COMPATIBILITY_FALLBACK"
@@ -113,6 +121,7 @@ def sanitize(payload: dict[str, Any], price_index: dict[int, dict[str, Any]] | N
     }
     result.setdefault("public_contract", {}).update({
         "technical_candidate_evidence_moved_to_candidate_audit": True,
+        "technical_price_health_codes_removed_from_legacy_fallback": True,
         "natural_language_price_narrative": True,
         "full_governed_price_evidence_preserved": True,
         "official_price_evidence_resolved_by_element_id": True,

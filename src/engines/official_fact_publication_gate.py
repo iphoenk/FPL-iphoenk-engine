@@ -117,7 +117,7 @@ def _predictor_health(latest: dict[str, Any]) -> str:
     if not direct:
         direct = ((latest.get("price_summary") or {}).get("official_price_predictor_health") or {})
     status = str(direct.get("status") or "UNAVAILABLE").upper()
-    if status in {"PASS", "LIVE", "FRESH"}:
+    if status in {"PASS", "LIVE", "FRESH", "HEALTHY"}:
         return "PASS"
     if status in {"STALE", "PARTIAL", "CALIBRATING", "DEGRADED"}:
         return "DEGRADED"

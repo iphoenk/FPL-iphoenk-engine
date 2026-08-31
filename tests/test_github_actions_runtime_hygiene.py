@@ -16,7 +16,7 @@ NODE24_ACTIONS = {
     },
     "actions/upload-artifact": {
         "v7",
-        "043fb46d1a93c77aae656e7c1c64a875d1fc6a0",  # v7.0.1
+        "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",  # v7.0.1
     },
     "actions/download-artifact": {
         "v8",

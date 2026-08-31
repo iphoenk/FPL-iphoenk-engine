@@ -9,8 +9,8 @@ exists only for compatibility while callers migrate off the historical name.
 
 from src.engines import v4_quality_gate_core as core
 from src.engines.v4_quality_gate_runner import run as _run_gate
+from src.release import RELEASE_VERSION
 
-RELEASE_VERSION = core.RELEASE_VERSION
 _load = core._load
 _assert_version = core._assert_version
 _assert_framework_health = core._assert_framework_health

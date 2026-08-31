@@ -29,8 +29,8 @@ def test_price_overlay_is_context_only_and_preserves_official_fields():
         "top_rise_risk": [{"element": 1, "name": "Bowen", "now_cost": 78, "official_progress_pct": 59.1, "urgency": "HIGH"}],
     }
     observations = {
-        "observations": [_obs("livefpl", "RISE"), _obs("onefpl", "RISE")],
-        "cross_source": [{"subject_key": "bowen", "player": "Bowen", "capability": "price_prediction", "state": "AGREEMENT", "providers": ["livefpl", "onefpl"], "directions": ["RISE"]}],
+        "observations": [_obs("fffix", "RISE"), _obs("onefpl", "RISE")],
+        "cross_source": [{"subject_key": "bowen", "player": "Bowen", "capability": "price_prediction", "state": "AGREEMENT", "providers": ["fffix", "onefpl"], "directions": ["RISE"]}],
     }
     enriched, summary = apply_context(prices, observations)
     row = enriched["players"][0]
@@ -44,7 +44,7 @@ def test_price_overlay_is_context_only_and_preserves_official_fields():
 
 
 def test_price_overlay_ignores_stale_observation():
-    stale = _obs("livefpl", "RISE")
+    stale = _obs("fffix", "RISE")
     stale["status"] = "STALE"
     stale["stale"] = True
     prices = {"players": [{"element": 1, "name": "Bowen", "now_cost": 78}]}
@@ -53,22 +53,24 @@ def test_price_overlay_ignores_stale_observation():
     assert summary["fresh_observation_count"] == 0
 
 
-def test_user_source_availability_separates_collector_and_report_time_sources():
+def test_user_source_availability_excludes_retired_livefpl_and_keeps_supported_challengers():
     source_health = {
         "sources": [
             {"id": "livefpl", "name": "LiveFPL", "status": "LIVE", "reachable": True},
             {"id": "onefpl", "name": "OneFPL", "status": "DISABLED", "reachable": False},
+            {"id": "fffix", "name": "FFFix", "status": "LIVE", "reachable": True},
         ],
         "capability_health": [
             {"source_id": "livefpl", "capability": "price_prediction", "data_state": "AVAILABLE", "fresh_observations": 5},
             {"source_id": "onefpl", "capability": "price_prediction", "data_state": "DISABLED", "fresh_observations": 0},
+            {"source_id": "fffix", "capability": "price_prediction", "data_state": "AVAILABLE", "fresh_observations": 2},
         ],
     }
     rendered = _source_availability(source_health)
-    assert len(rendered["collector_challenger"]) == 1
-    livefpl = rendered["collector_challenger"][0]
-    assert livefpl["source_id"] == "livefpl"
-    assert livefpl["terjangkau"] is True
-    assert "tersedia" in livefpl["status_data_harga"]
+    ids = {row["source_id"] for row in rendered["collector_challenger"]}
+    assert "livefpl" not in ids
+    assert "onefpl" in ids
+    assert "fffix" in ids
+    assert "livefpl" not in str(rendered).lower()
     assert "onefpl" in rendered["report_time"]
-    assert "on-demand" in rendered["report_time"]["onefpl"]
+    assert "market momentum" in rendered["report_time"]["onefpl"]

@@ -2,11 +2,39 @@ from pathlib import Path
 
 
 WORKFLOWS = Path('.github/workflows')
+V3_RUNTIME_WORKFLOW = WORKFLOWS / 'v3-runtime.yml'
 V4_DEFAULT_BRANCH_WORKFLOWS = (
     'v4-prediction.yml',
     'fpl-engine-recovery.yml',
     'v4-timing-probe.yml',
 )
+
+
+def test_v3_runtime_code_publication_requires_successful_main_ci():
+    text = V3_RUNTIME_WORKFLOW.read_text()
+    assert 'workflow_run:' in text
+    assert 'workflows: ["V3 CI"]' in text
+    assert "github.event.workflow_run.conclusion == 'success'" in text
+    assert "github.event.workflow_run.head_branch == 'main'" in text
+    assert 'Verify source commit passed V3 CI' in text
+    assert 'REFUSING_V3_RUNTIME_WITHOUT_GREEN_CI' in text
+    assert 'actions: read' in text
+
+
+def test_v3_runtime_no_longer_directly_triggers_on_main_push():
+    text = V3_RUNTIME_WORKFLOW.read_text()
+    trigger_block = text.split('permissions:', 1)[0]
+    assert '\n  push:\n' not in trigger_block
+    assert 'workflow_dispatch:' in trigger_block
+    assert 'schedule:' in trigger_block
+
+
+def test_v3_runtime_publication_provenance_uses_verified_source_commit():
+    text = V3_RUNTIME_WORKFLOW.read_text()
+    assert "SOURCE_COMMIT: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}" in text
+    assert 'ref: ${{ env.SOURCE_COMMIT }}' in text
+    assert '--source-commit "$SOURCE_COMMIT"' in text
+    assert 'if [ "$canonical_main" != "$SOURCE_COMMIT" ]; then' in text
 
 
 def test_default_branch_v4_workflows_use_node24_compatible_actions():

@@ -29,9 +29,9 @@ def test_parallel_domains_are_compiled_and_isolation_safe():
 
     registry = runtime._load_domains()
     policy = registry["policy"]
-    assert policy["weather_context_and_market_context_use_isolated_workspaces"] is True
-    assert policy["weather_context_and_market_context_may_execute_in_parallel"] is True
-    assert policy["prediction_waits_for_governed_weather_context"] is True
+    assert policy["market_context_and_weather_context_may_execute_in_parallel"] is True
+    assert policy["prediction_and_market_context_may_execute_in_parallel"] is False
+    assert policy["weather_context_has_explicit_enrich_execution_domain"] is True
     assert policy["parallel_domain_fan_in_uses_declared_artifacts_and_latest_keys_only"] is True
     assert policy["parallel_domain_fan_in_is_deterministic"] is True
 

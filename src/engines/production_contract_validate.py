@@ -135,15 +135,28 @@ def _validate_price_predictor_contract(snapshot: dict, prices: dict, trajectory:
     raw_contract = prices.get("official_predictor_raw_contract") or {}
     rows = list(prices.get("players") or [])
 
-    assert health.get("status") == "PASS", health
+    health_status = str(health.get("status") or "")
+    schema_invalid = int(health.get("schema_invalid_players") or 0)
+    stale_players = int(health.get("stale_players") or 0)
+    calibrating_players = int(health.get("calibrating_players") or 0)
+    assert health_status in {"PASS", "PARTIAL"}, health
     assert health.get("source") == "OFFICIAL_FPL"
     assert health.get("auth_required") is False
     assert health.get("ui_scraping") is False
     assert health.get("dedicated_predictor_endpoint") is False
     assert health.get("threshold_is_official_rule") is False
     assert health.get("no_intra_cycle_crossing_eta") is True
-    assert int(health.get("schema_invalid_players") or 0) == 0
-    assert int(health.get("stale_players") or 0) == 0
+    assert schema_invalid == 0
+    assert stale_players == 0
+
+    # Official FPL may explicitly mark individual predictor rows as CALIBRATING.
+    # That is a valid, non-fabricated evidence state: the unavailable projection
+    # must stay unavailable rather than being coerced to zero. Production may
+    # therefore be PARTIAL only when calibration is the sole reason.
+    if health_status == "PARTIAL":
+        assert 0 < calibrating_players < len(rows), health
+    else:
+        assert calibrating_players == 0, health
 
     assert contract.get("model_id") == price_policy.get("model_id")
     assert contract.get("current_progress_field") == "price_change_percent"
@@ -170,6 +183,12 @@ def _validate_price_predictor_contract(snapshot: dict, prices: dict, trajectory:
     assert all(row.get("trajectory_eta_hours") is None for row in rows)
     assert all(row.get("trajectory_predicted_change_deadline") is None for row in rows)
     assert all(row.get("predicted_change_cycle") in {"NEXT_UPDATE", "PLUS_1_UPDATE", "PLUS_2_UPDATE", "NONE"} for row in rows)
+
+    calibration_rows = [row for row in rows if row.get("evidence_state") == "CALIBRATING"]
+    assert len(calibration_rows) == calibrating_players, {"health": health, "calibration_rows": len(calibration_rows)}
+    assert all(row.get("price_change_calibrating") is True for row in calibration_rows)
+    assert all(row.get("fallback_reason") == "CALIBRATING" for row in calibration_rows)
+    assert all(row.get("confidence") == "MEDIUM" for row in calibration_rows)
 
     governance = snapshot.get("price_summary", {}).get("governance") or {}
     assert governance.get("likelihood_raw_only") is True

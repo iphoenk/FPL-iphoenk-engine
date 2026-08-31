@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from time import perf_counter
 
 from src import utils as runtime_utils
@@ -19,17 +20,103 @@ def _assert_no_critical_failure_erasure(before: set[str], maturity: dict) -> Non
         raise RuntimeError(f"maturity reconciliation cannot erase critical FAILED state: {erased}")
 
 
-def _production_operational_health(maturity: dict, readiness: dict) -> dict:
-    """Separate deploy/runtime health from evidence maturity without hiding either.
+def _expected_warmup_only(maturity: dict, readiness: dict) -> bool:
+    critical_warmup = sorted(set(maturity.get("critical_warmup") or []))
+    return (
+        bool(critical_warmup)
+        and set(critical_warmup).issubset(_EXPECTED_LIFECYCLE_WARMUP)
+        and readiness.get("status") == "PASS"
+        and not list(readiness.get("blockers") or [])
+        and bool(list(readiness.get("pending") or []))
+    )
 
-    A pre-deadline calibration warmup is an expected lifecycle state, not an
-    operational production failure. It remains visible through capability_health,
-    prediction_health, decision_engine and go_allowed. Production health may be
-    GREEN only when the runtime pipeline is healthy, Gate0 has no failures,
-    there are no critical FAILED/PARTIAL capabilities, and every critical WARMUP
-    is one of the governed calibration modules with reconciliation readiness
-    explicitly PASS and pending future evidence rather than a blocker.
+
+def _normalize_health_maturity_semantics(maturity: dict, readiness: dict) -> dict:
+    """Separate runtime health from data-dependent maturity without false-green.
+
+    Expected calibration WARMUP is not a runtime defect. The modules remain WARMUP,
+    the decision engine remains PROVISIONAL, and unqualified GO stays blocked until
+    calibration is genuinely mature.
     """
+    critical_failed = sorted(set(maturity.get("critical_failed") or []))
+    critical_partial = sorted(set(maturity.get("critical_partial") or []))
+    critical_warmup = sorted(set(maturity.get("critical_warmup") or []))
+    expected_warmup = _expected_warmup_only(maturity, readiness)
+
+    if critical_failed:
+        prediction_health, decision_engine = "RED", "BLOCKED"
+    elif critical_partial:
+        prediction_health, decision_engine = "AMBER", "DEGRADED"
+    elif critical_warmup:
+        prediction_health = "GREEN" if expected_warmup else "AMBER"
+        decision_engine = "PROVISIONAL"
+    else:
+        prediction_health, decision_engine = "GREEN", "HEALTHY"
+
+    coverage = maturity.get("capability_coverage") or {}
+    failed_count = int(coverage.get("failed") or 0)
+    partial_count = int(coverage.get("partial") or 0)
+    warmup_count = int(coverage.get("warmup") or 0)
+    capability_health = "RED" if failed_count else "AMBER" if partial_count else "GREEN"
+    capability_maturity = "WARMUP" if warmup_count or critical_warmup else "MATURE"
+
+    gate0 = maturity.get("gate0") or {}
+    gate0_counts = gate0.get("counts") or {}
+    gate0_pass = gate0.get("pass") is True or (
+        int(gate0_counts.get("PASS") or 0) == 16 and int(gate0_counts.get("FAIL") or 0) == 0
+    )
+    postflight_complete = int(gate0_counts.get("DEFERRED") or 0) == 0
+
+    maturity["prediction_health"] = prediction_health
+    maturity["capability_health"] = capability_health
+    maturity["capability_maturity"] = capability_maturity
+    maturity["decision_engine"] = decision_engine
+    maturity["go_allowed"] = (
+        maturity.get("pipeline_health") == "GREEN"
+        and prediction_health == "GREEN"
+        and decision_engine == "HEALTHY"
+        and gate0_pass
+        and postflight_complete
+    )
+    maturity.setdefault("governance", {}).update({
+        "operational_health_separate_from_capability_maturity": True,
+        "expected_warmup_does_not_degrade_operational_prediction_health": True,
+        "warmup_never_promoted_to_active": True,
+        "provisional_engine_blocks_unqualified_go": True,
+    })
+    return maturity
+
+
+def _align_prediction_telemetry_maturity(maturity: dict) -> dict:
+    telemetry = maturity.get("capability_telemetry") or {}
+    capabilities = telemetry.get("capabilities") or {}
+    prediction = capabilities.get("Prediction")
+    if isinstance(prediction, dict):
+        health = str(maturity.get("prediction_health") or "").upper()
+        engine = str(maturity.get("decision_engine") or "").upper()
+        if health == "RED":
+            state = "BLOCKED"
+        elif health == "AMBER":
+            state = "DEGRADED"
+        elif engine == "PROVISIONAL":
+            state = "WARMUP"
+        else:
+            state = "ACTIVE"
+        prediction["state"] = state
+        evidence = prediction.setdefault("evidence", {})
+        evidence["prediction_health"] = maturity.get("prediction_health")
+        evidence["decision_engine"] = maturity.get("decision_engine")
+        evidence["maturity_state"] = maturity.get("capability_maturity")
+    if capabilities:
+        telemetry["summary"] = dict(Counter(
+            row.get("state") for row in capabilities.values() if isinstance(row, dict)
+        ))
+        maturity["capability_telemetry"] = telemetry
+    return maturity
+
+
+def _production_operational_health(maturity: dict, readiness: dict) -> dict:
+    """Separate deploy/runtime health from evidence maturity without hiding either."""
     pipeline_green = maturity.get("pipeline_health") == "GREEN" and maturity.get("overall") == "GREEN"
     gate0_counts = ((maturity.get("gate0") or {}).get("counts") or {})
     gate0_failures = int(gate0_counts.get("FAIL", 0) or 0)
@@ -85,27 +172,16 @@ def _production_operational_health(maturity: dict, readiness: dict) -> dict:
         },
         "guardrails": {
             "does_not_promote_warmup_modules": True,
-            "does_not_change_prediction_health": True,
-            "does_not_change_decision_engine": True,
-            "does_not_change_go_allowed": True,
+            "operational_health_is_separate_from_maturity": True,
+            "provisional_engine_blocks_unqualified_go": True,
             "critical_failure_remains_fail_closed": True,
         },
     }
 
 
 def run() -> dict:
-    """Run the final governed decision boundary in one process.
-
-    POST-FLIGHT truth and visible checkpoint/report governance are sequential
-    phases of the same final-governance domain. Capability maturity reconciliation
-    runs between them so engineering readiness is measured from concrete runtime
-    evidence while current external-evidence gaps remain explicitly visible.
-    """
+    """Run the final governed decision boundary in one process."""
     total = perf_counter()
-    # These governance phases consume the same immutable prediction/latest/universe
-    # contracts. Parse them once and hand the exact objects through postflight and
-    # maturity reconciliation. Weather health remains a separate governed overlay
-    # on postflight truth and is never hidden inside xPts.
     predictions = read_json(DATA / "predictions_v4.json", {})
     latest = read_json(DATA / "latest.json", {})
     universe = read_json(DATA / "universe.json", {})
@@ -128,21 +204,18 @@ def run() -> dict:
     )
     _assert_no_critical_failure_erasure(critical_failed_before, maturity)
 
-    # Postflight telemetry is generated before capability maturity is reconciled.
-    # Rebuild it from the reconciled capability states so ACTIVE DSS modules cannot
-    # remain falsely reported as PARTIAL. Weather is then applied as the final
-    # advisory evidence overlay and remains separate from xPts.
+    readiness = runtime_utils.read_json(DATA / "validation" / "reconciliation_readiness_v4.json", {})
+    maturity = _normalize_health_maturity_semantics(maturity, readiness)
+
     maturity["capability_telemetry"] = framework_postflight_truth_service._canonical_capability_telemetry(
         maturity,
         latest,
         predictions,
         universe,
     )
+    maturity = _align_prediction_telemetry_maturity(maturity)
     maturity = apply_weather_health(maturity, write=False)
 
-    # Reconciliation readiness is a separate validation artifact, not part of the
-    # immutable prediction-context read set reused above.
-    readiness = runtime_utils.read_json(DATA / "validation" / "reconciliation_readiness_v4.json", {})
     production_health = _production_operational_health(maturity, readiness)
     maturity["production_health"] = production_health["status"]
     maturity["production_operational_health"] = production_health
@@ -151,6 +224,7 @@ def run() -> dict:
         "expected_lifecycle_warmup_is_not_operational_failure": True,
         "warmup_modules_remain_unpromoted": True,
         "capability_telemetry_refreshed_after_maturity": True,
+        "prediction_telemetry_preserves_provisional_as_warmup": True,
         "weather_overlay_applied_after_telemetry_refresh": True,
     })
     atomic_json(DATA / "framework_health_v4.json", maturity)
@@ -166,7 +240,10 @@ def run() -> dict:
         "components": {
             "framework_postflight": maturity.get("overall"),
             "production_health": maturity.get("production_health"),
-            "capability_maturity": maturity.get("capability_health"),
+            "prediction_health": maturity.get("prediction_health"),
+            "capability_health": maturity.get("capability_health"),
+            "capability_maturity": maturity.get("capability_maturity"),
+            "decision_engine": maturity.get("decision_engine"),
             "weather_context": (maturity.get("weather_context") or {}).get("status"),
             "report_governance": checkpoint.get("action_state"),
         },
@@ -183,6 +260,8 @@ def run() -> dict:
             "maturity_does_not_fabricate_external_evidence": True,
             "maturity_cannot_erase_critical_failure": True,
             "data_dependent_warmup_remains_truthful": True,
+            "operational_health_separate_from_maturity": True,
+            "provisional_engine_blocks_unqualified_go": True,
             "capability_telemetry_refreshed_after_maturity": True,
             "weather_health_propagated_after_maturity": True,
             "weather_cannot_mutate_expected_xpts_mean": True,

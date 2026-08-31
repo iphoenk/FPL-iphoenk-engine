@@ -18,8 +18,10 @@ def _f(value: Any, default: float = 0.0) -> float:
 
 
 def _i(value: Any, default: int = -1) -> int:
+    if value is None:
+        return int(default)
     try:
-        return int(default if value is None else value)
+        return int(value)
     except (TypeError, ValueError):
         return int(default)
 

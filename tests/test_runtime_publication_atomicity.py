@@ -74,8 +74,10 @@ def test_runtime_workflow_orders_every_candidate_gate_before_publication() -> No
 def test_runtime_publication_uses_exact_source_and_branch_leases() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
 
+    assert "SOURCE_COMMIT:" in text
     assert 'canonical_main="$(git rev-parse refs/remotes/origin/main)"' in text
-    assert 'if [ "$canonical_main" != "$GITHUB_SHA" ]; then' in text
+    assert 'if [ "$canonical_main" != "$SOURCE_COMMIT" ]; then' in text
+    assert '--source-commit "$SOURCE_COMMIT"' in text
     assert '--force-with-lease="refs/heads/${RUNTIME_BRANCH}:${RUNTIME_BASE_SHA}"' in text
     assert "git push --force origin" not in text
     assert 'if [ "$published_head" != "$PUBLISHED_RUNTIME_SHA" ]; then' in text

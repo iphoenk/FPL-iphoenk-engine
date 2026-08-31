@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "contract": "OWNED_CHALLENGER_DECISION_ENGINE_V1",
   "engine_view": "V4",
   "owner": "squad_decision.challenger_analysis.owned_challenger_evaluation",
@@ -16,7 +16,9 @@
   "lifecycle_states": [
     "UNCHALLENGED",
     "CHALLENGED_OWNED",
+    "DISCOVERED",
     "EMERGING_CHALLENGER",
+    "MANDATORY_CHALLENGER_REVIEW",
     "ACTIVE_CHALLENGER"
   ],
   "output_states": [
@@ -46,6 +48,29 @@
     "event_points_trigger": 8,
     "transfers_in_event_trigger": 50000
   },
+  "projected_value_market_discovery": {
+    "minimum_projected_value_score": 0.72,
+    "minimum_value_percentile": 0.75,
+    "minimum_start_probability": 0.6,
+    "football_edge_minimum_score": 0.76,
+    "structural_edge_minimum_5gw": 1.0,
+    "market_urgencies": [
+      "HIGH",
+      "CRITICAL"
+    ],
+    "imminent_cycles": [
+      "NEXT_UPDATE",
+      "PLUS_1_UPDATE"
+    ],
+    "visible_watchlist_per_position": 5,
+    "full_universe_scan_required": true,
+    "position_budget_aware_required": true,
+    "mandatory_review_is_not_buy": true,
+    "stale_predictor_cannot_create_market_urgency": true,
+    "official_identity_sanity_required": true,
+    "missing_mandatory_candidate_blocks_publication": true,
+    "market_priority_not_football_authority": true
+  },
   "publication": {
     "exact_owned": 15,
     "exact_watchlist": 20,
@@ -60,6 +85,7 @@
     "reuse_wc_package_audit_v4": true,
     "reuse_prediction_owned_prices": true,
     "reuse_governed_watchlist_20": true,
+    "reuse_full_universe_discovery_between_watchlist_and_challenger": true,
     "weather_contextual_only": true,
     "market_timing_subordinate_to_football": true,
     "one_match_haul_is_trigger_not_buy": true,
@@ -69,14 +95,15 @@
     "may_not_overwrite_effective_plan": true,
     "may_not_overwrite_starting_xi": true,
     "may_not_overwrite_captain_or_vice": true,
-    "may_not_overwrite_watchlist": true,
     "execution_authority_preserved": true,
     "missing_evidence_is_explicit": true,
     "data_join_defect_is_internal_only": true,
     "canonical_decision_authority": "CANONICAL_DECISION_ARBITRATION_V1",
     "challenger_states_are_advisory": true,
-    "overall_decision_must_equal_canonical_action": true
+    "overall_decision_must_equal_canonical_action": true,
+    "mandatory_market_review_never_auto_executes": true,
+    "v4_alone_not_final_cross_engine_winner": true
   },
-  "registry": "v4_owned_challenger_decision_policy_v2",
+  "registry": "v4_owned_challenger_decision_policy_v3",
   "decision_authority": "CANONICAL_DECISION_ARBITRATION_V1"
 }

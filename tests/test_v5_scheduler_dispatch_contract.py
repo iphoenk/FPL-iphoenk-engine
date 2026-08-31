@@ -10,9 +10,11 @@ def _read(path: str) -> str:
 
 def test_shadow_cycle_is_reusable_and_pins_canonical_v5_checkout():
     workflow = _read(".github/workflows/v5-shadow-cycle.yml")
-    assert "workflow_call:" in workflow
+    trigger_section = workflow.split("permissions:", 1)[0]
+    assert "workflow_call:" in trigger_section
+    assert "workflow_dispatch:" in trigger_section
+    assert "push:" not in trigger_section
     assert "ref: v5-unified-engine" in workflow
-    assert "config/v5_shadow_trigger.json" not in workflow
 
 
 def test_manual_scheduler_calls_shadow_workflow_directly():

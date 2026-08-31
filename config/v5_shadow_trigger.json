@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "v5.0.0-beta.4-chat4-real-shadow-1",
-  "requested_at": "2026-08-30T22:40:45Z",
+  "requested_cycle": "v5.0.0-beta.4-chat4-postmerge-real-shadow-1",
+  "requested_at": "2026-08-31T00:05:00Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "accepted_production_baseline_from_manifest",
   "v5_role": "shadow_only",

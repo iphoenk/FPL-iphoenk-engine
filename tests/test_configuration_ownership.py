@@ -43,22 +43,21 @@ def test_squad_constraints_are_owned_by_active_ruleset():
 def test_onefpl_report_time_queries_and_domains_are_registry_owned():
     machine_registry = json.loads((ROOT / "config" / "sources" / "registry.json").read_text())
     report_registry = json.loads((ROOT / "config" / "sources" / "report_time_registry.json").read_text())
+    challenger_registry = json.loads((ROOT / "config" / "intelligence" / "challenger_registry.json").read_text())
     machine = next(row for row in machine_registry["sources"] if row["id"] == "onefpl")
     report = next(row for row in report_registry["sources"] if row["id"] == "onefpl")
-    adapter = (ROOT / "src" / "sources" / "onefpl.py").read_text()
+    challenger_ids = {row["id"] for row in challenger_registry["providers"]}
 
     assert machine["enabled"] is False
     assert machine["adapter"] == "disabled"
-    assert machine["delegated_to"] == "REPORT_TIME_SOURCE_REGISTRY_V1"
+    assert machine["delegated_to"] == report_registry["registry"]
     assert "probe_url" not in machine
     assert "structured_url" not in machine
     assert report["retrieval"] == "REPORT_TIME_WEB"
     assert report["domains"]
     assert report["queries"]
-    for domain in report["domains"]:
-        assert domain not in adapter
-    for query in report["queries"]:
-        assert query not in adapter
+    assert "onefpl" not in challenger_ids
+    assert not (ROOT / "src" / "sources" / "onefpl.py").exists()
 
 
 def test_legacy_runtime_hardcodes_do_not_return():

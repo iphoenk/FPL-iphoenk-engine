@@ -23,6 +23,9 @@ jobs:
   evidence-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+      reasons: ${{ steps.gate.outputs.reasons }}
     steps:
       - name: Checkout V5 scheduler authority
         uses: actions/checkout@v4
@@ -42,12 +45,15 @@ jobs:
         id: gate
         run: python scripts/v5_evidence_scheduler_gate.py --event-name workflow_dispatch
 
-      - name: Trigger governed V5 shadow evidence cycle
-        if: steps.gate.outputs.should_run == 'true'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python scripts/v5_dispatch_shadow_trigger.py --reasons "${{ steps.gate.outputs.reasons }}"
-
       - name: No-op outside governed evidence windows or during baseline drift
         if: steps.gate.outputs.should_run != 'true'
         run: echo "No heavy V5 cycle required; either outside evidence window or deployed production baseline is not reconciled."
+
+  shadow-cycle:
+    needs: evidence-gate
+    if: needs.evidence-gate.outputs.should_run == 'true'
+    uses: ./.github/workflows/v5-shadow-cycle.yml
+    with:
+      scheduler_reasons: ${{ needs.evidence-gate.outputs.reasons }}
+      scheduler_source: v5-manual-governed-scheduler
+    secrets: inherit

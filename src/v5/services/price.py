@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from src.v5.price_service import build_price_snapshot
-from src.v5.price_squeeze import annotate_comparator, annotate_packages, attach_watchlist_price_evidence
+from src.v5.price_squeeze import annotate_comparator, attach_watchlist_price_evidence
 from src.v5.services.common import parse_datetime
 
 # Base price-intelligence capability remains intentionally narrow for the
@@ -18,7 +18,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
         return {
             "status": "ACTIVE",
             "capabilities": list(STATIC_CAPABILITIES),
-            "operations": ["build", "bind_watchlist_evidence", "annotate_comparator", "annotate_packages"],
+            "operations": ["build", "bind_watchlist_evidence", "annotate_comparator"],
             "official_price_predictor": {
                 "source": "OFFICIAL_FPL_BOOTSTRAP_STATIC",
                 "authentication_required": False,
@@ -32,6 +32,7 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             "governance": {
                 "price_business_authority": "price",
                 "cross_service_price_consumption_uses_versioned_operation_contract": True,
+                "advertised_operations_are_runtime_routed": True,
             },
         }
     if operation == "bind_watchlist_evidence":
@@ -48,11 +49,6 @@ def handle(operation: str, payload: dict[str, Any]) -> Any:
             team=team,
             transfer_state=payload.get("transfer_state") if isinstance(payload.get("transfer_state"), dict) else None,
         )
-    if operation == "annotate_packages":
-        packages = payload.get("packages") if isinstance(payload.get("packages"), dict) else {}
-        price = payload.get("price") if isinstance(payload.get("price"), dict) else {}
-        team = payload.get("team") if isinstance(payload.get("team"), dict) else {}
-        return annotate_packages(packages, price, team)
     if operation != "build":
         raise KeyError(f"unsupported price operation: {operation}")
     bootstrap = payload.get("bootstrap")

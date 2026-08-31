@@ -6,15 +6,39 @@ from src.engines import price_radar as canonical
 from src.v5.finance import sell_cost
 
 
-SCENARIOS: tuple[tuple[str, int, int], ...] = (
-    ("BASE", 0, 0),
-    ("OUTGOING_FALL_0_1", 1, 0),
-    ("INCOMING_RISE_0_1", 0, 1),
-    ("BOTH_SQUEEZE_0_1", 1, 1),
-    ("OUTGOING_FALL_0_2", 2, 0),
-    ("INCOMING_RISE_0_2", 0, 2),
-    ("BOTH_SQUEEZE_0_2", 2, 2),
-)
+def _squeeze_policy() -> tuple[tuple[int, ...], frozenset[str], int]:
+    policy = canonical.load_policy().get("squeeze_policy")
+    if not isinstance(policy, dict):
+        raise RuntimeError("price radar policy missing squeeze_policy")
+    raw_steps = policy.get("scenario_steps_tenths")
+    raw_levels = policy.get("material_urgency_levels")
+    worst = policy.get("worst_reasonable_short_horizon_tenths")
+    if not isinstance(raw_steps, list) or not raw_steps:
+        raise RuntimeError("price radar squeeze_policy.scenario_steps_tenths must be a non-empty list")
+    steps = tuple(sorted({int(value) for value in raw_steps}))
+    if any(value <= 0 for value in steps):
+        raise RuntimeError("price radar squeeze scenario steps must be positive tenths")
+    if not isinstance(raw_levels, list) or not raw_levels:
+        raise RuntimeError("price radar squeeze_policy.material_urgency_levels must be a non-empty list")
+    levels = frozenset(str(value) for value in raw_levels)
+    worst_step = int(worst) if worst is not None else 0
+    if worst_step <= 0:
+        raise RuntimeError("price radar squeeze_policy.worst_reasonable_short_horizon_tenths must be positive")
+    return steps, levels, worst_step
+
+
+def _scenario_matrix(steps: tuple[int, ...]) -> tuple[tuple[str, int, int], ...]:
+    rows: list[tuple[str, int, int]] = [("BASE", 0, 0)]
+    for step in steps:
+        suffix = f"0_{step}"
+        rows.extend(
+            (
+                (f"OUTGOING_FALL_{suffix}", step, 0),
+                (f"INCOMING_RISE_{suffix}", 0, step),
+                (f"BOTH_SQUEEZE_{suffix}", step, step),
+            )
+        )
+    return tuple(rows)
 
 
 def _price_players(price: dict[str, Any]) -> dict[int, dict[str, Any]]:
@@ -96,12 +120,16 @@ def _scenario(
     }
 
 
-def _material_short_horizon_risk(row: dict[str, Any], direction: str) -> bool:
+def _material_short_horizon_risk(
+    row: dict[str, Any],
+    direction: str,
+    material_urgency_levels: frozenset[str],
+) -> bool:
     return bool(
         row.get("direction") == direction
         and (
             row.get("predicted_change_cycle") == "NEXT_UPDATE"
-            or row.get("model_urgency") in {"HIGH", "CRITICAL"}
+            or str(row.get("model_urgency")) in material_urgency_levels
         )
     )
 
@@ -112,6 +140,7 @@ def price_squeeze(
     ledger: dict[str, Any],
     bank: int | None,
 ) -> dict[str, Any]:
+    steps, material_levels, worst_step = _squeeze_policy()
     scenarios = [
         _scenario(
             name,
@@ -122,18 +151,18 @@ def price_squeeze(
             outgoing_drop=out_drop,
             incoming_rise=in_rise,
         )
-        for name, out_drop, in_rise in SCENARIOS
+        for name, out_drop, in_rise in _scenario_matrix(steps)
     ]
-    outgoing_risk = _material_short_horizon_risk(outgoing, "FALL")
-    incoming_risk = _material_short_horizon_risk(incoming, "RISE")
+    outgoing_risk = _material_short_horizon_risk(outgoing, "FALL", material_levels)
+    incoming_risk = _material_short_horizon_risk(incoming, "RISE", material_levels)
     worst = _scenario(
         "WORST_REASONABLE_SHORT_HORIZON",
         outgoing=outgoing,
         incoming=incoming,
         ledger=ledger,
         bank=bank,
-        outgoing_drop=2 if outgoing_risk else 0,
-        incoming_rise=2 if incoming_risk else 0,
+        outgoing_drop=worst_step if outgoing_risk else 0,
+        incoming_rise=worst_step if incoming_risk else 0,
     )
     scenarios.append(worst)
     base = scenarios[0]
@@ -183,64 +212,12 @@ def price_squeeze(
             "future_sell_value_uses_governed_purchase_cost": True,
             "unresolved_sell_value_is_never_fabricated": True,
             "price_signal_may_change_timing_not_football_merit": True,
+            "scenario_policy_registry": "config/intelligence/price_radar.json#squeeze_policy",
+            "scenario_steps_tenths": list(steps),
+            "material_urgency_levels": sorted(material_levels),
+            "worst_reasonable_short_horizon_tenths": worst_step,
         },
     }
-
-
-def annotate_packages(packages: dict[str, Any], price: dict[str, Any], team: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(packages, dict):
-        return packages
-    prices = _price_players(price)
-    finance = _finance_players(team)
-    bank = _bank(team)
-    rows: list[dict[str, Any]] = []
-    for raw in packages.get("packages") or []:
-        if not isinstance(raw, dict):
-            continue
-        row = dict(raw)
-        squeezes: list[dict[str, Any]] = []
-        for outgoing, incoming in zip(row.get("outs") or [], row.get("ins") or []):
-            if not isinstance(outgoing, dict) or not isinstance(incoming, dict):
-                continue
-            out_id = canonical._int(outgoing.get("element"))
-            in_id = canonical._int(incoming.get("element"))
-            if out_id is None or in_id is None:
-                continue
-            out_price = prices.get(out_id)
-            in_price = prices.get(in_id)
-            ledger = finance.get(out_id)
-            if out_price is None or in_price is None or ledger is None:
-                squeezes.append(
-                    {
-                        "outgoing": {"element": out_id},
-                        "incoming": {"element": in_id},
-                        "status": "UNAVAILABLE",
-                        "reason": "PRICE_OR_FINANCE_EVIDENCE_MISSING",
-                        "price_only_execution_authorized": False,
-                    }
-                )
-                continue
-            squeezes.append(price_squeeze(out_price, in_price, ledger, bank))
-        row["price_squeeze"] = squeezes
-        row["price_timing_overlay"] = {
-            "material_risk": any(bool(s.get("official_next_cycle_material_risk")) for s in squeezes),
-            "affordability_loss_risk": any(bool(s.get("affordability_loss_risk")) for s in squeezes),
-            "price_only_execution_authorized": False,
-            "score_mutated_by_price": False,
-        }
-        rows.append(row)
-    result = {**packages, "packages": rows}
-    hold = next((row for row in rows if row.get("id") == "HOLD"), None)
-    if hold is not None:
-        result["hold"] = hold
-    result["price_governance"] = {
-        "price_squeeze_is_advisory_overlay": True,
-        "package_order_mutated_by_price": False,
-        "package_score_mutated_by_price": False,
-        "price_only_buy_sell_hit_forbidden": True,
-        "xi_captain_chip_mutation_forbidden": True,
-    }
-    return result
 
 
 def attach_watchlist_price_evidence(watchlist: dict[str, Any], price: dict[str, Any], owned_ids: Iterable[int]) -> dict[str, Any]:

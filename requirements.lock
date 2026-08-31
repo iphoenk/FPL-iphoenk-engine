@@ -1,3 +1,5 @@
+--require-hashes
+
 # Runtime dependency lock for Python 3.12 on the governed Linux x86_64 runtime.
 # Versions are frozen from the successful V3 Runtime run on 2026-08-31.
 # SHA-256 hashes were resolved on Ubuntu 24.04 / CPython 3.12.14 from the same wheel index used by GitHub Actions.

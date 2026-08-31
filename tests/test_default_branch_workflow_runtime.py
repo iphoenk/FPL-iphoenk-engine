@@ -2,12 +2,21 @@ from pathlib import Path
 
 
 WORKFLOWS = Path('.github/workflows')
+V3_CI_WORKFLOW = WORKFLOWS / 'v3-ci.yml'
 V3_RUNTIME_WORKFLOW = WORKFLOWS / 'v3-runtime.yml'
 V4_DEFAULT_BRANCH_WORKFLOWS = (
     'v4-prediction.yml',
     'fpl-engine-recovery.yml',
     'v4-timing-probe.yml',
 )
+
+
+def test_v3_ci_main_push_requires_merged_pr_provenance():
+    text = V3_CI_WORKFLOW.read_text()
+    assert 'pull-requests: read' in text
+    assert 'Enforce merged-PR provenance for main' in text
+    assert "github.event_name == 'push' && github.ref == 'refs/heads/main'" in text
+    assert 'python -m src.runtime_v3.main_pr_provenance' in text
 
 
 def test_v3_runtime_code_publication_requires_successful_main_ci():

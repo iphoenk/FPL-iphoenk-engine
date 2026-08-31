@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -14,6 +15,8 @@ REC_PATH = ROOT / "config" / "rec_registry.json"
 IMPLEMENTATION_STATUS_PATH = ROOT / "IMPLEMENTATION_STATUS.json"
 OFFICIAL_FIRST_PATH = ROOT / "config" / "sources" / "official_first_coverage.json"
 OFFICIAL_ENDPOINT_OWNERSHIP_PATH = ROOT / "config" / "sources" / "official_endpoint_ownership.json"
+OFFICIAL_FPL_MODULE = "src.sources.official_fpl"
+CORE_OFFICIAL_ENDPOINTS = {"bootstrap-static/", "fixtures/", "event-status/"}
 FRAMEWORK_PATHS = {
     "dss_core": ROOT / "config" / "dss_core_registry.json",
     "dss_extensions": ROOT / "config" / "dss_extension_registry.json",
@@ -75,38 +78,135 @@ def _artifact_writers(services: dict[str, Any]) -> dict[str, set[str]]:
     return writers
 
 
-def _scan_official_fetches(active: dict[str, set[str]]) -> dict[str, list[str]]:
-    hits: dict[str, list[str]] = defaultdict(list)
-    needles = ("src.sources.official_fpl", "from src.sources import official_fpl", "get_json(")
+def _dotted_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        parent = _dotted_name(node.value)
+        return f"{parent}.{node.attr}" if parent else None
+    return None
+
+
+def _static_string(node: ast.AST, constants: dict[str, str]) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.Name):
+        return constants.get(node.id)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _static_string(node.left, constants)
+        right = _static_string(node.right, constants)
+        return left + right if left is not None and right is not None else None
+    if isinstance(node, ast.JoinedStr):
+        parts: list[str] = []
+        for value in node.values:
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                parts.append(value.value)
+            else:
+                return None
+        return "".join(parts)
+    return None
+
+
+def _ast_official_fetch_calls(path: Path) -> list[dict[str, Any]]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    module_aliases: set[str] = {OFFICIAL_FPL_MODULE}
+    direct_get_json_aliases: set[str] = set()
+    constants: dict[str, str] = {}
+    wildcard_import = False
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == OFFICIAL_FPL_MODULE:
+                    module_aliases.add(alias.asname or alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module == "src.sources":
+                for alias in node.names:
+                    if alias.name == "official_fpl":
+                        module_aliases.add(alias.asname or alias.name)
+            elif node.module == OFFICIAL_FPL_MODULE:
+                for alias in node.names:
+                    if alias.name == "*":
+                        wildcard_import = True
+                    elif alias.name == "get_json":
+                        direct_get_json_aliases.add(alias.asname or alias.name)
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            value = node.value
+            if value is None:
+                continue
+            static = _static_string(value, constants)
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if static is not None:
+                for target in targets:
+                    if isinstance(target, ast.Name):
+                        constants[target.id] = static
+
+    if wildcard_import:
+        raise RuntimeError(f"wildcard import from {OFFICIAL_FPL_MODULE} is forbidden in active module: {path}")
+
+    def is_official_get_json_target(name: str | None) -> bool:
+        if not name:
+            return False
+        if name in direct_get_json_aliases:
+            return True
+        if name == f"{OFFICIAL_FPL_MODULE}.get_json":
+            return True
+        return any(name == f"{alias}.get_json" for alias in module_aliases)
+
+    # Resolve simple function aliases such as fetch = official_fpl.get_json.
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)) or node.value is None:
+            continue
+        if not is_official_get_json_target(_dotted_name(node.value)):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        for target in targets:
+            if isinstance(target, ast.Name):
+                direct_get_json_aliases.add(target.id)
+
+    calls: list[dict[str, Any]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not is_official_get_json_target(_dotted_name(node.func)):
+            continue
+        endpoint = _static_string(node.args[0], constants) if node.args else None
+        calls.append({
+            "line": int(getattr(node, "lineno", 0) or 0),
+            "endpoint": endpoint if endpoint is not None else "<dynamic>",
+            "target": _dotted_name(node.func),
+        })
+    return sorted(calls, key=lambda row: (int(row["line"]), str(row["target"])))
+
+
+def _scan_official_fetch_calls(active: dict[str, set[str]]) -> dict[str, list[dict[str, Any]]]:
+    findings: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for service, modules in active.items():
-        for module in modules:
+        for module in sorted(modules):
             path = _module_path(module)
             if not path.is_file():
                 continue
-            text = path.read_text(encoding="utf-8")
-            if any(needle in text for needle in needles):
-                hits[service].append(module)
-    return {service: sorted(modules) for service, modules in sorted(hits.items())}
+            for call in _ast_official_fetch_calls(path):
+                findings[service].append({"module": module, **call})
+    return {service: rows for service, rows in sorted(findings.items())}
 
 
-def _scan_core_refetches(active: dict[str, set[str]]) -> list[str]:
-    forbidden_needles = (
-        'get_json("bootstrap-static/")',
-        'get_json("fixtures/")',
-        'get_json("event-status/")',
-    )
+def _official_fetch_services(findings: dict[str, list[dict[str, Any]]]) -> dict[str, list[str]]:
+    return {
+        service: sorted({str(row.get("module")) for row in rows})
+        for service, rows in sorted(findings.items())
+        if rows
+    }
+
+
+def _scan_core_refetches(findings: dict[str, list[dict[str, Any]]]) -> list[str]:
     hits: list[str] = []
-    for service, modules in active.items():
+    for service, calls in findings.items():
         if service == "official_snapshot":
             continue
-        for module in modules:
-            path = _module_path(module)
-            if not path.is_file():
-                continue
-            text = path.read_text(encoding="utf-8")
-            for needle in forbidden_needles:
-                if needle in text:
-                    hits.append(f"{service}:{module}:{needle}")
+        for call in calls:
+            endpoint = str(call.get("endpoint") or "")
+            normalized = endpoint.lstrip("/")
+            if normalized in CORE_OFFICIAL_ENDPOINTS:
+                hits.append(f"{service}:{call.get('module')}:{call.get('line')}:{normalized}")
     return sorted(hits)
 
 
@@ -340,7 +440,12 @@ def run() -> dict[str, Any]:
         errors.append(f"invalid staged artifact ownership: {bad_staged}")
 
     endpoint_state = _validate_official_endpoint_ownership(errors, service_names)
-    official_hits = _scan_official_fetches(combined_active)
+    try:
+        official_findings = _scan_official_fetch_calls(combined_active)
+    except (SyntaxError, RuntimeError) as exc:
+        official_findings = {}
+        errors.append(f"Official FPL AST authority scan failed closed: {exc}")
+    official_hits = _official_fetch_services(official_findings)
     declared_network_owners = set(endpoint_state.get("owners") or [])
     architecture_allowed = {str(value) for value in ownership.get("official_fetch_allowed_services") or []}
     if architecture_allowed != declared_network_owners:
@@ -350,7 +455,7 @@ def run() -> dict[str, Any]:
     forbidden_fetches = {service: modules for service, modules in official_hits.items() if service not in declared_network_owners}
     if forbidden_fetches:
         errors.append(f"Official FPL fetch detected outside scoped network owner: {forbidden_fetches}")
-    core_refetches = _scan_core_refetches(combined_active)
+    core_refetches = _scan_core_refetches(official_findings)
     if core_refetches:
         errors.append(f"core Official snapshot endpoints refetched downstream: {core_refetches}")
 
@@ -365,6 +470,13 @@ def run() -> dict[str, Any]:
         "framework_counts": framework_counts,
         "rec": rec_state,
         "official_endpoint_ownership": endpoint_state,
+        "official_fetch_authority_guard": {
+            "scanner": "AST_V1",
+            "call_count": sum(len(rows) for rows in official_findings.values()),
+            "dynamic_endpoint_call_count": sum(
+                1 for rows in official_findings.values() for row in rows if row.get("endpoint") == "<dynamic>"
+            ),
+        },
         "background_service_count": len(services),
         "interactive_service_count": len(interactive_services),
         "total_bounded_service_count": len(service_names),

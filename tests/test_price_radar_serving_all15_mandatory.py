@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from src.engines.report_enrichment import _hydrate_price_radar, _source_availability
@@ -106,3 +109,17 @@ def test_livefpl_is_retired_from_v3_source_serving() -> None:
     block = _source_availability({"sources": [{"id": "livefpl", "name": "LiveFPL", "reachable": True}]})
     serialized = str(block).lower()
     assert "livefpl" not in serialized
+
+
+def test_p0_artifact_contract_budgets_governed_all15_and_mandatory_price_detail() -> None:
+    registry = json.loads(Path("config/report_artifact_registry.json").read_text())
+    consumer = registry["consumer_contract"]
+    artifacts = registry["artifacts"]
+    governance = registry["governance"]
+
+    assert consumer["price_radar_requires_all15_predictor_detail"] is True
+    assert consumer["price_radar_requires_mandatory_challenger_detail"] is True
+    assert governance["p0_payload_budget_expanded_for_governed_all15_and_mandatory_challenger_price_evidence"] is True
+    assert artifacts["decision_brief"]["max_bytes"] >= 100_000
+    assert artifacts["deep_review_payload"]["max_bytes"] >= 300_000
+    assert artifacts["user_report"]["max_bytes"] >= 300_000

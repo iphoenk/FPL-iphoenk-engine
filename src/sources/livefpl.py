@@ -10,10 +10,9 @@ from src.sources.observations import ChallengerObservation
 from src.sources.structured_web import FetchedDocument, fetch_public_document, visible_text
 
 PARSER_VERSION = "livefpl-price-v2"
-
+_NAME = r"[\w.'’ -]{2,60}?"
 _PRICE_RE = re.compile(
-    r"(?P<name>[A-Za-zÀ-ÖØ-öø-ÿ0-9.'’ -]{2,45}?)\s+"
-    r"(?P<position>GKP|GK|DEF|MID|FWD|FW)\s+"
+    rf"(?P<name>{_NAME})\s+(?P<position>GKP|GK|DEF|MID|FWD|FW)\s+"
     r"£(?P<price>\d+(?:\.\d+)?)\s+"
     r"(?P<progress>[+-]?\d+(?:\.\d+)?)%\s+"
     r"(?P<predicted>[+-]?\d+(?:\.\d+)?)%"
@@ -22,13 +21,12 @@ _PRICE_RE = re.compile(
     re.IGNORECASE,
 )
 _ROW_HEAD_RE = re.compile(
-    r"(?P<name>[A-Za-zÀ-ÖØ-öø-ÿ0-9.'’ -]{2,45}?)\s+"
-    r"(?P<position>GKP|GK|DEF|MID|FWD|FW)\s+"
-    r"£(?P<price>\d+(?:\.\d+)?)",
+    rf"(?P<name>{_NAME})\s+(?P<position>GKP|GK|DEF|MID|FWD|FW)\s+£(?P<price>\d+(?:\.\d+)?)",
     re.IGNORECASE,
 )
 _PERCENT_RE = re.compile(r"[+-]?\d+(?:\.\d+)?%")
 _ETA_RE = re.compile(r"(?:Tonight|Tomorrow|>\s*\d+\s*days?|\d+\s*days?)", re.IGNORECASE)
+_POSITION_MAP = {"GKP": "GK", "GK": "GK", "DEF": "DEF", "MID": "MID", "FW": "FWD", "FWD": "FWD"}
 
 
 class _TableRowsParser(HTMLParser):
@@ -37,65 +35,49 @@ class _TableRowsParser(HTMLParser):
         self.rows: list[list[str]] = []
         self._row: list[str] | None = None
         self._cell: list[str] | None = None
-        self._ignored_depth = 0
+        self._ignored = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         name = tag.lower()
         if name in {"script", "style", "noscript"}:
-            self._ignored_depth += 1
-            return
-        if self._ignored_depth:
-            return
-        if name == "tr":
-            self._row = []
-            self._cell = None
-        elif name in {"td", "th"} and self._row is not None:
+            self._ignored += 1
+        elif not self._ignored and name == "tr":
+            self._row, self._cell = [], None
+        elif not self._ignored and name in {"td", "th"} and self._row is not None:
             self._cell = []
 
     def handle_endtag(self, tag: str) -> None:
         name = tag.lower()
         if name in {"script", "style", "noscript"}:
-            if self._ignored_depth:
-                self._ignored_depth -= 1
+            self._ignored = max(0, self._ignored - 1)
             return
-        if self._ignored_depth:
+        if self._ignored:
             return
         if name in {"td", "th"} and self._row is not None and self._cell is not None:
-            value = " ".join(" ".join(self._cell).split())
-            self._row.append(value)
+            self._row.append(" ".join(" ".join(self._cell).split()))
             self._cell = None
         elif name == "tr" and self._row is not None:
-            if any(value for value in self._row):
+            if any(self._row):
                 self.rows.append(self._row)
-            self._row = None
-            self._cell = None
+            self._row, self._cell = None, None
 
     def handle_data(self, data: str) -> None:
-        if self._ignored_depth or self._cell is None:
+        if self._ignored or self._cell is None:
             return
         value = " ".join(data.split())
         if value:
             self._cell.append(value)
 
 
-def _direction(value: float) -> str:
-    if value > 0:
-        return "RISE"
-    if value < 0:
-        return "FALL"
-    return "STABLE"
-
-
 def _position(value: str) -> str:
-    return str(value).upper().replace("FW", "FWD").replace("GKP", "GK")
+    return _POSITION_MAP.get(str(value).upper(), str(value).upper())
 
 
-def _eta_label(text: str) -> str | None:
-    match = _ETA_RE.search(text)
-    return " ".join(match.group(0).split()) if match else None
+def _direction(value: float) -> str:
+    return "RISE" if value > 0 else "FALL" if value < 0 else "STABLE"
 
 
-def _observation(
+def _make_observation(
     *,
     name: str,
     position: str,
@@ -134,107 +116,74 @@ def _observation(
     ).as_dict()
 
 
-def _table_price_observations(
-    html: str,
-    *,
-    source_url: str,
-    fetched_at: str,
-    ttl_seconds: int,
-) -> list[dict[str, Any]]:
+def _table_rows(html: str) -> list[str]:
     parser = _TableRowsParser()
     parser.feed(html or "")
-    observations: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for cells in parser.rows:
-        row_text = " ".join(value for value in cells if value)
-        head = _ROW_HEAD_RE.search(row_text)
-        if head is None:
-            continue
-        remainder = row_text[head.end():]
-        percentages = list(_PERCENT_RE.finditer(remainder))
-        if len(percentages) < 2:
-            continue
-        name = " ".join(head.group("name").split()).strip()
-        if not name:
-            continue
-        progress = float(percentages[0].group(0)[:-1])
-        predicted = float(percentages[1].group(0)[:-1])
-        per_hour = float(percentages[2].group(0)[:-1]) if len(percentages) >= 3 else None
-        eta_window_end = percentages[2].start() if len(percentages) >= 3 else len(remainder)
-        eta = _eta_label(remainder[percentages[1].end():eta_window_end])
-        obs = _observation(
-            name=name,
-            position=head.group("position"),
-            price=float(head.group("price")),
-            progress=progress,
-            predicted=predicted,
-            eta=eta,
-            per_hour=per_hour,
-            source_url=source_url,
-            fetched_at=fetched_at,
-            ttl_seconds=ttl_seconds,
-        )
-        if obs["observation_key"] in seen:
-            continue
-        seen.add(obs["observation_key"])
-        observations.append(obs)
-    return observations
+    return [" ".join(cell for cell in row if cell) for row in parser.rows]
 
 
-def _legacy_price_observations(
-    html: str,
-    *,
-    source_url: str,
-    fetched_at: str,
-    ttl_seconds: int,
-) -> list[dict[str, Any]]:
-    observations: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for match in _PRICE_RE.finditer(visible_text(html)):
-        name = " ".join(match.group("name").split()).strip()
-        if not name:
-            continue
-        predicted = float(match.group("predicted"))
-        obs = _observation(
-            name=name,
-            position=match.group("position"),
-            price=float(match.group("price")),
-            progress=float(match.group("progress")),
-            predicted=predicted,
-            eta=match.group("eta"),
-            per_hour=float(match.group("per_hour")) if match.group("per_hour") else None,
-            source_url=source_url,
-            fetched_at=fetched_at,
-            ttl_seconds=ttl_seconds,
-        )
-        if obs["observation_key"] in seen:
-            continue
-        seen.add(obs["observation_key"])
-        observations.append(obs)
-    return observations
+def _parse_table_row(text: str) -> dict[str, Any] | None:
+    head = _ROW_HEAD_RE.search(text)
+    if head is None:
+        return None
+    remainder = text[head.end():]
+    percentages = list(_PERCENT_RE.finditer(remainder))
+    if len(percentages) < 2:
+        return None
+    eta_end = percentages[2].start() if len(percentages) >= 3 else len(remainder)
+    eta_match = _ETA_RE.search(remainder[percentages[1].end():eta_end])
+    return {
+        "name": " ".join(head.group("name").split()).strip(),
+        "position": head.group("position"),
+        "price": float(head.group("price")),
+        "progress": float(percentages[0].group(0)[:-1]),
+        "predicted": float(percentages[1].group(0)[:-1]),
+        "eta": " ".join(eta_match.group(0).split()) if eta_match else None,
+        "per_hour": float(percentages[2].group(0)[:-1]) if len(percentages) >= 3 else None,
+    }
 
 
 def parse_price_observations(html: str, *, source_url: str, fetched_at: str, ttl_seconds: int) -> list[dict]:
-    table_rows = _table_price_observations(
-        html,
-        source_url=source_url,
-        fetched_at=fetched_at,
-        ttl_seconds=ttl_seconds,
-    )
-    if table_rows:
-        return table_rows
-    return _legacy_price_observations(
-        html,
-        source_url=source_url,
-        fetched_at=fetched_at,
-        ttl_seconds=ttl_seconds,
-    )
+    parsed = [row for text in _table_rows(html) if (row := _parse_table_row(text))]
+    if not parsed:
+        parsed = [
+            {
+                "name": " ".join(match.group("name").split()).strip(),
+                "position": match.group("position"),
+                "price": float(match.group("price")),
+                "progress": float(match.group("progress")),
+                "predicted": float(match.group("predicted")),
+                "eta": match.group("eta"),
+                "per_hour": float(match.group("per_hour")) if match.group("per_hour") else None,
+            }
+            for match in _PRICE_RE.finditer(visible_text(html))
+        ]
+
+    observations: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in parsed:
+        if not row["name"]:
+            continue
+        obs = _make_observation(
+            **row,
+            source_url=source_url,
+            fetched_at=fetched_at,
+            ttl_seconds=ttl_seconds,
+        )
+        if obs["observation_key"] not in seen:
+            seen.add(obs["observation_key"])
+            observations.append(obs)
+    return observations
 
 
 def _candidate_urls(spec: SourceSpec) -> list[str]:
     configured = spec.config.get("structured_urls")
-    values: list[Any] = list(configured) if isinstance(configured, list) else []
-    values.extend([spec.config.get("structured_url"), spec.config.get("probe_url")])
+    if isinstance(configured, list) and configured:
+        values = configured
+    elif spec.config.get("structured_url"):
+        values = [spec.config.get("structured_url")]
+    else:
+        values = [spec.config.get("probe_url")]
     out: list[str] = []
     for raw in values:
         url = str(raw or "").strip()
@@ -243,7 +192,7 @@ def _candidate_urls(spec: SourceSpec) -> list[str]:
     return out
 
 
-def _result_detail(document: FetchedDocument | None, attempts: list[dict[str, Any]], observations: list[dict[str, Any]]) -> dict[str, Any]:
+def _detail(document: FetchedDocument | None, attempts: list[dict[str, Any]], ingested: bool) -> dict[str, Any]:
     return {
         "http_status": document.status_code if document else None,
         "content_type": document.content_type if document else None,
@@ -251,7 +200,7 @@ def _result_detail(document: FetchedDocument | None, attempts: list[dict[str, An
         "parser_version": PARSER_VERSION,
         "selected_url": document.url if document else None,
         "attempted_urls": attempts,
-        "data_values_ingested": bool(observations),
+        "data_values_ingested": ingested,
         "no_fabrication": True,
     }
 
@@ -261,82 +210,53 @@ def probe(spec: SourceSpec, timeout_seconds: float = 2.5) -> SourceResult:
     max_bytes = int(spec.config["max_fetch_bytes"])
     urls = _candidate_urls(spec)
     if not urls:
-        return SourceResult(
-            spec.source_id,
-            "UNAVAILABLE",
-            False,
-            None,
-            0,
-            {cap: "UNAVAILABLE" for cap in spec.capabilities},
-            {"error": "no_structured_url", "structured_ingestion": True, "parser_version": PARSER_VERSION},
-        )
+        return SourceResult(spec.source_id, "UNAVAILABLE", False, None, 0, {cap: "UNAVAILABLE" for cap in spec.capabilities}, {"error": "no_structured_url", "structured_ingestion": True, "parser_version": PARSER_VERSION})
 
     attempts: list[dict[str, Any]] = []
-    reachable_document: FetchedDocument | None = None
+    first_reachable: FetchedDocument | None = None
     total_latency = 0.0
     for url in urls:
         document = fetch_public_document(url, timeout_seconds, max_bytes=max_bytes)
-        if document.latency_ms is not None:
-            total_latency += float(document.latency_ms)
-        fetched_at = datetime.now(timezone.utc).isoformat()
-        observations = (
-            parse_price_observations(document.text, source_url=document.url, fetched_at=fetched_at, ttl_seconds=ttl)
-            if document.reachable
-            else []
-        )
-        attempts.append(
-            {
-                "url": url,
-                "resolved_url": document.url,
-                "reachable": document.reachable,
-                "http_status": document.status_code,
-                "observation_count": len(observations),
-                "error": document.error,
+        total_latency += float(document.latency_ms or 0.0)
+        observations = parse_price_observations(
+            document.text,
+            source_url=document.url,
+            fetched_at=datetime.now(timezone.utc).isoformat(),
+            ttl_seconds=ttl,
+        ) if document.reachable else []
+        attempts.append({
+            "url": url,
+            "resolved_url": document.url,
+            "reachable": document.reachable,
+            "http_status": document.status_code,
+            "observation_count": len(observations),
+            "error": document.error,
+        })
+        if document.reachable and first_reachable is None:
+            first_reachable = document
+        if observations:
+            capabilities = {
+                cap: "AVAILABLE" if cap == "price_prediction" else "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION"
+                for cap in spec.capabilities
             }
-        )
-        if document.reachable and reachable_document is None:
-            reachable_document = document
-        if not observations:
-            continue
-        capability_state = {
-            cap: ("AVAILABLE" if cap == "price_prediction" else "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION")
-            for cap in spec.capabilities
-        }
-        return SourceResult(
-            spec.source_id,
-            "LIVE",
-            True,
-            round(total_latency, 3),
-            len(observations),
-            capability_state,
-            _result_detail(document, attempts, observations),
-            tuple(observations),
-        )
+            return SourceResult(spec.source_id, "LIVE", True, round(total_latency, 3), len(observations), capabilities, _detail(document, attempts, True), tuple(observations))
 
-    if reachable_document is None:
-        return SourceResult(
-            spec.source_id,
-            "UNAVAILABLE",
-            False,
-            round(total_latency, 3) if total_latency else None,
-            0,
-            {cap: "UNAVAILABLE" for cap in spec.capabilities},
-            {
-                "http_status": attempts[-1].get("http_status") if attempts else None,
-                "error": attempts[-1].get("error") if attempts else "unreachable",
-                "structured_ingestion": True,
-                "parser_version": PARSER_VERSION,
-                "attempted_urls": attempts,
-            },
-        )
+    if first_reachable is not None:
+        capabilities = {cap: "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION" for cap in spec.capabilities}
+        return SourceResult(spec.source_id, "LIVE", True, round(total_latency, 3), 0, capabilities, _detail(first_reachable, attempts, False))
 
-    capability_state = {cap: "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION" for cap in spec.capabilities}
     return SourceResult(
         spec.source_id,
-        "LIVE",
-        True,
-        round(total_latency, 3),
+        "UNAVAILABLE",
+        False,
+        round(total_latency, 3) if total_latency else None,
         0,
-        capability_state,
-        _result_detail(reachable_document, attempts, []),
+        {cap: "UNAVAILABLE" for cap in spec.capabilities},
+        {
+            "http_status": attempts[-1].get("http_status") if attempts else None,
+            "error": attempts[-1].get("error") if attempts else "unreachable",
+            "structured_ingestion": True,
+            "parser_version": PARSER_VERSION,
+            "attempted_urls": attempts,
+        },
     )

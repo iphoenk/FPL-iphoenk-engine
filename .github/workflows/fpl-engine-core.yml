@@ -23,7 +23,7 @@ jobs:
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ inputs.ref }}
@@ -59,7 +59,7 @@ jobs:
             echo "No ${RUNTIME_BRANCH} branch yet; using canonical seed data"
           fi
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload deterministic failure diagnostics
         if: failure() && steps.deterministic_tests.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pytest-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
           path: pytest-diagnostic.txt
@@ -219,18 +219,52 @@ jobs:
           PY
 
       - name: Upload before-after decision diagnostic
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: v4-before-after-${{ github.run_id }}-${{ github.run_attempt }}
           path: v4-before-after-diagnostic.json
           if-no-files-found: error
           retention-days: 14
 
+      - name: Advanced enrichment ablation diagnostic
+        id: advanced_ablation
+        continue-on-error: true
+        run: |
+          python -m src.engines.v4_advanced_ablation
+          python - <<'PY'
+          import json
+          a=json.load(open('data/advanced_ablation_v4.json'))
+          assert a['status']=='PASS', a
+          assert a['ablation']['full_shadow_parity']['ok'] is True, a
+          assert a['interpretation']['impact_is_diagnostic_not_health_threshold'] is True, a
+          PY
+
+      - name: Record ablation execution status for atomic publication
+        if: always() && inputs.publish
+        env:
+          ABLATION_OUTCOME: ${{ steps.advanced_ablation.outcome }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path('data/advanced_ablation_v4.json')
+          try:
+              obj=json.loads(p.read_text())
+          except Exception:
+              obj={'schema_version': 1, 'status': 'DIAGNOSTIC_UNAVAILABLE'}
+          obj['runtime_execution']={
+              'outcome': os.environ.get('ABLATION_OUTCOME') or 'unknown',
+              'failure_cannot_block_core_publish': True,
+              'observational_outside_decision_chain': True,
+          }
+          p.write_text(json.dumps(obj,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
+          PY
+
       - name: Stamp runtime publication freshness
         if: inputs.publish
         run: python -m src.services.runtime_publish_stamp
 
-      - name: Publish core branch data
+      - name: Publish complete runtime snapshot atomically
         if: inputs.publish
         shell: bash
         run: |
@@ -246,19 +280,8 @@ jobs:
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a "$GITHUB_WORKSPACE/data" ./data
           git add -f data/
-          git commit -m "data(v4): prediction acceptance snapshot [skip ci]"
+          git commit -m "data(v4): atomic production snapshot [skip ci]"
           git push --force origin HEAD:"$RUNTIME_BRANCH"
-
-      - name: Advanced enrichment ablation post-publish diagnostic gate
-        run: |
-          python -m src.engines.v4_advanced_ablation
-          python - <<'PY'
-          import json
-          a=json.load(open('data/advanced_ablation_v4.json'))
-          assert a['status']=='PASS', a
-          assert a['ablation']['full_shadow_parity']['ok'] is True, a
-          assert a['interpretation']['impact_is_diagnostic_not_health_threshold'] is True, a
-          PY
 
       - name: Repeated FAST and warm-serving p95 benchmark
         if: inputs.publish == false
@@ -328,7 +351,7 @@ jobs:
 
       - name: Upload E2E hot-path benchmark
         if: inputs.publish == false
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: v4-hot-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -337,25 +360,6 @@ jobs:
             data/serving_benchmark_v4.json
           if-no-files-found: error
           retention-days: 14
-
-      - name: Publish ablation diagnostic data
-        if: inputs.publish
-        shell: bash
-        run: |
-          set -euo pipefail
-          publish_tree="$RUNNER_TEMP/v4-runtime-ablation"
-          rm -rf "$publish_tree"
-          git config user.name "fpl-iphoenk-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
-          git worktree add --detach "$publish_tree" "origin/${RUNTIME_BRANCH}"
-          mkdir -p "$publish_tree/data"
-          cp "$GITHUB_WORKSPACE/data/advanced_ablation_v4.json" "$publish_tree/data/advanced_ablation_v4.json"
-          cd "$publish_tree"
-          git add data/advanced_ablation_v4.json
-          if git diff --cached --quiet; then echo "No ablation data changes"; exit 0; fi
-          git commit -m "data(v4): advanced ablation diagnostic [skip ci]"
-          git push origin HEAD:"$RUNTIME_BRANCH"
 
       - name: Verify published V4 runtime snapshot
         if: inputs.publish
@@ -382,5 +386,9 @@ jobs:
           warm=benchmark.get('warm_serving') or {}
           assert int(warm.get('runs') or 0) >= 25, warm
           assert float(warm.get('p95_ms') or 1e9) < 1000.0, warm
+          ablation=json.loads(subprocess.check_output(['git','show','origin/runtime-data-v4:data/advanced_ablation_v4.json'],text=True))
+          runtime_execution=ablation.get('runtime_execution') or {}
+          assert runtime_execution.get('failure_cannot_block_core_publish') is True, runtime_execution
+          assert runtime_execution.get('observational_outside_decision_chain') is True, runtime_execution
           PY
           echo "Published V4 runtime snapshot to ${RUNTIME_BRANCH}"

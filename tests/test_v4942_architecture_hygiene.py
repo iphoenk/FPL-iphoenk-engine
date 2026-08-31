@@ -26,16 +26,19 @@ def test_redundant_manual_implementation_status_is_removed():
     assert not (ROOT / "IMPLEMENTATION_STATUS.json").exists()
 
 
-def test_core_data_publish_precedes_strict_ablation_diagnostic():
+def test_strict_ablation_is_recorded_before_single_atomic_runtime_publish():
     workflow = (ROOT / ".github/workflows/fpl-engine-core.yml").read_text()
 
     core_gate = workflow.index("Centralized V4 core quality gate")
     core_summary = workflow.index("Core acceptance summary")
-    core_publish = workflow.index("Publish core branch data")
-    ablation = workflow.index("Advanced enrichment ablation post-publish diagnostic gate")
-    ablation_publish = workflow.index("Publish ablation diagnostic data")
+    ablation = workflow.index("Advanced enrichment ablation diagnostic")
+    ablation_record = workflow.index("Record ablation execution status for atomic publication")
+    stamp = workflow.index("Stamp runtime publication freshness")
+    atomic_publish = workflow.index("Publish complete runtime snapshot atomically")
 
-    assert core_gate < core_summary < core_publish < ablation < ablation_publish
-    assert "continue-on-error" not in workflow
+    assert core_gate < core_summary < ablation < ablation_record < stamp < atomic_publish
+    assert workflow.count('git push --force origin HEAD:"$RUNTIME_BRANCH"') == 1
+    assert "continue-on-error: true" in workflow
     assert "assert a['ablation']['full_shadow_parity']['ok'] is True" in workflow
-    assert "git add data/advanced_ablation_v4.json" in workflow
+    assert "failure_cannot_block_core_publish" in workflow
+    assert "observational_outside_decision_chain" in workflow

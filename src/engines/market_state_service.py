@@ -133,6 +133,13 @@ def run() -> dict:
         "official_predictor_observed_at": bootstrap_health.get("fetched_at") or official.get("generated_at"),
         "official_predictor_transport_health": bootstrap_health,
         "official_element_types": bootstrap.get("element_types") or [],
+        "official_price_fields": {
+            "authority": "Official FPL bootstrap native fields",
+            "source": "OFFICIAL_FPL",
+            "endpoint": "bootstrap-static/",
+            "fact_fields": list(PREDICTOR_RAW_FIELDS),
+            "model_interpretation_separate": True,
+        },
         "official_predictor_raw_contract": {
             "source": "OFFICIAL_FPL",
             "endpoint": "bootstrap-static/",

@@ -4,16 +4,36 @@ import json
 from time import perf_counter
 
 from src.engines.v4_decision_pipeline import OUTFILE, run as run_decision_pipeline
+from src.engines.v4_price_context import serve_price_evidence
 from src.engines.v4_weather_tactical_overlay import apply_weather_overlay
-from src.utils import atomic_json
+from src.utils import DATA, atomic_json, read_json
 
 DECISION_COMPUTE_SLO_MS = 5000.0
+
+
+def _load_price_context() -> tuple[dict, list[dict]]:
+    prices = read_json(DATA / "prices.json", {})
+    tactical = read_json(DATA / "tactical_serving_v4.json", {})
+    if not prices.get("players"):
+        raise RuntimeError("canonical Prediction-owned price context is required")
+    all15 = prices.get("all15_actionable_price_radar") or []
+    if len(all15) != 15:
+        raise RuntimeError(f"price context requires exact ALL15 owned coverage, got {len(all15)}")
+    watchlist_ids = [int(row.get("element") or 0) for row in tactical.get("watchlist") or []]
+    all20 = serve_price_evidence(prices, watchlist_ids, owned=False, limit=20)
+    if len(all20) != 20:
+        raise RuntimeError(f"price context requires exact governed ALL20 watchlist coverage, got {len(all20)}")
+    return prices, all20
 
 
 def run() -> dict:
     wall_started = perf_counter()
     runtime_context: dict = {}
     out = run_decision_pipeline(runtime_context=runtime_context)
+
+    price_started = perf_counter()
+    price_context, all20 = _load_price_context()
+    price_context_ms = round((perf_counter() - price_started) * 1000.0, 2)
 
     weather_started = perf_counter()
     tactical = apply_weather_overlay(
@@ -23,12 +43,26 @@ def run() -> dict:
     weather_ms = round((perf_counter() - weather_started) * 1000.0, 2)
 
     base_compute_ms = float((out.get("timings") or {}).get("total_pipeline_ms") or float("inf"))
-    compute_ms = base_compute_ms + weather_ms
+    compute_ms = base_compute_ms + price_context_ms + weather_ms
     wall_ms = round((perf_counter() - wall_started) * 1000.0, 2)
     status = "PASS" if compute_ms < DECISION_COMPUTE_SLO_MS else "FAIL"
 
-    out.setdefault("timings", {})["weather_tactical_overlay_ms"] = weather_ms
+    out.setdefault("timings", {})["price_market_context_ms"] = price_context_ms
+    out["timings"]["weather_tactical_overlay_ms"] = weather_ms
     out["timings"]["total_pipeline_ms"] = round(compute_ms, 2)
+    out["price_context"] = {
+        "status": (price_context.get("health") or {}).get("status"),
+        "source": price_context.get("source"),
+        "contract": price_context.get("contract"),
+        "all15_count": len(price_context.get("all15_actionable_price_radar") or []),
+        "all20_count": len(all20),
+        "all20_external_dss_watchlist": all20,
+        "watchlist_source": "TACTICAL_SERVING_15_20_V1",
+        "artifact_owner": "prediction",
+        "optimization_access": "READ_ONLY_JOIN",
+        "decision_chain_effect": "TIMING_AFFORDABILITY_OPTIONALITY_ONLY",
+        "football_decision_authority": "SUBORDINATE",
+    }
     out["weather_context"] = {
         **(tactical.get("weather_context") or {}),
         "decision_chain_effect": "UNCERTAINTY_AND_TACTICAL_ADVISORY_ONLY",
@@ -43,6 +77,10 @@ def run() -> dict:
     }
     out.setdefault("performance_guardrails", {})["decision_compute_hard_slo_lt_5s"] = True
     out["performance_guardrails"]["external_network_latency_reported_separately"] = True
+    out["performance_guardrails"]["price_predictor_network_io_reuses_raw_snapshot"] = True
+    out["performance_guardrails"]["price_artifact_prediction_single_writer"] = True
+    out["performance_guardrails"]["optimization_price_access_read_only"] = True
+    out["performance_guardrails"]["price_signal_cannot_authorize_football_action"] = True
     out["performance_guardrails"]["weather_network_io_occurs_in_enrichment_not_decision_compute"] = True
     out["performance_guardrails"]["weather_mean_xpts_mutation"] = False
     atomic_json(OUTFILE, out)
@@ -50,6 +88,10 @@ def run() -> dict:
         "service": "optimization",
         "status": status,
         "decision_compute_ms": round(compute_ms, 2),
+        "price_context_ms": price_context_ms,
+        "price_context": (price_context.get("health") or {}).get("status"),
+        "all15": len(price_context.get("all15_actionable_price_radar") or []),
+        "all20": len(all20),
         "weather_overlay_ms": weather_ms,
         "weather_context": (tactical.get("weather_context") or {}).get("status"),
         "limit_ms": DECISION_COMPUTE_SLO_MS,

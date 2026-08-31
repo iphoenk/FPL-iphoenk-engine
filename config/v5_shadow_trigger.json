@@ -1,6 +1,6 @@
 {
-  "requested_cycle": "v5.0.0-beta.4-chat4-xi-parity-b724-real-shadow-seed",
-  "requested_at": "2026-08-31T00:43:00Z",
+  "requested_cycle": "operational-revalidation-3253b546-cycle-1-20260831T042756Z",
+  "requested_at": "2026-08-31T04:27:56Z",
   "mode": "REAL_SHADOW",
   "comparison_reference": "accepted_production_baseline_from_manifest",
   "v5_role": "shadow_only",
@@ -23,5 +23,9 @@
   "require_official_submitted_predeadline": false,
   "require_public_official_plus_user_capture_predeadline": true,
   "understat_role": "challenger",
-  "api_football_role": "cross_competition_enrichment"
+  "api_football_role": "cross_competition_enrichment",
+  "scheduler_reasons": [
+    "PRODUCTION_REANCHOR_REVALIDATION"
+  ],
+  "scheduler_source": "manual-governed-operational-revalidation"
 }

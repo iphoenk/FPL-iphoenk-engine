@@ -1,5 +1,5 @@
 {
-  "fingerprint": "c985ca4bc2c0ad0f",
+  "fingerprint": "352573f6e6a7c9a7",
   "state": {
     "squad": "HOLD",
     "starting_xi": [
@@ -10,16 +10,21 @@
       115,
       165,
       254,
+      346,
       411,
       426,
-      473,
       572
     ],
-    "formation": "5-3-2",
-    "captain": 115,
-    "vice_captain": 411,
+    "formation": "4-3-3",
+    "captain": 411,
+    "vice_captain": 115,
     "chip": null,
     "price": [
+      [
+        115,
+        "RISE",
+        "CRITICAL"
+      ],
       [
         557,
         "RISE",
@@ -31,31 +36,31 @@
         8,
         388,
         "REVIEW",
-        7.018
+        6.448
       ],
       [
-        8,
-        229,
+        254,
+        113,
         "REVIEW",
-        2.701
+        4.414
       ],
       [
-        8,
-        84,
+        473,
+        113,
         "REVIEW",
-        2.68
+        3.957
       ],
       [
         254,
         469,
         "REVIEW",
-        2.215
+        3.219
       ],
       [
-        473,
-        469,
+        8,
+        229,
         "REVIEW",
-        2.209
+        2.991
       ]
     ],
     "critical_health": {

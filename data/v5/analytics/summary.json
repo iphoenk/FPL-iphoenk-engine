@@ -1,0 +1,29 @@
+{
+  "fact_rows": 0,
+  "generated_at": "2026-08-31T00:48:08.723583+00:00",
+  "governance": {
+    "derived_from_canonical_frozen_prediction_ledger": true,
+    "mart_is_derived_not_prediction_authority": true,
+    "retroactive_prediction_reconstruction_forbidden": true
+  },
+  "model": "V5_COMPACT_PREDICTION_ANALYTICS_MART_V1",
+  "overall_metrics": {
+    "sample_size": 0,
+    "status": "NO_SETTLED_SAMPLE"
+  },
+  "readiness": {
+    "clean_sheet_samples": 0,
+    "frozen_baseline_non_regression": false,
+    "minimum_clean_sheet_samples": 300,
+    "minimum_player_gw_samples": 1000,
+    "minimum_settled_gameweeks": 4,
+    "minimum_starter_samples": 750,
+    "player_gw_samples": 0,
+    "sample_thresholds_pass": false,
+    "settled_gameweeks": 0,
+    "starter_samples": 0,
+    "temporal_guard_pass": false
+  },
+  "schema_version": 1,
+  "settled_gameweeks": []
+}

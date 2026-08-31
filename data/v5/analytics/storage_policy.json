@@ -1,0 +1,21 @@
+{
+  "canonical_shadow_state_retention": "CURRENT_2026_27_SEASON",
+  "compact_analytics_mart_retention": "CURRENT_2026_27_SEASON",
+  "dwh_escalation_trigger": "MULTI_SEASON_OR_GT_100000_PLAYER_GW_FACT_ROWS",
+  "dwh_mode": "NOT_REQUIRED_AT_CURRENT_SCALE",
+  "expected_single_season_player_gw_rows": "approximately 25000-30000",
+  "notes": [
+    "Actions artifacts auto-expire; do not use them as canonical evidence.",
+    "Canonical frozen ledger and derived compact analytics remain on v5-shadow-runtime for the season.",
+    "Rolling history is noncanonical and bounded independently from canonical prediction evidence.",
+    "The analytics mart is rebuildable from the canonical ledger and may be deleted/rebuilt without changing prediction authority."
+  ],
+  "policy": "V5_EVIDENCE_STORAGE_POLICY_V2",
+  "postseason_review_window_days": 90,
+  "raw_actions_artifact_retention_days": 14,
+  "rolling_history_canonical": false,
+  "rolling_history_max_age_days": 14,
+  "rolling_history_max_bytes": 33554432,
+  "rolling_history_max_records": 128,
+  "schema_version": 2
+}

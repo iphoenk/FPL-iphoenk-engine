@@ -153,7 +153,7 @@ def run() -> dict[str, Any]:
         "reasons": gate.get("reasons") or [],
     }
     latest.setdefault("report_serving", {})["official_fact_integrity"] = gate.get("status")
-    latest["report_serving"]["publication_integrity_gate"] = "PASS" if gate.get("complete_user_report_allowed") else "BLOCKED"
+    latest["report_serving"]["publication_integrity_gate"] = gate.get("status")
     atomic_json(DATA / "latest.json", latest)
 
     require_complete_user_report(integrity)
@@ -164,7 +164,7 @@ def run() -> dict[str, Any]:
             atomic_json(path, _patch_report_payload(payload, facts, integrity))
 
     return {
-        "status": "PASS",
+        "status": gate.get("status"),
         "owned": (integrity.get("owned") or {}).get("visible_gate"),
         "watchlist": (integrity.get("watchlist") or {}).get("visible_gate"),
         "snapshot_id": (integrity.get("official_snapshot") or {}).get("snapshot_id"),

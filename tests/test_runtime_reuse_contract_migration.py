@@ -24,8 +24,8 @@ def test_invalid_reuse_falls_through_to_owner_refresh(monkeypatch):
     monkeypatch.setattr(runner.incremental_reuse, "active", lambda profile, service=None: False)
     monkeypatch.setattr(runner.incremental_reuse, "_registry", lambda: {"services": {}})
     monkeypatch.setattr(
-        runner.legacy,
-        "_reuse_service",
+        runner.reuse_freshness,
+        "reuse_service",
         lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("old weather schema")),
     )
     monkeypatch.setattr(runner.module_batch_runner, "_registry", lambda: {"batches": {}})

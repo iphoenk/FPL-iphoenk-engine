@@ -12,7 +12,6 @@
     "all_sources_unavailable_is_fail_neutral": true
   },
   "sources": [
-    {"id":"livefpl","role":"LIVE_EO_RANK_CHALLENGER","capabilities":["live_rank","effective_ownership","live_average","rank_tier_context"],"preferred_modes":["MATCH_MODE"],"authority_ceiling":"ADVISORY"},
     {"id":"onefpl","role":"MARKET_PLANNER_CHALLENGER","capabilities":["transfer_trends","market_momentum","price_prediction","planner_context","captaincy_context"],"preferred_modes":["PRICE","DEADLINE","NORMAL"],"authority_ceiling":"ADVISORY"},
     {"id":"fffix","role":"PROJECTION_LINEUP_PRICE_CHALLENGER","capabilities":["predicted_points","predicted_lineup","xmins","price_prediction","rotation","player_comparison"],"preferred_modes":["NORMAL","DEADLINE"],"authority_ceiling":"ADVISORY"},
     {"id":"ffhub","role":"AI_DECISION_CHALLENGER","capabilities":["predicted_points","transfer_decision","fixture_comparison","player_comparison","starting_xi","captaincy"],"preferred_modes":["NORMAL","DEADLINE"],"authority_ceiling":"ADVISORY"},

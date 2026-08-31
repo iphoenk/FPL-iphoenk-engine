@@ -73,3 +73,8 @@ def probe_public_web(spec: SourceSpec, timeout_seconds: float = 2.5) -> SourceRe
     except (URLError, TimeoutError, OSError) as exc:
         elapsed = round((time.perf_counter() - started) * 1000.0, 3)
         return SourceResult(spec.source_id, "UNAVAILABLE", False, elapsed, 0, {c: "UNAVAILABLE" for c in spec.capabilities}, {"error": type(exc).__name__, "probe_only": True})
+
+
+def probe(spec: SourceSpec, timeout_seconds: float = 2.5) -> SourceResult:
+    """Registry-facing adapter for sources that intentionally expose reachability only."""
+    return probe_public_web(spec, timeout_seconds)

@@ -55,23 +55,34 @@ def _battle_reasons(leader: dict[str, Any], challenger: dict[str, Any]) -> list[
     return reasons[:3]
 
 
-_DATA_STATE_ID = {
-    "AVAILABLE": "data terstruktur tersedia",
-    "CACHED_LAST_KNOWN_GOOD": "hanya cache terakhir; tidak dipakai sebagai data saat ini",
-    "STALE": "data kedaluwarsa; tidak dipakai sebagai data saat ini",
-    "SOURCE_REACHABLE_NO_STRUCTURED_OBSERVATION": "situs terjangkau, tetapi data terstruktur belum tersedia",
-    "SOURCE_REACHABLE_NOT_INGESTED": "situs terjangkau, tetapi capability ini belum di-ingest",
-    "UNAVAILABLE": "tidak tersedia",
-    "DISABLED": "tidak dijalankan oleh collector",
-}
-
-
 def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
+    sources = {str(row.get("id")): row for row in source_health.get("sources") or []}
+    capability_rows = source_health.get("capability_health") or []
+    selected = []
+    for source_id in ("onefpl", "fffix", "ffhub", "ffscout"):
+        source = sources.get(source_id) or {}
+        if not source:
+            continue
+        capabilities = [row for row in capability_rows if row.get("source_id") == source_id]
+        selected.append({
+            "source": source.get("name") or source_id,
+            "source_id": source_id,
+            "terjangkau": bool(source.get("reachable")),
+            "status_sumber": source.get("status"),
+            "capabilities": [
+                {
+                    "capability": row.get("capability"),
+                    "structured_state": row.get("data_state") or "UNAVAILABLE",
+                    "observasi_baru": int(row.get("fresh_observations") or 0),
+                }
+                for row in capabilities
+            ],
+        })
     return {
-        "otoritas": "Official FPL tetap menjadi sumber native resmi",
-        "collector_challenger": [],
+        "otoritas": "Official FPL native facts dan native price predictor tetap menjadi otoritas utama",
+        "collector_challenger": selected,
         "report_time": {
-            "onefpl": "dicek melalui web saat report terjadwal atau on-demand untuk transfer trends, market momentum, price/planner context",
+            "onefpl": "transfer trends, market momentum, price/planner context sebagai challenger/consensus",
             "fffix": "predicted points, predicted lineup/xMins, price dan rotation challenger",
             "ffhub": "AI transfer/decision, fixture/player comparison, XI/captain challenger",
             "ffscout": "predicted lineup, team news, RMT/player comparison dan tactical/editorial challenger",
@@ -79,7 +90,7 @@ def _source_availability(source_health: dict[str, Any]) -> dict[str, Any]:
             "pundit_consensus": "FPL Harry, FPL Focal, Let's Talk FPL, BigManBakar, dan Scout editorial dibandingkan dengan DSS",
             "community": "Reddit r/FantasyPL dipakai sebagai sinyal komunitas yang wajib cross-check",
         },
-        "catatan": "LiveFPL retired dari V3. External benchmark dan source report-time tidak mengubah native truth/DSS. Consensus hanya evidence overlay; factual divergence memicu refresh Official, bukan overwrite external.",
+        "catatan": "External benchmark tidak mengubah native truth/DSS. LiveFPL retired dari V3; factual divergence memicu refresh Official, bukan overwrite external.",
     }
 
 
@@ -111,7 +122,6 @@ def _external_consensus_user_block(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _comparator_user_block(payload: dict[str, Any]) -> dict[str, Any]:
-    decision = payload.get("decision") or {}
     return {
         "status": payload.get("status"),
         "contract": payload.get("contract"),
@@ -119,11 +129,11 @@ def _comparator_user_block(payload: dict[str, Any]) -> dict[str, Any]:
         "capability_status": payload.get("capability_status"),
         "owned_count": payload.get("owned_count"),
         "governed_watchlist_count": payload.get("governed_watchlist_count"),
-        "full_universe_material_count": payload.get("full_universe_material_count"),
+        "material_candidate_count": payload.get("material_candidate_count"),
         "mandatory_review_count": payload.get("mandatory_review_count"),
         "comparison_count": payload.get("comparison_count"),
         "challenged_owned": payload.get("challenged_owned") or [],
-        "decision": decision,
+        "decision": payload.get("decision") or {},
         "main_transfer_battles": payload.get("main_transfer_battles") or [],
         "multi_transfer_alternatives": payload.get("multi_transfer_alternatives") or [],
         "publication_validation": payload.get("publication_validation") or {},
@@ -158,6 +168,186 @@ def _apply_transfer_decision(user: dict[str, Any], comparator: dict[str, Any]) -
 
 def _action_class(subject: str) -> str:
     return "FACT_CONSTRAINT" if subject == "Chip" else "MODEL_DERIVED"
+
+
+def _price_action(row: dict[str, Any], *, owned: bool) -> str:
+    direction = str(row.get("direction") or "NO_SIGNAL")
+    urgency = str(row.get("model_urgency") or "LOW")
+    state = str(row.get("evidence_state") or "UNAVAILABLE")
+    if state in {"STALE", "FIELD_MISSING", "SCHEMA_CHANGED", "UNAVAILABLE"}:
+        return "REVIEW_EVIDENCE"
+    if owned and direction == "FALL" and urgency in {"HIGH", "CRITICAL"}:
+        return "REVIEW_VALUE_RISK"
+    if not owned and direction == "RISE" and urgency in {"HIGH", "CRITICAL"}:
+        return "REVIEW_NOW"
+    return "HOLD" if owned else "WATCH"
+
+
+def _price_serving_row(raw: dict[str, Any], *, owned: bool, reason: str | None = None) -> dict[str, Any]:
+    element = raw.get("element_id") if raw.get("element_id") is not None else raw.get("element")
+    return {
+        "element": element,
+        "name": raw.get("player_name") or raw.get("name"),
+        "team_id": raw.get("team_id"),
+        "position": raw.get("position"),
+        "official_price": raw.get("current_price"),
+        "official_ownership": raw.get("ownership_percent"),
+        "confirmed_price_change": raw.get("confirmed_price_change"),
+        "direction": raw.get("direction") or "NO_SIGNAL",
+        "progress_pct": raw.get("current_progress_percent"),
+        "trajectory": raw.get("trajectory"),
+        "hourly_rate": raw.get("price_change_hourly_rate"),
+        "projection_offset_0_percent": raw.get("projection_offset_0_percent"),
+        "projection_offset_1_percent": raw.get("projection_offset_1_percent"),
+        "projection_offset_2_percent": raw.get("projection_offset_2_percent"),
+        "predicted_change_cycle": raw.get("predicted_change_cycle"),
+        "predicted_change_at": raw.get("predicted_change_at"),
+        "next_official_price_update_at": raw.get("next_official_price_update_at"),
+        "eta_human": raw.get("eta_human"),
+        "urgency": raw.get("model_urgency") or "LOW",
+        "confidence": raw.get("confidence") or "UNAVAILABLE",
+        "source": raw.get("source") or "OFFICIAL_FPL",
+        "observed_at": raw.get("observed_at"),
+        "freshness_seconds": raw.get("freshness_seconds"),
+        "evidence_state": raw.get("evidence_state") or "UNAVAILABLE",
+        "sell_value_relevance": raw.get("sell_value_relevance") if owned else "NOT_OWNED",
+        "action": _price_action(raw, owned=owned),
+        "mandatory_challenger_reason": reason,
+        "threshold_crossing_is_not_confirmation": True,
+        "price_signal_is_overlay_only": True,
+        "narrative": raw.get("narrative"),
+    }
+
+
+def _mandatory_challenger_ids(comparator: dict[str, Any], market_watch: list[dict[str, Any]], owned_ids: set[int]) -> dict[int, str]:
+    mandatory: dict[int, str] = {}
+    for pair in comparator.get("top_comparisons") or []:
+        incoming = pair.get("player_in") or {}
+        element = incoming.get("element")
+        if element is None:
+            continue
+        element = int(element)
+        if element in owned_ids:
+            continue
+        actionability = str((pair.get("actionability") or {}).get("level") or "")
+        state = str(pair.get("state") or "")
+        challenger_types = set(pair.get("challenger_types") or [])
+        if pair.get("challenger_type"):
+            challenger_types.add(str(pair.get("challenger_type")))
+        if (
+            actionability in {"REVIEW", "MATERIAL_UPGRADE", "ACTIONABLE_CHANGE"}
+            or state in {"REVIEW", "LEAN_TRANSFER", "STRONG_TRANSFER"}
+            or challenger_types & {"EMERGING_CHALLENGER", "MANDATORY_VALUE_MARKET_REVIEW", "FULL_UNIVERSE_DISCOVERY"}
+        ):
+            mandatory[element] = "GOVERNED_CHALLENGER"
+    for row in market_watch:
+        element = row.get("element_id") if row.get("element_id") is not None else row.get("element")
+        if element is None:
+            continue
+        element = int(element)
+        if element in owned_ids:
+            continue
+        if str(row.get("model_urgency") or row.get("urgency") or "") in {"HIGH", "CRITICAL"}:
+            mandatory.setdefault(element, "MARKET_URGENT_SCREEN_REQUIRED")
+    return mandatory
+
+
+def _hydrate_price_radar(
+    user: dict[str, Any],
+    team: dict[str, Any],
+    prices: dict[str, Any],
+    price_alerts: dict[str, Any],
+    watchlist: dict[str, Any],
+    comparator: dict[str, Any],
+) -> dict[str, Any]:
+    owned_ids = {
+        int(row["element"])
+        for row in team.get("team_value_ledger") or team.get("squad") or []
+        if isinstance(row, dict) and row.get("element") is not None
+    }
+    by_id = {
+        int(row.get("element_id") if row.get("element_id") is not None else row.get("element")): row
+        for row in prices.get("players") or []
+        if isinstance(row, dict) and (row.get("element_id") is not None or row.get("element") is not None)
+    }
+    served_owned = {
+        int(row.get("element")): row
+        for row in price_alerts.get("owned_price_radar") or []
+        if isinstance(row, dict) and row.get("element") is not None
+    }
+    missing_owned = sorted(owned_ids - (set(by_id) | set(served_owned)))
+    if len(owned_ids) != 15:
+        raise RuntimeError(f"price radar owned authority requires 15 players, got {len(owned_ids)}")
+    if missing_owned:
+        raise RuntimeError(f"price radar owned predictor coverage missing elements: {missing_owned}")
+
+    owned_rows = []
+    for element in sorted(owned_ids):
+        raw = by_id.get(element) or served_owned.get(element) or {}
+        owned_rows.append(_price_serving_row(raw, owned=True))
+
+    market_watch = list(price_alerts.get("market_watch_candidates") or [])
+    mandatory = _mandatory_challenger_ids(comparator, market_watch, owned_ids)
+    mandatory_rows = []
+    for element, reason in mandatory.items():
+        raw = by_id.get(element)
+        if raw is None:
+            raw = next(
+                (
+                    row for row in market_watch
+                    if int(row.get("element_id") if row.get("element_id") is not None else row.get("element") or -1) == element
+                ),
+                {},
+            )
+        mandatory_rows.append(_price_serving_row(raw, owned=False, reason=reason))
+
+    watch_ids = {
+        int(row.get("element"))
+        for rows in (watchlist.get("positions") or {}).values()
+        for row in rows
+        if isinstance(row, dict) and row.get("element") is not None
+    }
+    visible_watchlist_rows = []
+    for element in sorted(watch_ids):
+        raw = by_id.get(element)
+        if raw is None:
+            visible_watchlist_rows.append({
+                "element": element,
+                "name": None,
+                "direction": "NO_SIGNAL",
+                "evidence_state": "UNAVAILABLE",
+                "action": "WATCH",
+                "threshold_crossing_is_not_confirmation": True,
+            })
+        else:
+            visible_watchlist_rows.append(_price_serving_row(raw, owned=False))
+
+    radar = user.get("price_radar") or {}
+    radar.update({
+        "owned": owned_rows,
+        "owned_count": len(owned_rows),
+        "owned_coverage_required": 15,
+        "mandatory_high_value_challengers": mandatory_rows,
+        "mandatory_challenger_count": len(mandatory_rows),
+        "external_watchlist": visible_watchlist_rows,
+        "external_watchlist_count": len(visible_watchlist_rows),
+        "predictor_health": price_alerts.get("health") or prices.get("official_price_predictor_health") or {},
+        "fact_model_separation": {
+            "fact_fields": ["official_price", "official_ownership", "confirmed_price_change"],
+            "model_fields": ["direction", "progress_pct", "trajectory", "predicted_change_at", "urgency", "confidence"],
+            "next_official_price_update_is_not_player_change_eta": True,
+            "threshold_crossing_is_not_confirmation": True,
+        },
+        "decision": "REVIEW" if any(str(row.get("action")) in {"REVIEW_VALUE_RISK", "REVIEW_NOW", "REVIEW_EVIDENCE"} for row in owned_rows + mandatory_rows) else "HOLD",
+    })
+    user["price_radar"] = radar
+    return {
+        "owned_complete": len(owned_rows) == 15,
+        "mandatory_challenger_count": len(mandatory_rows),
+        "watchlist_price_rows": len(visible_watchlist_rows),
+        "all_price_rows_source": "data/prices.json players",
+        "market_watch_source": "data/price_alerts.json market_watch_candidates",
+    }
 
 
 def _apply_readiness_and_actionability(
@@ -223,6 +413,8 @@ def run() -> dict[str, Any]:
     lineup = read_json(DATA / "lineup_decision.json", {})
     projections = read_json(DATA / "projections.json", {})
     watchlist = read_json(DATA / "dss_watchlist.json", {})
+    prices = read_json(DATA / "prices.json", {})
+    price_alerts = read_json(DATA / "price_alerts.json", {})
     source_health = read_json(DATA / "source_health.json", {})
     external_consensus = read_json(DATA / "external_consensus.json", {})
     comparator = watchlist.get("owned_challenger_decision") or {}
@@ -232,25 +424,7 @@ def run() -> dict[str, Any]:
         raise RuntimeError("persisted governed owned challenger decision failed publication validation")
     report_time = run_report_time_intelligence()
 
-    ledger = {int(row.get("element") or -1): row for row in team.get("team_value_ledger") or []}
-    watch_rows = {
-        int(row.get("element") or -1): row
-        for rows in (watchlist.get("positions") or {}).values()
-        for row in rows
-    }
-    price = user.get("price_radar") or {}
-    for row in price.get("owned") or []:
-        source = ledger.get(int(row.get("element") or -1)) or {}
-        now_cost = source.get("now_cost")
-        row["price"] = round(_f(now_cost) / 10.0, 1) if now_cost is not None else None
-    for row in price.get("external_watchlist") or []:
-        source = watch_rows.get(int(row.get("element") or -1)) or {}
-        raw_price = source.get("now_cost", source.get("price"))
-        if raw_price is None:
-            row["price"] = None
-        else:
-            value = _f(raw_price)
-            row["price"] = round(value / 10.0, 1) if value >= 30 else round(value, 1)
+    price_coverage = _hydrate_price_radar(user, team, prices, price_alerts, watchlist, comparator)
 
     battle = lineup.get("main_starting_xi_battle") or {}
     leader_raw = (battle.get("starter_side") or [{}])[0]
@@ -281,12 +455,16 @@ def run() -> dict[str, Any]:
     tech["report_time_intelligence"] = report_time
     tech["external_consensus"] = external_consensus
     tech["owned_challenger_decision"] = comparator
+    tech["price_radar_serving_coverage"] = price_coverage
     tech["runtime"] = {
         "current_run_ref": "data/runtime_performance.json",
         "embedded_during_report_stage": False,
         "note": "current-run runtime metadata is finalized by the orchestrator after report generation",
     }
     tech.setdefault("audit", {})["price_radar_has_current_price_when_source_available"] = True
+    tech["audit"]["price_radar_owned_predictor_detail_is_all15"] = bool(price_coverage.get("owned_complete"))
+    tech["audit"]["price_radar_includes_mandatory_challengers"] = True
+    tech["audit"]["price_update_window_is_not_change_confirmation"] = True
     tech["audit"]["starting_xi_battle_has_decision_evidence"] = True
     tech["audit"]["source_reachability_is_separate_from_structured_data"] = True
     tech["audit"]["report_time_sources_do_not_mutate_dss"] = True
@@ -294,10 +472,10 @@ def run() -> dict[str, Any]:
     tech["audit"]["external_consensus_is_advisory_only"] = bool((external_consensus.get("governance") or {}).get("advisory_only", True))
     tech["audit"]["external_consensus_never_majority_votes"] = not bool((external_consensus.get("governance") or {}).get("majority_vote_used", False))
     tech["audit"]["external_consensus_does_not_mutate_native_truth"] = not bool((external_consensus.get("governance") or {}).get("native_truth_mutated", False))
-    tech["audit"]["owned_challenger_decision_is_governed"] = comparator.get("capability_status") == "GOVERNED_DECISION"
+    tech["audit"]["owned_challenger_decision_is_governed"] = comparator.get("owner") == "decision.owned_challenger_evaluation"
     tech["audit"]["owned_challenger_decision_reuses_governed_watchlist"] = int(comparator.get("governed_watchlist_count") or 0) == 20
     tech["audit"]["owned_challenger_reporting_recomputation_forbidden"] = True
-    tech["audit"]["livefpl_retired_from_v3_reporting"] = True
+    tech["audit"]["livefpl_retired_from_v3_serving"] = True
     _apply_readiness_and_actionability(user, tech, latest, report_time)
 
     arbitration = arbitrate_decisions(user, lineup, comparator)

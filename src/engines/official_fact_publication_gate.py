@@ -8,6 +8,7 @@ from src.engines.official_fact_completeness import (
     build_public_official_fact_integrity,
     require_complete_user_report,
 )
+from src.engines.predictor_publication_contract import decorate_predictor_payload
 from src.utils import DATA, atomic_json, read_json
 
 REPORT_FILES = (
@@ -108,7 +109,7 @@ def _patch_report_payload(payload: dict[str, Any], facts: dict[int, dict[str, An
             "exact_sell_value": "PERSONAL_AUTH_FACT_WHEN_AVAILABLE",
         },
     }
-    return out
+    return decorate_predictor_payload(out)
 
 
 def _predictor_health(latest: dict[str, Any]) -> str:
@@ -152,6 +153,8 @@ def run() -> dict[str, Any]:
         "health": integrity.get("health"),
         "reasons": gate.get("reasons") or [],
     }
+    if isinstance(latest.get("price_summary"), dict):
+        latest["price_summary"] = decorate_predictor_payload(latest["price_summary"])
     latest.setdefault("report_serving", {})["official_fact_integrity"] = gate.get("status")
     latest["report_serving"]["publication_integrity_gate"] = gate.get("status")
     atomic_json(DATA / "latest.json", latest)

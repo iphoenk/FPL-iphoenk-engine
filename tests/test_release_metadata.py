@@ -68,7 +68,7 @@ def test_release_metadata_surfaces_are_consistent():
     assert service_registry["policy"]["required_core_and_optional_private_enrichment_are_distinct"] is True
     assert service_registry["policy"]["optional_private_enrichment_never_blocks_required_core"] is True
     assert execution_domains["registry"] == "V3_EXECUTION_DOMAINS_V2"
-    assert execution_domains["domain_count"] == 11
+    assert execution_domains["domain_count"] == 12
     assert execution_domains["phase_count"] == 6
     assert interactive_registry["registry"] == "V3_INTERACTIVE_SERVICES_V1"
     assert interactive_registry["architecture"] == "UNIFIED_INTERACTIVE_FASTPATH"

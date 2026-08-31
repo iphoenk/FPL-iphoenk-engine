@@ -14,9 +14,13 @@ on:
 permissions:
   contents: write
 
+# Production publication (push/manual), the :30 scheduler, and stale-recovery
+# runs must serialize on the same lock and must never cancel one another.
+# PR validation is non-publishing and gets an isolated per-PR lock so a new PR
+# commit may supersede only its own older validation run, never production.
 concurrency:
-  group: fpl-iphoenk-v4-gate
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'pull_request' && format('fpl-iphoenk-v4-pr-{0}', github.event.pull_request.number) || 'fpl-iphoenk-v4-gate' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   core:

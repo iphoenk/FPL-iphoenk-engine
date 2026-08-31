@@ -47,6 +47,9 @@ def test_v5_branch_scheduler_has_no_dead_cron_and_delegates_policy_to_script():
     assert "production_source_authority" in gate
     assert "data/runtime_manifest.json" in gate
     assert "merge-base" in gate
+    assert "data/v5/shadow/acceptance_summary.json" in gate
+    assert "PRODUCTION_REANCHOR_REVALIDATION" in gate
+    assert "OPERATIONAL_ACCEPTANCE_INCOMPLETE" in gate
     assert "config/v5_shadow_trigger.json" in dispatch
     assert "default-branch-thin-dispatcher" in dispatch
 

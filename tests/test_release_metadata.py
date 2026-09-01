@@ -104,6 +104,7 @@ def test_housekeeping_closeout_metadata_is_explicit_and_non_self_referential():
     assert implementation["rec_status"]["REC-22"]["status"] == "MONITOR"
     assert implementation["rec_status"]["REC-26"]["status"] == "MONITOR"
     assert implementation["rec_status"]["REC-13"]["status"] == "DONE_PROD"
+    assert implementation["rec_status"]["REC-42"]["status"] == "DONE_PROD"
     assert implementation["architecture"]["version_stamped_release_tests_forbidden"] is True
     assert implementation["architecture"]["metadata_only_closeout_commits_do_not_redefine_behavioral_acceptance"] is True
 
@@ -129,31 +130,32 @@ def test_latest_visible_version_stamped_commit_matches_engine_release_lineage():
     )
 
 
-def test_master_task_governance_is_wired():
+def test_master_task_governance_is_authority_based_not_hardcoded_current_state():
     master_path = ROOT / "MASTER_TASK_LIST_V3.md"
     assert master_path.exists()
     master = master_path.read_text()
     readme = (ROOT / "README.md").read_text()
+
     assert "# FPL iphoenk Engine V3 Master Task List" in master
-    assert "V3.20 Architecture Hardening" in master
-    assert "V3.20.1 Correctness Hardening" in master
-    assert "V3.20.2 Artifact Contract Hardening" in master
-    assert "V3.21 Weather Intelligence + Report Transparency" in master
-    assert "V3.22 Runtime Optimization Foundation" in master
-    assert "V3.23 Personal Gameweek Context + User Decision Authority" in master
-    assert "V3.23.1 Report Completeness + Natural Presentation" in master
-    assert "V3.24 Tactical Role & System Evidence" in master
+    assert "human-readable roadmap and status projection" in master
+    assert "config/runtime/execution_domains.json" in master
+    assert "config/v3_service_registry.json" in master
+    assert "config/runtime/performance_slo.json" in master
+    assert "config/rec_registry.json" in master
+    assert "runtime-data/data/runtime_manifest.json" in master
+    assert "Historical release anchors" in master
+    assert "historical candidate baseline for REC-42" in master
+    assert "Definition of production done" in master
+    assert "OPEN PLATFORM CONTROL" in master
 
-    candidate = f"Current release candidate: V{ENGINE_VERSION}" in master
-    production = f"Current production release: V{ENGINE_VERSION}" in master
-    assert candidate != production, "roadmap must identify exactly one current release state"
-    if candidate:
-        separate_schema = f"Current candidate schema: {SCHEMA_VERSION}" in master
-        combined_schema = f"Current release candidate: V{ENGINE_VERSION} / schema {SCHEMA_VERSION}" in master
-        assert separate_schema or combined_schema
-    else:
-        assert f"Current production schema: {SCHEMA_VERSION}" in master
-        assert "Production acceptance: COMPLETE" in master
-
-    assert "Definition of Done" in master
+    assert "Current-state authority" in readme
+    assert "human-readable projection" in readme
+    assert "runtime-data/data/runtime_manifest.json" in readme
     assert "MASTER_TASK_LIST_V3.md" in readme
+
+    rec_registry = json.loads((ROOT / "config" / "rec_registry.json").read_text())
+    rec_status = {row["id"]: row["status"] for row in rec_registry["records"]}
+    implementation = json.loads((ROOT / "IMPLEMENTATION_STATUS.json").read_text())
+    assert rec_status["REC-42"] == "DONE_PROD"
+    assert implementation["rec_status"]["REC-42"]["status"] == rec_status["REC-42"]
+    assert "| REC-42 | Architecture Consolidation + No-Duplicate Guard + Sub-Second Decision Serving | **DONE PROD** |" in master

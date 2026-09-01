@@ -155,7 +155,7 @@ def test_policy_is_registry_owned_and_points_to_current_reconciled_anchor():
     policy = provenance._load_policy()
     assert policy["registry"] == "V3_MAIN_PROVENANCE_POLICY_V1"
     assert policy["branch"] == "main"
-    assert policy["trust_anchor_sha"] == "9fdbda2317930c90f8a98c96cf3ed5918efda9ef"
+    assert policy["trust_anchor_sha"] == "fd7637ae3340f28e839f4c540e49d2192bdc965c"
     assert policy["require_anchor_in_first_parent_history"] is True
     assert policy["require_each_first_parent_commit_after_anchor_from_merged_pr"] is True
     assert policy["fail_closed_on_github_api_error"] is True

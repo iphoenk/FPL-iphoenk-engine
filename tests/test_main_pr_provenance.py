@@ -159,11 +159,11 @@ def test_history_fails_closed_on_invalid_commit_response(monkeypatch):
         )
 
 
-def test_policy_is_registry_owned_and_points_to_current_proven_green_anchor():
+def test_policy_is_registry_owned_and_points_to_current_reconciled_anchor():
     policy = provenance._load_policy()
     assert policy["registry"] == "V3_MAIN_PROVENANCE_POLICY_V1"
     assert policy["branch"] == "main"
-    assert policy["trust_anchor_sha"] == "d025201abfb4c72bc707956275e77900f05dd87d"
+    assert policy["trust_anchor_sha"] == "2195231345180f6768c7a5cc10d51419d777e304"
     assert policy["require_anchor_in_first_parent_history"] is True
     assert policy["require_each_first_parent_commit_after_anchor_from_merged_pr"] is True
     assert policy["fail_closed_on_github_api_error"] is True

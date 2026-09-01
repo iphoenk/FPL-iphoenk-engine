@@ -2,7 +2,7 @@
   "registry": "V3_MAIN_PROVENANCE_POLICY_V1",
   "schema_version": 1,
   "branch": "main",
-  "trust_anchor_sha": "2195231345180f6768c7a5cc10d51419d777e304",
+  "trust_anchor_sha": "c705d5508e682ff1c420d7fe19ea39e912550052",
   "max_first_parent_commits": 256,
   "require_anchor_in_first_parent_history": true,
   "require_each_first_parent_commit_after_anchor_from_merged_pr": true,

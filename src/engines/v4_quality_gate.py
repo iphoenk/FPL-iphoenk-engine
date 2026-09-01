@@ -4,6 +4,7 @@ import json
 import statistics
 
 from src.engines import v4_quality_gate_legacy as legacy
+from src.engines import v4_quality_gate_runner as runner
 from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA
 
@@ -300,11 +301,15 @@ def _assert_orchestration(latest: dict) -> tuple[dict, list[dict]]:
     return orchestration, services
 
 
-legacy._assert_framework_health = _assert_framework_health
-legacy._assert_prediction_and_validation = _assert_prediction_and_validation
-legacy._assert_orchestration = _assert_orchestration
 _assert_version = legacy._assert_version
-run = legacy.run
+
+
+def run() -> dict:
+    return runner.run(
+        assert_framework_health=_assert_framework_health,
+        assert_orchestration=_assert_orchestration,
+        assert_prediction_and_validation=_assert_prediction_and_validation,
+    )
 
 
 if __name__ == "__main__":

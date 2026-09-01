@@ -119,7 +119,5 @@ def test_default_branch_v4_publish_callers_inherit_governed_secrets_and_stay_rea
         if 'publish: true' not in text:
             continue
         assert 'secrets: inherit' in text, name
-        core = text.split('uses: iphoenk/FPL-iphoenk-engine/.github/workflows/fpl-engine-core.yml@v4-prediction-engine', 1)[0]
-        caller = core.rsplit('\n  core:', 1)[-1]
-        assert 'contents: read' in caller, name
-        assert 'contents: write' not in caller, name
+        assert 'contents: read' in text, name
+        assert 'contents: write' not in text, name

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from src.engines.lineup_governance import build_lineup_decision, build_package_decision
+from src.engines.tactical_decision_consumption import apply_lineup_overlay
 from src.rules import LINEUP_RULES
 from src.runtime_v3.instant_serving import _config as serving_config
 from src.runtime_v3.instant_serving import _performance_contract, _require_files, _validate_contract
@@ -91,11 +92,20 @@ def run(data_dir: str | Path | None = None) -> dict[str, Any]:
     team = payloads["team.json"]
     chips = payloads["chips.json"]
     lock = _locked_squad(config_paths)
-    lineup = build_lineup_decision(projections, lock, chips)
+    lineup = build_lineup_decision(projections, lock, chips, team=team)
+    lineup = apply_lineup_overlay(lineup, projections, persist=False)
     package = build_package_decision(package_optimizer, projections, lock, team)
     expected_xi = int(LINEUP_RULES.get("starting_xi_size") or 11)
+    lineup_governance = lineup.get("governance") or {}
+    package_governance = package.get("governance") or {}
     if not lineup.get("formation") or len(lineup.get("starting_xi") or []) != expected_xi:
         raise RuntimeError("UNIFIED_FASTPATH_FAIL: governed XI is not legal")
+    if lineup_governance.get("team_state_authority_consumed") is not True:
+        raise RuntimeError("UNIFIED_FASTPATH_FAIL: lineup did not consume resolved team-state authority")
+    if lineup_governance.get("tactical_consumption_contract") != "TACTICAL_DECISION_CONSUMPTION_V1":
+        raise RuntimeError("UNIFIED_FASTPATH_FAIL: canonical tactical close-call overlay was not consumed")
+    if package_governance.get("team_state_authority_consumed") is not True:
+        raise RuntimeError("UNIFIED_FASTPATH_FAIL: package did not consume resolved team-state authority")
     if package.get("gate0_revalidated") is not True:
         raise RuntimeError("UNIFIED_FASTPATH_FAIL: package Gate0 revalidation failed")
     elapsed_ms = round((time.perf_counter() - started) * 1000.0, 3)
@@ -125,7 +135,19 @@ def run(data_dir: str | Path | None = None) -> dict[str, Any]:
         "action_board": brief.get("action_board"),
         "report_time_intelligence": brief.get("report_time_intelligence"),
         "engine": brief.get("engine"),
-        "authority": {"official_fpl_native_authority": True, "user_decision_authority_preserved": True, "canonical_projection_reused": True, "governed_decision_recomputed": True, "network_fetches": 0, "prediction_formula_recomputation": False, "framework_green": framework.get("overall") == "GREEN", "gate0_pass": int(((framework.get("gate0") or {}).get("counts") or {}).get("PASS") or 0), "materialized_user_report_present": bool(user_report)},
+        "authority": {
+            "official_fpl_native_authority": True,
+            "user_decision_authority_preserved": True,
+            "resolved_team_state_authority_consumed": True,
+            "canonical_projection_reused": True,
+            "governed_decision_recomputed": True,
+            "canonical_tactical_overlay_consumed": True,
+            "network_fetches": 0,
+            "prediction_formula_recomputation": False,
+            "framework_green": framework.get("overall") == "GREEN",
+            "gate0_pass": int(((framework.get("gate0") or {}).get("counts") or {}).get("PASS") or 0),
+            "materialized_user_report_present": bool(user_report),
+        },
     }
 
 

@@ -15,12 +15,21 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 CONFIG = ROOT / "config"
 
-# These two runtime artifacts are large machine-only contracts. Compact JSON keeps
-# their decoded object/schema identical while avoiding tens of MB of indentation
-# that every downstream isolated process would otherwise read and parse again.
+# Large/high-churn machine-only contracts use compact JSON. Whitespace is not
+# part of their contract, so decoded objects and schemas stay identical while
+# repeated process-boundary reads/writes carry fewer bytes. Human-facing and
+# small governance artifacts remain pretty-printed for operator readability.
 _COMPACT_MACHINE_ARTIFACTS = frozenset({
     "predictions_v4.json",
     "predictions_base_hot_cache_v4.json",
+    "competitive_load_v4.json",
+    "tactical_serving_v4.json",
+    "owned_challenger_decision_v4.json",
+    "wc_package_audit_v4.json",
+    "serving_payload_v4.json",
+    "effective_plan_v4.json",
+    "framework_health_v4.json",
+    "publication_integrity_v4.json",
 })
 
 
@@ -66,11 +75,11 @@ def read_json(path: Path, default=None):
 def atomic_json(path: Path, payload: Any):
     """Atomically write JSON without changing the decoded artifact contract.
 
-    Normal repository/runtime artifacts stay human-readable. The two very large
-    prediction machine artifacts use compact JSON because whitespace is not part of
-    their contract and repeatedly carrying it across process boundaries is costly.
-    Both codecs preserve the same Python object structure and UTF-8 semantics, with
-    stdlib fallbacks retained for minimal environments.
+    Large/high-churn machine runtime artifacts use compact JSON because
+    whitespace is not part of their contract and repeatedly carrying it across
+    process boundaries is costly. Both codecs preserve the same Python object
+    structure and UTF-8 semantics, with stdlib fallbacks retained for minimal
+    environments.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")

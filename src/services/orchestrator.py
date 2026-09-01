@@ -12,6 +12,7 @@ from typing import Callable
 
 from src.services import architecture_guard_service
 from src.services.contracts import file_digest, validate_contracts
+from src.services.runtime_hydration_guard import verify_hydrated_runtime_if_required
 from src.utils import CONFIG, DATA, ROOT, atomic_json, iso_now, read_json
 
 SERVICE_REGISTRY = CONFIG / "service_registry.json"
@@ -109,6 +110,7 @@ def orchestrate(
     root: Path = ROOT,
     outfile: Path = OUTFILE,
 ) -> dict:
+    runtime_hydration_assurance = verify_hydrated_runtime_if_required(root=root)
     startup_assurance = architecture_guard_service.run()
     if startup_assurance.get("status") != "PASS":
         raise RuntimeError("pre-orchestration architecture assurance failed")
@@ -139,6 +141,7 @@ def orchestrate(
         "completion_order": [],
         "snapshot_identity": None,
         "startup_assurance": {"service": "architecture_guard", "status": startup_assurance.get("status"), "runtime_microservice": False},
+        "runtime_hydration_assurance": runtime_hydration_assurance,
         "services": [],
         "guardrails": dict(registry.get("guardrails") or {}),
     }

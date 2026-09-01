@@ -1,6 +1,6 @@
 {
   "framework_schema": 9,
-  "generated_at": "2026-09-01T21:12:26.999759+00:00",
+  "generated_at": "2026-09-01T23:27:40.315044+00:00",
   "auditor": "v5-microservice-governance-v5",
   "overall": "GREEN",
   "decision_engine": "HEALTHY",
@@ -145,7 +145,7 @@
         "critical": true,
         "phase": "preflight",
         "status": "PASS",
-        "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=991,calculated_sell=991"
+        "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=993,calculated_sell=993"
       },
       {
         "id": "G0-16",
@@ -235,7 +235,7 @@
           "critical": true,
           "phase": "preflight",
           "status": "PASS",
-          "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=991,calculated_sell=991"
+          "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=993,calculated_sell=993"
         }
       ],
       "registry_integrity": {

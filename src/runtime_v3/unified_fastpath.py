@@ -12,9 +12,11 @@ from src.engines.lineup_governance import build_lineup_decision, build_package_d
 from src.rules import LINEUP_RULES
 from src.runtime_v3.instant_serving import _config as serving_config
 from src.runtime_v3.instant_serving import _performance_contract, _require_files, _validate_contract
-from src.utils import CONFIG, DATA, ROOT, read_json
+from src.utils import DATA, ROOT, read_json
 
 REGISTRY_PATH = ROOT / "config" / "runtime" / "interactive_service_registry.json"
+SERVICE_NAME = "unified_fastpath"
+SERVICE_MODULE = "src.runtime_v3.unified_fastpath"
 
 
 def _registry() -> dict[str, Any]:
@@ -26,18 +28,55 @@ def _registry() -> dict[str, Any]:
         raise RuntimeError("interactive performance SLO registry drift")
     if policy.get("performance_slo_profile") != "instant_serving":
         raise RuntimeError("interactive performance SLO profile drift")
+    services = payload.get("services") if isinstance(payload.get("services"), dict) else {}
+    service = services.get(SERVICE_NAME)
+    if not isinstance(service, dict):
+        raise RuntimeError(f"interactive service registry missing {SERVICE_NAME}")
+    if service.get("module") != SERVICE_MODULE:
+        raise RuntimeError(f"interactive service module drift: {service.get('module')}")
+    consumes = service.get("consumes")
+    if not isinstance(consumes, list) or not consumes:
+        raise RuntimeError(f"interactive service {SERVICE_NAME} has no declared inputs")
+    return payload
+
+
+def _service_inputs(registry: dict[str, Any]) -> tuple[tuple[str, ...], tuple[Path, ...]]:
+    service = ((registry.get("services") or {}).get(SERVICE_NAME) or {})
+    consumes = [str(value) for value in service.get("consumes") or []]
+    data_names: list[str] = []
+    config_paths: list[Path] = []
+    for value in consumes:
+        if value.startswith("config/"):
+            config_paths.append(ROOT / value)
+        else:
+            data_names.append(value.removeprefix("data/"))
+    if len(data_names) != len(set(data_names)) or len(config_paths) != len(set(config_paths)):
+        raise RuntimeError(f"interactive service {SERVICE_NAME} has duplicate declared inputs")
+    return tuple(data_names), tuple(config_paths)
+
+
+def _locked_squad(config_paths: tuple[Path, ...]) -> dict[str, Any]:
+    matches = [path for path in config_paths if path.name == "locked_squad.json"]
+    if len(matches) != 1:
+        raise RuntimeError(f"interactive service {SERVICE_NAME} must declare exactly one locked_squad config input")
+    path = matches[0]
+    if not path.is_file():
+        raise RuntimeError(f"REFRESH_REQUIRED: missing unified-fastpath config artifact: {path.relative_to(ROOT)}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict) or not payload:
+        raise RuntimeError("REFRESH_REQUIRED: locked_squad config is missing/empty")
     return payload
 
 
 def run(data_dir: str | Path | None = None) -> dict[str, Any]:
     started = time.perf_counter()
     root = Path(data_dir or os.getenv("FPL_DATA_DIR") or DATA)
-    _registry()
+    registry = _registry()
     cfg = serving_config()
     performance = _performance_contract(cfg)
     _require_files(cfg, root)
-    names = ("latest.json","decision_brief.json","user_report.json","framework_health.json","dss_watchlist_summary.json","projections.json","package_optimizer.json","team.json","chips.json")
-    payloads = {name: read_json(root / name, {}) for name in names}
+    data_names, config_paths = _service_inputs(registry)
+    payloads = {name: read_json(root / name, {}) for name in data_names}
     missing = [name for name, payload in payloads.items() if not payload]
     if missing:
         raise RuntimeError(f"REFRESH_REQUIRED: missing/empty unified-fastpath artifacts: {missing}")
@@ -51,7 +90,7 @@ def run(data_dir: str | Path | None = None) -> dict[str, Any]:
     package_optimizer = payloads["package_optimizer.json"]
     team = payloads["team.json"]
     chips = payloads["chips.json"]
-    lock = json.loads((CONFIG / "locked_squad.json").read_text(encoding="utf-8"))
+    lock = _locked_squad(config_paths)
     lineup = build_lineup_decision(projections, lock, chips)
     package = build_package_decision(package_optimizer, projections, lock, team)
     expected_xi = int(LINEUP_RULES.get("starting_xi_size") or 11)
@@ -66,7 +105,7 @@ def run(data_dir: str | Path | None = None) -> dict[str, Any]:
         raise RuntimeError(f"UNIFIED_FASTPATH_SLO_BREACH: {elapsed_ms}ms > {hard_ceiling_ms}ms")
     return {
         "schema_version": 1,
-        "service": "unified_fastpath",
+        "service": SERVICE_NAME,
         "serving_mode": "VALIDATED_REGENERATED_FROM_FRESH_CANONICAL_STATE",
         "refresh_required": False,
         "performance": {"elapsed_ms": elapsed_ms, "preferred_target_ms": target_ms, "hard_ceiling_ms": hard_ceiling_ms, "within_preferred_target": elapsed_ms <= target_ms, "within_hard_ceiling": True, "slo_profile": performance["profile"]},

@@ -115,6 +115,24 @@ def _version_exclusive_paths(commit_payload: dict[str, Any], allowed_paths: set[
     return paths if paths and set(paths).issubset(allowed_paths) else None
 
 
+def _historical_attestation_paths(
+    commit_payload: dict[str, Any],
+    *,
+    sha: str,
+    attestations: dict[str, set[str]],
+) -> list[str] | None:
+    expected = attestations.get(sha)
+    if expected is None:
+        return None
+    actual = _changed_paths(commit_payload)
+    if set(actual) != set(expected):
+        raise RuntimeError(
+            "MAIN_PROVENANCE_HISTORICAL_ATTESTATION_PATH_MISMATCH "
+            f"source_commit={sha} expected={sorted(expected)} actual={actual}"
+        )
+    return actual
+
+
 def verify_main_history_pr_provenance(
     *,
     api_url: str,
@@ -126,6 +144,7 @@ def verify_main_history_pr_provenance(
     max_first_parent_commits: int = 256,
     allow_direct_version_exclusive_commits: bool = False,
     version_exclusive_paths: set[str] | None = None,
+    historical_direct_commit_attestations: dict[str, set[str]] | None = None,
 ) -> dict[str, Any]:
     if not trust_anchor_sha:
         raise RuntimeError("MAIN_PROVENANCE_MISSING_TRUST_ANCHOR")
@@ -133,6 +152,10 @@ def verify_main_history_pr_provenance(
         raise RuntimeError("MAIN_PROVENANCE_INVALID_MAX_DEPTH")
 
     allowed_paths = set(version_exclusive_paths or set())
+    historical_attestations = {
+        str(commit_sha): set(paths)
+        for commit_sha, paths in (historical_direct_commit_attestations or {}).items()
+    }
     current = sha
     verified: list[dict[str, Any]] = []
     commit_cache: dict[str, dict[str, Any]] = {}
@@ -142,6 +165,11 @@ def verify_main_history_pr_provenance(
             head = verified[0] if verified else None
             merged_rows = [row for row in verified if row.get("provenance") == "MERGED_PR"]
             direct_rows = [row for row in verified if row.get("provenance") == "VERSION_EXCLUSIVE_DIRECT"]
+            historical_rows = [
+                row
+                for row in verified
+                if row.get("provenance") == "HISTORICAL_VERSION_EXCLUSIVE_DIRECT_ATTESTED"
+            ]
             return {
                 "status": "PASS",
                 "source_commit": sha,
@@ -154,6 +182,7 @@ def verify_main_history_pr_provenance(
                 "verified_commits": verified,
                 "verified_pull_requests": merged_rows,
                 "version_exclusive_direct_commits": direct_rows,
+                "historical_direct_attested_commits": historical_rows,
             }
 
         if current not in commit_cache:
@@ -184,22 +213,39 @@ def verify_main_history_pr_provenance(
         except RuntimeError as exc:
             if not str(exc).startswith("REFUSING_DIRECT_MAIN_PUSH_WITHOUT_MERGED_PR"):
                 raise
-            scoped_paths = None
-            if allow_direct_version_exclusive_commits and allowed_paths:
-                scoped_paths = _version_exclusive_paths(commit_payload, allowed_paths)
-            if scoped_paths is None:
-                raise RuntimeError(
-                    f"MAIN_PROVENANCE_UNTRUSTED_ANCESTOR source_commit={current} branch={branch}"
-                ) from exc
-            verified.append(
-                {
-                    "sha": current,
-                    "provenance": "VERSION_EXCLUSIVE_DIRECT",
-                    "pull_request": None,
-                    "merged_at": None,
-                    "paths": scoped_paths,
-                }
+
+            historical_paths = _historical_attestation_paths(
+                commit_payload,
+                sha=current,
+                attestations=historical_attestations,
             )
+            if historical_paths is not None:
+                verified.append(
+                    {
+                        "sha": current,
+                        "provenance": "HISTORICAL_VERSION_EXCLUSIVE_DIRECT_ATTESTED",
+                        "pull_request": None,
+                        "merged_at": None,
+                        "paths": historical_paths,
+                    }
+                )
+            else:
+                scoped_paths = None
+                if allow_direct_version_exclusive_commits and allowed_paths:
+                    scoped_paths = _version_exclusive_paths(commit_payload, allowed_paths)
+                if scoped_paths is None:
+                    raise RuntimeError(
+                        f"MAIN_PROVENANCE_UNTRUSTED_ANCESTOR source_commit={current} branch={branch}"
+                    ) from exc
+                verified.append(
+                    {
+                        "sha": current,
+                        "provenance": "VERSION_EXCLUSIVE_DIRECT",
+                        "pull_request": None,
+                        "merged_at": None,
+                        "paths": scoped_paths,
+                    }
+                )
 
         current = _first_parent(commit_payload, source_sha=sha, anchor_sha=trust_anchor_sha)
 
@@ -260,6 +306,37 @@ def verify_version_exclusive_main_advance(
     )
 
 
+def _historical_attestation_map(payload: dict[str, Any]) -> dict[str, set[str]]:
+    raw = payload.get("historical_direct_commit_attestations")
+    if not isinstance(raw, list) or not raw:
+        raise RuntimeError("MAIN_PROVENANCE_POLICY_HISTORICAL_ATTESTATIONS_INVALID")
+
+    result: dict[str, set[str]] = {}
+    for row in raw:
+        if not isinstance(row, dict):
+            raise RuntimeError("MAIN_PROVENANCE_POLICY_HISTORICAL_ATTESTATIONS_INVALID")
+        sha = row.get("sha")
+        paths = row.get("paths")
+        reason = row.get("reason")
+        if not isinstance(sha, str) or not _SHA40.fullmatch(sha) or sha in result:
+            raise RuntimeError("MAIN_PROVENANCE_POLICY_HISTORICAL_SHA_INVALID")
+        if not isinstance(paths, list) or not paths or any(not isinstance(path, str) or not path for path in paths):
+            raise RuntimeError("MAIN_PROVENANCE_POLICY_HISTORICAL_PATHS_INVALID")
+        if len(set(paths)) != len(paths) or any("*" in path for path in paths):
+            raise RuntimeError("MAIN_PROVENANCE_POLICY_HISTORICAL_PATHS_MUST_BE_EXACT")
+        if any(
+            not path.startswith(".github/workflows/v4-")
+            or not path.endswith(".yml")
+            or "/v3-" in path
+            for path in paths
+        ):
+            raise RuntimeError("MAIN_PROVENANCE_POLICY_HISTORICAL_SCOPE_TOO_BROAD")
+        if not isinstance(reason, str) or not reason.strip():
+            raise RuntimeError("MAIN_PROVENANCE_POLICY_HISTORICAL_REASON_REQUIRED")
+        result[sha] = set(paths)
+    return result
+
+
 def _load_policy(path: Path = POLICY_PATH) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -289,6 +366,8 @@ def _load_policy(path: Path = POLICY_PATH) -> dict[str, Any]:
         raise RuntimeError("MAIN_PROVENANCE_POLICY_VERSION_SCOPE_TOO_BROAD")
     if payload.get("allow_direct_version_exclusive_commits") is not True:
         raise RuntimeError("MAIN_PROVENANCE_POLICY_VERSION_SCOPE_DISABLED")
+
+    _historical_attestation_map(payload)
     return payload
 
 
@@ -311,6 +390,7 @@ def run() -> dict[str, Any]:
         max_first_parent_commits=int(policy["max_first_parent_commits"]),
         allow_direct_version_exclusive_commits=bool(policy["allow_direct_version_exclusive_commits"]),
         version_exclusive_paths=set(policy["version_exclusive_paths"]),
+        historical_direct_commit_attestations=_historical_attestation_map(policy),
     )
     print(json.dumps(result, sort_keys=True))
     return result

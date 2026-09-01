@@ -14,5 +14,35 @@
     ".github/workflows/v4-timing-probe.yml",
     ".github/workflows/fpl-engine-recovery.yml",
     ".github/workflows/v5-evidence-dispatcher.yml"
+  ],
+  "historical_direct_commit_attestations": [
+    {
+      "sha": "38fa0e64d2c35afea7d82f2ef8170b6417866c43",
+      "paths": [
+        ".github/workflows/v4-perf-attestation-refresh-temp.yml"
+      ],
+      "reason": "Legacy V4-only temporary workflow bootstrap created before the V3 main provenance gate evaluated this history."
+    },
+    {
+      "sha": "1580270d16f3ba8b5d349bb2eb97d13617d5f04b",
+      "paths": [
+        ".github/workflows/v4-perf-attestation-refresh-temp.yml"
+      ],
+      "reason": "Legacy V4-only temporary workflow cleanup paired with the exact bootstrap commit."
+    },
+    {
+      "sha": "9eba3392f58e1ce2f1597bf64732afc33cebed1e",
+      "paths": [
+        ".github/workflows/v4-validation-integrity-dedup-temp.yml"
+      ],
+      "reason": "Legacy V4-only temporary validation workflow bootstrap created before the V3 main provenance gate evaluated this history."
+    },
+    {
+      "sha": "c6c0c1f89df35d810313edbbadd0debe23bbdf6b",
+      "paths": [
+        ".github/workflows/v4-validation-integrity-dedup-temp.yml"
+      ],
+      "reason": "Legacy V4-only temporary validation workflow cleanup paired with the exact bootstrap commit."
+    }
   ]
 }

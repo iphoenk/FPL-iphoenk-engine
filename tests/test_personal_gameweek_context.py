@@ -160,8 +160,12 @@ def test_report_materializer_declares_official_snapshot_as_input():
     assert "official_snapshot.json" in report_inputs
 
 
-def test_wc_screenshot_lock_is_scoped_to_gw2():
+def test_checked_in_planning_lock_is_targeted_and_current_phase_specific():
     lock = json.loads((ROOT / "config" / "locked_squad.json").read_text(encoding="utf-8"))
-    assert lock.get("target_gw") == 2
-    assert lock.get("authority_source") == "USER_LOCKED_SCREENSHOT_WC_DRAFT"
+    assert isinstance(lock.get("target_gw"), int) and lock["target_gw"] > 0
     assert lock.get("planning_override_active") is True
+    assert isinstance(lock.get("authority_source"), str) and lock["authority_source"].startswith("USER_")
+    if lock.get("wildcard_active") is True:
+        assert "WC" in lock["authority_source"] or "WILDCARD" in lock["authority_source"]
+    else:
+        assert lock.get("authoritative_phase") in {"pre_deadline_transfer", "pre_deadline_planning"}

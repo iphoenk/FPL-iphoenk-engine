@@ -1,10 +1,28 @@
 from __future__ import annotations
 
+import importlib
 import json
 from pathlib import Path
 
+from src.engines import v4_quality_gate, v4_quality_gate_legacy
 from src.services import governance_live_overlay, hot_orchestrator
 from src.services.contracts import file_digest
+
+
+def test_canonical_quality_gate_does_not_mutate_legacy_assertion_globals() -> None:
+    before = (
+        v4_quality_gate_legacy._assert_framework_health,
+        v4_quality_gate_legacy._assert_orchestration,
+        v4_quality_gate_legacy._assert_prediction_and_validation,
+    )
+    importlib.reload(v4_quality_gate)
+    after = (
+        v4_quality_gate_legacy._assert_framework_health,
+        v4_quality_gate_legacy._assert_orchestration,
+        v4_quality_gate_legacy._assert_prediction_and_validation,
+    )
+    assert after == before
+    assert all(func.__module__ == "src.engines.v4_quality_gate_core" for func in after)
 
 
 def test_hot_path_service_identity_is_bound_to_authoritative_registry() -> None:

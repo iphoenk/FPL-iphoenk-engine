@@ -29,7 +29,7 @@ jobs:
       snapshot_role: ${{ steps.resolve.outputs.snapshot_role }}
       precompute_reused: ${{ steps.resolve.outputs.precompute_reused }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
 
@@ -136,7 +136,7 @@ jobs:
     if: needs.resolve-canonical.outputs.should_run_core == 'true'
     uses: iphoenk/FPL-iphoenk-engine/.github/workflows/fpl-engine-core.yml@v4-prediction-engine
     permissions:
-      contents: write
+      contents: read
     secrets: inherit
     with:
       ref: ${{ needs.resolve-canonical.outputs.canonical_sha }}

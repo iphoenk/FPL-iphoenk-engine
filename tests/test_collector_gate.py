@@ -35,7 +35,7 @@ def test_hourly_primary_always_collects():
 
 def test_adaptive_slot_skips_normal_day():
     collect, reason = should_collect(
-        "schedule", "0,15,45 * * * *", utc(2026, 8, 25, 18, 15), utc(2026, 8, 28, 17, 30), False
+        "schedule", "0,45 * * * *", utc(2026, 8, 25, 18, 0), utc(2026, 8, 28, 17, 30), False
     )
     assert collect is False
     assert reason == "adaptive_slot_not_needed"
@@ -48,23 +48,23 @@ def test_deadline_day_window_is_exactly_24h_and_adaptive_only_runs_for_final_rev
     assert deadline_intensive(deadline + timedelta(seconds=1), deadline) is False
 
     ordinary_adaptive, ordinary_reason = should_collect(
-        "schedule", "0,15,45 * * * *", deadline - timedelta(hours=2), deadline, False
+        "schedule", "0,45 * * * *", deadline - timedelta(hours=2), deadline, False
     )
     assert ordinary_adaptive is False
     assert ordinary_reason == "adaptive_slot_not_needed"
 
-    daytime_deadline = utc(2026, 8, 29, 11, 30)  # 18:30 WIB; final review 17:00 WIB
+    daytime_deadline = utc(2026, 8, 29, 11, 30)
     final_collect, final_reason = should_collect(
-        "schedule", "0,15,45 * * * *", utc(2026, 8, 29, 10, 0), daytime_deadline, False
+        "schedule", "0,45 * * * *", utc(2026, 8, 29, 10, 0), daytime_deadline, False
     )
     assert final_collect is True
     assert final_reason == "adaptive_final_review"
 
 
 def test_adaptive_slot_runs_for_live_refresh_without_authorizing_match_report_by_itself():
-    now = utc(2026, 8, 29, 13, 15)
+    now = utc(2026, 8, 29, 13, 0)
     collect, reason = should_collect(
-        "schedule", "0,15,45 * * * *", now, utc(2026, 9, 5, 17, 30), True
+        "schedule", "0,45 * * * *", now, utc(2026, 9, 5, 17, 30), True
     )
     assert collect is True
     assert reason == "adaptive_live_refresh"
@@ -74,11 +74,9 @@ def test_match_mode_requires_current_scoring_gw_started_and_unfinished():
     now = utc(2026, 8, 29, 13, 30)
     assert fixture_match_window(now, [live_fixture(event=2)], scoring_gw=2) is True
     assert fixture_match_window(now, [live_fixture(event=1)], scoring_gw=2) is False
-
     not_started = live_fixture(event=2)
     not_started["started"] = False
     assert fixture_match_window(now, [not_started], scoring_gw=2) is False
-
     finished = live_fixture(event=2)
     finished["finished"] = True
     assert fixture_match_window(now, [finished], scoring_gw=2) is False
@@ -92,9 +90,9 @@ def test_future_kickoff_cannot_be_match_mode_even_if_started_flag_is_bad():
 
 
 def test_normal_wib_report_checkpoints():
-    assert normal_report_mode(utc(2026, 8, 28, 21, 30)) == "NORMAL_DEEP_REVIEW"  # 04:30 WIB
-    assert normal_report_mode(utc(2026, 8, 29, 5, 30)) == "NORMAL_MIDDAY"  # 12:30 WIB
-    assert normal_report_mode(utc(2026, 8, 29, 14, 30)) == "NORMAL_NIGHT"  # 21:30 WIB
+    assert normal_report_mode(utc(2026, 8, 28, 21, 30)) == "NORMAL_DEEP_REVIEW"
+    assert normal_report_mode(utc(2026, 8, 29, 5, 30)) == "NORMAL_MIDDAY"
+    assert normal_report_mode(utc(2026, 8, 29, 14, 30)) == "NORMAL_NIGHT"
     assert normal_report_mode(utc(2026, 8, 29, 8, 30)) is None
 
 
@@ -103,21 +101,15 @@ def test_normal_report_checkpoint_tolerates_delayed_primary_job():
 
 
 def test_final_review_rule_for_overnight_deadline_is_t_minus_3h():
-    deadline = utc(2026, 8, 28, 17, 30)  # 00:30 WIB
-    assert final_review_at(deadline) == utc(2026, 8, 28, 14, 30)  # 21:30 WIB
+    deadline = utc(2026, 8, 28, 17, 30)
+    assert final_review_at(deadline) == utc(2026, 8, 28, 14, 30)
     assert final_review_due(utc(2026, 8, 28, 14, 30), deadline) is True
 
 
 def test_final_review_rule_for_non_overnight_deadline_is_t_minus_90m():
-    deadline = utc(2026, 8, 29, 11, 30)  # 18:30 WIB
-    assert final_review_at(deadline) == utc(2026, 8, 29, 10, 0)  # 17:00 WIB
-    decision = visible_report_decision(
-        utc(2026, 8, 29, 10, 0),
-        deadline,
-        scoring_gw=1,
-        fixtures=[],
-        hourly_checkpoint=False,
-    )
+    deadline = utc(2026, 8, 29, 11, 30)
+    assert final_review_at(deadline) == utc(2026, 8, 29, 10, 0)
+    decision = visible_report_decision(utc(2026, 8, 29, 10, 0), deadline, scoring_gw=1, fixtures=[], hourly_checkpoint=False)
     assert decision["visible"] is True
     assert decision["primary_mode"] == "DEADLINE_DAY_FINAL_REVIEW"
 
@@ -131,95 +123,46 @@ def test_final_review_grace_handles_scheduler_delay_once_inside_window():
 
 def test_deadline_day_hourly_report_is_never_suppressed():
     deadline = utc(2026, 8, 28, 17, 30)
-    decision = visible_report_decision(
-        utc(2026, 8, 28, 16, 30),
-        deadline,
-        scoring_gw=1,
-        fixtures=[],
-        hourly_checkpoint=True,
-    )
+    decision = visible_report_decision(utc(2026, 8, 28, 16, 30), deadline, scoring_gw=1, fixtures=[], hourly_checkpoint=True)
     assert decision["visible"] is True
     assert decision["primary_mode"] == "DEADLINE_DAY"
 
 
 def test_hourly_deadline_reports_continue_after_final_review():
     deadline = utc(2026, 8, 28, 17, 30)
-    decision = visible_report_decision(
-        utc(2026, 8, 28, 15, 30),
-        deadline,
-        scoring_gw=1,
-        fixtures=[],
-        hourly_checkpoint=True,
-    )
+    decision = visible_report_decision(utc(2026, 8, 28, 15, 30), deadline, scoring_gw=1, fixtures=[], hourly_checkpoint=True)
     assert decision["visible"] is True
     assert decision["primary_mode"] == "DEADLINE_DAY"
 
 
 def test_match_mode_only_visible_at_hourly_checkpoint():
     fixture = live_fixture(event=2)
-    off_checkpoint = visible_report_decision(
-        utc(2026, 8, 29, 13, 15),
-        utc(2026, 9, 5, 17, 30),
-        scoring_gw=2,
-        fixtures=[fixture],
-        hourly_checkpoint=False,
-    )
+    off_checkpoint = visible_report_decision(utc(2026, 8, 29, 13, 15), utc(2026, 9, 5, 17, 30), scoring_gw=2, fixtures=[fixture], hourly_checkpoint=False)
     assert off_checkpoint["match_mode"] is True
     assert off_checkpoint["visible"] is False
-
-    checkpoint = visible_report_decision(
-        utc(2026, 8, 29, 13, 30),
-        utc(2026, 9, 5, 17, 30),
-        scoring_gw=2,
-        fixtures=[fixture],
-        hourly_checkpoint=True,
-    )
+    checkpoint = visible_report_decision(utc(2026, 8, 29, 13, 30), utc(2026, 9, 5, 17, 30), scoring_gw=2, fixtures=[fixture], hourly_checkpoint=True)
     assert checkpoint["visible"] is True
     assert checkpoint["primary_mode"] == "MATCH_MODE"
 
 
 def test_night_and_match_collision_emits_one_match_mode_report_with_night_folded_in():
     fixture = live_fixture(event=2)
-    decision = visible_report_decision(
-        utc(2026, 8, 29, 14, 30),  # 21:30 WIB
-        utc(2026, 9, 5, 17, 30),
-        scoring_gw=2,
-        fixtures=[fixture],
-        hourly_checkpoint=True,
-    )
+    decision = visible_report_decision(utc(2026, 8, 29, 14, 30), utc(2026, 9, 5, 17, 30), scoring_gw=2, fixtures=[fixture], hourly_checkpoint=True)
     assert decision["primary_mode"] == "MATCH_MODE"
     assert decision["included_modes"] == ["MATCH_MODE", "NORMAL_NIGHT"]
 
 
 def test_deadline_final_review_collision_has_highest_priority():
     deadline = utc(2026, 8, 28, 17, 30)
-    fixture = {
-        "event": 1,
-        "kickoff_time": utc(2026, 8, 28, 14, 0).isoformat(),
-        "started": True,
-        "finished": False,
-    }
-    decision = visible_report_decision(
-        utc(2026, 8, 28, 14, 30),  # 21:30 WIB and T-3h
-        deadline,
-        scoring_gw=1,
-        fixtures=[fixture],
-        hourly_checkpoint=True,
-    )
+    fixture = {"event": 1, "kickoff_time": utc(2026, 8, 28, 14, 0).isoformat(), "started": True, "finished": False}
+    decision = visible_report_decision(utc(2026, 8, 28, 14, 30), deadline, scoring_gw=1, fixtures=[fixture], hourly_checkpoint=True)
     assert decision["primary_mode"] == "DEADLINE_DAY_FINAL_REVIEW"
     assert "NORMAL_NIGHT" in decision["included_modes"]
     assert "MATCH_MODE" in decision["included_modes"]
 
 
 def test_critical_price_alert_can_break_silence_outside_normal_schedule():
-    decision = visible_report_decision(
-        utc(2026, 8, 29, 3, 0),
-        utc(2026, 9, 5, 17, 30),
-        scoring_gw=2,
-        fixtures=[],
-        hourly_checkpoint=False,
-        critical_price_alert=True,
-    )
+    decision = visible_report_decision(utc(2026, 8, 29, 3, 0), utc(2026, 9, 5, 17, 30), scoring_gw=2, fixtures=[], hourly_checkpoint=False, critical_price_alert=True)
     assert decision["primary_mode"] == "CRITICAL_PRICE_ALERT"
 
 
@@ -233,16 +176,10 @@ def test_direct_official_refresh_threshold_and_material_override():
 
 def test_persisted_phase_reads_deadline_scoring_gw_and_generation_time(tmp_path):
     path = tmp_path / "latest.json"
-    path.write_text(
-        """{
-          "generated_at": "2026-08-29T09:30:00Z",
-          "phase": {
-            "deadline_time": "2026-09-05T17:30:00Z",
-            "scoring_gw": 2,
-            "is_live_event": true
-          }
-        }"""
-    )
+    path.write_text("""{
+      "generated_at": "2026-08-29T09:30:00Z",
+      "phase": {"deadline_time": "2026-09-05T17:30:00Z", "scoring_gw": 2, "is_live_event": true}
+    }""")
     phase = persisted_phase(path)
     assert phase["deadline"] == utc(2026, 9, 5, 17, 30)
     assert phase["scoring_gw"] == 2

@@ -211,6 +211,7 @@ def run() -> dict:
         predictions=predictions,
         latest=latest,
         universe=universe,
+        persist=False,
     )
     _assert_no_critical_failure_erasure(critical_failed_before, maturity)
 

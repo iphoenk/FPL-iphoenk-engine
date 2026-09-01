@@ -11,7 +11,7 @@ on:
         type: boolean
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   RUNTIME_BRANCH: runtime-data-v4
@@ -264,24 +264,21 @@ jobs:
         if: inputs.publish
         run: python -m src.services.runtime_publish_stamp
 
-      - name: Publish complete runtime snapshot atomically
+      - name: Package governed runtime snapshot
         if: inputs.publish
         shell: bash
         run: |
           set -euo pipefail
-          publish_tree="$RUNNER_TEMP/v4-runtime-core"
-          rm -rf "$publish_tree"
-          git config user.name "fpl-iphoenk-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git worktree add --detach "$publish_tree" HEAD
-          cd "$publish_tree"
-          git checkout --orphan runtime-snapshot
-          git rm -rf . >/dev/null 2>&1 || true
-          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -a "$GITHUB_WORKSPACE/data" ./data
-          git add -f data/
-          git commit -m "data(v4): atomic production snapshot [skip ci]"
-          git push --force origin HEAD:"$RUNTIME_BRANCH"
+          tar -C "$GITHUB_WORKSPACE" -cf "$RUNNER_TEMP/v4-runtime-data.tar" data
+
+      - name: Transfer governed runtime snapshot to publisher
+        if: inputs.publish
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: v4-runtime-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/v4-runtime-data.tar
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Repeated FAST and warm-serving p95 benchmark
         if: inputs.publish == false
@@ -361,8 +358,55 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  publish-v4:
+    if: inputs.publish
+    needs: validate-v4
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: v4-runtime-publisher
+    permissions:
+      contents: read
+    steps:
+      - name: Mint governed V4 runtime publisher token
+        id: runtime_app_token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.V4_RUNTIME_APP_ID }}
+          private-key: ${{ secrets.V4_RUNTIME_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: FPL-iphoenk-engine
+          permission-contents: write
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+          token: ${{ steps.runtime_app_token.outputs.token }}
+
+      - name: Download governed runtime snapshot
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: v4-runtime-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/v4-runtime-publication
+
+      - name: Publish complete runtime snapshot atomically
+        shell: bash
+        run: |
+          set -euo pipefail
+          publish_tree="$RUNNER_TEMP/v4-runtime-core"
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git worktree add --detach "$publish_tree" HEAD
+          cd "$publish_tree"
+          git checkout --orphan runtime-snapshot
+          git rm -rf . >/dev/null 2>&1 || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          tar -xf "$RUNNER_TEMP/v4-runtime-publication/v4-runtime-data.tar"
+          git add -f data/
+          git commit -m "data(v4): atomic production snapshot [skip ci]"
+          git push --force origin HEAD:"$RUNTIME_BRANCH"
+
       - name: Verify published V4 runtime snapshot
-        if: inputs.publish
         shell: bash
         run: |
           set -euo pipefail

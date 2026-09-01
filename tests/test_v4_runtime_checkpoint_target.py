@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.services.runtime_checkpoint_target import (
+    LATE_PRECOMPUTE_ROLE,
     PRECOMPUTE_ROLE,
     PRIMARY_FALLBACK_ROLE,
     UNSCOPED_ROLE,
@@ -23,6 +24,15 @@ def test_v4_precompute_at_15_targets_upcoming_logical_30() -> None:
     assert meta["generated_before_or_at_target"] is True
     assert meta["materialization_complete"] is True
     assert meta["publication_proof"] == "PRESENCE_ON_RUNTIME_BRANCH"
+
+
+def test_v4_delayed_15_run_keeps_same_target_but_is_not_valid_precompute() -> None:
+    generated = datetime(2026, 9, 1, 2, 35, 0, tzinfo=timezone.utc)
+    meta = resolve_runtime_checkpoint_metadata(generated, event_name="schedule", schedule_expr="15 * * * *")
+    assert meta["snapshot_role"] == LATE_PRECOMPUTE_ROLE
+    assert meta["target_checkpoint"] == "2026-09-01T02:30:00+00:00"
+    assert meta["precomputed"] is False
+    assert meta["generated_before_or_at_target"] is False
 
 
 def test_v4_primary_30_is_fallback_targeting_current_checkpoint() -> None:

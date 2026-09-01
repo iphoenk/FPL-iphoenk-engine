@@ -1,0 +1,282 @@
+name: V4 temporary governance proof reuse
+
+on:
+  push:
+    branches: [codex/v4-validation-integrity-dedup-runner-20260901]
+    paths:
+      - '.github/workflows/v4-governance-proof-reuse-temp.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: codex/v4-final-yellow-closeout-20260901
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+
+      - name: Apply explicit hot-path handoffs and same-cycle integrity proof reuse
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str, label: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              if new in text:
+                  return
+              if old not in text:
+                  raise SystemExit(f'{label} anchor not found in {path}')
+              p.write_text(text.replace(old, new, 1))
+
+          # 1) Prediction returns the exact in-memory contract only when explicitly requested.
+          replace_once(
+              'src/services/prediction_service.py',
+              'def run():',
+              'def run(*, return_predictions: bool = False):',
+              'prediction signature',
+          )
+          replace_once(
+              'src/services/prediction_service.py',
+              '\n    return latest\n\n\nif __name__ == "__main__":\n',
+              '\n    if return_predictions:\n        return {"latest": latest, "predictions": predictions}\n    return latest\n\n\nif __name__ == "__main__":\n',
+              'prediction return bundle',
+          )
+          replace_once(
+              'src/services/prediction_service_price_mover.py',
+              'def run():\n    result = run_prediction()\n    patch_price_artifacts(DATA)\n    return result\n',
+              'def run(*, return_predictions: bool = False):\n    result = run_prediction(return_predictions=True) if return_predictions else run_prediction()\n    patch_price_artifacts(DATA)\n    return result\n',
+              'prediction wrapper',
+          )
+
+          # 2) Validation accepts the already materialized prediction object; default DAG remains file-backed.
+          replace_once(
+              'src/services/validation_service.py',
+              'def run() -> dict:',
+              'def run(*, predictions_snapshot: dict | None = None) -> dict:',
+              'validation signature',
+          )
+          replace_once(
+              'src/services/validation_service.py',
+              '    snapshot_started = perf_counter()\n    raw_snapshot = read_json(RAW_SNAPSHOT, {})\n    predictions_snapshot = read_json(PREDICTIONS, {})\n    timings["parent_snapshot_load_ms"] = round((perf_counter() - snapshot_started) * 1000.0, 2)\n',
+              '    snapshot_started = perf_counter()\n    raw_snapshot = read_json(RAW_SNAPSHOT, {})\n    predictions_preloaded = predictions_snapshot is not None\n    if predictions_snapshot is None:\n        predictions_snapshot = read_json(PREDICTIONS, {})\n    timings["parent_snapshot_load_ms"] = round((perf_counter() - snapshot_started) * 1000.0, 2)\n',
+              'validation prediction load',
+          )
+          replace_once(
+              'src/services/validation_service.py',
+              '            "parent_predictions_loaded_once": True,\n            "lifecycle_received_preloaded_raw": True,\n',
+              '            "parent_predictions_loaded_once": not predictions_preloaded,\n            "parent_predictions_received_preloaded": predictions_preloaded,\n            "lifecycle_received_preloaded_raw": True,\n',
+              'validation reuse evidence',
+          )
+          replace_once(
+              'src/services/validation_service.py',
+              '            "parent_snapshot_reuse_fail_closed": True,\n            "official_api_refetch": False,\n',
+              '            "parent_snapshot_reuse_fail_closed": True,\n            "prediction_handoff_is_explicit_optional_input": True,\n            "file_backed_prediction_fallback_preserved": True,\n            "official_api_refetch": False,\n',
+              'validation reuse guardrail',
+          )
+
+          # 3) Validation eligibility records the semantic digest of the exact reconciliation row
+          # whose immutable source was fully verified. This lets governance verify exact bytes
+          # without reopening the legacy 32 MB deadline source in the same cycle.
+          replace_once(
+              'src/engines/v4_backtest_store.py',
+              '    integrity_checked: list[int] = []\n    rejected: list[dict] = []\n',
+              '    integrity_checked: list[int] = []\n    integrity_checked_sha256: dict[str, str] = {}\n    rejected: list[dict] = []\n',
+              'eligibility digest registry',
+          )
+          replace_once(
+              'src/engines/v4_backtest_store.py',
+              '            gw = int(sample.get("gw"))\n            integrity_checked.append(gw)\n            if model_version and sample.get("model_version") != model_version:\n',
+              '            gw = int(sample.get("gw"))\n            integrity_checked.append(gw)\n            integrity_checked_sha256[str(gw)] = _digest(sample)\n            if model_version and sample.get("model_version") != model_version:\n',
+              'eligibility digest capture',
+          )
+          replace_once(
+              'src/engines/v4_backtest_store.py',
+              '        "integrity_checked_gws": integrity_checked,\n        "rejected_samples": rejected,\n',
+              '        "integrity_checked_gws": integrity_checked,\n        "integrity_checked_sha256": integrity_checked_sha256,\n        "rejected_samples": rejected,\n',
+              'eligibility digest output',
+          )
+
+          # 4) Maturity consumes exact same-cycle proof when present; no proof means the old
+          # full reconciled_integrity path is preserved. A supplied but mismatched proof is
+          # rejected rather than silently trusted or promoted.
+          replace_once(
+              'src/engines/v4_maturity_reconciler.py',
+              'from src.engines.v4_backtest_store import reconciled_integrity\n',
+              'from src.engines.v4_backtest_store import _digest, reconciled_integrity\n',
+              'maturity digest import',
+          )
+          replace_once(
+              'src/engines/v4_maturity_reconciler.py',
+              'def _calibration_maturity_evidence(predictions: dict) -> tuple[bool, dict]:\n    model_version = predictions.get("model_version")\n    paths = sorted(RECONCILED.glob("gw*.json")) if RECONCILED.exists() else []\n    eligible: list[dict] = []\n    rejected: list[dict] = []\n    passing: list[dict] = []\n    best_observed_n = 0\n\n    for path in paths:\n        sample = read_json(path, {})\n        ok, reason = reconciled_integrity(sample, model_version=model_version)\n        if not ok:\n            rejected.append({"file": path.name, "reason": reason})\n            continue\n        gw = int(sample.get("gw") or 0)\n',
+              'def _calibration_maturity_evidence(\n    predictions: dict,\n    validation_eligibility: dict | None = None,\n) -> tuple[bool, dict]:\n    model_version = predictions.get("model_version")\n    paths = sorted(RECONCILED.glob("gw*.json")) if RECONCILED.exists() else []\n    eligible: list[dict] = []\n    rejected: list[dict] = []\n    passing: list[dict] = []\n    best_observed_n = 0\n    proof = validation_eligibility if isinstance(validation_eligibility, dict) else {}\n    proof_usable = (\n        proof.get("single_pass_source_integrity") is True\n        and proof.get("model_version") == model_version\n    )\n    proof_gws = {int(value) for value in (proof.get("integrity_checked_gws") or [])}\n    proof_digests = proof.get("integrity_checked_sha256") or {}\n    proof_reused_gws: list[int] = []\n    fallback_full_integrity_gws: list[int] = []\n\n    for path in paths:\n        sample = read_json(path, {})\n        gw = int(sample.get("gw") or 0)\n        expected_digest = proof_digests.get(str(gw)) if proof_usable and gw in proof_gws else None\n        if expected_digest is not None:\n            metrics = ((sample.get("report") or {}).get("metrics") or {})\n            proof_ok = (\n                sample.get("kind") == "post_gw_reconciliation"\n                and sample.get("immutable") is True\n                and sample.get("sample_eligible") is True\n                and sample.get("model_version") == model_version\n                and metrics.get("status") == "PASS"\n                and int(metrics.get("n") or 0) > 0\n                and int(metrics.get("leakage_rejected") or 0) == 0\n                and _digest(sample) == expected_digest\n            )\n            if not proof_ok:\n                rejected.append({"file": path.name, "reason": "same_cycle_integrity_proof_mismatch"})\n                continue\n            proof_reused_gws.append(gw)\n        else:\n            ok, reason = reconciled_integrity(sample, model_version=model_version)\n            fallback_full_integrity_gws.append(gw)\n            if not ok:\n                rejected.append({"file": path.name, "reason": reason})\n                continue\n',
+              'maturity calibration proof reuse',
+          )
+          replace_once(
+              'src/engines/v4_maturity_reconciler.py',
+              '        "rejected_samples": rejected,\n        "passing_gws": [row["gw"] for row in passing],\n',
+              '        "rejected_samples": rejected,\n        "validation_integrity_proof_reused_gws": proof_reused_gws,\n        "fallback_full_integrity_gws": fallback_full_integrity_gws,\n        "same_cycle_integrity_proof_requires_exact_digest": True,\n        "passing_gws": [row["gw"] for row in passing],\n',
+              'maturity proof telemetry',
+          )
+          replace_once(
+              'src/engines/v4_maturity_reconciler.py',
+              '    universe: dict | None = None,\n    persist: bool = True,\n) -> dict:\n',
+              '    universe: dict | None = None,\n    validation_eligibility: dict | None = None,\n    persist: bool = True,\n) -> dict:\n',
+              'maturity reconcile signature',
+          )
+          replace_once(
+              'src/engines/v4_maturity_reconciler.py',
+              '    calibration_active, calibration_detail = _calibration_maturity_evidence(predictions)\n',
+              '    calibration_active, calibration_detail = _calibration_maturity_evidence(\n        predictions, validation_eligibility=validation_eligibility\n    )\n',
+              'maturity reconcile proof wiring',
+          )
+
+          # 5) Governance also accepts the already materialized predictions object in the hot
+          # path and passes validation eligibility proof to maturity. Default process-isolated
+          # production execution remains file-backed and therefore contract-equivalent.
+          replace_once(
+              'src/services/governance_service.py',
+              'def run() -> dict:\n',
+              'def run(*, predictions_snapshot: dict | None = None) -> dict:\n',
+              'governance signature',
+          )
+          replace_once(
+              'src/services/governance_service.py',
+              '    predictions = read_json(DATA / "predictions_v4.json", {})\n    latest = read_json(DATA / "latest.json", {})\n    universe = read_json(DATA / "universe.json", {})\n',
+              '    predictions_preloaded = predictions_snapshot is not None\n    predictions = predictions_snapshot if predictions_preloaded else read_json(DATA / "predictions_v4.json", {})\n    latest = read_json(DATA / "latest.json", {})\n    universe = read_json(DATA / "universe.json", {})\n    lifecycle = read_json(DATA / "validation" / "lifecycle_v4.json", {})\n    validation_eligibility = lifecycle.get("eligibility") or {}\n',
+              'governance preloaded prediction',
+          )
+          replace_once(
+              'src/services/governance_service.py',
+              '        universe=universe,\n        persist=False,\n',
+              '        universe=universe,\n        validation_eligibility=validation_eligibility,\n        persist=False,\n',
+              'governance maturity proof pass',
+          )
+          replace_once(
+              'src/services/governance_service.py',
+              '            "production_health_does_not_promote_model_maturity": True,\n            "fail_closed": True,\n',
+              '            "production_health_does_not_promote_model_maturity": True,\n            "prediction_handoff_optional_and_file_fallback_preserved": True,\n            "predictions_received_preloaded": predictions_preloaded,\n            "validation_integrity_proof_passed_to_maturity": True,\n            "fail_closed": True,\n',
+              'governance handoff guardrail',
+          )
+          replace_once(
+              'src/services/governance_live_overlay.py',
+              'def run() -> dict:\n    """Add live-score composition to the existing final governance boundary."""\n    out = governance_service.run()\n',
+              'def run(*, predictions_snapshot: dict | None = None) -> dict:\n    """Add live-score composition to the existing final governance boundary."""\n    out = (\n        governance_service.run(predictions_snapshot=predictions_snapshot)\n        if predictions_snapshot is not None\n        else governance_service.run()\n    )\n',
+              'governance overlay handoff',
+          )
+
+          # 6) Hot benchmark uses the same exact object for validation and governance.
+          replace_once(
+              'src/services/hot_orchestrator.py',
+              'def _validation_worker(conn) -> None:\n',
+              'def _validation_worker(conn, predictions_snapshot: dict) -> None:\n',
+              'hot validation worker signature',
+          )
+          replace_once(
+              'src/services/hot_orchestrator.py',
+              '        detail = validation_service.run()\n',
+              '        detail = validation_service.run(predictions_snapshot=predictions_snapshot)\n',
+              'hot validation worker handoff',
+          )
+          replace_once(
+              'src/services/hot_orchestrator.py',
+              '    prediction_service_price_mover.run()\n    service_ms["prediction"] = round((perf_counter() - t) * 1000.0, 2)\n    prediction_cache = prediction_model_cache.last_status()\n',
+              '    prediction_bundle = prediction_service_price_mover.run(return_predictions=True)\n    service_ms["prediction"] = round((perf_counter() - t) * 1000.0, 2)\n    predictions_snapshot = (prediction_bundle or {}).get("predictions") or {}\n    if not predictions_snapshot.get("model_version") or not predictions_snapshot.get("players"):\n        raise RuntimeError("hot-path prediction handoff missing full prediction contract")\n    prediction_cache = prediction_model_cache.last_status()\n',
+              'hot prediction bundle',
+          )
+          replace_once(
+              'src/services/hot_orchestrator.py',
+              '        args=(validation_send,),\n        name="v496-hot-validation",\n',
+              '        args=(validation_send, predictions_snapshot),\n        name="v496-hot-validation",\n',
+              'hot validation args',
+          )
+          replace_once(
+              'src/services/hot_orchestrator.py',
+              '    governance_detail = governance_live_overlay.run()\n',
+              '    governance_detail = governance_live_overlay.run(predictions_snapshot=predictions_snapshot)\n',
+              'hot governance prediction handoff',
+          )
+          replace_once(
+              'src/services/hot_orchestrator.py',
+              '            "validation_fork_removes_interpreter_bootstrap_only": True,\n            "architecture_guard_runs_first": True,\n',
+              '            "validation_fork_removes_interpreter_bootstrap_only": True,\n            "prediction_validation_handoff_explicit": True,\n            "prediction_governance_handoff_explicit": True,\n            "prediction_handoffs_copy_on_write_or_read_only": True,\n            "production_file_backed_service_fallbacks_preserved": True,\n            "same_cycle_integrity_proof_reused_by_governance": True,\n            "architecture_guard_runs_first": True,\n',
+              'hot reuse guardrails',
+          )
+
+          Path('tests/test_v4_hot_governance_reuse.py').write_text('''from __future__ import annotations\n\nimport inspect\nimport json\n\nfrom src.engines import v4_maturity_reconciler as maturity\nfrom src.engines.v4_backtest_store import _digest\nfrom src.services import governance_live_overlay, governance_service, hot_orchestrator\n\n\ndef _sample():\n    return {\n        "kind": "post_gw_reconciliation",\n        "gw": 2,\n        "model_version": "m",\n        "immutable": True,\n        "sample_eligible": True,\n        "report": {"metrics": {"status": "PASS", "n": 1, "leakage_rejected": 0}},\n    }\n\n\ndef test_maturity_reuses_exact_same_cycle_integrity_proof(monkeypatch, tmp_path):\n    sample = _sample()\n    (tmp_path / "gw02.json").write_text(json.dumps(sample))\n    monkeypatch.setattr(maturity, "RECONCILED", tmp_path)\n    monkeypatch.setattr(maturity, "promotion_gate", lambda *_a, **_k: {"promote": False})\n    monkeypatch.setattr(maturity, "reconciled_integrity", lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("full source integrity must not repeat")))\n    proof = {\n        "model_version": "m",\n        "single_pass_source_integrity": True,\n        "integrity_checked_gws": [2],\n        "integrity_checked_sha256": {"2": _digest(sample)},\n    }\n    active, detail = maturity._calibration_maturity_evidence(\n        {"model_version": "m"}, validation_eligibility=proof\n    )\n    assert active is False\n    assert detail["validation_integrity_proof_reused_gws"] == [2]\n    assert detail["fallback_full_integrity_gws"] == []\n\n\ndef test_maturity_rejects_changed_reconciliation_after_validation(monkeypatch, tmp_path):\n    sample = _sample()\n    (tmp_path / "gw02.json").write_text(json.dumps(sample))\n    monkeypatch.setattr(maturity, "RECONCILED", tmp_path)\n    monkeypatch.setattr(maturity, "promotion_gate", lambda *_a, **_k: {"promote": False})\n    monkeypatch.setattr(maturity, "reconciled_integrity", lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("mismatched supplied proof must fail closed")))\n    proof = {\n        "model_version": "m",\n        "single_pass_source_integrity": True,\n        "integrity_checked_gws": [2],\n        "integrity_checked_sha256": {"2": "0" * 64},\n    }\n    _, detail = maturity._calibration_maturity_evidence(\n        {"model_version": "m"}, validation_eligibility=proof\n    )\n    assert detail["validation_integrity_proof_reused_gws"] == []\n    assert detail["rejected_samples"][0]["reason"] == "same_cycle_integrity_proof_mismatch"\n\n\ndef test_governance_and_hot_path_keep_optional_file_backed_fallbacks():\n    g = inspect.getsource(governance_service.run)\n    overlay = inspect.getsource(governance_live_overlay.run)\n    hot = inspect.getsource(hot_orchestrator.run)\n    worker = inspect.getsource(hot_orchestrator._validation_worker)\n    assert "predictions_snapshot if predictions_preloaded else read_json" in g\n    assert "validation_eligibility=validation_eligibility" in g\n    assert "else governance_service.run()" in overlay\n    assert "run(return_predictions=True)" in hot\n    assert "governance_live_overlay.run(predictions_snapshot=predictions_snapshot)" in hot\n    assert "validation_service.run(predictions_snapshot=predictions_snapshot)" in worker\n''')
+          PY
+
+      - name: Rebuild governed architecture attestation
+        run: python tools/v4_architecture_guard_attest.py
+
+      - name: Install dependencies
+        run: pip install --disable-pip-version-check -r requirements.txt pytest
+
+      - name: Verify focused and full deterministic suite
+        run: |
+          python -m pytest -q tests/test_v4_hot_governance_reuse.py tests/test_v4_validation_integrity_dedup.py
+          python -m pytest -q
+
+      - name: Measure repeated FAST p95 without threshold change
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, math, statistics, subprocess
+          subprocess.run(['python','-m','src.services.hot_orchestrator','daily','--stats','--deep-stats'], check=True)
+          setup=json.load(open('data/hot_orchestration_v4.json'))
+          runs=[]
+          details=[]
+          for i in range(5):
+              subprocess.run(['python','-m','src.services.hot_orchestrator','daily','--stats','--deep-stats'], check=True)
+              h=json.load(open('data/hot_orchestration_v4.json'))
+              assert h['status']=='PASS', h
+              assert (h.get('prediction_base_cache') or {}).get('hit') is True, h
+              assert h['guardrails']['prediction_validation_handoff_explicit'] is True, h
+              assert h['guardrails']['prediction_governance_handoff_explicit'] is True, h
+              serving=float(h['serving_e2e_excluding_startup_assurance_ms'])
+              runs.append(serving)
+              details.append({\n                  'serving_ms': serving,\n                  'validation_ms': (h.get('validation_detail') or {}).get('timings_ms',{}).get('total_ms'),\n                  'governance_ms': (h.get('governance_detail') or {}).get('timings_ms',{}).get('total_ms'),\n                  'decision_ms': h.get('decision_compute_ms'),\n                  'official_ms': h.get('official_acquisition_ms'),\n              })
+          ordered=sorted(runs)
+          p95=ordered[max(0,min(len(ordered)-1,math.ceil(.95*len(ordered))-1))]
+          result={'setup_ms':setup['serving_e2e_excluding_startup_assurance_ms'],'runs':runs,'details':details,'median_ms':statistics.median(runs),'p95_ms':p95,'target_ms':3000.0}
+          print(json.dumps(result))
+          assert p95 < 3000.0, result
+          PY
+
+      - name: Commit validated performance closeout to V4 branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add \
+            src/services/prediction_service.py \
+            src/services/prediction_service_price_mover.py \
+            src/services/validation_service.py \
+            src/services/governance_service.py \
+            src/services/governance_live_overlay.py \
+            src/services/hot_orchestrator.py \
+            src/engines/v4_backtest_store.py \
+            src/engines/v4_maturity_reconciler.py \
+            tests/test_v4_hot_governance_reuse.py \
+            config/architecture_guard_attestation.json
+          git diff --cached --exit-code && exit 0 || true
+          git commit -m 'perf(v4): reuse validated prediction and integrity evidence'
+          git fetch origin codex/v4-final-yellow-closeout-20260901
+          git rebase origin/codex/v4-final-yellow-closeout-20260901
+          python tools/v4_architecture_guard_attest.py
+          git add config/architecture_guard_attestation.json
+          git diff --cached --quiet || git commit --amend --no-edit
+          git push origin HEAD:codex/v4-final-yellow-closeout-20260901

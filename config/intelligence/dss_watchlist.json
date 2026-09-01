@@ -11,6 +11,7 @@
   "admission": {
     "minimum_start_probability": 0.45,
     "maximum_dnp_probability": 0.35,
+    "warning_dnp_probability": 0.20,
     "minimum_dimension_coverage": 0.70,
     "minimum_critical_dimension_score": 0.60,
     "critical_dimensions": ["role", "xmins", "fixtures_3_5", "underlying", "competition", "price_value", "squad_fit"],

@@ -178,7 +178,7 @@
     "REC-39": {"status": "DONE_PROD"},
     "REC-40": {"status": "DONE_PROD"},
     "REC-41": {"status": "DONE_PROD", "summary": "Observed tactical attacking-role profiles and team FPL-position starter-shape evidence are production-published through the Player Feature Contract. Evidence remains advisory-only; no xMins or xPts adjustment is applied."},
-    "REC-42": {"status": "CANDIDATE", "pr": 106, "feature_ci_run": 33171209718, "summary": "Historical V3.25 candidate evidence for architecture consolidation and sub-second warm serving; retained as evidence and not relabelled as V3.39 acceptance."}
+    "REC-42": {"status": "DONE_PROD", "historical_candidate_pr": 106, "historical_feature_ci_run": 33171209718, "summary": "Architecture consolidation, no-duplicate ownership guards, canonical domain runtime and sub-second validated warm serving are production-proven. PR #106 is retained only as historical V3.25 candidate evidence and does not define current production topology or SLO authority."}
   },
   "claude_qa_stabilization": {
     "source_review_date": "2026-08-27",

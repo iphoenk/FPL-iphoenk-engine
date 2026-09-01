@@ -163,6 +163,9 @@ def run() -> dict:
 
     hit = int((picks.get("entry_history") or {}).get("event_transfers_cost") or 0)
     complete = len(detail) == 15 and len({row["element"] for row in detail}) == 15
+    if active and not complete:
+        raise RuntimeError(f"Match Mode publication blocked: ALL15 submitted-pick coverage required, got {len(detail)}/15")
+
     personalized = {
         "status": "PROVISIONAL" if active else "RECONCILED_OR_IDLE",
         "effective_xi_points": effective_xi_points,

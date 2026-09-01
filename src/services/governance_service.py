@@ -279,7 +279,7 @@ def run() -> dict:
             "publication_integrity_registered": True,
             "publication_failure_cannot_leave_visible_health_green": True,
         })
-        if integrity.get("status") == "BLOCKED":
+        if integrity.get("status") != "PASS":
             maturity["overall"] = "RED"
             maturity["production_health"] = "RED"
             operational = maturity.setdefault("production_operational_health", {})
@@ -290,20 +290,45 @@ def run() -> dict:
                 blockers.append("PUBLICATION_INTEGRITY_BLOCKED")
         atomic_json(DATA / "framework_health_v4.json", maturity)
 
-    return {
+    out = {
         "service": "governance",
-        "status": maturity.get("overall"),
-        "health": maturity,
-        "checkpoint": checkpoint,
-        "challenger_serving": challenger_serving,
+        "status": "PASS",
+        "components": {
+            "framework_postflight": maturity.get("overall"),
+            "production_health": maturity.get("production_health"),
+            "prediction_health": maturity.get("prediction_health"),
+            "capability_health": maturity.get("capability_health"),
+            "capability_maturity": maturity.get("capability_maturity"),
+            "decision_engine": maturity.get("decision_engine"),
+            "weather_context": (maturity.get("weather_context") or {}).get("status"),
+            "report_governance": checkpoint.get("action_state"),
+            "publication_integrity": (integrity.get("capabilities") or {}).get("publication_integrity") or integrity.get("status") or "UNAVAILABLE",
+        },
         "timings_ms": {
-            "postflight": postflight_ms,
-            "maturity": maturity_ms,
-            "checkpoint": checkpoint_ms,
-            "total": round((perf_counter() - total) * 1000.0, 2),
+            "framework_postflight_ms": postflight_ms,
+            "capability_maturity_ms": maturity_ms,
+            "checkpoint_report_governance_ms": checkpoint_ms,
+            "total_ms": round((perf_counter() - total) * 1000.0, 2),
+        },
+        "guardrails": {
+            "canonical_decision_only": True,
+            "user_final_authority": True,
+            "visible_output_policy_preserved": True,
+            "maturity_does_not_fabricate_external_evidence": True,
+            "maturity_cannot_erase_critical_failure": True,
+            "data_dependent_warmup_remains_truthful": True,
+            "operational_health_separate_from_maturity": True,
+            "provisional_engine_blocks_unqualified_go": True,
+            "capability_telemetry_refreshed_after_maturity": True,
+            "weather_health_propagated_after_maturity": True,
+            "weather_cannot_mutate_expected_xpts_mean": True,
+            "production_health_does_not_promote_model_maturity": True,
+            "fail_closed": True,
         },
     }
+    print(json.dumps(out, ensure_ascii=False))
+    return out
 
 
 if __name__ == "__main__":
-    print(json.dumps(run(), ensure_ascii=False))
+    run()

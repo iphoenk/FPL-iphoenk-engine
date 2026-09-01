@@ -86,6 +86,9 @@ def test_runtime_guard_accepts_governed_snapshot_and_rejects_tamper(tmp_path, mo
     monkeypatch.setattr(guard, "_git_bytes", binary)
     result = guard.verify_hydrated_runtime_if_required(root=tmp_path)
     assert result["status"] == "PASS"
+    assert result["automation_commit_metadata_matches"] is True
+    assert result["publisher_identity_requires_platform_ruleset"] is True
+    assert "automation_identity" not in result
     (data / "runtime" / "snapshot.v1.json").write_bytes(b"tampered")
     with pytest.raises(RuntimeError, match="workspace snapshot differs"):
         guard.verify_hydrated_runtime_if_required(root=tmp_path)

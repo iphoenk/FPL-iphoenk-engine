@@ -8,6 +8,8 @@ from src.engines import v4_quality_gate, v4_quality_gate_legacy
 from src.services import governance_live_overlay, hot_orchestrator
 from src.services.contracts import file_digest
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def test_canonical_quality_gate_does_not_mutate_legacy_assertion_globals() -> None:
     before = (
@@ -59,3 +61,13 @@ def test_final_publication_integrity_hashes_post_overlay_content(monkeypatch, tm
 
     serving.write_text(json.dumps({"serving": "tampered-after-attestation"}), encoding="utf-8")
     assert stored["final_artifacts"]["serving_payload_v4"]["sha256"] != file_digest(serving)
+
+
+def test_workflow_callers_use_read_only_repository_token() -> None:
+    for relative in (
+        ".github/workflows/fpl-engine.yml",
+        ".github/workflows/fpl-engine-recovery.yml",
+    ):
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        assert "contents: write" not in text, relative
+        assert text.count("contents: read") >= 2, relative

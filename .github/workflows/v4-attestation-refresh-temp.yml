@@ -37,8 +37,8 @@ jobs:
           if old not in text:
               raise SystemExit('maturity reconcile signature anchor not found')
           text=text.replace(old,new,1)
-          old_tail='''    atomic_json(HEALTH, health)\n    return health\n'''
-          new_tail='''    if persist:\n        atomic_json(HEALTH, health)\n    return health\n'''
+          old_tail='''    atomic_json(HEALTH, health)\n    return health'''
+          new_tail='''    if persist:\n        atomic_json(HEALTH, health)\n    return health'''
           if old_tail not in text:
               raise SystemExit('maturity persistence anchor not found')
           maturity.write_text(text.replace(old_tail,new_tail,1))

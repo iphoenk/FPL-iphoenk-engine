@@ -1,12 +1,13 @@
 name: FPL iphoenk V4 production scheduler
 
-run-name: V4 master scheduler | target :30 WIB | ${{ github.event_name }}
+run-name: V4 master scheduler | :15 precompute / :30 checkpoint | ${{ github.event_name }}
 
 on:
   workflow_dispatch:
   schedule:
-    # Default-branch dispatcher for the canonical V4 :30 WIB master evaluation.
-    # Scheduled workflows only execute from the repository default branch.
+    # :15 precomputes the upcoming logical :30 checkpoint. :30 is a recovery
+    # heartbeat and recomputes only when the exact targeted precompute is absent.
+    - cron: "15 * * * *"
     - cron: "30 * * * *"
 
 permissions:
@@ -19,34 +20,120 @@ concurrency:
 jobs:
   resolve-canonical:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
     outputs:
       canonical_sha: ${{ steps.resolve.outputs.canonical_sha }}
       execution_observed: ${{ steps.resolve.outputs.execution_observed }}
+      should_run_core: ${{ steps.resolve.outputs.should_run_core }}
+      target_checkpoint: ${{ steps.resolve.outputs.target_checkpoint }}
+      snapshot_role: ${{ steps.resolve.outputs.snapshot_role }}
+      precompute_reused: ${{ steps.resolve.outputs.precompute_reused }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
-      - name: Resolve current canonical V4 SHA
+
+      - name: Resolve canonical V4 and exact logical checkpoint target
         id: resolve
+        env:
+          SCHEDULE_EXPR: ${{ github.event.schedule }}
+          RUNTIME_BRANCH: runtime-data-v4
         shell: bash
         run: |
           set -euo pipefail
           canonical_sha="$(git ls-remote origin refs/heads/v4-prediction-engine | awk '{print $1}')"
           test -n "$canonical_sha"
           observed="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+          export CANONICAL_SHA="$canonical_sha"
+          export OBSERVED="$observed"
+          python - <<'PY' > "$RUNNER_TEMP/checkpoint.json"
+          import json, os
+          from datetime import datetime, timedelta, timezone
+
+          now=datetime.fromisoformat(os.environ['OBSERVED'].replace('Z','+00:00')).astimezone(timezone.utc)
+          schedule=os.environ.get('SCHEDULE_EXPR','').strip()
+          target=None
+          role='ADAPTIVE_OR_MANUAL_REFRESH'
+          if schedule == '15 * * * *':
+              target=now.replace(minute=30,second=0,microsecond=0)
+              if now.minute >= 45:
+                  target += timedelta(hours=1)
+              role='PRECOMPUTE_NEXT_CHECKPOINT' if now <= target else 'LATE_PRECOMPUTE_RECOVERY'
+          elif schedule == '30 * * * *':
+              target=now.replace(minute=30,second=0,microsecond=0)
+              if now.minute < 30:
+                  target -= timedelta(hours=1)
+              role='PRIMARY_FALLBACK_CURRENT_CHECKPOINT'
+          print(json.dumps({
+              'schedule': schedule,
+              'target_checkpoint': target.isoformat() if target else None,
+              'snapshot_role': role,
+          }))
+          PY
+
+          target_checkpoint="$(python -c 'import json; print(json.load(open("'"$RUNNER_TEMP"'/checkpoint.json"))["target_checkpoint"] or "")')"
+          snapshot_role="$(python -c 'import json; print(json.load(open("'"$RUNNER_TEMP"'/checkpoint.json"))["snapshot_role"])')"
+          should_run_core=true
+          precompute_reused=false
+
+          if [ "${SCHEDULE_EXPR:-}" = "30 * * * *" ] && [ -n "$target_checkpoint" ]; then
+            git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}" || true
+            if git cat-file -e "origin/${RUNTIME_BRANCH}:data/runtime_provenance_v4.json" 2>/dev/null; then
+              git show "origin/${RUNTIME_BRANCH}:data/runtime_provenance_v4.json" > "$RUNNER_TEMP/runtime_provenance_v4.json"
+              export TARGET_CHECKPOINT="$target_checkpoint"
+              if python - <<'PY'
+          import json, os
+          from datetime import datetime
+          from pathlib import Path
+
+          p=Path(os.environ['RUNNER_TEMP'])/'runtime_provenance_v4.json'
+          obj=json.loads(p.read_text())
+          cp=obj.get('checkpoint') or {}
+          target=os.environ['TARGET_CHECKPOINT']
+          source=os.environ['CANONICAL_SHA']
+          publish=obj.get('runtime_publish_at')
+          valid=(
+              obj.get('canonical_source_sha') == source
+              and cp.get('snapshot_role') == 'PRECOMPUTE_NEXT_CHECKPOINT'
+              and cp.get('target_checkpoint') == target
+              and cp.get('precomputed') is True
+              and cp.get('generated_before_or_at_target') is True
+              and cp.get('materialization_complete') is True
+              and cp.get('publication_proof') == 'PRESENCE_ON_RUNTIME_BRANCH'
+              and bool(publish)
+              and datetime.fromisoformat(publish.replace('Z','+00:00')) <= datetime.fromisoformat(target.replace('Z','+00:00'))
+          )
+          raise SystemExit(0 if valid else 1)
+          PY
+              then
+                should_run_core=false
+                precompute_reused=true
+              fi
+            fi
+          fi
+
           echo "canonical_sha=$canonical_sha" >> "$GITHUB_OUTPUT"
           echo "execution_observed=$observed" >> "$GITHUB_OUTPUT"
+          echo "should_run_core=$should_run_core" >> "$GITHUB_OUTPUT"
+          echo "target_checkpoint=$target_checkpoint" >> "$GITHUB_OUTPUT"
+          echo "snapshot_role=$snapshot_role" >> "$GITHUB_OUTPUT"
+          echo "precompute_reused=$precompute_reused" >> "$GITHUB_OUTPUT"
           {
-            echo "### V4 master scheduler dispatch"
+            echo "### V4 checkpoint scheduler"
             echo "- SCHEDULE_TARGET=:30 WIB"
+            echo "- SCHEDULE=${SCHEDULE_EXPR:-manual}"
+            echo "- LOGICAL_TARGET=${target_checkpoint:-unscoped}"
+            echo "- REQUESTED_ROLE=$snapshot_role"
+            echo "- PRECOMPUTE_REUSED=$precompute_reused"
+            echo "- CORE_REQUIRED=$should_run_core"
             echo "- EXECUTION_OBSERVED=$observed"
-            echo "- RECOVERY_REQUIRED=false"
             echo "- CANONICAL_V4_SHA=$canonical_sha"
           } >> "$GITHUB_STEP_SUMMARY"
 
   core:
     needs: resolve-canonical
+    if: needs.resolve-canonical.outputs.should_run_core == 'true'
     uses: iphoenk/FPL-iphoenk-engine/.github/workflows/fpl-engine-core.yml@v4-prediction-engine
     permissions:
       contents: write
@@ -60,13 +147,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Record target versus observed execution
+      - name: Record precompute versus fallback outcome
         run: |
           {
             echo "### V4 scheduler outcome"
             echo "- SCHEDULE_TARGET=:30 WIB"
+            echo "- LOGICAL_TARGET=${{ needs.resolve-canonical.outputs.target_checkpoint }}"
+            echo "- REQUESTED_ROLE=${{ needs.resolve-canonical.outputs.snapshot_role }}"
+            echo "- PRECOMPUTE_REUSED=${{ needs.resolve-canonical.outputs.precompute_reused }}"
             echo "- EXECUTION_OBSERVED=${{ needs.resolve-canonical.outputs.execution_observed }}"
-            echo "- RECOVERY_REQUIRED=false"
             echo "- CANONICAL_V4_SHA=${{ needs.resolve-canonical.outputs.canonical_sha }}"
-            echo "- PRODUCTION_RESULT=${{ needs.core.result }}"
+            echo "- CORE_RESULT=${{ needs.core.result }}"
+            if [ "${{ needs.resolve-canonical.outputs.precompute_reused }}" = "true" ]; then
+              echo "- RECOVERY_REQUIRED=false"
+              echo "- CHECKPOINT_SOURCE=TARGETED_PRECOMPUTE"
+            else
+              echo "- RECOVERY_REQUIRED=${{ github.event.schedule == '30 * * * *' && 'true' || 'false' }}"
+              echo "- CHECKPOINT_SOURCE=FRESH_CORE_OR_PRECOMPUTE_BUILD"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"

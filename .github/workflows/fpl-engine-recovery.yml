@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: fpl-iphoenk-v4-gate
@@ -18,7 +18,7 @@ jobs:
   core:
     uses: ./.github/workflows/fpl-engine-core.yml
     permissions:
-      contents: write
+      contents: read
     with:
       ref: ${{ github.sha }}
       publish: true

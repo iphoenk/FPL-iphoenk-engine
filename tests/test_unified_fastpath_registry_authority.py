@@ -43,3 +43,12 @@ def test_unified_fastpath_source_has_no_secondary_runtime_artifact_tuple():
     text = open(source, encoding="utf-8").read()
     assert 'names = ("latest.json"' not in text
     assert 'CONFIG / "locked_squad.json"' not in text
+
+
+def test_unified_fastpath_reuses_resolved_team_authority_and_canonical_tactical_overlay():
+    text = open(unified_fastpath.__file__, encoding="utf-8").read()
+    assert "build_lineup_decision(projections, lock, chips, team=team)" in text
+    assert "apply_lineup_overlay(lineup, projections, persist=False)" in text
+    assert 'lineup_governance.get("team_state_authority_consumed") is not True' in text
+    assert 'lineup_governance.get("tactical_consumption_contract") != "TACTICAL_DECISION_CONSUMPTION_V1"' in text
+    assert 'package_governance.get("team_state_authority_consumed") is not True' in text

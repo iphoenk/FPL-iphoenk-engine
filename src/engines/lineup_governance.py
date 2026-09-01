@@ -40,6 +40,67 @@ def load_policy() -> dict[str, Any]:
     return json.loads(POLICY_PATH.read_text(encoding="utf-8"))
 
 
+def _authoritative_squad_rows(
+    team: dict[str, Any] | None,
+    lock: dict[str, Any],
+) -> tuple[list[dict[str, Any]], str | None, bool]:
+    """Resolve decision squad from the team-state owner, never from raw capture after resolution.
+
+    The lock fallback exists only for legacy unit fixtures that do not provide a
+    team-state artifact. Any payload that claims team-state authority but lacks a
+    complete squad fails closed instead of silently falling back to raw config.
+    """
+    expected = int(SQUAD_RULES.get("squad_size") or 15)
+    team = team if isinstance(team, dict) else {}
+    squad = [row for row in team.get("squad") or [] if isinstance(row, dict)]
+    if squad:
+        ids = [int(row.get("element") or -1) for row in squad]
+        if len(ids) != expected or len(set(ids)) != expected or any(element <= 0 for element in ids):
+            raise RuntimeError(f"canonical team squad invalid: count={len(ids)} unique={len(set(ids))}")
+        ledger_ids = {
+            int(row.get("element") or -1)
+            for row in team.get("team_value_ledger") or []
+            if isinstance(row, dict) and row.get("element") is not None
+        }
+        if ledger_ids and ledger_ids != set(ids):
+            raise RuntimeError(
+                "canonical team squad and value ledger diverged: "
+                f"squad_only={sorted(set(ids) - ledger_ids)} ledger_only={sorted(ledger_ids - set(ids))}"
+            )
+        authority = str(
+            team.get("squad_authority")
+            or (team.get("projection_baseline") or {}).get("effective_authority")
+            or ""
+        ) or None
+        return squad, authority, False
+
+    if team.get("squad_authority") or team.get("projection_baseline"):
+        raise RuntimeError("canonical team authority present without a complete resolved squad")
+
+    # Compatibility for isolated legacy unit fixtures only. Production callers
+    # must pass team.json and are fail-closed by the validation chain below.
+    fallback = [row for row in lock.get("players") or [] if isinstance(row, dict)]
+    ids = [int(row.get("element") or -1) for row in fallback]
+    if len(ids) != expected or len(set(ids)) != expected or any(element <= 0 for element in ids):
+        raise RuntimeError(f"legacy lock fixture invalid: count={len(ids)} unique={len(set(ids))}")
+    return fallback, str(lock.get("authoritative_phase") or "") or None, True
+
+
+def _effective_lock_context(
+    team: dict[str, Any] | None,
+    lock: dict[str, Any],
+    legacy_fixture_fallback: bool,
+) -> dict[str, Any]:
+    """Expose raw user-lock context only when team-state actually accepted it."""
+    if legacy_fixture_fallback:
+        return lock
+    team = team if isinstance(team, dict) else {}
+    baseline = team.get("projection_baseline") if isinstance(team.get("projection_baseline"), dict) else {}
+    if baseline.get("override_applied") is True:
+        return lock
+    return {}
+
+
 def _gw_projection(proj: dict[str, Any], gw: int) -> dict[str, Any]:
     for row in proj.get("xpts_by_gw") or []:
         if int(row.get("gw") or -1) == int(gw):
@@ -174,16 +235,23 @@ def _chip_context(lock: dict[str, Any], chips: dict[str, Any], planning_gw: int,
     return context
 
 
-def build_lineup_decision(projections: dict[str, Any], lock: dict[str, Any], chips: dict[str, Any]) -> dict[str, Any]:
+def build_lineup_decision(
+    projections: dict[str, Any],
+    lock: dict[str, Any],
+    chips: dict[str, Any],
+    *,
+    team: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     policy = load_policy()
     planning_gw = int(projections.get("planning_gw") or 1)
     proj_map = {int(p["element"]): p for p in projections.get("players") or []}
-    locked_ids = [int(p.get("element") or -1) for p in lock.get("players") or []]
-    missing = [e for e in locked_ids if e not in proj_map]
-    if len(locked_ids) != int(SQUAD_RULES.get("squad_size") or 15) or missing:
-        raise RuntimeError(f"cannot govern lineup: locked={len(locked_ids)} missing_projection_ids={missing}")
+    squad_rows, squad_authority, legacy_fixture_fallback = _authoritative_squad_rows(team, lock)
+    authoritative_ids = [int(row.get("element") or -1) for row in squad_rows]
+    missing = [element for element in authoritative_ids if element not in proj_map]
+    if len(authoritative_ids) != int(SQUAD_RULES.get("squad_size") or 15) or missing:
+        raise RuntimeError(f"cannot govern lineup: authoritative={len(authoritative_ids)} missing_projection_ids={missing}")
 
-    players = [_player_row(proj_map[e], planning_gw, policy) for e in locked_ids]
+    players = [_player_row(proj_map[element], planning_gw, policy) for element in authoritative_ids]
     pmap = {int(p["element"]): p for p in players}
     candidates = _lineup_candidates(players, policy)
     if not candidates:
@@ -223,12 +291,13 @@ def build_lineup_decision(projections: dict[str, Any], lock: dict[str, Any], chi
         for index, row in enumerate(alternatives)
     ]
     bench_close = bench_battles(outfield_bench, policy)
+    effective_lock = _effective_lock_context(team, lock, legacy_fixture_fallback)
     decision = {
         "generated_at": _now(),
         "model": policy.get("model_id"),
         "ruleset_id": RULESET_ID,
         "planning_gw": planning_gw,
-        "squad_authority": lock.get("authoritative_phase"),
+        "squad_authority": squad_authority,
         "formation": best["formation"],
         "squad_rows": sorted(players, key=lambda p: ({"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}.get(str(p.get("position")), 9), -_f(p.get("selection_score")))),
         "starting_xi": starters,
@@ -265,10 +334,14 @@ def build_lineup_decision(projections: dict[str, Any], lock: dict[str, Any], chi
         "main_starting_xi_battle": battle,
         "formation_comparison": formation_comparison,
         "alternatives": alternatives,
-        "chip_context": _chip_context(lock, chips, planning_gw, policy),
+        "chip_context": _chip_context(effective_lock, chips, planning_gw, policy),
         "governance": {
             "all_legal_xi_enumerated": True,
             "manual_squad_authority_preserved": True,
+            "team_state_authority_consumed": not legacy_fixture_fallback,
+            "legacy_lock_fixture_fallback": legacy_fixture_fallback,
+            "raw_user_lock_context_consumed": bool(effective_lock),
+            "rejected_user_lock_context_suppressed": not legacy_fixture_fallback and bool(lock) and not bool(effective_lock),
             "optimizer_does_not_mutate_locked_composition": True,
             "captain_dnp_guard_applied": True,
             "bench_order_is_model_output_not_manual_lock": True,
@@ -285,21 +358,36 @@ def build_lineup_decision(projections: dict[str, Any], lock: dict[str, Any], chi
     return decision
 
 
-def build_package_decision(package_optimizer: dict[str, Any], projections: dict[str, Any], lock: dict[str, Any], team: dict[str, Any]) -> dict[str, Any]:
+def build_package_decision(
+    package_optimizer: dict[str, Any],
+    projections: dict[str, Any],
+    lock: dict[str, Any],
+    team: dict[str, Any],
+) -> dict[str, Any]:
     policy = load_policy()
     package_cfg = policy.get("package_governance") or {}
     pmap = {int(p["element"]): p for p in projections.get("players") or []}
     ledger_by_id = {int(p.get("element") or -1): p for p in team.get("team_value_ledger") or []}
+    squad_rows, _, legacy_fixture_fallback = _authoritative_squad_rows(team, lock)
     current = []
-    for locked in lock.get("players") or []:
-        element = int(locked.get("element") or -1)
+    for owned in squad_rows:
+        element = int(owned.get("element") or -1)
         proj = pmap.get(element)
         if not proj:
             continue
         ledger = ledger_by_id.get(element) or {}
-        current.append({"element": element, "name": proj.get("name"), "position": proj.get("position"), "team_id": int(proj.get("team_id") or -1), "now_cost": int(proj.get("now_cost") or 0), "sell_cost": int(ledger.get("sell_cost") or proj.get("now_cost") or 0)})
+        current.append({
+            "element": element,
+            "name": proj.get("name"),
+            "position": proj.get("position"),
+            "team_id": int(proj.get("team_id") or -1),
+            "now_cost": int(proj.get("now_cost") or 0),
+            "sell_cost": int(ledger.get("sell_cost") or proj.get("now_cost") or 0),
+        })
     current_legal = legal_squad(current)
-    authoritative = lock.get("authoritative_phase") in set(package_cfg.get("authoritative_phases") or [])
+    baseline = team.get("projection_baseline") if isinstance(team.get("projection_baseline"), dict) else {}
+    phase_authoritative = lock.get("authoritative_phase") in set(package_cfg.get("authoritative_phases") or [])
+    authoritative = phase_authoritative and (baseline.get("override_applied") is True if baseline else True)
     freeze = bool(package_cfg.get("freeze_locked_composition_when_authoritative")) and authoritative
     optimizer_packages = list(package_optimizer.get("packages") or [])
     optimizer_best = optimizer_packages[0] if optimizer_packages else package_optimizer.get("hold")
@@ -314,7 +402,33 @@ def build_package_decision(package_optimizer: dict[str, Any], projections: dict[
         "planning_gw": int(projections.get("planning_gw") or 1), "selected_package": selected,
         "selected_package_id": selected.get("id"), "optimizer_best_candidate_id": (optimizer_best or {}).get("id"),
         "manual_authority_override": freeze, "current_squad_legal": current_legal, "gate0_revalidated": gate0_revalidated,
-        "governance": {"optimizer_is_candidate_generator_only": bool(package_cfg.get("optimizer_is_candidate_generator_only", True)), "locked_composition_preserved": freeze, "manual_authority_wins": True},
+        "governance": {
+            "optimizer_is_candidate_generator_only": bool(package_cfg.get("optimizer_is_candidate_generator_only", True)),
+            "locked_composition_preserved": freeze,
+            "manual_authority_wins": True,
+            "team_state_authority_consumed": not legacy_fixture_fallback,
+            "legacy_lock_fixture_fallback": legacy_fixture_fallback,
+            "rejected_user_lock_cannot_freeze_package": bool(baseline) and baseline.get("override_applied") is not True,
+        },
+    }
+
+
+def lineup_summary(lineup: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "formation": lineup.get("formation"),
+        "captain": (lineup.get("captain") or {}).get("name"),
+        "vice_captain": (lineup.get("vice_captain") or {}).get("name"),
+        "battle": (lineup.get("main_starting_xi_battle") or {}).get("status"),
+        "risk_adjustment": (lineup.get("lineup_score") or {}).get("risk_adjustment"),
+        "bench_close_battles": len(((lineup.get("bench") or {}).get("close_battles") or [])),
+    }
+
+
+def package_summary(package: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "selected_package_id": package.get("selected_package_id"),
+        "manual_authority_override": package.get("manual_authority_override"),
+        "gate0_revalidated": package.get("gate0_revalidated"),
     }
 
 
@@ -324,7 +438,7 @@ def run() -> dict[str, Any]:
     lock = json.loads((CONFIG / "locked_squad.json").read_text(encoding="utf-8"))
     chips = read_json(DATA / "chips.json", {})
     team = read_json(DATA / "team.json", {})
-    lineup = build_lineup_decision(projections, lock, chips)
+    lineup = build_lineup_decision(projections, lock, chips, team=team)
     package = build_package_decision(package_optimizer, projections, lock, team)
     if not lineup.get("formation") or len(lineup.get("starting_xi") or []) != int(LINEUP_RULES.get("starting_xi_size") or 11):
         raise RuntimeError("lineup governance failed legal XI contract")
@@ -334,15 +448,8 @@ def run() -> dict[str, Any]:
     atomic_json(PACKAGE_DECISION_OUT, package)
     latest = read_json(DATA / "latest.json", {})
     latest.setdefault("files", {}).update({"lineup_decision": "data/lineup_decision.json", "package_decision": "data/package_decision.json"})
-    latest["lineup_decision_summary"] = {
-        "formation": lineup.get("formation"),
-        "captain": (lineup.get("captain") or {}).get("name"),
-        "vice_captain": (lineup.get("vice_captain") or {}).get("name"),
-        "battle": (lineup.get("main_starting_xi_battle") or {}).get("status"),
-        "risk_adjustment": (lineup.get("lineup_score") or {}).get("risk_adjustment"),
-        "bench_close_battles": len(((lineup.get("bench") or {}).get("close_battles") or [])),
-    }
-    latest["package_decision_summary"] = {"selected_package_id": package.get("selected_package_id"), "manual_authority_override": package.get("manual_authority_override"), "gate0_revalidated": package.get("gate0_revalidated")}
+    latest["lineup_decision_summary"] = lineup_summary(lineup)
+    latest["package_decision_summary"] = package_summary(package)
     atomic_json(DATA / "latest.json", latest)
     print(json.dumps({"formation": lineup.get("formation"), "captain": lineup.get("captain"), "vice": lineup.get("vice_captain"), "package": package.get("selected_package_id"), "manual_override": package.get("manual_authority_override")}, ensure_ascii=False))
     return {"lineup": lineup, "package": package}

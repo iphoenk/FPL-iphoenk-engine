@@ -2,13 +2,11 @@ from __future__ import annotations
 import json
 from collections import Counter
 from itertools import combinations
-from src.utils import DATA, CONFIG, atomic_json, read_json
+from src.utils import DATA, CONFIG, read_json
 from src.engines.v4_wc_optimizer import (
     BUDGET_TENTHS, MAX_PER_CLUB, POSITION_COUNTS, build_candidates, best_xi,
     validate_squad, reconcile_owned_costs, _group_by_position, _best_xi_score_grouped,
 )
-
-OUTFILE = DATA / "wc_package_audit_v4.json"
 
 
 def payload(p):
@@ -280,7 +278,8 @@ def run():
         read_json(DATA / "universe.json", {}),
         read_json(CONFIG / "locked_squad.json", {}),
     )
-    atomic_json(OUTFILE, out)
+    # Reference/debug entrypoint is intentionally read-only. Canonical artifact
+    # publication is owned by v4_decision_pipeline.
     print(json.dumps({"engine": out["engine"], "overall_verdict": out["overall_verdict"], "cache_entries": out["performance"]["metrics_cache_entries"]}, ensure_ascii=False))
     return out
 

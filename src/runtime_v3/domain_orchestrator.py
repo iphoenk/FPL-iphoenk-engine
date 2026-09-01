@@ -20,109 +20,10 @@ from src.runtime_v3 import registry_compiler
 from src.utils import DATA, ROOT, atomic_json, read_json
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
-DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
 PERFORMANCE_PATH = DATA / "runtime_performance.json"
 FAST_LANE_POLICY_PATH = ROOT / "config" / "runtime" / "fast_lane_policy.json"
 DOMAIN_RUNTIME_ID = "v3-domain-pipeline-v2"
 _DOMAIN_RESULT_PREFIX = "V3_DOMAIN_RESULT="
-_CANONICAL_PHASES = ("ACQUIRE", "ENRICH", "MODEL", "DECISION", "GOVERNANCE", "PUBLISH")
-_CANONICAL_DOMAINS = (
-    "official_state",
-    "personal_team_state",
-    "football_context",
-    "weather_context",
-    "market_context",
-    "prediction",
-    "squad_decision",
-    "challenger_analysis",
-    "framework_governance",
-    "prediction_validation",
-    "reporting",
-    "serving",
-)
-
-
-def _load_domains() -> dict[str, Any]:
-    payload = json.loads(DOMAIN_PATH.read_text(encoding="utf-8"))
-    if payload.get("registry") != "V3_EXECUTION_DOMAINS_V2":
-        raise RuntimeError("unexpected execution domain registry")
-    domains = payload.get("domains")
-    if not isinstance(domains, dict) or len(domains) != int(payload.get("domain_count") or 0):
-        raise RuntimeError("execution domain count does not match its registry contract")
-    if tuple(domains) != _CANONICAL_DOMAINS:
-        raise RuntimeError(f"canonical execution domain order drifted: {tuple(domains)}")
-    phases = payload.get("canonical_phases")
-    if not isinstance(phases, dict) or tuple(phases) != _CANONICAL_PHASES:
-        raise RuntimeError("canonical execution phase contract drifted")
-    if int(payload.get("phase_count") or 0) != len(_CANONICAL_PHASES):
-        raise RuntimeError("execution phase count does not match its registry contract")
-    phase_domains = [str(name) for phase in _CANONICAL_PHASES for name in phases.get(phase) or []]
-    if len(phase_domains) != len(set(phase_domains)) or set(phase_domains) != set(domains):
-        raise RuntimeError("canonical phases must cover every execution domain exactly once")
-    for phase, names in phases.items():
-        for name in names:
-            if (domains.get(str(name)) or {}).get("phase") != phase:
-                raise RuntimeError(f"execution domain phase drift: {name} is not owned by {phase}")
-    return payload
-
-
-def _validate_domain_coverage(domain_registry: dict[str, Any], service_registry: dict[str, Any]) -> None:
-    services = set((service_registry.get("services") or {}).keys())
-    seen: list[str] = []
-    domains = domain_registry["domains"]
-    for name, spec in domains.items():
-        for dep in spec.get("depends_on") or []:
-            if dep not in domains:
-                raise RuntimeError(f"execution domain {name} depends on unknown domain {dep}")
-        seen.extend(str(value) for value in spec.get("capabilities") or [])
-    if len(seen) != len(set(seen)):
-        duplicates = sorted({name for name in seen if seen.count(name) > 1})
-        raise RuntimeError(f"capability assigned to multiple execution domains: {duplicates}")
-    missing = sorted(services - set(seen))
-    extra = sorted(set(seen) - services)
-    if missing or extra:
-        raise RuntimeError(f"execution domain coverage drift: missing={missing} extra={extra}")
-
-    owner = {
-        capability: domain_name
-        for domain_name, spec in domains.items()
-        for capability in spec.get("capabilities") or []
-    }
-    remaining = set(domains)
-    completed: set[str] = set()
-    while remaining:
-        ready = {
-            name
-            for name in remaining
-            if set(domains[name].get("depends_on") or []).issubset(completed)
-        }
-        if not ready:
-            raise RuntimeError(f"execution domain dependency cycle: {sorted(remaining)}")
-        completed.update(ready)
-        remaining.difference_update(ready)
-
-    def ancestors(domain_name: str) -> set[str]:
-        found: set[str] = set()
-        pending = list(domains[domain_name].get("depends_on") or [])
-        while pending:
-            dependency = str(pending.pop())
-            if dependency in found:
-                continue
-            found.add(dependency)
-            pending.extend(domains[dependency].get("depends_on") or [])
-        return found
-
-    for domain_name, spec in domains.items():
-        upstream = ancestors(domain_name)
-        domain_capabilities = set(spec.get("capabilities") or [])
-        for capability in domain_capabilities:
-            for dependency in (service_registry["services"][capability].get("depends_on") or []):
-                dependency_owner = owner[str(dependency)]
-                if dependency_owner != domain_name and dependency_owner not in upstream:
-                    raise RuntimeError(
-                        "execution domain dependency does not cover capability dependency: "
-                        f"{domain_name}:{capability} requires {dependency_owner}:{dependency}"
-                    )
 
 
 def _profile(mode: str, deep_stats: bool, explicit: str | None) -> tuple[str, dict[str, Any]]:
@@ -404,7 +305,6 @@ def _promote_isolated_domain(
     }
 
 
-
 def _parallel_wave_isolation_safe(
     wave: tuple[str, ...],
     domain_registry: dict[str, Any],
@@ -444,6 +344,7 @@ def _parallel_wave_isolation_safe(
         latest_keys_seen.update(latest_keys)
         latest_file_keys_seen.update(latest_file_keys)
     return True
+
 
 def _reuse_diagnostic_summary(name: str, capability_results: dict[str, dict[str, Any]], profile_name: str) -> dict[str, Any]:
     row = capability_results.get(name) or {}
@@ -497,14 +398,12 @@ def _accept_domain_result(
 
 
 def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profile: str | None = None) -> dict[str, Any]:
-    service_registry = legacy._load_registry()
-    legacy._validate_dag(service_registry)
-    domain_registry = _load_domains()
+    service_registry = registry_compiler.load_capability_registry()
+    domain_registry = registry_compiler.load_domain_registry()
     compiled_plan = registry_compiler.compile_runtime_plan(
         domain_registry=domain_registry,
         service_registry=service_registry,
     )
-    _validate_domain_coverage(domain_registry, service_registry)
     profile_name, profile_cfg = _profile(mode, deep_stats, profile)
 
     services = service_registry["services"]
@@ -627,7 +526,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                 domain_set = set(capabilities)
                 for capability in capabilities:
                     spec = services[capability]
-                    external_deps = {str(dep) for dep in spec.get("depends_on") or []} - domain_set
+                    external_deps = {str(dep) for dep in spec.get("depends_on") or [])} - domain_set
                     missing = sorted(external_deps - completed_capabilities)
                     if missing:
                         raise RuntimeError(

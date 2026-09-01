@@ -2,111 +2,87 @@
 
 Production-oriented personal FPL decision engine and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
-## Current release state
-- Current accepted production release: `3.39.0` / schema `49`.
-- V3.39 stabilization, REC-04 freeze-recovery correction and behavior-neutral housekeeping are merged to `main`; main CI is GREEN and the matching code-bearing `runtime-data` snapshot is published.
-- Latest production-proven code-bearing merge: `83873ea33ca631344212a792a57911fad7e1575b`. Later metadata-only closeout commits do not redefine behavioral acceptance.
-- The canonical V3 production topology maps 21 artifact-owned capabilities exactly once into 11 execution domains across 6 phases: ACQUIRE (`official_state`, `personal_team_state`), ENRICH (`football_context`, `market_context`), MODEL (`prediction`), DECISION (`squad_decision`, `challenger_analysis`), GOVERNANCE (`framework_governance`, `prediction_validation`) and PUBLISH (`reporting`, `serving`).
-- PR #161, merged-main CI run `33259791237` and runtime run `33259791179` proved the topology in production. The published FAST runtime was **6.256s**, within the 10s SLO.
-- Interactive serving is owned by the single `unified_fastpath` lane; execution domains are orchestration boundaries, not alternate business owners.
-- `config/rec_registry.json` is the canonical REC set. `IMPLEMENTATION_STATUS.json`, Official-first coverage and this documentation are projections/consumers, not competing REC authorities.
-- Runtime state publishes only to the rolling parentless `runtime-data` snapshot; mutable runtime output is not stored on protected `main`.
-- Runtime Artifact Contract Registry: `RUNTIME_ARTIFACT_CONTRACTS_V2`.
-- Machine Source Registry: `SOURCE_REGISTRY_V4`.
-- Report Artifact Registry remains backward-compatible `REPORT_ARTIFACT_REGISTRY_V3`.
-- Release metadata source of truth: `src/version.py`.
-- Canonical roadmap and Definition of Done: `MASTER_TASK_LIST_V3.md`.
+## Current-state authority
 
-## V3.39 Stabilization + Housekeeping Closeout
-This release preserves the existing football formulas while tightening runtime, release, prediction-settlement and repository hygiene.
+This README is a human-readable projection, not a second source of truth. Current mutable facts must be read from their machine owners:
 
-- Competitive-load runtime and report-time governance use one canonical policy file: `config/intelligence/competitive_load.json`.
-- The legacy duplicate `recent_competitive_load.json` policy was removed only after its report-time rules were migrated into the canonical policy and all DSS dependencies were repointed.
-- CI blocks accidental placeholder/probe files such as `x`, `noop` and `probe` from being committed again.
-- Release metadata is aligned with the V3.39 code lineage without claiming predictive validation that has not yet been earned from settled Gameweeks.
-- PR #148 closed the prediction-ledger planning-GW rollover gap: an overdue record may promote only its genuine pre-deadline forecast into frozen settlement state; post-deadline information may not be retrofitted as forecast truth.
-- PR #149 physically consolidated 14 legacy version-stamped test modules into four stable domain suites. The legacy allowlist is removed and the naming guard now requires zero `test_v<digit>*` release-test modules.
-- The 21-capability / 11-domain equivalence guard remains mandatory and prevents execution-domain drift from business capability ownership; execution domains remain orchestration boundaries, not alternate business owners.
-- PR #149 candidate CI run `33241937450` passed **307 tests in 1.29s**, FULL **17.283s**, FAST **4.683s**, material-decision equivalence, and interactive serving **7.595ms median / 157.275ms max**.
-- Merged-main CI run `33241992910` passed and production runtime run `33241992902` published the code-bearing `runtime-data` snapshot from `f0293334…`.
-- The published runtime manifest records engine **3.39.0**, schema **49**, FAST **4.834s**, within the 10s SLO, with 55 published runtime files.
-- Data-dependent monitors remain explicitly yellow: settled predictive validation, confidence calibration, price timing calibration, private authenticated precision, model actionability and tactical-evidence maturity are not promoted by housekeeping.
+- release/version: `src/version.py`
+- execution phases/domains: `config/runtime/execution_domains.json`
+- background capability contracts: `config/v3_service_registry.json`
+- runtime SLOs: `config/runtime/performance_slo.json`
+- canonical REC status: `config/rec_registry.json`
+- current production runtime/provenance: `runtime-data/data/runtime_manifest.json`
+- historical release/projection metadata: `IMPLEMENTATION_STATUS.json`
+- operational roadmap and monitor explanations: `MASTER_TASK_LIST_V3.md`
 
-## V3.25 Architecture Consolidation + Interactive Decision Lane
-REC-42 applies the V4 one-owner/no-duplicate concept and V5 bounded-context/performance principles without changing FPL scoring or prediction formulas.
+Do not copy a current commit SHA, topology count, or mutable SLO into this document as an independent authority. Historical values may remain only when explicitly labelled as historical evidence.
 
-- One authoritative owner per responsibility and one final owner per artifact.
-- Shared evidence is a declared primitive and is reused rather than recomputed in multiple DSS/REC paths.
-- DSS Core, Extensions, Enhancements, Gate0 and REC IDs are cross-registry checked for duplicate/drift.
-- Legacy `src.models.projection`, `src.models.fixture` and `src.models.optimizer` may not become active runtime owners again.
-- Official-FPL network access is restricted to declared owners/exceptions.
-- REC is governance/change history, not a second business-capability layer.
-- Background refresh and interactive decision serving are separate bounded lanes. This avoids turning the engine into a monolith while keeping user-facing recomputation fast.
-- Interactive services may consume canonical projection, legality and governance primitives but may not reimplement them.
-- Hard interactive end-to-end SLO is `<1000 ms`; cold source/model refresh remains measured separately and may not fake freshness to satisfy that SLO.
+## Production architecture
 
-## V3.24 Tactical Role & System Evidence
-REC-41 is production accepted and remains advisory-only. It does not directly change xMins or xPts.
+V3 uses the canonical domain pipeline:
 
-- Current advanced player-match evidence is converted into observed attacking-role profiles such as attacking defender, creator, advanced runner/shooter, hybrid attacking midfielder and focal shooter.
-- Team starter structure is reconstructed from Official player identity/FPL position plus observed starter rows and is explicitly labelled `FPL_POSITION_SHAPE`.
-- `FPL_POSITION_SHAPE` is not presented as the club's true tactical formation. It only describes the FPL-position composition of the observed starting XI.
-- Role evidence carries sample quality, confidence, evidence minutes, metrics, reason and provenance.
-- Missing evidence is explicit (`UNASSESSED` / `NONE`), never guessed.
-- Official FPL identity, team and position remain authoritative. Advanced role/system evidence is enrichment only.
-- REC-41 remains `ADVISORY_ONLY`: `xmins_adjustment_enabled=false`, `xpts_rate_adjustment_enabled=false`, and projections explicitly report `rec41_tactical_adjustment_applied=false`.
-- Evidence is published through the existing `PLAYER_FEATURE_CONTRACT_V1` and projection artifact, avoiding a parallel feature bus.
+`ACQUIRE → ENRICH → MODEL → DECISION → GOVERNANCE → PUBLISH`
 
-## V3.23.1 Report Completeness + Natural Presentation
-REC-40 is production accepted. Natural Bahasa Indonesia is the primary human-facing presentation, while raw states such as `HOLD`, `LOCK`, `LEAN`, `OPEN` and `REVIEW` remain audit/API state. Required checkpoints are explicit at 04:30, 12:30 and 21:30 WIB, checkpoint completion is persisted, and missed due checkpoints are surfaced explicitly.
+Execution domains are orchestration boundaries, not alternate business owners. Capability ownership remains registry-defined and every active capability must map exactly once through the compiled runtime plan. `src.runtime_v3.registry_compiler` is the control-plane compiler authority.
 
-## V3.23 Personal Gameweek Context + Decision Authority
-- Finished GWs use public Official FPL submitted picks/history as immutable actual truth, including actual GW points, chip, bench points, captain/vice and submitted squad.
-- Historical actuals are never reconstructed or relabelled as old forecasts when no genuine pre-deadline forecast was frozen.
-- Planning-GW points are labelled estimated xPts, never actual score.
-- Normal planning baseline is the previous Official submitted squad.
-- WC/FH/user-locked composition may replace the planning baseline only for the exact target GW; stale overrides are rejected and post-deadline Official picks reclaim authority.
-- Explicit user XI/C/VC/chip overrides may become effective while preserving the engine recommendation for comparison; the engine may warn but may not silently overwrite the user decision.
+The former executable service-level scheduler in `src.runtime_v3.orchestrator` is retired and fails closed. That module retains shared execution primitives only; production execution is owned by `src.runtime_v3.domain_orchestrator`.
 
-## Official FPL authority and Official-first contract
-Official FPL is the only native authority for Official fields and scoring. External sources remain enrichment/challenger evidence and may never overwrite Official-native truth.
+## Runtime and publication
 
-`config/rec_registry.json` owns the canonical REC set. `config/sources/official_first_coverage.json` must contain exactly the same REC IDs and an explicit Official disposition for every REC. REC-42 is `NOT_APPLICABLE` because it is architecture/runtime governance rather than an FPL data capability.
+- FAST, LIVE, FULL and DEEP profiles are registry-owned.
+- FAST and validated warm-serving SLO values are owned only by `config/runtime/performance_slo.json`.
+- Correctness may not be traded for latency and stale artifacts may not be presented as fresh to satisfy an SLO.
+- Mutable runtime state publishes only to the rolling parentless `runtime-data` snapshot, not to `main`.
+- Publication is whitelist-based, materialized before publish, atomic, source-SHA checked, and post-publish provenance verified.
+- Private authenticated state is optional enrichment and must not leak into public runtime artifacts; only governed public health/projection fields may be published.
+- Current runtime performance and exact source commit are authoritative only from `runtime-data/data/runtime_manifest.json`.
 
-Fallback/proxy evidence is allowed only after an explicit disposition:
-- `OFFICIAL_UNAVAILABLE`
-- `FIELD_NOT_EXPOSED`
-- `PRIVATE_AUTH_REQUIRED`
-- `OFFICIAL_NOT_APPLICABLE`, only when the REC genuinely does not depend on Official data
+## Artifact integrity
 
-Broad/expensive Official expansion belongs to FULL refresh; FAST may reuse only fresh, complete and contract-valid Official artifacts.
+`RUNTIME_ARTIFACT_CONTRACTS_V2` owns runtime JSON integrity. Malformed JSON is an integrity failure. Production-critical decision and serving artifacts have explicit structural contracts; non-critical unknown JSON may remain `PARSE_ONLY` where flexibility is intentional.
+
+Critical package publication requires the existing governed Gate0 invariant to be revalidated. A syntactically valid artifact is not sufficient if its decision contract is invalid.
+
+## Official FPL authority
+
+Official FPL is the only native authority for Official fields and scoring. External/community/challenger/weather/tactical evidence is enrichment and may never overwrite Official-native truth.
+
+Applicable REC work attempts public Official evidence first. Fallback requires an explicit allowed disposition such as `OFFICIAL_UNAVAILABLE`, `FIELD_NOT_EXPOSED`, `PRIVATE_AUTH_REQUIRED`, or genuinely not-applicable governance scope.
+
+Finished personal Gameweeks use Official submitted picks/history as actual truth. Planning-GW points are projections. User WC/FH/LOCK overrides must target the exact planning GW, and explicit XI/C/VC/chip overrides preserve the engine recommendation for audit comparison.
 
 ## Prediction and decision governance
-- REC-01 player-specific Defensive Contribution and REC-02 robust early-season attacking rates are production active.
-- `player_features.json` is the normalized feature/provenance bus; Official-native fields remain authoritative.
-- REC-41 tactical/system evidence is visible in that feature bus but intentionally has no direct decision adjustment yet.
-- All 15 OWNED expose current-GW xPts, uncertainty, xMins/start probability, selection score and lineup/choice state.
-- Prediction formula correctness and predictive accuracy are separate claims. Accuracy requires genuinely frozen pre-deadline forecasts settled against Official realized outcomes.
-- REC-04 freeze/settlement state-machine correctness is production-proven; predictive accuracy itself remains MONITOR until finished Gameweeks provide realized samples.
-- Early-season confidence and model-derived actionability remain calibration-gated.
-- Price prediction remains calibration-gated; Official realized price/ownership/transfer movement is settlement authority.
-- `ENGINE_READY` does not imply final report-time web evidence is already refreshed.
 
-## Runtime and source invariants
-- Gate0 must remain 16/16 PASS for unqualified GO.
-- DSS Core 50/50, Extensions 16/16 and Enhancements 8/8 must remain ACTIVE.
+- Gate0 remains the legality/governance validator, not a second optimizer or rules engine.
+- DSS Core, Extensions and Enhancements must satisfy their registry-owned activation requirements before unqualified GO.
 - OWNED is exactly 15 authoritative players.
-- WATCHLIST is exactly 20 external players, exactly 5 per position and excludes OWNED.
-- Critical internal artifact failure is fail-closed; optional external-source unavailability is fail-soft.
-- Missing evidence is explicit and is never fabricated to keep health GREEN.
-- Numerical formulas affecting decisions require deterministic regression tests.
-- Release test ownership is version-neutral; version-stamped release-test modules are forbidden.
-- Background FAST refresh and interactive decision latency are separate SLOs.
-- Interactive governed decision regeneration and validated gateway each have a hard `<1s` ceiling.
-- Service boundaries follow bounded-context ownership/failure semantics, not a target service count.
-- Runtime/report readiness and model evidence readiness are separate states.
-- Weather remains advisory and may not directly mutate xPts/XI/C/VC/transfers/watchlist/packages without calibrated governance.
-- Human-facing report language must not make raw machine state the primary narrative.
-- Required scheduled report checkpoints must be auditable and missed checkpoints explicit.
+- The external watchlist is produced by full DSS screening and must remain position-balanced according to the report contract.
+- Numerical decision formulas require deterministic regression coverage.
+- Formula correctness and predictive accuracy are separate claims. Predictive accuracy requires genuinely frozen pre-deadline forecasts settled against Official realized outcomes.
+- Price timing/direction, confidence calibration, private authenticated precision, model actionability and other evidence-dependent claims remain MONITOR until genuine evidence supports promotion.
 
-See `MASTER_TASK_LIST_V3.md` for authoritative production state, calibration monitors, deferred work and release checklist.
+## Tactical and weather evidence
+
+REC-41 tactical role/system evidence is production-published but evidence-driven. `FPL_POSITION_SHAPE` is not a claim of the club's true tactical formation, and missing tactical evidence is never invented.
+
+Weather is a governed enrichment capability. Probability and intensity are distinct fields. Weather remains observational/advisory and may not directly mutate xPts, xMins, XI, captaincy, transfers, watchlist or packages without calibrated governance.
+
+## Reporting and serving
+
+Human-facing reports use natural Bahasa Indonesia while raw enums remain machine/audit state. Required report checkpoints are tracked and missed due checkpoints must be explicit.
+
+Background refresh and validated warm serving are separate bounded lanes. Interactive serving consumes canonical decision artifacts; it may not reimplement projection, legality or decision formulas.
+
+## REC governance
+
+`config/rec_registry.json` is the canonical REC authority. REC records are change/remediation records, not business capabilities. `IMPLEMENTATION_STATUS.json`, Official-first coverage, this README and `MASTER_TASK_LIST_V3.md` are projections/consumers and may not create competing REC truth.
+
+REC-42, Architecture Consolidation / No-Duplicate Guard / Sub-Second Decision Serving, is production accepted. Its early PR #106 measurements remain historical candidate evidence only and do not define current topology or SLO values.
+
+## Historical release evidence
+
+Historical PR, CI, runtime and performance values are retained in Git history and `IMPLEMENTATION_STATUS.json` for provenance. They must remain explicitly historical and must not be interpreted as current topology, current runtime performance, current SLO, or current production source commit.
+
+V3.39 preserves the established football decision semantics while hardening source authority, prediction settlement, architecture ownership, runtime performance, artifact integrity, publication provenance and repository hygiene.
+
+See `MASTER_TASK_LIST_V3.md` for the human-readable operational projection, monitors and deferred work.

@@ -46,7 +46,7 @@ def test_canonical_domains_cover_every_background_capability_exactly_once():
     assert len(assigned) == 22
     assert len(set(assigned)) == 22
     assert set(assigned) == set(services["services"])
-    assert plan["registry"] == registry_compiler.COMPILED_PLAN_ID
+    assert plan["registry"] == registry_compiler.COMPILED_REGISTRY_ID
     assert plan["domain_count"] == len(domains["domains"])
     assert plan["capability_count"] == len(services["services"])
     assert plan["plan_sha256"]

@@ -152,7 +152,7 @@ def test_service_registry_preserves_eight_boundaries_and_uses_live_overlays() ->
     services = registry["services"]
     assert len(services) == 8
     by_id = {row["id"]: row for row in services}
-    assert by_id["personal_gw_scorecard"]["module"] == "src.services.gw_scorecard_service"
-    assert by_id["personal_gw_scorecard"]["command"][-1] == "src.services.gw_scorecard_live_overlay"
-    assert by_id["governance"]["module"] == "src.services.governance_service"
-    assert by_id["governance"]["command"][-1] == "src.services.governance_live_overlay"
+    assert by_id["personal_gw_scorecard"]["module"] == "src.services.gw_scorecard_live_overlay"
+    assert by_id["personal_gw_scorecard"]["command"][2] == by_id["personal_gw_scorecard"]["module"]
+    assert by_id["governance"]["module"] == "src.services.governance_live_overlay"
+    assert by_id["governance"]["command"][2] == by_id["governance"]["module"]

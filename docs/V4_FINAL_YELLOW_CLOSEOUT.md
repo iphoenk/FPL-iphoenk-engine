@@ -14,6 +14,7 @@ This closeout removes structural and operational hardening debt without changing
 - Report runtime commit metadata truthfully without treating spoofable commit metadata as proof of publisher identity. Platform ruleset enforcement remains the separate identity authority.
 - Remove repeated Python interpreter/bootstrap overhead from the non-publishing validation hot lane by running the exact registry-owned validation service in a forked child.
 - Make FAST performance evidence explicit: retain the cold/cache-establishment run separately, then measure fresh-Official exact-semantic-cache-hit runs against the unchanged 3.0s p95 target.
+- Deduplicate legacy reconciliation source-integrity verification inside one validation cycle: an existing reconciliation may defer the expensive source check only to the same cycle's eligibility rebuild, and the cycle fails closed unless that rebuild records the GW as integrity-verified.
 
 ## Explicit non-changes
 

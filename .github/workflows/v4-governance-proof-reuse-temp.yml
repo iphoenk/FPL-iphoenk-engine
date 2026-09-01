@@ -110,6 +110,10 @@ jobs:
             config/architecture_guard_attestation.json
           git diff --cached --exit-code && exit 0 || true
           git commit -m 'perf(v4): reuse validated prediction and integrity evidence'
+          # Benchmarks intentionally mutate runtime data. The source/test patch is now
+          # safely committed, so discard only ephemeral workspace changes before rebase.
+          git reset --hard HEAD
+          git clean -fd
           git fetch origin codex/v4-final-yellow-closeout-20260901
           git rebase origin/codex/v4-final-yellow-closeout-20260901
           python tools/v4_architecture_guard_attest.py

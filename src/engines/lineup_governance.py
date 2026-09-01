@@ -67,7 +67,11 @@ def _authoritative_squad_rows(
                 "canonical team squad and value ledger diverged: "
                 f"squad_only={sorted(set(ids) - ledger_ids)} ledger_only={sorted(ledger_ids - set(ids))}"
             )
-        authority = str(team.get("squad_authority") or (team.get("projection_baseline") or {}).get("effective_authority") or "") or None
+        authority = str(
+            team.get("squad_authority")
+            or (team.get("projection_baseline") or {}).get("effective_authority")
+            or ""
+        ) or None
         return squad, authority, False
 
     if team.get("squad_authority") or team.get("projection_baseline"):
@@ -80,6 +84,21 @@ def _authoritative_squad_rows(
     if len(ids) != expected or len(set(ids)) != expected or any(element <= 0 for element in ids):
         raise RuntimeError(f"legacy lock fixture invalid: count={len(ids)} unique={len(set(ids))}")
     return fallback, str(lock.get("authoritative_phase") or "") or None, True
+
+
+def _effective_lock_context(
+    team: dict[str, Any] | None,
+    lock: dict[str, Any],
+    legacy_fixture_fallback: bool,
+) -> dict[str, Any]:
+    """Expose raw user-lock context only when team-state actually accepted it."""
+    if legacy_fixture_fallback:
+        return lock
+    team = team if isinstance(team, dict) else {}
+    baseline = team.get("projection_baseline") if isinstance(team.get("projection_baseline"), dict) else {}
+    if baseline.get("override_applied") is True:
+        return lock
+    return {}
 
 
 def _gw_projection(proj: dict[str, Any], gw: int) -> dict[str, Any]:
@@ -272,6 +291,7 @@ def build_lineup_decision(
         for index, row in enumerate(alternatives)
     ]
     bench_close = bench_battles(outfield_bench, policy)
+    effective_lock = _effective_lock_context(team, lock, legacy_fixture_fallback)
     decision = {
         "generated_at": _now(),
         "model": policy.get("model_id"),
@@ -314,12 +334,14 @@ def build_lineup_decision(
         "main_starting_xi_battle": battle,
         "formation_comparison": formation_comparison,
         "alternatives": alternatives,
-        "chip_context": _chip_context(lock, chips, planning_gw, policy),
+        "chip_context": _chip_context(effective_lock, chips, planning_gw, policy),
         "governance": {
             "all_legal_xi_enumerated": True,
             "manual_squad_authority_preserved": True,
             "team_state_authority_consumed": not legacy_fixture_fallback,
             "legacy_lock_fixture_fallback": legacy_fixture_fallback,
+            "raw_user_lock_context_consumed": bool(effective_lock),
+            "rejected_user_lock_context_suppressed": not legacy_fixture_fallback and bool(lock) and not bool(effective_lock),
             "optimizer_does_not_mutate_locked_composition": True,
             "captain_dnp_guard_applied": True,
             "bench_order_is_model_output_not_manual_lock": True,
@@ -364,10 +386,8 @@ def build_package_decision(
         })
     current_legal = legal_squad(current)
     baseline = team.get("projection_baseline") if isinstance(team.get("projection_baseline"), dict) else {}
-    if baseline:
-        authoritative = baseline.get("override_applied") is True
-    else:
-        authoritative = lock.get("authoritative_phase") in set(package_cfg.get("authoritative_phases") or [])
+    phase_authoritative = lock.get("authoritative_phase") in set(package_cfg.get("authoritative_phases") or [])
+    authoritative = phase_authoritative and (baseline.get("override_applied") is True if baseline else True)
     freeze = bool(package_cfg.get("freeze_locked_composition_when_authoritative")) and authoritative
     optimizer_packages = list(package_optimizer.get("packages") or [])
     optimizer_best = optimizer_packages[0] if optimizer_packages else package_optimizer.get("hold")
@@ -388,6 +408,7 @@ def build_package_decision(
             "manual_authority_wins": True,
             "team_state_authority_consumed": not legacy_fixture_fallback,
             "legacy_lock_fixture_fallback": legacy_fixture_fallback,
+            "rejected_user_lock_cannot_freeze_package": bool(baseline) and baseline.get("override_applied") is not True,
         },
     }
 

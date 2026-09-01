@@ -39,4 +39,4 @@ jobs:
           git diff --cached --exit-code && exit 0 || true
           git commit -m 'chore(v4): refresh architecture guard attestation'
           git push origin HEAD:codex/v4-runtime-secret-inheritance
-# refresh-token: governance-contract-preserved
+# refresh-token: compact-runtime-contracts

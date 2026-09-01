@@ -79,9 +79,16 @@ def test_runtime_artifact_authority_is_separate_from_source_seed():
     assert 'RUNTIME_BRANCH: runtime-data-v4' in workflow
     assert 'git checkout --orphan runtime-snapshot' in workflow
     assert 'git rm -rf . >/dev/null 2>&1 || true' in workflow
-    assert 'cp -a "$GITHUB_WORKSPACE/data" ./data' in workflow
+    assert 'tar -C "$GITHUB_WORKSPACE" -cf "$RUNNER_TEMP/v4-runtime-data.tar" data' in workflow
+    assert 'tar -xf "$RUNNER_TEMP/v4-runtime-publication/v4-runtime-data.tar"' in workflow
     assert 'git add -f data/' in workflow
     assert 'git push --force origin HEAD:"$RUNTIME_BRANCH"' in workflow
+    assert 'environment: v4-runtime-publisher' in workflow
+    assert 'actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349' in workflow
+    assert 'app-id: ${{ vars.V4_RUNTIME_APP_ID }}' in workflow
+    assert 'private-key: ${{ secrets.V4_RUNTIME_APP_PRIVATE_KEY }}' in workflow
+    assert 'permission-contents: write' in workflow
+    assert 'token: ${{ steps.runtime_app_token.outputs.token }}' in workflow
     assert "data/runtime/" in gitignore
 
 

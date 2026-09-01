@@ -27,6 +27,7 @@ jobs:
     uses: ./.github/workflows/fpl-engine-core.yml
     permissions:
       contents: write
+    secrets: inherit
     with:
       ref: ${{ github.sha }}
       publish: ${{ github.event_name != 'pull_request' }}

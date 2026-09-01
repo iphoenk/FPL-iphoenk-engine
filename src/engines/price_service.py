@@ -15,7 +15,9 @@ def run(data_dir: str | Path | None = None) -> None:
     patch_official_price_radar(root)
     patch_price_calibration(root, previous_price_state)
     patch_challenger_context(root)
-    patch_price_artifacts(root)
+    contract = patch_price_artifacts(root)
+    if contract.get("status") != "PASS":
+        raise RuntimeError(f"price mover serving incomplete: {contract.get('reason')}")
 
 
 if __name__ == "__main__":

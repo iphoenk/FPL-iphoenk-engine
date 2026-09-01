@@ -1,12 +1,23 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "contract": "FPL_MASTER_MONITOR_TIME_SCHEDULE_GOVERNANCE_V1",
   "timezone": "Asia/Jakarta",
   "visible_checkpoint_minute": 30,
   "schedules": {
     "primary": "30 * * * *",
-    "adaptive": "0,15,45 * * * *",
-    "deep_stats": "30 21 * * *"
+    "precompute": "15 * * * *",
+    "adaptive": "0,45 * * * *"
+  },
+  "precompute": {
+    "enabled": true,
+    "lead_minutes": 15,
+    "target_minute": 30,
+    "internal_only_silent": true,
+    "full_governed_snapshot": true,
+    "primary_checkpoint_is_fallback_only_when_targeted_precompute_missing": true,
+    "generated_after_target_is_not_valid_precompute": true,
+    "source_commit_must_match_canonical_runtime_source": true,
+    "report_time_direct_official_refresh_required": true
   },
   "normal_reports": {
     "deep_review": "04:30",
@@ -151,6 +162,9 @@
     "never_skip_deadline_day_hourly_visible_report": true,
     "never_emit_match_mode_without_live_current_gw_match": true,
     "never_duplicate_visible_reports_on_collision": true,
-    "lower_priority_material_is_folded_into_higher_priority_report": true
+    "lower_priority_material_is_folded_into_higher_priority_report": true,
+    "precompute_target_must_be_explicit_in_runtime_manifest": true,
+    "primary_full_compute_is_recovery_when_precompute_missing": true,
+    "deep_review_profile_is_resolved_from_logical_target_not_duplicate_cron": true
   }
 }

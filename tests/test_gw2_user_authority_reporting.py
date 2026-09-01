@@ -46,13 +46,7 @@ def _planning():
 def test_compact_serving_uses_current_user_authority_and_keeps_engine_as_challenger():
     payload = {
         "gameweek_context": {"planning": _planning()},
-        "captaincy": {
-            "decision": "LEAN",
-            "confidence": "MEDIUM",
-            "captain": "Haaland",
-            "vice": "De Cuyper",
-            "reason": "engine captain reason",
-        },
+        "captaincy": {"decision": "LEAN", "confidence": "MEDIUM", "captain": "Haaland", "vice": "De Cuyper", "reason": "engine captain reason"},
         "action_board": [
             {"action": "LEAN", "subject": "Captain: Haaland", "trigger": "engine captain reason"},
             {"action": "HOLD", "subject": "Squad", "trigger": "no material change"},
@@ -95,10 +89,12 @@ def test_reporting_governance_blocks_internal_terms_from_human_surface():
         assert token in forbidden
 
 
-def test_adaptive_schedule_covers_quarter_hour_support_without_colliding_with_master_30():
+def test_scheduler_separates_precompute_from_adaptive_without_colliding_with_master_30():
     workflow = Path(".github/workflows/v3-runtime.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/runtime/collector_policy.json").read_text(encoding="utf-8"))
     assert 'cron: "30 * * * *"' in workflow
-    assert 'cron: "0,15,45 * * * *"' in workflow
+    assert 'cron: "15 * * * *"' in workflow
+    assert 'cron: "0,45 * * * *"' in workflow
     assert policy["schedules"]["primary"] == "30 * * * *"
-    assert policy["schedules"]["adaptive"] == "0,15,45 * * * *"
+    assert policy["schedules"]["precompute"] == "15 * * * *"
+    assert policy["schedules"]["adaptive"] == "0,45 * * * *"

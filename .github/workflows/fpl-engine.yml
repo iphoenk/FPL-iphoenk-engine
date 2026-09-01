@@ -3,12 +3,12 @@ name: FPL iphoenk V3 compatibility marker
 on:
   workflow_dispatch:
 
-# Inert compatibility marker for architecture tooling during V3.26 migration.
+# Inert compatibility marker for architecture tooling during V3 migration.
 # Active runtime scheduling is owned exclusively by v3-runtime.yml.
 # Collector policy expressions retained here as documentation only:
 # cron: "30 * * * *"
-# cron: "0,15,45 * * * *"
-# cron: "30 21 * * *"
+# cron: "15 * * * *"
+# cron: "0,45 * * * *"
 
 permissions:
   contents: read

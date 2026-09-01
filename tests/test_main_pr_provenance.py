@@ -151,7 +151,7 @@ def test_history_verifier_rejects_invalid_commit_response(monkeypatch):
         )
 
 
-def test_policy_is_registry_owned_and_points_to_current_proven_green_anchor():
+def test_policy_is_registry_owned_and_points_to_current_reconciled_anchor():
     policy = provenance._load_policy()
     assert policy["registry"] == "V3_MAIN_PROVENANCE_POLICY_V1"
     assert policy["branch"] == "main"

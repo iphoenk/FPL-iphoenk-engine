@@ -1,6 +1,6 @@
 {
   "framework_schema": 9,
-  "generated_at": "2026-08-31T00:57:21.670553+00:00",
+  "generated_at": "2026-09-01T07:56:20.675422+00:00",
   "auditor": "v5-microservice-governance-v5",
   "overall": "GREEN",
   "decision_engine": "HEALTHY",
@@ -73,7 +73,7 @@
         "critical": true,
         "phase": "postflight",
         "status": "PASS",
-        "detail": "minimum_itb=0,packages=[('2:8,557->388,94', True, 5), ('2:8,15->388,94', True, 5), ('2:557,15->94,398', True, 5), ('2:557,40->94,399', True, 9), ('2:8,254->388,113', True, 1), ('2:8,473->388,113', True, 1), ('2:557,254->94,113', True, 11), ('2:557,8->94,229', True, 5), ('2:557,473->94,113', True, 11), ('2:8,40->388,94', True, 15), ('2:565,254->94,113', True, 1), ('2:565,473->94,113', True, 1), ('2:15,40->94,399', True, 9), ('2:15,254->94,113', True, 11), ('2:15,473->94,113', True, 11), ('2:8,346->388,249', True, 5), ('2:15,8->94,229', True, 5), ('2:557,8->94,113', True, 21), ('2:557,254->398,113', True, 1), ('2:557,346->94,249', True, 15)]"
+        "detail": "minimum_itb=0,packages=[('2:557,8->94,388', True, 10), ('2:565,8->94,388', True, 0), ('2:15,8->94,388', True, 10), ('2:8,557->388,398', True, 0), ('2:565,557->94,398', True, 0), ('2:557,15->94,398', True, 10), ('2:557,40->94,399', True, 13), ('2:565,15->94,398', True, 0), ('2:8,15->388,398', True, 0), ('2:565,40->94,399', True, 3), ('2:15,40->94,399', True, 13), ('2:557,254->94,113', True, 16), ('2:8,40->388,399', True, 3), ('2:565,254->94,113', True, 6), ('2:15,254->94,113', True, 16), ('2:8,254->388,113', True, 6), ('2:557,40->398,399', True, 3), ('2:557,8->94,387', True, 5), ('2:557,279->94,113', True, 11), ('2:557,8->94,229', True, 10)]"
       },
       {
         "id": "G0-07",
@@ -105,7 +105,7 @@
         "critical": true,
         "phase": "postflight",
         "status": "PASS",
-        "detail": "status=READY,formation=4-3-3"
+        "detail": "status=READY,formation=5-2-3"
       },
       {
         "id": "G0-11",
@@ -145,7 +145,7 @@
         "critical": true,
         "phase": "preflight",
         "status": "PASS",
-        "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=995,calculated_sell=995"
+        "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=991,calculated_sell=991"
       },
       {
         "id": "G0-16",
@@ -153,7 +153,7 @@
         "critical": true,
         "phase": "postflight",
         "status": "PASS",
-        "detail": "packages=[('2:8,557->388,94', True, True), ('2:8,15->388,94', True, True), ('2:557,15->94,398', True, True), ('2:557,40->94,399', True, True), ('2:8,254->388,113', True, True), ('2:8,473->388,113', True, True), ('2:557,254->94,113', True, True), ('2:557,8->94,229', True, True), ('2:557,473->94,113', True, True), ('2:8,40->388,94', True, True), ('2:565,254->94,113', True, True), ('2:565,473->94,113', True, True), ('2:15,40->94,399', True, True), ('2:15,254->94,113', True, True), ('2:15,473->94,113', True, True), ('2:8,346->388,249', True, True), ('2:15,8->94,229', True, True), ('2:557,8->94,113', True, True), ('2:557,254->398,113', True, True), ('2:557,346->94,249', True, True)]"
+        "detail": "packages=[('2:557,8->94,388', True, True), ('2:565,8->94,388', True, True), ('2:15,8->94,388', True, True), ('2:8,557->388,398', True, True), ('2:565,557->94,398', True, True), ('2:557,15->94,398', True, True), ('2:557,40->94,399', True, True), ('2:565,15->94,398', True, True), ('2:8,15->388,398', True, True), ('2:565,40->94,399', True, True), ('2:15,40->94,399', True, True), ('2:557,254->94,113', True, True), ('2:8,40->388,399', True, True), ('2:565,254->94,113', True, True), ('2:15,254->94,113', True, True), ('2:8,254->388,113', True, True), ('2:557,40->398,399', True, True), ('2:557,8->94,387', True, True), ('2:557,279->94,113', True, True), ('2:557,8->94,229', True, True)]"
       }
     ],
     "preflight": {
@@ -235,7 +235,7 @@
           "critical": true,
           "phase": "preflight",
           "status": "PASS",
-          "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=995,calculated_sell=995"
+          "detail": "complete=True,squad_rows=15,ledger_rows=15,id_match=True,declared_sell=991,calculated_sell=991"
         }
       ],
       "registry_integrity": {
@@ -268,7 +268,7 @@
           "critical": true,
           "phase": "postflight",
           "status": "PASS",
-          "detail": "minimum_itb=0,packages=[('2:8,557->388,94', True, 5), ('2:8,15->388,94', True, 5), ('2:557,15->94,398', True, 5), ('2:557,40->94,399', True, 9), ('2:8,254->388,113', True, 1), ('2:8,473->388,113', True, 1), ('2:557,254->94,113', True, 11), ('2:557,8->94,229', True, 5), ('2:557,473->94,113', True, 11), ('2:8,40->388,94', True, 15), ('2:565,254->94,113', True, 1), ('2:565,473->94,113', True, 1), ('2:15,40->94,399', True, 9), ('2:15,254->94,113', True, 11), ('2:15,473->94,113', True, 11), ('2:8,346->388,249', True, 5), ('2:15,8->94,229', True, 5), ('2:557,8->94,113', True, 21), ('2:557,254->398,113', True, 1), ('2:557,346->94,249', True, 15)]"
+          "detail": "minimum_itb=0,packages=[('2:557,8->94,388', True, 10), ('2:565,8->94,388', True, 0), ('2:15,8->94,388', True, 10), ('2:8,557->388,398', True, 0), ('2:565,557->94,398', True, 0), ('2:557,15->94,398', True, 10), ('2:557,40->94,399', True, 13), ('2:565,15->94,398', True, 0), ('2:8,15->388,398', True, 0), ('2:565,40->94,399', True, 3), ('2:15,40->94,399', True, 13), ('2:557,254->94,113', True, 16), ('2:8,40->388,399', True, 3), ('2:565,254->94,113', True, 6), ('2:15,254->94,113', True, 16), ('2:8,254->388,113', True, 6), ('2:557,40->398,399', True, 3), ('2:557,8->94,387', True, 5), ('2:557,279->94,113', True, 11), ('2:557,8->94,229', True, 10)]"
         },
         {
           "id": "G0-10",
@@ -276,7 +276,7 @@
           "critical": true,
           "phase": "postflight",
           "status": "PASS",
-          "detail": "status=READY,formation=4-3-3"
+          "detail": "status=READY,formation=5-2-3"
         },
         {
           "id": "G0-11",
@@ -316,7 +316,7 @@
           "critical": true,
           "phase": "postflight",
           "status": "PASS",
-          "detail": "packages=[('2:8,557->388,94', True, True), ('2:8,15->388,94', True, True), ('2:557,15->94,398', True, True), ('2:557,40->94,399', True, True), ('2:8,254->388,113', True, True), ('2:8,473->388,113', True, True), ('2:557,254->94,113', True, True), ('2:557,8->94,229', True, True), ('2:557,473->94,113', True, True), ('2:8,40->388,94', True, True), ('2:565,254->94,113', True, True), ('2:565,473->94,113', True, True), ('2:15,40->94,399', True, True), ('2:15,254->94,113', True, True), ('2:15,473->94,113', True, True), ('2:8,346->388,249', True, True), ('2:15,8->94,229', True, True), ('2:557,8->94,113', True, True), ('2:557,254->398,113', True, True), ('2:557,346->94,249', True, True)]"
+          "detail": "packages=[('2:557,8->94,388', True, True), ('2:565,8->94,388', True, True), ('2:15,8->94,388', True, True), ('2:8,557->388,398', True, True), ('2:565,557->94,398', True, True), ('2:557,15->94,398', True, True), ('2:557,40->94,399', True, True), ('2:565,15->94,398', True, True), ('2:8,15->388,398', True, True), ('2:565,40->94,399', True, True), ('2:15,40->94,399', True, True), ('2:557,254->94,113', True, True), ('2:8,40->388,399', True, True), ('2:565,254->94,113', True, True), ('2:15,254->94,113', True, True), ('2:8,254->388,113', True, True), ('2:557,40->398,399', True, True), ('2:557,8->94,387', True, True), ('2:557,279->94,113', True, True), ('2:557,8->94,229', True, True)]"
         }
       ],
       "registry_integrity": {
@@ -1439,6 +1439,9 @@
       "prediction"
     ],
     "price_intelligence": [
+      "price"
+    ],
+    "price_squeeze": [
       "price"
     ],
     "transfer_momentum": [

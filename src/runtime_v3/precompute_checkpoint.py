@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from src.engines import collector_gate
+from src.runtime_v3.runtime_hydration_guard import verify_runtime_snapshot
 from src.utils import DATA, read_json
 
 MANIFEST_PATH = DATA / "runtime_manifest.json"
@@ -156,6 +157,9 @@ def _precompute_decision(now_utc: datetime) -> dict[str, Any]:
 
 
 def main() -> int:
+    hydration_assurance = verify_runtime_snapshot()
+    print(json.dumps({"runtime_hydration_assurance": hydration_assurance}, ensure_ascii=False))
+
     event = os.getenv("GITHUB_EVENT_NAME", "workflow_dispatch")
     schedule_expr = os.getenv("FPL_SCHEDULE_EXPR", "")
     source_commit = os.getenv("SOURCE_COMMIT", os.getenv("GITHUB_SHA", ""))

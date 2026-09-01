@@ -526,7 +526,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
                 domain_set = set(capabilities)
                 for capability in capabilities:
                     spec = services[capability]
-                    external_deps = {str(dep) for dep in spec.get("depends_on") or [])} - domain_set
+                    external_deps = {str(dep) for dep in spec.get("depends_on") or []} - domain_set
                     missing = sorted(external_deps - completed_capabilities)
                     if missing:
                         raise RuntimeError(

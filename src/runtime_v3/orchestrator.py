@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +23,10 @@ REGISTRY_PATH = ROOT / "config" / "v3_service_registry.json"
 PROFILE_PATH = ROOT / "config" / "runtime" / "execution_profiles.json"
 SLO_PATH = ROOT / "config" / "runtime" / "performance_slo.json"
 PERFORMANCE_PATH = DATA / "runtime_performance.json"
+RETIRED_SCHEDULER_ERROR = (
+    "RETIRED_V3_SERVICE_SCHEDULER: use src.runtime_v3.domain_orchestrator; "
+    "this module retains shared execution primitives only"
+)
 
 
 def _load_registry() -> dict[str, Any]:
@@ -68,6 +69,10 @@ def _load_slo() -> dict[str, Any]:
 
 
 def _validate_dag(registry: dict[str, Any]) -> None:
+    """Compatibility validator retained for non-production callers/tests.
+
+    Canonical production topology validation is owned by registry_compiler.
+    """
     services = registry["services"]
     for name, spec in services.items():
         for dep in spec.get("depends_on") or []:
@@ -496,148 +501,17 @@ def _default_profile(mode: str, deep_stats: bool) -> str:
 
 
 def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profile: str | None = None) -> dict[str, Any]:
-    registry = _load_registry()
-    _validate_dag(registry)
-    profiles = _load_profiles().get("profiles") or {}
-    profile_name = str(profile or _default_profile(mode, deep_stats))
-    profile_cfg = profiles.get(profile_name)
-    if not isinstance(profile_cfg, dict):
-        raise RuntimeError(f"unknown execution profile: {profile_name}")
+    """Retired service-level scheduler entry.
 
-    services = registry["services"]
-    runtime = registry.get("runtime") or {}
-    max_workers = max(1, int(profile_cfg.get("max_parallel_services") or runtime.get("max_parallel_services") or 1))
-    timeout = max(1, int(runtime.get("service_timeout_seconds") or 1))
-    cache_ttl = max(1, int(runtime.get("http_cache_ttl_seconds") or 1))
-    context = {
-        "mode": mode,
-        "stats": "--stats" if stats else "--no-stats",
-        "deep_stats": "--deep-stats" if deep_stats else "",
-        "http_cache_ttl": str(cache_ttl),
-        "profile": profile_name,
-    }
-    wall_started = time.perf_counter()
-    service_results: dict[str, dict[str, Any]] = {}
-    completed: set[str] = set()
-
-    with tempfile.TemporaryDirectory(prefix="fpl-v3-services-") as tmp:
-        temp_root = Path(tmp)
-        services_root = temp_root / "services"
-        configured_cache = os.getenv("FPL_RUNTIME_CACHE_DIR", "").strip()
-        cache_dir = Path(configured_cache).expanduser().resolve() / "official" if configured_cache else temp_root / "official-cache"
-        services_root.mkdir(parents=True, exist_ok=True)
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        pending = set(services)
-        running: dict[Any, str] = {}
-        with ThreadPoolExecutor(max_workers=max_workers) as pool:
-            while pending or running:
-                ready = [
-                    name for name in sorted(pending)
-                    if set(str(dep) for dep in services[name].get("depends_on") or []).issubset(completed)
-                ]
-
-                reused_any = False
-                for name in list(ready):
-                    reused = _reuse_service(name, services[name], DATA, profile_cfg)
-                    if reused is not None:
-                        pending.remove(name)
-                        service_results[name] = reused
-                        completed.add(name)
-                        reused_any = True
-                if reused_any:
-                    continue
-
-                for name in ready:
-                    if name not in pending:
-                        continue
-                    if len(running) >= max_workers:
-                        break
-                    pending.remove(name)
-                    submitted_at = time.perf_counter()
-                    running[
-                        pool.submit(
-                            _run_service,
-                            name,
-                            services[name],
-                            canonical=DATA,
-                            services_root=services_root,
-                            cache_dir=cache_dir,
-                            context=context,
-                            timeout=timeout,
-                            submitted_at=submitted_at,
-                        )
-                    ] = name
-                if not running:
-                    if pending:
-                        blocked = {name: services[name].get("depends_on") for name in pending}
-                        raise RuntimeError(f"service DAG stalled: {blocked}")
-                    break
-                done, _ = wait(tuple(running), return_when=FIRST_COMPLETED)
-                for future in done:
-                    name = running.pop(future)
-                    result = future.result()
-                    spec = services[name]
-                    if result["status"] == "SUCCESS":
-                        result = _attempt_promotion(name, result, spec, DATA)
-                    service_results[name] = result
-                    if result["status"] == "SUCCESS":
-                        completed.add(name)
-                    elif bool(spec.get("critical", True)):
-                        for pending_future in running:
-                            pending_future.cancel()
-                        raise RuntimeError(f"critical service {name} failed: {result.get('error')}")
-                    else:
-                        result["discarded_stale_outputs"] = _clear_failed_service_outputs(DATA, spec)
-                        service_results[name] = result
-                        completed.add(name)
-
-        total_ms = (time.perf_counter() - wall_started) * 1000.0
-        performance = _write_runtime_metadata(
-            registry,
-            service_results,
-            total_ms,
-            cache_dir,
-            profile_name,
-            profile_cfg,
-            temp_root,
-        )
-        performance["ephemeral_artifacts_removed"] = _cleanup_ephemeral(registry, DATA)
-        atomic_json(PERFORMANCE_PATH, performance)
-
-    print(json.dumps({
-        "runtime": RUNTIME_ID,
-        "architecture": registry.get("architecture"),
-        "engine_version": ENGINE_VERSION,
-        "schema_version": SCHEMA_VERSION,
-        "execution_profile": profile_name,
-        "total_wall_ms": performance["total_wall_ms"],
-        "target_wall_ms": performance.get("target_wall_ms"),
-        "within_target_slo": performance.get("within_target_slo"),
-        "within_target_budget": performance["within_target_budget"],
-        "services": {
-            name: {
-                "status": row.get("status"),
-                "elapsed_ms": row.get("elapsed_ms"),
-                "reuse_age_seconds": row.get("reuse_age_seconds"),
-            }
-            for name, row in service_results.items()
-        },
-        "resources": performance.get("resources"),
-        "shared_official_cache_entries": performance["shared_official_cache_entries"],
-        "ephemeral_artifacts_removed": performance.get("ephemeral_artifacts_removed"),
-    }, ensure_ascii=False))
-    return performance
+    Shared primitives in this module remain compatibility utilities for the
+    canonical domain runtime. Running the old service-level scheduler would
+    create a second production architecture, so direct execution fails closed.
+    """
+    raise RuntimeError(RETIRED_SCHEDULER_ERROR)
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["daily", "deadline", "live"], default="daily")
-    parser.add_argument("--stats", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--deep-stats", action="store_true")
-    parser.add_argument("--profile", choices=["fast_decision", "live", "full_refresh", "deep_stats"])
-    args = parser.parse_args()
-    run(mode=args.mode, stats=args.stats, deep_stats=args.deep_stats, profile=args.profile)
-    return 0
+    raise RuntimeError(RETIRED_SCHEDULER_ERROR)
 
 
 if __name__ == "__main__":

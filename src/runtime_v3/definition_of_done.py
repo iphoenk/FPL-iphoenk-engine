@@ -350,8 +350,14 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
     _check(rows, "OFFICIAL_HISTORY_IMMUTABLE_AUTHORITY", (latest.get("official_historical_authority") or {}).get("historical_submitted_team") == "GREEN_PUBLIC_OFFICIAL", latest.get("official_historical_authority"))
 
     workflow_text = (ROOT / ".github" / "workflows" / "v3-runtime.yml").read_text(encoding="utf-8")
-    schedule_ok = 'cron: "30 * * * *"' in workflow_text and 'cron: "0,15,45 * * * *"' in workflow_text and "collector_gate" in workflow_text
-    _check(rows, "SCHEDULE_GOVERNANCE_PROVEN", schedule_ok, {"master_hourly_30": 'cron: "30 * * * *"' in workflow_text, "adaptive_support": 'cron: "0,15,45 * * * *"' in workflow_text})
+    schedule_state = {
+        "master_hourly_30": 'cron: "30 * * * *"' in workflow_text,
+        "precompute_15": 'cron: "15 * * * *"' in workflow_text,
+        "adaptive_00_45": 'cron: "0,45 * * * *"' in workflow_text,
+        "precompute_resolver": "precompute_checkpoint" in workflow_text,
+    }
+    schedule_ok = all(schedule_state.values())
+    _check(rows, "SCHEDULE_GOVERNANCE_PROVEN", schedule_ok, schedule_state)
 
     comparator = technical.get("owned_challenger_comparator") or {}
     _check(rows, "COMPARATOR_CANONICAL", comparator.get("contract") in {"OWNED_CHALLENGER_COMPARATOR_V1", "OWNED_CHALLENGER_COMPARATOR_V2", "OWNED_CHALLENGER_COMPARATOR_V3"} and comparator.get("advisory_only") is True, {"contract": comparator.get("contract"), "advisory_only": comparator.get("advisory_only")})

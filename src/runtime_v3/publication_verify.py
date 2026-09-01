@@ -5,7 +5,36 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.runtime_v3.publish_snapshot import REGISTRY_PATH
+from src.runtime_v3.publish_snapshot import PUBLIC_AUTH_PROJECTION, REGISTRY_PATH
+
+PUBLIC_AUTH_ALLOWED_KEYS = {
+    "public_projection",
+    "checked_at",
+    "expected_entry",
+    "state",
+    "mode",
+    "verified_entry",
+    "raw_authenticated_payload_persisted",
+    "production_readiness",
+    "enhancement_health",
+    "policy",
+    "failure_reason",
+}
+PRIVATE_AUTH_FORBIDDEN_KEYS = {
+    "safe_finance",
+    "draft_integrity",
+    "chip_state",
+    "transfers_latest",
+    "endpoint_health",
+    "prices_for_private_squad",
+    "prices_for_authoritative_squad",
+    "private_exact_sell_total",
+    "private_exact_purchase_total",
+    "exact_sell_total",
+    "exact_purchase_total",
+    "bank",
+    "value",
+}
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -13,6 +42,21 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise RuntimeError(f"expected JSON object: {path}")
     return payload
+
+
+def _verify_public_auth_projection(payload: Any, *, location: str) -> None:
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"{location} authenticated state must be an object")
+    if payload.get("raw_authenticated_payload_persisted") is not False:
+        raise RuntimeError(f"{location} does not prove raw authenticated payloads are excluded")
+    if payload.get("public_projection") != PUBLIC_AUTH_PROJECTION:
+        raise RuntimeError(f"{location} is not the governed public auth projection")
+    extras = sorted(set(payload) - PUBLIC_AUTH_ALLOWED_KEYS)
+    if extras:
+        raise RuntimeError(f"{location} contains non-public authenticated fields: {extras}")
+    forbidden = sorted(set(payload) & PRIVATE_AUTH_FORBIDDEN_KEYS)
+    if forbidden:
+        raise RuntimeError(f"{location} contains private authenticated fields: {forbidden}")
 
 
 def verify_publication(
@@ -76,9 +120,16 @@ def verify_publication(
 
     auth_path = data_dir / "auth.json"
     if auth_path.exists():
-        auth = _read_json(auth_path)
-        if auth.get("raw_authenticated_payload_persisted") is not False:
-            raise RuntimeError("auth.json does not prove raw authenticated payloads are excluded")
+        _verify_public_auth_projection(_read_json(auth_path), location="auth.json")
+
+    latest_path = data_dir / "latest.json"
+    if latest_path.exists():
+        latest = _read_json(latest_path)
+        if "authenticated_official" in latest:
+            _verify_public_auth_projection(
+                latest.get("authenticated_official"),
+                location="latest.json.authenticated_official",
+            )
 
     result = {
         "status": "PASS",
@@ -90,6 +141,9 @@ def verify_publication(
         "payload_bytes": payload_bytes,
         "unauthorized_paths": unauthorized,
         "raw_authenticated_payload_persisted": False if auth_path.exists() else None,
+        "public_authenticated_projection_verified": auth_path.exists() or (
+            latest_path.exists() and "authenticated_official" in _read_json(latest_path)
+        ),
     }
     return result
 

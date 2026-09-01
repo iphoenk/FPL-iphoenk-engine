@@ -2,7 +2,7 @@
   "registry": "V5_CANONICAL_PROVENANCE_POLICY_V1",
   "schema_version": 1,
   "branch": "v5-unified-engine",
-  "trust_anchor_sha": "14ca0166210576f34eee7da11d7b90d6792ef47a",
+  "trust_anchor_sha": "bea82f81bbc3cce0c2bc39b5b5779a68583f5c39",
   "max_first_parent_commits": 256,
   "require_anchor_in_first_parent_history": true,
   "require_each_code_commit_after_anchor_from_merged_pr": true,

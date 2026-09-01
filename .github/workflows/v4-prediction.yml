@@ -137,6 +137,7 @@ jobs:
     uses: iphoenk/FPL-iphoenk-engine/.github/workflows/fpl-engine-core.yml@v4-prediction-engine
     permissions:
       contents: write
+    secrets: inherit
     with:
       ref: ${{ needs.resolve-canonical.outputs.canonical_sha }}
       publish: true

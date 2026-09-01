@@ -6,6 +6,8 @@
     "publish_only_declared_paths": true,
     "history_jsonl_and_gw_archives_are_not_published": true,
     "raw_authenticated_payloads_are_forbidden": true,
+    "derived_private_authenticated_fields_are_forbidden_in_publication": true,
+    "public_authenticated_state_is_health_projection_only": true,
     "temporary_service_artifacts_are_forbidden": true,
     "missing_optional_paths_do_not_block_publication": true,
     "weather_context_and_health_are_persisted_for_reconciliation": true

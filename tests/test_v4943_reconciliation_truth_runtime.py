@@ -25,7 +25,7 @@ def test_official_starts_is_only_start_truth():
     actual = actual_by_element(_live())
     assert actual[1]["started"] is True
     assert actual[2]["started"] is False
-    assert actual[3]["started"] is None
+n    assert actual[3]["started"] is None
 
 
 def test_missing_start_is_excluded_from_start_brier_not_inferred():
@@ -71,7 +71,10 @@ def test_runtime_architecture_preserves_hard_5s_compute_slo_with_simplified_boun
     by_id = {row["id"]: row for row in services}
     assert by_id["validation"]["module"] == "src.services.validation_service"
     assert by_id["optimization"]["module"] == "src.services.optimization_slo_service"
-    assert by_id["governance"]["module"] == "src.services.governance_service"
+    assert by_id["personal_gw_scorecard"]["module"] == "src.services.gw_scorecard_live_overlay"
+    assert by_id["personal_gw_scorecard"]["command"][2] == by_id["personal_gw_scorecard"]["module"]
+    assert by_id["governance"]["module"] == "src.services.governance_live_overlay"
+    assert by_id["governance"]["command"][2] == by_id["governance"]["module"]
     assert set(by_id["governance"]["depends_on"]) == {"validation", "user_decision_overlay", "personal_gw_scorecard"}
     assert "architecture_guard" not in by_id
     orchestrator = (ROOT / "src/services/orchestrator.py").read_text()

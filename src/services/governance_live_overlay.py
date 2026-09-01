@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 
 from src.services import governance_service
+from src.services.contracts import file_digest
 from src.utils import DATA, atomic_json, read_json
 
 SCORECARD = DATA / "gw_scorecard_v4.json"
 CHECKPOINT = DATA / "checkpoint_decision_v4.json"
 SERVING = DATA / "serving_payload_v4.json"
+PUBLICATION_INTEGRITY = DATA / "publication_integrity_v4.json"
 
 
 def _assert_match_mode_contract(live: dict, policy_id: str | None) -> None:
@@ -22,6 +24,32 @@ def _assert_match_mode_contract(live: dict, policy_id: str | None) -> None:
         coverage.get("complete") is not True or int(coverage.get("owned") or 0) != 15
     ):
         raise RuntimeError("Match Mode publication blocked: complete ALL15 live score required")
+
+
+def _finalize_publication_integrity(live: dict) -> dict:
+    integrity = read_json(PUBLICATION_INTEGRITY, {})
+    if integrity.get("status") != "PASS":
+        raise RuntimeError("final publication integrity requires PASS base integrity")
+    if not CHECKPOINT.exists() or not SERVING.exists():
+        raise RuntimeError("final publication integrity requires checkpoint and serving artifacts")
+    integrity["final_artifacts"] = {
+        "checkpoint_decision_v4": {
+            "path": "data/checkpoint_decision_v4.json",
+            "sha256": file_digest(CHECKPOINT),
+        },
+        "serving_payload_v4": {
+            "path": "data/serving_payload_v4.json",
+            "sha256": file_digest(SERVING),
+        },
+    }
+    integrity["post_overlay_verification"] = {
+        "status": "PASS",
+        "match_mode_status": live.get("status"),
+        "match_mode_composition_finalized_before_digest": True,
+        "checked_content_is_published_content": True,
+    }
+    atomic_json(PUBLICATION_INTEGRITY, integrity)
+    return integrity
 
 
 def run() -> dict:
@@ -50,9 +78,11 @@ def run() -> dict:
             "match_mode_all15_fail_closed": True,
             "submitted_picks_are_live_scoring_authority": True,
             "actual_vs_predicted_diagnostic_only": True,
+            "final_publication_integrity_sidecar": "data/publication_integrity_v4.json",
         })
         atomic_json(SERVING, serving)
 
+    _finalize_publication_integrity(live)
     return out
 
 

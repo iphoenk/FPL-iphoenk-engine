@@ -9,6 +9,9 @@ on:
       publish:
         required: true
         type: boolean
+    secrets:
+      V4_RUNTIME_APP_PRIVATE_KEY:
+        required: false
 
 permissions:
   contents: read
@@ -367,6 +370,17 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Assert governed publisher credential binding
+        shell: bash
+        env:
+          V4_RUNTIME_APP_PRIVATE_KEY: ${{ secrets.V4_RUNTIME_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${V4_RUNTIME_APP_PRIVATE_KEY:-}" ]; then
+            echo "::error::V4_RUNTIME_APP_PRIVATE_KEY is unavailable to the publisher environment"
+            exit 1
+          fi
+
       - name: Mint governed V4 runtime publisher token
         id: runtime_app_token
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2

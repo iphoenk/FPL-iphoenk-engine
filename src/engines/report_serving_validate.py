@@ -17,6 +17,17 @@ def _watch_ids(positions: dict) -> list[int]:
     return [int(row["element"]) for rows in positions.values() for row in rows]
 
 
+def _element_ids(rows: list[dict]) -> set[int]:
+    return {int(row["element"]) for row in rows if row.get("element") is not None}
+
+
+def _watch_ids_by_position(positions: dict, ordered_positions: list[str]) -> dict[str, set[int]]:
+    return {
+        position: _element_ids([row for row in positions.get(position) or [] if isinstance(row, dict)])
+        for position in ordered_positions
+    }
+
+
 def _validate_owned_transparency(name: str, rows: list[dict], expected: int, contract: dict) -> None:
     assert len(rows) == expected, (name, len(rows), expected)
     assert len({int(row["element"]) for row in rows}) == expected
@@ -73,7 +84,7 @@ def _validate_personal_gameweek_context(payload_name: str, payload: dict) -> Non
     for row in context.get("historical") or []:
         assert row.get("status") == "FINAL", (payload_name, row)
         assert row.get("authority") == "PUBLIC_OFFICIAL_POST_DEADLINE", (payload_name, row)
-        assert row.get("actual_points") is not None, (payload_name, row)
+        assert row.get("actual_points") is not None, payload_name
         assert row.get("forecast_capture") == "NOT_RECONSTRUCTED", (payload_name, row)
         assert len(row.get("submitted_squad") or []) == 15, (payload_name, row.get("gw"))
     governance = context.get("governance") or {}
@@ -371,12 +382,52 @@ def run() -> dict:
     user = _load(DATA / "user_report.json")
     summary = _load(DATA / "dss_watchlist_summary.json")
     latest = _load(DATA / "latest.json")
+    team = _load(DATA / "team.json")
+    canonical_watch = _load(DATA / "dss_watchlist.json")
 
-    owned = brief.get("owned_15") or []
-    _validate_owned_transparency("brief", owned, expected_owned, contract)
-    _validate_owned_transparency("deep", deep.get("owned_15") or [], expected_owned, contract)
-    _validate_owned_transparency("user", ((user.get("owned_squad") or {}).get("facts") or []), expected_owned, contract)
-    owned_ids = {int(x["element"]) for x in owned}
+    ledger_rows = [row for row in team.get("team_value_ledger") or [] if isinstance(row, dict)]
+    resolved_squad_rows = [row for row in team.get("squad") or [] if isinstance(row, dict)]
+    authoritative_owned_ids = _element_ids(ledger_rows)
+    resolved_squad_ids = _element_ids(resolved_squad_rows)
+    assert len(ledger_rows) == expected_owned and len(authoritative_owned_ids) == expected_owned, (
+        "team_value_ledger",
+        len(ledger_rows),
+        len(authoritative_owned_ids),
+    )
+    assert len(resolved_squad_rows) == expected_owned and resolved_squad_ids == authoritative_owned_ids, (
+        "resolved_team_squad_drift",
+        sorted(resolved_squad_ids - authoritative_owned_ids),
+        sorted(authoritative_owned_ids - resolved_squad_ids),
+    )
+
+    owned_surfaces = (
+        ("brief", brief.get("owned_15") or []),
+        ("deep", deep.get("owned_15") or []),
+        ("user", ((user.get("owned_squad") or {}).get("facts") or [])),
+    )
+    for payload_name, rows in owned_surfaces:
+        _validate_owned_transparency(payload_name, rows, expected_owned, contract)
+        ids = _element_ids(rows)
+        assert ids == authoritative_owned_ids, (
+            payload_name,
+            "owned_membership_drift",
+            sorted(ids - authoritative_owned_ids),
+            sorted(authoritative_owned_ids - ids),
+        )
+    owned_ids = authoritative_owned_ids
+
+    canonical_watch_positions = canonical_watch.get("positions") or {}
+    assert set(canonical_watch_positions) == set(positions), ("canonical_watchlist", sorted(canonical_watch_positions))
+    canonical_watch_sets = _watch_ids_by_position(canonical_watch_positions, positions)
+    for position in positions:
+        canonical_rows = canonical_watch_positions.get(position) or []
+        assert len(canonical_rows) == expected_per, ("canonical_watchlist", position, len(canonical_rows), expected_per)
+        assert len(canonical_watch_sets[position]) == expected_per, ("canonical_watchlist", position, "duplicate_membership")
+        assert not (owned_ids & canonical_watch_sets[position]), (
+            "canonical_watchlist",
+            position,
+            sorted(owned_ids & canonical_watch_sets[position]),
+        )
 
     for payload_name, watch_positions in (
         ("brief", brief.get("watchlist_20") or {}),
@@ -385,13 +436,57 @@ def run() -> dict:
         ("summary", summary.get("positions") or {}),
     ):
         assert set(watch_positions) == set(positions), (payload_name, sorted(watch_positions))
+        surface_sets = _watch_ids_by_position(watch_positions, positions)
         for position in positions:
             rows = watch_positions.get(position) or []
             assert len(rows) == expected_per, (payload_name, position, len(rows), expected_per)
             assert all(row.get("position") == position for row in rows), (payload_name, position)
+            assert surface_sets[position] == canonical_watch_sets[position], (
+                payload_name,
+                position,
+                "watchlist_membership_drift",
+                sorted(surface_sets[position] - canonical_watch_sets[position]),
+                sorted(canonical_watch_sets[position] - surface_sets[position]),
+            )
         ids = _watch_ids(watch_positions)
         assert len(ids) == expected_watch and len(set(ids)) == expected_watch, (payload_name, len(ids), len(set(ids)))
         assert not (owned_ids & set(ids)), (payload_name, sorted(owned_ids & set(ids)))
+
+    lineup_squad_ids = _element_ids([row for row in lineup.get("squad_rows") or [] if isinstance(row, dict)])
+    xi_ids = _element_ids([row for row in lineup.get("starting_xi") or [] if isinstance(row, dict)])
+    comparison = list(lineup.get("formation_comparison") or [])
+    selected_rows = [row for row in comparison if row.get("selected") is True]
+    lineup_score = lineup.get("lineup_score") or {}
+    lineup_governance = lineup.get("governance") or {}
+    assert lineup_squad_ids == authoritative_owned_ids, (
+        "lineup_authority_drift",
+        sorted(lineup_squad_ids - authoritative_owned_ids),
+        sorted(authoritative_owned_ids - lineup_squad_ids),
+    )
+    assert len(xi_ids) == 11 and xi_ids <= authoritative_owned_ids, ("lineup_xi_membership", sorted(xi_ids))
+    assert len(selected_rows) == 1, ("formation_comparison_selected_count", len(selected_rows))
+    assert selected_rows[0].get("formation") == lineup.get("formation"), (
+        "formation_comparison_final_drift",
+        selected_rows[0].get("formation"),
+        lineup.get("formation"),
+    )
+    assert lineup_score.get("base_robust") is not None, "lineup_score.base_robust missing after tactical overlay"
+    assert isinstance(lineup_score.get("risk_adjustment"), dict), "lineup_score.risk_adjustment missing after tactical overlay"
+    assert lineup_governance.get("team_state_authority_consumed") is True, "lineup bypassed team-state authority"
+    assert lineup_governance.get("legacy_lock_fixture_fallback") is False, "production lineup used legacy raw-lock fallback"
+    assert lineup_governance.get("tactical_overlay_preserves_decision_transparency") is True
+    assert lineup_governance.get("formation_comparison_reconciled_to_final_xi") is True
+
+    latest_lineup = latest.get("lineup_decision_summary") or {}
+    assert latest_lineup.get("formation") == lineup.get("formation"), (
+        "latest_lineup_formation_drift",
+        latest_lineup.get("formation"),
+        lineup.get("formation"),
+    )
+    assert latest_lineup.get("captain") == (lineup.get("captain") or {}).get("name"), "latest captain drift"
+    assert latest_lineup.get("vice_captain") == (lineup.get("vice_captain") or {}).get("name"), "latest vice drift"
+    assert latest_lineup.get("risk_adjustment") == lineup_score.get("risk_adjustment"), "latest lineup risk-adjustment drift"
+    assert int(latest_lineup.get("bench_close_battles") or 0) == len(((lineup.get("bench") or {}).get("close_battles") or [])), "latest bench battle drift"
 
     for payload in (user, brief):
         assert (payload.get("serving_contract") or {}).get("owned") == expected_owned
@@ -456,6 +551,10 @@ def run() -> dict:
         "watchlist": expected_watch,
         "per_position": expected_per,
         "owned_transparency": True,
+        "authoritative_owned_reconciled": True,
+        "watchlist_membership_reconciled": True,
+        "lineup_metadata_reconciled": True,
+        "latest_lineup_summary_reconciled": True,
         "tactical_context": True,
         "tactical_presentation": True,
         "tactical_authority_aligned": True,

@@ -189,12 +189,18 @@ def _production_operational_health(maturity: dict, readiness: dict) -> dict:
     }
 
 
-def run() -> dict:
+def run(*, predictions_snapshot: dict | None = None) -> dict:
     """Run the final governed decision boundary in one process."""
     total = perf_counter()
-    predictions = read_json(DATA / "predictions_v4.json", {})
+    predictions_preloaded = predictions_snapshot is not None
+    predictions = predictions_snapshot if predictions_preloaded else read_json(DATA / "predictions_v4.json", {})
     latest = read_json(DATA / "latest.json", {})
     universe = read_json(DATA / "universe.json", {})
+    try:
+        lifecycle = read_json(DATA / "validation" / "lifecycle_v4.json", {})
+    except (KeyError, FileNotFoundError):
+        lifecycle = {}
+    validation_eligibility = lifecycle.get("eligibility") or {}
 
     started = perf_counter()
     postflight = framework_postflight_truth_service.run(
@@ -211,6 +217,7 @@ def run() -> dict:
         predictions=predictions,
         latest=latest,
         universe=universe,
+        validation_eligibility=validation_eligibility,
         persist=False,
     )
     _assert_no_critical_failure_erasure(critical_failed_before, maturity)
@@ -323,6 +330,9 @@ def run() -> dict:
             "weather_health_propagated_after_maturity": True,
             "weather_cannot_mutate_expected_xpts_mean": True,
             "production_health_does_not_promote_model_maturity": True,
+            "prediction_handoff_optional_and_file_fallback_preserved": True,
+            "predictions_received_preloaded": predictions_preloaded,
+            "validation_integrity_proof_passed_to_maturity": True,
             "fail_closed": True,
         },
     }

@@ -205,6 +205,7 @@ def refresh_eligible_view(model_version: str | None) -> dict:
         path.unlink()
     eligible: list[int] = []
     integrity_checked: list[int] = []
+    integrity_checked_sha256: dict[str, str] = {}
     rejected: list[dict] = []
     if ARCHIVE_RECDIR.exists():
         for path in sorted(ARCHIVE_RECDIR.glob("gw*.json")):
@@ -219,6 +220,7 @@ def refresh_eligible_view(model_version: str | None) -> dict:
                 continue
             gw = int(sample.get("gw"))
             integrity_checked.append(gw)
+            integrity_checked_sha256[str(gw)] = _digest(sample)
             if model_version and sample.get("model_version") != model_version:
                 rejected.append({"file": path.name, "reason": "model_version_mismatch"})
                 continue
@@ -229,6 +231,7 @@ def refresh_eligible_view(model_version: str | None) -> dict:
         "eligible_samples": len(eligible),
         "eligible_gws": eligible,
         "integrity_checked_gws": integrity_checked,
+        "integrity_checked_sha256": integrity_checked_sha256,
         "rejected_samples": rejected,
         "archive_is_append_only": True,
         "health_view_rebuilt": True,

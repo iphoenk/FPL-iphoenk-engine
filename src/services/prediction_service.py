@@ -104,7 +104,7 @@ def _chip_state_summary(official, phase):
     }
 
 
-def run():
+def run(*, return_predictions: bool = False):
     started = perf_counter()
     raw = read_json(SNAPSHOT, {})
     enrichment = read_json(ENRICHMENT, {})
@@ -303,6 +303,8 @@ def run():
         "price_context_health": (price_context.get("health") or {}).get("status"),
         "duration_ms": prediction_ms,
     }))
+    if return_predictions:
+        return {"latest": latest, "predictions": predictions}
     return latest
 
 

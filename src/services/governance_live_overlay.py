@@ -52,9 +52,13 @@ def _finalize_publication_integrity(live: dict) -> dict:
     return integrity
 
 
-def run() -> dict:
+def run(*, predictions_snapshot: dict | None = None) -> dict:
     """Add live-score composition to the existing final governance boundary."""
-    out = governance_service.run()
+    out = (
+        governance_service.run(predictions_snapshot=predictions_snapshot)
+        if predictions_snapshot is not None
+        else governance_service.run()
+    )
     scorecard = read_json(SCORECARD, {})
     live = scorecard.get("current_live_gw") or {"status": "IDLE", "match_mode_active": False}
     checkpoint = read_json(CHECKPOINT, {})

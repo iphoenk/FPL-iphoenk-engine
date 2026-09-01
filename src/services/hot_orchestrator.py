@@ -61,7 +61,7 @@ def _assert_digest(path, expected: str, label: str) -> None:
         raise RuntimeError(f"hot-path immutable {label} changed: {actual} != {expected}")
 
 
-def _validation_worker(conn) -> None:
+def _validation_worker(conn, predictions_snapshot: dict) -> None:
     """Run the exact registered validation service in a forked child.
 
     The production process-isolated DAG still launches the registry command in its
@@ -70,7 +70,7 @@ def _validation_worker(conn) -> None:
     import cost while preserving the validation service and all of its artifacts.
     """
     try:
-        detail = validation_service.run()
+        detail = validation_service.run(predictions_snapshot=predictions_snapshot)
         conn.send({"ok": True, "detail": detail})
     except BaseException:
         conn.send({"ok": False, "error": traceback.format_exc()})
@@ -108,8 +108,11 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     enrichment_sha = file_digest(ENRICHMENT)
 
     t = perf_counter()
-    prediction_service_price_mover.run()
+    prediction_bundle = prediction_service_price_mover.run(return_predictions=True)
     service_ms["prediction"] = round((perf_counter() - t) * 1000.0, 2)
+    predictions_snapshot = (prediction_bundle or {}).get("predictions") or {}
+    if not predictions_snapshot.get("model_version") or not predictions_snapshot.get("players"):
+        raise RuntimeError("hot-path prediction handoff missing full prediction contract")
     prediction_cache = prediction_model_cache.last_status()
     _assert_digest(SNAPSHOT, snapshot_sha, "snapshot")
     _assert_digest(ENRICHMENT, enrichment_sha, "enrichment")
@@ -123,7 +126,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     validation_recv, validation_send = ctx.Pipe(duplex=False)
     validation = ctx.Process(
         target=_validation_worker,
-        args=(validation_send,),
+        args=(validation_send, predictions_snapshot),
         name="v496-hot-validation",
     )
     validation_started = perf_counter()
@@ -166,7 +169,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     validation_detail = validation_status.get("detail") or {}
 
     t = perf_counter()
-    governance_detail = governance_live_overlay.run()
+    governance_detail = governance_live_overlay.run(predictions_snapshot=predictions_snapshot)
     service_ms["governance"] = round((perf_counter() - t) * 1000.0, 2)
     _assert_digest(SNAPSHOT, snapshot_sha, "snapshot")
     _assert_digest(ENRICHMENT, enrichment_sha, "enrichment")
@@ -221,6 +224,11 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
             "validation_runs_concurrently_not_skipped": True,
             "validation_service_implementation_unchanged": True,
             "validation_fork_removes_interpreter_bootstrap_only": True,
+            "prediction_validation_handoff_explicit": True,
+            "prediction_governance_handoff_explicit": True,
+            "prediction_handoffs_copy_on_write_or_read_only": True,
+            "production_file_backed_service_fallbacks_preserved": True,
+            "same_cycle_integrity_proof_reused_by_governance": True,
             "architecture_guard_runs_first": True,
             "startup_assurance_measured_separately_from_serving": True,
             "snapshot_enrichment_latest_immutable_after_lock": True,

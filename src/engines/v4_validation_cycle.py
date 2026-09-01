@@ -93,7 +93,7 @@ def capture_submitted_state(raw: dict | None = None, now: datetime | None = None
     }
 
 
-def reconcile_latest_finished(raw: dict | None = None, now: datetime | None = None) -> dict:
+def reconcile_latest_finished(raw: dict | None = None, now: datetime | None = None, *, defer_existing_integrity: bool = False) -> dict:
     raw = raw or read_json(RAW_SNAPSHOT, {})
     if _is_simulation(raw):
         return {"status": "SKIP", "reason": "simulation_never_mutates_validation_store"}
@@ -103,9 +103,26 @@ def reconcile_latest_finished(raw: dict | None = None, now: datetime | None = No
         return {"status": "SKIP", "reason": "no_finished_gw"}
     archive_path = reconciled_path(int(gw))
     if archive_path.exists():
-        result = reconcile_finished_gw(int(gw), {}, now=now)
+        if defer_existing_integrity:
+            # Consolidated cycle defers the expensive immutable-source check to the
+            # eligibility rebuild later in the same fail-closed cycle. Standalone
+            # reconciliation callers keep the original immediate verification.
+            result = read_json(archive_path, None)
+            if not result:
+                raise RuntimeError("existing reconciliation archive is unreadable")
+            if result.get("kind") != "post_gw_reconciliation" or int(result.get("gw") or -1) != int(gw):
+                raise RuntimeError("existing reconciliation archive identity mismatch")
+        else:
+            result = reconcile_finished_gw(int(gw), {}, now=now)
         metrics = ((result or {}).get("report") or {}).get("metrics") or {}
-        return {"status": "PASS", "action": "PRESERVED", "gw": int(gw), "metrics": metrics, "model_version": (result or {}).get("model_version")}
+        return {
+            "status": "PASS",
+            "action": "PRESERVED",
+            "gw": int(gw),
+            "metrics": metrics,
+            "model_version": (result or {}).get("model_version"),
+            "integrity_deferred_to_eligibility": bool(defer_existing_integrity),
+        }
     if not deadline_snapshot_path(int(gw)).exists():
         return {"status": "SKIP", "reason": "no_predeadline_snapshot", "gw": int(gw)}
     scoring_gw = phase.get("scoring_gw")
@@ -170,9 +187,17 @@ def cycle(now: datetime | None = None, raw: dict | None = None, predictions: dic
         eligibility = {"model_version": predictions.get("model_version"), "eligible_samples": None, "health_view_rebuilt": False, "reason": "simulation_never_mutates_validation_store"}
     else:
         submitted = capture_submitted_state(raw, now=now)
-        reconciliation = reconcile_latest_finished(raw, now=now)
+        reconciliation = reconcile_latest_finished(raw, now=now, defer_existing_integrity=True)
         snapshot = snapshot_current(raw, predictions, now=now)
         eligibility = refresh_eligible_view(predictions.get("model_version"))
+        if reconciliation.get("integrity_deferred_to_eligibility"):
+            reconciliation_gw = int(reconciliation.get("gw") or -1)
+            integrity_checked = {int(value) for value in (eligibility.get("integrity_checked_gws") or [])}
+            if reconciliation_gw not in integrity_checked:
+                raise RuntimeError(
+                    f"deferred reconciliation integrity was not proven for GW{reconciliation_gw}"
+                )
+            reconciliation["integrity_verified_by_eligibility_rebuild"] = True
     out = {
         "schema_version": 4943,
         "engine": "v4.9.3-validation-lifecycle-v4.9.4.3-truthful-starts",

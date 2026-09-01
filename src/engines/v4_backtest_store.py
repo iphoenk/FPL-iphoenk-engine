@@ -204,22 +204,36 @@ def refresh_eligible_view(model_version: str | None) -> dict:
     for path in RECDIR.glob("gw*.json"):
         path.unlink()
     eligible: list[int] = []
+    integrity_checked: list[int] = []
+    integrity_checked_sha256: dict[str, str] = {}
     rejected: list[dict] = []
     if ARCHIVE_RECDIR.exists():
         for path in sorted(ARCHIVE_RECDIR.glob("gw*.json")):
             sample = read_json(path, {})
-            ok, reason = reconciled_integrity(sample, model_version=model_version)
+            # Full immutable-source integrity is the expensive check because legacy
+            # deadline snapshots can be tens of MB. Perform it once per archive row,
+            # then apply the model-version eligibility filter without rereading the
+            # source snapshot. This preserves both integrity and current-model rules.
+            ok, reason = reconciled_integrity(sample)
             if not ok:
                 rejected.append({"file": path.name, "reason": reason})
                 continue
             gw = int(sample.get("gw"))
+            integrity_checked.append(gw)
+            integrity_checked_sha256[str(gw)] = _digest(sample)
+            if model_version and sample.get("model_version") != model_version:
+                rejected.append({"file": path.name, "reason": "model_version_mismatch"})
+                continue
             atomic_json(eligible_reconciled_path(gw), sample)
             eligible.append(gw)
     return {
         "model_version": model_version,
         "eligible_samples": len(eligible),
         "eligible_gws": eligible,
+        "integrity_checked_gws": integrity_checked,
+        "integrity_checked_sha256": integrity_checked_sha256,
         "rejected_samples": rejected,
         "archive_is_append_only": True,
         "health_view_rebuilt": True,
+        "single_pass_source_integrity": True,
     }

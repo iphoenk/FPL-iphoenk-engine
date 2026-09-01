@@ -5,8 +5,8 @@ from src.services.prediction_service import run as run_prediction
 from src.utils import DATA
 
 
-def run():
-    result = run_prediction()
+def run(*, return_predictions: bool = False):
+    result = run_prediction(return_predictions=True) if return_predictions else run_prediction()
     patch_price_artifacts(DATA)
     return result
 

@@ -43,7 +43,7 @@ def _preflight_worker(conn, predictions_snapshot: dict) -> None:
         conn.close()
 
 
-def run() -> dict:
+def run(*, predictions_snapshot: dict | None = None) -> dict:
     """Run the complete pre-decision validation boundary with dependency-safe overlap.
 
     PRE-FLIGHT health depends on the immutable raw/enrichment/prediction snapshot but
@@ -58,7 +58,9 @@ def run() -> dict:
 
     snapshot_started = perf_counter()
     raw_snapshot = read_json(RAW_SNAPSHOT, {})
-    predictions_snapshot = read_json(PREDICTIONS, {})
+    predictions_preloaded = predictions_snapshot is not None
+    if predictions_snapshot is None:
+        predictions_snapshot = read_json(PREDICTIONS, {})
     timings["parent_snapshot_load_ms"] = round((perf_counter() - snapshot_started) * 1000.0, 2)
     if raw_snapshot.get("schema") != "snapshot.v1":
         raise RuntimeError("validation service requires runtime snapshot.v1")
@@ -129,7 +131,8 @@ def run() -> dict:
         },
         "snapshot_reuse": {
             "parent_raw_snapshot_loaded_once": True,
-            "parent_predictions_loaded_once": True,
+            "parent_predictions_loaded_once": not predictions_preloaded,
+            "parent_predictions_received_preloaded": predictions_preloaded,
             "lifecycle_received_preloaded_raw": True,
             "lifecycle_received_preloaded_predictions": True,
             "readiness_received_preloaded_raw": bool(reuse.get("raw_snapshot_preloaded")),
@@ -144,6 +147,8 @@ def run() -> dict:
             "lifecycle_before_reconciliation_readiness": True,
             "preflight_artifact_status_verified": True,
             "parent_snapshot_reuse_fail_closed": True,
+            "prediction_handoff_is_explicit_optional_input": True,
+            "file_backed_prediction_fallback_preserved": True,
             "official_api_refetch": False,
             "fail_closed": True,
         },

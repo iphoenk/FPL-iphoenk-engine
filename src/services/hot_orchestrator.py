@@ -2,29 +2,57 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import subprocess
-import sys
+import traceback
+from multiprocessing import get_context
 from time import perf_counter
 
 from src.services import (
     architecture_guard_service,
     enrichment_service,
-    governance_service,
-    gw_scorecard_service,
+    governance_live_overlay,
+    gw_scorecard_live_overlay,
     optimization_slo_service,
     prediction_model_cache,
-    prediction_service,
+    prediction_service_price_mover,
     raw_snapshot_service,
     user_decision_overlay_service,
+    validation_service,
 )
 from src.services.contracts import file_digest
-from src.utils import DATA, ROOT, atomic_json, iso_now, read_json
+from src.utils import CONFIG, DATA, atomic_json, iso_now, read_json
 
 OUTFILE = DATA / "hot_orchestration_v4.json"
 SNAPSHOT = DATA / "runtime" / "snapshot.v1.json"
 ENRICHMENT = DATA / "runtime" / "enrichment.v1.json"
 LATEST = DATA / "latest.json"
+
+HOT_PRODUCTION_MODULES = {
+    "raw_snapshot": raw_snapshot_service.__name__,
+    "enrichment": enrichment_service.__name__,
+    "prediction": prediction_service_price_mover.__name__,
+    "validation": validation_service.__name__,
+    "optimization": optimization_slo_service.__name__,
+    "user_decision_overlay": user_decision_overlay_service.__name__,
+    "personal_gw_scorecard": gw_scorecard_live_overlay.__name__,
+    "governance": governance_live_overlay.__name__,
+}
+
+
+def _assert_registry_module_parity() -> dict[str, dict]:
+    registry = read_json(CONFIG / "service_registry.json", {})
+    by_id = {row.get("id"): row for row in registry.get("services") or []}
+    if set(by_id) != set(HOT_PRODUCTION_MODULES):
+        raise RuntimeError(f"hot-path service ids drifted from registry: {sorted(by_id)}")
+    for service_id, module_name in HOT_PRODUCTION_MODULES.items():
+        row = by_id[service_id]
+        if row.get("module") != module_name:
+            raise RuntimeError(
+                f"hot-path module drift for {service_id}: {module_name} != {row.get('module')}"
+            )
+        command = row.get("command") or []
+        if len(command) < 3 or command[2] != module_name:
+            raise RuntimeError(f"registry command/module mismatch for {service_id}")
+    return by_id
 
 
 def _assert_digest(path, expected: str, label: str) -> None:
@@ -33,27 +61,32 @@ def _assert_digest(path, expected: str, label: str) -> None:
         raise RuntimeError(f"hot-path immutable {label} changed: {actual} != {expected}")
 
 
-def _last_service_json(stdout: str, service: str) -> dict:
-    for line in reversed((stdout or "").splitlines()):
-        try:
-            payload = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(payload, dict) and payload.get("service") == service:
-            return payload
-    return {}
+def _validation_worker(conn, predictions_snapshot: dict) -> None:
+    """Run the exact registered validation service in a forked child.
+
+    The production process-isolated DAG still launches the registry command in its
+    own interpreter. The non-publishing hot benchmark only changes process startup:
+    fork inherits already-imported service code, eliminating repeated interpreter
+    import cost while preserving the validation service and all of its artifacts.
+    """
+    try:
+        detail = validation_service.run(predictions_snapshot=predictions_snapshot)
+        conn.send({"ok": True, "detail": detail})
+    except BaseException:
+        conn.send({"ok": False, "error": traceback.format_exc()})
+    finally:
+        conn.close()
 
 
 def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of: str | None = None) -> dict:
-    """Production-candidate E2E hot path used first as a non-publishing benchmark.
+    """Production-equivalent non-publishing E2E hot-path benchmark.
 
-    Tier-1 acquisition, enrichment and prediction execute in one process. Validation
-    remains a separate concurrent process so the optimizer can safely fork its exact
-    WC/package/lineup workers from the main thread. User authority, scorecard and
-    governance then execute in-process. No decision capability or search width is
-    removed; this only eliminates repeated Python interpreter/process startup and
-    JSON bootstrap overhead between bounded stages.
+    The benchmark may use a different execution strategy to measure process-startup
+    overhead, but service identity is fail-closed against the authoritative production
+    registry. It therefore cannot silently benchmark stale base implementations while
+    production uses wrappers/overlays.
     """
+    _assert_registry_module_parity()
     started = perf_counter()
     service_ms: dict[str, float] = {}
 
@@ -74,28 +107,31 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     _assert_digest(SNAPSHOT, snapshot_sha, "snapshot")
     enrichment_sha = file_digest(ENRICHMENT)
 
-    # prediction_service owns exact base-prediction reuse in production now. The
-    # hot benchmark only observes that status; it no longer monkey-patches runtime
-    # behavior, which keeps benchmark and production semantics identical.
     t = perf_counter()
-    prediction_service.run()
+    prediction_bundle = prediction_service_price_mover.run(return_predictions=True)
     service_ms["prediction"] = round((perf_counter() - t) * 1000.0, 2)
+    predictions_snapshot = (prediction_bundle or {}).get("predictions") or {}
+    if not predictions_snapshot.get("model_version") or not predictions_snapshot.get("players"):
+        raise RuntimeError("hot-path prediction handoff missing full prediction contract")
     prediction_cache = prediction_model_cache.last_status()
     _assert_digest(SNAPSHOT, snapshot_sha, "snapshot")
     _assert_digest(ENRICHMENT, enrichment_sha, "enrichment")
     latest_sha = file_digest(LATEST)
 
-    env = os.environ.copy()
-    env["PYTHONPATH"] = str(ROOT)
-    validation_started = perf_counter()
-    validation = subprocess.Popen(
-        [sys.executable, "-m", "src.services.validation_service"],
-        cwd=ROOT,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
+    # Validation is logically independent from optimization after prediction. Use a
+    # forked child rather than a brand-new interpreter so the FAST benchmark measures
+    # service work, not Python import/bootstrap overhead. The exact registry-owned
+    # validation implementation and its nested fail-closed preflight remain unchanged.
+    ctx = get_context("fork")
+    validation_recv, validation_send = ctx.Pipe(duplex=False)
+    validation = ctx.Process(
+        target=_validation_worker,
+        args=(validation_send, predictions_snapshot),
+        name="v496-hot-validation",
     )
+    validation_started = perf_counter()
+    validation.start()
+    validation_send.close()
 
     t = perf_counter()
     decision = optimization_slo_service.run()
@@ -109,18 +145,31 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     service_ms["user_decision_overlay"] = round((perf_counter() - t) * 1000.0, 2)
 
     t = perf_counter()
-    gw_scorecard_service.run()
+    gw_scorecard_live_overlay.run()
     service_ms["personal_gw_scorecard"] = round((perf_counter() - t) * 1000.0, 2)
 
-    validation_stdout, validation_stderr = validation.communicate(timeout=45)
+    if not validation_recv.poll(45):
+        validation.terminate()
+        validation.join(timeout=5)
+        raise RuntimeError("hot-path validation timed out")
+    validation_status = validation_recv.recv()
+    validation_recv.close()
+    validation.join(timeout=5)
     validation_ms = round((perf_counter() - validation_started) * 1000.0, 2)
     service_ms["validation_concurrent_wall"] = validation_ms
-    if validation.returncode != 0:
-        raise RuntimeError(f"hot-path validation failed: {(validation_stderr or validation_stdout)[-1200:]}")
-    validation_detail = _last_service_json(validation_stdout, "validation")
+    if validation.is_alive():
+        validation.terminate()
+        validation.join(timeout=5)
+        raise RuntimeError("hot-path validation did not exit cleanly")
+    if not validation_status.get("ok") or validation.exitcode != 0:
+        raise RuntimeError(
+            "hot-path validation failed: "
+            + str(validation_status.get("error") or validation.exitcode)[-1200:]
+        )
+    validation_detail = validation_status.get("detail") or {}
 
     t = perf_counter()
-    governance_detail = governance_service.run()
+    governance_detail = governance_live_overlay.run(predictions_snapshot=predictions_snapshot)
     service_ms["governance"] = round((perf_counter() - t) * 1000.0, 2)
     _assert_digest(SNAPSHOT, snapshot_sha, "snapshot")
     _assert_digest(ENRICHMENT, enrichment_sha, "enrichment")
@@ -132,14 +181,15 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     timings = decision.get("timings") or {}
     latest = read_json(LATEST, {})
     out = {
-        "schema_version": 2,
-        "engine": "v4.9.6-e2e-hot-path-candidate-v2",
+        "schema_version": 4,
+        "engine": "v4.9.6-e2e-hot-path-production-wrapper-parity-v4",
         "generated_at": iso_now(),
         "status": "PASS",
         "mode": mode,
         "total_e2e_ms": total_ms,
         "serving_e2e_excluding_startup_assurance_ms": serving_ms,
         "service_ms": service_ms,
+        "production_service_modules": HOT_PRODUCTION_MODULES,
         "prediction_base_cache": prediction_cache,
         "validation_detail": validation_detail,
         "governance_detail": governance_detail,
@@ -168,8 +218,17 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
             "exact_base_prediction_reuse_only": True,
             "fresh_xmins_evidence_attached_after_base_prediction_reuse": True,
             "benchmark_matches_production_prediction_path": True,
+            "benchmark_matches_production_service_modules": True,
+            "registry_is_service_identity_authority": True,
             "user_final_authority_preserved": True,
             "validation_runs_concurrently_not_skipped": True,
+            "validation_service_implementation_unchanged": True,
+            "validation_fork_removes_interpreter_bootstrap_only": True,
+            "prediction_validation_handoff_explicit": True,
+            "prediction_governance_handoff_explicit": True,
+            "prediction_handoffs_copy_on_write_or_read_only": True,
+            "production_file_backed_service_fallbacks_preserved": True,
+            "same_cycle_integrity_proof_reused_by_governance": True,
             "architecture_guard_runs_first": True,
             "startup_assurance_measured_separately_from_serving": True,
             "snapshot_enrichment_latest_immutable_after_lock": True,

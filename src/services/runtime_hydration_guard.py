@@ -98,7 +98,8 @@ def verify_hydrated_runtime_if_required(root: Path = ROOT) -> dict:
         "canonical_source_sha": source,
         "snapshot_sha256": snapshot_hash,
         "parentless_snapshot": True,
-        "automation_identity": True,
+        "automation_commit_metadata_matches": True,
+        "publisher_identity_requires_platform_ruleset": True,
         "data_only_tree": True,
         "provenance_verified": True,
     }

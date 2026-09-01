@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from src.engines.v4_backtest_store import reconciled_integrity
+from src.engines.v4_backtest_store import _digest, reconciled_integrity
 from src.engines.v4_validation import promotion_gate
 from src.utils import CONFIG, DATA, atomic_json, read_json
 
@@ -259,21 +259,52 @@ def _ownership_evidence(latest: dict, universe: dict, predictions: dict) -> tupl
     }
 
 
-def _calibration_maturity_evidence(predictions: dict) -> tuple[bool, dict]:
+def _calibration_maturity_evidence(
+    predictions: dict,
+    validation_eligibility: dict | None = None,
+) -> tuple[bool, dict]:
     model_version = predictions.get("model_version")
     paths = sorted(RECONCILED.glob("gw*.json")) if RECONCILED.exists() else []
     eligible: list[dict] = []
     rejected: list[dict] = []
     passing: list[dict] = []
     best_observed_n = 0
+    proof = validation_eligibility if isinstance(validation_eligibility, dict) else {}
+    proof_usable = (
+        proof.get("single_pass_source_integrity") is True
+        and proof.get("model_version") == model_version
+    )
+    proof_gws = {int(value) for value in (proof.get("integrity_checked_gws") or [])}
+    proof_digests = proof.get("integrity_checked_sha256") or {}
+    proof_reused_gws: list[int] = []
+    fallback_full_integrity_gws: list[int] = []
 
     for path in paths:
         sample = read_json(path, {})
-        ok, reason = reconciled_integrity(sample, model_version=model_version)
-        if not ok:
-            rejected.append({"file": path.name, "reason": reason})
-            continue
         gw = int(sample.get("gw") or 0)
+        expected_digest = proof_digests.get(str(gw)) if proof_usable and gw in proof_gws else None
+        if expected_digest is not None:
+            metrics = ((sample.get("report") or {}).get("metrics") or {})
+            proof_ok = (
+                sample.get("kind") == "post_gw_reconciliation"
+                and sample.get("immutable") is True
+                and sample.get("sample_eligible") is True
+                and sample.get("model_version") == model_version
+                and metrics.get("status") == "PASS"
+                and int(metrics.get("n") or 0) > 0
+                and int(metrics.get("leakage_rejected") or 0) == 0
+                and _digest(sample) == expected_digest
+            )
+            if not proof_ok:
+                rejected.append({"file": path.name, "reason": "same_cycle_integrity_proof_mismatch"})
+                continue
+            proof_reused_gws.append(gw)
+        else:
+            ok, reason = reconciled_integrity(sample, model_version=model_version)
+            fallback_full_integrity_gws.append(gw)
+            if not ok:
+                rejected.append({"file": path.name, "reason": reason})
+                continue
         metrics = ((sample.get("report") or {}).get("metrics") or {})
         observed_n = int(metrics.get("n") or 0)
         best_observed_n = max(best_observed_n, observed_n)
@@ -298,6 +329,9 @@ def _calibration_maturity_evidence(predictions: dict) -> tuple[bool, dict]:
         "eligible_reconciled_samples": len(eligible),
         "eligible_gws": [row["gw"] for row in eligible],
         "rejected_samples": rejected,
+        "validation_integrity_proof_reused_gws": proof_reused_gws,
+        "fallback_full_integrity_gws": fallback_full_integrity_gws,
+        "same_cycle_integrity_proof_requires_exact_digest": True,
         "passing_gws": [row["gw"] for row in passing],
         "best_observed_n": best_observed_n,
         "minimum_n": CALIBRATION_MINIMUM_N,
@@ -382,6 +416,7 @@ def reconcile(
     predictions: dict | None = None,
     latest: dict | None = None,
     universe: dict | None = None,
+    validation_eligibility: dict | None = None,
     persist: bool = True,
 ) -> dict:
     health = health if health is not None else read_json(HEALTH, {})
@@ -412,7 +447,9 @@ def reconcile(
         else:
             partial.append(module_id)
 
-    calibration_active, calibration_detail = _calibration_maturity_evidence(predictions)
+    calibration_active, calibration_detail = _calibration_maturity_evidence(
+        predictions, validation_eligibility=validation_eligibility
+    )
     for module_id in CALIBRATION_WARMUP_MODULES:
         row = _find_module(health, module_id)
         if row is None:

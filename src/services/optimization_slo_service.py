@@ -8,9 +8,10 @@ from src.engines.v4_price_context import serve_price_evidence
 from src.engines.v4_weather_tactical_overlay import apply_weather_overlay
 from src.services.owned_challenger_decision_service import load_policy, run as run_owned_challenger_decision
 from src.services.projected_value_market_challenger import augment_challenger, discover, rerank_visible_watchlist
+from src.services.runtime_policy import decision_compute_slo_ms
 from src.utils import DATA, atomic_json, read_json
 
-DECISION_COMPUTE_SLO_MS = 5000.0
+DECISION_COMPUTE_SLO_MS = decision_compute_slo_ms()
 
 
 def _load_price_context() -> dict:

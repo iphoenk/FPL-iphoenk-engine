@@ -812,21 +812,6 @@
     {
       "event": 5,
       "kickoff_time": "2026-09-19T14:00:00Z",
-      "team_h": 13,
-      "team_a": 8,
-      "home_expected_goals": 1.5012,
-      "away_expected_goals": 0.8268,
-      "home_clean_sheet_probability": 0.4374,
-      "away_clean_sheet_probability": 0.2229,
-      "home_2plus_probability": 0.4426,
-      "away_2plus_probability": 0.2009,
-      "home_win_probability": 0.5315,
-      "draw_probability": 0.2616,
-      "away_win_probability": 0.2068
-    },
-    {
-      "event": 5,
-      "kickoff_time": "2026-09-19T14:00:00Z",
       "team_h": 17,
       "team_a": 11,
       "home_expected_goals": 1.3702,
@@ -868,6 +853,21 @@
       "home_win_probability": 0.3918,
       "draw_probability": 0.2459,
       "away_win_probability": 0.3623
+    },
+    {
+      "event": 5,
+      "kickoff_time": "2026-09-20T13:00:00Z",
+      "team_h": 13,
+      "team_a": 8,
+      "home_expected_goals": 1.5012,
+      "away_expected_goals": 0.8268,
+      "home_clean_sheet_probability": 0.4374,
+      "away_clean_sheet_probability": 0.2229,
+      "home_2plus_probability": 0.4426,
+      "away_2plus_probability": 0.2009,
+      "home_win_probability": 0.5315,
+      "draw_probability": 0.2616,
+      "away_win_probability": 0.2068
     },
     {
       "event": 5,
@@ -1261,21 +1261,6 @@
     },
     {
       "event": 8,
-      "kickoff_time": "2026-10-24T14:00:00Z",
-      "team_h": 14,
-      "team_a": 5,
-      "home_expected_goals": 2.5764,
-      "away_expected_goals": 2.1302,
-      "home_clean_sheet_probability": 0.1188,
-      "away_clean_sheet_probability": 0.076,
-      "home_2plus_probability": 0.728,
-      "away_2plus_probability": 0.6281,
-      "home_win_probability": 0.4849,
-      "draw_probability": 0.186,
-      "away_win_probability": 0.3273
-    },
-    {
-      "event": 8,
       "kickoff_time": "2026-10-24T16:30:00Z",
       "team_h": 6,
       "team_a": 19,
@@ -1318,6 +1303,21 @@
       "home_win_probability": 0.5012,
       "draw_probability": 0.2779,
       "away_win_probability": 0.2208
+    },
+    {
+      "event": 8,
+      "kickoff_time": "2026-10-25T14:00:00Z",
+      "team_h": 14,
+      "team_a": 5,
+      "home_expected_goals": 2.5764,
+      "away_expected_goals": 2.1302,
+      "home_clean_sheet_probability": 0.1188,
+      "away_clean_sheet_probability": 0.076,
+      "home_2plus_probability": 0.728,
+      "away_2plus_probability": 0.6281,
+      "home_win_probability": 0.4849,
+      "draw_probability": 0.186,
+      "away_win_probability": 0.3273
     },
     {
       "event": 8,
@@ -1456,7 +1456,7 @@
     },
     {
       "event": 9,
-      "kickoff_time": "2026-11-01T14:00:00Z",
+      "kickoff_time": "2026-10-31T20:00:00Z",
       "team_h": 2,
       "team_a": 10,
       "home_expected_goals": 0.9761,

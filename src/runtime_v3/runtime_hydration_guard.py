@@ -1,17 +1,30 @@
 from __future__ import annotations
 
+import io
 import json
+import os
 import re
 import subprocess
+import tempfile
+import zipfile
 from pathlib import Path
+from urllib.request import Request, urlopen
 
+from src.runtime_v3.publish_snapshot import (
+    ATTESTATION_DIGEST_CONTRACT,
+    ATTESTATION_REGISTRY,
+    snapshot_digest,
+)
 from src.utils import ROOT
 
 RUNTIME_BRANCH = "runtime-data"
 RUNTIME_REF = f"refs/remotes/origin/{RUNTIME_BRANCH}"
 EXPECTED_BOT_EMAIL = "actions@users.noreply.github.com"
 EXPECTED_SUBJECT = "data: rolling FPL runtime snapshot [skip ci]"
+EXPECTED_WORKFLOW = "V3 Runtime"
+ATTESTATION_MARKER = "V3_RUNTIME_SNAPSHOT_ATTESTATION "
 _SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _git_text(root: Path, *args: str) -> str:
@@ -38,13 +51,7 @@ def _git_ok(root: Path, *args: str) -> bool:
 
 
 def _refresh_main_history(root: Path) -> None:
-    """Make canonical main ancestry available in shallow Actions checkouts.
-
-    Runtime jobs intentionally checkout one source SHA with depth=1. An older,
-    valid runtime manifest therefore cannot be ancestry-checked until canonical
-    main history is materialized. Keep the ancestry requirement and expand only
-    Git history; never weaken it to string equality or commit existence.
-    """
+    """Make canonical main ancestry available in shallow Actions checkouts."""
     shallow = _git_text(root, "rev-parse", "--is-shallow-repository").lower() == "true"
     args = ["git", "fetch", "--no-tags"]
     if shallow:
@@ -72,6 +79,139 @@ def _source_is_canonical_ancestor(root: Path, source: str) -> bool:
     except (subprocess.CalledProcessError, OSError):
         return False
     return _git_ok(root, "merge-base", "--is-ancestor", source, "HEAD")
+
+
+def _production_actions_context() -> bool:
+    return os.getenv("GITHUB_ACTIONS") == "true" and os.getenv("GITHUB_WORKFLOW") == EXPECTED_WORKFLOW
+
+
+def _request(url: str) -> Request:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    token = str(os.getenv("GH_TOKEN") or "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return Request(url, headers=headers)
+
+
+def _fetch_json(url: str) -> dict:
+    try:
+        with urlopen(_request(url), timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        raise RuntimeError("runtime hydration rejected: workflow attestation metadata unavailable") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("runtime hydration rejected: workflow attestation metadata invalid")
+    return payload
+
+
+def _fetch_bytes(url: str) -> bytes:
+    try:
+        with urlopen(_request(url), timeout=30) as response:
+            return response.read()
+    except Exception as exc:
+        raise RuntimeError("runtime hydration rejected: workflow attestation logs unavailable") from exc
+
+
+def _verify_embedded_attestation(root: Path, manifest: dict, actual_paths: list[str]) -> dict:
+    schema_version = int(manifest.get("schema_version") or 0)
+    attestation = manifest.get("attestation")
+    if schema_version < 3:
+        if _production_actions_context():
+            raise RuntimeError("runtime hydration rejected: production snapshot attestation required")
+        return {
+            "embedded_attestation_verified": False,
+            "workflow_run_id": None,
+            "snapshot_sha256": None,
+            "attestation": None,
+        }
+    if not isinstance(attestation, dict):
+        raise RuntimeError("runtime hydration rejected: attestation missing")
+    if attestation.get("registry") != ATTESTATION_REGISTRY:
+        raise RuntimeError("runtime hydration rejected: attestation registry mismatch")
+    if attestation.get("digest_contract") != ATTESTATION_DIGEST_CONTRACT:
+        raise RuntimeError("runtime hydration rejected: attestation digest contract mismatch")
+    if attestation.get("workflow_name") != EXPECTED_WORKFLOW:
+        raise RuntimeError("runtime hydration rejected: attestation workflow mismatch")
+
+    run_id = attestation.get("workflow_run_id")
+    if not isinstance(run_id, int) or run_id <= 0:
+        raise RuntimeError("runtime hydration rejected: attestation workflow run id invalid")
+    source = str(manifest.get("source_commit") or "").lower()
+    if attestation.get("source_commit") != source:
+        raise RuntimeError("runtime hydration rejected: attestation source commit mismatch")
+    claimed = str(attestation.get("snapshot_sha256") or "").lower()
+    if not _DIGEST_RE.fullmatch(claimed):
+        raise RuntimeError("runtime hydration rejected: attestation digest invalid")
+
+    with tempfile.TemporaryDirectory(prefix="v3-runtime-attestation-") as tmp:
+        data_dir = Path(tmp)
+        for relative in actual_paths:
+            target = data_dir / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(_git_bytes(root, "show", f"{RUNTIME_REF}:data/{relative}"))
+        calculated = snapshot_digest(data_dir, manifest)
+    if calculated != claimed:
+        raise RuntimeError("runtime hydration rejected: attested runtime content digest mismatch")
+
+    return {
+        "embedded_attestation_verified": True,
+        "workflow_run_id": run_id,
+        "snapshot_sha256": claimed,
+        "attestation": attestation,
+    }
+
+
+def _verify_immutable_workflow_evidence(attestation: dict) -> dict:
+    if not _production_actions_context():
+        return {
+            "workflow_run_success_verified": False,
+            "immutable_log_attestation_verified": False,
+        }
+
+    repository = str(os.getenv("GITHUB_REPOSITORY") or "").strip()
+    api = str(os.getenv("GITHUB_API_URL") or "https://api.github.com").rstrip("/")
+    if not repository:
+        raise RuntimeError("runtime hydration rejected: GitHub repository identity unavailable")
+
+    run_id = int(attestation["workflow_run_id"])
+    metadata = _fetch_json(f"{api}/repos/{repository}/actions/runs/{run_id}")
+    if metadata.get("id") != run_id:
+        raise RuntimeError("runtime hydration rejected: workflow run id mismatch")
+    if metadata.get("name") != EXPECTED_WORKFLOW:
+        raise RuntimeError("runtime hydration rejected: workflow run name mismatch")
+    if metadata.get("head_branch") != "main":
+        raise RuntimeError("runtime hydration rejected: attesting workflow was not canonical main")
+    if metadata.get("head_sha") != attestation.get("source_commit"):
+        raise RuntimeError("runtime hydration rejected: attesting workflow source SHA mismatch")
+    if metadata.get("conclusion") != "success":
+        raise RuntimeError("runtime hydration rejected: attesting workflow did not complete successfully")
+
+    archive = _fetch_bytes(f"{api}/repos/{repository}/actions/runs/{run_id}/logs")
+    expected_marker = ATTESTATION_MARKER + json.dumps(
+        attestation, ensure_ascii=False, sort_keys=True
+    )
+    found = False
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive)) as logs:
+            for name in logs.namelist():
+                if name.endswith("/"):
+                    continue
+                text = logs.read(name).decode("utf-8", errors="replace")
+                if expected_marker in text:
+                    found = True
+                    break
+    except (zipfile.BadZipFile, OSError) as exc:
+        raise RuntimeError("runtime hydration rejected: workflow attestation log archive invalid") from exc
+    if not found:
+        raise RuntimeError("runtime hydration rejected: immutable workflow attestation marker missing")
+
+    return {
+        "workflow_run_success_verified": True,
+        "immutable_log_attestation_verified": True,
+    }
 
 
 def verify_runtime_snapshot(root: Path = ROOT) -> dict:
@@ -143,6 +283,9 @@ def verify_runtime_snapshot(root: Path = ROOT) -> dict:
             "runtime hydration rejected: source commit is not canonical checkout ancestry"
         )
 
+    embedded = _verify_embedded_attestation(root, manifest, actual_paths)
+    external = _verify_immutable_workflow_evidence(embedded.get("attestation") or {})
+
     return {
         "status": "PASS",
         "runtime_branch": RUNTIME_BRANCH,
@@ -153,6 +296,11 @@ def verify_runtime_snapshot(root: Path = ROOT) -> dict:
         "data_only_tree": True,
         "publication_whitelist_verified": True,
         "canonical_source_ancestry_verified": True,
+        "embedded_attestation_verified": embedded["embedded_attestation_verified"],
+        "workflow_run_id": embedded["workflow_run_id"],
+        "snapshot_sha256": embedded["snapshot_sha256"],
+        "workflow_run_success_verified": external["workflow_run_success_verified"],
+        "immutable_log_attestation_verified": external["immutable_log_attestation_verified"],
     }
 
 

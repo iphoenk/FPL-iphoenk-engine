@@ -39,15 +39,8 @@ jobs:
           from pathlib import Path
           path = Path('src/services/governance_service.py')
           text = path.read_text()
-          old = '''    lifecycle = read_json(DATA / "validation" / "lifecycle_v4.json", {})
-    validation_eligibility = lifecycle.get("eligibility") or {}
-'''
-          new = '''    try:
-        lifecycle = read_json(DATA / "validation" / "lifecycle_v4.json", {})
-    except (KeyError, FileNotFoundError):
-        lifecycle = {}
-    validation_eligibility = lifecycle.get("eligibility") or {}
-'''
+          old = '    lifecycle = read_json(DATA / "validation" / "lifecycle_v4.json", {})\n    validation_eligibility = lifecycle.get("eligibility") or {}\n'
+          new = '    try:\n        lifecycle = read_json(DATA / "validation" / "lifecycle_v4.json", {})\n    except (KeyError, FileNotFoundError):\n        lifecycle = {}\n    validation_eligibility = lifecycle.get("eligibility") or {}\n'
           if new not in text:
               if old not in text:
                   raise SystemExit('governance lifecycle fallback anchor not found')

@@ -10,21 +10,49 @@ from time import perf_counter
 from src.services import (
     architecture_guard_service,
     enrichment_service,
-    governance_service,
-    gw_scorecard_service,
+    governance_live_overlay,
+    gw_scorecard_live_overlay,
     optimization_slo_service,
     prediction_model_cache,
-    prediction_service,
+    prediction_service_price_mover,
     raw_snapshot_service,
     user_decision_overlay_service,
 )
 from src.services.contracts import file_digest
-from src.utils import DATA, ROOT, atomic_json, iso_now, read_json
+from src.utils import CONFIG, DATA, ROOT, atomic_json, iso_now, read_json
 
 OUTFILE = DATA / "hot_orchestration_v4.json"
 SNAPSHOT = DATA / "runtime" / "snapshot.v1.json"
 ENRICHMENT = DATA / "runtime" / "enrichment.v1.json"
 LATEST = DATA / "latest.json"
+
+HOT_PRODUCTION_MODULES = {
+    "raw_snapshot": raw_snapshot_service.__name__,
+    "enrichment": enrichment_service.__name__,
+    "prediction": prediction_service_price_mover.__name__,
+    "validation": "src.services.validation_service",
+    "optimization": optimization_slo_service.__name__,
+    "user_decision_overlay": user_decision_overlay_service.__name__,
+    "personal_gw_scorecard": gw_scorecard_live_overlay.__name__,
+    "governance": governance_live_overlay.__name__,
+}
+
+
+def _assert_registry_module_parity() -> dict[str, dict]:
+    registry = read_json(CONFIG / "service_registry.json", {})
+    by_id = {row.get("id"): row for row in registry.get("services") or []}
+    if set(by_id) != set(HOT_PRODUCTION_MODULES):
+        raise RuntimeError(f"hot-path service ids drifted from registry: {sorted(by_id)}")
+    for service_id, module_name in HOT_PRODUCTION_MODULES.items():
+        row = by_id[service_id]
+        if row.get("module") != module_name:
+            raise RuntimeError(
+                f"hot-path module drift for {service_id}: {module_name} != {row.get('module')}"
+            )
+        command = row.get("command") or []
+        if len(command) < 3 or command[2] != module_name:
+            raise RuntimeError(f"registry command/module mismatch for {service_id}")
+    return by_id
 
 
 def _assert_digest(path, expected: str, label: str) -> None:
@@ -45,15 +73,14 @@ def _last_service_json(stdout: str, service: str) -> dict:
 
 
 def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of: str | None = None) -> dict:
-    """Production-candidate E2E hot path used first as a non-publishing benchmark.
+    """Production-equivalent non-publishing E2E hot-path benchmark.
 
-    Tier-1 acquisition, enrichment and prediction execute in one process. Validation
-    remains a separate concurrent process so the optimizer can safely fork its exact
-    WC/package/lineup workers from the main thread. User authority, scorecard and
-    governance then execute in-process. No decision capability or search width is
-    removed; this only eliminates repeated Python interpreter/process startup and
-    JSON bootstrap overhead between bounded stages.
+    The benchmark may use a different execution strategy to measure process-startup
+    overhead, but service identity is fail-closed against the authoritative production
+    registry. It therefore cannot silently benchmark stale base implementations while
+    production uses wrappers/overlays.
     """
+    service_registry = _assert_registry_module_parity()
     started = perf_counter()
     service_ms: dict[str, float] = {}
 
@@ -74,11 +101,8 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     _assert_digest(SNAPSHOT, snapshot_sha, "snapshot")
     enrichment_sha = file_digest(ENRICHMENT)
 
-    # prediction_service owns exact base-prediction reuse in production now. The
-    # hot benchmark only observes that status; it no longer monkey-patches runtime
-    # behavior, which keeps benchmark and production semantics identical.
     t = perf_counter()
-    prediction_service.run()
+    prediction_service_price_mover.run()
     service_ms["prediction"] = round((perf_counter() - t) * 1000.0, 2)
     prediction_cache = prediction_model_cache.last_status()
     _assert_digest(SNAPSHOT, snapshot_sha, "snapshot")
@@ -88,8 +112,9 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT)
     validation_started = perf_counter()
+    validation_module = str(service_registry["validation"]["module"])
     validation = subprocess.Popen(
-        [sys.executable, "-m", "src.services.validation_service"],
+        [sys.executable, "-m", validation_module],
         cwd=ROOT,
         env=env,
         stdout=subprocess.PIPE,
@@ -109,7 +134,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     service_ms["user_decision_overlay"] = round((perf_counter() - t) * 1000.0, 2)
 
     t = perf_counter()
-    gw_scorecard_service.run()
+    gw_scorecard_live_overlay.run()
     service_ms["personal_gw_scorecard"] = round((perf_counter() - t) * 1000.0, 2)
 
     validation_stdout, validation_stderr = validation.communicate(timeout=45)
@@ -120,7 +145,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     validation_detail = _last_service_json(validation_stdout, "validation")
 
     t = perf_counter()
-    governance_detail = governance_service.run()
+    governance_detail = governance_live_overlay.run()
     service_ms["governance"] = round((perf_counter() - t) * 1000.0, 2)
     _assert_digest(SNAPSHOT, snapshot_sha, "snapshot")
     _assert_digest(ENRICHMENT, enrichment_sha, "enrichment")
@@ -132,14 +157,15 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
     timings = decision.get("timings") or {}
     latest = read_json(LATEST, {})
     out = {
-        "schema_version": 2,
-        "engine": "v4.9.6-e2e-hot-path-candidate-v2",
+        "schema_version": 3,
+        "engine": "v4.9.6-e2e-hot-path-production-wrapper-parity-v3",
         "generated_at": iso_now(),
         "status": "PASS",
         "mode": mode,
         "total_e2e_ms": total_ms,
         "serving_e2e_excluding_startup_assurance_ms": serving_ms,
         "service_ms": service_ms,
+        "production_service_modules": HOT_PRODUCTION_MODULES,
         "prediction_base_cache": prediction_cache,
         "validation_detail": validation_detail,
         "governance_detail": governance_detail,
@@ -168,6 +194,8 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = True, as_of:
             "exact_base_prediction_reuse_only": True,
             "fresh_xmins_evidence_attached_after_base_prediction_reuse": True,
             "benchmark_matches_production_prediction_path": True,
+            "benchmark_matches_production_service_modules": True,
+            "registry_is_service_identity_authority": True,
             "user_final_authority_preserved": True,
             "validation_runs_concurrently_not_skipped": True,
             "architecture_guard_runs_first": True,

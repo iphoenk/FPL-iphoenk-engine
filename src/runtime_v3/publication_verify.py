@@ -2,10 +2,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
-from src.runtime_v3.publish_snapshot import PUBLIC_AUTH_PROJECTION, REGISTRY_PATH
+from src.runtime_v3.publish_snapshot import (
+    ATTESTATION_DIGEST_CONTRACT,
+    ATTESTATION_REGISTRY,
+    PUBLIC_AUTH_PROJECTION,
+    REGISTRY_PATH,
+    snapshot_digest,
+)
 
 PUBLIC_AUTH_ALLOWED_KEYS = {
     "public_projection",
@@ -35,6 +42,7 @@ PRIVATE_AUTH_FORBIDDEN_KEYS = {
     "bank",
     "value",
 }
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -57,6 +65,35 @@ def _verify_public_auth_projection(payload: Any, *, location: str) -> None:
     forbidden = sorted(set(payload) & PRIVATE_AUTH_FORBIDDEN_KEYS)
     if forbidden:
         raise RuntimeError(f"{location} contains private authenticated fields: {forbidden}")
+
+
+def _verify_embedded_attestation(data_dir: Path, manifest: dict[str, Any]) -> dict[str, Any] | None:
+    schema = int(manifest.get("schema_version") or 0)
+    attestation = manifest.get("attestation")
+    if schema < 3:
+        if attestation is not None:
+            raise RuntimeError("legacy runtime manifest may not carry an unversioned attestation")
+        return None
+    if not isinstance(attestation, dict):
+        raise RuntimeError("runtime manifest v3 requires workflow attestation")
+    if attestation.get("registry") != ATTESTATION_REGISTRY:
+        raise RuntimeError("runtime workflow attestation registry mismatch")
+    if attestation.get("digest_contract") != ATTESTATION_DIGEST_CONTRACT:
+        raise RuntimeError("runtime workflow attestation digest contract mismatch")
+    if attestation.get("workflow_name") != "V3 Runtime":
+        raise RuntimeError("runtime workflow attestation workflow mismatch")
+    run_id = attestation.get("workflow_run_id")
+    if not isinstance(run_id, int) or run_id <= 0:
+        raise RuntimeError("runtime workflow attestation run id invalid")
+    if attestation.get("source_commit") != manifest.get("source_commit"):
+        raise RuntimeError("runtime workflow attestation source commit mismatch")
+    claimed = str(attestation.get("snapshot_sha256") or "").lower()
+    if not _SHA256_RE.fullmatch(claimed):
+        raise RuntimeError("runtime workflow attestation digest invalid")
+    actual = snapshot_digest(data_dir, manifest)
+    if claimed != actual:
+        raise RuntimeError("runtime workflow attestation content digest mismatch")
+    return attestation
 
 
 def verify_publication(
@@ -111,12 +148,11 @@ def verify_publication(
     if int(publication.get("file_count") or -1) != len(actual):
         raise RuntimeError("runtime manifest total file count mismatch")
 
-    payload_bytes = sum(
-        (data_dir / relative).stat().st_size
-        for relative in payload_paths
-    )
+    payload_bytes = sum((data_dir / relative).stat().st_size for relative in payload_paths)
     if int(publication.get("bytes_without_manifest") or -1) != payload_bytes:
         raise RuntimeError("runtime manifest payload byte count mismatch")
+
+    attestation = _verify_embedded_attestation(data_dir, manifest)
 
     auth_path = data_dir / "auth.json"
     if auth_path.exists():
@@ -135,6 +171,7 @@ def verify_publication(
         "status": "PASS",
         "registry": registry.get("registry"),
         "manifest": manifest.get("registry"),
+        "manifest_schema_version": manifest.get("schema_version"),
         "source_commit": manifest.get("source_commit"),
         "execution_profile": manifest.get("execution_profile"),
         "file_count": len(actual),
@@ -144,6 +181,9 @@ def verify_publication(
         "public_authenticated_projection_verified": auth_path.exists() or (
             latest_path.exists() and "authenticated_official" in _read_json(latest_path)
         ),
+        "embedded_attestation_verified": attestation is not None,
+        "snapshot_sha256": attestation.get("snapshot_sha256") if attestation else None,
+        "workflow_run_id": attestation.get("workflow_run_id") if attestation else None,
     }
     return result
 

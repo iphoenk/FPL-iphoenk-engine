@@ -17,7 +17,7 @@ def test_validation_lifecycle_accepts_preloaded_snapshot_without_file_reads(monk
     monkeypatch.setattr(v4_validation_cycle, "read_json", forbidden_read)
     monkeypatch.setattr(v4_validation_cycle, "atomic_json", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(v4_validation_cycle, "capture_submitted_state", lambda raw, now=None: {"status": "SKIP"})
-    monkeypatch.setattr(v4_validation_cycle, "reconcile_latest_finished", lambda raw, now=None: {"status": "SKIP"})
+    monkeypatch.setattr(v4_validation_cycle, "reconcile_latest_finished", lambda raw, now=None, **_kwargs: {"status": "SKIP"})
     monkeypatch.setattr(v4_validation_cycle, "snapshot_current", lambda raw, predictions, now=None: {"status": "PASS"})
     monkeypatch.setattr(v4_validation_cycle, "refresh_eligible_view", lambda model: {"model_version": model, "eligible_samples": 0})
 

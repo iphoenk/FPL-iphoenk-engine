@@ -249,15 +249,25 @@ def _counterfactual(previous: dict[str, Any] | None, live: dict[str, Any], offic
 
 def _auth_readiness(auth: dict[str, Any]) -> dict[str, Any]:
     state = str(auth.get("state") or "DISABLED").upper()
-    if state == "VALID":
+    readiness = auth.get("enhancement_health")
+    if not isinstance(readiness, dict):
+        readiness = auth.get("production_readiness")
+    readiness = readiness if isinstance(readiness, dict) else {}
+    readiness_status = str(readiness.get("status") or "").upper()
+
+    if readiness_status == "AVAILABLE" or state == "VALID":
         health = "GREEN"
-    elif state.startswith("PARTIAL") or state in {"UNAVAILABLE"}:
+    elif readiness_status == "NOT_CONFIGURED" or state == "DISABLED":
+        health = "NEUTRAL"
+    elif readiness_status == "DEGRADED" or state.startswith("PARTIAL") or state == "UNAVAILABLE":
         health = "AMBER"
     else:
         health = "RED"
+
     finance = auth.get("safe_finance") or {}
     return {
         "health": health,
+        "readiness_status": readiness_status or None,
         "state": state,
         "verified_entry": auth.get("verified_entry"),
         "chip_state_available": bool((auth.get("chip_state") or {}).get("available")),
@@ -266,6 +276,7 @@ def _auth_readiness(auth: dict[str, Any]) -> dict[str, Any]:
         "raw_authenticated_payload_persisted": bool(auth.get("raw_authenticated_payload_persisted")),
         "authority_upgrade_allowed": state == "VALID" and auth.get("verified_entry") == auth.get("expected_entry"),
         "governance": {
+            "optional_not_configured_is_not_failure": True,
             "disabled_without_credentials_is_explicit": True,
             "raw_authenticated_payload_must_not_be_persisted": True,
             "public_official_remains_authority_when_auth_not_valid": True,

@@ -19,6 +19,7 @@ jobs:
     uses: ./.github/workflows/fpl-engine-core.yml
     permissions:
       contents: read
+    secrets: inherit
     with:
       ref: ${{ github.sha }}
       publish: true

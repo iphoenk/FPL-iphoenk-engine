@@ -1,0 +1,37 @@
+name: V4 temporary performance attestation refresh
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v4-perf-attestation-refresh-temp.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: codex/v4-final-yellow-closeout-20260901
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - name: Rebuild governed architecture attestation
+        run: python tools/v4_architecture_guard_attest.py
+      - name: Commit governed attestation to V4 closeout branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add config/architecture_guard_attestation.json
+          git diff --cached --exit-code && exit 0 || true
+          git commit -m 'chore(v4): refresh performance architecture attestation'
+          git push origin HEAD:codex/v4-final-yellow-closeout-20260901

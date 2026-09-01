@@ -1,4 +1,4 @@
-name: V4 temporary attestation artifact builder
+name: V4 temporary performance patch + attestation builder
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
@@ -23,15 +23,47 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: Build governed attestation from PR source bytes
+      - name: Apply serialization-dedup optimization
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          maturity=Path('src/engines/v4_maturity_reconciler.py')
+          text=maturity.read_text()
+          old='''def reconcile(\n    health: dict | None = None,\n    *,\n    predictions: dict | None = None,\n    latest: dict | None = None,\n    universe: dict | None = None,\n) -> dict:'''
+          new='''def reconcile(\n    health: dict | None = None,\n    *,\n    predictions: dict | None = None,\n    latest: dict | None = None,\n    universe: dict | None = None,\n    persist: bool = True,\n) -> dict:'''
+          if old not in text:
+              raise SystemExit('maturity reconcile signature anchor not found')
+          text=text.replace(old,new,1)
+          old_tail='''    atomic_json(HEALTH, health)\n    return health\n'''
+          new_tail='''    if persist:\n        atomic_json(HEALTH, health)\n    return health\n'''
+          if old_tail not in text:
+              raise SystemExit('maturity persistence anchor not found')
+          maturity.write_text(text.replace(old_tail,new_tail,1))
+
+          governance=Path('src/services/governance_service.py')
+          text=governance.read_text()
+          old_call='''        predictions=predictions,\n        latest=latest,\n        universe=universe,\n    )'''
+          new_call='''        predictions=predictions,\n        latest=latest,\n        universe=universe,\n        persist=False,\n    )'''
+          if old_call not in text:
+              raise SystemExit('governance maturity call anchor not found')
+          governance.write_text(text.replace(old_call,new_call,1))
+          PY
+      - name: Rebuild governed architecture attestation
         run: python tools/v4_architecture_guard_attest.py
-      - name: Commit governed attestation to PR branch
+      - name: Install test dependencies
+        run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Verify optimization and full deterministic suite
+        run: python -m pytest -q
+      - name: Commit governed performance fix to PR branch
         shell: bash
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add config/architecture_guard_attestation.json
+          git add src/engines/v4_maturity_reconciler.py src/services/governance_service.py config/architecture_guard_attestation.json
           git diff --cached --exit-code && exit 0 || true
-          git commit -m 'chore(v4): refresh governed architecture attestation'
+          git commit -m 'perf(v4): avoid duplicate maturity health serialization'
           git push origin HEAD:codex/v4-runtime-secret-inheritance

@@ -4,6 +4,7 @@ import json
 from functools import lru_cache
 from typing import Any
 
+from src.engines.p1_decision_governance import bench_battles
 from src.utils import DATA, ROOT, atomic_json, read_json
 
 CONSUMPTION_CONFIG = ROOT / "config" / "intelligence" / "tactical_decision_consumption.json"
@@ -125,6 +126,33 @@ def _close_group_sort(
     return out
 
 
+def _sync_formation_comparison(
+    lineup: dict[str, Any],
+    alternatives: list[dict[str, Any]],
+    selected_ids: list[int],
+) -> None:
+    raw_rows = list(lineup.get("formation_comparison") or [])
+    if not raw_rows:
+        return
+    selected_set = set(selected_ids)
+    rows: list[dict[str, Any]] = []
+    for index, raw in enumerate(raw_rows):
+        row = dict(raw)
+        alternative = alternatives[index] if index < len(alternatives) else {}
+        alternative_ids = {int(value) for value in alternative.get("element_ids") or []}
+        row["selected"] = bool(alternative_ids) and alternative_ids == selected_set
+        rows.append(row)
+    selected_rows = [row for row in rows if row.get("selected") is True]
+    if len(selected_rows) != 1:
+        raise RuntimeError(
+            "tactical lineup overlay could not reconcile formation comparison with final XI: "
+            f"selected_rows={len(selected_rows)}"
+        )
+    if selected_rows[0].get("formation") != lineup.get("formation"):
+        raise RuntimeError("tactical lineup overlay formation comparison disagrees with final formation")
+    lineup["formation_comparison"] = rows
+
+
 def apply_lineup_overlay(
     lineup: dict[str, Any] | None = None,
     projections: dict[str, Any] | None = None,
@@ -176,10 +204,14 @@ def apply_lineup_overlay(
         lineup["starting_xi"] = starters
         lineup["formation"] = selected_alt.get("formation")
         lineup["lineup_score"] = {
-            "robust": selected_alt.get("score"),
+            "robust": selected_alt.get("decision_score", selected_alt.get("score")),
+            "base_robust": selected_alt.get("base_score"),
             "xpts_mean": selected_alt.get("xpts_mean"),
             "xpts_std": selected_alt.get("xpts_std"),
+            "risk_adjustment": selected_alt.get("risk_adjustment"),
         }
+
+    _sync_formation_comparison(lineup, alternatives, selected_ids)
 
     starter_ids = {int(row["element"]) for row in starters}
     bench_rows = [dict(row) for row in squad_rows if int(row.get("element") or -1) not in starter_ids]
@@ -190,8 +222,24 @@ def apply_lineup_overlay(
     if bench_gk is None or len(outfield) != 3:
         raise RuntimeError("tactical lineup overlay must preserve legal bench structure")
     lineup["bench"] = {
-        "gk": {"element": bench_gk.get("element"), "name": bench_gk.get("name"), "position": bench_gk.get("position"), "bench_score": bench_gk.get("bench_score")},
-        "order": [{"element": row.get("element"), "name": row.get("name"), "position": row.get("position"), "bench_score": row.get("bench_score")} for row in outfield],
+        "gk": {
+            "element": bench_gk.get("element"),
+            "name": bench_gk.get("name"),
+            "position": bench_gk.get("position"),
+            "bench_score": bench_gk.get("bench_score"),
+        },
+        "order": [
+            {
+                "element": row.get("element"),
+                "name": row.get("name"),
+                "position": row.get("position"),
+                "bench_score": row.get("bench_score"),
+                "lower80": row.get("lower80"),
+                "upper80": row.get("upper80"),
+            }
+            for row in outfield
+        ],
+        "close_battles": bench_battles(outfield, _lineup_config()),
     }
 
     captain_cfg = _lineup_config().get("captaincy") or {}
@@ -209,10 +257,36 @@ def apply_lineup_overlay(
     vice = next(row for row in safe_pool[1:] if int(row.get("element")) != int(captain.get("element")))
     old_captain = int((lineup.get("captain") or {}).get("element") or -1)
     old_vice = int((lineup.get("vice_captain") or {}).get("element") or -1)
-    lineup["captain"] = {"element": captain.get("element"), "name": captain.get("name"), "captain_score": captain.get("captain_score"), "dnp_probability": captain.get("dnp_probability")}
-    lineup["vice_captain"] = {"element": vice.get("element"), "name": vice.get("name"), "captain_score": vice.get("captain_score"), "dnp_probability": vice.get("dnp_probability")}
+    lineup["captain"] = {
+        "element": captain.get("element"),
+        "name": captain.get("name"),
+        "captain_score": captain.get("captain_score"),
+        "dnp_probability": captain.get("dnp_probability"),
+        "lower80": captain.get("lower80"),
+        "upper80": captain.get("upper80"),
+        "score_decomposition": captain.get("score_decomposition"),
+    }
+    lineup["vice_captain"] = {
+        "element": vice.get("element"),
+        "name": vice.get("name"),
+        "captain_score": vice.get("captain_score"),
+        "vice_score": vice.get("vice_score"),
+        "dnp_probability": vice.get("dnp_probability"),
+        "attack_ceiling_proxy": vice.get("attack_ceiling_proxy"),
+        "focality_proxy": vice.get("focality_proxy"),
+        "score_decomposition": vice.get("score_decomposition"),
+    }
     lineup["captain_safe_pool"] = [
-        {"element": row.get("element"), "name": row.get("name"), "captain_score": row.get("captain_score"), "start_probability": row.get("start_probability"), "dnp_probability": row.get("dnp_probability")}
+        {
+            "element": row.get("element"),
+            "name": row.get("name"),
+            "captain_score": row.get("captain_score"),
+            "vice_score": row.get("vice_score"),
+            "start_probability": row.get("start_probability"),
+            "dnp_probability": row.get("dnp_probability"),
+            "attack_ceiling_proxy": row.get("attack_ceiling_proxy"),
+            "focality_proxy": row.get("focality_proxy"),
+        }
         for row in safe_pool
     ]
 
@@ -233,6 +307,8 @@ def apply_lineup_overlay(
         "tactical_captain_tiebreak_applied": old_captain != int(captain.get("element") or -1),
         "tactical_vice_tiebreak_applied": old_vice != int(vice.get("element") or -1),
         "tactical_consumption_contract": "TACTICAL_DECISION_CONSUMPTION_V1",
+        "tactical_overlay_preserves_decision_transparency": True,
+        "formation_comparison_reconciled_to_final_xi": bool(lineup.get("formation_comparison")),
     })
     if persist:
         atomic_json(DATA / "lineup_decision.json", lineup)

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 
@@ -21,9 +22,11 @@ def test_ablation_is_observational_not_runtime_authority():
 
 def test_core_actions_use_node24_compatible_majors():
     text = WORKFLOW.read_text()
-    assert 'actions/checkout@v7' in text
-    assert 'actions/setup-python@v7' in text
-    assert 'actions/upload-artifact@v7' in text
+    required = ('actions/checkout', 'actions/setup-python', 'actions/upload-artifact')
+    for action in required:
+        rows = [line.strip() for line in text.splitlines() if f'uses: {action}@' in line]
+        assert rows, action
+        assert all(re.search(r'#\s*v7\s*$', row) for row in rows), (action, rows)
     assert 'actions/checkout@v4' not in text
     assert 'actions/setup-python@v5' not in text
     assert 'actions/upload-artifact@v4' not in text

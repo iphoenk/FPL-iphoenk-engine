@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
+from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -13,6 +15,8 @@ from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 REGISTRY_PATH = ROOT / "config" / "runtime" / "runtime_publish_registry.json"
 PUBLIC_AUTH_PROJECTION = "PUBLIC_AUTH_HEALTH_V1"
+ATTESTATION_REGISTRY = "V3_RUNTIME_WORKFLOW_ATTESTATION_V1"
+ATTESTATION_DIGEST_CONTRACT = "MANIFEST_CORE_PLUS_DECLARED_PAYLOAD_V1"
 
 
 def _registry() -> dict[str, Any]:
@@ -42,13 +46,7 @@ def _copy_declared(source_root: Path, output_root: Path, paths: list[str]) -> li
 
 
 def _public_auth_projection(raw: Any) -> dict[str, Any]:
-    """Project private authenticated enrichment to publication-safe health only.
-
-    The private auth service may retain precise current-draft finance and squad state
-    inside the working runtime. Public runtime publication is a different authority
-    boundary: only explicit health/governance fields are allowed through. Constructing
-    the payload from an allowlist ensures future private fields fail closed by omission.
-    """
+    """Project private authenticated enrichment to publication-safe health only."""
     payload = raw if isinstance(raw, dict) else {}
     readiness = payload.get("enhancement_health")
     if not isinstance(readiness, dict):
@@ -129,6 +127,50 @@ def _checkpoint_metadata(
     }
 
 
+def _runtime_workflow_run_id() -> int | None:
+    if os.getenv("GITHUB_WORKFLOW") != "V3 Runtime":
+        return None
+    raw = str(os.getenv("GITHUB_RUN_ID") or "").strip()
+    if not raw.isdigit():
+        return None
+    return int(raw)
+
+
+def snapshot_digest(data_dir: Path, manifest: dict[str, Any]) -> str:
+    """Hash immutable manifest semantics plus every declared payload byte.
+
+    The attestation object and derived total-manifest byte count are excluded so
+    the digest can be embedded in the manifest without recursion. All authority,
+    freshness, checkpoint, runtime, whitelist and payload bytes remain covered.
+    """
+    core = deepcopy(manifest)
+    core.pop("attestation", None)
+    publication = core.get("publication")
+    if not isinstance(publication, dict):
+        raise RuntimeError("runtime manifest publication metadata missing for digest")
+    publication.pop("bytes", None)
+    paths = publication.get("paths")
+    if not isinstance(paths, list):
+        raise RuntimeError("runtime manifest publication paths missing for digest")
+
+    digest = hashlib.sha256()
+    digest.update(b"V3_RUNTIME_SNAPSHOT_V1\0")
+    digest.update(
+        json.dumps(core, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    )
+    for raw in sorted(str(path) for path in paths):
+        path = data_dir / raw
+        if not path.is_file():
+            raise RuntimeError(f"declared runtime payload missing for digest: {raw}")
+        digest.update(b"\0PATH\0")
+        digest.update(raw.encode("utf-8"))
+        digest.update(b"\0DATA\0")
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    return digest.hexdigest()
+
+
 def materialize(
     source_root: Path,
     output_dir: Path,
@@ -152,8 +194,9 @@ def materialize(
 
     performance = read_json(source_root / "runtime_performance.json", {})
     generated_at = datetime.now(timezone.utc)
+    run_id = _runtime_workflow_run_id()
     manifest = {
-        "schema_version": 2,
+        "schema_version": 3 if run_id is not None else 2,
         "registry": "RUNTIME_MANIFEST_V1",
         "engine_version": ENGINE_VERSION,
         "engine_schema_version": SCHEMA_VERSION,
@@ -181,12 +224,24 @@ def materialize(
             "paths": sorted(copied),
             "rolling_snapshot_intended": True,
             "private_authenticated_state_projected_to_public_health": True,
+            "file_count": len(copied) + 1,
         },
     }
+
+    if run_id is not None:
+        digest = snapshot_digest(output_data, manifest)
+        manifest["attestation"] = {
+            "registry": ATTESTATION_REGISTRY,
+            "digest_contract": ATTESTATION_DIGEST_CONTRACT,
+            "workflow_name": "V3 Runtime",
+            "workflow_run_id": run_id,
+            "source_commit": manifest.get("source_commit"),
+            "snapshot_sha256": digest,
+        }
+
     atomic_json(source_root / "runtime_manifest.json", manifest)
     atomic_json(output_data / "runtime_manifest.json", manifest)
     manifest_bytes = (output_data / "runtime_manifest.json").stat().st_size
-    manifest["publication"]["file_count"] = len(copied) + 1
     manifest["publication"]["bytes"] = payload_bytes + manifest_bytes
     atomic_json(source_root / "runtime_manifest.json", manifest)
     atomic_json(output_data / "runtime_manifest.json", manifest)
@@ -218,7 +273,13 @@ def main() -> int:
         "bytes": manifest["publication"]["bytes"],
         "source_commit": manifest.get("source_commit"),
         "checkpoint": manifest.get("checkpoint"),
+        "attestation": manifest.get("attestation"),
     }, ensure_ascii=False))
+    if manifest.get("attestation"):
+        print(
+            "V3_RUNTIME_SNAPSHOT_ATTESTATION "
+            + json.dumps(manifest["attestation"], ensure_ascii=False, sort_keys=True)
+        )
     return 0
 
 

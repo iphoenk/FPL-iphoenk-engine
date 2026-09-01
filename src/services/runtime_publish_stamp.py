@@ -8,7 +8,8 @@ import subprocess
 from pathlib import Path
 
 from src.engines.v4_freshness import evaluate_freshness
-from src.utils import DATA, atomic_json, iso_now, read_json
+from src.services.runtime_checkpoint_target import PRECOMPUTE_ROLE, resolve_runtime_checkpoint_metadata
+from src.utils import DATA, atomic_json, iso_now, parse_dt, read_json
 
 LATEST = DATA / "latest.json"
 CHECKPOINT = DATA / "checkpoint_decision_v4.json"
@@ -104,6 +105,17 @@ def _validate_provenance(provenance: dict, *, require_complete: bool) -> None:
         ):
             if provenance.get(key) in (None, ""):
                 raise RuntimeError(f"runtime provenance requires {key}")
+    checkpoint = provenance.get("checkpoint") or {}
+    if checkpoint:
+        if checkpoint.get("snapshot_role") == PRECOMPUTE_ROLE:
+            if not checkpoint.get("target_checkpoint"):
+                raise RuntimeError("V4 precompute provenance requires explicit target_checkpoint")
+            if checkpoint.get("generated_before_or_at_target") is not True:
+                raise RuntimeError("late V4 precompute cannot be marked CURRENT for a logical checkpoint")
+            if checkpoint.get("materialization_complete") is not True:
+                raise RuntimeError("V4 precompute provenance requires complete materialization")
+        if checkpoint.get("publication_proof") != "PRESENCE_ON_RUNTIME_BRANCH":
+            raise RuntimeError("V4 checkpoint publication proof must be runtime-branch presence")
 
 
 def stamp_runtime_publish(
@@ -118,15 +130,20 @@ def stamp_runtime_publish(
         raise RuntimeError("runtime publish stamp requires latest.json")
 
     provenance = dict(provenance or provenance_from_env(required=require_provenance))
-    _validate_provenance(provenance, require_complete=require_provenance)
+    checkpoint_metadata = resolve_runtime_checkpoint_metadata(
+        parse_dt(stamp),
+        event_name=str(provenance.get("event") or os.getenv("GITHUB_EVENT_NAME") or ""),
+    )
     provenance.update(
         {
-            "schema_version": 1,
+            "schema_version": 2,
             "contract": "V4_RUNTIME_PROVENANCE_V1",
             "runtime_publish_at": stamp,
             "snapshot_sha256": _sha256(SNAPSHOT),
+            "checkpoint": checkpoint_metadata,
         }
     )
+    _validate_provenance(provenance, require_complete=require_provenance)
 
     latest["runtime_publish_at"] = stamp
     freshness = evaluate_freshness(latest, now=stamp, runtime_publish_at=stamp)
@@ -134,6 +151,7 @@ def stamp_runtime_publish(
     latest["source_age_minutes"] = freshness.get("source_age_minutes")
     latest["freshness_state"] = freshness.get("freshness_state")
     latest["runtime_provenance"] = provenance
+    latest["runtime_checkpoint"] = checkpoint_metadata
     atomic_json(LATEST, latest)
 
     checkpoint = read_json(CHECKPOINT, {})
@@ -141,11 +159,13 @@ def stamp_runtime_publish(
         checkpoint["runtime_publish_at"] = stamp
         checkpoint["freshness_at_publish"] = freshness
         checkpoint["runtime_provenance"] = provenance
+        checkpoint["runtime_checkpoint"] = checkpoint_metadata
         atomic_json(CHECKPOINT, checkpoint)
 
     serving = read_json(SERVING, {})
     if serving:
         serving["runtime_publish_at"] = stamp
+        serving["runtime_checkpoint"] = checkpoint_metadata
         engine_line = serving.setdefault("engine_source_line", {})
         engine_line["freshness_at_publish"] = freshness
         engine_line["runtime_provenance"] = provenance
@@ -156,6 +176,7 @@ def stamp_runtime_publish(
         benchmark["runtime_publish_at"] = stamp
         benchmark["publication_source_age_minutes"] = freshness.get("source_age_minutes")
         benchmark["runtime_provenance"] = provenance
+        benchmark["runtime_checkpoint"] = checkpoint_metadata
         atomic_json(BENCHMARK, benchmark)
 
     atomic_json(PROVENANCE, provenance)
@@ -166,6 +187,7 @@ def stamp_runtime_publish(
         "canonical_source_sha": provenance.get("canonical_source_sha"),
         "workflow_run_id": provenance.get("workflow_run_id"),
         "snapshot_sha256": provenance.get("snapshot_sha256"),
+        "checkpoint": checkpoint_metadata,
     }
 
 
@@ -186,6 +208,8 @@ def verify_runtime_provenance(
         )
     if latest.get("runtime_publish_at") != provenance.get("runtime_publish_at"):
         raise RuntimeError("runtime publication timestamp provenance mismatch")
+    if latest.get("runtime_checkpoint") != provenance.get("checkpoint"):
+        raise RuntimeError("latest.json runtime checkpoint metadata mismatch")
     if expected_source_sha and provenance.get("canonical_source_sha") != expected_source_sha.lower():
         raise RuntimeError("runtime provenance canonical source SHA mismatch")
     if expected_run_id is not None and provenance.get("workflow_run_id") != int(expected_run_id):

@@ -1,9 +1,16 @@
 import json
 from pathlib import Path
 
-from src.runtime_v3.domain_orchestrator import _validate_domain_coverage
+from src.runtime_v3 import registry_compiler
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _compile(domains: dict, services: dict) -> dict:
+    return registry_compiler.compile_runtime_plan(
+        domain_registry=domains,
+        service_registry=services,
+    )
 
 
 def test_canonical_domains_cover_every_background_capability_exactly_once():
@@ -34,11 +41,13 @@ def test_canonical_domains_cover_every_background_capability_exactly_once():
         "reporting",
         "serving",
     ]
-    _validate_domain_coverage(domains, services)
+    plan = _compile(domains, services)
     assigned = [cap for spec in domains["domains"].values() for cap in spec["capabilities"]]
     assert len(assigned) == 22
     assert len(set(assigned)) == 22
     assert set(assigned) == set(services["services"])
+    assert plan["domain_count"] == len(domains["domains"])
+    assert plan["capability_count"] == len(services["services"])
 
 
 def test_canonical_domain_boundaries_prevent_responsibility_leakage():
@@ -70,27 +79,17 @@ def test_canonical_domain_boundaries_prevent_responsibility_leakage():
 def test_domain_dependency_dag_is_acyclic_and_covers_capability_dependencies():
     registry = json.loads((ROOT / "config/runtime/execution_domains.json").read_text())
     services = json.loads((ROOT / "config/v3_service_registry.json").read_text())
-    _validate_domain_coverage(registry, services)
+    plan = _compile(registry, services)
+    assert plan["runtime_assurance"] == "PASS"
 
 
 def test_domain_dag_reaches_every_domain_without_phase_order_assumptions():
     registry = json.loads((ROOT / "config/runtime/execution_domains.json").read_text())
-    remaining = list(registry["domains"])
-    completed: set[str] = set()
-    waves: list[list[str]] = []
-    while remaining:
-        ready = [
-            name
-            for name in remaining
-            if set(registry["domains"][name]["depends_on"]).issubset(completed)
-        ]
-        assert ready
-        waves.append(ready)
-        completed.update(ready)
-        remaining = [name for name in remaining if name not in ready]
+    services = json.loads((ROOT / "config/v3_service_registry.json").read_text())
+    plan = _compile(registry, services)
 
-    assert completed == set(registry["domains"])
-    assert waves == [
+    assert set(plan["domain_order"]) == set(registry["domains"])
+    assert plan["domain_waves"] == [
         ["official_state"],
         ["personal_team_state"],
         ["football_context"],

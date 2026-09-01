@@ -1,0 +1,36 @@
+name: V4 temporary attestation artifact builder
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v4-attestation-refresh-temp.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: codex/v4-runtime-secret-inheritance
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Build governed attestation from PR source bytes
+        run: python tools/v4_architecture_guard_attest.py
+      - name: Verify generated attestation
+        run: python -m pytest -q tests/test_v4_architecture_attestation.py tests/test_v496_architecture_consolidation.py tests/test_v4_p0_production_publication_governance.py
+      - name: Upload generated governed files
+        uses: actions/upload-artifact@v7
+        with:
+          name: v4-attestation-refresh
+          path: |
+            config/architecture_guard_attestation.json
+            data/architecture_ownership_v4.json
+          if-no-files-found: error
+          retention-days: 1

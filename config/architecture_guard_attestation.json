@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "fingerprint": "7912962228165387dc979d4c785e9d3696420b7652556ed133dc37c4ad4c8964",
+  "fingerprint": "c11add91c851048cde6b0d90aac31e3578e681b957295b1acb65ab8c868de0ac",
   "release": "4.9.6",
   "guard_schema_version": 497,
   "result": {
@@ -86,6 +86,10 @@
         "detail": []
       },
       "reporting_composition_only": {
+        "pass": true,
+        "detail": []
+      },
+      "reference_modules_read_only": {
         "pass": true,
         "detail": []
       },
@@ -471,7 +475,8 @@
       "audit_first_capability_matrix_enforced": true,
       "reporting_composition_only": true,
       "moving_operational_identity_single_owner": true,
-      "owned_challenger_single_decision_authority": true
+      "owned_challenger_single_decision_authority": true,
+      "reference_modules_read_only": true
     }
   }
 }

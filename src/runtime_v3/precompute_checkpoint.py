@@ -62,11 +62,7 @@ def _local_tz():
 
 
 def target_checkpoint_for_precompute(now_utc: datetime) -> datetime:
-    """Resolve the logical :30 target for a physical :15 precompute.
-
-    Until :44 local, retain the current-hour :30 target so scheduler lateness
-    remains visible. At :45 or later, the next :30 is the only honest target.
-    """
+    """Resolve the logical :30 target for a physical :15 precompute."""
     local = now_utc.astimezone(timezone.utc).astimezone(_local_tz())
     target_minute = int(_policy().get("visible_checkpoint_minute") or 30)
     candidate = local.replace(minute=target_minute, second=0, microsecond=0)
@@ -91,21 +87,23 @@ def _manifest_precompute_valid(
     target_utc: datetime,
     source_commit: str,
 ) -> bool:
-    """Validate a precompute already observed on the runtime branch.
+    """Validate a published precompute for one exact logical checkpoint.
 
-    Presence of this manifest in hydrated runtime-data is the publication proof;
-    the materialized manifest itself never claims that a future push completed.
+    Runtime-branch presence is publication proof. Freshness is derived from the
+    immutable generated_at/target timestamps, never filesystem mtime or a
+    self-asserted freshness boolean.
     """
     checkpoint = manifest.get("checkpoint") or {}
     generated_at = _parse_dt(manifest.get("generated_at"))
     target = _parse_dt(checkpoint.get("target_checkpoint"))
+    target_utc = target_utc.astimezone(timezone.utc)
     if str(checkpoint.get("snapshot_role") or "") != PRECOMPUTE_ROLE:
         return False
-    if target is None or target != target_utc.astimezone(timezone.utc):
+    if target is None or target != target_utc:
         return False
-    if generated_at is None or generated_at > target_utc.astimezone(timezone.utc):
+    if generated_at is None or generated_at > target_utc:
         return False
-    if checkpoint.get("generated_before_or_at_target") is not True:
+    if checkpoint.get("materialization_complete") is False:
         return False
     if str(manifest.get("source_commit") or "") != str(source_commit or ""):
         return False

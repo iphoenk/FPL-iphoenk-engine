@@ -3,8 +3,6 @@ from __future__ import annotations
 import json
 
 from src.runtime_v3 import registry_compiler
-from src.runtime_v3.domain_orchestrator import _load_domains
-from src.runtime_v3.orchestrator import _load_registry
 from src.utils import ROOT
 
 POLICY_PATH = ROOT / "config" / "runtime" / "fast_lane_policy.json"
@@ -59,8 +57,8 @@ def run() -> dict:
         errors.append("fast-decision contract must use HARD_CEILING")
 
     plan = registry_compiler.compile_runtime_plan(
-        domain_registry=_load_domains(),
-        service_registry=_load_registry(),
+        domain_registry=registry_compiler.load_domain_registry(),
+        service_registry=registry_compiler.load_capability_registry(),
     )
     if int(plan.get("domain_count") or 0) <= 0:
         errors.append("compiled fast-lane execution plan has no domains")

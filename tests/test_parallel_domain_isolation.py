@@ -2,9 +2,14 @@ from src.runtime_v3 import domain_orchestrator as runtime
 from src.runtime_v3 import registry_compiler
 
 
+def _runtime_authorities() -> tuple[dict, dict]:
+    registry = registry_compiler.load_domain_registry()
+    service_registry = registry_compiler.load_capability_registry()
+    return registry, service_registry
+
+
 def _safe_parallel_waves() -> list[tuple[str, ...]]:
-    registry = runtime._load_domains()
-    service_registry = runtime.legacy._load_registry()
+    registry, service_registry = _runtime_authorities()
     services = service_registry["services"]
     plan = registry_compiler.compile_runtime_plan(
         domain_registry=registry,
@@ -27,7 +32,7 @@ def test_parallel_domains_are_compiled_and_isolation_safe():
     assert ("weather_context", "market_context") in safe_waves
     assert ("squad_decision", "prediction_validation") in safe_waves
 
-    registry = runtime._load_domains()
+    registry, _ = _runtime_authorities()
     policy = registry["policy"]
     assert policy["market_context_and_weather_context_may_execute_in_parallel"] is True
     assert policy["prediction_and_market_context_may_execute_in_parallel"] is False
@@ -52,8 +57,9 @@ def test_seed_paths_are_contract_derived():
 
 
 def test_current_compiled_parallel_waves_have_disjoint_declared_write_sets():
-    services = runtime.legacy._load_registry()["services"]
-    domains = runtime._load_domains()["domains"]
+    registry, service_registry = _runtime_authorities()
+    services = service_registry["services"]
+    domains = registry["domains"]
 
     def write_set(domain_name: str) -> tuple[set[str], set[str], set[str]]:
         artifacts: set[str] = set()

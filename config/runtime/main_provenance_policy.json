@@ -13,6 +13,8 @@
     ".github/workflows/v4-prediction.yml",
     ".github/workflows/v4-timing-probe.yml",
     ".github/workflows/fpl-engine-recovery.yml",
-    ".github/workflows/v5-evidence-dispatcher.yml"
+    ".github/workflows/v5-evidence-dispatcher.yml",
+    ".github/workflows/v4-perf-attestation-refresh-temp.yml",
+    ".github/workflows/v4-validation-integrity-dedup-temp.yml"
   ]
 }

@@ -31,13 +31,14 @@ def maps(bootstrap):
 
 
 def run(mode: str = "daily", sync_stats: bool = False, deep_stats: bool = False):
-    """Compatibility facade around the active V3 service orchestrator.
+    """Compatibility facade around the canonical V3 domain orchestrator.
 
-    Production service ownership lives in config/v3_service_registry.json. This
-    facade intentionally contains no FPL network, squad, market, live or report
-    business logic.
+    Production topology and capability ownership live in the compiled domain
+    control plane. This facade remains for supported root/API entrypoints but
+    intentionally contains no FPL network, squad, market, live, report, or
+    scheduling business logic of its own.
     """
-    from src.runtime_v3.orchestrator import run as run_runtime
+    from src.runtime_v3.domain_orchestrator import run as run_runtime
 
     return run_runtime(mode=mode, stats=sync_stats, deep_stats=deep_stats)
 

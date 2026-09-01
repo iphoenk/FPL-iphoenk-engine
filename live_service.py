@@ -1,5 +1,5 @@
 from __future__ import annotations
-import asyncio, json, os, secrets
+import asyncio, json, logging, os, secrets
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
@@ -12,6 +12,7 @@ POLL = LIVE_POLL_SECONDS
 REFRESH_API_KEY=os.getenv("FPL_REFRESH_API_KEY")
 _poll_lock=asyncio.Lock()
 _stop_event=asyncio.Event()
+_logger=logging.getLogger(__name__)
 
 async def _refresh_once():
     async with _poll_lock:
@@ -22,7 +23,7 @@ async def _shared_poller():
         try:
             await _refresh_once()
         except Exception:
-            pass
+            _logger.exception("V3 live refresh failed")
         try:
             await asyncio.wait_for(_stop_event.wait(),timeout=POLL)
         except asyncio.TimeoutError:

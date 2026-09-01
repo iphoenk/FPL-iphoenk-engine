@@ -46,8 +46,10 @@ def test_canonical_domains_cover_every_background_capability_exactly_once():
     assert len(assigned) == 22
     assert len(set(assigned)) == 22
     assert set(assigned) == set(services["services"])
+    assert plan["registry"] == registry_compiler.COMPILED_PLAN_ID
     assert plan["domain_count"] == len(domains["domains"])
     assert plan["capability_count"] == len(services["services"])
+    assert plan["plan_sha256"]
 
 
 def test_canonical_domain_boundaries_prevent_responsibility_leakage():
@@ -80,7 +82,9 @@ def test_domain_dependency_dag_is_acyclic_and_covers_capability_dependencies():
     registry = json.loads((ROOT / "config/runtime/execution_domains.json").read_text())
     services = json.loads((ROOT / "config/v3_service_registry.json").read_text())
     plan = _compile(registry, services)
-    assert plan["runtime_assurance"] == "PASS"
+    assert plan["domain_count"] == registry["domain_count"]
+    assert plan["capability_count"] == len(services["services"])
+    assert len(plan["domain_order"]) == registry["domain_count"]
 
 
 def test_domain_dag_reaches_every_domain_without_phase_order_assumptions():

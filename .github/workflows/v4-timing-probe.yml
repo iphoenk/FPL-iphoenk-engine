@@ -25,11 +25,11 @@ jobs:
       canonical_sha: ${{ steps.canonical.outputs.canonical_sha }}
     steps:
       - name: Checkout canonical V4
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: v4-prediction-engine
           fetch-depth: 1
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.12"
           cache: pip
@@ -52,7 +52,8 @@ jobs:
     needs: probe
     if: needs.probe.outputs.run_full == 'true'
     permissions:
-      contents: write
+      contents: read
+    secrets: inherit
     uses: iphoenk/FPL-iphoenk-engine/.github/workflows/fpl-engine-core.yml@v4-prediction-engine
     with:
       ref: ${{ needs.probe.outputs.canonical_sha }}

@@ -296,24 +296,9 @@ jobs:
             "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
           canonical_main="$(git rev-parse refs/remotes/origin/main)"
           if [ "$canonical_main" != "$SOURCE_COMMIT" ]; then
-            export CANONICAL_MAIN="$canonical_main"
-            python - <<'PY'
-          import json
-          import os
-          from src.runtime_v3.main_pr_provenance import _load_policy, verify_version_exclusive_main_advance
-
-          policy = _load_policy()
-          result = verify_version_exclusive_main_advance(
-              api_url=os.environ["GITHUB_API_URL"],
-              repository=os.environ["GITHUB_REPOSITORY"],
-              source_sha=os.environ["SOURCE_COMMIT"],
-              head_sha=os.environ["CANONICAL_MAIN"],
-              token=os.environ["GH_TOKEN"],
-              version_exclusive_paths=set(policy["version_exclusive_paths"]),
-              max_first_parent_commits=int(policy["max_first_parent_commits"]),
-          )
-          print(json.dumps(result, sort_keys=True))
-          PY
+            python -m src.runtime_v3.version_scope_validate \
+              --source-commit "$SOURCE_COMMIT" \
+              --canonical-main "$canonical_main"
           fi
           runtime_base="$(git rev-parse refs/remotes/origin/${RUNTIME_BRANCH})"
           echo "RUNTIME_BASE_SHA=$runtime_base" >> "$GITHUB_ENV"

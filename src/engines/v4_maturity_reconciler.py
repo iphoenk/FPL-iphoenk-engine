@@ -382,6 +382,7 @@ def reconcile(
     predictions: dict | None = None,
     latest: dict | None = None,
     universe: dict | None = None,
+    persist: bool = True,
 ) -> dict:
     health = health if health is not None else read_json(HEALTH, {})
     if not health:
@@ -434,5 +435,6 @@ def reconcile(
         "calibration_promotion_gate_enforced": True,
         "note": "Capability readiness is recomputed from concrete producer-consumer evidence; current optional external evidence remains a separate evidence-state dimension, and calibration warmup promotes only on immutable current-model evidence that passes the canonical quality gate.",
     }
-    atomic_json(HEALTH, health)
+    if persist:
+        atomic_json(HEALTH, health)
     return health

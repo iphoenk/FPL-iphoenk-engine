@@ -201,6 +201,7 @@ def run() -> dict:
         predictions=predictions,
         latest=latest,
         universe=universe,
+        persist=False,
     )
     postflight_ms = round((perf_counter() - started) * 1000.0, 2)
     critical_failed_before = set(postflight.get("critical_failed") or [])

@@ -8,11 +8,12 @@ from typing import Any
 
 import requests
 
+from src.settings import API_TIMEOUT_SECONDS, TEAM_ID
 from src.utils import iso_now
 
 API_BASE = os.getenv("FPL_API_BASE", "https://fantasy.premierleague.com/api").rstrip("/")
-TIMEOUT = int(os.getenv("FPL_TIMEOUT", "20"))
-EXPECTED_TEAM_ID = int(os.getenv("FPL_TEAM_ID", "3462711"))
+TIMEOUT = API_TIMEOUT_SECONDS
+EXPECTED_TEAM_ID = TEAM_ID
 
 ALLOWED_API_PATHS = {
     "me/",

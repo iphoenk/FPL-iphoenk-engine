@@ -10,29 +10,41 @@ import shutil
 import sys
 import time
 from functools import lru_cache
-from pathlib import Path
 from typing import Any
 
 from src.runtime_v3 import incremental_reuse
 from src.runtime_v3 import module_batch_runner
 from src.runtime_v3 import orchestrator as legacy
+from src.runtime_v3 import registry_compiler
 from src.runtime_v3 import reuse_freshness
-from src.utils import DATA, ROOT
+from src.utils import DATA
 
-DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
+
+@lru_cache(maxsize=1)
+def _validated_registries() -> tuple[dict[str, Any], dict[str, Any]]:
+    """Load domain/capability registries through the canonical compiler authority.
+
+    The domain subprocess is also directly invokable, so it must fail closed on
+    the same topology and capability contract as the parent domain orchestrator
+    rather than maintaining a second registry loader/validator.
+    """
+    domain_registry = registry_compiler.load_domain_registry()
+    service_registry = registry_compiler.load_capability_registry()
+    registry_compiler.compile_runtime_plan(
+        domain_registry=domain_registry,
+        service_registry=service_registry,
+    )
+    return domain_registry, service_registry
 
 
 @lru_cache(maxsize=1)
 def _domains() -> dict[str, Any]:
-    payload = json.loads(DOMAIN_PATH.read_text(encoding="utf-8"))
-    if payload.get("registry") != "V3_EXECUTION_DOMAINS_V2":
-        raise RuntimeError("unexpected execution domain registry")
-    return payload.get("domains") or {}
+    return _validated_registries()[0].get("domains") or {}
 
 
 @lru_cache(maxsize=1)
 def _service_registry() -> dict[str, Any]:
-    return legacy._load_registry()
+    return _validated_registries()[1]
 
 
 @lru_cache(maxsize=1)

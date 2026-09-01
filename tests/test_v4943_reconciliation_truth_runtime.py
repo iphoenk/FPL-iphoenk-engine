@@ -25,7 +25,7 @@ def test_official_starts_is_only_start_truth():
     actual = actual_by_element(_live())
     assert actual[1]["started"] is True
     assert actual[2]["started"] is False
-n    assert actual[3]["started"] is None
+    assert actual[3]["started"] is None
 
 
 def test_missing_start_is_excluded_from_start_brier_not_inferred():

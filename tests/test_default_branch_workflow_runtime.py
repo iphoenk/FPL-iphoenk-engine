@@ -17,6 +17,9 @@ VERSION_EXCLUSIVE_MAIN_WORKFLOWS = (
     '.github/workflows/v4-timing-probe.yml',
     '.github/workflows/v5-evidence-dispatcher.yml',
 )
+CHECKOUT_V7_SHA = '3d3c42e5aac5ba805825da76410c181273ba90b1'
+SETUP_PYTHON_V7_SHA = '5fda3b95a4ea91299a34e894583c3862153e4b97'
+UPLOAD_ARTIFACT_V7_SHA = '043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
 
 
 def test_v3_ci_main_push_requires_merged_pr_provenance():
@@ -74,14 +77,33 @@ def test_v3_runtime_publication_provenance_uses_verified_source_commit():
     assert 'Refusing stale runtime publication: run_source=' not in text
 
 
-def test_default_branch_v4_workflows_use_node24_compatible_actions():
-    combined = '\n'.join((WORKFLOWS / name).read_text() for name in V4_DEFAULT_BRANCH_WORKFLOWS)
-    assert 'actions/checkout@v4' not in combined
-    assert 'actions/setup-python@v5' not in combined
-    assert 'actions/upload-artifact@v4' not in combined
-    assert 'actions/checkout@v7' in combined
-    assert 'actions/setup-python@v7' in combined
-    assert 'actions/upload-artifact@v7' in combined
+def test_default_branch_v4_workflows_use_node24_compatible_immutable_actions():
+    texts = {name: (WORKFLOWS / name).read_text() for name in V4_DEFAULT_BRANCH_WORKFLOWS}
+    combined = '\n'.join(texts.values())
+
+    # Older Node runtimes and floating major tags are both forbidden in the V4
+    # production control plane. Exact action SHAs are the reproducibility authority.
+    for floating in (
+        'actions/checkout@v4',
+        'actions/setup-python@v5',
+        'actions/upload-artifact@v4',
+        'actions/checkout@v7',
+        'actions/setup-python@v7',
+        'actions/upload-artifact@v7',
+    ):
+        assert floating not in combined
+
+    assert f'actions/checkout@{CHECKOUT_V7_SHA}' in combined
+    assert f'actions/setup-python@{SETUP_PYTHON_V7_SHA}' in combined
+    assert f'actions/upload-artifact@{UPLOAD_ARTIFACT_V7_SHA}' in combined
+
+    for name, text in texts.items():
+        if 'actions/checkout@' in text:
+            assert f'actions/checkout@{CHECKOUT_V7_SHA}' in text, name
+        if 'actions/setup-python@' in text:
+            assert f'actions/setup-python@{SETUP_PYTHON_V7_SHA}' in text, name
+        if 'actions/upload-artifact@' in text:
+            assert f'actions/upload-artifact@{UPLOAD_ARTIFACT_V7_SHA}' in text, name
 
 
 def test_default_branch_v4_publishers_keep_shared_non_cancelling_lock():
@@ -89,3 +111,15 @@ def test_default_branch_v4_publishers_keep_shared_non_cancelling_lock():
         text = (WORKFLOWS / name).read_text()
         assert 'group: fpl-iphoenk-v4-gate' in text, name
         assert 'cancel-in-progress: false' in text, name
+
+
+def test_default_branch_v4_publish_callers_inherit_governed_secrets_and_stay_read_only():
+    for name in V4_DEFAULT_BRANCH_WORKFLOWS:
+        text = (WORKFLOWS / name).read_text()
+        if 'publish: true' not in text:
+            continue
+        assert 'secrets: inherit' in text, name
+        core = text.split('uses: iphoenk/FPL-iphoenk-engine/.github/workflows/fpl-engine-core.yml@v4-prediction-engine', 1)[0]
+        caller = core.rsplit('\n  core:', 1)[-1]
+        assert 'contents: read' in caller, name
+        assert 'contents: write' not in caller, name

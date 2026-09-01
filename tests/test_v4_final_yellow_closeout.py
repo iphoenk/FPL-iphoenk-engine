@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import re
 from pathlib import Path
 
 from src.engines import v4_quality_gate, v4_quality_gate_legacy
@@ -63,11 +64,22 @@ def test_final_publication_integrity_hashes_post_overlay_content(monkeypatch, tm
     assert stored["final_artifacts"]["serving_payload_v4"]["sha256"] != file_digest(serving)
 
 
-def test_workflow_callers_use_read_only_repository_token() -> None:
-    for relative in (
-        ".github/workflows/fpl-engine.yml",
-        ".github/workflows/fpl-engine-recovery.yml",
+def test_workflow_callers_use_read_only_repository_token_and_recovery_inherits_secrets() -> None:
+    production = (ROOT / ".github/workflows/fpl-engine.yml").read_text(encoding="utf-8")
+    recovery = (ROOT / ".github/workflows/fpl-engine-recovery.yml").read_text(encoding="utf-8")
+    for relative, text in (
+        (".github/workflows/fpl-engine.yml", production),
+        (".github/workflows/fpl-engine-recovery.yml", recovery),
     ):
-        text = (ROOT / relative).read_text(encoding="utf-8")
         assert "contents: write" not in text, relative
         assert text.count("contents: read") >= 2, relative
+    assert "secrets: inherit" in production
+    assert "secrets: inherit" in recovery
+
+
+def test_reusable_core_third_party_actions_are_immutable_sha_pinned() -> None:
+    text = (ROOT / ".github/workflows/fpl-engine-core.yml").read_text(encoding="utf-8")
+    action_refs = re.findall(r"^\s*-?\s*uses:\s+(actions/[^@\s]+)@([^\s#]+)", text, flags=re.MULTILINE)
+    assert action_refs
+    for action, ref in action_refs:
+        assert re.fullmatch(r"[0-9a-f]{40}", ref), (action, ref)

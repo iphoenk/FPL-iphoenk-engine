@@ -114,8 +114,27 @@ def test_runtime_hydration_guard_rejects_manifest_tree_drift(monkeypatch):
 
 def test_runtime_hydration_guard_rejects_noncanonical_source(monkeypatch):
     _wire_git(monkeypatch, ancestry=False)
+    monkeypatch.setattr(guard, "_refresh_main_history", lambda root: None)
     with pytest.raises(RuntimeError, match="canonical checkout ancestry"):
         guard.verify_runtime_snapshot(Path("."))
+
+
+def test_source_ancestry_recovers_after_shallow_history_refresh(monkeypatch):
+    calls = {"ancestry": 0, "refresh": 0}
+
+    def fake_ok(root: Path, *args: str) -> bool:
+        assert args[:2] == ("merge-base", "--is-ancestor")
+        calls["ancestry"] += 1
+        return calls["ancestry"] >= 2
+
+    def fake_refresh(root: Path) -> None:
+        calls["refresh"] += 1
+
+    monkeypatch.setattr(guard, "_git_ok", fake_ok)
+    monkeypatch.setattr(guard, "_refresh_main_history", fake_refresh)
+
+    assert guard._source_is_canonical_ancestor(Path("."), SOURCE_SHA) is True
+    assert calls == {"ancestry": 2, "refresh": 1}
 
 
 def test_precompute_gates_runtime_before_collector(monkeypatch):

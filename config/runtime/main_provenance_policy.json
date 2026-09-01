@@ -6,5 +6,14 @@
   "max_first_parent_commits": 256,
   "require_anchor_in_first_parent_history": true,
   "require_each_first_parent_commit_after_anchor_from_merged_pr": true,
-  "fail_closed_on_github_api_error": true
+  "fail_closed_on_github_api_error": true,
+  "allow_direct_version_exclusive_commits": true,
+  "version_exclusive_direct_commit_requires_all_changed_paths_allowed": true,
+  "version_exclusive_paths": [
+    ".github/workflows/v4-prediction.yml",
+    ".github/workflows/v4-timing-probe.yml",
+    ".github/workflows/fpl-engine-recovery.yml",
+    ".github/workflows/v5-evidence-dispatcher.yml",
+    ".github/workflows/v4-attestation-refresh-temp.yml"
+  ]
 }

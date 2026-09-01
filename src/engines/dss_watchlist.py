@@ -372,7 +372,8 @@ def _reasons(row: dict[str, Any]) -> tuple[list[str], list[str]]:
         risks.append("role/competition masih memakai proxy, bukan bukti taktis penuh")
     if str(row.get("projection_confidence")) == "LOW":
         risks.append("projection confidence LOW")
-    if _f((row.get("xmins") or {}).get("dnp_probability")) >= 0.20:
+    warning_dnp_probability = _f((load_policy().get("admission") or {})["warning_dnp_probability"])
+    if _f((row.get("xmins") or {}).get("dnp_probability")) >= warning_dnp_probability:
         risks.append("DNP/rotation risk masih material")
     return why[:3], risks[:3]
 

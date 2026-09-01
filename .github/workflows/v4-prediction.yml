@@ -121,6 +121,7 @@ jobs:
           echo "precompute_reused=$precompute_reused" >> "$GITHUB_OUTPUT"
           {
             echo "### V4 checkpoint scheduler"
+            echo "- SCHEDULE_TARGET=:30 WIB"
             echo "- SCHEDULE=${SCHEDULE_EXPR:-manual}"
             echo "- LOGICAL_TARGET=${target_checkpoint:-unscoped}"
             echo "- REQUESTED_ROLE=$snapshot_role"
@@ -150,6 +151,7 @@ jobs:
         run: |
           {
             echo "### V4 scheduler outcome"
+            echo "- SCHEDULE_TARGET=:30 WIB"
             echo "- LOGICAL_TARGET=${{ needs.resolve-canonical.outputs.target_checkpoint }}"
             echo "- REQUESTED_ROLE=${{ needs.resolve-canonical.outputs.snapshot_role }}"
             echo "- PRECOMPUTE_REUSED=${{ needs.resolve-canonical.outputs.precompute_reused }}"

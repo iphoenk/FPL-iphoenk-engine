@@ -15,6 +15,7 @@ from src.settings import (
     PURCHASE_RECONSTRUCTION_BASELINE_GW,
     TEAM_ID,
 )
+from src.sources import official_auth
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -32,6 +33,14 @@ def test_mutable_runtime_settings_are_owned_by_engine_config():
     assert API_RETRIES == int(config["api_retries"])
     assert API_BACKOFF_SECONDS == float(config["api_backoff_seconds"])
     assert API_TIMEOUT_SECONDS == int(config["api_timeout_seconds"])
+
+
+def test_authenticated_official_transport_reuses_canonical_engine_settings():
+    assert official_auth.EXPECTED_TEAM_ID == TEAM_ID
+    assert official_auth.TIMEOUT == API_TIMEOUT_SECONDS
+    source = (ROOT / "src" / "sources" / "official_auth.py").read_text()
+    assert 'FPL_TEAM_ID", "3462711"' not in source
+    assert 'FPL_TIMEOUT", "20"' not in source
 
 
 def test_squad_constraints_are_owned_by_active_ruleset():

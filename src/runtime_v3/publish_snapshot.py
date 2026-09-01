@@ -12,6 +12,7 @@ from src.utils import DATA, ROOT, atomic_json, read_json
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 REGISTRY_PATH = ROOT / "config" / "runtime" / "runtime_publish_registry.json"
+PUBLIC_AUTH_PROJECTION = "PUBLIC_AUTH_HEALTH_V1"
 
 
 def _registry() -> dict[str, Any]:
@@ -24,9 +25,8 @@ def _registry() -> dict[str, Any]:
     return payload
 
 
-def _copy_declared(source_root: Path, output_root: Path, paths: list[str]) -> tuple[list[str], int]:
+def _copy_declared(source_root: Path, output_root: Path, paths: list[str]) -> list[str]:
     copied: list[str] = []
-    total_bytes = 0
     for raw in paths:
         relative = Path(str(raw))
         if relative.is_absolute() or ".." in relative.parts:
@@ -38,8 +38,69 @@ def _copy_declared(source_root: Path, output_root: Path, paths: list[str]) -> tu
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
         copied.append(relative.as_posix())
-        total_bytes += target.stat().st_size
-    return copied, total_bytes
+    return copied
+
+
+def _public_auth_projection(raw: Any) -> dict[str, Any]:
+    """Project private authenticated enrichment to publication-safe health only.
+
+    The private auth service may retain precise current-draft finance and squad state
+    inside the working runtime. Public runtime publication is a different authority
+    boundary: only explicit health/governance fields are allowed through. Constructing
+    the payload from an allowlist ensures future private fields fail closed by omission.
+    """
+    payload = raw if isinstance(raw, dict) else {}
+    readiness = payload.get("enhancement_health")
+    if not isinstance(readiness, dict):
+        readiness = payload.get("production_readiness")
+    if not isinstance(readiness, dict):
+        readiness = {}
+
+    policy = payload.get("policy") if isinstance(payload.get("policy"), dict) else {}
+    public_policy = {
+        key: policy.get(key)
+        for key in (
+            "role",
+            "primary_authority",
+            "resource_methods",
+            "allowed_endpoints",
+            "redirects_followed",
+            "redirects_rejected",
+            "production_blocking",
+            "configured_mode_requires_production_validation",
+        )
+        if key in policy
+    }
+
+    projection = {
+        "public_projection": PUBLIC_AUTH_PROJECTION,
+        "checked_at": payload.get("checked_at"),
+        "expected_entry": payload.get("expected_entry"),
+        "state": payload.get("state"),
+        "mode": payload.get("mode"),
+        "verified_entry": payload.get("verified_entry"),
+        "raw_authenticated_payload_persisted": False,
+        "production_readiness": dict(readiness),
+        "enhancement_health": dict(readiness),
+        "policy": public_policy,
+    }
+    if payload.get("failure_reason"):
+        projection["failure_reason"] = str(payload.get("failure_reason"))
+    return projection
+
+
+def _sanitize_public_authenticated_state(output_data: Path) -> None:
+    auth_path = output_data / "auth.json"
+    if auth_path.is_file():
+        auth = read_json(auth_path, {})
+        atomic_json(auth_path, _public_auth_projection(auth))
+
+    latest_path = output_data / "latest.json"
+    if latest_path.is_file():
+        latest = read_json(latest_path, {})
+        if isinstance(latest, dict) and "authenticated_official" in latest:
+            latest["authenticated_official"] = _public_auth_projection(latest.get("authenticated_official"))
+            atomic_json(latest_path, latest)
 
 
 def _checkpoint_metadata(
@@ -85,7 +146,10 @@ def materialize(
     output_data.mkdir(parents=True, exist_ok=True)
 
     declared = [str(path) for path in registry.get("publish_paths") or [] if str(path) != "runtime_manifest.json"]
-    copied, payload_bytes = _copy_declared(source_root, output_data, declared)
+    copied = _copy_declared(source_root, output_data, declared)
+    _sanitize_public_authenticated_state(output_data)
+    payload_bytes = sum((output_data / relative).stat().st_size for relative in copied)
+
     performance = read_json(source_root / "runtime_performance.json", {})
     generated_at = datetime.now(timezone.utc)
     manifest = {
@@ -116,6 +180,7 @@ def materialize(
             "bytes_without_manifest": payload_bytes,
             "paths": sorted(copied),
             "rolling_snapshot_intended": True,
+            "private_authenticated_state_projected_to_public_health": True,
         },
     }
     atomic_json(source_root / "runtime_manifest.json", manifest)

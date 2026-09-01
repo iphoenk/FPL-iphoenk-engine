@@ -6,6 +6,13 @@ on:
     branches: [main]
     paths-ignore:
       - 'data/**'
+      # Default-branch workflows below are version-owned and do not change V3
+      # code, contracts, or runtime semantics. PR validation remains broad; only
+      # post-merge main execution is suppressed for strictly isolated changes.
+      - '.github/workflows/v4-prediction.yml'
+      - '.github/workflows/v4-timing-probe.yml'
+      - '.github/workflows/fpl-engine-recovery.yml'
+      - '.github/workflows/v5-evidence-dispatcher.yml'
 
 permissions:
   contents: read

@@ -9,6 +9,12 @@ V4_DEFAULT_BRANCH_WORKFLOWS = (
     'fpl-engine-recovery.yml',
     'v4-timing-probe.yml',
 )
+VERSION_EXCLUSIVE_MAIN_WORKFLOWS = (
+    '.github/workflows/v4-prediction.yml',
+    '.github/workflows/fpl-engine-recovery.yml',
+    '.github/workflows/v4-timing-probe.yml',
+    '.github/workflows/v5-evidence-dispatcher.yml',
+)
 
 
 def test_v3_ci_main_push_requires_merged_pr_provenance():
@@ -17,6 +23,20 @@ def test_v3_ci_main_push_requires_merged_pr_provenance():
     assert 'Enforce merged-PR provenance for main' in text
     assert "github.event_name == 'push' && github.ref == 'refs/heads/main'" in text
     assert 'python -m src.runtime_v3.main_pr_provenance' in text
+
+
+def test_v3_ci_main_push_ignores_only_version_exclusive_workflows():
+    text = V3_CI_WORKFLOW.read_text()
+    trigger_block = text.split('permissions:', 1)[0]
+    assert 'pull_request:' in trigger_block
+    assert 'push:' in trigger_block
+    for path in VERSION_EXCLUSIVE_MAIN_WORKFLOWS:
+        assert f"- '{path}'" in trigger_block
+    # V3/shared control-plane files must never be excluded from main V3 validation.
+    assert "- '.github/workflows/v3-ci.yml'" not in trigger_block
+    assert "- '.github/workflows/v3-runtime.yml'" not in trigger_block
+    assert "- 'src/**'" not in trigger_block
+    assert "- 'config/**'" not in trigger_block
 
 
 def test_v3_runtime_code_publication_requires_successful_main_ci():

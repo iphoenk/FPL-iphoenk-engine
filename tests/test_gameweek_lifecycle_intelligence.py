@@ -33,7 +33,7 @@ def _event_live(points=None, minutes=None):
     }
 
 
-def _payload(*, final=False):
+def _payload(*, final=False, auth=None):
     previous = _previous()
     current_ids = list(range(1, 8)) + list(range(16, 24))
     team = {"team_value_ledger": [{"element": e, "name": f"C{e}", "position": "MID"} for e in current_ids]}
@@ -53,7 +53,7 @@ def _payload(*, final=False):
         live=live,
         official_snapshot=snapshot,
         prediction_accuracy={"status": "WAIT_FOR_DATA", "aggregate": {"sample_size": 0}},
-        auth={"state": "DISABLED", "expected_entry": 3462711, "raw_authenticated_payload_persisted": False},
+        auth=auth or {"state": "DISABLED", "expected_entry": 3462711, "raw_authenticated_payload_persisted": False},
         price_model_health={"status": "WARMUP", "direction_samples": 3},
     )
 
@@ -86,13 +86,33 @@ def test_final_counterfactual_settles_same_gameweek_actuals():
     assert isinstance(pnl["realized_or_live_pnl"], float)
 
 
-def test_auth_disabled_is_explicit_red_without_authority_upgrade():
+def test_auth_disabled_is_neutral_without_authority_upgrade():
     payload = _payload()
     auth = payload["authenticated_official"]
-    assert auth["health"] == "RED"
+    assert auth["health"] == "NEUTRAL"
     assert auth["state"] == "DISABLED"
     assert auth["authority_upgrade_allowed"] is False
     assert auth["raw_authenticated_payload_persisted"] is False
+    assert auth["governance"]["optional_not_configured_is_not_failure"] is True
+
+
+def test_auth_lifecycle_consumes_canonical_enhancement_readiness():
+    payload = _payload(auth={
+        "state": "PARTIAL",
+        "expected_entry": 3462711,
+        "verified_entry": None,
+        "raw_authenticated_payload_persisted": False,
+        "enhancement_health": {
+            "required": False,
+            "ready": False,
+            "status": "DEGRADED",
+            "reasons": ["entry_not_verified"],
+        },
+    })
+    auth = payload["authenticated_official"]
+    assert auth["health"] == "AMBER"
+    assert auth["readiness_status"] == "DEGRADED"
+    assert auth["authority_upgrade_allowed"] is False
 
 
 def test_price_warmup_is_advisory_only_and_never_single_trigger():

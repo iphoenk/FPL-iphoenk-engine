@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.runtime_v3.publication_verify import verify_publication
+from src.runtime_v3.publish_snapshot import PUBLIC_AUTH_PROJECTION, materialize
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -84,6 +85,14 @@ def test_runtime_publication_uses_exact_source_and_branch_leases() -> None:
     assert 'diff -qr "$RUNNER_TEMP/runtime-publish/data" "$verify_tree/data"' in text
 
 
+def test_publication_registry_forbids_derived_private_auth_state() -> None:
+    registry = json.loads((ROOT / "config" / "runtime" / "runtime_publish_registry.json").read_text())
+    policy = registry["policy"]
+    assert policy["raw_authenticated_payloads_are_forbidden"] is True
+    assert policy["derived_private_authenticated_fields_are_forbidden_in_publication"] is True
+    assert policy["public_authenticated_state_is_health_projection_only"] is True
+
+
 def test_publication_verifier_accepts_declared_exact_manifest(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     source_commit = "1" * 40
@@ -122,6 +131,95 @@ def test_publication_verifier_rejects_raw_authenticated_payload_claim(tmp_path: 
     )
 
     with pytest.raises(RuntimeError, match="raw authenticated payloads are excluded"):
+        verify_publication(data_dir, source_commit="a" * 40, profile="fast_decision")
+
+
+def test_publication_verifier_rejects_derived_private_authenticated_fields(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    public = {
+        "public_projection": PUBLIC_AUTH_PROJECTION,
+        "state": "VALID",
+        "raw_authenticated_payload_persisted": False,
+        "safe_finance": {"bank": 10, "prices_for_private_squad": [{"element": 1, "selling_price": 50}]},
+    }
+    _write_snapshot(data_dir, {"auth.json": public})
+
+    with pytest.raises(RuntimeError, match="non-public authenticated fields"):
+        verify_publication(data_dir, source_commit="a" * 40, profile="fast_decision")
+
+
+def test_materialization_projects_private_auth_in_auth_and_latest_only(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    output = tmp_path / "publish"
+    source.mkdir()
+    private_auth = {
+        "checked_at": "2026-09-01T00:00:00+00:00",
+        "expected_entry": 3462711,
+        "state": "VALID",
+        "mode": "session_cookie",
+        "verified_entry": 3462711,
+        "endpoint_health": {"my_team": {"status": "LIVE"}},
+        "safe_finance": {
+            "bank": 10,
+            "private_exact_sell_total": 1000,
+            "prices_for_private_squad": [{"element": 1, "purchase_price": 50, "selling_price": 51}],
+        },
+        "draft_integrity": {"count": 15, "fingerprint": "private-fingerprint"},
+        "chip_state": {"available": True, "chips": [{"name": "wildcard"}]},
+        "transfers_latest": {"available": True, "count": 2},
+        "raw_authenticated_payload_persisted": False,
+        "production_readiness": {"required": False, "ready": True, "status": "AVAILABLE", "reasons": []},
+        "enhancement_health": {"required": False, "ready": True, "status": "AVAILABLE", "reasons": []},
+        "policy": {"role": "OPTIONAL_PRIVATE_ENRICHMENT", "production_blocking": False},
+    }
+    (source / "auth.json").write_text(json.dumps(private_auth), encoding="utf-8")
+    (source / "latest.json").write_text(
+        json.dumps({"status": "ok", "authenticated_official": private_auth}),
+        encoding="utf-8",
+    )
+
+    materialize(source, output, "fast_decision", "d" * 40)
+
+    source_auth = json.loads((source / "auth.json").read_text())
+    public_auth = json.loads((output / "data" / "auth.json").read_text())
+    public_latest = json.loads((output / "data" / "latest.json").read_text())
+
+    assert "safe_finance" in source_auth
+    assert public_auth["public_projection"] == PUBLIC_AUTH_PROJECTION
+    assert public_latest["authenticated_official"]["public_projection"] == PUBLIC_AUTH_PROJECTION
+    for payload in (public_auth, public_latest["authenticated_official"]):
+        assert "safe_finance" not in payload
+        assert "draft_integrity" not in payload
+        assert "chip_state" not in payload
+        assert "transfers_latest" not in payload
+        assert "endpoint_health" not in payload
+        serialized = json.dumps(payload)
+        assert "private-fingerprint" not in serialized
+        assert "selling_price" not in serialized
+        assert "purchase_price" not in serialized
+
+    result = verify_publication(output / "data", source_commit="d" * 40, profile="fast_decision")
+    assert result["status"] == "PASS"
+    assert result["public_authenticated_projection_verified"] is True
+
+
+def test_publication_verifier_rejects_private_state_embedded_in_latest(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    _write_snapshot(
+        data_dir,
+        {
+            "latest.json": {
+                "authenticated_official": {
+                    "public_projection": PUBLIC_AUTH_PROJECTION,
+                    "state": "VALID",
+                    "raw_authenticated_payload_persisted": False,
+                    "draft_integrity": {"fingerprint": "private"},
+                }
+            }
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="non-public authenticated fields"):
         verify_publication(data_dir, source_commit="a" * 40, profile="fast_decision")
 
 

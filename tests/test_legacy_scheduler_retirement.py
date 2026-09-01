@@ -20,6 +20,13 @@ def test_canonical_runtime_does_not_schedule_legacy_entry():
     assert "python -m src.runtime_v3.orchestrator" not in runtime_workflow
 
 
+def test_release_acceptance_does_not_reactivate_legacy_scheduler():
+    equivalence = (ROOT / "src/runtime_v3/equivalence_acceptance.py").read_text(encoding="utf-8")
+    assert 'RUNTIME_MODULE = "src.runtime_v3.domain_orchestrator"' in equivalence
+    assert '"src.runtime_v3.orchestrator"' not in equivalence
+    assert '"legacy_scheduler_executed": False' in equivalence
+
+
 def test_shared_primitives_remain_available_for_canonical_runtime():
     required = (
         "_load_profiles",

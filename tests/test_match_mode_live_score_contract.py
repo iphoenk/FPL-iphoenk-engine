@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from src.engines import live_state_service as service
 
 
@@ -137,6 +139,11 @@ def test_missing_submitted_picks_never_infers_personalized_total(tmp_path, monke
     assert result["submitted_picks_status"] == "SUBMITTED PICKS UNAVAILABLE"
     assert result["personalized_live_score"] is None
     assert result["players"] == []
+
+
+def test_incomplete_available_submitted_picks_fail_closed_during_match_mode(tmp_path, monkeypatch):
+    with pytest.raises(RuntimeError, match="ALL15 submitted-pick coverage required"):
+        _run(tmp_path, monkeypatch, _snapshot(picks_count=14))
 
 
 def test_match_mode_uses_fixture_state_not_phase_flag_for_activation(tmp_path, monkeypatch):

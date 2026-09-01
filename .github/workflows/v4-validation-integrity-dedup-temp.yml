@@ -2,7 +2,7 @@ name: V4 temporary validation integrity dedup
 
 on:
   push:
-    branches: [main]
+    branches: [codex/v4-validation-integrity-dedup-runner-20260901]
     paths:
       - '.github/workflows/v4-validation-integrity-dedup-temp.yml'
 

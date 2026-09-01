@@ -71,6 +71,10 @@ RECONCILIATION_MODULE = ROOT / "src/engines/v4_reconciliation_truth.py"
 LEGACY_ENGINE_MODULE = ROOT / "src/engine.py"
 REPORT_GOVERNANCE_MODULE = ROOT / "src/engines/v4_checkpoint_governance.py"
 SERVING_MODULE = ROOT / "src/engines/v4_serving_contract.py"
+REFERENCE_READ_ONLY_MODULES = (
+    ROOT / "src/engines/v4_wc_package_audit.py",
+    ROOT / "src/engines/v4_lineup_optimizer.py",
+)
 RELEASE_MODULE = ROOT / "src/release.py"
 SKIP_DUP_FN_NAMES = {"main", "run", "cli", "_f", "check", "write", "load", "dump"}
 ATTESTATION_PATH = CONFIG / "architecture_guard_attestation.json"
@@ -84,6 +88,7 @@ ATTESTED_CONFIG_PATHS = (
     CONFIG / "gate0_registry.json",
     CONFIG / "architecture_ownership_registry.json",
     CONFIG / "release_manifest.json",
+    CONFIG / "runtime_artifact_policy.json",
     CONFIG / "intelligence/owned_challenger_decision_v4.json",
 )
 ATTESTED_WORKFLOW_PATHS = (
@@ -412,6 +417,15 @@ def run(*, force_full_scan: bool = False) -> dict:
         [] if reporting_ok else [{"governance_forbidden_calls": sorted(report_calls & {"resolve_decision"}), "serving_forbidden_imports": forbidden_serving_imports}],
     )
 
+    reference_writer_violations = [
+        str(path.relative_to(ROOT))
+        for path in REFERENCE_READ_ONLY_MODULES
+        if "atomic_json(" in _text(path)
+    ]
+    checks["reference_modules_read_only"] = (
+        not reference_writer_violations, reference_writer_violations
+    )
+
     moving_literals = _moving_operational_literal_violations()
     checks["moving_operational_identity_single_owner"] = (not moving_literals, moving_literals)
 
@@ -461,6 +475,7 @@ def run(*, force_full_scan: bool = False) -> dict:
             "reporting_composition_only": True,
             "moving_operational_identity_single_owner": True,
             "owned_challenger_single_decision_authority": True,
+            "reference_modules_read_only": True,
         },
     }
     atomic_json(OUT, out)

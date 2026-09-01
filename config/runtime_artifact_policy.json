@@ -10,7 +10,23 @@
     "branch": "runtime-data-v4",
     "role": "atomic_materialized_runtime_snapshot",
     "mutable_runtime_freshness_authority": true,
-    "publication_mode": "orphan_atomic_replace"
+    "publication_mode": "orphan_atomic_replace",
+    "hydration_integrity_gate": {
+      "mode": "FAIL_CLOSED_BEFORE_SERVICE_EXECUTION",
+      "requires_parentless_orphan_snapshot": true,
+      "requires_data_only_tree": true,
+      "requires_automation_commit_identity": true,
+      "requires_provenance_contract_match": true,
+      "requires_snapshot_hash_match": true,
+      "requires_workspace_snapshot_match": true,
+      "requires_canonical_source_ancestor": true
+    },
+    "platform_write_protection": {
+      "authority": "GITHUB_BRANCH_RULESET",
+      "required_target": "block direct human writes while allowing governed automation force-replace",
+      "repository_code_can_configure": false,
+      "external_admin_control_required": true
+    }
   },
   "artifact_classes": {
     "source_seed": {
@@ -36,6 +52,8 @@
     "source_seed_cannot_override_runtime_snapshot": true,
     "runtime_publish_is_atomic_branch_replace": true,
     "runtime_worktree_contains_data_only": true,
-    "mutable_runtime_cache_directory_ignored": "data/runtime/"
+    "mutable_runtime_cache_directory_ignored": "data/runtime/",
+    "hydrate_only_trusted_runtime_before_service_use": true,
+    "reference_modules_cannot_publish_canonical_decision_artifacts": true
   }
 }

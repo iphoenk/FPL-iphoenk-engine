@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 from src.engines.fpl_rules_2026 import LEGAL_FORMATION_TUPLES
 from src.engines.fpl_legality import formation_from_rows
-from src.utils import DATA, CONFIG, atomic_json, read_json
+from src.utils import DATA, CONFIG, read_json
 
-OUTFILE = DATA / "lineup_decision_v4.json"
 MANUAL_FILE = CONFIG / "manual_lineup.json"
 POLICY_FILE = CONFIG / "serving_improvement_registry.json"
 
@@ -141,6 +140,6 @@ def optimize_lineup(predictions,universe,locked,gw_index=0,manual=None):
 
 
 def run():
-    out=optimize_lineup(read_json(DATA/"predictions_v4.json",{}),read_json(DATA/"universe.json",{}),read_json(CONFIG/"locked_squad.json",{}),manual=read_json(MANUAL_FILE,{}));atomic_json(OUTFILE,out);print(json.dumps(out,ensure_ascii=False,indent=2));return out
+    out=optimize_lineup(read_json(DATA/"predictions_v4.json",{}),read_json(DATA/"universe.json",{}),read_json(CONFIG/"locked_squad.json",{}),manual=read_json(MANUAL_FILE,{}));print(json.dumps(out,ensure_ascii=False,indent=2));return out
 
 if __name__=="__main__":run()

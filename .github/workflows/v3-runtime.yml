@@ -287,6 +287,8 @@ jobs:
 
       - name: Assert source main is still canonical before publication
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git fetch --depth=1 origin \
@@ -294,8 +296,9 @@ jobs:
             "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
           canonical_main="$(git rev-parse refs/remotes/origin/main)"
           if [ "$canonical_main" != "$SOURCE_COMMIT" ]; then
-            echo "Refusing stale runtime publication: run_source=$SOURCE_COMMIT canonical_main=$canonical_main"
-            exit 1
+            python -m src.runtime_v3.version_scope_validate \
+              --source-commit "$SOURCE_COMMIT" \
+              --canonical-main "$canonical_main"
           fi
           runtime_base="$(git rev-parse refs/remotes/origin/${RUNTIME_BRANCH})"
           echo "RUNTIME_BASE_SHA=$runtime_base" >> "$GITHUB_ENV"

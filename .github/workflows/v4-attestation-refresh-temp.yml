@@ -1,4 +1,4 @@
-name: V4 temporary performance patch + attestation builder
+name: V4 temporary governance persist fix + attestation
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  fix:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
@@ -23,47 +23,45 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: Apply serialization-dedup optimization
+      - name: Correct persist flag placement
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
 
-          maturity=Path('src/engines/v4_maturity_reconciler.py')
-          text=maturity.read_text()
-          old='''def reconcile(\n    health: dict | None = None,\n    *,\n    predictions: dict | None = None,\n    latest: dict | None = None,\n    universe: dict | None = None,\n) -> dict:'''
-          new='''def reconcile(\n    health: dict | None = None,\n    *,\n    predictions: dict | None = None,\n    latest: dict | None = None,\n    universe: dict | None = None,\n    persist: bool = True,\n) -> dict:'''
-          if old not in text:
-              raise SystemExit('maturity reconcile signature anchor not found')
-          text=text.replace(old,new,1)
-          old_tail='''    atomic_json(HEALTH, health)\n    return health'''
-          new_tail='''    if persist:\n        atomic_json(HEALTH, health)\n    return health'''
-          if old_tail not in text:
-              raise SystemExit('maturity persistence anchor not found')
-          maturity.write_text(text.replace(old_tail,new_tail,1))
+          p=Path('src/services/governance_service.py')
+          text=p.read_text()
+          wrong='''    postflight = framework_postflight_truth_service.run(\n        predictions=predictions,\n        latest=latest,\n        universe=universe,\n        persist=False,\n    )'''
+          right='''    postflight = framework_postflight_truth_service.run(\n        predictions=predictions,\n        latest=latest,\n        universe=universe,\n    )'''
+          if wrong not in text:
+              raise SystemExit('wrong postflight persist anchor not found')
+          text=text.replace(wrong,right,1)
 
-          governance=Path('src/services/governance_service.py')
-          text=governance.read_text()
-          old_call='''        predictions=predictions,\n        latest=latest,\n        universe=universe,\n    )'''
-          new_call='''        predictions=predictions,\n        latest=latest,\n        universe=universe,\n        persist=False,\n    )'''
-          if old_call not in text:
-              raise SystemExit('governance maturity call anchor not found')
-          governance.write_text(text.replace(old_call,new_call,1))
+          old='''    maturity = v4_maturity_reconciler.reconcile(\n        postflight,\n        predictions=predictions,\n        latest=latest,\n        universe=universe,\n    )'''
+          new='''    maturity = v4_maturity_reconciler.reconcile(\n        postflight,\n        predictions=predictions,\n        latest=latest,\n        universe=universe,\n        persist=False,\n    )'''
+          if old not in text:
+              raise SystemExit('maturity reconcile anchor not found')
+          text=text.replace(old,new,1)
+          if text.count('persist=False') != 1:
+              raise SystemExit(f'unexpected persist=False count: {text.count("persist=False")}')
+          p.write_text(text)
           PY
       - name: Rebuild governed architecture attestation
         run: python tools/v4_architecture_guard_attest.py
       - name: Install test dependencies
         run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Verify optimization and full deterministic suite
+      - name: Verify full deterministic suite
         run: python -m pytest -q
-      - name: Commit governed performance fix to PR branch
+      - name: Verify governed orchestration smoke
+        run: python -m src.services.orchestrator daily --stats --deep-stats
+      - name: Commit corrective patch to PR branch
         shell: bash
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add src/engines/v4_maturity_reconciler.py src/services/governance_service.py config/architecture_guard_attestation.json
+          git add src/services/governance_service.py config/architecture_guard_attestation.json
           git diff --cached --exit-code && exit 0 || true
-          git commit -m 'perf(v4): avoid duplicate maturity health serialization'
+          git commit -m 'fix(v4): scope maturity persistence dedup correctly'
           git push origin HEAD:codex/v4-runtime-secret-inheritance

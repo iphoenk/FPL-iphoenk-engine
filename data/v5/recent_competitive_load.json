@@ -2,10 +2,10 @@
   "status": "ACTIVE",
   "contract": "V5_COMPETITIVE_LOAD_PRIMITIVE_V1",
   "planning_gw": 3,
-  "player_count": 626,
+  "player_count": 629,
   "state_counts": {
     "NORMAL": 97,
-    "RESTED": 529
+    "RESTED": 532
   },
   "players": {
     "1": {
@@ -4076,24 +4076,6 @@
       "long_haul_evidence": false,
       "travel_context": null
     },
-    "201": {
-      "element": 201,
-      "team_id": 8,
-      "planning_gw": 3,
-      "next_pl_kickoff": "2026-09-05T14:00:00Z",
-      "last_verified_competitive_match": "2026-08-28T19:00:00+00:00",
-      "rest_hours": 187.0,
-      "last_match_minutes": 55.0,
-      "extra_time_minutes": 0.0,
-      "matches_7d": 1,
-      "matches_14d": 2,
-      "state": "RESTED",
-      "verified_non_pl_observation_count": 0,
-      "non_pl_evidence_state": "UNAVAILABLE",
-      "international_evidence": false,
-      "long_haul_evidence": false,
-      "travel_context": null
-    },
     "202": {
       "element": 202,
       "team_id": 8,
@@ -7280,6 +7262,24 @@
       "long_haul_evidence": false,
       "travel_context": null
     },
+    "629": {
+      "element": 629,
+      "team_id": 13,
+      "planning_gw": 3,
+      "next_pl_kickoff": "2026-09-05T14:00:00Z",
+      "last_verified_competitive_match": "2026-08-30T13:00:00+00:00",
+      "rest_hours": 145.0,
+      "last_match_minutes": 0.0,
+      "extra_time_minutes": 0.0,
+      "matches_7d": 1,
+      "matches_14d": 2,
+      "state": "RESTED",
+      "verified_non_pl_observation_count": 0,
+      "non_pl_evidence_state": "UNAVAILABLE",
+      "international_evidence": false,
+      "long_haul_evidence": false,
+      "travel_context": null
+    },
     "350": {
       "element": 350,
       "team_id": 14,
@@ -7910,6 +7910,24 @@
       "long_haul_evidence": false,
       "travel_context": null
     },
+    "627": {
+      "element": 627,
+      "team_id": 14,
+      "planning_gw": 3,
+      "next_pl_kickoff": "2026-09-04T19:00:00Z",
+      "last_verified_competitive_match": "2026-08-29T11:30:00+00:00",
+      "rest_hours": 151.5,
+      "last_match_minutes": 0.0,
+      "extra_time_minutes": 0.0,
+      "matches_7d": 1,
+      "matches_14d": 2,
+      "state": "RESTED",
+      "verified_non_pl_observation_count": 0,
+      "non_pl_evidence_state": "UNAVAILABLE",
+      "international_evidence": false,
+      "long_haul_evidence": false,
+      "travel_context": null
+    },
     "238": {
       "element": 238,
       "team_id": 15,
@@ -8434,6 +8452,24 @@
     },
     "622": {
       "element": 622,
+      "team_id": 15,
+      "planning_gw": 3,
+      "next_pl_kickoff": "2026-09-05T14:00:00Z",
+      "last_verified_competitive_match": "2026-08-28T19:00:00+00:00",
+      "rest_hours": 187.0,
+      "last_match_minutes": 0.0,
+      "extra_time_minutes": 0.0,
+      "matches_7d": 1,
+      "matches_14d": 2,
+      "state": "RESTED",
+      "verified_non_pl_observation_count": 0,
+      "non_pl_evidence_state": "UNAVAILABLE",
+      "international_evidence": false,
+      "long_haul_evidence": false,
+      "travel_context": null
+    },
+    "628": {
+      "element": 628,
       "team_id": 15,
       "planning_gw": 3,
       "next_pl_kickoff": "2026-09-05T14:00:00Z",
@@ -9574,6 +9610,24 @@
       "last_verified_competitive_match": "2026-08-29T11:30:00+00:00",
       "rest_hours": 170.5,
       "last_match_minutes": 0.0,
+      "extra_time_minutes": 0.0,
+      "matches_7d": 1,
+      "matches_14d": 2,
+      "state": "RESTED",
+      "verified_non_pl_observation_count": 0,
+      "non_pl_evidence_state": "UNAVAILABLE",
+      "international_evidence": false,
+      "long_haul_evidence": false,
+      "travel_context": null
+    },
+    "201": {
+      "element": 201,
+      "team_id": 18,
+      "planning_gw": 3,
+      "next_pl_kickoff": "2026-09-05T14:00:00Z",
+      "last_verified_competitive_match": "2026-08-29T11:30:00+00:00",
+      "rest_hours": 170.5,
+      "last_match_minutes": 55.0,
       "extra_time_minutes": 0.0,
       "matches_7d": 1,
       "matches_14d": 2,

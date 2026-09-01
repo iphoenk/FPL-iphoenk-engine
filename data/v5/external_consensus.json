@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "contract": "V5_EXTERNAL_CONSENSUS_V1",
-  "generated_at": "2026-09-01T07:56:23.188794+00:00",
+  "generated_at": "2026-09-01T13:37:01.524919+00:00",
   "owner": "evaluation.external_consensus",
   "native_conclusion_frozen_before_overlay": true,
   "native_snapshot": {
@@ -9,128 +9,128 @@
     "lineup": {
       "status": "READY",
       "planning_gw": 3,
-      "formation": "5-2-3",
+      "formation": "4-3-3",
       "starters": [
         {
           "element": 572,
           "name": "Tzolakis",
           "position": "GK",
           "team_id": 11,
-          "mean": 4.798,
-          "std": 3.538,
-          "start_probability": 0.7566,
-          "dnp_probability": 0.0852,
-          "score": 4.203
+          "mean": 4.736,
+          "std": 3.485,
+          "start_probability": 0.7825,
+          "dnp_probability": 0.0761,
+          "score": 4.1656
         },
         {
           "element": 115,
           "name": "De Cuyper",
           "position": "DEF",
           "team_id": 5,
-          "mean": 5.305,
-          "std": 3.732,
-          "start_probability": 0.7752,
-          "dnp_probability": 0.0787,
-          "score": 4.6998
+          "mean": 4.616,
+          "std": 3.425,
+          "start_probability": 0.7912,
+          "dnp_probability": 0.0731,
+          "score": 4.0588
         },
         {
           "element": 8,
           "name": "Calafiori",
           "position": "DEF",
           "team_id": 1,
-          "mean": 4.576,
-          "std": 3.404,
-          "start_probability": 0.7947,
-          "dnp_probability": 0.0719,
-          "score": 4.0237
+          "mean": 4.343,
+          "std": 3.289,
+          "start_probability": 0.8096,
+          "dnp_probability": 0.0666,
+          "score": 3.8151
         },
         {
           "element": 88,
           "name": "Kayode",
           "position": "DEF",
           "team_id": 4,
-          "mean": 5.071,
-          "std": 3.505,
-          "start_probability": 0.8766,
-          "dnp_probability": 0.0432,
-          "score": 4.564
-        },
-        {
-          "element": 254,
-          "name": "Robinson",
-          "position": "DEF",
-          "team_id": 10,
-          "mean": 3.979,
-          "std": 3.176,
-          "start_probability": 0.7752,
-          "dnp_probability": 0.0787,
-          "score": 3.4405
+          "mean": 5.112,
+          "std": 3.507,
+          "start_probability": 0.8865,
+          "dnp_probability": 0.0397,
+          "score": 4.6118
         },
         {
           "element": 279,
           "name": "Ajayi",
           "position": "DEF",
           "team_id": 11,
-          "mean": 4.665,
-          "std": 3.483,
-          "start_probability": 0.7566,
-          "dnp_probability": 0.0852,
-          "score": 4.0766
+          "mean": 4.753,
+          "std": 3.492,
+          "start_probability": 0.7825,
+          "dnp_probability": 0.0761,
+          "score": 4.1818
         },
         {
           "element": 426,
           "name": "B.Fernandes",
           "position": "MID",
           "team_id": 16,
-          "mean": 4.503,
-          "std": 3.266,
-          "start_probability": 0.8766,
-          "dnp_probability": 0.0432,
-          "score": 4.0247
+          "mean": 5.545,
+          "std": 3.689,
+          "start_probability": 0.8865,
+          "dnp_probability": 0.0397,
+          "score": 5.0229
         },
         {
           "element": 40,
           "name": "Rogers",
           "position": "MID",
           "team_id": 6,
-          "mean": 4.189,
-          "std": 3.134,
-          "start_probability": 0.8766,
-          "dnp_probability": 0.0432,
-          "score": 3.7265
+          "mean": 4.226,
+          "std": 3.135,
+          "start_probability": 0.8865,
+          "dnp_probability": 0.0397,
+          "score": 3.7704
+        },
+        {
+          "element": 565,
+          "name": "M.Sangaré",
+          "position": "MID",
+          "team_id": 4,
+          "mean": 4.02,
+          "std": 3.185,
+          "start_probability": 0.7825,
+          "dnp_probability": 0.0761,
+          "score": 3.4856
         },
         {
           "element": 411,
           "name": "Haaland",
           "position": "FWD",
           "team_id": 15,
-          "mean": 5.08,
-          "std": 3.521,
-          "start_probability": 0.8683,
-          "dnp_probability": 0.0461,
-          "score": 4.5653
+          "mean": 5.672,
+          "std": 3.754,
+          "start_probability": 0.8787,
+          "dnp_probability": 0.0424,
+          "score": 5.1367
         },
         {
           "element": 165,
           "name": "João Pedro",
           "position": "FWD",
           "team_id": 6,
-          "mean": 4.492,
-          "std": 3.31,
-          "start_probability": 0.8426,
-          "dnp_probability": 0.0551,
-          "score": 3.9846
+          "mean": 4.547,
+          "std": 3.316,
+          "start_probability": 0.8547,
+          "dnp_probability": 0.0508,
+          "score": 4.0475
         },
         {
           "element": 346,
           "name": "Calvert-Lewin",
           "position": "FWD",
           "team_id": 13,
-          "mean": 3.731,
-          "std": 3.004,
-          "start_probability": 0.8323,
-          "dnp_probability": 0.0587,
-          "score": 3.2531
+          "mean": 4.236,
+          "std": 3.199,
+          "start_probability": 0.8451,
+          "dnp_probability": 0.0542,
+          "score": 3.7437
         }
       ],
       "bench": [
@@ -139,9 +139,9 @@
           "name": "Ødegaard",
           "position": "MID",
           "team_id": 1,
-          "start_probability": 0.7716,
-          "dnp_probability": 0.0799,
-          "score": 3.8509,
+          "start_probability": 0.7878,
+          "dnp_probability": 0.0743,
+          "score": 4.0728,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 6,
@@ -158,38 +158,6 @@
             "route_vulnerability_overlap": [],
             "highlights": [
               "recent-GW lawan: ['long_range', 'close_central']"
-            ],
-            "tactical_key": [
-              0,
-              1,
-              1
-            ],
-            "advisory_only": true
-          }
-        },
-        {
-          "element": 565,
-          "name": "M.Sangaré",
-          "position": "MID",
-          "team_id": 4,
-          "start_probability": 0.7566,
-          "dnp_probability": 0.0852,
-          "score": 3.8115,
-          "tactical": {
-            "status": "READY",
-            "opponent_team_id": 20,
-            "player_role": null,
-            "player_return_routes": [],
-            "opponent_vulnerabilities": [
-              "transition_threat"
-            ],
-            "opponent_strengths": [
-              "set_piece_activity",
-              "final_third_progression"
-            ],
-            "route_vulnerability_overlap": [],
-            "highlights": [
-              "recent-GW lawan: ['close_central', 'box_central']"
             ],
             "tactical_key": [
               0,
@@ -204,9 +172,9 @@
           "name": "Tzolis",
           "position": "MID",
           "team_id": 1,
-          "start_probability": 0.7566,
-          "dnp_probability": 0.0852,
-          "score": 3.2096,
+          "start_probability": 0.7825,
+          "dnp_probability": 0.0761,
+          "score": 3.4616,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 6,
@@ -233,20 +201,49 @@
           }
         },
         {
+          "element": 254,
+          "name": "Robinson",
+          "position": "DEF",
+          "team_id": 10,
+          "start_probability": 0.7912,
+          "dnp_probability": 0.0731,
+          "score": 3.7742,
+          "tactical": {
+            "status": "READY",
+            "opponent_team_id": 8,
+            "player_role": null,
+            "player_return_routes": [],
+            "opponent_vulnerabilities": [],
+            "opponent_strengths": [
+              "transition_threat"
+            ],
+            "route_vulnerability_overlap": [],
+            "highlights": [],
+            "tactical_key": [
+              0,
+              0,
+              0
+            ],
+            "advisory_only": true
+          }
+        },
+        {
           "element": 109,
           "name": "Verbruggen",
           "position": "GK",
           "team_id": 5,
-          "start_probability": 0.8766,
-          "dnp_probability": 0.0432,
-          "score": 4.5245,
+          "start_probability": 0.8865,
+          "dnp_probability": 0.0397,
+          "score": 3.6828,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 13,
             "player_role": null,
             "player_return_routes": [],
             "opponent_vulnerabilities": [],
-            "opponent_strengths": [],
+            "opponent_strengths": [
+              "final_third_progression"
+            ],
             "route_vulnerability_overlap": [],
             "highlights": [
               "recent-GW lawan: ['long_range', 'close_central']"
@@ -265,9 +262,9 @@
         "name": "Haaland",
         "position": "FWD",
         "team_id": 15,
-        "start_probability": 0.8683,
-        "dnp_probability": 0.0461,
-        "score": 6.2801,
+        "start_probability": 0.8787,
+        "dnp_probability": 0.0424,
+        "score": 6.9246,
         "tactical": {
           "status": "READY",
           "opponent_team_id": 7,
@@ -292,23 +289,29 @@
         }
       },
       "vice_captain": {
-        "element": 115,
-        "name": "De Cuyper",
+        "element": 88,
+        "name": "Kayode",
         "position": "DEF",
-        "team_id": 5,
-        "start_probability": 0.7752,
-        "dnp_probability": 0.0787,
-        "score": 5.5867,
+        "team_id": 4,
+        "start_probability": 0.8865,
+        "dnp_probability": 0.0397,
+        "score": 5.5453,
         "tactical": {
           "status": "READY",
-          "opponent_team_id": 13,
+          "opponent_team_id": 20,
           "player_role": null,
           "player_return_routes": [],
-          "opponent_vulnerabilities": [],
-          "opponent_strengths": [],
+          "opponent_vulnerabilities": [
+            "transition_threat",
+            "wide_delivery"
+          ],
+          "opponent_strengths": [
+            "set_piece_activity",
+            "final_third_progression"
+          ],
           "route_vulnerability_overlap": [],
           "highlights": [
-            "recent-GW lawan: ['long_range', 'close_central']"
+            "recent-GW lawan: ['close_central', 'box_central']"
           ],
           "tactical_key": [
             0,
@@ -324,9 +327,9 @@
           "name": "Haaland",
           "position": "FWD",
           "team_id": 15,
-          "start_probability": 0.8683,
-          "dnp_probability": 0.0461,
-          "score": 6.2801,
+          "start_probability": 0.8787,
+          "dnp_probability": 0.0424,
+          "score": 6.9246,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 7,
@@ -351,47 +354,21 @@
           }
         },
         {
-          "element": 115,
-          "name": "De Cuyper",
-          "position": "DEF",
-          "team_id": 5,
-          "start_probability": 0.7752,
-          "dnp_probability": 0.0787,
-          "score": 6.4486,
-          "tactical": {
-            "status": "READY",
-            "opponent_team_id": 13,
-            "player_role": null,
-            "player_return_routes": [],
-            "opponent_vulnerabilities": [],
-            "opponent_strengths": [],
-            "route_vulnerability_overlap": [],
-            "highlights": [
-              "recent-GW lawan: ['long_range', 'close_central']"
-            ],
-            "tactical_key": [
-              0,
-              1,
-              1
-            ],
-            "advisory_only": true
-          }
-        },
-        {
           "element": 88,
           "name": "Kayode",
           "position": "DEF",
           "team_id": 4,
-          "start_probability": 0.8766,
-          "dnp_probability": 0.0432,
-          "score": 6.2766,
+          "start_probability": 0.8865,
+          "dnp_probability": 0.0397,
+          "score": 6.3281,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 20,
             "player_role": null,
             "player_return_routes": [],
             "opponent_vulnerabilities": [
-              "transition_threat"
+              "transition_threat",
+              "wide_delivery"
             ],
             "opponent_strengths": [
               "set_piece_activity",
@@ -410,13 +387,38 @@
           }
         },
         {
-          "element": 572,
-          "name": "Tzolakis",
-          "position": "GK",
+          "element": 426,
+          "name": "B.Fernandes",
+          "position": "MID",
+          "team_id": 16,
+          "start_probability": 0.8865,
+          "dnp_probability": 0.0397,
+          "score": 6.7938,
+          "tactical": {
+            "status": "READY",
+            "opponent_team_id": 9,
+            "player_role": null,
+            "player_return_routes": [],
+            "opponent_vulnerabilities": [],
+            "opponent_strengths": [],
+            "route_vulnerability_overlap": [],
+            "highlights": [],
+            "tactical_key": [
+              0,
+              0,
+              0
+            ],
+            "advisory_only": true
+          }
+        },
+        {
+          "element": 279,
+          "name": "Ajayi",
+          "position": "DEF",
           "team_id": 11,
-          "start_probability": 0.7566,
-          "dnp_probability": 0.0852,
-          "score": 5.8878,
+          "start_probability": 0.7825,
+          "dnp_probability": 0.0761,
+          "score": 5.8608,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 2,
@@ -441,13 +443,13 @@
           }
         },
         {
-          "element": 279,
-          "name": "Ajayi",
-          "position": "DEF",
+          "element": 572,
+          "name": "Tzolakis",
+          "position": "GK",
           "team_id": 11,
-          "start_probability": 0.7566,
-          "dnp_probability": 0.0852,
-          "score": 5.7449,
+          "start_probability": 0.7825,
+          "dnp_probability": 0.0761,
+          "score": 5.8426,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 2,
@@ -474,13 +476,13 @@
       ],
       "main_starting_xi_battle": {
         "status": "CLOSE",
-        "margin": 0.082,
+        "margin": 0.097,
         "starter_side": [
           {
-            "element": 346,
-            "name": "Calvert-Lewin",
-            "position": "FWD",
-            "selection_score": 3.2531
+            "element": 565,
+            "name": "M.Sangaré",
+            "position": "MID",
+            "selection_score": 3.4856
           }
         ],
         "bench_side": [
@@ -488,22 +490,22 @@
             "element": 15,
             "name": "Ødegaard",
             "position": "MID",
-            "selection_score": 3.1709
+            "selection_score": 3.3884
           }
         ],
-        "alternative_formation": "5-3-2",
+        "alternative_formation": "4-3-3",
         "tactical_tiebreak": {
           "eligible": true,
           "applied_to_xi": false,
           "base_xi_key": [
             0,
-            11,
-            12
+            10,
+            11
           ],
           "selected_xi_key": [
             0,
-            11,
-            12
+            10,
+            11
           ],
           "policy": "close-call tactical evidence only; canonical scores unchanged"
         }
@@ -511,17 +513,37 @@
       "alternatives": [
         {
           "rank": 1,
-          "formation": "5-2-3",
-          "selection_score": 44.5035,
-          "mean": 50.389,
-          "std": 11.198,
+          "formation": "4-3-3",
+          "selection_score": 45.9825,
+          "mean": 51.806,
+          "std": 11.318,
           "element_ids": [
             8,
             40,
             88,
             115,
             165,
-            254,
+            279,
+            346,
+            411,
+            426,
+            565,
+            572
+          ]
+        },
+        {
+          "rank": 2,
+          "formation": "4-3-3",
+          "selection_score": 45.8855,
+          "mean": 51.699,
+          "std": 11.303,
+          "element_ids": [
+            8,
+            15,
+            40,
+            88,
+            115,
+            165,
             279,
             346,
             411,
@@ -530,11 +552,11 @@
           ]
         },
         {
-          "rank": 2,
-          "formation": "5-3-2",
-          "selection_score": 44.4215,
-          "mean": 50.356,
-          "std": 11.214,
+          "rank": 3,
+          "formation": "4-4-2",
+          "selection_score": 45.6279,
+          "mean": 51.483,
+          "std": 11.299,
           "element_ids": [
             8,
             15,
@@ -542,26 +564,6 @@
             88,
             115,
             165,
-            254,
-            279,
-            411,
-            426,
-            572
-          ]
-        },
-        {
-          "rank": 3,
-          "formation": "5-3-2",
-          "selection_score": 44.3777,
-          "mean": 50.323,
-          "std": 11.214,
-          "element_ids": [
-            8,
-            40,
-            88,
-            115,
-            165,
-            254,
             279,
             411,
             426,
@@ -571,17 +573,17 @@
         },
         {
           "rank": 4,
-          "formation": "4-3-3",
-          "selection_score": 44.2345,
-          "mean": 50.108,
-          "std": 11.166,
+          "formation": "5-2-3",
+          "selection_score": 45.604,
+          "mean": 51.399,
+          "std": 11.268,
           "element_ids": [
             8,
-            15,
             40,
             88,
             115,
             165,
+            254,
             279,
             346,
             411,
@@ -592,12 +594,12 @@
         {
           "rank": 5,
           "formation": "4-3-3",
-          "selection_score": 44.1908,
-          "mean": 50.075,
-          "std": 11.167,
+          "selection_score": 45.6012,
+          "mean": 51.493,
+          "std": 11.317,
           "element_ids": [
             8,
-            40,
+            15,
             88,
             115,
             165,
@@ -611,27 +613,27 @@
         },
         {
           "rank": 6,
-          "formation": "5-2-3",
-          "selection_score": 44.1579,
-          "mean": 49.918,
-          "std": 11.094,
+          "formation": "3-4-3",
+          "selection_score": 45.5567,
+          "mean": 51.376,
+          "std": 11.273,
           "element_ids": [
-            8,
+            15,
             40,
             88,
-            109,
             115,
             165,
-            254,
             279,
             346,
             411,
-            426
+            426,
+            565,
+            572
           ]
         }
       ],
-      "expected_starting_xi_mean": 50.389,
-      "selection_score": 44.504,
+      "expected_starting_xi_mean": 51.806,
+      "selection_score": 45.983,
       "authority": "v5_decision_lineup_optimizer",
       "performance": {
         "projection_lookup": "indexed_o1",

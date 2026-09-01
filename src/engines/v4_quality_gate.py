@@ -8,6 +8,44 @@ from src.services.contracts import file_digest
 from src.utils import CONFIG, DATA
 
 
+def _assert_capability_lifecycle_state(post: dict) -> None:
+    """Accept only the two governed calibration lifecycle states.
+
+    DSS-44 and DSS-X12 start in WARMUP and promote together only after the
+    existing immutable reconciliation gate succeeds.  This verifier must not
+    freeze production permanently at the pre-promotion state.
+    """
+    coverage = post.get("capability_coverage") or {}
+    critical_warmup = list(post.get("critical_warmup") or [])
+    assert post.get("critical_partial") == []
+    if critical_warmup:
+        assert critical_warmup == ["DSS-44", "DSS-X12"]
+        assert coverage == {
+            "active": 72,
+            "warmup": 2,
+            "partial": 0,
+            "failed": 0,
+            "declared": 74,
+            "active_ratio": 0.973,
+        }
+        assert post.get("capability_maturity") == "WARMUP"
+        assert post.get("decision_engine") == "PROVISIONAL"
+        assert post.get("go_allowed") is False
+        return
+
+    assert coverage == {
+        "active": 74,
+        "warmup": 0,
+        "partial": 0,
+        "failed": 0,
+        "declared": 74,
+        "active_ratio": 1.0,
+    }
+    assert post.get("capability_maturity") == "MATURE"
+    assert post.get("decision_engine") == "HEALTHY"
+    assert post.get("go_allowed") is True
+
+
 def _assert_framework_health() -> tuple[dict, dict]:
     """Preserve fail-closed operational health while keeping lifecycle maturity separate."""
     pre = legacy._load("framework_health_preflight_v4.json")
@@ -35,22 +73,9 @@ def _assert_framework_health() -> tuple[dict, dict]:
     assert pre["gate0"]["counts"].get("PASS", 0) + pre["gate0"]["counts"].get("DEFERRED", 0) == 16
     assert post["gate0"]["counts"].get("PASS", 0) == 16
     assert post.get("pipeline_health") == "GREEN"
-    coverage = post.get("capability_coverage") or {}
-    assert coverage == {
-        "active": 72,
-        "warmup": 2,
-        "partial": 0,
-        "failed": 0,
-        "declared": 74,
-        "active_ratio": 0.973,
-    }
     assert post.get("capability_health") == "GREEN"
     assert post.get("prediction_health") == "GREEN"
-    assert post.get("capability_maturity") == "WARMUP"
-    assert post.get("decision_engine") == "PROVISIONAL"
-    assert post.get("go_allowed") is False
-    assert post.get("critical_partial") == []
-    assert post.get("critical_warmup") == ["DSS-44", "DSS-X12"]
+    _assert_capability_lifecycle_state(post)
     maturity = post.get("maturity_reconciliation") or {}
     assert maturity.get("failed_proof_demotes_active_to_partial") is True
     assert set(maturity.get("active_modules") or []) == {

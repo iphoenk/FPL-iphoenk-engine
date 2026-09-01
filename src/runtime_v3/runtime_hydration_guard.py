@@ -37,6 +37,43 @@ def _git_ok(root: Path, *args: str) -> bool:
     )
 
 
+def _refresh_main_history(root: Path) -> None:
+    """Make canonical main ancestry available in shallow Actions checkouts.
+
+    Runtime jobs intentionally checkout one source SHA with depth=1. An older,
+    valid runtime manifest therefore cannot be ancestry-checked until canonical
+    main history is materialized. Keep the ancestry requirement and expand only
+    Git history; never weaken it to string equality or commit existence.
+    """
+    shallow = _git_text(root, "rev-parse", "--is-shallow-repository").lower() == "true"
+    args = ["git", "fetch", "--no-tags"]
+    if shallow:
+        args.append("--unshallow")
+    args.extend(
+        [
+            "origin",
+            "+refs/heads/main:refs/remotes/origin/main",
+        ]
+    )
+    subprocess.run(
+        args,
+        cwd=root,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=True,
+    )
+
+
+def _source_is_canonical_ancestor(root: Path, source: str) -> bool:
+    if _git_ok(root, "merge-base", "--is-ancestor", source, "HEAD"):
+        return True
+    try:
+        _refresh_main_history(root)
+    except (subprocess.CalledProcessError, OSError):
+        return False
+    return _git_ok(root, "merge-base", "--is-ancestor", source, "HEAD")
+
+
 def verify_runtime_snapshot(root: Path = ROOT) -> dict:
     if not _git_ok(root, "show-ref", "--verify", "--quiet", RUNTIME_REF):
         return {"status": "SKIPPED", "reason": "runtime_branch_absent_first_publish"}
@@ -101,7 +138,7 @@ def verify_runtime_snapshot(root: Path = ROOT) -> dict:
     source = str(manifest.get("source_commit") or "").lower()
     if not _SHA_RE.fullmatch(source):
         raise RuntimeError("runtime hydration rejected: source commit invalid")
-    if not _git_ok(root, "merge-base", "--is-ancestor", source, "HEAD"):
+    if not _source_is_canonical_ancestor(root, source):
         raise RuntimeError(
             "runtime hydration rejected: source commit is not canonical checkout ancestry"
         )

@@ -11,6 +11,9 @@ from typing import Any
 
 from src.utils import DATA, ROOT
 
+RUNTIME_MODULE = "src.runtime_v3.domain_orchestrator"
+CONTRACT = "V3_CANONICAL_MATERIAL_DETERMINISM_V2"
+
 
 def _read(data_dir: Path, name: str) -> dict[str, Any]:
     return json.loads((data_dir / name).read_text(encoding="utf-8"))
@@ -117,7 +120,7 @@ def _copy_seed(source: Path, target: Path) -> None:
         shutil.copy2(item, destination)
 
 
-def _run(module: str, data_dir: Path, cache_root: Path) -> dict[str, Any]:
+def _run(data_dir: Path, cache_root: Path) -> dict[str, Any]:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(ROOT)
     env["FPL_DATA_DIR"] = str(data_dir)
@@ -126,7 +129,7 @@ def _run(module: str, data_dir: Path, cache_root: Path) -> dict[str, Any]:
     command = [
         sys.executable,
         "-m",
-        module,
+        RUNTIME_MODULE,
         "--mode",
         "daily",
         "--stats",
@@ -135,7 +138,7 @@ def _run(module: str, data_dir: Path, cache_root: Path) -> dict[str, Any]:
     ]
     proc = subprocess.run(command, cwd=ROOT, env=env, text=True, capture_output=True, check=False)
     result = {
-        "module": module,
+        "module": RUNTIME_MODULE,
         "returncode": proc.returncode,
         "stdout_tail": (proc.stdout or "")[-2000:],
         "stderr_tail": (proc.stderr or "")[-2000:],
@@ -146,42 +149,52 @@ def _run(module: str, data_dir: Path, cache_root: Path) -> dict[str, Any]:
 
 
 def run() -> dict[str, Any]:
-    with tempfile.TemporaryDirectory(prefix="fpl-v3-equivalence-") as tmp:
+    """Prove material determinism of the single canonical runtime.
+
+    Historical legacy-vs-domain equivalence was required while both execution
+    paths existed. The legacy scheduler is now retired, so release acceptance
+    must not reactivate it merely to compare outputs. Instead, two independent
+    canonical runs receive the same seed and shared Official cache and must
+    produce the same material decision signature.
+    """
+    with tempfile.TemporaryDirectory(prefix="fpl-v3-determinism-") as tmp:
         root = Path(tmp)
-        legacy_data = root / "legacy"
-        domain_data = root / "domain"
+        first_data = root / "canonical-a"
+        second_data = root / "canonical-b"
         shared_cache = root / "cache"
-        _copy_seed(DATA, legacy_data)
-        _copy_seed(DATA, domain_data)
+        _copy_seed(DATA, first_data)
+        _copy_seed(DATA, second_data)
 
-        legacy_run = _run("src.runtime_v3.orchestrator", legacy_data, shared_cache)
-        domain_run = _run("src.runtime_v3.domain_orchestrator", domain_data, shared_cache)
-        legacy_signature = material_signature(legacy_data)
-        domain_signature = material_signature(domain_data)
+        first_run = _run(first_data, shared_cache)
+        second_run = _run(second_data, shared_cache)
+        first_signature = material_signature(first_data)
+        second_signature = material_signature(second_data)
 
-        if legacy_signature != domain_signature:
+        if first_signature != second_signature:
             differences = {
-                key: {"legacy": legacy_signature.get(key), "domain": domain_signature.get(key)}
-                for key in legacy_signature
-                if legacy_signature.get(key) != domain_signature.get(key)
+                key: {"canonical_a": first_signature.get(key), "canonical_b": second_signature.get(key)}
+                for key in first_signature
+                if first_signature.get(key) != second_signature.get(key)
             }
             result = {
                 "status": "FAIL",
-                "contract": "V3_MATERIAL_DECISION_EQUIVALENCE_V1",
+                "contract": CONTRACT,
                 "differences": differences,
-                "legacy_run": legacy_run,
-                "domain_run": domain_run,
+                "canonical_a_run": first_run,
+                "canonical_b_run": second_run,
             }
             print(json.dumps(result, ensure_ascii=False))
             raise SystemExit(1)
 
         result = {
             "status": "PASS",
-            "contract": "V3_MATERIAL_DECISION_EQUIVALENCE_V1",
+            "contract": CONTRACT,
+            "canonical_runtime": RUNTIME_MODULE,
+            "legacy_scheduler_executed": False,
             "same_input_seed": True,
             "shared_official_cache": True,
-            "compared": list(legacy_signature),
-            "signature": domain_signature,
+            "compared": list(first_signature),
+            "signature": second_signature,
         }
         print(json.dumps(result, ensure_ascii=False))
         return result

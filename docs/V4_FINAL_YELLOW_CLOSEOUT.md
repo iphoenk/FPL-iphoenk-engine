@@ -18,3 +18,5 @@ No prediction mathematics, xPts/xMins mathematics, calibration thresholds, optim
 ## Acceptance
 
 The closeout is accepted only when the existing `core / validate-v4` required check passes, including the complete deterministic test suite, 8-service DAG, centralized quality gate, architecture assurance, before/after diagnostic, advanced ablation, and repeated non-publishing performance benchmark.
+
+The governed architecture attestation was regenerated from the final closeout source bytes with `tools/v4_architecture_guard_attest.py` before the final required-gate run.

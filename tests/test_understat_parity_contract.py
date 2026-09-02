@@ -47,7 +47,8 @@ def _raw():
                 "2": {"id": "2", "title": "Chelsea", "history": _history()},
             },
             "playersData": [
-                {"id": "10", "player_name": "Saka", "team_title": "Arsenal", "games": "5", "time": "450", "xG": "3", "xA": "2", "xGChain": "5", "xGBuildup": "1.5", "shots": "15", "key_passes": "10", "position": "M"}
+                {"id": "10", "player_name": "Saka", "team_title": "Arsenal", "games": "5", "time": "450", "xG": "3", "xA": "2", "xGChain": "5", "xGBuildup": "1.5", "shots": "15", "key_passes": "10", "position": "M"},
+                {"id": "20", "player_name": "Palmer", "team_title": "Chelsea", "games": "5", "time": "445", "xG": "2.5", "xA": "1.8", "xGChain": "4.6", "xGBuildup": "1.2", "shots": "14", "key_passes": "9", "position": "M"},
             ],
             "datesData": [],
         },
@@ -55,7 +56,10 @@ def _raw():
 
 
 def _universe():
-    return [{"element": 101, "element_id": 101, "name": "Saka", "team": "Arsenal", "team_id": 1, "position": "MID"}]
+    return [
+        {"element": 101, "element_id": 101, "name": "Saka", "team": "Arsenal", "team_id": 1, "position": "MID"},
+        {"element": 202, "element_id": 202, "name": "Palmer", "team": "Chelsea", "team_id": 2, "position": "MID"},
+    ]
 
 
 def _policy():
@@ -68,16 +72,18 @@ def _policy():
 
 
 def test_normalized_understat_intelligence_contract_is_engine_agnostic():
+    universe = _universe()
     teams = normalize_team_evidence(_raw(), _policy())
-    players, unresolved = normalize_player_evidence(_raw(), _universe(), _policy())
+    players, unresolved = normalize_player_evidence(_raw(), universe, _policy())
     fixtures = [{"id": 1, "event": 3, "team_h": 1, "team_a": 2, "finished": False, "kickoff_time": "2026-09-12T14:00:00Z"}]
-    matchups = build_matchups(teams, players, _universe(), fixtures, _policy())
+    matchups = build_matchups(teams, players, universe, fixtures, _policy())
 
     arsenal = teams["arsenal"]
     assert REQUIRED_WINDOWS.issubset(arsenal["windows"])
     assert arsenal["windows"]["last_1"]["metric_evidence"]["xg"]["evidence_type"] == "SOURCE_OBSERVED"
     assert arsenal["windows"]["last_1"]["metric_evidence"]["ppda"]["evidence_type"] == "DERIVED"
     assert players["101"]["mapping"]["state"] == "RESOLVED"
+    assert players["202"]["mapping"]["state"] == "RESOLVED"
     assert unresolved == []
     assert REQUIRED_MATCHUP_DIMENSIONS.issubset(matchups["101"]["dimensions"])
     assert matchups["101"]["state"] in {"POSITIVE", "NEUTRAL", "NEGATIVE", "INSUFFICIENT_EVIDENCE"}

@@ -78,6 +78,12 @@ def _runtime_ruleset(*, app_id: int = PUBLISHER_APP_ID):
     }
 
 
+def test_default_branch_selector_does_not_match_runtime_branch():
+    ruleset = _main_ruleset()
+    assert audit._ruleset_targets_branch(ruleset, "main", default_branch="main") is True
+    assert audit._ruleset_targets_branch(ruleset, "runtime-data", default_branch="main") is False
+
+
 def test_platform_audit_reports_current_unprotected_shape_as_red(monkeypatch):
     result = _run(
         monkeypatch,
@@ -111,6 +117,11 @@ def test_platform_audit_accepts_ruleset_required_check_and_exact_publisher_for_g
     by_name = {row["name"]: row for row in result["checks"]}
     assert by_name["MAIN_REQUIRED_V3_CI"]["detail"]["classic"]["enforcement"] == "off"
     assert by_name["MAIN_REQUIRED_V3_CI"]["detail"]["ruleset"]["required_checks"] == ["verify"]
+    assert by_name["RUNTIME_RULESET_UPDATE_DELETE_GUARDS"]["detail"]["active_rule_types"] == [
+        "deletion",
+        "non_fast_forward",
+        "update",
+    ]
     assert by_name["RUNTIME_PUBLISHER_BYPASS_EXACT"]["detail"]["evidence_source"] == "authenticated_ruleset_detail"
 
 

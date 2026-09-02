@@ -5,7 +5,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   verify-platform-governance:
@@ -17,9 +16,20 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
+      - name: Mint read-only V3 governance evidence token
+        id: governance_app_token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.V3_RUNTIME_APP_ID }}
+          private-key: ${{ secrets.V3_RUNTIME_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: FPL-iphoenk-engine
+          permission-administration: read
+          permission-contents: read
+
       - name: Verify GitHub-native V3 platform controls
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.governance_app_token.outputs.token }}
           V3_DEFAULT_BRANCH: main
           RUNTIME_BRANCH: runtime-data
           V3_REQUIRED_CHECK: verify

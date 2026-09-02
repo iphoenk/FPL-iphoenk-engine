@@ -1,0 +1,733 @@
+[
+  {
+    "element": 102,
+    "normalized_names": [
+      "yehor yarmoliuk",
+      "yarmoliuk"
+    ],
+    "official_name": "Yehor Yarmoliuk",
+    "second_name": "Yarmoliuk",
+    "team": "Brentford",
+    "top_global": [
+      {
+        "name": "Yehor Yarmolyuk",
+        "normalized_name": "yehor yarmolyuk",
+        "score": 0.933333,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Omar Marmoush",
+        "normalized_name": "omar marmoush",
+        "score": 0.571429,
+        "teams": [
+          "Tottenham"
+        ]
+      },
+      {
+        "name": "Aaron Hickey",
+        "normalized_name": "aaron hickey",
+        "score": 0.47619,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Tyler Adams",
+        "normalized_name": "tyler adams",
+        "score": 0.461538,
+        "teams": [
+          "Bournemouth"
+        ]
+      },
+      {
+        "name": "Yasin Ayari",
+        "normalized_name": "yasin ayari",
+        "score": 0.461538,
+        "teams": [
+          "Brighton"
+        ]
+      },
+      {
+        "name": "Sandro Tonali",
+        "normalized_name": "sandro tonali",
+        "score": 0.454545,
+        "teams": [
+          "Tottenham"
+        ]
+      },
+      {
+        "name": "Ethan Ampadu",
+        "normalized_name": "ethan ampadu",
+        "score": 0.444444,
+        "teams": [
+          "Leeds"
+        ]
+      },
+      {
+        "name": "Takehiro Tomiyasu",
+        "normalized_name": "takehiro tomiyasu",
+        "score": 0.4375,
+        "teams": [
+          "Crystal Palace"
+        ]
+      }
+    ],
+    "top_team": [
+      {
+        "name": "Yehor Yarmolyuk",
+        "normalized_name": "yehor yarmolyuk",
+        "score": 0.933333,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Aaron Hickey",
+        "normalized_name": "aaron hickey",
+        "score": 0.47619,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Nathan Collins",
+        "normalized_name": "nathan collins",
+        "score": 0.347826,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Kristoffer Ajer",
+        "normalized_name": "kristoffer ajer",
+        "score": 0.333333,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Dango Ouattara",
+        "normalized_name": "dango ouattara",
+        "score": 0.275862,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Vitaly Janelt",
+        "normalized_name": "vitaly janelt",
+        "score": 0.272727,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Callum Wilson",
+        "normalized_name": "callum wilson",
+        "score": 0.272727,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Thiago",
+        "normalized_name": "thiago",
+        "score": 0.266667,
+        "teams": [
+          "Brentford"
+        ]
+      }
+    ],
+    "web_name": "Yarmoliuk"
+  },
+  {
+    "element": 211,
+    "normalized_names": [
+      "yeremy pino santos",
+      "yeremy",
+      "pino santos"
+    ],
+    "official_name": "Y\u00e9remy Pino Santos",
+    "second_name": "Pino Santos",
+    "team": "Crystal Palace",
+    "top_global": [
+      {
+        "name": "Yeremi Pino",
+        "normalized_name": "yeremi pino",
+        "score": 0.689655,
+        "teams": [
+          "Crystal Palace"
+        ]
+      },
+      {
+        "name": "Andrey Santos",
+        "normalized_name": "andrey santos",
+        "score": 0.666667,
+        "teams": [
+          "Manchester United"
+        ]
+      },
+      {
+        "name": "Pedro Neto",
+        "normalized_name": "pedro neto",
+        "score": 0.571429,
+        "teams": [
+          "Chelsea"
+        ]
+      },
+      {
+        "name": "Jaidon Anthony",
+        "normalized_name": "jaidon anthony",
+        "score": 0.56,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Nilson Angulo",
+        "normalized_name": "nilson angulo",
+        "score": 0.5,
+        "teams": [
+          "Sunderland"
+        ]
+      },
+      {
+        "name": "J\u00e9r\u00e9my Jacquet",
+        "normalized_name": "jeremy jacquet",
+        "score": 0.5,
+        "teams": [
+          "Liverpool"
+        ]
+      },
+      {
+        "name": "Elliot Stroud",
+        "normalized_name": "elliot stroud",
+        "score": 0.5,
+        "teams": [
+          "Hull"
+        ]
+      },
+      {
+        "name": "Tatsuhiro Sakamoto",
+        "normalized_name": "tatsuhiro sakamoto",
+        "score": 0.482759,
+        "teams": [
+          "Coventry"
+        ]
+      }
+    ],
+    "top_team": [
+      {
+        "name": "Yeremi Pino",
+        "normalized_name": "yeremi pino",
+        "score": 0.689655,
+        "teams": [
+          "Crystal Palace"
+        ]
+      },
+      {
+        "name": "Jaydee Canvot",
+        "normalized_name": "jaydee canvot",
+        "score": 0.451613,
+        "teams": [
+          "Crystal Palace"
+        ]
+      },
+      {
+        "name": "Takehiro Tomiyasu",
+        "normalized_name": "takehiro tomiyasu",
+        "score": 0.428571,
+        "teams": [
+          "Crystal Palace"
+        ]
+      },
+      {
+        "name": "Axel Disasi",
+        "normalized_name": "axel disasi",
+        "score": 0.413793,
+        "teams": [
+          "Crystal Palace"
+        ]
+      },
+      {
+        "name": "Evann Guessand",
+        "normalized_name": "evann guessand",
+        "score": 0.4,
+        "teams": [
+          "Crystal Palace"
+        ]
+      },
+      {
+        "name": "J\u00f8rgen Strand Larsen",
+        "normalized_name": "jorgen strand larsen",
+        "score": 0.387097,
+        "teams": [
+          "Crystal Palace"
+        ]
+      },
+      {
+        "name": "Jean-Philippe Mateta",
+        "normalized_name": "jean philippe mateta",
+        "score": 0.368421,
+        "teams": [
+          "Crystal Palace"
+        ]
+      },
+      {
+        "name": "Adam Wharton",
+        "normalized_name": "adam wharton",
+        "score": 0.347826,
+        "teams": [
+          "Crystal Palace"
+        ]
+      }
+    ],
+    "web_name": "Yeremy"
+  },
+  {
+    "element": 295,
+    "normalized_names": [
+      "oli mcburnie",
+      "mcburnie"
+    ],
+    "official_name": "Oli McBurnie",
+    "second_name": "McBurnie",
+    "team": "Hull City",
+    "top_global": [
+      {
+        "name": "Oliver McBurnie",
+        "normalized_name": "oliver mcburnie",
+        "score": 0.888889,
+        "teams": [
+          "Hull"
+        ]
+      },
+      {
+        "name": "Marcus Tavernier",
+        "normalized_name": "marcus tavernier",
+        "score": 0.583333,
+        "teams": [
+          "Bournemouth"
+        ]
+      },
+      {
+        "name": "Nordi Mukiele",
+        "normalized_name": "nordi mukiele",
+        "score": 0.56,
+        "teams": [
+          "Sunderland"
+        ]
+      },
+      {
+        "name": "Rodrigo Muniz",
+        "normalized_name": "rodrigo muniz",
+        "score": 0.56,
+        "teams": [
+          "Fulham"
+        ]
+      },
+      {
+        "name": "Thomas Meunier",
+        "normalized_name": "thomas meunier",
+        "score": 0.538462,
+        "teams": [
+          "Sunderland"
+        ]
+      },
+      {
+        "name": "Romaine Mundle",
+        "normalized_name": "romaine mundle",
+        "score": 0.538462,
+        "teams": [
+          "Sunderland"
+        ]
+      },
+      {
+        "name": "Gabriel",
+        "normalized_name": "gabriel",
+        "score": 0.533333,
+        "teams": [
+          "Arsenal"
+        ]
+      },
+      {
+        "name": "Murillo",
+        "normalized_name": "murillo",
+        "score": 0.533333,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      }
+    ],
+    "top_team": [],
+    "web_name": "McBurnie"
+  },
+  {
+    "element": 592,
+    "normalized_names": [
+      "abdoul ouattara",
+      "ouattara"
+    ],
+    "official_name": "Abdoul Ouattara",
+    "second_name": "Ouattara",
+    "team": "Ipswich Town",
+    "top_global": [
+      {
+        "name": "Dango Ouattara",
+        "normalized_name": "dango ouattara",
+        "score": 0.758621,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Abdul Fatawu",
+        "normalized_name": "abdul fatawu",
+        "score": 0.666667,
+        "teams": [
+          "Ipswich"
+        ]
+      },
+      {
+        "name": "Guemissongui Ouattara",
+        "normalized_name": "guemissongui ouattara",
+        "score": 0.611111,
+        "teams": [
+          "Ipswich"
+        ]
+      },
+      {
+        "name": "Boubacar Kamara",
+        "normalized_name": "boubacar kamara",
+        "score": 0.533333,
+        "teams": [
+          "Aston Villa"
+        ]
+      },
+      {
+        "name": "Mamadou Sangar\u00e9",
+        "normalized_name": "mamadou sangare",
+        "score": 0.533333,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Ola Aina",
+        "normalized_name": "ola aina",
+        "score": 0.5,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      },
+      {
+        "name": "Matt Targett",
+        "normalized_name": "matt targett",
+        "score": 0.5,
+        "teams": [
+          "Hull"
+        ]
+      },
+      {
+        "name": "Ao Tanaka",
+        "normalized_name": "ao tanaka",
+        "score": 0.5,
+        "teams": [
+          "Leeds"
+        ]
+      }
+    ],
+    "top_team": [],
+    "web_name": "Ouattara"
+  },
+  {
+    "element": 350,
+    "normalized_names": [
+      "alisson becker",
+      "a becker",
+      "becker"
+    ],
+    "official_name": "Alisson Becker",
+    "second_name": "Becker",
+    "team": "Liverpool",
+    "top_global": [
+      {
+        "name": "Alisson",
+        "normalized_name": "alisson",
+        "score": 0.666667,
+        "teams": [
+          "Liverpool"
+        ]
+      },
+      {
+        "name": "Alysson Edward",
+        "normalized_name": "alysson edward",
+        "score": 0.642857,
+        "teams": [
+          "Aston Villa"
+        ]
+      },
+      {
+        "name": "Aaron Hickey",
+        "normalized_name": "aaron hickey",
+        "score": 0.538462,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Maxim De Cuyper",
+        "normalized_name": "maxim de cuyper",
+        "score": 0.521739,
+        "teams": [
+          "Brighton"
+        ]
+      },
+      {
+        "name": "Mathis Cherki",
+        "normalized_name": "mathis cherki",
+        "score": 0.518519,
+        "teams": [
+          "Manchester City"
+        ]
+      },
+      {
+        "name": "Calvin Bassey",
+        "normalized_name": "calvin bassey",
+        "score": 0.518519,
+        "teams": [
+          "Fulham"
+        ]
+      },
+      {
+        "name": "Sander Berge",
+        "normalized_name": "sander berge",
+        "score": 0.5,
+        "teams": [
+          "Fulham"
+        ]
+      },
+      {
+        "name": "Valent\u00edn Barco",
+        "normalized_name": "valentin barco",
+        "score": 0.5,
+        "teams": [
+          "Chelsea"
+        ]
+      }
+    ],
+    "top_team": [
+      {
+        "name": "Alisson",
+        "normalized_name": "alisson",
+        "score": 0.666667,
+        "teams": [
+          "Liverpool"
+        ]
+      },
+      {
+        "name": "Milos Kerkez",
+        "normalized_name": "milos kerkez",
+        "score": 0.461538,
+        "teams": [
+          "Liverpool"
+        ]
+      },
+      {
+        "name": "Ryan Gravenberch",
+        "normalized_name": "ryan gravenberch",
+        "score": 0.416667,
+        "teams": [
+          "Liverpool"
+        ]
+      },
+      {
+        "name": "Alexis Mac Allister",
+        "normalized_name": "alexis mac allister",
+        "score": 0.37037,
+        "teams": [
+          "Liverpool"
+        ]
+      },
+      {
+        "name": "Alexander Isak",
+        "normalized_name": "alexander isak",
+        "score": 0.363636,
+        "teams": [
+          "Liverpool"
+        ]
+      },
+      {
+        "name": "Lewis Koumas",
+        "normalized_name": "lewis koumas",
+        "score": 0.307692,
+        "teams": [
+          "Liverpool"
+        ]
+      },
+      {
+        "name": "Florian Wirtz",
+        "normalized_name": "florian wirtz",
+        "score": 0.296296,
+        "teams": [
+          "Liverpool"
+        ]
+      },
+      {
+        "name": "Ronald Ara\u00fajo",
+        "normalized_name": "ronald araujo",
+        "score": 0.285714,
+        "teams": [
+          "Liverpool"
+        ]
+      }
+    ],
+    "web_name": "A.Becker"
+  },
+  {
+    "element": 474,
+    "normalized_names": [
+      "jair paula da cunha filho",
+      "jair cunha",
+      "paula da cunha filho"
+    ],
+    "official_name": "Jair Paula da Cunha Filho",
+    "second_name": "Paula da Cunha Filho",
+    "team": "Nott'm Forest",
+    "top_global": [
+      {
+        "name": "Jorge Cuenca",
+        "normalized_name": "jorge cuenca",
+        "score": 0.636364,
+        "teams": [
+          "Fulham"
+        ]
+      },
+      {
+        "name": "Matheus Cunha",
+        "normalized_name": "matheus cunha",
+        "score": 0.608696,
+        "teams": [
+          "Manchester United"
+        ]
+      },
+      {
+        "name": "Jair",
+        "normalized_name": "jair",
+        "score": 0.571429,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      },
+      {
+        "name": "Fabian Sch\u00e4r",
+        "normalized_name": "fabian schar",
+        "score": 0.545455,
+        "teams": [
+          "Newcastle United"
+        ]
+      },
+      {
+        "name": "C\u00e9sar Palacios",
+        "normalized_name": "cesar palacios",
+        "score": 0.512821,
+        "teams": [
+          "Fulham"
+        ]
+      },
+      {
+        "name": "Xaver Schlager",
+        "normalized_name": "xaver schlager",
+        "score": 0.5,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      },
+      {
+        "name": "Jaidon Anthony",
+        "normalized_name": "jaidon anthony",
+        "score": 0.5,
+        "teams": [
+          "Brentford"
+        ]
+      },
+      {
+        "name": "Oliver McBurnie",
+        "normalized_name": "oliver mcburnie",
+        "score": 0.48,
+        "teams": [
+          "Hull"
+        ]
+      }
+    ],
+    "top_team": [
+      {
+        "name": "Jair",
+        "normalized_name": "jair",
+        "score": 0.571429,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      },
+      {
+        "name": "Xaver Schlager",
+        "normalized_name": "xaver schlager",
+        "score": 0.5,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      },
+      {
+        "name": "James McAtee",
+        "normalized_name": "james mcatee",
+        "score": 0.454545,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      },
+      {
+        "name": "Ola Aina",
+        "normalized_name": "ola aina",
+        "score": 0.444444,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      },
+      {
+        "name": "Igor Jesus",
+        "normalized_name": "igor jesus",
+        "score": 0.4,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      },
+      {
+        "name": "Arnaud Kalimuendo Muinga",
+        "normalized_name": "arnaud kalimuendo muinga",
+        "score": 0.352941,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      },
+      {
+        "name": "Dan Ndoye",
+        "normalized_name": "dan ndoye",
+        "score": 0.344828,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      },
+      {
+        "name": "Nikola Milenkovic",
+        "normalized_name": "nikola milenkovic",
+        "score": 0.333333,
+        "teams": [
+          "Nott'm Forest"
+        ]
+      }
+    ],
+    "web_name": "Jair Cunha"
+  }
+]

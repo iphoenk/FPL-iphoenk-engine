@@ -15,6 +15,7 @@ HEALTH_OUT = DATA / "understat_tactical_health_v3.json"
 RAW_CACHE = DATA / "stats" / "understat_epl_2026.json"
 TEAM_PROFILE = DATA / "tactical_team_profiles.json"
 ROLE_PROFILE = DATA / "player_role_profiles.json"
+POSITION_BY_TYPE = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
 
 
 def _f(value: Any) -> float | None:
@@ -44,9 +45,37 @@ def _norm(value: Any) -> str:
 
 
 def _official_universe() -> list[dict[str, Any]]:
-    universe = read_json(DATA / "universe.json", {})
-    rows = universe.get("players") if isinstance(universe, dict) else []
-    return [dict(row) for row in (rows or []) if isinstance(row, dict) and row.get("element") is not None]
+    """Build the full FPL universe from the already-owned Official snapshot.
+
+    tactical_context must not depend on market_state merely to obtain universe.json.
+    Official bootstrap already owns player identity/team/position and is the correct
+    authority for Understat mapping.
+    """
+    official = read_json(DATA / "official_snapshot.json", {})
+    bootstrap = official.get("bootstrap") or {}
+    teams = {
+        int(row.get("id") or -1): str(row.get("name") or row.get("short_name") or row.get("id"))
+        for row in bootstrap.get("teams") or []
+        if row.get("id") is not None
+    }
+    rows: list[dict[str, Any]] = []
+    for player in bootstrap.get("elements") or []:
+        try:
+            element = int(player.get("id") or 0)
+            team_id = int(player.get("team") or 0)
+            element_type = int(player.get("element_type") or 0)
+        except (TypeError, ValueError):
+            continue
+        if element <= 0 or team_id <= 0:
+            continue
+        rows.append({
+            "element": element,
+            "name": player.get("web_name") or player.get("second_name") or player.get("first_name") or str(element),
+            "team": teams.get(team_id),
+            "team_id": team_id,
+            "position": POSITION_BY_TYPE.get(element_type),
+        })
+    return rows
 
 
 def _raw_snapshot() -> tuple[dict[str, Any], str]:
@@ -296,6 +325,7 @@ def build() -> dict[str, Any]:
         "owner": "tactical_context",
         "acquisition_mode": acquisition_mode,
         "official_fpl_identity_and_fixture_authority_preserved": True,
+        "official_universe_derived_from_existing_official_snapshot": True,
         "canonical_tactical_artifacts_enriched": canonical_merge,
         "existing_tactical_decision_consumption_reused": True,
         "second_decision_consumer_created": False,

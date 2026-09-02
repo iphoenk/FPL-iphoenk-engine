@@ -69,6 +69,8 @@ def load_policy() -> dict[str, Any]:
             raise RuntimeError("optional enrichment bootstrap requires artifact and contract")
         if not bootstrap.get("usable_source_states"):
             raise RuntimeError("optional enrichment bootstrap requires usable source states")
+        if not bootstrap.get("usable_freshness_states"):
+            raise RuntimeError("optional enrichment bootstrap requires usable freshness states")
         revision = bootstrap.get("source_revision") or {}
         if revision:
             required = ("policy_file", "policy_path", "artifact_field", "refresh_artifact_field")
@@ -206,6 +208,7 @@ def optional_enrichment_bootstrap_plan(
         "expected_source_revision": None,
         "artifact_source_revision": None,
         "refresh_source_revision": None,
+        "artifact_freshness": None,
     }
     if cfg.get("enabled") is not True:
         return result
@@ -220,6 +223,7 @@ def optional_enrichment_bootstrap_plan(
 
     artifact_path = DATA / str(cfg.get("artifact") or "")
     payload = read_json(artifact_path, {}) or {}
+    result["artifact_freshness"] = str(payload.get("freshness") or "") or None
     revision = _source_revision_state(cfg, payload)
     result["expected_source_revision"] = revision.get("expected")
     result["artifact_source_revision"] = revision.get("artifact")
@@ -241,13 +245,17 @@ def optional_enrichment_bootstrap_plan(
 
     expected_contract = str(cfg.get("contract") or "")
     usable_states = {str(value) for value in cfg.get("usable_source_states") or []}
+    usable_freshness_states = {str(value) for value in cfg.get("usable_freshness_states") or []}
+    source_state = str(payload.get("source_availability") or "")
+    freshness_state = str(payload.get("freshness") or "")
     revision_compatible = not expected_revision or artifact_revision == expected_revision
-    if (
+    cache_structurally_usable = bool(
         payload.get("contract") == expected_contract
         and payload.get("schema_valid") is True
-        and str(payload.get("source_availability") or "") in usable_states
+        and source_state in usable_states
         and revision_compatible
-    ):
+    )
+    if cache_structurally_usable and freshness_state in usable_freshness_states:
         result["reason"] = "USABLE_CACHE_PRESENT"
         return result
 
@@ -270,7 +278,7 @@ def optional_enrichment_bootstrap_plan(
             return result
 
     result["required"] = True
-    result["reason"] = "MISSING_OR_INVALID_CACHE"
+    result["reason"] = "CACHE_FRESHNESS_NOT_USABLE" if cache_structurally_usable else "MISSING_OR_INVALID_CACHE"
     return result
 
 
@@ -336,6 +344,7 @@ def resolve_execution_profile(
         "optional_enrichment_expected_source_revision": bootstrap_plan.get("expected_source_revision"),
         "optional_enrichment_artifact_source_revision": bootstrap_plan.get("artifact_source_revision"),
         "optional_enrichment_refresh_source_revision": bootstrap_plan.get("refresh_source_revision"),
+        "optional_enrichment_artifact_freshness": bootstrap_plan.get("artifact_freshness"),
     }
 
 
@@ -360,6 +369,7 @@ def main() -> int:
         f"optional_enrichment_bootstrap_upgraded={'true' if result['optional_enrichment_bootstrap_upgraded'] else 'false'}",
         f"optional_enrichment_bootstrap_reason={result['optional_enrichment_bootstrap_reason'] or ''}",
         f"optional_enrichment_expected_source_revision={result['optional_enrichment_expected_source_revision'] or ''}",
+        f"optional_enrichment_artifact_freshness={result['optional_enrichment_artifact_freshness'] or ''}",
     ]
     if output:
         with open(output, "a", encoding="utf-8") as handle:

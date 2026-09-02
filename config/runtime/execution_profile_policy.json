@@ -89,6 +89,7 @@
     "artifact": "stats/understat_epl_2026.json",
     "contract": "UNDERSTAT_RAW_SOURCE_V1",
     "usable_source_states": ["AVAILABLE", "STALE_FALLBACK"],
+    "usable_freshness_states": ["FRESH"],
     "fast_deferred_refresh_marker": "network_refresh_deferred_in_fast_decision",
     "retry_cooldown_minutes": 60,
     "only_upgrade_to_higher_rank": true,
@@ -112,6 +113,7 @@
     "checkpoint_recovery_is_registry_driven": true,
     "deadline_and_live_modes_are_not_overridden_by_late_recovery": true,
     "optional_enrichment_bootstrap_is_registry_driven": true,
+    "optional_enrichment_freshness_is_registry_driven": true,
     "fast_profile_never_performs_optional_enrichment_network_bootstrap": true,
     "real_optional_enrichment_refresh_failures_use_bounded_retry_cooldown": true,
     "source_transport_revision_is_single_authority_from_source_policy": true

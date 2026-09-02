@@ -87,7 +87,7 @@ def test_fast_deferred_current_transport_bootstraps_once_outside_fast(monkeypatc
     assert result["optional_enrichment_bootstrap_reason"] == "FAST_DEFERRED_WITHOUT_NETWORK_ATTEMPT"
 
 
-def test_usable_understat_cache_keeps_normal_fast_profile(monkeypatch, tmp_path):
+def test_fresh_usable_understat_cache_keeps_normal_fast_profile(monkeypatch, tmp_path):
     monkeypatch.setattr(resolver, "DATA", tmp_path)
     _write_raw(
         tmp_path,
@@ -96,6 +96,7 @@ def test_usable_understat_cache_keeps_normal_fast_profile(monkeypatch, tmp_path)
             "transport_revision": REVISION,
             "refresh_transport_revision": REVISION,
             "source_availability": "AVAILABLE",
+            "freshness": "FRESH",
             "schema_valid": True,
             "fetched_at": NOW.isoformat(),
         },
@@ -107,6 +108,33 @@ def test_usable_understat_cache_keeps_normal_fast_profile(monkeypatch, tmp_path)
     assert result["optional_enrichment_bootstrap_required"] is False
     assert result["optional_enrichment_bootstrap_upgraded"] is False
     assert result["optional_enrichment_bootstrap_reason"] == "USABLE_CACHE_PRESENT"
+    assert result["optional_enrichment_artifact_freshness"] == "FRESH"
+
+
+def test_stale_available_cache_upgrades_daily_run_for_governed_refresh(monkeypatch, tmp_path):
+    monkeypatch.setattr(resolver, "DATA", tmp_path)
+    _write_raw(
+        tmp_path,
+        {
+            "contract": "UNDERSTAT_RAW_SOURCE_V1",
+            "transport_revision": REVISION,
+            "refresh_transport_revision": REVISION,
+            "source_availability": "AVAILABLE",
+            "freshness": "STALE",
+            "schema_valid": True,
+            "fetched_at": (NOW - timedelta(hours=7)).isoformat(),
+        },
+    )
+
+    result = _resolve()
+
+    assert result["profile"] == "deep_stats"
+    assert result["mode"] == "daily"
+    assert result["extra"] == "--deep-stats"
+    assert result["optional_enrichment_bootstrap_required"] is True
+    assert result["optional_enrichment_bootstrap_upgraded"] is True
+    assert result["optional_enrichment_bootstrap_reason"] == "CACHE_FRESHNESS_NOT_USABLE"
+    assert result["optional_enrichment_artifact_freshness"] == "STALE"
 
 
 def test_recent_real_refresh_failure_on_current_transport_obeys_retry_cooldown(monkeypatch, tmp_path):
@@ -165,6 +193,7 @@ def test_current_transport_refresh_failure_with_old_lkg_still_honors_cooldown(mo
             "transport_revision": "UNDERSTAT_HTML_V0",
             "refresh_transport_revision": REVISION,
             "source_availability": "STALE_FALLBACK",
+            "freshness": "STALE",
             "schema_valid": True,
             "refresh_attempted_at": (NOW - timedelta(minutes=5)).isoformat(),
             "fetched_at": (NOW - timedelta(hours=7)).isoformat(),
@@ -176,6 +205,31 @@ def test_current_transport_refresh_failure_with_old_lkg_still_honors_cooldown(mo
     assert result["profile"] == "fast_decision"
     assert result["optional_enrichment_bootstrap_required"] is False
     assert result["optional_enrichment_bootstrap_reason"] == "REAL_REFRESH_FAILURE_COOLDOWN"
+    assert result["optional_enrichment_artifact_freshness"] == "STALE"
+
+
+def test_stale_fallback_after_cooldown_retries_via_existing_deep_owner(monkeypatch, tmp_path):
+    monkeypatch.setattr(resolver, "DATA", tmp_path)
+    _write_raw(
+        tmp_path,
+        {
+            "contract": "UNDERSTAT_RAW_SOURCE_V1",
+            "transport_revision": REVISION,
+            "refresh_transport_revision": REVISION,
+            "source_availability": "STALE_FALLBACK",
+            "freshness": "STALE",
+            "schema_valid": True,
+            "refresh_attempted_at": (NOW - timedelta(minutes=61)).isoformat(),
+            "fetched_at": (NOW - timedelta(hours=7)).isoformat(),
+        },
+    )
+
+    result = _resolve()
+
+    assert result["profile"] == "deep_stats"
+    assert result["optional_enrichment_bootstrap_required"] is True
+    assert result["optional_enrichment_bootstrap_upgraded"] is True
+    assert result["optional_enrichment_bootstrap_reason"] == "CACHE_FRESHNESS_NOT_USABLE"
 
 
 def test_deadline_mode_is_never_upgraded_for_optional_understat_bootstrap(monkeypatch, tmp_path):
@@ -184,9 +238,12 @@ def test_deadline_mode_is_never_upgraded_for_optional_understat_bootstrap(monkey
         tmp_path,
         {
             "contract": "UNDERSTAT_RAW_SOURCE_V1",
-            "source_availability": "UNAVAILABLE",
-            "schema_valid": False,
-            "refresh_error": "network_refresh_deferred_in_fast_decision",
+            "transport_revision": REVISION,
+            "refresh_transport_revision": REVISION,
+            "source_availability": "AVAILABLE",
+            "freshness": "STALE",
+            "schema_valid": True,
+            "fetched_at": (NOW - timedelta(hours=7)).isoformat(),
         },
     )
 

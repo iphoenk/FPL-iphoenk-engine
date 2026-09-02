@@ -81,3 +81,83 @@ def test_identity_variants_are_deduplicated_after_normalization():
     )
 
     assert variants == ["João Pedro", "Pedro", "João"]
+
+
+def test_fast_lane_reuses_normalized_tactical_snapshot_on_exact_fingerprint(monkeypatch, tmp_path):
+    target = tmp_path / "understat_tactical_v3.json"
+    monkeypatch.setattr(context, "OUT", target)
+    raw = {
+        "fetched_at": "2026-09-02T13:04:09+00:00",
+        "transport_revision": "UNDERSTAT_XHR_JSON_V1",
+        "source_availability": "AVAILABLE",
+        "freshness": "FRESH",
+        "schema_valid": True,
+        "fallback": False,
+        "provenance": {"provider": "Understat"},
+    }
+    universe = [{"element": 7, "name": "Bukayo Saka", "team": "Arsenal", "position": "MID"}]
+    fixtures = [{"id": 99, "event": 3, "team_h": 1, "team_a": 2, "kickoff_time": "2026-09-04T17:30:00Z", "finished": False}]
+    fingerprint = context._derived_cache_fingerprint(raw, universe, fixtures)
+    cached = {
+        "contract": "UNDERSTAT_TACTICAL_INTELLIGENCE_V1",
+        "source": {"availability": "AVAILABLE"},
+        "health": {"status": "AVAILABLE"},
+        "native_integration": {
+            "derived_cache_revision": context.DERIVED_CACHE_REVISION,
+            "derived_cache_fingerprint": fingerprint,
+        },
+    }
+    target.write_text(json.dumps(cached), encoding="utf-8")
+
+    reused, observed = context._reusable_tactical(raw, universe, fixtures, "FAST_CACHE_ONLY")
+
+    assert observed == fingerprint
+    assert reused is not None
+    assert reused["native_integration"]["derived_cache_reused"] is True
+    assert reused["source"]["freshness"] == "FRESH"
+
+
+def test_fast_lane_recomputes_when_identity_or_fixture_fingerprint_changes(monkeypatch, tmp_path):
+    target = tmp_path / "understat_tactical_v3.json"
+    monkeypatch.setattr(context, "OUT", target)
+    raw = {
+        "fetched_at": "2026-09-02T13:04:09+00:00",
+        "transport_revision": "UNDERSTAT_XHR_JSON_V1",
+    }
+    universe = [{"element": 7, "name": "Bukayo Saka", "team": "Arsenal", "position": "MID"}]
+    fixtures = [{"id": 99, "event": 3, "team_h": 1, "team_a": 2, "kickoff_time": "2026-09-04T17:30:00Z", "finished": False}]
+    stale_fingerprint = context._derived_cache_fingerprint(raw, universe, fixtures)
+    target.write_text(json.dumps({
+        "contract": "UNDERSTAT_TACTICAL_INTELLIGENCE_V1",
+        "native_integration": {
+            "derived_cache_revision": context.DERIVED_CACHE_REVISION,
+            "derived_cache_fingerprint": stale_fingerprint,
+        },
+    }), encoding="utf-8")
+    changed_universe = [{"element": 7, "name": "Bukayo Saka", "team": "Arsenal", "position": "FWD"}]
+
+    reused, current = context._reusable_tactical(raw, changed_universe, fixtures, "FAST_CACHE_ONLY")
+
+    assert current != stale_fingerprint
+    assert reused is None
+
+
+def test_non_fast_profile_never_uses_derived_tactical_cache(monkeypatch, tmp_path):
+    target = tmp_path / "understat_tactical_v3.json"
+    monkeypatch.setattr(context, "OUT", target)
+    raw = {"fetched_at": "2026-09-02T13:04:09+00:00", "transport_revision": "UNDERSTAT_XHR_JSON_V1"}
+    universe = [{"element": 7, "name": "Bukayo Saka", "team": "Arsenal", "position": "MID"}]
+    fixtures: list[dict] = []
+    fingerprint = context._derived_cache_fingerprint(raw, universe, fixtures)
+    target.write_text(json.dumps({
+        "contract": "UNDERSTAT_TACTICAL_INTELLIGENCE_V1",
+        "native_integration": {
+            "derived_cache_revision": context.DERIVED_CACHE_REVISION,
+            "derived_cache_fingerprint": fingerprint,
+        },
+    }), encoding="utf-8")
+
+    reused, observed = context._reusable_tactical(raw, universe, fixtures, "GOVERNED_REFRESH_OR_CACHE")
+
+    assert observed == fingerprint
+    assert reused is None

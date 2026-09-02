@@ -17,8 +17,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Generate governed V4 architecture attestation
-        run: python tools/v4_architecture_guard_attest.py
+        run: PYTHONPATH=. python tools/v4_architecture_guard_attest.py
       - name: Upload generated attestation
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: v4-architecture-attestation-refresh

@@ -19,6 +19,15 @@ _EMBEDDED_RE = re.compile(
     re.DOTALL,
 )
 
+# Representation aliases only. Official FPL remains the identity authority and
+# no player-specific aliases are permitted here.
+_TEAM_TITLE_ALIASES = {
+    "Coventry City": "Coventry",
+    "Hull City": "Hull",
+    "Ipswich Town": "Ipswich",
+    "Nottingham Forest": "Nott'm Forest",
+}
+
 
 def _policy() -> dict:
     return read_json(POLICY_FILE, {}) or {}
@@ -180,12 +189,61 @@ def _request_json(url: str, policy: dict, session: requests.Session | None = Non
     raise RuntimeError(f"Understat request failed after {calls} bounded attempts: {last_error}")
 
 
+def _canonical_team_title(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_canonical_team_title(item) for item in value]
+    if not isinstance(value, str):
+        return value
+    parts = [part.strip() for part in value.split(",")]
+    mapped = [_TEAM_TITLE_ALIASES.get(part, part) for part in parts]
+    return ", ".join(mapped)
+
+
+def _normalize_team_rows(value: Any) -> Any:
+    def one(row: Any) -> Any:
+        if not isinstance(row, dict):
+            return row
+        out = dict(row)
+        if row.get("title"):
+            out["source_title"] = row.get("title")
+            out["title"] = _canonical_team_title(row.get("title"))
+        return out
+
+    if isinstance(value, list):
+        return [one(row) for row in value]
+    if isinstance(value, dict):
+        return {key: one(row) for key, row in value.items()}
+    return value
+
+
+def _normalize_player_rows(value: Any) -> Any:
+    def one(row: Any) -> Any:
+        if not isinstance(row, dict):
+            return row
+        out = dict(row)
+        team_title = row.get("team_title") or row.get("team")
+        if team_title:
+            out["source_team_title"] = team_title
+            if row.get("team_title") is not None:
+                out["team_title"] = _canonical_team_title(row.get("team_title"))
+            elif row.get("team") is not None:
+                out["team"] = _canonical_team_title(row.get("team"))
+        return out
+
+    if isinstance(value, list):
+        return [one(row) for row in value]
+    if isinstance(value, dict):
+        return {key: one(row) for key, row in value.items()}
+    return value
+
+
 def _normalize_ajax_payload(payload: dict[str, Any]) -> dict[str, Any]:
     # Keep the established raw contract stable while adapting only the transport
-    # boundary to Understat's current XHR response keys.
+    # boundary to Understat's current XHR response keys. Team-title aliases are
+    # representation-only normalization; Official FPL remains identity authority.
     return {
-        "teamsData": payload.get("teams"),
-        "playersData": payload.get("players"),
+        "teamsData": _normalize_team_rows(payload.get("teams")),
+        "playersData": _normalize_player_rows(payload.get("players")),
         "datesData": payload.get("dates"),
     }
 
@@ -252,6 +310,7 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
                 "landing_url": landing_url,
                 "transport": "HTTPS_JSON_XHR",
                 "transport_revision": revision,
+                "team_title_representation_normalization": True,
                 "adapter": "src.sources.understat",
             },
         }

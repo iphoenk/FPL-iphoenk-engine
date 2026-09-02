@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "registry": "fpl_v4_source_adapter_truth_v1",
+  "schema_version": 2,
+  "registry": "fpl_v4_source_adapter_truth_v2",
   "allowed_statuses": ["AVAILABLE", "PARTIAL", "STALE", "UNAVAILABLE", "NO MATERIAL UPDATE"],
   "fabrication_forbidden": true,
   "sources": {
@@ -17,6 +17,16 @@
     "fffix": {"tier": 3, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
     "ffhub": {"tier": 3, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
     "ffscout": {"tier": 3, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
+    "understat_tactical": {
+      "tier": 4,
+      "adapter": "src.sources.understat",
+      "status_rule": "UNDERSTAT_TACTICAL_ARTIFACT_HEALTH",
+      "runtime_wired": true,
+      "class": "OPTIONAL_DYNAMIC_TACTICAL_ENRICHMENT",
+      "policy_ref": "config/intelligence/understat_tactical.json",
+      "official_fact_authority": false,
+      "direct_xpts_mutation_forbidden": true
+    },
     "ben_crellin_fixture_chip_context": {"tier": 4, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
     "x_twitter": {"tier": 5, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false},
     "reddit": {"tier": 5, "adapter": null, "status_rule": "UNAVAILABLE_UNLESS_EXTERNAL_SWEEP", "runtime_wired": false}
@@ -25,6 +35,9 @@
     "governance_name_does_not_imply_adapter_exists": true,
     "unwired_source_cannot_be_reported_available": true,
     "external_report_time_sweep_may_upgrade_status_with_evidence": true,
-    "official_fpl_native_status_must_come_from_current_endpoint_health": true
+    "official_fpl_native_status_must_come_from_current_endpoint_health": true,
+    "understat_status_must_come_from_normalized_runtime_artifact": true,
+    "understat_failure_cannot_fabricate_zero_metrics": true,
+    "understat_cannot_override_official_fpl_facts": true
   }
 }

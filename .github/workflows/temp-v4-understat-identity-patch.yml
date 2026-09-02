@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   patch-attest-test:
-    if: ${{ !contains(github.event.head_commit.message, '[identity-patched]') && !contains(github.event.head_commit.message, '[patch-diagnostic]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[identity-patched]') && !contains(github.event.head_commit.message, '[patch-diagnostic]') && !contains(github.event.head_commit.message, '[attestation-diagnostic]') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -38,7 +38,18 @@ jobs:
           fi
           cat verification/v4_identity_patch_diagnostic.txt
       - name: Regenerate governed V4 architecture attestation
-        run: python tools/v4_architecture_guard_attest.py
+        shell: bash
+        run: |
+          if ! python tools/v4_architecture_guard_attest.py > verification/v4_identity_attestation_diagnostic.txt 2>&1; then
+            cat verification/v4_identity_attestation_diagnostic.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src/sources/understat.py src/intelligence/understat_tactical.py src/services/enrichment_service.py tests/test_v4_understat_official_identity_bridge.py config/architecture_guard_attestation.json verification/v4_identity_attestation_diagnostic.txt
+            git commit -m "chore(v4): capture patched attestation failure [attestation-diagnostic]"
+            git push origin HEAD:fix/v4-official-understat-player-mapping-20260902
+            exit 1
+          fi
+          cat verification/v4_identity_attestation_diagnostic.txt
       - name: Full regression
         run: python -m pytest -q --tb=short
       - name: Generate live Official to Understat proof

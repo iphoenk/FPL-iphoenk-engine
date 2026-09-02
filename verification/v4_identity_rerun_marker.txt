@@ -1,4 +1,4 @@
-rerun_reason=unmatched-only-crosswalk-audit
+rerun_reason=mononym-collision-closeout
 scope=diagnostic-only
 generated_for=official-651-understat-one-to-one
-revision=2
+revision=3

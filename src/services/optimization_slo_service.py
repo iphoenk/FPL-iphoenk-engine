@@ -6,6 +6,7 @@ from time import perf_counter
 from src.engines.v4_decision_pipeline import OUTFILE, run as run_decision_pipeline
 from src.engines.v4_price_context import serve_price_evidence
 from src.engines.v4_weather_tactical_overlay import apply_weather_overlay
+from src.intelligence.understat_package_context import augment_package_tactical_context
 from src.services.owned_challenger_decision_service import load_policy, run as run_owned_challenger_decision
 from src.services.projected_value_market_challenger import augment_challenger, discover, rerank_visible_watchlist
 from src.services.runtime_policy import decision_compute_slo_ms
@@ -48,6 +49,7 @@ def run() -> dict:
     latest = read_json(DATA / "latest.json", {})
     raw_snapshot = read_json(DATA / "runtime" / "snapshot.v1.json", {})
     tactical_before = read_json(DATA / "tactical_serving_v4.json", {})
+    understat_tactical = read_json(DATA / "understat_tactical_v4.json", {})
     policy = load_policy()
     discovery = discover(
         predictions=predictions,
@@ -88,6 +90,11 @@ def run() -> dict:
         tactical=tactical,
         prices=price_context,
         policy=policy,
+    )
+    challenger = augment_package_tactical_context(
+        challenger,
+        predictions=predictions,
+        understat=understat_tactical,
     )
     atomic_json(DATA / "owned_challenger_decision_v4.json", challenger)
     challenger_ms = round((perf_counter() - challenger_started) * 1000.0, 2)
@@ -134,6 +141,7 @@ def run() -> dict:
         "expected_xpts_mean_adjustment": 0.0,
     }
     discovery_artifact = challenger.get("projected_value_market_discovery") or {}
+    understat_package = challenger.get("understat_package_intelligence") or {}
     out["owned_challenger_decision"] = {
         "status": challenger.get("status"),
         "contract": challenger.get("contract"),
@@ -144,6 +152,7 @@ def run() -> dict:
         "multi_transfer_package_count": len(challenger.get("multi_transfer_packages") or []),
         "mandatory_candidate_count": len(discovery_artifact.get("mandatory_candidate_ids") or []),
         "mandatory_candidate_coverage_complete": discovery_artifact.get("mandatory_candidate_coverage_complete"),
+        "understat_package_context": understat_package,
         "challenge_signal": challenger.get("challenge_signal"),
         "overall_decision": challenger.get("overall_decision"),
         "decision_authority": challenger.get("decision_authority"),
@@ -170,6 +179,9 @@ def run() -> dict:
     out["performance_guardrails"]["owned_challenger_creates_no_second_decision_authority"] = True
     out["performance_guardrails"]["projected_value_market_full_universe_single_scan"] = True
     out["performance_guardrails"]["mandatory_market_review_is_not_execution_authority"] = True
+    out["performance_guardrails"]["understat_network_io_occurs_in_enrichment_not_decision_compute"] = True
+    out["performance_guardrails"]["understat_package_context_annotation_only"] = True
+    out["performance_guardrails"]["understat_cannot_authorize_transfer_or_hit"] = True
     atomic_json(OUTFILE, out)
     print(json.dumps({
         "service": "optimization",
@@ -184,6 +196,7 @@ def run() -> dict:
         "mandatory_coverage": discovery_artifact.get("mandatory_candidate_coverage_complete"),
         "weather_overlay_ms": weather_ms,
         "weather_context": (tactical.get("weather_context") or {}).get("status"),
+        "understat_package_context": understat_package.get("packages_annotated"),
         "owned_challenger_ms": challenger_ms,
         "owned_challenger_status": challenger.get("status"),
         "owned_challenger_signal": challenger.get("challenge_signal"),

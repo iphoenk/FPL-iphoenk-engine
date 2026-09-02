@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -42,13 +43,25 @@ def main() -> None:
     )
     official_unique = len(set(element_ids))
     states: dict[str, int] = {}
+    direct_ids: list[str] = []
     for row in mapped.values():
         state = (row.get("mapping") or {}).get("state") or "UNKNOWN"
         states[state] = states.get(state, 0) + 1
+        if state == "RESOLVED":
+            source_id = str(row.get("understat_player_id") or "")
+            if source_id:
+                direct_ids.append(source_id)
 
     direct_resolved = states.get("RESOLVED", 0)
     source_absent = states.get("SOURCE_ABSENT_CURRENT_SEASON", 0)
     source_present = direct_resolved + len(unresolved)
+    id_counts = Counter(direct_ids)
+    duplicate_direct_ids = sorted(source_id for source_id, count in id_counts.items() if count > 1)
+    direct_ids_complete_unique = (
+        len(direct_ids) == direct_resolved
+        and len(set(direct_ids)) == direct_resolved
+        and not duplicate_direct_ids
+    )
     proof = {
         "generated_at": now,
         "official": {
@@ -68,6 +81,9 @@ def main() -> None:
             "crosswalk_classified_count": len(mapped),
             "crosswalk_coverage": round(len(mapped) / max(1, official_count), 6),
             "direct_resolved_count": direct_resolved,
+            "direct_understat_id_count": len(direct_ids),
+            "direct_understat_unique_id_count": len(set(direct_ids)),
+            "duplicate_direct_understat_ids": duplicate_direct_ids,
             "source_absent_current_season_count": source_absent,
             "source_present_official_count": source_present,
             "source_present_resolved_coverage": round(direct_resolved / max(1, source_present), 6),
@@ -87,6 +103,7 @@ def main() -> None:
         "team_mapping_100_percent": len(team_evidence) == len(teams),
         "crosswalk_classified_100_percent": len(mapped) == official_count,
         "source_present_mapping_100_percent": len(unresolved) == 0,
+        "direct_understat_ids_one_to_one": direct_ids_complete_unique,
         "no_fake_source_absent_mapping": direct_resolved + source_absent == official_count,
     }
     proof["acceptance"]["all_green"] = all(proof["acceptance"].values())

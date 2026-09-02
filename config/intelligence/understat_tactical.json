@@ -61,7 +61,10 @@
     "bench_score_margin": 0.12,
     "formation_risk_adjusted_margin": 0.25,
     "minimum_confidence": 0.6,
+    "max_start_probability_disadvantage": 0.05,
+    "max_dnp_probability_disadvantage": 0.05,
     "tactical_signal_may_only_break_close_ties": true,
+    "tactical_signal_cannot_erase_xmins_risk": true,
     "missing_evidence_neutral": true,
     "captaincy_semantics_unchanged": true,
     "transfer_hit_authority": false

@@ -63,6 +63,15 @@ def _rows(value: Any) -> list[dict]:
     return []
 
 
+def _source_counts(embedded: dict[str, Any]) -> dict[str, int]:
+    """Expose observed source cardinality without implying FPL identity parity."""
+    return {
+        "team_count": len(_rows(embedded.get("teamsData"))),
+        "player_count": len(_rows(embedded.get("playersData"))),
+        "fixture_count": len(_rows(embedded.get("datesData"))),
+    }
+
+
 def _is_completed_fixture(row: dict) -> bool:
     if row.get("isResult") is True or str(row.get("isResult") or "").lower() in {"true", "1"}:
         return True
@@ -117,6 +126,7 @@ def _failure(error: str, previous: dict | None = None) -> dict:
     if previous and (policy.get("cache") or {}).get("retain_last_known_good", True):
         valid, defects = _validate(previous)
         if valid:
+            embedded = previous.get("embedded") or {}
             return {
                 **previous,
                 "source_availability": "STALE_FALLBACK",
@@ -126,6 +136,7 @@ def _failure(error: str, previous: dict | None = None) -> dict:
                 "refresh_attempted_at": iso_now(),
                 "refresh_transport_revision": revision,
                 "cache_age_minutes": round(age, 2) if age is not None else None,
+                "source_counts": previous.get("source_counts") or _source_counts(embedded),
                 "schema_valid": True,
                 "schema_defects": defects,
             }
@@ -141,6 +152,7 @@ def _failure(error: str, previous: dict | None = None) -> dict:
         "latest_fixture_represented": None,
         "refresh_attempted_at": iso_now(),
         "fallback": False,
+        "source_counts": {"team_count": 0, "player_count": 0, "fixture_count": 0},
         "schema_valid": False,
         "schema_defects": ["source_unavailable"],
         "error": error,
@@ -200,11 +212,13 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
     valid, _ = _validate(cached) if cached else (False, [])
     same_transport = bool(revision) and str(cached.get("transport_revision") or "") == revision
     if not force and cached and valid and same_transport and age is not None and age <= ttl:
+        embedded = cached.get("embedded") or {}
         return {
             **cached,
             "runtime_reused": True,
             "cache_age_minutes": round(age, 2),
             "freshness": _freshness(age, policy),
+            "source_counts": cached.get("source_counts") or _source_counts(embedded),
         }
 
     base = str(network.get("base_url") or "https://understat.com").rstrip("/")
@@ -244,6 +258,7 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
             "fallback": False,
             "runtime_reused": False,
             "cache_age_minutes": 0.0,
+            "source_counts": _source_counts(embedded),
             "request_count": request_count,
             "request_budget": max(1, int(network.get("max_requests_per_refresh") or network.get("max_attempts") or 1)),
             "request_strategy": "single_league_xhr_snapshot_no_per_player_network_calls",
@@ -275,9 +290,11 @@ def load() -> dict:
     if not payload:
         return _failure("no_cached_understat_snapshot")
     age = _age_minutes(payload.get("fetched_at"))
+    embedded = payload.get("embedded") or {}
     return {
         **payload,
         "runtime_reused": True,
         "cache_age_minutes": round(age, 2) if age is not None else None,
         "freshness": _freshness(age, _policy()),
+        "source_counts": payload.get("source_counts") or _source_counts(embedded),
     }

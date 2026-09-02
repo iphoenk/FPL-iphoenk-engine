@@ -142,6 +142,33 @@ def _failure(error: str, previous: dict | None = None) -> dict:
     }
 
 
+def _persist_failure(error: str, previous: dict | None = None) -> dict:
+    payload = _failure(error, previous=previous)
+    CACHE.parent.mkdir(parents=True, exist_ok=True)
+    atomic_json(CACHE, payload)
+    return payload
+
+
+def _recent_failure_reuse(cached: dict, policy: dict) -> dict | None:
+    if str(cached.get("source_availability") or "") not in {"UNAVAILABLE", "STALE_FALLBACK"}:
+        return None
+    cache_policy = policy.get("cache") or {}
+    retry_minutes = max(0.0, float(cache_policy.get("failure_retry_minutes") or 15.0))
+    retry_age = _age_minutes(cached.get("refresh_attempted_at"))
+    if retry_minutes <= 0.0 or retry_age is None or retry_age > retry_minutes:
+        return None
+    source_age = _age_minutes(cached.get("fetched_at")) if cached.get("fetched_at") else None
+    return {
+        **cached,
+        "runtime_reused": True,
+        "retry_suppressed": True,
+        "failure_retry_minutes": retry_minutes,
+        "failure_retry_age_minutes": round(retry_age, 2),
+        "cache_age_minutes": round(source_age, 2) if source_age is not None else None,
+        "freshness": _freshness(source_age, policy),
+    }
+
+
 def _request(url: str, policy: dict, session: requests.Session | None = None) -> tuple[str, int]:
     cfg = policy.get("network") or {}
     configured_attempts = max(1, int(cfg.get("max_attempts") or 3))
@@ -174,10 +201,17 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
     age = _age_minutes(cached.get("fetched_at")) if cached else None
     ttl = float((policy.get("cache") or {}).get("raw_ttl_minutes") or 360)
     valid, _ = _validate(cached) if cached else (False, [])
+
+    if not force and cached:
+        failure_reuse = _recent_failure_reuse(cached, policy)
+        if failure_reuse is not None:
+            return failure_reuse
+
     if not force and cached and valid and age is not None and age <= ttl:
         return {
             **cached,
             "runtime_reused": True,
+            "retry_suppressed": False,
             "cache_age_minutes": round(age, 2),
             "freshness": _freshness(age, policy),
         }
@@ -216,6 +250,7 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
             "freshness": "FRESH",
             "fallback": False,
             "runtime_reused": False,
+            "retry_suppressed": False,
             "cache_age_minutes": 0.0,
             "request_count": request_count,
             "request_budget": max(1, int(network.get("max_requests_per_refresh") or network.get("max_attempts") or 1)),
@@ -233,12 +268,12 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
         payload["schema_valid"] = valid
         payload["schema_defects"] = defects
         if not valid:
-            return _failure(";".join(defects), previous=cached)
+            return _persist_failure(";".join(defects), previous=cached)
         CACHE.parent.mkdir(parents=True, exist_ok=True)
         atomic_json(CACHE, payload)
         return payload
     except Exception as exc:
-        return _failure(f"{type(exc).__name__}: {exc}", previous=cached)
+        return _persist_failure(f"{type(exc).__name__}: {exc}", previous=cached)
 
 
 def load() -> dict:

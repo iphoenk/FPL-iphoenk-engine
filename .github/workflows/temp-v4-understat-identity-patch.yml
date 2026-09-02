@@ -1,4 +1,4 @@
-name: TEMP V4 Understat identity patch
+name: TEMP V4 Understat identity verification
 
 on:
   push:
@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  patch-attest-test:
-    if: ${{ !contains(github.event.head_commit.message, '[identity-patched]') && !contains(github.event.head_commit.message, '[patch-diagnostic]') && !contains(github.event.head_commit.message, '[attestation-diagnostic]') }}
+  attest-test-live-proof:
+    if: ${{ !contains(github.event.head_commit.message, '[identity-patched]') && !contains(github.event.head_commit.message, '[verification-diagnostic]') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -23,46 +23,51 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Apply governed source and identity patch
-        shell: bash
-        run: |
-          mkdir -p verification
-          if ! python tools/temp_v4_understat_identity_patch_runner.py > verification/v4_identity_patch_diagnostic.txt 2>&1; then
-            cat verification/v4_identity_patch_diagnostic.txt
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add verification/v4_identity_patch_diagnostic.txt
-            git commit -m "chore(v4): capture identity patch failure [patch-diagnostic]"
-            git push origin HEAD:fix/v4-official-understat-player-mapping-20260902
-            exit 1
-          fi
-          cat verification/v4_identity_patch_diagnostic.txt
       - name: Regenerate governed V4 architecture attestation
         shell: bash
         run: |
-          if ! python tools/v4_architecture_guard_attest.py > verification/v4_identity_attestation_diagnostic.txt 2>&1; then
-            cat verification/v4_identity_attestation_diagnostic.txt
+          mkdir -p verification
+          if ! PYTHONPATH=. python tools/v4_architecture_guard_attest.py > verification/v4_identity_verification_diagnostic.txt 2>&1; then
+            cat verification/v4_identity_verification_diagnostic.txt
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src/sources/understat.py src/intelligence/understat_tactical.py src/services/enrichment_service.py tests/test_v4_understat_official_identity_bridge.py config/architecture_guard_attestation.json verification/v4_identity_attestation_diagnostic.txt
-            git commit -m "chore(v4): capture patched attestation failure [attestation-diagnostic]"
+            git add config/architecture_guard_attestation.json verification/v4_identity_verification_diagnostic.txt
+            git commit -m "chore(v4): capture identity verification failure [verification-diagnostic]"
             git push origin HEAD:fix/v4-official-understat-player-mapping-20260902
             exit 1
           fi
-          cat verification/v4_identity_attestation_diagnostic.txt
+          cat verification/v4_identity_verification_diagnostic.txt
       - name: Full regression
-        run: python -m pytest -q --tb=short
+        shell: bash
+        run: |
+          if ! PYTHONPATH=. python -m pytest -q --tb=short > verification/v4_identity_regression_diagnostic.txt 2>&1; then
+            cat verification/v4_identity_regression_diagnostic.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add config/architecture_guard_attestation.json verification/v4_identity_regression_diagnostic.txt
+            git commit -m "chore(v4): capture identity regression failure [verification-diagnostic]"
+            git push origin HEAD:fix/v4-official-understat-player-mapping-20260902
+            exit 1
+          fi
+          tail -n 30 verification/v4_identity_regression_diagnostic.txt
       - name: Generate live Official to Understat proof
-        run: python tools/temp_v4_understat_live_proof.py
-      - name: Commit validated patch, attestation and live proof
+        shell: bash
+        run: |
+          if ! PYTHONPATH=. python tools/temp_v4_understat_live_proof.py > verification/v4_identity_live_diagnostic.txt 2>&1; then
+            cat verification/v4_identity_live_diagnostic.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add verification/v4_identity_live_diagnostic.txt verification/v4_official_understat_identity_live_proof.json
+            git commit -m "chore(v4): capture live identity verification failure [verification-diagnostic]"
+            git push origin HEAD:fix/v4-official-understat-player-mapping-20260902
+            exit 1
+          fi
+          cat verification/v4_identity_live_diagnostic.txt
+      - name: Commit attestation and live proof
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/sources/understat.py src/intelligence/understat_tactical.py src/services/enrichment_service.py tests/test_v4_understat_official_identity_bridge.py config/architecture_guard_attestation.json verification/v4_official_understat_identity_live_proof.json
-          if git diff --cached --quiet; then
-            echo "No patch changes to commit"
-            exit 1
-          fi
-          git commit -m "fix(v4): complete Official-Understat identity crosswalk [identity-patched]"
+          git add config/architecture_guard_attestation.json verification/v4_official_understat_identity_live_proof.json
+          git commit -m "fix(v4): verify Official-Understat identity crosswalk [identity-patched]"
           git push origin HEAD:fix/v4-official-understat-player-mapping-20260902

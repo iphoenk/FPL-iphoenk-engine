@@ -113,10 +113,32 @@ def _deep_task(gw: int, ttl: float) -> dict:
     }
 
 
+def _identity_variants(player: dict) -> list[str]:
+    first = str(player.get("first_name") or "").strip()
+    second = str(player.get("second_name") or "").strip()
+    web = str(player.get("web_name") or "").strip()
+    full = " ".join(part for part in (first, second) if part).strip()
+    values = [full, web, second]
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        key = value.casefold()
+        if value and key not in seen:
+            seen.add(key)
+            out.append(value)
+    return out
+
+
 def _official_player_row(player: dict, teams: dict, positions: dict, snapshot_meta: dict) -> dict:
     fact = build_public_fact(player, teams, positions, snapshot_meta)
+    variants = _identity_variants(player)
     return {
         **fact,
+        "web_name": player.get("web_name"),
+        "first_name": player.get("first_name"),
+        "second_name": player.get("second_name"),
+        "full_name": variants[0] if variants else player.get("web_name"),
+        "name_variants": variants,
         "element_type": player["element_type"],
         "selected_by_percent": player.get("selected_by_percent"),
         "chance_of_playing_next_round": player.get("chance_of_playing_next_round"),
@@ -262,7 +284,13 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         for row in universe
     )
 
-    understat_tactical = materialize_understat_tactical(raw_understat, raw, universe)
+    # Preserve Official FPL web_name for the canonical universe while using the
+    # fuller Official identity only at the Understat cross-source join boundary.
+    understat_identity_universe = [
+        {**row, "name": row.get("full_name") or row.get("name")}
+        for row in universe
+    ]
+    understat_tactical = materialize_understat_tactical(raw_understat, raw, understat_identity_universe)
     advanced["understat"] = _understat_summary(understat_tactical, raw_understat)
 
     competitive_load = build_competitive_load(
@@ -325,6 +353,8 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
             "freshness": official_snapshot.get("freshness"),
             "players": len(universe),
             "required_public_fact_complete": official_fact_complete,
+            "identity_full_name": sum(bool(row.get("full_name")) for row in universe),
+            "identity_variant_coverage": sum(bool(row.get("name_variants")) for row in universe),
             "ownership": sum(row.get("ownership") is not None for row in universe),
             "expected_goals": sum(row.get("expected_goals") is not None for row in universe),
             "expected_assists": sum(row.get("expected_assists") is not None for row in universe),
@@ -341,6 +371,8 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         "duration_ms": out["duration_ms"],
         "official_players": len(universe),
         "official_fact_complete": official_fact_complete,
+        "official_identity_full_name": out["official_player_evidence"]["identity_full_name"],
+        "official_identity_variant_coverage": out["official_player_evidence"]["identity_variant_coverage"],
         "official_snapshot": official_snapshot.get("source_snapshot_id"),
         "stats_reused": {key: value.get("reused") for key, value in advanced.items() if isinstance(value, dict) and "reused" in value},
         "understat": (understat_tactical.get("health") or {}).get("status"),

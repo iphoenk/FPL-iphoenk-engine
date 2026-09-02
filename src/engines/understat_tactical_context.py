@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -8,7 +9,7 @@ from typing import Any
 
 from src.intelligence.understat_tactical import build_understat_tactical
 from src.sources import understat
-from src.utils import DATA, atomic_json, read_json
+from src.utils import DATA, atomic_json, iso_now, read_json
 
 OUT = DATA / "understat_tactical_v3.json"
 HEALTH_OUT = DATA / "understat_tactical_health_v3.json"
@@ -16,6 +17,13 @@ RAW_CACHE = DATA / "stats" / "understat_epl_2026.json"
 TEAM_PROFILE = DATA / "tactical_team_profiles.json"
 ROLE_PROFILE = DATA / "player_role_profiles.json"
 POSITION_BY_TYPE = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
+DERIVED_CACHE_REVISION = "UNDERSTAT_V3_OFFICIAL_IDENTITY_V1"
+OFFICIAL_TO_UNDERSTAT_TEAM = {
+    "Coventry City": "Coventry",
+    "Hull City": "Hull",
+    "Ipswich Town": "Ipswich",
+    "Nott'm Forest": "Nottingham Forest",
+}
 
 
 def _f(value: Any) -> float | None:
@@ -40,8 +48,27 @@ def _norm(value: Any) -> str:
         "newcastle": "newcastle united",
         "west ham": "west ham united",
         "brighton": "brighton and hove albion",
+        "coventry city": "coventry",
+        "hull city": "hull",
+        "ipswich town": "ipswich",
+        "nott m forest": "nottingham forest",
     }
     return aliases.get(text, text)
+
+
+def _identity_variants(player: dict[str, Any]) -> list[str]:
+    first = str(player.get("first_name") or "").strip()
+    second = str(player.get("second_name") or "").strip()
+    web = str(player.get("web_name") or "").strip()
+    full = " ".join(part for part in (first, second) if part).strip()
+    variants: list[str] = []
+    seen: set[str] = set()
+    for value in (full, web, second, first):
+        key = _norm(value)
+        if value and key and key not in seen:
+            seen.add(key)
+            variants.append(value)
+    return variants
 
 
 def _official_universe() -> list[dict[str, Any]]:
@@ -49,12 +76,16 @@ def _official_universe() -> list[dict[str, Any]]:
 
     tactical_context must not depend on market_state merely to obtain universe.json.
     Official bootstrap already owns player identity/team/position and is the correct
-    authority for Understat mapping.
+    authority for Understat mapping. Full Official identity is retained so an
+    abbreviated FPL web_name cannot unnecessarily suppress a valid source match.
     """
     official = read_json(DATA / "official_snapshot.json", {})
     bootstrap = official.get("bootstrap") or {}
     teams = {
-        int(row.get("id") or -1): str(row.get("name") or row.get("short_name") or row.get("id"))
+        int(row.get("id") or -1): OFFICIAL_TO_UNDERSTAT_TEAM.get(
+            str(row.get("name") or row.get("short_name") or row.get("id")),
+            str(row.get("name") or row.get("short_name") or row.get("id")),
+        )
         for row in bootstrap.get("teams") or []
         if row.get("id") is not None
     }
@@ -68,9 +99,14 @@ def _official_universe() -> list[dict[str, Any]]:
             continue
         if element <= 0 or team_id <= 0:
             continue
+        variants = _identity_variants(player)
         rows.append({
             "element": element,
-            "name": player.get("web_name") or player.get("second_name") or player.get("first_name") or str(element),
+            "name": variants[0] if variants else str(element),
+            "web_name": player.get("web_name"),
+            "first_name": player.get("first_name"),
+            "second_name": player.get("second_name"),
+            "name_variants": variants,
             "team": teams.get(team_id),
             "team_id": team_id,
             "position": POSITION_BY_TYPE.get(element_type),
@@ -89,6 +125,78 @@ def _raw_snapshot() -> tuple[dict[str, Any], str]:
             raw["refresh_error"] = "network_refresh_deferred_in_fast_decision"
         return raw, mode
     return understat.sync(), "GOVERNED_REFRESH_OR_CACHE"
+
+
+def _derived_cache_fingerprint(raw: dict[str, Any], universe: list[dict[str, Any]], fixtures: list[dict[str, Any]]) -> str:
+    identity = [
+        [
+            int(row.get("element") or 0),
+            _norm(row.get("name")),
+            _norm(row.get("team")),
+            str(row.get("position") or ""),
+        ]
+        for row in universe
+    ]
+    future_fixtures = [
+        [
+            row.get("id"),
+            row.get("event"),
+            row.get("team_h"),
+            row.get("team_a"),
+            row.get("kickoff_time"),
+        ]
+        for row in fixtures
+        if not row.get("finished")
+    ]
+    material = {
+        "revision": DERIVED_CACHE_REVISION,
+        "source_fetched_at": raw.get("fetched_at"),
+        "transport_revision": raw.get("transport_revision"),
+        "identity": identity,
+        "future_fixtures": future_fixtures,
+    }
+    encoded = json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _reusable_tactical(
+    raw: dict[str, Any],
+    universe: list[dict[str, Any]],
+    fixtures: list[dict[str, Any]],
+    acquisition_mode: str,
+) -> tuple[dict[str, Any] | None, str]:
+    fingerprint = _derived_cache_fingerprint(raw, universe, fixtures)
+    if acquisition_mode != "FAST_CACHE_ONLY":
+        return None, fingerprint
+    cached = read_json(OUT, {}) or {}
+    native = cached.get("native_integration") or {}
+    if (
+        cached.get("contract") != "UNDERSTAT_TACTICAL_INTELLIGENCE_V1"
+        or native.get("derived_cache_revision") != DERIVED_CACHE_REVISION
+        or native.get("derived_cache_fingerprint") != fingerprint
+    ):
+        return None, fingerprint
+
+    source = cached.setdefault("source", {})
+    source.update({
+        "availability": raw.get("source_availability"),
+        "freshness": raw.get("freshness"),
+        "fetched_at": raw.get("fetched_at"),
+        "source_timestamp": raw.get("source_timestamp"),
+        "schema_valid": raw.get("schema_valid"),
+        "schema_defects": raw.get("schema_defects") or [],
+        "fallback": bool(raw.get("fallback")),
+        "cache_age_minutes": raw.get("cache_age_minutes"),
+        "request_count": raw.get("request_count"),
+        "provenance": raw.get("provenance") or {},
+    })
+    health = cached.setdefault("health", {})
+    health["fallback_state"] = "LAST_KNOWN_GOOD" if raw.get("fallback") else "NONE"
+    health["degradation_reason"] = raw.get("refresh_error") or raw.get("error")
+    native["derived_cache_reused"] = True
+    native["derived_cache_reused_at"] = iso_now()
+    cached["native_integration"] = native
+    return cached, fingerprint
 
 
 def _window(team_evidence: dict[str, Any]) -> dict[str, Any]:
@@ -309,18 +417,23 @@ def build() -> dict[str, Any]:
     # outage cannot turn a declared runtime artifact into an integrity failure.
     atomic_json(RAW_CACHE, raw)
 
-    snapshot = {"official": {"fixtures": list(official.get("fixtures") or [])}}
-    tactical = build_understat_tactical(raw, snapshot, universe)
-    tactical["engine"] = "V3"
-    for matchup in (tactical.get("tactical_matchups") or {}).values():
-        if not isinstance(matchup, dict):
-            continue
-        interaction = matchup.get("player_role_interaction")
-        if isinstance(interaction, dict):
-            interaction["xmins_authority"] = "V3_PREDICTION_NOT_UNDERSTAT"
+    fixtures = list(official.get("fixtures") or [])
+    snapshot = {"official": {"fixtures": fixtures}}
+    tactical, cache_fingerprint = _reusable_tactical(raw, universe, fixtures, acquisition_mode)
+    derived_cache_reused = tactical is not None
+    if tactical is None:
+        tactical = build_understat_tactical(raw, snapshot, universe)
+        tactical["engine"] = "V3"
+        for matchup in (tactical.get("tactical_matchups") or {}).values():
+            if not isinstance(matchup, dict):
+                continue
+            interaction = matchup.get("player_role_interaction")
+            if isinstance(interaction, dict):
+                interaction["xmins_authority"] = "V3_PREDICTION_NOT_UNDERSTAT"
 
     canonical_merge = _merge_canonical_tactical_artifacts(tactical)
-    tactical["native_integration"] = {
+    native = tactical.setdefault("native_integration", {})
+    native.update({
         "architecture": "V3_CANONICAL_DOMAIN_PIPELINE",
         "owner": "tactical_context",
         "acquisition_mode": acquisition_mode,
@@ -332,7 +445,10 @@ def build() -> dict[str, Any]:
         "direct_xpts_mutation": False,
         "direct_xmins_mutation": False,
         "captaincy_semantics_unchanged": True,
-    }
+        "derived_cache_revision": DERIVED_CACHE_REVISION,
+        "derived_cache_fingerprint": cache_fingerprint,
+        "derived_cache_reused": derived_cache_reused,
+    })
 
     health = {
         "schema_version": 1,
@@ -344,6 +460,7 @@ def build() -> dict[str, Any]:
         "coverage": tactical.get("health") or {},
         "canonical_merge": canonical_merge,
         "acquisition_mode": acquisition_mode,
+        "derived_cache_reused": derived_cache_reused,
         "production_blocking": False,
         "governance": {
             "official_fpl_authority_preserved": True,
@@ -354,6 +471,7 @@ def build() -> dict[str, Any]:
             "ppda_direct_xpts_conversion_forbidden": True,
             "existing_tactical_decision_path_reused": True,
             "duplicate_decision_authority_forbidden": True,
+            "fast_reuses_normalized_tactical_snapshot_when_fingerprint_matches": True,
         },
     }
     return {"tactical": tactical, "health": health}
@@ -379,6 +497,7 @@ def run() -> dict[str, Any]:
             "tactical_matchup_coverage": coverage.get("tactical_matchup_coverage"),
             "full_universe_count": coverage.get("official_universe_count"),
             "canonical_merge": health.get("canonical_merge") or {},
+            "derived_cache_reused": health.get("derived_cache_reused"),
             "optional_enrichment": True,
         }
         atomic_json(DATA / "latest.json", latest)
@@ -387,6 +506,7 @@ def run() -> dict[str, Any]:
         "coverage": out["health"].get("coverage"),
         "canonical_merge": out["health"].get("canonical_merge"),
         "acquisition_mode": out["health"].get("acquisition_mode"),
+        "derived_cache_reused": out["health"].get("derived_cache_reused"),
     }, ensure_ascii=False))
     return out
 

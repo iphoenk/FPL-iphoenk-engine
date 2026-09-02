@@ -52,11 +52,26 @@ def _write_advanced_identity(tmp_path, now: datetime, official_rows: list[dict],
     (tmp_path / "official_snapshot.json").write_text(
         json.dumps({"bootstrap": {"elements": official_rows}}), encoding="utf-8"
     )
+    generated_at = (now - timedelta(minutes=10)).isoformat()
     (tmp_path / "advanced_stats_sync.json").write_text(
-        json.dumps({"generated_at": (now - timedelta(minutes=10)).isoformat()}), encoding="utf-8"
+        json.dumps({"generated_at": generated_at}), encoding="utf-8"
     )
     (tmp_path / "player_features.json").write_text(
-        json.dumps({"players": cached_rows}), encoding="utf-8"
+        json.dumps(
+            {
+                "schema_version": 1,
+                "contract": "PLAYER_FEATURE_CONTRACT_V1",
+                "generated_at": generated_at,
+                "decision_neutral": False,
+                "model_opt_in": "REC-01",
+                "players": cached_rows,
+                "policy": {},
+                "official_player_count": len(cached_rows),
+                "advanced_row_count": 0,
+                "advanced_player_coverage": 0,
+            }
+        ),
+        encoding="utf-8",
     )
 
 

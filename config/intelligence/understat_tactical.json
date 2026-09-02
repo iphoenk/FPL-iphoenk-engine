@@ -15,7 +15,7 @@
     "max_attempts": 3,
     "backoff_seconds": [0.5, 1.0],
     "minimum_request_interval_seconds": 0.35,
-    "max_requests_per_refresh": 22,
+    "max_requests_per_refresh": 2,
     "user_agent": "FPL-iphoenk-engine/Understat-tactical-enrichment"
   },
   "cache": {
@@ -60,6 +60,7 @@
     "lineup_selection_score_margin": 0.12,
     "bench_score_margin": 0.12,
     "formation_risk_adjusted_margin": 0.25,
+    "minimum_confidence": 0.6,
     "tactical_signal_may_only_break_close_ties": true,
     "missing_evidence_neutral": true,
     "captaincy_semantics_unchanged": true,
@@ -68,7 +69,7 @@
   "performance": {
     "no_per_player_network_calls": true,
     "league_page_fetch_once": true,
-    "team_pages_batched": true,
+    "team_and_player_evidence_batched_in_league_snapshot": true,
     "decision_compute_network_io_forbidden": true,
     "normalized_snapshot_reused_by_consumers": true
   }

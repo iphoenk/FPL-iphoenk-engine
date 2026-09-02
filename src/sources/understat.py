@@ -32,8 +32,9 @@ def _age_minutes(stamp: str | None) -> float | None:
 
 
 def _decode_embedded(body: str) -> Any:
-    # Understat serializes JSON inside a JavaScript string. Decode the string
-    # escapes only; never execute JavaScript from the page.
+    # Backward-compatible parser for historical fixtures/tests. Current
+    # production acquisition uses Understat's XHR JSON endpoint and never
+    # executes JavaScript from the landing page.
     decoded = codecs.decode(body.encode("utf-8"), "unicode_escape")
     return json.loads(decoded)
 
@@ -138,7 +139,7 @@ def _failure(error: str, previous: dict | None = None) -> dict:
     }
 
 
-def _request(url: str, policy: dict, session: requests.Session | None = None) -> tuple[str, int]:
+def _request_json(url: str, policy: dict, session: requests.Session | None = None) -> tuple[dict[str, Any], int]:
     cfg = policy.get("network") or {}
     configured_attempts = max(1, int(cfg.get("max_attempts") or 3))
     request_budget = max(1, int(cfg.get("max_requests_per_refresh") or configured_attempts))
@@ -146,7 +147,10 @@ def _request(url: str, policy: dict, session: requests.Session | None = None) ->
     timeout = float(cfg.get("timeout_seconds") or 12)
     backoff = list(cfg.get("backoff_seconds") or [0.5, 1.0])
     minimum_interval = max(0.0, float(cfg.get("minimum_request_interval_seconds") or 0.0))
-    headers = {"User-Agent": str(cfg.get("user_agent") or "FPL-iphoenk-engine")}
+    headers = {
+        "User-Agent": str(cfg.get("user_agent") or "FPL-iphoenk-engine"),
+        "X-Requested-With": "XMLHttpRequest",
+    }
     client = session or requests.Session()
     last_error: Exception | None = None
     calls = 0
@@ -155,13 +159,26 @@ def _request(url: str, policy: dict, session: requests.Session | None = None) ->
             calls += 1
             response = client.get(url, timeout=timeout, headers=headers)
             response.raise_for_status()
-            return response.text, calls
-        except requests.RequestException as exc:
+            payload = response.json()
+            if not isinstance(payload, dict):
+                raise ValueError("Understat XHR response is not a JSON object")
+            return payload, calls
+        except (requests.RequestException, ValueError) as exc:
             last_error = exc
             if attempt < attempts - 1:
                 delay = float(backoff[min(attempt, len(backoff) - 1)]) if backoff else 0.0
                 time.sleep(max(minimum_interval, max(0.0, delay)))
     raise RuntimeError(f"Understat request failed after {calls} bounded attempts: {last_error}")
+
+
+def _normalize_ajax_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    # Keep the established V3 normalized raw contract stable while adapting
+    # only the transport boundary to Understat's current XHR response keys.
+    return {
+        "teamsData": payload.get("teams"),
+        "playersData": payload.get("players"),
+        "datesData": payload.get("dates"),
+    }
 
 
 def sync(*, force: bool = False, session: requests.Session | None = None) -> dict:
@@ -182,11 +199,12 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
     base = str(network.get("base_url") or "https://understat.com").rstrip("/")
     league = str(policy.get("league") or "EPL")
     season = int(policy.get("season_start_year") or 2026)
-    url = f"{base}/league/{league}/{season}"
+    url = f"{base}/getLeagueData/{league}/{season}"
+    landing_url = f"{base}/league/{league}/{season}"
     started = time.perf_counter()
     try:
-        html, request_count = _request(url, policy, session=session)
-        embedded = parse_embedded_json(html)
+        ajax_payload, request_count = _request_json(url, policy, session=session)
+        embedded = _normalize_ajax_payload(ajax_payload)
         latest = latest_completed_fixture(embedded)
         latest_stamp = (latest or {}).get("datetime") or (latest or {}).get("date")
         payload = {
@@ -196,8 +214,9 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
             "league": league,
             "season_start_year": season,
             "source_url": url,
+            "source_landing_url": landing_url,
             "fetched_at": iso_now(),
-            # Understat league HTML does not advertise a separate publication
+            # The XHR payload does not advertise a separate publication
             # timestamp. The latest completed match represented is retained as
             # source-observation context rather than inventing an update SLA.
             "source_timestamp": latest_stamp,
@@ -212,13 +231,14 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
             "cache_age_minutes": 0.0,
             "request_count": request_count,
             "request_budget": max(1, int(network.get("max_requests_per_refresh") or network.get("max_attempts") or 1)),
-            "request_strategy": "single_league_snapshot_no_per_player_network_calls",
+            "request_strategy": "single_league_xhr_snapshot_no_per_player_network_calls",
             "embedded": embedded,
             "fetch_duration_ms": round((time.perf_counter() - started) * 1000.0, 2),
             "provenance": {
                 "provider": "Understat",
                 "url": url,
-                "transport": "HTTPS_HTML_EMBEDDED_JSON",
+                "landing_url": landing_url,
+                "transport": "HTTPS_JSON_XHR",
                 "adapter": "src.sources.understat",
             },
         }

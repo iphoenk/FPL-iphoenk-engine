@@ -7,7 +7,7 @@ ADAPTERS = CONFIG / "source_adapter_registry.json"
 
 
 def build_source_sweep_status(endpoint_health: dict | None = None, external_evidence: dict | None = None) -> dict:
-    """Resolve truthful Tier 1-5 source status without inventing adapter availability."""
+    """Resolve truthful Tier 1-5 deadline-source status without inventing adapter availability."""
     policy = read_json(POLICY, {})
     adapters = read_json(ADAPTERS, {})
     endpoint_health = endpoint_health or {}
@@ -76,6 +76,7 @@ def build_source_sweep_status(endpoint_health: dict | None = None, external_evid
             "available": sum(row["status"] == "AVAILABLE" for row in tier_rows),
             "partial": sum(row["status"] == "PARTIAL" for row in tier_rows),
             "unavailable": sum(row["status"] == "UNAVAILABLE" for row in tier_rows),
+            "stale": sum(row["status"] == "STALE" for row in tier_rows),
         }
 
     return {

@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 
 from src.engines.v4_official_fact_integrity import build_public_fact, fact_defects, official_snapshot_metadata
+from src.intelligence.understat_tactical import materialize as materialize_understat_tactical
 from src.intelligence.weather_advisory import collect_weather_context
 from src.services.competitive_load_service import OUT as COMPETITIVE_LOAD_OUT
 from src.services.competitive_load_service import (
@@ -14,7 +15,7 @@ from src.services.competitive_load_service import (
     build_competitive_load,
 )
 from src.services.contracts import file_digest
-from src.sources import core_insights, vaastav
+from src.sources import core_insights, understat, vaastav
 from src.utils import CONFIG, DATA, atomic_json, iso_now, parse_dt, read_json, utcnow
 
 RUNTIME = DATA / "runtime"
@@ -22,6 +23,7 @@ SNAPSHOT = RUNTIME / "snapshot.v1.json"
 OUTFILE = RUNTIME / "enrichment.v1.json"
 WEATHER_OUT = DATA / "weather_context_v4.json"
 LIVE_WEATHER_EVIDENCE = DATA / "weather_live_evidence_v4.json"
+UNDERSTAT_OUT = DATA / "understat_tactical_v4.json"
 STATS = DATA / "stats"
 
 
@@ -149,6 +151,33 @@ def _official_player_row(player: dict, teams: dict, positions: dict, snapshot_me
     }
 
 
+def _understat_summary(tactical: dict, raw_understat: dict) -> dict:
+    health = tactical.get("health") or {}
+    source = tactical.get("source") or {}
+    return {
+        "ok": health.get("status") in {"AVAILABLE", "PARTIAL"},
+        "status": health.get("status"),
+        "source_availability": source.get("availability"),
+        "freshness": source.get("freshness"),
+        "fetched_at": source.get("fetched_at"),
+        "latest_match_covered": source.get("latest_match_covered"),
+        "reused": bool(raw_understat.get("runtime_reused")),
+        "cache_age_minutes": raw_understat.get("cache_age_minutes"),
+        "team_mapping_coverage": health.get("team_mapping_coverage"),
+        "player_mapping_count": health.get("player_mapping_count"),
+        "player_mapping_coverage": health.get("player_mapping_coverage"),
+        "unresolved_mapping_count": health.get("unresolved_mapping_count"),
+        "tactical_matchup_usable_count": health.get("tactical_matchup_usable_count"),
+        "tactical_matchup_coverage": health.get("tactical_matchup_coverage"),
+        "fallback_state": health.get("fallback_state"),
+        "degradation_reason": health.get("degradation_reason"),
+        "artifact": str(UNDERSTAT_OUT.relative_to(DATA.parent)),
+        "optional_enrichment": True,
+        "direct_xpts_mutation": False,
+        "direct_xmins_mutation": False,
+    }
+
+
 def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
     started = perf_counter()
     raw = read_json(SNAPSHOT, {})
@@ -169,6 +198,7 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
             "core_insights": lambda: _core_insights_task(int(stats_gw), current_ttl),
             "vaastav": lambda: _vaastav_task(int(stats_gw), current_ttl),
             "last_season": lambda: _previous_season_task(previous_ttl),
+            "understat_raw": understat.sync,
             "weather_context": lambda: collect_weather_context(
                 raw,
                 previous=previous_weather,
@@ -179,6 +209,7 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
             tasks["deep"] = lambda: _deep_task(int(stats_gw), deep_ttl)
         results = _run_parallel(tasks)
         weather_context = results.pop("weather_context")
+        raw_understat = results.pop("understat_raw")
         advanced = {
             "core_insights": {
                 "ok": bool(results["core_insights"].get("schema_valid")),
@@ -202,6 +233,7 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
                 "current_gw_stats_ttl_minutes": current_ttl,
                 "deep_stats_ttl_minutes": deep_ttl,
                 "previous_season_ttl_minutes": previous_ttl,
+                "understat_policy_owned_by": "config/intelligence/understat_tactical.json",
                 "official_fpl_excluded": True,
                 "volatile_team_news_excluded": True,
                 "weather_source_refresh_bounded_and_fail_soft": True,
@@ -210,6 +242,7 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         if deep_stats:
             advanced["deep"] = results["deep"]
     else:
+        raw_understat = understat.load()
         weather_context = collect_weather_context(
             raw,
             previous=previous_weather,
@@ -229,6 +262,9 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         for row in universe
     )
 
+    understat_tactical = materialize_understat_tactical(raw_understat, raw, universe)
+    advanced["understat"] = _understat_summary(understat_tactical, raw_understat)
+
     competitive_load = build_competitive_load(
         raw,
         read_json(PRESS_EVIDENCE, {}),
@@ -239,12 +275,23 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
     weather_health = weather_context.get("health") or {}
     out = {
         "schema": "enrichment.v1",
-        "schema_version": 498,
+        "schema_version": 499,
         "generated_at": iso_now(),
         "lineage": {"snapshot_schema": "snapshot.v1", "snapshot_sha256": file_digest(SNAPSHOT)},
         "stats_gw": stats_gw,
         "advanced_stats_sync": advanced,
         "official_fact_snapshot": official_snapshot,
+        "understat_tactical": {
+            "artifact": str(UNDERSTAT_OUT.relative_to(DATA.parent)),
+            "contract": understat_tactical.get("contract"),
+            "health": (understat_tactical.get("health") or {}).get("status"),
+            "freshness": (understat_tactical.get("source") or {}).get("freshness"),
+            "player_mapping_coverage": (understat_tactical.get("health") or {}).get("player_mapping_coverage"),
+            "tactical_matchup_coverage": (understat_tactical.get("health") or {}).get("tactical_matchup_coverage"),
+            "optional_enrichment": True,
+            "direct_xpts_mutation": False,
+            "direct_xmins_mutation": False,
+        },
         "weather_context": {
             "artifact": "data/weather_context_v4.json",
             "contract": weather_context.get("contract"),
@@ -296,6 +343,9 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         "official_fact_complete": official_fact_complete,
         "official_snapshot": official_snapshot.get("source_snapshot_id"),
         "stats_reused": {key: value.get("reused") for key, value in advanced.items() if isinstance(value, dict) and "reused" in value},
+        "understat": (understat_tactical.get("health") or {}).get("status"),
+        "understat_player_mapping_coverage": (understat_tactical.get("health") or {}).get("player_mapping_coverage"),
+        "understat_tactical_matchup_coverage": (understat_tactical.get("health") or {}).get("tactical_matchup_coverage"),
         "competitive_load_rows": competitive_load.get("coverage", {}).get("observed_player_fixture_rows"),
         "competitive_load_complete_for_visible_report": competitive_load.get("coverage", {}).get("complete_for_visible_report"),
         "weather_context": weather_health.get("status"),

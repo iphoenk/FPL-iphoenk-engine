@@ -19,11 +19,12 @@ from src.utils import CONFIG, DATA, atomic_json, read_json
 
 OUTFILE = DATA / "decision_pipeline_v4.json"
 TACTICAL_OUTFILE = DATA / "tactical_serving_v4.json"
+UNDERSTAT_FILE = DATA / "understat_tactical_v4.json"
 DECISION_CACHE = DATA / "decision_hot_cache_v4.json"
 WC_OUTFILE = DATA / "wc_decision_v4.json"
 PACKAGE_OUTFILE = DATA / "wc_package_audit_v4.json"
 LINEUP_OUTFILE = DATA / "lineup_decision_v4.json"
-CACHE_ALGORITHM = "v4.9.6-exact-semantic-decision-cache-v2"
+CACHE_ALGORITHM = "v4.9.6-exact-semantic-decision-cache-v3-understat-close-call"
 _SHARED = None
 
 
@@ -80,7 +81,10 @@ def _decision_worker(kind, conn):
             out = audit_packages_from_candidates_fast(shared["candidates"], shared["locked"])
             atomic_json(PACKAGE_OUTFILE, out)
         elif kind == "lineup":
-            out = optimize_lineup(shared["predictions"], shared["universe"], shared["locked"], manual=None)
+            out = optimize_lineup(
+                shared["predictions"], shared["universe"], shared["locked"],
+                manual=None, tactical=shared["understat_tactical"],
+            )
             atomic_json(LINEUP_OUTFILE, out)
         else:
             raise RuntimeError(f"unknown decision worker: {kind}")
@@ -91,9 +95,12 @@ def _decision_worker(kind, conn):
         conn.close()
 
 
-def _run_parallel_decisions(candidates, locked, predictions, universe):
+def _run_parallel_decisions(candidates, locked, predictions, universe, understat_tactical):
     global _SHARED
-    _SHARED = {"candidates": candidates, "locked": locked, "predictions": predictions, "universe": universe}
+    _SHARED = {
+        "candidates": candidates, "locked": locked, "predictions": predictions,
+        "universe": universe, "understat_tactical": understat_tactical,
+    }
     ctx = get_context("fork")
     workers = {}
     wall = perf_counter()
@@ -115,13 +122,7 @@ def _run_parallel_decisions(candidates, locked, predictions, universe):
 
 
 def _candidate_semantics(candidates) -> list[dict]:
-    """Compact exact semantics consumed by WC/package optimizers.
-
-    The Candidate object is already the canonical normalization boundary for those
-    optimizers. Hashing it avoids recursively serializing prediction provenance that
-    cannot affect WC/package outputs while preserving exact cache invalidation for
-    every field the optimizers can read.
-    """
+    """Compact exact semantics consumed by WC/package optimizers."""
     return [
         {
             "element": row.element,
@@ -142,13 +143,23 @@ def _candidate_semantics(candidates) -> list[dict]:
     ]
 
 
-def _lineup_semantics(predictions: dict, universe: dict, locked: dict) -> list[dict]:
+def _understat_lineup_semantics(understat_tactical: dict, element: int) -> dict:
+    row = ((understat_tactical.get("tactical_matchups") or {}).get(str(element)) or {})
+    return {
+        "state": row.get("state") or "INSUFFICIENT_EVIDENCE",
+        "confidence": row.get("confidence"),
+        "dimensions": row.get("dimensions") or {},
+        "supporting_signals": row.get("supporting_signals") or [],
+        "conflicting_signals": row.get("conflicting_signals") or [],
+    }
+
+
+def _lineup_semantics(predictions: dict, universe: dict, locked: dict, understat_tactical: dict) -> list[dict]:
     """Hash exactly the fields consumed by optimize_lineup(manual=None).
 
-    This deliberately excludes timestamps, provenance blobs, external tactical
-    serving evidence and unowned player detail because none can affect the cached
-    lineup artifact. Sanity, tactical serving and arbitration are never cached and
-    still consume the full current prediction/universe payload every run.
+    Understat is included only through the bounded tactical fields that can break a
+    governed close call. Source timestamps/provenance and unowned detail do not
+    invalidate the lineup cache by themselves.
     """
     pmap = {int(row.get("element") or 0): row for row in predictions.get("players") or [] if row.get("element") is not None}
     umap = {int(row.get("element") or 0): row for row in universe.get("players") or [] if row.get("element") is not None}
@@ -172,38 +183,32 @@ def _lineup_semantics(predictions: dict, universe: dict, locked: dict) -> list[d
             "bench_probability": xmins.get("bench_probability"),
             "dnp_probability": xmins.get("dnp_probability"),
             "tactical_role": (pred.get("priors") or {}).get("tactical_role"),
+            "understat_close_call": _understat_lineup_semantics(understat_tactical, element),
         })
     return rows
 
 
-def _semantic_fingerprint(predictions: dict, universe: dict, locked: dict, candidates=None) -> str:
-    """Hash exact inputs of cached WC/package/lineup artifacts, not whole payloads.
-
-    Candidate normalization covers WC/package semantics. A separate owned-player
-    projection covers lineup semantics. This reduces fingerprint complexity from a
-    recursive full-payload walk to a bounded compact projection while remaining
-    exact for the three cached artifacts.
-    """
+def _semantic_fingerprint(predictions: dict, universe: dict, locked: dict, understat_tactical: dict | None = None, candidates=None) -> str:
+    """Hash exact inputs of cached WC/package/lineup artifacts, not whole payloads."""
     normalized_candidates = candidates if candidates is not None else build_candidates(predictions, universe)
     serving_policy = read_json(CONFIG / "serving_improvement_registry.json", {}) or {}
+    understat_policy = read_json(CONFIG / "intelligence" / "understat_tactical.json", {}) or {}
+    tactical = understat_tactical or {}
     payload = {
         "algorithm": CACHE_ALGORITHM,
         "prediction_model": predictions.get("model_version"),
         "candidate_semantics": _candidate_semantics(normalized_candidates),
-        "lineup_semantics": _lineup_semantics(predictions, universe, locked),
+        "lineup_semantics": _lineup_semantics(predictions, universe, locked, tactical),
         "planning_squad": locked,
         "lineup_policy": serving_policy.get("lineup") or {},
+        "understat_close_call_policy": understat_policy.get("close_call") or {},
     }
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
 
 
 def _cache_artifacts() -> dict[str, Path]:
-    return {
-        "wc": WC_OUTFILE,
-        "packages": PACKAGE_OUTFILE,
-        "lineup": LINEUP_OUTFILE,
-    }
+    return {"wc": WC_OUTFILE, "packages": PACKAGE_OUTFILE, "lineup": LINEUP_OUTFILE}
 
 
 def _cache_hit(fingerprint: str) -> tuple[bool, str]:
@@ -231,6 +236,7 @@ def _write_cache(fingerprint: str) -> None:
             "exact_semantic_inputs_only": True,
             "bounded_consumer_projection_not_full_payload": True,
             "runtime_timestamps_not_consumed_by_cache_key": True,
+            "understat_close_call_semantics_in_cache_key": True,
             "artifact_digest_verified_before_reuse": True,
             "manual_user_override_not_cached": True,
             "sanity_tactical_arbitration_rerun_every_time": True,
@@ -246,6 +252,7 @@ def run(*, runtime_context: dict | None = None):
     configured_lock = read_json(CONFIG / "locked_squad.json", {})
     team = read_json(DATA / "team.json", {})
     latest = read_json(DATA / "latest.json", {})
+    understat_tactical = read_json(UNDERSTAT_FILE, {})
     locked = effective_planning_squad(team, configured_lock, latest)
     load_ms = round((perf_counter() - t0) * 1000.0, 1)
 
@@ -254,7 +261,7 @@ def run(*, runtime_context: dict | None = None):
     candidates_ms = round((perf_counter() - t) * 1000.0, 1)
 
     t = perf_counter()
-    fingerprint = _semantic_fingerprint(predictions, universe, locked, candidates=candidates)
+    fingerprint = _semantic_fingerprint(predictions, universe, locked, understat_tactical, candidates=candidates)
     fingerprint_ms = round((perf_counter() - t) * 1000.0, 1)
     timings = {
         "load_shared_inputs_ms": load_ms,
@@ -272,7 +279,7 @@ def run(*, runtime_context: dict | None = None):
         }
         parallel_wall = 0.0
     else:
-        statuses, parallel_wall = _run_parallel_decisions(candidates, locked, predictions, universe)
+        statuses, parallel_wall = _run_parallel_decisions(candidates, locked, predictions, universe, understat_tactical)
         _write_cache(fingerprint)
 
     timings.update({
@@ -301,7 +308,10 @@ def run(*, runtime_context: dict | None = None):
 
     t = perf_counter()
     previous_tactical = read_json(TACTICAL_OUTFILE, {})
-    tactical = build_tactical_serving(predictions, universe, team, previous=previous_tactical)
+    tactical = build_tactical_serving(
+        predictions, universe, team, previous=previous_tactical,
+        understat_data=understat_tactical,
+    )
     atomic_json(TACTICAL_OUTFILE, tactical)
     timings["tactical_serving_ms"] = round((perf_counter() - t) * 1000.0, 1)
 
@@ -312,8 +322,8 @@ def run(*, runtime_context: dict | None = None):
     timings["total_pipeline_ms"] = round((perf_counter() - t0) * 1000.0, 1)
 
     out = {
-        "schema_version": 4962,
-        "engine": "v4.9.6-unified-decision-pipeline-canonical-arbitration",
+        "schema_version": 4963,
+        "engine": "v4.9.6-unified-decision-pipeline-understat-close-call",
         "checkpoint_context": latest.get("checkpoint_context") or {},
         "decision_authority": "ENGINE_ADVISORY_ONLY",
         "planning_squad": {
@@ -324,6 +334,13 @@ def run(*, runtime_context: dict | None = None):
             "target_gw": locked.get("target_gw"),
             "authority_source": locked.get("authority_source"),
             "wildcard_active": locked.get("wildcard_active"),
+        },
+        "understat_tactical": {
+            "health": (understat_tactical.get("health") or {}).get("status") or "UNAVAILABLE",
+            "freshness": (understat_tactical.get("source") or {}).get("freshness"),
+            "close_call_only": True,
+            "direct_xpts_mutation": False,
+            "direct_xmins_mutation": False,
         },
         "timings": timings,
         "canonical_resolution": arbitration,
@@ -359,12 +376,12 @@ def run(*, runtime_context: dict | None = None):
             "optimizer_cache_bounded_to_actual_consumers": True,
             "optimizer_cache_never_skips_sanity_tactical_or_arbitration": True,
             "optimizer_cache_artifact_digest_verified": True,
+            "understat_network_io_excluded_from_decision_compute": True,
+            "understat_close_call_semantics_cache_bound": True,
+            "understat_no_direct_prediction_mutation": True,
         },
     }
     if runtime_context is not None:
-        # Same-process immutable reuse only. These objects were parsed from
-        # the governed prediction/universe artifacts above; the weather
-        # overlay would otherwise parse the identical files again.
         runtime_context["predictions"] = predictions
         runtime_context["universe"] = universe
     atomic_json(OUTFILE, out)
@@ -373,6 +390,7 @@ def run(*, runtime_context: dict | None = None):
         "overall_action": arbitration.get("overall_action"),
         "transfer_state": out["results"]["transfer_candidate_state"],
         "formation": lineup.get("formation"),
+        "understat": out["understat_tactical"]["health"],
         "optimizer_cache_hit": hit,
         "semantic_fingerprint_ms": fingerprint_ms,
         "decision_parallel_wall_ms": parallel_wall,

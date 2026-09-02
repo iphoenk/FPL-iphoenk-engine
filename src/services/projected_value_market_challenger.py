@@ -410,6 +410,7 @@ def rerank_visible_watchlist(
     predictions: dict[str, Any],
     universe: dict[str, Any],
     external: dict[str, Any] | None = None,
+    understat_data: dict[str, Any] | None = None,
     per_position: int = 5,
 ) -> dict[str, Any]:
     from src.engines.v4_tactical_serving import _compact_tactical
@@ -417,6 +418,7 @@ def rerank_visible_watchlist(
     pmap = {int(row.get("element") or 0): row for row in predictions.get("players") or [] if int(row.get("element") or 0) > 0}
     umap = {int(row.get("element") or 0): row for row in universe.get("players") or [] if int(row.get("element") or 0) > 0}
     external = external if external is not None else read_json(DATA / "tactical_external_evidence.json", {})
+    understat_data = understat_data if understat_data is not None else read_json(DATA / "understat_tactical_v4.json", {})
     current = list(tactical.get("watchlist") or [])
     current_ids = {int(row.get("element") or 0) for row in current}
     candidate_by_id = {int(row["element"]): row for row in discovery.get("candidates") or []}
@@ -466,7 +468,7 @@ def rerank_visible_watchlist(
                 "exit_reason": None,
                 "mandatory_challenger_review": True,
                 "projected_value_market": discovered,
-                "tactical": _compact_tactical(pred, uni, external),
+                "tactical": _compact_tactical(pred, uni, external, understat_data),
             })
 
     if len(selected) != per_position * 4:

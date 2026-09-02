@@ -10,14 +10,28 @@ DATA = Path(_data_override).expanduser().resolve() if _data_override else ROOT /
 CONFIG = ROOT / "config"
 _JSON_READ_CACHE: dict[Path, tuple[int, int, Any]] = {}
 _JSON_WRITE_PROOF_CACHE: dict[Path, tuple[int, int, str, Any]] = {}
-# Machine-only high-volume artifacts are compacted to remove serialization/I/O cost.
-# This is representation-only: parsed JSON values and decision semantics are identical.
+# Machine-consumed high-volume artifacts are compacted to remove avoidable
+# serialization/I/O cost. This is representation-only: parsed JSON values,
+# schemas, validation and decision semantics are identical.
 _COMPACT_JSON_ARTIFACTS = {
     "decision_brief.json",
     "projections.json",
     "package_optimizer.json",
     "team_strength.json",
     "prediction_quality.json",
+    "prices.json",
+    "price_trajectory.json",
+    "price_alerts.json",
+    "price_challenger_context.json",
+    "dss_watchlist.json",
+    "recent_competitive_load.json",
+    "dss_operational_evidence.json",
+    "framework_health_preflight.json",
+    "framework_health.json",
+    "external_consensus.json",
+    "user_report.json",
+    "technical_appendix.json",
+    "deep_review_payload.json",
 }
 
 def utcnow():

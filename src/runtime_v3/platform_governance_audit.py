@@ -51,17 +51,29 @@ def _required_checks(branch: dict[str, Any]) -> tuple[str, set[str]]:
     return enforcement, names
 
 
-def _ruleset_targets_branch(ruleset: dict[str, Any], branch: str) -> bool:
+def _ruleset_targets_branch(
+    ruleset: dict[str, Any],
+    branch: str,
+    *,
+    default_branch: str | None = None,
+) -> bool:
     conditions = ruleset.get("conditions") if isinstance(ruleset.get("conditions"), dict) else {}
     ref_name = conditions.get("ref_name") if isinstance(conditions.get("ref_name"), dict) else {}
     include = [str(x) for x in ref_name.get("include") or []]
     exclude = [str(x) for x in ref_name.get("exclude") or []]
     canonical = f"refs/heads/{branch}"
-    if canonical in exclude or branch in exclude:
+    is_default = bool(default_branch and branch == default_branch)
+
+    if canonical in exclude or branch in exclude or "~ALL" in exclude:
+        return False
+    if is_default and "~DEFAULT_BRANCH" in exclude:
         return False
     if not include:
         return True
-    accepted = {canonical, branch, "~ALL", "~DEFAULT_BRANCH"}
+
+    accepted = {canonical, branch, "~ALL"}
+    if is_default:
+        accepted.add("~DEFAULT_BRANCH")
     return bool(accepted.intersection(include))
 
 
@@ -89,10 +101,19 @@ def _ruleset_required_checks(ruleset: dict[str, Any]) -> tuple[bool, set[str]]:
     return strict, names
 
 
-def _normalized_bypass_actors(rulesets: list[dict[str, Any]], branch: str) -> set[tuple[str, int, str]]:
+def _normalized_bypass_actors(
+    rulesets: list[dict[str, Any]],
+    branch: str,
+    *,
+    default_branch: str | None = None,
+) -> set[tuple[str, int, str]]:
     actors: set[tuple[str, int, str]] = set()
     for ruleset in rulesets:
-        if ruleset.get("enforcement") != "active" or not _ruleset_targets_branch(ruleset, branch):
+        if ruleset.get("enforcement") != "active" or not _ruleset_targets_branch(
+            ruleset,
+            branch,
+            default_branch=default_branch,
+        ):
             continue
         for actor in ruleset.get("bypass_actors") or []:
             if not isinstance(actor, dict):
@@ -110,6 +131,7 @@ def _public_ruleset_bypass_fallback(
     base: str,
     authenticated_rulesets: list[dict[str, Any]],
     branch: str,
+    default_branch: str,
 ) -> tuple[set[tuple[str, int, str]], list[dict[str, Any]]]:
     """Recover bypass actors only when GitHub masks them from an Actions token.
 
@@ -120,7 +142,11 @@ def _public_ruleset_bypass_fallback(
     actors: set[tuple[str, int, str]] = set()
     evidence: list[dict[str, Any]] = []
     for authenticated in authenticated_rulesets:
-        if authenticated.get("enforcement") != "active" or not _ruleset_targets_branch(authenticated, branch):
+        if authenticated.get("enforcement") != "active" or not _ruleset_targets_branch(
+            authenticated,
+            branch,
+            default_branch=default_branch,
+        ):
             continue
         if authenticated.get("bypass_actors"):
             continue
@@ -139,13 +165,17 @@ def _public_ruleset_bypass_fallback(
             continue
         if public.payload.get("enforcement") != authenticated.get("enforcement"):
             continue
-        if not _ruleset_targets_branch(public.payload, branch):
+        if not _ruleset_targets_branch(public.payload, branch, default_branch=default_branch):
             continue
         authenticated_rules = _ruleset_rule_types(authenticated)
         public_rules = _ruleset_rule_types(public.payload)
         if public_rules != authenticated_rules:
             continue
-        public_actors = _normalized_bypass_actors([public.payload], branch)
+        public_actors = _normalized_bypass_actors(
+            [public.payload],
+            branch,
+            default_branch=default_branch,
+        )
         actors |= public_actors
         evidence.append(
             {
@@ -188,12 +218,12 @@ def audit(
     for ruleset in rulesets:
         if ruleset.get("enforcement") != "active":
             continue
-        if _ruleset_targets_branch(ruleset, default_branch):
+        if _ruleset_targets_branch(ruleset, default_branch, default_branch=default_branch):
             main_rules |= _ruleset_rule_types(ruleset)
             strict, names = _ruleset_required_checks(ruleset)
             main_ruleset_strict = main_ruleset_strict or strict
             main_ruleset_checks |= names
-        if _ruleset_targets_branch(ruleset, runtime_branch):
+        if _ruleset_targets_branch(ruleset, runtime_branch, default_branch=default_branch):
             runtime_rules |= _ruleset_rule_types(ruleset)
 
     checks: list[dict[str, Any]] = []
@@ -245,7 +275,11 @@ def audit(
                 {"active_rule_types": sorted(runtime_rules)},
             )
         )
-        bypass_actors = _normalized_bypass_actors(rulesets, runtime_branch)
+        bypass_actors = _normalized_bypass_actors(
+            rulesets,
+            runtime_branch,
+            default_branch=default_branch,
+        )
         bypass_evidence_source = "authenticated_ruleset_detail"
         fallback_evidence: list[dict[str, Any]] = []
         if not bypass_actors and token:
@@ -253,6 +287,7 @@ def audit(
                 base=base,
                 authenticated_rulesets=rulesets,
                 branch=runtime_branch,
+                default_branch=default_branch,
             )
             if fallback_actors:
                 bypass_actors = fallback_actors
@@ -307,6 +342,7 @@ def audit(
             "runtime_attestation_is_defense_in_depth_not_native_branch_protection": True,
             "runtime_publisher_bypass_must_be_exact_dedicated_integration": True,
             "masked_bypass_fallback_requires_same_ruleset_identity_target_and_rules": True,
+            "default_branch_selector_must_not_match_non_default_branches": True,
         },
     }
 

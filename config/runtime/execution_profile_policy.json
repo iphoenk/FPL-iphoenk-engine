@@ -82,6 +82,18 @@
       "visible_mode": "NORMAL_NIGHT"
     }
   },
+  "optional_enrichment_bootstrap": {
+    "enabled": true,
+    "visible_mode": "NORMAL_DEEP_REVIEW",
+    "allowed_base_modes": ["daily"],
+    "artifact": "stats/understat_epl_2026.json",
+    "contract": "UNDERSTAT_RAW_SOURCE_V1",
+    "usable_source_states": ["AVAILABLE", "STALE_FALLBACK"],
+    "fast_deferred_refresh_marker": "network_refresh_deferred_in_fast_decision",
+    "retry_cooldown_minutes": 60,
+    "only_upgrade_to_higher_rank": true,
+    "fail_soft_after_real_refresh_failure": true
+  },
   "recovery": {
     "enabled": true,
     "recover_all_overdue_with_single_run": true,
@@ -92,6 +104,9 @@
   "governance": {
     "workflow_must_not_reimplement_profile_selection": true,
     "checkpoint_recovery_is_registry_driven": true,
-    "deadline_and_live_modes_are_not_overridden_by_late_recovery": true
+    "deadline_and_live_modes_are_not_overridden_by_late_recovery": true,
+    "optional_enrichment_bootstrap_is_registry_driven": true,
+    "fast_profile_never_performs_optional_enrichment_network_bootstrap": true,
+    "real_optional_enrichment_refresh_failures_use_bounded_retry_cooldown": true
   }
 }

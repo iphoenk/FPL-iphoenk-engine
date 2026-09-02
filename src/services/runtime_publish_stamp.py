@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
+from time import perf_counter
 
 from src.engines.v4_freshness import evaluate_freshness
 from src.services.runtime_checkpoint_target import PRECOMPUTE_ROLE, resolve_runtime_checkpoint_metadata
@@ -17,6 +18,7 @@ SERVING = DATA / "serving_payload_v4.json"
 BENCHMARK = DATA / "serving_benchmark_v4.json"
 SNAPSHOT = DATA / "runtime" / "snapshot.v1.json"
 PROVENANCE = DATA / "runtime_provenance_v4.json"
+FRONTIER_REGRET_SHADOW = DATA / "frontier_regret_shadow_v4.json"
 _SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
@@ -191,6 +193,67 @@ def stamp_runtime_publish(
     }
 
 
+def run_frontier_regret_shadow_nonblocking() -> dict:
+    """Persist shadow search-regret evidence without gaining publication authority.
+
+    This deliberately executes after the canonical runtime stamp. Any shadow
+    exception or persistence failure is returned as diagnostic telemetry and MUST
+    NOT prevent the already-validated production snapshot from being packaged.
+    """
+    started = perf_counter()
+    previous = read_json(FRONTIER_REGRET_SHADOW, {})
+    try:
+        from v4_frontier_regret_shadow import audit_current_runtime
+
+        output = audit_current_runtime()
+        execution = {
+            "outcome": "success",
+            "duration_ms": round((perf_counter() - started) * 1000.0, 2),
+            "failure_cannot_block_core_publish": True,
+            "observational_outside_decision_chain": True,
+        }
+        output["runtime_execution"] = execution
+    except Exception as exc:  # Shadow diagnostics are intentionally fail-open for publication.
+        history = list(previous.get("history") or [])
+        observation = {
+            "generated_at": iso_now(),
+            "status": "DIAGNOSTIC_UNAVAILABLE",
+            "error_type": type(exc).__name__,
+        }
+        history.append(observation)
+        history_limit = int(previous.get("history_limit") or 48)
+        execution = {
+            "outcome": "failure",
+            "duration_ms": round((perf_counter() - started) * 1000.0, 2),
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "failure_cannot_block_core_publish": True,
+            "observational_outside_decision_chain": True,
+        }
+        output = {
+            "schema_version": 1,
+            "engine": "v4-frontier-regret-shadow",
+            "audit_only": True,
+            "decision_authority": "NONE",
+            "affects_search": False,
+            "affects_decision": False,
+            "status": "DIAGNOSTIC_UNAVAILABLE",
+            "production_frontier_unchanged": True,
+            "history": history[-history_limit:],
+            "history_limit": history_limit,
+            "runtime_execution": execution,
+        }
+
+    try:
+        atomic_json(FRONTIER_REGRET_SHADOW, output)
+        execution["persistence"] = "success"
+    except Exception as exc:  # Publication must remain independent from shadow persistence.
+        execution["persistence"] = "failure"
+        execution["persistence_error_type"] = type(exc).__name__
+        execution["persistence_error"] = str(exc)
+    return execution
+
+
 def verify_runtime_provenance(
     *, expected_source_sha: str | None = None, expected_run_id: int | None = None
 ) -> dict:
@@ -238,6 +301,7 @@ def main() -> None:
 
     require = os.getenv("V4_PROVENANCE_REQUIRED") == "1" or os.getenv("GITHUB_ACTIONS") == "true"
     result = stamp_runtime_publish(require_provenance=require)
+    result["frontier_regret_shadow"] = run_frontier_regret_shadow_nonblocking()
     if require:
         verify_runtime_provenance(
             expected_source_sha=result["canonical_source_sha"],

@@ -183,5 +183,6 @@ def test_understat_lineup_guardrails_follow_positive_pass_contract():
     assert "understat_direct_xpts_mutation" not in out["guardrails"]
     assert "understat_direct_xmins_mutation" not in out["guardrails"]
     assert all(out["guardrails"].values())
+    assert {key for key, value in out["guardrails"].items() if value is not True} == set()
     assert out["understat_tactical"]["direct_xpts_mutation"] is False
     assert out["understat_tactical"]["direct_xmins_mutation"] is False

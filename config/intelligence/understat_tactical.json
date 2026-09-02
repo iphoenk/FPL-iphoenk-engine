@@ -41,7 +41,11 @@
     "normalized_exact_confidence": 0.98,
     "fuzzy_minimum_confidence": 0.94,
     "ambiguity_margin": 0.03,
-    "unresolved_state": "UNRESOLVED"
+    "unresolved_state": "UNRESOLVED",
+    "cross_team_unique_exact_multi_token_fallback": true,
+    "cross_team_exact_confidence": 0.95,
+    "cross_team_fuzzy_forbidden": true,
+    "official_team_authority_preserved_on_source_team_drift": true
   },
   "tactical_matchup": {
     "states": ["POSITIVE", "NEUTRAL", "NEGATIVE", "INSUFFICIENT_EVIDENCE"],

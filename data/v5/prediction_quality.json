@@ -17,7 +17,7 @@
     "starter_xmins_dispersion": {
       "value": 0.0839,
       "threshold": 0.035,
-      "sample": 252,
+      "sample": 251,
       "minimum_sample": 40,
       "pass": true
     },
@@ -32,7 +32,7 @@
     "model": "v5_historical_player_priors_v2",
     "season": "2025-26",
     "status": "READY",
-    "fetch_mode": "NETWORK_REFRESH",
+    "fetch_mode": "PERSISTED_CACHE",
     "coverage": {
       "current_players": 629,
       "matched_with_usable_prior": 348,

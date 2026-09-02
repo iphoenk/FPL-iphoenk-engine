@@ -2187,16 +2187,16 @@
         "candidate_score": 22.807
       },
       {
+        "element": 155,
+        "name": "Enzo",
+        "now_cost": 69,
+        "candidate_score": 22.698
+      },
+      {
         "element": 480,
         "name": "Gibbs-White",
         "now_cost": 79,
         "candidate_score": 22.549
-      },
-      {
-        "element": 154,
-        "name": "Palmer",
-        "now_cost": 96,
-        "candidate_score": 22.125
       }
     ],
     "FWD": [
@@ -2892,55 +2892,18 @@
           "opponent_team_id": 6,
           "player_role": null,
           "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "final_third_progression"
-          ],
+          "opponent_vulnerabilities": [],
           "opponent_strengths": [
             "transition_threat",
             "box_pressure",
             "chance_creation"
           ],
           "route_vulnerability_overlap": [],
-          "highlights": [
-            "recent-GW lawan: ['long_range', 'close_central']"
-          ],
+          "highlights": [],
           "tactical_key": [
             0,
-            1,
-            1
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 557,
-        "name": "Tzolis",
-        "position": "MID",
-        "team_id": 1,
-        "start_probability": 0.7825,
-        "dnp_probability": 0.0761,
-        "score": 3.4616,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 6,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "final_third_progression"
-          ],
-          "opponent_strengths": [
-            "transition_threat",
-            "box_pressure",
-            "chance_creation"
-          ],
-          "route_vulnerability_overlap": [],
-          "highlights": [
-            "recent-GW lawan: ['long_range', 'close_central']"
-          ],
-          "tactical_key": [
             0,
-            1,
-            1
+            0
           ],
           "advisory_only": true
         }
@@ -2973,6 +2936,35 @@
         }
       },
       {
+        "element": 557,
+        "name": "Tzolis",
+        "position": "MID",
+        "team_id": 1,
+        "start_probability": 0.7825,
+        "dnp_probability": 0.0761,
+        "score": 3.4616,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 6,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
+            "transition_threat",
+            "box_pressure",
+            "chance_creation"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [],
+          "tactical_key": [
+            0,
+            0,
+            0
+          ],
+          "advisory_only": true
+        }
+      },
+      {
         "element": 109,
         "name": "Verbruggen",
         "position": "GK",
@@ -2985,7 +2977,9 @@
           "opponent_team_id": 13,
           "player_role": null,
           "player_return_routes": [],
-          "opponent_vulnerabilities": [],
+          "opponent_vulnerabilities": [
+            "set_piece_activity"
+          ],
           "opponent_strengths": [
             "final_third_progression"
           ],
@@ -3061,7 +3055,7 @@
         "tactical_key": [
           0,
           1,
-          1
+          2
         ],
         "advisory_only": true
       }
@@ -3126,7 +3120,7 @@
           "tactical_key": [
             0,
             1,
-            1
+            2
           ],
           "advisory_only": true
         }
@@ -3145,7 +3139,9 @@
           "player_role": null,
           "player_return_routes": [],
           "opponent_vulnerabilities": [],
-          "opponent_strengths": [],
+          "opponent_strengths": [
+            "shot_volume"
+          ],
           "route_vulnerability_overlap": [],
           "highlights": [],
           "tactical_key": [
@@ -3244,13 +3240,13 @@
         "applied_to_xi": false,
         "base_xi_key": [
           0,
-          10,
-          11
+          9,
+          12
         ],
         "selected_xi_key": [
           0,
-          10,
-          11
+          9,
+          12
         ],
         "policy": "close-call tactical evidence only; canonical scores unchanged"
       }
@@ -4518,7 +4514,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 72 active price alerts"
+      "market timing context contains 70 active price alerts"
     ],
     "evidence": [
       {
@@ -4621,7 +4617,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 72
+    "alert_count": 70
   },
   "governance": {
     "candidate_generation_only": true,

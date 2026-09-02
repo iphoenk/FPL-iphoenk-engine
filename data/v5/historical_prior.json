@@ -5244,7 +5244,7 @@
     "network_failure_may_use_stale_prior": true,
     "missing_prior_must_degrade_quality_not_block_prediction": true
   },
-  "fetch_mode": "NETWORK_REFRESH",
+  "fetch_mode": "PERSISTED_CACHE",
   "cache_fresh": true,
   "source_meta": {
     "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2025-26/players_raw.csv",

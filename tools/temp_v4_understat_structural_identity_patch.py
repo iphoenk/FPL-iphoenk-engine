@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 import re
 
+# Re-run marker: validate the generic resolver against the current one-to-one
+# Official FPL -> Understat proof contract before persisting governed source.
 
 path = Path("src/intelligence/understat_tactical.py")
 text = path.read_text(encoding="utf-8")

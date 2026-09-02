@@ -32,8 +32,6 @@ def _age_minutes(stamp: str | None) -> float | None:
 
 
 def _decode_embedded(body: str) -> Any:
-    # Understat serializes JSON inside a JavaScript string. Decode the string
-    # escapes only; never execute JavaScript from the page.
     decoded = codecs.decode(body.encode("utf-8"), "unicode_escape")
     return json.loads(decoded)
 
@@ -75,6 +73,14 @@ def latest_completed_fixture(embedded: dict[str, Any]) -> dict | None:
         if stamp:
             completed.append((stamp, row))
     return max(completed, key=lambda item: item[0])[1] if completed else None
+
+
+def _completed_fixture_view(embedded: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    out = dict(embedded)
+    dates = _rows(embedded.get("datesData"))
+    completed = [row for row in dates if _is_completed_fixture(row)]
+    out["datesData"] = completed
+    return out, max(0, len(dates) - len(completed))
 
 
 def _validate(payload: dict) -> tuple[bool, list[str]]:
@@ -186,9 +192,10 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
     started = time.perf_counter()
     try:
         html, request_count = _request(url, policy, session=session)
-        embedded = parse_embedded_json(html)
-        latest = latest_completed_fixture(embedded)
+        parsed = parse_embedded_json(html)
+        latest = latest_completed_fixture(parsed)
         latest_stamp = (latest or {}).get("datetime") or (latest or {}).get("date")
+        embedded, scheduled_excluded = _completed_fixture_view(parsed)
         payload = {
             "contract": "UNDERSTAT_RAW_SOURCE_V1",
             "source": "Understat",
@@ -197,14 +204,16 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
             "season_start_year": season,
             "source_url": url,
             "fetched_at": iso_now(),
-            # Understat league HTML does not advertise a separate publication
-            # timestamp. The latest completed match represented is retained as
-            # source-observation context rather than inventing an update SLA.
             "source_timestamp": latest_stamp,
             "latest_fixture_represented": {
                 "id": (latest or {}).get("id"),
                 "datetime": latest_stamp,
             } if latest else None,
+            "fixture_view": {
+                "completed_only": True,
+                "scheduled_rows_excluded": scheduled_excluded,
+                "reason": "freshness/latest-match coverage must never be advanced by future schedule rows",
+            },
             "source_availability": "AVAILABLE",
             "freshness": "FRESH",
             "fallback": False,
@@ -230,7 +239,7 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
         CACHE.parent.mkdir(parents=True, exist_ok=True)
         atomic_json(CACHE, payload)
         return payload
-    except Exception as exc:  # fail-soft optional enrichment boundary
+    except Exception as exc:
         return _failure(f"{type(exc).__name__}: {exc}", previous=cached)
 
 

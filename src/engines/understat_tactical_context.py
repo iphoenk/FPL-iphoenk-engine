@@ -17,7 +17,7 @@ RAW_CACHE = DATA / "stats" / "understat_epl_2026.json"
 TEAM_PROFILE = DATA / "tactical_team_profiles.json"
 ROLE_PROFILE = DATA / "player_role_profiles.json"
 POSITION_BY_TYPE = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
-DERIVED_CACHE_REVISION = "UNDERSTAT_V3_OFFICIAL_IDENTITY_V1"
+DERIVED_CACHE_REVISION = "UNDERSTAT_V3_OFFICIAL_IDENTITY_V2"
 OFFICIAL_TO_UNDERSTAT_TEAM = {
     "Coventry City": "Coventry",
     "Hull City": "Hull",
@@ -132,6 +132,10 @@ def _derived_cache_fingerprint(raw: dict[str, Any], universe: list[dict[str, Any
         [
             int(row.get("element") or 0),
             _norm(row.get("name")),
+            [_norm(value) for value in (row.get("name_variants") or []) if _norm(value)],
+            _norm(row.get("web_name")),
+            _norm(row.get("first_name")),
+            _norm(row.get("second_name")),
             _norm(row.get("team")),
             str(row.get("position") or ""),
         ]
@@ -197,6 +201,41 @@ def _reusable_tactical(
     native["derived_cache_reused_at"] = iso_now()
     cached["native_integration"] = native
     return cached, fingerprint
+
+
+def _source_relative_mapping_health(raw: dict[str, Any], tactical: dict[str, Any]) -> dict[str, Any]:
+    players_data = ((raw.get("embedded") or {}).get("playersData"))
+    if isinstance(players_data, list):
+        source_rows = [row for row in players_data if isinstance(row, dict)]
+    elif isinstance(players_data, dict):
+        source_rows = [row for row in players_data.values() if isinstance(row, dict)]
+    else:
+        source_rows = []
+    source_ids = {str(row.get("id")) for row in source_rows if row.get("id") is not None}
+    resolved_rows = [
+        row for row in (tactical.get("player_evidence") or {}).values()
+        if isinstance(row, dict) and (row.get("mapping") or {}).get("state") == "RESOLVED"
+    ]
+    resolved_source_ids = {
+        str(row.get("understat_player_id"))
+        for row in resolved_rows
+        if row.get("understat_player_id") is not None
+    }
+    method_counts: dict[str, int] = {}
+    for row in resolved_rows:
+        method = str((row.get("mapping") or {}).get("method") or "UNKNOWN")
+        method_counts[method] = method_counts.get(method, 0) + 1
+    mapped_source = len(source_ids & resolved_source_ids)
+    source_count = len(source_ids)
+    return {
+        "source_player_count": source_count,
+        "source_player_mapping_count": mapped_source,
+        "source_player_mapping_coverage": round(mapped_source / max(1, source_count), 4),
+        "source_player_unmapped_count": max(0, source_count - mapped_source),
+        "mapping_method_counts": dict(sorted(method_counts.items())),
+        "source_relative_denominator_is_observed_understat_players": True,
+        "official_universe_denominator_remains_all_fpl_players": True,
+    }
 
 
 def _window(team_evidence: dict[str, Any]) -> dict[str, Any]:
@@ -431,6 +470,8 @@ def build() -> dict[str, Any]:
             if isinstance(interaction, dict):
                 interaction["xmins_authority"] = "V3_PREDICTION_NOT_UNDERSTAT"
 
+    coverage = tactical.setdefault("health", {})
+    coverage.update(_source_relative_mapping_health(raw, tactical))
     canonical_merge = _merge_canonical_tactical_artifacts(tactical)
     native = tactical.setdefault("native_integration", {})
     native.update({
@@ -472,6 +513,7 @@ def build() -> dict[str, Any]:
             "existing_tactical_decision_path_reused": True,
             "duplicate_decision_authority_forbidden": True,
             "fast_reuses_normalized_tactical_snapshot_when_fingerprint_matches": True,
+            "source_relative_mapping_coverage_is_observable": True,
         },
     }
     return {"tactical": tactical, "health": health}
@@ -494,6 +536,8 @@ def run() -> dict[str, Any]:
             "source_availability": (health.get("source") or {}).get("availability"),
             "freshness": (health.get("source") or {}).get("freshness"),
             "player_mapping_coverage": coverage.get("player_mapping_coverage"),
+            "source_player_mapping_coverage": coverage.get("source_player_mapping_coverage"),
+            "source_player_count": coverage.get("source_player_count"),
             "tactical_matchup_coverage": coverage.get("tactical_matchup_coverage"),
             "full_universe_count": coverage.get("official_universe_count"),
             "canonical_merge": health.get("canonical_merge") or {},

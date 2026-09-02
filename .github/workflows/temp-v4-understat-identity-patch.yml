@@ -1,4 +1,4 @@
-name: TEMP V4 Understat identity verification
+name: TEMP V4 Understat structural identity verification
 
 on:
   push:
@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  attest-test-live-proof:
-    if: ${{ !contains(github.event.head_commit.message, '[identity-patched]') && !contains(github.event.head_commit.message, '[verification-diagnostic]') }}
+  patch-attest-test-live-proof:
+    if: ${{ !contains(github.event.head_commit.message, '[identity-green]') && !contains(github.event.head_commit.message, '[structural-diagnostic]') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -23,51 +23,31 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Apply generic structural identity patch
+        run: PYTHONPATH=. python tools/temp_v4_understat_structural_identity_patch.py
       - name: Regenerate governed V4 architecture attestation
-        shell: bash
-        run: |
-          mkdir -p verification
-          if ! PYTHONPATH=. python tools/v4_architecture_guard_attest.py > verification/v4_identity_verification_diagnostic.txt 2>&1; then
-            cat verification/v4_identity_verification_diagnostic.txt
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add config/architecture_guard_attestation.json verification/v4_identity_verification_diagnostic.txt
-            git commit -m "chore(v4): capture identity verification failure [verification-diagnostic]"
-            git push origin HEAD:fix/v4-official-understat-player-mapping-20260902
-            exit 1
-          fi
-          cat verification/v4_identity_verification_diagnostic.txt
+        run: PYTHONPATH=. python tools/v4_architecture_guard_attest.py
       - name: Full regression
-        shell: bash
-        run: |
-          if ! PYTHONPATH=. python -m pytest -q --tb=short > verification/v4_identity_regression_diagnostic.txt 2>&1; then
-            cat verification/v4_identity_regression_diagnostic.txt
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add config/architecture_guard_attestation.json verification/v4_identity_regression_diagnostic.txt
-            git commit -m "chore(v4): capture identity regression failure [verification-diagnostic]"
-            git push origin HEAD:fix/v4-official-understat-player-mapping-20260902
-            exit 1
-          fi
-          tail -n 30 verification/v4_identity_regression_diagnostic.txt
+        run: PYTHONPATH=. python -m pytest -q --tb=short
       - name: Generate live Official to Understat proof
+        run: PYTHONPATH=. python tools/temp_v4_understat_live_proof.py
+      - name: Require truthful 100 percent acceptance
         shell: bash
         run: |
-          if ! PYTHONPATH=. python tools/temp_v4_understat_live_proof.py > verification/v4_identity_live_diagnostic.txt 2>&1; then
-            cat verification/v4_identity_live_diagnostic.txt
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add verification/v4_identity_live_diagnostic.txt verification/v4_official_understat_identity_live_proof.json
-            git commit -m "chore(v4): capture live identity verification failure [verification-diagnostic]"
-            git push origin HEAD:fix/v4-official-understat-player-mapping-20260902
-            exit 1
-          fi
-          cat verification/v4_identity_live_diagnostic.txt
-      - name: Commit attestation and live proof
+          PYTHONPATH=. python - <<'PY'
+          import json
+          from pathlib import Path
+          proof = json.loads(Path('verification/v4_official_understat_identity_live_proof.json').read_text())
+          acceptance = proof.get('acceptance') or {}
+          print(json.dumps(acceptance, sort_keys=True))
+          if not acceptance.get('all_green'):
+              raise SystemExit('Official-Understat identity acceptance is not all green')
+          PY
+      - name: Commit proven structural mapping
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add config/architecture_guard_attestation.json verification/v4_official_understat_identity_live_proof.json
-          git commit -m "fix(v4): verify Official-Understat identity crosswalk [identity-patched]"
+          git add src/intelligence/understat_tactical.py config/architecture_guard_attestation.json verification/v4_official_understat_identity_live_proof.json
+          git commit -m "fix(v4): prove 100% Official-Understat crosswalk [identity-green]"
           git push origin HEAD:fix/v4-official-understat-player-mapping-20260902

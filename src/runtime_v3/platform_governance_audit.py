@@ -105,6 +105,58 @@ def _normalized_bypass_actors(rulesets: list[dict[str, Any]], branch: str) -> se
     return actors
 
 
+def _public_ruleset_bypass_fallback(
+    *,
+    base: str,
+    authenticated_rulesets: list[dict[str, Any]],
+    branch: str,
+) -> tuple[set[tuple[str, int, str]], list[dict[str, Any]]]:
+    """Recover bypass actors only when GitHub masks them from an Actions token.
+
+    The unauthenticated detail is accepted only if it is the exact same active
+    ruleset ID, targets the same runtime branch, and exposes the exact same rule
+    types as the authenticated payload. Empty/failed evidence never becomes PASS.
+    """
+    actors: set[tuple[str, int, str]] = set()
+    evidence: list[dict[str, Any]] = []
+    for authenticated in authenticated_rulesets:
+        if authenticated.get("enforcement") != "active" or not _ruleset_targets_branch(authenticated, branch):
+            continue
+        if authenticated.get("bypass_actors"):
+            continue
+        try:
+            ruleset_id = int(authenticated.get("id"))
+        except (TypeError, ValueError):
+            continue
+        public = _request_json(f"{base}/rulesets/{ruleset_id}", None)
+        if public.status != 200 or not isinstance(public.payload, dict):
+            continue
+        try:
+            public_id = int(public.payload.get("id"))
+        except (TypeError, ValueError):
+            continue
+        if public_id != ruleset_id:
+            continue
+        if public.payload.get("enforcement") != authenticated.get("enforcement"):
+            continue
+        if not _ruleset_targets_branch(public.payload, branch):
+            continue
+        authenticated_rules = _ruleset_rule_types(authenticated)
+        public_rules = _ruleset_rule_types(public.payload)
+        if public_rules != authenticated_rules:
+            continue
+        public_actors = _normalized_bypass_actors([public.payload], branch)
+        actors |= public_actors
+        evidence.append(
+            {
+                "ruleset_id": ruleset_id,
+                "rule_types": sorted(public_rules),
+                "actors": sorted(public_actors),
+            }
+        )
+    return actors, evidence
+
+
 def audit(
     *,
     api_url: str,
@@ -194,12 +246,28 @@ def audit(
             )
         )
         bypass_actors = _normalized_bypass_actors(rulesets, runtime_branch)
+        bypass_evidence_source = "authenticated_ruleset_detail"
+        fallback_evidence: list[dict[str, Any]] = []
+        if not bypass_actors and token:
+            fallback_actors, fallback_evidence = _public_ruleset_bypass_fallback(
+                base=base,
+                authenticated_rulesets=rulesets,
+                branch=runtime_branch,
+            )
+            if fallback_actors:
+                bypass_actors = fallback_actors
+                bypass_evidence_source = "public_ruleset_detail_fallback"
         if runtime_publisher_app_id is None:
             checks.append(
                 _check(
                     "RUNTIME_PUBLISHER_BYPASS_EXACT",
                     "UNKNOWN",
-                    {"reason": "V3_RUNTIME_PUBLISHER_APP_ID_NOT_DECLARED", "actors": sorted(bypass_actors)},
+                    {
+                        "reason": "V3_RUNTIME_PUBLISHER_APP_ID_NOT_DECLARED",
+                        "actors": sorted(bypass_actors),
+                        "evidence_source": bypass_evidence_source,
+                        "fallback_evidence": fallback_evidence,
+                    },
                 )
             )
         else:
@@ -208,7 +276,12 @@ def audit(
                 _check(
                     "RUNTIME_PUBLISHER_BYPASS_EXACT",
                     "PASS" if bypass_actors == expected else "FAIL",
-                    {"actors": sorted(bypass_actors), "expected": sorted(expected)},
+                    {
+                        "actors": sorted(bypass_actors),
+                        "expected": sorted(expected),
+                        "evidence_source": bypass_evidence_source,
+                        "fallback_evidence": fallback_evidence,
+                    },
                 )
             )
     else:
@@ -233,6 +306,7 @@ def audit(
             "unknown_never_counts_as_green": True,
             "runtime_attestation_is_defense_in_depth_not_native_branch_protection": True,
             "runtime_publisher_bypass_must_be_exact_dedicated_integration": True,
+            "masked_bypass_fallback_requires_same_ruleset_identity_target_and_rules": True,
         },
     }
 

@@ -25,6 +25,56 @@ def _profile(ttl: int, *, freshness: bool = True) -> dict:
     return {"reuse_services": {"source_layer": rule}}
 
 
+def _advanced_profile(ttl: int = 21600) -> dict:
+    return {
+        "reuse_services": {
+            "advanced_stats": {
+                "max_age_seconds": ttl,
+                "freshness_artifact": "advanced_stats_sync.json",
+                "freshness_field": "generated_at",
+                "semantic_guards": [
+                    {
+                        "type": "JSON_ARRAY_TO_KEYED_OBJECT_FIELD_MATCH_V1",
+                        "source_artifact": "official_snapshot.json",
+                        "source_path": ["bootstrap", "elements"],
+                        "source_key": "id",
+                        "cached_artifact": "player_features.json",
+                        "cached_path": ["players"],
+                        "field_map": {"team": "team_id", "element_type": "element_type", "web_name": "name"},
+                    }
+                ],
+            }
+        }
+    }
+
+
+def _write_advanced_identity(tmp_path, now: datetime, official_rows: list[dict], cached_rows: dict[str, dict]) -> None:
+    (tmp_path / "official_snapshot.json").write_text(
+        json.dumps({"bootstrap": {"elements": official_rows}}), encoding="utf-8"
+    )
+    generated_at = (now - timedelta(minutes=10)).isoformat()
+    (tmp_path / "advanced_stats_sync.json").write_text(
+        json.dumps({"generated_at": generated_at}), encoding="utf-8"
+    )
+    (tmp_path / "player_features.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "contract": "PLAYER_FEATURE_CONTRACT_V1",
+                "generated_at": generated_at,
+                "decision_neutral": False,
+                "model_opt_in": "REC-01",
+                "players": cached_rows,
+                "policy": {},
+                "official_player_count": len(cached_rows),
+                "advanced_row_count": 0,
+                "advanced_player_coverage": 0,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_hydrated_fresh_mtime_cannot_hide_stale_semantic_timestamp(tmp_path):
     now = datetime(2026, 8, 31, 5, 0, tzinfo=timezone.utc)
     artifact = tmp_path / "source_health.json"
@@ -49,6 +99,50 @@ def test_fresh_semantic_timestamp_allows_ttl_reuse(tmp_path):
     assert reused["reuse_freshness_artifact"] == "source_health.json"
     assert reused["reuse_freshness_timestamp"] == generated_at.isoformat()
     assert reused["reuse_age_seconds"] == 600.0
+
+
+def test_semantic_guard_rejects_stale_player_universe_even_when_ttl_is_fresh(tmp_path):
+    now = datetime(2026, 9, 2, 15, 0, tzinfo=timezone.utc)
+    official = [
+        {"id": 1, "team": 10, "element_type": 3, "web_name": "Alpha"},
+        {"id": 2, "team": 20, "element_type": 4, "web_name": "Bravo"},
+    ]
+    cached = {
+        "1": {"element": 1, "team_id": 10, "element_type": 3, "name": "Alpha"},
+    }
+    _write_advanced_identity(tmp_path, now, official, cached)
+    spec = {"artifacts": ["advanced_stats_sync.json", "player_features.json"]}
+
+    assert reuse_service("advanced_stats", spec, tmp_path, _advanced_profile(), now=now) is None
+
+
+def test_semantic_guard_rejects_transfer_with_same_player_count(tmp_path):
+    now = datetime(2026, 9, 2, 15, 0, tzinfo=timezone.utc)
+    official = [{"id": 1, "team": 20, "element_type": 3, "web_name": "Alpha"}]
+    cached = {"1": {"element": 1, "team_id": 10, "element_type": 3, "name": "Alpha"}}
+    _write_advanced_identity(tmp_path, now, official, cached)
+    spec = {"artifacts": ["advanced_stats_sync.json", "player_features.json"]}
+
+    assert reuse_service("advanced_stats", spec, tmp_path, _advanced_profile(), now=now) is None
+
+
+def test_semantic_guard_allows_exact_current_official_identity(tmp_path):
+    now = datetime(2026, 9, 2, 15, 0, tzinfo=timezone.utc)
+    official = [
+        {"id": 1, "team": 10, "element_type": 3, "web_name": "Alpha"},
+        {"id": 2, "team": 20, "element_type": 4, "web_name": "Bravo"},
+    ]
+    cached = {
+        "1": {"element": 1, "team_id": 10, "element_type": 3, "name": "Alpha"},
+        "2": {"element": 2, "team_id": 20, "element_type": 4, "name": "Bravo"},
+    }
+    _write_advanced_identity(tmp_path, now, official, cached)
+    spec = {"artifacts": ["advanced_stats_sync.json", "player_features.json"]}
+
+    reused = reuse_service("advanced_stats", spec, tmp_path, _advanced_profile(), now=now)
+    assert reused is not None
+    assert reused["reuse_mode"] == "AGE_TTL"
+    assert reused["semantic_guard_count"] == 1
 
 
 def test_non_positive_ttl_disables_age_reuse(tmp_path):

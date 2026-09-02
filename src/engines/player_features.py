@@ -140,6 +140,7 @@ def build() -> dict[str, Any]:
             "element": element,
             "name": player.get("web_name"),
             "team_id": team_id,
+            "element_type": element_type,
             "position": position,
             "official_current": {
                 "minutes": int(player.get("minutes") or 0),

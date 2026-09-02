@@ -32,8 +32,8 @@ def _age_minutes(stamp: str | None) -> float | None:
 
 
 def _decode_embedded(body: str) -> Any:
-    # Understat serializes JSON inside a JavaScript string. codecs.decode mirrors
-    # the site's escaping without executing JavaScript.
+    # Understat serializes JSON inside a JavaScript string. Decode the string
+    # escapes only; never execute JavaScript from the page.
     decoded = codecs.decode(body.encode("utf-8"), "unicode_escape")
     return json.loads(decoded)
 
@@ -47,6 +47,34 @@ def parse_embedded_json(html: str) -> dict[str, Any]:
         except (UnicodeDecodeError, json.JSONDecodeError):
             continue
     return out
+
+
+def _rows(value: Any) -> list[dict]:
+    if isinstance(value, list):
+        return [row for row in value if isinstance(row, dict)]
+    if isinstance(value, dict):
+        return [row for row in value.values() if isinstance(row, dict)]
+    return []
+
+
+def _is_completed_fixture(row: dict) -> bool:
+    if row.get("isResult") is True or str(row.get("isResult") or "").lower() in {"true", "1"}:
+        return True
+    goals = row.get("goals")
+    if isinstance(goals, dict):
+        return goals.get("h") is not None and goals.get("a") is not None
+    return row.get("h_goals") is not None and row.get("a_goals") is not None
+
+
+def latest_completed_fixture(embedded: dict[str, Any]) -> dict | None:
+    completed = []
+    for row in _rows(embedded.get("datesData")):
+        if not _is_completed_fixture(row):
+            continue
+        stamp = str(row.get("datetime") or row.get("date") or "")
+        if stamp:
+            completed.append((stamp, row))
+    return max(completed, key=lambda item: item[0])[1] if completed else None
 
 
 def _validate(payload: dict) -> tuple[bool, list[str]]:
@@ -99,6 +127,8 @@ def _failure(error: str, previous: dict | None = None) -> dict:
         "source_availability": "UNAVAILABLE",
         "freshness": "UNKNOWN",
         "fetched_at": None,
+        "source_timestamp": None,
+        "latest_fixture_represented": None,
         "refresh_attempted_at": iso_now(),
         "fallback": False,
         "schema_valid": False,
@@ -108,25 +138,30 @@ def _failure(error: str, previous: dict | None = None) -> dict:
     }
 
 
-def _request(url: str, policy: dict, session: requests.Session | None = None) -> str:
+def _request(url: str, policy: dict, session: requests.Session | None = None) -> tuple[str, int]:
     cfg = policy.get("network") or {}
-    attempts = max(1, int(cfg.get("max_attempts") or 3))
+    configured_attempts = max(1, int(cfg.get("max_attempts") or 3))
+    request_budget = max(1, int(cfg.get("max_requests_per_refresh") or configured_attempts))
+    attempts = min(configured_attempts, request_budget)
     timeout = float(cfg.get("timeout_seconds") or 12)
     backoff = list(cfg.get("backoff_seconds") or [0.5, 1.0])
+    minimum_interval = max(0.0, float(cfg.get("minimum_request_interval_seconds") or 0.0))
     headers = {"User-Agent": str(cfg.get("user_agent") or "FPL-iphoenk-engine")}
     client = session or requests.Session()
     last_error: Exception | None = None
+    calls = 0
     for attempt in range(attempts):
         try:
+            calls += 1
             response = client.get(url, timeout=timeout, headers=headers)
             response.raise_for_status()
-            return response.text
+            return response.text, calls
         except requests.RequestException as exc:
             last_error = exc
             if attempt < attempts - 1:
-                delay = float(backoff[min(attempt, len(backoff) - 1)]) if backoff else 0.5
-                time.sleep(max(0.0, delay))
-    raise RuntimeError(f"Understat request failed after {attempts} attempts: {last_error}")
+                delay = float(backoff[min(attempt, len(backoff) - 1)]) if backoff else 0.0
+                time.sleep(max(minimum_interval, max(0.0, delay)))
+    raise RuntimeError(f"Understat request failed after {calls} bounded attempts: {last_error}")
 
 
 def sync(*, force: bool = False, session: requests.Session | None = None) -> dict:
@@ -150,8 +185,10 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
     url = f"{base}/league/{league}/{season}"
     started = time.perf_counter()
     try:
-        html = _request(url, policy, session=session)
+        html, request_count = _request(url, policy, session=session)
         embedded = parse_embedded_json(html)
+        latest = latest_completed_fixture(embedded)
+        latest_stamp = (latest or {}).get("datetime") or (latest or {}).get("date")
         payload = {
             "contract": "UNDERSTAT_RAW_SOURCE_V1",
             "source": "Understat",
@@ -160,13 +197,21 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
             "season_start_year": season,
             "source_url": url,
             "fetched_at": iso_now(),
-            "source_timestamp": None,
+            # Understat league HTML does not advertise a separate publication
+            # timestamp. The latest completed match represented is retained as
+            # source-observation context rather than inventing an update SLA.
+            "source_timestamp": latest_stamp,
+            "latest_fixture_represented": {
+                "id": (latest or {}).get("id"),
+                "datetime": latest_stamp,
+            } if latest else None,
             "source_availability": "AVAILABLE",
             "freshness": "FRESH",
             "fallback": False,
             "runtime_reused": False,
             "cache_age_minutes": 0.0,
-            "request_count": 1,
+            "request_count": request_count,
+            "request_budget": max(1, int(network.get("max_requests_per_refresh") or network.get("max_attempts") or 1)),
             "request_strategy": "single_league_snapshot_no_per_player_network_calls",
             "embedded": embedded,
             "fetch_duration_ms": round((time.perf_counter() - started) * 1000.0, 2),

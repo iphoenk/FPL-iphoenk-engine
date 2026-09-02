@@ -26,9 +26,17 @@
     "direct_xpts_mutation_forbidden": true
   },
   "understat": {
-    "enabled": false,
+    "enabled": true,
     "tier": 4,
-    "note": "Direct scraping disabled by default; use mirrored/open datasets unless explicitly enabled."
+    "class": "DYNAMIC_TACTICAL_ENRICHMENT",
+    "critical": false,
+    "adapter": "src.sources.understat",
+    "policy_ref": "config/intelligence/understat_tactical.json",
+    "decision_influence": "TACTICAL_CONTEXT_UNCERTAINTY_AND_CLOSE_CALLS_ONLY",
+    "direct_xpts_mutation_forbidden": true,
+    "direct_xmins_mutation_forbidden": true,
+    "fail_soft": true,
+    "network_scope": "SINGLE_LEAGUE_SNAPSHOT_NO_PER_PLAYER_CALLS"
   },
   "report_time_verified_news": {
     "enabled": true,
@@ -53,6 +61,7 @@
     "previous_season_ttl_minutes": 10080,
     "policy": "reuse_only_when_cached_payload_is_schema-valid_and_within_ttl; otherwise refresh",
     "official_fpl_excluded": true,
-    "volatile_team_news_excluded": true
+    "volatile_team_news_excluded": true,
+    "understat_policy_owned_by": "config/intelligence/understat_tactical.json"
   }
 }

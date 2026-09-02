@@ -5,9 +5,11 @@ import re
 
 path = Path("src/intelligence/understat_tactical.py")
 text = path.read_text(encoding="utf-8")
+if "import html\n" not in text:
+    text = text.replace("import math\n", "import html\nimport math\n", 1)
 
 norm = '''def _norm(value: Any) -> str:
-    text = str(value or "").translate(
+    text = html.unescape(str(value or "")).translate(
         str.maketrans(
             {
                 "Đ": "D", "đ": "d", "Ł": "L", "ł": "l", "Ø": "O", "ø": "o",
@@ -30,6 +32,7 @@ norm = '''def _norm(value: Any) -> str:
         "brighton": "brighton and hove albion",
         "hull city": "hull",
         "ipswich town": "ipswich",
+        "coventry city": "coventry",
     }
     return aliases.get(text, text)
 
@@ -63,52 +66,29 @@ mapper = '''def _map_player(official: dict, candidates: list[dict], policy: dict
     def token_set(value: str) -> frozenset[str]:
         return frozenset(tokens(value))
 
-    def position_buckets(value: object) -> set[str]:
-        raw = str(value or "").upper()
-        buckets: set[str] = set()
-        for token in re.findall(r"[A-Z]+", raw):
-            if token in {"G", "GK", "GOALKEEPER"}:
-                buckets.add("GK")
-            elif token in {"D", "DEF", "DEFENDER"}:
-                buckets.add("DEF")
-            elif token in {"M", "MID", "MIDFIELDER"}:
-                buckets.add("MID")
-            elif token in {"F", "FW", "FWD", "FORWARD", "STRIKER"}:
-                buckets.add("FWD")
-        return buckets
-
-    official_positions = position_buckets(official.get("position"))
-
-    def position_compatible(row: dict) -> bool:
-        source_positions = position_buckets(row.get("position"))
-        return not official_positions or not source_positions or bool(official_positions & source_positions)
-
     full_name = _norm(official.get("full_name") or official.get("name"))
     full_token_seq = tokens(full_name)
     full_tokens = frozenset(full_token_seq)
     first_name = _norm(official.get("first_name"))
     first_token = (tokens(first_name) or full_token_seq[:1] or ("",))[0]
     second_name = _norm(official.get("second_name"))
-    surname_anchors = frozenset(
-        token for token in tokens(second_name)
-        if len(token) >= 4 and token not in {"filho", "junior"}
-    )
+    web_name = _norm(official.get("web_name"))
+    official_minutes = _f(official.get("minutes")) or 0.0
     name_tokens = [token_set(name) for name in names if name]
-    team_candidates = [
-        row
-        for row in candidates
-        if team and team in row.get("normalized_teams", []) and position_compatible(row)
-    ]
+    team_candidates = [row for row in candidates if team and team in row.get("normalized_teams", [])]
 
+    # Cross-source identity is stronger than source role labels. Understat's
+    # position describes match/tactical usage and can legitimately disagree with
+    # FPL's fantasy position, so position is never an identity hard gate.
     exact = [row for row in team_candidates if row.get("normalized_name") in names]
     if len(exact) == 1:
         return exact[0], 1.0, "TEAM_AND_NORMALIZED_NAME_EXACT"
 
-    # A source may publish a football mononym while Official FPL stores the
-    # legal/full name. Only accept an exact first-token mononym when unique in
-    # the same team and position bucket.
+    # True football mononyms are safe only inside the current team and only for
+    # a player with observed Official minutes. Never use first-name mononyms as
+    # a global transfer fallback.
     mononym = []
-    if first_token:
+    if first_token and official_minutes > 0:
         for row in team_candidates:
             candidate_tokens = tokens(row.get("normalized_name") or "")
             if len(candidate_tokens) == 1 and candidate_tokens[0] == first_token:
@@ -116,9 +96,9 @@ mapper = '''def _map_player(official: dict, candidates: list[dict], policy: dict
     if len(mononym) == 1:
         return mononym[0], 0.995, "TEAM_SCOPED_MONONYM_EXACT"
 
-    # Handle benign spelling/transliteration and truncated-family-name shapes
-    # by aligning each source token to the closest Official full-name token.
-    # Require a strong average, no weak token, and at least one exact anchor.
+    # Handle truncation, transliteration and legal-name expansion by aligning
+    # source tokens against the Official full identity. Team scope plus at least
+    # one exact anchor keeps this deterministic without player-specific aliases.
     near = []
     for row in team_candidates:
         candidate_tokens = tokens(row.get("normalized_name") or "")
@@ -136,20 +116,25 @@ mapper = '''def _map_player(official: dict, candidates: list[dict], policy: dict
     if near and (len(near) == 1 or near[0][0] - near[1][0] >= 0.03):
         return near[0][1], near[0][0], "TEAM_SCOPED_NEAR_TOKEN_IDENTITY"
 
-    # When source and Official first names differ materially, a unique surname
-    # token inside the same team/position is a deterministic identity anchor.
+    # Unique surname fallback uses only the terminal family-name token, not any
+    # middle name. It is disabled for zero-minute Official rows so a dormant
+    # player cannot steal a teammate's source identity by surname alone.
+    surname_candidates = []
+    for value in (web_name, second_name):
+        value_tokens = [token for token in tokens(value) if len(token) >= 4 and token not in {"filho", "junior"}]
+        if value_tokens:
+            surname_candidates.append(value_tokens[-1])
+    surname_anchor = next((token for token in surname_candidates if token), "")
     surname = []
-    if surname_anchors:
+    if surname_anchor and official_minutes > 0:
         for row in team_candidates:
             candidate_tokens = token_set(row.get("normalized_name") or "")
-            if surname_anchors & candidate_tokens:
+            if surname_anchor in candidate_tokens:
                 surname.append(row)
     if len(surname) == 1:
         return surname[0], 0.99, "TEAM_SCOPED_UNIQUE_SURNAME_IDENTITY"
 
     # Generic structural identity bridge for multi-token subset/order changes.
-    # Single-token variants are intentionally excluded here because mononym and
-    # surname resolution above apply stricter semantics.
     structural = []
     for row in team_candidates:
         candidate_tokens = token_set(row.get("normalized_name") or "")
@@ -166,20 +151,19 @@ mapper = '''def _map_player(official: dict, candidates: list[dict], policy: dict
         return structural[0], 0.985, "TEAM_SCOPED_STRUCTURAL_NAME_EXACT"
 
     # Deadline transfers can make Official current club newer than Understat's
-    # represented club. Keep global fallback exact/structural only and position
-    # compatible. Never use global fuzzy or player-specific aliases.
-    global_exact = [
-        row for row in candidates
-        if position_compatible(row) and row.get("normalized_name") in names
-    ]
+    # represented club. Global fallback is intentionally multi-token only.
+    # Single-token first names/surnames are not globally unique identities.
+    global_exact_names = {
+        name for name in names
+        if len(tokens(name)) >= 2
+    }
+    global_exact = [row for row in candidates if row.get("normalized_name") in global_exact_names]
     if len(global_exact) == 1:
         return global_exact[0], 0.97, "GLOBAL_NORMALIZED_NAME_EXACT_TEAM_TRANSITION"
 
     global_structural = []
     if len(full_tokens) >= 2:
         for row in candidates:
-            if not position_compatible(row):
-                continue
             candidate_tokens = token_set(row.get("normalized_name") or "")
             if len(candidate_tokens) >= 2 and (
                 candidate_tokens == full_tokens
@@ -241,9 +225,8 @@ normalizer = '''def normalize_player_evidence(raw: dict, official_universe: list
             "method": method,
         })
 
-    # Enforce a one-to-one cross-source identity. If two Official elements claim
-    # the same Understat id, the more specific/higher-confidence proposal wins;
-    # equal-confidence collisions are rejected rather than double-mapped.
+    # Enforce one-to-one Understat identities. Exact/stronger evidence wins over
+    # a weaker fallback; equal-confidence collisions are rejected for review.
     by_source: dict[str, list[int]] = {}
     for index, proposal in enumerate(proposals):
         row = proposal.get("row") or {}
@@ -254,11 +237,7 @@ normalizer = '''def normalize_player_evidence(raw: dict, official_universe: list
     for indexes in by_source.values():
         if len(indexes) <= 1:
             continue
-        ranked = sorted(
-            indexes,
-            key=lambda index: float(proposals[index].get("confidence") or 0.0),
-            reverse=True,
-        )
+        ranked = sorted(indexes, key=lambda index: float(proposals[index].get("confidence") or 0.0), reverse=True)
         top = float(proposals[ranked[0]].get("confidence") or 0.0)
         second = float(proposals[ranked[1]].get("confidence") or 0.0)
         if top > second:

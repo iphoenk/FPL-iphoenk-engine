@@ -226,3 +226,58 @@ def test_generic_identity_resolver_handles_live_cross_source_name_shapes(
     assert unresolved == []
     assert mapped[str(element)]["mapping"]["state"] == "RESOLVED"
     assert mapped[str(element)]["mapping"]["method"] == expected_method
+
+
+def test_duplicate_understat_identity_claim_is_rejected_instead_of_double_mapped():
+    official = [
+        {
+            "element": 1,
+            "element_id": 1,
+            "name": "John Smith",
+            "full_name": "John Smith",
+            "web_name": "Smith",
+            "second_name": "Smith",
+            "name_variants": ["John Smith", "Smith"],
+            "team": "Example City",
+            "team_id": 1,
+            "position": "MID",
+            "minutes": 180,
+        },
+        {
+            "element": 2,
+            "element_id": 2,
+            "name": "James Smith",
+            "full_name": "James Smith",
+            "web_name": "Smith",
+            "second_name": "Smith",
+            "name_variants": ["James Smith", "Smith"],
+            "team": "Example City",
+            "team_id": 1,
+            "position": "MID",
+            "minutes": 180,
+        },
+    ]
+    raw = {
+        "embedded": {
+            "playersData": [
+                {
+                    "id": "9001",
+                    "player_name": "John Smith",
+                    "team_title": "Example City",
+                    "position": "M",
+                    "games": "2",
+                    "time": "180",
+                    "xG": "0.2",
+                    "xA": "0.1",
+                    "xGChain": "0.4",
+                    "xGBuildup": "0.2",
+                }
+            ]
+        }
+    }
+    mapped, unresolved = normalize_player_evidence(raw, official, _policy())
+    assert mapped["1"]["mapping"]["state"] == "RESOLVED"
+    assert mapped["1"]["understat_player_id"] == "9001"
+    assert mapped["2"]["mapping"]["state"] == "UNRESOLVED"
+    assert mapped["2"]["mapping"]["method"] == "UNDERSTAT_IDENTITY_COLLISION"
+    assert [row["element"] for row in unresolved] == [2]

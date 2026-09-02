@@ -27,6 +27,18 @@ def _parse_hhmm(value: str) -> tuple[int, int]:
     return hour, minute
 
 
+def _parse_utc(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 @lru_cache(maxsize=1)
 def load_policy() -> dict[str, Any]:
     payload = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
@@ -39,6 +51,15 @@ def load_policy() -> dict[str, Any]:
     for name, spec in modes.items():
         if not isinstance(spec, dict) or not spec.get("profile") or not spec.get("mode"):
             raise RuntimeError(f"invalid execution profile mapping: {name}")
+    bootstrap = payload.get("optional_enrichment_bootstrap") or {}
+    if bootstrap.get("enabled"):
+        visible_mode = str(bootstrap.get("visible_mode") or "")
+        if visible_mode not in modes:
+            raise RuntimeError(f"optional enrichment bootstrap mode is not registered: {visible_mode}")
+        if not str(bootstrap.get("artifact") or "").strip() or not str(bootstrap.get("contract") or "").strip():
+            raise RuntimeError("optional enrichment bootstrap requires artifact and contract")
+        if not bootstrap.get("usable_source_states"):
+            raise RuntimeError("optional enrichment bootstrap requires usable source states")
     return payload
 
 
@@ -141,6 +162,64 @@ def overdue_checkpoint_plan(
     }
 
 
+def optional_enrichment_bootstrap_plan(
+    now_utc: datetime,
+    selected: dict[str, Any],
+) -> dict[str, Any]:
+    cfg = load_policy().get("optional_enrichment_bootstrap") or {}
+    result: dict[str, Any] = {
+        "required": False,
+        "reason": "DISABLED",
+        "visible_mode": None,
+        "artifact": None,
+        "retry_after": None,
+    }
+    if cfg.get("enabled") is not True:
+        return result
+
+    allowed_modes = {str(value) for value in cfg.get("allowed_base_modes") or []}
+    selected_mode = str(selected.get("mode") or "")
+    result["visible_mode"] = str(cfg.get("visible_mode") or "") or None
+    result["artifact"] = str(cfg.get("artifact") or "") or None
+    if selected_mode not in allowed_modes:
+        result["reason"] = "BASE_MODE_NOT_ELIGIBLE"
+        return result
+
+    artifact_path = DATA / str(cfg.get("artifact") or "")
+    payload = read_json(artifact_path, {}) or {}
+    expected_contract = str(cfg.get("contract") or "")
+    usable_states = {str(value) for value in cfg.get("usable_source_states") or []}
+    if (
+        payload.get("contract") == expected_contract
+        and payload.get("schema_valid") is True
+        and str(payload.get("source_availability") or "") in usable_states
+    ):
+        result["reason"] = "USABLE_CACHE_PRESENT"
+        return result
+
+    deferred_marker = str(cfg.get("fast_deferred_refresh_marker") or "")
+    if deferred_marker and str(payload.get("refresh_error") or "") == deferred_marker:
+        result["required"] = True
+        result["reason"] = "FAST_DEFERRED_WITHOUT_NETWORK_ATTEMPT"
+        return result
+
+    attempted = _parse_utc(payload.get("refresh_attempted_at"))
+    cooldown = timedelta(minutes=max(1, int(cfg.get("retry_cooldown_minutes") or 60)))
+    if attempted is not None:
+        if attempted > now_utc:
+            result["reason"] = "REFRESH_ATTEMPT_TIMESTAMP_IN_FUTURE"
+            result["retry_after"] = (attempted + cooldown).isoformat()
+            return result
+        if now_utc - attempted < cooldown:
+            result["reason"] = "REAL_REFRESH_FAILURE_COOLDOWN"
+            result["retry_after"] = (attempted + cooldown).isoformat()
+            return result
+
+    result["required"] = True
+    result["reason"] = "MISSING_OR_INVALID_CACHE"
+    return result
+
+
 def resolve_execution_profile(
     *,
     visible_mode: str,
@@ -169,8 +248,21 @@ def resolve_execution_profile(
         if int(candidate.get("rank") or 0) > int(selected.get("rank") or 0):
             selected["profile"] = candidate.get("profile")
             selected["extra"] = candidate.get("extra") or ""
+            selected["rank"] = candidate.get("rank")
         recovery_ids = list(recovery_plan.get("checkpoint_ids") or [])
         recovery_mode = str(recovery_plan.get("required_mode") or "") or None
+
+    bootstrap_plan = optional_enrichment_bootstrap_plan(now, selected)
+    bootstrap_upgraded = False
+    if bootstrap_plan.get("required"):
+        candidate = _profile_spec(str(bootstrap_plan.get("visible_mode") or ""))
+        only_higher = bool((load_policy().get("optional_enrichment_bootstrap") or {}).get("only_upgrade_to_higher_rank", True))
+        if not only_higher or int(candidate.get("rank") or 0) > int(selected.get("rank") or 0):
+            selected["profile"] = candidate.get("profile")
+            selected["mode"] = candidate.get("mode")
+            selected["extra"] = candidate.get("extra") or ""
+            selected["rank"] = candidate.get("rank")
+            bootstrap_upgraded = True
 
     return {
         "profile": str(selected.get("profile") or "fast_decision"),
@@ -182,6 +274,11 @@ def resolve_execution_profile(
         "recovery_mode": recovery_mode,
         "deferred_recovery": bool(recovery_plan.get("required") and not recovery_ids),
         "deferred_checkpoint_ids": list(recovery_plan.get("checkpoint_ids") or []) if recovery_plan.get("required") and not recovery_ids else [],
+        "optional_enrichment_bootstrap_required": bool(bootstrap_plan.get("required")),
+        "optional_enrichment_bootstrap_upgraded": bootstrap_upgraded,
+        "optional_enrichment_bootstrap_reason": bootstrap_plan.get("reason"),
+        "optional_enrichment_bootstrap_artifact": bootstrap_plan.get("artifact"),
+        "optional_enrichment_retry_after": bootstrap_plan.get("retry_after"),
     }
 
 
@@ -202,6 +299,9 @@ def main() -> int:
         f"recovery_checkpoint_ids={','.join(result['recovery_checkpoint_ids'])}",
         f"recovery_mode={result['recovery_mode'] or ''}",
         f"deferred_recovery={'true' if result['deferred_recovery'] else 'false'}",
+        f"optional_enrichment_bootstrap_required={'true' if result['optional_enrichment_bootstrap_required'] else 'false'}",
+        f"optional_enrichment_bootstrap_upgraded={'true' if result['optional_enrichment_bootstrap_upgraded'] else 'false'}",
+        f"optional_enrichment_bootstrap_reason={result['optional_enrichment_bootstrap_reason'] or ''}",
     ]
     if output:
         with open(output, "a", encoding="utf-8") as handle:

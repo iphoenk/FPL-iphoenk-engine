@@ -23,4 +23,5 @@ jobs:
           V3_DEFAULT_BRANCH: main
           RUNTIME_BRANCH: runtime-data
           V3_REQUIRED_CHECK: verify
+          V3_RUNTIME_PUBLISHER_APP_ID: ${{ vars.V3_RUNTIME_APP_ID }}
         run: python -m src.runtime_v3.platform_governance_audit

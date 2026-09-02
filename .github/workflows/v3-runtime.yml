@@ -264,11 +264,21 @@ jobs:
     needs: compute
     if: needs.compute.outputs.should_publish == 'true'
     permissions:
-      contents: write
+      contents: read
       actions: read
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Mint governed V3 runtime publisher token
+        id: runtime_app_token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.V3_RUNTIME_APP_ID }}
+          private-key: ${{ secrets.V3_RUNTIME_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: FPL-iphoenk-engine
+          permission-contents: write
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.SOURCE_COMMIT }}
@@ -313,7 +323,7 @@ jobs:
       - name: Publish rolling runtime snapshot atomically
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.runtime_app_token.outputs.token }}
         run: |
           set -euo pipefail
           publish_tree="$RUNNER_TEMP/runtime-worktree"

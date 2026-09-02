@@ -1,0 +1,498 @@
+from __future__ import annotations
+
+from pathlib import Path
+import re
+
+
+def sub_once(text: str, pattern: str, replacement: str, label: str) -> str:
+    out, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+    if count != 1:
+        raise SystemExit(f"{label}: expected one replacement, got {count}")
+    return out
+
+
+def replace_once(text: str, old: str, new: str, label: str) -> str:
+    count = text.count(old)
+    if count != 1:
+        raise SystemExit(f"{label}: expected one replacement, got {count}")
+    return text.replace(old, new, 1)
+
+
+# ---------------------------------------------------------------------------
+# Understat source: retain legacy test contract, move production to XHR JSON,
+# preserve bounded retry/cooldown/LKG semantics, and avoid architecture clones.
+# ---------------------------------------------------------------------------
+source_path = Path("src/sources/understat.py")
+source = source_path.read_text(encoding="utf-8")
+
+source = sub_once(
+    source,
+    r"def _rows\(value: Any\) -> list\[dict\]:\n.*?\n\n\ndef _is_completed_fixture",
+    '''def _date_rows(embedded: dict[str, Any]) -> list[dict]:
+    value = embedded.get("datesData")
+    candidates = value.values() if isinstance(value, dict) else value if isinstance(value, list) else ()
+    return [row for row in candidates if isinstance(row, dict)]
+
+
+def _completed_fixture_view(embedded: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    out = dict(embedded)
+    dates = _date_rows(embedded)
+    completed = [row for row in dates if _is_completed_fixture(row)]
+    out["datesData"] = completed
+    return out, max(0, len(dates) - len(completed))
+
+
+def _is_completed_fixture''',
+    "replace duplicate _rows helper",
+)
+source = replace_once(
+    source,
+    'for row in _rows(embedded.get("datesData")):',
+    "for row in _date_rows(embedded):",
+    "latest completed fixture iterator",
+)
+
+helper_marker = "\ndef _request_json(url: str, policy: dict, session: requests.Session | None = None) -> tuple[dict[str, Any], int]:\n"
+helpers = '''
+def _persist_failure(error: str, previous: dict | None = None) -> dict:
+    payload = _failure(error, previous=previous)
+    CACHE.parent.mkdir(parents=True, exist_ok=True)
+    atomic_json(CACHE, payload)
+    return payload
+
+
+def _recent_failure_reuse(cached: dict, policy: dict) -> dict | None:
+    if str(cached.get("source_availability") or "") not in {"UNAVAILABLE", "STALE_FALLBACK"}:
+        return None
+    revision = _transport_revision(policy)
+    cached_revision = str(cached.get("refresh_transport_revision") or cached.get("transport_revision") or "")
+    if revision and cached_revision and cached_revision != revision:
+        return None
+    cache_policy = policy.get("cache") or {}
+    retry_minutes = max(0.0, float(cache_policy.get("failure_retry_minutes") or 15.0))
+    retry_age = _age_minutes(cached.get("refresh_attempted_at"))
+    if retry_minutes <= 0.0 or retry_age is None or retry_age > retry_minutes:
+        return None
+    source_age = _age_minutes(cached.get("fetched_at")) if cached.get("fetched_at") else None
+    return {
+        **cached,
+        "runtime_reused": True,
+        "retry_suppressed": True,
+        "failure_retry_minutes": retry_minutes,
+        "failure_retry_age_minutes": round(retry_age, 2),
+        "cache_age_minutes": round(source_age, 2) if source_age is not None else None,
+        "freshness": _freshness(source_age, policy),
+    }
+
+
+def _request(url: str, policy: dict, session: requests.Session | None = None) -> tuple[str, int]:
+    cfg = policy.get("network") or {}
+    configured_attempts = max(1, int(cfg.get("max_attempts") or 3))
+    request_budget = max(1, int(cfg.get("max_requests_per_refresh") or configured_attempts))
+    attempts = min(configured_attempts, request_budget)
+    timeout = float(cfg.get("timeout_seconds") or 12)
+    backoff = list(cfg.get("backoff_seconds") or [0.5, 1.0])
+    minimum_interval = max(0.0, float(cfg.get("minimum_request_interval_seconds") or 0.0))
+    headers = {"User-Agent": str(cfg.get("user_agent") or "FPL-iphoenk-engine")}
+    client = session or requests.Session()
+    last_error: Exception | None = None
+    calls = 0
+    for attempt in range(attempts):
+        try:
+            calls += 1
+            response = client.get(url, timeout=timeout, headers=headers)
+            response.raise_for_status()
+            return response.text, calls
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt < attempts - 1:
+                delay = float(backoff[min(attempt, len(backoff) - 1)]) if backoff else 0.0
+                time.sleep(max(minimum_interval, max(0.0, delay)))
+    raise RuntimeError(f"Understat request failed after {calls} bounded attempts: {last_error}")
+
+'''
+if helper_marker not in source:
+    raise SystemExit("request helper insertion marker missing")
+source = source.replace(helper_marker, "\n" + helpers + helper_marker.lstrip("\n"), 1)
+
+sync_replacement = '''def sync(*, force: bool = False, session: requests.Session | None = None) -> dict:
+    policy = _policy()
+    network = policy.get("network") or {}
+    revision = _transport_revision(policy)
+    cached = read_json(CACHE, {}) or {}
+    age = _age_minutes(cached.get("fetched_at")) if cached else None
+    ttl = float((policy.get("cache") or {}).get("raw_ttl_minutes") or 360)
+    valid, _ = _validate(cached) if cached else (False, [])
+    same_transport = not revision or str(cached.get("transport_revision") or "") == revision
+
+    if not force and cached:
+        failure_reuse = _recent_failure_reuse(cached, policy)
+        if failure_reuse is not None:
+            return failure_reuse
+
+    if not force and cached and valid and same_transport and age is not None and age <= ttl:
+        return {
+            **cached,
+            "runtime_reused": True,
+            "retry_suppressed": False,
+            "cache_age_minutes": round(age, 2),
+            "freshness": _freshness(age, policy),
+        }
+
+    base = str(network.get("base_url") or "https://understat.com").rstrip("/")
+    league = str(policy.get("league") or "EPL")
+    season = int(policy.get("season_start_year") or 2026)
+    landing_url = f"{base}/league/{league}/{season}"
+    use_xhr = bool(network.get("endpoint_template")) and bool(revision)
+    if use_xhr:
+        endpoint_template = str(network.get("endpoint_template"))
+        endpoint = endpoint_template.format(league=league, season=season).lstrip("/")
+        url = f"{base}/{endpoint}"
+    else:
+        url = landing_url
+
+    started = time.perf_counter()
+    try:
+        if use_xhr:
+            ajax_payload, request_count = _request_json(url, policy, session=session)
+            normalized = _normalize_ajax_payload(ajax_payload)
+            transport = "HTTPS_JSON_XHR"
+            strategy = "single_league_xhr_snapshot_no_per_player_network_calls"
+        else:
+            html, request_count = _request(url, policy, session=session)
+            normalized = parse_embedded_json(html)
+            transport = "HTTPS_HTML_EMBEDDED_JSON"
+            strategy = "single_league_snapshot_no_per_player_network_calls"
+
+        latest = latest_completed_fixture(normalized)
+        latest_stamp = (latest or {}).get("datetime") or (latest or {}).get("date")
+        embedded, scheduled_excluded = _completed_fixture_view(normalized)
+        payload = {
+            "contract": "UNDERSTAT_RAW_SOURCE_V1",
+            "source": "Understat",
+            "source_tier": "dynamic_tactical_enrichment",
+            "league": league,
+            "season_start_year": season,
+            "transport_revision": revision,
+            "refresh_transport_revision": revision,
+            "source_url": url,
+            "source_landing_url": landing_url,
+            "fetched_at": iso_now(),
+            "source_timestamp": latest_stamp,
+            "latest_fixture_represented": {
+                "id": (latest or {}).get("id"),
+                "datetime": latest_stamp,
+            } if latest else None,
+            "fixture_view": {
+                "completed_only": True,
+                "scheduled_rows_excluded": scheduled_excluded,
+                "reason": "freshness/latest-match coverage must never be advanced by future schedule rows",
+            },
+            "source_availability": "AVAILABLE",
+            "freshness": "FRESH",
+            "fallback": False,
+            "runtime_reused": False,
+            "retry_suppressed": False,
+            "cache_age_minutes": 0.0,
+            "request_count": request_count,
+            "request_budget": max(1, int(network.get("max_requests_per_refresh") or network.get("max_attempts") or 1)),
+            "request_strategy": strategy,
+            "embedded": embedded,
+            "fetch_duration_ms": round((time.perf_counter() - started) * 1000.0, 2),
+            "provenance": {
+                "provider": "Understat",
+                "url": url,
+                "landing_url": landing_url,
+                "transport": transport,
+                "transport_revision": revision,
+                "team_title_representation_normalization": bool(use_xhr),
+                "adapter": "src.sources.understat",
+            },
+        }
+        valid, defects = _validate(payload)
+        payload["schema_valid"] = valid
+        payload["schema_defects"] = defects
+        if not valid:
+            return _persist_failure(";".join(defects), previous=cached)
+        CACHE.parent.mkdir(parents=True, exist_ok=True)
+        atomic_json(CACHE, payload)
+        return payload
+    except Exception as exc:  # fail-soft optional enrichment boundary
+        return _persist_failure(f"{type(exc).__name__}: {exc}", previous=cached)
+
+
+def load() -> dict:'''
+source = sub_once(
+    source,
+    r"def sync\(\*, force: bool = False, session: requests\.Session \| None = None\) -> dict:\n.*?\n\n\ndef load\(\) -> dict:",
+    sync_replacement,
+    "replace sync implementation",
+)
+source_path.write_text(source, encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# Official -> Understat bridge. Crosswalk classification is 100% of Official.
+# Direct Understat resolution must be 100% of source-present Official players.
+# ---------------------------------------------------------------------------
+tactical_path = Path("src/intelligence/understat_tactical.py")
+tactical = tactical_path.read_text(encoding="utf-8")
+
+map_replacement = '''def _map_player(official: dict, candidates: list[dict], policy: dict) -> tuple[dict | None, float, str]:
+    team = _norm(official.get("team") or official.get("club"))
+    raw_names = [
+        official.get("name"),
+        official.get("full_name"),
+        official.get("web_name"),
+        official.get("second_name"),
+        *((official.get("name_variants") or [])),
+    ]
+    names = []
+    seen = set()
+    for value in raw_names:
+        normalized = _norm(value)
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            names.append(normalized)
+    team_candidates = [row for row in candidates if team and team in row.get("normalized_teams", [])]
+    exact = [row for row in team_candidates if row.get("normalized_name") in names]
+    if len(exact) == 1:
+        return exact[0], 1.0, "TEAM_AND_NORMALIZED_NAME_EXACT"
+    global_exact = [row for row in candidates if row.get("normalized_name") in names]
+    if len(global_exact) == 1:
+        return global_exact[0], 0.97, "GLOBAL_NORMALIZED_NAME_EXACT_TEAM_TRANSITION"
+    scored = sorted(
+        (
+            (
+                max(
+                    (SequenceMatcher(None, name, row.get("normalized_name") or "").ratio() for name in names),
+                    default=0.0,
+                ),
+                row,
+            )
+            for row in team_candidates
+        ),
+        key=lambda item: item[0], reverse=True,
+    )
+    minimum = float((policy.get("identity") or {}).get("fuzzy_minimum_confidence") or 0.94)
+    ambiguity = float((policy.get("identity") or {}).get("ambiguity_margin") or 0.03)
+    if scored and scored[0][0] >= minimum and (len(scored) == 1 or scored[0][0] - scored[1][0] >= ambiguity):
+        return scored[0][1], scored[0][0], "TEAM_SCOPED_FUZZY_NAME"
+    return None, 0.0, "UNRESOLVED"
+
+
+def normalize_player_evidence'''
+tactical = sub_once(
+    tactical,
+    r"def _map_player\(official: dict, candidates: list\[dict\], policy: dict\) -> tuple\[dict \| None, float, str\]:\n.*?\n\n\ndef normalize_player_evidence",
+    map_replacement,
+    "replace player mapper",
+)
+
+unresolved_replacement = '''        if not row:
+            official_minutes = _f(official.get("minutes"))
+            source_absent = official_minutes is not None and official_minutes <= 0
+            state = "SOURCE_ABSENT_CURRENT_SEASON" if source_absent else "UNRESOLVED"
+            if not source_absent:
+                unresolved.append({
+                    "element": element,
+                    "name": official.get("name"),
+                    "team": official.get("team"),
+                    "state": "IDENTITY_UNRESOLVED",
+                    "official_minutes": official_minutes,
+                })
+            mapped[str(element)] = {
+                "element": element,
+                "official_name": official.get("name"),
+                "official_team": official.get("team"),
+                "mapping": {"state": state, "confidence": 0.0, "method": method},
+                "season_to_date": None,
+                "rolling_windows": {"last_1": None, "last_3": None, "last_5": None},
+                "missingness": "UNDERSTAT_SOURCE_ABSENT_CURRENT_SEASON"
+                if source_absent
+                else "UNDERSTAT_PLAYER_IDENTITY_UNRESOLVED",
+            }
+            continue
+        season = row.get'''
+tactical = sub_once(
+    tactical,
+    r"        if not row:\n.*?            continue\n        season = row\.get",
+    unresolved_replacement,
+    "classify unresolved/source absent players",
+)
+
+old_counts = '''    mapped = sum((row.get("mapping") or {}).get("state") == "RESOLVED" for row in players.values())
+    usable_matchups = sum(row.get("state") != "INSUFFICIENT_EVIDENCE" for row in matchups.values())
+    source_available = raw.get("source_availability") in {"AVAILABLE", "STALE_FALLBACK"} and bool(raw.get("schema_valid"))
+    status = "AVAILABLE" if source_available and mapped else "PARTIAL" if source_available else "UNAVAILABLE"
+'''
+new_counts = '''    mapped = sum((row.get("mapping") or {}).get("state") == "RESOLVED" for row in players.values())
+    source_absent = sum((row.get("mapping") or {}).get("state") == "SOURCE_ABSENT_CURRENT_SEASON" for row in players.values())
+    classified = sum(
+        (row.get("mapping") or {}).get("state") in {"RESOLVED", "SOURCE_ABSENT_CURRENT_SEASON", "UNRESOLVED"}
+        for row in players.values()
+    )
+    official_team_count = len({int(row.get("team_id") or 0) for row in official_universe if int(row.get("team_id") or 0)})
+    source_present = mapped + len(unresolved)
+    source_present_coverage = mapped / max(1, source_present)
+    usable_matchups = sum(row.get("state") != "INSUFFICIENT_EVIDENCE" for row in matchups.values())
+    source_available = raw.get("source_availability") in {"AVAILABLE", "STALE_FALLBACK"} and bool(raw.get("schema_valid"))
+    crosswalk_complete = classified == len(official_universe)
+    team_mapping_complete = len(teams) == official_team_count
+    source_present_complete = len(unresolved) == 0
+    status = (
+        "AVAILABLE"
+        if source_available and crosswalk_complete and team_mapping_complete and source_present_complete
+        else "PARTIAL" if source_available else "UNAVAILABLE"
+    )
+'''
+tactical = replace_once(tactical, old_counts, new_counts, "health preamble")
+
+old_health = '''        "team_mapping_coverage": len(teams),
+        "official_universe_count": len(official_universe),
+        "player_mapping_count": mapped,
+        "player_mapping_coverage": round(mapped / max(1, len(official_universe)), 4),
+        "unresolved_mapping_count": len(unresolved),
+'''
+new_health = '''        "team_mapping_coverage": len(teams),
+        "team_mapping_count": len(teams),
+        "official_team_count": official_team_count,
+        "team_mapping_ratio": round(len(teams) / max(1, official_team_count), 4),
+        "official_universe_count": len(official_universe),
+        "player_mapping_count": mapped,
+        "player_mapping_coverage": round(mapped / max(1, len(official_universe)), 4),
+        "player_crosswalk_classified_count": classified,
+        "player_crosswalk_coverage": round(classified / max(1, len(official_universe)), 4),
+        "source_present_official_count": source_present,
+        "source_present_mapping_count": mapped,
+        "source_present_mapping_coverage": round(source_present_coverage, 4),
+        "source_absent_current_season_count": source_absent,
+        "identity_unresolved_count": len(unresolved),
+        "unresolved_mapping_count": len(unresolved),
+'''
+tactical = replace_once(tactical, old_health, new_health, "health metrics")
+
+old_guard = '''        "full_official_universe_mapping_attempted": True,
+        "intelligence_parity_not_decision_parity": True,
+'''
+new_guard = '''        "full_official_universe_mapping_attempted": True,
+        "full_official_universe_crosswalk_classified": crosswalk_complete,
+        "source_present_player_mapping_complete": source_present_complete,
+        "team_mapping_complete": team_mapping_complete,
+        "source_absent_not_fabricated_as_direct_match": True,
+        "player_specific_aliases": False,
+        "global_fuzzy_identity_match": False,
+        "intelligence_parity_not_decision_parity": True,
+'''
+tactical = replace_once(tactical, old_guard, new_guard, "crosswalk guardrails")
+tactical_path.write_text(tactical, encoding="utf-8")
+
+
+# Surface crosswalk truth in enrichment output.
+enrichment_path = Path("src/services/enrichment_service.py")
+enrichment = enrichment_path.read_text(encoding="utf-8")
+enrichment = replace_once(
+    enrichment,
+    '''        "player_mapping_coverage": health.get("player_mapping_coverage"),
+        "unresolved_mapping_count": health.get("unresolved_mapping_count"),
+''',
+    '''        "player_mapping_coverage": health.get("player_mapping_coverage"),
+        "player_crosswalk_coverage": health.get("player_crosswalk_coverage"),
+        "source_present_mapping_coverage": health.get("source_present_mapping_coverage"),
+        "source_absent_current_season_count": health.get("source_absent_current_season_count"),
+        "identity_unresolved_count": health.get("identity_unresolved_count"),
+        "unresolved_mapping_count": health.get("unresolved_mapping_count"),
+''',
+    "understat summary fields",
+)
+enrichment = replace_once(
+    enrichment,
+    '''            "player_mapping_coverage": (understat_tactical.get("health") or {}).get("player_mapping_coverage"),
+            "tactical_matchup_coverage": (understat_tactical.get("health") or {}).get("tactical_matchup_coverage"),
+''',
+    '''            "player_mapping_coverage": (understat_tactical.get("health") or {}).get("player_mapping_coverage"),
+            "player_crosswalk_coverage": (understat_tactical.get("health") or {}).get("player_crosswalk_coverage"),
+            "source_present_mapping_coverage": (understat_tactical.get("health") or {}).get("source_present_mapping_coverage"),
+            "identity_unresolved_count": (understat_tactical.get("health") or {}).get("identity_unresolved_count"),
+            "tactical_matchup_coverage": (understat_tactical.get("health") or {}).get("tactical_matchup_coverage"),
+''',
+    "enrichment understat contract fields",
+)
+enrichment = replace_once(
+    enrichment,
+    '''        "understat_player_mapping_coverage": (understat_tactical.get("health") or {}).get("player_mapping_coverage"),
+        "understat_tactical_matchup_coverage": (understat_tactical.get("health") or {}).get("tactical_matchup_coverage"),
+''',
+    '''        "understat_player_mapping_coverage": (understat_tactical.get("health") or {}).get("player_mapping_coverage"),
+        "understat_player_crosswalk_coverage": (understat_tactical.get("health") or {}).get("player_crosswalk_coverage"),
+        "understat_source_present_mapping_coverage": (understat_tactical.get("health") or {}).get("source_present_mapping_coverage"),
+        "understat_identity_unresolved_count": (understat_tactical.get("health") or {}).get("identity_unresolved_count"),
+        "understat_tactical_matchup_coverage": (understat_tactical.get("health") or {}).get("tactical_matchup_coverage"),
+''',
+    "enrichment console proof fields",
+)
+enrichment_path.write_text(enrichment, encoding="utf-8")
+
+
+# Regression: 100% crosswalk classification must not fake direct source data.
+test_path = Path("tests/test_v4_understat_official_identity_bridge.py")
+tests = test_path.read_text(encoding="utf-8")
+marker = "def test_full_official_crosswalk_classifies_source_absent_without_fake_match():"
+if marker not in tests:
+    tests += '''
+
+
+def test_full_official_crosswalk_classifies_source_absent_without_fake_match():
+    official = [
+        {
+            "element": 7,
+            "element_id": 7,
+            "name": "Bukayo Saka",
+            "full_name": "Bukayo Saka",
+            "web_name": "Saka",
+            "second_name": "Saka",
+            "name_variants": ["Bukayo Saka", "Saka"],
+            "team": "Arsenal",
+            "team_id": 1,
+            "position": "MID",
+            "minutes": 180,
+        },
+        {
+            "element": 8,
+            "element_id": 8,
+            "name": "New Player",
+            "full_name": "New Player",
+            "web_name": "New Player",
+            "second_name": "Player",
+            "name_variants": ["New Player", "Player"],
+            "team": "Arsenal",
+            "team_id": 1,
+            "position": "MID",
+            "minutes": 0,
+        },
+    ]
+    raw = {
+        "embedded": {
+            "playersData": [
+                {
+                    "id": "501",
+                    "player_name": "Bukayo Saka",
+                    "team_title": "Arsenal",
+                    "games": "2",
+                    "time": "180",
+                    "xG": "1.0",
+                    "xA": "0.5",
+                    "xGChain": "1.6",
+                    "xGBuildup": "0.4",
+                }
+            ]
+        }
+    }
+    mapped, unresolved = normalize_player_evidence(raw, official, _policy())
+    assert unresolved == []
+    assert len(mapped) == len(official)
+    assert mapped["7"]["mapping"]["state"] == "RESOLVED"
+    assert mapped["8"]["mapping"]["state"] == "SOURCE_ABSENT_CURRENT_SEASON"
+    assert mapped["8"].get("understat_player_id") is None
+'''
+    test_path.write_text(tests, encoding="utf-8")

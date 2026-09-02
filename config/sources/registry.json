@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "registry": "SOURCE_REGISTRY_V4",
   "season": "2026-2027",
   "policy": {
@@ -22,6 +22,9 @@
     "source_ingestion_timeouts_are_registry_owned": true,
     "active_artifact_aliases_must_not_embed_gameweek": true,
     "weather_is_advisory_enrichment_only": true,
+    "understat_is_optional_tactical_enrichment_only": true,
+    "understat_network_owner_is_tactical_context": true,
+    "understat_source_health_probe_is_artifact_only": true,
     "retired_source_ids": ["livefpl"],
     "retired_sources_must_not_reappear_in_runtime_or_report_sweeps": true
   },
@@ -34,6 +37,6 @@
     {"id":"fffix","name":"Fantasy Football Fix","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"public_web","probe_url":"https://www.fantasyfootballfix.com/","capabilities":["price_prediction","predicted_points","predicted_lineups","ownership_context"]},
     {"id":"ffhub","name":"Fantasy Football Hub","class":"CHALLENGER","tier":2,"enabled":true,"critical":false,"adapter":"public_web","probe_url":"https://www.fantasyfootballhub.co.uk/","capabilities":["predicted_points","team_optimization","ownership_context","mini_league_context"]},
     {"id":"ffscout","name":"Fantasy Football Scout","class":"ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"public_web","probe_url":"https://www.fantasyfootballscout.co.uk/","capabilities":["team_news","predicted_lineups","role_context","set_piece_context","community_analysis"]},
-    {"id":"understat","name":"Understat","class":"ENRICHMENT","tier":4,"enabled":false,"critical":false,"adapter":"disabled","capabilities":["xg","xa"],"note":"Direct scraping remains disabled by default."}
+    {"id":"understat","name":"Understat","class":"ENRICHMENT","tier":3,"enabled":true,"critical":false,"adapter":"understat_artifact","artifact_paths":["understat_tactical_v3.json","understat_tactical_health_v3.json"],"policy_ref":"config/intelligence/understat_tactical.json","capabilities":["xg","xa","xgchain","xgbuildup","shots","key_passes","team_xg","team_xga","ppda","ppda_allowed","deep","deep_allowed","rolling_1","rolling_3","rolling_5","home_away","opponent_context","player_role_interaction","tactical_matchup","full_universe_tactical_enrichment"],"note":"Governed optional tactical enrichment. Network acquisition is owned by tactical_context; source-layer performs artifact-only health projection."}
   ]
 }

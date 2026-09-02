@@ -1,34 +1,16 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "registry": "V3_EXECUTION_DOMAINS_V2",
   "architecture": "V3_CANONICAL_DOMAIN_PIPELINE",
   "phase_count": 6,
   "domain_count": 12,
   "canonical_phases": {
-    "ACQUIRE": [
-      "official_state",
-      "personal_team_state"
-    ],
-    "ENRICH": [
-      "football_context",
-      "weather_context",
-      "market_context"
-    ],
-    "MODEL": [
-      "prediction"
-    ],
-    "DECISION": [
-      "squad_decision",
-      "challenger_analysis"
-    ],
-    "GOVERNANCE": [
-      "framework_governance",
-      "prediction_validation"
-    ],
-    "PUBLISH": [
-      "reporting",
-      "serving"
-    ]
+    "ACQUIRE": ["official_state", "personal_team_state"],
+    "ENRICH": ["football_context", "weather_context", "market_context"],
+    "MODEL": ["prediction"],
+    "DECISION": ["squad_decision", "challenger_analysis"],
+    "GOVERNANCE": ["framework_governance", "prediction_validation"],
+    "PUBLISH": ["reporting", "serving"]
   },
   "control_plane": {
     "compiler": "src.runtime_v3.registry_compiler",
@@ -44,32 +26,13 @@
     "business_capability_contract_unchanged": false,
     "service_registry_unchanged": false,
     "legacy_domain_aliases": {
-      "ACQUIRE": [
-        "official_state",
-        "personal_team_state"
-      ],
-      "ENRICH": [
-        "football_context",
-        "weather_context"
-      ],
-      "MODEL": [
-        "prediction"
-      ],
-      "MARKET": [
-        "market_context"
-      ],
-      "DECISION": [
-        "squad_decision",
-        "challenger_analysis"
-      ],
-      "GOVERNANCE": [
-        "framework_governance",
-        "prediction_validation"
-      ],
-      "PUBLISH": [
-        "reporting",
-        "serving"
-      ]
+      "ACQUIRE": ["official_state", "personal_team_state"],
+      "ENRICH": ["football_context", "weather_context"],
+      "MODEL": ["prediction"],
+      "MARKET": ["market_context"],
+      "DECISION": ["squad_decision", "challenger_analysis"],
+      "GOVERNANCE": ["framework_governance", "prediction_validation"],
+      "PUBLISH": ["reporting", "serving"]
     }
   },
   "policy": {
@@ -88,6 +51,9 @@
     "weather_context_has_explicit_enrich_execution_domain": true,
     "weather_context_reuses_football_context_execution_domain": false,
     "weather_context_does_not_add_process_startup_boundary": false,
+    "understat_reuses_existing_football_tactical_context_capability": true,
+    "understat_does_not_add_business_capability_or_process_domain": true,
+    "understat_enriches_canonical_tactical_artifacts_before_existing_close_call_consumption": true,
     "parallel_domain_fan_in_uses_declared_artifacts_and_latest_keys_only": true,
     "parallel_domain_fan_in_is_deterministic": true,
     "phase_membership_is_a_responsibility_taxonomy_not_a_strict_execution_barrier": true,
@@ -102,141 +68,21 @@
     "base_snapshot_declares_only_artifacts_it_actually_writes": true
   },
   "artifact_writer_exceptions": {
-    "prices.json": {
-      "kind": "base_market_state_then_market_enrichment",
-      "writers": [
-        "market_state",
-        "price"
-      ]
-    },
-    "user_report.json": {
-      "kind": "report_then_serving_materialization",
-      "writers": [
-        "reporting",
-        "report_materializer"
-      ]
-    }
+    "prices.json": {"kind":"base_market_state_then_market_enrichment","writers":["market_state","price"]},
+    "user_report.json": {"kind":"report_then_serving_materialization","writers":["reporting","report_materializer"]}
   },
   "domains": {
-    "official_state": {
-      "phase": "ACQUIRE",
-      "depends_on": [],
-      "capabilities": [
-        "official_snapshot",
-        "rules"
-      ]
-    },
-    "personal_team_state": {
-      "phase": "ACQUIRE",
-      "depends_on": [
-        "official_state"
-      ],
-      "capabilities": [
-        "team_state",
-        "market_state",
-        "live_state",
-        "advanced_stats",
-        "base_snapshot",
-        "authenticated_official"
-      ]
-    },
-    "football_context": {
-      "phase": "ENRICH",
-      "depends_on": [
-        "personal_team_state"
-      ],
-      "capabilities": [
-        "historical_prior",
-        "tactical_context",
-        "source_layer"
-      ]
-    },
-    "weather_context": {
-      "phase": "ENRICH",
-      "depends_on": [
-        "football_context"
-      ],
-      "capabilities": [
-        "weather_context"
-      ]
-    },
-    "market_context": {
-      "phase": "ENRICH",
-      "depends_on": [
-        "football_context"
-      ],
-      "capabilities": [
-        "price",
-        "official_detail"
-      ]
-    },
-    "prediction": {
-      "phase": "MODEL",
-      "depends_on": [
-        "weather_context"
-      ],
-      "capabilities": [
-        "prediction"
-      ]
-    },
-    "squad_decision": {
-      "phase": "DECISION",
-      "depends_on": [
-        "prediction"
-      ],
-      "capabilities": [
-        "lineup_governance"
-      ]
-    },
-    "challenger_analysis": {
-      "phase": "DECISION",
-      "depends_on": [
-        "prediction_validation",
-        "football_context"
-      ],
-      "capabilities": [
-        "challenger"
-      ]
-    },
-    "framework_governance": {
-      "phase": "GOVERNANCE",
-      "depends_on": [
-        "market_context",
-        "prediction_validation",
-        "squad_decision",
-        "challenger_analysis"
-      ],
-      "capabilities": [
-        "governance"
-      ]
-    },
-    "prediction_validation": {
-      "phase": "GOVERNANCE",
-      "depends_on": [
-        "prediction"
-      ],
-      "capabilities": [
-        "prediction_evaluation"
-      ]
-    },
-    "reporting": {
-      "phase": "PUBLISH",
-      "depends_on": [
-        "framework_governance"
-      ],
-      "capabilities": [
-        "watchlist",
-        "reporting"
-      ]
-    },
-    "serving": {
-      "phase": "PUBLISH",
-      "depends_on": [
-        "reporting"
-      ],
-      "capabilities": [
-        "report_materializer"
-      ]
-    }
+    "official_state": {"phase":"ACQUIRE","depends_on":[],"capabilities":["official_snapshot","rules"]},
+    "personal_team_state": {"phase":"ACQUIRE","depends_on":["official_state"],"capabilities":["team_state","market_state","live_state","advanced_stats","base_snapshot","authenticated_official"]},
+    "football_context": {"phase":"ENRICH","depends_on":["personal_team_state"],"capabilities":["historical_prior","tactical_context","source_layer"]},
+    "weather_context": {"phase":"ENRICH","depends_on":["football_context"],"capabilities":["weather_context"]},
+    "market_context": {"phase":"ENRICH","depends_on":["football_context"],"capabilities":["price","official_detail"]},
+    "prediction": {"phase":"MODEL","depends_on":["weather_context"],"capabilities":["prediction"]},
+    "squad_decision": {"phase":"DECISION","depends_on":["prediction"],"capabilities":["lineup_governance"]},
+    "challenger_analysis": {"phase":"DECISION","depends_on":["prediction_validation","football_context"],"capabilities":["challenger"]},
+    "framework_governance": {"phase":"GOVERNANCE","depends_on":["market_context","prediction_validation","squad_decision","challenger_analysis"],"capabilities":["governance"]},
+    "prediction_validation": {"phase":"GOVERNANCE","depends_on":["prediction"],"capabilities":["prediction_evaluation"]},
+    "reporting": {"phase":"PUBLISH","depends_on":["framework_governance"],"capabilities":["watchlist","reporting"]},
+    "serving": {"phase":"PUBLISH","depends_on":["reporting"],"capabilities":["report_materializer"]}
   }
 }

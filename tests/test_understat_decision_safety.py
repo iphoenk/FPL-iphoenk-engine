@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 
 from src.engines.v4_tactical_serving import _apply_watchlist_close_call
+from src.engines.v4_lineup_optimizer import optimize_lineup
 from src.intelligence.understat_package_context import augment_package_tactical_context
 from src.services.projected_value_market_challenger import rerank_visible_watchlist
 
@@ -135,3 +136,52 @@ def test_projected_value_rerank_forwards_explicit_understat_dependency():
     assert promoted["tactical"]["understat"]["confidence"] == 0.91
     assert promoted["tactical"]["understat"]["direct_xpts_mutation"] is False
     assert promoted["tactical"]["understat"]["direct_xmins_mutation"] is False
+
+
+def test_understat_lineup_guardrails_follow_positive_pass_contract():
+    positions = ["GK"] * 2 + ["DEF"] * 5 + ["MID"] * 5 + ["FWD"] * 3
+    prediction_rows = []
+    universe_rows = []
+    locked_rows = []
+    for index, position in enumerate(positions, start=1):
+        element = 1000 + index
+        xpts = 8.0 - index * 0.1
+        prediction_rows.append({
+            "element": element,
+            "position": position,
+            "fixtures": [{
+                "xpts": xpts,
+                "lower80": xpts - 1.0,
+                "upper80": xpts + 1.0,
+                "xmins": {
+                    "start_probability": 0.95,
+                    "bench_probability": 0.04,
+                    "dnp_probability": 0.01,
+                    "expected_minutes": 85,
+                    "start_probability_confidence": 0.9,
+                },
+            }],
+            "priors": {"tactical_role": position.lower()},
+        })
+        universe_rows.append({
+            "element": element,
+            "name": f"P{element}",
+            "position": position,
+            "team": f"T{(index % 5) + 1}",
+        })
+        locked_rows.append({"element": element})
+
+    out = optimize_lineup(
+        {"players": prediction_rows},
+        {"players": universe_rows},
+        {"players": locked_rows, "wildcard_active": False},
+        tactical={},
+    )
+
+    assert out["guardrails"]["understat_no_direct_xpts_mutation"] is True
+    assert out["guardrails"]["understat_no_direct_xmins_mutation"] is True
+    assert "understat_direct_xpts_mutation" not in out["guardrails"]
+    assert "understat_direct_xmins_mutation" not in out["guardrails"]
+    assert all(out["guardrails"].values())
+    assert out["understat_tactical"]["direct_xpts_mutation"] is False
+    assert out["understat_tactical"]["direct_xmins_mutation"] is False

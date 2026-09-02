@@ -30,3 +30,16 @@ def test_core_actions_use_node24_compatible_majors():
     assert 'actions/checkout@v4' not in text
     assert 'actions/setup-python@v5' not in text
     assert 'actions/upload-artifact@v4' not in text
+
+
+def test_publish_path_is_bound_to_current_canonical_v4():
+    text = WORKFLOW.read_text()
+    guard = 'Assert publish ref is current canonical V4'
+    canonical_lookup = 'git ls-remote origin refs/heads/v4-prediction-engine'
+    checked_out = 'checked_out_sha="$(git rev-parse HEAD)"'
+    mismatch = 'publish ref $checked_out_sha is not current canonical V4 $canonical_sha'
+    assert text.count(guard) == 2
+    assert text.count(canonical_lookup) == 2
+    assert text.count(checked_out) == 2
+    assert text.count(mismatch) == 2
+    assert text.rfind(guard) < text.index('Publish complete runtime snapshot atomically')

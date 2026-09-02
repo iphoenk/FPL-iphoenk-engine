@@ -1,3 +1,4 @@
-rerun_reason=strict-unmatched-source-audit
+rerun_reason=unmatched-only-crosswalk-audit
 scope=diagnostic-only
 generated_for=official-651-understat-one-to-one
+revision=2

@@ -48,8 +48,20 @@ def main() -> None:
     identity_universe = [{**row, "name": row.get("full_name") or row.get("name")} for row in universe]
     raw = understat.sync(force=True, session=session)
     candidates = _understat_players(raw)
-    _, unresolved = normalize_player_evidence(raw, identity_universe)
+    mapped, unresolved = normalize_player_evidence(raw, identity_universe)
     official_by_id = {int(row["element"]): row for row in identity_universe}
+
+    accepted_source_ids = {
+        str(row.get("understat_player_id"))
+        for row in mapped.values()
+        if (row.get("mapping") or {}).get("state") == "RESOLVED"
+        and row.get("understat_player_id") is not None
+    }
+    unmatched_source = [
+        row for row in candidates
+        if str(row.get("understat_player_id")) not in accepted_source_ids
+    ]
+    unmatched_ids = {str(row.get("understat_player_id")) for row in unmatched_source}
 
     proposals: dict[int, dict] = {}
     claimers: dict[str, list[dict]] = defaultdict(list)
@@ -88,10 +100,10 @@ def main() -> None:
             candidate = row.get("normalized_name") or ""
             return max((SequenceMatcher(None, name, candidate).ratio() for name in names), default=0.0)
 
-        team_rows = [row for row in candidates if team in (row.get("normalized_teams") or [])]
-        top_team = sorted(team_rows, key=score, reverse=True)[:10]
-        top_global = sorted(candidates, key=score, reverse=True)[:10]
-        exact_global = [row for row in candidates if row.get("normalized_name") in names]
+        team_unmatched = [row for row in unmatched_source if team in (row.get("normalized_teams") or [])]
+        exact_unmatched = [row for row in unmatched_source if row.get("normalized_name") in names]
+        top_team = sorted(team_unmatched, key=score, reverse=True)[:5]
+        top_global = sorted(unmatched_source, key=score, reverse=True)[:5]
         proposal = proposals.get(int(item["element"])) or {}
         source_id = str(((proposal.get("source") or {}).get("understat_player_id")) or "")
         report.append({
@@ -104,16 +116,36 @@ def main() -> None:
             "team": official.get("team"),
             "position": official.get("position"),
             "official_minutes": official.get("minutes"),
-            "normalized_names": names,
             "pre_collision_proposal": proposal,
             "proposal_claimers": claimers.get(source_id, []) if source_id else [],
-            "exact_global": [_source_view(row) for row in exact_global],
-            "top_team": [_source_view(row, score(row)) for row in top_team],
-            "top_global": [_source_view(row, score(row)) for row in top_global],
+            "proposed_source_is_currently_unmatched": bool(source_id and source_id in unmatched_ids),
+            "exact_unmatched": [_source_view(row) for row in exact_unmatched],
+            "top_unmatched_team": [_source_view(row, score(row)) for row in top_team],
+            "top_unmatched_global": [_source_view(row, score(row)) for row in top_global],
         })
+
+    output = {
+        "generated_at": now,
+        "summary": {
+            "official_count": len(identity_universe),
+            "understat_source_player_count": len(candidates),
+            "direct_resolved_unique_source_ids": len(accepted_source_ids),
+            "unmatched_understat_source_count": len(unmatched_source),
+            "identity_unresolved_count": len(unresolved),
+        },
+        "unmatched_source_players": [_source_view(row) for row in unmatched_source],
+        "unresolved_official_players": report,
+        "guardrails": {
+            "diagnostic_only": True,
+            "official_fpl_identity_authority": True,
+            "player_specific_aliases": False,
+            "candidate_set_is_only_unclaimed_understat_rows": True,
+            "do_not_force_direct_match": True,
+        },
+    }
     path = Path("verification/v4_understat_unresolved_candidates.json")
-    path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps(report, sort_keys=True))
+    path.write_text(json.dumps(output, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(json.dumps(output, sort_keys=True))
 
 
 if __name__ == "__main__":

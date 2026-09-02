@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   patch-attest-test:
-    if: ${{ !contains(github.event.head_commit.message, '[identity-patched]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[identity-patched]') && !contains(github.event.head_commit.message, '[patch-diagnostic]') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -24,7 +24,19 @@ jobs:
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
       - name: Apply governed source and identity patch
-        run: python tools/temp_v4_understat_identity_patch.py
+        shell: bash
+        run: |
+          mkdir -p verification
+          if ! python tools/temp_v4_understat_identity_patch.py > verification/v4_identity_patch_diagnostic.txt 2>&1; then
+            cat verification/v4_identity_patch_diagnostic.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add verification/v4_identity_patch_diagnostic.txt
+            git commit -m "chore(v4): capture identity patch failure [patch-diagnostic]"
+            git push origin HEAD:fix/v4-official-understat-player-mapping-20260902
+            exit 1
+          fi
+          cat verification/v4_identity_patch_diagnostic.txt
       - name: Regenerate governed V4 architecture attestation
         run: python tools/v4_architecture_guard_attest.py
       - name: Full regression

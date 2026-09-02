@@ -1,4 +1,4 @@
-name: TEMP V4 Understat unresolved identity diagnostic
+name: TEMP V4 Understat final identity resolver
 
 on:
   push:
@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  live-candidate-diagnostic:
-    if: ${{ !contains(github.event.head_commit.message, '[candidate-diagnostic]') }}
+  resolve-attest-test-live-proof:
+    if: ${{ contains(github.event.head_commit.message, '[resolver-ready]') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -23,13 +23,33 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Generate unresolved candidate diagnostic
-        run: PYTHONPATH=. python tools/temp_v4_understat_unresolved_diag.py
-      - name: Persist diagnostic
+      - name: Apply generic identity resolver
+        run: PYTHONPATH=. python tools/temp_v4_understat_structural_identity_patch.py
+      - name: Regenerate governed V4 architecture attestation
+        run: PYTHONPATH=. python tools/v4_architecture_guard_attest.py
+      - name: Targeted Official-Understat identity tests
+        run: PYTHONPATH=. python -m pytest -q tests/test_v4_understat_official_identity_bridge.py --tb=short
+      - name: Full regression
+        run: PYTHONPATH=. python -m pytest -q --tb=short
+      - name: Generate live Official to Understat proof
+        run: PYTHONPATH=. python tools/temp_v4_understat_live_proof.py
+      - name: Require truthful 100 percent acceptance and persist
         shell: bash
         run: |
+          set -euo pipefail
+          mkdir -p verification
+          PYTHONPATH=. python - <<'PY'
+          import json
+          from pathlib import Path
+          proof_path = Path('verification/v4_official_understat_identity_live_proof.json')
+          proof = json.loads(proof_path.read_text())
+          acceptance = proof.get('acceptance') or {}
+          print(json.dumps(acceptance, sort_keys=True))
+          if not acceptance.get('all_green'):
+              raise SystemExit('Official-Understat identity acceptance is not all green')
+          PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add verification/v4_understat_unresolved_candidates.json
-          git commit -m "chore(v4): capture unresolved Understat candidates [candidate-diagnostic]"
+          git add src/intelligence/understat_tactical.py config/architecture_guard_attestation.json verification/v4_official_understat_identity_live_proof.json
+          git commit -m "fix(v4): complete 100% Official-Understat crosswalk [identity-green]"
           git push origin HEAD:fix/v4-official-understat-player-mapping-20260902

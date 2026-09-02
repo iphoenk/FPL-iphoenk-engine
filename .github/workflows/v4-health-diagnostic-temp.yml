@@ -1,4 +1,4 @@
-name: V4 temporary health diagnostic
+name: V4 temporary lineup guardrail semantic fixer
 
 on:
   push:
@@ -8,15 +8,15 @@ on:
       - '.github/workflows/v4-health-diagnostic-temp.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   RUNTIME_BRANCH: runtime-data-v4
 
 jobs:
-  diagnose:
+  fix-and-verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
@@ -24,47 +24,70 @@ jobs:
         with:
           ref: codex/v4-understat-tactical-parity-20260902
           fetch-depth: 0
-      - name: Hydrate latest governed V4 runtime state
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
-          git archive "origin/${RUNTIME_BRANCH}" data | tar -x -C "$GITHUB_WORKSPACE"
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Reproduce postflight health and emit exact blockers
+      - name: Apply positive-pass guardrail semantics and regression test
         shell: bash
         run: |
           set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          optimizer = Path('src/engines/v4_lineup_optimizer.py')
+          text = optimizer.read_text()
+          old = '"understat_cannot_erase_xmins":True,"understat_direct_xpts_mutation":False,"understat_direct_xmins_mutation":False,"optimizer_legal_formation_width_unchanged":True'
+          new = '"understat_cannot_erase_xmins":True,"understat_no_direct_xpts_mutation":True,"understat_no_direct_xmins_mutation":True,"optimizer_legal_formation_width_unchanged":True'
+          if text.count(old) != 1:
+              raise SystemExit(f'guardrail contract target drifted: {text.count(old)} matches')
+          optimizer.write_text(text.replace(old, new, 1))
+
+          test = Path('tests/test_understat_decision_safety.py')
+          test_text = test.read_text()
+          import_line = 'from src.engines.v4_lineup_optimizer import optimize_lineup\n'
+          if import_line not in test_text:
+              anchor = 'from src.engines.v4_tactical_serving import _apply_watchlist_close_call\n'
+              if test_text.count(anchor) != 1:
+                  raise SystemExit('test import anchor drifted')
+              test_text = test_text.replace(anchor, anchor + import_line, 1)
+          test_name = 'def test_understat_lineup_guardrails_follow_positive_pass_contract():'
+          if test_name not in test_text:
+              test_text += '''\n\ndef test_understat_lineup_guardrails_follow_positive_pass_contract():\n    positions = ["GK"] * 2 + ["DEF"] * 5 + ["MID"] * 5 + ["FWD"] * 3\n    prediction_rows = []\n    universe_rows = []\n    locked_rows = []\n    for index, position in enumerate(positions, start=1):\n        element = 1000 + index\n        xpts = 8.0 - index * 0.1\n        prediction_rows.append({\n            "element": element,\n            "position": position,\n            "fixtures": [{\n                "xpts": xpts,\n                "lower80": xpts - 1.0,\n                "upper80": xpts + 1.0,\n                "xmins": {\n                    "start_probability": 0.95,\n                    "bench_probability": 0.04,\n                    "dnp_probability": 0.01,\n                    "expected_minutes": 85,\n                    "start_probability_confidence": 0.9,\n                },\n            }],\n            "priors": {"tactical_role": position.lower()},\n        })\n        universe_rows.append({\n            "element": element,\n            "name": f"P{element}",\n            "position": position,\n            "team": f"T{(index % 5) + 1}",\n        })\n        locked_rows.append({"element": element})\n\n    out = optimize_lineup(\n        {"players": prediction_rows},\n        {"players": universe_rows},\n        {"players": locked_rows, "wildcard_active": False},\n        tactical={},\n    )\n\n    assert out["guardrails"]["understat_no_direct_xpts_mutation"] is True\n    assert out["guardrails"]["understat_no_direct_xmins_mutation"] is True\n    assert "understat_direct_xpts_mutation" not in out["guardrails"]\n    assert "understat_direct_xmins_mutation" not in out["guardrails"]\n    assert all(out["guardrails"].values())\n    assert out["understat_tactical"]["direct_xpts_mutation"] is False\n    assert out["understat_tactical"]["direct_xmins_mutation"] is False\n'''
+          test.write_text(test_text)
+
+          temp = Path('.github/workflows/v4-health-diagnostic-temp.yml')
+          if not temp.exists():
+              raise SystemExit('temporary fixer missing before cleanup')
+          temp.unlink()
+          PY
+          python tools/v4_architecture_guard_attest.py
+          python -m pytest -q tests/test_understat_decision_safety.py tests/test_v4_architecture_attestation.py
+      - name: Hydrate governed runtime and verify production gate locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          git archive "origin/${RUNTIME_BRANCH}" data | tar -x -C "$GITHUB_WORKSPACE"
           python -m src.services.orchestrator daily --stats --deep-stats
+          python -m src.engines.v4_quality_gate
           python - <<'PY'
           import json
-          from pathlib import Path
-          health=json.loads(Path('data/framework_health_v4.json').read_text())
-          lineup=json.loads(Path('data/lineup_decision_v4.json').read_text())
-          print('V4_LINEUP_GUARDRAILS='+json.dumps(lineup.get('guardrails') or {}, sort_keys=True))
-          print('V4_LINEUP_META='+json.dumps({
-              'formation':lineup.get('formation'),
-              'xi_count':len(lineup.get('starting_xi') or []),
-              'bench_count':len(lineup.get('bench') or []),
-              'captain':lineup.get('captain'),
-              'vice_captain':lineup.get('vice_captain'),
-          }, sort_keys=True))
-          print('V4_HEALTH_DIAGNOSTIC='+json.dumps({
-              'overall':health.get('overall'),
-              'pipeline_health':health.get('pipeline_health'),
-              'prediction_health':health.get('prediction_health'),
-              'capability_health':health.get('capability_health'),
-              'decision_engine':health.get('decision_engine'),
-              'go_allowed':health.get('go_allowed'),
-              'critical_failed':health.get('critical_failed'),
-              'critical_partial':health.get('critical_partial'),
-              'critical_warmup':health.get('critical_warmup'),
-              'capability_coverage':health.get('capability_coverage'),
-          }, sort_keys=True))
-          raise SystemExit('TEMP_HEALTH_DIAGNOSTIC_FAIL_CLOSED')
+          h=json.load(open('data/framework_health_v4.json'))
+          assert h['prediction_health'] in {'GREEN','AMBER'}, h
+          assert h['decision_engine'] != 'BLOCKED', h
+          assert h['go_allowed'] is True, h
+          print({'prediction_health':h['prediction_health'],'capability_health':h['capability_health'],'decision_engine':h['decision_engine'],'go_allowed':h['go_allowed'],'coverage':h['capability_coverage']})
           PY
+      - name: Commit only governed source/test/attestation cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/engines/v4_lineup_optimizer.py tests/test_understat_decision_safety.py config/architecture_guard_attestation.json .github/workflows/v4-health-diagnostic-temp.yml
+          git diff --cached --quiet && { echo '::error::Fix produced no changes'; exit 1; }
+          git commit -m 'fix(v4): make Understat lineup guardrails health-positive'
+          git push origin HEAD:codex/v4-understat-tactical-parity-20260902

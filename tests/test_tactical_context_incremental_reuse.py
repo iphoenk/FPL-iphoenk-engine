@@ -8,10 +8,15 @@ from src.models.observed_tactical_context import merge_recent_history
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config" / "runtime" / "incremental_reuse.json"
+EXECUTION_PROFILES = ROOT / "config" / "runtime" / "execution_profiles.json"
 
 
 def _config() -> dict:
     return json.loads(CONFIG.read_text(encoding="utf-8"))
+
+
+def _execution_profiles() -> dict:
+    return json.loads(EXECUTION_PROFILES.read_text(encoding="utf-8"))
 
 
 def test_tactical_context_reuse_is_exact_content_addressed_not_ttl() -> None:
@@ -48,10 +53,23 @@ def test_tactical_context_reuse_fingerprints_all_material_evidence_and_policy() 
 def test_tactical_context_reuse_is_not_live_opted_in() -> None:
     cfg = _config()
     tactical = cfg["services"]["tactical_context"]
+    profiles = _execution_profiles()["profiles"]
 
     assert cfg["policy"]["disable_when_current_scoring_fixture_live"] is True
     assert cfg["policy"]["live_reuse_requires_explicit_service_opt_in"] is True
     assert tactical.get("allow_during_live") is not True
+    assert "tactical_context" not in profiles["live"]["reuse_services"]
+
+
+def test_tactical_context_exact_reuse_is_declared_by_fast_profile_without_age_reuse() -> None:
+    profiles_cfg = _execution_profiles()
+    policy = profiles_cfg["policy"]
+    fast_reuse = profiles_cfg["profiles"]["fast_decision"]["reuse_services"]
+
+    assert policy["non_positive_ttl_disables_age_reuse"] is True
+    assert policy["tactical_context_age_reuse_forbidden"] is True
+    assert policy["tactical_context_content_addressed_reuse_requires_exact_fingerprint_match"] is True
+    assert fast_reuse["tactical_context"] == {"max_age_seconds": 0}
 
 
 def test_tactical_context_records_post_execution_fingerprint_only_for_owned_rolling_state() -> None:

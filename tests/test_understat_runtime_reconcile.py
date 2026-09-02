@@ -148,3 +148,136 @@ def test_reconcile_keeps_parity_in_review_when_current_identity_is_unlinked(monk
     assert reconciled["health"]["production_parity_status"] == "REVIEW_REQUIRED"
     assert coverage["full_current_universe_parity_ready"] is False
     assert coverage["source_player_mapping_review_required_count"] == 1
+
+
+def test_reconcile_repairs_unique_exact_multitoken_source_team_drift(monkeypatch, tmp_path) -> None:
+    raw_path = tmp_path / "understat.json"
+    tactical_path = tmp_path / "tactical.json"
+    health_path = tmp_path / "health.json"
+    latest_path = tmp_path / "latest.json"
+    raw_path.write_text(
+        json.dumps(
+            {
+                "embedded": {
+                    "playersData": [
+                        {
+                            "id": "10",
+                            "player_name": "Alpha Player",
+                            "team_title": "Old Club",
+                            "games": "2",
+                            "time": "180",
+                            "xG": "0.4",
+                            "xA": "0.2",
+                            "xGChain": "0.7",
+                            "xGBuildup": "0.3",
+                            "shots": "3",
+                            "key_passes": "2",
+                        }
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    latest_path.write_text(json.dumps({"understat_tactical_summary": {}}), encoding="utf-8")
+    monkeypatch.setattr(reconcile, "RAW_CACHE", raw_path)
+    monkeypatch.setattr(reconcile, "TACTICAL_OUT", tactical_path)
+    monkeypatch.setattr(reconcile, "HEALTH_OUT", health_path)
+    monkeypatch.setattr(reconcile, "LATEST_OUT", latest_path)
+    monkeypatch.setattr(
+        reconcile,
+        "_refresh_canonical_merge",
+        lambda tactical: {"team_profiles_enriched": 1, "player_profiles_enriched": 1, "player_return_routes_enriched": 1},
+    )
+
+    out = {
+        "tactical": {
+            "source": {},
+            "player_evidence": {
+                "1": {
+                    "element": 1,
+                    "canonical_identity": {
+                        "element": 1,
+                        "name": "Alpha Player",
+                        "web_name": "Alpha",
+                        "team": "Current Club",
+                        "name_variants": ["Alpha Player", "Alpha"],
+                    },
+                    "mapping": {"state": "UNRESOLVED", "method": "UNRESOLVED"},
+                    "season_to_date": None,
+                }
+            },
+            "unresolved_mappings": [{"element": 1, "name": "Alpha Player", "team": "Current Club"}],
+        },
+        "health": {
+            "source": {},
+            "coverage": {"official_universe_count": 1, "canonical_identity_mapping_complete": True},
+            "canonical_merge": {"player_profiles_enriched": 1},
+            "governance": {},
+        },
+    }
+
+    reconciled = reconcile.reconcile(out)
+    player = reconciled["tactical"]["player_evidence"]["1"]
+    coverage = reconciled["health"]["coverage"]
+    assert player["mapping"]["state"] == "RESOLVED"
+    assert player["mapping"]["method"] == "CURRENT_OFFICIAL_IDENTITY_EXACT_SOURCE_TEAM_DRIFT"
+    assert player["mapping"]["source_team_mismatch"] is True
+    assert player["mapping"]["source_teams"] == ["Old Club"]
+    assert player["mapping"]["official_team_authority"] == "Current Club"
+    assert player["season_to_date"]["metrics"]["xg"]["value"] == 0.4
+    assert reconciled["tactical"]["unresolved_mappings"] == []
+    assert coverage["source_team_drift_repaired_count"] == 1
+    assert coverage["source_player_mapping_review_required_count"] == 0
+    assert coverage["source_player_mapping_count"] == 1
+    assert coverage["unresolved_mapping_count"] == 0
+    assert reconciled["health"]["production_parity_status"] == "GREEN"
+
+
+def test_cross_team_repair_rejects_ambiguous_exact_source_identity() -> None:
+    raw = {
+        "embedded": {
+            "playersData": [
+                {"id": "10", "player_name": "Alpha Player", "team_title": "Old Club A"},
+                {"id": "11", "player_name": "Alpha Player", "team_title": "Old Club B"},
+            ]
+        }
+    }
+    tactical = {
+        "player_evidence": {
+            "1": {
+                "element": 1,
+                "canonical_identity": {
+                    "element": 1,
+                    "name": "Alpha Player",
+                    "web_name": "Alpha",
+                    "team": "Current Club",
+                    "name_variants": ["Alpha Player", "Alpha"],
+                },
+                "mapping": {"state": "UNRESOLVED"},
+            }
+        }
+    }
+    assert reconcile.repair_exact_identity_source_team_drift(raw, tactical) == []
+    assert tactical["player_evidence"]["1"]["mapping"]["state"] == "UNRESOLVED"
+
+
+def test_cross_team_repair_rejects_single_token_identity() -> None:
+    raw = {"embedded": {"playersData": [{"id": "10", "player_name": "Alpha", "team_title": "Old Club"}]}}
+    tactical = {
+        "player_evidence": {
+            "1": {
+                "element": 1,
+                "canonical_identity": {
+                    "element": 1,
+                    "name": "Alpha",
+                    "web_name": "Alpha",
+                    "team": "Current Club",
+                    "name_variants": ["Alpha"],
+                },
+                "mapping": {"state": "UNRESOLVED"},
+            }
+        }
+    }
+    assert reconcile.repair_exact_identity_source_team_drift(raw, tactical) == []
+    assert tactical["player_evidence"]["1"]["mapping"]["state"] == "UNRESOLVED"

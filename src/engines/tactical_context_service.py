@@ -197,8 +197,8 @@ def run() -> dict[str, Any]:
     # Understat is an extension of this capability, not a second executable
     # owner. Run and reconcile it inside the same bounded tactical_context
     # process after canonical artifacts exist so it can enrich them in place.
-    from src.engines.understat_runtime_reconcile import reconcile as reconcile_understat_runtime
     from src.engines.understat_tactical_context import run as run_understat_tactical_context
+    from src.intelligence.understat_runtime_reconcile import reconcile as reconcile_understat_runtime
 
     understat_out = reconcile_understat_runtime(run_understat_tactical_context())
     health = understat_out.get("health") or {}

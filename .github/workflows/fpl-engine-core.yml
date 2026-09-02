@@ -28,6 +28,23 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.ref }}
 
+      - name: Assert publish ref is current canonical V4
+        if: inputs.publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          checked_out_sha="$(git rev-parse HEAD)"
+          canonical_sha="$(git ls-remote origin refs/heads/v4-prediction-engine | awk '{print $1}')"
+          if [ -z "$canonical_sha" ]; then
+            echo "::error::Unable to resolve canonical V4 HEAD"
+            exit 1
+          fi
+          if [ "$checked_out_sha" != "$canonical_sha" ]; then
+            echo "::error::publish ref $checked_out_sha is not current canonical V4 $canonical_sha"
+            exit 1
+          fi
+          echo "V4 publish source attested: $checked_out_sha"
+
       - name: Capture production baseline for decision comparison
         shell: bash
         run: |
@@ -407,6 +424,23 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.ref }}
           token: ${{ steps.runtime_app_token.outputs.token }}
+
+      - name: Assert publish ref is current canonical V4
+        if: inputs.publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          checked_out_sha="$(git rev-parse HEAD)"
+          canonical_sha="$(git ls-remote origin refs/heads/v4-prediction-engine | awk '{print $1}')"
+          if [ -z "$canonical_sha" ]; then
+            echo "::error::Unable to resolve canonical V4 HEAD"
+            exit 1
+          fi
+          if [ "$checked_out_sha" != "$canonical_sha" ]; then
+            echo "::error::publish ref $checked_out_sha is not current canonical V4 $canonical_sha"
+            exit 1
+          fi
+          echo "V4 publish source attested: $checked_out_sha"
 
       - name: Download governed runtime snapshot
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7

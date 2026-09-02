@@ -26,10 +26,12 @@ jobs:
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
       - name: Apply generic identity resolver
         run: PYTHONPATH=. python tools/temp_v4_understat_structural_identity_patch.py
+      - name: Apply first-name mononym collision guard
+        run: PYTHONPATH=. python tools/temp_v4_understat_mononym_guard_patch.py
       - name: Regenerate governed V4 architecture attestation
         run: PYTHONPATH=. python tools/v4_architecture_guard_attest.py
       - name: Targeted Official-Understat identity tests
-        run: PYTHONPATH=. python -m pytest -q tests/test_v4_understat_official_identity_bridge.py --tb=short
+        run: PYTHONPATH=. python -m pytest -q tests/test_v4_understat_official_identity_bridge.py tests/test_v4_understat_mononym_identity_guard.py --tb=short
       - name: Full regression
         run: PYTHONPATH=. python -m pytest -q --tb=short
       - name: Generate live Official to Understat proof

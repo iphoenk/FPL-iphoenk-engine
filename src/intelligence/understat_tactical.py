@@ -36,7 +36,16 @@ def _rows(value: Any) -> list[dict]:
 
 
 def _norm(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or "")).encode("ascii", "ignore").decode("ascii")
+    text = str(value or "").translate(
+        str.maketrans(
+            {
+                "Đ": "D", "đ": "d", "Ł": "L", "ł": "l", "Ø": "O", "ø": "o",
+                "Ð": "D", "ð": "d", "Þ": "Th", "þ": "th", "Æ": "AE", "æ": "ae",
+                "Œ": "OE", "œ": "oe",
+            }
+        )
+    )
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
     text = re.sub(r"[^a-z0-9]+", " ", text.casefold()).strip()
     aliases = {
         "man utd": "manchester united",
@@ -315,13 +324,58 @@ def _map_player(official: dict, candidates: list[dict], policy: dict) -> tuple[d
         if normalized and normalized not in seen:
             seen.add(normalized)
             names.append(normalized)
+
+    def token_set(value: str) -> frozenset[str]:
+        return frozenset(token for token in value.split() if token)
+
+    name_tokens = [token_set(name) for name in names if name]
+    full_name = _norm(official.get("full_name") or official.get("name"))
+    full_tokens = token_set(full_name)
     team_candidates = [row for row in candidates if team and team in row.get("normalized_teams", [])]
+
     exact = [row for row in team_candidates if row.get("normalized_name") in names]
     if len(exact) == 1:
         return exact[0], 1.0, "TEAM_AND_NORMALIZED_NAME_EXACT"
+
+    # Generic structural identity bridge. This handles source names that omit
+    # middle/family names, surname-only Official web names, and token order
+    # differences. It is team-scoped and must resolve to exactly one candidate.
+    structural = []
+    for row in team_candidates:
+        candidate_name = row.get("normalized_name") or ""
+        candidate_tokens = token_set(candidate_name)
+        if not candidate_tokens:
+            continue
+        same_tokens = any(tokens and tokens == candidate_tokens for tokens in name_tokens)
+        candidate_within_full = len(candidate_tokens) >= 2 and candidate_tokens <= full_tokens
+        official_variant_within_candidate = any(
+            tokens and tokens <= candidate_tokens for tokens in name_tokens
+        )
+        if same_tokens or candidate_within_full or official_variant_within_candidate:
+            structural.append(row)
+    if len(structural) == 1:
+        return structural[0], 0.995, "TEAM_SCOPED_STRUCTURAL_NAME_EXACT"
+
+    # Deadline transfers can make Official current club newer than Understat's
+    # represented club. Keep this global fallback exact/structural only. Never
+    # perform global fuzzy matching and never add player-specific aliases.
     global_exact = [row for row in candidates if row.get("normalized_name") in names]
     if len(global_exact) == 1:
         return global_exact[0], 0.97, "GLOBAL_NORMALIZED_NAME_EXACT_TEAM_TRANSITION"
+
+    global_structural = []
+    if len(full_tokens) >= 2:
+        for row in candidates:
+            candidate_tokens = token_set(row.get("normalized_name") or "")
+            if len(candidate_tokens) >= 2 and (
+                candidate_tokens == full_tokens
+                or candidate_tokens <= full_tokens
+                or full_tokens <= candidate_tokens
+            ):
+                global_structural.append(row)
+    if len(global_structural) == 1:
+        return global_structural[0], 0.965, "GLOBAL_STRUCTURAL_NAME_EXACT_TEAM_TRANSITION"
+
     scored = sorted(
         (
             (

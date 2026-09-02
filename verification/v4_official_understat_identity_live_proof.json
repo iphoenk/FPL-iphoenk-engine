@@ -9,7 +9,7 @@
     "team_mapping_100_percent": true,
     "understat_available_fresh": true
   },
-  "generated_at": "2026-09-02T16:21:30.968870+00:00",
+  "generated_at": "2026-09-02T16:27:35.748187+00:00",
   "official": {
     "count": 651,
     "team_count": 20,
@@ -21,141 +21,15 @@
   "understat": {
     "crosswalk_classified_count": 651,
     "crosswalk_coverage": 1.0,
-    "direct_resolved_count": 316,
+    "direct_resolved_count": 360,
     "freshness": "FRESH",
     "identity_unresolved": [
-      {
-        "element": 1,
-        "name": "David Raya Mart\u00edn",
-        "official_minutes": 180.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Arsenal"
-      },
-      {
-        "element": 10,
-        "name": "Benjamin White",
-        "official_minutes": 180.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Arsenal"
-      },
-      {
-        "element": 17,
-        "name": "Mikel Merino Zaz\u00f3n",
-        "official_minutes": 33.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Arsenal"
-      },
-      {
-        "element": 19,
-        "name": "Mart\u00edn Zubimendi Ib\u00e1\u00f1ez",
-        "official_minutes": 27.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Arsenal"
-      },
-      {
-        "element": 452,
-        "name": "Bruno Guimar\u00e3es Rodriguez Moura",
-        "official_minutes": 19.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Arsenal"
-      },
-      {
-        "element": 32,
-        "name": "Matty Cash",
-        "official_minutes": 167.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Aston Villa"
-      },
-      {
-        "element": 41,
-        "name": "Emiliano Buend\u00eda Stati",
-        "official_minutes": 175.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Aston Villa"
-      },
-      {
-        "element": 52,
-        "name": "Alysson Edward Franco da Rocha dos Santos",
-        "official_minutes": 27.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Aston Villa"
-      },
-      {
-        "element": 160,
-        "name": "Alejandro Garnacho Ferreyra",
-        "official_minutes": 16.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Aston Villa"
-      },
-      {
-        "element": 57,
-        "name": "\u0110or\u0111e Petrovi\u0107",
-        "official_minutes": 180.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Bournemouth"
-      },
-      {
-        "element": 72,
-        "name": "Ben Gannon-Doak",
-        "official_minutes": 1.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Bournemouth"
-      },
-      {
-        "element": 566,
-        "name": "Ant\u00f3nio Jo\u00e3o Pereira de Albuquerque Tavares da Silva",
-        "official_minutes": 180.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Bournemouth"
-      },
       {
         "element": 102,
         "name": "Yehor Yarmoliuk",
         "official_minutes": 44.0,
         "state": "IDENTITY_UNRESOLVED",
         "team": "Brentford"
-      },
-      {
-        "element": 127,
-        "name": "Diego G\u00f3mez Amarilla",
-        "official_minutes": 175.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Brighton"
-      },
-      {
-        "element": 28,
-        "name": "Emiliano Mart\u00ednez Romero",
-        "official_minutes": 90.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Chelsea"
-      },
-      {
-        "element": 140,
-        "name": "Robert Lynch S\u00e1nchez",
-        "official_minutes": 90.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Chelsea"
-      },
-      {
-        "element": 149,
-        "name": "Levi Samuels Colwill",
-        "official_minutes": 161.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Chelsea"
-      },
-      {
-        "element": 156,
-        "name": "Pedro Lomba Neto",
-        "official_minutes": 81.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Chelsea"
-      },
-      {
-        "element": 159,
-        "name": "Mois\u00e9s Caicedo Corozo",
-        "official_minutes": 13.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Chelsea"
       },
       {
         "element": 211,
@@ -165,60 +39,11 @@
         "team": "Crystal Palace"
       },
       {
-        "element": 243,
-        "name": "Carlos Alcaraz Dur\u00e1n",
-        "official_minutes": 5.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Everton"
-      },
-      {
-        "element": 255,
-        "name": "Jorge Cuenca Barreno",
-        "official_minutes": 90.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Fulham"
-      },
-      {
-        "element": 268,
-        "name": "Josh King",
-        "official_minutes": 180.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Fulham"
-      },
-      {
-        "element": 271,
-        "name": "Rodrigo Muniz Carvalho",
-        "official_minutes": 8.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Fulham"
-      },
-      {
-        "element": 282,
-        "name": "Ryan Giles",
-        "official_minutes": 174.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Hull City"
-      },
-      {
         "element": 295,
         "name": "Oli McBurnie",
         "official_minutes": 180.0,
         "state": "IDENTITY_UNRESOLVED",
         "team": "Hull City"
-      },
-      {
-        "element": 304,
-        "name": "Dara O'Shea",
-        "official_minutes": 180.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Ipswich Town"
-      },
-      {
-        "element": 321,
-        "name": "Sindre Walle Egeli",
-        "official_minutes": 10.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Ipswich Town"
       },
       {
         "element": 592,
@@ -228,13 +53,6 @@
         "team": "Ipswich Town"
       },
       {
-        "element": 345,
-        "name": "Tanaka Ao",
-        "official_minutes": 45.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Leeds"
-      },
-      {
         "element": 350,
         "name": "Alisson Becker",
         "official_minutes": 180.0,
@@ -242,135 +60,23 @@
         "team": "Liverpool"
       },
       {
-        "element": 364,
-        "name": "Kostas Tsimikas",
-        "official_minutes": 19.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Liverpool"
-      },
-      {
-        "element": 375,
-        "name": "Trey Nyoni",
-        "official_minutes": 13.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Liverpool"
-      },
-      {
-        "element": 387,
-        "name": "Nico O'Reilly",
-        "official_minutes": 150.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Man City"
-      },
-      {
-        "element": 390,
-        "name": "R\u00faben dos Santos Gato Alves Dias",
-        "official_minutes": 180.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Man City"
-      },
-      {
-        "element": 399,
-        "name": "Rayan Cherki",
-        "official_minutes": 108.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Man City"
-      },
-      {
-        "element": 417,
-        "name": "Diogo Dalot Teixeira",
-        "official_minutes": 83.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Man Utd"
-      },
-      {
-        "element": 426,
-        "name": "Bruno Borges Fernandes",
-        "official_minutes": 180.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Man Utd"
-      },
-      {
-        "element": 428,
-        "name": "Matheus Santos Carneiro da Cunha",
-        "official_minutes": 158.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Man Utd"
-      },
-      {
-        "element": 405,
-        "name": "Nico Gonz\u00e1lez Iglesias",
-        "official_minutes": 70.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Newcastle"
-      },
-      {
-        "element": 201,
-        "name": "Daniel Mu\u00f1oz Mej\u00eda",
-        "official_minutes": 54.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Nott'm Forest"
-      },
-      {
         "element": 474,
         "name": "Jair Paula da Cunha Filho",
         "official_minutes": 180.0,
         "state": "IDENTITY_UNRESOLVED",
         "team": "Nott'm Forest"
-      },
-      {
-        "element": 493,
-        "name": "Arnaud Kalimuendo",
-        "official_minutes": 1.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Nott'm Forest"
-      },
-      {
-        "element": 498,
-        "name": "Marcos Senesi Bar\u00f3n",
-        "official_minutes": 90.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Spurs"
-      },
-      {
-        "element": 506,
-        "name": "Destiny Udogie",
-        "official_minutes": 26.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Spurs"
-      },
-      {
-        "element": 526,
-        "name": "Dominic Solanke-Mitchell",
-        "official_minutes": 37.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Spurs"
-      },
-      {
-        "element": 532,
-        "name": "Daniel Ballard",
-        "official_minutes": 180.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Sunderland"
-      },
-      {
-        "element": 539,
-        "name": "Luke O'Nien",
-        "official_minutes": 66.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Sunderland"
       }
     ],
-    "identity_unresolved_count": 48,
+    "identity_unresolved_count": 6,
     "schema_valid": true,
-    "source_absent_current_season_count": 287,
+    "source_absent_current_season_count": 285,
     "source_availability": "AVAILABLE",
-    "source_present_official_count": 364,
-    "source_present_resolved_coverage": 0.868132,
+    "source_present_official_count": 366,
+    "source_present_resolved_coverage": 0.983607,
     "state_counts": {
-      "RESOLVED": 316,
-      "SOURCE_ABSENT_CURRENT_SEASON": 287,
-      "UNRESOLVED": 48
+      "RESOLVED": 360,
+      "SOURCE_ABSENT_CURRENT_SEASON": 285,
+      "UNRESOLVED": 6
     },
     "team_mapping_count": 20,
     "transport_revision": "UNDERSTAT_XHR_JSON_V1"

@@ -377,11 +377,19 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
     _check(rows, "OFFICIAL_HISTORY_IMMUTABLE_AUTHORITY", (latest.get("official_historical_authority") or {}).get("historical_submitted_team") == "GREEN_PUBLIC_OFFICIAL", latest.get("official_historical_authority"))
 
     workflow_text = (ROOT / ".github" / "workflows" / "v3-runtime.yml").read_text(encoding="utf-8")
+    collector_policy = read_json(ROOT / "config" / "runtime" / "collector_policy.json", {})
+    schedules = collector_policy.get("schedules") or {}
+    recovery_policy = collector_policy.get("checkpoint_recovery") or {}
+    primary_expr = str(schedules.get("primary") or "")
+    precompute_expr = str(schedules.get("precompute") or "")
+    adaptive_expr = str(schedules.get("adaptive") or "")
     schedule_state = {
-        "master_hourly_30": 'cron: "30 * * * *"' in workflow_text,
-        "precompute_15": 'cron: "15 * * * *"' in workflow_text,
-        "adaptive_00_45": 'cron: "0,45 * * * *"' in workflow_text,
+        "primary_policy_bound": bool(primary_expr) and f'cron: "{primary_expr}"' in workflow_text,
+        "precompute_policy_bound": bool(precompute_expr) and f'cron: "{precompute_expr}"' in workflow_text,
+        "adaptive_policy_bound": bool(adaptive_expr) and f'cron: "{adaptive_expr}"' in workflow_text,
         "precompute_resolver": "precompute_checkpoint" in workflow_text,
+        "recovery_enabled": recovery_policy.get("enabled") is True,
+        "recovery_no_second_authority": recovery_policy.get("never_create_second_checkpoint_authority") is True,
     }
     schedule_ok = all(schedule_state.values())
     _check(rows, "SCHEDULE_GOVERNANCE_PROVEN", schedule_ok, schedule_state)

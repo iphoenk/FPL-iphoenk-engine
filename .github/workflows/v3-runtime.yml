@@ -7,9 +7,11 @@ on:
     types: [completed]
   schedule:
     # Logical FPL checkpoint remains :30. The :15 run precomputes its snapshot.
+    # Other 5-minute wakeups are probe/recovery only and no-op when the logical
+    # checkpoint is already satisfied; they never become a second authority.
     - cron: "30 * * * *"
     - cron: "15 * * * *"
-    - cron: "0,45 * * * *"
+    - cron: "0,5,10,20,25,35,40,45,50,55 * * * *"
 
 permissions:
   contents: read

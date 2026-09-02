@@ -14,6 +14,7 @@
     "missing_or_invalid_fingerprint_falls_back_to_execution": true,
     "reuse_only_when_avoided_compute_exceeds_fingerprint_cost": true,
     "cheap_decision_consumers_execute_and_validate_directly": true,
+    "expensive_deterministic_enrichment_may_use_exact_fingerprint_reuse": true,
     "football_formulas_unchanged": true
   },
   "services": {
@@ -32,6 +33,19 @@
         "config/intelligence/projection.json",
         "config/intelligence/team_strength.json",
         "config/intelligence/xmins_v2.json"
+      ]
+    },
+    "tactical_context": {
+      "inputs": [
+        "src/",
+        "official_snapshot.json",
+        "player_features.json",
+        "stats/shots_current.json",
+        "stats/playermatchstats_current.json",
+        "recent_tactical_form.json",
+        "stats/understat_epl_2026.json",
+        "config/intelligence/tactical_observed_context.json",
+        "config/intelligence/understat_tactical.json"
       ]
     }
   }

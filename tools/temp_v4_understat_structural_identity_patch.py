@@ -58,59 +58,87 @@ mapper = '''def _map_player(official: dict, candidates: list[dict], policy: dict
             seen.add(normalized)
             names.append(normalized)
 
-    def token_set(value: str) -> frozenset[str]:
-        return frozenset(token for token in value.split() if token)
+    def tokens(value: str) -> tuple[str, ...]:
+        return tuple(token for token in value.split() if token)
 
-    name_tokens = [token_set(name) for name in names if name]
+    def token_set(value: str) -> frozenset[str]:
+        return frozenset(tokens(value))
+
     full_name = _norm(official.get("full_name") or official.get("name"))
-    full_tokens = token_set(full_name)
+    full_token_seq = tokens(full_name)
+    full_tokens = frozenset(full_token_seq)
     first_name = _norm(official.get("first_name"))
-    first_tokens = token_set(first_name)
+    first_token = (tokens(first_name) or full_token_seq[:1] or ("",))[0]
     second_name = _norm(official.get("second_name"))
     surname_anchors = frozenset(
-        token for token in second_name.split()
+        token for token in tokens(second_name)
         if len(token) >= 4 and token not in {"filho", "junior"}
     )
+    name_tokens = [token_set(name) for name in names if name]
     team_candidates = [row for row in candidates if team and team in row.get("normalized_teams", [])]
 
     exact = [row for row in team_candidates if row.get("normalized_name") in names]
     if len(exact) == 1:
         return exact[0], 1.0, "TEAM_AND_NORMALIZED_NAME_EXACT"
 
-    # Generic structural identity bridge. It is deliberately team-scoped and
-    # only accepts a unique candidate. No player-specific aliases are allowed.
+    # A source may publish a football mononym while Official FPL stores the
+    # legal/full name. Only accept an exact first-token mononym when unique in
+    # the current team. This is generic identity logic, not a player alias.
+    mononym = []
+    if first_token:
+        for row in team_candidates:
+            candidate_tokens = tokens(row.get("normalized_name") or "")
+            if len(candidate_tokens) == 1 and candidate_tokens[0] == first_token:
+                mononym.append(row)
+    if len(mononym) == 1:
+        return mononym[0], 0.995, "TEAM_SCOPED_MONONYM_EXACT"
+
+    # Handle benign spelling/transliteration and truncated-family-name shapes
+    # by aligning each source token to the closest Official full-name token.
+    # Require a strong average, no weak token, and at least one exact anchor.
+    near = []
+    for row in team_candidates:
+        candidate_tokens = tokens(row.get("normalized_name") or "")
+        if len(candidate_tokens) < 2 or not full_token_seq:
+            continue
+        best = [
+            max(SequenceMatcher(None, source_token, official_token).ratio() for official_token in full_token_seq)
+            for source_token in candidate_tokens
+        ]
+        exact_anchor = any(source_token in full_tokens for source_token in candidate_tokens)
+        average = sum(best) / len(best)
+        if exact_anchor and min(best) >= 0.80 and average >= 0.90:
+            near.append((average, row))
+    near.sort(key=lambda item: item[0], reverse=True)
+    if near and (len(near) == 1 or near[0][0] - near[1][0] >= 0.03):
+        return near[0][1], near[0][0], "TEAM_SCOPED_NEAR_TOKEN_IDENTITY"
+
+    # When source and Official first names differ materially, a unique surname
+    # token inside the same team remains a deterministic identity anchor.
+    surname = []
+    if surname_anchors:
+        for row in team_candidates:
+            candidate_tokens = token_set(row.get("normalized_name") or "")
+            if surname_anchors & candidate_tokens:
+                surname.append(row)
+    if len(surname) == 1:
+        return surname[0], 0.99, "TEAM_SCOPED_UNIQUE_SURNAME_IDENTITY"
+
+    # Generic structural identity bridge for token subsets/order differences.
     structural = []
     for row in team_candidates:
-        candidate_name = row.get("normalized_name") or ""
-        candidate_tokens = token_set(candidate_name)
+        candidate_tokens = token_set(row.get("normalized_name") or "")
         if not candidate_tokens:
             continue
-        same_tokens = any(tokens and tokens == candidate_tokens for tokens in name_tokens)
+        same_tokens = any(variant and variant == candidate_tokens for variant in name_tokens)
         candidate_within_full = len(candidate_tokens) >= 2 and candidate_tokens <= full_tokens
         official_variant_within_candidate = any(
-            len(tokens) >= 1 and tokens <= candidate_tokens for tokens in name_tokens
+            variant and variant <= candidate_tokens for variant in name_tokens
         )
-        surname_anchor_match = bool(surname_anchors & candidate_tokens)
-        source_mononym_matches_first = (
-            len(candidate_tokens) == 1
-            and bool(first_tokens)
-            and candidate_tokens == first_tokens
-        )
-        first_name_plus_close_full = (
-            bool(first_tokens & candidate_tokens)
-            and SequenceMatcher(None, full_name, candidate_name).ratio() >= 0.90
-        )
-        if (
-            same_tokens
-            or candidate_within_full
-            or official_variant_within_candidate
-            or surname_anchor_match
-            or source_mononym_matches_first
-            or first_name_plus_close_full
-        ):
+        if same_tokens or candidate_within_full or official_variant_within_candidate:
             structural.append(row)
     if len(structural) == 1:
-        return structural[0], 0.995, "TEAM_SCOPED_STRUCTURAL_NAME_EXACT"
+        return structural[0], 0.985, "TEAM_SCOPED_STRUCTURAL_NAME_EXACT"
 
     # Deadline transfers can make Official current club newer than Understat's
     # represented club. Keep this global fallback exact/structural only. Never
@@ -132,6 +160,7 @@ mapper = '''def _map_player(official: dict, candidates: list[dict], policy: dict
     if len(global_structural) == 1:
         return global_structural[0], 0.965, "GLOBAL_STRUCTURAL_NAME_EXACT_TEAM_TRANSITION"
 
+    # Last resort remains team-scoped fuzzy matching under the governed policy.
     scored = sorted(
         (
             (

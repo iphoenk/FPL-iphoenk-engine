@@ -45,6 +45,15 @@ jobs:
           import json
           from pathlib import Path
           health=json.loads(Path('data/framework_health_v4.json').read_text())
+          lineup=json.loads(Path('data/lineup_decision_v4.json').read_text())
+          print('V4_LINEUP_GUARDRAILS='+json.dumps(lineup.get('guardrails') or {}, sort_keys=True))
+          print('V4_LINEUP_META='+json.dumps({
+              'formation':lineup.get('formation'),
+              'xi_count':len(lineup.get('starting_xi') or []),
+              'bench_count':len(lineup.get('bench') or []),
+              'captain':lineup.get('captain'),
+              'vice_captain':lineup.get('vice_captain'),
+          }, sort_keys=True))
           print('V4_HEALTH_DIAGNOSTIC='+json.dumps({
               'overall':health.get('overall'),
               'pipeline_health':health.get('pipeline_health'),
@@ -57,11 +66,5 @@ jobs:
               'critical_warmup':health.get('critical_warmup'),
               'capability_coverage':health.get('capability_coverage'),
           }, sort_keys=True))
-          for group_name in ('dss_core','dss_extensions','enhancements'):
-              group=(health.get('registries') or {}).get(group_name) or (health.get(group_name) or {})
-              items=group.get('items') or []
-              bad=[{'id':x.get('id'),'status':x.get('status'),'critical':x.get('critical'),'detail':x.get('detail')} for x in items if x.get('status') != 'ACTIVE']
-              if bad:
-                  print('V4_HEALTH_BAD_'+group_name.upper()+'='+json.dumps(bad, sort_keys=True))
           raise SystemExit('TEMP_HEALTH_DIAGNOSTIC_FAIL_CLOSED')
           PY

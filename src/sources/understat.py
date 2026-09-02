@@ -24,6 +24,11 @@ def _policy() -> dict:
     return read_json(POLICY_FILE, {}) or {}
 
 
+def _transport_revision(policy: dict | None = None) -> str:
+    payload = policy or _policy()
+    return str((payload.get("network") or {}).get("transport_revision") or "")
+
+
 def _age_minutes(stamp: str | None) -> float | None:
     dt = parse_dt(stamp) if stamp else None
     if not dt:
@@ -106,6 +111,7 @@ def _freshness(age: float | None, policy: dict) -> str:
 
 def _failure(error: str, previous: dict | None = None) -> dict:
     policy = _policy()
+    revision = _transport_revision(policy)
     previous = previous or read_json(CACHE, {}) or {}
     age = _age_minutes(previous.get("fetched_at")) if previous else None
     if previous and (policy.get("cache") or {}).get("retain_last_known_good", True):
@@ -118,6 +124,7 @@ def _failure(error: str, previous: dict | None = None) -> dict:
                 "fallback": True,
                 "refresh_error": error,
                 "refresh_attempted_at": iso_now(),
+                "refresh_transport_revision": revision,
                 "cache_age_minutes": round(age, 2) if age is not None else None,
                 "schema_valid": True,
                 "schema_defects": defects,
@@ -125,6 +132,8 @@ def _failure(error: str, previous: dict | None = None) -> dict:
     return {
         "contract": "UNDERSTAT_RAW_SOURCE_V1",
         "source": "Understat",
+        "transport_revision": revision,
+        "refresh_transport_revision": revision,
         "source_availability": "UNAVAILABLE",
         "freshness": "UNKNOWN",
         "fetched_at": None,
@@ -183,11 +192,14 @@ def _normalize_ajax_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 def sync(*, force: bool = False, session: requests.Session | None = None) -> dict:
     policy = _policy()
+    network = policy.get("network") or {}
+    revision = _transport_revision(policy)
     cached = read_json(CACHE, {}) or {}
     age = _age_minutes(cached.get("fetched_at")) if cached else None
     ttl = float((policy.get("cache") or {}).get("raw_ttl_minutes") or 360)
     valid, _ = _validate(cached) if cached else (False, [])
-    if not force and cached and valid and age is not None and age <= ttl:
+    same_transport = bool(revision) and str(cached.get("transport_revision") or "") == revision
+    if not force and cached and valid and same_transport and age is not None and age <= ttl:
         return {
             **cached,
             "runtime_reused": True,
@@ -195,11 +207,12 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
             "freshness": _freshness(age, policy),
         }
 
-    network = policy.get("network") or {}
     base = str(network.get("base_url") or "https://understat.com").rstrip("/")
     league = str(policy.get("league") or "EPL")
     season = int(policy.get("season_start_year") or 2026)
-    url = f"{base}/getLeagueData/{league}/{season}"
+    endpoint_template = str(network.get("endpoint_template") or "getLeagueData/{league}/{season}")
+    endpoint = endpoint_template.format(league=league, season=season).lstrip("/")
+    url = f"{base}/{endpoint}"
     landing_url = f"{base}/league/{league}/{season}"
     started = time.perf_counter()
     try:
@@ -213,6 +226,8 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
             "source_tier": "dynamic_tactical_enrichment",
             "league": league,
             "season_start_year": season,
+            "transport_revision": revision,
+            "refresh_transport_revision": revision,
             "source_url": url,
             "source_landing_url": landing_url,
             "fetched_at": iso_now(),
@@ -239,6 +254,7 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
                 "url": url,
                 "landing_url": landing_url,
                 "transport": "HTTPS_JSON_XHR",
+                "transport_revision": revision,
                 "adapter": "src.sources.understat",
             },
         }

@@ -1,4 +1,0 @@
-rerun_reason=mononym-collision-closeout
-scope=diagnostic-only
-generated_for=official-651-understat-one-to-one
-revision=3

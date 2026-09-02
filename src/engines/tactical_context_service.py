@@ -193,6 +193,21 @@ def run() -> dict[str, Any]:
     atomic_json(TEAM_OUT, out["team_profiles"])
     atomic_json(ROLE_OUT, out["player_roles"])
     atomic_json(RECENT_OUT, out["recent_form"])
+
+    # Understat is an extension of this capability, not a second executable
+    # owner. Run it inside the same bounded tactical_context process after the
+    # canonical artifacts exist so it can enrich them in place.
+    from src.engines.understat_tactical_context import run as run_understat_tactical_context
+
+    understat_out = run_understat_tactical_context()
+    health = understat_out.get("health") or {}
+    out["summary"]["understat_tactical"] = {
+        "status": health.get("status") or "UNAVAILABLE",
+        "optional_enrichment": True,
+        "canonical_merge": health.get("canonical_merge") or {},
+        "direct_xpts_mutation": False,
+        "direct_xmins_mutation": False,
+    }
     print(json.dumps(out["summary"], ensure_ascii=False))
     return out["summary"]
 

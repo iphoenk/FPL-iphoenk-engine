@@ -11,6 +11,8 @@
   "direct_xmins_mutation_forbidden": true,
   "network": {
     "base_url": "https://understat.com",
+    "endpoint_template": "getLeagueData/{league}/{season}",
+    "transport_revision": "UNDERSTAT_XHR_JSON_V1",
     "timeout_seconds": 12,
     "max_attempts": 3,
     "backoff_seconds": [0.5, 1.0],
@@ -40,7 +42,11 @@
     "normalized_exact_confidence": 0.98,
     "fuzzy_minimum_confidence": 0.94,
     "ambiguity_margin": 0.03,
-    "unresolved_state": "UNRESOLVED"
+    "unresolved_state": "IDENTITY_UNRESOLVED",
+    "source_absent_state": "SOURCE_ABSENT_CURRENT_SEASON",
+    "crosswalk_classification_required": true,
+    "global_exact_team_transition_allowed": true,
+    "player_specific_aliases_forbidden": true
   },
   "tactical_matchup": {
     "states": ["POSITIVE", "NEUTRAL", "NEGATIVE", "INSUFFICIENT_EVIDENCE"],

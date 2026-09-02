@@ -15,6 +15,7 @@
     "reuse_only_when_avoided_compute_exceeds_fingerprint_cost": true,
     "cheap_decision_consumers_execute_and_validate_directly": true,
     "expensive_deterministic_enrichment_may_use_exact_fingerprint_reuse": true,
+    "self_owned_rolling_state_may_record_post_execution_fingerprint_only_when_idempotent": true,
     "football_formulas_unchanged": true
   },
   "services": {
@@ -36,6 +37,8 @@
       ]
     },
     "tactical_context": {
+      "record_post_execution_fingerprint": true,
+      "self_owned_rolling_state": "recent_tactical_form.json",
       "inputs": [
         "src/",
         "official_snapshot.json",

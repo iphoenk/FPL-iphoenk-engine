@@ -195,14 +195,16 @@ def run() -> dict[str, Any]:
     atomic_json(RECENT_OUT, out["recent_form"])
 
     # Understat is an extension of this capability, not a second executable
-    # owner. Run it inside the same bounded tactical_context process after the
-    # canonical artifacts exist so it can enrich them in place.
+    # owner. Run and reconcile it inside the same bounded tactical_context
+    # process after canonical artifacts exist so it can enrich them in place.
+    from src.engines.understat_runtime_reconcile import reconcile as reconcile_understat_runtime
     from src.engines.understat_tactical_context import run as run_understat_tactical_context
 
-    understat_out = run_understat_tactical_context()
+    understat_out = reconcile_understat_runtime(run_understat_tactical_context())
     health = understat_out.get("health") or {}
     out["summary"]["understat_tactical"] = {
         "status": health.get("status") or "UNAVAILABLE",
+        "production_parity_status": health.get("production_parity_status") or "REVIEW_REQUIRED",
         "optional_enrichment": True,
         "canonical_merge": health.get("canonical_merge") or {},
         "direct_xpts_mutation": False,

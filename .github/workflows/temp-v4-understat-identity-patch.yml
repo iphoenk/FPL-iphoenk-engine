@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p verification
-          if ! python tools/temp_v4_understat_identity_patch.py > verification/v4_identity_patch_diagnostic.txt 2>&1; then
+          if ! python tools/temp_v4_understat_identity_patch_runner.py > verification/v4_identity_patch_diagnostic.txt 2>&1; then
             cat verification/v4_identity_patch_diagnostic.txt
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

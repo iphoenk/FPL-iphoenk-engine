@@ -11,6 +11,8 @@
   "direct_xmins_mutation_forbidden": true,
   "network": {
     "base_url": "https://understat.com",
+    "endpoint_template": "getLeagueData/{league}/{season}",
+    "transport_revision": "UNDERSTAT_XHR_JSON_V1",
     "timeout_seconds": 12,
     "max_attempts": 3,
     "backoff_seconds": [0.5, 1.0],

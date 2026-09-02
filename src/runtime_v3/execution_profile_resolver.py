@@ -39,6 +39,15 @@ def _parse_utc(value: Any) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
+def _nested_value(payload: dict[str, Any], path: list[str]) -> Any:
+    current: Any = payload
+    for key in path:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(key)
+    return current
+
+
 @lru_cache(maxsize=1)
 def load_policy() -> dict[str, Any]:
     payload = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
@@ -60,6 +69,13 @@ def load_policy() -> dict[str, Any]:
             raise RuntimeError("optional enrichment bootstrap requires artifact and contract")
         if not bootstrap.get("usable_source_states"):
             raise RuntimeError("optional enrichment bootstrap requires usable source states")
+        revision = bootstrap.get("source_revision") or {}
+        if revision:
+            required = ("policy_file", "policy_path", "artifact_field", "refresh_artifact_field")
+            if any(not revision.get(key) for key in required):
+                raise RuntimeError("optional enrichment source revision contract is incomplete")
+            if not isinstance(revision.get("policy_path"), list) or not all(isinstance(key, str) and key for key in revision["policy_path"]):
+                raise RuntimeError("optional enrichment source revision policy_path must be non-empty string keys")
     return payload
 
 
@@ -162,6 +178,20 @@ def overdue_checkpoint_plan(
     }
 
 
+def _source_revision_state(cfg: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    spec = cfg.get("source_revision") or {}
+    if not spec:
+        return {"enabled": False, "expected": None, "artifact": None, "refresh": None}
+    source_policy = read_json(ROOT / str(spec.get("policy_file") or ""), {}) or {}
+    expected = _nested_value(source_policy, [str(key) for key in spec.get("policy_path") or []])
+    return {
+        "enabled": True,
+        "expected": str(expected or "") or None,
+        "artifact": str(payload.get(str(spec.get("artifact_field") or "")) or "") or None,
+        "refresh": str(payload.get(str(spec.get("refresh_artifact_field") or "")) or "") or None,
+    }
+
+
 def optional_enrichment_bootstrap_plan(
     now_utc: datetime,
     selected: dict[str, Any],
@@ -173,6 +203,9 @@ def optional_enrichment_bootstrap_plan(
         "visible_mode": None,
         "artifact": None,
         "retry_after": None,
+        "expected_source_revision": None,
+        "artifact_source_revision": None,
+        "refresh_source_revision": None,
     }
     if cfg.get("enabled") is not True:
         return result
@@ -187,12 +220,33 @@ def optional_enrichment_bootstrap_plan(
 
     artifact_path = DATA / str(cfg.get("artifact") or "")
     payload = read_json(artifact_path, {}) or {}
+    revision = _source_revision_state(cfg, payload)
+    result["expected_source_revision"] = revision.get("expected")
+    result["artifact_source_revision"] = revision.get("artifact")
+    result["refresh_source_revision"] = revision.get("refresh")
+
+    expected_revision = revision.get("expected")
+    artifact_revision = revision.get("artifact")
+    refresh_revision = revision.get("refresh")
+    revision_changed_without_current_attempt = bool(
+        revision.get("enabled")
+        and expected_revision
+        and artifact_revision != expected_revision
+        and refresh_revision != expected_revision
+    )
+    if revision_changed_without_current_attempt:
+        result["required"] = True
+        result["reason"] = "SOURCE_ADAPTER_REVISION_CHANGED"
+        return result
+
     expected_contract = str(cfg.get("contract") or "")
     usable_states = {str(value) for value in cfg.get("usable_source_states") or []}
+    revision_compatible = not expected_revision or artifact_revision == expected_revision
     if (
         payload.get("contract") == expected_contract
         and payload.get("schema_valid") is True
         and str(payload.get("source_availability") or "") in usable_states
+        and revision_compatible
     ):
         result["reason"] = "USABLE_CACHE_PRESENT"
         return result
@@ -279,6 +333,9 @@ def resolve_execution_profile(
         "optional_enrichment_bootstrap_reason": bootstrap_plan.get("reason"),
         "optional_enrichment_bootstrap_artifact": bootstrap_plan.get("artifact"),
         "optional_enrichment_retry_after": bootstrap_plan.get("retry_after"),
+        "optional_enrichment_expected_source_revision": bootstrap_plan.get("expected_source_revision"),
+        "optional_enrichment_artifact_source_revision": bootstrap_plan.get("artifact_source_revision"),
+        "optional_enrichment_refresh_source_revision": bootstrap_plan.get("refresh_source_revision"),
     }
 
 
@@ -302,6 +359,7 @@ def main() -> int:
         f"optional_enrichment_bootstrap_required={'true' if result['optional_enrichment_bootstrap_required'] else 'false'}",
         f"optional_enrichment_bootstrap_upgraded={'true' if result['optional_enrichment_bootstrap_upgraded'] else 'false'}",
         f"optional_enrichment_bootstrap_reason={result['optional_enrichment_bootstrap_reason'] or ''}",
+        f"optional_enrichment_expected_source_revision={result['optional_enrichment_expected_source_revision'] or ''}",
     ]
     if output:
         with open(output, "a", encoding="utf-8") as handle:

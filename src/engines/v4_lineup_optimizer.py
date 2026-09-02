@@ -72,7 +72,19 @@ def _positive_tactical(row, minimum_confidence):
     return str(tactical.get("state") or "") == "POSITIVE" and _f(tactical.get("confidence")) >= minimum_confidence
 
 
-def _select_close_call(rows, count, score_key, margin, minimum_confidence, allow_tactical=True):
+def _xmins_safe(candidate, boundary, max_start_disadvantage=.05, max_dnp_disadvantage=.05):
+    start_disadvantage = _f(boundary.get("start_probability")) - _f(candidate.get("start_probability"))
+    dnp_disadvantage = _f(candidate.get("dnp_probability")) - _f(boundary.get("dnp_probability"))
+    return (
+        start_disadvantage <= max_start_disadvantage + 1e-9
+        and dnp_disadvantage <= max_dnp_disadvantage + 1e-9
+    )
+
+
+def _select_close_call(
+    rows, count, score_key, margin, minimum_confidence, allow_tactical=True,
+    max_start_disadvantage=.05, max_dnp_disadvantage=.05,
+):
     ordered = sorted(rows, key=lambda r:(_f(r.get(score_key)), _f(r.get("xpts")), _f(r.get("start_probability"))), reverse=True)
     selected = list(ordered[:count])
     metadata = {"used": False, "displaced_element": None, "promoted_element": None, "score_gap": None}
@@ -84,6 +96,8 @@ def _select_close_call(rows, count, score_key, margin, minimum_confidence, allow
     for candidate in ordered[count:]:
         gap = _f(boundary.get(score_key)) - _f(candidate.get(score_key))
         if gap < -1e-9 or gap > margin or not _positive_tactical(candidate, minimum_confidence):
+            continue
+        if not _xmins_safe(candidate, boundary, max_start_disadvantage, max_dnp_disadvantage):
             continue
         if boundary_positive and _f((candidate.get("understat_tactical") or {}).get("confidence")) <= _f((boundary.get("understat_tactical") or {}).get("confidence")):
             continue
@@ -97,8 +111,12 @@ def _select_close_call(rows, count, score_key, margin, minimum_confidence, allow
             "promoted_element": challenger.get("element"),
             "score_gap": round(gap,4),
             "governed_margin": margin,
+            "max_start_probability_disadvantage": max_start_disadvantage,
+            "max_dnp_probability_disadvantage": max_dnp_disadvantage,
+            "xmins_guard_passed": True,
             "reason": "POSITIVE_UNDERSTAT_MATCHUP_BREAKS_CLOSE_CALL_ONLY",
             "direct_xpts_mutation": False,
+            "direct_xmins_mutation": False,
         }
     return selected, metadata
 
@@ -110,27 +128,37 @@ def _formation_candidates(rows, tactical_policy):
     player_margin = _f(cfg.get("lineup_selection_score_margin"), .12)
     formation_margin = _f(cfg.get("formation_risk_adjusted_margin"), .25)
     minimum_confidence = _f(cfg.get("minimum_confidence"), .6)
+    max_start_disadvantage = _f(cfg.get("max_start_probability_disadvantage"), .05)
+    max_dnp_disadvantage = _f(cfg.get("max_dnp_probability_disadvantage"), .05)
     gks = sorted(by["GK"], key=lambda r:(r["selection_score"],r["start_probability"],-r["dnp_probability"]), reverse=True)
     candidates = []
     for d,m,f in LEGAL_FORMATION_TUPLES:
         if len(by["DEF"])<d or len(by["MID"])<m or len(by["FWD"])<f: continue
         gk = gks[0]
-        defs, def_meta = _select_close_call(by["DEF"], d, "selection_score", player_margin, minimum_confidence)
-        mids, mid_meta = _select_close_call(by["MID"], m, "selection_score", player_margin, minimum_confidence)
-        fwds, fwd_meta = _select_close_call(by["FWD"], f, "selection_score", player_margin, minimum_confidence)
+        args = (player_margin, minimum_confidence, True, max_start_disadvantage, max_dnp_disadvantage)
+        defs, def_meta = _select_close_call(by["DEF"], d, "selection_score", *args)
+        mids, mid_meta = _select_close_call(by["MID"], m, "selection_score", *args)
+        fwds, fwd_meta = _select_close_call(by["FWD"], f, "selection_score", *args)
         chosen = [gk] + defs + mids + fwds
         xpts = sum(r["xpts"] for r in chosen); dnp = sum(r["dnp_probability"] for r in chosen); uncertainty = sum(r["interval_width"] for r in chosen); correlation = _correlation_penalty(chosen)
         risk_adjusted = xpts - .28*dnp - .012*uncertainty - correlation
         tactical_positive = sum(_positive_tactical(row, minimum_confidence) for row in chosen)
         candidates.append({
             "formation":f"{d}-{m}-{f}","starting_xi":chosen,"xi_xpts":round(xpts,3),"risk_adjusted_score":round(risk_adjusted,3),"uncertainty":round(uncertainty,3),"dnp_risk":round(dnp,3),"structural_correlation_penalty":round(correlation,3),
+            "mean_start_probability": round(sum(_f(r.get("start_probability")) for r in chosen)/len(chosen),4),
+            "mean_dnp_probability": round(sum(_f(r.get("dnp_probability")) for r in chosen)/len(chosen),4),
             "understat_positive_context_count": tactical_positive,
             "understat_player_close_calls": [meta for meta in (def_meta, mid_meta, fwd_meta) if meta.get("used")],
         })
     candidates.sort(key=lambda row:(row["risk_adjusted_score"],row["xi_xpts"],-row["dnp_risk"]), reverse=True)
     if not candidates: raise RuntimeError("no legal XI")
     raw_leader = candidates[0]
-    near = [row for row in candidates if raw_leader["risk_adjusted_score"] - row["risk_adjusted_score"] <= formation_margin]
+    near = [
+        row for row in candidates
+        if raw_leader["risk_adjusted_score"] - row["risk_adjusted_score"] <= formation_margin
+        and raw_leader["mean_start_probability"] - row["mean_start_probability"] <= max_start_disadvantage + 1e-9
+        and row["mean_dnp_probability"] - raw_leader["mean_dnp_probability"] <= max_dnp_disadvantage + 1e-9
+    ]
     selected = max(near, key=lambda row:(row["understat_positive_context_count"], row["risk_adjusted_score"], row["xi_xpts"])) if near else raw_leader
     tactical_formation_used = selected is not raw_leader and selected["understat_positive_context_count"] > raw_leader["understat_positive_context_count"]
     if tactical_formation_used:
@@ -144,7 +172,9 @@ def _formation_candidates(rows, tactical_policy):
             "raw_risk_leader_formation": raw_leader["formation"],
             "raw_risk_leader_score": raw_leader["risk_adjusted_score"],
             "governed_margin": formation_margin,
+            "xmins_guarded": True,
             "direct_xpts_mutation": False,
+            "direct_xmins_mutation": False,
         }
     return candidates
 
@@ -162,21 +192,28 @@ def _bench(rows, xi_ids, policy, tactical_policy):
     bench = [r for r in rows if r["element"] not in xi_ids]; gks = [r for r in bench if r["position"]=="GK"]; out = [r for r in bench if r["position"]!="GK"]
     if len(gks)!=1 or len(out)!=3: raise RuntimeError("bench structure invalid")
     out.sort(key=lambda r:(r["bench_score"],r["xpts"],r["start_probability"]),reverse=True)
-    cfg = tactical_policy.get("close_call") or {}; tactical_margin=_f(cfg.get("bench_score_margin"),.12); minimum_confidence=_f(cfg.get("minimum_confidence"),.6)
+    cfg = tactical_policy.get("close_call") or {}
+    tactical_margin=_f(cfg.get("bench_score_margin"),.12); minimum_confidence=_f(cfg.get("minimum_confidence"),.6)
+    max_start_disadvantage=_f(cfg.get("max_start_probability_disadvantage"),.05); max_dnp_disadvantage=_f(cfg.get("max_dnp_probability_disadvantage"),.05)
     swaps=[]
     for index in range(len(out)-1):
         first, second = out[index], out[index+1]
         gap = _f(first.get("bench_score"))-_f(second.get("bench_score"))
-        if 0 <= gap <= tactical_margin and _positive_tactical(second,minimum_confidence) and not _positive_tactical(first,minimum_confidence):
+        if (
+            0 <= gap <= tactical_margin
+            and _positive_tactical(second,minimum_confidence)
+            and not _positive_tactical(first,minimum_confidence)
+            and _xmins_safe(second, first, max_start_disadvantage, max_dnp_disadvantage)
+        ):
             out[index],out[index+1]=second,first
-            swaps.append({"from_slot":index+2,"to_slot":index+1,"element":second["element"],"base_score_gap":round(gap,4),"governed_margin":tactical_margin})
+            swaps.append({"from_slot":index+2,"to_slot":index+1,"element":second["element"],"base_score_gap":round(gap,4),"governed_margin":tactical_margin,"xmins_guard_passed":True})
             break
     gaps = [round(out[i]["bench_score"]-out[i+1]["bench_score"],4) for i in range(len(out)-1)]
     threshold = _f(policy.get("bench_open_score_margin"),.15); open_state = any(abs(gap)<threshold for gap in gaps)
     reasoning=[]
     for index,row in enumerate(out):
         reasoning.append({"slot":index+1,"element":row["element"],"name":row["name"],"bench_score":row["bench_score"],"autosub_legal":True,"start_security":row["start_probability"],"ceiling":row["upper80"],"role":row.get("role"),"dnp_risk":row["dnp_probability"],"understat_tactical":row.get("understat_tactical")})
-    return gks[0], out, {"status":"OPEN" if open_state else "DECIDED","score_gaps":gaps,"open_threshold":threshold,"reasoning":reasoning,"false_precision_forbidden":True,"understat_close_call_swaps":swaps,"understat_direct_xpts_mutation":False}
+    return gks[0], out, {"status":"OPEN" if open_state else "DECIDED","score_gaps":gaps,"open_threshold":threshold,"reasoning":reasoning,"false_precision_forbidden":True,"understat_close_call_swaps":swaps,"understat_xmins_guarded":True,"understat_direct_xpts_mutation":False,"understat_direct_xmins_mutation":False}
 
 
 def _captain_pair(xi, policy):
@@ -226,7 +263,7 @@ def optimize_lineup(predictions,universe,locked,gw_index=0,manual=None,tactical=
     chip="WILDCARD" if bool(locked.get("wildcard_active")) else "NONE"
     alternatives=[{k:v for k,v in row.items() if k!="starting_xi"}|{"starting_ids":[r["element"] for r in row["starting_xi"]]} for row in formations]
     understat_health=(tactical.get("health") or {}).get("status") or "UNAVAILABLE"
-    return {"schema_version":4963,"engine":"v4.9.6-lineup-risk-auditable-understat-close-call","gw_offset":gw_index+1,"formation":formation,"formation_state":"OPEN" if formation_open else "DECIDED","formation_margin":round(formation_margin,4),"formation_alternatives":alternatives,"xi_xpts":round(xi_score,2),"starting_xi":sorted(chosen_xi,key=lambda r:(0 if r["position"]=="GK" else 1 if r["position"]=="DEF" else 2 if r["position"]=="MID" else 3,-r["xpts"])),"captain":captain,"vice_captain":opt_vice,"captaincy_governance":cap_governance,"gk_selection":gk_governance,"bench":{"gk":bench_gk,"order":[{"slot":i+1,**r} for i,r in enumerate(bench_out)]},"bench_governance":bench_governance,"optimizer_proposal":{"formation":raw_form,"xi_xpts":round(raw_score,2),"starting_ids":[r["element"] for r in raw_xi],"captain":opt_c["element"],"vice_captain":opt_v["element"]},"manual_draft":manual_snapshot,"governance":governance|{"captain_decision":captain_decision},"understat_tactical":{"health":understat_health,"close_call_only":True,"direct_xpts_mutation":False,"direct_xmins_mutation":False,"captaincy_semantics_unchanged":True},"chip_context":{"active_chip":chip,"other_chip_recommendation":"NONE" if chip=="WILDCARD" else "UNASSESSED","single_chip_rule_respected":True},"guardrails":{"legal_formation":True,"all_legal_formations_evaluated":True,"formation_close_call_can_be_open":True,"gk_near_tie_risk_adjusted":True,"bench_false_precision_forbidden":True,"captain_reason_decomposed":True,"attacker_defender_vice_compared":True,"one_gk_in_xi":True,"captain_in_xi":True,"vice_in_xi":True,"bench_has_one_gk_three_outfield":True,"manual_draft_not_overwritten_without_margin":True,"prediction_interval_robustness":True,"understat_only_breaks_governed_close_calls":True,"understat_missing_is_neutral":True,"understat_cannot_erase_xmins":True,"understat_direct_xpts_mutation":False,"optimizer_legal_formation_width_unchanged":True}}
+    return {"schema_version":4963,"engine":"v4.9.6-lineup-risk-auditable-understat-close-call","gw_offset":gw_index+1,"formation":formation,"formation_state":"OPEN" if formation_open else "DECIDED","formation_margin":round(formation_margin,4),"formation_alternatives":alternatives,"xi_xpts":round(xi_score,2),"starting_xi":sorted(chosen_xi,key=lambda r:(0 if r["position"]=="GK" else 1 if r["position"]=="DEF" else 2 if r["position"]=="MID" else 3,-r["xpts"])),"captain":captain,"vice_captain":opt_vice,"captaincy_governance":cap_governance,"gk_selection":gk_governance,"bench":{"gk":bench_gk,"order":[{"slot":i+1,**r} for i,r in enumerate(bench_out)]},"bench_governance":bench_governance,"optimizer_proposal":{"formation":raw_form,"xi_xpts":round(raw_score,2),"starting_ids":[r["element"] for r in raw_xi],"captain":opt_c["element"],"vice_captain":opt_v["element"]},"manual_draft":manual_snapshot,"governance":governance|{"captain_decision":captain_decision},"understat_tactical":{"health":understat_health,"close_call_only":True,"xmins_guarded":True,"direct_xpts_mutation":False,"direct_xmins_mutation":False,"captaincy_semantics_unchanged":True},"chip_context":{"active_chip":chip,"other_chip_recommendation":"NONE" if chip=="WILDCARD" else "UNASSESSED","single_chip_rule_respected":True},"guardrails":{"legal_formation":True,"all_legal_formations_evaluated":True,"formation_close_call_can_be_open":True,"gk_near_tie_risk_adjusted":True,"bench_false_precision_forbidden":True,"captain_reason_decomposed":True,"attacker_defender_vice_compared":True,"one_gk_in_xi":True,"captain_in_xi":True,"vice_in_xi":True,"bench_has_one_gk_three_outfield":True,"manual_draft_not_overwritten_without_margin":True,"prediction_interval_robustness":True,"understat_only_breaks_governed_close_calls":True,"understat_missing_is_neutral":True,"understat_cannot_erase_xmins":True,"understat_direct_xpts_mutation":False,"understat_direct_xmins_mutation":False,"optimizer_legal_formation_width_unchanged":True}}
 
 
 def run():

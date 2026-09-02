@@ -299,21 +299,86 @@ def _understat_players(raw: dict) -> list[dict]:
     return out
 
 
+def _official_identity_names(official: dict) -> list[str]:
+    """Return strong, normalized Official identity variants in deterministic order.
+
+    Full name remains primary. Web-name and surname variants are valid identity
+    evidence, while first-name-only matching is allowed only for mononyms so a
+    common given name cannot silently resolve the wrong teammate.
+    """
+    raw: list[Any] = [official.get("name")]
+    raw.extend(official.get("name_variants") or [])
+    raw.extend([official.get("web_name"), official.get("second_name")])
+    if not str(official.get("second_name") or "").strip():
+        raw.append(official.get("first_name"))
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in raw:
+        normalized = _norm(value)
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            out.append(normalized)
+    return out
+
+
+def _token_subset_identity(left: str, right: str) -> bool:
+    """Accept unique multi-token containment without lowering fuzzy threshold."""
+    left_tokens = set(left.split())
+    right_tokens = set(right.split())
+    if min(len(left_tokens), len(right_tokens)) < 2:
+        return False
+    return left_tokens <= right_tokens or right_tokens <= left_tokens
+
+
 def _map_player(official: dict, candidates: list[dict], policy: dict) -> tuple[dict | None, float, str]:
     team = _norm(official.get("team") or official.get("club"))
-    name = _norm(official.get("name"))
-    team_candidates = [row for row in candidates if team and team in row.get("normalized_teams", [])]
-    exact = [row for row in team_candidates if row.get("normalized_name") == name]
-    if len(exact) == 1:
-        return exact[0], 1.0, "TEAM_AND_NORMALIZED_NAME_EXACT"
-    scored = sorted(
-        ((SequenceMatcher(None, name, row.get("normalized_name") or "").ratio(), row) for row in team_candidates),
-        key=lambda item: item[0], reverse=True,
-    )
+    names = _official_identity_names(official)
+    if not team or not names:
+        return None, 0.0, "UNRESOLVED"
+    team_candidates = [row for row in candidates if team in row.get("normalized_teams", [])]
+    if not team_candidates:
+        return None, 0.0, "UNRESOLVED"
+
+    # Strongest rule: a normalized Official identity variant exactly equals one
+    # and only one source player within the same current team.
+    exact_rows: dict[str, dict] = {}
+    for row in team_candidates:
+        candidate_name = str(row.get("normalized_name") or "")
+        if candidate_name in names:
+            exact_rows[str(row.get("understat_player_id") or candidate_name)] = row
+    if len(exact_rows) == 1:
+        row = next(iter(exact_rows.values()))
+        primary = _norm(official.get("name"))
+        method = "TEAM_AND_NORMALIZED_NAME_EXACT" if row.get("normalized_name") == primary else "TEAM_AND_IDENTITY_VARIANT_EXACT"
+        confidence = 1.0 if method == "TEAM_AND_NORMALIZED_NAME_EXACT" else float((policy.get("identity") or {}).get("normalized_exact_confidence") or 0.98)
+        return row, confidence, method
+    if len(exact_rows) > 1:
+        return None, 0.0, "AMBIGUOUS_EXACT_IDENTITY_VARIANTS"
+
+    # FPL full legal names often include middle names while Understat publishes a
+    # shorter public identity (for example two tokens from a three/four-token
+    # Official name). A unique, team-scoped multi-token subset is deterministic
+    # evidence and avoids weakening the global fuzzy threshold.
+    subset_rows: dict[str, dict] = {}
+    for row in team_candidates:
+        candidate_name = str(row.get("normalized_name") or "")
+        if any(_token_subset_identity(name, candidate_name) for name in names):
+            subset_rows[str(row.get("understat_player_id") or candidate_name)] = row
+    if len(subset_rows) == 1:
+        return next(iter(subset_rows.values())), 0.985, "TEAM_SCOPED_MULTI_TOKEN_IDENTITY_SUBSET"
+    if len(subset_rows) > 1:
+        return None, 0.0, "AMBIGUOUS_MULTI_TOKEN_IDENTITY_SUBSET"
+
+    scored = []
+    for row in team_candidates:
+        candidate_name = str(row.get("normalized_name") or "")
+        score = max((SequenceMatcher(None, name, candidate_name).ratio() for name in names), default=0.0)
+        scored.append((score, row))
+    scored.sort(key=lambda item: item[0], reverse=True)
     minimum = float((policy.get("identity") or {}).get("fuzzy_minimum_confidence") or 0.94)
     ambiguity = float((policy.get("identity") or {}).get("ambiguity_margin") or 0.03)
     if scored and scored[0][0] >= minimum and (len(scored) == 1 or scored[0][0] - scored[1][0] >= ambiguity):
-        return scored[0][1], scored[0][0], "TEAM_SCOPED_FUZZY_NAME"
+        return scored[0][1], scored[0][0], "TEAM_SCOPED_IDENTITY_VARIANT_FUZZY"
     return None, 0.0, "UNRESOLVED"
 
 

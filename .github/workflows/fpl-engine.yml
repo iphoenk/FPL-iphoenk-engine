@@ -8,7 +8,7 @@ on:
 # Collector policy expressions retained here as documentation only:
 # cron: "30 * * * *"
 # cron: "15 * * * *"
-# cron: "0,45 * * * *"
+# cron: "0,5,10,20,25,35,40,45,50,55 * * * *"
 
 permissions:
   contents: read

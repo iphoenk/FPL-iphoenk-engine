@@ -47,12 +47,10 @@ def parse_embedded_json(html: str) -> dict[str, Any]:
     return out
 
 
-def _rows(value: Any) -> list[dict]:
-    if isinstance(value, list):
-        return [row for row in value if isinstance(row, dict)]
-    if isinstance(value, dict):
-        return [row for row in value.values() if isinstance(row, dict)]
-    return []
+def _date_rows(embedded: dict[str, Any]) -> list[dict]:
+    value = embedded.get("datesData")
+    candidates = value.values() if isinstance(value, dict) else value if isinstance(value, list) else ()
+    return [row for row in candidates if isinstance(row, dict)]
 
 
 def _is_completed_fixture(row: dict) -> bool:
@@ -66,7 +64,7 @@ def _is_completed_fixture(row: dict) -> bool:
 
 def latest_completed_fixture(embedded: dict[str, Any]) -> dict | None:
     completed = []
-    for row in _rows(embedded.get("datesData")):
+    for row in _date_rows(embedded):
         if not _is_completed_fixture(row):
             continue
         stamp = str(row.get("datetime") or row.get("date") or "")
@@ -77,7 +75,7 @@ def latest_completed_fixture(embedded: dict[str, Any]) -> dict | None:
 
 def _completed_fixture_view(embedded: dict[str, Any]) -> tuple[dict[str, Any], int]:
     out = dict(embedded)
-    dates = _rows(embedded.get("datesData"))
+    dates = _date_rows(embedded)
     completed = [row for row in dates if _is_completed_fixture(row)]
     out["datesData"] = completed
     return out, max(0, len(dates) - len(completed))

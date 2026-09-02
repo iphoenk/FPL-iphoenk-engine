@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   verify-platform-governance:
+    environment: v3-governance-auditor
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -16,20 +17,19 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Mint read-only V3 governance evidence token
-        id: governance_app_token
+      - name: Mint isolated V3 governance auditor token
+        id: governance_auditor_token
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
         with:
-          app-id: ${{ vars.V3_RUNTIME_APP_ID }}
-          private-key: ${{ secrets.V3_RUNTIME_APP_PRIVATE_KEY }}
+          app-id: ${{ vars.V3_GOVERNANCE_AUDITOR_APP_ID }}
+          private-key: ${{ secrets.V3_GOVERNANCE_AUDITOR_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: FPL-iphoenk-engine
-          permission-administration: read
-          permission-contents: read
+          permission-administration: write
 
       - name: Verify GitHub-native V3 platform controls
         env:
-          GH_TOKEN: ${{ steps.governance_app_token.outputs.token }}
+          GH_TOKEN: ${{ steps.governance_auditor_token.outputs.token }}
           V3_DEFAULT_BRANCH: main
           RUNTIME_BRANCH: runtime-data
           V3_REQUIRED_CHECK: verify

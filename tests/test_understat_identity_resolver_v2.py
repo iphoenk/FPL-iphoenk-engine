@@ -88,7 +88,7 @@ def test_ambiguous_multi_token_subset_fails_closed() -> None:
     row, confidence, method = tactical._map_player(official, candidates, POLICY)
     assert row is None
     assert confidence == 0.0
-    assert method in {"AMBIGUOUS_EXACT_IDENTITY_VARIANTS", "AMBIGUOUS_MULTI_TOKEN_IDENTITY_SUBSET"}
+    assert method == "AMBIGUOUS_IDENTITY_CANDIDATES"
 
 
 def test_first_name_alone_is_not_used_when_surname_exists() -> None:
@@ -108,6 +108,54 @@ def test_first_name_alone_is_not_used_when_surname_exists() -> None:
     assert row is None
     assert confidence == 0.0
     assert method == "UNRESOLVED"
+
+
+def test_all_official_players_receive_canonical_identity_records_even_without_source_rows() -> None:
+    raw = {
+        "source_availability": "AVAILABLE",
+        "schema_valid": True,
+        "embedded": {
+            "teamsData": {},
+            "playersData": [
+                {"id": "1", "player_name": "Alpha", "team_title": "Example FC", "games": 2, "time": 120},
+            ],
+            "datesData": [],
+        },
+    }
+    universe = [
+        {
+            "element": 101,
+            "name": "Alpha",
+            "web_name": "Alpha",
+            "first_name": "Alpha",
+            "second_name": "",
+            "name_variants": ["Alpha"],
+            "team": "Example FC",
+            "team_id": 1,
+            "position": "MID",
+        },
+        {
+            "element": 102,
+            "name": "Beta Player",
+            "web_name": "Beta",
+            "first_name": "Beta",
+            "second_name": "Player",
+            "name_variants": ["Beta Player", "Beta", "Player"],
+            "team": "Example FC",
+            "team_id": 1,
+            "position": "DEF",
+        },
+    ]
+    payload = tactical.build_understat_tactical(raw, {"official": {"fixtures": []}}, universe, POLICY)
+    assert set(payload["player_evidence"]) == {"101", "102"}
+    assert payload["health"]["player_mapping_count"] == 2
+    assert payload["health"]["player_mapping_coverage"] == 1.0
+    assert payload["health"]["canonical_identity_mapping_complete"] is True
+    assert payload["player_evidence"]["102"]["canonical_identity"]["state"] == "RESOLVED"
+    assert payload["player_evidence"]["102"]["mapping"]["state"] == "UNRESOLVED"
+    assert payload["player_evidence"]["102"]["season_to_date"] is None
+    assert payload["health"]["source_linked_mapping_count"] == 1
+    assert payload["health"]["source_unlinked_official_count"] == 1
 
 
 def test_source_relative_mapping_health_has_honest_separate_denominators() -> None:

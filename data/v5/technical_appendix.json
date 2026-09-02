@@ -8,12 +8,12 @@
     "schema_version": 1,
     "model": "v5_master_time_schedule_governance_v1",
     "timezone": "Asia/Jakarta",
-    "evaluated_at": "2026-09-02T01:11:12.976797+00:00",
-    "local_evaluated_at": "2026-09-02T08:11:12.976797+07:00",
+    "evaluated_at": "2026-09-02T06:02:06.485638+00:00",
+    "local_evaluated_at": "2026-09-02T13:02:06.485638+07:00",
     "hourly_checkpoint": false,
     "official_deadline_time": "2026-09-04T17:30:00+00:00",
     "local_deadline_time": "2026-09-05T00:30:00+07:00",
-    "minutes_to_deadline": 3858.784,
+    "minutes_to_deadline": 3567.892,
     "deadline_day_active": false,
     "final_review_target": "2026-09-04T21:30:00+07:00",
     "final_review_due": false,
@@ -1245,7 +1245,7 @@
   "owned_challenger_comparator": {
     "schema_version": 1,
     "model": "v5_owned_challenger_comparator_v1",
-    "generated_at": "2026-09-02T01:11:13.529887+00:00",
+    "generated_at": "2026-09-02T06:02:07.144684+00:00",
     "status": "ACTIVE_ALPHA",
     "authority": "ADVISORY_ONLY",
     "planning_gw": 3,
@@ -1363,7 +1363,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -1484,7 +1484,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -1796,8 +1796,8 @@
             "sell_value": 55,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 74.1,
-            "offset0": 84.5,
+            "current_progress": 75.9,
+            "offset0": 84.6,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "HIGH"
@@ -1806,15 +1806,15 @@
             "element": 388,
             "name": "Guéhi",
             "current_price": 60,
-            "current_progress": 50.8,
-            "offset0": 49.7,
+            "current_progress": 50.6,
+            "offset0": 50.5,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "WATCH"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -2044,7 +2044,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -2159,7 +2159,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -2470,7 +2470,7 @@
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
             "current_progress": 1.2,
-            "offset0": 1.3,
+            "offset0": 1.2,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
@@ -2487,7 +2487,7 @@
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -2717,7 +2717,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -2832,7 +2832,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -3143,7 +3143,7 @@
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
             "current_progress": 1.2,
-            "offset0": 1.3,
+            "offset0": 1.2,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
@@ -3152,7 +3152,7 @@
             "element": 445,
             "name": "Thiaw",
             "current_price": 50,
-            "current_progress": 9.9,
+            "current_progress": 10.0,
             "offset0": 10.5,
             "raw_likelihood": 1,
             "direction": "RISE",
@@ -3160,7 +3160,7 @@
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -3394,7 +3394,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -3515,7 +3515,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -3827,8 +3827,8 @@
             "sell_value": 55,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 74.1,
-            "offset0": 84.5,
+            "current_progress": 75.9,
+            "offset0": 84.6,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "HIGH"
@@ -3837,15 +3837,15 @@
             "element": 387,
             "name": "O'Reilly",
             "current_price": 65,
-            "current_progress": -29.6,
-            "offset0": -31.3,
+            "current_progress": -29.9,
+            "offset0": -31.4,
             "raw_likelihood": -2,
             "direction": "FALL",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -4075,7 +4075,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4198,7 +4198,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4510,8 +4510,8 @@
             "sell_value": 45,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 27.2,
-            "offset0": 28.5,
+            "current_progress": 27.5,
+            "offset0": 29.0,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
@@ -4520,15 +4520,15 @@
             "element": 82,
             "name": "Kelleher",
             "current_price": 50,
-            "current_progress": 30.4,
-            "offset0": 31.1,
+            "current_progress": 30.5,
+            "offset0": 31.3,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -4758,7 +4758,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -4881,7 +4881,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -5193,8 +5193,8 @@
             "sell_value": 45,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 27.2,
-            "offset0": 28.5,
+            "current_progress": 27.5,
+            "offset0": 29.0,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
@@ -5203,15 +5203,15 @@
             "element": 226,
             "name": "Pickford",
             "current_price": 55,
-            "current_progress": 11.7,
-            "offset0": 11.0,
+            "current_progress": 11.5,
+            "offset0": 11.1,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -5441,7 +5441,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -5564,7 +5564,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -5876,8 +5876,8 @@
             "sell_value": 45,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 27.2,
-            "offset0": 28.5,
+            "current_progress": 27.5,
+            "offset0": 29.0,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
@@ -5887,14 +5887,14 @@
             "name": "Petrović",
             "current_price": 45,
             "current_progress": 7.0,
-            "offset0": 7.1,
+            "offset0": 7.0,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -6124,7 +6124,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -6245,7 +6245,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -6557,8 +6557,8 @@
             "sell_value": 45,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 27.2,
-            "offset0": 28.5,
+            "current_progress": 27.5,
+            "offset0": 29.0,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
@@ -6567,15 +6567,15 @@
             "element": 384,
             "name": "Donnarumma",
             "current_price": 55,
-            "current_progress": -23.0,
-            "offset0": -24.1,
+            "current_progress": -23.1,
+            "offset0": -23.7,
             "raw_likelihood": -2,
             "direction": "FALL",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -6807,7 +6807,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -6924,7 +6924,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -7234,8 +7234,8 @@
             "sell_value": 40,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 12.4,
-            "offset0": 16.2,
+            "current_progress": 13.1,
+            "offset0": 16.6,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
@@ -7252,7 +7252,7 @@
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -7482,7 +7482,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -7601,7 +7601,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -7911,8 +7911,8 @@
             "sell_value": 45,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 27.2,
-            "offset0": 28.5,
+            "current_progress": 27.5,
+            "offset0": 29.0,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
@@ -7921,15 +7921,15 @@
             "element": 250,
             "name": "Leno",
             "current_price": 45,
-            "current_progress": 2.5,
-            "offset0": 2.9,
+            "current_progress": 2.6,
+            "offset0": 3.0,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -8161,7 +8161,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -8278,7 +8278,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -8588,8 +8588,8 @@
             "sell_value": 40,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 12.4,
-            "offset0": 16.2,
+            "current_progress": 13.1,
+            "offset0": 16.6,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
@@ -8598,7 +8598,7 @@
             "element": 445,
             "name": "Thiaw",
             "current_price": 50,
-            "current_progress": 9.9,
+            "current_progress": 10.0,
             "offset0": 10.5,
             "raw_likelihood": 1,
             "direction": "RISE",
@@ -8606,7 +8606,7 @@
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -8836,7 +8836,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -8955,7 +8955,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -9268,7 +9268,7 @@
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
             "current_progress": 1.2,
-            "offset0": 1.3,
+            "offset0": 1.2,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
@@ -9277,15 +9277,15 @@
             "element": 388,
             "name": "Guéhi",
             "current_price": 60,
-            "current_progress": 50.8,
-            "offset0": 49.7,
+            "current_progress": 50.6,
+            "offset0": 50.5,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "WATCH"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -9515,7 +9515,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -9634,7 +9634,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -9947,7 +9947,7 @@
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
             "current_progress": 1.2,
-            "offset0": 1.3,
+            "offset0": 1.2,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
@@ -9956,15 +9956,15 @@
             "element": 387,
             "name": "O'Reilly",
             "current_price": 65,
-            "current_progress": -29.6,
-            "offset0": -31.3,
+            "current_progress": -29.9,
+            "offset0": -31.4,
             "raw_likelihood": -2,
             "direction": "FALL",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -10196,7 +10196,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -10317,7 +10317,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -10629,8 +10629,8 @@
             "sell_value": 40,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 12.4,
-            "offset0": 16.2,
+            "current_progress": 13.1,
+            "offset0": 16.6,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
@@ -10639,15 +10639,15 @@
             "element": 388,
             "name": "Guéhi",
             "current_price": 60,
-            "current_progress": 50.8,
-            "offset0": 49.7,
+            "current_progress": 50.6,
+            "offset0": 50.5,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "WATCH"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -10877,7 +10877,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -10998,7 +10998,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -11311,7 +11311,7 @@
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
             "current_progress": 1.2,
-            "offset0": 1.3,
+            "offset0": 1.2,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
@@ -11320,15 +11320,15 @@
             "element": 229,
             "name": "Tarkowski",
             "current_price": 60,
-            "current_progress": 44.9,
-            "offset0": 48.1,
+            "current_progress": 45.4,
+            "offset0": 48.0,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -11560,7 +11560,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -11683,7 +11683,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -11995,8 +11995,8 @@
             "sell_value": 40,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 12.4,
-            "offset0": 16.2,
+            "current_progress": 13.1,
+            "offset0": 16.6,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
@@ -12005,15 +12005,15 @@
             "element": 229,
             "name": "Tarkowski",
             "current_price": 60,
-            "current_progress": 44.9,
-            "offset0": 48.1,
+            "current_progress": 45.4,
+            "offset0": 48.0,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -12247,7 +12247,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -12368,7 +12368,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -12680,7 +12680,7 @@
             "sell_value": 45,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 26.8,
+            "current_progress": 27.1,
             "offset0": 28.3,
             "raw_likelihood": 2,
             "direction": "RISE",
@@ -12690,15 +12690,15 @@
             "element": 387,
             "name": "O'Reilly",
             "current_price": 65,
-            "current_progress": -29.6,
-            "offset0": -31.3,
+            "current_progress": -29.9,
+            "offset0": -31.4,
             "raw_likelihood": -2,
             "direction": "FALL",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -12932,7 +12932,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -13055,7 +13055,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -13367,8 +13367,8 @@
             "sell_value": 55,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 74.1,
-            "offset0": 84.5,
+            "current_progress": 75.9,
+            "offset0": 84.6,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "HIGH"
@@ -13377,15 +13377,15 @@
             "element": 229,
             "name": "Tarkowski",
             "current_price": 60,
-            "current_progress": 44.9,
-            "offset0": 48.1,
+            "current_progress": 45.4,
+            "offset0": 48.0,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -13619,7 +13619,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -13736,7 +13736,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -14046,8 +14046,8 @@
             "sell_value": 55,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 74.1,
-            "offset0": 84.5,
+            "current_progress": 75.9,
+            "offset0": 84.6,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "HIGH"
@@ -14064,7 +14064,7 @@
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -14296,7 +14296,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -14419,7 +14419,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -14731,8 +14731,8 @@
             "sell_value": 45,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 94.9,
-            "offset0": 100.3,
+            "current_progress": 95.9,
+            "offset0": 100.2,
             "raw_likelihood": 5,
             "direction": "RISE",
             "urgency": "CRITICAL"
@@ -14741,15 +14741,15 @@
             "element": 82,
             "name": "Kelleher",
             "current_price": 50,
-            "current_progress": 30.4,
-            "offset0": 31.1,
+            "current_progress": 30.5,
+            "offset0": 31.3,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -14981,7 +14981,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -15104,7 +15104,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -15416,8 +15416,8 @@
             "sell_value": 45,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 94.9,
-            "offset0": 100.3,
+            "current_progress": 95.9,
+            "offset0": 100.2,
             "raw_likelihood": 5,
             "direction": "RISE",
             "urgency": "CRITICAL"
@@ -15426,15 +15426,15 @@
             "element": 226,
             "name": "Pickford",
             "current_price": 55,
-            "current_progress": 11.7,
-            "offset0": 11.0,
+            "current_progress": 11.5,
+            "offset0": 11.1,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -15666,7 +15666,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -15789,7 +15789,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -16101,8 +16101,8 @@
             "sell_value": 45,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 94.9,
-            "offset0": 100.3,
+            "current_progress": 95.9,
+            "offset0": 100.2,
             "raw_likelihood": 5,
             "direction": "RISE",
             "urgency": "CRITICAL"
@@ -16112,14 +16112,14 @@
             "name": "Petrović",
             "current_price": 45,
             "current_progress": 7.0,
-            "offset0": 7.1,
+            "offset0": 7.0,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -16351,7 +16351,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -16472,7 +16472,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -16784,8 +16784,8 @@
             "sell_value": 45,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 94.9,
-            "offset0": 100.3,
+            "current_progress": 95.9,
+            "offset0": 100.2,
             "raw_likelihood": 5,
             "direction": "RISE",
             "urgency": "CRITICAL"
@@ -16794,15 +16794,15 @@
             "element": 384,
             "name": "Donnarumma",
             "current_price": 55,
-            "current_progress": -23.0,
-            "offset0": -24.1,
+            "current_progress": -23.1,
+            "offset0": -23.7,
             "raw_likelihood": -2,
             "direction": "FALL",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -17034,7 +17034,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -17153,7 +17153,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -17463,8 +17463,8 @@
             "sell_value": 45,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 94.9,
-            "offset0": 100.3,
+            "current_progress": 95.9,
+            "offset0": 100.2,
             "raw_likelihood": 5,
             "direction": "RISE",
             "urgency": "CRITICAL"
@@ -17473,15 +17473,15 @@
             "element": 250,
             "name": "Leno",
             "current_price": 45,
-            "current_progress": 2.5,
-            "offset0": 2.9,
+            "current_progress": 2.6,
+            "offset0": 3.0,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -17717,7 +17717,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -17838,7 +17838,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -18150,8 +18150,8 @@
             "sell_value": 55,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 74.1,
-            "offset0": 84.5,
+            "current_progress": 75.9,
+            "offset0": 84.6,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "HIGH"
@@ -18160,15 +18160,15 @@
             "element": 388,
             "name": "Guéhi",
             "current_price": 60,
-            "current_progress": 50.8,
-            "offset0": 49.7,
+            "current_progress": 50.6,
+            "offset0": 50.5,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "WATCH"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -18398,7 +18398,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -18513,7 +18513,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [],
@@ -18824,7 +18824,7 @@
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
             "current_progress": 1.2,
-            "offset0": 1.3,
+            "offset0": 1.2,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
@@ -18841,7 +18841,7 @@
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -19071,7 +19071,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -19186,7 +19186,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [],
@@ -19497,7 +19497,7 @@
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
             "current_progress": 1.2,
-            "offset0": 1.3,
+            "offset0": 1.2,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
@@ -19506,7 +19506,7 @@
             "element": 445,
             "name": "Thiaw",
             "current_price": 50,
-            "current_progress": 9.9,
+            "current_progress": 10.0,
             "offset0": 10.5,
             "raw_likelihood": 1,
             "direction": "RISE",
@@ -19514,7 +19514,7 @@
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -19748,7 +19748,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -19869,7 +19869,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -20181,8 +20181,8 @@
             "sell_value": 55,
             "sell_value_source": "entry_transfer_history",
             "sell_value_exact": false,
-            "current_progress": 74.1,
-            "offset0": 84.5,
+            "current_progress": 75.9,
+            "offset0": 84.6,
             "raw_likelihood": 3,
             "direction": "RISE",
             "urgency": "HIGH"
@@ -20191,15 +20191,15 @@
             "element": 387,
             "name": "O'Reilly",
             "current_price": 65,
-            "current_progress": -29.6,
-            "offset0": -31.3,
+            "current_progress": -29.9,
+            "offset0": -31.4,
             "raw_likelihood": -2,
             "direction": "FALL",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -20429,7 +20429,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -20552,7 +20552,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -20864,8 +20864,8 @@
             "sell_value": 45,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 27.2,
-            "offset0": 28.5,
+            "current_progress": 27.5,
+            "offset0": 29.0,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
@@ -20874,15 +20874,15 @@
             "element": 82,
             "name": "Kelleher",
             "current_price": 50,
-            "current_progress": 30.4,
-            "offset0": 31.1,
+            "current_progress": 30.5,
+            "offset0": 31.3,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -21112,7 +21112,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -21235,7 +21235,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -21547,8 +21547,8 @@
             "sell_value": 45,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 27.2,
-            "offset0": 28.5,
+            "current_progress": 27.5,
+            "offset0": 29.0,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
@@ -21557,15 +21557,15 @@
             "element": 226,
             "name": "Pickford",
             "current_price": 55,
-            "current_progress": 11.7,
-            "offset0": 11.0,
+            "current_progress": 11.5,
+            "offset0": 11.1,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -21795,7 +21795,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -21918,7 +21918,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -22230,8 +22230,8 @@
             "sell_value": 45,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 27.2,
-            "offset0": 28.5,
+            "current_progress": 27.5,
+            "offset0": 29.0,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
@@ -22241,14 +22241,14 @@
             "name": "Petrović",
             "current_price": 45,
             "current_progress": 7.0,
-            "offset0": 7.1,
+            "offset0": 7.0,
             "raw_likelihood": 1,
             "direction": "RISE",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -22478,7 +22478,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "LOW",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 1,
               "highlights": [
@@ -22599,7 +22599,7 @@
                 "AVAILABLE": 1
               },
               "evidence_confidence": "MEDIUM",
-              "evidence_timestamp": "2026-09-02T01:11:08.984946+00:00",
+              "evidence_timestamp": "2026-09-02T06:02:02.072491+00:00",
               "evidence_count": 4,
               "recent_gw_evidence_count": 2,
               "highlights": [
@@ -22911,8 +22911,8 @@
             "sell_value": 45,
             "sell_value_source": "initial_squad_baseline",
             "sell_value_exact": false,
-            "current_progress": 27.2,
-            "offset0": 28.5,
+            "current_progress": 27.5,
+            "offset0": 29.0,
             "raw_likelihood": 2,
             "direction": "RISE",
             "urgency": "LOW"
@@ -22921,15 +22921,15 @@
             "element": 384,
             "name": "Donnarumma",
             "current_price": 55,
-            "current_progress": -23.0,
-            "offset0": -24.1,
+            "current_progress": -23.1,
+            "offset0": -23.7,
             "raw_likelihood": -2,
             "direction": "FALL",
             "urgency": "LOW"
           },
           "bank": 10,
           "next_official_price_update_at": "2026-09-03T06:00:00+07:00",
-          "eta_to_next_price_update_seconds": 78531,
+          "eta_to_next_price_update_seconds": 61078,
           "scenarios": [
             {
               "scenario": "BASE",
@@ -23211,7 +23211,7 @@
   "gate0_preflight_pass": true,
   "governance": {
     "framework_schema": 9,
-    "generated_at": "2026-09-02T01:11:10.985261+00:00",
+    "generated_at": "2026-09-02T06:02:04.253260+00:00",
     "auditor": "v5-microservice-governance-v5",
     "overall": "GREEN",
     "decision_engine": "HEALTHY",
@@ -24789,9 +24789,9 @@
     "base_collection": {
       "service_id": "ingestion",
       "operation": "collect_base",
-      "service_compute_ms": 201.037,
-      "round_trip_ms": 256.209,
-      "transport_overhead_ms": 55.172,
+      "service_compute_ms": 264.236,
+      "round_trip_ms": 322.904,
+      "transport_overhead_ms": 58.668,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -24804,9 +24804,9 @@
     "event_context": {
       "service_id": "truth",
       "operation": "context",
-      "service_compute_ms": 0.073,
-      "round_trip_ms": 37.089,
-      "transport_overhead_ms": 37.016,
+      "service_compute_ms": 0.106,
+      "round_trip_ms": 38.775,
+      "transport_overhead_ms": 38.669,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -24820,9 +24820,9 @@
       "auth": {
         "service_id": "ingestion",
         "operation": "collect_authenticated",
-        "service_compute_ms": 0.059,
-        "round_trip_ms": 20.622,
-        "transport_overhead_ms": 20.563,
+        "service_compute_ms": 0.062,
+        "round_trip_ms": 22.644,
+        "transport_overhead_ms": 22.582,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -24835,9 +24835,9 @@
       "enrichment": {
         "service_id": "ingestion",
         "operation": "collect_enrichment",
-        "service_compute_ms": 2.215,
-        "round_trip_ms": 46.611,
-        "transport_overhead_ms": 44.396,
+        "service_compute_ms": 2.31,
+        "round_trip_ms": 48.7,
+        "transport_overhead_ms": 46.39,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -24850,9 +24850,9 @@
       "dynamic": {
         "service_id": "ingestion",
         "operation": "collect_dynamic",
-        "service_compute_ms": 58.274,
-        "round_trip_ms": 90.85,
-        "transport_overhead_ms": 32.576,
+        "service_compute_ms": 58.844,
+        "round_trip_ms": 93.858,
+        "transport_overhead_ms": 35.014,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -24866,9 +24866,9 @@
     "truth_assembly": {
       "service_id": "truth",
       "operation": "assemble",
-      "service_compute_ms": 1.404,
-      "round_trip_ms": 78.209,
-      "transport_overhead_ms": 76.805,
+      "service_compute_ms": 1.49,
+      "round_trip_ms": 85.914,
+      "transport_overhead_ms": 84.424,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -24879,12 +24879,12 @@
       }
     },
     "state_hydration": {
-      "challenger_observations": {
+      "historical_prior": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 0.169,
-        "round_trip_ms": 16.074,
-        "transport_overhead_ms": 15.905,
+        "service_compute_ms": 2.59,
+        "round_trip_ms": 13.23,
+        "transport_overhead_ms": 10.64,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -24894,12 +24894,12 @@
           "cooldown_seconds": 10.0
         }
       },
-      "historical_prior": {
+      "challenger_observations": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 8.636,
-        "round_trip_ms": 23.488,
-        "transport_overhead_ms": 14.852,
+        "service_compute_ms": 1.683,
+        "round_trip_ms": 22.853,
+        "transport_overhead_ms": 21.17,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -24912,9 +24912,9 @@
       "prediction_ledger": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 5.343,
-        "round_trip_ms": 25.95,
-        "transport_overhead_ms": 20.607,
+        "service_compute_ms": 9.143,
+        "round_trip_ms": 27.882,
+        "transport_overhead_ms": 18.739,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -24927,9 +24927,9 @@
       "price_trajectory": {
         "service_id": "snapshot",
         "operation": "read",
-        "service_compute_ms": 19.591,
-        "round_trip_ms": 33.06,
-        "transport_overhead_ms": 13.469,
+        "service_compute_ms": 7.305,
+        "round_trip_ms": 32.42,
+        "transport_overhead_ms": 25.115,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -24943,9 +24943,9 @@
     "prediction_settlement_targets": {
       "service_id": "evaluation",
       "operation": "settlement_targets",
-      "service_compute_ms": 0.024,
-      "round_trip_ms": 41.453,
-      "transport_overhead_ms": 41.429,
+      "service_compute_ms": 0.031,
+      "round_trip_ms": 43.277,
+      "transport_overhead_ms": 43.246,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -24959,9 +24959,9 @@
       "price": {
         "service_id": "price",
         "operation": "build",
-        "service_compute_ms": 91.26,
-        "round_trip_ms": 203.794,
-        "transport_overhead_ms": 112.534,
+        "service_compute_ms": 105.654,
+        "round_trip_ms": 222.72,
+        "transport_overhead_ms": 117.066,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -24974,9 +24974,9 @@
       "prediction": {
         "service_id": "prediction",
         "operation": "build",
-        "service_compute_ms": 401.304,
-        "round_trip_ms": 820.848,
-        "transport_overhead_ms": 419.544,
+        "service_compute_ms": 445.25,
+        "round_trip_ms": 905.651,
+        "transport_overhead_ms": 460.401,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -24995,9 +24995,9 @@
       "gate0_preflight": {
         "service_id": "governance",
         "operation": "gate0_preflight",
-        "service_compute_ms": 0.658,
-        "round_trip_ms": 8.998,
-        "transport_overhead_ms": 8.34,
+        "service_compute_ms": 0.681,
+        "round_trip_ms": 7.217,
+        "transport_overhead_ms": 6.536,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -25010,9 +25010,9 @@
       "evaluation": {
         "service_id": "evaluation",
         "operation": "build",
-        "service_compute_ms": 3.85,
-        "round_trip_ms": 403.51,
-        "transport_overhead_ms": 399.66,
+        "service_compute_ms": 5.551,
+        "round_trip_ms": 436.461,
+        "transport_overhead_ms": 430.91,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -25025,9 +25025,9 @@
       "decision_prepare": {
         "service_id": "decision",
         "operation": "prepare",
-        "service_compute_ms": 551.168,
-        "round_trip_ms": 962.547,
-        "transport_overhead_ms": 411.379,
+        "service_compute_ms": 599.009,
+        "round_trip_ms": 919.456,
+        "transport_overhead_ms": 320.447,
         "transport_attempts": 1,
         "transport_retry_policy": "idempotent",
         "transport_circuit": {
@@ -25041,9 +25041,9 @@
     "decision_finalize": {
       "service_id": "decision",
       "operation": "finalize",
-      "service_compute_ms": 1.911,
-      "round_trip_ms": 269.34,
-      "transport_overhead_ms": 267.429,
+      "service_compute_ms": 2.068,
+      "round_trip_ms": 296.369,
+      "transport_overhead_ms": 294.301,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -25056,9 +25056,9 @@
     "governance": {
       "service_id": "governance",
       "operation": "audit",
-      "service_compute_ms": 0.89,
-      "round_trip_ms": 284.547,
-      "transport_overhead_ms": 283.657,
+      "service_compute_ms": 1.181,
+      "round_trip_ms": 309.388,
+      "transport_overhead_ms": 308.207,
       "transport_attempts": 1,
       "transport_retry_policy": "idempotent",
       "transport_circuit": {
@@ -25069,42 +25069,12 @@
       }
     },
     "artifact_persistence": {
-      "team_strength": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 13.463,
-        "round_trip_ms": 68.076,
-        "transport_overhead_ms": 54.613,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
       "source_fusion": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 6.549,
-        "round_trip_ms": 192.322,
-        "transport_overhead_ms": 185.773,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "prediction_quality": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 12.263,
-        "round_trip_ms": 83.666,
-        "transport_overhead_ms": 71.403,
+        "service_compute_ms": 5.254,
+        "round_trip_ms": 139.056,
+        "transport_overhead_ms": 133.802,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -25117,39 +25087,9 @@
       "historical_prior": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 15.87,
-        "round_trip_ms": 196.021,
-        "transport_overhead_ms": 180.151,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "package_optimizer": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 19.126,
-        "round_trip_ms": 55.361,
-        "transport_overhead_ms": 36.235,
-        "transport_attempts": 1,
-        "transport_retry_policy": "non_idempotent",
-        "transport_circuit": {
-          "enabled": true,
-          "state": "CLOSED",
-          "failures": 0,
-          "cooldown_seconds": 10.0
-        }
-      },
-      "prediction_ledger": {
-        "service_id": "snapshot",
-        "operation": "write",
-        "service_compute_ms": 16.516,
-        "round_trip_ms": 87.585,
-        "transport_overhead_ms": 71.069,
+        "service_compute_ms": 9.026,
+        "round_trip_ms": 147.292,
+        "transport_overhead_ms": 138.266,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -25162,9 +25102,24 @@
       "prediction_accuracy": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 0.827,
-        "round_trip_ms": 63.263,
-        "transport_overhead_ms": 62.436,
+        "service_compute_ms": 1.666,
+        "round_trip_ms": 42.811,
+        "transport_overhead_ms": 41.145,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "prediction_quality": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 0.573,
+        "round_trip_ms": 178.161,
+        "transport_overhead_ms": 177.588,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -25177,9 +25132,54 @@
       "framework_health": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 2.244,
-        "round_trip_ms": 64.122,
-        "transport_overhead_ms": 61.878,
+        "service_compute_ms": 24.919,
+        "round_trip_ms": 57.842,
+        "transport_overhead_ms": 32.923,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "package_optimizer": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 30.028,
+        "round_trip_ms": 63.786,
+        "transport_overhead_ms": 33.758,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "team_strength": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 31.663,
+        "round_trip_ms": 95.879,
+        "transport_overhead_ms": 64.216,
+        "transport_attempts": 1,
+        "transport_retry_policy": "non_idempotent",
+        "transport_circuit": {
+          "enabled": true,
+          "state": "CLOSED",
+          "failures": 0,
+          "cooldown_seconds": 10.0
+        }
+      },
+      "prediction_ledger": {
+        "service_id": "snapshot",
+        "operation": "write",
+        "service_compute_ms": 17.972,
+        "round_trip_ms": 93.077,
+        "transport_overhead_ms": 75.105,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -25192,9 +25192,9 @@
       "challenger_scorecard": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 2.684,
-        "round_trip_ms": 68.396,
-        "transport_overhead_ms": 65.712,
+        "service_compute_ms": 1.072,
+        "round_trip_ms": 72.096,
+        "transport_overhead_ms": 71.024,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -25207,9 +25207,9 @@
       "price_trajectory": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 5.051,
-        "round_trip_ms": 40.751,
-        "transport_overhead_ms": 35.7,
+        "service_compute_ms": 6.418,
+        "round_trip_ms": 41.501,
+        "transport_overhead_ms": 35.083,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -25222,9 +25222,9 @@
       "price_alerts": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 5.629,
-        "round_trip_ms": 37.612,
-        "transport_overhead_ms": 31.983,
+        "service_compute_ms": 6.508,
+        "round_trip_ms": 40.797,
+        "transport_overhead_ms": 34.289,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -25237,9 +25237,9 @@
       "prices": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 82.639,
-        "round_trip_ms": 289.653,
-        "transport_overhead_ms": 207.014,
+        "service_compute_ms": 199.457,
+        "round_trip_ms": 435.327,
+        "transport_overhead_ms": 235.87,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -25252,9 +25252,9 @@
       "predictions": {
         "service_id": "snapshot",
         "operation": "write",
-        "service_compute_ms": 591.018,
-        "round_trip_ms": 1042.288,
-        "transport_overhead_ms": 451.27,
+        "service_compute_ms": 707.402,
+        "round_trip_ms": 1104.665,
+        "transport_overhead_ms": 397.263,
         "transport_attempts": 1,
         "transport_retry_policy": "non_idempotent",
         "transport_circuit": {
@@ -25268,9 +25268,9 @@
     "snapshot_write": {
       "service_id": "snapshot",
       "operation": "snapshot",
-      "service_compute_ms": 170.452,
-      "round_trip_ms": 177.862,
-      "transport_overhead_ms": 7.41,
+      "service_compute_ms": 181.584,
+      "round_trip_ms": 189.419,
+      "transport_overhead_ms": 7.835,
       "transport_attempts": 1,
       "transport_retry_policy": "non_idempotent",
       "transport_circuit": {
@@ -25280,7 +25280,7 @@
         "cooldown_seconds": 10.0
       }
     },
-    "orchestrator_wall_ms": 4249.195
+    "orchestrator_wall_ms": 4633.251
   },
   "provenance": {
     "ruleset_id": "FPL_2026_27",

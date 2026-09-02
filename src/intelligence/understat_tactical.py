@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import html
 import math
 import re
 import unicodedata
 from difflib import SequenceMatcher
+from functools import lru_cache
 from statistics import median
 from typing import Any
 
@@ -35,21 +37,39 @@ def _rows(value: Any) -> list[dict]:
     return []
 
 
-def _norm(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or "")).encode("ascii", "ignore").decode("ascii")
-    text = re.sub(r"[^a-z0-9]+", " ", text.casefold()).strip()
-    aliases = {
-        "man utd": "manchester united",
-        "man united": "manchester united",
-        "man city": "manchester city",
-        "spurs": "tottenham",
-        "tottenham hotspur": "tottenham",
-        "wolves": "wolverhampton wanderers",
-        "newcastle": "newcastle united",
-        "west ham": "west ham united",
-        "brighton": "brighton and hove albion",
+_TRANSLITERATION_TABLE = str.maketrans(
+    {
+        "Đ": "D", "đ": "d", "Ł": "L", "ł": "l", "Ø": "O", "ø": "o",
+        "Ð": "D", "ð": "d", "Þ": "Th", "þ": "th", "Æ": "AE", "æ": "ae",
+        "Œ": "OE", "œ": "oe",
     }
-    return aliases.get(text, text)
+)
+_TEAM_REPRESENTATION_ALIASES = {
+    "man utd": "manchester united",
+    "man united": "manchester united",
+    "man city": "manchester city",
+    "spurs": "tottenham",
+    "tottenham hotspur": "tottenham",
+    "wolves": "wolverhampton wanderers",
+    "newcastle": "newcastle united",
+    "west ham": "west ham united",
+    "brighton": "brighton and hove albion",
+    "hull city": "hull",
+    "ipswich town": "ipswich",
+    "coventry city": "coventry",
+}
+
+
+@lru_cache(maxsize=4096)
+def _norm_text(value: str) -> str:
+    text = html.unescape(value).translate(_TRANSLITERATION_TABLE)
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    text = re.sub(r"[^a-z0-9]+", " ", text.casefold()).strip()
+    return _TEAM_REPRESENTATION_ALIASES.get(text, text)
+
+
+def _norm(value: Any) -> str:
+    return _norm_text(str(value or ""))
 
 
 def _metric(row: dict, *keys: str) -> float | None:
@@ -299,15 +319,185 @@ def _understat_players(raw: dict) -> list[dict]:
     return out
 
 
-def _map_player(official: dict, candidates: list[dict], policy: dict) -> tuple[dict | None, float, str]:
+@lru_cache(maxsize=4096)
+def _identity_tokens(value: str) -> tuple[str, ...]:
+    return tuple(token for token in value.split() if token)
+
+
+@lru_cache(maxsize=4096)
+def _identity_token_set(value: str) -> frozenset[str]:
+    return frozenset(_identity_tokens(value))
+
+
+def _identity_index(candidates: list[dict]) -> dict[str, dict]:
+    by_team: dict[str, list[dict]] = {}
+    by_name: dict[str, list[dict]] = {}
+    by_token: dict[str, list[dict]] = {}
+    for row in candidates:
+        normalized_name = str(row.get("normalized_name") or "")
+        tokens = _identity_tokens(normalized_name)
+        row["_identity_tokens"] = tokens
+        row["_identity_token_set"] = frozenset(tokens)
+        if normalized_name:
+            by_name.setdefault(normalized_name, []).append(row)
+        for team in row.get("normalized_teams", []) or []:
+            if team:
+                by_team.setdefault(str(team), []).append(row)
+        for token in tokens:
+            by_token.setdefault(token, []).append(row)
+    return {"by_team": by_team, "by_name": by_name, "by_token": by_token}
+
+
+def _map_player(official: dict, candidates: list[dict], policy: dict, identity_index: dict | None = None) -> tuple[dict | None, float, str]:
     team = _norm(official.get("team") or official.get("club"))
-    name = _norm(official.get("name"))
-    team_candidates = [row for row in candidates if team and team in row.get("normalized_teams", [])]
-    exact = [row for row in team_candidates if row.get("normalized_name") == name]
+    raw_names = [
+        official.get("name"),
+        official.get("full_name"),
+        official.get("web_name"),
+        official.get("second_name"),
+        *((official.get("name_variants") or [])),
+    ]
+    names = []
+    seen = set()
+    for value in raw_names:
+        normalized = _norm(value)
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            names.append(normalized)
+
+    tokens = _identity_tokens
+    token_set = _identity_token_set
+
+    full_name = _norm(official.get("full_name") or official.get("name"))
+    full_token_seq = tokens(full_name)
+    full_tokens = frozenset(full_token_seq)
+    first_name = _norm(official.get("first_name"))
+    first_token = (tokens(first_name) or full_token_seq[:1] or ("",))[0]
+    second_name = _norm(official.get("second_name"))
+    web_name = _norm(official.get("web_name"))
+    official_minutes = _f(official.get("minutes")) or 0.0
+    name_tokens = [token_set(name) for name in names if name]
+    index = identity_index or _identity_index(candidates)
+    team_candidates = list((index.get("by_team") or {}).get(team, ())) if team else []
+
+    # Cross-source identity is stronger than source role labels. Understat's
+    # position describes match/tactical usage and can legitimately disagree with
+    # FPL's fantasy position, so position is never an identity hard gate.
+    exact = [row for row in team_candidates if row.get("normalized_name") in names]
     if len(exact) == 1:
         return exact[0], 1.0, "TEAM_AND_NORMALIZED_NAME_EXACT"
+
+    # True football mononyms are safe only inside the current team and only for
+    # a player with observed Official minutes. Never use first-name mononyms as
+    # a global transfer fallback.
+    mononym = []
+    if first_token and official_minutes > 0:
+        for row in team_candidates:
+            candidate_tokens = row.get("_identity_tokens") or tokens(row.get("normalized_name") or "")
+            if len(candidate_tokens) == 1 and candidate_tokens[0] == first_token:
+                mononym.append(row)
+    if len(mononym) == 1:
+        return mononym[0], 0.995, "TEAM_SCOPED_MONONYM_EXACT"
+
+    # Handle truncation, transliteration and legal-name expansion by aligning
+    # source tokens against the Official full identity. Team scope plus at least
+    # one exact anchor keeps this deterministic without player-specific aliases.
+    near = []
+    for row in team_candidates:
+        candidate_tokens = row.get("_identity_tokens") or tokens(row.get("normalized_name") or "")
+        if len(candidate_tokens) < 2 or not full_token_seq:
+            continue
+        exact_anchor = any(source_token in full_tokens for source_token in candidate_tokens)
+        if not exact_anchor:
+            continue
+        best = [
+            max(SequenceMatcher(None, source_token, official_token).ratio() for official_token in full_token_seq)
+            for source_token in candidate_tokens
+        ]
+        average = sum(best) / len(best)
+        if min(best) >= 0.80 and average >= 0.90:
+            near.append((average, row))
+    near.sort(key=lambda item: item[0], reverse=True)
+    if near and (len(near) == 1 or near[0][0] - near[1][0] >= 0.03):
+        return near[0][1], near[0][0], "TEAM_SCOPED_NEAR_TOKEN_IDENTITY"
+
+    # Unique surname fallback uses only the terminal family-name token, not any
+    # middle name. It is disabled for zero-minute Official rows so a dormant
+    # player cannot steal a teammate's source identity by surname alone.
+    surname_candidates = []
+    for value in (web_name, second_name):
+        value_tokens = [token for token in tokens(value) if len(token) >= 4 and token not in {"filho", "junior"}]
+        if value_tokens:
+            surname_candidates.append(value_tokens[-1])
+    surname_anchor = next((token for token in surname_candidates if token), "")
+    surname = []
+    if surname_anchor and official_minutes > 0:
+        for row in team_candidates:
+            candidate_tokens = row.get("_identity_token_set") or token_set(row.get("normalized_name") or "")
+            if surname_anchor in candidate_tokens:
+                surname.append(row)
+    if len(surname) == 1:
+        return surname[0], 0.99, "TEAM_SCOPED_UNIQUE_SURNAME_IDENTITY"
+
+    # Generic structural identity bridge for multi-token subset/order changes.
+    structural = []
+    for row in team_candidates:
+        candidate_tokens = row.get("_identity_token_set") or token_set(row.get("normalized_name") or "")
+        if not candidate_tokens:
+            continue
+        same_tokens = any(variant and variant == candidate_tokens for variant in name_tokens)
+        candidate_within_full = len(candidate_tokens) >= 2 and candidate_tokens <= full_tokens
+        official_variant_within_candidate = any(
+            len(variant) >= 2 and variant <= candidate_tokens for variant in name_tokens
+        )
+        if same_tokens or candidate_within_full or official_variant_within_candidate:
+            structural.append(row)
+    if len(structural) == 1:
+        return structural[0], 0.985, "TEAM_SCOPED_STRUCTURAL_NAME_EXACT"
+
+    # Deadline transfers can make Official current club newer than Understat's
+    # represented club. Global fallback is intentionally multi-token only.
+    # Single-token first names/surnames are not globally unique identities.
+    global_exact_names = {
+        name for name in names
+        if len(tokens(name)) >= 2
+    }
+    global_exact = []
+    for global_name in global_exact_names:
+        global_exact.extend((index.get("by_name") or {}).get(global_name, ()))
+    if len(global_exact) == 1:
+        return global_exact[0], 0.97, "GLOBAL_NORMALIZED_NAME_EXACT_TEAM_TRANSITION"
+
+    global_structural = []
+    if len(full_tokens) >= 2:
+        structural_pool: dict[str, dict] = {}
+        for token in full_tokens:
+            for row in (index.get("by_token") or {}).get(token, ()):
+                source_key = str(row.get("understat_player_id") or id(row))
+                structural_pool[source_key] = row
+        for row in structural_pool.values():
+            candidate_tokens = row.get("_identity_token_set") or token_set(row.get("normalized_name") or "")
+            if len(candidate_tokens) >= 2 and (
+                candidate_tokens == full_tokens
+                or candidate_tokens <= full_tokens
+                or full_tokens <= candidate_tokens
+            ):
+                global_structural.append(row)
+    if len(global_structural) == 1:
+        return global_structural[0], 0.965, "GLOBAL_STRUCTURAL_NAME_EXACT_TEAM_TRANSITION"
+
+    # Last resort remains team-scoped fuzzy matching under governed thresholds.
     scored = sorted(
-        ((SequenceMatcher(None, name, row.get("normalized_name") or "").ratio(), row) for row in team_candidates),
+        (
+            (
+                max(
+                    (SequenceMatcher(None, name, row.get("normalized_name") or "").ratio() for name in names),
+                    default=0.0,
+                ),
+                row,
+            )
+            for row in team_candidates
+        ),
         key=lambda item: item[0], reverse=True,
     )
     minimum = float((policy.get("identity") or {}).get("fuzzy_minimum_confidence") or 0.94)
@@ -320,21 +510,76 @@ def _map_player(official: dict, candidates: list[dict], policy: dict) -> tuple[d
 def normalize_player_evidence(raw: dict, official_universe: list[dict], policy: dict | None = None) -> tuple[dict[str, dict], list[dict]]:
     policy = policy or _policy()
     candidates = _understat_players(raw)
+    identity_index = _identity_index(candidates)
     mapped: dict[str, dict] = {}
     unresolved = []
+    proposals = []
     for official in official_universe:
         element = int(official.get("element_id") or official.get("element") or 0)
         if not element:
             continue
-        row, confidence, method = _map_player(official, candidates, policy)
+        row, confidence, method = _map_player(official, candidates, policy, identity_index)
+        proposals.append({
+            "official": official,
+            "element": element,
+            "row": row,
+            "confidence": confidence,
+            "method": method,
+        })
+
+    # Enforce one-to-one Understat identities. Exact/stronger evidence wins over
+    # a weaker fallback; equal-confidence collisions are rejected for review.
+    by_source: dict[str, list[int]] = {}
+    for index, proposal in enumerate(proposals):
+        row = proposal.get("row") or {}
+        source_id = str(row.get("understat_player_id") or "")
+        if source_id:
+            by_source.setdefault(source_id, []).append(index)
+    rejected: set[int] = set()
+    for indexes in by_source.values():
+        if len(indexes) <= 1:
+            continue
+        ranked = sorted(indexes, key=lambda index: float(proposals[index].get("confidence") or 0.0), reverse=True)
+        top = float(proposals[ranked[0]].get("confidence") or 0.0)
+        second = float(proposals[ranked[1]].get("confidence") or 0.0)
+        if top > second:
+            rejected.update(ranked[1:])
+        else:
+            rejected.update(ranked)
+
+    for index, proposal in enumerate(proposals):
+        official = proposal["official"]
+        element = proposal["element"]
+        row = proposal.get("row")
+        confidence = float(proposal.get("confidence") or 0.0)
+        method = str(proposal.get("method") or "UNRESOLVED")
+        if index in rejected:
+            row = None
+            confidence = 0.0
+            method = "UNDERSTAT_IDENTITY_COLLISION"
         if not row:
-            unresolved.append({"element": element, "name": official.get("name"), "team": official.get("team"), "state": "UNRESOLVED"})
+            official_minutes = _f(official.get("minutes"))
+            source_absent = official_minutes is not None and official_minutes <= 0 and method != "UNDERSTAT_IDENTITY_COLLISION"
+            state = "SOURCE_ABSENT_CURRENT_SEASON" if source_absent else "UNRESOLVED"
+            if not source_absent:
+                unresolved.append({
+                    "element": element,
+                    "name": official.get("name"),
+                    "team": official.get("team"),
+                    "state": "IDENTITY_UNRESOLVED",
+                    "official_minutes": official_minutes,
+                    "method": method,
+                })
             mapped[str(element)] = {
                 "element": element,
-                "mapping": {"state": "UNRESOLVED", "confidence": 0.0, "method": method},
+                "official_name": official.get("name"),
+                "official_team": official.get("team"),
+                "mapping": {"state": state, "confidence": 0.0, "method": method},
                 "season_to_date": None,
                 "rolling_windows": {"last_1": None, "last_3": None, "last_5": None},
-                "missingness": "UNDERSTAT_PLAYER_MAPPING_UNRESOLVED",
+                "missingness": "UNDERSTAT_SOURCE_ABSENT_CURRENT_SEASON"
+                if source_absent
+                else "UNDERSTAT_PLAYER_IDENTITY_UNRESOLVED",
             }
             continue
         season = row.get("season_to_date") or {}
@@ -352,8 +597,6 @@ def normalize_player_evidence(raw: dict, official_universe: list[dict], policy: 
                 "sample_state": sample_state,
                 "confidence": round(sample_confidence * confidence, 4),
             },
-            # The league snapshot supplies season player aggregates, not a reliable
-            # per-match player series. Do not fabricate rolling player form.
             "rolling_windows": {
                 "last_1": {"state": "INSUFFICIENT_EVIDENCE", "reason": "PLAYER_MATCH_SERIES_NOT_SUPPLIED_BY_GOVERNED_SNAPSHOT"},
                 "last_3": {"state": "INSUFFICIENT_EVIDENCE", "reason": "PLAYER_MATCH_SERIES_NOT_SUPPLIED_BY_GOVERNED_SNAPSHOT"},
@@ -418,6 +661,11 @@ def build_matchups(teams: dict[str, dict], players: dict[str, dict], official_un
         rows.sort(key=lambda row: (row.get("event") or 999, row.get("kickoff_time") or ""))
 
     out = {}
+    median_keys = ("xg", "xga", "deep", "deep_allowed", "ppda")
+    medians_by_home = {
+        home_state: {key: _league_median(teams, key, home_state) for key in median_keys}
+        for home_state in (True, False)
+    }
     for official in official_universe:
         element = int(official.get("element_id") or official.get("element") or 0)
         team_id = int(official.get("team_id") or 0)
@@ -447,7 +695,7 @@ def build_matchups(teams: dict[str, dict], players: dict[str, dict], official_un
             continue
         own_m = own_window.get("metrics_adjusted_per_match") or {}
         opp_m = opp_window.get("metrics_adjusted_per_match") or {}
-        med = {key: _league_median(teams, key, home) for key in ("xg", "xga", "deep", "deep_allowed", "ppda")}
+        med = medians_by_home[home]
         attacking = _dimension([
             _cmp(own_m.get("xg"), med["xg"], True),
             _cmp(opp_m.get("xga"), med["xga"], True),
@@ -554,9 +802,24 @@ def build_understat_tactical(raw: dict, snapshot: dict, official_universe: list[
     fixtures = ((snapshot.get("official") or {}).get("fixtures") or [])
     matchups = build_matchups(teams, players, official_universe, fixtures, policy)
     mapped = sum((row.get("mapping") or {}).get("state") == "RESOLVED" for row in players.values())
+    source_absent = sum((row.get("mapping") or {}).get("state") == "SOURCE_ABSENT_CURRENT_SEASON" for row in players.values())
+    classified = sum(
+        (row.get("mapping") or {}).get("state") in {"RESOLVED", "SOURCE_ABSENT_CURRENT_SEASON", "UNRESOLVED"}
+        for row in players.values()
+    )
+    official_team_count = len({int(row.get("team_id") or 0) for row in official_universe if int(row.get("team_id") or 0)})
+    source_present = mapped + len(unresolved)
+    source_present_coverage = mapped / max(1, source_present)
     usable_matchups = sum(row.get("state") != "INSUFFICIENT_EVIDENCE" for row in matchups.values())
     source_available = raw.get("source_availability") in {"AVAILABLE", "STALE_FALLBACK"} and bool(raw.get("schema_valid"))
-    status = "AVAILABLE" if source_available and mapped else "PARTIAL" if source_available else "UNAVAILABLE"
+    crosswalk_complete = classified == len(official_universe)
+    team_mapping_complete = len(teams) == official_team_count
+    source_present_complete = len(unresolved) == 0
+    status = (
+        "AVAILABLE"
+        if source_available and crosswalk_complete and team_mapping_complete and source_present_complete
+        else "PARTIAL" if source_available else "UNAVAILABLE"
+    )
     out = {
         "schema_version": 1,
         "contract": "UNDERSTAT_TACTICAL_INTELLIGENCE_V1",
@@ -579,9 +842,19 @@ def build_understat_tactical(raw: dict, snapshot: dict, official_universe: list[
             "status": status,
             "optional_enrichment": True,
             "team_mapping_coverage": len(teams),
+            "team_mapping_count": len(teams),
+            "official_team_count": official_team_count,
+            "team_mapping_ratio": round(len(teams) / max(1, official_team_count), 4),
             "official_universe_count": len(official_universe),
             "player_mapping_count": mapped,
             "player_mapping_coverage": round(mapped / max(1, len(official_universe)), 4),
+            "player_crosswalk_classified_count": classified,
+            "player_crosswalk_coverage": round(classified / max(1, len(official_universe)), 4),
+            "source_present_official_count": source_present,
+            "source_present_mapping_count": mapped,
+            "source_present_mapping_coverage": round(source_present_coverage, 4),
+            "source_absent_current_season_count": source_absent,
+            "identity_unresolved_count": len(unresolved),
             "unresolved_mapping_count": len(unresolved),
             "tactical_matchup_usable_count": usable_matchups,
             "tactical_matchup_coverage": round(usable_matchups / max(1, len(official_universe)), 4),
@@ -605,6 +878,12 @@ def build_understat_tactical(raw: dict, snapshot: dict, official_universe: list[
             "direct_xmins_mutation": False,
             "no_per_player_network_calls": True,
             "full_official_universe_mapping_attempted": True,
+            "full_official_universe_crosswalk_classified": crosswalk_complete,
+            "source_present_player_mapping_complete": source_present_complete,
+            "team_mapping_complete": team_mapping_complete,
+            "source_absent_not_fabricated_as_direct_match": True,
+            "player_specific_aliases": False,
+            "global_fuzzy_identity_match": False,
             "intelligence_parity_not_decision_parity": True,
         },
     }

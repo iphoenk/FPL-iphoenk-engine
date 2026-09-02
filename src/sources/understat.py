@@ -19,9 +19,23 @@ _EMBEDDED_RE = re.compile(
     re.DOTALL,
 )
 
+# Representation aliases only. Official FPL remains the identity authority and
+# no player-specific aliases are permitted here.
+_TEAM_TITLE_ALIASES = {
+    "Coventry City": "Coventry",
+    "Hull City": "Hull",
+    "Ipswich Town": "Ipswich",
+    "Nottingham Forest": "Nott'm Forest",
+}
+
 
 def _policy() -> dict:
     return read_json(POLICY_FILE, {}) or {}
+
+
+def _transport_revision(policy: dict | None = None) -> str:
+    payload = policy or _policy()
+    return str((payload.get("network") or {}).get("transport_revision") or "")
 
 
 def _age_minutes(stamp: str | None) -> float | None:
@@ -32,6 +46,9 @@ def _age_minutes(stamp: str | None) -> float | None:
 
 
 def _decode_embedded(body: str) -> Any:
+    # Backward-compatible parser for historical fixtures/tests. Current
+    # production acquisition uses Understat's XHR JSON endpoint and never
+    # executes JavaScript from the landing page.
     decoded = codecs.decode(body.encode("utf-8"), "unicode_escape")
     return json.loads(decoded)
 
@@ -53,6 +70,14 @@ def _date_rows(embedded: dict[str, Any]) -> list[dict]:
     return [row for row in candidates if isinstance(row, dict)]
 
 
+def _completed_fixture_view(embedded: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    out = dict(embedded)
+    dates = _date_rows(embedded)
+    completed = [row for row in dates if _is_completed_fixture(row)]
+    out["datesData"] = completed
+    return out, max(0, len(dates) - len(completed))
+
+
 def _is_completed_fixture(row: dict) -> bool:
     if row.get("isResult") is True or str(row.get("isResult") or "").lower() in {"true", "1"}:
         return True
@@ -71,14 +96,6 @@ def latest_completed_fixture(embedded: dict[str, Any]) -> dict | None:
         if stamp:
             completed.append((stamp, row))
     return max(completed, key=lambda item: item[0])[1] if completed else None
-
-
-def _completed_fixture_view(embedded: dict[str, Any]) -> tuple[dict[str, Any], int]:
-    out = dict(embedded)
-    dates = _date_rows(embedded)
-    completed = [row for row in dates if _is_completed_fixture(row)]
-    out["datesData"] = completed
-    return out, max(0, len(dates) - len(completed))
 
 
 def _validate(payload: dict) -> tuple[bool, list[str]]:
@@ -109,6 +126,7 @@ def _freshness(age: float | None, policy: dict) -> str:
 
 def _failure(error: str, previous: dict | None = None) -> dict:
     policy = _policy()
+    revision = _transport_revision(policy)
     previous = previous or read_json(CACHE, {}) or {}
     age = _age_minutes(previous.get("fetched_at")) if previous else None
     if previous and (policy.get("cache") or {}).get("retain_last_known_good", True):
@@ -121,6 +139,7 @@ def _failure(error: str, previous: dict | None = None) -> dict:
                 "fallback": True,
                 "refresh_error": error,
                 "refresh_attempted_at": iso_now(),
+                "refresh_transport_revision": revision,
                 "cache_age_minutes": round(age, 2) if age is not None else None,
                 "schema_valid": True,
                 "schema_defects": defects,
@@ -128,6 +147,8 @@ def _failure(error: str, previous: dict | None = None) -> dict:
     return {
         "contract": "UNDERSTAT_RAW_SOURCE_V1",
         "source": "Understat",
+        "transport_revision": revision,
+        "refresh_transport_revision": revision,
         "source_availability": "UNAVAILABLE",
         "freshness": "UNKNOWN",
         "fetched_at": None,
@@ -142,6 +163,7 @@ def _failure(error: str, previous: dict | None = None) -> dict:
     }
 
 
+
 def _persist_failure(error: str, previous: dict | None = None) -> dict:
     payload = _failure(error, previous=previous)
     CACHE.parent.mkdir(parents=True, exist_ok=True)
@@ -151,6 +173,10 @@ def _persist_failure(error: str, previous: dict | None = None) -> dict:
 
 def _recent_failure_reuse(cached: dict, policy: dict) -> dict | None:
     if str(cached.get("source_availability") or "") not in {"UNAVAILABLE", "STALE_FALLBACK"}:
+        return None
+    revision = _transport_revision(policy)
+    cached_revision = str(cached.get("refresh_transport_revision") or cached.get("transport_revision") or "")
+    if revision and cached_revision and cached_revision != revision:
         return None
     cache_policy = policy.get("cache") or {}
     retry_minutes = max(0.0, float(cache_policy.get("failure_retry_minutes") or 15.0))
@@ -194,20 +220,113 @@ def _request(url: str, policy: dict, session: requests.Session | None = None) ->
                 time.sleep(max(minimum_interval, max(0.0, delay)))
     raise RuntimeError(f"Understat request failed after {calls} bounded attempts: {last_error}")
 
+def _request_json(url: str, policy: dict, session: requests.Session | None = None) -> tuple[dict[str, Any], int]:
+    cfg = policy.get("network") or {}
+    configured_attempts = max(1, int(cfg.get("max_attempts") or 3))
+    request_budget = max(1, int(cfg.get("max_requests_per_refresh") or configured_attempts))
+    attempts = min(configured_attempts, request_budget)
+    timeout = float(cfg.get("timeout_seconds") or 12)
+    backoff = list(cfg.get("backoff_seconds") or [0.5, 1.0])
+    minimum_interval = max(0.0, float(cfg.get("minimum_request_interval_seconds") or 0.0))
+    headers = {
+        "User-Agent": str(cfg.get("user_agent") or "FPL-iphoenk-engine"),
+        "X-Requested-With": "XMLHttpRequest",
+    }
+    client = session or requests.Session()
+    last_error: Exception | None = None
+    calls = 0
+    for attempt in range(attempts):
+        try:
+            calls += 1
+            response = client.get(url, timeout=timeout, headers=headers)
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, dict):
+                raise ValueError("Understat XHR response is not a JSON object")
+            return payload, calls
+        except (requests.RequestException, ValueError) as exc:
+            last_error = exc
+            if attempt < attempts - 1:
+                delay = float(backoff[min(attempt, len(backoff) - 1)]) if backoff else 0.0
+                time.sleep(max(minimum_interval, max(0.0, delay)))
+    raise RuntimeError(f"Understat request failed after {calls} bounded attempts: {last_error}")
+
+
+def _canonical_team_title(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_canonical_team_title(item) for item in value]
+    if not isinstance(value, str):
+        return value
+    parts = [part.strip() for part in value.split(",")]
+    mapped = [_TEAM_TITLE_ALIASES.get(part, part) for part in parts]
+    return ", ".join(mapped)
+
+
+def _normalize_team_rows(value: Any) -> Any:
+    def one(row: Any) -> Any:
+        if not isinstance(row, dict):
+            return row
+        out = dict(row)
+        if row.get("title"):
+            out["source_title"] = row.get("title")
+            out["title"] = _canonical_team_title(row.get("title"))
+        return out
+
+    if isinstance(value, list):
+        return [one(row) for row in value]
+    if isinstance(value, dict):
+        return {key: one(row) for key, row in value.items()}
+    return value
+
+
+def _normalize_player_rows(value: Any) -> Any:
+    def one(row: Any) -> Any:
+        if not isinstance(row, dict):
+            return row
+        out = dict(row)
+        team_title = row.get("team_title") or row.get("team")
+        if team_title:
+            out["source_team_title"] = team_title
+            if row.get("team_title") is not None:
+                out["team_title"] = _canonical_team_title(row.get("team_title"))
+            elif row.get("team") is not None:
+                out["team"] = _canonical_team_title(row.get("team"))
+        return out
+
+    if isinstance(value, list):
+        return [one(row) for row in value]
+    if isinstance(value, dict):
+        return {key: one(row) for key, row in value.items()}
+    return value
+
+
+def _normalize_ajax_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    # Keep the established raw contract stable while adapting only the transport
+    # boundary to Understat's current XHR response keys. Team-title aliases are
+    # representation-only normalization; Official FPL remains identity authority.
+    return {
+        "teamsData": _normalize_team_rows(payload.get("teams")),
+        "playersData": _normalize_player_rows(payload.get("players")),
+        "datesData": payload.get("dates"),
+    }
+
 
 def sync(*, force: bool = False, session: requests.Session | None = None) -> dict:
     policy = _policy()
+    network = policy.get("network") or {}
+    revision = _transport_revision(policy)
     cached = read_json(CACHE, {}) or {}
     age = _age_minutes(cached.get("fetched_at")) if cached else None
     ttl = float((policy.get("cache") or {}).get("raw_ttl_minutes") or 360)
     valid, _ = _validate(cached) if cached else (False, [])
+    same_transport = not revision or str(cached.get("transport_revision") or "") == revision
 
     if not force and cached:
         failure_reuse = _recent_failure_reuse(cached, policy)
         if failure_reuse is not None:
             return failure_reuse
 
-    if not force and cached and valid and age is not None and age <= ttl:
+    if not force and cached and valid and same_transport and age is not None and age <= ttl:
         return {
             **cached,
             "runtime_reused": True,
@@ -216,25 +335,44 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
             "freshness": _freshness(age, policy),
         }
 
-    network = policy.get("network") or {}
     base = str(network.get("base_url") or "https://understat.com").rstrip("/")
     league = str(policy.get("league") or "EPL")
     season = int(policy.get("season_start_year") or 2026)
-    url = f"{base}/league/{league}/{season}"
+    landing_url = f"{base}/league/{league}/{season}"
+    use_xhr = bool(network.get("endpoint_template")) and bool(revision)
+    if use_xhr:
+        endpoint_template = str(network.get("endpoint_template"))
+        endpoint = endpoint_template.format(league=league, season=season).lstrip("/")
+        url = f"{base}/{endpoint}"
+    else:
+        url = landing_url
+
     started = time.perf_counter()
     try:
-        html, request_count = _request(url, policy, session=session)
-        parsed = parse_embedded_json(html)
-        latest = latest_completed_fixture(parsed)
+        if use_xhr:
+            ajax_payload, request_count = _request_json(url, policy, session=session)
+            normalized = _normalize_ajax_payload(ajax_payload)
+            transport = "HTTPS_JSON_XHR"
+            strategy = "single_league_xhr_snapshot_no_per_player_network_calls"
+        else:
+            html, request_count = _request(url, policy, session=session)
+            normalized = parse_embedded_json(html)
+            transport = "HTTPS_HTML_EMBEDDED_JSON"
+            strategy = "single_league_snapshot_no_per_player_network_calls"
+
+        latest = latest_completed_fixture(normalized)
         latest_stamp = (latest or {}).get("datetime") or (latest or {}).get("date")
-        embedded, scheduled_excluded = _completed_fixture_view(parsed)
+        embedded, scheduled_excluded = _completed_fixture_view(normalized)
         payload = {
             "contract": "UNDERSTAT_RAW_SOURCE_V1",
             "source": "Understat",
             "source_tier": "dynamic_tactical_enrichment",
             "league": league,
             "season_start_year": season,
+            "transport_revision": revision,
+            "refresh_transport_revision": revision,
             "source_url": url,
+            "source_landing_url": landing_url,
             "fetched_at": iso_now(),
             "source_timestamp": latest_stamp,
             "latest_fixture_represented": {
@@ -254,13 +392,16 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
             "cache_age_minutes": 0.0,
             "request_count": request_count,
             "request_budget": max(1, int(network.get("max_requests_per_refresh") or network.get("max_attempts") or 1)),
-            "request_strategy": "single_league_snapshot_no_per_player_network_calls",
+            "request_strategy": strategy,
             "embedded": embedded,
             "fetch_duration_ms": round((time.perf_counter() - started) * 1000.0, 2),
             "provenance": {
                 "provider": "Understat",
                 "url": url,
-                "transport": "HTTPS_HTML_EMBEDDED_JSON",
+                "landing_url": landing_url,
+                "transport": transport,
+                "transport_revision": revision,
+                "team_title_representation_normalization": bool(use_xhr),
                 "adapter": "src.sources.understat",
             },
         }
@@ -272,7 +413,7 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
         CACHE.parent.mkdir(parents=True, exist_ok=True)
         atomic_json(CACHE, payload)
         return payload
-    except Exception as exc:
+    except Exception as exc:  # fail-soft optional enrichment boundary
         return _persist_failure(f"{type(exc).__name__}: {exc}", previous=cached)
 
 

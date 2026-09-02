@@ -122,6 +122,9 @@ def test_failed_refresh_is_persisted_and_recent_failure_suppresses_retry(monkeyp
     assert second["retry_suppressed"] is True
     assert second["freshness"] == "UNKNOWN"
     assert second["failure_retry_minutes"] == 15.0
+    assert 0.0 <= second["failure_retry_age_minutes"] <= second["failure_retry_minutes"]
+    assert second["refresh_attempted_at"] == persisted["refresh_attempted_at"]
+    assert json.loads(cache.read_text())["refresh_attempted_at"] == persisted["refresh_attempted_at"]
 
 
 def test_force_refresh_bypasses_recent_failure_cooldown(monkeypatch, tmp_path):

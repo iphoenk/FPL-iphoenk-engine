@@ -1,4 +1,4 @@
-name: TEMP V4 Understat structural identity verification
+name: TEMP V4 Understat unresolved identity diagnostic
 
 on:
   push:
@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  patch-attest-test-live-proof:
-    if: ${{ !contains(github.event.head_commit.message, '[identity-green]') && !contains(github.event.head_commit.message, '[structural-diagnostic]') }}
+  live-candidate-diagnostic:
+    if: ${{ !contains(github.event.head_commit.message, '[candidate-diagnostic]') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -23,34 +23,13 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Apply generic structural identity patch
-        run: PYTHONPATH=. python tools/temp_v4_understat_structural_identity_patch.py
-      - name: Regenerate governed V4 architecture attestation
-        run: PYTHONPATH=. python tools/v4_architecture_guard_attest.py
-      - name: Full regression
-        run: PYTHONPATH=. python -m pytest -q --tb=short
-      - name: Generate live Official to Understat proof
-        run: PYTHONPATH=. python tools/temp_v4_understat_live_proof.py
-      - name: Evaluate and persist proof
+      - name: Generate unresolved candidate diagnostic
+        run: PYTHONPATH=. python tools/temp_v4_understat_unresolved_diag.py
+      - name: Persist diagnostic
         shell: bash
         run: |
-          if PYTHONPATH=. python - <<'PY'
-          import json
-          from pathlib import Path
-          proof = json.loads(Path('verification/v4_official_understat_identity_live_proof.json').read_text())
-          acceptance = proof.get('acceptance') or {}
-          print(json.dumps(acceptance, sort_keys=True))
-          raise SystemExit(0 if acceptance.get('all_green') else 1)
-          PY
-          then
-            marker='[identity-green]'
-            message='fix(v4): prove 100% Official-Understat crosswalk'
-          else
-            marker='[structural-diagnostic]'
-            message='chore(v4): persist structural crosswalk proof'
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/intelligence/understat_tactical.py config/architecture_guard_attestation.json verification/v4_official_understat_identity_live_proof.json
-          git commit -m "$message $marker"
+          git add verification/v4_understat_unresolved_candidates.json
+          git commit -m "chore(v4): capture unresolved Understat candidates [candidate-diagnostic]"
           git push origin HEAD:fix/v4-official-understat-player-mapping-20260902

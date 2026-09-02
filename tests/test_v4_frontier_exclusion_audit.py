@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from src.engines.v4_frontier_exclusion_audit import frontier_exclusion_audit_from_candidates
+from v4_frontier_exclusion_audit import frontier_exclusion_audit_from_candidates
 from src.engines.v4_wc_package_audit import frontier
 
 
@@ -29,7 +29,7 @@ def _locked():
 
 def test_audit_top7_exactly_matches_production_frontier(monkeypatch):
     monkeypatch.setattr(
-        "src.engines.v4_frontier_exclusion_audit.reconcile_owned_costs",
+        "v4_frontier_exclusion_audit.reconcile_owned_costs",
         lambda candidates, locked: (candidates, {"available_budget_tenths": 1000}),
     )
     candidates = []
@@ -58,7 +58,7 @@ def test_audit_top7_exactly_matches_production_frontier(monkeypatch):
 
 def test_audit_preserves_exact_frontier_tie_break_order(monkeypatch):
     monkeypatch.setattr(
-        "src.engines.v4_frontier_exclusion_audit.reconcile_owned_costs",
+        "v4_frontier_exclusion_audit.reconcile_owned_costs",
         lambda candidates, locked: (candidates, {"available_budget_tenths": 1000}),
     )
     candidates = [
@@ -77,7 +77,7 @@ def test_audit_preserves_exact_frontier_tie_break_order(monkeypatch):
 
 def test_boundary_reports_rank7_rank8_gap_without_changing_width(monkeypatch):
     monkeypatch.setattr(
-        "src.engines.v4_frontier_exclusion_audit.reconcile_owned_costs",
+        "v4_frontier_exclusion_audit.reconcile_owned_costs",
         lambda candidates, locked: (candidates, {"available_budget_tenths": 1000}),
     )
     candidates = [_p(i, "FWD", 10 - i * 0.1, 0.1, 20 - i * 0.1, 50) for i in range(1, 11)]

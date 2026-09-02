@@ -64,12 +64,18 @@ def parse_embedded_json(html: str) -> dict[str, Any]:
     return out
 
 
-def _rows(value: Any) -> list[dict]:
-    if isinstance(value, list):
-        return [row for row in value if isinstance(row, dict)]
-    if isinstance(value, dict):
-        return [row for row in value.values() if isinstance(row, dict)]
-    return []
+def _date_rows(embedded: dict[str, Any]) -> list[dict]:
+    value = embedded.get("datesData")
+    candidates = value.values() if isinstance(value, dict) else value if isinstance(value, list) else ()
+    return [row for row in candidates if isinstance(row, dict)]
+
+
+def _completed_fixture_view(embedded: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    out = dict(embedded)
+    dates = _date_rows(embedded)
+    completed = [row for row in dates if _is_completed_fixture(row)]
+    out["datesData"] = completed
+    return out, max(0, len(dates) - len(completed))
 
 
 def _is_completed_fixture(row: dict) -> bool:
@@ -83,7 +89,7 @@ def _is_completed_fixture(row: dict) -> bool:
 
 def latest_completed_fixture(embedded: dict[str, Any]) -> dict | None:
     completed = []
-    for row in _rows(embedded.get("datesData")):
+    for row in _date_rows(embedded):
         if not _is_completed_fixture(row):
             continue
         stamp = str(row.get("datetime") or row.get("date") or "")
@@ -156,6 +162,63 @@ def _failure(error: str, previous: dict | None = None) -> dict:
         "embedded": {},
     }
 
+
+
+def _persist_failure(error: str, previous: dict | None = None) -> dict:
+    payload = _failure(error, previous=previous)
+    CACHE.parent.mkdir(parents=True, exist_ok=True)
+    atomic_json(CACHE, payload)
+    return payload
+
+
+def _recent_failure_reuse(cached: dict, policy: dict) -> dict | None:
+    if str(cached.get("source_availability") or "") not in {"UNAVAILABLE", "STALE_FALLBACK"}:
+        return None
+    revision = _transport_revision(policy)
+    cached_revision = str(cached.get("refresh_transport_revision") or cached.get("transport_revision") or "")
+    if revision and cached_revision and cached_revision != revision:
+        return None
+    cache_policy = policy.get("cache") or {}
+    retry_minutes = max(0.0, float(cache_policy.get("failure_retry_minutes") or 15.0))
+    retry_age = _age_minutes(cached.get("refresh_attempted_at"))
+    if retry_minutes <= 0.0 or retry_age is None or retry_age > retry_minutes:
+        return None
+    source_age = _age_minutes(cached.get("fetched_at")) if cached.get("fetched_at") else None
+    return {
+        **cached,
+        "runtime_reused": True,
+        "retry_suppressed": True,
+        "failure_retry_minutes": retry_minutes,
+        "failure_retry_age_minutes": round(retry_age, 2),
+        "cache_age_minutes": round(source_age, 2) if source_age is not None else None,
+        "freshness": _freshness(source_age, policy),
+    }
+
+
+def _request(url: str, policy: dict, session: requests.Session | None = None) -> tuple[str, int]:
+    cfg = policy.get("network") or {}
+    configured_attempts = max(1, int(cfg.get("max_attempts") or 3))
+    request_budget = max(1, int(cfg.get("max_requests_per_refresh") or configured_attempts))
+    attempts = min(configured_attempts, request_budget)
+    timeout = float(cfg.get("timeout_seconds") or 12)
+    backoff = list(cfg.get("backoff_seconds") or [0.5, 1.0])
+    minimum_interval = max(0.0, float(cfg.get("minimum_request_interval_seconds") or 0.0))
+    headers = {"User-Agent": str(cfg.get("user_agent") or "FPL-iphoenk-engine")}
+    client = session or requests.Session()
+    last_error: Exception | None = None
+    calls = 0
+    for attempt in range(attempts):
+        try:
+            calls += 1
+            response = client.get(url, timeout=timeout, headers=headers)
+            response.raise_for_status()
+            return response.text, calls
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt < attempts - 1:
+                delay = float(backoff[min(attempt, len(backoff) - 1)]) if backoff else 0.0
+                time.sleep(max(minimum_interval, max(0.0, delay)))
+    raise RuntimeError(f"Understat request failed after {calls} bounded attempts: {last_error}")
 
 def _request_json(url: str, policy: dict, session: requests.Session | None = None) -> tuple[dict[str, Any], int]:
     cfg = policy.get("network") or {}
@@ -256,11 +319,18 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
     age = _age_minutes(cached.get("fetched_at")) if cached else None
     ttl = float((policy.get("cache") or {}).get("raw_ttl_minutes") or 360)
     valid, _ = _validate(cached) if cached else (False, [])
-    same_transport = bool(revision) and str(cached.get("transport_revision") or "") == revision
+    same_transport = not revision or str(cached.get("transport_revision") or "") == revision
+
+    if not force and cached:
+        failure_reuse = _recent_failure_reuse(cached, policy)
+        if failure_reuse is not None:
+            return failure_reuse
+
     if not force and cached and valid and same_transport and age is not None and age <= ttl:
         return {
             **cached,
             "runtime_reused": True,
+            "retry_suppressed": False,
             "cache_age_minutes": round(age, 2),
             "freshness": _freshness(age, policy),
         }
@@ -268,16 +338,31 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
     base = str(network.get("base_url") or "https://understat.com").rstrip("/")
     league = str(policy.get("league") or "EPL")
     season = int(policy.get("season_start_year") or 2026)
-    endpoint_template = str(network.get("endpoint_template") or "getLeagueData/{league}/{season}")
-    endpoint = endpoint_template.format(league=league, season=season).lstrip("/")
-    url = f"{base}/{endpoint}"
     landing_url = f"{base}/league/{league}/{season}"
+    use_xhr = bool(network.get("endpoint_template")) and bool(revision)
+    if use_xhr:
+        endpoint_template = str(network.get("endpoint_template"))
+        endpoint = endpoint_template.format(league=league, season=season).lstrip("/")
+        url = f"{base}/{endpoint}"
+    else:
+        url = landing_url
+
     started = time.perf_counter()
     try:
-        ajax_payload, request_count = _request_json(url, policy, session=session)
-        embedded = _normalize_ajax_payload(ajax_payload)
-        latest = latest_completed_fixture(embedded)
+        if use_xhr:
+            ajax_payload, request_count = _request_json(url, policy, session=session)
+            normalized = _normalize_ajax_payload(ajax_payload)
+            transport = "HTTPS_JSON_XHR"
+            strategy = "single_league_xhr_snapshot_no_per_player_network_calls"
+        else:
+            html, request_count = _request(url, policy, session=session)
+            normalized = parse_embedded_json(html)
+            transport = "HTTPS_HTML_EMBEDDED_JSON"
+            strategy = "single_league_snapshot_no_per_player_network_calls"
+
+        latest = latest_completed_fixture(normalized)
         latest_stamp = (latest or {}).get("datetime") or (latest or {}).get("date")
+        embedded, scheduled_excluded = _completed_fixture_view(normalized)
         payload = {
             "contract": "UNDERSTAT_RAW_SOURCE_V1",
             "source": "Understat",
@@ -294,23 +379,29 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
                 "id": (latest or {}).get("id"),
                 "datetime": latest_stamp,
             } if latest else None,
+            "fixture_view": {
+                "completed_only": True,
+                "scheduled_rows_excluded": scheduled_excluded,
+                "reason": "freshness/latest-match coverage must never be advanced by future schedule rows",
+            },
             "source_availability": "AVAILABLE",
             "freshness": "FRESH",
             "fallback": False,
             "runtime_reused": False,
+            "retry_suppressed": False,
             "cache_age_minutes": 0.0,
             "request_count": request_count,
             "request_budget": max(1, int(network.get("max_requests_per_refresh") or network.get("max_attempts") or 1)),
-            "request_strategy": "single_league_xhr_snapshot_no_per_player_network_calls",
+            "request_strategy": strategy,
             "embedded": embedded,
             "fetch_duration_ms": round((time.perf_counter() - started) * 1000.0, 2),
             "provenance": {
                 "provider": "Understat",
                 "url": url,
                 "landing_url": landing_url,
-                "transport": "HTTPS_JSON_XHR",
+                "transport": transport,
                 "transport_revision": revision,
-                "team_title_representation_normalization": True,
+                "team_title_representation_normalization": bool(use_xhr),
                 "adapter": "src.sources.understat",
             },
         }
@@ -318,12 +409,12 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
         payload["schema_valid"] = valid
         payload["schema_defects"] = defects
         if not valid:
-            return _failure(";".join(defects), previous=cached)
+            return _persist_failure(";".join(defects), previous=cached)
         CACHE.parent.mkdir(parents=True, exist_ok=True)
         atomic_json(CACHE, payload)
         return payload
     except Exception as exc:  # fail-soft optional enrichment boundary
-        return _failure(f"{type(exc).__name__}: {exc}", previous=cached)
+        return _persist_failure(f"{type(exc).__name__}: {exc}", previous=cached)
 
 
 def load() -> dict:

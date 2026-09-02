@@ -108,3 +108,58 @@ def test_understat_xhr_team_representation_aliases_are_team_only():
     assert normalized["playersData"][0]["team_title"] == "Hull"
     assert normalized["playersData"][0]["player_name"] == "Example Player"
     assert normalized["playersData"][0]["source_team_title"] == "Hull City"
+
+
+
+def test_full_official_crosswalk_classifies_source_absent_without_fake_match():
+    official = [
+        {
+            "element": 7,
+            "element_id": 7,
+            "name": "Bukayo Saka",
+            "full_name": "Bukayo Saka",
+            "web_name": "Saka",
+            "second_name": "Saka",
+            "name_variants": ["Bukayo Saka", "Saka"],
+            "team": "Arsenal",
+            "team_id": 1,
+            "position": "MID",
+            "minutes": 180,
+        },
+        {
+            "element": 8,
+            "element_id": 8,
+            "name": "New Player",
+            "full_name": "New Player",
+            "web_name": "New Player",
+            "second_name": "Player",
+            "name_variants": ["New Player", "Player"],
+            "team": "Arsenal",
+            "team_id": 1,
+            "position": "MID",
+            "minutes": 0,
+        },
+    ]
+    raw = {
+        "embedded": {
+            "playersData": [
+                {
+                    "id": "501",
+                    "player_name": "Bukayo Saka",
+                    "team_title": "Arsenal",
+                    "games": "2",
+                    "time": "180",
+                    "xG": "1.0",
+                    "xA": "0.5",
+                    "xGChain": "1.6",
+                    "xGBuildup": "0.4",
+                }
+            ]
+        }
+    }
+    mapped, unresolved = normalize_player_evidence(raw, official, _policy())
+    assert unresolved == []
+    assert len(mapped) == len(official)
+    assert mapped["7"]["mapping"]["state"] == "RESOLVED"
+    assert mapped["8"]["mapping"]["state"] == "SOURCE_ABSENT_CURRENT_SEASON"
+    assert mapped["8"].get("understat_player_id") is None

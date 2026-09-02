@@ -301,13 +301,38 @@ def _understat_players(raw: dict) -> list[dict]:
 
 def _map_player(official: dict, candidates: list[dict], policy: dict) -> tuple[dict | None, float, str]:
     team = _norm(official.get("team") or official.get("club"))
-    name = _norm(official.get("name"))
+    raw_names = [
+        official.get("name"),
+        official.get("full_name"),
+        official.get("web_name"),
+        official.get("second_name"),
+        *((official.get("name_variants") or [])),
+    ]
+    names = []
+    seen = set()
+    for value in raw_names:
+        normalized = _norm(value)
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            names.append(normalized)
     team_candidates = [row for row in candidates if team and team in row.get("normalized_teams", [])]
-    exact = [row for row in team_candidates if row.get("normalized_name") == name]
+    exact = [row for row in team_candidates if row.get("normalized_name") in names]
     if len(exact) == 1:
         return exact[0], 1.0, "TEAM_AND_NORMALIZED_NAME_EXACT"
+    global_exact = [row for row in candidates if row.get("normalized_name") in names]
+    if len(global_exact) == 1:
+        return global_exact[0], 0.97, "GLOBAL_NORMALIZED_NAME_EXACT_TEAM_TRANSITION"
     scored = sorted(
-        ((SequenceMatcher(None, name, row.get("normalized_name") or "").ratio(), row) for row in team_candidates),
+        (
+            (
+                max(
+                    (SequenceMatcher(None, name, row.get("normalized_name") or "").ratio() for name in names),
+                    default=0.0,
+                ),
+                row,
+            )
+            for row in team_candidates
+        ),
         key=lambda item: item[0], reverse=True,
     )
     minimum = float((policy.get("identity") or {}).get("fuzzy_minimum_confidence") or 0.94)
@@ -328,13 +353,27 @@ def normalize_player_evidence(raw: dict, official_universe: list[dict], policy: 
             continue
         row, confidence, method = _map_player(official, candidates, policy)
         if not row:
-            unresolved.append({"element": element, "name": official.get("name"), "team": official.get("team"), "state": "UNRESOLVED"})
+            official_minutes = _f(official.get("minutes"))
+            source_absent = official_minutes is not None and official_minutes <= 0
+            state = "SOURCE_ABSENT_CURRENT_SEASON" if source_absent else "UNRESOLVED"
+            if not source_absent:
+                unresolved.append({
+                    "element": element,
+                    "name": official.get("name"),
+                    "team": official.get("team"),
+                    "state": "IDENTITY_UNRESOLVED",
+                    "official_minutes": official_minutes,
+                })
             mapped[str(element)] = {
                 "element": element,
-                "mapping": {"state": "UNRESOLVED", "confidence": 0.0, "method": method},
+                "official_name": official.get("name"),
+                "official_team": official.get("team"),
+                "mapping": {"state": state, "confidence": 0.0, "method": method},
                 "season_to_date": None,
                 "rolling_windows": {"last_1": None, "last_3": None, "last_5": None},
-                "missingness": "UNDERSTAT_PLAYER_MAPPING_UNRESOLVED",
+                "missingness": "UNDERSTAT_SOURCE_ABSENT_CURRENT_SEASON"
+                if source_absent
+                else "UNDERSTAT_PLAYER_IDENTITY_UNRESOLVED",
             }
             continue
         season = row.get("season_to_date") or {}
@@ -554,9 +593,24 @@ def build_understat_tactical(raw: dict, snapshot: dict, official_universe: list[
     fixtures = ((snapshot.get("official") or {}).get("fixtures") or [])
     matchups = build_matchups(teams, players, official_universe, fixtures, policy)
     mapped = sum((row.get("mapping") or {}).get("state") == "RESOLVED" for row in players.values())
+    source_absent = sum((row.get("mapping") or {}).get("state") == "SOURCE_ABSENT_CURRENT_SEASON" for row in players.values())
+    classified = sum(
+        (row.get("mapping") or {}).get("state") in {"RESOLVED", "SOURCE_ABSENT_CURRENT_SEASON", "UNRESOLVED"}
+        for row in players.values()
+    )
+    official_team_count = len({int(row.get("team_id") or 0) for row in official_universe if int(row.get("team_id") or 0)})
+    source_present = mapped + len(unresolved)
+    source_present_coverage = mapped / max(1, source_present)
     usable_matchups = sum(row.get("state") != "INSUFFICIENT_EVIDENCE" for row in matchups.values())
     source_available = raw.get("source_availability") in {"AVAILABLE", "STALE_FALLBACK"} and bool(raw.get("schema_valid"))
-    status = "AVAILABLE" if source_available and mapped else "PARTIAL" if source_available else "UNAVAILABLE"
+    crosswalk_complete = classified == len(official_universe)
+    team_mapping_complete = len(teams) == official_team_count
+    source_present_complete = len(unresolved) == 0
+    status = (
+        "AVAILABLE"
+        if source_available and crosswalk_complete and team_mapping_complete and source_present_complete
+        else "PARTIAL" if source_available else "UNAVAILABLE"
+    )
     out = {
         "schema_version": 1,
         "contract": "UNDERSTAT_TACTICAL_INTELLIGENCE_V1",
@@ -579,9 +633,19 @@ def build_understat_tactical(raw: dict, snapshot: dict, official_universe: list[
             "status": status,
             "optional_enrichment": True,
             "team_mapping_coverage": len(teams),
+            "team_mapping_count": len(teams),
+            "official_team_count": official_team_count,
+            "team_mapping_ratio": round(len(teams) / max(1, official_team_count), 4),
             "official_universe_count": len(official_universe),
             "player_mapping_count": mapped,
             "player_mapping_coverage": round(mapped / max(1, len(official_universe)), 4),
+            "player_crosswalk_classified_count": classified,
+            "player_crosswalk_coverage": round(classified / max(1, len(official_universe)), 4),
+            "source_present_official_count": source_present,
+            "source_present_mapping_count": mapped,
+            "source_present_mapping_coverage": round(source_present_coverage, 4),
+            "source_absent_current_season_count": source_absent,
+            "identity_unresolved_count": len(unresolved),
             "unresolved_mapping_count": len(unresolved),
             "tactical_matchup_usable_count": usable_matchups,
             "tactical_matchup_coverage": round(usable_matchups / max(1, len(official_universe)), 4),
@@ -605,6 +669,12 @@ def build_understat_tactical(raw: dict, snapshot: dict, official_universe: list[
             "direct_xmins_mutation": False,
             "no_per_player_network_calls": True,
             "full_official_universe_mapping_attempted": True,
+            "full_official_universe_crosswalk_classified": crosswalk_complete,
+            "source_present_player_mapping_complete": source_present_complete,
+            "team_mapping_complete": team_mapping_complete,
+            "source_absent_not_fabricated_as_direct_match": True,
+            "player_specific_aliases": False,
+            "global_fuzzy_identity_match": False,
             "intelligence_parity_not_decision_parity": True,
         },
     }

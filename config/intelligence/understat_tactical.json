@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "contract": "UNDERSTAT_TACTICAL_INTELLIGENCE_V1",
+  "source": "Understat",
+  "league": "EPL",
+  "season_start_year": 2026,
+  "optional_enrichment": true,
+  "authority": "TACTICAL_ENRICHMENT_ONLY",
+  "official_fpl_fact_authority_preserved": true,
+  "direct_xpts_mutation_forbidden": true,
+  "direct_xmins_mutation_forbidden": true,
+  "network": {
+    "base_url": "https://understat.com",
+    "timeout_seconds": 12,
+    "max_attempts": 3,
+    "backoff_seconds": [0.5, 1.0],
+    "minimum_request_interval_seconds": 0.35,
+    "max_requests_per_refresh": 2,
+    "user_agent": "FPL-iphoenk-engine/Understat-tactical-enrichment"
+  },
+  "cache": {
+    "raw_ttl_minutes": 360,
+    "failure_retry_minutes": 15,
+    "fresh_minutes": 360,
+    "stale_after_minutes": 2880,
+    "retain_last_known_good": true,
+    "never_label_stale_as_fresh": true
+  },
+  "rolling_windows": [1, 3, 5],
+  "season_to_date": true,
+  "venue_splits": ["HOME", "AWAY"],
+  "sample_size": {
+    "insufficient_matches_below": 1,
+    "low_confidence_matches_below": 3,
+    "mature_matches_at_least": 5,
+    "small_sample_shrinkage_prior_matches": 5
+  },
+  "identity": {
+    "require_team_context": true,
+    "normalized_exact_confidence": 0.98,
+    "fuzzy_minimum_confidence": 0.94,
+    "ambiguity_margin": 0.03,
+    "unresolved_state": "UNRESOLVED"
+  },
+  "tactical_matchup": {
+    "states": ["POSITIVE", "NEUTRAL", "NEGATIVE", "INSUFFICIENT_EVIDENCE"],
+    "dimensions": [
+      "attacking_environment",
+      "creativity_environment",
+      "finishing_environment",
+      "transition_environment",
+      "clean_sheet_environment",
+      "goalkeeper_environment",
+      "set_piece_environment"
+    ],
+    "no_single_metric_authority": true,
+    "ppda_direct_xpts_rule_forbidden": true
+  },
+  "close_call": {
+    "watchlist_base_score_margin": 0.15,
+    "lineup_selection_score_margin": 0.12,
+    "bench_score_margin": 0.12,
+    "formation_risk_adjusted_margin": 0.25,
+    "minimum_confidence": 0.6,
+    "max_start_probability_disadvantage": 0.05,
+    "max_dnp_probability_disadvantage": 0.05,
+    "tactical_signal_may_only_break_close_ties": true,
+    "tactical_signal_cannot_erase_xmins_risk": true,
+    "missing_evidence_neutral": true,
+    "captaincy_semantics_unchanged": true,
+    "transfer_hit_authority": false
+  },
+  "performance": {
+    "no_per_player_network_calls": true,
+    "league_page_fetch_once": true,
+    "team_and_player_evidence_batched_in_league_snapshot": true,
+    "decision_compute_network_io_forbidden": true,
+    "normalized_snapshot_reused_by_consumers": true
+  }
+}

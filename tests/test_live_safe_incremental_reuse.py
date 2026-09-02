@@ -37,8 +37,7 @@ def test_live_reuse_is_explicit_compute_positive_and_prediction_only():
     assert policy["cheap_decision_consumers_execute_and_validate_directly"] is True
     services = registry["services"]
     assert {name for name, spec in services.items() if spec.get("allow_during_live") is True} == {"prediction"}
-    assert "lineup_governance" in services
-    assert services["lineup_governance"].get("allow_during_live") is not True
+    assert "lineup_governance" not in services
     assert "challenger" not in services
     assert "watchlist" not in services
     assert "reporting" not in services

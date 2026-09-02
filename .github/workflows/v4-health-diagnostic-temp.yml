@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  RUNTIME_BRANCH: runtime-data-v4
+
 jobs:
   diagnose:
     runs-on: ubuntu-latest
@@ -21,6 +24,12 @@ jobs:
         with:
           ref: codex/v4-understat-tactical-parity-20260902
           fetch-depth: 0
+      - name: Hydrate latest governed V4 runtime state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          git archive "origin/${RUNTIME_BRANCH}" data | tar -x -C "$GITHUB_WORKSPACE"
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.12'

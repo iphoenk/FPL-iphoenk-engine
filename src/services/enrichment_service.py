@@ -280,6 +280,7 @@ def run(sync_stats: bool = False, deep_stats: bool = False) -> dict:
         "lineage": {"snapshot_schema": "snapshot.v1", "snapshot_sha256": file_digest(SNAPSHOT)},
         "stats_gw": stats_gw,
         "advanced_stats_sync": advanced,
+        "official_fact_snapshot": official_snapshot,
         "understat_tactical": {
             "artifact": str(UNDERSTAT_OUT.relative_to(DATA.parent)),
             "contract": understat_tactical.get("contract"),

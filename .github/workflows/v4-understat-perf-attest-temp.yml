@@ -12,6 +12,7 @@ permissions:
 
 env:
   PYTHONPATH: ${{ github.workspace }}
+  RUNTIME_BRANCH: runtime-data-v4
 
 jobs:
   attest-and-benchmark:
@@ -39,11 +40,23 @@ jobs:
           rm .github/workflows/v4-understat-perf-attest-temp.yml
           python tools/v4_architecture_guard_attest.py
 
-      - name: Full regression and governed runtime preflight
+      - name: Full regression
         shell: bash
         run: |
           set -euo pipefail
           python -m pytest -q
+
+      - name: Hydrate latest governed V4 runtime state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          git archive "origin/${RUNTIME_BRANCH}" data | tar -x -C "$GITHUB_WORKSPACE"
+
+      - name: Governed runtime preflight
+        shell: bash
+        run: |
+          set -euo pipefail
           python -m src.services.orchestrator daily --stats --deep-stats
           python -m src.engines.v4_quality_gate
 

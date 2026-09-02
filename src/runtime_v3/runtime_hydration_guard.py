@@ -115,6 +115,20 @@ def _fetch_bytes(url: str) -> bytes:
         raise RuntimeError("runtime hydration rejected: workflow attestation logs unavailable") from exc
 
 
+def _archive_contains_marker(archive: bytes, expected_marker: str) -> bool:
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive)) as logs:
+            for name in logs.namelist():
+                if name.endswith("/"):
+                    continue
+                text = logs.read(name).decode("utf-8", errors="replace")
+                if expected_marker in text:
+                    return True
+    except (zipfile.BadZipFile, OSError) as exc:
+        raise RuntimeError("runtime hydration rejected: workflow attestation log archive invalid") from exc
+    return False
+
+
 def _verify_embedded_attestation(root: Path, manifest: dict, actual_paths: list[str]) -> dict:
     schema_version = int(manifest.get("schema_version") or 0)
     attestation = manifest.get("attestation")
@@ -189,29 +203,55 @@ def _verify_immutable_workflow_evidence(attestation: dict) -> dict:
     if metadata.get("conclusion") != "success":
         raise RuntimeError("runtime hydration rejected: attesting workflow did not complete successfully")
 
-    archive = _fetch_bytes(f"{api}/repos/{repository}/actions/runs/{run_id}/logs")
+    raw_attempt = metadata.get("run_attempt")
+    try:
+        run_attempt = max(1, int(raw_attempt or 1))
+    except (TypeError, ValueError):
+        raise RuntimeError("runtime hydration rejected: workflow run attempt metadata invalid")
+    if run_attempt > 100:
+        raise RuntimeError("runtime hydration rejected: workflow run attempt metadata unreasonable")
+
     expected_marker = ATTESTATION_MARKER + json.dumps(
         attestation, ensure_ascii=False, sort_keys=True
     )
-    found = False
-    try:
-        with zipfile.ZipFile(io.BytesIO(archive)) as logs:
-            for name in logs.namelist():
-                if name.endswith("/"):
-                    continue
-                text = logs.read(name).decode("utf-8", errors="replace")
-                if expected_marker in text:
-                    found = True
-                    break
-    except (zipfile.BadZipFile, OSError) as exc:
-        raise RuntimeError("runtime hydration rejected: workflow attestation log archive invalid") from exc
-    if not found:
-        raise RuntimeError("runtime hydration rejected: immutable workflow attestation marker missing")
 
-    return {
-        "workflow_run_success_verified": True,
-        "immutable_log_attestation_verified": True,
-    }
+    # GitHub's run-level logs endpoint resolves to the latest attempt. A snapshot
+    # may have been computed in an earlier attempt and then published by a rerun
+    # of a later job. The attestation is bound to the immutable run id, source SHA
+    # and snapshot digest, so search every attempt of that same run without
+    # weakening any provenance or content checks.
+    fetched_any_archive = False
+    for attempt in range(run_attempt, 0, -1):
+        try:
+            archive = _fetch_bytes(
+                f"{api}/repos/{repository}/actions/runs/{run_id}/attempts/{attempt}/logs"
+            )
+        except RuntimeError:
+            continue
+        fetched_any_archive = True
+        if _archive_contains_marker(archive, expected_marker):
+            return {
+                "workflow_run_success_verified": True,
+                "immutable_log_attestation_verified": True,
+            }
+
+    # Backward-compatible fallback for single-attempt runs or GitHub API variants
+    # where the attempt-specific archive is unavailable but run-level logs remain.
+    try:
+        archive = _fetch_bytes(f"{api}/repos/{repository}/actions/runs/{run_id}/logs")
+    except RuntimeError:
+        archive = b""
+    if archive:
+        fetched_any_archive = True
+        if _archive_contains_marker(archive, expected_marker):
+            return {
+                "workflow_run_success_verified": True,
+                "immutable_log_attestation_verified": True,
+            }
+
+    if not fetched_any_archive:
+        raise RuntimeError("runtime hydration rejected: workflow attestation logs unavailable")
+    raise RuntimeError("runtime hydration rejected: immutable workflow attestation marker missing")
 
 
 def verify_runtime_snapshot(root: Path = ROOT) -> dict:

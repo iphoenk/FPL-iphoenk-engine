@@ -144,6 +144,7 @@ def _reuse_candidate(
 
 def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profile_name: str, profile_cfg: dict[str, Any]) -> dict[str, Any]:
     reuse_active = incremental_reuse.active(profile_name, name)
+    reuse_registry_spec = (incremental_reuse._registry().get("services") or {}).get(name) or {}
     reuse_diagnostic_before = incremental_reuse.diagnose(name, profile_name) if name in (incremental_reuse._registry().get("services") or {}) else None
     reuse_rejections: list[dict[str, Any]] = []
 
@@ -211,7 +212,11 @@ def _run_service(name: str, spec: dict[str, Any], context: dict[str, str], profi
         result["promotion_ms"] = 0.0
         result["promoted_output_bytes"] = 0
         if reuse_active:
-            incremental_reuse.record(name, profile_name, input_fingerprint)
+            record_post_execution = bool(reuse_registry_spec.get("record_post_execution_fingerprint"))
+            incremental_reuse.record(name, profile_name, None if record_post_execution else input_fingerprint)
+            if record_post_execution:
+                result["input_fingerprint_after"] = incremental_reuse.stored_fingerprint(name)
+                result["reuse_recording_mode"] = "POST_EXECUTION_SELF_OWNED_ROLLING_STATE"
         return result
     except Exception as exc:
         result = {

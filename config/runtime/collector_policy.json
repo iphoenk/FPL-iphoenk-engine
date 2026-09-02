@@ -1,12 +1,12 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "contract": "FPL_MASTER_MONITOR_TIME_SCHEDULE_GOVERNANCE_V1",
   "timezone": "Asia/Jakarta",
   "visible_checkpoint_minute": 30,
   "schedules": {
     "primary": "30 * * * *",
     "precompute": "15 * * * *",
-    "adaptive": "0,45 * * * *"
+    "adaptive": "0,5,10,20,25,35,40,45,50,55 * * * *"
   },
   "precompute": {
     "enabled": true,
@@ -18,6 +18,17 @@
     "generated_after_target_is_not_valid_precompute": true,
     "source_commit_must_match_canonical_runtime_source": true,
     "report_time_direct_official_refresh_required": true
+  },
+  "checkpoint_recovery": {
+    "enabled": true,
+    "wake_interval_minutes": 5,
+    "adaptive_wakeups_are_probe_only_when_checkpoint_satisfied": true,
+    "recover_missing_precompute_before_target": true,
+    "recover_missing_primary_after_target": true,
+    "source_commit_must_match": true,
+    "materialization_complete_required": true,
+    "same_hour_visible_checkpoint_catchup": true,
+    "never_create_second_checkpoint_authority": true
   },
   "normal_reports": {
     "deep_review": "04:30",
@@ -165,6 +176,8 @@
     "lower_priority_material_is_folded_into_higher_priority_report": true,
     "precompute_target_must_be_explicit_in_runtime_manifest": true,
     "primary_full_compute_is_recovery_when_precompute_missing": true,
-    "deep_review_profile_is_resolved_from_logical_target_not_duplicate_cron": true
+    "deep_review_profile_is_resolved_from_logical_target_not_duplicate_cron": true,
+    "recovery_wakeups_must_not_create_second_evaluation_authority": true,
+    "recovery_wakeups_must_noop_when_checkpoint_is_already_satisfied": true
   }
 }

@@ -318,7 +318,6 @@ def _map_player(official: dict, candidates: list[dict], policy: dict) -> tuple[d
         official.get("name"),
         official.get("full_name"),
         official.get("web_name"),
-        official.get("first_name"),
         official.get("second_name"),
         *((official.get("name_variants") or [])),
     ]

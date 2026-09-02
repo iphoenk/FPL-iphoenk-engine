@@ -1,16 +1,16 @@
 {
   "acceptance": {
-    "all_green": false,
+    "all_green": true,
     "crosswalk_classified_100_percent": true,
     "direct_understat_ids_one_to_one": true,
-    "identity_unresolved_zero": false,
-    "no_fake_source_absent_mapping": false,
+    "identity_unresolved_zero": true,
+    "no_fake_source_absent_mapping": true,
     "official_100_percent_unique": true,
     "official_100_percent_valid": true,
     "team_mapping_100_percent": true,
     "understat_available_fresh": true
   },
-  "generated_at": "2026-09-02T21:34:32.588963+00:00",
+  "generated_at": "2026-09-02T21:40:04.458417+00:00",
   "official": {
     "count": 651,
     "team_count": 20,
@@ -22,48 +22,22 @@
   "understat": {
     "crosswalk_classified_count": 651,
     "crosswalk_coverage": 1.0,
-    "direct_resolved_count": 363,
-    "direct_understat_id_count": 363,
-    "direct_understat_unique_id_count": 363,
+    "direct_resolved_count": 364,
+    "direct_understat_id_count": 364,
+    "direct_understat_unique_id_count": 364,
     "duplicate_direct_understat_claims": {},
     "duplicate_direct_understat_ids": [],
     "freshness": "FRESH",
-    "identity_unresolved": [
-      {
-        "element": 4,
-        "method": "UNDERSTAT_IDENTITY_COLLISION",
-        "name": "Gabriel dos Santos Magalh\u00e3es",
-        "official_minutes": 180.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Arsenal"
-      },
-      {
-        "element": 18,
-        "method": "UNDERSTAT_IDENTITY_COLLISION",
-        "name": "Gabriel Martinelli Silva",
-        "official_minutes": 0.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Arsenal"
-      },
-      {
-        "element": 27,
-        "method": "UNDERSTAT_IDENTITY_COLLISION",
-        "name": "Gabriel Fernando de Jesus",
-        "official_minutes": 0.0,
-        "state": "IDENTITY_UNRESOLVED",
-        "team": "Arsenal"
-      }
-    ],
-    "identity_unresolved_count": 3,
+    "identity_unresolved": [],
+    "identity_unresolved_count": 0,
     "schema_valid": true,
-    "source_absent_current_season_count": 285,
+    "source_absent_current_season_count": 287,
     "source_availability": "AVAILABLE",
     "source_player_count": 364,
     "source_player_unique_id_count": 364,
     "state_counts": {
-      "RESOLVED": 363,
-      "SOURCE_ABSENT_CURRENT_SEASON": 285,
-      "UNRESOLVED": 3
+      "RESOLVED": 364,
+      "SOURCE_ABSENT_CURRENT_SEASON": 287
     },
     "team_mapping_count": 20,
     "transport_revision": "UNDERSTAT_XHR_JSON_V1"

@@ -188,16 +188,17 @@ def _lineup_semantics(predictions: dict, universe: dict, locked: dict, understat
     return rows
 
 
-def _semantic_fingerprint(predictions: dict, universe: dict, locked: dict, understat_tactical: dict, candidates=None) -> str:
+def _semantic_fingerprint(predictions: dict, universe: dict, locked: dict, understat_tactical: dict | None = None, candidates=None) -> str:
     """Hash exact inputs of cached WC/package/lineup artifacts, not whole payloads."""
     normalized_candidates = candidates if candidates is not None else build_candidates(predictions, universe)
     serving_policy = read_json(CONFIG / "serving_improvement_registry.json", {}) or {}
     understat_policy = read_json(CONFIG / "intelligence" / "understat_tactical.json", {}) or {}
+    tactical = understat_tactical or {}
     payload = {
         "algorithm": CACHE_ALGORITHM,
         "prediction_model": predictions.get("model_version"),
         "candidate_semantics": _candidate_semantics(normalized_candidates),
-        "lineup_semantics": _lineup_semantics(predictions, universe, locked, understat_tactical),
+        "lineup_semantics": _lineup_semantics(predictions, universe, locked, tactical),
         "planning_squad": locked,
         "lineup_policy": serving_policy.get("lineup") or {},
         "understat_close_call_policy": understat_policy.get("close_call") or {},
@@ -227,7 +228,7 @@ def _cache_hit(fingerprint: str) -> tuple[bool, str]:
 
 def _write_cache(fingerprint: str) -> None:
     atomic_json(DECISION_CACHE, {
-        "schema_version": 3,
+        "schema_version": 2,
         "algorithm": CACHE_ALGORITHM,
         "fingerprint": fingerprint,
         "artifact_sha256": {key: file_digest(path) for key, path in _cache_artifacts().items()},

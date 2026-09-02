@@ -1,4 +1,5 @@
 # Enriched unresolved diagnostics are persisted on every non-green strict run.
+# Trigger: guarded first-name mononym proof.
 name: TEMP V4 Understat final identity resolver
 
 on:

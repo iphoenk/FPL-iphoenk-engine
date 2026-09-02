@@ -146,7 +146,7 @@ def test_platform_audit_recovers_exact_bypass_when_actions_token_masks_actor_lis
     detail = by_name["RUNTIME_PUBLISHER_BYPASS_EXACT"]["detail"]
     assert by_name["RUNTIME_PUBLISHER_BYPASS_EXACT"]["status"] == "PASS"
     assert detail["evidence_source"] == "public_ruleset_detail_fallback"
-    assert detail["actors"] == [["Integration", PUBLISHER_APP_ID, "always"]]
+    assert detail["actors"] == [("Integration", PUBLISHER_APP_ID, "always")]
 
 
 def test_platform_audit_does_not_accept_unmatched_public_fallback(monkeypatch):

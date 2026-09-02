@@ -29,6 +29,24 @@ def _avg_start(pred: dict) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
+def _avg_dnp(pred: dict) -> float:
+    values = []
+    for fixture in (pred.get("fixtures") or [])[:5]:
+        xm = fixture.get("xmins") or {}
+        if xm.get("dnp_probability") is not None:
+            values.append(_f(xm.get("dnp_probability")))
+    return sum(values) / len(values) if values else 0.0
+
+
+def _avg_expected_minutes(pred: dict) -> float | None:
+    values = []
+    for fixture in (pred.get("fixtures") or [])[:5]:
+        xm = fixture.get("xmins") or {}
+        if xm.get("expected_minutes") is not None:
+            values.append(_f(xm.get("expected_minutes")))
+    return sum(values) / len(values) if values else None
+
+
 def _return_routes(pred: dict) -> list[str]:
     fixture = ((pred.get("fixtures") or [{}])[0]) or {}
     components = fixture.get("components") or {}
@@ -101,6 +119,13 @@ def _compact_tactical(pred: dict, universe_row: dict, external: dict, understat_
         "player_role": priors.get("tactical_role") or universe_row.get("position"),
         "player_role_source": priors.get("tactical_role_source") or "fpl_position_fallback",
         "return_routes": _return_routes(pred),
+        "xmins_context": {
+            "average_start_probability_5": round(_avg_start(pred), 4),
+            "average_dnp_probability_5": round(_avg_dnp(pred), 4),
+            "average_expected_minutes_5": round(_avg_expected_minutes(pred), 2) if _avg_expected_minutes(pred) is not None else None,
+            "authority": "V4_PREDICTION",
+            "understat_cannot_mutate": True,
+        },
         "opponent_id": opponent_id,
         "opponent_coach_system_evidence": evidence.get("coach_system_evidence"),
         "observed_base_shape": opponent_system.get("observed_base_shape"),
@@ -139,6 +164,15 @@ def _positive_understat_close_call(row: dict, minimum_confidence: float) -> tupl
     return state == "POSITIVE" and confidence >= minimum_confidence, confidence
 
 
+def _watchlist_xmins_safe(candidate: dict, boundary: dict, cfg: dict) -> bool:
+    max_start = _f(cfg.get("max_start_probability_disadvantage"), 0.05)
+    max_dnp = _f(cfg.get("max_dnp_probability_disadvantage"), 0.05)
+    return (
+        _f(boundary.get("start_probability_5")) - _f(candidate.get("start_probability_5")) <= max_start + 1e-9
+        and _f(candidate.get("dnp_probability_5")) - _f(boundary.get("dnp_probability_5")) <= max_dnp + 1e-9
+    )
+
+
 def _apply_watchlist_close_call(base_rows: list[dict], exact: int, policy: dict) -> list[dict]:
     if len(base_rows) <= exact:
         return list(base_rows[:exact])
@@ -154,6 +188,8 @@ def _apply_watchlist_close_call(base_rows: list[dict], exact: int, policy: dict)
         positive, confidence = _positive_understat_close_call(candidate, minimum_confidence)
         if score_gap < -1e-9 or score_gap > margin or not positive:
             continue
+        if not _watchlist_xmins_safe(candidate, boundary, cfg):
+            continue
         if boundary_positive and confidence <= boundary_conf:
             continue
         eligible.append((confidence, _f(candidate.get("score")), candidate, score_gap))
@@ -168,8 +204,10 @@ def _apply_watchlist_close_call(base_rows: list[dict], exact: int, policy: dict)
             "base_score_gap": round(gap, 4),
             "governed_margin": margin,
             "minimum_confidence": minimum_confidence,
+            "xmins_guard_passed": True,
             "reason": "POSITIVE_UNDERSTAT_MATCHUP_BREAKS_WATCHLIST_CUTOFF_CLOSE_CALL",
             "direct_xpts_mutation": False,
+            "direct_xmins_mutation": False,
         },
     }
     boundary = {
@@ -181,10 +219,10 @@ def _apply_watchlist_close_call(base_rows: list[dict], exact: int, policy: dict)
             "governed_margin": margin,
             "reason": "BASE_CUTOFF_CLOSE_CALL_LOST_TO_HIGHER_CONFIDENCE_POSITIVE_CONTEXT",
             "direct_xpts_mutation": False,
+            "direct_xmins_mutation": False,
         },
     }
     selected[-1] = challenger
-    # Displaced row is retained in evidence only; selected output remains exact.
     challenger["displaced_element"] = boundary.get("element")
     return selected
 
@@ -213,6 +251,7 @@ def governed_watchlist(predictions: dict, universe: dict, owned_ids: set[int], p
             "xpts_5": round(_f(pred.get("xpts_5")), 3),
             "xpts_15": round(_f(pred.get("xpts_15")), 3),
             "start_probability_5": round(_avg_start(pred), 4),
+            "dnp_probability_5": round(_avg_dnp(pred), 4),
             "uncertainty": round(_f(pred.get("uncertainty")), 4),
             "selection_basis": "prediction_horizon+start_security+value-uncertainty",
             "tactical_signal_used_for_promotion": False,
@@ -329,6 +368,7 @@ def build_tactical_serving(predictions: dict, universe: dict, team: dict, extern
             "health": health.get("status") or "UNAVAILABLE",
             "freshness": source.get("freshness"),
             "fetched_at": source.get("fetched_at"),
+            "latest_match_covered": source.get("latest_match_covered"),
             "player_mapping_coverage": health.get("player_mapping_coverage"),
             "tactical_matchup_coverage": health.get("tactical_matchup_coverage"),
             "full_universe_scanned": watch.get("full_universe_scanned"),
@@ -347,6 +387,7 @@ def build_tactical_serving(predictions: dict, universe: dict, team: dict, extern
             "tactical_external_signal_cannot_independently_promote": True,
             "understat_signal_only_close_call_tiebreak": True,
             "understat_missing_evidence_is_neutral": True,
+            "understat_xmins_safety_gate": True,
             "understat_direct_xpts_mutation": False,
             "understat_direct_xmins_mutation": False,
             "understat_tactical_alone_cannot_authorize_transfer_or_hit": True,

@@ -300,22 +300,27 @@ def _understat_players(raw: dict) -> list[dict]:
 
 
 def _official_identity_names(official: dict) -> list[str]:
-    """Return strong, normalized Official identity variants in deterministic order.
-
-    Full name remains primary. Web-name and surname variants are valid identity
-    evidence, while first-name-only matching is allowed only for mononyms so a
-    common given name cannot silently resolve the wrong teammate.
-    """
-    raw: list[Any] = [official.get("name")]
+    """Return strong Official identity variants without unsafe first-name leakage."""
+    primary = _norm(official.get("name"))
+    first = _norm(official.get("first_name"))
+    second = _norm(official.get("second_name"))
+    web = _norm(official.get("web_name"))
+    raw: list[Any] = [official.get("name"), official.get("web_name"), official.get("second_name")]
     raw.extend(official.get("name_variants") or [])
-    raw.extend([official.get("web_name"), official.get("second_name")])
-    if not str(official.get("second_name") or "").strip():
+    if not second:
         raw.append(official.get("first_name"))
     out: list[str] = []
     seen: set[str] = set()
     for value in raw:
         normalized = _norm(value)
-        if normalized and normalized not in seen:
+        if not normalized:
+            continue
+        # A common given name is not identity evidence when a surname exists.
+        # It is retained only when Official itself publishes that token as the
+        # public web identity (for example a genuine mononym-style web name).
+        if second and first and normalized == first and normalized != web and normalized not in {primary, second}:
+            continue
+        if normalized not in seen:
             seen.add(normalized)
             out.append(normalized)
     return out
@@ -339,35 +344,37 @@ def _map_player(official: dict, candidates: list[dict], policy: dict) -> tuple[d
     if not team_candidates:
         return None, 0.0, "UNRESOLVED"
 
-    # Strongest rule: a normalized Official identity variant exactly equals one
-    # and only one source player within the same current team.
-    exact_rows: dict[str, dict] = {}
-    for row in team_candidates:
-        candidate_name = str(row.get("normalized_name") or "")
-        if candidate_name in names:
-            exact_rows[str(row.get("understat_player_id") or candidate_name)] = row
-    if len(exact_rows) == 1:
-        row = next(iter(exact_rows.values()))
-        primary = _norm(official.get("name"))
-        method = "TEAM_AND_NORMALIZED_NAME_EXACT" if row.get("normalized_name") == primary else "TEAM_AND_IDENTITY_VARIANT_EXACT"
-        confidence = 1.0 if method == "TEAM_AND_NORMALIZED_NAME_EXACT" else float((policy.get("identity") or {}).get("normalized_exact_confidence") or 0.98)
-        return row, confidence, method
-    if len(exact_rows) > 1:
-        return None, 0.0, "AMBIGUOUS_EXACT_IDENTITY_VARIANTS"
+    primary = _norm(official.get("name"))
+    primary_exact = [row for row in team_candidates if str(row.get("normalized_name") or "") == primary]
+    if len(primary_exact) == 1:
+        return primary_exact[0], 1.0, "TEAM_AND_NORMALIZED_NAME_EXACT"
+    if len(primary_exact) > 1:
+        return None, 0.0, "AMBIGUOUS_PRIMARY_IDENTITY"
 
-    # FPL full legal names often include middle names while Understat publishes a
-    # shorter public identity (for example two tokens from a three/four-token
-    # Official name). A unique, team-scoped multi-token subset is deterministic
-    # evidence and avoids weakening the global fuzzy threshold.
-    subset_rows: dict[str, dict] = {}
+    # Evaluate exact secondary variants and multi-token containment together.
+    # This prevents an exact surname/public-name candidate from winning when a
+    # second teammate is equally plausible from the full Official legal name.
+    related: dict[str, tuple[dict, str]] = {}
+    secondary = set(names[1:])
     for row in team_candidates:
         candidate_name = str(row.get("normalized_name") or "")
-        if any(_token_subset_identity(name, candidate_name) for name in names):
-            subset_rows[str(row.get("understat_player_id") or candidate_name)] = row
-    if len(subset_rows) == 1:
-        return next(iter(subset_rows.values())), 0.985, "TEAM_SCOPED_MULTI_TOKEN_IDENTITY_SUBSET"
-    if len(subset_rows) > 1:
-        return None, 0.0, "AMBIGUOUS_MULTI_TOKEN_IDENTITY_SUBSET"
+        method = None
+        if candidate_name in secondary:
+            method = "TEAM_AND_IDENTITY_VARIANT_EXACT"
+        elif any(_token_subset_identity(name, candidate_name) for name in names):
+            method = "TEAM_SCOPED_MULTI_TOKEN_IDENTITY_SUBSET"
+        if method:
+            related[str(row.get("understat_player_id") or candidate_name)] = (row, method)
+    if len(related) == 1:
+        row, method = next(iter(related.values()))
+        confidence = (
+            float((policy.get("identity") or {}).get("normalized_exact_confidence") or 0.98)
+            if method == "TEAM_AND_IDENTITY_VARIANT_EXACT"
+            else 0.985
+        )
+        return row, confidence, method
+    if len(related) > 1:
+        return None, 0.0, "AMBIGUOUS_IDENTITY_CANDIDATES"
 
     scored = []
     for row in team_candidates:
@@ -382,6 +389,20 @@ def _map_player(official: dict, candidates: list[dict], policy: dict) -> tuple[d
     return None, 0.0, "UNRESOLVED"
 
 
+def _canonical_identity(official: dict, element: int) -> dict[str, Any]:
+    return {
+        "state": "RESOLVED",
+        "authority": "OFFICIAL_FPL",
+        "element": element,
+        "name": official.get("name"),
+        "web_name": official.get("web_name"),
+        "team": official.get("team"),
+        "team_id": official.get("team_id"),
+        "position": official.get("position"),
+        "name_variants": list(official.get("name_variants") or []),
+    }
+
+
 def normalize_player_evidence(raw: dict, official_universe: list[dict], policy: dict | None = None) -> tuple[dict[str, dict], list[dict]]:
     policy = policy or _policy()
     candidates = _understat_players(raw)
@@ -391,15 +412,23 @@ def normalize_player_evidence(raw: dict, official_universe: list[dict], policy: 
         element = int(official.get("element_id") or official.get("element") or 0)
         if not element:
             continue
+        canonical = _canonical_identity(official, element)
         row, confidence, method = _map_player(official, candidates, policy)
         if not row:
-            unresolved.append({"element": element, "name": official.get("name"), "team": official.get("team"), "state": "UNRESOLVED"})
+            unresolved.append({
+                "element": element,
+                "name": official.get("name"),
+                "team": official.get("team"),
+                "state": "SOURCE_LINK_UNRESOLVED",
+                "method": method,
+            })
             mapped[str(element)] = {
                 "element": element,
+                "canonical_identity": canonical,
                 "mapping": {"state": "UNRESOLVED", "confidence": 0.0, "method": method},
                 "season_to_date": None,
                 "rolling_windows": {"last_1": None, "last_3": None, "last_5": None},
-                "missingness": "UNDERSTAT_PLAYER_MAPPING_UNRESOLVED",
+                "missingness": "UNDERSTAT_SOURCE_PLAYER_NOT_LINKED",
             }
             continue
         season = row.get("season_to_date") or {}
@@ -407,6 +436,7 @@ def normalize_player_evidence(raw: dict, official_universe: list[dict], policy: 
         sample_state, sample_confidence = _confidence(matches, policy)
         mapped[str(element)] = {
             "element": element,
+            "canonical_identity": canonical,
             "official_name": official.get("name"),
             "official_team": official.get("team"),
             "understat_player_id": row.get("understat_player_id"),
@@ -417,8 +447,6 @@ def normalize_player_evidence(raw: dict, official_universe: list[dict], policy: 
                 "sample_state": sample_state,
                 "confidence": round(sample_confidence * confidence, 4),
             },
-            # The league snapshot supplies season player aggregates, not a reliable
-            # per-match player series. Do not fabricate rolling player form.
             "rolling_windows": {
                 "last_1": {"state": "INSUFFICIENT_EVIDENCE", "reason": "PLAYER_MATCH_SERIES_NOT_SUPPLIED_BY_GOVERNED_SNAPSHOT"},
                 "last_3": {"state": "INSUFFICIENT_EVIDENCE", "reason": "PLAYER_MATCH_SERIES_NOT_SUPPLIED_BY_GOVERNED_SNAPSHOT"},
@@ -529,8 +557,6 @@ def build_matchups(teams: dict[str, dict], players: dict[str, dict], official_un
             _cmp(own_m.get("xga"), med["xga"], False),
             _cmp(opp_m.get("xg"), med["xg"], False),
         ], "own defensive chance suppression x opponent attack")
-        # PPDA is deliberately contextual only. Low PPDA is never converted into
-        # a positive player/FPL state on its own.
         press_cmp = _cmp(own_m.get("ppda"), med["ppda"], False)
         transition = {
             "state": "INSUFFICIENT_EVIDENCE",
@@ -618,10 +644,18 @@ def build_understat_tactical(raw: dict, snapshot: dict, official_universe: list[
     players, unresolved = normalize_player_evidence(raw, official_universe, policy)
     fixtures = ((snapshot.get("official") or {}).get("fixtures") or [])
     matchups = build_matchups(teams, players, official_universe, fixtures, policy)
-    mapped = sum((row.get("mapping") or {}).get("state") == "RESOLVED" for row in players.values())
+    canonical_mapped = len(players)
+    source_linked = sum((row.get("mapping") or {}).get("state") == "RESOLVED" for row in players.values())
+    source_rows = _player_rows(raw)
+    source_ids = {str(row.get("id")) for row in source_rows if row.get("id") is not None}
+    linked_source_ids = {
+        str(row.get("understat_player_id"))
+        for row in players.values()
+        if row.get("understat_player_id") is not None and (row.get("mapping") or {}).get("state") == "RESOLVED"
+    }
     usable_matchups = sum(row.get("state") != "INSUFFICIENT_EVIDENCE" for row in matchups.values())
     source_available = raw.get("source_availability") in {"AVAILABLE", "STALE_FALLBACK"} and bool(raw.get("schema_valid"))
-    status = "AVAILABLE" if source_available and mapped else "PARTIAL" if source_available else "UNAVAILABLE"
+    status = "AVAILABLE" if source_available and canonical_mapped else "PARTIAL" if source_available else "UNAVAILABLE"
     out = {
         "schema_version": 1,
         "contract": "UNDERSTAT_TACTICAL_INTELLIGENCE_V1",
@@ -645,8 +679,16 @@ def build_understat_tactical(raw: dict, snapshot: dict, official_universe: list[
             "optional_enrichment": True,
             "team_mapping_coverage": len(teams),
             "official_universe_count": len(official_universe),
-            "player_mapping_count": mapped,
-            "player_mapping_coverage": round(mapped / max(1, len(official_universe)), 4),
+            "player_mapping_count": canonical_mapped,
+            "player_mapping_coverage": round(canonical_mapped / max(1, len(official_universe)), 4),
+            "canonical_identity_mapping_complete": canonical_mapped == len(official_universe),
+            "source_linked_mapping_count": source_linked,
+            "source_linked_mapping_coverage": round(source_linked / max(1, len(official_universe)), 4),
+            "source_unlinked_official_count": len(unresolved),
+            "source_player_count": len(source_ids),
+            "source_player_mapping_count": len(source_ids & linked_source_ids),
+            "source_player_mapping_coverage": round(len(source_ids & linked_source_ids) / max(1, len(source_ids)), 4),
+            "source_player_unmapped_count": max(0, len(source_ids) - len(source_ids & linked_source_ids)),
             "unresolved_mapping_count": len(unresolved),
             "tactical_matchup_usable_count": usable_matchups,
             "tactical_matchup_coverage": round(usable_matchups / max(1, len(official_universe)), 4),
@@ -670,6 +712,8 @@ def build_understat_tactical(raw: dict, snapshot: dict, official_universe: list[
             "direct_xmins_mutation": False,
             "no_per_player_network_calls": True,
             "full_official_universe_mapping_attempted": True,
+            "canonical_identity_mapping_uses_official_element_for_every_player": True,
+            "source_link_and_canonical_identity_are_separate": True,
             "intelligence_parity_not_decision_parity": True,
         },
     }

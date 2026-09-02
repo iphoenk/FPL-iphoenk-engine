@@ -6155,7 +6155,7 @@
       "gw": 3,
       "deadline_time": "2026-09-04T17:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-02T06:02:01.964946+00:00",
+        "generated_at": "2026-09-02T11:33:37.027741+00:00",
         "players": [
           {
             "element": 1,
@@ -7321,10 +7321,10 @@
             "element": 620,
             "name": "Diouf",
             "position": "DEF",
-            "xpts": 3.148,
-            "xpts_std": 2.987,
-            "xmins": 46.2,
-            "start_probability": 0.5726,
+            "xpts": 3.906,
+            "xpts_std": 3.175,
+            "xmins": 70.1,
+            "start_probability": 0.7456,
             "clean_sheet_probability": 0.4461
           },
           {
@@ -8371,10 +8371,10 @@
             "element": 623,
             "name": "Bentley",
             "position": "GK",
-            "xpts": 2.058,
-            "xpts_std": 2.529,
-            "xmins": 46.2,
-            "start_probability": 0.5726,
+            "xpts": 2.315,
+            "xpts_std": 2.615,
+            "xmins": 59.5,
+            "start_probability": 0.611,
             "clean_sheet_probability": 0.0957
           },
           {
@@ -12452,6 +12452,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-02T06:02:03.049161+00:00",
+  "updated_at": "2026-09-02T11:33:38.023080+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

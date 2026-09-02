@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T08:30:15.506399+00:00",
+  "generated_at": "2026-09-02T11:33:36.790630+00:00",
   "status": "READY",
   "model": "v5_historical_player_priors_v2",
   "season": "2025-26",
@@ -331,21 +331,6 @@
       "avg_minutes_when_start": 90.0,
       "xg90": 0.2,
       "xa90": 0.18,
-      "attacking_prior_weight": 0.75,
-      "source": "vaastav/Fantasy-Premier-League:2025-26",
-      "identity_match": "stable_player_code"
-    },
-    "28": {
-      "element": 28,
-      "web_name": "Martinez",
-      "minutes": 2835.0,
-      "starts": 32.0,
-      "team_start_share": 0.8421,
-      "conditional_start_share": 1.0,
-      "start_probability": 0.9447,
-      "avg_minutes_when_start": 88.6,
-      "xg90": 0.0,
-      "xa90": 0.0,
       "attacking_prior_weight": 0.75,
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
@@ -1025,21 +1010,6 @@
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
-    "91": {
-      "element": 91,
-      "web_name": "Pinnock",
-      "minutes": 318.0,
-      "starts": 4.0,
-      "team_start_share": 0.1053,
-      "conditional_start_share": 1.0,
-      "start_probability": 0.6868,
-      "avg_minutes_when_start": 79.5,
-      "xg90": 0.0,
-      "xa90": 0.02,
-      "attacking_prior_weight": 0.1325,
-      "source": "vaastav/Fantasy-Premier-League:2025-26",
-      "identity_match": "stable_player_code"
-    },
     "94": {
       "element": 94,
       "web_name": "Schade",
@@ -1172,6 +1142,21 @@
       "xg90": 0.55,
       "xa90": 0.04,
       "attacking_prior_weight": 0.5142,
+      "source": "vaastav/Fantasy-Premier-League:2025-26",
+      "identity_match": "stable_player_code"
+    },
+    "620": {
+      "element": 620,
+      "web_name": "Diouf",
+      "minutes": 2706.0,
+      "starts": 30.0,
+      "team_start_share": 0.7895,
+      "conditional_start_share": 0.9978,
+      "start_probability": 0.9249,
+      "avg_minutes_when_start": 90.0,
+      "xg90": 0.02,
+      "xa90": 0.08,
+      "attacking_prior_weight": 0.75,
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
@@ -1400,21 +1385,6 @@
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
-    "131": {
-      "element": 131,
-      "web_name": "Baleba",
-      "minutes": 1646.0,
-      "starts": 23.0,
-      "team_start_share": 0.6053,
-      "conditional_start_share": 1.0,
-      "start_probability": 0.8618,
-      "avg_minutes_when_start": 71.6,
-      "xg90": 0.04,
-      "xa90": 0.04,
-      "attacking_prior_weight": 0.6858,
-      "source": "vaastav/Fantasy-Premier-League:2025-26",
-      "identity_match": "stable_player_code"
-    },
     "138": {
       "element": 138,
       "web_name": "Kostoulas",
@@ -1441,6 +1411,21 @@
       "avg_minutes_when_start": 88.9,
       "xg90": 0.09,
       "xa90": 0.02,
+      "attacking_prior_weight": 0.75,
+      "source": "vaastav/Fantasy-Premier-League:2025-26",
+      "identity_match": "stable_player_code"
+    },
+    "28": {
+      "element": 28,
+      "web_name": "Martinez",
+      "minutes": 2835.0,
+      "starts": 32.0,
+      "team_start_share": 0.8421,
+      "conditional_start_share": 1.0,
+      "start_probability": 0.9447,
+      "avg_minutes_when_start": 88.6,
+      "xg90": 0.0,
+      "xa90": 0.0,
       "attacking_prior_weight": 0.75,
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
@@ -1655,21 +1640,6 @@
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
-    "153": {
-      "element": 153,
-      "web_name": "Disasi",
-      "minutes": 1254.0,
-      "starts": 14.0,
-      "team_start_share": 0.3684,
-      "conditional_start_share": 1.0,
-      "start_probability": 0.7789,
-      "avg_minutes_when_start": 89.6,
-      "xg90": 0.08,
-      "xa90": 0.0,
-      "attacking_prior_weight": 0.5225,
-      "source": "vaastav/Fantasy-Premier-League:2025-26",
-      "identity_match": "stable_player_code"
-    },
     "154": {
       "element": 154,
       "web_name": "Palmer",
@@ -1790,21 +1760,6 @@
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
-    "167": {
-      "element": 167,
-      "web_name": "Delap",
-      "minutes": 1092.0,
-      "starts": 12.0,
-      "team_start_share": 0.3158,
-      "conditional_start_share": 0.989,
-      "start_probability": 0.7534,
-      "avg_minutes_when_start": 90.0,
-      "xg90": 0.37,
-      "xa90": 0.02,
-      "attacking_prior_weight": 0.455,
-      "source": "vaastav/Fantasy-Premier-League:2025-26",
-      "identity_match": "stable_player_code"
-    },
     "168": {
       "element": 168,
       "web_name": "Marc Guiu",
@@ -1832,6 +1787,21 @@
       "xg90": 0.07,
       "xa90": 0.02,
       "attacking_prior_weight": 0.75,
+      "source": "vaastav/Fantasy-Premier-League:2025-26",
+      "identity_match": "stable_player_code"
+    },
+    "91": {
+      "element": 91,
+      "web_name": "Pinnock",
+      "minutes": 318.0,
+      "starts": 4.0,
+      "team_start_share": 0.1053,
+      "conditional_start_share": 1.0,
+      "start_probability": 0.6868,
+      "avg_minutes_when_start": 79.5,
+      "xg90": 0.0,
+      "xa90": 0.02,
+      "attacking_prior_weight": 0.1325,
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
@@ -1865,6 +1835,21 @@
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
+    "623": {
+      "element": 623,
+      "web_name": "Bentley",
+      "minutes": 270.0,
+      "starts": 3.0,
+      "team_start_share": 0.0789,
+      "conditional_start_share": 1.0,
+      "start_probability": 0.6776,
+      "avg_minutes_when_start": 90.0,
+      "xg90": 0.0,
+      "xa90": 0.0,
+      "attacking_prior_weight": 0.1125,
+      "source": "vaastav/Fantasy-Premier-League:2025-26",
+      "identity_match": "stable_player_code"
+    },
     "42": {
       "element": 42,
       "web_name": "Guessand",
@@ -1880,6 +1865,21 @@
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
+    "153": {
+      "element": 153,
+      "web_name": "Disasi",
+      "minutes": 1254.0,
+      "starts": 14.0,
+      "team_start_share": 0.3684,
+      "conditional_start_share": 1.0,
+      "start_probability": 0.7789,
+      "avg_minutes_when_start": 89.6,
+      "xg90": 0.08,
+      "xa90": 0.0,
+      "attacking_prior_weight": 0.5225,
+      "source": "vaastav/Fantasy-Premier-League:2025-26",
+      "identity_match": "stable_player_code"
+    },
     "198": {
       "element": 198,
       "web_name": "Henderson",
@@ -1891,21 +1891,6 @@
       "avg_minutes_when_start": 90.0,
       "xg90": 0.0,
       "xa90": 0.0,
-      "attacking_prior_weight": 0.75,
-      "source": "vaastav/Fantasy-Premier-League:2025-26",
-      "identity_match": "stable_player_code"
-    },
-    "201": {
-      "element": 201,
-      "web_name": "Muñoz",
-      "minutes": 2400.0,
-      "starts": 29.0,
-      "team_start_share": 0.7632,
-      "conditional_start_share": 1.0,
-      "start_probability": 0.9171,
-      "avg_minutes_when_start": 82.8,
-      "xg90": 0.09,
-      "xa90": 0.15,
       "attacking_prior_weight": 0.75,
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
@@ -3515,21 +3500,6 @@
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
-    "401": {
-      "element": 401,
-      "web_name": "Marmoush",
-      "minutes": 691.0,
-      "starts": 8.0,
-      "team_start_share": 0.2105,
-      "conditional_start_share": 1.0,
-      "start_probability": 0.7237,
-      "avg_minutes_when_start": 86.4,
-      "xg90": 0.36,
-      "xa90": 0.1,
-      "attacking_prior_weight": 0.2879,
-      "source": "vaastav/Fantasy-Premier-League:2025-26",
-      "identity_match": "stable_player_code"
-    },
     "402": {
       "element": 402,
       "web_name": "Rodrigo",
@@ -3557,21 +3527,6 @@
       "xg90": 0.26,
       "xa90": 0.13,
       "attacking_prior_weight": 0.6763,
-      "source": "vaastav/Fantasy-Premier-League:2025-26",
-      "identity_match": "stable_player_code"
-    },
-    "405": {
-      "element": 405,
-      "web_name": "N.Gonzalez",
-      "minutes": 1561.0,
-      "starts": 17.0,
-      "team_start_share": 0.4474,
-      "conditional_start_share": 0.9801,
-      "start_probability": 0.7937,
-      "avg_minutes_when_start": 90.0,
-      "xg90": 0.04,
-      "xa90": 0.06,
-      "attacking_prior_weight": 0.6504,
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
@@ -3617,6 +3572,21 @@
       "xg90": 0.06,
       "xa90": 0.16,
       "attacking_prior_weight": 0.75,
+      "source": "vaastav/Fantasy-Premier-League:2025-26",
+      "identity_match": "stable_player_code"
+    },
+    "131": {
+      "element": 131,
+      "web_name": "Baleba",
+      "minutes": 1646.0,
+      "starts": 23.0,
+      "team_start_share": 0.6053,
+      "conditional_start_share": 1.0,
+      "start_probability": 0.8618,
+      "avg_minutes_when_start": 71.6,
+      "xg90": 0.04,
+      "xa90": 0.04,
+      "attacking_prior_weight": 0.6858,
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
@@ -3950,6 +3920,21 @@
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
+    "405": {
+      "element": 405,
+      "web_name": "N.Gonzalez",
+      "minutes": 1561.0,
+      "starts": 17.0,
+      "team_start_share": 0.4474,
+      "conditional_start_share": 0.9801,
+      "start_probability": 0.7937,
+      "avg_minutes_when_start": 90.0,
+      "xg90": 0.04,
+      "xa90": 0.06,
+      "attacking_prior_weight": 0.6504,
+      "source": "vaastav/Fantasy-Premier-League:2025-26",
+      "identity_match": "stable_player_code"
+    },
     "442": {
       "element": 442,
       "web_name": "Pope",
@@ -4202,6 +4187,36 @@
       "xg90": 0.48,
       "xa90": 0.07,
       "attacking_prior_weight": 0.3354,
+      "source": "vaastav/Fantasy-Premier-League:2025-26",
+      "identity_match": "stable_player_code"
+    },
+    "167": {
+      "element": 167,
+      "web_name": "Delap",
+      "minutes": 1092.0,
+      "starts": 12.0,
+      "team_start_share": 0.3158,
+      "conditional_start_share": 0.989,
+      "start_probability": 0.7534,
+      "avg_minutes_when_start": 90.0,
+      "xg90": 0.37,
+      "xa90": 0.02,
+      "attacking_prior_weight": 0.455,
+      "source": "vaastav/Fantasy-Premier-League:2025-26",
+      "identity_match": "stable_player_code"
+    },
+    "201": {
+      "element": 201,
+      "web_name": "Muñoz",
+      "minutes": 2400.0,
+      "starts": 29.0,
+      "team_start_share": 0.7632,
+      "conditional_start_share": 1.0,
+      "start_probability": 0.9171,
+      "avg_minutes_when_start": 82.8,
+      "xg90": 0.09,
+      "xa90": 0.15,
+      "attacking_prior_weight": 0.75,
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
@@ -4535,9 +4550,24 @@
       "source": "vaastav/Fantasy-Premier-League:2025-26",
       "identity_match": "stable_player_code"
     },
+    "401": {
+      "element": 401,
+      "web_name": "Marmoush",
+      "minutes": 691.0,
+      "starts": 8.0,
+      "team_start_share": 0.2105,
+      "conditional_start_share": 1.0,
+      "start_probability": 0.7237,
+      "avg_minutes_when_start": 86.4,
+      "xg90": 0.36,
+      "xa90": 0.1,
+      "attacking_prior_weight": 0.2879,
+      "source": "vaastav/Fantasy-Premier-League:2025-26",
+      "identity_match": "stable_player_code"
+    },
     "403": {
       "element": 403,
-      "web_name": "Savinho",
+      "web_name": "Sávio",
       "minutes": 817.0,
       "starts": 7.0,
       "team_start_share": 0.1842,
@@ -5197,12 +5227,12 @@
     }
   },
   "coverage": {
-    "current_players": 612,
-    "matched_with_usable_prior": 346,
-    "coverage_ratio": 0.5654,
-    "matched_by_stable_code": 468,
+    "current_players": 629,
+    "matched_with_usable_prior": 348,
+    "coverage_ratio": 0.5533,
+    "matched_by_stable_code": 472,
     "matched_by_unique_full_name": 0,
-    "rejected_low_minutes": 122
+    "rejected_low_minutes": 124
   },
   "governance": {
     "previous_season_only": true,
@@ -5214,7 +5244,7 @@
     "network_failure_may_use_stale_prior": true,
     "missing_prior_must_degrade_quality_not_block_prediction": true
   },
-  "fetch_mode": "PERSISTED_CACHE",
+  "fetch_mode": "NETWORK_REFRESH",
   "cache_fresh": true,
   "source_meta": {
     "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2025-26/players_raw.csv",

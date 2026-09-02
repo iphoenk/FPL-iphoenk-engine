@@ -4,7 +4,7 @@
   "failed_checks": [],
   "checks": {
     "universe_prior_coverage": {
-      "value": 0.5654,
+      "value": 0.5533,
       "threshold": 0.45,
       "pass": true
     },
@@ -32,14 +32,14 @@
     "model": "v5_historical_player_priors_v2",
     "season": "2025-26",
     "status": "READY",
-    "fetch_mode": "PERSISTED_CACHE",
+    "fetch_mode": "NETWORK_REFRESH",
     "coverage": {
-      "current_players": 612,
-      "matched_with_usable_prior": 346,
-      "coverage_ratio": 0.5654,
-      "matched_by_stable_code": 468,
+      "current_players": 629,
+      "matched_with_usable_prior": 348,
+      "coverage_ratio": 0.5533,
+      "matched_by_stable_code": 472,
       "matched_by_unique_full_name": 0,
-      "rejected_low_minutes": 122
+      "rejected_low_minutes": 124
     }
   },
   "owned_squad": {

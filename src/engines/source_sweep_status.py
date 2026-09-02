@@ -42,9 +42,11 @@ def build_source_sweep_status(endpoint_health: dict | None = None, external_evid
     configured = adapters.get("sources") or {}
     rows = []
     missing = []
+    tiered_ids: set[str] = set()
 
     for tier, source_ids in tiers.items():
         for source_id in source_ids:
+            tiered_ids.add(source_id)
             adapter = configured.get(source_id)
             if not adapter:
                 missing.append(source_id)
@@ -88,6 +90,21 @@ def build_source_sweep_status(endpoint_health: dict | None = None, external_evid
                 "runtime_wired": bool(adapter.get("runtime_wired")),
                 "evidence": evidence_text,
             })
+
+    # Understat is a native enrichment source rather than a deadline news sweep
+    # provider. Include it in observability even though the older source-sweep tier
+    # registry predates this capability; do not create a second source authority.
+    if "understat_tactical" not in tiered_ids and "understat_tactical" in configured:
+        adapter = configured["understat_tactical"]
+        status, evidence_text = _understat_status()
+        rows.append({
+            "source_id": "understat_tactical",
+            "tier": int(adapter.get("tier") or 4),
+            "status": status,
+            "runtime_wired": True,
+            "evidence": evidence_text,
+            "scope": "TACTICAL_ENRICHMENT_NOT_DEADLINE_NEWS_SWEEP",
+        })
 
     if missing:
         raise RuntimeError(f"source adapter registry incomplete: {sorted(missing)}")

@@ -6,7 +6,8 @@ on:
   workflow_dispatch:
   schedule:
     # :15 precomputes the upcoming logical :30 checkpoint. :30 is a recovery
-    # heartbeat and recomputes only when the exact targeted precompute is absent.
+    # heartbeat and recomputes when the exact targeted precompute is absent or
+    # no longer fresh under the governed operational policy.
     - cron: "15 * * * *"
     - cron: "30 * * * *"
 
@@ -81,31 +82,11 @@ jobs:
             git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}" || true
             if git cat-file -e "origin/${RUNTIME_BRANCH}:data/runtime_provenance_v4.json" 2>/dev/null; then
               git show "origin/${RUNTIME_BRANCH}:data/runtime_provenance_v4.json" > "$RUNNER_TEMP/runtime_provenance_v4.json"
-              export TARGET_CHECKPOINT="$target_checkpoint"
-              if python - <<'PY'
-          import json, os
-          from datetime import datetime
-          from pathlib import Path
-
-          p=Path(os.environ['RUNNER_TEMP'])/'runtime_provenance_v4.json'
-          obj=json.loads(p.read_text())
-          cp=obj.get('checkpoint') or {}
-          target=os.environ['TARGET_CHECKPOINT']
-          source=os.environ['CANONICAL_SHA']
-          publish=obj.get('runtime_publish_at')
-          valid=(
-              obj.get('canonical_source_sha') == source
-              and cp.get('snapshot_role') == 'PRECOMPUTE_NEXT_CHECKPOINT'
-              and cp.get('target_checkpoint') == target
-              and cp.get('precomputed') is True
-              and cp.get('generated_before_or_at_target') is True
-              and cp.get('materialization_complete') is True
-              and cp.get('publication_proof') == 'PRESENCE_ON_RUNTIME_BRANCH'
-              and bool(publish)
-              and datetime.fromisoformat(publish.replace('Z','+00:00')) <= datetime.fromisoformat(target.replace('Z','+00:00'))
-          )
-          raise SystemExit(0 if valid else 1)
-          PY
+              if python .github/scripts/v4_precompute_reuse_guard.py \
+                --provenance "$RUNNER_TEMP/runtime_provenance_v4.json" \
+                --target-checkpoint "$target_checkpoint" \
+                --canonical-sha "$canonical_sha" \
+                --observed "$observed"
               then
                 should_run_core=false
                 precompute_reused=true

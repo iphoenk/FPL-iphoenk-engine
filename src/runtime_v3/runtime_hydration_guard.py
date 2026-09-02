@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import io
 import json
 import os
 import re
 import subprocess
 import tempfile
-import zipfile
 from pathlib import Path
 from urllib.request import Request, urlopen
 
@@ -164,6 +162,56 @@ def _verify_embedded_attestation(root: Path, manifest: dict, actual_paths: list[
     }
 
 
+def _verify_compute_job_attestation(
+    *,
+    api: str,
+    repository: str,
+    run_id: int,
+    expected_marker: str,
+) -> None:
+    """Verify the exact marker in a successful compute job, including rerun attempts.
+
+    GitHub's workflow-run aggregate log archive is not a stable authority across
+    reruns. The attestation is emitted by the compute job, so bind verification to
+    that immutable job log while still requiring the parent workflow run itself to
+    be canonical and successful.
+    """
+    jobs_payload = _fetch_json(
+        f"{api}/repos/{repository}/actions/runs/{run_id}/jobs?filter=all&per_page=100"
+    )
+    jobs = jobs_payload.get("jobs")
+    if not isinstance(jobs, list):
+        raise RuntimeError("runtime hydration rejected: attesting workflow jobs unavailable")
+
+    candidates = []
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        if job.get("name") != "compute" or job.get("conclusion") != "success":
+            continue
+        job_run_id = job.get("run_id")
+        if job_run_id is not None and job_run_id != run_id:
+            continue
+        job_id = job.get("id")
+        if not isinstance(job_id, int) or job_id <= 0:
+            continue
+        candidates.append(job)
+
+    candidates.sort(
+        key=lambda job: (int(job.get("run_attempt") or 0), int(job.get("id") or 0)),
+        reverse=True,
+    )
+    for job in candidates:
+        job_id = int(job["id"])
+        text = _fetch_bytes(
+            f"{api}/repos/{repository}/actions/jobs/{job_id}/logs"
+        ).decode("utf-8", errors="replace")
+        if expected_marker in text:
+            return
+
+    raise RuntimeError("runtime hydration rejected: immutable workflow attestation marker missing")
+
+
 def _verify_immutable_workflow_evidence(attestation: dict) -> dict:
     if not _production_actions_context():
         return {
@@ -189,24 +237,15 @@ def _verify_immutable_workflow_evidence(attestation: dict) -> dict:
     if metadata.get("conclusion") != "success":
         raise RuntimeError("runtime hydration rejected: attesting workflow did not complete successfully")
 
-    archive = _fetch_bytes(f"{api}/repos/{repository}/actions/runs/{run_id}/logs")
     expected_marker = ATTESTATION_MARKER + json.dumps(
         attestation, ensure_ascii=False, sort_keys=True
     )
-    found = False
-    try:
-        with zipfile.ZipFile(io.BytesIO(archive)) as logs:
-            for name in logs.namelist():
-                if name.endswith("/"):
-                    continue
-                text = logs.read(name).decode("utf-8", errors="replace")
-                if expected_marker in text:
-                    found = True
-                    break
-    except (zipfile.BadZipFile, OSError) as exc:
-        raise RuntimeError("runtime hydration rejected: workflow attestation log archive invalid") from exc
-    if not found:
-        raise RuntimeError("runtime hydration rejected: immutable workflow attestation marker missing")
+    _verify_compute_job_attestation(
+        api=api,
+        repository=repository,
+        run_id=run_id,
+        expected_marker=expected_marker,
+    )
 
     return {
         "workflow_run_success_verified": True,

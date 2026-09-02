@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "comparison_widths": [7, 10, 13, 20],
+  "max_replacements": 4,
+  "top_per_size": 8,
+  "beam_size": 28,
+  "history_limit": 48,
+  "regret_epsilon": 0.01
+}

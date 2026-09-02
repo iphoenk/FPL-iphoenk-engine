@@ -29,6 +29,8 @@ def _policy() -> dict:
             "watchlist_base_score_margin": 0.15,
             "lineup_selection_score_margin": 0.12,
             "minimum_confidence": 0.6,
+            "max_start_probability_disadvantage": 0.05,
+            "max_dnp_probability_disadvantage": 0.05,
         },
     }
 
@@ -68,7 +70,7 @@ def _raw() -> dict:
                 {"id": "10", "player_name": "Saka", "team_title": "Arsenal", "games": "5", "time": "450", "xG": "3.2", "xA": "2.0", "xGChain": "5.1", "xGBuildup": "1.4", "shots": "16", "key_passes": "12", "position": "M"},
                 {"id": "20", "player_name": "Palmer", "team_title": "Chelsea", "games": "5", "time": "440", "xG": "1.5", "xA": "1.2", "xGChain": "3.4", "xGBuildup": "1.0", "shots": "11", "key_passes": "9", "position": "M"},
             ],
-            "datesData": [{"datetime": "2026-08-31 18:00:00"}],
+            "datesData": [{"datetime": "2026-08-31 18:00:00", "isResult": True, "goals": {"h": "1", "a": "0"}}],
         },
     }
 
@@ -149,7 +151,7 @@ def test_watchlist_understat_can_only_promote_inside_governed_cutoff_margin():
     ids = [row["element"] for row in selected]
     assert 6 in ids
     assert 5 not in ids
-    assert 7 not in ids  # 0.5 below cutoff: tactical evidence cannot jump the gap
+    assert 7 not in ids
     promoted = next(row for row in selected if row["element"] == 6)
     assert promoted["tactical_signal_used_for_promotion"] is True
     assert promoted["tactical_close_call"]["direct_xpts_mutation"] is False
@@ -157,13 +159,27 @@ def test_watchlist_understat_can_only_promote_inside_governed_cutoff_margin():
 
 def test_lineup_close_call_does_not_change_xpts_or_allow_large_jump():
     rows = [
-        {"element": 1, "selection_score": 5.00, "xpts": 5.00, "start_probability": 1.0, "understat_tactical": {"state": "NEUTRAL", "confidence": 0.9}},
-        {"element": 2, "selection_score": 4.95, "xpts": 4.95, "start_probability": 1.0, "understat_tactical": {"state": "POSITIVE", "confidence": 0.9}},
-        {"element": 3, "selection_score": 4.50, "xpts": 4.50, "start_probability": 1.0, "understat_tactical": {"state": "POSITIVE", "confidence": 1.0}},
+        {"element": 1, "selection_score": 5.00, "xpts": 5.00, "start_probability": 1.0, "dnp_probability": 0.0, "understat_tactical": {"state": "NEUTRAL", "confidence": 0.9}},
+        {"element": 2, "selection_score": 4.95, "xpts": 4.95, "start_probability": 1.0, "dnp_probability": 0.0, "understat_tactical": {"state": "POSITIVE", "confidence": 0.9}},
+        {"element": 3, "selection_score": 4.50, "xpts": 4.50, "start_probability": 1.0, "dnp_probability": 0.0, "understat_tactical": {"state": "POSITIVE", "confidence": 1.0}},
     ]
     selected, metadata = _select_close_call(rows, 1, "selection_score", 0.12, 0.6)
     assert selected[0]["element"] == 2
     assert selected[0]["xpts"] == 4.95
     assert metadata["direct_xpts_mutation"] is False
+    assert metadata["direct_xmins_mutation"] is False
     assert metadata["score_gap"] == 0.05
     assert 3 not in [row["element"] for row in selected]
+
+
+def test_positive_tactics_cannot_promote_materially_worse_xmins():
+    rows = [
+        {"element": 1, "selection_score": 5.00, "xpts": 5.00, "start_probability": 0.90, "dnp_probability": 0.05, "understat_tactical": {"state": "NEUTRAL", "confidence": 0.8}},
+        {"element": 2, "selection_score": 4.95, "xpts": 4.95, "start_probability": 0.55, "dnp_probability": 0.30, "understat_tactical": {"state": "POSITIVE", "confidence": 1.0}},
+    ]
+    selected, metadata = _select_close_call(
+        rows, 1, "selection_score", 0.12, 0.6,
+        max_start_disadvantage=0.05, max_dnp_disadvantage=0.05,
+    )
+    assert selected[0]["element"] == 1
+    assert metadata["used"] is False

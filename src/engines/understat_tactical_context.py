@@ -16,6 +16,12 @@ RAW_CACHE = DATA / "stats" / "understat_epl_2026.json"
 TEAM_PROFILE = DATA / "tactical_team_profiles.json"
 ROLE_PROFILE = DATA / "player_role_profiles.json"
 POSITION_BY_TYPE = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
+OFFICIAL_TO_UNDERSTAT_TEAM = {
+    "Coventry City": "Coventry",
+    "Hull City": "Hull",
+    "Ipswich Town": "Ipswich",
+    "Nott'm Forest": "Nottingham Forest",
+}
 
 
 def _f(value: Any) -> float | None:
@@ -40,8 +46,24 @@ def _norm(value: Any) -> str:
         "newcastle": "newcastle united",
         "west ham": "west ham united",
         "brighton": "brighton and hove albion",
+        "coventry city": "coventry",
+        "hull city": "hull",
+        "ipswich town": "ipswich",
+        "nott m forest": "nottingham forest",
     }
     return aliases.get(text, text)
+
+
+def _identity_variants(player: dict[str, Any]) -> list[str]:
+    first = str(player.get("first_name") or "").strip()
+    second = str(player.get("second_name") or "").strip()
+    web = str(player.get("web_name") or "").strip()
+    full = " ".join(part for part in (first, second) if part).strip()
+    variants: list[str] = []
+    for value in (full, web, second, first):
+        if value and _norm(value) not in {_norm(existing) for existing in variants}:
+            variants.append(value)
+    return variants
 
 
 def _official_universe() -> list[dict[str, Any]]:
@@ -49,12 +71,16 @@ def _official_universe() -> list[dict[str, Any]]:
 
     tactical_context must not depend on market_state merely to obtain universe.json.
     Official bootstrap already owns player identity/team/position and is the correct
-    authority for Understat mapping.
+    authority for Understat mapping. Full Official identity is retained so an
+    abbreviated FPL web_name cannot unnecessarily suppress a valid source match.
     """
     official = read_json(DATA / "official_snapshot.json", {})
     bootstrap = official.get("bootstrap") or {}
     teams = {
-        int(row.get("id") or -1): str(row.get("name") or row.get("short_name") or row.get("id"))
+        int(row.get("id") or -1): OFFICIAL_TO_UNDERSTAT_TEAM.get(
+            str(row.get("name") or row.get("short_name") or row.get("id")),
+            str(row.get("name") or row.get("short_name") or row.get("id")),
+        )
         for row in bootstrap.get("teams") or []
         if row.get("id") is not None
     }
@@ -68,9 +94,14 @@ def _official_universe() -> list[dict[str, Any]]:
             continue
         if element <= 0 or team_id <= 0:
             continue
+        variants = _identity_variants(player)
         rows.append({
             "element": element,
-            "name": player.get("web_name") or player.get("second_name") or player.get("first_name") or str(element),
+            "name": variants[0] if variants else str(element),
+            "web_name": player.get("web_name"),
+            "first_name": player.get("first_name"),
+            "second_name": player.get("second_name"),
+            "name_variants": variants,
             "team": teams.get(team_id),
             "team_id": team_id,
             "position": POSITION_BY_TYPE.get(element_type),

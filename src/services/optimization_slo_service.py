@@ -65,6 +65,7 @@ def run() -> dict:
         discovery=discovery,
         predictions=predictions,
         universe=universe,
+        understat_data=understat_tactical,
         per_position=int(discovery_cfg["visible_watchlist_per_position"]),
     )
     atomic_json(DATA / "tactical_serving_v4.json", tactical_reranked)

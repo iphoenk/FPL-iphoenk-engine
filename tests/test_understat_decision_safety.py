@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from src.engines.v4_tactical_serving import _apply_watchlist_close_call
 from src.intelligence.understat_package_context import augment_package_tactical_context
+from src.services.projected_value_market_challenger import rerank_visible_watchlist
 
 
 def test_watchlist_positive_tactics_cannot_erase_start_security():
@@ -58,3 +59,79 @@ def test_package_understat_context_is_annotation_only_and_preserves_decision():
     assert package["understat_decision_invariant"]["unchanged"] is True
     assert package["understat_tactical_context"]["tactical_alone_authorizes_hit"] is False
     assert out["understat_package_intelligence"]["decision_authority"] is False
+
+
+def test_projected_value_rerank_forwards_explicit_understat_dependency():
+    positions = ("GK", "DEF", "MID", "FWD")
+    current = []
+    for pos_index, position in enumerate(positions):
+        for rank in range(5):
+            current.append({
+                "element": 10 * (pos_index + 1) + rank,
+                "position": position,
+                "score": 5.0 - rank * 0.1,
+                "xpts_5": 5.0 - rank * 0.1,
+            })
+    discovery = {
+        "candidates": [{
+            "element": 99,
+            "position": "GK",
+            "mandatory_review": True,
+            "identity_sanity": {
+                "status": "PASS",
+                "official_fact": {
+                    "element": 99,
+                    "name": "Explicit Understat GK",
+                    "team_id": 1,
+                    "team": "Test",
+                    "position": "GK",
+                    "now_cost": 45,
+                    "ownership": 0.1,
+                    "status": "a",
+                },
+            },
+            "projected_value": {"score": 9.0, "value_per_million_5gw": 2.0},
+        }],
+    }
+    predictions = {
+        "players": [{
+            "element": 99,
+            "position": "GK",
+            "xpts_5": 8.0,
+            "xpts_15": 24.0,
+            "uncertainty": 0.1,
+            "fixtures": [{
+                "opponent": 2,
+                "xmins": {
+                    "start_probability": 0.95,
+                    "dnp_probability": 0.01,
+                    "expected_minutes": 90,
+                },
+                "components": {},
+            }],
+            "priors": {"tactical_role": "GK"},
+        }],
+    }
+    universe = {"players": [{"element": 99, "name": "Explicit Understat GK", "position": "GK"}]}
+    understat = {
+        "source": {"freshness": "FRESH"},
+        "tactical_matchups": {
+            "99": {"state": "POSITIVE", "confidence": 0.91, "dimensions": {"pressing": "EDGE"}},
+        },
+    }
+
+    out = rerank_visible_watchlist(
+        {"watchlist": current},
+        discovery=discovery,
+        predictions=predictions,
+        universe=universe,
+        external={},
+        understat_data=understat,
+        per_position=5,
+    )
+
+    promoted = next(row for row in out["watchlist"] if row.get("element") == 99)
+    assert promoted["tactical"]["understat"]["state"] == "POSITIVE"
+    assert promoted["tactical"]["understat"]["confidence"] == 0.91
+    assert promoted["tactical"]["understat"]["direct_xpts_mutation"] is False
+    assert promoted["tactical"]["understat"]["direct_xmins_mutation"] is False

@@ -29,6 +29,8 @@ norm = '''def _norm(value: Any) -> str:
         "newcastle": "newcastle united",
         "west ham": "west ham united",
         "brighton": "brighton and hove albion",
+        "hull city": "hull",
+        "ipswich town": "ipswich",
     }
     return aliases.get(text, text)
 
@@ -44,6 +46,7 @@ mapper = '''def _map_player(official: dict, candidates: list[dict], policy: dict
         official.get("name"),
         official.get("full_name"),
         official.get("web_name"),
+        official.get("first_name"),
         official.get("second_name"),
         *((official.get("name_variants") or [])),
     ]
@@ -61,15 +64,21 @@ mapper = '''def _map_player(official: dict, candidates: list[dict], policy: dict
     name_tokens = [token_set(name) for name in names if name]
     full_name = _norm(official.get("full_name") or official.get("name"))
     full_tokens = token_set(full_name)
+    first_name = _norm(official.get("first_name"))
+    first_tokens = token_set(first_name)
+    second_name = _norm(official.get("second_name"))
+    surname_anchors = frozenset(
+        token for token in second_name.split()
+        if len(token) >= 4 and token not in {"filho", "junior"}
+    )
     team_candidates = [row for row in candidates if team and team in row.get("normalized_teams", [])]
 
     exact = [row for row in team_candidates if row.get("normalized_name") in names]
     if len(exact) == 1:
         return exact[0], 1.0, "TEAM_AND_NORMALIZED_NAME_EXACT"
 
-    # Generic structural identity bridge. This handles source names that omit
-    # middle/family names, surname-only Official web names, and token order
-    # differences. It is team-scoped and must resolve to exactly one candidate.
+    # Generic structural identity bridge. It is deliberately team-scoped and
+    # only accepts a unique candidate. No player-specific aliases are allowed.
     structural = []
     for row in team_candidates:
         candidate_name = row.get("normalized_name") or ""
@@ -79,9 +88,26 @@ mapper = '''def _map_player(official: dict, candidates: list[dict], policy: dict
         same_tokens = any(tokens and tokens == candidate_tokens for tokens in name_tokens)
         candidate_within_full = len(candidate_tokens) >= 2 and candidate_tokens <= full_tokens
         official_variant_within_candidate = any(
-            tokens and tokens <= candidate_tokens for tokens in name_tokens
+            len(tokens) >= 1 and tokens <= candidate_tokens for tokens in name_tokens
         )
-        if same_tokens or candidate_within_full or official_variant_within_candidate:
+        surname_anchor_match = bool(surname_anchors & candidate_tokens)
+        source_mononym_matches_first = (
+            len(candidate_tokens) == 1
+            and bool(first_tokens)
+            and candidate_tokens == first_tokens
+        )
+        first_name_plus_close_full = (
+            bool(first_tokens & candidate_tokens)
+            and SequenceMatcher(None, full_name, candidate_name).ratio() >= 0.90
+        )
+        if (
+            same_tokens
+            or candidate_within_full
+            or official_variant_within_candidate
+            or surname_anchor_match
+            or source_mononym_matches_first
+            or first_name_plus_close_full
+        ):
             structural.append(row)
     if len(structural) == 1:
         return structural[0], 0.995, "TEAM_SCOPED_STRUCTURAL_NAME_EXACT"

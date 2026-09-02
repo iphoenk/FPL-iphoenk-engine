@@ -24,6 +24,11 @@ def _policy() -> dict:
     return read_json(POLICY_FILE, {}) or {}
 
 
+def _transport_revision(policy: dict | None = None) -> str:
+    payload = policy or _policy()
+    return str((payload.get("network") or {}).get("transport_revision") or "")
+
+
 def _age_minutes(stamp: str | None) -> float | None:
     dt = parse_dt(stamp) if stamp else None
     if not dt:
@@ -32,6 +37,9 @@ def _age_minutes(stamp: str | None) -> float | None:
 
 
 def _decode_embedded(body: str) -> Any:
+    # Backward-compatible parser for historical fixtures/tests. Current
+    # production acquisition uses Understat's XHR JSON endpoint and never
+    # executes JavaScript from the landing page.
     decoded = codecs.decode(body.encode("utf-8"), "unicode_escape")
     return json.loads(decoded)
 
@@ -47,10 +55,12 @@ def parse_embedded_json(html: str) -> dict[str, Any]:
     return out
 
 
-def _date_rows(embedded: dict[str, Any]) -> list[dict]:
-    value = embedded.get("datesData")
-    candidates = value.values() if isinstance(value, dict) else value if isinstance(value, list) else ()
-    return [row for row in candidates if isinstance(row, dict)]
+def _rows(value: Any) -> list[dict]:
+    if isinstance(value, list):
+        return [row for row in value if isinstance(row, dict)]
+    if isinstance(value, dict):
+        return [row for row in value.values() if isinstance(row, dict)]
+    return []
 
 
 def _is_completed_fixture(row: dict) -> bool:
@@ -64,21 +74,13 @@ def _is_completed_fixture(row: dict) -> bool:
 
 def latest_completed_fixture(embedded: dict[str, Any]) -> dict | None:
     completed = []
-    for row in _date_rows(embedded):
+    for row in _rows(embedded.get("datesData")):
         if not _is_completed_fixture(row):
             continue
         stamp = str(row.get("datetime") or row.get("date") or "")
         if stamp:
             completed.append((stamp, row))
     return max(completed, key=lambda item: item[0])[1] if completed else None
-
-
-def _completed_fixture_view(embedded: dict[str, Any]) -> tuple[dict[str, Any], int]:
-    out = dict(embedded)
-    dates = _date_rows(embedded)
-    completed = [row for row in dates if _is_completed_fixture(row)]
-    out["datesData"] = completed
-    return out, max(0, len(dates) - len(completed))
 
 
 def _validate(payload: dict) -> tuple[bool, list[str]]:
@@ -109,6 +111,7 @@ def _freshness(age: float | None, policy: dict) -> str:
 
 def _failure(error: str, previous: dict | None = None) -> dict:
     policy = _policy()
+    revision = _transport_revision(policy)
     previous = previous or read_json(CACHE, {}) or {}
     age = _age_minutes(previous.get("fetched_at")) if previous else None
     if previous and (policy.get("cache") or {}).get("retain_last_known_good", True):
@@ -121,6 +124,7 @@ def _failure(error: str, previous: dict | None = None) -> dict:
                 "fallback": True,
                 "refresh_error": error,
                 "refresh_attempted_at": iso_now(),
+                "refresh_transport_revision": revision,
                 "cache_age_minutes": round(age, 2) if age is not None else None,
                 "schema_valid": True,
                 "schema_defects": defects,
@@ -128,6 +132,8 @@ def _failure(error: str, previous: dict | None = None) -> dict:
     return {
         "contract": "UNDERSTAT_RAW_SOURCE_V1",
         "source": "Understat",
+        "transport_revision": revision,
+        "refresh_transport_revision": revision,
         "source_availability": "UNAVAILABLE",
         "freshness": "UNKNOWN",
         "fetched_at": None,
@@ -142,34 +148,7 @@ def _failure(error: str, previous: dict | None = None) -> dict:
     }
 
 
-def _persist_failure(error: str, previous: dict | None = None) -> dict:
-    payload = _failure(error, previous=previous)
-    CACHE.parent.mkdir(parents=True, exist_ok=True)
-    atomic_json(CACHE, payload)
-    return payload
-
-
-def _recent_failure_reuse(cached: dict, policy: dict) -> dict | None:
-    if str(cached.get("source_availability") or "") not in {"UNAVAILABLE", "STALE_FALLBACK"}:
-        return None
-    cache_policy = policy.get("cache") or {}
-    retry_minutes = max(0.0, float(cache_policy.get("failure_retry_minutes") or 15.0))
-    retry_age = _age_minutes(cached.get("refresh_attempted_at"))
-    if retry_minutes <= 0.0 or retry_age is None or retry_age > retry_minutes:
-        return None
-    source_age = _age_minutes(cached.get("fetched_at")) if cached.get("fetched_at") else None
-    return {
-        **cached,
-        "runtime_reused": True,
-        "retry_suppressed": True,
-        "failure_retry_minutes": retry_minutes,
-        "failure_retry_age_minutes": round(retry_age, 2),
-        "cache_age_minutes": round(source_age, 2) if source_age is not None else None,
-        "freshness": _freshness(source_age, policy),
-    }
-
-
-def _request(url: str, policy: dict, session: requests.Session | None = None) -> tuple[str, int]:
+def _request_json(url: str, policy: dict, session: requests.Session | None = None) -> tuple[dict[str, Any], int]:
     cfg = policy.get("network") or {}
     configured_attempts = max(1, int(cfg.get("max_attempts") or 3))
     request_budget = max(1, int(cfg.get("max_requests_per_refresh") or configured_attempts))
@@ -177,7 +156,10 @@ def _request(url: str, policy: dict, session: requests.Session | None = None) ->
     timeout = float(cfg.get("timeout_seconds") or 12)
     backoff = list(cfg.get("backoff_seconds") or [0.5, 1.0])
     minimum_interval = max(0.0, float(cfg.get("minimum_request_interval_seconds") or 0.0))
-    headers = {"User-Agent": str(cfg.get("user_agent") or "FPL-iphoenk-engine")}
+    headers = {
+        "User-Agent": str(cfg.get("user_agent") or "FPL-iphoenk-engine"),
+        "X-Requested-With": "XMLHttpRequest",
+    }
     client = session or requests.Session()
     last_error: Exception | None = None
     calls = 0
@@ -186,8 +168,11 @@ def _request(url: str, policy: dict, session: requests.Session | None = None) ->
             calls += 1
             response = client.get(url, timeout=timeout, headers=headers)
             response.raise_for_status()
-            return response.text, calls
-        except requests.RequestException as exc:
+            payload = response.json()
+            if not isinstance(payload, dict):
+                raise ValueError("Understat XHR response is not a JSON object")
+            return payload, calls
+        except (requests.RequestException, ValueError) as exc:
             last_error = exc
             if attempt < attempts - 1:
                 delay = float(backoff[min(attempt, len(backoff) - 1)]) if backoff else 0.0
@@ -195,72 +180,78 @@ def _request(url: str, policy: dict, session: requests.Session | None = None) ->
     raise RuntimeError(f"Understat request failed after {calls} bounded attempts: {last_error}")
 
 
+def _normalize_ajax_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    # Keep the established raw contract stable while adapting only the transport
+    # boundary to Understat's current XHR response keys.
+    return {
+        "teamsData": payload.get("teams"),
+        "playersData": payload.get("players"),
+        "datesData": payload.get("dates"),
+    }
+
+
 def sync(*, force: bool = False, session: requests.Session | None = None) -> dict:
     policy = _policy()
+    network = policy.get("network") or {}
+    revision = _transport_revision(policy)
     cached = read_json(CACHE, {}) or {}
     age = _age_minutes(cached.get("fetched_at")) if cached else None
     ttl = float((policy.get("cache") or {}).get("raw_ttl_minutes") or 360)
     valid, _ = _validate(cached) if cached else (False, [])
-
-    if not force and cached:
-        failure_reuse = _recent_failure_reuse(cached, policy)
-        if failure_reuse is not None:
-            return failure_reuse
-
-    if not force and cached and valid and age is not None and age <= ttl:
+    same_transport = bool(revision) and str(cached.get("transport_revision") or "") == revision
+    if not force and cached and valid and same_transport and age is not None and age <= ttl:
         return {
             **cached,
             "runtime_reused": True,
-            "retry_suppressed": False,
             "cache_age_minutes": round(age, 2),
             "freshness": _freshness(age, policy),
         }
 
-    network = policy.get("network") or {}
     base = str(network.get("base_url") or "https://understat.com").rstrip("/")
     league = str(policy.get("league") or "EPL")
     season = int(policy.get("season_start_year") or 2026)
-    url = f"{base}/league/{league}/{season}"
+    endpoint_template = str(network.get("endpoint_template") or "getLeagueData/{league}/{season}")
+    endpoint = endpoint_template.format(league=league, season=season).lstrip("/")
+    url = f"{base}/{endpoint}"
+    landing_url = f"{base}/league/{league}/{season}"
     started = time.perf_counter()
     try:
-        html, request_count = _request(url, policy, session=session)
-        parsed = parse_embedded_json(html)
-        latest = latest_completed_fixture(parsed)
+        ajax_payload, request_count = _request_json(url, policy, session=session)
+        embedded = _normalize_ajax_payload(ajax_payload)
+        latest = latest_completed_fixture(embedded)
         latest_stamp = (latest or {}).get("datetime") or (latest or {}).get("date")
-        embedded, scheduled_excluded = _completed_fixture_view(parsed)
         payload = {
             "contract": "UNDERSTAT_RAW_SOURCE_V1",
             "source": "Understat",
             "source_tier": "dynamic_tactical_enrichment",
             "league": league,
             "season_start_year": season,
+            "transport_revision": revision,
+            "refresh_transport_revision": revision,
             "source_url": url,
+            "source_landing_url": landing_url,
             "fetched_at": iso_now(),
             "source_timestamp": latest_stamp,
             "latest_fixture_represented": {
                 "id": (latest or {}).get("id"),
                 "datetime": latest_stamp,
             } if latest else None,
-            "fixture_view": {
-                "completed_only": True,
-                "scheduled_rows_excluded": scheduled_excluded,
-                "reason": "freshness/latest-match coverage must never be advanced by future schedule rows",
-            },
             "source_availability": "AVAILABLE",
             "freshness": "FRESH",
             "fallback": False,
             "runtime_reused": False,
-            "retry_suppressed": False,
             "cache_age_minutes": 0.0,
             "request_count": request_count,
             "request_budget": max(1, int(network.get("max_requests_per_refresh") or network.get("max_attempts") or 1)),
-            "request_strategy": "single_league_snapshot_no_per_player_network_calls",
+            "request_strategy": "single_league_xhr_snapshot_no_per_player_network_calls",
             "embedded": embedded,
             "fetch_duration_ms": round((time.perf_counter() - started) * 1000.0, 2),
             "provenance": {
                 "provider": "Understat",
                 "url": url,
-                "transport": "HTTPS_HTML_EMBEDDED_JSON",
+                "landing_url": landing_url,
+                "transport": "HTTPS_JSON_XHR",
+                "transport_revision": revision,
                 "adapter": "src.sources.understat",
             },
         }
@@ -268,12 +259,12 @@ def sync(*, force: bool = False, session: requests.Session | None = None) -> dic
         payload["schema_valid"] = valid
         payload["schema_defects"] = defects
         if not valid:
-            return _persist_failure(";".join(defects), previous=cached)
+            return _failure(";".join(defects), previous=cached)
         CACHE.parent.mkdir(parents=True, exist_ok=True)
         atomic_json(CACHE, payload)
         return payload
-    except Exception as exc:
-        return _persist_failure(f"{type(exc).__name__}: {exc}", previous=cached)
+    except Exception as exc:  # fail-soft optional enrichment boundary
+        return _failure(f"{type(exc).__name__}: {exc}", previous=cached)
 
 
 def load() -> dict:

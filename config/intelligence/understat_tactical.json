@@ -20,6 +20,7 @@
   },
   "cache": {
     "raw_ttl_minutes": 360,
+    "failure_retry_minutes": 15,
     "fresh_minutes": 360,
     "stale_after_minutes": 2880,
     "retain_last_known_good": true,

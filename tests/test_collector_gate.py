@@ -12,6 +12,8 @@ from src.engines.collector_gate import (
     visible_report_decision,
 )
 
+ADAPTIVE_SCHEDULE = "0,5,10,20,25,35,40,45,50,55 * * * *"
+
 
 def utc(y, m, d, hh, mm=0, ss=0):
     return datetime(y, m, d, hh, mm, ss, tzinfo=timezone.utc)
@@ -35,7 +37,7 @@ def test_hourly_primary_always_collects():
 
 def test_adaptive_slot_skips_normal_day():
     collect, reason = should_collect(
-        "schedule", "0,45 * * * *", utc(2026, 8, 25, 18, 0), utc(2026, 8, 28, 17, 30), False
+        "schedule", ADAPTIVE_SCHEDULE, utc(2026, 8, 25, 18, 0), utc(2026, 8, 28, 17, 30), False
     )
     assert collect is False
     assert reason == "adaptive_slot_not_needed"
@@ -48,14 +50,14 @@ def test_deadline_day_window_is_exactly_24h_and_adaptive_only_runs_for_final_rev
     assert deadline_intensive(deadline + timedelta(seconds=1), deadline) is False
 
     ordinary_adaptive, ordinary_reason = should_collect(
-        "schedule", "0,45 * * * *", deadline - timedelta(hours=2), deadline, False
+        "schedule", ADAPTIVE_SCHEDULE, deadline - timedelta(hours=2), deadline, False
     )
     assert ordinary_adaptive is False
     assert ordinary_reason == "adaptive_slot_not_needed"
 
     daytime_deadline = utc(2026, 8, 29, 11, 30)
     final_collect, final_reason = should_collect(
-        "schedule", "0,45 * * * *", utc(2026, 8, 29, 10, 0), daytime_deadline, False
+        "schedule", ADAPTIVE_SCHEDULE, utc(2026, 8, 29, 10, 0), daytime_deadline, False
     )
     assert final_collect is True
     assert final_reason == "adaptive_final_review"
@@ -64,7 +66,7 @@ def test_deadline_day_window_is_exactly_24h_and_adaptive_only_runs_for_final_rev
 def test_adaptive_slot_runs_for_live_refresh_without_authorizing_match_report_by_itself():
     now = utc(2026, 8, 29, 13, 0)
     collect, reason = should_collect(
-        "schedule", "0,45 * * * *", now, utc(2026, 9, 5, 17, 30), True
+        "schedule", ADAPTIVE_SCHEDULE, now, utc(2026, 9, 5, 17, 30), True
     )
     assert collect is True
     assert reason == "adaptive_live_refresh"

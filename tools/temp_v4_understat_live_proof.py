@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 
 from src.engines.v4_official_fact_integrity import fact_defects
-from src.intelligence.understat_tactical import normalize_player_evidence, normalize_team_evidence
+from src.intelligence.understat_tactical import _understat_players, normalize_player_evidence, normalize_team_evidence
 from src.services.enrichment_service import _official_player_row
 from src.sources import understat
 
@@ -30,8 +30,11 @@ def main() -> None:
     }
     universe = [_official_player_row(player, teams, positions, meta) for player in bootstrap.get("elements", [])]
     identity_universe = [{**row, "name": row.get("full_name") or row.get("name")} for row in universe]
+    official_by_element = {str(row.get("element_id")): row for row in identity_universe}
 
     raw = understat.sync(force=True, session=session)
+    source_players = _understat_players(raw)
+    source_ids = [str(row.get("understat_player_id") or "") for row in source_players if row.get("understat_player_id")]
     team_evidence = normalize_team_evidence(raw)
     mapped, unresolved = normalize_player_evidence(raw, identity_universe)
 
@@ -44,19 +47,31 @@ def main() -> None:
     official_unique = len(set(element_ids))
     states: dict[str, int] = {}
     direct_ids: list[str] = []
-    for row in mapped.values():
+    claims: dict[str, list[dict]] = defaultdict(list)
+    for element, row in mapped.items():
         state = (row.get("mapping") or {}).get("state") or "UNKNOWN"
         states[state] = states.get(state, 0) + 1
         if state == "RESOLVED":
             source_id = str(row.get("understat_player_id") or "")
             if source_id:
                 direct_ids.append(source_id)
+                official = official_by_element.get(str(element)) or {}
+                claims[source_id].append({
+                    "element": int(element),
+                    "official_name": official.get("full_name") or official.get("name"),
+                    "official_web_name": official.get("web_name"),
+                    "official_team": official.get("team"),
+                    "official_minutes": official.get("minutes"),
+                    "understat_name": row.get("understat_name"),
+                    "method": (row.get("mapping") or {}).get("method"),
+                    "confidence": (row.get("mapping") or {}).get("confidence"),
+                })
 
     direct_resolved = states.get("RESOLVED", 0)
     source_absent = states.get("SOURCE_ABSENT_CURRENT_SEASON", 0)
-    source_present = direct_resolved + len(unresolved)
     id_counts = Counter(direct_ids)
     duplicate_direct_ids = sorted(source_id for source_id, count in id_counts.items() if count > 1)
+    duplicate_claims = {source_id: claims[source_id] for source_id in duplicate_direct_ids}
     direct_ids_complete_unique = (
         len(direct_ids) == direct_resolved
         and len(set(direct_ids)) == direct_resolved
@@ -77,6 +92,8 @@ def main() -> None:
             "freshness": raw.get("freshness"),
             "schema_valid": raw.get("schema_valid"),
             "transport_revision": raw.get("transport_revision"),
+            "source_player_count": len(source_players),
+            "source_player_unique_id_count": len(set(source_ids)),
             "team_mapping_count": len(team_evidence),
             "crosswalk_classified_count": len(mapped),
             "crosswalk_coverage": round(len(mapped) / max(1, official_count), 6),
@@ -84,9 +101,8 @@ def main() -> None:
             "direct_understat_id_count": len(direct_ids),
             "direct_understat_unique_id_count": len(set(direct_ids)),
             "duplicate_direct_understat_ids": duplicate_direct_ids,
+            "duplicate_direct_understat_claims": duplicate_claims,
             "source_absent_current_season_count": source_absent,
-            "source_present_official_count": source_present,
-            "source_present_resolved_coverage": round(direct_resolved / max(1, source_present), 6),
             "identity_unresolved_count": len(unresolved),
             "state_counts": states,
             "identity_unresolved": unresolved,
@@ -102,7 +118,7 @@ def main() -> None:
         ),
         "team_mapping_100_percent": len(team_evidence) == len(teams),
         "crosswalk_classified_100_percent": len(mapped) == official_count,
-        "source_present_mapping_100_percent": len(unresolved) == 0,
+        "identity_unresolved_zero": len(unresolved) == 0,
         "direct_understat_ids_one_to_one": direct_ids_complete_unique,
         "no_fake_source_absent_mapping": direct_resolved + source_absent == official_count,
     }

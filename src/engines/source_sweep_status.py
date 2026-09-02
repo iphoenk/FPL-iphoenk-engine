@@ -1,9 +1,34 @@
 from __future__ import annotations
 
-from src.utils import CONFIG, read_json
+from src.utils import CONFIG, DATA, read_json
 
 POLICY = CONFIG / "checkpoint_policy_registry.json"
 ADAPTERS = CONFIG / "source_adapter_registry.json"
+UNDERSTAT = DATA / "understat_tactical_v4.json"
+
+
+def _understat_status() -> tuple[str, str]:
+    payload = read_json(UNDERSTAT, {}) or {}
+    health = payload.get("health") or {}
+    source = payload.get("source") or {}
+    if not payload:
+        return "UNAVAILABLE", "understat_runtime_artifact_missing"
+    freshness = str(source.get("freshness") or "UNKNOWN").upper()
+    availability = str(source.get("availability") or "UNAVAILABLE").upper()
+    native = str(health.get("status") or "UNAVAILABLE").upper()
+    if freshness in {"STALE", "EXPIRED"} or availability == "STALE_FALLBACK":
+        status = "STALE"
+    elif native == "AVAILABLE":
+        status = "AVAILABLE"
+    elif native == "PARTIAL":
+        status = "PARTIAL"
+    else:
+        status = "UNAVAILABLE"
+    evidence = (
+        f"data/understat_tactical_v4.json health={native} freshness={freshness} "
+        f"mapped={health.get('player_mapping_count')} coverage={health.get('tactical_matchup_coverage')}"
+    )
+    return status, evidence
 
 
 def build_source_sweep_status(endpoint_health: dict | None = None, external_evidence: dict | None = None) -> dict:
@@ -50,6 +75,8 @@ def build_source_sweep_status(endpoint_health: dict | None = None, external_evid
                 else:
                     status = "UNAVAILABLE"
                 evidence_text = "raw_snapshot.endpoint_health"
+            elif source_id == "understat_tactical":
+                status, evidence_text = _understat_status()
             else:
                 status = "UNAVAILABLE"
                 evidence_text = "no_runtime_adapter_or_external_sweep_evidence"
@@ -76,6 +103,7 @@ def build_source_sweep_status(endpoint_health: dict | None = None, external_evid
             "available": sum(row["status"] == "AVAILABLE" for row in tier_rows),
             "partial": sum(row["status"] == "PARTIAL" for row in tier_rows),
             "unavailable": sum(row["status"] == "UNAVAILABLE" for row in tier_rows),
+            "stale": sum(row["status"] == "STALE" for row in tier_rows),
         }
 
     return {

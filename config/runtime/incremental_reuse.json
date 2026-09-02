@@ -50,6 +50,18 @@
         "config/intelligence/tactical_observed_context.json",
         "config/intelligence/understat_tactical.json"
       ]
+    },
+    "lineup_governance": {
+      "inputs": [
+        "src/",
+        "latest.json",
+        "team.json",
+        "chips.json",
+        "projections.json",
+        "package_optimizer.json",
+        "config/locked_squad.json",
+        "config/intelligence/lineup_governance.json"
+      ]
     }
   }
 }

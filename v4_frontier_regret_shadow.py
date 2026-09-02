@@ -12,6 +12,7 @@ from v4_frontier_exclusion_audit import PRODUCTION_FRONTIER_PER_POSITION
 
 SHADOW_CONFIG = CONFIG / "frontier_regret_shadow.json"
 OUTPUT_PATH = DATA / "frontier_regret_shadow_v4.json"
+PRODUCTION_PACKAGE_ARTIFACT = DATA / "wc_package_audit_v4.json"
 
 
 def _ids(rows) -> list[int]:
@@ -282,7 +283,7 @@ def audit_current_runtime() -> dict:
     predictions = read_json(DATA / "predictions_v4.json", {})
     universe = read_json(DATA / "universe.json", {})
     locked = read_json(CONFIG / "locked_squad.json", {})
-    production_artifact = read_json(DATA / "owned_challenger_decision_v4.json", {})
+    production_artifact = read_json(PRODUCTION_PACKAGE_ARTIFACT, {})
     previous_output = read_json(OUTPUT_PATH, {})
     latest = read_json(DATA / "latest.json", {})
     candidates = build_candidates(predictions, universe)

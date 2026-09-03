@@ -44,3 +44,69 @@ jobs:
           if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
             exit "$code"
           fi
+
+  cardinality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install --disable-pip-version-check -r requirements.txt
+      - name: Count exact legal package space and outgoing skew
+        shell: bash
+        run: |
+          python - <<'PY'
+          from collections import Counter, defaultdict
+          from itertools import combinations
+          from time import perf_counter
+          from src.engines.v4_decision_pipeline import effective_planning_squad
+          from src.engines.v4_full_universe_package_search import safe_prune_incoming_players
+          from src.engines.v4_full_universe_package_search_core import _incoming_combinations
+          from src.engines.v4_wc_optimizer import POSITION_COUNTS, build_candidates, reconcile_owned_costs
+          from src.utils import CONFIG, DATA, read_json
+
+          started = perf_counter()
+          predictions = read_json(DATA / 'predictions_v4.json', {})
+          universe = read_json(DATA / 'universe.json', {})
+          team = read_json(DATA / 'team.json', {})
+          latest = read_json(DATA / 'latest.json', {})
+          configured = read_json(CONFIG / 'locked_squad.json', {})
+          locked = effective_planning_squad(team, configured, latest)
+          candidates = build_candidates(predictions, universe)
+          reconciled, affordability = reconcile_owned_costs(candidates, locked)
+          budget = int(affordability['available_budget_tenths'])
+          owned = {int(r.get('element')) for r in locked.get('players') or [] if r.get('element') is not None}
+          by_id = {p.element: p for p in reconciled}
+          current = tuple(by_id[e] for e in sorted(owned))
+          external, proofs = safe_prune_incoming_players(reconciled, owned)
+          pools = {pos: [] for pos in POSITION_COUNTS}
+          for p in external:
+              pools[p.position].append(p)
+          for pos in pools:
+              pools[pos].sort(key=lambda p: p.element)
+          d = {'search_nodes':0,'incoming_combinations_considered':0,'packages_rejected_by_budget':0,'packages_rejected_by_budget_bound':0,'packages_rejected_by_club_limit':0}
+          by_k = defaultdict(int)
+          rows = []
+          total = 0
+          for k in range(1,4):
+              for outs_raw in combinations(current,k):
+                  outs = tuple(sorted(outs_raw,key=lambda p:(p.position,p.element)))
+                  out_ids = {p.element for p in outs}
+                  keep = tuple(p for p in current if p.element not in out_ids)
+                  need = Counter(p.position for p in outs)
+                  local = sum(1 for _ in _incoming_combinations(pools,need,keep,budget,d))
+                  total += local
+                  by_k[k] += local
+                  rows.append((local,k,tuple(sorted(out_ids)),tuple(sorted(need.items()))))
+          rows.sort(reverse=True)
+          print({'elapsed_s':round(perf_counter()-started,3),'candidate_count':len(candidates),'safe_pruned':len(proofs),'remaining_external':len(external),'pool_sizes':{p:len(v) for p,v in pools.items()},'total_legal_packages':total,'legal_packages_by_k':dict(by_k),'diagnostics':d,'top_20_outgoing_subtrees':rows[:20]}, flush=True)
+          PY

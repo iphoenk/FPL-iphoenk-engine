@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/v4-final-precompute-microservice-acceptance-temp.yml
       - tools/v4_precompute_microservice_finalize_temp.py
+      - tools/v4_precompute_microservice_finalize_fix1_temp.py
 permissions:
   contents: write
 jobs:
@@ -25,7 +26,7 @@ jobs:
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
       - name: Stage registry-driven precompute microservice architecture
-        run: python tools/v4_precompute_microservice_finalize_temp.py
+        run: python tools/v4_precompute_microservice_finalize_fix1_temp.py
       - name: Compile production boundaries
         run: python -m py_compile src/services/package_optimization_service.py src/services/optimization_slo_service.py src/services/orchestrator.py src/services/hot_orchestrator.py src/engines/v4_decision_pipeline.py src/engines/v4_package_artifact_contract.py
       - name: Focused architecture and exactness tests

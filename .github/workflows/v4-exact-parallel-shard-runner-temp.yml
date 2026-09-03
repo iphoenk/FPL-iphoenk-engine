@@ -42,4 +42,4 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m 'perf(v4): exact parallel package-search shards'
           git push origin HEAD:codex/v4-full-universe-tactical-20260903
-# rerun: anchored public search definition
+# rerun: 2026-09-03T08:50Z exact parallel acceptance

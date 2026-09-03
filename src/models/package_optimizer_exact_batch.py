@@ -18,9 +18,10 @@ from src.models.package_optimizer_v2 import (
 class ExactBatchScorer:
     """Guarded vectorized accelerator for canonical package scoring semantics.
 
-    This class is never an independent scoring authority. Candidates close to a
-    floating publication boundary or formation tie are re-scored by the canonical
-    ``CompiledPackageScorer`` before any result is exposed.
+    This class is never an independent scoring authority. Exact formation ties are
+    resolved by the same stable ordering and first-max semantics as the canonical
+    scorer. Only candidates close to a three-decimal floating publication boundary
+    are re-scored by the canonical ``CompiledPackageScorer`` before exposure.
     """
 
     ROUND_BOUNDARY_SCALED_EPS = 1e-5
@@ -77,6 +78,8 @@ class ExactBatchScorer:
         self.canonical = CompiledPackageScorer(canonical_universe, self.planning_gw, scoring_context=self.context)
         self.last_scalar_fallback_count = 0
         self.total_scalar_fallback_count = 0
+        self.last_formation_tie_count = 0
+        self.total_formation_tie_count = 0
 
     @staticmethod
     def _round3(values: np.ndarray) -> np.ndarray:
@@ -138,6 +141,7 @@ class ExactBatchScorer:
 
     def score_ids_compact(self, candidate_ids: list[list[int]], *, changes: int) -> list[dict[str, Any]]:
         self.last_scalar_fallback_count = 0
+        self.last_formation_tie_count = 0
         if not candidate_ids:
             return []
         if int(changes) > int(self.context["change_cap"]):
@@ -163,6 +167,7 @@ class ExactBatchScorer:
         horizon_means: dict[int, np.ndarray] = {}
         horizon_stds: dict[int, np.ndarray] = {}
         scalar_required = np.zeros(n, dtype=bool)
+        formation_tied = np.zeros(n, dtype=bool)
         bench_weight = float(self.context["bench_weight"])
         captain_weight = float(self.context["captain_weight"])
 
@@ -187,7 +192,7 @@ class ExactBatchScorer:
             best_formation = np.argmax(fm, axis=1)
             if fm.shape[1] > 1:
                 sorted_fm = np.sort(fm, axis=1)
-                scalar_required |= (sorted_fm[:, -1] - sorted_fm[:, -2]) <= self.FORMATION_MARGIN_EPS
+                formation_tied |= (sorted_fm[:, -1] - sorted_fm[:, -2]) <= self.FORMATION_MARGIN_EPS
             selected_counts = np.asarray(self.formations, dtype=np.int8)[best_formation]
 
             starter_mask = np.zeros((n, width), dtype=bool)
@@ -238,6 +243,9 @@ class ExactBatchScorer:
                 scalar_required |= self._near_round_boundary(raw_std)
                 horizon_means[elapsed] = self._round3(total_mean)
                 horizon_stds[elapsed] = self._round3(raw_std)
+
+        self.last_formation_tie_count = int(np.count_nonzero(formation_tied))
+        self.total_formation_tie_count += self.last_formation_tie_count
 
         cfg = self.context["cfg"]
         cluster = cfg.get("team_cluster_penalty") or {}

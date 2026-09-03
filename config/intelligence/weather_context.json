@@ -5,8 +5,8 @@
   "venue_registry": "config/venues/premier_league_2026_27.json",
   "api": {
     "forecast_url": "https://api.open-meteo.com/v1/forecast",
-    "request_timeout_seconds": 10,
-    "max_concurrency": 4,
+    "request_timeout_seconds": 20,
+    "max_concurrency": 1,
     "hourly_fields": [
       "temperature_2m",
       "precipitation_probability",

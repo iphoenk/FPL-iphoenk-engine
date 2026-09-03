@@ -8,10 +8,10 @@
     "work_estimator": "POSITION_COMBINATION_UPPER_BOUND",
     "observed_hotpath_packages_per_second": 5066,
     "target_worker_seconds": 16,
-    "target_combinations_per_shard": 80000,
+    "target_combinations_per_shard": 15000000,
     "max_estimated_combinations_per_task": 20000,
-    "min_shards": 2,
-    "max_shards": 10,
+    "min_shards": 8,
+    "max_shards": 64,
     "top_keep_per_shard": 12
   },
   "workflow": {
@@ -46,6 +46,7 @@
     "fail_closed_on_partial_or_inconsistent_shard_set": true,
     "workflow_does_not_hardcode_downstream_business_modules": true,
     "overloaded_plan_is_explicit": true,
-    "throughput_baseline_is_measured_from_production_profile": true
+    "throughput_baseline_is_measured_from_production_profile": true,
+    "max_shards_tuned_from_observed_ten_shard_timeout": true
   }
 }

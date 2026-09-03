@@ -2,10 +2,6 @@ name: V4 full-universe sharded precompute
 
 on:
   workflow_dispatch:
-  push:
-    branches: [codex/v4-full-universe-tactical-20260903]
-    paths:
-      - .github/workflows/v4-full-universe-sharded-precompute.yml
 
 concurrency:
   group: v4-full-universe-sharded-precompute-${{ github.ref }}
@@ -19,7 +15,6 @@ env:
 
 jobs:
   plan:
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}

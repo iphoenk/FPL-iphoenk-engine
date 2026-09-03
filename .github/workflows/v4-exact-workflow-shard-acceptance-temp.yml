@@ -1,11 +1,14 @@
 name: V4 temporary exact workflow-shard acceptance
+
 on:
   push:
     branches: [codex/v4-full-universe-tactical-20260903]
     paths:
       - .github/workflows/v4-exact-workflow-shard-acceptance-temp.yml
+
 permissions:
   contents: read
+
 jobs:
   structural:
     runs-on: ubuntu-24.04
@@ -21,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: codex/v4-full-universe-tactical-20260903
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
@@ -36,6 +39,7 @@ jobs:
           python tools/v4_exact_workflow_shard_fix2_temp.py
           python tools/v4_exact_2d_execution_registry_patch_temp.py
           python tools/v4_exact_2d_execution_registry_fix1_temp.py
+          python tools/v4_exact_2d_execution_registry_fix2_temp.py
       - name: Resolve execution plan from registry
         id: execution-plan
         shell: bash
@@ -75,7 +79,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: codex/v4-full-universe-tactical-20260903
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
@@ -90,6 +94,7 @@ jobs:
           python tools/v4_exact_workflow_shard_fix2_temp.py
           python tools/v4_exact_2d_execution_registry_patch_temp.py
           python tools/v4_exact_2d_execution_registry_fix1_temp.py
+          python tools/v4_exact_2d_execution_registry_fix2_temp.py
       - name: Run exact non-authoritative cell
         shell: bash
         run: timeout "${V4_PACKAGE_WORKER_TIMEOUT_SECONDS}s" python -m src.services.package_optimization_shard_service
@@ -135,7 +140,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: codex/v4-full-universe-tactical-20260903
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
@@ -150,7 +155,8 @@ jobs:
           python tools/v4_exact_workflow_shard_fix2_temp.py
           python tools/v4_exact_2d_execution_registry_patch_temp.py
           python tools/v4_exact_2d_execution_registry_fix1_temp.py
-      - uses: actions/download-artifact@v4
+          python tools/v4_exact_2d_execution_registry_fix2_temp.py
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           pattern: v4-exact-package-cell-*
           path: data/package_shards

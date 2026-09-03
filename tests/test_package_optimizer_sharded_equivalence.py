@@ -122,3 +122,8 @@ def test_sharded_reducer_is_differentially_equivalent_to_canonical_exhaustive(mo
     assert _top_signature(reduced) == _top_signature(canonical_result)
     assert (reduced.get("efficient_frontier") or {}).get("count") == (canonical_result.get("efficient_frontier") or {}).get("count")
     assert _frontier_ids(reduced) == _frontier_ids(canonical_result)
+
+    for result in (reduced, canonical_result):
+        governance = result.get("governance") or {}
+        assert governance.get("candidate_generation_only") is True
+        assert governance.get("final_go_requires_framework_governance_and_postflight_gate0") is True

@@ -7,6 +7,8 @@ on:
     paths:
       - .github/workflows/v4-full-search-profile-temp.yml
       - tools/v4_full_search_profile_temp.py
+      - tools/v4_exact_lazy_utility_patch_temp.py
+      - tools/v4_exact_hotpath_patch_temp.py
 
 permissions:
   contents: read
@@ -20,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: codex/v4-full-universe-tactical-20260903
+          ref: ${{ github.sha }}
           fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
@@ -28,8 +30,10 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt
-      - name: Apply uncommitted lazy utility candidate patch for profiling
+      - name: Apply lazy exact utility candidate patch
         run: python tools/v4_exact_lazy_utility_patch_temp.py
+      - name: Apply exact hotpath candidate patch
+        run: python tools/v4_exact_hotpath_patch_temp.py
       - name: Profile exact production-sized package search for 25 seconds
         shell: bash
         run: |

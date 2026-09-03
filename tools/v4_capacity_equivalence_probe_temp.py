@@ -29,6 +29,128 @@ helper = r'''    def _capacity_key(
         cache[cache_key] = value
         return value
 
+    @staticmethod
+    def _x15_key(state: IncomingState) -> float:
+        return -state.x15
+
+    def _cost_x15_add(
+        self,
+        index: dict[int, list[IncomingState]],
+        costs: list[int],
+        row: IncomingState,
+    ) -> None:
+        bucket = index.get(row.cost)
+        if bucket is None:
+            bucket = []
+            index[row.cost] = bucket
+            costs.insert(bisect_right(costs, row.cost), row.cost)
+        bucket.insert(bisect_right(bucket, -row.x15, key=self._x15_key), row)
+
+    def _cost_x15_build(
+        self,
+        rows: list[IncomingState],
+    ) -> tuple[dict[int, list[IncomingState]], list[int]]:
+        index: dict[int, list[IncomingState]] = {}
+        costs: list[int] = []
+        for row in rows:
+            self._cost_x15_add(index, costs, row)
+        return index, costs
+
+    def _indexed_dominator_exists(
+        self,
+        index: dict[int, list[IncomingState]],
+        costs: list[int],
+        candidate: IncomingState,
+        relation: Callable[..., bool],
+    ) -> bool:
+        total_indexed = sum(len(index[cost]) for cost in costs)
+        eligible_cost_end = bisect_right(costs, candidate.cost)
+        checks = 0
+        x15_eligible = 0
+        for cost in costs[:eligible_cost_end]:
+            rows = index[cost]
+            end = bisect_right(rows, -candidate.x15, key=self._x15_key)
+            x15_eligible += end
+            for idx in range(end):
+                incumbent = rows[idx]
+                checks += 1
+                if relation(
+                    incumbent,
+                    candidate,
+                    frontier_epsilon=self.frontier_epsilon,
+                ):
+                    self.stats["dominance_full_checks"] += checks
+                    self.stats["dominance_pairs_skipped_by_cost_x15_index"] = int(
+                        self.stats.get("dominance_pairs_skipped_by_cost_x15_index") or 0
+                    ) + max(0, total_indexed - x15_eligible)
+                    self.stats["frontier_insert_rejected"] += 1
+                    return True
+        self.stats["dominance_full_checks"] += checks
+        self.stats["dominance_pairs_skipped_by_cost_x15_index"] = int(
+            self.stats.get("dominance_pairs_skipped_by_cost_x15_index") or 0
+        ) + max(0, total_indexed - x15_eligible)
+        return False
+
+    def _monotone_rank_layers(
+        self,
+        candidates: list[IncomingState],
+    ) -> list[list[IncomingState]]:
+        layers = self._new_rank_layers()
+        indexes: list[tuple[dict[int, list[IncomingState]], list[int]]] = [
+            ({}, []) for _ in range(self.top_keep)
+        ]
+        previous_x5: float | None = None
+        for candidate in sorted(candidates, key=lambda row: (-row.x5, _state_key(row))):
+            if previous_x5 is not None and candidate.x5 == previous_x5:
+                _skyband_insert(
+                    layers,
+                    candidate,
+                    top_keep=self.top_keep,
+                    frontier_epsilon=self.frontier_epsilon,
+                    relation=rank_dominates,
+                    metrics=self.stats,
+                )
+                indexes = [self._cost_x15_build(layer) for layer in layers]
+                previous_x5 = candidate.x5
+                continue
+            for layer_index in range(self.top_keep):
+                self.stats["frontier_insert_calls"] += 1
+                index, costs = indexes[layer_index]
+                if self._indexed_dominator_exists(index, costs, candidate, rank_dominates):
+                    continue
+                layers[layer_index].append(candidate)
+                self._cost_x15_add(index, costs, candidate)
+                break
+            previous_x5 = candidate.x5
+        return layers
+
+    def _monotone_frontier(
+        self,
+        candidates: list[IncomingState],
+    ) -> list[IncomingState]:
+        layer: list[IncomingState] = []
+        index: dict[int, list[IncomingState]] = {}
+        costs: list[int] = []
+        previous_x5: float | None = None
+        for candidate in sorted(candidates, key=lambda row: (-row.x5, _state_key(row))):
+            if previous_x5 is not None and candidate.x5 == previous_x5:
+                _front_insert(
+                    layer,
+                    candidate,
+                    frontier_epsilon=self.frontier_epsilon,
+                    relation=frontier_dominates,
+                    metrics=self.stats,
+                )
+                index, costs = self._cost_x15_build(layer)
+                previous_x5 = candidate.x5
+                continue
+            self.stats["frontier_insert_calls"] += 1
+            if not self._indexed_dominator_exists(index, costs, candidate, frontier_dominates):
+                layer.append(candidate)
+                self._cost_x15_add(index, costs, candidate)
+            previous_x5 = candidate.x5
+        return layer
+
     def _states_for_need_keep(
         self,
         need: Counter,
@@ -107,17 +229,7 @@ helper = r'''    def _capacity_key(
                         if bucket is not None:
                             rank_pending.setdefault(bucket, []).append(merged)
                 for bucket, candidates in rank_pending.items():
-                    layers = self._new_rank_layers()
-                    for merged in sorted(candidates, key=lambda row: (-row.x5, _state_key(row))):
-                        _skyband_insert(
-                            layers,
-                            merged,
-                            top_keep=self.top_keep,
-                            frontier_epsilon=self.frontier_epsilon,
-                            relation=rank_dominates,
-                            metrics=self.stats,
-                        )
-                    rank_dp[1][bucket] = layers
+                    rank_dp[1][bucket] = self._monotone_rank_layers(candidates)
 
                 frontier_pending: dict[int, list[IncomingState]] = {}
                 frontier_sources = _flatten_frontier(frontier_dp[0])
@@ -132,16 +244,7 @@ helper = r'''    def _capacity_key(
                         if bucket is not None:
                             frontier_pending.setdefault(bucket, []).append(merged)
                 for bucket, candidates in frontier_pending.items():
-                    layer: list[IncomingState] = []
-                    for merged in sorted(candidates, key=lambda row: (-row.x5, _state_key(row))):
-                        _front_insert(
-                            layer,
-                            merged,
-                            frontier_epsilon=self.frontier_epsilon,
-                            relation=frontier_dominates,
-                            metrics=self.stats,
-                        )
-                    frontier_dp[1][bucket] = layer
+                    frontier_dp[1][bucket] = self._monotone_frontier(candidates)
             else:
                 for processed, player in enumerate(pool):
                     singleton = self._single_state[player.element]
@@ -198,8 +301,10 @@ helper = r'''    def _capacity_key(
                 round(__import__("time").perf_counter() - probe_started, 3),
                 "checks",
                 self.stats["dominance_full_checks"],
-                "skipped",
+                "x5_skipped",
                 self.stats["dominance_pairs_skipped_by_x5_index"],
+                "cost_x15_skipped",
+                self.stats.get("dominance_pairs_skipped_by_cost_x15_index", 0),
                 flush=True,
             )
             if not rank_states and not frontier_states:

@@ -1,0 +1,36 @@
+name: V4 temporary optimization profile
+on:
+  push:
+    branches:
+      - codex/v4-full-universe-tactical-20260903
+    paths:
+      - .github/workflows/v4-opt-profile-temp.yml
+permissions:
+  contents: read
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: codex/v4-full-universe-tactical-20260903
+          fetch-depth: 1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Apply uncommitted lazy patch
+        run: python tools/v4_exact_lazy_utility_patch_temp.py
+      - name: Profile cold optimization to completion
+        run: |
+          timeout 120s python -m cProfile -o /tmp/v4opt.prof -m src.services.optimization_slo_service || true
+          python - <<'PY'
+          import pstats
+          s = pstats.Stats('/tmp/v4opt.prof')
+          s.strip_dirs().sort_stats('cumtime').print_stats(50)
+          PY

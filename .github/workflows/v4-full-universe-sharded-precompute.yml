@@ -7,11 +7,13 @@ on:
     paths:
       - .github/workflows/v4-full-universe-sharded-precompute.yml
       - config/intelligence/full_universe_package_search_sharding.json
+      - src/engines/v4_full_universe_package_search.py
+      - src/engines/v4_full_universe_package_search_core.py
+      - src/engines/v4_wc_package_audit_fast.py
       - src/engines/v4_full_universe_shard_planner.py
+      - src/engines/v4_full_universe_shard_kernel.py
       - src/engines/v4_full_universe_shard_worker.py
       - src/engines/v4_full_universe_shard_reducer.py
-      - tools/v4_exact_lazy_utility_patch_temp.py
-      - tools/v4_exact_hotpath_patch_temp.py
 
 permissions:
   contents: read
@@ -32,12 +34,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with: {python-version: '3.12', cache: pip, cache-dependency-path: requirements.txt}
       - run: pip install --disable-pip-version-check -r requirements.txt
-      - name: Apply measured exact hotpath candidate
-        run: |
-          python tools/v4_exact_lazy_utility_patch_temp.py
-          python tools/v4_exact_hotpath_patch_temp.py
       - id: plan
-        name: Derive dynamic exact-work matrix
+        name: Derive registry-driven exact-work matrix
         run: python -m src.engines.v4_full_universe_shard_planner --emit-matrix
       - id: runtime
         name: Read execution SLO from registry
@@ -80,10 +78,6 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with: {python-version: '3.12', cache: pip, cache-dependency-path: requirements.txt}
       - run: pip install --disable-pip-version-check -r requirements.txt
-      - name: Apply measured exact hotpath candidate
-        run: |
-          python tools/v4_exact_lazy_utility_patch_temp.py
-          python tools/v4_exact_hotpath_patch_temp.py
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with: {name: v4-full-universe-plan, path: data/runtime}
       - name: Run exact non-authoritative shard
@@ -94,13 +88,15 @@ jobs:
           import glob,json
           paths=glob.glob('data/runtime/v4_full_universe_shards/shard_*.json')
           assert len(paths)==1
-          p=json.load(open(paths[0])); s=p['search']; d=s['diagnostics']
+          p=json.load(open(paths[0])); s=p['search']; d=s['diagnostics']; e=p['shard_execution']
           assert s['status']=='SHARD_PARTIAL_EXACT'
           assert s['global_optimality_guaranteed_under_declared_package_semantics'] is False
           assert p['decision_authority']=='EXECUTION_ONLY_SHARD_PARTIAL'
           assert p['execution_authorized'] is False
-          assert p['shard_execution']['workers_may_not_publish_final_package_authority'] is True
-          print({'shard':p['shard_execution']['shard_id'],'tasks':p['shard_execution']['assigned_task_count'],'packages':d['packages_evaluated'],'exact_utility_evaluations':d.get('exact_utility_evaluations'),'bound_pruned':d.get('exact_utility_pruned_by_admissible_bound')})
+          assert e['workers_may_not_publish_final_package_authority'] is True
+          assert e['explicit_task_kernel'] is True
+          assert e['monolithic_full_search_invocation'] is False
+          print({'shard':e['shard_id'],'tasks':e['assigned_task_count'],'estimated_work':e['estimated_work'],'packages':d['packages_evaluated']})
           PY
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -118,10 +114,6 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with: {python-version: '3.12', cache: pip, cache-dependency-path: requirements.txt}
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Apply measured exact hotpath candidate
-        run: |
-          python tools/v4_exact_lazy_utility_patch_temp.py
-          python tools/v4_exact_hotpath_patch_temp.py
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with: {name: v4-full-universe-plan, path: data/runtime}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093

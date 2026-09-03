@@ -8,6 +8,7 @@ on:
       - .github/workflows/v4-capacity-equivalence-profiler-temp.yml
       - tools/v4_capacity_equivalence_probe_temp.py
       - tools/v4_terminal_suffix_probe_temp.py
+      - tools/v4_terminal_package_rank_probe_temp.py
 
 permissions:
   contents: read
@@ -38,5 +39,7 @@ jobs:
         run: python -m pytest -q tests/test_v4_full_universe_exact_state_frontier.py tests/test_v4_full_universe_authority_fail_closed.py
       - name: Terminal suffix compression profile
         run: python tools/v4_terminal_suffix_probe_temp.py
+      - name: Exact terminal package rank branch-bound profile
+        run: python tools/v4_terminal_package_rank_probe_temp.py
       - name: Production-scale exact regression
         run: /usr/bin/time -f 'regression_elapsed=%e' python -m pytest -q -s tests/test_v4_exact_frontier_production_scale.py

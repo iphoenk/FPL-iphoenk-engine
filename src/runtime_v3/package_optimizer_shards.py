@@ -27,6 +27,17 @@ POLICY_PATH = ROOT / "config" / "runtime" / "package_optimizer_sharding.json"
 SLO_PATH = ROOT / "config" / "runtime" / "performance_slo.json"
 PLAN_REGISTRY = "V3_PACKAGE_OPTIMIZER_SHARD_PLAN_V1"
 SHARD_REGISTRY = "V3_PACKAGE_OPTIMIZER_SHARD_RESULT_V1"
+REQUIRED_GUARDRAIL_KEYS = (
+    "team_cluster_penalty_enabled",
+    "early_season_change_cap_enabled",
+)
+
+
+def _canonical_guardrail_telemetry(score: dict[str, Any]) -> dict[str, bool]:
+    guardrails = score.get("guardrails") or {}
+    if any(not isinstance(guardrails.get(key), bool) for key in REQUIRED_GUARDRAIL_KEYS):
+        raise RuntimeError("canonical package scorer did not emit required guardrail telemetry")
+    return {key: guardrails[key] for key in REQUIRED_GUARDRAIL_KEYS}
 
 
 def load_policy() -> dict[str, Any]:
@@ -257,6 +268,7 @@ def reduce_shards(plan: dict[str, Any], shard_dir: Path, *, persist: bool = True
     scalar = CompiledPackageScorer(projections.get("players") or [], gw, scoring_context=context)
     clubs = Counter(int(row.get("team_id") or -1) for row in current)
     hold_score = scalar.score(current, changes=0)
+    hold_guardrails = _canonical_guardrail_telemetry(hold_score)
     hold = base._record(0, [], [], hold_score, {"resulting_itb": itb, "steps": [], "execution_order": [], "orders_checked": 1}, itb)
     hold_h = hold_score.get("horizons") or {}
     keep = int(policy["planner"]["top_keep_per_shard"])
@@ -404,6 +416,8 @@ def reduce_shards(plan: dict[str, Any], shard_dir: Path, *, persist: bool = True
             "step_legal_transfer_recomputation": True,
             "efficient_frontier_from_all_evaluated_legal_packages": True,
             "lossy_pruning_is_explicit": False,
+            **hold_guardrails,
+            "guardrail_telemetry_source": "CANONICAL_COMPILED_PACKAGE_SCORER_HOLD_SCORE",
         },
     }
     if optimizer["status"] != "READY" or diagnostics["search_authority"] != "FULL" or diagnostics["all_step_legal_packages_scored"] is not True:

@@ -54,47 +54,39 @@ def _team(owned: list[dict]) -> dict:
     }
 
 
-def test_config_forbids_hidden_top_n_candidate_authority():
+def test_config_separates_full_universe_origin_from_bounded_search_authority():
     cfg = json.loads((ROOT / "config/intelligence/package_optimizer.json").read_text())
     assert cfg["candidate_origin"] == "COMPLETE_ELIGIBLE_OFFICIAL_FPL_UNIVERSE"
     assert cfg["watchlist_is_optimizer_input"] is False
-    assert "max_candidates_per_position" not in cfg
-    assert "max_single_moves_per_out" not in cfg
-    assert "max_deterministic_packages" not in cfg
-    assert cfg["governance"]["fixed_top_n_candidate_authority_forbidden"] is True
+    assert cfg["search_frontier"]["lossy"] is True
+    assert cfg["search_frontier"]["authority_when_applied"] == "PARTIAL"
+    assert cfg["governance"]["official_fpl_full_universe_scanned_before_pruning"] is True
+    assert cfg["governance"]["lossy_pruning_must_be_observable"] is True
     assert cfg["governance"]["lossy_pruning_must_downgrade_search_authority"] is True
 
 
-def test_rank_beyond_old_top7_can_win_package_optimization(monkeypatch):
+def test_full_universe_is_scanned_even_when_exact_search_is_bounded(monkeypatch):
     owned = _owned_squad()
-    candidates = []
-    # Seven high candidate-score rows are deliberately unaffordable. The eighth
-    # candidate must still enter exact single-move evaluation and can win.
-    for index in range(7):
-        candidates.append(_player(100 + index, "MID", 16 + index, 8.0 - index * 0.1, 100))
-    candidates.append(_player(107, "MID", 23, 7.0, 50))
-    candidates.append(_player(108, "MID", 24, 2.0, 50))
+    candidates = [_player(100 + index, "MID", 16 + index, 8.0 - index * 0.1, 50) for index in range(9)]
     projections = {"planning_gw": 3, "players": owned + candidates}
     cfg = json.loads((ROOT / "config/intelligence/package_optimizer.json").read_text())
     cfg["max_changes"] = 1
-    cfg["candidate_pool_preview_per_position"] = 7
+    cfg["candidate_pool_preview_per_position"] = 20
     cfg["monte_carlo_top_n"] = 100
+    cfg["search_frontier"]["candidates_per_position"] = 7
+    cfg["search_frontier"]["single_moves_per_out"] = 4
     monkeypatch.setattr(decision_intelligence, "load_optimizer_config", lambda: cfg)
 
     result = build_package_optimizer(projections, _team(owned))
 
     preview_ids = {row["element"] for row in result["candidate_pool"]["MID"]}
-    package_in_ids = {
-        row["element"]
-        for package in result["packages"]
-        for row in package.get("ins") or []
-    }
-    assert 107 not in preview_ids
-    assert 107 in package_in_ids
+    assert {100 + index for index in range(9)}.issubset(preview_ids)
     assert result["search_diagnostics"]["eligible_by_position"]["MID"] == 9
-    assert result["search_diagnostics"]["fixed_top_n_candidate_truncation_applied"] is False
+    assert result["search_diagnostics"]["searched_frontier_by_position"]["MID"] == 7
     assert result["search_diagnostics"]["watchlist_used_as_optimizer_input"] is False
-    assert result["search_diagnostics"]["search_authority"] == "FULL"
+    assert result["search_diagnostics"]["lossy_pruning"] is True
+    assert result["search_diagnostics"]["search_authority"] == "PARTIAL"
+    assert result["status"] == "READY"
 
 
 def test_each_transfer_step_recomputes_cash_and_legal_squad():

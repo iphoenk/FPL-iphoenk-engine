@@ -28,6 +28,13 @@ _PREDICTION_FIXTURE_FIELDS = (
     "event", "kickoff_time", "finished", "team_h", "team_a",
     "team_h_score", "team_a_score",
 )
+_TACTICAL_TEAM_FIELDS = ("id", "name", "short_name")
+_TACTICAL_PLAYER_FIELDS = (
+    "id", "team", "element_type", "web_name", "first_name", "second_name",
+)
+_TACTICAL_FIXTURE_FIELDS = (
+    "id", "event", "team_h", "team_a", "kickoff_time", "finished",
+)
 
 
 @lru_cache(maxsize=1)
@@ -167,6 +174,30 @@ def _prediction_official_snapshot(value: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _tactical_official_snapshot(value: dict[str, Any]) -> dict[str, Any]:
+    """Project Official state to only evidence consumed by tactical materialization."""
+    bootstrap = value.get("bootstrap") if isinstance(value.get("bootstrap"), dict) else {}
+    phase = value.get("phase") if isinstance(value.get("phase"), dict) else {}
+    teams = [_pick(row, _TACTICAL_TEAM_FIELDS) for row in bootstrap.get("teams") or [] if isinstance(row, dict)]
+    elements = [_pick(row, _TACTICAL_PLAYER_FIELDS) for row in bootstrap.get("elements") or [] if isinstance(row, dict)]
+    fixtures = [_pick(row, _TACTICAL_FIXTURE_FIELDS) for row in value.get("fixtures") or [] if isinstance(row, dict)]
+    teams.sort(key=lambda row: int(row.get("id") or 0))
+    elements.sort(key=lambda row: int(row.get("id") or 0))
+    fixtures.sort(key=lambda row: (
+        int(row.get("event") or 999),
+        str(row.get("kickoff_time") or ""),
+        int(row.get("team_h") or 0),
+        int(row.get("team_a") or 0),
+        int(row.get("id") or 0),
+    ))
+    return {
+        "current_gw": phase.get("current_gw"),
+        "teams": teams,
+        "elements": elements,
+        "fixtures": fixtures,
+    }
+
+
 def _prediction_team_state(value: dict[str, Any]) -> dict[str, Any]:
     ledger = []
     for row in value.get("team_value_ledger") or []:
@@ -190,6 +221,8 @@ def _semantic_json(service_name: str, name: str, value: Any) -> Any:
         return _prediction_official_snapshot(value)
     if service_name == "prediction" and name == "team.json" and isinstance(value, dict):
         return _prediction_team_state(value)
+    if service_name == "tactical_context" and name == "official_snapshot.json" and isinstance(value, dict):
+        return _tactical_official_snapshot(value)
     return value
 
 
@@ -200,6 +233,8 @@ def _semantic_profile(service_name: str, name: str, suffix: str) -> str:
         return "PREDICTION_OFFICIAL_SNAPSHOT"
     if service_name == "prediction" and name == "team.json":
         return "PREDICTION_TEAM_STATE"
+    if service_name == "tactical_context" and name == "official_snapshot.json":
+        return "TACTICAL_OFFICIAL_SNAPSHOT"
     return "GENERIC_JSON"
 
 
@@ -300,13 +335,20 @@ def _semantic_hash(value: Any, *, top_level: bool = False) -> str:
 def _digest_file_cached(profile: str, path_text: str, size: int, mtime_ns: int) -> str:
     del size, mtime_ns
     path = Path(path_text)
-    if profile in {"GENERIC_JSON", "PREDICTION_OFFICIAL_SNAPSHOT", "PREDICTION_TEAM_STATE"}:
+    if profile in {
+        "GENERIC_JSON",
+        "PREDICTION_OFFICIAL_SNAPSHOT",
+        "PREDICTION_TEAM_STATE",
+        "TACTICAL_OFFICIAL_SNAPSHOT",
+    }:
         value = read_json(path, None)
         if value is not None:
             if profile == "PREDICTION_OFFICIAL_SNAPSHOT" and isinstance(value, dict):
                 value = _prediction_official_snapshot(value)
             elif profile == "PREDICTION_TEAM_STATE" and isinstance(value, dict):
                 value = _prediction_team_state(value)
+            elif profile == "TACTICAL_OFFICIAL_SNAPSHOT" and isinstance(value, dict):
+                value = _tactical_official_snapshot(value)
             return _semantic_hash(value, top_level=True)
     return hashlib.sha256(path.read_bytes()).hexdigest()
 

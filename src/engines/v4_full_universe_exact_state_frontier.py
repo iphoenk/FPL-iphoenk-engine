@@ -12,8 +12,8 @@ from src.engines.v4_wc_optimizer import MAX_PER_CLUB, POSITION_COUNTS, Candidate
 CONTRACT = "V4_FULL_UNIVERSE_EXACT_STATE_FRONTIER_V1"
 _POSITIONS = tuple(POSITION_COUNTS)
 _POSITION_ORDER = {position: index for index, position in enumerate(_POSITIONS)}
-_HORIZON_ROUND_STEP = 0.010000000001
-_FOUR_DP_ROUND_STEP = 0.000100000001
+_TWO_DP_ROUND_ERROR = 0.010000000001
+_FOUR_DP_ROUND_ERROR = 0.000100000001
 
 
 @dataclass(frozen=True)
@@ -154,37 +154,47 @@ def _gw_no_worse(left: IncomingState, right: IncomingState) -> bool:
 
 
 def _guaranteed_rank_strict(left: IncomingState, right: IncomingState) -> bool:
+    # Rank has no dominance epsilon. A raw horizon gap larger than the total 2dp
+    # rounding error guarantees a positive published gap. Lower integer cost is an
+    # exact later rank tie-breaker if all earlier dimensions remain equal.
     return (
-        left.x5 > right.x5 + _HORIZON_ROUND_STEP
-        or left.x15 > right.x15 + _HORIZON_ROUND_STEP
+        left.x5 > right.x5 + _TWO_DP_ROUND_ERROR
+        or left.x15 > right.x15 + _TWO_DP_ROUND_ERROR
         or left.cost < right.cost
     )
 
 
-def _guaranteed_frontier_strict(left: IncomingState, right: IncomingState) -> bool:
+def _guaranteed_frontier_strict(left: IncomingState, right: IncomingState, frontier_epsilon: float) -> bool:
+    # Frontier strictness requires a published gap strictly greater than epsilon.
+    # Horizon totals are rounded to 2dp. Direct risk/confidence averages are rounded
+    # to 4dp; uncertainty deltas are not used for strictness because max(0, delta)
+    # can flatten a raw improvement to an equal zero after outgoing subtraction.
     k = max(1, len(left.players))
-    four_dp_sum_gap = _FOUR_DP_ROUND_STEP * k
+    horizon_gap = float(frontier_epsilon) + _TWO_DP_ROUND_ERROR
+    sum_gap = (float(frontier_epsilon) + _FOUR_DP_ROUND_ERROR) * k
     return (
-        left.x3 > right.x3 + _HORIZON_ROUND_STEP
-        or left.x5 > right.x5 + _HORIZON_ROUND_STEP
-        or left.x10 > right.x10 + _HORIZON_ROUND_STEP
-        or left.x15 > right.x15 + _HORIZON_ROUND_STEP
-        or left.price_risk + four_dp_sum_gap < right.price_risk
-        or left.tactical_role_confidence > right.tactical_role_confidence + four_dp_sum_gap
-        or left.opponent_matchup_confidence > right.opponent_matchup_confidence + four_dp_sum_gap
+        left.x3 > right.x3 + horizon_gap
+        or left.x5 > right.x5 + horizon_gap
+        or left.x10 > right.x10 + horizon_gap
+        or left.x15 > right.x15 + horizon_gap
+        or left.price_risk + sum_gap < right.price_risk
+        or left.tactical_role_confidence > right.tactical_role_confidence + sum_gap
+        or left.opponent_matchup_confidence > right.opponent_matchup_confidence + sum_gap
     )
 
 
-def dominates(left: IncomingState, right: IncomingState) -> bool:
+def dominates(left: IncomingState, right: IncomingState, *, frontier_epsilon: float) -> bool:
     """Conservative proof that one state cannot affect canonical best/frontier.
 
     Compression is only applied inside identical incoming club signatures. Every
     future keep therefore sees identical club-slot feasibility. The left state is
     required to be no worse on every monotone input to XI, utility, horizon, risk
     and confidence, plus a strict improvement that provably survives canonical
-    rounding in both rank and efficient-frontier semantics. Tiny/equal float ties
-    are retained so package-id tie ordering cannot be changed by compression.
+    rounding and the governed frontier epsilon. Tiny/equal float ties are retained
+    so package-id tie ordering cannot be changed by compression.
     """
+    if frontier_epsilon < 0:
+        raise ValueError("frontier_epsilon must be non-negative")
     if not _gw_no_worse(left, right):
         return False
     minimize_pairs = (
@@ -207,14 +217,17 @@ def dominates(left: IncomingState, right: IncomingState) -> bool:
         return False
     if any(a < b for a, b in maximize_pairs):
         return False
-    return _guaranteed_rank_strict(left, right) and _guaranteed_frontier_strict(left, right)
+    return _guaranteed_rank_strict(left, right) and _guaranteed_frontier_strict(left, right, frontier_epsilon)
 
 
-def _insert_exact(frontier: list[IncomingState], candidate: IncomingState) -> tuple[bool, int]:
+def _insert_exact(frontier: list[IncomingState], candidate: IncomingState, *, frontier_epsilon: float) -> tuple[bool, int]:
     for incumbent in frontier:
-        if dominates(incumbent, candidate):
+        if dominates(incumbent, candidate, frontier_epsilon=frontier_epsilon):
             return False, 1
-    retained = [incumbent for incumbent in frontier if not dominates(candidate, incumbent)]
+    retained = [
+        incumbent for incumbent in frontier
+        if not dominates(candidate, incumbent, frontier_epsilon=frontier_epsilon)
+    ]
     removed = len(frontier) - len(retained)
     retained.append(candidate)
     frontier[:] = retained
@@ -236,12 +249,21 @@ def _need_key(need: Counter) -> tuple[tuple[str, int], ...]:
 class ExactIncomingFrontierIndex:
     """Reusable exact incoming-state index for all outgoing sets in one search."""
 
-    def __init__(self, pools: dict[str, list[Candidate]], risk_by_element: dict[int, dict]):
+    def __init__(
+        self,
+        pools: dict[str, list[Candidate]],
+        risk_by_element: dict[int, dict],
+        *,
+        frontier_epsilon: float,
+    ):
+        if frontier_epsilon < 0:
+            raise ValueError("frontier_epsilon must be non-negative")
         self.pools = {
             position: tuple(sorted(pools.get(position, []), key=lambda row: row.element))
             for position in _POSITIONS
         }
         self.risk_by_element = risk_by_element
+        self.frontier_epsilon = float(frontier_epsilon)
         self._group_cache: dict[tuple[str, int], tuple[IncomingState, ...]] = {}
         self._need_cache: dict[tuple[tuple[str, int], ...], tuple[IncomingState, ...]] = {}
         self.stats = {
@@ -269,7 +291,7 @@ class ExactIncomingFrontierIndex:
             self.stats["group_raw_combinations"] += 1
             state = _state(tuple(combo), self.risk_by_element)
             bucket = buckets.setdefault(state.club_signature, [])
-            inserted, removed = _insert_exact(bucket, state)
+            inserted, removed = _insert_exact(bucket, state, frontier_epsilon=self.frontier_epsilon)
             if inserted:
                 self.stats["group_states_retained"] += 1
             self.stats["group_states_pruned_exact"] += removed + (0 if inserted else 1)
@@ -295,7 +317,7 @@ class ExactIncomingFrontierIndex:
                     self.stats["merge_states_considered"] += 1
                     merged = _merge(left, right)
                     bucket = buckets.setdefault(merged.club_signature, [])
-                    inserted, removed = _insert_exact(bucket, merged)
+                    inserted, removed = _insert_exact(bucket, merged, frontier_epsilon=self.frontier_epsilon)
                     if inserted:
                         self.stats["merge_states_retained"] += 1
                     self.stats["merge_states_pruned_exact"] += removed + (0 if inserted else 1)
@@ -327,10 +349,11 @@ class ExactIncomingFrontierIndex:
         local.setdefault("same_signature_partial_dominance_only", True)
         local.setdefault("cross_signature_partial_pruning", False)
         local.setdefault("package_id_exact_ties_preserved", True)
-        local.setdefault("strictness_survives_canonical_rounding", True)
+        local.setdefault("strictness_survives_canonical_rounding_and_frontier_epsilon", True)
         local.setdefault("best_xi_componentwise_gw_proof", True)
         local.setdefault("club_capacity_equivalence_preserved_before_final_legality", True)
         local.setdefault("need_pattern_cache_reused_across_outgoing_sets", True)
+        local["frontier_epsilon"] = self.frontier_epsilon
         local["calls"] = int(local.get("calls") or 0) + 1
         local["cached_need_states"] = len(states)
 
@@ -364,7 +387,8 @@ class ExactIncomingFrontierIndex:
             "club_capacity_future_equivalence_required": True,
             "componentwise_position_gw_dominance_required": True,
             "cost_and_all_frontier_risk_confidence_dimensions_required": True,
-            "strictness_survives_canonical_rounding": True,
+            "strictness_survives_canonical_rounding_and_frontier_epsilon": True,
+            "frontier_epsilon": self.frontier_epsilon,
             "exact_ties_preserved_for_package_id_ranking": True,
             "need_pattern_cache_reused_across_outgoing_sets": True,
             "group_cache_entries": len(self._group_cache),

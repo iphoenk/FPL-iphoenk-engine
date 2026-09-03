@@ -9,7 +9,7 @@ from src.engines.v4_optimizer_primitives import gw_value
 from src.engines.v4_wc_optimizer import MAX_PER_CLUB, POSITION_COUNTS, Candidate
 
 
-CONTRACT = "V4_FULL_UNIVERSE_EXACT_STATE_FRONTIER_V1"
+CONTRACT = "V4_FULL_UNIVERSE_EXACT_STATE_SKYBAND_V1"
 _POSITIONS = tuple(POSITION_COUNTS)
 _POSITION_ORDER = {position: index for index, position in enumerate(_POSITIONS)}
 _TWO_DP_ROUND_ERROR = 0.010000000001
@@ -154,9 +154,6 @@ def _gw_no_worse(left: IncomingState, right: IncomingState) -> bool:
 
 
 def _guaranteed_rank_strict(left: IncomingState, right: IncomingState) -> bool:
-    # Rank has no dominance epsilon. A raw horizon gap larger than the total 2dp
-    # rounding error guarantees a positive published gap. Lower integer cost is an
-    # exact later rank tie-breaker if all earlier dimensions remain equal.
     return (
         left.x5 > right.x5 + _TWO_DP_ROUND_ERROR
         or left.x15 > right.x15 + _TWO_DP_ROUND_ERROR
@@ -165,10 +162,6 @@ def _guaranteed_rank_strict(left: IncomingState, right: IncomingState) -> bool:
 
 
 def _guaranteed_frontier_strict(left: IncomingState, right: IncomingState, frontier_epsilon: float) -> bool:
-    # Frontier strictness requires a published gap strictly greater than epsilon.
-    # Horizon totals are rounded to 2dp. Direct risk/confidence averages are rounded
-    # to 4dp; uncertainty deltas are not used for strictness because max(0, delta)
-    # can flatten a raw improvement to an equal zero after outgoing subtraction.
     k = max(1, len(left.players))
     horizon_gap = float(frontier_epsilon) + _TWO_DP_ROUND_ERROR
     sum_gap = (float(frontier_epsilon) + _FOUR_DP_ROUND_ERROR) * k
@@ -184,15 +177,7 @@ def _guaranteed_frontier_strict(left: IncomingState, right: IncomingState, front
 
 
 def dominates(left: IncomingState, right: IncomingState, *, frontier_epsilon: float) -> bool:
-    """Conservative proof that one state cannot affect canonical best/frontier.
-
-    Compression is only applied inside identical incoming club signatures. Every
-    future keep therefore sees identical club-slot feasibility. The left state is
-    required to be no worse on every monotone input to XI, utility, horizon, risk
-    and confidence, plus a strict improvement that provably survives canonical
-    rounding and the governed frontier epsilon. Tiny/equal float ties are retained
-    so package-id tie ordering cannot be changed by compression.
-    """
+    """Sufficient transitive proof for rank/frontier dominance after fixed keep merge."""
     if frontier_epsilon < 0:
         raise ValueError("frontier_epsilon must be non-negative")
     if not _gw_no_worse(left, right):
@@ -220,18 +205,57 @@ def dominates(left: IncomingState, right: IncomingState, *, frontier_epsilon: fl
     return _guaranteed_rank_strict(left, right) and _guaranteed_frontier_strict(left, right, frontier_epsilon)
 
 
-def _insert_exact(frontier: list[IncomingState], candidate: IncomingState, *, frontier_epsilon: float) -> tuple[bool, int]:
-    for incumbent in frontier:
-        if dominates(incumbent, candidate, frontier_epsilon=frontier_epsilon):
-            return False, 1
-    retained = [
-        incumbent for incumbent in frontier
-        if not dominates(candidate, incumbent, frontier_epsilon=frontier_epsilon)
+def _front_insert(layer: list[IncomingState], candidate: IncomingState, *, frontier_epsilon: float) -> tuple[bool, list[IncomingState]]:
+    if any(dominates(incumbent, candidate, frontier_epsilon=frontier_epsilon) for incumbent in layer):
+        return False, []
+    displaced = [
+        incumbent for incumbent in layer
+        if dominates(candidate, incumbent, frontier_epsilon=frontier_epsilon)
     ]
-    removed = len(frontier) - len(retained)
-    retained.append(candidate)
-    frontier[:] = retained
-    return True, removed
+    if displaced:
+        displaced_ids = {id(row) for row in displaced}
+        layer[:] = [row for row in layer if id(row) not in displaced_ids]
+    layer.append(candidate)
+    return True, displaced
+
+
+def _skyband_insert(
+    layers: list[list[IncomingState]],
+    candidate: IncomingState,
+    *,
+    top_keep: int,
+    frontier_epsilon: float,
+) -> int:
+    """Maintain the first N exact dominance fronts, discarding only depth > N.
+
+    A state outside N Pareto layers has a strict dominance chain containing at
+    least N distinct states. Because dominance is preserved when the same suffix
+    and keep are merged, that state cannot enter the canonical top-N for its
+    outgoing set, nor any efficient frontier. This preserves both top-N package
+    diagnostics and decision/frontier authority while allowing exact pruning.
+    """
+    pending = [candidate]
+    for layer_index in range(top_keep):
+        layer = layers[layer_index]
+        next_pending: list[IncomingState] = []
+        for row in pending:
+            inserted, displaced = _front_insert(layer, row, frontier_epsilon=frontier_epsilon)
+            if inserted:
+                next_pending.extend(displaced)
+            else:
+                next_pending.append(row)
+        pending = next_pending
+        if not pending:
+            break
+    return len(pending)
+
+
+def _flatten(layers: list[list[IncomingState]]) -> tuple[IncomingState, ...]:
+    return tuple(
+        row
+        for layer in layers
+        for row in sorted(layer, key=lambda item: tuple(player.element for player in item.players))
+    )
 
 
 def _need_key(need: Counter) -> tuple[tuple[str, int], ...]:
@@ -242,12 +266,12 @@ def _need_key(need: Counter) -> tuple[tuple[str, int], ...]:
     )
     total = sum(count for _position, count in rows)
     if total < 1 or total > 3:
-        raise RuntimeError(f"exact state frontier supports governed package sizes 1..3, got {total}")
+        raise RuntimeError(f"exact state skyband supports governed package sizes 1..3, got {total}")
     return rows
 
 
 class ExactIncomingFrontierIndex:
-    """Reusable exact incoming-state index for all outgoing sets in one search."""
+    """Reusable exact incoming-state skyband for all outgoing sets in one search."""
 
     def __init__(
         self,
@@ -255,15 +279,19 @@ class ExactIncomingFrontierIndex:
         risk_by_element: dict[int, dict],
         *,
         frontier_epsilon: float,
+        top_keep: int,
     ):
         if frontier_epsilon < 0:
             raise ValueError("frontier_epsilon must be non-negative")
+        if top_keep < 1:
+            raise ValueError("top_keep must be positive")
         self.pools = {
-            position: tuple(sorted(pools.get(position, []), key=lambda row: row.element))
+            position: tuple(sorted(pools.get(position, []), key=lambda row: (-row.x5, -row.x15, row.cost, row.element)))
             for position in _POSITIONS
         }
         self.risk_by_element = risk_by_element
         self.frontier_epsilon = float(frontier_epsilon)
+        self.top_keep = int(top_keep)
         self._group_cache: dict[tuple[str, int], tuple[IncomingState, ...]] = {}
         self._need_cache: dict[tuple[tuple[str, int], ...], tuple[IncomingState, ...]] = {}
         self.stats = {
@@ -279,6 +307,9 @@ class ExactIncomingFrontierIndex:
             "legal_state_rejected_club_limit": 0,
         }
 
+    def _new_layers(self) -> list[list[IncomingState]]:
+        return [[] for _ in range(self.top_keep)]
+
     def _group_frontier(self, position: str, count: int) -> tuple[IncomingState, ...]:
         key = (position, int(count))
         cached = self._group_cache.get(key)
@@ -286,20 +317,24 @@ class ExactIncomingFrontierIndex:
             return cached
         if position not in self.pools or count < 1 or count > 3:
             raise RuntimeError(f"invalid exact state group {key}")
-        buckets: dict[int, list[IncomingState]] = {}
+        buckets: dict[int, list[list[IncomingState]]] = {}
         for combo in combinations(self.pools[position], count):
             self.stats["group_raw_combinations"] += 1
             state = _state(tuple(combo), self.risk_by_element)
-            bucket = buckets.setdefault(state.club_signature, [])
-            inserted, removed = _insert_exact(bucket, state, frontier_epsilon=self.frontier_epsilon)
-            if inserted:
-                self.stats["group_states_retained"] += 1
-            self.stats["group_states_pruned_exact"] += removed + (0 if inserted else 1)
+            layers = buckets.setdefault(state.club_signature, self._new_layers())
+            pruned = _skyband_insert(
+                layers,
+                state,
+                top_keep=self.top_keep,
+                frontier_epsilon=self.frontier_epsilon,
+            )
+            self.stats["group_states_pruned_exact"] += pruned
         rows = tuple(
             state
             for signature in sorted(buckets)
-            for state in sorted(buckets[signature], key=lambda row: tuple(player.element for player in row.players))
+            for state in _flatten(buckets[signature])
         )
+        self.stats["group_states_retained"] += len(rows)
         self._group_cache[key] = rows
         return rows
 
@@ -311,21 +346,25 @@ class ExactIncomingFrontierIndex:
         states = (_empty_state(),)
         for position, count in key:
             group_states = self._group_frontier(position, count)
-            buckets: dict[int, list[IncomingState]] = {}
+            buckets: dict[int, list[list[IncomingState]]] = {}
             for left in states:
                 for right in group_states:
                     self.stats["merge_states_considered"] += 1
                     merged = _merge(left, right)
-                    bucket = buckets.setdefault(merged.club_signature, [])
-                    inserted, removed = _insert_exact(bucket, merged, frontier_epsilon=self.frontier_epsilon)
-                    if inserted:
-                        self.stats["merge_states_retained"] += 1
-                    self.stats["merge_states_pruned_exact"] += removed + (0 if inserted else 1)
+                    layers = buckets.setdefault(merged.club_signature, self._new_layers())
+                    pruned = _skyband_insert(
+                        layers,
+                        merged,
+                        top_keep=self.top_keep,
+                        frontier_epsilon=self.frontier_epsilon,
+                    )
+                    self.stats["merge_states_pruned_exact"] += pruned
             states = tuple(
                 state
                 for signature in sorted(buckets)
-                for state in sorted(buckets[signature], key=lambda row: tuple(player.element for player in row.players))
+                for state in _flatten(buckets[signature])
             )
+            self.stats["merge_states_retained"] += len(states)
             if not states:
                 break
         self._need_cache[key] = states
@@ -344,8 +383,8 @@ class ExactIncomingFrontierIndex:
         diagnostics.setdefault("exact_state_compression", {})
         local = diagnostics["exact_state_compression"]
         local.setdefault("contract", CONTRACT)
-        local.setdefault("canonical_best_and_frontier_exact", True)
-        local.setdefault("non_frontier_top_n_diagnostic_completeness", False)
+        local.setdefault("canonical_top_n_best_and_frontier_exact", True)
+        local.setdefault("pareto_skyband_depth", self.top_keep)
         local.setdefault("same_signature_partial_dominance_only", True)
         local.setdefault("cross_signature_partial_pruning", False)
         local.setdefault("package_id_exact_ties_preserved", True)
@@ -377,8 +416,8 @@ class ExactIncomingFrontierIndex:
         return {
             "schema_version": 1,
             "contract": CONTRACT,
-            "canonical_best_and_frontier_exact": True,
-            "non_frontier_top_n_diagnostic_completeness": False,
+            "canonical_top_n_best_and_frontier_exact": True,
+            "pareto_skyband_depth": self.top_keep,
             "heuristic": False,
             "beam_cutoff": False,
             "candidate_cutoff": False,

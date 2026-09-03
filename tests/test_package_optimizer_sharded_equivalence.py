@@ -127,3 +127,10 @@ def test_sharded_reducer_is_differentially_equivalent_to_canonical_exhaustive(mo
         governance = result.get("governance") or {}
         assert governance.get("candidate_generation_only") is True
         assert governance.get("final_go_requires_framework_governance_and_postflight_gate0") is True
+        frontier = result.get("efficient_frontier") or {}
+        assert frontier.get("dimensions_pending_richer_runtime_evidence") == []
+        assert "xmins_uncertainty_minutes_std_sum" in (frontier.get("dimensions_used") or [])
+        assert "tactical_role_uncertainty_missing_dimensions" in (frontier.get("dimensions_used") or [])
+        assert "price_risk_adverse_progress_percent" in (frontier.get("dimensions_used") or [])
+        assert "club_slot_headroom" in (frontier.get("dimensions_used") or [])
+        assert "roster_change_uncertainty_players" in (frontier.get("dimensions_used") or [])

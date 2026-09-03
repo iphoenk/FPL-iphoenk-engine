@@ -9,78 +9,35 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONPATH: ${{ github.workspace }}
+
 jobs:
   profile:
     runs-on: ubuntu-24.04
-    timeout-minutes: 8
-    env:
-      PYTHONPATH: ${{ github.workspace }}
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: codex/v4-full-universe-tactical-20260903
-          fetch-depth: 1
+        with: {ref: codex/v4-full-universe-tactical-20260903, fetch-depth: 1}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
-        with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: requirements.txt
+        with: {python-version: '3.12', cache: pip, cache-dependency-path: requirements.txt}
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Exact scalar versus batch task benchmark
+      - name: Profile exact batch shard hot path
         run: |
           python -u - <<'PY'
-          import json
+          import cProfile,pstats,io
           from time import perf_counter
-          from src.engines.v4_full_universe_shard_planner import build_plan, _load_material
-          from src.engines import v4_full_universe_shard_kernel as scalar
+          from src.engines.v4_full_universe_shard_planner import build_plan,_load_material
           from src.engines import v4_full_universe_shard_batch_kernel as batch
 
-          plan=build_plan()
-          material=_load_material()
-          tasks=[task for shard in plan['shards'] for task in shard['tasks'] if int(task.get('estimated_work') or 0)>0]
-          task=max(tasks, key=lambda row:(int(row.get('estimated_work') or 0), str(row.get('task_id'))))
-          work=int(task['estimated_work'])
+          plan=build_plan(); material=_load_material()
+          task=max((t for s in plan['shards'] for t in s['tasks'] if int(t.get('estimated_work') or 0)>0),key=lambda t:(int(t['estimated_work']),str(t['task_id'])))
           top_keep=int(plan['registry']['planner']['top_keep_per_shard'])
-          print('TASK', {'task_id':task['task_id'],'estimated_work':work,'replacements':task['replacements']})
-
-          started=perf_counter()
-          scalar_result, scalar_processed=scalar.execute_tasks(material,[task],top_per_size=top_keep)
-          scalar_elapsed=perf_counter()-started
-          scalar_diag=(scalar_result.get('search') or {}).get('diagnostics') or {}
-
-          rows={}
-          for size in (256,1024,4096,8192):
-              started=perf_counter()
-              result, processed=batch.execute_tasks(material,[task],top_per_size=top_keep,batch_size=size)
-              elapsed=perf_counter()-started
-              diag=(result.get('search') or {}).get('diagnostics') or {}
-              assert processed==scalar_processed
-              assert int(diag.get('packages_evaluated') or 0)==int(scalar_diag.get('packages_evaluated') or 0)
-              # Reducer-facing exact survivors must match by package identity before scalar rehydration.
-              def ids(payload):
-                  return sorted(str(row.get('package_id')) for row in (payload.get('packages') or []))
-              def frontier_ids(payload):
-                  return sorted(str(row.get('package_id')) for row in ((payload.get('efficient_frontier') or {}).get('rows') or []))
-              assert ids(result)==ids(scalar_result), (size,'top')
-              assert frontier_ids(result)==frontier_ids(scalar_result), (size,'frontier')
-              evaluated=int(diag.get('packages_evaluated') or 0)
-              rows[size]={
-                  'elapsed_s':round(elapsed,4),
-                  'packages_evaluated':evaluated,
-                  'packages_per_second':round(evaluated/max(elapsed,1e-9),1),
-                  'batch_flushes':int(diag.get('batch_flushes') or 0),
-              }
-              print('BATCH', size, rows[size])
-
-          scalar_eval=int(scalar_diag.get('packages_evaluated') or 0)
-          scalar_pps=scalar_eval/max(scalar_elapsed,1e-9)
-          best_size=max(rows, key=lambda size:rows[size]['packages_per_second'])
-          best=rows[best_size]
-          print('RESULT', {
-              'scalar':{'elapsed_s':round(scalar_elapsed,4),'packages_evaluated':scalar_eval,'packages_per_second':round(scalar_pps,1)},
-              'best_batch_size':best_size,
-              'best_batch':best,
-              'speedup':round(best['packages_per_second']/max(scalar_pps,1e-9),2),
-              'exact_survivor_parity':True,
-          })
+          profiler=cProfile.Profile(); started=perf_counter(); profiler.enable()
+          result,_=batch.execute_tasks(material,[task],top_per_size=top_keep,batch_size=1024)
+          profiler.disable(); elapsed=perf_counter()-started
+          diag=(result['search']['diagnostics'])
+          print('RESULT',{'elapsed_s':round(elapsed,4),'packages':diag['packages_evaluated'],'pps':round(diag['packages_evaluated']/elapsed,1),'frontier':diag['packages_retained_on_frontier'],'flushes':diag['batch_flushes']})
+          stream=io.StringIO(); pstats.Stats(profiler,stream=stream).strip_dirs().sort_stats('cumulative').print_stats(45)
+          print(stream.getvalue())
           PY

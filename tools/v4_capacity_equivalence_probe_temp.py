@@ -55,6 +55,7 @@ helper = r'''    def _capacity_key(
         frontier_states = (_empty_state(),)
         capacity_cache: dict[tuple[int, int], int | None] = {}
         picked_before = 0
+        probe_started = __import__("time").perf_counter()
 
         for position, count in key:
             remaining_after_position = total_picks - picked_before - count
@@ -144,6 +145,22 @@ helper = r'''    def _capacity_key(
             rank_states = _flatten_rank(rank_dp[count])
             frontier_states = _flatten_frontier(frontier_dp[count])
             picked_before += count
+            print(
+                "CAPACITY_EQ_STAGE",
+                key,
+                position,
+                "rank",
+                len(rank_states),
+                "frontier",
+                len(frontier_states),
+                "elapsed",
+                round(__import__("time").perf_counter() - probe_started, 3),
+                "checks",
+                self.stats["dominance_full_checks"],
+                "skipped",
+                self.stats["dominance_pairs_skipped_by_x5_index"],
+                flush=True,
+            )
             if not rank_states and not frontier_states:
                 break
 

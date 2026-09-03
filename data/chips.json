@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-09-03T22:33:27.990762+00:00",
+  "used": [
+    {
+      "name": "bboost",
+      "time": "2026-08-21T13:52:44.153226Z",
+      "event": 1
+    },
+    {
+      "name": "wildcard",
+      "time": "2026-08-24T05:07:55.443463Z",
+      "event": 2
+    }
+  ],
+  "ledger": {
+    "ruleset_id": "FPL_2026_27",
+    "current_half": 1,
+    "one_chip_per_gameweek": true,
+    "used": [
+      {
+        "api_name": "bboost",
+        "chip": "bench_boost",
+        "event": 1,
+        "half": 1,
+        "time": "2026-08-21T13:52:44.153226Z"
+      },
+      {
+        "api_name": "wildcard",
+        "chip": "wildcard",
+        "event": 2,
+        "half": 1,
+        "time": "2026-08-24T05:07:55.443463Z"
+      }
+    ],
+    "halves": {
+      "1": {
+        "gw_range": [
+          1,
+          19
+        ],
+        "used": [
+          "bench_boost",
+          "wildcard"
+        ],
+        "available": [
+          "free_hit",
+          "triple_captain"
+        ]
+      },
+      "2": {
+        "gw_range": [
+          20,
+          38
+        ],
+        "used": [],
+        "available": [
+          "wildcard",
+          "free_hit",
+          "triple_captain",
+          "bench_boost"
+        ]
+      }
+    }
+  },
+  "ruleset_id": "FPL_2026_27"
+}

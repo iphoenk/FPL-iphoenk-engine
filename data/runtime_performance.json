@@ -1,0 +1,1603 @@
+{
+  "runtime_id": "v3-domain-pipeline-v2",
+  "architecture": "V3_CANONICAL_DOMAIN_PIPELINE",
+  "production_contract": "v3.39-profile-aware-slo-fast-3s-atomic-publication",
+  "engine_version": "3.39.0",
+  "schema_version": 49,
+  "execution_profile": "exhaustive_precompute",
+  "profile_config": {
+    "description": "Interactive decision regeneration. A fresh Official snapshot may be reused for at most 60 seconds inside the same working directory so a bounded warm retry does not refetch or perturb its own canonical evidence. The canonical official_snapshot.json remains ephemeral. A workspace-local retry mirror can restore it only inside the same job and is excluded from runtime-data hydration and publication, so every new production job still performs a fresh Official pull. Official detail keeps its one-hour reuse window plus a bounded 60-second scheduler/retry jitter grace so an artifact that qualified at the start of a FAST attempt cannot cross the freshness boundary a few seconds later during the single permitted warm retry. Core Official current-state evidence remains freshly acquired every production job. REC-41 tactical-role/system fields are already published in runtime-data, so advanced player features may use the normal six-hour freshness window only while their cached player identity exactly matches the current Official player universe. Historical priors are still re-indexed every run so current Official club identity is reconciled against cached previous-season evidence. Prediction and tactical_context are declared with zero age so age-based reuse is impossible; only exact content-addressed fingerprint reuse can qualify for those capabilities.",
+    "max_parallel_services": 5,
+    "reuse_services": {
+      "official_snapshot": {
+        "max_age_seconds": 60,
+        "freshness_artifact": "official_snapshot.json",
+        "freshness_field": "generated_at",
+        "workspace_retry_artifact": "official_snapshot.retry.json"
+      },
+      "advanced_stats": {
+        "max_age_seconds": 21600,
+        "freshness_artifact": "advanced_stats_sync.json",
+        "freshness_field": "generated_at",
+        "semantic_guards": [
+          {
+            "type": "JSON_ARRAY_TO_KEYED_OBJECT_FIELD_MATCH_V1",
+            "source_artifact": "official_snapshot.json",
+            "source_path": [
+              "bootstrap",
+              "elements"
+            ],
+            "source_key": "id",
+            "cached_artifact": "player_features.json",
+            "cached_path": [
+              "players"
+            ],
+            "field_map": {
+              "team": "team_id",
+              "element_type": "element_type",
+              "web_name": "name"
+            }
+          }
+        ]
+      },
+      "historical_prior": {
+        "max_age_seconds": 0
+      },
+      "source_layer": {
+        "max_age_seconds": 1800,
+        "freshness_artifact": "source_health.json",
+        "freshness_field": "generated_at"
+      },
+      "official_detail": {
+        "max_age_seconds": 3660,
+        "freshness_artifact": "official_detail.json",
+        "freshness_field": "generated_at"
+      },
+      "prediction": {
+        "max_age_seconds": 0
+      },
+      "tactical_context": {
+        "max_age_seconds": 0
+      }
+    }
+  },
+  "total_wall_ms": 229378.099,
+  "target_wall_ms": 240000.0,
+  "warning_wall_ms": 225000.0,
+  "legacy_ceiling_ms": 300000.0,
+  "within_target_slo": true,
+  "within_warning_slo": false,
+  "within_legacy_ceiling": true,
+  "performance_budget_ms": 300000.0,
+  "within_target_budget": true,
+  "shared_official_cache_entries": 9,
+  "resources": {
+    "peak_rss_kb": 359600,
+    "child_peak_rss_kb": 149556,
+    "temporary_bytes": 53070781,
+    "seed_input_bytes": 8536819,
+    "promoted_output_bytes": 50219,
+    "semantics": {
+      "peak_rss_kb": "EXACT_REDUCER_CHILD_PROCESS_PEAK",
+      "child_peak_rss_kb": "MAX_DISTRIBUTED_SHARD_WORKER_PROCESS_PEAK",
+      "temporary_bytes": "SHARD_EVIDENCE_PLUS_RESOURCE_EVIDENCE_BYTES",
+      "seed_input_bytes": "PROJECTIONS_PLUS_TEAM_PLUS_SHARD_PLAN_BYTES",
+      "promoted_output_bytes": "FINAL_PACKAGE_OPTIMIZER_BYTES"
+    }
+  },
+  "services": {
+    "official_snapshot": {
+      "service": "official_snapshot",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 656.706,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.official_snapshot_service",
+          "argv": [
+            "src.engines.official_snapshot_service"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 656.485,
+          "stdout_tail": "{\"team_id\": 3462711, \"planning_gw\": 3, \"submitted_gw\": 2, \"official_freshness\": {\"state\": \"FRESH\", \"fallback\": false, \"banner\": null, \"snapshot_id\": \"bootstrap-static@2026-09-03T22:33:27.603257+00:00\", \"last_verified_at\": \"2026-09-03T22:33:27.603257+00:00\", \"age_seconds\": 0, \"confidence\": \"HIGH\"}}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "official_snapshot.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "health.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 4.331,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "official_state"
+    },
+    "rules": {
+      "service": "rules",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 5.041,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.rules_compliance_audit",
+          "argv": [
+            "src.engines.rules_compliance_audit"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 4.836,
+          "stdout_tail": "{\"rules\": \"PASS\", \"ruleset_id\": \"FPL_2026_27\", \"registry_integrity\": true, \"sections_pass\": 7, \"semantic_pass\": 7, \"drift\": \"STALE\"}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "rules_compliance.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 1.674,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "official_state"
+    },
+    "team_state": {
+      "service": "team_state",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 5.918,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.team_state_service",
+          "argv": [
+            "src.engines.team_state_service"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 5.789,
+          "stdout_tail": "{\"team_id\": 3462711, \"squad_authority\": \"LOCKED_PRE_DEADLINE\", \"projection_baseline\": {\"planning_gw\": 3, \"baseline_gw\": 2, \"default_rule\": \"PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD\", \"default_authority\": \"OFFICIAL_SUBMITTED\", \"override_requested\": true, \"override_kind\": \"USER_LOCK\", \"override_target_gw\": 3, \"override_applied\": true, \"effective_authority\": \"LOCKED_PRE_DEADLINE\", \"authority_source\": \"USER_CONFIRMED_SCREENSHOT_GW3_TRANSFER\", \"canonical_user_capture_authority\": \"LOCKED_PRE_DEADLINE\", \"capture_contract\": \"STRUCTURED_USER_CAPTURE_V1\", \"capture_pre_deadline_phase\": true, \"capture_target_gw_matches\": true, \"capture_evidence_required\": true, \"capture_evidence\": {\"contract\": \"STRUCTURED_USER_CAPTURE_V1\", \"status\": \"VALID\", \"valid\": true, \"errors\": [], \"provenance\": \"USER_CONFIRMED_SCREENSHOT_GW3_TRANSFER\", \"capture_timestamp\": \"2026-08-31T22:53:24Z\", \"timestamp_valid\": true, \"own_team\": true, \"identity_validated\": true, \"squad_legal\": true, \"lineup\": {\"status\": \"NOT_SUPPLIED\", \"valid\": true, \"errors\": []}, \"purchase_cost_rows_supplied\": 15, \"purchase_cost_exact_for_all\": true}, \"capture_rejection_reason\": null, \"stale_override_rejected\": false, \"wrong_gw_override_rejected\": false, \"post_deadline_official_reclaims_authority\": false}, \"players\": 15, \"totals\": {\"market_value\": 1001, \"sell_value\": 993, \"itb\": 10}}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "team.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "chips.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 1.581,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "personal_team_state"
+    },
+    "market_state": {
+      "service": "market_state",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 15.789,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.market_state_service",
+          "argv": [
+            "src.engines.market_state_service"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 15.662,
+          "stdout_tail": "{\"generated_at\": \"2026-09-03T22:33:27.998610+00:00\", \"confirmed_changes\": 0, \"universe_players\": 652, \"official_predictor_raw_players\": 652, \"top_buy_pressure\": 25}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "price_cache.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "prices.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "universe.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 1.985,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "personal_team_state"
+    },
+    "live_state": {
+      "service": "live_state",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 9.629,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.live_state_service",
+          "argv": [
+            "src.engines.live_state_service"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 9.495,
+          "stdout_tail": "{\"status\": \"RECONCILED_OR_IDLE\", \"match_mode_active\": false, \"scoring_gw\": 2, \"owned\": 15, \"net_points\": 93}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "live.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 1.637,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "personal_team_state"
+    },
+    "advanced_stats": {
+      "service": "advanced_stats",
+      "status": "REUSED",
+      "reused": true,
+      "elapsed_ms": 0.0,
+      "artifacts": [
+        "advanced_stats_sync.json",
+        "player_features.json"
+      ],
+      "artifact_validation": [
+        {
+          "artifact": "advanced_stats_sync.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "player_features.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        }
+      ],
+      "reuse_mode": "AGE_TTL",
+      "reuse_freshness_source": "SEMANTIC_TIMESTAMP",
+      "reuse_freshness_artifact": "advanced_stats_sync.json",
+      "reuse_freshness_field": "generated_at",
+      "reuse_freshness_timestamp": "2026-09-03T22:08:15.896023+00:00",
+      "reuse_age_seconds": 1512.127,
+      "reuse_max_age_seconds": 21600.0,
+      "semantic_guard_count": 1,
+      "workspace_retry_restored": false,
+      "workspace_retry_artifact": null,
+      "execution_boundary": "DOMAIN_PROCESS",
+      "execution_domain": "personal_team_state"
+    },
+    "base_snapshot": {
+      "service": "base_snapshot",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 7.799,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.base_snapshot_service",
+          "argv": [
+            "src.engines.base_snapshot_service",
+            "deadline"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 7.65,
+          "stdout_tail": "{\"engine_version\": \"3.39.0\", \"schema_version\": 49, \"planning_gw\": 3, \"snapshot_id\": \"c625470592acb4b2\", \"mini_league_memberships\": 10, \"reused_latest_state_carried_forward\": {\"historical_prior\": {\"latest_keys\": [\"historical_prior_summary\"], \"latest_file_keys\": [\"prior_season\", \"vaastav_previous_season\"]}, \"official_detail\": {\"latest_keys\": [\"official_detail_summary\", \"official_health_panel\", \"official_historical_authority\"], \"latest_file_keys\": []}, \"prediction\": {\"latest_keys\": [\"decision_intelligence\", \"prediction_quality_summary\"], \"latest_file_keys\": [\"team_strength\", \"projections\", \"package_optimizer\", \"prediction_quality\"]}, \"source_layer\": {\"latest_keys\": [\"source_layer_summary\"], \"latest_file_keys\": [\"source_health\", \"source_registry_runtime\", \"challenger_observations\", \"fixture_weather\"]}, \"tactical_context\": {\"latest_keys\": [\"understat_tactical_summary\"], \"latest_file_keys\": [\"understat_tactical\", \"understat_tactical_health\"]}}}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "native.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 0.209,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "personal_team_state"
+    },
+    "authenticated_official": {
+      "service": "authenticated_official",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 6.01,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.authenticated_official",
+          "argv": [
+            "src.engines.authenticated_official"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 5.889,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "auth.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 0.149,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "personal_team_state"
+    },
+    "historical_prior": {
+      "service": "historical_prior",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 51.221,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.historical_prior_runtime",
+          "argv": [
+            "src.engines.historical_prior_runtime"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 50.963,
+          "stdout_tail": "{\"model\": \"historical_player_priors_v1\", \"season\": \"2025-26\", \"fetch_mode\": \"PERSISTED_CACHE\", \"coverage\": {\"current_players\": 652, \"matched_with_usable_prior\": 349, \"coverage_ratio\": 0.5353, \"matched_by_stable_code\": 473, \"matched_by_unique_full_name\": 0, \"rejected_low_minutes\": 124}, \"transfer_context\": {\"annotated_prior_players\": 349, \"team_changes_detected\": 48, \"team_context_unknown\": 0, \"method\": \"stable_player_identity_then_previous_vs_current_team_code\"}, \"new_signing_adaptation\": {\"contract\": \"NEW_SIGNING_ADAPTATION_V1\", \"team_matches_played\": 2, \"states\": {\"SAME_CLUB\": 301, \"INTRA_PL_TRANSFER\": 48}, \"starter_role_prior_mutated\": true, \"portable_skill_prior_retained_separately\": true}}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "prior_season.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "stats/vaastav_previous_season.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 22.066,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "football_context"
+    },
+    "tactical_context": {
+      "service": "tactical_context",
+      "status": "REUSED",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 0.0,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "validation_ms": 0.0,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "reuse_mode": "CONTENT_ADDRESSED",
+      "input_fingerprint": "3b8a38f3c8ce6ddc0623b17955d25b53d3b8e6ee41dc2bb0e3963053a10b09e1",
+      "artifact_validation": [
+        {
+          "artifact": "tactical_team_profiles.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "player_role_profiles.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "recent_tactical_form.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "understat_tactical_v3.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "understat_tactical_health_v3.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "stats/understat_epl_2026.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "commands": [],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "reuse_diagnostic_before": {
+        "reason": "MATCH",
+        "current": "3b8a38f3c8ce",
+        "stored": "3b8a38f3c8ce",
+        "match": true
+      },
+      "execution_domain": "football_context"
+    },
+    "source_layer": {
+      "service": "source_layer",
+      "status": "REUSED",
+      "reused": true,
+      "elapsed_ms": 0.0,
+      "artifacts": [
+        "source_health.json",
+        "source_registry_runtime.json",
+        "challenger_observations.json",
+        "fixture_weather.json"
+      ],
+      "artifact_validation": [
+        {
+          "artifact": "source_health.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "source_registry_runtime.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "challenger_observations.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "fixture_weather.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        }
+      ],
+      "reuse_mode": "AGE_TTL",
+      "reuse_freshness_source": "SEMANTIC_TIMESTAMP",
+      "reuse_freshness_artifact": "source_health.json",
+      "reuse_freshness_field": "generated_at",
+      "reuse_freshness_timestamp": "2026-09-03T22:08:19.153972+00:00",
+      "reuse_age_seconds": 1509.228,
+      "reuse_max_age_seconds": 1800.0,
+      "semantic_guard_count": 0,
+      "workspace_retry_restored": false,
+      "workspace_retry_artifact": null,
+      "execution_boundary": "DOMAIN_PROCESS",
+      "execution_domain": "football_context"
+    },
+    "weather_context": {
+      "service": "weather_context",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 41.452,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.weather_context",
+          "argv": [
+            "src.engines.weather_context"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 41.311,
+          "stdout_tail": "{\"status\": \"PASS\", \"fixture_count\": 10, \"available_count\": 10, \"stale_count\": 0, \"tactical_context_complete\": true, \"decision_authority\": \"NONE\"}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "weather_context.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "weather_context_health.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 0.315,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "weather_context"
+    },
+    "price": {
+      "service": "price",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 325.705,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.price_service",
+          "argv": [
+            "src.engines.price_service"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 325.525,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "prices.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "price_trajectory.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "price_alerts.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "price_challenger_context.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 29.822,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "market_context"
+    },
+    "official_detail": {
+      "service": "official_detail",
+      "status": "REUSED",
+      "reused": true,
+      "elapsed_ms": 0.0,
+      "artifacts": [
+        "official_detail.json"
+      ],
+      "artifact_validation": [
+        {
+          "artifact": "official_detail.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        }
+      ],
+      "reuse_mode": "AGE_TTL",
+      "reuse_freshness_source": "SEMANTIC_TIMESTAMP",
+      "reuse_freshness_artifact": "official_detail.json",
+      "reuse_freshness_field": "generated_at",
+      "reuse_freshness_timestamp": "2026-09-03T22:08:21.312594+00:00",
+      "reuse_age_seconds": 1507.476,
+      "reuse_max_age_seconds": 3660.0,
+      "semantic_guard_count": 0,
+      "workspace_retry_restored": false,
+      "workspace_retry_artifact": null,
+      "execution_boundary": "DOMAIN_PROCESS",
+      "execution_domain": "market_context"
+    },
+    "prediction": {
+      "service": "prediction",
+      "status": "REUSED",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 0.0,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "validation_ms": 0.0,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "reuse_mode": "CONTENT_ADDRESSED",
+      "input_fingerprint": "8da0336f285afc21e553845805e9029dbe6c65cb292b764fdfba41d1e6895b0a",
+      "artifact_validation": [
+        {
+          "artifact": "team_strength.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "projections.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "package_optimizer.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "prediction_quality.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "commands": [],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "reuse_diagnostic_before": {
+        "reason": "MATCH",
+        "current": "8da0336f285a",
+        "stored": "8da0336f285a",
+        "match": true
+      },
+      "execution_domain": "prediction"
+    },
+    "lineup_governance": {
+      "service": "lineup_governance",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 123.759,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.lineup_governance",
+          "argv": [
+            "src.engines.lineup_governance"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 123.621,
+          "stdout_tail": "{\"formation\": \"4-3-3\", \"captain\": {\"element\": 411, \"name\": \"Haaland\", \"captain_score\": 5.1529, \"dnp_probability\": 0.0424, \"lower80\": 0.874, \"upper80\": 10.524, \"score_decomposition\": {\"raw_xpts\": 5.699, \"uncertainty_penalty_selection\": 0.4518, \"dnp_penalty_selection\": 0.0848, \"captain_uncertainty_penalty\": 0.3765, \"captain_dnp_penalty\": 0.1696, \"vice_context_adjustment\": 0.35, \"bench_context_adjustment\": 0.25}}, \"vice\": {\"element\": 426, \"name\": \"B.Fernandes\", \"captain_score\": 4.9943, \"vice_score\": 5.3443, \"dnp_probability\": 0.0397, \"attack_ceiling_proxy\": 2.863, \"focality_proxy\": 0.5186, \"score_decomposition\": {\"raw_xpts\": 5.521, \"uncertainty_penalty_selection\": 0.4415, \"dnp_penalty_selection\": 0.0794, \"captain_uncertainty_penalty\": 0.3679, \"captain_dnp_penalty\": 0.1588, \"vice_context_adjustment\": 0.35, \"bench_context_adjustment\": 0.25}}, \"package\": \"HOLD\", \"manual_override\": false}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "lineup_decision.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "package_decision.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 0.36,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "squad_decision"
+    },
+    "prediction_evaluation": {
+      "service": "prediction_evaluation",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 83.386,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.prediction_evaluation",
+          "argv": [
+            "src.engines.prediction_evaluation"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 83.248,
+          "stdout_tail": "lean_sheet_brier\": 0.1115, \"clean_sheet_sample_size\": 68, \"spearman\": 0.4544, \"status\": \"SETTLED\"}, \"MID\": {\"sample_size\": 273, \"points_mae\": 1.9702, \"points_rmse\": 2.7381, \"xmins_mae\": 28.4978, \"starter_brier\": 0.2288, \"starter_sample_size\": 273, \"dnp_brier\": null, \"dnp_sample_size\": 0, \"clean_sheet_brier\": 0.1221, \"clean_sheet_sample_size\": 273, \"spearman\": 0.4847, \"status\": \"SETTLED\"}}, \"by_gw\": {\"2\": {\"sample_size\": 620, \"points_mae\": 2.072, \"points_rmse\": 2.6662, \"xmins_mae\": 29.1545, \"starter_brier\": 0.2205, \"starter_sample_size\": 620, \"dnp_brier\": null, \"dnp_sample_size\": 0, \"clean_sheet_brier\": 0.1215, \"clean_sheet_sample_size\": 547, \"spearman\": 0.4751, \"status\": \"SETTLED\", \"decision_validation\": {\"captain_regret\": {\"status\": \"NO_GENUINE_PREDEADLINE_SAMPLE\", \"sample_size\": 0, \"value\": null}, \"vice_regret\": {\"status\": \"NO_GENUINE_PREDEADLINE_SAMPLE\", \"sample_size\": 0, \"value\": null}, \"xi_regret\": {\"status\": \"NO_GENUINE_PREDEADLINE_SAMPLE\", \"sample_size\": 0, \"value\": null}, \"bench_first_regret\": {\"status\": \"NO_GENUINE_PREDEADLINE_SAMPLE\", \"sample_size\": 0, \"value\": null}, \"transfer_comparator_realized_net_gain\": {\"status\": \"NO_GENUINE_PREDEADLINE_SAMPLE\", \"sample_size\": 0, \"value\": null}}}}, \"decision_metrics\": {\"captain_regret\": {\"status\": \"NO_GENUINE_PREDEADLINE_SAMPLE\", \"sample_size\": 0, \"mean\": null}, \"vice_regret\": {\"status\": \"NO_GENUINE_PREDEADLINE_SAMPLE\", \"sample_size\": 0, \"mean\": null}, \"xi_regret\": {\"status\": \"NO_GENUINE_PREDEADLINE_SAMPLE\", \"sample_size\": 0, \"mean\": null}, \"bench_first_regret\": {\"status\": \"NO_GENUINE_PREDEADLINE_SAMPLE\", \"sample_size\": 0, \"mean\": null}, \"transfer_comparator_realized_net_gain\": {\"status\": \"NO_GENUINE_PREDEADLINE_SAMPLE\", \"sample_size\": 0, \"mean\": null}}, \"position_drift\": {\"status\": \"OK\", \"alerts\": [], \"positions\": [{\"position\": \"DEF\", \"sample_size\": 206, \"points_mae\": 2.1925, \"overall_points_mae\": 2.072, \"mae_excess\": 0.1205, \"eligible\": true}, {\"position\": \"FWD\", \"sample_size\": 73, \"points_mae\": 1.9324, \"overall_points_mae\": 2.072, \"mae_excess\": -0.1396, \"eligible\": true}, {\"position\": \"GK\", \"sample_size\": 68, \"points_mae\": 2.2654, \"overall_points_mae\": 2.072, \"mae_excess\": 0.1934, \"eligible\": true}, {\"position\": \"MID\", \"sample_size\": 273, \"points_mae\": 1.9702, \"overall_points_mae\": 2.072, \"mae_excess\": -0.1018, \"eligible\": true}], \"minimum_samples_per_position\": 8, \"mae_excess_threshold\": 0.75}, \"validation_dimensions\": {\"formula_correctness\": {\"status\": \"SEPARATE_GOVERNANCE_TRACK\", \"counts_as_predictive_accuracy\": false}, \"predictive_accuracy\": {\"status\": \"SETTLED\", \"sample_size\": 620}, \"dnp_calibration\": {\"status\": \"SETTLED\", \"sample_size\": 0, \"brier\": null}, \"decision_outcomes\": {\"status\": \"GENUINE_PREDEADLINE_ONLY\", \"metrics\": [\"captain_regret\", \"vice_regret\", \"xi_regret\", \"bench_first_regret\", \"transfer_comparator_realized_net_gain\"]}}, \"settled_gameweeks\": [2], \"collecting_gameweeks\": [3], \"dynamic_weight_eligible\": true, \"governance\": {\"accuracy_claim_requires_settled_sample\": true, \"pre_deadline_forecast_is_frozen_before_scoring\": true, \"overdue_freeze_may_only_promote_predeadline_payload\": true, \"pre_deadline_decision_snapshot_required_for_decision_regret\": true, \"post_deadline_information_cannot_rewrite_frozen_forecast\": true, \"post_deadline_information_cannot_create_retroactive_decision_snapshot\": true, \"reconcile_only_finished_events\": true, \"formula_correctness_is_separate_from_predictive_accuracy\": true, \"optimizer_change_penalty_is_never_used_as_fpl_hit_cost\": true, \"core_snapshot_consumed_before_historical_network\": true, \"early_season_confidence_is_conservative\": true, \"dnp_calibration_uses_frozen_predeadline_probability_only\": true, \"vice_and_bench_metrics_require_genuine_predeadline_capture\": true, \"position_drift_alert_is_diagnostic_not_dynamic_weighting\": true}, \"source_health\": {\"bootstrap\": \"LIVE\", \"bootstrap_source\": \"CORE_SNAPSHOT\", \"event_live_snapshot_reused\": 0, \"historical_event_live_fetched\": 0, \"freeze_recovery\": {\"promoted\": 0, \"missed\": 0}}}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "prediction_ledger.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "prediction_accuracy.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 0.802,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "prediction_validation"
+    },
+    "challenger": {
+      "service": "challenger",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 8.664,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_module",
+          "descriptor": "src.engines.challenger_scorecard",
+          "argv": [
+            "src.engines.challenger_scorecard"
+          ],
+          "returncode": 0,
+          "elapsed_ms": 8.502,
+          "stdout_tail": "{\"generated_at\": \"2026-09-03T22:33:29.244251+00:00\", \"registry\": \"EXTERNAL_CHALLENGER_SCORECARD_V2\", \"planning_gw\": 3, \"auto_scrape\": false, \"providers\": [{\"id\": \"internal\", \"name\": \"FPL iphoenk Engine\", \"mode\": \"native\", \"enabled\": true, \"state\": \"ACTIVE\", \"current_coverage\": 652, \"historical_sample\": 620, \"dynamic_weight_eligible\": true}, {\"id\": \"fffix\", \"name\": \"Fantasy Football Fix\", \"mode\": \"observation_file\", \"enabled\": true, \"state\": \"NO_OBSERVATION\", \"current_coverage\": 0, \"structured_current_coverage\": 0, \"structured_capabilities\": [], \"historical_accuracy\": {\"xpts_sample\": 0, \"xpts_mae\": null, \"xmins_sample\": 0, \"xmins_mae\": null}, \"dynamic_weight_eligible\": false}, {\"id\": \"ffhub\", \"name\": \"Fantasy Football Hub\", \"mode\": \"observation_file\", \"enabled\": true, \"state\": \"NO_OBSERVATION\", \"current_coverage\": 0, \"structured_current_coverage\": 0, \"structured_capabilities\": [], \"historical_accuracy\": {\"xpts_sample\": 0, \"xpts_mae\": null, \"xmins_sample\": 0, \"xmins_mae\": null}, \"dynamic_weight_eligible\": false}], \"current_comparisons\": [], \"external_observation_count\": 0, \"structured_fresh_count\": 0, \"structured_cross_source\": [], \"governance\": {\"missing_provider_data_is_not_fabricated\": true, \"provider_weight_requires_observed_accuracy\": true, \"provider_reputation_is_not_accuracy_evidence\": true, \"structured_price_context_never_overrides_official_price_fields\": true, \"cached_or_stale_structured_observations_are_not_current\": true, \"report_time_only_providers_are_excluded_from_machine_scorecard\": true}, \"status\": \"ACTIVE_INTERNAL_ONLY_EXTERNAL_DATA_ABSENT\"}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "artifact_validation": [
+        {
+          "artifact": "challenger_scorecard.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 0.246,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "challenger_analysis"
+    },
+    "governance": {
+      "service": "governance",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 200.626,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_batch",
+          "descriptor": "governance",
+          "returncode": 0,
+          "elapsed_ms": 200.496,
+          "stdout_tail": "{\"overall\": \"AMBER\", \"phase\": \"preflight\", \"rules\": \"PASS\", \"gate0\": {\"PASS\": 10, \"DEFERRED\": 6}, \"dss_core\": {\"ACTIVE\": 16, \"PARTIAL\": 34}, \"extensions\": {\"ACTIVE\": 6, \"PARTIAL\": 10}, \"enhancements\": {\"ACTIVE\": 2, \"PARTIAL\": 6}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 48.64}\n{\"overall\": \"AMBER\", \"phase\": \"postflight\", \"rules\": \"PASS\", \"gate0\": {\"PASS\": 16}, \"dss_core\": {\"ACTIVE\": 16, \"PARTIAL\": 34}, \"extensions\": {\"ACTIVE\": 6, \"PARTIAL\": 10}, \"enhancements\": {\"ACTIVE\": 2, \"PARTIAL\": 6}, \"recommendation_allowed\": true, \"go_allowed\": false, \"performance_ms\": 27.76}\n{\"overall\": \"AMBER\", \"p0\": {\"P0-1_prediction_calibration_backtest\": \"ACTIVE\", \"P0-2_xmins_role_v2\": \"ACTIVE\", \"P0-3_team_strength_fixture_probability\": \"ACTIVE\", \"P0-4_multi_horizon_package_optimizer\": \"ACTIVE\", \"P0-5_external_challenger_scorecard\": \"PARTIAL\"}, \"dss_core\": {\"ACTIVE\": 29, \"PARTIAL\": 21}, \"extensions\": {\"ACTIVE\": 11, \"PARTIAL\": 5}, \"enhancements\": {\"ACTIVE\": 5, \"PARTIAL\": 3}, \"go_allowed\": false}\n{\"overall\": \"AMBER\", \"phase\": \"postflight\", \"gate0\": {\"PASS\": 16}, \"lineup\": \"ACTIVE\", \"package\": \"ACTIVE\", \"tactical\": {\"xi_tiebreak_applied\": true, \"captain_tiebreak_applied\": true, \"vice_tiebreak_applied\": true, \"final_summary_synced\": true, \"xpts_mutated\": false}, \"extensions\": {\"ACTIVE\": 13, \"PARTIAL\": 3}, \"enhancements\": {\"ACTIVE\": 7, \"PARTIAL\": 1}, \"go_allowed\": false}\n{\"overall\": \"AMBER\", \"prediction_quality\": \"HEALTHY\", \"p0_xmins\": \"ACTIVE\", \"dss_core\": {\"ACTIVE\": 30, \"PARTIAL\": 20}, \"enhancements\": {\"ACTIVE\": 7, \"PARTIAL\": 1}, \"go_allowed\": false}\n{\"overall\": \"INSUFFICIENT_EVIDENCE\", \"observation_count\": 0, \"requires_official_refresh\": false, \"advisory_only\": true}\n{\"source_health\": {\"status\": \"AMBER\", \"decision_blocking\": false, \"challenger_live\": [\"fffix\", \"ffhub\"], \"structured_observations\": {\"fresh\": 0, \"cached_last_known_good\": 0, \"stale\": 0, \"disagreements\": 0}}, \"external_consensus\": {\"overall\": \"INSUFFICIENT_EVIDENCE\", \"observation_count\": 0, \"requires_official_refresh\": false, \"advisory_only\": true, \"owner\": \"governance.external_consensus\"}, \"competitive_load\": {\"status\": \"PARTIAL_COMPETITION_COVERAGE\", \"player_count\": 652, \"state_counts\": {\"RESTED\": 367, \"NORMAL\": 63, \"CONGESTED\": 0, \"HIGH_ROTATION_RISK\": 0, \"UNKNOWN\": 222}, \"source_gw\": 2, \"advisory_only\": true, \"owner\": \"governance.competitive_load\"}}\n{\"status\": \"ACTIVE\", \"core\": {\"ACTIVE\": 50}, \"extensions\": {\"ACTIVE\": 16}, \"enhancements\": {\"ACTIVE\": 8}, \"overall\": \"GREEN\", \"go_allowed\": true}\n{\"tiers\": [\"NATIVE\", \"DERIVED\", \"PROXY\", \"SAFE_FALLBACK\", \"UNAVAILABLE\"], \"counts\": {\"NATIVE\": 5, \"DERIVED\": 12, \"PROXY\": 3, \"SAFE_FALLBACK\": 4, \"UNAVAILABLE\": 0}, \"module_health_separate\": true, \"active_does_not_imply_native_evidence\": true}\n",
+          "executed": [
+            {
+              "module": "src.engines.framework_health_service",
+              "args": [
+                "--phase",
+                "preflight",
+                "--strict"
+              ],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.framework_health_service",
+              "args": [
+                "--phase",
+                "postflight",
+                "--strict"
+              ],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.p0_framework_health_overlay",
+              "args": [],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.lineup_framework_health_overlay",
+              "args": [],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.decision_quality_overlay",
+              "args": [],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.source_framework_overlay",
+              "args": [],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.dss_operationalization_overlay",
+              "args": [],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.dss_evidence_maturity",
+              "args": [],
+              "returncode": 0
+            }
+          ]
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "single_process_module_batch": true,
+      "artifact_validation": [
+        {
+          "artifact": "framework_health_preflight.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "framework_health.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "external_consensus.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "recent_competitive_load.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "dss_operational_evidence.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 0.885,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "framework_governance"
+    },
+    "watchlist": {
+      "service": "watchlist",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 238.976,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_batch",
+          "descriptor": "watchlist",
+          "returncode": 0,
+          "elapsed_ms": 238.829,
+          "stdout_tail": "{\"status\": \"READY\", \"published\": 20, \"positions\": {\"GK\": 5, \"DEF\": 5, \"MID\": 5, \"FWD\": 5}, \"full_registry_traversal\": true}\n{\"status\": \"READY\", \"screening_contract\": \"FULL_DSS_SCREEN_V1\", \"candidate_audit_count\": 20, \"price_evidence\": {\"published_watchlist_rows\": 20, \"official_price_evidence_rows\": 20, \"complete\": true, \"required_when_published\": true, \"authority\": \"OFFICIAL_FPL\"}, \"challenger_decision\": \"READY\", \"owned_screened\": 15, \"comparisons\": 1149, \"mandatory_review\": 9, \"publication_validation\": \"PASS\"}\n",
+          "executed": [
+            {
+              "module": "src.engines.dss_watchlist",
+              "args": [],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.watchlist_public_sanitize",
+              "args": [],
+              "returncode": 0
+            }
+          ]
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "single_process_module_batch": true,
+      "artifact_validation": [
+        {
+          "artifact": "dss_watchlist.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 0.802,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "reporting"
+    },
+    "reporting": {
+      "service": "reporting",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 34.08,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_batch",
+          "descriptor": "reporting",
+          "returncode": 0,
+          "elapsed_ms": 33.903,
+          "stdout_tail": "{\"decision\": {\"overall\": \"REVIEW\", \"squad\": \"HOLD\", \"starting_xi\": \"OPEN\", \"captaincy\": \"LEAN\", \"chip\": \"HOLD\", \"price\": \"HOLD\", \"confidence\": \"LOW\"}, \"report_mode\": \"COMPACT_STABLE\", \"material_change\": false, \"actions\": 4}\n{\"status\": \"PREDEADLINE_CAPTURED\", \"planning_gw\": 3, \"xi\": 11, \"owned\": 15, \"vice_captured\": true, \"bench_outfield_captured\": 3, \"comparisons\": 20}\n",
+          "executed": [
+            {
+              "module": "src.engines.report_architecture",
+              "args": [],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.report_enrichment",
+              "args": [],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.prediction_decision_snapshot",
+              "args": [],
+              "returncode": 0
+            }
+          ]
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "single_process_module_batch": true,
+      "artifact_validation": [
+        {
+          "artifact": "user_report.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "technical_appendix.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "report_state.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "decision_validation_snapshots.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 1.012,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "reporting"
+    },
+    "report_materializer": {
+      "service": "report_materializer",
+      "status": "SUCCESS",
+      "isolated": false,
+      "data_dir": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/data",
+      "elapsed_ms": 113.725,
+      "queue_wait_ms": 0.0,
+      "seed_input_ms": 0.0,
+      "seed_input_bytes": 0,
+      "commands": [
+        {
+          "type": "in_process_batch",
+          "descriptor": "report_materializer",
+          "returncode": 0,
+          "elapsed_ms": 113.587,
+          "stdout_tail": "{\"owned\": 15, \"watchlist\": 20, \"planning_gw\": 3, \"estimated_points\": 56.23, \"decision_authority\": \"ENGINE_RECOMMENDATION\", \"lifecycle_status\": \"PROVISIONAL\", \"counterfactual_status\": \"PROVISIONAL\", \"artifact_sizes\": {\"decision_brief\": 41355, \"deep_review_payload\": 64577, \"user_report\": 172410, \"watchlist_summary\": 11228, \"technical_appendix\": 744930, \"full_dss_watchlist\": 816633, \"official_detail_full\": 1659876, \"official_detail_owned\": 127582, \"official_detail_watchlist\": 69331}}\n{\"user_report.json\": {\"owned\": 15, \"weather\": \"AVAILABLE\", \"transfer_battles\": 10}, \"decision_brief.json\": {\"owned\": 15, \"weather\": \"AVAILABLE\", \"transfer_battles\": 10}, \"deep_review_payload.json\": {\"owned\": 15, \"weather\": \"AVAILABLE\", \"transfer_battles\": 10}, \"user_presentation\": {\"checkpoint\": \"ROUTINE\", \"completeness\": \"OK\"}, \"official_fact_integrity\": {\"status\": \"PASS\", \"owned\": \"Owned Official FACT completeness = 15/15\", \"watchlist\": \"Watchlist Official FACT completeness = 20/20\", \"resolver\": \"35/35\", \"snapshot_id\": \"bootstrap-static@2026-09-03T22:33:27.603257+00:00\", \"predictor_freshness\": \"PASS\"}}\n{\"status\": \"PASS\", \"registry\": \"REPORT_ARTIFACT_REGISTRY_V3\", \"owned\": 15, \"watchlist\": 20, \"per_position\": 5, \"owned_transparency\": true, \"authoritative_owned_reconciled\": true, \"watchlist_membership_reconciled\": true, \"lineup_metadata_reconciled\": true, \"latest_lineup_summary_reconciled\": true, \"tactical_context\": true, \"tactical_presentation\": true, \"tactical_authority_aligned\": true, \"tactical_overlay\": {\"user_report.json\": {\"owned\": 15, \"watchlist\": 20}, \"decision_brief.json\": {\"owned\": 15, \"watchlist\": 20}, \"deep_review_payload.json\": {\"owned\": 15, \"watchlist\": 20}}, \"tactical_direct_xpts_mutation\": false, \"selection_score\": true, \"model_validation\": true, \"weather_context\": true, \"report_time_intelligence\": true, \"personal_gameweek_context\": true, \"fast_context_compacted\": true, \"fast_final_surface_compacted\": true, \"deep_context_full_fidelity\": true, \"sizes\": {\"decision_brief\": 75518, \"deep_review_payload\": 99912, \"user_report\": 209559, \"watchlist_summary\": 21776, \"technical_appendix\": 744930, \"full_dss_watchlist\": 816633, \"official_detail_full\": 1659876, \"official_detail_owned\": 127582, \"official_detail_watchlist\": 69331}, \"default_fast\": \"data/decision_brief.json\", \"default_deep\": \"data/deep_review_payload.json\"}\n",
+          "executed": [
+            {
+              "module": "src.engines.report_materializer",
+              "args": [],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.report_transparency_overlay",
+              "args": [],
+              "returncode": 0
+            },
+            {
+              "module": "src.engines.report_serving_validate",
+              "args": [],
+              "returncode": 0
+            }
+          ]
+        }
+      ],
+      "execution_boundary": "DOMAIN_PROCESS",
+      "single_process_module_batch": true,
+      "artifact_validation": [
+        {
+          "artifact": "user_report.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "decision_brief.json",
+          "validation": "CONTRACT_VALID",
+          "contract_registry": "RUNTIME_ARTIFACT_CONTRACTS_V2"
+        },
+        {
+          "artifact": "deep_review_payload.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "dss_watchlist_summary.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "official_detail_owned.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "official_detail_watchlist.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "report_artifact_registry.json",
+          "validation": "PARSE_ONLY"
+        },
+        {
+          "artifact": "latest.json",
+          "validation": "PARSE_ONLY"
+        }
+      ],
+      "validation_ms": 0.887,
+      "promotion_ms": 0.0,
+      "promoted_output_bytes": 0,
+      "execution_domain": "serving"
+    }
+  },
+  "policy": {
+    "coarse_grained_services": true,
+    "generic_root_service_scheduling": true,
+    "single_owner_for_standard_official_network_fetches": true,
+    "scoped_official_endpoint_ownership_registry": true,
+    "single_run_shared_official_cache": true,
+    "parallelize_independent_services": true,
+    "service_data_isolation": true,
+    "deterministic_fan_in": true,
+    "fail_closed_on_critical_service_failure": true,
+    "declared_json_artifacts_are_validated_before_acceptance": true,
+    "artifact_contract_registry_owned": true,
+    "malformed_internal_artifact_is_integrity_failure": true,
+    "valid_empty_external_observations_remain_fail_soft": true,
+    "optional_public_enrichment_missing_or_partial_is_non_blocking": true,
+    "latest_json_single_writer_during_base_fan_in": true,
+    "dependency_aware_scheduling": true,
+    "raw_optimizer_is_not_final_decision": true,
+    "postflight_gate0_requires_governed_lineup_and_package": true,
+    "mechanical_validity_is_not_prediction_quality": true,
+    "historical_prior_missing_evidence_is_never_fabricated": true,
+    "two_layer_report_contract": true,
+    "user_report_is_decision_first": true,
+    "technical_state_is_appendix_only": true,
+    "full_dss_watchlist_generator": true,
+    "watchlist_requires_postflight_framework_state": true,
+    "report_materializer_is_serving_only": true,
+    "personal_gameweek_context_is_report_serving_owned": true,
+    "planning_squad_override_must_target_exact_gw": true,
+    "historical_gw_truth_is_official_actual": true,
+    "user_decision_override_preserves_engine_comparison": true,
+    "report_serving_requires_15_owned_and_20_external_watchlist": true,
+    "owned_report_rows_require_current_gw_xpts": true,
+    "settled_prediction_validation_is_exposed_to_reports": true,
+    "projection_confidence_calibration_guard_is_config_owned": true,
+    "technical_and_full_source_artifacts_are_lazy_load": true,
+    "source_registry_is_separate_infrastructure_layer": true,
+    "official_fpl_remains_native_authority": true,
+    "historical_submitted_team_public_official_authority": true,
+    "retrospective_proxy_never_counts_as_predictive_accuracy": true,
+    "challenger_source_failure_does_not_block_decisions": true,
+    "missing_external_observations_are_never_fabricated": true,
+    "dss_module_health_is_separate_from_signal_availability": true,
+    "dss_evidence_maturity_is_explicit_and_separate": true,
+    "all_active_dss_requires_runtime_evidence_contract": true,
+    "strict_postflight_requires_50_core_16_extensions_and_8_enhancements_active": true,
+    "source_reachability_is_separate_from_capability_data_health": true,
+    "structured_challenger_ingestion_is_registry_driven": true,
+    "price_challenger_context_is_non_authoritative": true,
+    "stale_challenger_observations_are_not_current": true,
+    "version_neutral_service_entrypoints": true,
+    "inline_python_service_commands_forbidden": true,
+    "framework_expected_counts_are_registry_owned": true,
+    "report_time_source_registry_is_separate_from_machine_source_registry": true,
+    "onefpl_unattended_collector_fetch_is_disabled": true,
+    "report_time_sources_never_mutate_dss": true,
+    "pundit_consensus_is_advisory_only": true,
+    "pundit_consensus_is_compared_with_dss": true,
+    "community_signal_requires_crosscheck": true,
+    "fixture_strategy_expert_does_not_vote_on_player_projection": true,
+    "report_time_web_refresh_is_chat_report_orchestration_owned": true,
+    "service_boundaries_follow_artifact_ownership_not_file_size": true,
+    "ephemeral_internal_snapshot_is_not_published": true,
+    "weather_acquisition_lives_inside_source_layer": true,
+    "weather_context_is_separate_governed_enrichment_capability": true,
+    "weather_is_observational_and_advisory_only": true,
+    "weather_never_directly_mutates_xpts_xmins_or_decisions": true,
+    "weather_context_health_propagates_to_framework": true,
+    "normalized_player_features_are_decision_neutral_until_model_opt_in": true,
+    "player_feature_model_opt_in_rec01_active": true,
+    "tactical_context_is_separate_bounded_evidence_service": true,
+    "tactical_context_never_infers_missing_coach_style_or_true_pressing": true,
+    "tactical_context_rolling_history_is_service_owned": true,
+    "understat_extends_existing_tactical_context_not_a_competing_authority": true,
+    "understat_is_optional_tactical_enrichment": true,
+    "understat_full_official_universe_mapping": true,
+    "understat_missing_is_unknown_not_zero": true,
+    "understat_never_directly_mutates_xpts_or_xmins": true,
+    "understat_ppda_direct_xpts_conversion_forbidden": true,
+    "understat_fast_decision_network_io_forbidden": true,
+    "understat_source_failure_is_fail_soft": true,
+    "understat_reuses_existing_tactical_close_call_consumption": true,
+    "decision_snapshot_is_reporting_owned_evidence": true,
+    "prediction_evaluation_must_receive_declared_decision_snapshot_input": true,
+    "required_core_and_optional_private_enrichment_are_distinct": true,
+    "optional_private_enrichment_never_blocks_required_core": true
+  },
+  "content_addressed_reuse": {
+    "enabled": true,
+    "inactive_reason": null,
+    "reused_services": [
+      "prediction",
+      "tactical_context"
+    ],
+    "diagnostics_semantics": "PRE_EXECUTION_DECISION_STATE_WHEN_AVAILABLE",
+    "diagnostics": {
+      "prediction": {
+        "reason": "MATCH",
+        "current": "8da0336f285a",
+        "stored": "8da0336f285a",
+        "match": true,
+        "decision_time": true,
+        "execution_status": "REUSED",
+        "reuse_mode": "CONTENT_ADDRESSED"
+      },
+      "tactical_context": {
+        "reason": "MATCH",
+        "current": "3b8a38f3c8ce",
+        "stored": "3b8a38f3c8ce",
+        "match": true,
+        "decision_time": true,
+        "execution_status": "REUSED",
+        "reuse_mode": "CONTENT_ADDRESSED"
+      }
+    }
+  },
+  "module_batching": {
+    "registry": "V3_MODULE_BATCHES_DERIVED_V2",
+    "generated_from": "config/v3_service_registry.json#services.*.commands",
+    "human_maintained_registry": false,
+    "batched_services": [
+      "governance",
+      "report_materializer",
+      "reporting",
+      "watchlist"
+    ]
+  },
+  "compiled_execution_plan": {
+    "registry": "V3_COMPILED_EXECUTION_PLAN_V1",
+    "plan_sha256": "81d0307961c5528376534c0e07fd35d02569cc392701749eb1de997da0d2d1b5",
+    "phase_count": 6,
+    "domain_count": 12,
+    "capability_count": 22,
+    "domain_waves": [
+      [
+        "official_state"
+      ],
+      [
+        "personal_team_state"
+      ],
+      [
+        "football_context"
+      ],
+      [
+        "weather_context",
+        "market_context"
+      ],
+      [
+        "prediction"
+      ],
+      [
+        "squad_decision",
+        "prediction_validation"
+      ],
+      [
+        "challenger_analysis"
+      ],
+      [
+        "framework_governance"
+      ],
+      [
+        "reporting"
+      ],
+      [
+        "serving"
+      ]
+    ],
+    "batch_registry": "V3_MODULE_BATCHES_DERIVED_V2",
+    "runtime_assurance": "PASS"
+  },
+  "domain_process_execution": {
+    "enabled": false,
+    "process_count": 0,
+    "phase_count": 6,
+    "one_process_per_execution_domain": false,
+    "coalesced_fast_lane": true,
+    "execution_boundary": "IN_PROCESS_COALESCED",
+    "fail_closed_after_partial_execution": true,
+    "fallback_to_multi_process_allowed": false,
+    "business_ownership_unchanged": true,
+    "isolated_parallel_domains": [],
+    "parallel_pairs_executed": [],
+    "compiled_parallel_waves": [],
+    "parallel_wave_scheduler": "COMPILED_ISOLATION_SAFE",
+    "deterministic_fan_in": true
+  },
+  "execution_domain_count": 12,
+  "execution_phase_count": 6,
+  "execution_phases": {
+    "ACQUIRE": [
+      "official_state",
+      "personal_team_state"
+    ],
+    "ENRICH": [
+      "football_context",
+      "weather_context",
+      "market_context"
+    ],
+    "MODEL": [
+      "prediction"
+    ],
+    "DECISION": [
+      "squad_decision",
+      "challenger_analysis"
+    ],
+    "GOVERNANCE": [
+      "framework_governance",
+      "prediction_validation"
+    ],
+    "PUBLISH": [
+      "reporting",
+      "serving"
+    ]
+  },
+  "canonical_domain_order": [
+    "official_state",
+    "personal_team_state",
+    "football_context",
+    "weather_context",
+    "market_context",
+    "prediction",
+    "squad_decision",
+    "challenger_analysis",
+    "framework_governance",
+    "prediction_validation",
+    "reporting",
+    "serving"
+  ],
+  "execution_order": [
+    "official_state",
+    "personal_team_state",
+    "football_context",
+    "weather_context",
+    "market_context",
+    "prediction",
+    "squad_decision",
+    "prediction_validation",
+    "challenger_analysis",
+    "framework_governance",
+    "reporting",
+    "serving"
+  ],
+  "execution_phase_results": {
+    "ACQUIRE": {
+      "status": "SUCCESS",
+      "domains": [
+        "official_state",
+        "personal_team_state"
+      ]
+    },
+    "ENRICH": {
+      "status": "SUCCESS",
+      "domains": [
+        "football_context",
+        "weather_context",
+        "market_context"
+      ]
+    },
+    "MODEL": {
+      "status": "SUCCESS",
+      "domains": [
+        "prediction"
+      ]
+    },
+    "DECISION": {
+      "status": "SUCCESS",
+      "domains": [
+        "squad_decision",
+        "challenger_analysis"
+      ]
+    },
+    "GOVERNANCE": {
+      "status": "SUCCESS",
+      "domains": [
+        "framework_governance",
+        "prediction_validation"
+      ]
+    },
+    "PUBLISH": {
+      "status": "SUCCESS",
+      "domains": [
+        "reporting",
+        "serving"
+      ]
+    }
+  },
+  "capability_owner_count": 22,
+  "execution_domains": {
+    "official_state": {
+      "status": "SUCCESS",
+      "phase": "ACQUIRE",
+      "elapsed_ms": 670.108,
+      "process_elapsed_ms": 671.101,
+      "capabilities": [
+        "official_snapshot",
+        "rules"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    },
+    "personal_team_state": {
+      "status": "SUCCESS",
+      "phase": "ACQUIRE",
+      "elapsed_ms": 111.697,
+      "process_elapsed_ms": 111.733,
+      "capabilities": [
+        "team_state",
+        "market_state",
+        "live_state",
+        "advanced_stats",
+        "base_snapshot",
+        "authenticated_official"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    },
+    "football_context": {
+      "status": "SUCCESS",
+      "phase": "ENRICH",
+      "elapsed_ms": 285.773,
+      "process_elapsed_ms": 285.808,
+      "capabilities": [
+        "historical_prior",
+        "tactical_context",
+        "source_layer"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    },
+    "weather_context": {
+      "status": "SUCCESS",
+      "phase": "ENRICH",
+      "elapsed_ms": 41.974,
+      "process_elapsed_ms": 42.011,
+      "capabilities": [
+        "weather_context"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    },
+    "market_context": {
+      "status": "SUCCESS",
+      "phase": "ENRICH",
+      "elapsed_ms": 372.373,
+      "process_elapsed_ms": 372.412,
+      "capabilities": [
+        "price",
+        "official_detail"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    },
+    "prediction": {
+      "status": "SUCCESS",
+      "phase": "MODEL",
+      "elapsed_ms": 233.608,
+      "process_elapsed_ms": 233.655,
+      "capabilities": [
+        "prediction"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    },
+    "squad_decision": {
+      "status": "SUCCESS",
+      "phase": "DECISION",
+      "elapsed_ms": 124.416,
+      "process_elapsed_ms": 124.454,
+      "capabilities": [
+        "lineup_governance"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    },
+    "prediction_validation": {
+      "status": "SUCCESS",
+      "phase": "GOVERNANCE",
+      "elapsed_ms": 84.397,
+      "process_elapsed_ms": 84.433,
+      "capabilities": [
+        "prediction_evaluation"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    },
+    "challenger_analysis": {
+      "status": "SUCCESS",
+      "phase": "DECISION",
+      "elapsed_ms": 9.092,
+      "process_elapsed_ms": 9.128,
+      "capabilities": [
+        "challenger"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    },
+    "framework_governance": {
+      "status": "SUCCESS",
+      "phase": "GOVERNANCE",
+      "elapsed_ms": 201.725,
+      "process_elapsed_ms": 201.754,
+      "capabilities": [
+        "governance"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    },
+    "reporting": {
+      "status": "SUCCESS",
+      "phase": "PUBLISH",
+      "elapsed_ms": 275.293,
+      "process_elapsed_ms": 275.328,
+      "capabilities": [
+        "watchlist",
+        "reporting"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    },
+    "serving": {
+      "status": "SUCCESS",
+      "phase": "PUBLISH",
+      "elapsed_ms": 114.822,
+      "process_elapsed_ms": 114.857,
+      "capabilities": [
+        "report_materializer"
+      ],
+      "workspace_isolated": false,
+      "fan_in": null
+    }
+  },
+  "cross_capability_copy_promotion": false,
+  "isolated_domain_fan_in_promotion": false,
+  "ephemeral_artifacts_removed": [
+    "official_snapshot.json"
+  ],
+  "sharded_precompute": {
+    "registry": "V3_PACKAGE_OPTIMIZER_SHARD_PLAN_V1",
+    "shard_policy_registry": "V3_PACKAGE_OPTIMIZER_SHARDING_V1",
+    "shard_count": 8,
+    "task_count": 105,
+    "estimated_pair_combinations": 1808232,
+    "load_balance": {
+      "min": 224185,
+      "max": 228416,
+      "mean": 226029.0,
+      "max_to_mean_ratio": 1.0106
+    },
+    "optimizer_input_fingerprint_prefix": "ff606713f29b",
+    "cross_runner": true,
+    "single_business_authority": true,
+    "resource_telemetry_registry": "V3_SHARDED_OPTIMIZER_RESOURCE_TELEMETRY_V1",
+    "distributed_worker_count": 8,
+    "distributed_worker_peak_rss_kb": 149556,
+    "reducer_peak_rss_kb": 359600,
+    "shard_worker_elapsed_ms": [
+      69662.272,
+      77076.785,
+      79791.873,
+      76049.277,
+      80937.388,
+      74813.792,
+      77015.019,
+      75295.421
+    ],
+    "resource_observability_complete": true
+  }
+}

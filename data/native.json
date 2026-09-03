@@ -1,0 +1,558 @@
+{
+  "generated_at": "2026-09-03T22:33:28.086043+00:00",
+  "snapshot_id": "c625470592acb4b2",
+  "entry": {
+    "id": 3462711,
+    "summary_overall_points": 164,
+    "summary_overall_rank": 783760,
+    "summary_event_points": 93,
+    "summary_event_rank": 2578047,
+    "current_event": 2,
+    "last_deadline_bank": 5,
+    "last_deadline_value": 1006,
+    "last_deadline_total_transfers": 0,
+    "fetched_at": "2026-09-03T22:33:27.558889+00:00"
+  },
+  "history": {
+    "current": [
+      {
+        "event": 1,
+        "points": 71,
+        "total_points": 71,
+        "rank": 462167,
+        "rank_sort": 491943,
+        "overall_rank": 462166,
+        "percentile_rank": 10,
+        "overall_rank_percentage": "5",
+        "bank": 0,
+        "value": 1000,
+        "event_transfers": 0,
+        "event_transfers_cost": 0,
+        "points_on_bench": 0
+      },
+      {
+        "event": 2,
+        "points": 93,
+        "total_points": 164,
+        "rank": 2578047,
+        "rank_sort": 2608409,
+        "overall_rank": 783760,
+        "percentile_rank": 30,
+        "overall_rank_percentage": "8",
+        "bank": 5,
+        "value": 1006,
+        "event_transfers": 0,
+        "event_transfers_cost": 0,
+        "points_on_bench": 6
+      }
+    ],
+    "chips": [
+      {
+        "name": "bboost",
+        "time": "2026-08-21T13:52:44.153226Z",
+        "event": 1
+      },
+      {
+        "name": "wildcard",
+        "time": "2026-08-24T05:07:55.443463Z",
+        "event": 2
+      }
+    ],
+    "past": [
+      {
+        "season_name": "2014/15",
+        "total_points": 1465,
+        "rank": 2691993,
+        "rank_percentage": "77"
+      },
+      {
+        "season_name": "2016/17",
+        "total_points": 1791,
+        "rank": 1893092,
+        "rank_percentage": "42"
+      },
+      {
+        "season_name": "2017/18",
+        "total_points": 2035,
+        "rank": 909455,
+        "rank_percentage": "15"
+      },
+      {
+        "season_name": "2018/19",
+        "total_points": 1990,
+        "rank": 2006466,
+        "rank_percentage": "32"
+      },
+      {
+        "season_name": "2019/20",
+        "total_points": 2185,
+        "rank": 363380,
+        "rank_percentage": "5"
+      },
+      {
+        "season_name": "2020/21",
+        "total_points": 2210,
+        "rank": 847840,
+        "rank_percentage": "10"
+      },
+      {
+        "season_name": "2021/22",
+        "total_points": 2267,
+        "rank": 817553,
+        "rank_percentage": "9"
+      },
+      {
+        "season_name": "2022/23",
+        "total_points": 2175,
+        "rank": 3023313,
+        "rank_percentage": "26"
+      },
+      {
+        "season_name": "2023/24",
+        "total_points": 2144,
+        "rank": 2946410,
+        "rank_percentage": "27"
+      },
+      {
+        "season_name": "2024/25",
+        "total_points": 1743,
+        "rank": 8071445,
+        "rank_percentage": "71"
+      },
+      {
+        "season_name": "2025/26",
+        "total_points": 2081,
+        "rank": 2594811,
+        "rank_percentage": "20"
+      }
+    ]
+  },
+  "transfers": [
+    {
+      "element_in": 572,
+      "element_in_cost": 45,
+      "element_out": 496,
+      "element_out_cost": 45,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-25T03:43:41.276704Z"
+    },
+    {
+      "element_in": 254,
+      "element_in_cost": 45,
+      "element_out": 534,
+      "element_out_cost": 45,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-25T02:43:02.507541Z"
+    },
+    {
+      "element_in": 473,
+      "element_in_cost": 45,
+      "element_out": 305,
+      "element_out_cost": 40,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-25T02:15:36.091837Z"
+    },
+    {
+      "element_in": 496,
+      "element_in_cost": 45,
+      "element_out": 572,
+      "element_out_cost": 45,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-25T02:15:36.091611Z"
+    },
+    {
+      "element_in": 572,
+      "element_in_cost": 45,
+      "element_out": 497,
+      "element_out_cost": 40,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T23:11:44.111491Z"
+    },
+    {
+      "element_in": 346,
+      "element_in_cost": 60,
+      "element_out": 321,
+      "element_out_cost": 45,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T23:11:44.111314Z"
+    },
+    {
+      "element_in": 15,
+      "element_in_cost": 65,
+      "element_out": 12,
+      "element_out_cost": 95,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T23:11:44.111077Z"
+    },
+    {
+      "element_in": 321,
+      "element_in_cost": 45,
+      "element_out": 346,
+      "element_out_cost": 60,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T22:59:15.095725Z"
+    },
+    {
+      "element_in": 40,
+      "element_in_cost": 75,
+      "element_out": 237,
+      "element_out_cost": 60,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T22:59:15.095139Z"
+    },
+    {
+      "element_in": 8,
+      "element_in_cost": 55,
+      "element_out": 10,
+      "element_out_cost": 55,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T14:03:42.543160Z"
+    },
+    {
+      "element_in": 497,
+      "element_in_cost": 40,
+      "element_out": 496,
+      "element_out_cost": 45,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T05:08:03.620210Z"
+    },
+    {
+      "element_in": 12,
+      "element_in_cost": 95,
+      "element_out": 368,
+      "element_out_cost": 70,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T05:08:03.620005Z"
+    },
+    {
+      "element_in": 534,
+      "element_in_cost": 45,
+      "element_out": 469,
+      "element_out_cost": 50,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T05:08:03.619781Z"
+    },
+    {
+      "element_in": 305,
+      "element_in_cost": 40,
+      "element_out": 259,
+      "element_out_cost": 40,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T05:08:03.619563Z"
+    },
+    {
+      "element_in": 10,
+      "element_in_cost": 55,
+      "element_out": 11,
+      "element_out_cost": 55,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T05:08:03.619349Z"
+    },
+    {
+      "element_in": 115,
+      "element_in_cost": 45,
+      "element_out": 8,
+      "element_out_cost": 55,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T05:08:03.619079Z"
+    },
+    {
+      "element_in": 88,
+      "element_in_cost": 45,
+      "element_out": 418,
+      "element_out_cost": 50,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-24T00:13:33.971264Z"
+    },
+    {
+      "element_in": 565,
+      "element_in_cost": 55,
+      "element_out": 124,
+      "element_out_cost": 55,
+      "entry": 3462711,
+      "event": 2,
+      "time": "2026-08-23T15:02:49.369877Z"
+    }
+  ],
+  "picks": {
+    "gw": 2,
+    "payload": {
+      "active_chip": "wildcard",
+      "automatic_subs": [],
+      "entry_history": {
+        "event": 2,
+        "points": 93,
+        "total_points": 164,
+        "rank": 2578047,
+        "rank_sort": 2608409,
+        "overall_rank": 783760,
+        "percentile_rank": 30,
+        "overall_rank_percentage": "8",
+        "bank": 5,
+        "value": 1006,
+        "event_transfers": 0,
+        "event_transfers_cost": 0,
+        "points_on_bench": 6
+      },
+      "picks": [
+        {
+          "element": 572,
+          "position": 1,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 1
+        },
+        {
+          "element": 115,
+          "position": 2,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 2
+        },
+        {
+          "element": 8,
+          "position": 3,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 2
+        },
+        {
+          "element": 88,
+          "position": 4,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 2
+        },
+        {
+          "element": 426,
+          "position": 5,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 3
+        },
+        {
+          "element": 15,
+          "position": 6,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 3
+        },
+        {
+          "element": 557,
+          "position": 7,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 3
+        },
+        {
+          "element": 40,
+          "position": 8,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 3
+        },
+        {
+          "element": 411,
+          "position": 9,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": true,
+          "element_type": 4
+        },
+        {
+          "element": 165,
+          "position": 10,
+          "multiplier": 2,
+          "is_captain": true,
+          "is_vice_captain": false,
+          "element_type": 4
+        },
+        {
+          "element": 346,
+          "position": 11,
+          "multiplier": 1,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 4
+        },
+        {
+          "element": 109,
+          "position": 12,
+          "multiplier": 0,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 1
+        },
+        {
+          "element": 565,
+          "position": 13,
+          "multiplier": 0,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 3
+        },
+        {
+          "element": 254,
+          "position": 14,
+          "multiplier": 0,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 2
+        },
+        {
+          "element": 473,
+          "position": 15,
+          "multiplier": 0,
+          "is_captain": false,
+          "is_vice_captain": false,
+          "element_type": 2
+        }
+      ]
+    }
+  },
+  "mini_leagues": {
+    "authority": "PUBLIC_OFFICIAL_ENTRY",
+    "entry_id": 3462711,
+    "classic_private_count": 9,
+    "h2h_count": 1,
+    "membership_count": 10,
+    "system_classic_excluded_count": 5,
+    "memberships": [
+      {
+        "kind": "classic",
+        "league_id": 130459,
+        "league_name": "Basdor FPL 2026/2027",
+        "rank": 56,
+        "last_rank": 43,
+        "rank_delta": -13,
+        "entry_can_leave": true,
+        "entry_can_admin": false,
+        "entry_can_invite": false
+      },
+      {
+        "kind": "classic",
+        "league_id": 285587,
+        "league_name": "FPL Architect’s League",
+        "rank": 1307,
+        "last_rank": 541,
+        "rank_delta": -766,
+        "entry_can_leave": true,
+        "entry_can_admin": false,
+        "entry_can_invite": false
+      },
+      {
+        "kind": "classic",
+        "league_id": 179859,
+        "league_name": "FPL Experts",
+        "rank": 730,
+        "last_rank": 376,
+        "rank_delta": -354,
+        "entry_can_leave": true,
+        "entry_can_admin": false,
+        "entry_can_invite": false
+      },
+      {
+        "kind": "classic",
+        "league_id": 5063,
+        "league_name": "FPL INDO [8cxqq1]",
+        "rank": 186,
+        "last_rank": 110,
+        "rank_delta": -76,
+        "entry_can_leave": true,
+        "entry_can_admin": false,
+        "entry_can_invite": false
+      },
+      {
+        "kind": "classic",
+        "league_id": 9477,
+        "league_name": "ICON+ League ",
+        "rank": 6,
+        "last_rank": 2,
+        "rank_delta": -4,
+        "entry_can_leave": true,
+        "entry_can_admin": false,
+        "entry_can_invite": false
+      },
+      {
+        "kind": "classic",
+        "league_id": 27604,
+        "league_name": "Liga FPL Box2Box (rizelo)",
+        "rank": 1710,
+        "last_rank": 920,
+        "rank_delta": -790,
+        "entry_can_leave": true,
+        "entry_can_admin": false,
+        "entry_can_invite": false
+      },
+      {
+        "kind": "classic",
+        "league_id": 1517881,
+        "league_name": "Liga Kopdes Paris",
+        "rank": 248,
+        "last_rank": 153,
+        "rank_delta": -95,
+        "entry_can_leave": true,
+        "entry_can_admin": false,
+        "entry_can_invite": false
+      },
+      {
+        "kind": "classic",
+        "league_id": 1436718,
+        "league_name": "Pandit FPL 2026/27",
+        "rank": 1160,
+        "last_rank": 629,
+        "rank_delta": -531,
+        "entry_can_leave": true,
+        "entry_can_admin": false,
+        "entry_can_invite": false
+      },
+      {
+        "kind": "classic",
+        "league_id": 6348,
+        "league_name": "YouTube.com/FPLtips",
+        "rank": 13514,
+        "last_rank": 4687,
+        "rank_delta": -8827,
+        "entry_can_leave": true,
+        "entry_can_admin": false,
+        "entry_can_invite": false
+      },
+      {
+        "kind": "h2h",
+        "league_id": 1798198,
+        "league_name": "Liga H2H Basdor FPL",
+        "rank": 48,
+        "last_rank": 10,
+        "rank_delta": -38,
+        "entry_can_leave": false,
+        "entry_can_admin": false,
+        "entry_can_invite": false
+      }
+    ]
+  }
+}

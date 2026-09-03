@@ -1,0 +1,4278 @@
+{
+  "schema_version": 1,
+  "contract": "WEATHER_CONTEXT_V3_V1",
+  "owner": "weather_context",
+  "generated_at": "2026-09-03T22:33:28.419226+00:00",
+  "status": "PASS",
+  "provider": "open_meteo",
+  "fixtures": [
+    {
+      "fixture_id": 21,
+      "event": 3,
+      "home_team": "Ipswich Town",
+      "away_team": "Liverpool",
+      "kickoff_time": "2026-09-04T19:00:00+00:00",
+      "venue": "Portman Road",
+      "evidence_state": "FORECAST",
+      "evidence_precedence": "FRESH_FORECAST",
+      "freshness": "FRESH",
+      "selected_evidence": {
+        "evidence_kind": "FORECAST",
+        "fetched_at": "2026-09-03T22:08:17.717497+00:00",
+        "provider": "open_meteo",
+        "forecast_for": "2026-09-04T19:00:00+00:00",
+        "forecast_issued_at": "2026-09-03T22:08:17.717497+00:00",
+        "evidence_timestamp": "2026-09-04T19:00:00+00:00",
+        "forecast_local_hour": "2026-09-04T20:00",
+        "forecast_confidence": "HIGH",
+        "severity": "NORMAL",
+        "signals": [],
+        "weather": {
+          "temperature_c": 18.0,
+          "precipitation_probability_pct": 0,
+          "precipitation_mm_h": 0.0,
+          "wind_speed_kmh": 13.0,
+          "wind_gust_kmh": 26.3,
+          "weather_code": 0
+        },
+        "provenance": {
+          "source": "Open-Meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast",
+          "venue": "Portman Road",
+          "latitude": 52.0549,
+          "longitude": 1.1453,
+          "timezone": "Europe/London",
+          "evidence_class": "ENVIRONMENTAL_CONTEXT"
+        }
+      },
+      "severity": "NORMAL",
+      "observed_incidents": [],
+      "attribution": {
+        "incident_count": 0,
+        "similar_incident_counts": {},
+        "repeated_patterns": [],
+        "pattern_confidence": "NONE",
+        "relationship_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+        "causality_claimed": false,
+        "incidents": [],
+        "sustainability": {
+          "automatic_future_projection_increase": false,
+          "weather_associated_return_is_not_sustainable_signal_by_default": true
+        }
+      },
+      "tactical_interactions": [
+        {
+          "team_id": 12,
+          "opponent_id": 14,
+          "own_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        },
+        {
+          "team_id": 14,
+          "opponent_id": 12,
+          "own_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        }
+      ],
+      "post_match_reconciled": false
+    },
+    {
+      "fixture_id": 27,
+      "event": 3,
+      "home_team": "Newcastle",
+      "away_team": "Bournemouth",
+      "kickoff_time": "2026-09-05T11:30:00+00:00",
+      "venue": "St James' Park",
+      "evidence_state": "FORECAST",
+      "evidence_precedence": "FRESH_FORECAST",
+      "freshness": "FRESH",
+      "selected_evidence": {
+        "evidence_kind": "FORECAST",
+        "fetched_at": "2026-09-03T22:08:17.725301+00:00",
+        "provider": "open_meteo",
+        "forecast_for": "2026-09-05T11:30:00+00:00",
+        "forecast_issued_at": "2026-09-03T22:08:17.725301+00:00",
+        "evidence_timestamp": "2026-09-05T11:30:00+00:00",
+        "forecast_local_hour": "2026-09-05T12:00",
+        "forecast_confidence": "HIGH",
+        "severity": "ADVERSE",
+        "signals": [
+          "wind_gust"
+        ],
+        "weather": {
+          "temperature_c": 16.5,
+          "precipitation_probability_pct": 0,
+          "precipitation_mm_h": 0.0,
+          "wind_speed_kmh": 22.3,
+          "wind_gust_kmh": 46.1,
+          "weather_code": 1
+        },
+        "provenance": {
+          "source": "Open-Meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast",
+          "venue": "St James' Park",
+          "latitude": 54.9756,
+          "longitude": -1.6217,
+          "timezone": "Europe/London",
+          "evidence_class": "ENVIRONMENTAL_CONTEXT"
+        }
+      },
+      "severity": "ADVERSE",
+      "observed_incidents": [],
+      "attribution": {
+        "incident_count": 0,
+        "similar_incident_counts": {},
+        "repeated_patterns": [],
+        "pattern_confidence": "NONE",
+        "relationship_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+        "causality_claimed": false,
+        "incidents": [],
+        "sustainability": {
+          "automatic_future_projection_increase": false,
+          "weather_associated_return_is_not_sustainable_signal_by_default": true
+        }
+      },
+      "tactical_interactions": [
+        {
+          "team_id": 17,
+          "opponent_id": 3,
+          "own_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [
+            {
+              "element": 405,
+              "name": "N.Gonzalez",
+              "position": "MID",
+              "role": "CREATOR_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 442,
+              "name": "Pope",
+              "position": "GK",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 443,
+              "name": "Gillespie",
+              "position": "GK",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 444,
+              "name": "Jaouen",
+              "position": "GK",
+              "role": "GOALKEEPER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 445,
+              "name": "Thiaw",
+              "position": "DEF",
+              "role": "DEFENSIVE_BASE_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 446,
+              "name": "Schär",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 447,
+              "name": "Botman",
+              "position": "DEF",
+              "role": "DEFENSIVE_BASE_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 448,
+              "name": "Burn",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 449,
+              "name": "Hall",
+              "position": "DEF",
+              "role": "ATTACKING_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 450,
+              "name": "Livramento",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 451,
+              "name": "A.Murphy",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 453,
+              "name": "Barnes",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 454,
+              "name": "Elanga",
+              "position": "MID",
+              "role": "ADVANCED_RUNNER_SHOOTER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 456,
+              "name": "J.Ramsey",
+              "position": "MID",
+              "role": "CREATOR_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 457,
+              "name": "J.Murphy",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 458,
+              "name": "Joelinton",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 459,
+              "name": "L.Miley",
+              "position": "MID",
+              "role": "DEEP_OR_LOW_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 460,
+              "name": "Willock",
+              "position": "MID",
+              "role": "ADVANCED_RUNNER_SHOOTER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 461,
+              "name": "Touré",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 462,
+              "name": "Steur",
+              "position": "MID",
+              "role": "DEEP_OR_LOW_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 463,
+              "name": "Woltemade",
+              "position": "FWD",
+              "role": "COMPLETE_FORWARD_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 464,
+              "name": "Wissa",
+              "position": "FWD",
+              "role": "FOCAL_SHOOTER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 465,
+              "name": "Osula",
+              "position": "FWD",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 466,
+              "name": "Neave",
+              "position": "FWD",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 559,
+              "name": "Bamba",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 567,
+              "name": "Horníček",
+              "position": "GK",
+              "role": "GOALKEEPER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 593,
+              "name": "Dedić",
+              "position": "DEF",
+              "role": "ATTACKING_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 609,
+              "name": "Shahar",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 634,
+              "name": "Fernandez-Pardo",
+              "position": "FWD",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            }
+          ],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": true,
+            "variance_context": "ELEVATED",
+            "floor_context": "UNCERTAIN",
+            "ceiling_context": "UNCERTAIN",
+            "risk_context": "ADVERSE"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        },
+        {
+          "team_id": 3,
+          "opponent_id": 17,
+          "own_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [
+            {
+              "element": 57,
+              "name": "Petrović",
+              "position": "GK",
+              "role": "GOALKEEPER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 58,
+              "name": "Forster",
+              "position": "GK",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 59,
+              "name": "Dennis",
+              "position": "GK",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 60,
+              "name": "Hill",
+              "position": "DEF",
+              "role": "ATTACKING_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 61,
+              "name": "Truffert",
+              "position": "DEF",
+              "role": "ATTACKING_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 62,
+              "name": "Diakité",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 63,
+              "name": "Milosavljević",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 64,
+              "name": "Smith",
+              "position": "DEF",
+              "role": "ATTACKING_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 65,
+              "name": "J.Araujo",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 66,
+              "name": "Soler",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 67,
+              "name": "Rayan",
+              "position": "MID",
+              "role": "ADVANCED_RUNNER_SHOOTER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 68,
+              "name": "Tavernier",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 69,
+              "name": "Scott",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 70,
+              "name": "Kluivert",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 71,
+              "name": "Cook",
+              "position": "MID",
+              "role": "DEEP_OR_LOW_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 72,
+              "name": "Gannon-Doak",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 73,
+              "name": "Adams",
+              "position": "MID",
+              "role": "DEEP_OR_LOW_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 74,
+              "name": "Brooks",
+              "position": "MID",
+              "role": "DEEP_OR_LOW_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 75,
+              "name": "Christie",
+              "position": "MID",
+              "role": "DEEP_OR_LOW_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 76,
+              "name": "Tóth.A",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 77,
+              "name": "Adli",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 78,
+              "name": "Kroupi.Jr",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 79,
+              "name": "Evanilson",
+              "position": "FWD",
+              "role": "COMPLETE_FORWARD_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 80,
+              "name": "Enes Ünal",
+              "position": "FWD",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 81,
+              "name": "Rodríguez",
+              "position": "FWD",
+              "role": "LOW_ATTACKING_EVIDENCE_FORWARD_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 566,
+              "name": "Silva",
+              "position": "DEF",
+              "role": "ATTACKING_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 573,
+              "name": "Sanchez",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 608,
+              "name": "Jebbison",
+              "position": "FWD",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 615,
+              "name": "Di Gregorio",
+              "position": "GK",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            }
+          ],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": true,
+            "variance_context": "ELEVATED",
+            "floor_context": "UNCERTAIN",
+            "ceiling_context": "UNCERTAIN",
+            "risk_context": "ADVERSE"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        }
+      ],
+      "post_match_reconciled": false
+    },
+    {
+      "fixture_id": 22,
+      "event": 3,
+      "home_team": "Brentford",
+      "away_team": "Sunderland",
+      "kickoff_time": "2026-09-05T14:00:00+00:00",
+      "venue": "Gtech Community Stadium",
+      "evidence_state": "FORECAST",
+      "evidence_precedence": "FRESH_FORECAST",
+      "freshness": "FRESH",
+      "selected_evidence": {
+        "evidence_kind": "FORECAST",
+        "fetched_at": "2026-09-03T22:08:17.714271+00:00",
+        "provider": "open_meteo",
+        "forecast_for": "2026-09-05T14:00:00+00:00",
+        "forecast_issued_at": "2026-09-03T22:08:17.714271+00:00",
+        "evidence_timestamp": "2026-09-05T14:00:00+00:00",
+        "forecast_local_hour": "2026-09-05T15:00",
+        "forecast_confidence": "HIGH",
+        "severity": "NORMAL",
+        "signals": [],
+        "weather": {
+          "temperature_c": 21.5,
+          "precipitation_probability_pct": 0,
+          "precipitation_mm_h": 0.0,
+          "wind_speed_kmh": 9.0,
+          "wind_gust_kmh": 22.7,
+          "weather_code": 1
+        },
+        "provenance": {
+          "source": "Open-Meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast",
+          "venue": "Gtech Community Stadium",
+          "latitude": 51.4906,
+          "longitude": -0.2886,
+          "timezone": "Europe/London",
+          "evidence_class": "ENVIRONMENTAL_CONTEXT"
+        }
+      },
+      "severity": "NORMAL",
+      "observed_incidents": [],
+      "attribution": {
+        "incident_count": 0,
+        "similar_incident_counts": {},
+        "repeated_patterns": [],
+        "pattern_confidence": "NONE",
+        "relationship_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+        "causality_claimed": false,
+        "incidents": [],
+        "sustainability": {
+          "automatic_future_projection_increase": false,
+          "weather_associated_return_is_not_sustainable_signal_by_default": true
+        }
+      },
+      "tactical_interactions": [
+        {
+          "team_id": 4,
+          "opponent_id": 20,
+          "own_system": {
+            "base_formation": "3-6-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        },
+        {
+          "team_id": 20,
+          "opponent_id": 4,
+          "own_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "3-6-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        }
+      ],
+      "post_match_reconciled": false
+    },
+    {
+      "fixture_id": 23,
+      "event": 3,
+      "home_team": "Brighton",
+      "away_team": "Leeds",
+      "kickoff_time": "2026-09-05T14:00:00+00:00",
+      "venue": "Amex Stadium",
+      "evidence_state": "FORECAST",
+      "evidence_precedence": "FRESH_FORECAST",
+      "freshness": "FRESH",
+      "selected_evidence": {
+        "evidence_kind": "FORECAST",
+        "fetched_at": "2026-09-03T22:08:17.720073+00:00",
+        "provider": "open_meteo",
+        "forecast_for": "2026-09-05T14:00:00+00:00",
+        "forecast_issued_at": "2026-09-03T22:08:17.720073+00:00",
+        "evidence_timestamp": "2026-09-05T14:00:00+00:00",
+        "forecast_local_hour": "2026-09-05T15:00",
+        "forecast_confidence": "HIGH",
+        "severity": "NORMAL",
+        "signals": [],
+        "weather": {
+          "temperature_c": 19.3,
+          "precipitation_probability_pct": 0,
+          "precipitation_mm_h": 0.0,
+          "wind_speed_kmh": 18.0,
+          "wind_gust_kmh": 34.6,
+          "weather_code": 0
+        },
+        "provenance": {
+          "source": "Open-Meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast",
+          "venue": "Amex Stadium",
+          "latitude": 50.8617,
+          "longitude": -0.0837,
+          "timezone": "Europe/London",
+          "evidence_class": "ENVIRONMENTAL_CONTEXT"
+        }
+      },
+      "severity": "NORMAL",
+      "observed_incidents": [],
+      "attribution": {
+        "incident_count": 0,
+        "similar_incident_counts": {},
+        "repeated_patterns": [],
+        "pattern_confidence": "NONE",
+        "relationship_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+        "causality_claimed": false,
+        "incidents": [],
+        "sustainability": {
+          "automatic_future_projection_increase": false,
+          "weather_associated_return_is_not_sustainable_signal_by_default": true
+        }
+      },
+      "tactical_interactions": [
+        {
+          "team_id": 5,
+          "opponent_id": 13,
+          "own_system": {
+            "base_formation": "6-3-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        },
+        {
+          "team_id": 13,
+          "opponent_id": 5,
+          "own_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "6-3-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        }
+      ],
+      "post_match_reconciled": false
+    },
+    {
+      "fixture_id": 24,
+      "event": 3,
+      "home_team": "Fulham",
+      "away_team": "Crystal Palace",
+      "kickoff_time": "2026-09-05T14:00:00+00:00",
+      "venue": "Craven Cottage",
+      "evidence_state": "FORECAST",
+      "evidence_precedence": "FRESH_FORECAST",
+      "freshness": "FRESH",
+      "selected_evidence": {
+        "evidence_kind": "FORECAST",
+        "fetched_at": "2026-09-03T22:08:17.906661+00:00",
+        "provider": "open_meteo",
+        "forecast_for": "2026-09-05T14:00:00+00:00",
+        "forecast_issued_at": "2026-09-03T22:08:17.906661+00:00",
+        "evidence_timestamp": "2026-09-05T14:00:00+00:00",
+        "forecast_local_hour": "2026-09-05T15:00",
+        "forecast_confidence": "HIGH",
+        "severity": "NORMAL",
+        "signals": [],
+        "weather": {
+          "temperature_c": 21.5,
+          "precipitation_probability_pct": 0,
+          "precipitation_mm_h": 0.0,
+          "wind_speed_kmh": 8.6,
+          "wind_gust_kmh": 22.0,
+          "weather_code": 1
+        },
+        "provenance": {
+          "source": "Open-Meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast",
+          "venue": "Craven Cottage",
+          "latitude": 51.475,
+          "longitude": -0.2217,
+          "timezone": "Europe/London",
+          "evidence_class": "ENVIRONMENTAL_CONTEXT"
+        }
+      },
+      "severity": "NORMAL",
+      "observed_incidents": [],
+      "attribution": {
+        "incident_count": 0,
+        "similar_incident_counts": {},
+        "repeated_patterns": [],
+        "pattern_confidence": "NONE",
+        "relationship_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+        "causality_claimed": false,
+        "incidents": [],
+        "sustainability": {
+          "automatic_future_projection_increase": false,
+          "weather_associated_return_is_not_sustainable_signal_by_default": true
+        }
+      },
+      "tactical_interactions": [
+        {
+          "team_id": 10,
+          "opponent_id": 8,
+          "own_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "5-3-2",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        },
+        {
+          "team_id": 8,
+          "opponent_id": 10,
+          "own_system": {
+            "base_formation": "5-3-2",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        }
+      ],
+      "post_match_reconciled": false
+    },
+    {
+      "fixture_id": 26,
+      "event": 3,
+      "home_team": "Man City",
+      "away_team": "Coventry City",
+      "kickoff_time": "2026-09-05T14:00:00+00:00",
+      "venue": "Etihad Stadium",
+      "evidence_state": "FORECAST",
+      "evidence_precedence": "FRESH_FORECAST",
+      "freshness": "FRESH",
+      "selected_evidence": {
+        "evidence_kind": "FORECAST",
+        "fetched_at": "2026-09-03T22:08:17.909331+00:00",
+        "provider": "open_meteo",
+        "forecast_for": "2026-09-05T14:00:00+00:00",
+        "forecast_issued_at": "2026-09-03T22:08:17.909331+00:00",
+        "evidence_timestamp": "2026-09-05T14:00:00+00:00",
+        "forecast_local_hour": "2026-09-05T15:00",
+        "forecast_confidence": "HIGH",
+        "severity": "NORMAL",
+        "signals": [],
+        "weather": {
+          "temperature_c": 18.4,
+          "precipitation_probability_pct": 7,
+          "precipitation_mm_h": 0.0,
+          "wind_speed_kmh": 15.8,
+          "wind_gust_kmh": 34.2,
+          "weather_code": 1
+        },
+        "provenance": {
+          "source": "Open-Meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast",
+          "venue": "Etihad Stadium",
+          "latitude": 53.4831,
+          "longitude": -2.2004,
+          "timezone": "Europe/London",
+          "evidence_class": "ENVIRONMENTAL_CONTEXT"
+        }
+      },
+      "severity": "NORMAL",
+      "observed_incidents": [],
+      "attribution": {
+        "incident_count": 0,
+        "similar_incident_counts": {},
+        "repeated_patterns": [],
+        "pattern_confidence": "NONE",
+        "relationship_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+        "causality_claimed": false,
+        "incidents": [],
+        "sustainability": {
+          "automatic_future_projection_increase": false,
+          "weather_associated_return_is_not_sustainable_signal_by_default": true
+        }
+      },
+      "tactical_interactions": [
+        {
+          "team_id": 15,
+          "opponent_id": 7,
+          "own_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        },
+        {
+          "team_id": 7,
+          "opponent_id": 15,
+          "own_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        }
+      ],
+      "post_match_reconciled": false
+    },
+    {
+      "fixture_id": 28,
+      "event": 3,
+      "home_team": "Nott'm Forest",
+      "away_team": "Spurs",
+      "kickoff_time": "2026-09-05T14:00:00+00:00",
+      "venue": "City Ground",
+      "evidence_state": "FORECAST",
+      "evidence_precedence": "FRESH_FORECAST",
+      "freshness": "FRESH",
+      "selected_evidence": {
+        "evidence_kind": "FORECAST",
+        "fetched_at": "2026-09-03T22:08:17.913261+00:00",
+        "provider": "open_meteo",
+        "forecast_for": "2026-09-05T14:00:00+00:00",
+        "forecast_issued_at": "2026-09-03T22:08:17.913261+00:00",
+        "evidence_timestamp": "2026-09-05T14:00:00+00:00",
+        "forecast_local_hour": "2026-09-05T15:00",
+        "forecast_confidence": "HIGH",
+        "severity": "NORMAL",
+        "signals": [],
+        "weather": {
+          "temperature_c": 19.9,
+          "precipitation_probability_pct": 0,
+          "precipitation_mm_h": 0.0,
+          "wind_speed_kmh": 13.7,
+          "wind_gust_kmh": 29.2,
+          "weather_code": 2
+        },
+        "provenance": {
+          "source": "Open-Meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast",
+          "venue": "City Ground",
+          "latitude": 52.94,
+          "longitude": -1.1327,
+          "timezone": "Europe/London",
+          "evidence_class": "ENVIRONMENTAL_CONTEXT"
+        }
+      },
+      "severity": "NORMAL",
+      "observed_incidents": [],
+      "attribution": {
+        "incident_count": 0,
+        "similar_incident_counts": {},
+        "repeated_patterns": [],
+        "pattern_confidence": "NONE",
+        "relationship_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+        "causality_claimed": false,
+        "incidents": [],
+        "sustainability": {
+          "automatic_future_projection_increase": false,
+          "weather_associated_return_is_not_sustainable_signal_by_default": true
+        }
+      },
+      "tactical_interactions": [
+        {
+          "team_id": 18,
+          "opponent_id": 19,
+          "own_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "3-6-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        },
+        {
+          "team_id": 19,
+          "opponent_id": 18,
+          "own_system": {
+            "base_formation": "3-6-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        }
+      ],
+      "post_match_reconciled": false
+    },
+    {
+      "fixture_id": 25,
+      "event": 3,
+      "home_team": "Hull City",
+      "away_team": "Aston Villa",
+      "kickoff_time": "2026-09-05T16:30:00+00:00",
+      "venue": "MKM Stadium",
+      "evidence_state": "FORECAST",
+      "evidence_precedence": "FRESH_FORECAST",
+      "freshness": "FRESH",
+      "selected_evidence": {
+        "evidence_kind": "FORECAST",
+        "fetched_at": "2026-09-03T22:08:17.911366+00:00",
+        "provider": "open_meteo",
+        "forecast_for": "2026-09-05T16:30:00+00:00",
+        "forecast_issued_at": "2026-09-03T22:08:17.911366+00:00",
+        "evidence_timestamp": "2026-09-05T16:30:00+00:00",
+        "forecast_local_hour": "2026-09-05T17:00",
+        "forecast_confidence": "HIGH",
+        "severity": "NORMAL",
+        "signals": [],
+        "weather": {
+          "temperature_c": 19.1,
+          "precipitation_probability_pct": 0,
+          "precipitation_mm_h": 0.0,
+          "wind_speed_kmh": 15.1,
+          "wind_gust_kmh": 31.3,
+          "weather_code": 1
+        },
+        "provenance": {
+          "source": "Open-Meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast",
+          "venue": "MKM Stadium",
+          "latitude": 53.7461,
+          "longitude": -0.3678,
+          "timezone": "Europe/London",
+          "evidence_class": "ENVIRONMENTAL_CONTEXT"
+        }
+      },
+      "severity": "NORMAL",
+      "observed_incidents": [],
+      "attribution": {
+        "incident_count": 0,
+        "similar_incident_counts": {},
+        "repeated_patterns": [],
+        "pattern_confidence": "NONE",
+        "relationship_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+        "causality_claimed": false,
+        "incidents": [],
+        "sustainability": {
+          "automatic_future_projection_increase": false,
+          "weather_associated_return_is_not_sustainable_signal_by_default": true
+        }
+      },
+      "tactical_interactions": [
+        {
+          "team_id": 11,
+          "opponent_id": 2,
+          "own_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        },
+        {
+          "team_id": 2,
+          "opponent_id": 11,
+          "own_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        }
+      ],
+      "post_match_reconciled": false
+    },
+    {
+      "fixture_id": 30,
+      "event": 3,
+      "home_team": "Everton",
+      "away_team": "Man Utd",
+      "kickoff_time": "2026-09-06T13:00:00+00:00",
+      "venue": "Everton Stadium",
+      "evidence_state": "FORECAST",
+      "evidence_precedence": "FRESH_FORECAST",
+      "freshness": "FRESH",
+      "selected_evidence": {
+        "evidence_kind": "FORECAST",
+        "fetched_at": "2026-09-03T15:12:17.142669+00:00",
+        "provider": "open_meteo",
+        "forecast_for": "2026-09-06T13:00:00+00:00",
+        "forecast_issued_at": "2026-09-03T15:12:17.142669+00:00",
+        "evidence_timestamp": "2026-09-06T13:00:00+00:00",
+        "forecast_local_hour": "2026-09-06T14:00",
+        "forecast_confidence": "MEDIUM",
+        "severity": "NOTABLE",
+        "signals": [
+          "wind_speed",
+          "wind_gust"
+        ],
+        "weather": {
+          "temperature_c": 22.6,
+          "precipitation_probability_pct": 8,
+          "precipitation_mm_h": 0.0,
+          "wind_speed_kmh": 22.3,
+          "wind_gust_kmh": 44.6,
+          "weather_code": 2
+        },
+        "provenance": {
+          "source": "Open-Meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast",
+          "venue": "Everton Stadium",
+          "latitude": 53.4508,
+          "longitude": -2.993,
+          "timezone": "Europe/London",
+          "evidence_class": "ENVIRONMENTAL_CONTEXT"
+        }
+      },
+      "severity": "NOTABLE",
+      "observed_incidents": [],
+      "attribution": {
+        "incident_count": 0,
+        "similar_incident_counts": {},
+        "repeated_patterns": [],
+        "pattern_confidence": "NONE",
+        "relationship_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+        "causality_claimed": false,
+        "incidents": [],
+        "sustainability": {
+          "automatic_future_projection_increase": false,
+          "weather_associated_return_is_not_sustainable_signal_by_default": true
+        }
+      },
+      "tactical_interactions": [
+        {
+          "team_id": 9,
+          "opponent_id": 16,
+          "own_system": {
+            "base_formation": "3-6-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "4-6-0",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [
+            {
+              "element": 21,
+              "name": "Nørgaard",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 209,
+              "name": "Johnson",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 226,
+              "name": "Pickford",
+              "position": "GK",
+              "role": "GOALKEEPER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 227,
+              "name": "Travers",
+              "position": "GK",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 228,
+              "name": "King",
+              "position": "GK",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 229,
+              "name": "Tarkowski",
+              "position": "DEF",
+              "role": "BOX_THREAT_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 230,
+              "name": "Branthwaite",
+              "position": "DEF",
+              "role": "BOX_THREAT_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 231,
+              "name": "Keane",
+              "position": "DEF",
+              "role": "BOX_THREAT_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 232,
+              "name": "O'Brien",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 233,
+              "name": "Mykolenko",
+              "position": "DEF",
+              "role": "ATTACKING_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 234,
+              "name": "Patterson",
+              "position": "DEF",
+              "role": "DEFENSIVE_BASE_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 235,
+              "name": "Aznou",
+              "position": "DEF",
+              "role": "ATTACKING_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 236,
+              "name": "Dewsbury-Hall",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 238,
+              "name": "Grealish",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 239,
+              "name": "Garner",
+              "position": "MID",
+              "role": "CREATOR_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 242,
+              "name": "George",
+              "position": "MID",
+              "role": "ADVANCED_RUNNER_SHOOTER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 243,
+              "name": "Alcaraz",
+              "position": "MID",
+              "role": "ADVANCED_RUNNER_SHOOTER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 244,
+              "name": "Armstrong",
+              "position": "MID",
+              "role": "DEEP_OR_LOW_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 245,
+              "name": "Dibling",
+              "position": "MID",
+              "role": "ADVANCED_RUNNER_SHOOTER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 246,
+              "name": "Röhl",
+              "position": "MID",
+              "role": "DEEP_OR_LOW_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 247,
+              "name": "Hackney",
+              "position": "MID",
+              "role": "DEEP_OR_LOW_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 248,
+              "name": "Beto",
+              "position": "FWD",
+              "role": "FOCAL_SHOOTER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 249,
+              "name": "Barry",
+              "position": "FWD",
+              "role": "COMPLETE_FORWARD_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 649,
+              "name": "Maitland-Niles",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            }
+          ],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": true,
+            "variance_context": "ELEVATED",
+            "floor_context": "UNCERTAIN",
+            "ceiling_context": "UNCERTAIN",
+            "risk_context": "NOTABLE"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        },
+        {
+          "team_id": 16,
+          "opponent_id": 9,
+          "own_system": {
+            "base_formation": "4-6-0",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "3-6-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": true,
+              "context": "HEIGHTENED_VARIANCE_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [
+            {
+              "element": 43,
+              "name": "Tielemans",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 131,
+              "name": "Baleba",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 162,
+              "name": "Andrey Santos",
+              "position": "MID",
+              "role": "DEEP_OR_LOW_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 325,
+              "name": "Darlow",
+              "position": "GK",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 412,
+              "name": "Lammens",
+              "position": "GK",
+              "role": "GOALKEEPER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 413,
+              "name": "Bayindir",
+              "position": "GK",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 414,
+              "name": "Heaton",
+              "position": "GK",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "gk_distribution_handling",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 415,
+              "name": "Dorgu",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 416,
+              "name": "De Ligt",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 417,
+              "name": "Dalot",
+              "position": "DEF",
+              "role": "ATTACKING_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 418,
+              "name": "Maguire",
+              "position": "DEF",
+              "role": "BOX_THREAT_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 419,
+              "name": "Martinez",
+              "position": "DEF",
+              "role": "BOX_THREAT_DEFENDER_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 420,
+              "name": "Yoro",
+              "position": "DEF",
+              "role": "DEFENSIVE_BASE_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 421,
+              "name": "Heaven",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 422,
+              "name": "Mazraoui",
+              "position": "DEF",
+              "role": "DEFENSIVE_BASE_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 423,
+              "name": "Shaw",
+              "position": "DEF",
+              "role": "DEFENSIVE_BASE_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 424,
+              "name": "Amass",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 425,
+              "name": "Fredricson",
+              "position": "DEF",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 426,
+              "name": "B.Fernandes",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 427,
+              "name": "Mbeumo",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 428,
+              "name": "Cunha",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 429,
+              "name": "Rashford",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 430,
+              "name": "Mount",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 431,
+              "name": "Amad",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 432,
+              "name": "Mainoo",
+              "position": "MID",
+              "role": "HYBRID_ATTACKING_MID_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 433,
+              "name": "Ugarte",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 434,
+              "name": "J.Fletcher",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 435,
+              "name": "Lacey",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 436,
+              "name": "Collyer",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 437,
+              "name": "Bendito Mantato",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 438,
+              "name": "Fletcher",
+              "position": "MID",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 439,
+              "name": "Šeško",
+              "position": "FWD",
+              "role": "COMPLETE_FORWARD_PROFILE",
+              "role_evidence_confidence": "LOW",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 440,
+              "name": "Zirkzee",
+              "position": "FWD",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            },
+            {
+              "element": 441,
+              "name": "Obi",
+              "position": "FWD",
+              "role": null,
+              "role_evidence_confidence": "NONE",
+              "weather_relevant_dimensions": [
+                "aerial_play",
+                "set_pieces"
+              ],
+              "interpretation_only": true
+            }
+          ],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": true,
+            "variance_context": "ELEVATED",
+            "floor_context": "UNCERTAIN",
+            "ceiling_context": "UNCERTAIN",
+            "risk_context": "NOTABLE"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        }
+      ],
+      "post_match_reconciled": false
+    },
+    {
+      "fixture_id": 29,
+      "event": 3,
+      "home_team": "Arsenal",
+      "away_team": "Chelsea",
+      "kickoff_time": "2026-09-06T15:30:00+00:00",
+      "venue": "Emirates Stadium",
+      "evidence_state": "FORECAST",
+      "evidence_precedence": "FRESH_FORECAST",
+      "freshness": "FRESH",
+      "selected_evidence": {
+        "evidence_kind": "FORECAST",
+        "fetched_at": "2026-09-03T22:08:17.980289+00:00",
+        "provider": "open_meteo",
+        "forecast_for": "2026-09-06T15:30:00+00:00",
+        "forecast_issued_at": "2026-09-03T22:08:17.980289+00:00",
+        "evidence_timestamp": "2026-09-06T15:30:00+00:00",
+        "forecast_local_hour": "2026-09-06T16:00",
+        "forecast_confidence": "MEDIUM",
+        "severity": "NORMAL",
+        "signals": [],
+        "weather": {
+          "temperature_c": 24.3,
+          "precipitation_probability_pct": 2,
+          "precipitation_mm_h": 0.0,
+          "wind_speed_kmh": 14.0,
+          "wind_gust_kmh": 29.9,
+          "weather_code": 0
+        },
+        "provenance": {
+          "source": "Open-Meteo",
+          "endpoint": "https://api.open-meteo.com/v1/forecast",
+          "venue": "Emirates Stadium",
+          "latitude": 51.5549,
+          "longitude": -0.1084,
+          "timezone": "Europe/London",
+          "evidence_class": "ENVIRONMENTAL_CONTEXT"
+        }
+      },
+      "severity": "NORMAL",
+      "observed_incidents": [],
+      "attribution": {
+        "incident_count": 0,
+        "similar_incident_counts": {},
+        "repeated_patterns": [],
+        "pattern_confidence": "NONE",
+        "relationship_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+        "causality_claimed": false,
+        "incidents": [],
+        "sustainability": {
+          "automatic_future_projection_increase": false,
+          "weather_associated_return_is_not_sustainable_signal_by_default": true
+        }
+      },
+      "tactical_interactions": [
+        {
+          "team_id": 1,
+          "opponent_id": 6,
+          "own_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        },
+        {
+          "team_id": 6,
+          "opponent_id": 1,
+          "own_system": {
+            "base_formation": "5-4-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": null,
+            "evidence_available": true
+          },
+          "opponent_system": {
+            "base_formation": "4-5-1",
+            "build_up": null,
+            "pressing": null,
+            "defensive_line": null,
+            "transition": null,
+            "set_piece_profile": "OBSERVED_HIGH_SET_PIECE_ACTIVITY",
+            "evidence_available": true
+          },
+          "dimensions": [
+            {
+              "dimension": "build_up",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "pressing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "transition",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "high_line",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "gk_distribution_handling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "crossing",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "set_pieces",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "aerial_play",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "dribbling",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "acceleration",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            },
+            {
+              "dimension": "defensive_recovery",
+              "weather_relevant": false,
+              "context": "NORMAL_CONTEXT",
+              "direct_projection_modifier": null,
+              "direct_decision_modifier": null
+            }
+          ],
+          "player_role_interactions": [],
+          "interpretation_confidence": "MATERIAL",
+          "allowed_context": {
+            "tactical_interpretation": true,
+            "uncertainty": false,
+            "variance_context": "BASELINE",
+            "floor_context": "BASELINE",
+            "ceiling_context": "BASELINE",
+            "risk_context": "NORMAL"
+          },
+          "direct_xpts_modifier": null,
+          "direct_xmins_modifier": null
+        }
+      ],
+      "post_match_reconciled": false
+    }
+  ],
+  "health": {
+    "schema_version": 1,
+    "contract": "WEATHER_CONTEXT_HEALTH_V1",
+    "generated_at": "2026-09-03T22:33:28.419211+00:00",
+    "status": "PASS",
+    "allowed_statuses": [
+      "PASS",
+      "PARTIAL",
+      "STALE",
+      "UNAVAILABLE"
+    ],
+    "fixture_count": 10,
+    "available_count": 10,
+    "stale_count": 0,
+    "unavailable_count": 0,
+    "tactical_context_complete": true,
+    "decision_blocking": false,
+    "reasons": []
+  },
+  "governance": {
+    "advisory_only": true,
+    "rain_probability_is_not_rain_intensity": true,
+    "football_event_class": "FACT",
+    "observed_incident_class": "OBSERVED_MATCH_EVIDENCE",
+    "weather_class": "ENVIRONMENTAL_CONTEXT",
+    "post_match_attribution_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+    "causal_claim_requires_calibrated_evidence": true,
+    "sustainability_guard": true,
+    "may_directly_change_xpts": false,
+    "may_directly_change_xmins": false,
+    "may_directly_change_starting_xi": false,
+    "may_directly_change_bench_order": false,
+    "may_directly_change_captaincy": false,
+    "may_directly_change_vice_captaincy": false,
+    "may_directly_change_transfer_decision": false,
+    "may_directly_change_hit_decision": false,
+    "may_directly_change_chip_decision": false,
+    "may_directly_change_watchlist_membership": false,
+    "may_modify": [
+      "tactical_interpretation",
+      "uncertainty",
+      "variance_context",
+      "floor_context",
+      "ceiling_context",
+      "risk_context"
+    ],
+    "alternative_explanations_required": [
+      "opponent_strength",
+      "tactical_change",
+      "game_state",
+      "red_cards",
+      "injury",
+      "rotation",
+      "role_change",
+      "venue",
+      "sample_noise"
+    ],
+    "decision_authority": "NONE",
+    "incident_class": "OBSERVED_MATCH_EVIDENCE",
+    "relationship_label": "POSSIBLE_CONTRIBUTING_FACTOR",
+    "weather_causality_claimed": false,
+    "sustainable_projection_auto_increase": false
+  }
+}

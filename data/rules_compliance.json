@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "ruleset_id": "FPL_2026_27",
+  "season": "2026/27",
+  "authority": "Official FPL",
+  "verified_at": "2026-08-26",
+  "ruleset_fingerprint_sha256": "da933a4884cb5f192116d74e5a9b2020062560eed69a6dfe176186655ac4293a",
+  "overall": "PASS",
+  "registry_integrity": {
+    "status": "PASS",
+    "manifest_exists": true,
+    "schema_exists": true,
+    "rules_file_exists": true,
+    "active_ruleset_matches": true,
+    "season_matches": true,
+    "authority_matches": true,
+    "auto_mutate_rules": false
+  },
+  "sections": {
+    "squad": {
+      "status": "PASS",
+      "verification": "VERIFIED",
+      "source_key": "general_rules",
+      "source_url": "https://fantasy.premierleague.com/help/rules"
+    },
+    "lineup": {
+      "status": "PASS",
+      "verification": "VERIFIED",
+      "source_key": "general_rules",
+      "source_url": "https://fantasy.premierleague.com/help/rules"
+    },
+    "scoring": {
+      "status": "PASS",
+      "verification": "VERIFIED",
+      "source_key": "scoring",
+      "source_url": "https://www.premierleague.com/en/news/2174909/fpl-basics-explained-scoring-points"
+    },
+    "defensive_contributions": {
+      "status": "PASS",
+      "verification": "VERIFIED",
+      "source_key": "defensive_contributions",
+      "source_url": "https://www.premierleague.com/en/news/4361991"
+    },
+    "chips": {
+      "status": "PASS",
+      "verification": "VERIFIED",
+      "source_key": "chips",
+      "source_url": "https://www.premierleague.com/en/news/4679879/whats-happening-with-fpl-chips-in-202627"
+    },
+    "finance": {
+      "status": "PASS",
+      "verification": "VERIFIED",
+      "source_key": "general_rules",
+      "source_url": "https://fantasy.premierleague.com/help/rules"
+    },
+    "bonus_bps": {
+      "status": "PASS",
+      "verification": "VERIFIED",
+      "source_key": "bps_changes",
+      "source_url": "https://www.premierleague.com/en/news/4679946/whats-new-in-202627-fantasy-changes-to-bonus-points-system"
+    }
+  },
+  "semantic_checks": {
+    "squad_shape": {
+      "status": "PASS",
+      "squad_size": 15,
+      "position_counts": {
+        "GK": 2,
+        "DEF": 5,
+        "MID": 5,
+        "FWD": 3
+      }
+    },
+    "budget_and_club_limit": {
+      "status": "PASS",
+      "budget_tenths": 1000,
+      "max_players_per_club": 3
+    },
+    "lineup_contract": {
+      "status": "PASS",
+      "starting_xi_size": 11,
+      "legal_formations": [
+        "3-4-3",
+        "3-5-2",
+        "4-3-3",
+        "4-4-2",
+        "4-5-1",
+        "5-2-3",
+        "5-3-2",
+        "5-4-1"
+      ],
+      "bench": {
+        "goalkeepers": 1,
+        "outfield": 3
+      }
+    },
+    "chip_windows": {
+      "status": "PASS",
+      "halves": {
+        "1": [
+          1,
+          19
+        ],
+        "2": [
+          20,
+          38
+        ]
+      },
+      "one_chip_per_gameweek": true
+    },
+    "scoring_contract": {
+      "status": "PASS",
+      "goal_points": {
+        "GK": 10,
+        "DEF": 6,
+        "MID": 5,
+        "FWD": 4
+      },
+      "assists": 3,
+      "bonus_awards": [
+        3,
+        2,
+        1
+      ]
+    },
+    "defcon_contract": {
+      "status": "PASS",
+      "points_cap_per_match": 2,
+      "positions": [
+        "DEF",
+        "FWD",
+        "GK",
+        "MID"
+      ]
+    },
+    "sell_value_method": {
+      "status": "PASS",
+      "method": "official_half_profit_floor",
+      "rounding": "floor_to_0.1m_units"
+    }
+  },
+  "drift": {
+    "status": "STALE",
+    "checked_at": "2026-09-01T21:00:04.697088+00:00",
+    "age_hours": 49.556,
+    "stale_after_hours": 36.0,
+    "cached": true,
+    "changed_sources": [],
+    "failed_sources": [],
+    "auto_mutation": false
+  },
+  "change_policy": "manual_review_required",
+  "governance": {
+    "single_source_of_truth": true,
+    "consumers_must_load_registry": true,
+    "remote_change_never_auto_mutates_rules": true,
+    "registry_integrity_failure_blocks_go": true,
+    "remote_drift_check_is_scheduled_not_hourly": true,
+    "persisted_remote_drift_state_is_reused_between_checks": true
+  }
+}

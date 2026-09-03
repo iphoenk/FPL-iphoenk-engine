@@ -1,0 +1,395 @@
+{
+  "generated_at": "2026-09-03T22:33:27.990762+00:00",
+  "team_id": 3462711,
+  "entry": {
+    "id": 3462711,
+    "summary_overall_points": 164,
+    "summary_overall_rank": 783760,
+    "summary_event_points": 93,
+    "summary_event_rank": 2578047,
+    "current_event": 2,
+    "last_deadline_bank": 5,
+    "last_deadline_value": 1006,
+    "last_deadline_total_transfers": 0,
+    "fetched_at": "2026-09-03T22:33:27.558889+00:00"
+  },
+  "squad_authority": "LOCKED_PRE_DEADLINE",
+  "projection_baseline": {
+    "planning_gw": 3,
+    "baseline_gw": 2,
+    "default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
+    "default_authority": "OFFICIAL_SUBMITTED",
+    "override_requested": true,
+    "override_kind": "USER_LOCK",
+    "override_target_gw": 3,
+    "override_applied": true,
+    "effective_authority": "LOCKED_PRE_DEADLINE",
+    "authority_source": "USER_CONFIRMED_SCREENSHOT_GW3_TRANSFER",
+    "canonical_user_capture_authority": "LOCKED_PRE_DEADLINE",
+    "capture_contract": "STRUCTURED_USER_CAPTURE_V1",
+    "capture_pre_deadline_phase": true,
+    "capture_target_gw_matches": true,
+    "capture_evidence_required": true,
+    "capture_evidence": {
+      "contract": "STRUCTURED_USER_CAPTURE_V1",
+      "status": "VALID",
+      "valid": true,
+      "errors": [],
+      "provenance": "USER_CONFIRMED_SCREENSHOT_GW3_TRANSFER",
+      "capture_timestamp": "2026-08-31T22:53:24Z",
+      "timestamp_valid": true,
+      "own_team": true,
+      "identity_validated": true,
+      "squad_legal": true,
+      "lineup": {
+        "status": "NOT_SUPPLIED",
+        "valid": true,
+        "errors": []
+      },
+      "purchase_cost_rows_supplied": 15,
+      "purchase_cost_exact_for_all": true
+    },
+    "capture_rejection_reason": null,
+    "stale_override_rejected": false,
+    "wrong_gw_override_rejected": false,
+    "post_deadline_official_reclaims_authority": false
+  },
+  "squad": [
+    {
+      "element": 572,
+      "name": "Tzolakis",
+      "position": "GK",
+      "purchase_cost": 45,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 109,
+      "name": "Verbruggen",
+      "position": "GK",
+      "purchase_cost": 45,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 115,
+      "name": "De Cuyper",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 8,
+      "name": "Calafiori",
+      "position": "DEF",
+      "purchase_cost": 55,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 88,
+      "name": "Kayode",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 254,
+      "name": "Robinson",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 279,
+      "name": "Ajayi",
+      "position": "DEF",
+      "purchase_cost": 40,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 426,
+      "name": "B.Fernandes",
+      "position": "MID",
+      "purchase_cost": 120,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 15,
+      "name": "Ødegaard",
+      "position": "MID",
+      "purchase_cost": 65,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 557,
+      "name": "Tzolis",
+      "position": "MID",
+      "purchase_cost": 65,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 40,
+      "name": "Rogers",
+      "position": "MID",
+      "purchase_cost": 75,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 565,
+      "name": "M.Sangaré",
+      "position": "MID",
+      "purchase_cost": 55,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 411,
+      "name": "Haaland",
+      "position": "FWD",
+      "purchase_cost": 155,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 165,
+      "name": "João Pedro",
+      "position": "FWD",
+      "purchase_cost": 75,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    },
+    {
+      "element": 346,
+      "name": "Calvert-Lewin",
+      "position": "FWD",
+      "purchase_cost": 60,
+      "source": "user_capture_exact",
+      "purchase_cost_exact": true
+    }
+  ],
+  "team_value_ledger": [
+    {
+      "element": 572,
+      "name": "Tzolakis",
+      "team": "Hull City",
+      "position": "GK",
+      "purchase_cost": 45,
+      "now_cost": 46,
+      "sell_cost": 45,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "7.5",
+      "status": "a"
+    },
+    {
+      "element": 109,
+      "name": "Verbruggen",
+      "team": "Brighton",
+      "position": "GK",
+      "purchase_cost": 45,
+      "now_cost": 45,
+      "sell_cost": 45,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "21.7",
+      "status": "a"
+    },
+    {
+      "element": 115,
+      "name": "De Cuyper",
+      "team": "Brighton",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "now_cost": 47,
+      "sell_cost": 46,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "16.1",
+      "status": "a"
+    },
+    {
+      "element": 8,
+      "name": "Calafiori",
+      "team": "Arsenal",
+      "position": "DEF",
+      "purchase_cost": 55,
+      "now_cost": 56,
+      "sell_cost": 55,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "44.1",
+      "status": "a"
+    },
+    {
+      "element": 88,
+      "name": "Kayode",
+      "team": "Brentford",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "now_cost": 46,
+      "sell_cost": 45,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "9.5",
+      "status": "a"
+    },
+    {
+      "element": 254,
+      "name": "Robinson",
+      "team": "Fulham",
+      "position": "DEF",
+      "purchase_cost": 45,
+      "now_cost": 45,
+      "sell_cost": 45,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "1.6",
+      "status": "a"
+    },
+    {
+      "element": 279,
+      "name": "Ajayi",
+      "team": "Hull City",
+      "position": "DEF",
+      "purchase_cost": 40,
+      "now_cost": 41,
+      "sell_cost": 40,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "8.8",
+      "status": "a"
+    },
+    {
+      "element": 426,
+      "name": "B.Fernandes",
+      "team": "Man Utd",
+      "position": "MID",
+      "purchase_cost": 120,
+      "now_cost": 120,
+      "sell_cost": 120,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "48.6",
+      "status": "a"
+    },
+    {
+      "element": 15,
+      "name": "Ødegaard",
+      "team": "Arsenal",
+      "position": "MID",
+      "purchase_cost": 65,
+      "now_cost": 66,
+      "sell_cost": 65,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "11.2",
+      "status": "a"
+    },
+    {
+      "element": 557,
+      "name": "Tzolis",
+      "team": "Arsenal",
+      "position": "MID",
+      "purchase_cost": 65,
+      "now_cost": 65,
+      "sell_cost": 65,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "20.7",
+      "status": "a"
+    },
+    {
+      "element": 40,
+      "name": "Rogers",
+      "team": "Chelsea",
+      "position": "MID",
+      "purchase_cost": 75,
+      "now_cost": 75,
+      "sell_cost": 75,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "24.5",
+      "status": "a"
+    },
+    {
+      "element": 565,
+      "name": "M.Sangaré",
+      "team": "Brentford",
+      "position": "MID",
+      "purchase_cost": 55,
+      "now_cost": 57,
+      "sell_cost": 56,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "14.1",
+      "status": "a"
+    },
+    {
+      "element": 411,
+      "name": "Haaland",
+      "team": "Man City",
+      "position": "FWD",
+      "purchase_cost": 155,
+      "now_cost": 155,
+      "sell_cost": 155,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "71.4",
+      "status": "a"
+    },
+    {
+      "element": 165,
+      "name": "João Pedro",
+      "team": "Chelsea",
+      "position": "FWD",
+      "purchase_cost": 75,
+      "now_cost": 77,
+      "sell_cost": 76,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "69.6",
+      "status": "a"
+    },
+    {
+      "element": 346,
+      "name": "Calvert-Lewin",
+      "team": "Leeds",
+      "position": "FWD",
+      "purchase_cost": 60,
+      "now_cost": 60,
+      "sell_cost": 60,
+      "purchase_source": "user_capture_exact",
+      "finance_precision": "EXACT_USER_CAPTURE",
+      "ownership": "26.1",
+      "status": "a"
+    }
+  ],
+  "totals": {
+    "market_value": 1001,
+    "sell_value": 993,
+    "itb": 10
+  },
+  "governance": {
+    "ruleset_id": "FPL_2026_27",
+    "sell_value_formula_owned_by_team_value_engine": true,
+    "squad_identity_is_element_id_authoritative": true,
+    "purchase_reconstruction_baseline_gw": 1,
+    "planning_override_must_target_exact_gw": true,
+    "structured_user_capture_contract": "STRUCTURED_USER_CAPTURE_V1",
+    "canonical_applied_user_capture_authority": "LOCKED_PRE_DEADLINE",
+    "capture_can_override_private_own_team_state_only": true,
+    "official_public_player_facts_remain_authoritative": true,
+    "capture_finance_exact_only_when_explicitly_supplied": true,
+    "stale_planning_override_is_rejected": true,
+    "post_deadline_official_submission_reclaims_authority": true
+  }
+}

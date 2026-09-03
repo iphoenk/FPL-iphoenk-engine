@@ -1,0 +1,248 @@
+{
+  "schema_version": 1,
+  "contract": "V3_UNDERSTAT_TACTICAL_HEALTH_V1",
+  "generated_at": "2026-09-03T15:12:15.769574+00:00",
+  "status": "AVAILABLE",
+  "optional_enrichment": true,
+  "source": {
+    "provider": "Understat",
+    "availability": "AVAILABLE",
+    "freshness": "STALE",
+    "fetched_at": "2026-09-03T05:21:03.153925+00:00",
+    "source_timestamp": "2026-08-31 19:00:00",
+    "latest_match_covered": "2026-08-31 19:00:00",
+    "schema_valid": true,
+    "schema_defects": [],
+    "fallback": false,
+    "cache_age_minutes": 1026.59,
+    "request_count": 1,
+    "provenance": {
+      "provider": "Understat",
+      "url": "https://understat.com/getLeagueData/EPL/2026",
+      "landing_url": "https://understat.com/league/EPL/2026",
+      "transport": "HTTPS_JSON_XHR",
+      "transport_revision": "UNDERSTAT_XHR_JSON_V1",
+      "adapter": "src.sources.understat"
+    },
+    "latest_match_is_completed_evidence": true
+  },
+  "coverage": {
+    "status": "AVAILABLE",
+    "optional_enrichment": true,
+    "team_mapping_coverage": 20,
+    "official_universe_count": 652,
+    "player_mapping_count": 652,
+    "player_mapping_coverage": 1.0,
+    "canonical_identity_mapping_complete": true,
+    "source_linked_mapping_count": 349,
+    "source_linked_mapping_coverage": 0.5353,
+    "source_unlinked_official_count": 303,
+    "source_player_count": 364,
+    "source_player_mapping_count": 349,
+    "source_player_mapping_coverage": 0.9588,
+    "source_player_unmapped_count": 15,
+    "unresolved_mapping_count": 303,
+    "tactical_matchup_usable_count": 652,
+    "tactical_matchup_coverage": 1.0,
+    "fallback_state": "NONE",
+    "degradation_reason": null,
+    "provenance_coherent": true,
+    "mapping_method_counts": {
+      "CURRENT_OFFICIAL_IDENTITY_EXACT_SOURCE_TEAM_DRIFT": 4,
+      "TEAM_AND_IDENTITY_VARIANT_EXACT": 18,
+      "TEAM_AND_NORMALIZED_NAME_EXACT": 291,
+      "TEAM_SCOPED_IDENTITY_VARIANT_FUZZY": 3,
+      "TEAM_SCOPED_MULTI_TOKEN_IDENTITY_SUBSET": 33
+    },
+    "source_relative_denominator_is_observed_understat_players": true,
+    "official_universe_denominator_remains_all_fpl_players": true,
+    "source_player_unmapped_classifications": [
+      {
+        "understat_player_id": "8094",
+        "source_name": "Mathis Cherki",
+        "source_teams": [
+          "Manchester City"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "12410",
+        "source_name": "Joshua King",
+        "source_teams": [
+          "Fulham"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "1257",
+        "source_name": "Alisson",
+        "source_teams": [
+          "Liverpool"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "1736",
+        "source_name": "Oliver McBurnie",
+        "source_teams": [
+          "Hull"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "7298",
+        "source_name": "Ben White",
+        "source_teams": [
+          "Arsenal"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "8852",
+        "source_name": "Konstantinos Tsimikas",
+        "source_teams": [
+          "Liverpool"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "8864",
+        "source_name": "Matthew Cash",
+        "source_teams": [
+          "Aston Villa"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "9024",
+        "source_name": "Yeremi Pino",
+        "source_teams": [
+          "Crystal Palace"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "10485",
+        "source_name": "Guemissongui Ouattara",
+        "source_teams": [
+          "Ipswich"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "11772",
+        "source_name": "Yehor Yarmolyuk",
+        "source_teams": [
+          "Brentford"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "12032",
+        "source_name": "Djordje Petrovic",
+        "source_teams": [
+          "Bournemouth"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "12203",
+        "source_name": "Treymaurice Nyoni",
+        "source_teams": [
+          "Liverpool"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "12408",
+        "source_name": "Daniel Muñoz",
+        "source_teams": [
+          "Crystal Palace"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "13715",
+        "source_name": "Dan Ballard",
+        "source_teams": [
+          "Sunderland"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      },
+      {
+        "understat_player_id": "13779",
+        "source_name": "Jair",
+        "source_teams": [
+          "Nottingham Forest"
+        ],
+        "classification": "NOT_IN_CURRENT_OFFICIAL_UNIVERSE",
+        "review_required": false,
+        "current_official_candidates": []
+      }
+    ],
+    "source_player_mapping_review_required_count": 0,
+    "source_player_historical_or_noncurrent_count": 15,
+    "source_mapping_review_required": false,
+    "source_team_drift_repaired_count": 0,
+    "source_team_drift_repairs": [],
+    "current_universe_canonical_merge_complete": true,
+    "current_universe_canonical_merge_coverage": 1.0,
+    "full_current_universe_parity_ready": true
+  },
+  "canonical_merge": {
+    "team_profiles_enriched": 20,
+    "player_profiles_enriched": 652,
+    "player_return_routes_enriched": 301
+  },
+  "acquisition_mode": "FAST_CACHE_ONLY",
+  "derived_cache_reused": true,
+  "production_blocking": false,
+  "governance": {
+    "official_fpl_authority_preserved": true,
+    "missing_is_unknown_not_zero": true,
+    "stale_never_labeled_fresh": true,
+    "fast_decision_network_io_forbidden": true,
+    "understat_failure_does_not_block_unrelated_v3": true,
+    "ppda_direct_xpts_conversion_forbidden": true,
+    "existing_tactical_decision_path_reused": true,
+    "duplicate_decision_authority_forbidden": true,
+    "fast_reuses_normalized_tactical_snapshot_when_fingerprint_matches": true,
+    "source_relative_mapping_coverage_is_observable": true,
+    "latest_match_covered_uses_completed_evidence_only": true,
+    "unlinked_source_rows_are_classified_not_force_mapped": true,
+    "historical_source_residue_does_not_reduce_current_official_identity_coverage": true,
+    "current_identity_unlinked_source_rows_require_review": true,
+    "cross_team_source_drift_requires_unique_exact_multi_token_identity": true,
+    "cross_team_source_drift_never_overrides_official_team_authority": true,
+    "cross_team_fuzzy_identity_mapping_forbidden": true
+  },
+  "production_parity_status": "GREEN"
+}

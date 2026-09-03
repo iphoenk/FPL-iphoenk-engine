@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-09-03T22:08:15.896023+00:00",
+  "enabled": true,
+  "deep_stats": false,
+  "stats_gw": 2,
+  "core_insights": {
+    "ok": true,
+    "rows": 652,
+    "error": null
+  },
+  "vaastav": {
+    "ok": true,
+    "rows": 610,
+    "error": null,
+    "data_mode": "MERGED_GW_FALLBACK"
+  },
+  "deep": null,
+  "current_aliases": {
+    "shots": false,
+    "playermatchstats": false
+  },
+  "player_features": {
+    "contract": "PLAYER_FEATURE_CONTRACT_V1",
+    "decision_neutral": false,
+    "model_opt_in": "REC-01",
+    "player_count": 652,
+    "advanced_player_coverage": 359,
+    "tactical_role_player_coverage": 359,
+    "team_system_coverage": 20,
+    "tactical_role_decision_influence": "ADVISORY_ONLY",
+    "file": "data/player_features.json"
+  }
+}

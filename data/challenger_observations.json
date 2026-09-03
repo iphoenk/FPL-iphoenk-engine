@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "contract": "challenger_observation_v2",
+  "generated_at": "2026-09-03T22:08:19.153529+00:00",
+  "observations": [],
+  "counts": {
+    "fresh": 0,
+    "cached_last_known_good": 0,
+    "stale": 0,
+    "legacy": 0
+  },
+  "cross_source": [],
+  "policy": {
+    "official_native_fields_win": true,
+    "missing_observations_are_not_fabricated": true,
+    "source_reachability_is_separate_from_capability_health": true,
+    "cached_or_stale_rows_are_not_current": true
+  }
+}

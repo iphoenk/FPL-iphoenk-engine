@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "registry": "V3_INCREMENTAL_REUSE_STATE_V1",
+  "services": {
+    "prediction": {
+      "fingerprint": "8da0336f285afc21e553845805e9029dbe6c65cb292b764fdfba41d1e6895b0a"
+    },
+    "lineup_governance": {
+      "fingerprint": "ab6ef7940a0b531e339907aaec8c0eb83858ba8fb65a262c2e39f7ecc46f9b52"
+    },
+    "challenger": {
+      "fingerprint": "9879d4d30896bacc13929b98cf3c953f52b2978699d3eb133c16ff8ff333168f"
+    },
+    "tactical_context": {
+      "fingerprint": "3b8a38f3c8ce6ddc0623b17955d25b53d3b8e6ee41dc2bb0e3963053a10b09e1"
+    }
+  },
+  "package_optimizer_authority": {
+    "fingerprint": "ff606713f29b2f739eab9a7ecfb062dda4b47b26a4c96f0e3fba7b6a86264b06",
+    "authority_registry": "V3_FULL_OPTIMIZER_AUTHORITY_V2",
+    "search_authority": "FULL",
+    "recorded_profile": "exhaustive_precompute",
+    "optimizer_generated_at": "2026-09-03T22:37:15.893829+00:00",
+    "planning_gw": 3,
+    "ruleset_id": "FPL_2026_27",
+    "fingerprint_contract": "PERSISTED_OPTIMIZER_INPUTS_PLUS_CODE_IDENTITY_V1"
+  }
+}

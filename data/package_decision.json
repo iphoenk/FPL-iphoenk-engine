@@ -1,0 +1,89 @@
+{
+  "generated_at": "2026-09-03T22:37:16.395526+00:00",
+  "model": "package_governance_v1",
+  "ruleset_id": "FPL_2026_27",
+  "planning_gw": 3,
+  "selected_package": {
+    "id": "HOLD",
+    "changes": 0,
+    "outs": [],
+    "ins": [],
+    "affordability": {
+      "cash_available": 10,
+      "incoming_cost": 0,
+      "resulting_itb": 10
+    },
+    "score": {
+      "valid": true,
+      "horizons": {
+        "3": {
+          "valid": true,
+          "mean": 171.286,
+          "std": 22.967
+        },
+        "5": {
+          "valid": true,
+          "mean": 290.905,
+          "std": 29.999
+        },
+        "10": {
+          "valid": true,
+          "mean": 583.43,
+          "std": 42.6
+        },
+        "15": {
+          "valid": true,
+          "mean": 881.194,
+          "std": 52.428
+        }
+      },
+      "objective_mean": 343.573,
+      "objective_std": 16.105,
+      "change_penalty_points": 0.0,
+      "team_cluster_penalty_points": 0.05,
+      "robust_score": 341.59,
+      "guardrails": {
+        "early_season_change_cap_enabled": true,
+        "early_season_through_gw": 5,
+        "configured_max_changes": 2,
+        "effective_max_changes": 2,
+        "team_cluster_penalty_enabled": true,
+        "free_players_per_club": 2,
+        "points_per_extra_player": 0.05,
+        "cluster_excess_players": 1,
+        "cluster_penalty_points": 0.05,
+        "club_counts": {
+          "1": 3,
+          "4": 2,
+          "5": 2,
+          "6": 2,
+          "10": 1,
+          "11": 2,
+          "13": 1,
+          "15": 1,
+          "16": 1
+        }
+      }
+    },
+    "legal": true,
+    "sequential_legality": {
+      "resulting_itb": 10,
+      "steps": [],
+      "execution_order": [],
+      "orders_checked": 1
+    }
+  },
+  "selected_package_id": "HOLD",
+  "optimizer_best_candidate_id": "2:40,557->427,398",
+  "manual_authority_override": false,
+  "current_squad_legal": true,
+  "gate0_revalidated": true,
+  "governance": {
+    "optimizer_is_candidate_generator_only": true,
+    "locked_composition_preserved": false,
+    "manual_authority_wins": true,
+    "team_state_authority_consumed": true,
+    "legacy_lock_fixture_fallback": false,
+    "rejected_user_lock_cannot_freeze_package": false
+  }
+}

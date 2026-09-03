@@ -1,0 +1,44 @@
+{
+  "ruleset_id": "FPL_2026_27",
+  "checked_at": "2026-09-01T21:00:04.697088+00:00",
+  "status": "BASELINED",
+  "changed_sources": [],
+  "failed_sources": [],
+  "sources": {
+    "general_rules": {
+      "url": "https://fantasy.premierleague.com/help/rules",
+      "http_status": 200,
+      "fingerprint_sha256": "a44dcd44f0fe91c530e61db125b62c459610299c483ae1262faaa7652a6deb79",
+      "previous_fingerprint_sha256": null,
+      "changed": false
+    },
+    "scoring": {
+      "url": "https://www.premierleague.com/en/news/2174909/fpl-basics-explained-scoring-points",
+      "http_status": 200,
+      "fingerprint_sha256": "12c6e22331d4bf5c991c65c1c699423cbdebd58766e83cb2777cf29df904376b",
+      "previous_fingerprint_sha256": null,
+      "changed": false
+    },
+    "defensive_contributions": {
+      "url": "https://www.premierleague.com/en/news/4361991",
+      "http_status": 200,
+      "fingerprint_sha256": "94097ee45c31a84daab692d0b1a8a85e018f8aacade6a7ac365d075878d0b2ae",
+      "previous_fingerprint_sha256": null,
+      "changed": false
+    },
+    "chips": {
+      "url": "https://www.premierleague.com/en/news/4679879/whats-happening-with-fpl-chips-in-202627",
+      "http_status": 200,
+      "fingerprint_sha256": "2ba53633b951faa53d9c2c363ea5f7f3b53b4d65a68bfd7c5f7f808f8a8e39f6",
+      "previous_fingerprint_sha256": null,
+      "changed": false
+    },
+    "bps_changes": {
+      "url": "https://www.premierleague.com/en/news/4679946/whats-new-in-202627-fantasy-changes-to-bonus-points-system",
+      "http_status": 200,
+      "fingerprint_sha256": "f52b95c73dd9446759e1dfec736e3a2e09002809a1aeabeffbd981003481b5f7",
+      "previous_fingerprint_sha256": null,
+      "changed": false
+    }
+  }
+}

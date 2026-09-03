@@ -1,0 +1,500 @@
+{
+  "schema_version": 2,
+  "contract": "DECISION_VALIDATION_SNAPSHOTS_V1",
+  "records": {
+    "3": {
+      "gw": 3,
+      "captured_at": "2026-09-03T22:37:17.303835+00:00",
+      "deadline_time": "2026-09-04T17:30:00Z",
+      "status": "PREDEADLINE_CAPTURED",
+      "lineup": {
+        "starting_xi": [
+          {
+            "element": 572,
+            "position": "GK"
+          },
+          {
+            "element": 88,
+            "position": "DEF"
+          },
+          {
+            "element": 279,
+            "position": "DEF"
+          },
+          {
+            "element": 115,
+            "position": "DEF"
+          },
+          {
+            "element": 8,
+            "position": "DEF"
+          },
+          {
+            "element": 254,
+            "position": "DEF"
+          },
+          {
+            "element": 426,
+            "position": "MID"
+          },
+          {
+            "element": 565,
+            "position": "MID"
+          },
+          {
+            "element": 411,
+            "position": "FWD"
+          },
+          {
+            "element": 165,
+            "position": "FWD"
+          },
+          {
+            "element": 346,
+            "position": "FWD"
+          }
+        ],
+        "owned_squad": [
+          {
+            "element": 572,
+            "position": "GK"
+          },
+          {
+            "element": 109,
+            "position": "GK"
+          },
+          {
+            "element": 115,
+            "position": "DEF"
+          },
+          {
+            "element": 8,
+            "position": "DEF"
+          },
+          {
+            "element": 88,
+            "position": "DEF"
+          },
+          {
+            "element": 254,
+            "position": "DEF"
+          },
+          {
+            "element": 279,
+            "position": "DEF"
+          },
+          {
+            "element": 426,
+            "position": "MID"
+          },
+          {
+            "element": 15,
+            "position": "MID"
+          },
+          {
+            "element": 557,
+            "position": "MID"
+          },
+          {
+            "element": 40,
+            "position": "MID"
+          },
+          {
+            "element": 565,
+            "position": "MID"
+          },
+          {
+            "element": 411,
+            "position": "FWD"
+          },
+          {
+            "element": 165,
+            "position": "FWD"
+          },
+          {
+            "element": 346,
+            "position": "FWD"
+          }
+        ],
+        "captain": 426,
+        "vice_captain": 411,
+        "captain_candidates": [
+          426,
+          411,
+          88,
+          572,
+          346
+        ],
+        "bench_gk": 109,
+        "bench_order": [
+          15,
+          557,
+          40
+        ]
+      },
+      "comparator": {
+        "contract": "OWNED_CHALLENGER_DECISION_V3",
+        "capability_status": null,
+        "decision": {
+          "state": "REVIEW",
+          "execution_authorized": false,
+          "reason": "PAIR_EDGE_EXISTS_BUT_PACKAGE_NET_GAIN_NOT_ROBUST",
+          "no_transfer_recommended": false,
+          "no_transfer_message": null,
+          "selected_package_evidence": {
+            "replacements": 2,
+            "out": [
+              {
+                "element": 40,
+                "name": "Rogers",
+                "position": null
+              },
+              {
+                "element": 557,
+                "name": "Tzolis",
+                "position": null
+              }
+            ],
+            "in": [
+              {
+                "element": 427,
+                "name": "Mbeumo",
+                "position": null
+              },
+              {
+                "element": 398,
+                "name": "Foden",
+                "position": null
+              }
+            ],
+            "classification": null,
+            "robust_gain_vs_hold": 0.0,
+            "net_gain_3gw": null,
+            "net_gain_5gw": null,
+            "net_gain_10gw": null,
+            "net_gain_15gw": null,
+            "hit_cost": 0.0,
+            "legal": true,
+            "affordability": {
+              "cash_available": 150,
+              "incoming_cost": 150,
+              "resulting_itb": 0
+            },
+            "chip_context": null,
+            "free_transfer_context": null,
+            "source": "canonical_package_optimizer"
+          },
+          "market_timing_is_not_football_authority": true,
+          "package_optimizer_is_transfer_structure_authority": true
+        },
+        "comparisons": [
+          {
+            "player_out": 40,
+            "player_in": 427,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "PRICE_ACTIONABLE",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 557,
+            "player_in": 398,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 557,
+            "player_in": 94,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 40,
+            "player_in": 399,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "PRICE_ACTIONABLE",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 15,
+            "player_in": 398,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 40,
+            "player_in": 398,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 8,
+            "player_in": 388,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "OWNED_PRICE_ACTIONABLE",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 254,
+            "player_in": 84,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 557,
+            "player_in": 68,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 15,
+            "player_in": 94,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 254,
+            "player_in": 449,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 557,
+            "player_in": 86,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 557,
+            "player_in": 367,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "PRICE_ACTIONABLE",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 557,
+            "player_in": 368,
+            "state": "LEAN_TRANSFER",
+            "actionability": {
+              "level": "MATERIAL_UPGRADE",
+              "blockers": [],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "material challenger edge; review package/timing gates"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 557,
+            "player_in": 427,
+            "state": "REVIEW",
+            "actionability": {
+              "level": "REVIEW",
+              "blockers": [
+                "AFFORDABILITY"
+              ],
+              "market_timing": "PRICE_ACTIONABLE",
+              "reason": "evidence review required"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 15,
+            "player_in": 427,
+            "state": "REVIEW",
+            "actionability": {
+              "level": "REVIEW",
+              "blockers": [
+                "AFFORDABILITY"
+              ],
+              "market_timing": "PRICE_ACTIONABLE",
+              "reason": "evidence review required"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 557,
+            "player_in": 399,
+            "state": "REVIEW",
+            "actionability": {
+              "level": "REVIEW",
+              "blockers": [
+                "AFFORDABILITY"
+              ],
+              "market_timing": "PRICE_ACTIONABLE",
+              "reason": "evidence review required"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 254,
+            "player_in": 388,
+            "state": "REVIEW",
+            "actionability": {
+              "level": "REVIEW",
+              "blockers": [
+                "AFFORDABILITY"
+              ],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "evidence review required"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 565,
+            "player_in": 427,
+            "state": "REVIEW",
+            "actionability": {
+              "level": "REVIEW",
+              "blockers": [
+                "AFFORDABILITY"
+              ],
+              "market_timing": "PRICE_ACTIONABLE",
+              "reason": "evidence review required"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          },
+          {
+            "player_out": 557,
+            "player_in": 12,
+            "state": "REVIEW",
+            "actionability": {
+              "level": "REVIEW",
+              "blockers": [
+                "AFFORDABILITY"
+              ],
+              "market_timing": "MODEL_CONTEXT_ONLY",
+              "reason": "evidence review required"
+            },
+            "challenger_type": null,
+            "exact_hit_cost": null,
+            "hit_cost_state": "UNAVAILABLE_EXACT_HIT_COST"
+          }
+        ]
+      },
+      "governance": {
+        "genuine_predeadline_only": true,
+        "postdeadline_overwrite_forbidden": true,
+        "optimizer_change_penalty_is_not_fpl_hit_cost": true,
+        "missing_exact_hit_cost_is_never_invented": true,
+        "vice_and_bench_are_captured_only_when_genuinely_available_predeadline": true,
+        "historical_snapshots_are_not_retrofitted": true,
+        "reporting_owns_snapshot_capture": true,
+        "prediction_evaluation_is_consumer_only": true,
+        "challenger_decision_is_persisted_not_recomputed": true
+      }
+    }
+  },
+  "updated_at": "2026-09-03T22:37:17.303906+00:00",
+  "owner": "reporting.decision_snapshot_evidence"
+}

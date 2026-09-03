@@ -1,0 +1,999 @@
+{
+  "generated_at": "2026-09-03T22:33:28.019782+00:00",
+  "contract": "MATCH_MODE_LIVE_SCORE_V1",
+  "status": "RECONCILED_OR_IDLE",
+  "match_mode_active": false,
+  "scoring_gw": 2,
+  "submitted_picks_status": "AVAILABLE",
+  "event_live_status": "AVAILABLE",
+  "prediction_snapshot": {
+    "status": "AVAILABLE",
+    "source": "prediction_ledger.latest_pre_deadline_forecast",
+    "generated_at": "2026-08-28T16:40:29.506977+00:00",
+    "gw": 2
+  },
+  "coverage": {
+    "owned": 15,
+    "expected_owned": 15,
+    "complete": true
+  },
+  "gross_points": 93,
+  "hit": 0,
+  "net_points": 93,
+  "players": [
+    {
+      "element": 572,
+      "name": "Tzolakis",
+      "team": "Hull City",
+      "team_id": 11,
+      "position": "GK",
+      "fixture_status": "FT",
+      "pick_position": 1,
+      "bench_order": null,
+      "multiplier": 1,
+      "effective_points": 10,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 3.69,
+        "xmins": 60.0,
+        "start_probability": 0.7566,
+        "confidence": "LOW",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": 6.31,
+        "diagnostic_only": true
+      },
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 1,
+      "goals_conceded": 0,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 3,
+      "bonus": 3,
+      "bps": 32,
+      "total_points": 10,
+      "defensive_contribution": 0,
+      "explain": [
+        {
+          "fixture": 13,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "clean_sheets",
+              "points": 4,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "saves",
+              "points": 1,
+              "value": 3,
+              "points_modification": 0
+            },
+            {
+              "identifier": "bonus",
+              "points": 3,
+              "value": 3,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 115,
+      "name": "De Cuyper",
+      "team": "Brighton",
+      "team_id": 5,
+      "position": "DEF",
+      "fixture_status": "FT",
+      "pick_position": 2,
+      "bench_order": null,
+      "multiplier": 1,
+      "effective_points": 0,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 4.739,
+        "xmins": 66.7,
+        "start_probability": 0.7752,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": -4.739,
+        "diagnostic_only": true
+      },
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 4,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": -2,
+      "total_points": 0,
+      "defensive_contribution": 2,
+      "explain": [
+        {
+          "fixture": 16,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "goals_conceded",
+              "points": -2,
+              "value": 4,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 8,
+      "name": "Calafiori",
+      "team": "Arsenal",
+      "team_id": 1,
+      "position": "DEF",
+      "fixture_status": "FT",
+      "pick_position": 3,
+      "bench_order": null,
+      "multiplier": 1,
+      "effective_points": 11,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 3.853,
+        "xmins": 63.7,
+        "start_probability": 0.7947,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": 7.147,
+        "diagnostic_only": true
+      },
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 1,
+      "clean_sheets": 1,
+      "goals_conceded": 0,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 2,
+      "bps": 30,
+      "total_points": 11,
+      "defensive_contribution": 3,
+      "explain": [
+        {
+          "fixture": 20,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "assists",
+              "points": 3,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "clean_sheets",
+              "points": 4,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "bonus",
+              "points": 2,
+              "value": 2,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 88,
+      "name": "Kayode",
+      "team": "Brentford",
+      "team_id": 4,
+      "position": "DEF",
+      "fixture_status": "FT",
+      "pick_position": 4,
+      "bench_order": null,
+      "multiplier": 1,
+      "effective_points": 2,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 3.977,
+        "xmins": 78.7,
+        "start_probability": 0.8766,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": -1.977,
+        "diagnostic_only": true
+      },
+      "minutes": 87,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 1,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 9,
+      "total_points": 2,
+      "defensive_contribution": 4,
+      "explain": [
+        {
+          "fixture": 17,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 87,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 426,
+      "name": "B.Fernandes",
+      "team": "Man Utd",
+      "team_id": 16,
+      "position": "MID",
+      "fixture_status": "FT",
+      "pick_position": 5,
+      "bench_order": null,
+      "multiplier": 1,
+      "effective_points": 23,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 3.753,
+        "xmins": 78.2,
+        "start_probability": 0.8766,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": 19.247,
+        "diagnostic_only": true
+      },
+      "minutes": 90,
+      "goals_scored": 3,
+      "assists": 1,
+      "clean_sheets": 0,
+      "goals_conceded": 2,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 3,
+      "bps": 87,
+      "total_points": 23,
+      "defensive_contribution": 8,
+      "explain": [
+        {
+          "fixture": 18,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "goals_scored",
+              "points": 15,
+              "value": 3,
+              "points_modification": 0
+            },
+            {
+              "identifier": "assists",
+              "points": 3,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "bonus",
+              "points": 3,
+              "value": 3,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 15,
+      "name": "Ødegaard",
+      "team": "Arsenal",
+      "team_id": 1,
+      "position": "MID",
+      "fixture_status": "FT",
+      "pick_position": 6,
+      "bench_order": null,
+      "multiplier": 1,
+      "effective_points": 3,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 4.131,
+        "xmins": 68.4,
+        "start_probability": 0.7716,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": -1.131,
+        "diagnostic_only": true
+      },
+      "minutes": 70,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 1,
+      "goals_conceded": 0,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 13,
+      "total_points": 3,
+      "defensive_contribution": 5,
+      "explain": [
+        {
+          "fixture": 20,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 70,
+              "points_modification": 0
+            },
+            {
+              "identifier": "clean_sheets",
+              "points": 1,
+              "value": 1,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 557,
+      "name": "Tzolis",
+      "team": "Arsenal",
+      "team_id": 1,
+      "position": "MID",
+      "fixture_status": "FT",
+      "pick_position": 7,
+      "bench_order": null,
+      "multiplier": 1,
+      "effective_points": 0,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 3.688,
+        "xmins": 57.8,
+        "start_probability": 0.7566,
+        "confidence": "LOW",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": -3.688,
+        "diagnostic_only": true
+      },
+      "minutes": 45,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 0,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 1,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 1,
+      "total_points": 0,
+      "defensive_contribution": 3,
+      "explain": [
+        {
+          "fixture": 20,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 1,
+              "value": 45,
+              "points_modification": 0
+            },
+            {
+              "identifier": "yellow_cards",
+              "points": -1,
+              "value": 1,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 40,
+      "name": "Rogers",
+      "team": "Chelsea",
+      "team_id": 6,
+      "position": "MID",
+      "fixture_status": "FT",
+      "pick_position": 8,
+      "bench_order": null,
+      "multiplier": 1,
+      "effective_points": 5,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 3.309,
+        "xmins": 61.8,
+        "start_probability": 0.7517,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": 1.691,
+        "diagnostic_only": true
+      },
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 1,
+      "clean_sheets": 0,
+      "goals_conceded": 3,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 28,
+      "total_points": 5,
+      "defensive_contribution": 5,
+      "explain": [
+        {
+          "fixture": 16,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "assists",
+              "points": 3,
+              "value": 1,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 411,
+      "name": "Haaland",
+      "team": "Man City",
+      "team_id": 15,
+      "position": "FWD",
+      "fixture_status": "FT",
+      "pick_position": 9,
+      "bench_order": null,
+      "multiplier": 1,
+      "effective_points": 13,
+      "captain": false,
+      "vice": true,
+      "pre_match_prediction": {
+        "xpts": 5.985,
+        "xmins": 77.0,
+        "start_probability": 0.8683,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": 7.015,
+        "diagnostic_only": true
+      },
+      "minutes": 90,
+      "goals_scored": 2,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 1,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 3,
+      "bps": 60,
+      "total_points": 13,
+      "defensive_contribution": 5,
+      "explain": [
+        {
+          "fixture": 11,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "goals_scored",
+              "points": 8,
+              "value": 2,
+              "points_modification": 0
+            },
+            {
+              "identifier": "bonus",
+              "points": 3,
+              "value": 3,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 165,
+      "name": "João Pedro",
+      "team": "Chelsea",
+      "team_id": 6,
+      "position": "FWD",
+      "fixture_status": "FT",
+      "pick_position": 10,
+      "bench_order": null,
+      "multiplier": 2,
+      "effective_points": 18,
+      "captain": true,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 3.887,
+        "xmins": 74.1,
+        "start_probability": 0.8426,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": 5.113,
+        "diagnostic_only": true
+      },
+      "minutes": 90,
+      "goals_scored": 1,
+      "assists": 1,
+      "clean_sheets": 0,
+      "goals_conceded": 3,
+      "own_goals": 1,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 2,
+      "bps": 44,
+      "total_points": 9,
+      "defensive_contribution": 3,
+      "explain": [
+        {
+          "fixture": 16,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "goals_scored",
+              "points": 4,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "assists",
+              "points": 3,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "own_goals",
+              "points": -2,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "bonus",
+              "points": 2,
+              "value": 2,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 346,
+      "name": "Calvert-Lewin",
+      "team": "Leeds",
+      "team_id": 13,
+      "position": "FWD",
+      "fixture_status": "FT",
+      "pick_position": 11,
+      "bench_order": null,
+      "multiplier": 1,
+      "effective_points": 8,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 3.123,
+        "xmins": 76.9,
+        "start_probability": 0.8323,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": 4.877,
+        "diagnostic_only": true
+      },
+      "minutes": 90,
+      "goals_scored": 1,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 1,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 2,
+      "bps": 31,
+      "total_points": 8,
+      "defensive_contribution": 4,
+      "explain": [
+        {
+          "fixture": 17,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "goals_scored",
+              "points": 4,
+              "value": 1,
+              "points_modification": 0
+            },
+            {
+              "identifier": "bonus",
+              "points": 2,
+              "value": 2,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 109,
+      "name": "Verbruggen",
+      "team": "Brighton",
+      "team_id": 5,
+      "position": "GK",
+      "fixture_status": "FT",
+      "pick_position": 12,
+      "bench_order": 1,
+      "multiplier": 0,
+      "effective_points": 0,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 3.271,
+        "xmins": 80.3,
+        "start_probability": 0.8766,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": -3.271,
+        "diagnostic_only": true
+      },
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 4,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 1,
+      "bonus": 0,
+      "bps": -1,
+      "total_points": 0,
+      "defensive_contribution": 0,
+      "explain": [
+        {
+          "fixture": 16,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "goals_conceded",
+              "points": -2,
+              "value": 4,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 565,
+      "name": "M.Sangaré",
+      "team": "Brentford",
+      "team_id": 4,
+      "position": "MID",
+      "fixture_status": "FT",
+      "pick_position": 13,
+      "bench_order": 2,
+      "multiplier": 0,
+      "effective_points": 0,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 3.472,
+        "xmins": 57.8,
+        "start_probability": 0.7566,
+        "confidence": "LOW",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": 0.528,
+        "diagnostic_only": true
+      },
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 1,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 16,
+      "total_points": 4,
+      "defensive_contribution": 14,
+      "explain": [
+        {
+          "fixture": 17,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            },
+            {
+              "identifier": "defensive_contribution",
+              "points": 2,
+              "value": 14,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 254,
+      "name": "Robinson",
+      "team": "Fulham",
+      "team_id": 10,
+      "position": "DEF",
+      "fixture_status": "FT",
+      "pick_position": 14,
+      "bench_order": 3,
+      "multiplier": 0,
+      "effective_points": 0,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 3.348,
+        "xmins": 70.5,
+        "start_probability": 0.7752,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": -1.348,
+        "diagnostic_only": true
+      },
+      "minutes": 90,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 1,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 0,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 10,
+      "total_points": 2,
+      "defensive_contribution": 3,
+      "explain": [
+        {
+          "fixture": 19,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 90,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "element": 473,
+      "name": "Aina",
+      "team": "Nott'm Forest",
+      "team_id": 18,
+      "position": "DEF",
+      "fixture_status": "FT",
+      "pick_position": 15,
+      "bench_order": 4,
+      "multiplier": 0,
+      "effective_points": 0,
+      "captain": false,
+      "vice": false,
+      "pre_match_prediction": {
+        "xpts": 2.999,
+        "xmins": 71.3,
+        "start_probability": 0.7789,
+        "confidence": "MEDIUM",
+        "source": "prediction_ledger.latest_pre_deadline_forecast"
+      },
+      "actual_vs_predicted": {
+        "raw_points_minus_xpts": -2.999,
+        "diagnostic_only": true
+      },
+      "minutes": 85,
+      "goals_scored": 0,
+      "assists": 0,
+      "clean_sheets": 0,
+      "goals_conceded": 2,
+      "own_goals": 0,
+      "penalties_saved": 0,
+      "penalties_missed": 0,
+      "yellow_cards": 1,
+      "red_cards": 0,
+      "saves": 0,
+      "bonus": 0,
+      "bps": 2,
+      "total_points": 0,
+      "defensive_contribution": 5,
+      "explain": [
+        {
+          "fixture": 14,
+          "stats": [
+            {
+              "identifier": "minutes",
+              "points": 2,
+              "value": 85,
+              "points_modification": 0
+            },
+            {
+              "identifier": "goals_conceded",
+              "points": -1,
+              "value": 2,
+              "points_modification": 0
+            },
+            {
+              "identifier": "yellow_cards",
+              "points": -1,
+              "value": 1,
+              "points_modification": 0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "personalized_live_score": {
+    "status": "RECONCILED_OR_IDLE",
+    "effective_xi_points": 93,
+    "bench_points": 6,
+    "captain_raw_points": 9,
+    "captain_effective_contribution": 18,
+    "players_ft": 15,
+    "players_live": 0,
+    "players_not_started": 0,
+    "provisional_bonus_total": 15,
+    "hit": 0,
+    "current_effective_total": 93,
+    "current_net_total": 93,
+    "autosub_implications": {
+      "status": "PROVISIONAL",
+      "potential_out": [],
+      "bench_candidates": [
+        "M.Sangaré",
+        "Robinson"
+      ],
+      "note": "Official finalization remains authoritative; no autosub is inferred into the current total."
+    }
+  },
+  "governance": {
+    "submitted_picks_are_scoring_authority": true,
+    "planning_xi_cannot_replace_submitted_picks": true,
+    "actual_vs_predicted_is_diagnostic_only": true,
+    "single_match_performance_cannot_authorize_transfer": true
+  }
+}

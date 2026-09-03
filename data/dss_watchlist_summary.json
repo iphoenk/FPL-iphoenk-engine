@@ -1,0 +1,685 @@
+{
+  "status": "READY",
+  "screening_contract": "FULL_DSS_SCREEN_V1",
+  "count": 20,
+  "per_position": 5,
+  "positions": {
+    "GK": [
+      {
+        "element": 82,
+        "rank": 1,
+        "lifecycle": "KEEP",
+        "name": "Kelleher",
+        "team": "Brentford",
+        "position": "GK",
+        "price": 5.0,
+        "xmins": 81.1,
+        "start_probability": 0.8865,
+        "xpts_5": 20.731,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "proyeksi 5-GW kuat",
+        "main_risk": "evidence set-piece/penalty belum cukup",
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 82,
+        "ownership_pct": "7.5",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 82,
+          "resolved_element_id": 82,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 226,
+        "rank": 2,
+        "lifecycle": "KEEP",
+        "name": "Pickford",
+        "team": "Everton",
+        "position": "GK",
+        "price": 5.5,
+        "xmins": 81.1,
+        "start_probability": 0.8865,
+        "xpts_5": 20.448,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "proyeksi 3-GW kuat",
+        "main_risk": "evidence set-piece/penalty belum cukup",
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 226,
+        "ownership_pct": "8.7",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 226,
+          "resolved_element_id": 226,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 57,
+        "rank": 3,
+        "lifecycle": "KEEP",
+        "name": "Petrović",
+        "team": "Bournemouth",
+        "position": "GK",
+        "price": 4.5,
+        "xmins": 81.1,
+        "start_probability": 0.8865,
+        "xpts_5": 19.277,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "starter security / xMins kuat",
+        "main_risk": "evidence set-piece/penalty belum cukup",
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 57,
+        "ownership_pct": "3.4",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 57,
+          "resolved_element_id": 57,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 467,
+        "rank": 4,
+        "lifecycle": "KEEP",
+        "name": "Sels",
+        "team": "Nott'm Forest",
+        "position": "GK",
+        "price": 5.0,
+        "xmins": 77.2,
+        "start_probability": 0.8483,
+        "xpts_5": 19.381,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "proyeksi 3-GW kuat",
+        "main_risk": "evidence set-piece/penalty belum cukup",
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 467,
+        "ownership_pct": "1.4",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 467,
+          "resolved_element_id": 467,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 384,
+        "rank": 5,
+        "lifecycle": "KEEP",
+        "name": "Donnarumma",
+        "team": "Man City",
+        "position": "GK",
+        "price": 5.5,
+        "xmins": 80.5,
+        "start_probability": 0.8787,
+        "xpts_5": 19.129,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "starter security / xMins kuat",
+        "main_risk": "evidence set-piece/penalty belum cukup",
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 384,
+        "ownership_pct": "8.0",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 384,
+          "resolved_element_id": 384,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      }
+    ],
+    "DEF": [
+      {
+        "element": 388,
+        "rank": 1,
+        "lifecycle": "KEEP",
+        "name": "Guéhi",
+        "team": "Man City",
+        "position": "DEF",
+        "price": 6.0,
+        "xmins": 81.1,
+        "start_probability": 0.8865,
+        "xpts_5": 26.986,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "proyeksi 3-GW kuat",
+        "main_risk": "evidence set-piece/penalty belum cukup",
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 388,
+        "ownership_pct": "18.8",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 388,
+          "resolved_element_id": 388,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 229,
+        "rank": 2,
+        "lifecycle": "KEEP",
+        "name": "Tarkowski",
+        "team": "Everton",
+        "position": "DEF",
+        "price": 6.0,
+        "xmins": 81.1,
+        "start_probability": 0.8865,
+        "xpts_5": 22.029,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "starter security / xMins kuat",
+        "main_risk": "evidence set-piece/penalty belum cukup",
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 229,
+        "ownership_pct": "10.6",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 229,
+          "resolved_element_id": 229,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 387,
+        "rank": 3,
+        "lifecycle": "KEEP",
+        "name": "O'Reilly",
+        "team": "Man City",
+        "position": "DEF",
+        "price": 6.5,
+        "xmins": 77.3,
+        "start_probability": 0.8376,
+        "xpts_5": 23.359,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "proyeksi 3-GW kuat",
+        "main_risk": "evidence set-piece/penalty belum cukup",
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 387,
+        "ownership_pct": "18.9",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 387,
+          "resolved_element_id": 387,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 84,
+        "rank": 4,
+        "lifecycle": "KEEP",
+        "name": "Collins",
+        "team": "Brentford",
+        "position": "DEF",
+        "price": 5.5,
+        "xmins": 78.0,
+        "start_probability": 0.8473,
+        "xpts_5": 21.73,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "proyeksi 3-GW kuat",
+        "main_risk": "evidence set-piece/penalty belum cukup",
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 84,
+        "ownership_pct": "2.3",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 84,
+          "resolved_element_id": 84,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 449,
+        "rank": 5,
+        "lifecycle": "KEEP",
+        "name": "Hall",
+        "team": "Newcastle",
+        "position": "DEF",
+        "price": 5.1,
+        "xmins": 75.6,
+        "start_probability": 0.8157,
+        "xpts_5": 21.452,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "proyeksi 5-GW kuat",
+        "main_risk": null,
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 449,
+        "ownership_pct": "9.2",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 449,
+          "resolved_element_id": 449,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      }
+    ],
+    "MID": [
+      {
+        "element": 427,
+        "rank": 1,
+        "lifecycle": "KEEP",
+        "name": "Mbeumo",
+        "team": "Man Utd",
+        "position": "MID",
+        "price": 8.0,
+        "xmins": 73.7,
+        "start_probability": 0.8547,
+        "xpts_5": 29.586,
+        "confidence": "HIGH",
+        "action": "PROMOTE REVIEW",
+        "main_reason": "proyeksi 3-GW kuat",
+        "main_risk": null,
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 427,
+        "ownership_pct": "28.7",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 427,
+          "resolved_element_id": 427,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 94,
+        "rank": 2,
+        "lifecycle": "UP",
+        "name": "Schade",
+        "team": "Brentford",
+        "position": "MID",
+        "price": 6.0,
+        "xmins": 75.6,
+        "start_probability": 0.8618,
+        "xpts_5": 23.563,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "starter security / xMins kuat",
+        "main_risk": null,
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 94,
+        "ownership_pct": "4.2",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 94,
+          "resolved_element_id": 94,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 398,
+        "rank": 3,
+        "lifecycle": "DOWN",
+        "name": "Foden",
+        "team": "Man City",
+        "position": "MID",
+        "price": 7.0,
+        "xmins": 75.3,
+        "start_probability": 0.8126,
+        "xpts_5": 25.693,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "proyeksi 3-GW kuat",
+        "main_risk": null,
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 398,
+        "ownership_pct": "5.4",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 398,
+          "resolved_element_id": 398,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 367,
+        "rank": 4,
+        "lifecycle": "KEEP",
+        "name": "Gakpo",
+        "team": "Liverpool",
+        "position": "MID",
+        "price": 7.0,
+        "xmins": 75.3,
+        "start_probability": 0.8618,
+        "xpts_5": 20.234,
+        "confidence": "HIGH",
+        "action": "PROMOTE REVIEW",
+        "main_reason": "starter security / xMins kuat",
+        "main_risk": null,
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 367,
+        "ownership_pct": "8.4",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 367,
+          "resolved_element_id": 367,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 12,
+        "rank": 5,
+        "lifecycle": "KEEP",
+        "name": "Saka",
+        "team": "Arsenal",
+        "position": "MID",
+        "price": 9.5,
+        "xmins": 75.0,
+        "start_probability": 0.8224,
+        "xpts_5": 24.827,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "proyeksi 3-GW kuat",
+        "main_risk": null,
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 12,
+        "ownership_pct": "10.7",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 12,
+          "resolved_element_id": 12,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      }
+    ],
+    "FWD": [
+      {
+        "element": 106,
+        "rank": 1,
+        "lifecycle": "UP",
+        "name": "Thiago",
+        "team": "Brentford",
+        "position": "FWD",
+        "price": 8.0,
+        "xmins": 80.0,
+        "start_probability": 0.8865,
+        "xpts_5": 23.473,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "proyeksi 3-GW kuat",
+        "main_risk": null,
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 106,
+        "ownership_pct": "14.3",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 106,
+          "resolved_element_id": 106,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 249,
+        "rank": 2,
+        "lifecycle": "DOWN",
+        "name": "Barry",
+        "team": "Everton",
+        "position": "FWD",
+        "price": 5.5,
+        "xmins": 74.7,
+        "start_probability": 0.8046,
+        "xpts_5": 21.04,
+        "confidence": "HIGH",
+        "action": "PROMOTE REVIEW",
+        "main_reason": "proyeksi 3-GW kuat",
+        "main_risk": null,
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 249,
+        "ownership_pct": "4.6",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 249,
+          "resolved_element_id": 249,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 379,
+        "rank": 3,
+        "lifecycle": "KEEP",
+        "name": "Isak",
+        "team": "Liverpool",
+        "position": "FWD",
+        "price": 9.0,
+        "xmins": 69.0,
+        "start_probability": 0.7628,
+        "xpts_5": 18.545,
+        "confidence": "MEDIUM",
+        "action": "WATCH",
+        "main_reason": "proyeksi 3-GW kuat",
+        "main_risk": null,
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 379,
+        "ownership_pct": "16.7",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 379,
+          "resolved_element_id": 379,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 464,
+        "rank": 4,
+        "lifecycle": "KEEP",
+        "name": "Wissa",
+        "team": "Newcastle",
+        "position": "FWD",
+        "price": 6.1,
+        "xmins": 65.9,
+        "start_probability": 0.6928,
+        "xpts_5": 18.843,
+        "confidence": "MEDIUM",
+        "action": "WATCH",
+        "main_reason": "underlying profile kuat",
+        "main_risk": null,
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 464,
+        "ownership_pct": "13.1",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 464,
+          "resolved_element_id": 464,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      },
+      {
+        "element": 79,
+        "rank": 5,
+        "lifecycle": "KEEP",
+        "name": "Evanilson",
+        "team": "Bournemouth",
+        "position": "FWD",
+        "price": 6.0,
+        "xmins": 75.5,
+        "start_probability": 0.8618,
+        "xpts_5": 16.516,
+        "confidence": "HIGH",
+        "action": "WATCH",
+        "main_reason": "starter security / xMins kuat",
+        "main_risk": "evidence set-piece/penalty belum cukup",
+        "price_risk": {
+          "direction": null,
+          "urgency": null,
+          "progress_pct": null
+        },
+        "element_id": 79,
+        "ownership_pct": "3.2",
+        "status": "a",
+        "fact_authority": "PUBLIC_OFFICIAL_FACT",
+        "official_fact_snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+        "resolver_provenance": {
+          "resolver": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+          "requested_element_id": 79,
+          "resolved_element_id": 79,
+          "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00"
+        }
+      }
+    ]
+  },
+  "official_fact_integrity": {
+    "status": "PASS",
+    "owned": "Owned Official FACT completeness = 15/15",
+    "watchlist": "Watchlist Official FACT completeness = 20/20",
+    "resolver": {
+      "method": "OFFICIAL_BOOTSTRAP_ELEMENT_ID",
+      "expected": 35,
+      "provenance_complete": 35,
+      "status": "PASS"
+    },
+    "authority": "PUBLIC_OFFICIAL_FACT",
+    "source": "Official FPL bootstrap-static",
+    "snapshot_id": "bootstrap-static@2026-09-03T22:33:27.603257+00:00",
+    "fetched_at": "2026-09-03T22:33:27.603257+00:00",
+    "freshness_state": "FRESH",
+    "fallback": false,
+    "fallback_banner": null,
+    "last_verified_at": "2026-09-03T22:33:27.603257+00:00",
+    "age_seconds": 0,
+    "confidence": "HIGH",
+    "fact_model_separation": {
+      "current_price": "FACT",
+      "current_ownership": "FACT",
+      "confirmed_official_change": "FACT",
+      "price_prediction": "MODEL",
+      "purchase_price": "PERSONAL_AUTH_FACT_OR_RECONSTRUCTED_PERSONAL_FACT",
+      "exact_sell_value": "PERSONAL_AUTH_FACT_WHEN_AVAILABLE"
+    }
+  }
+}

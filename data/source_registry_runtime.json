@@ -1,0 +1,717 @@
+{
+  "generated_at": "2026-09-03T22:08:19.153972+00:00",
+  "registry": {
+    "registry": "SOURCE_REGISTRY_V4",
+    "schema_version": 5,
+    "declared": 9,
+    "enabled": 8,
+    "authoritative": [
+      "official_fpl"
+    ],
+    "challengers": [
+      "onefpl",
+      "fffix",
+      "ffhub"
+    ],
+    "enrichment": [
+      "fpl_core_insights",
+      "vaastav",
+      "open_meteo",
+      "ffscout",
+      "understat"
+    ],
+    "integrity_ok": true
+  },
+  "sources": [
+    {
+      "id": "official_fpl",
+      "class": "AUTHORITATIVE",
+      "status": "LIVE",
+      "reachable": true,
+      "observation_count": 0
+    },
+    {
+      "id": "fpl_core_insights",
+      "class": "ENRICHMENT",
+      "status": "LIVE",
+      "reachable": true,
+      "observation_count": 2
+    },
+    {
+      "id": "vaastav",
+      "class": "ENRICHMENT",
+      "status": "LIVE",
+      "reachable": true,
+      "observation_count": 1
+    },
+    {
+      "id": "open_meteo",
+      "class": "ENRICHMENT",
+      "status": "LIVE",
+      "reachable": true,
+      "observation_count": 10
+    },
+    {
+      "id": "onefpl",
+      "class": "CHALLENGER",
+      "status": "DISABLED",
+      "reachable": false,
+      "observation_count": 0
+    },
+    {
+      "id": "fffix",
+      "class": "CHALLENGER",
+      "status": "LIVE",
+      "reachable": true,
+      "observation_count": 0
+    },
+    {
+      "id": "ffhub",
+      "class": "CHALLENGER",
+      "status": "LIVE",
+      "reachable": true,
+      "observation_count": 0
+    },
+    {
+      "id": "ffscout",
+      "class": "ENRICHMENT",
+      "status": "LIVE",
+      "reachable": true,
+      "observation_count": 0
+    },
+    {
+      "id": "understat",
+      "class": "ENRICHMENT",
+      "status": "PARTIAL",
+      "reachable": true,
+      "observation_count": 652
+    }
+  ],
+  "capability_health": [
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "player_identity",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "prices",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "price_prediction",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "fixtures",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "entry",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "entry_history",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "entry_picks",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "entry_transfers",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "league_standings",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "element_summary",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "event_live",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "event_status",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "dream_team",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "set_piece_notes",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "history",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "picks",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "live",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "official_fpl",
+      "source_class": "AUTHORITATIVE",
+      "capability": "rules_native_fields",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AUTHORITATIVE_NATIVE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fpl_core_insights",
+      "source_class": "ENRICHMENT",
+      "capability": "advanced_stats",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fpl_core_insights",
+      "source_class": "ENRICHMENT",
+      "capability": "shots",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fpl_core_insights",
+      "source_class": "ENRICHMENT",
+      "capability": "player_match_stats",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fpl_core_insights",
+      "source_class": "ENRICHMENT",
+      "capability": "observed_team_attack_profile",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fpl_core_insights",
+      "source_class": "ENRICHMENT",
+      "capability": "observed_opponent_concession_profile",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fpl_core_insights",
+      "source_class": "ENRICHMENT",
+      "capability": "shot_location_context",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fpl_core_insights",
+      "source_class": "ENRICHMENT",
+      "capability": "observed_player_return_routes",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fpl_core_insights",
+      "source_class": "ENRICHMENT",
+      "capability": "recent_tactical_event_context",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "vaastav",
+      "source_class": "ENRICHMENT",
+      "capability": "historical_prior",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "vaastav",
+      "source_class": "ENRICHMENT",
+      "capability": "previous_season_stats",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "open_meteo",
+      "source_class": "ENRICHMENT",
+      "capability": "fixture_weather",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AVAILABLE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "open_meteo",
+      "source_class": "ENRICHMENT",
+      "capability": "weather_anomaly_context",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "AVAILABLE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "onefpl",
+      "source_class": "CHALLENGER",
+      "capability": "price_prediction",
+      "source_status": "DISABLED",
+      "source_reachable": false,
+      "data_state": "DISABLED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "onefpl",
+      "source_class": "CHALLENGER",
+      "capability": "transfer_trends",
+      "source_status": "DISABLED",
+      "source_reachable": false,
+      "data_state": "DISABLED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "onefpl",
+      "source_class": "CHALLENGER",
+      "capability": "captaincy_context",
+      "source_status": "DISABLED",
+      "source_reachable": false,
+      "data_state": "DISABLED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "onefpl",
+      "source_class": "CHALLENGER",
+      "capability": "planner_context",
+      "source_status": "DISABLED",
+      "source_reachable": false,
+      "data_state": "DISABLED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fffix",
+      "source_class": "CHALLENGER",
+      "capability": "price_prediction",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fffix",
+      "source_class": "CHALLENGER",
+      "capability": "predicted_points",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fffix",
+      "source_class": "CHALLENGER",
+      "capability": "predicted_lineups",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "fffix",
+      "source_class": "CHALLENGER",
+      "capability": "ownership_context",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "ffhub",
+      "source_class": "CHALLENGER",
+      "capability": "predicted_points",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "ffhub",
+      "source_class": "CHALLENGER",
+      "capability": "team_optimization",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "ffhub",
+      "source_class": "CHALLENGER",
+      "capability": "ownership_context",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "ffhub",
+      "source_class": "CHALLENGER",
+      "capability": "mini_league_context",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "ffscout",
+      "source_class": "ENRICHMENT",
+      "capability": "team_news",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "ffscout",
+      "source_class": "ENRICHMENT",
+      "capability": "predicted_lineups",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "ffscout",
+      "source_class": "ENRICHMENT",
+      "capability": "role_context",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "ffscout",
+      "source_class": "ENRICHMENT",
+      "capability": "set_piece_context",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "ffscout",
+      "source_class": "ENRICHMENT",
+      "capability": "community_analysis",
+      "source_status": "LIVE",
+      "source_reachable": true,
+      "data_state": "SOURCE_REACHABLE_NOT_INGESTED",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "xg",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "xa",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "xgchain",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "xgbuildup",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "shots",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "key_passes",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "team_xg",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "team_xga",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "ppda",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "ppda_allowed",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "deep",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "deep_allowed",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "rolling_1",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "rolling_3",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "rolling_5",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "home_away",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "opponent_context",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "player_role_interaction",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "tactical_matchup",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    },
+    {
+      "source_id": "understat",
+      "source_class": "ENRICHMENT",
+      "capability": "full_universe_tactical_enrichment",
+      "source_status": "PARTIAL",
+      "source_reachable": true,
+      "data_state": "STALE",
+      "fresh_observations": 0
+    }
+  ],
+  "structured_observations": {
+    "fresh": 0,
+    "cached_last_known_good": 0,
+    "stale": 0,
+    "disagreements": 0
+  },
+  "weather": {
+    "provider": "open_meteo",
+    "fixture_count": 10,
+    "available_count": 10,
+    "material_count": 2,
+    "advisory_only": true
+  },
+  "policy": {
+    "official_native_fields_win": true,
+    "challenger_failure_does_not_block": true,
+    "missing_observations_are_not_fabricated": true,
+    "public_probe_does_not_equal_data_ingestion": true,
+    "source_reachability_is_separate_from_capability_health": true,
+    "stale_observations_are_never_silently_current": true,
+    "weather_is_advisory_enrichment_only": true
+  }
+}

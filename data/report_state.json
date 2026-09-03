@@ -1,0 +1,206 @@
+{
+  "checkpoint_history": [
+    {
+      "slot_id": "DAILY_DEEP",
+      "label": "Review pagi 04:30 WIB",
+      "local_date": "2026-08-31",
+      "scheduled_local": "2026-08-31T04:30:00+07:00",
+      "generated_at_utc": "2026-08-31T02:09:50.647900+00:00",
+      "generated_local": "2026-08-31T09:09:50.647900+07:00",
+      "status": "LATE_RECOVERED",
+      "timeliness": "LATE_RECOVERED"
+    },
+    {
+      "slot_id": "MIDDAY_CATCHUP",
+      "label": "Catch-up 12:30 WIB",
+      "local_date": "2026-08-31",
+      "scheduled_local": "2026-08-31T12:30:00+07:00",
+      "generated_at_utc": "2026-08-31T05:51:27.875404+00:00",
+      "generated_local": "2026-08-31T12:51:27.875404+07:00",
+      "status": "COMPLETED",
+      "timeliness": "ON_TIME_WINDOW"
+    },
+    {
+      "slot_id": "EVENING_CHECK",
+      "label": "Review malam 21:30 WIB",
+      "local_date": "2026-08-31",
+      "scheduled_local": "2026-08-31T21:30:00+07:00",
+      "generated_at_utc": "2026-08-31T15:00:31.641651+00:00",
+      "generated_local": "2026-08-31T22:00:31.641651+07:00",
+      "status": "COMPLETED",
+      "timeliness": "ON_TIME_WINDOW"
+    },
+    {
+      "slot_id": "DAILY_DEEP",
+      "label": "Review pagi 04:30 WIB",
+      "local_date": "2026-09-01",
+      "scheduled_local": "2026-09-01T04:30:00+07:00",
+      "generated_at_utc": "2026-08-31T22:52:23.760059+00:00",
+      "generated_local": "2026-09-01T05:52:23.760059+07:00",
+      "status": "LATE_RECOVERED",
+      "timeliness": "LATE_RECOVERED"
+    },
+    {
+      "slot_id": "MIDDAY_CATCHUP",
+      "label": "Catch-up 12:30 WIB",
+      "local_date": "2026-09-01",
+      "scheduled_local": "2026-09-01T12:30:00+07:00",
+      "generated_at_utc": "2026-09-01T05:31:22.124323+00:00",
+      "generated_local": "2026-09-01T12:31:22.124323+07:00",
+      "status": "COMPLETED",
+      "timeliness": "ON_TIME_WINDOW"
+    },
+    {
+      "slot_id": "DAILY_DEEP",
+      "label": "Review pagi 04:30 WIB",
+      "local_date": "2026-09-02",
+      "scheduled_local": "2026-09-02T04:30:00+07:00",
+      "generated_at_utc": "2026-09-01T23:17:12.235786+00:00",
+      "generated_local": "2026-09-02T06:17:12.235786+07:00",
+      "status": "LATE_RECOVERED",
+      "timeliness": "LATE_RECOVERED"
+    },
+    {
+      "slot_id": "MIDDAY_CATCHUP",
+      "label": "Catch-up 12:30 WIB",
+      "local_date": "2026-09-02",
+      "scheduled_local": "2026-09-02T12:30:00+07:00",
+      "generated_at_utc": "2026-09-02T10:46:17.817919+00:00",
+      "generated_local": "2026-09-02T17:46:17.817919+07:00",
+      "status": "LATE_RECOVERED",
+      "timeliness": "LATE_RECOVERED"
+    },
+    {
+      "slot_id": "EVENING_CHECK",
+      "label": "Review malam 21:30 WIB",
+      "local_date": "2026-09-02",
+      "scheduled_local": "2026-09-02T21:30:00+07:00",
+      "generated_at_utc": "2026-09-02T14:46:55.603492+00:00",
+      "generated_local": "2026-09-02T21:46:55.603492+07:00",
+      "status": "COMPLETED",
+      "timeliness": "ON_TIME_WINDOW"
+    },
+    {
+      "slot_id": "DAILY_DEEP",
+      "label": "Review pagi 04:30 WIB",
+      "local_date": "2026-09-03",
+      "scheduled_local": "2026-09-03T04:30:00+07:00",
+      "generated_at_utc": "2026-09-02T21:35:53.962075+00:00",
+      "generated_local": "2026-09-03T04:35:53.962075+07:00",
+      "status": "COMPLETED",
+      "timeliness": "ON_TIME_WINDOW"
+    },
+    {
+      "slot_id": "MIDDAY_CATCHUP",
+      "label": "Catch-up 12:30 WIB",
+      "local_date": "2026-09-03",
+      "scheduled_local": "2026-09-03T12:30:00+07:00",
+      "generated_at_utc": "2026-09-03T05:56:51.414508+00:00",
+      "generated_local": "2026-09-03T12:56:51.414508+07:00",
+      "status": "COMPLETED",
+      "timeliness": "ON_TIME_WINDOW"
+    },
+    {
+      "slot_id": "EVENING_CHECK",
+      "label": "Review malam 21:30 WIB",
+      "local_date": "2026-09-03",
+      "scheduled_local": "2026-09-03T21:30:00+07:00",
+      "generated_at_utc": "2026-09-03T15:12:22.025267+00:00",
+      "generated_local": "2026-09-03T22:12:22.025267+07:00",
+      "status": "COMPLETED",
+      "timeliness": "ON_TIME_WINDOW"
+    },
+    {
+      "slot_id": "DAILY_DEEP",
+      "label": "Review pagi 04:30 WIB",
+      "local_date": "2026-09-04",
+      "scheduled_local": "2026-09-04T04:30:00+07:00",
+      "generated_at_utc": "2026-09-03T22:08:24.371068+00:00",
+      "generated_local": "2026-09-04T05:08:24.371068+07:00",
+      "status": "COMPLETED",
+      "timeliness": "ON_TIME_WINDOW"
+    }
+  ],
+  "last_checkpoint": {
+    "schema": "report_checkpoint.v1",
+    "enabled": true,
+    "timezone": "Asia/Jakarta",
+    "current": {
+      "kind": "ROUTINE",
+      "label": "Report rutin di luar checkpoint utama",
+      "generated_local": "2026-09-04T05:37:17.377094+07:00"
+    },
+    "completeness": "OK",
+    "missed_due": [],
+    "recovered_late": [],
+    "today": [
+      {
+        "id": "DAILY_DEEP",
+        "label": "Review pagi 04:30 WIB",
+        "scheduled_local": "2026-09-04T04:30:00+07:00",
+        "state": "COMPLETED"
+      },
+      {
+        "id": "MIDDAY_CATCHUP",
+        "label": "Catch-up 12:30 WIB",
+        "scheduled_local": "2026-09-04T12:30:00+07:00",
+        "state": "PENDING"
+      },
+      {
+        "id": "EVENING_CHECK",
+        "label": "Review malam 21:30 WIB",
+        "scheduled_local": "2026-09-04T21:30:00+07:00",
+        "state": "PENDING"
+      }
+    ],
+    "silent_missing_forbidden": true
+  },
+  "operational_health": {
+    "overall": "GREEN",
+    "engine": "GREEN",
+    "checkpoint": "GREEN",
+    "missed_checkpoint_ids": [],
+    "late_recovered_checkpoint_ids": [],
+    "checkpoint_completeness": "OK"
+  },
+  "generated_at": "2026-09-03T22:37:17.268503+00:00",
+  "fingerprint": "ca5974d49259f087",
+  "state": {
+    "squad": "HOLD",
+    "starting_xi": [
+      8,
+      88,
+      115,
+      165,
+      254,
+      279,
+      346,
+      411,
+      426,
+      565,
+      572
+    ],
+    "formation": "5-2-3",
+    "captain": 426,
+    "vice_captain": 411,
+    "chip": null,
+    "price": [],
+    "critical_health": {
+      "overall": "GREEN",
+      "critical_failed": [],
+      "prediction_quality": "HEALTHY"
+    }
+  },
+  "last_report_mode": "COMPACT_STABLE",
+  "last_decision": {
+    "overall": "REVIEW",
+    "squad": "REVIEW",
+    "starting_xi": "OPEN",
+    "captaincy": "LEAN",
+    "chip": "HOLD",
+    "price": "HOLD",
+    "confidence": "LOW",
+    "challenger_state": "REVIEW",
+    "challenger_execution_authorized": false
+  }
+}

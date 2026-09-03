@@ -1,0 +1,140 @@
+{
+  "schema_version": 4,
+  "registry": "REPORT_ARTIFACT_REGISTRY_V3",
+  "consumer_contract": {
+    "owned_count": 15,
+    "watchlist_total": 20,
+    "watchlist_per_position": 5,
+    "watchlist_positions": [
+      "GK",
+      "DEF",
+      "MID",
+      "FWD"
+    ],
+    "owned_must_never_be_counted_as_watchlist": true,
+    "owned_rows_require_current_gw_xpts": true,
+    "owned_rows_require_selection_score": true,
+    "owned_rows_require_lineup_status": true,
+    "owned_rows_require_choice_state": true,
+    "model_validation_required": true,
+    "weather_context_required": true,
+    "report_time_intelligence_required": true,
+    "personal_gameweek_context_required": true,
+    "natural_user_presentation_required": true,
+    "report_checkpoint_required": true,
+    "historical_gw_must_be_official_actual": true,
+    "planning_gw_must_be_labelled_projection": true,
+    "pundit_consensus_must_include_dss_alignment": true,
+    "price_radar_requires_all15_predictor_detail": true,
+    "price_radar_requires_mandatory_challenger_detail": true
+  },
+  "artifacts": {
+    "decision_brief": {
+      "path": "data/decision_brief.json",
+      "consumer": "chatgpt-fast",
+      "priority": "P0",
+      "lazy_load": false,
+      "max_bytes": 100000,
+      "required_owned_count": 15,
+      "required_watchlist_count": 20,
+      "required_sections": [
+        "user_presentation",
+        "report_checkpoint",
+        "gameweek_context",
+        "report_time_intelligence",
+        "model_validation",
+        "weather_context"
+      ]
+    },
+    "deep_review_payload": {
+      "path": "data/deep_review_payload.json",
+      "consumer": "chatgpt-deep-review",
+      "priority": "P0",
+      "lazy_load": false,
+      "max_bytes": 350000,
+      "required_owned_count": 15,
+      "required_watchlist_count": 20,
+      "required_sections": [
+        "user_presentation",
+        "report_checkpoint",
+        "gameweek_context",
+        "report_time_intelligence",
+        "model_validation",
+        "weather_context"
+      ]
+    },
+    "user_report": {
+      "path": "data/user_report.json",
+      "consumer": "human-report-contract",
+      "priority": "P0",
+      "lazy_load": false,
+      "max_bytes": 350000,
+      "required_owned_count": 15,
+      "required_watchlist_count": 20,
+      "required_sections": [
+        "user_presentation",
+        "report_checkpoint",
+        "gameweek_context",
+        "report_time_intelligence",
+        "model_validation",
+        "weather_context"
+      ]
+    },
+    "watchlist_summary": {
+      "path": "data/dss_watchlist_summary.json",
+      "consumer": "chatgpt-watchlist",
+      "priority": "P0",
+      "lazy_load": false,
+      "max_bytes": 32000,
+      "required_watchlist_count": 20
+    },
+    "technical_appendix": {
+      "path": "data/technical_appendix.json",
+      "consumer": "debug-audit",
+      "priority": "P2",
+      "lazy_load": true
+    },
+    "full_dss_watchlist": {
+      "path": "data/dss_watchlist.json",
+      "consumer": "debug-audit",
+      "priority": "P2",
+      "lazy_load": true
+    },
+    "official_detail_full": {
+      "path": "data/official_detail.json",
+      "consumer": "debug-source",
+      "priority": "P3",
+      "lazy_load": true
+    },
+    "official_detail_owned": {
+      "path": "data/official_detail_owned.json",
+      "consumer": "on-demand-owned-deep-dive",
+      "priority": "P2",
+      "lazy_load": true,
+      "max_bytes": 500000
+    },
+    "official_detail_watchlist": {
+      "path": "data/official_detail_watchlist.json",
+      "consumer": "on-demand-watchlist-deep-dive",
+      "priority": "P2",
+      "lazy_load": true,
+      "max_bytes": 500000
+    }
+  },
+  "governance": {
+    "report_materializer_may_reduce_fields_but_may_not_make_new_football_decisions": true,
+    "personal_gameweek_context_may_apply_explicit_user_override_but_never_invent_one": true,
+    "engine_recommendation_remains_visible_when_user_override_is_active": true,
+    "natural_user_presentation_is_primary_human_surface": true,
+    "raw_machine_decision_states_remain_audit_compatible": true,
+    "scheduled_checkpoint_misses_are_explicit": true,
+    "technical_artifacts_are_lazy_loaded": true,
+    "chatgpt_default_reads_decision_brief_or_deep_review_payload": true,
+    "payload_limits_are_fail_closed_for_p0_serving_artifacts": true,
+    "p0_payload_budget_expanded_for_governed_all15_and_mandatory_challenger_price_evidence": true,
+    "report_time_sources_are_refreshed_by_chat_report_orchestration_not_collector": true,
+    "pundit_consensus_is_advisory_and_never_mutates_dss": true,
+    "weather_context_is_advisory_and_never_mutates_dss": true,
+    "formula_correctness_must_not_be_presented_as_predictive_accuracy": true
+  }
+}

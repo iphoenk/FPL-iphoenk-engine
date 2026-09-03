@@ -1,0 +1,246 @@
+{
+  "generated_at": "2026-09-03T22:37:16.565127+00:00",
+  "model": "prediction_evaluation_v1",
+  "freeze_policy": "last_pre_deadline_snapshot",
+  "overall": {
+    "sample_size": 620,
+    "points_mae": 2.072,
+    "points_rmse": 2.6662,
+    "xmins_mae": 29.1545,
+    "starter_brier": 0.2205,
+    "starter_sample_size": 620,
+    "dnp_brier": null,
+    "dnp_sample_size": 0,
+    "clean_sheet_brier": 0.1215,
+    "clean_sheet_sample_size": 547,
+    "spearman": 0.4751,
+    "status": "SETTLED"
+  },
+  "confidence": "HIGH",
+  "by_position": {
+    "DEF": {
+      "sample_size": 206,
+      "points_mae": 2.1925,
+      "points_rmse": 2.6393,
+      "xmins_mae": 28.5786,
+      "starter_brier": 0.2006,
+      "starter_sample_size": 206,
+      "dnp_brier": null,
+      "dnp_sample_size": 0,
+      "clean_sheet_brier": 0.1242,
+      "clean_sheet_sample_size": 206,
+      "spearman": 0.5723,
+      "status": "SETTLED"
+    },
+    "FWD": {
+      "sample_size": 73,
+      "points_mae": 1.9324,
+      "points_rmse": 2.4889,
+      "xmins_mae": 29.0082,
+      "starter_brier": 0.2316,
+      "starter_sample_size": 73,
+      "dnp_brier": null,
+      "dnp_sample_size": 0,
+      "clean_sheet_brier": null,
+      "clean_sheet_sample_size": 0,
+      "spearman": 0.474,
+      "status": "SETTLED"
+    },
+    "GK": {
+      "sample_size": 68,
+      "points_mae": 2.2654,
+      "points_rmse": 2.6388,
+      "xmins_mae": 33.6926,
+      "starter_brier": 0.2361,
+      "starter_sample_size": 68,
+      "dnp_brier": null,
+      "dnp_sample_size": 0,
+      "clean_sheet_brier": 0.1115,
+      "clean_sheet_sample_size": 68,
+      "spearman": 0.4544,
+      "status": "SETTLED"
+    },
+    "MID": {
+      "sample_size": 273,
+      "points_mae": 1.9702,
+      "points_rmse": 2.7381,
+      "xmins_mae": 28.4978,
+      "starter_brier": 0.2288,
+      "starter_sample_size": 273,
+      "dnp_brier": null,
+      "dnp_sample_size": 0,
+      "clean_sheet_brier": 0.1221,
+      "clean_sheet_sample_size": 273,
+      "spearman": 0.4847,
+      "status": "SETTLED"
+    }
+  },
+  "by_gw": {
+    "2": {
+      "sample_size": 620,
+      "points_mae": 2.072,
+      "points_rmse": 2.6662,
+      "xmins_mae": 29.1545,
+      "starter_brier": 0.2205,
+      "starter_sample_size": 620,
+      "dnp_brier": null,
+      "dnp_sample_size": 0,
+      "clean_sheet_brier": 0.1215,
+      "clean_sheet_sample_size": 547,
+      "spearman": 0.4751,
+      "status": "SETTLED",
+      "decision_validation": {
+        "captain_regret": {
+          "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+          "sample_size": 0,
+          "value": null
+        },
+        "vice_regret": {
+          "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+          "sample_size": 0,
+          "value": null
+        },
+        "xi_regret": {
+          "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+          "sample_size": 0,
+          "value": null
+        },
+        "bench_first_regret": {
+          "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+          "sample_size": 0,
+          "value": null
+        },
+        "transfer_comparator_realized_net_gain": {
+          "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+          "sample_size": 0,
+          "value": null
+        }
+      }
+    }
+  },
+  "decision_metrics": {
+    "captain_regret": {
+      "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+      "sample_size": 0,
+      "mean": null
+    },
+    "vice_regret": {
+      "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+      "sample_size": 0,
+      "mean": null
+    },
+    "xi_regret": {
+      "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+      "sample_size": 0,
+      "mean": null
+    },
+    "bench_first_regret": {
+      "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+      "sample_size": 0,
+      "mean": null
+    },
+    "transfer_comparator_realized_net_gain": {
+      "status": "NO_GENUINE_PREDEADLINE_SAMPLE",
+      "sample_size": 0,
+      "mean": null
+    }
+  },
+  "position_drift": {
+    "status": "OK",
+    "alerts": [],
+    "positions": [
+      {
+        "position": "DEF",
+        "sample_size": 206,
+        "points_mae": 2.1925,
+        "overall_points_mae": 2.072,
+        "mae_excess": 0.1205,
+        "eligible": true
+      },
+      {
+        "position": "FWD",
+        "sample_size": 73,
+        "points_mae": 1.9324,
+        "overall_points_mae": 2.072,
+        "mae_excess": -0.1396,
+        "eligible": true
+      },
+      {
+        "position": "GK",
+        "sample_size": 68,
+        "points_mae": 2.2654,
+        "overall_points_mae": 2.072,
+        "mae_excess": 0.1934,
+        "eligible": true
+      },
+      {
+        "position": "MID",
+        "sample_size": 273,
+        "points_mae": 1.9702,
+        "overall_points_mae": 2.072,
+        "mae_excess": -0.1018,
+        "eligible": true
+      }
+    ],
+    "minimum_samples_per_position": 8,
+    "mae_excess_threshold": 0.75
+  },
+  "validation_dimensions": {
+    "formula_correctness": {
+      "status": "SEPARATE_GOVERNANCE_TRACK",
+      "counts_as_predictive_accuracy": false
+    },
+    "predictive_accuracy": {
+      "status": "SETTLED",
+      "sample_size": 620
+    },
+    "dnp_calibration": {
+      "status": "SETTLED",
+      "sample_size": 0,
+      "brier": null
+    },
+    "decision_outcomes": {
+      "status": "GENUINE_PREDEADLINE_ONLY",
+      "metrics": [
+        "captain_regret",
+        "vice_regret",
+        "xi_regret",
+        "bench_first_regret",
+        "transfer_comparator_realized_net_gain"
+      ]
+    }
+  },
+  "settled_gameweeks": [
+    2
+  ],
+  "collecting_gameweeks": [
+    3
+  ],
+  "dynamic_weight_eligible": true,
+  "governance": {
+    "accuracy_claim_requires_settled_sample": true,
+    "pre_deadline_forecast_is_frozen_before_scoring": true,
+    "overdue_freeze_may_only_promote_predeadline_payload": true,
+    "pre_deadline_decision_snapshot_required_for_decision_regret": true,
+    "post_deadline_information_cannot_rewrite_frozen_forecast": true,
+    "post_deadline_information_cannot_create_retroactive_decision_snapshot": true,
+    "reconcile_only_finished_events": true,
+    "formula_correctness_is_separate_from_predictive_accuracy": true,
+    "optimizer_change_penalty_is_never_used_as_fpl_hit_cost": true,
+    "core_snapshot_consumed_before_historical_network": true,
+    "early_season_confidence_is_conservative": true,
+    "dnp_calibration_uses_frozen_predeadline_probability_only": true,
+    "vice_and_bench_metrics_require_genuine_predeadline_capture": true,
+    "position_drift_alert_is_diagnostic_not_dynamic_weighting": true
+  },
+  "source_health": {
+    "bootstrap": "LIVE",
+    "bootstrap_source": "CORE_SNAPSHOT",
+    "event_live_snapshot_reused": 0,
+    "historical_event_live_fetched": 0,
+    "freeze_recovery": {
+      "promoted": 0,
+      "missed": 0
+    }
+  }
+}

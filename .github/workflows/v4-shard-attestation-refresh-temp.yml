@@ -1,0 +1,38 @@
+name: V4 shard attestation refresh temp
+
+on:
+  push:
+    branches:
+      - codex/v4-full-universe-tactical-20260903
+    paths:
+      - .github/workflows/v4-shard-attestation-refresh-temp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  attest:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: codex/v4-full-universe-tactical-20260903
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Refresh architecture attestation
+        run: PYTHONPATH="$PWD" python tools/v4_architecture_guard_attest.py
+      - name: Verify architecture guard
+        run: PYTHONPATH="$PWD" python -m src.services.architecture_guard_service
+      - name: Commit refreshed attestation only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add config/architecture_guard_attestation.json
+          if git diff --cached --quiet; then
+            echo "attestation already current"
+            exit 0
+          fi
+          git commit -m "chore(v4): refresh sharded architecture attestation"
+          git push origin HEAD:codex/v4-full-universe-tactical-20260903

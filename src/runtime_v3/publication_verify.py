@@ -44,6 +44,8 @@ PRIVATE_AUTH_FORBIDDEN_KEYS = {
     "value",
 }
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+EXHAUSTIVE_PROFILE = "exhaustive_precompute"
+WATCHLIST_POSITIONS = ("GK", "DEF", "MID", "FWD")
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -51,6 +53,13 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise RuntimeError(f"expected JSON object: {path}")
     return payload
+
+
+def _required_json(data_dir: Path, relative: str) -> dict[str, Any]:
+    path = data_dir / relative
+    if not path.is_file():
+        raise RuntimeError(f"exhaustive publication missing required artifact: {relative}")
+    return _read_json(path)
 
 
 def _verify_public_auth_projection(payload: Any, *, location: str) -> None:
@@ -66,6 +75,90 @@ def _verify_public_auth_projection(payload: Any, *, location: str) -> None:
     forbidden = sorted(set(payload) & PRIVATE_AUTH_FORBIDDEN_KEYS)
     if forbidden:
         raise RuntimeError(f"{location} contains private authenticated fields: {forbidden}")
+
+
+def _verify_exhaustive_precompute_contract(data_dir: Path) -> dict[str, Any]:
+    optimizer = _required_json(data_dir, "package_optimizer.json")
+    diagnostics = optimizer.get("search_diagnostics") or {}
+    required_false = (
+        "lossy_pruning",
+        "candidate_pruning_applied",
+        "single_budget_applied",
+        "pair_budget_applied",
+        "exact_package_limit_applied",
+    )
+    if optimizer.get("status") != "READY":
+        raise RuntimeError("exhaustive publication optimizer is not READY")
+    if diagnostics.get("search_authority") != "FULL":
+        raise RuntimeError("exhaustive publication optimizer is not FULL authority")
+    if any(diagnostics.get(key) is not False for key in required_false):
+        raise RuntimeError("exhaustive publication contains pruning/budget/cap authority")
+    if diagnostics.get("all_step_legal_packages_scored") is not True:
+        raise RuntimeError("exhaustive publication did not score every sequentially legal package")
+    if diagnostics.get("watchlist_used_as_optimizer_input") is not False:
+        raise RuntimeError("exhaustive publication used watchlist as optimizer input")
+
+    package = _required_json(data_dir, "package_decision.json")
+    if package.get("gate0_revalidated") is not True or package.get("current_squad_legal") is not True:
+        raise RuntimeError("exhaustive publication package decision failed Gate0 revalidation")
+    selectable_ids = {str((optimizer.get("hold") or {}).get("id") or "")}
+    selectable_ids.update(str(row.get("id") or "") for row in optimizer.get("packages") or [] if isinstance(row, dict))
+    if str(package.get("selected_package_id") or "") not in selectable_ids:
+        raise RuntimeError("exhaustive publication package decision is not derived from published FULL optimizer")
+
+    framework = _required_json(data_dir, "framework_health.json")
+    gate0 = framework.get("gate0") or {}
+    if framework.get("overall") != "GREEN" or framework.get("decision_engine") != "HEALTHY":
+        raise RuntimeError("exhaustive publication framework/decision health is not GREEN/HEALTHY")
+    if gate0.get("pass") is not True or int((gate0.get("counts") or {}).get("PASS") or 0) != 16:
+        raise RuntimeError("exhaustive publication Gate0 is not 16/16 PASS")
+
+    team = _required_json(data_dir, "team.json")
+    owned = {
+        int(row.get("element") or -1)
+        for row in (team.get("squad") or team.get("team_value_ledger") or [])
+        if isinstance(row, dict) and int(row.get("element") or -1) > 0
+    }
+    watchlist = _required_json(data_dir, "dss_watchlist.json")
+    positions = watchlist.get("positions") or {}
+    counts = {position: len(positions.get(position) or []) for position in WATCHLIST_POSITIONS}
+    if counts != {position: 5 for position in WATCHLIST_POSITIONS}:
+        raise RuntimeError(f"exhaustive publication watchlist is not exact 5x4: {counts}")
+    watch_ids = [
+        int(row.get("element") or -1)
+        for position in WATCHLIST_POSITIONS
+        for row in (positions.get(position) or [])
+        if isinstance(row, dict)
+    ]
+    if len(watch_ids) != 20 or len(set(watch_ids)) != 20 or any(element <= 0 for element in watch_ids):
+        raise RuntimeError("exhaustive publication watchlist does not contain 20 unique valid elements")
+    overlap = sorted(set(watch_ids) & owned)
+    if overlap:
+        raise RuntimeError(f"exhaustive publication watchlist contains owned players: {overlap}")
+
+    latest = _required_json(data_dir, "latest.json")
+    intelligence = latest.get("decision_intelligence") or {}
+    package_summary = latest.get("package_decision_summary") or {}
+    if intelligence.get("package_optimizer_search_authority") != "FULL":
+        raise RuntimeError("latest.json does not propagate FULL optimizer authority")
+    if intelligence.get("package_optimizer_execution_profile") != EXHAUSTIVE_PROFILE:
+        raise RuntimeError("latest.json does not propagate exhaustive execution profile")
+    if package_summary.get("selected_package_id") != package.get("selected_package_id"):
+        raise RuntimeError("latest.json package decision summary is inconsistent with package_decision.json")
+    if package_summary.get("gate0_revalidated") is not True:
+        raise RuntimeError("latest.json package decision summary lost Gate0 proof")
+
+    return {
+        "search_authority": "FULL",
+        "lossy_pruning": False,
+        "all_step_legal_packages_scored": True,
+        "gate0_pass": 16,
+        "framework": "GREEN",
+        "decision_engine": "HEALTHY",
+        "watchlist_counts": counts,
+        "watchlist_non_owned_unique": True,
+        "selected_package_id": package.get("selected_package_id"),
+    }
 
 
 def _verify_embedded_attestation(data_dir: Path, manifest: dict[str, Any]) -> dict[str, Any] | None:
@@ -89,7 +182,7 @@ def _verify_embedded_attestation(data_dir: Path, manifest: dict[str, Any]) -> di
             raise RuntimeError("runtime workflow attestation registry mismatch")
         run_attempt = attestation.get("workflow_run_attempt")
         if not isinstance(run_attempt, int) or run_attempt <= 0:
-            raise RuntimeError("runtime workflow attestation run attempt invalid")
+            raise RuntimeError("runtime manifest workflow attempt invalid")
 
     if attestation.get("digest_contract") != ATTESTATION_DIGEST_CONTRACT:
         raise RuntimeError("runtime workflow attestation digest contract mismatch")
@@ -180,6 +273,9 @@ def verify_publication(
                 location="latest.json.authenticated_official",
             )
 
+    effective_profile = str(profile or manifest.get("execution_profile") or "")
+    exhaustive_assurance = _verify_exhaustive_precompute_contract(data_dir) if effective_profile == EXHAUSTIVE_PROFILE else None
+
     result = {
         "status": "PASS",
         "registry": registry.get("registry"),
@@ -198,6 +294,7 @@ def verify_publication(
         "snapshot_sha256": attestation.get("snapshot_sha256") if attestation else None,
         "workflow_run_id": attestation.get("workflow_run_id") if attestation else None,
         "workflow_run_attempt": attestation.get("workflow_run_attempt") if attestation else None,
+        "exhaustive_precompute_assurance": exhaustive_assurance,
     }
     return result
 

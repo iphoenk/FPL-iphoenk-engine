@@ -25,14 +25,18 @@ jobs:
       - run: python tools/v4_exact_lazy_utility_patch_temp.py
       - name: Focused correctness regression
         run: python -m pytest -q tests/test_v4_full_universe_package_search_proof.py tests/test_v4_full_universe_authority_fail_closed.py tests/test_v496_e2e_performance_hardening.py tests/test_v4_p1_structural_hardening.py
-      - name: Cold optimization hard SLO proof
-        run: /usr/bin/time -f 'cold_optimization_elapsed=%e' timeout 44s python -m src.services.optimization_slo_service
-      - run: python tools/v4_architecture_guard_attest.py
-      - name: Commit governed performance hardening
+      - name: Profile cold optimization beyond SLO
+        continue-on-error: true
+        run: /usr/bin/time -f 'cold_optimization_elapsed=%e' timeout 150s python -m src.services.optimization_slo_service
+      - name: Show package artifact diagnostics
         run: |
-          git config user.name "fpl-iphoenk-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add src/engines/v4_full_universe_package_search_core.py config/architecture_guard_attestation.json
-          git diff --cached --quiet && exit 0
-          git commit -m "perf(v4): exact lazy utility for full-universe package search"
-          git push origin HEAD:codex/v4-full-universe-tactical-20260903
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('data/wc_package_audit_v4.json')
+          if not p.exists():
+              print('package_artifact_missing')
+              raise SystemExit(0)
+          d=json.loads(p.read_text())
+          print(json.dumps({'search': d.get('search',{}).get('status'), 'diagnostics': d.get('search',{}).get('diagnostics',{})}, indent=2))
+          PY

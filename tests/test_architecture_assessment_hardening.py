@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from src.utils import atomic_json
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -52,6 +54,15 @@ def test_assessment_reviewed_json_writers_are_atomic() -> None:
     assert "compact: bool | None = None" in utils
     assert "atomic_json(output, payload, compact=True)" in measured
     assert "atomic_json(output, result, compact=True)" in shards
+
+
+def test_atomic_json_compact_override_preserves_payload_and_representation(tmp_path: Path) -> None:
+    output = tmp_path / "shard-result.json"
+    payload = {"status": "READY", "values": [1, 2, 3]}
+    atomic_json(output, payload, compact=True)
+    assert output.read_text(encoding="utf-8") == json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    assert json.loads(output.read_text(encoding="utf-8")) == payload
+    assert not output.with_suffix(output.suffix + ".tmp").exists()
 
 
 def test_sharded_official_snapshot_boundary_remains_fail_closed() -> None:

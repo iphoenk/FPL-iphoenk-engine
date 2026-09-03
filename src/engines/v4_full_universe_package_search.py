@@ -5,6 +5,7 @@ from threading import RLock
 from typing import Any
 
 from src.engines import v4_full_universe_package_search_core as _core
+from src.engines.v4_full_universe_exact_state_frontier import ExactIncomingFrontierIndex
 from src.engines.v4_recommendation_sanity import _player_evidence
 from src.engines.v4_tactical_interaction import build_tactical_interactions
 from src.engines.v4_wc_optimizer import Candidate
@@ -249,8 +250,6 @@ def _apply_authority_gate(out: dict, *, global_proof: bool) -> dict:
         out["decision_authority"] = "ENGINE_ADVISORY_ONLY_FULL_UNIVERSE_PROVEN"
         return out
 
-    # Preserve heuristic discovery for diagnostics only. Canonical consumers use
-    # the legacy field names below, so clear them rather than risk silent use.
     out["heuristic_discovery"] = {
         "overall_verdict": out.get("overall_verdict"),
         "recommended_package": out.get("recommended_package"),
@@ -291,6 +290,19 @@ def search_full_universe_packages(
             roster_events=roster_events,
         )
     interactions = interactions or {"players": {}, "health": {"status": "UNAVAILABLE"}}
+    policy = _core._policy()
+    search_cfg = policy.get("search") or {}
+    frontier_epsilon = _f(search_cfg.get("frontier_epsilon"), 0.01)
+    if top_per_size < 1:
+        raise ValueError("top_per_size must be positive")
+
+    interaction_map = _core._interaction_rows(interactions)
+    price_map = _core._price_rows(prices)
+    risk_by_element = {
+        player.element: _core._player_risk(player, interaction_map, price_map)
+        for player in candidates
+    }
+    state_index: ExactIncomingFrontierIndex | None = None
 
     def governed_pruner(rows: list[Candidate], owned: set[int], *, epsilon: float | None = None):
         return safe_prune_incoming_players(
@@ -303,9 +315,22 @@ def search_full_universe_packages(
             epsilon=epsilon,
         )
 
+    def exact_incoming_generator(pools, need, keep, budget, diagnostics):
+        nonlocal state_index
+        if state_index is None:
+            state_index = ExactIncomingFrontierIndex(
+                pools,
+                risk_by_element,
+                frontier_epsilon=frontier_epsilon,
+                top_keep=top_per_size,
+            )
+        return state_index.iter_legal(need, keep, budget, diagnostics)
+
     with _SEARCH_LOCK:
-        original = _core.safe_prune_incoming_players
+        original_pruner = _core.safe_prune_incoming_players
+        original_incoming = _core._incoming_combinations
         _core.safe_prune_incoming_players = governed_pruner
+        _core._incoming_combinations = exact_incoming_generator
         try:
             out = _core.search_full_universe_packages(
                 candidates,
@@ -321,7 +346,8 @@ def search_full_universe_packages(
                 top_per_size=top_per_size,
             )
         finally:
-            _core.safe_prune_incoming_players = original
+            _core.safe_prune_incoming_players = original_pruner
+            _core._incoming_combinations = original_incoming
 
     search = out.setdefault("search", {})
     proofs = search.get("pruning_proofs") or []
@@ -332,11 +358,17 @@ def search_full_universe_packages(
         and proof.get("safe_recommendation_sanity_equivalence") is True
         for proof in proofs
     )
+    compression_proof = state_index.proof_summary() if state_index is not None else {
+        "contract": "V4_FULL_UNIVERSE_EXACT_STATE_SKYBAND_V1",
+        "canonical_top_n_best_and_frontier_exact": False,
+        "reason": "NO_STATE_INDEX_EXECUTED",
+    }
+    compression_exact = compression_proof.get("canonical_top_n_best_and_frontier_exact") is True
     configured_exact = (
-        not bool((_core._policy().get("search") or {}).get("allow_heuristic_candidate_cutoff"))
-        and not bool((_core._policy().get("search") or {}).get("allow_beam_cutoff"))
+        not bool(search_cfg.get("allow_heuristic_candidate_cutoff"))
+        and not bool(search_cfg.get("allow_beam_cutoff"))
     )
-    global_proof = configured_exact and all_safe
+    global_proof = configured_exact and all_safe and compression_exact
     search.update({
         "status": "FULL_UNIVERSE_PROVEN" if global_proof else "FULL_UNIVERSE_HEURISTIC",
         "global_optimality_guaranteed_under_declared_package_semantics": global_proof,
@@ -346,11 +378,19 @@ def search_full_universe_packages(
         "proof_covers_recommendation_sanity": all_safe,
         "proof_minimize_dimensions": list(_MINIMIZE),
         "proof_maximize_dimensions": list(_MAXIMIZE),
+        "exact_incoming_state_skyband": compression_proof,
+        "exact_state_skyband_preserves_top_n_best_and_frontier": compression_exact,
     })
     out.setdefault("governance", {}).update({
         "full_decision_chain_safe_pruning": all_safe,
         "xpts_only_pruning_forbidden": True,
         "downstream_sanity_regret_from_pruning_forbidden": True,
+        "exact_state_skyband_is_algorithmic_not_heuristic": True,
+        "exact_state_skyband_cross_signature_partial_pruning_forbidden": True,
+        "exact_state_skyband_depth_matches_top_per_size": bool(
+            compression_proof.get("pareto_skyband_depth") == top_per_size
+        ),
+        "state_compression_must_preserve_top_n_best_and_frontier": True,
     })
     if not global_proof:
         (out.get("efficient_frontier") or {})["status"] = "PARTIAL"

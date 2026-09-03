@@ -12,19 +12,13 @@ from src.engines.v4_full_universe_shard_planner import (
     PLAN_FILE,
     _execution_code_fingerprint,
     _load_material,
+    load_plan,
 )
-from src.utils import DATA, atomic_json, read_json
+from src.utils import DATA, atomic_json
 
 
 CONTRACT = "V4_FULL_UNIVERSE_SHARD_RESULT_V1"
 DEFAULT_DIR = DATA / "runtime" / "v4_full_universe_shards"
-
-
-def _load_plan(path: Path) -> dict[str, Any]:
-    plan = read_json(path, {}) or {}
-    if plan.get("contract") != "V4_FULL_UNIVERSE_SHARD_PLAN_V1":
-        raise RuntimeError("invalid V4 full-universe shard plan")
-    return plan
 
 
 def _shard(plan: dict[str, Any], shard_id: int) -> dict[str, Any]:
@@ -124,7 +118,7 @@ def _execute_filtered_search(material: dict[str, Any], tasks: list[dict[str, Any
 
 
 def run_shard(shard_id: int, *, plan_path: Path = PLAN_FILE, output_path: Path | None = None) -> dict[str, Any]:
-    plan = _load_plan(plan_path)
+    plan = load_plan(plan_path)
     shard = _shard(plan, shard_id)
     material = _load_material()
     current_optimizer_fingerprint = str(material["optimizer_input_fingerprint"])

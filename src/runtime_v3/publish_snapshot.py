@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from src.runtime_v3.full_authority_cache import verify_full_authority
 from src.utils import DATA, ROOT, atomic_json, read_json
 from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
@@ -186,6 +187,13 @@ def materialize(
     target_visible_mode: str | None = None,
 ) -> dict[str, Any]:
     registry = _registry()
+    workflow_identity = _runtime_workflow_identity()
+    authority_assurance = None
+    if workflow_identity is not None:
+        if source_root.resolve() != DATA.resolve():
+            raise RuntimeError("V3 Runtime FULL authority gate requires the canonical data directory")
+        authority_assurance = verify_full_authority(profile)
+
     output_data = output_dir / "data"
     if output_dir.exists():
         shutil.rmtree(output_dir)
@@ -198,7 +206,6 @@ def materialize(
 
     performance = read_json(source_root / "runtime_performance.json", {})
     generated_at = datetime.now(timezone.utc)
-    workflow_identity = _runtime_workflow_identity()
     manifest = {
         "schema_version": 4 if workflow_identity is not None else 2,
         "registry": "RUNTIME_MANIFEST_V1",
@@ -228,9 +235,12 @@ def materialize(
             "paths": sorted(copied),
             "rolling_snapshot_intended": True,
             "private_authenticated_state_projected_to_public_health": True,
+            "full_optimizer_authority_fail_closed": workflow_identity is not None,
             "file_count": len(copied) + 1,
         },
     }
+    if authority_assurance is not None:
+        manifest["optimizer_authority"] = authority_assurance
 
     if workflow_identity is not None:
         run_id, run_attempt = workflow_identity
@@ -279,6 +289,7 @@ def main() -> int:
         "bytes": manifest["publication"]["bytes"],
         "source_commit": manifest.get("source_commit"),
         "checkpoint": manifest.get("checkpoint"),
+        "optimizer_authority": manifest.get("optimizer_authority"),
         "attestation": manifest.get("attestation"),
     }, ensure_ascii=False))
     if manifest.get("attestation"):

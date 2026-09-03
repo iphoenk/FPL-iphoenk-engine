@@ -92,14 +92,15 @@ def test_reporting_governance_blocks_internal_terms_from_human_surface():
 def test_scheduler_separates_precompute_and_recovery_wakeups_from_master_30():
     workflow = Path(".github/workflows/v3-runtime.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/runtime/collector_policy.json").read_text(encoding="utf-8"))
-    adaptive = "0,5,10,20,25,35,40,45,50,55 * * * *"
+    adaptive = "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
     assert 'cron: "30 * * * *"' in workflow
     assert 'cron: "15 * * * *"' in workflow
     assert f'cron: "{adaptive}"' in workflow
     assert policy["schedules"]["primary"] == "30 * * * *"
     assert policy["schedules"]["precompute"] == "15 * * * *"
     assert policy["schedules"]["adaptive"] == adaptive
-    adaptive_minutes = {0, 5, 10, 20, 25, 35, 40, 45, 50, 55}
+    adaptive_minutes = {2, 7, 12, 17, 22, 27, 32, 37, 42, 47, 52, 57}
     assert 15 not in adaptive_minutes
     assert 30 not in adaptive_minutes
+    assert all(minute % 5 == 2 for minute in adaptive_minutes)
     assert policy["checkpoint_recovery"]["never_create_second_checkpoint_authority"] is True

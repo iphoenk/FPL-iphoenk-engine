@@ -6,7 +6,7 @@
   "schedules": {
     "primary": "30 * * * *",
     "precompute": "15 * * * *",
-    "adaptive": "0,5,10,20,25,35,40,45,50,55 * * * *"
+    "adaptive": "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
   },
   "precompute": {
     "enabled": true,

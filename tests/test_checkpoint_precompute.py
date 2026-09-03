@@ -7,7 +7,7 @@ from src.runtime_v3 import precompute_checkpoint as pc
 from src.runtime_v3.publish_snapshot import _checkpoint_metadata
 
 ROOT = Path(__file__).resolve().parents[1]
-ADAPTIVE_SCHEDULE = "0,5,10,20,25,35,40,45,50,55 * * * *"
+ADAPTIVE_SCHEDULE = "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
 
 
 def test_policy_and_workflow_keep_logical_30_precompute_15_and_recovery_only_wakeups() -> None:
@@ -55,19 +55,19 @@ def test_primary_heartbeat_resolves_most_recent_logical_30() -> None:
 
 
 def test_adaptive_recovery_targets_missing_precompute_before_logical_30() -> None:
-    kind, target = pc._adaptive_recovery_target(datetime(2026, 8, 30, 21, 20, tzinfo=timezone.utc))
+    kind, target = pc._adaptive_recovery_target(datetime(2026, 8, 30, 21, 17, tzinfo=timezone.utc))
     assert kind == "PRECOMPUTE"
     assert target == datetime(2026, 8, 30, 21, 30, tzinfo=timezone.utc)
-    kind, target = pc._adaptive_recovery_target(datetime(2026, 8, 30, 21, 25, tzinfo=timezone.utc))
+    kind, target = pc._adaptive_recovery_target(datetime(2026, 8, 30, 21, 27, tzinfo=timezone.utc))
     assert kind == "PRECOMPUTE"
     assert target == datetime(2026, 8, 30, 21, 30, tzinfo=timezone.utc)
 
 
 def test_adaptive_recovery_targets_most_recent_missing_primary_after_30() -> None:
-    kind, target = pc._adaptive_recovery_target(datetime(2026, 8, 30, 21, 35, tzinfo=timezone.utc))
+    kind, target = pc._adaptive_recovery_target(datetime(2026, 8, 30, 21, 32, tzinfo=timezone.utc))
     assert kind == "CURRENT"
     assert target == datetime(2026, 8, 30, 21, 30, tzinfo=timezone.utc)
-    kind, target = pc._adaptive_recovery_target(datetime(2026, 8, 30, 22, 5, tzinfo=timezone.utc))
+    kind, target = pc._adaptive_recovery_target(datetime(2026, 8, 30, 22, 7, tzinfo=timezone.utc))
     assert kind == "CURRENT"
     assert target == datetime(2026, 8, 30, 21, 30, tzinfo=timezone.utc)
 

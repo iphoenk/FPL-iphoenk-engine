@@ -20,6 +20,11 @@ def _write(path: Path, payload: dict) -> None:
 
 
 def _valid_full_chain(data_dir: Path) -> None:
+    _write(data_dir / "projections.json", {
+        "planning_gw": 3,
+        "generated_at": "2026-09-03T10:00:00+00:00",
+        "players": [{"element": 1, "position": "GK", "team_id": 1, "xpts_by_gw": []}],
+    })
     _write(data_dir / "package_optimizer.json", {
         "generated_at": "2026-09-03T10:00:00+00:00",
         "planning_gw": 3,
@@ -48,8 +53,11 @@ def _valid_full_chain(data_dir: Path) -> None:
         "decision_engine": "HEALTHY",
         "gate0": {"pass": True, "counts": {"PASS": 16}},
     })
+    squad = [{"element": element} for element in range(1, 16)]
     _write(data_dir / "team.json", {
-        "squad": [{"element": element} for element in range(1, 16)],
+        "squad": squad,
+        "team_value_ledger": [{"element": element, "sell_cost": 50} for element in range(1, 16)],
+        "totals": {"itb": 10},
     })
     positions = {}
     next_element = 100
@@ -84,38 +92,60 @@ def test_full_prediction_artifacts_are_hydrated_for_exact_reuse():
     assert {"team_strength.json", "projections.json", "package_optimizer.json", "prediction_quality.json"} <= hydrate
 
 
-def test_exhaustive_publication_records_attested_full_fingerprint(monkeypatch, tmp_path):
+def test_optimizer_authority_fingerprint_does_not_require_ephemeral_official_snapshot(monkeypatch, tmp_path):
     _patch_data(monkeypatch, tmp_path)
     _valid_full_chain(tmp_path)
-    monkeypatch.setattr(incremental_reuse, "fingerprint", lambda service: "a" * 64)
+    assert not (tmp_path / "official_snapshot.json").exists()
+    first = full_authority_cache.optimizer_input_fingerprint()
+    assert len(first) == 64
+
+    projections = json.loads((tmp_path / "projections.json").read_text(encoding="utf-8"))
+    projections["generated_at"] = "2099-01-01T00:00:00+00:00"
+    _write(tmp_path / "projections.json", projections)
+    assert full_authority_cache.optimizer_input_fingerprint() == first
+
+
+def test_optimizer_authority_fingerprint_changes_on_material_team_ledger(monkeypatch, tmp_path):
+    _patch_data(monkeypatch, tmp_path)
+    _valid_full_chain(tmp_path)
+    before = full_authority_cache.optimizer_input_fingerprint()
+    team = json.loads((tmp_path / "team.json").read_text(encoding="utf-8"))
+    team["team_value_ledger"][0]["sell_cost"] = 51
+    _write(tmp_path / "team.json", team)
+    assert full_authority_cache.optimizer_input_fingerprint() != before
+
+
+def test_exhaustive_publication_records_attested_full_optimizer_fingerprint(monkeypatch, tmp_path):
+    _patch_data(monkeypatch, tmp_path)
+    _valid_full_chain(tmp_path)
+    monkeypatch.setattr(full_authority_cache, "optimizer_input_fingerprint", lambda: "a" * 64)
 
     result = full_authority_cache.verify_full_authority("exhaustive_precompute")
 
     state = json.loads((tmp_path / "incremental_reuse_state.json").read_text(encoding="utf-8"))
-    row = state["services"]["prediction"]
+    row = state["package_optimizer_authority"]
     assert result["status"] == "PASS"
     assert result["fingerprint_recorded"] is True
+    assert result["ephemeral_source_artifact_required"] is False
     assert row["fingerprint"] == "a" * 64
-    assert row["authority_registry"] == "V3_FULL_OPTIMIZER_AUTHORITY_V1"
+    assert row["authority_registry"] == "V3_FULL_OPTIMIZER_AUTHORITY_V2"
     assert row["search_authority"] == "FULL"
     assert row["recorded_profile"] == "exhaustive_precompute"
 
 
-def test_non_exhaustive_publication_requires_exact_attested_full_fingerprint(monkeypatch, tmp_path):
+def test_non_exhaustive_publication_requires_exact_attested_full_optimizer_fingerprint(monkeypatch, tmp_path):
     _patch_data(monkeypatch, tmp_path)
     _valid_full_chain(tmp_path)
     _write(tmp_path / "incremental_reuse_state.json", {
         "schema_version": 1,
         "registry": "V3_INCREMENTAL_REUSE_STATE_V1",
-        "services": {
-            "prediction": {
-                "fingerprint": "b" * 64,
-                "authority_registry": "V3_FULL_OPTIMIZER_AUTHORITY_V1",
-                "search_authority": "FULL",
-            }
+        "package_optimizer_authority": {
+            "fingerprint": "b" * 64,
+            "authority_registry": "V3_FULL_OPTIMIZER_AUTHORITY_V2",
+            "search_authority": "FULL",
         },
     })
-    monkeypatch.setattr(incremental_reuse, "fingerprint", lambda service: "b" * 64)
+    monkeypatch.setattr(full_authority_cache, "optimizer_input_fingerprint", lambda: "b" * 64)
 
     result = full_authority_cache.verify_full_authority("fast_decision")
     assert result["status"] == "PASS"
@@ -126,18 +156,33 @@ def test_non_exhaustive_publication_fails_closed_on_fingerprint_change(monkeypat
     _patch_data(monkeypatch, tmp_path)
     _valid_full_chain(tmp_path)
     _write(tmp_path / "incremental_reuse_state.json", {
-        "services": {
-            "prediction": {
-                "fingerprint": "c" * 64,
-                "authority_registry": "V3_FULL_OPTIMIZER_AUTHORITY_V1",
-                "search_authority": "FULL",
-            }
+        "package_optimizer_authority": {
+            "fingerprint": "c" * 64,
+            "authority_registry": "V3_FULL_OPTIMIZER_AUTHORITY_V2",
+            "search_authority": "FULL",
         }
     })
-    monkeypatch.setattr(incremental_reuse, "fingerprint", lambda service: "d" * 64)
+    monkeypatch.setattr(full_authority_cache, "optimizer_input_fingerprint", lambda: "d" * 64)
 
     with pytest.raises(RuntimeError, match="would downgrade FULL optimizer authority"):
         full_authority_cache.verify_full_authority("fast_decision")
+
+
+def test_exact_full_optimizer_can_be_reused_without_recomputing_search(monkeypatch, tmp_path):
+    _patch_data(monkeypatch, tmp_path)
+    _valid_full_chain(tmp_path)
+    _write(tmp_path / "incremental_reuse_state.json", {
+        "package_optimizer_authority": {
+            "fingerprint": "e" * 64,
+            "authority_registry": "V3_FULL_OPTIMIZER_AUTHORITY_V2",
+            "search_authority": "FULL",
+        }
+    })
+    monkeypatch.setattr(full_authority_cache, "optimizer_input_fingerprint", lambda: "e" * 64)
+    optimizer = full_authority_cache.reusable_full_optimizer()
+    assert optimizer is not None
+    assert (optimizer.get("search_diagnostics") or {}).get("search_authority") == "FULL"
+    assert (optimizer.get("governance") or {}).get("full_authority_exact_input_reuse") is True
 
 
 def test_authority_gate_rejects_partial_optimizer_even_with_matching_fingerprint(monkeypatch, tmp_path):
@@ -146,7 +191,7 @@ def test_authority_gate_rejects_partial_optimizer_even_with_matching_fingerprint
     optimizer = json.loads((tmp_path / "package_optimizer.json").read_text(encoding="utf-8"))
     optimizer["search_diagnostics"]["search_authority"] = "PARTIAL"
     _write(tmp_path / "package_optimizer.json", optimizer)
-    monkeypatch.setattr(incremental_reuse, "fingerprint", lambda service: "e" * 64)
+    monkeypatch.setattr(full_authority_cache, "optimizer_input_fingerprint", lambda: "f" * 64)
 
     with pytest.raises(RuntimeError, match="not truthful FULL authority"):
         full_authority_cache.verify_full_authority("exhaustive_precompute")
@@ -163,7 +208,7 @@ def test_v3_runtime_materialization_runs_full_authority_gate_before_copy(monkeyp
 
     def fake_verify(profile: str) -> dict:
         captured["profile"] = profile
-        return {"status": "PASS", "search_authority": "FULL", "prediction_fingerprint_prefix": "abc123"}
+        return {"status": "PASS", "search_authority": "FULL", "optimizer_fingerprint_prefix": "abc123"}
 
     monkeypatch.setattr(publish_snapshot, "verify_full_authority", fake_verify)
     manifest = publish_snapshot.materialize(source, output, "exhaustive_precompute", "f" * 40)

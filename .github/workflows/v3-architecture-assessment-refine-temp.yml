@@ -40,36 +40,33 @@ jobs:
           def main_text(path: str) -> str:
               return subprocess.check_output(['git', 'show', f'origin/main:{path}'], text=True)
 
-          # Restore exact main formatting, then append only the reviewed policy keys.
-          path = 'config/intelligence/xmins_v2.json'
-          text = main_text(path)
-          marker = '\n  }\n}\n'
-          if not text.endswith(marker):
-              raise SystemExit('unexpected xmins_v2.json tail')
-          text = text[:-len(marker)] + '\n  },\n  "contract_validation": {\n    "probability_sum_tolerance": 0.002,\n    "expected_minutes_identity_tolerance": 0.2\n  }\n}\n'
-          (ROOT / path).write_text(text, encoding='utf-8')
+          def append_root_block(path: str, block: str) -> None:
+              text = main_text(path).rstrip()
+              if not text.endswith('}'):
+                  raise SystemExit(f'{path}: unexpected JSON root tail')
+              head = text[:-1].rstrip()
+              if not head.endswith('}'):
+                  raise SystemExit(f'{path}: expected existing root member before final brace')
+              (ROOT / path).write_text(head + ',\n' + block + '\n}\n', encoding='utf-8')
 
-          path = 'config/intelligence/projection.json'
-          text = main_text(path)
-          marker = '\n  }\n}\n'
-          if not text.endswith(marker):
-              raise SystemExit('unexpected projection.json tail')
-          text = text[:-len(marker)] + '\n  },\n  "validation": {\n    "minimum_player_coverage_ratio": 0.95\n  }\n}\n'
-          (ROOT / path).write_text(text, encoding='utf-8')
-
-          path = 'config/intelligence/reporting.json'
-          text = main_text(path)
-          marker = '\n  }\n}\n'
-          if not text.endswith(marker):
-              raise SystemExit('unexpected reporting.json tail')
-          text = text[:-len(marker)] + '\n  },\n  "battle_reason_thresholds": {\n    "xpts_delta": 0.10,\n    "xmins_delta": 2.0,\n    "start_probability_delta": 0.03\n  }\n}\n'
-          (ROOT / path).write_text(text, encoding='utf-8')
+          append_root_block(
+              'config/intelligence/xmins_v2.json',
+              '  "contract_validation": {\n    "probability_sum_tolerance": 0.002,\n    "expected_minutes_identity_tolerance": 0.2\n  }',
+          )
+          append_root_block(
+              'config/intelligence/projection.json',
+              '  "validation": {\n    "minimum_player_coverage_ratio": 0.95\n  }',
+          )
+          append_root_block(
+              'config/intelligence/reporting.json',
+              '  "battle_reason_thresholds": {\n    "xpts_delta": 0.10,\n    "xmins_delta": 2.0,\n    "start_probability_delta": 0.03\n  }',
+          )
 
           # Preserve compact representation for outputs that were compact before atomic hardening.
           replace_once(
               'src/utils.py',
-              'def atomic_json(path: Path, payload):\n    path.parent.mkdir(parents=True, exist_ok=True)\n    tmp = path.with_suffix(path.suffix + ".tmp")\n    if path.name in _COMPACT_JSON_ARTIFACTS:\n',
-              'def atomic_json(path: Path, payload, *, compact: bool | None = None):\n    path.parent.mkdir(parents=True, exist_ok=True)\n    tmp = path.with_suffix(path.suffix + ".tmp")\n    use_compact = path.name in _COMPACT_JSON_ARTIFACTS if compact is None else bool(compact)\n    if use_compact:\n'
+              'def atomic_json(path: Path, payload: Any):\n    path.parent.mkdir(parents=True, exist_ok=True)\n    tmp = path.with_suffix(path.suffix + ".tmp")\n    if path.name in _COMPACT_JSON_ARTIFACTS:\n',
+              'def atomic_json(path: Path, payload: Any, *, compact: bool | None = None):\n    path.parent.mkdir(parents=True, exist_ok=True)\n    tmp = path.with_suffix(path.suffix + ".tmp")\n    use_compact = path.name in _COMPACT_JSON_ARTIFACTS if compact is None else bool(compact)\n    if use_compact:\n',
           )
           replace_once('src/runtime_v3/measured_command.py', '    atomic_json(output, payload)\n', '    atomic_json(output, payload, compact=True)\n')
           replace_once('src/runtime_v3/package_optimizer_shards.py', '        atomic_json(output, result)\n', '        atomic_json(output, result, compact=True)\n')
@@ -78,7 +75,19 @@ jobs:
           replace_once(
               'src/engines/production_contract_validate.py',
               '    for row in pr.get("players", []):\n        xm = row.get("xmins", {})\n        prob = sum(float(xm.get(k, 0)) for k in ("start_probability", "bench_probability", "dnp_probability"))\n        xmins_contract = (load_config("config/intelligence/xmins_v2.json").get("contract_validation") or {})\n        probability_tolerance = float(xmins_contract["probability_sum_tolerance"])\n',
-              '    xmins_contract = (load_config("config/intelligence/xmins_v2.json").get("contract_validation") or {})\n    probability_tolerance = float(xmins_contract["probability_sum_tolerance"])\n    for row in pr.get("players", []):\n        xm = row.get("xmins", {})\n        prob = sum(float(xm.get(k, 0)) for k in ("start_probability", "bench_probability", "dnp_probability"))\n'
+              '    xmins_contract = (load_config("config/intelligence/xmins_v2.json").get("contract_validation") or {})\n    probability_tolerance = float(xmins_contract["probability_sum_tolerance"])\n    for row in pr.get("players", []):\n        xm = row.get("xmins", {})\n        prob = sum(float(xm.get(k, 0)) for k in ("start_probability", "bench_probability", "dnp_probability"))\n',
+          )
+
+          # Correct registry shape and lock compact serialization regression coverage.
+          replace_once(
+              'tests/test_architecture_assessment_hardening.py',
+              '    official = next(row for row in registry["services"] if row["service_id"] == "official_snapshot")\n',
+              '    official = registry["services"]["official_snapshot"]\n',
+          )
+          replace_once(
+              'tests/test_architecture_assessment_hardening.py',
+              '        assert ".write_text(json.dumps(" not in text\n\n\ndef test_sharded_official_snapshot_boundary_remains_fail_closed() -> None:\n',
+              '        assert ".write_text(json.dumps(" not in text\n\n    utils = (ROOT / "src" / "utils.py").read_text(encoding="utf-8")\n    measured = (ROOT / "src" / "runtime_v3" / "measured_command.py").read_text(encoding="utf-8")\n    shards = (ROOT / "src" / "runtime_v3" / "package_optimizer_shards.py").read_text(encoding="utf-8")\n    assert "compact: bool | None = None" in utils\n    assert "atomic_json(output, payload, compact=True)" in measured\n    assert "atomic_json(output, result, compact=True)" in shards\n\n\ndef test_sharded_official_snapshot_boundary_remains_fail_closed() -> None:\n',
           )
 
           (ROOT / '.github' / 'workflows' / 'v3-architecture-assessment-refine-temp.yml').unlink(missing_ok=True)

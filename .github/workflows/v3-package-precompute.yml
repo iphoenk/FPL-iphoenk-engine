@@ -224,18 +224,22 @@ jobs:
           name: v3-package-shard-input-${{ github.run_id }}
           path: .
 
-      - name: Execute one exact optimizer shard
+      - name: Execute one exact optimizer shard with resource sidecar
         run: |
           mkdir -p shard-results
-          python -m src.runtime_v3.package_optimizer_shards run-shard \
-            --plan package-shard-plan.json \
-            --shard-id "${{ matrix.shard_id }}" \
-            --output "shard-results/shard-${{ matrix.shard_id }}.json"
+          python -m src.runtime_v3.measured_command \
+            --output "shard-results/resource-${{ matrix.shard_id }}.json" -- \
+            python -m src.runtime_v3.package_optimizer_shards run-shard \
+              --plan package-shard-plan.json \
+              --shard-id "${{ matrix.shard_id }}" \
+              --output "shard-results/shard-${{ matrix.shard_id }}.json"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: v3-package-shard-${{ github.run_id }}-${{ matrix.shard_id }}
-          path: shard-results/shard-${{ matrix.shard_id }}.json
+          path: |
+            shard-results/shard-${{ matrix.shard_id }}.json
+            shard-results/resource-${{ matrix.shard_id }}.json
           if-no-files-found: error
           retention-days: 1
 
@@ -273,7 +277,12 @@ jobs:
           merge-multiple: true
 
       - name: Exact fan-in to single FULL optimizer authority
-        run: python -m src.runtime_v3.package_optimizer_shards reduce --plan package-shard-plan.json --shard-dir shard-results
+        run: |
+          python -m src.runtime_v3.measured_command \
+            --output reducer-resource.json -- \
+            python -m src.runtime_v3.package_optimizer_shards reduce \
+              --plan package-shard-plan.json \
+              --shard-dir shard-results
 
       - name: Resume downstream domain DAG from registry boundary
         shell: bash
@@ -299,6 +308,10 @@ jobs:
       - name: Finalize true cross-runner runtime performance
         run: |
           python -m src.runtime_v3.package_optimizer_shards finalize-runtime --plan package-shard-plan.json
+          python -m src.runtime_v3.sharded_resource_telemetry \
+            --plan package-shard-plan.json \
+            --shard-dir shard-results \
+            --reducer-resource reducer-resource.json
           python -m src.runtime_v3.performance_guard --profile exhaustive_precompute
 
       - name: Verify V3 candidate definition of done

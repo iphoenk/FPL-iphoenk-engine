@@ -1,0 +1,176 @@
+name: V4 batched skyband profiler temp
+
+on:
+  push:
+    branches: [codex/v4-full-universe-tactical-20260903]
+    paths:
+      - .github/workflows/v4-batched-skyband-profiler-temp.yml
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {ref: codex/v4-full-universe-tactical-20260903, fetch-depth: 1}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with: {python-version: '3.12', cache: pip, cache-dependency-path: requirements.txt}
+      - run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Benchmark exact batched skyband cross-position DP
+        run: |
+          python -u - <<'PY'
+          from collections import Counter
+          from time import perf_counter
+          import numpy as np
+          import src.engines.v4_full_universe_exact_state_frontier as mod
+          from tests.test_v4_exact_frontier_production_scale import _pool, _risks, _diagnostics
+
+          FIELDS = (
+              'cost','x3','x5','x10','x15','projection_uncertainty','xmins_uncertainty',
+              'tactical_uncertainty','roster_change_uncertainty','price_risk',
+              'tactical_role_confidence','opponent_matchup_confidence',
+          )
+
+          def flat_gw(state):
+              return tuple(value for pos in state.gw_values for gw in pos for value in gw)
+
+          def dominance(rows, relation, epsilon):
+              n=len(rows)
+              if not n:
+                  return np.zeros((0,0),dtype=bool)
+              a={key:np.asarray([getattr(row,key) for row in rows],dtype=np.float64) for key in FIELDS}
+              gw=[flat_gw(row) for row in rows]
+              width=len(gw[0]) if gw else 0
+              g=np.asarray(gw,dtype=np.float64).reshape(n,width) if width else np.empty((n,0),dtype=np.float64)
+              cost=a['cost'][:,None]; cost_t=a['cost'][None,:]
+              x3=a['x3'][:,None]; x3_t=a['x3'][None,:]
+              x5=a['x5'][:,None]; x5_t=a['x5'][None,:]
+              x10=a['x10'][:,None]; x10_t=a['x10'][None,:]
+              x15=a['x15'][:,None]; x15_t=a['x15'][None,:]
+              pu=a['projection_uncertainty'][:,None]; pu_t=a['projection_uncertainty'][None,:]
+              xu=a['xmins_uncertainty'][:,None]; xu_t=a['xmins_uncertainty'][None,:]
+              tu=a['tactical_uncertainty'][:,None]; tu_t=a['tactical_uncertainty'][None,:]
+              ru=a['roster_change_uncertainty'][:,None]; ru_t=a['roster_change_uncertainty'][None,:]
+              pr=a['price_risk'][:,None]; pr_t=a['price_risk'][None,:]
+              tr=a['tactical_role_confidence'][:,None]; tr_t=a['tactical_role_confidence'][None,:]
+              oc=a['opponent_matchup_confidence'][:,None]; oc_t=a['opponent_matchup_confidence'][None,:]
+
+              rank_no_worse=(cost<=cost_t)&(x5>=x5_t)&(x15>=x15_t)&(pu<=pu_t)&(xu<=xu_t)&(tu<=tu_t)&(ru<=ru_t)
+              rank_strict=(x5>x5_t+mod._TWO_DP_ROUND_ERROR)|(x15>x15_t+mod._TWO_DP_ROUND_ERROR)|(cost<cost_t)
+              gw_no_worse=np.all(g[:,None,:]>=g[None,:,:],axis=2) if width else np.ones((n,n),dtype=bool)
+              rank=rank_no_worse & rank_strict & gw_no_worse
+
+              k=max(1,len(rows[0].players))
+              horizon_gap=float(epsilon)+mod._TWO_DP_ROUND_ERROR
+              sum_gap=(float(epsilon)+mod._FOUR_DP_ROUND_ERROR)*k
+              front_no_worse=(cost<=cost_t)&(pu<=pu_t)&(xu<=xu_t)&(tu<=tu_t)&(ru<=ru_t)&(pr<=pr_t)&(x3>=x3_t)&(x5>=x5_t)&(x10>=x10_t)&(x15>=x15_t)&(tr>=tr_t)&(oc>=oc_t)
+              front_strict=(x3>x3_t+horizon_gap)|(x5>x5_t+horizon_gap)|(x10>x10_t+horizon_gap)|(x15>x15_t+horizon_gap)|(pr+sum_gap<pr_t)|(tr>tr_t+sum_gap)|(oc>oc_t+sum_gap)
+              front=front_no_worse & front_strict
+              if relation is mod.rank_dominates:
+                  return rank
+              if relation is mod.frontier_dominates:
+                  return front
+              if relation is mod.dominates:
+                  return rank & front
+              raise RuntimeError('unsupported relation')
+
+          def layers(rows, depth, relation, epsilon):
+              if not rows:
+                  return []
+              unique={mod._state_key(row):row for row in rows}
+              rows=[unique[key] for key in sorted(unique)]
+              matrix=dominance(rows,relation,epsilon)
+              indegree=matrix.sum(axis=0,dtype=np.int32)
+              active=np.ones(len(rows),dtype=bool)
+              result=[]
+              for _ in range(depth):
+                  front=np.flatnonzero(active & (indegree==0))
+                  if not len(front):
+                      break
+                  result.append([rows[int(i)] for i in front])
+                  active[front]=False
+                  if np.any(active):
+                      indegree -= matrix[front].sum(axis=0,dtype=np.int32)
+              return result
+
+          def reduce(existing, additions, depth, relation, epsilon):
+              return layers([row for layer in existing for row in layer] + list(additions),depth,relation,epsilon)
+
+          def patched_states_for_need(self, need):
+              key=mod._need_key(need)
+              cached=self._need_cache.get(key)
+              if cached is not None:
+                  return cached
+              raw_need=1
+              for position,count in key:
+                  raw_need*=mod.comb(len(self.pools.get(position,tuple())),count)
+              self.stats['need_raw_combinations_theoretical'] += raw_need
+              rank_states=(mod._empty_state(),)
+              frontier_states=(mod._empty_state(),)
+              flush_size=256
+              for position,count in key:
+                  group_rank,group_frontier=self._group_survivors(position,count)
+
+                  rank_layers={}
+                  rank_pending={}
+                  for left in rank_states:
+                      for right in group_rank:
+                          self.stats['rank_merge_states_considered'] += 1
+                          merged=right if not left.players else mod._merge_disjoint_position(left,right,position)
+                          sig=merged.club_signature
+                          pending=rank_pending.setdefault(sig,[])
+                          pending.append(merged)
+                          if len(pending)>=flush_size:
+                              rank_layers[sig]=reduce(rank_layers.get(sig,[]),pending,self.top_keep,mod.rank_dominates,self.frontier_epsilon)
+                              pending.clear()
+                  for sig,pending in rank_pending.items():
+                      if pending:
+                          rank_layers[sig]=reduce(rank_layers.get(sig,[]),pending,self.top_keep,mod.rank_dominates,self.frontier_epsilon)
+                  rank_states=mod._flatten_rank(rank_layers)
+                  self.stats['rank_merge_states_retained'] += len(rank_states)
+
+                  frontier_layers={}
+                  frontier_pending={}
+                  for left in frontier_states:
+                      for right in group_frontier:
+                          self.stats['frontier_merge_states_considered'] += 1
+                          merged=right if not left.players else mod._merge_disjoint_position(left,right,position)
+                          sig=merged.club_signature
+                          pending=frontier_pending.setdefault(sig,[])
+                          pending.append(merged)
+                          if len(pending)>=flush_size:
+                              frontier_layers[sig]=reduce(frontier_layers.get(sig,[]),pending,1,mod.frontier_dominates,self.frontier_epsilon)
+                              pending.clear()
+                  for sig,pending in frontier_pending.items():
+                      if pending:
+                          frontier_layers[sig]=reduce(frontier_layers.get(sig,[]),pending,1,mod.frontier_dominates,self.frontier_epsilon)
+                  frontier_buckets={sig:(value[0] if value else []) for sig,value in frontier_layers.items()}
+                  frontier_states=mod._flatten_frontier(frontier_buckets)
+                  self.stats['frontier_merge_states_retained'] += len(frontier_states)
+                  if not rank_states and not frontier_states:
+                      break
+
+              self.stats['need_union_states_retained'] += len(mod._union_states(rank_states,frontier_states))
+              cached=(rank_states,frontier_states)
+              self._need_cache[key]=cached
+              return cached
+
+          mod.ExactIncomingFrontierIndex._states_for_need=patched_states_for_need
+          pools=_pool()
+          index=mod.ExactIncomingFrontierIndex(pools,_risks(pools),frontier_epsilon=0.01,top_keep=12)
+          started=perf_counter()
+          k2=sum(1 for _ in index.iter_legal(Counter({'MID':2}),tuple(),10000,_diagnostics()))
+          k2_done=perf_counter()
+          k3=sum(1 for _ in index.iter_legal(Counter({'DEF':1,'MID':1,'FWD':1}),tuple(),10000,_diagnostics()))
+          elapsed=perf_counter()-started
+          print('RESULT',{'k2':k2,'k3':k3,'k2_elapsed_s':round(k2_done-started,3),'total_elapsed_s':round(elapsed,3)})
+          print('PROOF',index.proof_summary())
+          if elapsed>=25:
+              raise SystemExit(f'exact batched skyband exceeded regression target: {elapsed:.3f}s')
+          PY

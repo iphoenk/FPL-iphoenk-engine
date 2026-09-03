@@ -1,0 +1,50 @@
+name: V4 temporary exact batch and guard probe
+
+on:
+  push:
+    branches:
+      - codex/v4-full-universe-tactical-20260903
+    paths:
+      - .github/workflows/v4-batch-guard-temp.yml
+      - src/engines/v4_full_universe_exact_batch.py
+      - config/architecture_guard_attestation.json
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Exact batch scalar parity
+        run: python -m pytest -q tests/test_v4_full_universe_exact_batch.py
+      - name: Full architecture guard and fingerprint
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from src.services import architecture_guard_service as guard
+
+          result = guard.run(force_full_scan=True)
+          payload = {
+              'schema_version': guard.ATTESTATION_SCHEMA_VERSION,
+              'fingerprint': guard.repository_fingerprint(),
+              'release': guard.RELEASE_VERSION,
+              'guard_schema_version': result.get('schema_version'),
+              'result': result,
+          }
+          print('V4_ARCHITECTURE_ATTESTATION=' + json.dumps(payload, sort_keys=True, separators=(',', ':')), flush=True)
+          PY

@@ -26,129 +26,52 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Apply local hot-counter patch
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('src/engines/v4_full_universe_exact_state_frontier.py')
-          text = path.read_text()
-          start = text.index('def _front_insert(')
-          end = text.index('\ndef _skyband_insert(', start)
-          replacement = '''def _front_insert(
-              layer: list[IncomingState],
-              candidate: IncomingState,
-              *,
-              frontier_epsilon: float,
-              relation: Callable[..., bool],
-              metrics: dict[str, int] | None = None,
-          ) -> tuple[bool, list[IncomingState]]:
-              """Insert into an exact Pareto layer ordered by descending x5."""
-              _metric_add(metrics, "frontier_insert_calls")
-              if not layer:
-                  layer.append(candidate)
-                  return True, []
-
-              if not _supports_x5_index(relation):
-                  checks = 0
-                  for incumbent in layer:
-                      checks += 1
-                      if relation(incumbent, candidate, frontier_epsilon=frontier_epsilon):
-                          _metric_add(metrics, "dominance_full_checks", checks)
-                          _metric_add(metrics, "frontier_insert_rejected")
-                          return False, []
-                  displaced = []
-                  for incumbent in layer:
-                      checks += 1
-                      if relation(candidate, incumbent, frontier_epsilon=frontier_epsilon):
-                          displaced.append(incumbent)
-                  _metric_add(metrics, "dominance_full_checks", checks)
-                  if displaced:
-                      displaced_ids = {id(row) for row in displaced}
-                      layer[:] = [row for row in layer if id(row) not in displaced_ids]
-                      _metric_add(metrics, "frontier_states_displaced", len(displaced))
-                  layer.append(candidate)
-                  return True, displaced
-
-              candidate_key = -candidate.x5
-              layer_size = len(layer)
-              dominator_end = bisect_right(layer, candidate_key, key=_x5_sort_key)
-              displaced_start = bisect_left(layer, candidate_key, key=_x5_sort_key)
-              _metric_add(
-                  metrics,
-                  "dominance_pairs_skipped_by_x5_index",
-                  max(0, 2 * layer_size - dominator_end - (layer_size - displaced_start)),
-              )
-
-              checks = 0
-              for index in range(dominator_end):
-                  incumbent = layer[index]
-                  checks += 1
-                  if relation(incumbent, candidate, frontier_epsilon=frontier_epsilon):
-                      _metric_add(metrics, "dominance_full_checks", checks)
-                      _metric_add(metrics, "frontier_insert_rejected")
-                      return False, []
-
-              displaced: list[IncomingState] = []
-              for index in range(displaced_start, layer_size):
-                  incumbent = layer[index]
-                  checks += 1
-                  if relation(candidate, incumbent, frontier_epsilon=frontier_epsilon):
-                      displaced.append(incumbent)
-              _metric_add(metrics, "dominance_full_checks", checks)
-
-              if displaced:
-                  displaced_ids = {id(row) for row in displaced}
-                  layer[displaced_start:] = [
-                      row for row in layer[displaced_start:] if id(row) not in displaced_ids
-                  ]
-                  _metric_add(metrics, "frontier_states_displaced", len(displaced))
-
-              insert_at = bisect_right(layer, candidate_key, key=_x5_sort_key)
-              layer.insert(insert_at, candidate)
-              return True, displaced
-          '''
-          path.write_text(text[:start] + replacement + text[end:])
-          PY
-          python -m py_compile src/engines/v4_full_universe_exact_state_frontier.py
-          python -m pytest -q tests/test_v4_full_universe_exact_state_frontier.py
-      - name: Profile k2 and k3 exact state compression
+      - name: Profile frontier-only exact mixed k3
         run: |
           python - <<'PY'
           import cProfile
           import io
           import pstats
-          import signal
-          from collections import Counter
-          from src.engines.v4_full_universe_exact_state_frontier import ExactIncomingFrontierIndex
-          from tests.test_v4_exact_frontier_production_scale import _pool, _risks, _diagnostics
+          from time import perf_counter
+          from src.engines.v4_full_universe_exact_state_frontier import (
+              ExactIncomingFrontierIndex,
+              _flatten_frontier,
+              _front_insert,
+              _merge_disjoint_position,
+              frontier_dominates,
+          )
+          from tests.test_v4_exact_frontier_production_scale import _pool, _risks
 
-          class ProbeTimeout(Exception):
-              pass
-          def alarm(_signum, _frame):
-              raise ProbeTimeout()
-          signal.signal(signal.SIGALRM, alarm)
-          for name, need in (
-              ('k2_mid2', Counter({'MID': 2})),
-              ('k3_def_mid_fwd', Counter({'DEF': 1, 'MID': 1, 'FWD': 1})),
-          ):
-              pools = _pool()
-              index = ExactIncomingFrontierIndex(pools, _risks(pools), frontier_epsilon=0.01, top_keep=12)
-              profiler = cProfile.Profile()
-              profiler.enable()
-              completed = False
-              count = 0
-              signal.alarm(20)
-              try:
-                  count = sum(1 for _ in index.iter_legal(need, tuple(), 10_000, _diagnostics()))
-                  completed = True
-              except ProbeTimeout:
-                  pass
-              finally:
-                  signal.alarm(0)
-                  profiler.disable()
-              print(f'=== {name} completed={completed} yielded={count} ===')
-              print(index.proof_summary())
-              stream = io.StringIO()
-              pstats.Stats(profiler, stream=stream).strip_dirs().sort_stats('cumulative').print_stats(30)
-              print(stream.getvalue())
+          pools = _pool()
+          index = ExactIncomingFrontierIndex(pools, _risks(pools), frontier_epsilon=0.01, top_keep=12)
+          states = None
+          profiler = cProfile.Profile()
+          profiler.enable()
+          started = perf_counter()
+          for position in ('DEF', 'MID', 'FWD'):
+              group = tuple(index._single_state[p.element] for p in index.pools[position])
+              if states is None:
+                  states = group
+                  print(position, 'singletons', len(states))
+                  continue
+              buckets = {}
+              considered = 0
+              for left in states:
+                  for right in group:
+                      considered += 1
+                      merged = _merge_disjoint_position(left, right, position)
+                      _front_insert(
+                          buckets.setdefault(merged.club_signature, []),
+                          merged,
+                          frontier_epsilon=0.01,
+                          relation=frontier_dominates,
+                          metrics=None,
+                      )
+              states = _flatten_frontier(buckets)
+              print(position, 'considered', considered, 'retained', len(states), 'elapsed', perf_counter() - started)
+          profiler.disable()
+          print('FINAL', len(states), 'elapsed', perf_counter() - started)
+          stream = io.StringIO()
+          pstats.Stats(profiler, stream=stream).strip_dirs().sort_stats('cumulative').print_stats(30)
+          print(stream.getvalue())
           PY

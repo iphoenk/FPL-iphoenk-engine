@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from src.engines import v4_full_universe_package_search_core as core
-from src.engines.v4_full_universe_shard_planner import PLAN_FILE
+from src.engines.v4_full_universe_shard_planner import PLAN_FILE, load_plan
 from src.engines.v4_full_universe_shard_worker import CONTRACT as SHARD_CONTRACT, DEFAULT_DIR
 from src.utils import DATA, atomic_json, read_json
 
@@ -20,13 +20,6 @@ DEFAULT_OUTPUT = DATA / "runtime" / "v4_full_universe_precomputed.json"
 def _stable_hash(value: Any) -> str:
     raw = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
-
-
-def _load_plan(path: Path) -> dict[str, Any]:
-    plan = read_json(path, {}) or {}
-    if plan.get("contract") != "V4_FULL_UNIVERSE_SHARD_PLAN_V1":
-        raise RuntimeError("invalid V4 full-universe shard plan")
-    return plan
 
 
 def _load_results(directory: Path) -> list[dict[str, Any]]:
@@ -232,7 +225,7 @@ def reduce_results(plan: dict[str, Any], results: list[dict[str, Any]]) -> dict[
 
 
 def run(*, plan_path: Path = PLAN_FILE, shard_dir: Path = DEFAULT_DIR, output_path: Path = DEFAULT_OUTPUT) -> dict[str, Any]:
-    plan = _load_plan(plan_path)
+    plan = load_plan(plan_path)
     results = _load_results(shard_dir)
     reduced = reduce_results(plan, results)
     atomic_json(output_path, reduced)

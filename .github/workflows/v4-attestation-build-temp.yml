@@ -89,6 +89,8 @@ jobs:
           )
           PY
       - name: Build architecture attestation from final governed bytes
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: python tools/v4_architecture_guard_attest.py
       - name: Commit governed patches and attestation
         run: |

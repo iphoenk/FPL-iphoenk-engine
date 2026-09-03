@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "contract": "V4_FULL_UNIVERSE_PACKAGE_SEARCH_V1",
   "authority": "OPTIMIZATION",
   "official_fpl_factual_authority": true,
@@ -9,6 +9,7 @@
   "search": {
     "minimum_package_sizes": [0, 1, 2, 3],
     "maximum_replacements": 3,
+    "top_per_size": 12,
     "allow_heuristic_candidate_cutoff": false,
     "allow_beam_cutoff": false,
     "safe_player_pruning": "SAME_TEAM_SAME_POSITION_FULL_DECISION_PARETO_DOMINANCE",
@@ -109,6 +110,8 @@
     "report_restricted_search_as_green_forbidden": true,
     "heuristic_search_must_fail_closed_for_recommendation": true,
     "reporting_may_not_recompute_decision": true,
-    "deterministic_result_required": true
+    "deterministic_result_required": true,
+    "operational_tunables_registry_owned": true,
+    "top_per_size_not_hardcoded_by_runtime_owner": true
   }
 }

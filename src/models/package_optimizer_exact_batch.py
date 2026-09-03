@@ -39,10 +39,7 @@ class ExactBatchScorer:
             position = str(player.get("position") or "")
             if element <= 0 or position not in position_code:
                 continue
-            by_gw = {
-                int(row.get("gw") or -1): row
-                for row in (player.get("xpts_by_gw") or [])
-            }
+            by_gw = {int(row.get("gw") or -1): row for row in (player.get("xpts_by_gw") or [])}
             row_means: list[float] = []
             row_vars: list[float] = []
             for offset in range(self.max_horizon):
@@ -86,11 +83,7 @@ class ExactBatchScorer:
         return np.asarray(flat, dtype=np.int32).reshape(len(candidate_ids), width)
 
     @staticmethod
-    def _ordered_sum(
-        values: np.ndarray,
-        columns: list[np.ndarray],
-        rows: np.ndarray,
-    ) -> np.ndarray:
+    def _ordered_sum(values: np.ndarray, columns: list[np.ndarray], rows: np.ndarray) -> np.ndarray:
         """Vectorize across packages while preserving scalar left-to-right sum order."""
         total = np.zeros(len(rows), dtype=np.float64)
         for column in columns:
@@ -112,10 +105,7 @@ class ExactBatchScorer:
         if not np.all(layout == layout[0]):
             raise ValueError("batch candidate position layout must be constant")
         layout0 = layout[0]
-        position_columns = {
-            position: np.flatnonzero(layout0 == code)
-            for code, position in enumerate(POSITIONS)
-        }
+        position_columns = {position: np.flatnonzero(layout0 == code) for code, position in enumerate(POSITIONS)}
         if any(len(position_columns[position]) == 0 for position in POSITIONS):
             raise ValueError("batch candidate layout is missing a position")
 
@@ -133,16 +123,12 @@ class ExactBatchScorer:
             gw_means = means[:, :, offset]
             gw_vars = variances[:, :, offset]
             ranked_columns: dict[str, np.ndarray] = {}
-
             for position in POSITIONS:
                 cols = position_columns[position]
                 pm = gw_means[:, cols]
                 order = np.argsort(-pm, axis=1, kind="stable")
                 ranked_columns[position] = cols[order]
 
-            # Compute each formation mean with the exact scalar selected-list
-            # order: GK, then DEF, MID, FWD. This avoids reduction-tree drift at
-            # the 0.001 publication boundary.
             formation_means: list[np.ndarray] = []
             for d, m, f in self.formations:
                 selected_columns: list[np.ndarray] = [ranked_columns["GK"][:, 0]]
@@ -151,13 +137,12 @@ class ExactBatchScorer:
                 selected_columns.extend(ranked_columns["FWD"][:, rank] for rank in range(f))
                 formation_means.append(self._ordered_sum(gw_means, selected_columns, rows))
             fm = np.stack(formation_means, axis=1)
-            best_formation = np.argmax(fm, axis=1)  # first maximum = scalar strict-gt tie rule
+            best_formation = np.argmax(fm, axis=1)
             selected_counts = np.asarray(self.formations, dtype=np.int8)[best_formation]
 
             starter_mask = np.zeros((n, width), dtype=bool)
             lineup_mean = np.zeros(n, dtype=np.float64)
             lineup_var = np.zeros(n, dtype=np.float64)
-
             gk_column = ranked_columns["GK"][:, 0]
             starter_mask[rows, gk_column] = True
             lineup_mean = lineup_mean + gw_means[rows, gk_column]
@@ -174,20 +159,23 @@ class ExactBatchScorer:
                     selected_rows = rows[selected]
                     selected_columns = column[selected]
                     starter_mask[selected_rows, selected_columns] = True
-                    # Adding +0.0 for rows where the scalar loop skipped an item
-                    # is bit-preserving for finite FPL projection values.
                     lineup_mean = lineup_mean + np.where(selected, gw_means[rows, column], 0.0)
                     lineup_var = lineup_var + np.where(selected, gw_vars[rows, column], 0.0)
 
-            bench_mean = np.zeros(n, dtype=np.float64)
-            bench_var = np.zeros(n, dtype=np.float64)
+            # Canonical scorer does not sum the bench directly. It Python-sums
+            # the complete candidate in input order, then subtracts lineup.
+            # Preserve that exact floating operation order to keep 0.001 output
+            # boundaries identical to _score_compiled_rows.
+            all_mean = np.zeros(n, dtype=np.float64)
+            all_var = np.zeros(n, dtype=np.float64)
             for column in range(width):
-                is_bench = ~starter_mask[:, column]
-                bench_mean = bench_mean + np.where(is_bench, gw_means[:, column], 0.0)
-                bench_var = bench_var + np.where(is_bench, gw_vars[:, column], 0.0)
+                all_mean = all_mean + gw_means[:, column]
+                all_var = all_var + gw_vars[:, column]
+            bench_mean = all_mean - lineup_mean
+            bench_var = all_var - lineup_var
 
             starter_means = np.where(starter_mask, gw_means, -np.inf)
-            captain_column = np.argmax(starter_means, axis=1)  # first input-order maximum
+            captain_column = np.argmax(starter_means, axis=1)
             captain_mean = gw_means[rows, captain_column]
             captain_var = gw_vars[rows, captain_column]
 
@@ -228,14 +216,7 @@ class ExactBatchScorer:
 
         out: list[dict[str, Any]] = []
         for row_index in range(n):
-            horizon_rows = {
-                str(h): {
-                    "valid": True,
-                    "mean": float(horizon_means[h][row_index]),
-                    "std": float(horizon_stds[h][row_index]),
-                }
-                for h in horizons
-            }
+            horizon_rows = {str(h): {"valid": True, "mean": float(horizon_means[h][row_index]), "std": float(horizon_stds[h][row_index])} for h in horizons}
             objective_mean = sum(normalized[h] * horizon_rows[str(h)]["mean"] for h in horizons)
             objective_var = sum((normalized[h] ** 2) * (horizon_rows[str(h)]["std"] ** 2) for h in horizons)
             objective_std = objective_var ** 0.5
@@ -260,7 +241,6 @@ def exact_skyline_indices(metrics: np.ndarray, *, eps: float = 1e-12) -> np.ndar
     n = values.shape[0]
     if n <= 1:
         return np.arange(n, dtype=np.int32)
-
     active = np.arange(n, dtype=np.int32)
     block = 512
     dominated = np.zeros(n, dtype=bool)

@@ -77,12 +77,19 @@ def test_exhaustive_small_universe_has_full_authority_and_no_budget():
     assert result["status"] == "READY"
     assert diag["search_authority"] == "FULL"
     assert diag["lossy_pruning"] is False
+    assert diag["candidate_pruning_applied"] is False
+    assert diag["candidate_pruned_count"] == 0
     assert diag["single_budget_applied"] is False
     assert diag["pair_budget_applied"] is False
     assert diag["exact_package_limit_applied"] is False
-    assert diag["single_exact_scored"] == diag["legal_single_stubs"]
+    assert diag["single_exact_scored"] == diag["single_step_legal"]
     assert diag["pair_candidates_exact_scored"] == diag["pair_step_legal"]
+    assert diag["all_step_legal_packages_scored"] is True
+    assert diag["pair_requires_single_move_seed"] is False
     assert result["package_count"] == 1 + diag["single_exact_scored"] + diag["pair_candidates_exact_scored"]
+    frontier = result["efficient_frontier"]
+    assert frontier["representation_input"] == "ALL_EVALUATED_LEGAL_PACKAGES"
+    assert frontier["evaluated_legal_package_count"] == result["package_count"]
 
 
 def test_exhaustive_finalizer_reuses_canonical_owners_and_has_no_target_bias():
@@ -93,10 +100,12 @@ def test_exhaustive_finalizer_reuses_canonical_owners_and_has_no_target_bias():
     assert "from src.engines.lineup_governance import build_package_decision" in text
     assert '"search_authority": "FULL"' in text
     assert '"lossy_pruning": False' in text
+    assert '"candidate_pruning_applied": False' in text
     assert '"single_budget_applied": False' in text
     assert '"pair_budget_applied": False' in text
     assert '"exact_package_limit_applied": False' in text
     assert "canonical_score_package_reused_for_every_legal_package" in text
+    assert "pair_search_not_seeded_by_single_legality" in text
     assert "dss_watchlist" not in text
     assert "watchlist.json" not in text
     for name in ("Mbeumo", "Cherki", "Foden", "Schade", "Barry", "Guehi", "Guéhi"):

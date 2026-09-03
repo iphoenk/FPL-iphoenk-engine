@@ -49,7 +49,8 @@ def _tactical_missing(player: dict[str, Any]) -> int:
 
 def _roster_uncertain(player: dict[str, Any]) -> int:
     adaptation = (((player.get("historical_prior") or {}).get("transfer_adaptation")) or {})
-    return int(bool(adaptation) and adaptation.get("state") != "SAME_CLUB" and (adaptation.get("confidence_ceiling") or adaptation.get("old_role_prior_retired") is False))
+    uncertain = bool(adaptation) and adaptation.get("state") != "SAME_CLUB" and bool(adaptation.get("confidence_ceiling") or adaptation.get("old_role_prior_retired") is False)
+    return int(uncertain)
 
 
 def _adverse_price(row: dict[str, Any], outgoing: bool) -> float:

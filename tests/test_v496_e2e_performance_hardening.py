@@ -114,8 +114,12 @@ def test_optimizer_exact_cache_write_uses_path_artifacts(monkeypatch, tmp_path):
     v4_decision_pipeline._write_cache("fingerprint")
     stored = json.loads(cache.read_text(encoding="utf-8"))
     assert stored["fingerprint"] == "fingerprint"
-    assert stored["schema_version"] == 2
+    assert stored["schema_version"] == 3
     assert stored["guardrails"]["bounded_consumer_projection_not_full_payload"] is True
+    assert stored["guardrails"]["full_universe_package_policy_in_cache_key"] is True
+    assert stored["guardrails"]["tactical_interaction_semantics_in_cache_key"] is True
+    assert stored["guardrails"]["price_scenario_semantics_in_cache_key"] is True
+    assert stored["guardrails"]["package_search_width_is_not_silently_bounded"] is True
     assert set(stored["artifact_sha256"]) == {"wc", "packages", "lineup"}
     assert all(len(value) == 64 for value in stored["artifact_sha256"].values())
 

@@ -1,0 +1,45 @@
+name: V4 capacity equivalence profiler temp
+
+on:
+  push:
+    branches:
+      - codex/v4-full-universe-tactical-20260903
+    paths:
+      - .github/workflows/v4-capacity-equivalence-profiler-temp.yml
+      - tools/v4_capacity_equivalence_probe_temp.py
+      - tools/v4_terminal_suffix_probe_temp.py
+      - tools/v4_terminal_package_rank_probe_temp.py
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: codex/v4-full-universe-tactical-20260903
+          fetch-depth: 1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Apply capacity-equivalence source probe
+        run: python tools/v4_capacity_equivalence_probe_temp.py
+      - name: Compile probed source
+        run: python -m py_compile src/engines/v4_full_universe_exact_state_frontier.py
+      - name: Exact semantic oracle
+        run: python -m pytest -q tests/test_v4_full_universe_exact_state_frontier.py tests/test_v4_full_universe_authority_fail_closed.py
+      - name: Terminal suffix compression profile
+        run: python tools/v4_terminal_suffix_probe_temp.py
+      - name: Exact terminal package rank branch-bound profile
+        run: python tools/v4_terminal_package_rank_probe_temp.py
+      - name: Production-scale exact regression
+        run: /usr/bin/time -f 'regression_elapsed=%e' python -m pytest -q -s tests/test_v4_exact_frontier_production_scale.py

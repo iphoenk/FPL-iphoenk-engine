@@ -90,6 +90,8 @@ ATTESTED_CONFIG_PATHS = (
     CONFIG / "release_manifest.json",
     CONFIG / "runtime_artifact_policy.json",
     CONFIG / "intelligence/owned_challenger_decision_v4.json",
+    CONFIG / "optimizer_equivalence_registry.json",
+    CONFIG / "intelligence/full_universe_package_search.json",
 )
 ATTESTED_WORKFLOW_PATHS = (
     ROOT / ".github/workflows/fpl-engine.yml",

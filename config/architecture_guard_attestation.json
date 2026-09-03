@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "fingerprint": "8c69be60aba5c515481a77f6c49cacbeef4c0ccfa1e459941ab6a2dda3b0e70e",
+  "fingerprint": "b22b81dbcf6e141327e423a912ea1bba195c8f3717908ba831c417f9ada889f9",
   "release": "4.9.6",
   "guard_schema_version": 497,
   "result": {
@@ -318,13 +318,13 @@
       {
         "capability": "PACKAGE_OPTIMIZER",
         "current_owner": "optimization",
-        "input_contract": "canonical candidates + exact finance + planning squad",
+        "input_contract": "full Official candidate universe + safe dominance proof + exact finance + tactical/price evidence + planning squad",
         "output_artifact": "data/wc_package_audit_v4.json",
         "consumers": [
           "recommendation_sanity",
           "decision_arbitration"
         ],
-        "duplicates_overlap": "v4_wc_package_audit.py retained as reference/equivalence implementation, not runtime owner",
+        "duplicates_overlap": "v4_full_universe_package_search is the transfer-package runtime owner; v4_full_universe_package_search_core is internal exhaustive mechanics; v4_wc_package_audit.py and v4_wc_package_audit_fast are legacy reference/equivalence implementations only",
         "action": "READ_ONLY_ALIAS_REQUIRED"
       },
       {

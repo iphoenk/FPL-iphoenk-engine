@@ -1,0 +1,117 @@
+{
+  "schema_version": 3,
+  "contract": "V4_FULL_UNIVERSE_PACKAGE_SEARCH_V1",
+  "authority": "OPTIMIZATION",
+  "official_fpl_factual_authority": true,
+  "watchlist_is_output_only": true,
+  "benchmark_players_are_audit_only": true,
+  "global_optimality_claim_requires_proof": true,
+  "search": {
+    "minimum_package_sizes": [0, 1, 2, 3],
+    "maximum_replacements": 3,
+    "top_per_size": 12,
+    "allow_heuristic_candidate_cutoff": false,
+    "allow_beam_cutoff": false,
+    "safe_player_pruning": "SAME_TEAM_SAME_POSITION_FULL_DECISION_PARETO_DOMINANCE",
+    "dominance_epsilon": 0.000001,
+    "frontier_epsilon": 0.01,
+    "hit_cost_points": 4,
+    "full_universe_proven_state": "FULL_UNIVERSE_PROVEN",
+    "heuristic_state": "FULL_UNIVERSE_HEURISTIC"
+  },
+  "safe_player_dominance": {
+    "same_team_required": true,
+    "same_position_required": true,
+    "minimize": [
+      "cost",
+      "projection_uncertainty",
+      "xmins_uncertainty",
+      "tactical_uncertainty",
+      "roster_change_uncertainty",
+      "price_risk",
+      "projected_buy_cost_0",
+      "projected_buy_cost_1",
+      "projected_buy_cost_2",
+      "dnp_probability_5",
+      "rate_spike_risk"
+    ],
+    "maximize": [
+      "xpts_3",
+      "xpts_5",
+      "xpts_10",
+      "xpts_15",
+      "objective",
+      "gw_xpts_1",
+      "gw_xpts_2",
+      "gw_xpts_3",
+      "gw_xpts_4",
+      "gw_xpts_5",
+      "tactical_role_confidence",
+      "opponent_matchup_confidence",
+      "sanity_confidence",
+      "start_probability_5",
+      "role_prior",
+      "horizon_stability",
+      "current_season_weight",
+      "market_support"
+    ],
+    "at_least_one_strict": true,
+    "proof_required_per_pruned_player": true,
+    "downstream_sanity_regret_forbidden": true,
+    "future_price_feasibility_regret_forbidden": true
+  },
+  "efficient_frontier": {
+    "maximize": [
+      "net_xpts_3",
+      "net_xpts_5",
+      "net_xpts_10",
+      "net_xpts_15",
+      "structural_flexibility",
+      "tactical_role_confidence",
+      "opponent_matchup_confidence"
+    ],
+    "minimize": [
+      "hit_cost",
+      "xmins_uncertainty",
+      "projection_uncertainty",
+      "tactical_uncertainty",
+      "price_risk",
+      "roster_change_uncertainty"
+    ],
+    "categories": [
+      "MAX_UPSIDE",
+      "BEST_RISK_ADJUSTED",
+      "BEST_NO_HIT",
+      "LOWEST_UNCERTAINTY",
+      "BEST_FLEXIBILITY",
+      "CHEAPEST_ENABLER",
+      "BEST_STAGGERED",
+      "ROLL_BASELINE"
+    ],
+    "false_precision_forbidden": true
+  },
+  "tactical": {
+    "direct_xpts_multiplier_forbidden": true,
+    "direct_understat_xpts_mutation_forbidden": true,
+    "direct_understat_xmins_mutation_forbidden": true,
+    "missing_formation_state": "EVIDENCE_GATED",
+    "missing_coach_system_state": "EVIDENCE_GATED",
+    "missing_actual_role_state": "EVIDENCE_GATED",
+    "missing_opponent_shape_state": "EVIDENCE_GATED"
+  },
+  "price": {
+    "current_ledger_is_factual": true,
+    "projected_price_scenario_is_advisory": true,
+    "projected_price_cannot_authorize_transfer": true
+  },
+  "governance": {
+    "screened_players_is_not_full_universe_proof": true,
+    "pruned_player_must_have_safe_proof": true,
+    "report_restricted_search_as_green_forbidden": true,
+    "heuristic_search_must_fail_closed_for_recommendation": true,
+    "reporting_may_not_recompute_decision": true,
+    "deterministic_result_required": true,
+    "operational_tunables_registry_owned": true,
+    "top_per_size_not_hardcoded_by_runtime_owner": true
+  }
+}

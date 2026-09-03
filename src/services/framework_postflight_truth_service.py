@@ -157,7 +157,17 @@ def _canonical_capability_telemetry(health: dict, latest: dict, predictions: dic
     phase_state = "ACTIVE" if (latest.get("phase") or {}).get("planning_gw") and (latest.get("checkpoint_context") or {}).get("policy_id") else "BLOCKED"
     tactical_state = "ACTIVE" if len(tactical.get("owned") or []) == 15 and len(tactical.get("watchlist") or []) == 20 else "PARTIAL"
     finance_state = "ACTIVE" if len(team.get("team_value_ledger") or []) == 15 and (packages.get("affordability") or {}).get("price_basis") else "PARTIAL"
-    package_state = "ACTIVE" if packages.get("best_by_replacement_count") is not None and packages.get("overall_verdict") else "UNAVAILABLE"
+    package_search = packages.get("search") or {}
+    package_proven = (
+        package_search.get("status") == "FULL_UNIVERSE_PROVEN"
+        and package_search.get("authoritative_for_recommendation") is True
+        and packages.get("decision_authority") == "ENGINE_ADVISORY_ONLY_FULL_UNIVERSE_PROVEN"
+    )
+    package_state = (
+        "ACTIVE" if package_proven and packages.get("best_by_replacement_count") is not None and packages.get("overall_verdict")
+        else "BLOCKED" if package_search.get("status") == "FULL_UNIVERSE_HEURISTIC"
+        else "UNAVAILABLE"
+    )
     lineup_state = "ACTIVE" if len(lineup.get("starting_xi") or []) == 11 else "BLOCKED"
     captain_state = "ACTIVE" if (lineup.get("captain") or {}).get("element") and (lineup.get("vice_captain") or {}).get("element") else "BLOCKED"
     comparator_state = "ACTIVE" if tactical_state == "ACTIVE" and arbitration.get("resolution_id") else "PARTIAL"
@@ -180,7 +190,13 @@ def _canonical_capability_telemetry(health: dict, latest: dict, predictions: dic
         "Set Pieces": (set_piece_state, {"health_status": set_piece_status}),
         "Price/Finance": (finance_state, {"ledger": len(team.get("team_value_ledger") or []), "price_basis": (packages.get("affordability") or {}).get("price_basis")}),
         "Comparator": (comparator_state, {"canonical_resolution": arbitration.get("resolution_id"), "watchlist": len(tactical.get("watchlist") or [])}),
-        "Package Optimizer": (package_state, {"verdict": packages.get("overall_verdict")}),
+        "Package Optimizer": (package_state, {
+            "verdict": packages.get("overall_verdict"),
+            "search_status": package_search.get("status"),
+            "authoritative_for_recommendation": package_search.get("authoritative_for_recommendation"),
+            "decision_authority": packages.get("decision_authority"),
+            "false_green_forbidden": True,
+        }),
         "XI/Bench": (lineup_state, {"xi": len(lineup.get("starting_xi") or []), "formation": lineup.get("formation")}),
         "Captaincy": (captain_state, {"captain": (lineup.get("captain") or {}).get("element"), "vice": (lineup.get("vice_captain") or {}).get("element")}),
         "External Consensus": (external_state, {"source_rows": len(external_rows), "advisory_only": True}),

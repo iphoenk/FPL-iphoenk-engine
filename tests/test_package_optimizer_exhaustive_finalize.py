@@ -1,15 +1,14 @@
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 
-from src.engines.package_optimizer_exhaustive_finalize import build_exhaustive, safe_per_gw_dominates
+from src.engines.decision_intelligence import _step_legal_transfer_sequence
+from src.engines.package_optimizer_exhaustive_finalize import _fast_step_sequence, build_exhaustive, safe_per_gw_dominates
 
 
 def _player(element: int, position: str, team_id: int, means: list[float], cost: int = 50, std: float = 1.0) -> dict:
-    rows = [
-        {"gw": 3 + index, "mean": float(mean), "std": float(std)}
-        for index, mean in enumerate(means)
-    ]
+    rows = [{"gw": 3 + index, "mean": float(mean), "std": float(std)} for index, mean in enumerate(means)]
     running = 0.0
     variance = 0.0
     horizon_rows = {}
@@ -18,16 +17,7 @@ def _player(element: int, position: str, team_id: int, means: list[float], cost:
         variance += std * std
         if index in (3, 5, 10, 15):
             horizon_rows[str(index)] = {"mean": running, "std": variance ** 0.5}
-    return {
-        "element": element,
-        "name": f"P{element}",
-        "position": position,
-        "team_id": team_id,
-        "now_cost": cost,
-        "status": "a",
-        "xpts_by_gw": rows,
-        "horizons": horizon_rows,
-    }
+    return {"element": element, "name": f"P{element}", "position": position, "team_id": team_id, "now_cost": cost, "status": "a", "xpts_by_gw": rows, "horizons": horizon_rows}
 
 
 def _owned() -> list[dict]:
@@ -43,10 +33,7 @@ def _owned() -> list[dict]:
 
 
 def _team(owned: list[dict]) -> dict:
-    return {
-        "team_value_ledger": [{"element": row["element"], "sell_cost": row["now_cost"]} for row in owned],
-        "totals": {"itb": 0},
-    }
+    return {"team_value_ledger": [{"element": row["element"], "sell_cost": row["now_cost"]} for row in owned], "totals": {"itb": 0}}
 
 
 def test_safe_dominance_requires_every_gw_not_only_cumulative_horizons():
@@ -63,14 +50,49 @@ def test_safe_dominance_is_same_team_position_price_and_per_gw():
     assert safe_per_gw_dominates(stronger, other_team, 3, 15) is False
 
 
+def test_fast_step_sequence_matches_canonical_for_governed_replacements():
+    owned = _owned()
+    clubs = Counter(int(x["team_id"]) for x in owned)
+    out_a, out_b = owned[7], owned[8]
+    in_a = _player(100, out_a["position"], 18, [4.0] * 15, 49)
+    in_b = _player(101, out_b["position"], 19, [4.0] * 15, 51)
+    for outs, ins, itb in (([out_a], [in_a], 0), ([out_a, out_b], [in_a, in_b], 0), ([out_a, out_b], [in_b, in_a], 0)):
+        canonical = _step_legal_transfer_sequence(owned, outs, ins, itb)
+        fast = _fast_step_sequence(owned, clubs, outs, ins, itb)
+        assert fast == canonical
+
+
+def test_pair_search_finds_package_that_requires_first_transfer_to_free_club_slot():
+    owned = _owned()
+    # Force three owned players at club 1 while preserving a legal squad.
+    owned[0]["team_id"] = 1
+    owned[2]["team_id"] = 1
+    owned[7]["team_id"] = 1
+    for idx, row in enumerate(owned):
+        if idx not in (0, 2, 7) and row["team_id"] == 1:
+            row["team_id"] = 20
+    out_free = owned[2]  # DEF from club 1
+    out_mid = owned[8]   # MID from another club
+    in_def = _player(100, "DEF", 18, [4.0] * 15, 50)
+    in_mid_club1 = _player(101, "MID", 1, [8.0] * 15, 50)
+    projections = {"planning_gw": 3, "players": owned + [in_def, in_mid_club1]}
+    team = _team(owned)
+
+    # MID->club1 alone is illegal from the original 3-player club state.
+    single_ok, _ = _step_legal_transfer_sequence(owned, [out_mid], [in_mid_club1], 0)
+    assert single_ok is False
+
+    result = build_exhaustive(projections, team, top_keep=100)
+    packages = result["packages"]
+    wanted_outs = {out_free["element"], out_mid["element"]}
+    wanted_ins = {in_def["element"], in_mid_club1["element"]}
+    assert any({x["element"] for x in p["outs"]} == wanted_outs and {x["element"] for x in p["ins"]} == wanted_ins for p in packages)
+    assert result["search_diagnostics"]["pair_requires_single_move_seed"] is False
+
+
 def test_exhaustive_small_universe_has_full_authority_and_no_budget():
     owned = _owned()
-    candidates = [
-        _player(100, "MID", 16, [5.0] * 15, 50),
-        _player(101, "MID", 17, [4.5] * 15, 50),
-        _player(102, "DEF", 18, [4.5] * 15, 50),
-        _player(103, "FWD", 19, [4.5] * 15, 50),
-    ]
+    candidates = [_player(100, "MID", 16, [5.0] * 15, 50), _player(101, "MID", 17, [4.5] * 15, 50), _player(102, "DEF", 18, [4.5] * 15, 50), _player(103, "FWD", 19, [4.5] * 15, 50)]
     projections = {"planning_gw": 3, "players": owned + candidates}
     result = build_exhaustive(projections, _team(owned), top_keep=100)
     diag = result["search_diagnostics"]

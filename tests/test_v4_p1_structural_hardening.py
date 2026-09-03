@@ -44,19 +44,26 @@ def test_quality_gate_runner_uses_explicit_dependencies_without_module_monkeypat
     assert "core._assert_prediction_and_validation =" not in source
 
 
-def test_optimizer_runtime_owner_is_fast_and_reference_is_equivalence_only():
+def test_optimizer_runtime_owner_is_full_universe_for_transfer_packages_and_reference_is_equivalence_only():
     registry = _json("config/optimizer_equivalence_registry.json")
     manifest = _json("config/release_manifest.json")
     decision_source = _text("src/engines/v4_decision_pipeline.py")
     assert manifest["registries"]["optimizer_equivalence"] == registry["registry"]
     assert "from src.engines.v4_wc_optimizer_fast import decision_report_from_candidates_fast" in decision_source
-    assert "from src.engines.v4_wc_package_audit_fast import audit_packages_from_candidates_fast" in decision_source
+    assert "from src.engines.v4_full_universe_package_search import search_full_universe_packages" in decision_source
     assert "decision_report_from_candidates_fast(" in decision_source
-    assert "audit_packages_from_candidates_fast(" in decision_source
+    assert "search_full_universe_packages(" in decision_source
+    assert "audit_packages_from_candidates_fast(" not in decision_source
+    assert registry["production"]["transfer_package_optimizer"] == "src.engines.v4_full_universe_package_search.search_full_universe_packages"
+    assert registry["production"]["full_squad_optimizer_state"] == "RESTRICTED_BEAM_FULL_SQUAD"
     assert registry["reference"]["runtime_authority"] is False
     assert registry["reference"]["purpose"] == "read_only_semantic_equivalence_oracle"
     assert registry["guardrails"]["optimizer_search_width_reduction_forbidden"] is True
     assert registry["guardrails"]["fast_path_semantic_drift_forbidden"] is True
+    assert registry["guardrails"]["watchlist_candidate_authority_forbidden"] is True
+    assert registry["guardrails"]["transfer_package_beam_cutoff_forbidden"] is True
+    assert registry["guardrails"]["full_universe_optimality_claim_requires_safe_pruning_proof"] is True
+    assert registry["guardrails"]["legacy_package_audit_cannot_own_transfer_recommendation"] is True
     for relative in registry["required_equivalence_suites"]:
         assert (ROOT / relative).is_file(), relative
 

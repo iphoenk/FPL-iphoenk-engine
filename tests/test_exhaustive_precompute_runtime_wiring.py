@@ -4,15 +4,70 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 from src.engines import prediction_service
 from src.runtime_v3 import domain_orchestrator
 from src.runtime_v3.execution_profile_resolver import resolve_execution_profile
+from src.runtime_v3.publication_verify import _verify_exhaustive_precompute_contract
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _json(path: str) -> dict:
     return json.loads((ROOT / path).read_text(encoding="utf-8"))
+
+
+def _write(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _valid_exhaustive_snapshot(data_dir: Path) -> None:
+    hold = {"id": "HOLD", "legal": True, "score": {"valid": True}}
+    _write(data_dir / "package_optimizer.json", {
+        "status": "READY",
+        "hold": hold,
+        "packages": [],
+        "search_diagnostics": {
+            "search_authority": "FULL",
+            "lossy_pruning": False,
+            "candidate_pruning_applied": False,
+            "single_budget_applied": False,
+            "pair_budget_applied": False,
+            "exact_package_limit_applied": False,
+            "all_step_legal_packages_scored": True,
+            "watchlist_used_as_optimizer_input": False,
+        },
+    })
+    _write(data_dir / "package_decision.json", {
+        "selected_package_id": "HOLD",
+        "current_squad_legal": True,
+        "gate0_revalidated": True,
+    })
+    _write(data_dir / "framework_health.json", {
+        "overall": "GREEN",
+        "decision_engine": "HEALTHY",
+        "gate0": {"pass": True, "counts": {"PASS": 16}},
+    })
+    _write(data_dir / "team.json", {
+        "squad": [{"element": element} for element in range(1, 16)],
+    })
+    positions = {}
+    next_element = 100
+    for position in ("GK", "DEF", "MID", "FWD"):
+        positions[position] = [{"element": next_element + offset} for offset in range(5)]
+        next_element += 10
+    _write(data_dir / "dss_watchlist.json", {"status": "READY", "positions": positions})
+    _write(data_dir / "latest.json", {
+        "decision_intelligence": {
+            "package_optimizer_search_authority": "FULL",
+            "package_optimizer_execution_profile": "exhaustive_precompute",
+        },
+        "package_decision_summary": {
+            "selected_package_id": "HOLD",
+            "gate0_revalidated": True,
+        },
+    })
 
 
 def test_exhaustive_precompute_profile_resolves_from_single_policy_authority():
@@ -93,3 +148,44 @@ def test_registry_preserves_single_prediction_owner_and_downstream_decision_owne
     assert registry["lineup_governance"]["depends_on"] == ["prediction"]
     assert "package_optimizer.json" in registry["lineup_governance"]["inputs"]
     assert "package_decision.json" in registry["lineup_governance"]["artifacts"]
+
+
+def test_exhaustive_publication_assurance_requires_same_snapshot_full_chain(tmp_path):
+    _valid_exhaustive_snapshot(tmp_path)
+    result = _verify_exhaustive_precompute_contract(tmp_path)
+    assert result["search_authority"] == "FULL"
+    assert result["gate0_pass"] == 16
+    assert result["framework"] == "GREEN"
+    assert result["decision_engine"] == "HEALTHY"
+    assert result["watchlist_counts"] == {position: 5 for position in ("GK", "DEF", "MID", "FWD")}
+    assert result["watchlist_non_owned_unique"] is True
+
+
+def test_exhaustive_publication_assurance_fails_closed_on_partial_optimizer(tmp_path):
+    _valid_exhaustive_snapshot(tmp_path)
+    optimizer = json.loads((tmp_path / "package_optimizer.json").read_text(encoding="utf-8"))
+    optimizer["search_diagnostics"]["search_authority"] = "PARTIAL"
+    _write(tmp_path / "package_optimizer.json", optimizer)
+    with pytest.raises(RuntimeError, match="not FULL authority"):
+        _verify_exhaustive_precompute_contract(tmp_path)
+
+
+def test_exhaustive_publication_assurance_fails_closed_on_incomplete_watchlist(tmp_path):
+    _valid_exhaustive_snapshot(tmp_path)
+    watchlist = json.loads((tmp_path / "dss_watchlist.json").read_text(encoding="utf-8"))
+    watchlist["positions"]["GK"].pop()
+    _write(tmp_path / "dss_watchlist.json", watchlist)
+    with pytest.raises(RuntimeError, match="not exact 5x4"):
+        _verify_exhaustive_precompute_contract(tmp_path)
+
+
+def test_exhaustive_publication_required_artifacts_are_whitelisted():
+    publish_paths = set(_json("config/runtime/runtime_publish_registry.json")["publish_paths"])
+    assert {
+        "latest.json",
+        "team.json",
+        "package_optimizer.json",
+        "package_decision.json",
+        "framework_health.json",
+        "dss_watchlist.json",
+    } <= publish_paths

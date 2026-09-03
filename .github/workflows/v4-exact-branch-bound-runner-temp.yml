@@ -1,4 +1,4 @@
-name: V4 temporary exact branch-bound acceptance
+name: V4 temporary exact retention hot-path acceptance
 on:
   push:
     branches:
@@ -24,7 +24,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Apply exact admissible branch-bound hardening
+      - name: Apply exact retention hot-path optimization
         run: python tools/v4_exact_branch_bound_patch_temp.py
       - name: Refresh governed architecture attestation
         run: python tools/v4_architecture_guard_attest.py
@@ -34,12 +34,12 @@ jobs:
         run: python -m pytest -q
       - name: Cold optimization hard SLO proof
         run: /usr/bin/time -f 'cold_optimization_elapsed=%e' timeout 44s python -m src.services.optimization_slo_service
-      - name: Commit governed exact branch-bound hardening
+      - name: Commit governed exact retention optimization
         run: |
           git config user.name 'fpl-iphoenk-bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add src/engines/v4_full_universe_package_search_core.py config/architecture/architecture_guard_attestation.json
+          git add src/engines/v4_full_universe_package_search_core.py config/architecture_guard_attestation.json
           git diff --cached --quiet && exit 0
-          git commit -m 'perf(v4): exact admissible package branch bound'
+          git commit -m 'perf(v4): remove exact package retention hot-path churn'
           git push origin HEAD:codex/v4-full-universe-tactical-20260903
-# rerun 2026-09-03T08:45Z
+# exact-retention-proof 2026-09-03T09:18Z

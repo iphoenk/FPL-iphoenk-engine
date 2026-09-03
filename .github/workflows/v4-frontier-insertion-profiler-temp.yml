@@ -1,0 +1,72 @@
+name: V4 frontier insertion profiler temp
+
+on:
+  push:
+    branches: [codex/v4-full-universe-tactical-20260903]
+    paths:
+      - .github/workflows/v4-frontier-insertion-profiler-temp.yml
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: codex/v4-full-universe-tactical-20260903
+          fetch-depth: 1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Profile k2 and k3 exact state compression
+        run: |
+          python - <<'PY'
+          import cProfile
+          import io
+          import pstats
+          import signal
+          from collections import Counter
+          from src.engines.v4_full_universe_exact_state_frontier import ExactIncomingFrontierIndex
+          from tests.test_v4_exact_frontier_production_scale import _pool, _risks, _diagnostics
+
+          class ProbeTimeout(Exception):
+              pass
+
+          def alarm(_signum, _frame):
+              raise ProbeTimeout()
+
+          signal.signal(signal.SIGALRM, alarm)
+
+          for name, need in (
+              ('k2_mid2', Counter({'MID': 2})),
+              ('k3_def_mid_fwd', Counter({'DEF': 1, 'MID': 1, 'FWD': 1})),
+          ):
+              pools = _pool()
+              index = ExactIncomingFrontierIndex(pools, _risks(pools), frontier_epsilon=0.01, top_keep=12)
+              profiler = cProfile.Profile()
+              profiler.enable()
+              completed = False
+              count = 0
+              signal.alarm(20)
+              try:
+                  count = sum(1 for _ in index.iter_legal(need, tuple(), 10_000, _diagnostics()))
+                  completed = True
+              except ProbeTimeout:
+                  pass
+              finally:
+                  signal.alarm(0)
+                  profiler.disable()
+              print(f'=== {name} completed={completed} yielded={count} ===')
+              print(index.proof_summary())
+              stream = io.StringIO()
+              pstats.Stats(profiler, stream=stream).strip_dirs().sort_stats('cumulative').print_stats(35)
+              print(stream.getvalue())
+          PY

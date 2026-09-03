@@ -39,7 +39,7 @@ def _squad() -> tuple[Candidate, ...]:
     rows: list[Candidate] = []
     element = 1
     for position, count in (("GK", 2), ("DEF", 5), ("MID", 5), ("FWD", 3)):
-        for index in range(count):
+        for _index in range(count):
             rows.append(
                 _candidate(
                     element,
@@ -137,7 +137,7 @@ def test_exact_state_frontier_preserves_best_and_efficient_frontier_for_small_k1
     all_players = current + tuple(player for rows in external.values() for player in rows)
     risks = _risk(all_players)
     epsilon = float((core._policy().get("search") or {}).get("frontier_epsilon") or 0.01)
-    index = ExactIncomingFrontierIndex(external, risks, frontier_epsilon=epsilon)
+    index = ExactIncomingFrontierIndex(external, risks, frontier_epsilon=epsilon, top_keep=1)
     locked = {"itb_tenths": 80, "free_transfers": 1, "wildcard_active": False, "free_hit_active": False}
     budget = sum(player.cost for player in current) + locked["itb_tenths"]
 
@@ -171,42 +171,64 @@ def test_exact_state_frontier_preserves_best_and_efficient_frontier_for_small_k1
         assert _frontier_ids(raw_rows) == _frontier_ids(compressed_rows)
 
     proof = index.proof_summary()
-    assert proof["canonical_best_and_frontier_exact"] is True
+    assert proof["canonical_top_n_best_and_frontier_exact"] is True
+    assert proof["pareto_skyband_depth"] == 1
     assert proof["heuristic"] is False
     assert proof["cross_signature_partial_pruning"] is False
     assert proof["strictness_survives_canonical_rounding_and_frontier_epsilon"] is True
     assert proof["exact_states_pruned"] > 0
 
 
+def test_pareto_skyband_preserves_exact_top_two_rank_order():
+    current = _squad()
+    outs = (current[7],)
+    pool = [
+        _candidate(201, "MID", 11, 45, 5.0),
+        _candidate(202, "MID", 11, 46, 4.5),
+        _candidate(203, "MID", 11, 47, 4.0),
+        _candidate(204, "MID", 11, 48, 3.5),
+    ]
+    pools = {"GK": [], "DEF": [], "MID": pool, "FWD": []}
+    risks = _risk(current + tuple(pool))
+    index = ExactIncomingFrontierIndex(pools, risks, frontier_epsilon=0.01, top_keep=2)
+    keep = tuple(player for player in current if player.element != outs[0].element)
+    budget = sum(player.cost for player in current) + 100
+    diagnostics = {"incoming_combinations_considered": 0, "packages_rejected_by_budget": 0, "packages_rejected_by_club_limit": 0}
+    compressed = list(index.iter_legal(Counter({"MID": 1}), keep, budget, diagnostics))
+    raw_diag = {"search_nodes": 0, "incoming_combinations_considered": 0, "packages_rejected_by_budget": 0, "packages_rejected_by_budget_bound": 0, "packages_rejected_by_club_limit": 0}
+    raw = list(core._incoming_combinations(pools, Counter({"MID": 1}), keep, budget, raw_diag))
+    locked = {"itb_tenths": 100, "free_transfers": 1, "wildcard_active": False, "free_hit_active": False}
+    raw_rows = sorted(_rows_for(raw, current=current, outs=outs, locked=locked, risk_by_element=risks), key=core._rank, reverse=True)
+    compressed_rows = sorted(_rows_for(compressed, current=current, outs=outs, locked=locked, risk_by_element=risks), key=core._rank, reverse=True)
+    assert [row["package_id"] for row in compressed_rows[:2]] == [row["package_id"] for row in raw_rows[:2]]
+    assert len(compressed_rows) == 2
+    assert index.proof_summary()["exact_states_pruned"] == 2
+
+
 def test_different_club_signature_is_not_pruned_before_keep_legality_is_known():
-    # Team 1 is already full in keep. The stronger team-1 incoming is illegal,
-    # while the weaker team-2 incoming remains legal. Cross-signature pruning would
-    # therefore be wrong even though the stronger player wins every score dimension.
     keep = (
         _candidate(1, "GK", 1, 45, 1.0),
         _candidate(2, "DEF", 1, 45, 1.0),
         _candidate(3, "MID", 1, 45, 1.0),
     )
-    stronger_illegal = _candidate(201, "FWD", 1, 50, 5.0)
-    weaker_legal = _candidate(202, "FWD", 2, 55, 3.0)
+    stronger_illegal = _candidate(301, "FWD", 1, 50, 5.0)
+    weaker_legal = _candidate(302, "FWD", 2, 55, 3.0)
     pools = {"GK": [], "DEF": [], "MID": [], "FWD": [stronger_illegal, weaker_legal]}
     risks = _risk(keep + (stronger_illegal, weaker_legal))
-    index = ExactIncomingFrontierIndex(pools, risks, frontier_epsilon=0.01)
+    index = ExactIncomingFrontierIndex(pools, risks, frontier_epsilon=0.01, top_keep=1)
     diagnostics = {"incoming_combinations_considered": 0, "packages_rejected_by_budget": 0, "packages_rejected_by_club_limit": 0}
     rows = list(index.iter_legal(Counter({"FWD": 1}), keep, 1000, diagnostics))
-    assert [tuple(player.element for player in row) for row in rows] == [(202,)]
+    assert [tuple(player.element for player in row) for row in rows] == [(302,)]
     assert diagnostics["packages_rejected_by_club_limit"] == 1
 
 
 def test_rounding_boundary_and_exact_ties_are_not_compressed():
-    # 0.015 raw x5 advantage can become only a 0.01 published difference, equal to
-    # the governed frontier epsilon, so it cannot prove strict frontier dominance.
-    right = _candidate(301, "MID", 11, 50, 3.0)
-    left = _candidate(302, "MID", 11, 50, 3.0, x5_offset=0.015)
-    tie = _candidate(303, "MID", 11, 50, 3.0)
+    right = _candidate(401, "MID", 11, 50, 3.0)
+    left = _candidate(402, "MID", 11, 50, 3.0, x5_offset=0.015)
+    tie = _candidate(403, "MID", 11, 50, 3.0)
     pools = {"GK": [], "DEF": [], "MID": [right, left, tie], "FWD": []}
     risks = _risk((right, left, tie))
-    index = ExactIncomingFrontierIndex(pools, risks, frontier_epsilon=0.01)
+    index = ExactIncomingFrontierIndex(pools, risks, frontier_epsilon=0.01, top_keep=1)
     diagnostics = {"incoming_combinations_considered": 0, "packages_rejected_by_budget": 0, "packages_rejected_by_club_limit": 0}
     rows = list(index.iter_legal(Counter({"MID": 1}), tuple(), 1000, diagnostics))
-    assert {row[0].element for row in rows} == {301, 302, 303}
+    assert {row[0].element for row in rows} == {401, 402, 403}

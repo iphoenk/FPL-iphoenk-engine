@@ -15,7 +15,7 @@ BENCHMARK = DATA / "serving_benchmark_v4.json"
 PUBLICATION_INTEGRITY = DATA / "publication_integrity_v4.json"
 FRAMEWORK_HEALTH = DATA / "framework_health_v4.json"
 EXTERNAL_SOURCE_EVIDENCE = DATA / "external_source_evidence.json"
-WEATHER_EVIDENCE = DATA / "weather_evidence.json"
+WEATHER_EVIDENCE = DATA / "weather_context_v4.json"
 WARM_BENCHMARK_RUNS = 25
 
 SOURCE_DISPLAY = {
@@ -167,6 +167,29 @@ def _main_battle(lineup: dict) -> dict:
     return {"type": "XI", "status": "DECIDED", "detail": alternatives[:2]}
 
 
+def _governed_weather_for_publication(framework_health: dict, weather: dict) -> dict:
+    """Expose the governed decision-relevant weather state while retaining raw collection truth."""
+    allowed = {"PASS", "PARTIAL", "STALE", "UNAVAILABLE"}
+    raw_health = dict(weather.get("health") or {})
+    raw_status = str(raw_health.get("status") or "UNAVAILABLE").upper()
+    raw_status = raw_status if raw_status in allowed else "UNAVAILABLE"
+    governed = framework_health.get("weather_context") or {}
+    governed_status = str(governed.get("status") or "").upper()
+    if governed_status not in allowed:
+        governed_status = raw_status
+    health = {
+        **raw_health,
+        "status": governed_status,
+        "raw_collection_status": raw_status,
+        "reason": governed.get("reason") or raw_health.get("reason"),
+        "tactical_context_completeness": (
+            governed.get("tactical_context_completeness")
+            or raw_health.get("tactical_context_completeness")
+        ),
+    }
+    return {**weather, "health": health}
+
+
 def build_serving_payload(
     decision: dict,
     effective_plan: dict,
@@ -276,6 +299,8 @@ def build_serving_payload(
             "official_fact_completeness_required_before_publication": True,
             "publication_integrity_independent_of_execution_authority": True,
             "price_fact_and_model_evidence_separated": True,
+            "weather_publication_uses_governed_decision_relevant_health": True,
+            "weather_raw_collection_status_remains_visible": True,
         },
     }
     payload["quick_serving_ms"] = round((perf_counter() - start) * 1000.0, 3)
@@ -337,13 +362,15 @@ def _blocked_payload(integrity: dict) -> dict:
 
 def write_serving_payload(decision: dict, effective_plan: dict, team: dict, tactical: dict, lineup: dict, prices: dict, latest: dict, competitive: dict) -> dict:
     weather = read_json(WEATHER_EVIDENCE, {})
+    framework_health = read_json(FRAMEWORK_HEALTH, {})
+    governed_weather = _governed_weather_for_publication(framework_health, weather)
     integrity = build_publication_integrity(
         tactical,
         latest,
         prices,
         decision,
-        framework_health=read_json(FRAMEWORK_HEALTH, {}),
-        weather=weather,
+        framework_health=framework_health,
+        weather=governed_weather,
     )
     atomic_json(PUBLICATION_INTEGRITY, integrity)
     if integrity.get("status") != "PASS":
@@ -373,7 +400,7 @@ def write_serving_payload(decision: dict, effective_plan: dict, team: dict, tact
         latest,
         competitive,
         source_panel=source_panel,
-        weather=weather,
+        weather=governed_weather,
     )
     payload["publication_integrity"] = integrity
     samples = [float(payload.get("quick_serving_ms") or 0.0)]
@@ -388,7 +415,7 @@ def write_serving_payload(decision: dict, effective_plan: dict, team: dict, tact
             latest,
             competitive,
             source_panel=source_panel,
-            weather=weather,
+            weather=governed_weather,
         )
         samples.append(float(measured.get("quick_serving_ms") or 0.0))
     atomic_json(OUTFILE, payload)

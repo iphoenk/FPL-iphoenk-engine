@@ -15,6 +15,12 @@ from src.utils import DATA, atomic_json, read_json
 
 CONTRACT = "V4_FULL_UNIVERSE_SHARD_REDUCTION_V1"
 DEFAULT_OUTPUT = DATA / "runtime" / "v4_full_universe_precomputed.json"
+_SAFE_PRUNING_FLAGS = (
+    "safe_legality_equivalence",
+    "safe_package_frontier_equivalence",
+    "safe_projected_affordability_equivalence",
+    "safe_recommendation_sanity_equivalence",
+)
 
 
 def _stable_hash(value: Any) -> str:
@@ -29,6 +35,10 @@ def _load_results(directory: Path) -> list[dict[str, Any]]:
         payload["_source_path"] = str(path)
         rows.append(payload)
     return rows
+
+
+def _pruning_proofs_are_safe(proofs: list[dict[str, Any]]) -> bool:
+    return all(all(proof.get(flag) is True for flag in _SAFE_PRUNING_FLAGS) for proof in proofs)
 
 
 def _verify(plan: dict[str, Any], results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -77,7 +87,10 @@ def _verify(plan: dict[str, Any], results: list[dict[str, Any]]) -> dict[str, An
         search = result.get("search") or {}
         if search.get("status") != "SHARD_PARTIAL_EXACT" or search.get("shard_local_exactness") is not True:
             raise RuntimeError(f"non-exact shard result shard_id={shard_id}")
-        pruning_hashes.add(_stable_hash(search.get("pruning_proofs") or []))
+        pruning_proofs = list(search.get("pruning_proofs") or [])
+        if not _pruning_proofs_are_safe(pruning_proofs):
+            raise RuntimeError(f"unsafe safe-pruning proof on shard_id={shard_id}")
+        pruning_hashes.add(_stable_hash(pruning_proofs))
         baseline_hashes.add(_stable_hash(result.get("baseline") or {}))
         affordability_hashes.add(_stable_hash(result.get("affordability") or {}))
         epsilon_values.add(float((result.get("efficient_frontier") or {}).get("dominance_epsilon") or 0.0))
@@ -100,8 +113,8 @@ def _verify(plan: dict[str, Any], results: list[dict[str, Any]]) -> dict[str, An
         raise RuntimeError("safe-pruning proof set differs across shards")
     if len(baseline_hashes) != 1 or len(affordability_hashes) != 1:
         raise RuntimeError("baseline/affordability contract differs across shards")
-    if len(epsilon_values) != 1:
-        raise RuntimeError("frontier epsilon differs across shards")
+    if len(epsilon_values) != 1 or next(iter(epsilon_values), 0.0) <= 0.0:
+        raise RuntimeError("frontier epsilon missing or differs across shards")
 
     return {
         "expected_shard_count": len(expected_shards),
@@ -115,6 +128,7 @@ def _verify(plan: dict[str, Any], results: list[dict[str, Any]]) -> dict[str, An
         "optimizer_input_fingerprint_match": True,
         "execution_code_fingerprint_match": True,
         "safe_pruning_proof_match": True,
+        "safe_pruning_proof_semantics_valid": True,
         "baseline_match": True,
         "affordability_match": True,
         "frontier_epsilon_match": True,
@@ -145,10 +159,18 @@ def _merge_diagnostics(results: list[dict[str, Any]]) -> dict[str, Any]:
 def reduce_results(plan: dict[str, Any], results: list[dict[str, Any]]) -> dict[str, Any]:
     proof = _verify(plan, results)
     template = copy.deepcopy(results[0])
-    top_limit = int((((plan.get("registry") or {}).get("planner") or {}).get("top_keep_per_shard") or 12))
-    epsilon = float((template.get("efficient_frontier") or {}).get("dominance_epsilon") or 0.01)
+    planner_cfg = (plan.get("registry") or {}).get("planner") or {}
+    top_limit = int(planner_cfg.get("top_keep_per_shard") or 0)
+    if top_limit <= 0:
+        raise RuntimeError("reducer requires positive registry-owned top_keep_per_shard")
+    maximum = int((core._policy().get("search") or {}).get("maximum_replacements") or 0)
+    if maximum <= 0:
+        raise RuntimeError("reducer requires positive governed maximum_replacements")
+    epsilon = float((template.get("efficient_frontier") or {}).get("dominance_epsilon") or 0.0)
+    if epsilon <= 0.0:
+        raise RuntimeError("reducer requires positive governed frontier epsilon")
 
-    top_by_k: dict[int, list[dict]] = {1: [], 2: [], 3: []}
+    top_by_k: dict[int, list[dict]] = {k: [] for k in range(1, maximum + 1)}
     package_seen: set[str] = set()
     for result in results:
         for row in result.get("packages") or []:
@@ -161,9 +183,9 @@ def reduce_results(plan: dict[str, Any], results: list[dict[str, Any]]) -> dict[
                 core._retain_top(top_by_k[replacements], copy.deepcopy(row), top_limit)
 
     roll = copy.deepcopy(template.get("roll_baseline") or {})
-    frontier_by_id: dict[str, dict] = {}
-    if roll:
-        frontier_by_id[str(roll.get("package_id") or "ROLL_BASELINE")] = roll
+    if not roll or str(roll.get("package_id") or "") != "ROLL_BASELINE":
+        raise RuntimeError("reducer requires canonical ROLL baseline")
+    frontier_by_id: dict[str, dict] = {"ROLL_BASELINE": roll}
     for result in results:
         for row in (result.get("efficient_frontier") or {}).get("rows") or []:
             package_id = str(row.get("package_id") or "")
@@ -178,7 +200,7 @@ def reduce_results(plan: dict[str, Any], results: list[dict[str, Any]]) -> dict[
     frontier.sort(key=core._rank, reverse=True)
 
     best_by_k = {str(k): (rows[0] if rows else None) for k, rows in top_by_k.items()}
-    packages = [row for k in (1, 2, 3) for row in top_by_k[k]]
+    packages = [row for k in range(1, maximum + 1) for row in top_by_k[k]]
     best_candidates = [row for row in best_by_k.values() if row]
     recommended = max(best_candidates, key=core._rank) if best_candidates else None
     if recommended and core._f(recommended.get("adjusted_utility_gain_5")) <= 0:
@@ -213,14 +235,17 @@ def reduce_results(plan: dict[str, Any], results: list[dict[str, Any]]) -> dict[
         "execution_code_fingerprint": plan.get("execution_code_fingerprint"),
         "proof": proof,
         "top_keep_per_shard": top_limit,
+        "maximum_replacements": maximum,
         "global_top_n_exact_from_union_of_local_top_n": True,
         "global_frontier_exact_from_union_of_exact_local_frontiers": True,
+        "published_rows_use_canonical_scalar_kernel": True,
         "single_final_business_authority_preserved": True,
-        "fail_closed_on_partial_inconsistent_or_overlapping_shards": True,
+        "fail_closed_on_partial_inconsistent_overlapping_or_unsafe_shards": True,
     }
     template.setdefault("governance", {})["sharding_changes_execution_topology_only"] = True
     template["governance"]["workers_are_non_authoritative"] = True
     template["governance"]["global_completeness_proven_before_full_universe_state"] = True
+    template["governance"]["global_safe_pruning_semantics_proven_before_full_universe_state"] = True
     return template
 
 

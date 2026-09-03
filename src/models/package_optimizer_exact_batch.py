@@ -66,8 +66,6 @@ class ExactBatchScorer:
 
     @staticmethod
     def _round3(values: np.ndarray) -> np.ndarray:
-        # Use Python round() to preserve the scalar scorer's externally visible
-        # decimal semantics rather than relying on NumPy's formatter details.
         return np.fromiter((round(float(value), 3) for value in values), dtype=np.float64, count=len(values))
 
     def _indices(self, candidate_ids: list[list[int]]) -> np.ndarray:
@@ -87,8 +85,20 @@ class ExactBatchScorer:
             return np.empty((0, 0), dtype=np.int32)
         return np.asarray(flat, dtype=np.int32).reshape(len(candidate_ids), width)
 
+    @staticmethod
+    def _ordered_sum(
+        values: np.ndarray,
+        columns: list[np.ndarray],
+        rows: np.ndarray,
+    ) -> np.ndarray:
+        """Vectorize across packages while preserving scalar left-to-right sum order."""
+        total = np.zeros(len(rows), dtype=np.float64)
+        for column in columns:
+            total = total + values[rows, column]
+        return total
+
     def score_ids_compact(self, candidate_ids: list[list[int]], *, changes: int) -> list[dict[str, Any]]:
-        """Score equal-width legal squads and return decision-bearing numeric fields."""
+        """Score equal-layout legal squads and return decision-bearing numeric fields."""
         if not candidate_ids:
             return []
         if int(changes) > int(self.context["change_cap"]):
@@ -111,6 +121,7 @@ class ExactBatchScorer:
 
         means = self.means[indices]
         variances = self.variances[indices]
+        rows = np.arange(n)
         total_mean = np.zeros(n, dtype=np.float64)
         total_var = np.zeros(n, dtype=np.float64)
         horizon_means: dict[int, np.ndarray] = {}
@@ -119,65 +130,72 @@ class ExactBatchScorer:
         captain_weight = float(self.context["captain_weight"])
 
         for offset in range(self.max_horizon):
-            prefix_mean: dict[str, np.ndarray] = {}
-            prefix_var: dict[str, np.ndarray] = {}
-            top_means: list[np.ndarray] = []
-            top_vars: list[np.ndarray] = []
-            top_cols: list[np.ndarray] = []
+            gw_means = means[:, :, offset]
+            gw_vars = variances[:, :, offset]
+            ranked_columns: dict[str, np.ndarray] = {}
 
             for position in POSITIONS:
                 cols = position_columns[position]
-                pm = means[:, cols, offset]
-                pv = variances[:, cols, offset]
+                pm = gw_means[:, cols]
                 order = np.argsort(-pm, axis=1, kind="stable")
-                sorted_mean = np.take_along_axis(pm, order, axis=1)
-                sorted_var = np.take_along_axis(pv, order, axis=1)
-                prefix_mean[position] = np.cumsum(sorted_mean, axis=1)
-                prefix_var[position] = np.cumsum(sorted_var, axis=1)
-                top_means.append(sorted_mean[:, 0])
-                top_vars.append(sorted_var[:, 0])
-                top_cols.append(cols[order[:, 0]])
+                ranked_columns[position] = cols[order]
 
+            # Compute each formation mean with the exact scalar selected-list
+            # order: GK, then DEF, MID, FWD. This avoids reduction-tree drift at
+            # the 0.001 publication boundary.
             formation_means: list[np.ndarray] = []
-            formation_vars: list[np.ndarray] = []
             for d, m, f in self.formations:
-                formation_means.append(
-                    prefix_mean["GK"][:, 0]
-                    + prefix_mean["DEF"][:, d - 1]
-                    + prefix_mean["MID"][:, m - 1]
-                    + prefix_mean["FWD"][:, f - 1]
-                )
-                formation_vars.append(
-                    prefix_var["GK"][:, 0]
-                    + prefix_var["DEF"][:, d - 1]
-                    + prefix_var["MID"][:, m - 1]
-                    + prefix_var["FWD"][:, f - 1]
-                )
+                selected_columns: list[np.ndarray] = [ranked_columns["GK"][:, 0]]
+                selected_columns.extend(ranked_columns["DEF"][:, rank] for rank in range(d))
+                selected_columns.extend(ranked_columns["MID"][:, rank] for rank in range(m))
+                selected_columns.extend(ranked_columns["FWD"][:, rank] for rank in range(f))
+                formation_means.append(self._ordered_sum(gw_means, selected_columns, rows))
             fm = np.stack(formation_means, axis=1)
-            fv = np.stack(formation_vars, axis=1)
-            best_formation = np.argmax(fm, axis=1)  # first maximum matches scalar strict-gt tie rule
-            rows = np.arange(n)
-            lineup_mean = fm[rows, best_formation]
-            lineup_var = fv[rows, best_formation]
+            best_formation = np.argmax(fm, axis=1)  # first maximum = scalar strict-gt tie rule
+            selected_counts = np.asarray(self.formations, dtype=np.int8)[best_formation]
 
-            all_mean = np.sum(means[:, :, offset], axis=1)
-            all_var = np.sum(variances[:, :, offset], axis=1)
-            bench_mean = all_mean - lineup_mean
-            bench_var = all_var - lineup_var
+            starter_mask = np.zeros((n, width), dtype=bool)
+            lineup_mean = np.zeros(n, dtype=np.float64)
+            lineup_var = np.zeros(n, dtype=np.float64)
 
-            captain_means = np.stack(top_means, axis=1)
-            captain_vars = np.stack(top_vars, axis=1)
-            captain_cols = np.stack(top_cols, axis=1)
-            max_captain_mean = np.max(captain_means, axis=1)
-            tied = captain_means == max_captain_mean[:, None]
-            sentinel = width + 1
-            first_col = np.min(np.where(tied, captain_cols, sentinel), axis=1)
-            chosen_position = np.argmax(tied & (captain_cols == first_col[:, None]), axis=1)
-            captain_mean = captain_means[rows, chosen_position]
-            captain_var = captain_vars[rows, chosen_position]
+            gk_column = ranked_columns["GK"][:, 0]
+            starter_mask[rows, gk_column] = True
+            lineup_mean = lineup_mean + gw_means[rows, gk_column]
+            lineup_var = lineup_var + gw_vars[rows, gk_column]
 
-            total_mean += lineup_mean + bench_weight * bench_mean + captain_weight * captain_mean
-            total_var += lineup_var + (bench_weight * bench_weight) * bench_var + (((1.0 + captain_weight) ** 2 - 1.0) * captain_var)
+            for position_index, position in enumerate(("DEF", "MID", "FWD")):
+                ranked = ranked_columns[position]
+                counts = selected_counts[:, position_index]
+                for rank in range(ranked.shape[1]):
+                    selected = rank < counts
+                    if not np.any(selected):
+                        continue
+                    column = ranked[:, rank]
+                    selected_rows = rows[selected]
+                    selected_columns = column[selected]
+                    starter_mask[selected_rows, selected_columns] = True
+                    # Adding +0.0 for rows where the scalar loop skipped an item
+                    # is bit-preserving for finite FPL projection values.
+                    lineup_mean = lineup_mean + np.where(selected, gw_means[rows, column], 0.0)
+                    lineup_var = lineup_var + np.where(selected, gw_vars[rows, column], 0.0)
+
+            bench_mean = np.zeros(n, dtype=np.float64)
+            bench_var = np.zeros(n, dtype=np.float64)
+            for column in range(width):
+                is_bench = ~starter_mask[:, column]
+                bench_mean = bench_mean + np.where(is_bench, gw_means[:, column], 0.0)
+                bench_var = bench_var + np.where(is_bench, gw_vars[:, column], 0.0)
+
+            starter_means = np.where(starter_mask, gw_means, -np.inf)
+            captain_column = np.argmax(starter_means, axis=1)  # first input-order maximum
+            captain_mean = gw_means[rows, captain_column]
+            captain_var = gw_vars[rows, captain_column]
+
+            gw_mean = lineup_mean + bench_weight * bench_mean + captain_weight * captain_mean
+            captain_extra_var = ((1.0 + captain_weight) ** 2 - 1.0) * captain_var
+            gw_var = lineup_var + (bench_weight ** 2) * bench_var + captain_extra_var
+            total_mean = total_mean + gw_mean
+            total_var = total_var + gw_var
 
             elapsed = offset + 1
             if elapsed in self.context["horizon_set"]:
@@ -235,11 +253,7 @@ class ExactBatchScorer:
 
 
 def exact_skyline_indices(metrics: np.ndarray, *, eps: float = 1e-12) -> np.ndarray:
-    """Return exact Pareto skyline indices for [max4, min changes, min std].
-
-    Uses chunked NumPy comparisons to avoid Python-per-candidate dominance loops.
-    It is representation-only and does not influence package scoring authority.
-    """
+    """Return exact Pareto skyline indices for [max4, min changes, min std]."""
     values = np.asarray(metrics, dtype=np.float64)
     if values.ndim != 2 or values.shape[1] != 6:
         raise ValueError("skyline metrics must have shape (n, 6)")
@@ -248,20 +262,16 @@ def exact_skyline_indices(metrics: np.ndarray, *, eps: float = 1e-12) -> np.ndar
         return np.arange(n, dtype=np.int32)
 
     active = np.arange(n, dtype=np.int32)
-    # Small blocks bound peak memory while all comparisons remain exact.
     block = 512
     dominated = np.zeros(n, dtype=bool)
     for start in range(0, n, block):
         stop = min(n, start + block)
         target_idx = active[start:stop]
-        if len(target_idx) == 0:
-            continue
         target = values[target_idx]
         for source_start in range(0, n, block):
             source_stop = min(n, source_start + block)
             source_idx = active[source_start:source_stop]
             source = values[source_idx]
-
             no_worse = (
                 np.all(source[:, None, :4] >= target[None, :, :4] - eps, axis=2)
                 & (source[:, None, 4] <= target[None, :, 4])

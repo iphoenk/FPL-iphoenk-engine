@@ -12,17 +12,8 @@ from src.engines.v4_wc_optimizer import MAX_PER_CLUB, POSITION_COUNTS, Candidate
 CONTRACT = "V4_FULL_UNIVERSE_EXACT_STATE_FRONTIER_V1"
 _POSITIONS = tuple(POSITION_COUNTS)
 _POSITION_ORDER = {position: index for index, position in enumerate(_POSITIONS)}
-_RISK_MINIMIZE = (
-    "projection_uncertainty",
-    "xmins_uncertainty",
-    "tactical_uncertainty",
-    "roster_change_uncertainty",
-    "price_risk",
-)
-_CONFIDENCE_MAXIMIZE = (
-    "tactical_role_confidence",
-    "opponent_matchup_confidence",
-)
+_HORIZON_ROUND_STEP = 0.010000000001
+_FOUR_DP_ROUND_STEP = 0.000100000001
 
 
 @dataclass(frozen=True)
@@ -41,8 +32,6 @@ class IncomingState:
     price_risk: float
     tactical_role_confidence: float
     opponent_matchup_confidence: float
-    # position -> GW -> descending values. Shapes are identical for states that
-    # share one need-pattern stage, so component-wise comparison is exact.
     gw_values: tuple[tuple[tuple[float, ...], ...], ...]
 
 
@@ -116,21 +105,12 @@ def _state(players: tuple[Candidate, ...], risk_by_element: dict[int, dict]) -> 
 def _empty_state() -> IncomingState:
     empty_gw = tuple(tuple(tuple() for _ in range(5)) for _ in _POSITIONS)
     return IncomingState(
-        players=tuple(),
-        club_signature=0,
-        cost=0,
-        x3=0.0,
-        x5=0.0,
-        x10=0.0,
-        x15=0.0,
-        projection_uncertainty=0.0,
-        xmins_uncertainty=0.0,
-        tactical_uncertainty=0.0,
-        roster_change_uncertainty=0.0,
-        price_risk=0.0,
-        tactical_role_confidence=0.0,
-        opponent_matchup_confidence=0.0,
-        gw_values=empty_gw,
+        players=tuple(), club_signature=0, cost=0,
+        x3=0.0, x5=0.0, x10=0.0, x15=0.0,
+        projection_uncertainty=0.0, xmins_uncertainty=0.0,
+        tactical_uncertainty=0.0, roster_change_uncertainty=0.0,
+        price_risk=0.0, tactical_role_confidence=0.0,
+        opponent_matchup_confidence=0.0, gw_values=empty_gw,
     )
 
 
@@ -161,33 +141,51 @@ def _merge(left: IncomingState, right: IncomingState) -> IncomingState:
     )
 
 
-def _gw_no_worse(left: IncomingState, right: IncomingState) -> tuple[bool, bool]:
-    strict = False
+def _gw_no_worse(left: IncomingState, right: IncomingState) -> bool:
     for pos_index, _position in enumerate(_POSITIONS):
         for gw_index in range(5):
             left_values = left.gw_values[pos_index][gw_index]
             right_values = right.gw_values[pos_index][gw_index]
             if len(left_values) != len(right_values):
-                return False, False
-            for left_value, right_value in zip(left_values, right_values):
-                if left_value < right_value:
-                    return False, False
-                if left_value > right_value:
-                    strict = True
-    return True, strict
+                return False
+            if any(left_value < right_value for left_value, right_value in zip(left_values, right_values)):
+                return False
+    return True
+
+
+def _guaranteed_rank_strict(left: IncomingState, right: IncomingState) -> bool:
+    return (
+        left.x5 > right.x5 + _HORIZON_ROUND_STEP
+        or left.x15 > right.x15 + _HORIZON_ROUND_STEP
+        or left.cost < right.cost
+    )
+
+
+def _guaranteed_frontier_strict(left: IncomingState, right: IncomingState) -> bool:
+    k = max(1, len(left.players))
+    four_dp_sum_gap = _FOUR_DP_ROUND_STEP * k
+    return (
+        left.x3 > right.x3 + _HORIZON_ROUND_STEP
+        or left.x5 > right.x5 + _HORIZON_ROUND_STEP
+        or left.x10 > right.x10 + _HORIZON_ROUND_STEP
+        or left.x15 > right.x15 + _HORIZON_ROUND_STEP
+        or left.price_risk + four_dp_sum_gap < right.price_risk
+        or left.tactical_role_confidence > right.tactical_role_confidence + four_dp_sum_gap
+        or left.opponent_matchup_confidence > right.opponent_matchup_confidence + four_dp_sum_gap
+    )
 
 
 def dominates(left: IncomingState, right: IncomingState) -> bool:
-    """Sufficient exact dominance for one fixed incoming need-pattern.
+    """Conservative proof that one state cannot affect canonical best/frontier.
 
-    The relation is deliberately conservative. Cost/risk are minimized; horizon,
-    confidence and every position-specific GW value are maximized. Component-wise
-    GW dominance guarantees that merging either state with the same fixed keep
-    cannot make any legal-formation best-XI prefix or bench-adjusted utility worse.
-    Exact ties are never removed, preserving package-id tie semantics.
+    Compression is only applied inside identical incoming club signatures. Every
+    future keep therefore sees identical club-slot feasibility. The left state is
+    required to be no worse on every monotone input to XI, utility, horizon, risk
+    and confidence, plus a strict improvement that provably survives canonical
+    rounding in both rank and efficient-frontier semantics. Tiny/equal float ties
+    are retained so package-id tie ordering cannot be changed by compression.
     """
-    gw_no_worse, gw_strict = _gw_no_worse(left, right)
-    if not gw_no_worse:
+    if not _gw_no_worse(left, right):
         return False
     minimize_pairs = (
         (left.cost, right.cost),
@@ -209,8 +207,7 @@ def dominates(left: IncomingState, right: IncomingState) -> bool:
         return False
     if any(a < b for a, b in maximize_pairs):
         return False
-    strict = gw_strict or any(a < b for a, b in minimize_pairs) or any(a > b for a, b in maximize_pairs)
-    return strict
+    return _guaranteed_rank_strict(left, right) and _guaranteed_frontier_strict(left, right)
 
 
 def _insert_exact(frontier: list[IncomingState], candidate: IncomingState) -> tuple[bool, int]:
@@ -237,13 +234,7 @@ def _need_key(need: Counter) -> tuple[tuple[str, int], ...]:
 
 
 class ExactIncomingFrontierIndex:
-    """Reusable exact incoming-state index for all outgoing sets in one search.
-
-    Expensive position-combination construction is performed once per need pattern,
-    not once per outgoing set. Partial states are compressed only inside identical
-    incoming club signatures. Therefore every future keep has identical club-slot
-    feasibility for a retained state and the state it proves dominated.
-    """
+    """Reusable exact incoming-state index for all outgoing sets in one search."""
 
     def __init__(self, pools: dict[str, list[Candidate]], risk_by_element: dict[int, dict]):
         self.pools = {
@@ -331,10 +322,12 @@ class ExactIncomingFrontierIndex:
         diagnostics.setdefault("exact_state_compression", {})
         local = diagnostics["exact_state_compression"]
         local.setdefault("contract", CONTRACT)
-        local.setdefault("canonical_package_rank_and_frontier_exact", True)
+        local.setdefault("canonical_best_and_frontier_exact", True)
+        local.setdefault("non_frontier_top_n_diagnostic_completeness", False)
         local.setdefault("same_signature_partial_dominance_only", True)
         local.setdefault("cross_signature_partial_pruning", False)
         local.setdefault("package_id_exact_ties_preserved", True)
+        local.setdefault("strictness_survives_canonical_rounding", True)
         local.setdefault("best_xi_componentwise_gw_proof", True)
         local.setdefault("club_capacity_equivalence_preserved_before_final_legality", True)
         local.setdefault("need_pattern_cache_reused_across_outgoing_sets", True)
@@ -361,7 +354,8 @@ class ExactIncomingFrontierIndex:
         return {
             "schema_version": 1,
             "contract": CONTRACT,
-            "canonical_package_rank_and_frontier_exact": True,
+            "canonical_best_and_frontier_exact": True,
+            "non_frontier_top_n_diagnostic_completeness": False,
             "heuristic": False,
             "beam_cutoff": False,
             "candidate_cutoff": False,
@@ -370,6 +364,7 @@ class ExactIncomingFrontierIndex:
             "club_capacity_future_equivalence_required": True,
             "componentwise_position_gw_dominance_required": True,
             "cost_and_all_frontier_risk_confidence_dimensions_required": True,
+            "strictness_survives_canonical_rounding": True,
             "exact_ties_preserved_for_package_id_ranking": True,
             "need_pattern_cache_reused_across_outgoing_sets": True,
             "group_cache_entries": len(self._group_cache),

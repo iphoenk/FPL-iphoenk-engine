@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "registry": "V4_FULL_UNIVERSE_PACKAGE_SEARCH_SHARDING_V1",
+  "execution_only": true,
+  "authority_owner": "optimization",
+  "planner": {
+    "strategy": "GREEDY_DESCENDING_ESTIMATED_WORK_BALANCE",
+    "work_estimator": "POSITION_COMBINATION_UPPER_BOUND",
+    "observed_hotpath_packages_per_second": 5066,
+    "target_worker_seconds": 24,
+    "target_combinations_per_shard": 120000,
+    "min_shards": 2,
+    "max_shards": 10,
+    "top_keep_per_shard": 12
+  },
+  "workflow": {
+    "seed_profile": "fast_decision_pipeline",
+    "authority_profile": "full_universe_exhaustive",
+    "resume_from_domain": "decision_composition",
+    "seed_artifact_name": "v4-full-universe-seed",
+    "shard_artifact_prefix": "v4-full-universe-shard",
+    "worker_timeout_seconds": 60,
+    "reducer_timeout_seconds": 15
+  },
+  "contracts": {
+    "complete_task_cover_required": true,
+    "duplicate_task_forbidden": true,
+    "missing_task_forbidden": true,
+    "all_shards_require_same_optimizer_input_fingerprint": true,
+    "shards_may_not_write_package_authority": true,
+    "shard_partition_may_not_prune_without_proof": true,
+    "shard_partition_may_not_change_scoring": true,
+    "shard_partition_may_not_change_sequential_legality": true,
+    "local_frontier_reduction_must_be_exact": true,
+    "global_frontier_uses_union_of_exact_local_frontiers_for_all_package_sizes_plus_roll": true,
+    "canonical_scalar_rehydration_required_for_published_rows": true,
+    "resume_boundary_is_domain_registry_driven": true
+  },
+  "governance": {
+    "operational_tuning_is_registry_owned_not_code_hardcoded": true,
+    "shard_count_is_derived_from_estimated_workload": true,
+    "shard_ids_are_ephemeral_execution_coordinates": true,
+    "single_final_authority_writer": true,
+    "zero_unproven_candidate_pruning": true,
+    "fail_closed_on_partial_or_inconsistent_shard_set": true,
+    "workflow_does_not_hardcode_downstream_business_modules": true,
+    "overloaded_plan_is_explicit": true
+  }
+}

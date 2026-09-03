@@ -23,4 +23,14 @@ if needle not in text:
     raise RuntimeError("missing transfer package optimizer registry assertion")
 text = text.replace(needle, needle + '    assert registry["production"]["transfer_package_execution_topology"] == "WORKFLOW_MATRIX_FANOUT_FANIN"\n    assert registry["production"]["transfer_package_shard_worker"] == "src.services.package_optimization_shard_service"\n    assert registry["production"]["transfer_package_fan_in"] == "src.services.package_optimization_merge_service"\n', 1)
 path.write_text(text, encoding="utf-8")
+
+core_path = ROOT / "src/engines/v4_full_universe_package_search_core.py"
+core = core_path.read_text(encoding="utf-8")
+old_annotation = "    need: Counter,\n"
+new_annotation = "    need: dict[str, int],\n"
+if core.count(old_annotation) != 1:
+    raise RuntimeError(f"expected current exact-core need annotation once, found {core.count(old_annotation)}")
+core_path.write_text(core.replace(old_annotation, new_annotation, 1), encoding="utf-8")
+
 print("structural optimizer ownership test aligned to non-authoritative shards + single fan-in")
+print("2D staging anchor aligned to current exact-core signature")

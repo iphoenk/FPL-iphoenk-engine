@@ -12,6 +12,12 @@ from src.rules import LINEUP_RULES, SQUAD_RULES
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "config" / "intelligence" / "package_optimizer.json"
+POSITIONS = ("GK", "DEF", "MID", "FWD")
+PARSED_FORMATIONS = tuple(
+    (formation, tuple(int(x) for x in str(formation).split("-")))
+    for formation in (LINEUP_RULES.get("legal_formations") or [])
+)
+EXPECTED_XI = int(LINEUP_RULES.get("starting_xi_size") or 11)
 
 
 @lru_cache(maxsize=1)
@@ -75,14 +81,13 @@ def _best_lineup_indexed(players: list[dict[str, Any]], gw: int, index: dict[int
             key=lambda p: _f(_indexed_row(index, p, gw).get("mean")),
             reverse=True,
         )
-        for pos in ("GK", "DEF", "MID", "FWD")
+        for pos in POSITIONS
     }
     gks = by_position["GK"]
     if not gks:
         return {"valid": False, "mean": 0.0, "variance": 0.0, "starters": []}
     best: dict[str, Any] | None = None
-    for formation in LINEUP_RULES.get("legal_formations") or []:
-        d, m, f = [int(x) for x in str(formation).split("-")]
+    for formation, (d, m, f) in PARSED_FORMATIONS:
         selected = [gks[0]]
         ok = True
         for pos, count in (("DEF", d), ("MID", m), ("FWD", f)):
@@ -91,7 +96,7 @@ def _best_lineup_indexed(players: list[dict[str, Any]], gw: int, index: dict[int
                 ok = False
                 break
             selected.extend(pool[:count])
-        if not ok or len(selected) != int(LINEUP_RULES.get("starting_xi_size") or 11):
+        if not ok or len(selected) != EXPECTED_XI:
             continue
         mean = sum(_f(_indexed_row(index, p, gw).get("mean")) for p in selected)
         variance = sum(_f(_indexed_row(index, p, gw).get("std")) ** 2 for p in selected)
@@ -126,12 +131,12 @@ def _effective_change_cap(cfg: dict[str, Any], planning_gw: int) -> tuple[int, d
     }
 
 
-def _team_cluster_penalty(players: list[dict[str, Any]], cfg: dict[str, Any]) -> tuple[float, dict[str, Any]]:
+def _cluster_penalty_from_team_ids(team_ids: list[int], cfg: dict[str, Any]) -> tuple[float, dict[str, Any]]:
     guard = cfg.get("team_cluster_penalty") or {}
     enabled = bool(guard.get("enabled"))
     free = max(0, int(guard.get("free_players_per_club") or 0))
     per_extra = max(0.0, _f(guard.get("points_per_extra_player")))
-    clubs = Counter(int(p.get("team_id") or -1) for p in players if int(p.get("team_id") or -1) > 0)
+    clubs = Counter(int(team_id) for team_id in team_ids if int(team_id) > 0)
     excess = sum(max(0, count - free) for count in clubs.values()) if enabled else 0
     penalty = excess * per_extra if enabled else 0.0
     return penalty, {
@@ -142,6 +147,10 @@ def _team_cluster_penalty(players: list[dict[str, Any]], cfg: dict[str, Any]) ->
         "cluster_penalty_points": round(penalty, 3),
         "club_counts": dict(sorted(clubs.items())),
     }
+
+
+def _team_cluster_penalty(players: list[dict[str, Any]], cfg: dict[str, Any]) -> tuple[float, dict[str, Any]]:
+    return _cluster_penalty_from_team_ids([int(p.get("team_id") or -1) for p in players], cfg)
 
 
 def _scoring_context(cfg: dict[str, Any], planning_gw: int) -> dict[str, Any]:
@@ -159,48 +168,121 @@ def _scoring_context(cfg: dict[str, Any], planning_gw: int) -> dict[str, Any]:
         "change_penalty_points": _f(cfg.get("change_penalty_points"), 0.20),
         "change_cap": change_cap,
         "change_guard": change_guard,
+        "_compiled_player_cache": {},
     }
 
 
-def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int = 0, *, scoring_context: dict[str, Any] | None = None) -> dict[str, Any]:
-    context = scoring_context or _scoring_context(load_config(), planning_gw)
+def _compile_player(player: dict[str, Any], planning_gw: int, max_horizon: int) -> dict[str, Any]:
+    index = {
+        int(row.get("gw") or -1): row
+        for row in (player.get("xpts_by_gw") or [])
+    }
+    means: list[float] = []
+    variances: list[float] = []
+    for offset in range(int(max_horizon)):
+        row = index.get(int(planning_gw) + offset, {})
+        mean = _f(row.get("mean"))
+        std = _f(row.get("std"))
+        means.append(mean)
+        variances.append(std * std)
+    return {
+        "element": int(player.get("element") or -1),
+        "position": str(player.get("position") or ""),
+        "team_id": int(player.get("team_id") or -1),
+        "means": tuple(means),
+        "variances": tuple(variances),
+    }
+
+
+def _compile_players_cached(players: list[dict[str, Any]], planning_gw: int, context: dict[str, Any]) -> list[dict[str, Any]]:
+    cache = context.setdefault("_compiled_player_cache", {})
+    rows: list[dict[str, Any]] = []
+    max_horizon = int(context["max_horizon"])
+    for player in players:
+        key = id(player)
+        cached = cache.get(key)
+        if cached is None or cached[0] is not player:
+            compiled = _compile_player(player, planning_gw, max_horizon)
+            cache[key] = (player, compiled)
+        else:
+            compiled = cached[1]
+        rows.append(compiled)
+    return rows
+
+
+def _compiled_best_lineup(by_position: dict[str, list[dict[str, Any]]], offset: int) -> tuple[bool, float, float, set[int]]:
+    ranked = {
+        position: sorted(pool, key=lambda row: row["means"][offset], reverse=True)
+        for position, pool in by_position.items()
+    }
+    gks = ranked["GK"]
+    if not gks:
+        return False, 0.0, 0.0, set()
+    best_mean: float | None = None
+    best_var = 0.0
+    best_ids: set[int] = set()
+    for _, (d, m, f) in PARSED_FORMATIONS:
+        selected = [gks[0]]
+        valid = True
+        for position, count in (("DEF", d), ("MID", m), ("FWD", f)):
+            pool = ranked[position]
+            if len(pool) < count:
+                valid = False
+                break
+            selected.extend(pool[:count])
+        if not valid or len(selected) != EXPECTED_XI:
+            continue
+        mean = sum(row["means"][offset] for row in selected)
+        if best_mean is None or mean > best_mean:
+            best_mean = mean
+            best_var = sum(row["variances"][offset] for row in selected)
+            best_ids = {int(row["element"]) for row in selected}
+    if best_mean is None:
+        return False, 0.0, 0.0, set()
+    return True, best_mean, best_var, best_ids
+
+
+def _score_compiled_rows(rows: list[dict[str, Any]], changes: int, context: dict[str, Any]) -> dict[str, Any]:
     cfg = context["cfg"]
-    cluster_penalty, cluster_guard = _team_cluster_penalty(players, cfg)
+    cluster_penalty, cluster_guard = _cluster_penalty_from_team_ids([int(row["team_id"]) for row in rows], cfg)
     guardrails = {**context["change_guard"], **cluster_guard}
     if int(changes) > int(context["change_cap"]):
-        return {
-            "valid": False,
-            "reason": "early_season_change_cap_exceeded",
-            "guardrails": guardrails,
-        }
+        return {"valid": False, "reason": "early_season_change_cap_exceeded", "guardrails": guardrails}
 
     horizons = context["horizons"]
     bench_weight = context["bench_weight"]
     captain_weight = context["captain_weight"]
-    index = _gw_index(players)
+    by_position = {position: [row for row in rows if row["position"] == position] for position in POSITIONS}
     horizon_results: dict[str, dict[str, Any]] = {}
     total_mean = 0.0
     total_var = 0.0
     valid = True
 
     for offset in range(context["max_horizon"]):
-        gw = planning_gw + offset
-        lineup = _best_lineup_indexed(players, gw, index)
-        if not lineup["valid"]:
+        lineup_valid, lineup_mean, lineup_var, starter_ids = _compiled_best_lineup(by_position, offset)
+        if not lineup_valid:
             valid = False
         if valid:
-            starter_ids = set(lineup["starters"])
-            bench = [p for p in players if int(p["element"]) not in starter_ids]
-            bench_mean = sum(_f(_indexed_row(index, p, gw).get("mean")) for p in bench)
-            bench_var = sum(_f(_indexed_row(index, p, gw).get("std")) ** 2 for p in bench)
-            starter_rows = [_indexed_row(index, p, gw) for p in players if int(p["element"]) in starter_ids]
-            captain_row = max(starter_rows, key=lambda row: _f(row.get("mean")), default={})
-            captain_mean = _f(captain_row.get("mean"))
-            captain_std = _f(captain_row.get("std"))
-            captain_var = captain_std ** 2
-            total_mean += lineup["mean"] + bench_weight * bench_mean + captain_weight * captain_mean
+            all_mean = sum(row["means"][offset] for row in rows)
+            all_var = sum(row["variances"][offset] for row in rows)
+            bench_mean = all_mean - lineup_mean
+            bench_var = all_var - lineup_var
+            captain_row: dict[str, Any] | None = None
+            captain_mean = float("-inf")
+            for row in rows:
+                if int(row["element"]) in starter_ids:
+                    mean = row["means"][offset]
+                    if captain_row is None or mean > captain_mean:
+                        captain_row = row
+                        captain_mean = mean
+            if captain_row is None:
+                captain_mean = 0.0
+                captain_var = 0.0
+            else:
+                captain_var = captain_row["variances"][offset]
+            total_mean += lineup_mean + bench_weight * bench_mean + captain_weight * captain_mean
             captain_extra_var = ((1.0 + captain_weight) ** 2 - 1.0) * captain_var
-            total_var += lineup["variance"] + (bench_weight ** 2) * bench_var + captain_extra_var
+            total_var += lineup_var + (bench_weight ** 2) * bench_var + captain_extra_var
 
         elapsed = offset + 1
         if elapsed in context["horizon_set"]:
@@ -212,7 +294,6 @@ def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int 
 
     for horizon in horizons:
         horizon_results.setdefault(str(horizon), {"valid": False, "mean": None, "std": None})
-
     weights = context["weights"]
     available = [(h, horizon_results[str(h)]) for h in horizons if horizon_results[str(h)]["valid"]]
     weight_sum = sum(weights.get(str(h), 0.0) for h, _ in available)
@@ -233,6 +314,35 @@ def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int 
         "robust_score": round(robust, 3),
         "guardrails": guardrails,
     }
+
+
+class CompiledPackageScorer:
+    """Precompiled input adapter for the single canonical exact scoring kernel."""
+
+    def __init__(self, universe: list[dict[str, Any]], planning_gw: int, *, scoring_context: dict[str, Any] | None = None) -> None:
+        self.planning_gw = int(planning_gw)
+        self.context = scoring_context or _scoring_context(load_config(), planning_gw)
+        self.registry = {
+            int(player.get("element") or -1): _compile_player(player, planning_gw, self.context["max_horizon"])
+            for player in universe
+            if int(player.get("element") or -1) > 0
+        }
+
+    def score(self, players: list[dict[str, Any]], changes: int = 0) -> dict[str, Any]:
+        rows: list[dict[str, Any]] = []
+        for player in players:
+            element = int(player.get("element") or -1)
+            compiled = self.registry.get(element)
+            if compiled is None:
+                raise KeyError(f"compiled package scorer missing element={element}")
+            rows.append(compiled)
+        return _score_compiled_rows(rows, changes, self.context)
+
+
+def score_package(players: list[dict[str, Any]], planning_gw: int, changes: int = 0, *, scoring_context: dict[str, Any] | None = None) -> dict[str, Any]:
+    context = scoring_context or _scoring_context(load_config(), planning_gw)
+    rows = _compile_players_cached(players, planning_gw, context)
+    return _score_compiled_rows(rows, changes, context)
 
 
 def affordable_package(outs: list[dict[str, Any]], ins: list[dict[str, Any]], itb: int) -> tuple[bool, dict[str, int]]:

@@ -15,6 +15,8 @@ LATE_PRECOMPUTE_ROLE = "LATE_PRECOMPUTE_RECOVERY"
 PRIMARY_FALLBACK_ROLE = "PRIMARY_FALLBACK_CURRENT_CHECKPOINT"
 CI_DEPLOYMENT_ROLE = "CI_DEPLOYMENT_EXHAUSTIVE_REFRESH"
 PRECOMPUTE_EXECUTION_MODE = "EXHAUSTIVE_PRECOMPUTE"
+LEGACY_RUNTIME_WORKFLOW = "V3 Runtime"
+SHARDED_PRECOMPUTE_WORKFLOW = "V3 Package Precompute"
 
 
 def _parse_dt(value: Any) -> datetime | None:
@@ -218,13 +220,45 @@ def _checkpoint_recovery_decision(now_utc: datetime, target: datetime) -> dict[s
     }
 
 
+def _delegated_result(reason: str) -> dict[str, Any]:
+    return {
+        "should_collect": False,
+        "reason": reason,
+        "deadline_intensive": False,
+        "match_window": False,
+        "deep_stats": False,
+        "visible_report": False,
+        "visible_mode": "SILENT",
+        "post_deadline_reconciliation": False,
+        "direct_official_phase_refresh": False,
+        "snapshot_role": "SHARDED_PRECOMPUTE_DELEGATED",
+        "target_checkpoint_utc": "",
+        "target_checkpoint_local": "",
+        "target_visible_report": False,
+        "target_visible_mode": "SILENT",
+    }
+
+
 def main() -> int:
     hydration_assurance = verify_runtime_snapshot()
     print(json.dumps({"runtime_hydration_assurance": hydration_assurance}, ensure_ascii=False))
     event = os.getenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+    workflow = os.getenv("GITHUB_WORKFLOW", "")
     schedule_expr = os.getenv("FPL_SCHEDULE_EXPR", "")
     source_commit = os.getenv("SOURCE_COMMIT", os.getenv("GITHUB_SHA", ""))
     now = datetime.now(timezone.utc)
+
+    if workflow == LEGACY_RUNTIME_WORKFLOW and event == "workflow_run":
+        result = _delegated_result("ci_exhaustive_refresh_delegated_to_sharded_precompute_workflow")
+        _append_outputs(result)
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+    if workflow == LEGACY_RUNTIME_WORKFLOW and event == "schedule" and is_precompute_schedule(schedule_expr):
+        result = _delegated_result("scheduled_exhaustive_precompute_delegated_to_sharded_workflow")
+        _append_outputs(result)
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
     if event == "workflow_run":
         result = _ci_deployment_decision(now)
         _append_outputs(result)
@@ -266,8 +300,13 @@ def main() -> int:
         recovery_kind, target = _adaptive_recovery_target(now)
         if recovery_kind == "PRECOMPUTE" and target is not None:
             if not _manifest_precompute_valid(manifest, target_utc=target, source_commit=source_commit):
-                result = _precompute_decision(now)
-                result["reason"] = "adaptive_missing_precompute_recovery"
+                if workflow == LEGACY_RUNTIME_WORKFLOW:
+                    result = _delegated_result("adaptive_missing_precompute_delegated_to_sharded_workflow")
+                    result["target_checkpoint_utc"] = target.isoformat()
+                    result["target_checkpoint_local"] = target.astimezone(_local_tz()).isoformat()
+                else:
+                    result = _precompute_decision(now)
+                    result["reason"] = "adaptive_missing_precompute_recovery"
                 _append_outputs(result)
                 print(json.dumps(result, ensure_ascii=False))
                 return 0

@@ -135,3 +135,82 @@ jobs:
               'top_30_tasks': rows[:30],
           }, flush=True)
           PY
+
+  heavy-task:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install --disable-pip-version-check -r requirements.txt
+      - run: python tools/v4_exact_lazy_utility_patch_temp.py
+      - run: python tools/v4_exact_hotpath_patch_temp.py
+      - name: Benchmark one measured heaviest outgoing task
+        shell: bash
+        run: |
+          timeout 300s python - <<'PY'
+          from time import perf_counter
+          from itertools import combinations as real_combinations
+          from src.engines.v4_decision_pipeline import effective_planning_squad
+          from src.engines.v4_full_universe_package_search import search_full_universe_packages
+          from src.engines import v4_full_universe_package_search_core as core
+          from src.engines.v4_tactical_interaction import build_tactical_interactions
+          from src.engines.v4_wc_optimizer import build_candidates
+          from src.utils import CONFIG, DATA, read_json
+
+          target = (473, 557, 565)
+          predictions = read_json(DATA / 'predictions_v4.json', {})
+          universe = read_json(DATA / 'universe.json', {})
+          team = read_json(DATA / 'team.json', {})
+          latest = read_json(DATA / 'latest.json', {})
+          prices = read_json(DATA / 'prices.json', {})
+          understat = read_json(DATA / 'understat_tactical_v4.json', {})
+          locked = effective_planning_squad(team, read_json(CONFIG / 'locked_squad.json', {}), latest)
+          candidates = build_candidates(predictions, universe)
+          interactions = build_tactical_interactions(predictions, universe, understat)
+          owned = tuple(sorted(int(r['element']) for r in locked.get('players') or []))
+          original = core.combinations
+          selected = []
+
+          def filtered(iterable, r):
+              seq = tuple(iterable)
+              if len(seq) == 15 and tuple(sorted(getattr(p, 'element', -1) for p in seq)) == owned and r in (1, 2, 3):
+                  if r != len(target):
+                      return iter(())
+                  def gen():
+                      for combo in real_combinations(seq, r):
+                          ids = tuple(sorted(p.element for p in combo))
+                          if ids == target:
+                              selected.append(ids)
+                              yield combo
+                  return gen()
+              return real_combinations(seq, r)
+
+          started = perf_counter()
+          core.combinations = filtered
+          try:
+              result = search_full_universe_packages(
+                  candidates, locked, predictions=predictions, universe=universe,
+                  understat=understat, interactions=interactions, prices=prices,
+                  max_replacements=3,
+              )
+          finally:
+              core.combinations = original
+          elapsed = perf_counter() - started
+          print({
+              'task': target,
+              'elapsed_s': round(elapsed, 3),
+              'selected_outgoing_tasks': selected,
+              'status': (result.get('search') or {}).get('status'),
+              'diagnostics': (result.get('search') or {}).get('diagnostics'),
+          }, flush=True)
+          PY

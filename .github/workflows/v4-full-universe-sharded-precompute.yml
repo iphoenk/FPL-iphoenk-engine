@@ -1,0 +1,133 @@
+name: V4 full-universe sharded precompute
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/v4-full-universe-tactical-20260903]
+    paths:
+      - .github/workflows/v4-full-universe-sharded-precompute.yml
+      - config/intelligence/full_universe_package_search_sharding.json
+      - src/engines/v4_full_universe_shard_planner.py
+      - src/engines/v4_full_universe_shard_worker.py
+      - src/engines/v4_full_universe_shard_reducer.py
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      worker_timeout: ${{ steps.runtime.outputs.worker_timeout }}
+      reducer_timeout: ${{ steps.runtime.outputs.reducer_timeout }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {ref: "${{ github.sha }}"}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with: {python-version: '3.12', cache: pip, cache-dependency-path: requirements.txt}
+      - run: pip install --disable-pip-version-check -r requirements.txt
+      - id: plan
+        name: Derive dynamic exact-work matrix
+        run: python -m src.engines.v4_full_universe_shard_planner --emit-matrix
+      - id: runtime
+        name: Read execution SLO from registry
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          p=json.load(open('config/intelligence/full_universe_package_search_sharding.json'))['workflow']
+          print(f"worker_timeout={int(p['worker_timeout_seconds'])}")
+          print(f"reducer_timeout={int(p['reducer_timeout_seconds'])}")
+          PY
+      - name: Verify plan proof
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open('data/runtime/v4_full_universe_shard_plan.json'))
+          assert p['partition_proof']['all_task_ids_unique'] is True
+          assert p['partition_proof']['root_ranges_complete_and_disjoint_per_outgoing_set'] is True
+          assert p['balance']['task_cover_complete'] is True
+          assert p['balance']['task_assignment_disjoint'] is True
+          assert p['contracts']['no_candidate_pruning_introduced_by_partition'] is True
+          print({'shards':len(p['shards']),'tasks':p['partition_proof']['task_count'],'estimated_work':p['balance']['estimated_total_work'],'load_max':p['balance']['max_estimated_shard_work']})
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v4-full-universe-plan
+          path: data/runtime/v4_full_universe_shard_plan.json
+          if-no-files-found: error
+          retention-days: 1
+
+  shard:
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {ref: "${{ github.sha }}"}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with: {python-version: '3.12', cache: pip, cache-dependency-path: requirements.txt}
+      - run: pip install --disable-pip-version-check -r requirements.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: {name: v4-full-universe-plan, path: data/runtime}
+      - name: Run exact non-authoritative shard
+        run: timeout "${{ needs.plan.outputs.worker_timeout }}s" python -m src.engines.v4_full_universe_shard_worker --shard-id ${{ matrix.shard.id }}
+      - name: Verify shard authority is blocked
+        run: |
+          python - <<'PY'
+          import glob,json
+          paths=glob.glob('data/runtime/v4_full_universe_shards/shard_*.json')
+          assert len(paths)==1
+          p=json.load(open(paths[0])); s=p['search']
+          assert s['status']=='SHARD_PARTIAL_EXACT'
+          assert s['global_optimality_guaranteed_under_declared_package_semantics'] is False
+          assert p['decision_authority']=='EXECUTION_ONLY_SHARD_PARTIAL'
+          assert p['execution_authorized'] is False
+          assert p['shard_execution']['workers_may_not_publish_final_package_authority'] is True
+          print({'shard':p['shard_execution']['shard_id'],'tasks':p['shard_execution']['assigned_task_count'],'packages':s['diagnostics']['packages_evaluated']})
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v4-full-universe-shard-${{ matrix.shard.id }}
+          path: data/runtime/v4_full_universe_shards/shard_*.json
+          if-no-files-found: error
+          retention-days: 1
+
+  reduce:
+    needs: [plan, shard]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {ref: "${{ github.sha }}"}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with: {python-version: '3.12', cache: pip, cache-dependency-path: requirements.txt}
+      - run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: {name: v4-full-universe-plan, path: data/runtime}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: {pattern: 'v4-full-universe-shard-*', path: data/runtime/v4_full_universe_shards, merge-multiple: true}
+      - name: Exact proof fan-in
+        run: timeout "${{ needs.plan.outputs.reducer_timeout }}s" python -m src.engines.v4_full_universe_shard_reducer
+      - name: Verify global exact authority handoff
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open('data/runtime/v4_full_universe_precomputed.json'))
+          s=p['search']; r=p['shard_reduction']; q=r['proof']
+          assert s['status']=='FULL_UNIVERSE_PROVEN'
+          assert s['global_optimality_guaranteed_under_declared_package_semantics'] is True
+          assert q['complete_task_cover'] is True and q['task_processing_disjoint'] is True
+          assert q['optimizer_input_fingerprint_match'] is True and q['execution_code_fingerprint_match'] is True
+          assert r['global_frontier_exact_from_union_of_exact_local_frontiers'] is True
+          assert p['decision_authority']=='PRECOMPUTED_FULL_UNIVERSE_EXACT_FOR_OPTIMIZATION'
+          assert p['execution_authorized'] is False
+          print({'status':s['status'],'shards':q['actual_shard_count'],'tasks':q['processed_task_count'],'packages':s['diagnostics']['packages_evaluated'],'frontier':len(p['efficient_frontier']['rows'])})
+          PY
+      - name: Focused regression
+        run: python -m pytest -q tests/test_v4_full_universe_package_search_proof.py tests/test_v4_full_universe_authority_fail_closed.py tests/test_v4_p1_structural_hardening.py

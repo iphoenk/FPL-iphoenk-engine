@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 from src.runtime_v3.publish_snapshot import (
     ATTESTATION_DIGEST_CONTRACT,
     ATTESTATION_REGISTRY,
+    ATTESTATION_REGISTRY_V1,
     snapshot_digest,
 )
 from src.utils import ROOT
@@ -138,13 +139,27 @@ def _verify_embedded_attestation(root: Path, manifest: dict, actual_paths: list[
         return {
             "embedded_attestation_verified": False,
             "workflow_run_id": None,
+            "workflow_run_attempt": None,
             "snapshot_sha256": None,
             "attestation": None,
         }
     if not isinstance(attestation, dict):
         raise RuntimeError("runtime hydration rejected: attestation missing")
-    if attestation.get("registry") != ATTESTATION_REGISTRY:
-        raise RuntimeError("runtime hydration rejected: attestation registry mismatch")
+
+    registry = attestation.get("registry")
+    if schema_version == 3:
+        if registry != ATTESTATION_REGISTRY_V1:
+            raise RuntimeError("runtime hydration rejected: legacy attestation registry mismatch")
+        if attestation.get("workflow_run_attempt") is not None:
+            raise RuntimeError("runtime hydration rejected: legacy attestation may not declare workflow attempt")
+        run_attempt = None
+    else:
+        if registry != ATTESTATION_REGISTRY:
+            raise RuntimeError("runtime hydration rejected: attestation registry mismatch")
+        run_attempt = attestation.get("workflow_run_attempt")
+        if not isinstance(run_attempt, int) or run_attempt <= 0:
+            raise RuntimeError("runtime hydration rejected: attestation workflow run attempt invalid")
+
     if attestation.get("digest_contract") != ATTESTATION_DIGEST_CONTRACT:
         raise RuntimeError("runtime hydration rejected: attestation digest contract mismatch")
     if attestation.get("workflow_name") != EXPECTED_WORKFLOW:
@@ -173,8 +188,111 @@ def _verify_embedded_attestation(root: Path, manifest: dict, actual_paths: list[
     return {
         "embedded_attestation_verified": True,
         "workflow_run_id": run_id,
+        "workflow_run_attempt": run_attempt,
         "snapshot_sha256": claimed,
         "attestation": attestation,
+    }
+
+
+def _validate_attempt_metadata(metadata: dict, attestation: dict, attempt: int) -> None:
+    run_id = int(attestation["workflow_run_id"])
+    if metadata.get("id") != run_id:
+        raise RuntimeError("runtime hydration rejected: workflow run id mismatch")
+    try:
+        actual_attempt = int(metadata.get("run_attempt") or 0)
+    except (TypeError, ValueError):
+        raise RuntimeError("runtime hydration rejected: workflow run attempt metadata invalid")
+    if actual_attempt != attempt:
+        raise RuntimeError("runtime hydration rejected: workflow run attempt mismatch")
+    if metadata.get("name") != EXPECTED_WORKFLOW:
+        raise RuntimeError("runtime hydration rejected: workflow run name mismatch")
+    if metadata.get("head_branch") != "main":
+        raise RuntimeError("runtime hydration rejected: attesting workflow was not canonical main")
+    if metadata.get("head_sha") != attestation.get("source_commit"):
+        raise RuntimeError("runtime hydration rejected: attesting workflow source SHA mismatch")
+
+
+def _verify_attempt_aware_workflow_evidence(
+    *, api: str, repository: str, attestation: dict
+) -> dict:
+    run_id = int(attestation["workflow_run_id"])
+    run_attempt = int(attestation["workflow_run_attempt"])
+    metadata = _fetch_json(
+        f"{api}/repos/{repository}/actions/runs/{run_id}/attempts/{run_attempt}"
+    )
+    _validate_attempt_metadata(metadata, attestation, run_attempt)
+    if metadata.get("conclusion") != "success":
+        raise RuntimeError("runtime hydration rejected: attesting workflow attempt did not complete successfully")
+
+    expected_marker = ATTESTATION_MARKER + json.dumps(
+        attestation, ensure_ascii=False, sort_keys=True
+    )
+    archive = _fetch_bytes(
+        f"{api}/repos/{repository}/actions/runs/{run_id}/attempts/{run_attempt}/logs"
+    )
+    if not _archive_contains_marker(archive, expected_marker):
+        raise RuntimeError("runtime hydration rejected: immutable workflow attestation marker missing")
+    return {
+        "workflow_run_success_verified": True,
+        "immutable_log_attestation_verified": True,
+        "workflow_run_attempt": run_attempt,
+        "legacy_attempt_migration": False,
+    }
+
+
+def _verify_legacy_workflow_evidence(
+    *, api: str, repository: str, attestation: dict
+) -> dict:
+    """Resolve V1 run-id-only evidence to one immutable successful attempt.
+
+    V1 snapshots predate attempt-aware attestation. GitHub reruns reuse the same
+    run id and mutate the run-level conclusion, so migration must not trust that
+    conclusion. Instead, inspect bounded attempt-specific metadata/log archives
+    and require exactly one successful attempt containing the exact legacy marker.
+    """
+    run_id = int(attestation["workflow_run_id"])
+    run_metadata = _fetch_json(f"{api}/repos/{repository}/actions/runs/{run_id}")
+    if run_metadata.get("id") != run_id:
+        raise RuntimeError("runtime hydration rejected: workflow run id mismatch")
+    if run_metadata.get("name") != EXPECTED_WORKFLOW:
+        raise RuntimeError("runtime hydration rejected: workflow run name mismatch")
+    if run_metadata.get("head_branch") != "main":
+        raise RuntimeError("runtime hydration rejected: attesting workflow was not canonical main")
+    if run_metadata.get("head_sha") != attestation.get("source_commit"):
+        raise RuntimeError("runtime hydration rejected: attesting workflow source SHA mismatch")
+    try:
+        max_attempt = max(1, int(run_metadata.get("run_attempt") or 1))
+    except (TypeError, ValueError):
+        raise RuntimeError("runtime hydration rejected: workflow run attempt metadata invalid")
+    if max_attempt > 100:
+        raise RuntimeError("runtime hydration rejected: workflow run attempt metadata unreasonable")
+
+    expected_marker = ATTESTATION_MARKER + json.dumps(
+        attestation, ensure_ascii=False, sort_keys=True
+    )
+    matching_attempts: list[int] = []
+    for attempt in range(1, max_attempt + 1):
+        metadata = _fetch_json(
+            f"{api}/repos/{repository}/actions/runs/{run_id}/attempts/{attempt}"
+        )
+        _validate_attempt_metadata(metadata, attestation, attempt)
+        if metadata.get("conclusion") != "success":
+            continue
+        archive = _fetch_bytes(
+            f"{api}/repos/{repository}/actions/runs/{run_id}/attempts/{attempt}/logs"
+        )
+        if _archive_contains_marker(archive, expected_marker):
+            matching_attempts.append(attempt)
+
+    if not matching_attempts:
+        raise RuntimeError("runtime hydration rejected: immutable workflow attestation marker missing")
+    if len(matching_attempts) != 1:
+        raise RuntimeError("runtime hydration rejected: legacy workflow attestation attempt is ambiguous")
+    return {
+        "workflow_run_success_verified": True,
+        "immutable_log_attestation_verified": True,
+        "workflow_run_attempt": matching_attempts[0],
+        "legacy_attempt_migration": True,
     }
 
 
@@ -183,6 +301,8 @@ def _verify_immutable_workflow_evidence(attestation: dict) -> dict:
         return {
             "workflow_run_success_verified": False,
             "immutable_log_attestation_verified": False,
+            "workflow_run_attempt": attestation.get("workflow_run_attempt"),
+            "legacy_attempt_migration": False,
         }
 
     repository = str(os.getenv("GITHUB_REPOSITORY") or "").strip()
@@ -190,68 +310,15 @@ def _verify_immutable_workflow_evidence(attestation: dict) -> dict:
     if not repository:
         raise RuntimeError("runtime hydration rejected: GitHub repository identity unavailable")
 
-    run_id = int(attestation["workflow_run_id"])
-    metadata = _fetch_json(f"{api}/repos/{repository}/actions/runs/{run_id}")
-    if metadata.get("id") != run_id:
-        raise RuntimeError("runtime hydration rejected: workflow run id mismatch")
-    if metadata.get("name") != EXPECTED_WORKFLOW:
-        raise RuntimeError("runtime hydration rejected: workflow run name mismatch")
-    if metadata.get("head_branch") != "main":
-        raise RuntimeError("runtime hydration rejected: attesting workflow was not canonical main")
-    if metadata.get("head_sha") != attestation.get("source_commit"):
-        raise RuntimeError("runtime hydration rejected: attesting workflow source SHA mismatch")
-    if metadata.get("conclusion") != "success":
-        raise RuntimeError("runtime hydration rejected: attesting workflow did not complete successfully")
-
-    raw_attempt = metadata.get("run_attempt")
-    try:
-        run_attempt = max(1, int(raw_attempt or 1))
-    except (TypeError, ValueError):
-        raise RuntimeError("runtime hydration rejected: workflow run attempt metadata invalid")
-    if run_attempt > 100:
-        raise RuntimeError("runtime hydration rejected: workflow run attempt metadata unreasonable")
-
-    expected_marker = ATTESTATION_MARKER + json.dumps(
-        attestation, ensure_ascii=False, sort_keys=True
-    )
-
-    # GitHub's run-level logs endpoint resolves to the latest attempt. A snapshot
-    # may have been computed in an earlier attempt and then published by a rerun
-    # of a later job. The attestation is bound to the immutable run id, source SHA
-    # and snapshot digest, so search every attempt of that same run without
-    # weakening any provenance or content checks.
-    fetched_any_archive = False
-    for attempt in range(run_attempt, 0, -1):
-        try:
-            archive = _fetch_bytes(
-                f"{api}/repos/{repository}/actions/runs/{run_id}/attempts/{attempt}/logs"
-            )
-        except RuntimeError:
-            continue
-        fetched_any_archive = True
-        if _archive_contains_marker(archive, expected_marker):
-            return {
-                "workflow_run_success_verified": True,
-                "immutable_log_attestation_verified": True,
-            }
-
-    # Backward-compatible fallback for single-attempt runs or GitHub API variants
-    # where the attempt-specific archive is unavailable but run-level logs remain.
-    try:
-        archive = _fetch_bytes(f"{api}/repos/{repository}/actions/runs/{run_id}/logs")
-    except RuntimeError:
-        archive = b""
-    if archive:
-        fetched_any_archive = True
-        if _archive_contains_marker(archive, expected_marker):
-            return {
-                "workflow_run_success_verified": True,
-                "immutable_log_attestation_verified": True,
-            }
-
-    if not fetched_any_archive:
-        raise RuntimeError("runtime hydration rejected: workflow attestation logs unavailable")
-    raise RuntimeError("runtime hydration rejected: immutable workflow attestation marker missing")
+    if attestation.get("registry") == ATTESTATION_REGISTRY:
+        return _verify_attempt_aware_workflow_evidence(
+            api=api, repository=repository, attestation=attestation
+        )
+    if attestation.get("registry") == ATTESTATION_REGISTRY_V1:
+        return _verify_legacy_workflow_evidence(
+            api=api, repository=repository, attestation=attestation
+        )
+    raise RuntimeError("runtime hydration rejected: unsupported workflow attestation registry")
 
 
 def verify_runtime_snapshot(root: Path = ROOT) -> dict:
@@ -338,6 +405,8 @@ def verify_runtime_snapshot(root: Path = ROOT) -> dict:
         "canonical_source_ancestry_verified": True,
         "embedded_attestation_verified": embedded["embedded_attestation_verified"],
         "workflow_run_id": embedded["workflow_run_id"],
+        "workflow_run_attempt": external.get("workflow_run_attempt"),
+        "legacy_attempt_migration": external.get("legacy_attempt_migration", False),
         "snapshot_sha256": embedded["snapshot_sha256"],
         "workflow_run_success_verified": external["workflow_run_success_verified"],
         "immutable_log_attestation_verified": external["immutable_log_attestation_verified"],

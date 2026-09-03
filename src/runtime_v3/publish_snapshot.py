@@ -15,7 +15,8 @@ from src.version import ENGINE_VERSION, SCHEMA_VERSION
 
 REGISTRY_PATH = ROOT / "config" / "runtime" / "runtime_publish_registry.json"
 PUBLIC_AUTH_PROJECTION = "PUBLIC_AUTH_HEALTH_V1"
-ATTESTATION_REGISTRY = "V3_RUNTIME_WORKFLOW_ATTESTATION_V1"
+ATTESTATION_REGISTRY_V1 = "V3_RUNTIME_WORKFLOW_ATTESTATION_V1"
+ATTESTATION_REGISTRY = "V3_RUNTIME_WORKFLOW_ATTESTATION_V2"
 ATTESTATION_DIGEST_CONTRACT = "MANIFEST_CORE_PLUS_DECLARED_PAYLOAD_V1"
 
 
@@ -127,13 +128,16 @@ def _checkpoint_metadata(
     }
 
 
-def _runtime_workflow_run_id() -> int | None:
+def _runtime_workflow_identity() -> tuple[int, int] | None:
     if os.getenv("GITHUB_WORKFLOW") != "V3 Runtime":
         return None
-    raw = str(os.getenv("GITHUB_RUN_ID") or "").strip()
-    if not raw.isdigit():
-        return None
-    return int(raw)
+    raw_run_id = str(os.getenv("GITHUB_RUN_ID") or "").strip()
+    raw_attempt = str(os.getenv("GITHUB_RUN_ATTEMPT") or "").strip()
+    if not raw_run_id.isdigit() or int(raw_run_id) <= 0:
+        raise RuntimeError("V3 Runtime publication requires a valid GITHUB_RUN_ID")
+    if not raw_attempt.isdigit() or int(raw_attempt) <= 0:
+        raise RuntimeError("V3 Runtime publication requires a valid GITHUB_RUN_ATTEMPT")
+    return int(raw_run_id), int(raw_attempt)
 
 
 def snapshot_digest(data_dir: Path, manifest: dict[str, Any]) -> str:
@@ -194,9 +198,9 @@ def materialize(
 
     performance = read_json(source_root / "runtime_performance.json", {})
     generated_at = datetime.now(timezone.utc)
-    run_id = _runtime_workflow_run_id()
+    workflow_identity = _runtime_workflow_identity()
     manifest = {
-        "schema_version": 3 if run_id is not None else 2,
+        "schema_version": 4 if workflow_identity is not None else 2,
         "registry": "RUNTIME_MANIFEST_V1",
         "engine_version": ENGINE_VERSION,
         "engine_schema_version": SCHEMA_VERSION,
@@ -228,13 +232,15 @@ def materialize(
         },
     }
 
-    if run_id is not None:
+    if workflow_identity is not None:
+        run_id, run_attempt = workflow_identity
         digest = snapshot_digest(output_data, manifest)
         manifest["attestation"] = {
             "registry": ATTESTATION_REGISTRY,
             "digest_contract": ATTESTATION_DIGEST_CONTRACT,
             "workflow_name": "V3 Runtime",
             "workflow_run_id": run_id,
+            "workflow_run_attempt": run_attempt,
             "source_commit": manifest.get("source_commit"),
             "snapshot_sha256": digest,
         }

@@ -9,6 +9,7 @@ from typing import Any
 from src.runtime_v3.publish_snapshot import (
     ATTESTATION_DIGEST_CONTRACT,
     ATTESTATION_REGISTRY,
+    ATTESTATION_REGISTRY_V1,
     PUBLIC_AUTH_PROJECTION,
     REGISTRY_PATH,
     snapshot_digest,
@@ -75,9 +76,21 @@ def _verify_embedded_attestation(data_dir: Path, manifest: dict[str, Any]) -> di
             raise RuntimeError("legacy runtime manifest may not carry an unversioned attestation")
         return None
     if not isinstance(attestation, dict):
-        raise RuntimeError("runtime manifest v3 requires workflow attestation")
-    if attestation.get("registry") != ATTESTATION_REGISTRY:
-        raise RuntimeError("runtime workflow attestation registry mismatch")
+        raise RuntimeError("runtime manifest requires workflow attestation")
+
+    registry = attestation.get("registry")
+    if schema == 3:
+        if registry != ATTESTATION_REGISTRY_V1:
+            raise RuntimeError("runtime workflow attestation registry mismatch")
+        if attestation.get("workflow_run_attempt") is not None:
+            raise RuntimeError("runtime manifest v3 may not carry attempt-aware attestation")
+    else:
+        if registry != ATTESTATION_REGISTRY:
+            raise RuntimeError("runtime workflow attestation registry mismatch")
+        run_attempt = attestation.get("workflow_run_attempt")
+        if not isinstance(run_attempt, int) or run_attempt <= 0:
+            raise RuntimeError("runtime workflow attestation run attempt invalid")
+
     if attestation.get("digest_contract") != ATTESTATION_DIGEST_CONTRACT:
         raise RuntimeError("runtime workflow attestation digest contract mismatch")
     if attestation.get("workflow_name") != "V3 Runtime":
@@ -184,6 +197,7 @@ def verify_publication(
         "embedded_attestation_verified": attestation is not None,
         "snapshot_sha256": attestation.get("snapshot_sha256") if attestation else None,
         "workflow_run_id": attestation.get("workflow_run_id") if attestation else None,
+        "workflow_run_attempt": attestation.get("workflow_run_attempt") if attestation else None,
     }
     return result
 

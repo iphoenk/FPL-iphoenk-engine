@@ -14,12 +14,24 @@ def _zip_log(text: str) -> bytes:
     return buffer.getvalue()
 
 
-def _attestation() -> dict:
+def _legacy_attestation() -> dict:
     return {
-        "registry": "V3_RUNTIME_WORKFLOW_ATTESTATION_V1",
+        "registry": guard.ATTESTATION_REGISTRY_V1,
         "digest_contract": "MANIFEST_CORE_PLUS_DECLARED_PAYLOAD_V1",
         "workflow_name": "V3 Runtime",
         "workflow_run_id": 123456,
+        "source_commit": "a" * 40,
+        "snapshot_sha256": "b" * 64,
+    }
+
+
+def _attempt_attestation(attempt: int = 1) -> dict:
+    return {
+        "registry": guard.ATTESTATION_REGISTRY,
+        "digest_contract": "MANIFEST_CORE_PLUS_DECLARED_PAYLOAD_V1",
+        "workflow_name": "V3 Runtime",
+        "workflow_run_id": 123456,
+        "workflow_run_attempt": attempt,
         "source_commit": "a" * 40,
         "snapshot_sha256": "b" * 64,
     }
@@ -32,36 +44,106 @@ def _production_env(monkeypatch) -> None:
     monkeypatch.setenv("GITHUB_API_URL", "https://api.github.test")
 
 
-def test_immutable_attestation_survives_publish_job_rerun(monkeypatch):
+def _metadata(attestation: dict, attempt: int, conclusion: str) -> dict:
+    return {
+        "id": attestation["workflow_run_id"],
+        "name": "V3 Runtime",
+        "head_branch": "main",
+        "head_sha": attestation["source_commit"],
+        "conclusion": conclusion,
+        "run_attempt": attempt,
+    }
+
+
+def test_legacy_attestation_survives_later_failed_rerun(monkeypatch):
     _production_env(monkeypatch)
-    attestation = _attestation()
+    attestation = _legacy_attestation()
     expected_marker = guard.ATTESTATION_MARKER + json.dumps(
         attestation, ensure_ascii=False, sort_keys=True
     )
 
+    def fake_fetch_json(url: str) -> dict:
+        if url.endswith("/actions/runs/123456"):
+            return _metadata(attestation, 2, "failure")
+        if url.endswith("/attempts/1"):
+            return _metadata(attestation, 1, "success")
+        if url.endswith("/attempts/2"):
+            return _metadata(attestation, 2, "failure")
+        raise AssertionError(f"unexpected metadata URL: {url}")
+
+    monkeypatch.setattr(guard, "_fetch_json", fake_fetch_json)
     monkeypatch.setattr(
         guard,
-        "_fetch_json",
-        lambda url: {
-            "id": attestation["workflow_run_id"],
-            "name": "V3 Runtime",
-            "head_branch": "main",
-            "head_sha": attestation["source_commit"],
-            "conclusion": "success",
-            "run_attempt": 2,
-        },
+        "_fetch_bytes",
+        lambda url: _zip_log(expected_marker) if "/attempts/1/logs" in url else _zip_log("no marker"),
     )
 
+    result = guard._verify_immutable_workflow_evidence(attestation)
+
+    assert result == {
+        "workflow_run_success_verified": True,
+        "immutable_log_attestation_verified": True,
+        "workflow_run_attempt": 1,
+        "legacy_attempt_migration": True,
+    }
+
+
+def test_legacy_attestation_rejects_missing_marker(monkeypatch):
+    _production_env(monkeypatch)
+    attestation = _legacy_attestation()
+
+    def fake_fetch_json(url: str) -> dict:
+        if url.endswith("/actions/runs/123456"):
+            return _metadata(attestation, 2, "failure")
+        attempt = 1 if url.endswith("/attempts/1") else 2
+        return _metadata(attestation, attempt, "success" if attempt == 1 else "failure")
+
+    monkeypatch.setattr(guard, "_fetch_json", fake_fetch_json)
+    monkeypatch.setattr(guard, "_fetch_bytes", lambda url: _zip_log("no marker here"))
+
+    with pytest.raises(RuntimeError, match="immutable workflow attestation marker missing"):
+        guard._verify_immutable_workflow_evidence(attestation)
+
+
+def test_legacy_attestation_rejects_ambiguous_matching_attempts(monkeypatch):
+    _production_env(monkeypatch)
+    attestation = _legacy_attestation()
+    expected_marker = guard.ATTESTATION_MARKER + json.dumps(
+        attestation, ensure_ascii=False, sort_keys=True
+    )
+
+    def fake_fetch_json(url: str) -> dict:
+        if url.endswith("/actions/runs/123456"):
+            return _metadata(attestation, 2, "failure")
+        attempt = 1 if url.endswith("/attempts/1") else 2
+        return _metadata(attestation, attempt, "success")
+
+    monkeypatch.setattr(guard, "_fetch_json", fake_fetch_json)
+    monkeypatch.setattr(guard, "_fetch_bytes", lambda url: _zip_log(expected_marker))
+
+    with pytest.raises(RuntimeError, match="attempt is ambiguous"):
+        guard._verify_immutable_workflow_evidence(attestation)
+
+
+def test_attempt_aware_attestation_verifies_only_exact_attempt(monkeypatch):
+    _production_env(monkeypatch)
+    attestation = _attempt_attestation(1)
+    expected_marker = guard.ATTESTATION_MARKER + json.dumps(
+        attestation, ensure_ascii=False, sort_keys=True
+    )
     requested = []
+
+    def fake_fetch_json(url: str) -> dict:
+        requested.append(url)
+        assert url.endswith("/actions/runs/123456/attempts/1")
+        return _metadata(attestation, 1, "success")
 
     def fake_fetch_bytes(url: str) -> bytes:
         requested.append(url)
-        if "/attempts/2/logs" in url:
-            return _zip_log("publish-only rerun without compute attestation marker")
-        if "/attempts/1/logs" in url:
-            return _zip_log(expected_marker)
-        raise AssertionError(f"unexpected log URL: {url}")
+        assert url.endswith("/actions/runs/123456/attempts/1/logs")
+        return _zip_log(expected_marker)
 
+    monkeypatch.setattr(guard, "_fetch_json", fake_fetch_json)
     monkeypatch.setattr(guard, "_fetch_bytes", fake_fetch_bytes)
 
     result = guard._verify_immutable_workflow_evidence(attestation)
@@ -69,49 +151,20 @@ def test_immutable_attestation_survives_publish_job_rerun(monkeypatch):
     assert result == {
         "workflow_run_success_verified": True,
         "immutable_log_attestation_verified": True,
+        "workflow_run_attempt": 1,
+        "legacy_attempt_migration": False,
     }
-    assert any("/attempts/2/logs" in url for url in requested)
-    assert any("/attempts/1/logs" in url for url in requested)
+    assert all("/attempts/1" in url for url in requested)
 
 
-def test_immutable_attestation_still_rejects_when_marker_absent(monkeypatch):
+def test_attempt_aware_attestation_rejects_failed_exact_attempt(monkeypatch):
     _production_env(monkeypatch)
-    attestation = _attestation()
-
+    attestation = _attempt_attestation(2)
     monkeypatch.setattr(
         guard,
         "_fetch_json",
-        lambda url: {
-            "id": attestation["workflow_run_id"],
-            "name": "V3 Runtime",
-            "head_branch": "main",
-            "head_sha": attestation["source_commit"],
-            "conclusion": "success",
-            "run_attempt": 2,
-        },
-    )
-    monkeypatch.setattr(guard, "_fetch_bytes", lambda url: _zip_log("no marker here"))
-
-    with pytest.raises(RuntimeError, match="immutable workflow attestation marker missing"):
-        guard._verify_immutable_workflow_evidence(attestation)
-
-
-def test_immutable_attestation_does_not_accept_failed_run(monkeypatch):
-    _production_env(monkeypatch)
-    attestation = _attestation()
-
-    monkeypatch.setattr(
-        guard,
-        "_fetch_json",
-        lambda url: {
-            "id": attestation["workflow_run_id"],
-            "name": "V3 Runtime",
-            "head_branch": "main",
-            "head_sha": attestation["source_commit"],
-            "conclusion": "failure",
-            "run_attempt": 2,
-        },
+        lambda url: _metadata(attestation, 2, "failure"),
     )
 
-    with pytest.raises(RuntimeError, match="did not complete successfully"):
+    with pytest.raises(RuntimeError, match="attempt did not complete successfully"):
         guard._verify_immutable_workflow_evidence(attestation)

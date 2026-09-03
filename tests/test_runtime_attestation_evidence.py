@@ -13,6 +13,7 @@ from src.runtime_v3 import runtime_hydration_guard as guard
 SOURCE_SHA = "a" * 40
 DIGEST = "b" * 64
 RUN_ID = 123456
+RUN_ATTEMPT = 1
 
 
 def _attestation() -> dict:
@@ -21,6 +22,7 @@ def _attestation() -> dict:
         "digest_contract": guard.ATTESTATION_DIGEST_CONTRACT,
         "workflow_name": guard.EXPECTED_WORKFLOW,
         "workflow_run_id": RUN_ID,
+        "workflow_run_attempt": RUN_ATTEMPT,
         "source_commit": SOURCE_SHA,
         "snapshot_sha256": DIGEST,
     }
@@ -51,6 +53,7 @@ def _wire_success(monkeypatch: pytest.MonkeyPatch, attestation: dict) -> None:
             "head_branch": "main",
             "head_sha": SOURCE_SHA,
             "conclusion": "success",
+            "run_attempt": RUN_ATTEMPT,
         },
     )
     monkeypatch.setattr(guard, "_fetch_bytes", lambda url: _logs(attestation))
@@ -66,6 +69,8 @@ def test_immutable_workflow_evidence_accepts_exact_successful_run_marker(
 
     assert result["workflow_run_success_verified"] is True
     assert result["immutable_log_attestation_verified"] is True
+    assert result["workflow_run_attempt"] == RUN_ATTEMPT
+    assert result["legacy_attempt_migration"] is False
 
 
 def test_immutable_workflow_evidence_rejects_unsuccessful_run(
@@ -82,10 +87,11 @@ def test_immutable_workflow_evidence_rejects_unsuccessful_run(
             "head_branch": "main",
             "head_sha": SOURCE_SHA,
             "conclusion": "failure",
+            "run_attempt": RUN_ATTEMPT,
         },
     )
 
-    with pytest.raises(RuntimeError, match="did not complete successfully"):
+    with pytest.raises(RuntimeError, match="attempt did not complete successfully"):
         guard._verify_immutable_workflow_evidence(attestation)
 
 

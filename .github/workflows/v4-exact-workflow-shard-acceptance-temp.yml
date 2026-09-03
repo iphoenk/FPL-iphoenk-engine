@@ -38,6 +38,7 @@ jobs:
           python tools/v4_exact_2d_execution_registry_fix1_temp.py
           python tools/v4_exact_2d_execution_registry_fix2_temp.py
           python tools/v4_exact_2d_execution_registry_fix3_temp.py
+          python tools/v4_exact_2d_execution_registry_fix4_temp.py
       - id: plan
         run: |
           echo "matrix=$(python -m src.services.package_optimization_execution_plan matrix)" >> "$GITHUB_OUTPUT"
@@ -86,6 +87,7 @@ jobs:
           python tools/v4_exact_2d_execution_registry_fix1_temp.py
           python tools/v4_exact_2d_execution_registry_fix2_temp.py
           python tools/v4_exact_2d_execution_registry_fix3_temp.py
+          python tools/v4_exact_2d_execution_registry_fix4_temp.py
       - name: Run exact non-authoritative cell
         run: timeout "${V4_PACKAGE_WORKER_TIMEOUT_SECONDS}s" python -m src.services.package_optimization_shard_service
       - name: Verify cell authority and SLO
@@ -131,6 +133,7 @@ jobs:
           python tools/v4_exact_2d_execution_registry_fix1_temp.py
           python tools/v4_exact_2d_execution_registry_fix2_temp.py
           python tools/v4_exact_2d_execution_registry_fix3_temp.py
+          python tools/v4_exact_2d_execution_registry_fix4_temp.py
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with: {pattern: 'v4-exact-package-cell-*', path: data/package_shards, merge-multiple: true}
       - name: Exact fan-in

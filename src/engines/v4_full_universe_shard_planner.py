@@ -27,6 +27,10 @@ _CODE_FILES = (
     Path("src/engines/v4_full_universe_package_search.py"),
     Path("src/engines/v4_full_universe_package_search_core.py"),
     Path("src/engines/v4_wc_package_audit_fast.py"),
+    Path("src/engines/v4_full_universe_shard_planner.py"),
+    Path("src/engines/v4_full_universe_shard_kernel.py"),
+    Path("src/engines/v4_full_universe_shard_worker.py"),
+    Path("src/engines/v4_full_universe_shard_reducer.py"),
 )
 
 

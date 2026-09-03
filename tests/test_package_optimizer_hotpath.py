@@ -121,13 +121,18 @@ def test_exact_batch_scorer_matches_canonical_randomized_single_and_pair_layouts
             candidate = [row for i, row in enumerate(current) if i not in set(out_indices)] + ins
             candidates.append((candidate, 2))
 
-    for changes in (1, 2):
-        group = [candidate for candidate, c in candidates if c == changes]
-        if not group:
-            continue
+    grouped: dict[tuple[int, tuple[str, ...]], list[list[dict]]] = {}
+    for candidate, changes in candidates:
+        layout = tuple(str(row["position"]) for row in candidate)
+        grouped.setdefault((changes, layout), []).append(candidate)
+
+    checked = 0
+    for (changes, _layout), group in grouped.items():
         actual = batch.score_ids_compact([[int(row["element"]) for row in candidate] for candidate in group], changes=changes)
         expected = [score_package(candidate, 3, changes=changes, scoring_context=context) for candidate in group]
         assert [_numeric_surface(row) for row in actual] == [_numeric_surface(row) for row in expected]
+        checked += len(group)
+    assert checked >= 60
 
 
 def test_exact_batch_scorer_preserves_captain_and_formation_ties():

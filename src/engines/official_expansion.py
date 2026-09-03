@@ -1,13 +1,28 @@
 from __future__ import annotations
 
 import json, os
+from concurrent.futures import ThreadPoolExecutor
+
 from src.engines.official_snapshot_primitives import endpoint_health, load_snapshot
 from src.sources.official_fpl import get_json
 from src.utils import DATA, ROOT, atomic_json, iso_now
 
 TEAM_ID = 3462711
-MAX_DETAIL = int(os.getenv("FPL_ELEMENT_SUMMARY_MAX", "40"))
+DETAIL_POLICY_PATH = ROOT / "config" / "runtime" / "official_detail_policy.json"
 MINI_LEAGUE_CONFIG = ROOT / "config" / "strategy" / "mini_leagues.json"
+
+
+def _detail_policy():
+    payload = json.loads(DETAIL_POLICY_PATH.read_text(encoding="utf-8"))
+    if payload.get("registry") != "V3_OFFICIAL_DETAIL_POLICY_V1":
+        raise RuntimeError("unexpected V3 official detail policy registry")
+    return payload
+
+
+_DETAIL_POLICY = _detail_policy()
+MAX_DETAIL = max(1, int(os.getenv("FPL_ELEMENT_SUMMARY_MAX", str(_DETAIL_POLICY["element_summary_max"]))))
+DETAIL_WORKERS = max(1, min(MAX_DETAIL, int(os.getenv("FPL_ELEMENT_SUMMARY_WORKERS", str(_DETAIL_POLICY["element_summary_workers"])))))
+REQUEST_RETRIES = max(1, int(_DETAIL_POLICY.get("request_retries") or 1))
 
 
 def _load(name, default):
@@ -77,6 +92,27 @@ def _compact_element_summary(payload):
     return {"fixtures": payload.get("fixtures",[]),"history": payload.get("history",[]),"history_past": payload.get("history_past",[])}
 
 
+def _fetch_element_summary(eid):
+    payload, health = get_json(f"element-summary/{eid}/", retries=REQUEST_RETRIES)
+    return int(eid), payload, health
+
+
+def _element_summaries(detail_ids):
+    """Fetch the unchanged governed detail universe with bounded transport concurrency."""
+    if not detail_ids:
+        return {}, {}
+    workers = max(1, min(DETAIL_WORKERS, len(detail_ids)))
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="v3-official-detail") as pool:
+        fetched = list(pool.map(_fetch_element_summary, detail_ids))
+    details={}
+    health={}
+    for eid,payload,row_health in fetched:
+        health[str(eid)]=row_health
+        if payload:
+            details[str(eid)]=_compact_element_summary(payload)
+    return details,health
+
+
 def _fixture_stats(fixtures, planning_gw):
     rows=[]
     for f in fixtures or []:
@@ -98,10 +134,10 @@ def _live_rich(live):
 def _optional_leagues(health,entry):
     result={"classic":{},"h2h":{}}
     for lid in _configured_league_ids("classic",entry):
-        p,h=get_json(f"leagues-classic/{lid}/standings/",retries=1); health[f"league_classic_{lid}"]=h
+        p,h=get_json(f"leagues-classic/{lid}/standings/",retries=REQUEST_RETRIES); health[f"league_classic_{lid}"]=h
         if p: result["classic"][lid]=p
     for lid in _configured_league_ids("h2h",entry):
-        p,h=get_json(f"leagues-h2h/{lid}/standings/",retries=1); health[f"league_h2h_{lid}"]=h
+        p,h=get_json(f"leagues-h2h/{lid}/standings/",retries=REQUEST_RETRIES); health[f"league_h2h_{lid}"]=h
         if p: result["h2h"][lid]=p
     return result
 
@@ -178,15 +214,13 @@ def run():
     if scoring:
         health["event_live_detail"]=endpoint_health(snapshot,"event_live")
 
-    setpieces,h=get_json("team/set-piece-notes/",retries=1); health["set_piece_notes"]=h
-    dream_all,h=get_json("dream-team/",retries=1); health["dream_team_season"]=h
+    setpieces,h=get_json("team/set-piece-notes/",retries=REQUEST_RETRIES); health["set_piece_notes"]=h
+    dream_all,h=get_json("dream-team/",retries=REQUEST_RETRIES); health["dream_team_season"]=h
     dream_gw=None; dream_gw_id=phase.get("last_finished_gw") or scoring
-    if dream_gw_id: dream_gw,h=get_json(f"dream-team/{dream_gw_id}/",retries=1); health["dream_team_gw"]=h
-    owned,detail_ids=_ids_from_state(bootstrap); details={}; detail_health={}
-    for eid in detail_ids:
-        payload,h=get_json(f"element-summary/{eid}/",retries=1); detail_health[str(eid)]=h
-        if payload: details[str(eid)]=_compact_element_summary(payload)
-    cup,h=get_json(f"entry/{TEAM_ID}/cup/",retries=1); health["entry_cup"]=h
+    if dream_gw_id: dream_gw,h=get_json(f"dream-team/{dream_gw_id}/",retries=REQUEST_RETRIES); health["dream_team_gw"]=h
+    owned,detail_ids=_ids_from_state(bootstrap)
+    details,detail_health=_element_summaries(detail_ids)
+    cup,h=get_json(f"entry/{TEAM_ID}/cup/",retries=REQUEST_RETRIES); health["entry_cup"]=h
     leagues=_optional_leagues(health,entry); mini_league_tracking=_mini_league_tracking(leagues,previous_detail,entry)
     detail_ok=sum(1 for h in detail_health.values() if h.get("status")=="LIVE")
     official_health={"core":snapshot.get("endpoint_health",{}),"detail":health,"element_summary":{"requested":len(detail_ids),"live":detail_ok,"failed":len(detail_ids)-detail_ok},"overall":"HEALTHY" if hb.get("status")=="LIVE" and detail_ok>=len(owned) else "DEGRADED"}

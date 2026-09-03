@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from typing import Any
 
+from src.rules import RULESET_ID
 from src.runtime_v3 import incremental_reuse
-from src.utils import DATA, atomic_json, read_json
+from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
 
-AUTHORITY_SERVICE = "prediction"
-AUTHORITY_REGISTRY = "V3_FULL_OPTIMIZER_AUTHORITY_V1"
+AUTHORITY_REGISTRY = "V3_FULL_OPTIMIZER_AUTHORITY_V2"
+AUTHORITY_STATE_KEY = "package_optimizer_authority"
 EXHAUSTIVE_PROFILE = "exhaustive_precompute"
 WATCHLIST_POSITIONS = ("GK", "DEF", "MID", "FWD")
 
@@ -96,16 +98,53 @@ def _truthful_full_chain() -> dict[str, Any]:
     }
 
 
-def _record_full_prediction_fingerprint(profile: str, chain: dict[str, Any]) -> str:
-    current = incremental_reuse.fingerprint(AUTHORITY_SERVICE)
-    if not current:
-        raise RuntimeError("FULL optimizer authority fingerprint is unavailable")
+def optimizer_input_fingerprint() -> str:
+    """Hash only persisted material inputs consumed by package optimization.
+
+    This deliberately does not depend on ``official_snapshot.json`` because that
+    artifact is ephemeral and is removed before publication. The optimizer consumes
+    projections + exact team ledger/ITB + its governed config/rules, while source
+    code identity protects algorithm changes. Volatile timestamps are ignored by the
+    shared semantic hash primitive.
+    """
+    projections = read_json(DATA / "projections.json", {})
+    team = read_json(DATA / "team.json", {})
+    optimizer_cfg = read_json(CONFIG / "intelligence" / "package_optimizer.json", {})
+    if not projections or not team or not optimizer_cfg:
+        raise RuntimeError("optimizer authority fingerprint material input missing")
+
+    semantic_team = incremental_reuse._prediction_team_state(team)
+    rows = [
+        ("projections", incremental_reuse._semantic_hash(projections, top_level=True)),
+        ("team", incremental_reuse._semantic_hash(semantic_team, top_level=True)),
+        ("optimizer_config", incremental_reuse._semantic_hash(optimizer_cfg, top_level=True)),
+        ("ruleset", hashlib.sha256(str(RULESET_ID).encode("utf-8")).hexdigest()),
+        ("source_tree", incremental_reuse._digest_source_tree(str((ROOT / "src").resolve()))),
+    ]
+    payload = json.dumps(rows, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _authority_state() -> dict[str, Any]:
+    state = read_json(incremental_reuse.STATE_PATH, {})
+    row = state.get(AUTHORITY_STATE_KEY) if isinstance(state, dict) else None
+    return row if isinstance(row, dict) else {}
+
+
+def stored_optimizer_fingerprint() -> str | None:
+    row = _authority_state()
+    value = row.get("fingerprint")
+    return str(value) if value else None
+
+
+def _record_full_optimizer_fingerprint(profile: str, chain: dict[str, Any]) -> str:
+    current = optimizer_input_fingerprint()
     state = read_json(incremental_reuse.STATE_PATH, {})
     if not isinstance(state, dict):
         state = {}
-    state["schema_version"] = 1
-    state["registry"] = "V3_INCREMENTAL_REUSE_STATE_V1"
-    state.setdefault("services", {})[AUTHORITY_SERVICE] = {
+    state.setdefault("schema_version", 1)
+    state.setdefault("registry", "V3_INCREMENTAL_REUSE_STATE_V1")
+    state[AUTHORITY_STATE_KEY] = {
         "fingerprint": current,
         "authority_registry": AUTHORITY_REGISTRY,
         "search_authority": "FULL",
@@ -113,34 +152,64 @@ def _record_full_prediction_fingerprint(profile: str, chain: dict[str, Any]) -> 
         "optimizer_generated_at": chain.get("optimizer_generated_at"),
         "planning_gw": chain.get("planning_gw"),
         "ruleset_id": chain.get("ruleset_id"),
+        "fingerprint_contract": "PERSISTED_OPTIMIZER_INPUTS_PLUS_CODE_IDENTITY_V1",
     }
     atomic_json(incremental_reuse.STATE_PATH, state)
     return current
 
 
+def reusable_full_optimizer() -> dict[str, Any] | None:
+    """Return the persisted FULL optimizer only for an exact material input match."""
+    path = DATA / "package_optimizer.json"
+    if not path.is_file():
+        return None
+    row = _authority_state()
+    if row.get("authority_registry") != AUTHORITY_REGISTRY or row.get("search_authority") != "FULL":
+        return None
+    try:
+        current = optimizer_input_fingerprint()
+    except RuntimeError:
+        return None
+    if str(row.get("fingerprint") or "") != current:
+        return None
+    optimizer = read_json(path, {})
+    diagnostics = optimizer.get("search_diagnostics") or {}
+    if (
+        optimizer.get("status") != "READY"
+        or diagnostics.get("search_authority") != "FULL"
+        or diagnostics.get("lossy_pruning") is not False
+        or diagnostics.get("all_step_legal_packages_scored") is not True
+    ):
+        return None
+    optimizer.setdefault("governance", {}).update({
+        "full_authority_exact_input_reuse": True,
+        "authority_execution_profile": EXHAUSTIVE_PROFILE,
+        "runtime_reuse_fingerprint_prefix": current[:12],
+    })
+    return optimizer
+
+
 def verify_full_authority(profile: str) -> dict[str, Any]:
     """Protect rolling runtime publication from silent FULL -> PARTIAL downgrade."""
     chain = _truthful_full_chain()
-    current = incremental_reuse.fingerprint(AUTHORITY_SERVICE)
-    if not current:
-        raise RuntimeError("current prediction fingerprint unavailable for FULL authority gate")
+    current = optimizer_input_fingerprint()
 
     recorded = False
     if profile == EXHAUSTIVE_PROFILE:
-        current = _record_full_prediction_fingerprint(profile, chain)
+        current = _record_full_optimizer_fingerprint(profile, chain)
         recorded = True
     else:
-        stored = incremental_reuse.stored_fingerprint(AUTHORITY_SERVICE)
+        row = _authority_state()
+        stored = str(row.get("fingerprint") or "") or None
         if not stored:
-            raise RuntimeError("non-exhaustive publication has no stored FULL prediction fingerprint")
+            raise RuntimeError("non-exhaustive publication has no stored FULL optimizer fingerprint")
         if stored != current:
             raise RuntimeError(
                 "non-exhaustive publication would downgrade FULL optimizer authority: "
                 f"stored={stored[:12]} current={current[:12]}"
             )
-        row = ((read_json(incremental_reuse.STATE_PATH, {}) or {}).get("services") or {}).get(AUTHORITY_SERVICE) or {}
         if row.get("authority_registry") != AUTHORITY_REGISTRY or row.get("search_authority") != "FULL":
-            raise RuntimeError("stored prediction fingerprint is not attested as FULL optimizer authority")
+            raise RuntimeError("stored optimizer fingerprint is not attested as FULL authority")
 
     return {
         "status": "PASS",
@@ -154,9 +223,10 @@ def verify_full_authority(profile: str) -> dict[str, Any]:
         "watchlist_counts": chain["watchlist_counts"],
         "watchlist_non_owned_unique": chain["watchlist_non_owned_unique"],
         "selected_package_id": chain["selected_package_id"],
-        "prediction_fingerprint_prefix": current[:12],
+        "optimizer_fingerprint_prefix": current[:12],
         "fingerprint_recorded": recorded,
         "non_exhaustive_requires_exact_full_fingerprint": True,
+        "ephemeral_source_artifact_required": False,
     }
 
 

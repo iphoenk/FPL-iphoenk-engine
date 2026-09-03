@@ -22,7 +22,8 @@
     "fast_same_job_official_snapshot_reuse_is_bounded_and_semantic": true,
     "workspace_retry_mirror_never_crosses_runtime_publication_boundary": true,
     "exhaustive_precompute_is_background_only": true,
-    "exhaustive_precompute_never_relaxes_interactive_or_refresh_slos": true
+    "exhaustive_precompute_never_relaxes_interactive_or_refresh_slos": true,
+    "profile_specific_service_timeout_does_not_relax_other_profiles": true
   },
   "profiles": {
     "fast_decision": {
@@ -56,6 +57,6 @@
     },
     "full_refresh": {"description":"Complete source, enrichment, detail, model, governance and report refresh.","max_parallel_services":4,"reuse_services":{}},
     "deep_stats": {"description":"Complete refresh including optional deep advanced-stat datasets.","max_parallel_services":3,"reuse_services":{}},
-    "exhaustive_precompute": {"description":"Background :15 targeted checkpoint precompute. Runs the complete zero-prune Official-universe package optimizer before downstream lineup/governance/report publication. This profile is not an interactive request path and does not alter FAST, live, full-refresh or deep-stats limits.","max_parallel_services":4,"reuse_services":{}}
+    "exhaustive_precompute": {"description":"Background :15 targeted checkpoint precompute. Runs the complete zero-prune Official-universe package optimizer before downstream lineup/governance/report publication. This profile is not an interactive request path and does not alter FAST, live, full-refresh or deep-stats limits.","max_parallel_services":4,"service_timeout_seconds":300,"reuse_services":{}}
   }
 }

@@ -24,7 +24,15 @@ def test_sharded_resume_uses_registry_boundary_and_compiled_order(monkeypatch):
     monkeypatch.setattr(
         sharded_pipeline_resume.registry_compiler,
         "compile_runtime_plan",
-        lambda **kwargs: {"domain_order": ["prediction", "squad_decision", "reporting"]},
+        lambda **kwargs: {
+            "domain_order": ["prediction", "squad_decision", "reporting"],
+            "domain_waves": [["prediction"], ["squad_decision"], ["reporting"]],
+            "capability_owner": {
+                "prediction": "prediction",
+                "lineup_governance": "squad_decision",
+                "reporting": "reporting",
+            },
+        },
     )
     executed = []
     monkeypatch.setattr(
@@ -37,4 +45,6 @@ def test_sharded_resume_uses_registry_boundary_and_compiled_order(monkeypatch):
     assert executed == ["squad_decision", "reporting"]
     assert result["precompleted_domains"] == ["prediction"]
     assert result["executed_domains"] == ["squad_decision", "reporting"]
+    assert result["executed_domain_waves"] == [["squad_decision"], ["reporting"]]
+    assert result["governance"]["domain_waves_from_compiled_registry"] is True
     assert result["governance"]["downstream_business_modules_not_hardcoded"] is True

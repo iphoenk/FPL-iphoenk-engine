@@ -20,7 +20,9 @@
     "advanced_player_features_follow_current_official_identity": true,
     "non_positive_ttl_disables_age_reuse": true,
     "fast_same_job_official_snapshot_reuse_is_bounded_and_semantic": true,
-    "workspace_retry_mirror_never_crosses_runtime_publication_boundary": true
+    "workspace_retry_mirror_never_crosses_runtime_publication_boundary": true,
+    "exhaustive_precompute_is_background_only": true,
+    "exhaustive_precompute_never_relaxes_interactive_or_refresh_slos": true
   },
   "profiles": {
     "fast_decision": {
@@ -32,17 +34,7 @@
           "max_age_seconds": 21600,
           "freshness_artifact": "advanced_stats_sync.json",
           "freshness_field": "generated_at",
-          "semantic_guards": [
-            {
-              "type": "JSON_ARRAY_TO_KEYED_OBJECT_FIELD_MATCH_V1",
-              "source_artifact": "official_snapshot.json",
-              "source_path": ["bootstrap", "elements"],
-              "source_key": "id",
-              "cached_artifact": "player_features.json",
-              "cached_path": ["players"],
-              "field_map": {"team": "team_id", "element_type": "element_type", "web_name": "name"}
-            }
-          ]
+          "semantic_guards": [{"type":"JSON_ARRAY_TO_KEYED_OBJECT_FIELD_MATCH_V1","source_artifact":"official_snapshot.json","source_path":["bootstrap","elements"],"source_key":"id","cached_artifact":"player_features.json","cached_path":["players"],"field_map":{"team":"team_id","element_type":"element_type","web_name":"name"}}]
         },
         "historical_prior": {"max_age_seconds": 0},
         "source_layer": {"max_age_seconds": 1800, "freshness_artifact": "source_health.json", "freshness_field": "generated_at"},
@@ -55,37 +47,15 @@
       "description": "Match/live decision path. Advanced player features may use the normal six-hour freshness window only while their cached player identity exactly matches the current Official player universe; historical priors remain transfer-aware on every run. Prediction is declared with zero age so only exact content-addressed fingerprint reuse can qualify; stale age-based prediction reuse remains impossible.",
       "max_parallel_services": 5,
       "reuse_services": {
-        "advanced_stats": {
-          "max_age_seconds": 21600,
-          "freshness_artifact": "advanced_stats_sync.json",
-          "freshness_field": "generated_at",
-          "semantic_guards": [
-            {
-              "type": "JSON_ARRAY_TO_KEYED_OBJECT_FIELD_MATCH_V1",
-              "source_artifact": "official_snapshot.json",
-              "source_path": ["bootstrap", "elements"],
-              "source_key": "id",
-              "cached_artifact": "player_features.json",
-              "cached_path": ["players"],
-              "field_map": {"team": "team_id", "element_type": "element_type", "web_name": "name"}
-            }
-          ]
-        },
+        "advanced_stats": {"max_age_seconds":21600,"freshness_artifact":"advanced_stats_sync.json","freshness_field":"generated_at","semantic_guards":[{"type":"JSON_ARRAY_TO_KEYED_OBJECT_FIELD_MATCH_V1","source_artifact":"official_snapshot.json","source_path":["bootstrap","elements"],"source_key":"id","cached_artifact":"player_features.json","cached_path":["players"],"field_map":{"team":"team_id","element_type":"element_type","web_name":"name"}}]},
         "historical_prior": {"max_age_seconds": 0},
         "source_layer": {"max_age_seconds": 1800, "freshness_artifact": "source_health.json", "freshness_field": "generated_at"},
         "official_detail": {"max_age_seconds": 3600, "freshness_artifact": "official_detail.json", "freshness_field": "generated_at"},
         "prediction": {"max_age_seconds": 0}
       }
     },
-    "full_refresh": {
-      "description": "Complete source, enrichment, detail, model, governance and report refresh.",
-      "max_parallel_services": 4,
-      "reuse_services": {}
-    },
-    "deep_stats": {
-      "description": "Complete refresh including optional deep advanced-stat datasets.",
-      "max_parallel_services": 3,
-      "reuse_services": {}
-    }
+    "full_refresh": {"description":"Complete source, enrichment, detail, model, governance and report refresh.","max_parallel_services":4,"reuse_services":{}},
+    "deep_stats": {"description":"Complete refresh including optional deep advanced-stat datasets.","max_parallel_services":3,"reuse_services":{}},
+    "exhaustive_precompute": {"description":"Background :15 targeted checkpoint precompute. Runs the complete zero-prune Official-universe package optimizer before downstream lineup/governance/report publication. This profile is not an interactive request path and does not alter FAST, live, full-refresh or deep-stats limits.","max_parallel_services":4,"reuse_services":{}}
   }
 }

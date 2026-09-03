@@ -92,55 +92,96 @@ helper = r'''    def _capacity_key(
                     metrics=self.stats,
                 )
 
-            for processed, player in enumerate(pool):
-                singleton = self._single_state[player.element]
-                max_pick = min(count, processed + 1)
-                for pick in range(max_pick, 0, -1):
-                    rank_sources = _flatten_rank(rank_dp[pick - 1])
-                    remaining = (count - pick) + remaining_after_position
+            if count == 1:
+                remaining = remaining_after_position
+                rank_pending: dict[int, list[IncomingState]] = {}
+                rank_sources = _flatten_rank(rank_dp[0])
+                for player in pool:
+                    singleton = self._single_state[player.element]
                     for prefix in rank_sources:
                         self.stats["rank_merge_states_considered"] += 1
-                        if not prefix.players:
-                            merged = singleton
-                        elif any(row.position == position for row in prefix.players):
-                            merged = _merge_same_position(prefix, singleton, position)
-                        else:
-                            merged = _merge_disjoint_position(prefix, singleton, position)
+                        merged = singleton if not prefix.players else _merge_disjoint_position(prefix, singleton, position)
                         bucket = self._capacity_key(
                             keep_signature, merged.club_signature, remaining, capacity_cache
                         )
-                        if bucket is None:
-                            continue
+                        if bucket is not None:
+                            rank_pending.setdefault(bucket, []).append(merged)
+                for bucket, candidates in rank_pending.items():
+                    layers = self._new_rank_layers()
+                    for merged in sorted(candidates, key=lambda row: (-row.x5, _state_key(row))):
                         _skyband_insert(
-                            rank_dp[pick].setdefault(bucket, self._new_rank_layers()),
+                            layers,
                             merged,
                             top_keep=self.top_keep,
                             frontier_epsilon=self.frontier_epsilon,
                             relation=rank_dominates,
                             metrics=self.stats,
                         )
+                    rank_dp[1][bucket] = layers
 
-                    frontier_sources = _flatten_frontier(frontier_dp[pick - 1])
+                frontier_pending: dict[int, list[IncomingState]] = {}
+                frontier_sources = _flatten_frontier(frontier_dp[0])
+                for player in pool:
+                    singleton = self._single_state[player.element]
                     for prefix in frontier_sources:
                         self.stats["frontier_merge_states_considered"] += 1
-                        if not prefix.players:
-                            merged = singleton
-                        elif any(row.position == position for row in prefix.players):
-                            merged = _merge_same_position(prefix, singleton, position)
-                        else:
-                            merged = _merge_disjoint_position(prefix, singleton, position)
+                        merged = singleton if not prefix.players else _merge_disjoint_position(prefix, singleton, position)
                         bucket = self._capacity_key(
                             keep_signature, merged.club_signature, remaining, capacity_cache
                         )
-                        if bucket is None:
-                            continue
+                        if bucket is not None:
+                            frontier_pending.setdefault(bucket, []).append(merged)
+                for bucket, candidates in frontier_pending.items():
+                    layer: list[IncomingState] = []
+                    for merged in sorted(candidates, key=lambda row: (-row.x5, _state_key(row))):
                         _front_insert(
-                            frontier_dp[pick].setdefault(bucket, []),
+                            layer,
                             merged,
                             frontier_epsilon=self.frontier_epsilon,
                             relation=frontier_dominates,
                             metrics=self.stats,
                         )
+                    frontier_dp[1][bucket] = layer
+            else:
+                for processed, player in enumerate(pool):
+                    singleton = self._single_state[player.element]
+                    max_pick = min(count, processed + 1)
+                    for pick in range(max_pick, 0, -1):
+                        rank_sources = _flatten_rank(rank_dp[pick - 1])
+                        remaining = (count - pick) + remaining_after_position
+                        for prefix in rank_sources:
+                            self.stats["rank_merge_states_considered"] += 1
+                            merged = singleton if not prefix.players else _merge_same_position(prefix, singleton, position)
+                            bucket = self._capacity_key(
+                                keep_signature, merged.club_signature, remaining, capacity_cache
+                            )
+                            if bucket is None:
+                                continue
+                            _skyband_insert(
+                                rank_dp[pick].setdefault(bucket, self._new_rank_layers()),
+                                merged,
+                                top_keep=self.top_keep,
+                                frontier_epsilon=self.frontier_epsilon,
+                                relation=rank_dominates,
+                                metrics=self.stats,
+                            )
+
+                        frontier_sources = _flatten_frontier(frontier_dp[pick - 1])
+                        for prefix in frontier_sources:
+                            self.stats["frontier_merge_states_considered"] += 1
+                            merged = singleton if not prefix.players else _merge_same_position(prefix, singleton, position)
+                            bucket = self._capacity_key(
+                                keep_signature, merged.club_signature, remaining, capacity_cache
+                            )
+                            if bucket is None:
+                                continue
+                            _front_insert(
+                                frontier_dp[pick].setdefault(bucket, []),
+                                merged,
+                                frontier_epsilon=self.frontier_epsilon,
+                                relation=frontier_dominates,
+                                metrics=self.stats,
+                            )
 
             rank_states = _flatten_rank(rank_dp[count])
             frontier_states = _flatten_frontier(frontier_dp[count])

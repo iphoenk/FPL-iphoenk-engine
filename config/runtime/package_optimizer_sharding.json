@@ -11,6 +11,13 @@
     "batch_size": 512,
     "top_keep_per_shard": 500
   },
+  "workflow": {
+    "seed_profile": "fast_decision",
+    "authority_profile": "exhaustive_precompute",
+    "resume_from_domain": "squad_decision",
+    "seed_artifact_name": "v3-package-precompute-seed",
+    "shard_artifact_prefix": "v3-package-shard"
+  },
   "profiles": {
     "exhaustive_precompute": {
       "enabled": true,
@@ -32,7 +39,8 @@
     "global_frontier_uses_union_of_exact_local_frontiers_plus_hold_and_singles": true,
     "global_top_k_uses_union_of_local_top_k_with_k_equal_to_global_keep": true,
     "watchlist_is_never_an_optimizer_input": true,
-    "business_authority_is_not_sharded": true
+    "business_authority_is_not_sharded": true,
+    "resume_boundary_is_domain_registry_driven": true
   },
   "governance": {
     "operational_tuning_is_registry_owned_not_code_hardcoded": true,
@@ -40,6 +48,7 @@
     "shard_ids_are_ephemeral_execution_coordinates": true,
     "single_final_optimizer_writer": true,
     "zero_candidate_pruning_full_authority": true,
-    "fail_closed_on_partial_or_inconsistent_shard_set": true
+    "fail_closed_on_partial_or_inconsistent_shard_set": true,
+    "workflow_does_not_hardcode_downstream_business_modules": true
   }
 }

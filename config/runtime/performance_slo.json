@@ -11,41 +11,16 @@
     "sub_second_target_applies_to_validated_warm_serving": true,
     "external_network_refresh_is_measured_separately": true,
     "stale_artifacts_may_not_be_misreported_as_fresh_to_hit_slo": true,
-    "duplicate_fetch_or_duplicate_business_compute_may_not_be_used_to_hide_latency": true
+    "duplicate_fetch_or_duplicate_business_compute_may_not_be_used_to_hide_latency": true,
+    "background_precompute_slo_does_not_relax_existing_profile_slos": true
   },
   "profiles": {
-    "instant_serving": {
-      "target_wall_ms": 500,
-      "warning_wall_ms": 750,
-      "legacy_ceiling_ms": 1000,
-      "enforcement": "HARD_CEILING",
-      "scope": "validated precomputed decision/report serving only; no external source refresh"
-    },
-    "fast_decision": {
-      "target_wall_ms": 3000,
-      "warning_wall_ms": 2800,
-      "legacy_ceiling_ms": 3000,
-      "enforcement": "HARD_CEILING",
-      "consistency_requirement": "3 fresh-process candidate runs must each be <=3000ms"
-    },
-    "live": {
-      "target_wall_ms": 10000,
-      "warning_wall_ms": 7500,
-      "legacy_ceiling_ms": 45000,
-      "enforcement": "TARGET_WITH_LEGACY_CEILING"
-    },
-    "full_refresh": {
-      "target_wall_ms": 45000,
-      "warning_wall_ms": 35000,
-      "legacy_ceiling_ms": 60000,
-      "enforcement": "CEILING"
-    },
-    "deep_stats": {
-      "target_wall_ms": 60000,
-      "warning_wall_ms": 50000,
-      "legacy_ceiling_ms": 90000,
-      "enforcement": "CEILING"
-    }
+    "instant_serving": {"target_wall_ms":500,"warning_wall_ms":750,"legacy_ceiling_ms":1000,"enforcement":"HARD_CEILING","scope":"validated precomputed decision/report serving only; no external source refresh"},
+    "fast_decision": {"target_wall_ms":3000,"warning_wall_ms":2800,"legacy_ceiling_ms":3000,"enforcement":"HARD_CEILING","consistency_requirement":"3 fresh-process candidate runs must each be <=3000ms"},
+    "live": {"target_wall_ms":10000,"warning_wall_ms":7500,"legacy_ceiling_ms":45000,"enforcement":"TARGET_WITH_LEGACY_CEILING"},
+    "full_refresh": {"target_wall_ms":45000,"warning_wall_ms":35000,"legacy_ceiling_ms":60000,"enforcement":"CEILING"},
+    "deep_stats": {"target_wall_ms":60000,"warning_wall_ms":50000,"legacy_ceiling_ms":90000,"enforcement":"CEILING"},
+    "exhaustive_precompute": {"target_wall_ms":240000,"warning_wall_ms":225000,"legacy_ceiling_ms":300000,"enforcement":"CEILING","scope":"background targeted :15 precompute only; complete zero-prune package search plus canonical downstream materialization; never interactive"}
   },
   "resource_observability": {
     "state": "BASELINE_COLLECTION_GOVERNED",
@@ -54,16 +29,7 @@
     "hard_limit_activation": "REQUIRES_MULTI_RUN_PRODUCTION_BASELINE",
     "false_precision_forbidden": true,
     "operational_health_effect": "NON_BLOCKING_WHILE_BASELINE_GOVERNANCE_IS_VALID",
-    "metrics": [
-      "peak_rss_kb",
-      "child_peak_rss_kb",
-      "temporary_bytes",
-      "seed_input_bytes",
-      "promoted_output_bytes",
-      "published_snapshot_bytes",
-      "published_snapshot_files",
-      "shared_official_cache_entries"
-    ],
+    "metrics": ["peak_rss_kb","child_peak_rss_kb","temporary_bytes","seed_input_bytes","promoted_output_bytes","published_snapshot_bytes","published_snapshot_files","shared_official_cache_entries"],
     "memory_enforcement": "OBSERVE_ONLY",
     "storage_enforcement": "OBSERVE_ONLY"
   }

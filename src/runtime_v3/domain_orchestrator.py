@@ -408,7 +408,7 @@ def run(mode: str = "daily", stats: bool = True, deep_stats: bool = False, profi
 
     services = service_registry["services"]
     runtime = service_registry.get("runtime") or {}
-    timeout = max(1, int(runtime.get("service_timeout_seconds") or 1))
+    timeout = max(1, int(profile_cfg.get("service_timeout_seconds") or runtime.get("service_timeout_seconds") or 1))
     cache_ttl = max(1, int(runtime.get("http_cache_ttl_seconds") or 1))
 
     wall_started = time.perf_counter()
@@ -713,7 +713,8 @@ def main() -> int:
     parser.add_argument("--mode", choices=["daily", "deadline", "live"], default="daily")
     parser.add_argument("--stats", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--deep-stats", action="store_true")
-    parser.add_argument("--profile", choices=["fast_decision", "live", "full_refresh", "deep_stats"])
+    profile_choices = sorted((legacy._load_profiles().get("profiles") or {}).keys())
+    parser.add_argument("--profile", choices=profile_choices)
     args = parser.parse_args()
     run(mode=args.mode, stats=args.stats, deep_stats=args.deep_stats, profile=args.profile)
     return 0

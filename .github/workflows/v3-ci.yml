@@ -94,3 +94,9 @@ jobs:
       - name: Benchmark unified interactive fastpath against canonical instant SLO
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: python -m src.runtime_v3.unified_fastpath --benchmark
+      - name: Benchmark certified exhaustive optimizer on production-scale LKG
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 420s python -m src.engines.package_optimizer_exhaustive_accelerated --no-persist | tee "$RUNNER_TEMP/exhaustive-finalizer.json"

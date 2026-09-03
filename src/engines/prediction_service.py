@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 
 from src.engines.decision_intelligence import build_package_optimizer
@@ -16,6 +17,8 @@ from src.models.tactical_matchup import attach_tactical_matchups
 from src.models.team_strength import build_team_strength
 from src.settings import STRATEGIC_HORIZON_GWS
 from src.utils import DATA, atomic_json, read_json
+
+EXHAUSTIVE_PRECOMPUTE_PROFILE = "exhaustive_precompute"
 
 
 def _now() -> str:
@@ -33,6 +36,30 @@ def _annotate_tactical_effect(projections: dict) -> None:
             "advisory_layer_does_not_mutate_xpts": True,
             "tie_break_consumption_is_owned_by_tactical_decision_consumption": True,
         })
+
+
+def _build_packages(projections: dict, team: dict) -> dict:
+    profile = str(os.getenv("FPL_EXECUTION_PROFILE") or "")
+    if profile == EXHAUSTIVE_PRECOMPUTE_PROFILE:
+        from src.engines.package_optimizer_exhaustive_accelerated import build_exhaustive
+
+        packages = build_exhaustive(projections, team)
+        diagnostics = packages.get("search_diagnostics") or {}
+        if (
+            packages.get("status") != "READY"
+            or diagnostics.get("search_authority") != "FULL"
+            or diagnostics.get("lossy_pruning") is not False
+            or diagnostics.get("all_step_legal_packages_scored") is not True
+        ):
+            raise RuntimeError("prediction service refused non-FULL exhaustive precompute optimizer")
+        packages.setdefault("governance", {}).update({
+            "production_owner": "prediction",
+            "execution_profile": profile,
+            "package_decision_writer": "lineup_governance",
+            "exhaustive_precompute": True,
+        })
+        return packages
+    return build_package_optimizer(projections, team)
 
 
 def run() -> dict:
@@ -55,6 +82,7 @@ def run() -> dict:
 
     latest = read_json(DATA / "latest.json", {})
     planning_gw = int((latest.get("phase") or {}).get("planning_gw") or 1)
+    execution_profile = str(os.getenv("FPL_EXECUTION_PROFILE") or "standard")
 
     strength = build_team_strength(bootstrap, fixtures)
     strength["generated_at"] = _now()
@@ -92,7 +120,7 @@ def run() -> dict:
     })
     atomic_json(DATA / "projections.json", projections)
 
-    packages = build_package_optimizer(projections, read_json(DATA / "team.json", {}))
+    packages = _build_packages(projections, read_json(DATA / "team.json", {}))
     hold_guardrails = (((packages.get("hold") or {}).get("score") or {}).get("guardrails") or {})
     packages.setdefault("governance", {}).update({
         "team_cluster_penalty_enabled": hold_guardrails.get("team_cluster_penalty_enabled") is True,
@@ -108,12 +136,14 @@ def run() -> dict:
     quality = evaluate_prediction_quality(projections, prior)
     atomic_json(DATA / "prediction_quality.json", quality)
     tactical = projections.get("tactical_matchup_summary") or {}
+    search_authority = (packages.get("search_diagnostics") or {}).get("search_authority")
     latest.setdefault("files", {}).update({"team_strength": "data/team_strength.json", "projections": "data/projections.json", "package_optimizer": "data/package_optimizer.json", "prediction_quality": "data/prediction_quality.json"})
     latest["decision_intelligence"] = {
         "service": "prediction_service", "model": projections.get("model"), "planning_gw": planning_gw, "projection_horizon_gws": STRATEGIC_HORIZON_GWS,
         "projection_players": len(projections.get("players") or []), "team_strength_model": strength.get("model"), "team_strength_teams": len(strength.get("teams") or []),
         "historical_prior_model": projections.get("historical_prior_model"), "historical_prior_players_used": projections.get("historical_prior_players_used"),
         "prediction_quality": quality.get("status"), "package_optimizer_status": packages.get("status"), "package_count": packages.get("package_count", 0),
+        "package_optimizer_search_authority": search_authority, "package_optimizer_execution_profile": execution_profile,
         "best_package": (packages.get("packages") or [{}])[0].get("id") if packages.get("packages") else None, "candidate_generation_only": True,
         "official_role_evidence": official_role_evidence,
         "tactical_matchup": {

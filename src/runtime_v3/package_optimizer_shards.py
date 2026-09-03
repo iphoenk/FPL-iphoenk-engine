@@ -401,6 +401,7 @@ def reduce_shards(plan: dict[str, Any], shard_dir: Path, *, persist: bool = True
         "search_diagnostics": diagnostics,
         "governance": {
             "candidate_generation_only": True,
+            "final_go_requires_framework_governance_and_postflight_gate0": True,
             "production_owner": "prediction",
             "package_decision_writer": "lineup_governance",
             "execution_profile": EXHAUSTIVE_PROFILE,

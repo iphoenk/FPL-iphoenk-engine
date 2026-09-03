@@ -37,6 +37,10 @@ jobs:
       snapshot_role: ${{ steps.cadence.outputs.snapshot_role }}
       target_checkpoint_utc: ${{ steps.cadence.outputs.target_checkpoint_utc }}
       target_visible_mode: ${{ steps.cadence.outputs.target_visible_mode }}
+      target_execution_profile: ${{ steps.target_execution.outputs.seed_profile }}
+      target_execution_mode: ${{ steps.target_execution.outputs.execution_mode }}
+      target_execution_extra: ${{ steps.target_execution.outputs.execution_extra }}
+      authority_profile: ${{ steps.target_execution.outputs.authority_profile }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -91,6 +95,12 @@ jobs:
           FPL_SCHEDULE_EXPR: ${{ github.event.schedule }}
         run: python -m src.runtime_v3.precompute_checkpoint
 
+      - name: Resolve target checkpoint execution semantics from registry
+        id: target_execution
+        env:
+          FPL_TARGET_VISIBLE_MODE: ${{ steps.cadence.outputs.target_visible_mode }}
+        run: python -m src.runtime_v3.precompute_target_execution
+
       - name: Route only exhaustive precompute work to shard lane
         id: route
         shell: bash
@@ -142,7 +152,7 @@ jobs:
           print(load_policy()["registry"])
           PY
 
-      - name: Build fresh governed seed snapshot on FAST lane
+      - name: Build fresh governed target-semantic seed snapshot
         if: steps.route.outputs.should_run == 'true'
         shell: bash
         env:
@@ -153,7 +163,16 @@ jobs:
           FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
           FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
           FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
-        run: python -m src.runtime_v3.domain_orchestrator --mode daily --stats --profile fast_decision
+          TARGET_EXECUTION_MODE: ${{ steps.target_execution.outputs.execution_mode }}
+          TARGET_EXECUTION_PROFILE: ${{ steps.target_execution.outputs.seed_profile }}
+          TARGET_EXECUTION_EXTRA: ${{ steps.target_execution.outputs.execution_extra }}
+        run: |
+          set -euo pipefail
+          args=(--mode "$TARGET_EXECUTION_MODE" --stats --profile "$TARGET_EXECUTION_PROFILE")
+          if [ -n "$TARGET_EXECUTION_EXTRA" ]; then
+            args+=("$TARGET_EXECUTION_EXTRA")
+          fi
+          python -m src.runtime_v3.domain_orchestrator "${args[@]}"
 
       - name: Plan exact workload-balanced optimizer shards
         if: steps.route.outputs.should_run == 'true'
@@ -249,7 +268,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
-      profile: exhaustive_precompute
+      profile: ${{ needs.prepare.outputs.authority_profile }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -295,7 +314,7 @@ jobs:
               --plan package-shard-plan.json \
               --shard-dir shard-results
 
-      - name: Resume downstream domain DAG from registry boundary
+      - name: Resume downstream domain DAG with target checkpoint semantics
         shell: bash
         env:
           FPL_AUTH_MODE: ${{ secrets.FPL_AUTH_MODE }}
@@ -305,43 +324,58 @@ jobs:
           FPL_OIDC_TOKEN_URL: ${{ secrets.FPL_OIDC_TOKEN_URL }}
           FPL_OIDC_CLIENT_ID: ${{ secrets.FPL_OIDC_CLIENT_ID }}
           FPL_OIDC_CLIENT_SECRET: ${{ secrets.FPL_OIDC_CLIENT_SECRET }}
-        run: python -m src.runtime_v3.sharded_pipeline_resume --mode daily --stats --profile exhaustive_precompute
+          TARGET_EXECUTION_MODE: ${{ needs.prepare.outputs.target_execution_mode }}
+          TARGET_EXECUTION_EXTRA: ${{ needs.prepare.outputs.target_execution_extra }}
+          AUTHORITY_PROFILE: ${{ needs.prepare.outputs.authority_profile }}
+        run: |
+          set -euo pipefail
+          args=(--mode "$TARGET_EXECUTION_MODE" --stats --profile "$AUTHORITY_PROFILE")
+          if [ -n "$TARGET_EXECUTION_EXTRA" ]; then
+            args+=("$TARGET_EXECUTION_EXTRA")
+          fi
+          python -m src.runtime_v3.sharded_pipeline_resume "${args[@]}"
 
       - name: Validate full production decision chain
+        env:
+          AUTHORITY_PROFILE: ${{ needs.prepare.outputs.authority_profile }}
         run: |
           python -m src.engines.source_contract_validate
           python -m src.engines.production_contract_validate
           python -m src.engines.watchlist_contract_validate
           python -m src.engines.report_serving_validate
           python -m src.engines.report_time_contract_validate
-          python -m src.runtime_v3.full_authority_cache --profile exhaustive_precompute
+          python -m src.runtime_v3.full_authority_cache --profile "$AUTHORITY_PROFILE"
 
       - name: Finalize true cross-runner runtime performance
+        env:
+          AUTHORITY_PROFILE: ${{ needs.prepare.outputs.authority_profile }}
         run: |
           python -m src.runtime_v3.package_optimizer_shards finalize-runtime --plan package-shard-plan.json
           python -m src.runtime_v3.sharded_resource_telemetry \
             --plan package-shard-plan.json \
             --shard-dir shard-results \
             --reducer-resource reducer-resource.json
-          python -m src.runtime_v3.performance_guard --profile exhaustive_precompute
+          python -m src.runtime_v3.performance_guard --profile "$AUTHORITY_PROFILE"
 
       - name: Verify V3 candidate definition of done
         run: python -m src.runtime_v3.definition_of_done --scope candidate --source-commit "$SOURCE_COMMIT"
 
       - name: Materialize verified targeted checkpoint snapshot
+        env:
+          AUTHORITY_PROFILE: ${{ needs.prepare.outputs.authority_profile }}
         run: |
           rm -rf "$RUNNER_TEMP/runtime-publish"
           python -m src.runtime_v3.publish_snapshot \
             --source-data data \
             --output-dir "$RUNNER_TEMP/runtime-publish" \
-            --profile exhaustive_precompute \
+            --profile "$AUTHORITY_PROFILE" \
             --source-commit "$SOURCE_COMMIT" \
             --snapshot-role "${{ needs.prepare.outputs.snapshot_role }}" \
             --target-checkpoint "${{ needs.prepare.outputs.target_checkpoint_utc }}" \
             --target-visible-mode "${{ needs.prepare.outputs.target_visible_mode }}"
           python -m src.runtime_v3.publication_verify \
             --data-dir "$RUNNER_TEMP/runtime-publish/data" \
-            --profile exhaustive_precompute \
+            --profile "$AUTHORITY_PROFILE" \
             --source-commit "$SOURCE_COMMIT"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -403,7 +437,9 @@ jobs:
           echo "RUNTIME_BASE_SHA=$runtime_base" >> "$GITHUB_ENV"
 
       - name: Revalidate transferred publication artifact
-        run: python -m src.runtime_v3.publication_verify --data-dir "$RUNNER_TEMP/runtime-publish/data" --profile exhaustive_precompute --source-commit "$SOURCE_COMMIT"
+        env:
+          AUTHORITY_PROFILE: ${{ needs.prepare.outputs.authority_profile }}
+        run: python -m src.runtime_v3.publication_verify --data-dir "$RUNNER_TEMP/runtime-publish/data" --profile "$AUTHORITY_PROFILE" --source-commit "$SOURCE_COMMIT"
 
       - name: Publish rolling runtime snapshot atomically
         shell: bash
@@ -431,6 +467,8 @@ jobs:
           echo "PUBLISHED_RUNTIME_SHA=$published_sha" >> "$GITHUB_ENV"
 
       - name: Verify published runtime provenance and content
+        env:
+          AUTHORITY_PROFILE: ${{ needs.prepare.outputs.authority_profile }}
         run: |
           set -euo pipefail
           git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
@@ -441,5 +479,5 @@ jobs:
           git worktree add --detach "$verify_tree" "refs/remotes/origin/${RUNTIME_BRANCH}"
           unauthorized_root="$(git -C "$verify_tree" ls-files | grep -v '^data/' || true)"
           test -z "$unauthorized_root"
-          python -m src.runtime_v3.publication_verify --data-dir "$verify_tree/data" --profile exhaustive_precompute --source-commit "$SOURCE_COMMIT"
+          python -m src.runtime_v3.publication_verify --data-dir "$verify_tree/data" --profile "$AUTHORITY_PROFILE" --source-commit "$SOURCE_COMMIT"
           diff -qr "$RUNNER_TEMP/runtime-publish/data" "$verify_tree/data"

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "registry": "V3_PACKAGE_OPTIMIZER_SHARDING_V1",
+  "execution_only": true,
+  "authority_owner": "prediction",
+  "planner": {
+    "strategy": "GREEDY_DESCENDING_ESTIMATED_PAIR_WORK_BALANCE",
+    "target_pair_combinations_per_shard": 250000,
+    "min_shards": 2,
+    "max_shards": 10,
+    "batch_size": 512,
+    "top_keep_per_shard": 500
+  },
+  "profiles": {
+    "exhaustive_precompute": {
+      "enabled": true,
+      "cross_runner_sharding": true,
+      "nested_process_pool": false
+    }
+  },
+  "contracts": {
+    "complete_outgoing_pair_task_cover_required": true,
+    "duplicate_pair_task_forbidden": true,
+    "missing_pair_task_forbidden": true,
+    "all_shards_require_same_optimizer_input_fingerprint": true,
+    "shards_may_not_write_package_optimizer": true,
+    "shards_may_not_write_package_decision": true,
+    "shard_partition_may_not_prune_candidates": true,
+    "shard_partition_may_not_change_scoring": true,
+    "shard_partition_may_not_change_sequential_legality": true,
+    "local_frontier_reduction_must_be_exact": true,
+    "global_frontier_uses_union_of_exact_local_frontiers_plus_hold_and_singles": true,
+    "global_top_k_uses_union_of_local_top_k_with_k_equal_to_global_keep": true,
+    "watchlist_is_never_an_optimizer_input": true,
+    "business_authority_is_not_sharded": true
+  },
+  "governance": {
+    "operational_tuning_is_registry_owned_not_code_hardcoded": true,
+    "shard_count_is_derived_from_estimated_workload": true,
+    "shard_ids_are_ephemeral_execution_coordinates": true,
+    "single_final_optimizer_writer": true,
+    "zero_candidate_pruning_full_authority": true,
+    "fail_closed_on_partial_or_inconsistent_shard_set": true
+  }
+}

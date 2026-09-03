@@ -74,10 +74,10 @@ def test_package_precompute_materialization_embeds_its_workflow_identity(
     monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "3")
 
     manifest = publish_snapshot.materialize(
-        source, output, "exhaustive_precompute", "d" * 40
+        source, output, "fast_decision", "d" * 40
     )
     result = publication_verify.verify_publication(
-        output / "data", source_commit="d" * 40, profile="exhaustive_precompute"
+        output / "data", source_commit="d" * 40, profile="fast_decision"
     )
 
     assert manifest["schema_version"] == 4

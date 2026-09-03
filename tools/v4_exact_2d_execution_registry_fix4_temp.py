@@ -22,7 +22,7 @@ replace_once(
 )
 replace_once(
     worker,
-    '''"semantic_fingerprint":_semantic_fingerprint(candidates, locked_for_search, predictions=predictions, universe=universe, understat=understat, tactical_interactions=tactical, prices=prices)''',
+    '''"semantic_fingerprint":_semantic_fingerprint(candidates, locked_for_search, predictions=predictions, universe=universe, understat=understat,tactical_interactions=tactical,prices=prices)''',
     '''"semantic_fingerprint":_semantic_fingerprint(predictions, universe, locked_for_search, understat, candidates=candidates, tactical_interactions=tactical, prices=prices)''',
 )
 
@@ -34,3 +34,5 @@ replace_once(
 )
 
 print("2D package worker/fan-in aligned exactly to canonical planning, candidates, tactical and semantic contracts")
+
+# acceptance trigger 2026-09-03: re-run exact 2D root-partition benchmark before permanent promotion

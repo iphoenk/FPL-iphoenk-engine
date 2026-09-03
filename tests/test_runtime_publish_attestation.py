@@ -39,6 +39,7 @@ def test_runtime_materialization_embeds_verified_workflow_attestation(
     (source / "a.json").write_text('{"x":1}\n', encoding="utf-8")
     monkeypatch.setenv("GITHUB_WORKFLOW", "V3 Runtime")
     monkeypatch.setenv("GITHUB_RUN_ID", "123456")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "2")
 
     manifest = publish_snapshot.materialize(
         source, output, "fast_decision", "a" * 40
@@ -47,13 +48,32 @@ def test_runtime_materialization_embeds_verified_workflow_attestation(
         output / "data", source_commit="a" * 40, profile="fast_decision"
     )
 
-    assert manifest["schema_version"] == 3
+    assert manifest["schema_version"] == 4
     assert manifest["attestation"]["registry"] == publish_snapshot.ATTESTATION_REGISTRY
     assert manifest["attestation"]["workflow_run_id"] == 123456
+    assert manifest["attestation"]["workflow_run_attempt"] == 2
     assert result["status"] == "PASS"
     assert result["embedded_attestation_verified"] is True
     assert result["workflow_run_id"] == 123456
+    assert result["workflow_run_attempt"] == 2
     assert result["snapshot_sha256"] == manifest["attestation"]["snapshot_sha256"]
+
+
+def test_runtime_materialization_fails_closed_without_attempt_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    registry = _registry(tmp_path)
+    _wire_registry(monkeypatch, registry)
+    source = tmp_path / "source"
+    output = tmp_path / "publish"
+    source.mkdir()
+    (source / "a.json").write_text('{"x":1}\n', encoding="utf-8")
+    monkeypatch.setenv("GITHUB_WORKFLOW", "V3 Runtime")
+    monkeypatch.setenv("GITHUB_RUN_ID", "123456")
+    monkeypatch.delenv("GITHUB_RUN_ATTEMPT", raising=False)
+
+    with pytest.raises(RuntimeError, match="GITHUB_RUN_ATTEMPT"):
+        publish_snapshot.materialize(source, output, "fast_decision", "a" * 40)
 
 
 def test_attestation_rejects_same_size_payload_mutation(
@@ -67,6 +87,7 @@ def test_attestation_rejects_same_size_payload_mutation(
     (source / "a.json").write_text('{"x":1}\n', encoding="utf-8")
     monkeypatch.setenv("GITHUB_WORKFLOW", "V3 Runtime")
     monkeypatch.setenv("GITHUB_RUN_ID", "123456")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
 
     publish_snapshot.materialize(source, output, "fast_decision", "b" * 40)
     published = output / "data" / "a.json"
@@ -91,6 +112,7 @@ def test_non_runtime_materialization_remains_legacy_bootstrap_compatible(
     (source / "a.json").write_text('{"x":1}\n', encoding="utf-8")
     monkeypatch.delenv("GITHUB_WORKFLOW", raising=False)
     monkeypatch.delenv("GITHUB_RUN_ID", raising=False)
+    monkeypatch.delenv("GITHUB_RUN_ATTEMPT", raising=False)
 
     manifest = publish_snapshot.materialize(
         source, output, "fast_decision", "c" * 40
@@ -103,3 +125,4 @@ def test_non_runtime_materialization_remains_legacy_bootstrap_compatible(
     assert "attestation" not in manifest
     assert result["status"] == "PASS"
     assert result["embedded_attestation_verified"] is False
+    assert result["workflow_run_attempt"] is None

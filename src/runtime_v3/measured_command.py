@@ -24,7 +24,7 @@ def run(command: list[str], output: Path) -> int:
         "exit_code": int(completed.returncode),
         "command_module": command[2] if len(command) >= 3 and command[0].endswith("python") and command[1] == "-m" else command[0],
     }
-    atomic_json(output, payload)
+    atomic_json(output, payload, compact=True)
     print(json.dumps(payload, ensure_ascii=False))
     return int(completed.returncode)
 

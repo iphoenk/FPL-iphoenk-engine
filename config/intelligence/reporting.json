@@ -1,25 +1,10 @@
 {
   "schema_version": 2,
   "model_id": "decision_first_report_v2",
-  "layers": [
-    "USER_REPORT",
-    "TECHNICAL_APPENDIX"
-  ],
-  "decision_states": [
-    "HOLD",
-    "CHANGE",
-    "REVIEW"
-  ],
-  "confidence_labels": [
-    "HIGH",
-    "MEDIUM",
-    "LOW"
-  ],
-  "lock_labels": [
-    "LOCK",
-    "LEAN",
-    "OPEN"
-  ],
+  "layers": ["USER_REPORT", "TECHNICAL_APPENDIX"],
+  "decision_states": ["HOLD", "CHANGE", "REVIEW"],
+  "confidence_labels": ["HIGH", "MEDIUM", "LOW"],
+  "lock_labels": ["LOCK", "LEAN", "OPEN"],
   "section_order": [
     "user_presentation",
     "report_checkpoint",
@@ -39,23 +24,10 @@
     "enabled": true,
     "compact_when_no_material_change": true,
     "normal_length_ratio_target": 0.35,
-    "material_delta_keys": [
-      "squad",
-      "starting_xi",
-      "captain",
-      "vice_captain",
-      "chip",
-      "price",
-      "critical_health",
-      "report_time_intelligence"
-    ]
+    "material_delta_keys": ["squad", "starting_xi", "captain", "vice_captain", "chip", "price", "critical_health", "report_time_intelligence"]
   },
   "state_persistence": {
-    "preserve_across_rebuild": [
-      "checkpoint_history",
-      "last_checkpoint",
-      "operational_health"
-    ],
+    "preserve_across_rebuild": ["checkpoint_history", "last_checkpoint", "operational_health"],
     "unknown_extension_policy": "DROP",
     "core_state_is_rebuilt_each_report": true
   },
@@ -66,53 +38,33 @@
     "history_days": 14,
     "silent_missing_forbidden": true,
     "slots": [
-      {
-        "id": "DAILY_DEEP",
-        "time": "04:30",
-        "label": "Review pagi 04:30 WIB"
-      },
-      {
-        "id": "MIDDAY_CATCHUP",
-        "time": "12:30",
-        "label": "Catch-up 12:30 WIB"
-      },
-      {
-        "id": "EVENING_CHECK",
-        "time": "21:30",
-        "label": "Review malam 21:30 WIB"
-      }
+      {"id": "DAILY_DEEP", "time": "04:30", "label": "Review pagi 04:30 WIB"},
+      {"id": "MIDDAY_CATCHUP", "time": "12:30", "label": "Catch-up 12:30 WIB"},
+      {"id": "EVENING_CHECK", "time": "21:30", "label": "Review malam 21:30 WIB"}
     ]
   },
   "starting_xi": {
     "lock_margin": 0.75,
     "high_confidence_margin": 1.25,
-    "medium_confidence_margin": 0.5,
+    "medium_confidence_margin": 0.50,
     "publish_full_xi_on_initial_report": true,
     "publish_full_xi_when_changed": true
   },
   "captaincy": {
     "minimum_start_probability_for_lock": 0.85,
     "minimum_expected_minutes_for_lock": 70.0,
-    "maximum_dnp_probability_for_lock": 0.1,
-    "maximum_relative_volatility_for_lock": 0.7,
-    "minimum_score_margin_for_lock": 0.4,
+    "maximum_dnp_probability_for_lock": 0.10,
+    "maximum_relative_volatility_for_lock": 0.70,
+    "minimum_score_margin_for_lock": 0.40,
     "require_role_evidence_for_lock": true,
-    "required_role_fields_any": [
-      "penalty_share",
-      "penalty_role",
-      "set_piece_share",
-      "set_piece_role"
-    ],
+    "required_role_fields_any": ["penalty_share", "penalty_role", "set_piece_share", "set_piece_role"],
     "require_positive_fixture_context": true,
     "missing_required_evidence_result": "OPEN"
   },
   "price_radar": {
     "owned_minimum_urgency": "HIGH",
     "external_requires_full_dss_watchlist": true,
-    "allowed_urgencies": [
-      "HIGH",
-      "CRITICAL"
-    ],
+    "allowed_urgencies": ["HIGH", "CRITICAL"],
     "show_market_noise": false,
     "translate_projection_health_to_plain_language": true
   },
@@ -120,43 +72,17 @@
     "artifact": "data/dss_watchlist.json",
     "required_contract": "FULL_DSS_SCREEN_V1",
     "max_per_position": 5,
-    "positions": [
-      "GK",
-      "DEF",
-      "MID",
-      "FWD"
-    ],
-    "required_dimensions": [
-      "role",
-      "xmins",
-      "fixtures_3_5",
-      "underlying",
-      "system_fit",
-      "competition",
-      "set_piece_penalty",
-      "price_value",
-      "squad_fit"
-    ],
+    "positions": ["GK", "DEF", "MID", "FWD"],
+    "required_dimensions": ["role", "xmins", "fixtures_3_5", "underlying", "system_fit", "competition", "set_piece_penalty", "price_value", "squad_fit"],
     "missing_or_incomplete_result": "INSUFFICIENT_EVIDENCE"
   },
   "report_time_intelligence": {
     "enabled": true,
     "registry": "config/sources/report_time_registry.json",
     "evidence_contract": "report_time_evidence_v1",
-    "refresh_modes": [
-      "SCHEDULED_REPORT",
-      "ON_DEMAND_REPORT"
-    ],
-    "collector_fetch_forbidden": [
-      "onefpl"
-    ],
-    "source_classes": [
-      "MODEL_CHALLENGER",
-      "FIXTURE_STRATEGY_EXPERT",
-      "PUNDIT_CONSENSUS",
-      "COMMUNITY_SIGNAL",
-      "VERIFIED_NEWS"
-    ],
+    "refresh_modes": ["SCHEDULED_REPORT", "ON_DEMAND_REPORT"],
+    "collector_fetch_forbidden": ["onefpl"],
+    "source_classes": ["MODEL_CHALLENGER", "FIXTURE_STRATEGY_EXPERT", "PUNDIT_CONSENSUS", "COMMUNITY_SIGNAL", "VERIFIED_NEWS"],
     "compare_pundit_consensus_with_dss": true,
     "surface_alignment_and_divergence": true,
     "pundit_consensus_is_advisory_only": true,
@@ -167,11 +93,7 @@
     "never_override_official_native_fields": true
   },
   "authority_display": {
-    "current_team_source_order": [
-      "USER_OVERRIDE",
-      "POST_DEADLINE_OFFICIAL",
-      "ENGINE_RECOMMENDATION"
-    ],
+    "current_team_source_order": ["USER_OVERRIDE", "POST_DEADLINE_OFFICIAL", "ENGINE_RECOMMENDATION"],
     "engine_recommendation_is_challenger_when_user_override": true,
     "never_surface_superseded_captain_as_current": true,
     "never_surface_superseded_vice_captain_as_current": true,
@@ -187,48 +109,18 @@
   },
   "action_board": {
     "max_items": 8,
-    "allowed_actions": [
-      "HOLD",
-      "START",
-      "BENCH",
-      "LOCK",
-      "LEAN",
-      "OPEN",
-      "WATCH",
-      "BUY",
-      "SELL",
-      "REVIEW"
-    ]
+    "allowed_actions": ["HOLD", "START", "BENCH", "LOCK", "LEAN", "OPEN", "WATCH", "BUY", "SELL", "REVIEW"]
   },
   "language": {
     "decision_first": true,
     "natural_fpl_language": true,
     "presentation_is_primary_human_surface": true,
     "raw_machine_states_are_audit_only": true,
-    "forbidden_user_report_tokens": [
-      "go_allowed",
-      "SUSPECT_STATIC_OFFSET0",
-      "DSS-",
-      "Gate 0",
-      "epistemik",
-      "asset-value protection"
-    ],
+    "forbidden_user_report_tokens": ["go_allowed", "SUSPECT_STATIC_OFFSET0", "DSS-", "Gate 0", "epistemik", "asset-value protection"],
     "forbidden_user_presentation_tokens": [
-      "HOLD",
-      "CHANGE",
-      "REVIEW",
-      "LOCK",
-      "LEAN",
-      "OPEN",
-      "user_override_active",
-      "runtime_publish",
-      "schema_version",
-      "report_artifact_registry",
-      "technical_appendix",
-      "payload_type",
-      "REFRESH_REQUIRED",
-      "INVALID_EVIDENCE_CONTRACT",
-      "PARTIAL/UNAVAILABLE"
+      "HOLD", "CHANGE", "REVIEW", "LOCK", "LEAN", "OPEN",
+      "user_override_active", "runtime_publish", "schema_version", "report_artifact_registry",
+      "technical_appendix", "payload_type", "REFRESH_REQUIRED", "INVALID_EVIDENCE_CONTRACT", "PARTIAL/UNAVAILABLE"
     ],
     "technical_terms_allowed_only_in_appendix": true
   },
@@ -236,20 +128,14 @@
     "facts_models_decisions_separated": true,
     "raw_model_ranking_is_not_final_recommendation": true,
     "latest_gw_is_evidence_not_single_gw_decision_driver": true,
-    "primary_horizon_gws": [
-      3,
-      5
-    ],
-    "strategic_horizon_gws": [
-      10,
-      15
-    ],
+    "primary_horizon_gws": [3, 5],
+    "strategic_horizon_gws": [10, 15],
     "technical_health_is_one_line_in_user_report_unless_critical": true,
     "missing_external_evidence_is_never_fabricated": true,
     "scheduled_checkpoint_miss_is_explicit": true
   },
   "battle_reason_thresholds": {
-    "xpts_delta": 0.1,
+    "xpts_delta": 0.10,
     "xmins_delta": 2.0,
     "start_probability_delta": 0.03
   }

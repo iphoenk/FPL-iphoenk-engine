@@ -46,11 +46,18 @@ def test_assessment_reviewed_json_writers_are_atomic() -> None:
         assert "atomic_json" in text
         assert ".write_text(json.dumps(" not in text
 
+    utils = (ROOT / "src" / "utils.py").read_text(encoding="utf-8")
+    measured = (ROOT / "src" / "runtime_v3" / "measured_command.py").read_text(encoding="utf-8")
+    shards = (ROOT / "src" / "runtime_v3" / "package_optimizer_shards.py").read_text(encoding="utf-8")
+    assert "compact: bool | None = None" in utils
+    assert "atomic_json(output, payload, compact=True)" in measured
+    assert "atomic_json(output, result, compact=True)" in shards
+
 
 def test_sharded_official_snapshot_boundary_remains_fail_closed() -> None:
     workflow = (ROOT / ".github" / "workflows" / "v3-package-precompute.yml").read_text(encoding="utf-8")
     registry = _json("config/v3_service_registry.json")
-    official = next(row for row in registry["services"] if row["service_id"] == "official_snapshot")
+    official = registry["services"]["official_snapshot"]
     assert official["ephemeral_artifacts"] == ["official_snapshot.json"]
     assert "data/official_snapshot.retry.json" in workflow
     assert "cmp -s data/official_snapshot.json data/official_snapshot.retry.json" in workflow

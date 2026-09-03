@@ -531,7 +531,7 @@ def main() -> int:
         plan = json.loads(Path(args.plan).read_text(encoding="utf-8"))
         result = run_shard(plan, args.shard_id)
         output = Path(args.output)
-        atomic_json(output, result)
+        atomic_json(output, result, compact=True)
         print(json.dumps({"status": "READY", "shard_id": result["shard_id"], "tasks": result["task_count"], "pair_exact_scored": (result.get("counters") or {}).get("pair_candidates_exact_scored"), "scalar_fallbacks": (result.get("counters") or {}).get("batch_scalar_fallback_count")}, ensure_ascii=False))
         return 0
     if args.command == "reduce":

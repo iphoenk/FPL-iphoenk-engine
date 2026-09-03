@@ -286,11 +286,11 @@ def run() -> dict:
     assert int(pr.get("horizon_gws") or 0) == STRATEGIC_HORIZON_GWS
     assert pr.get("historical_prior_model")
     assert int(pr.get("historical_prior_players_used") or 0) > 0
+    xmins_contract = (load_config("config/intelligence/xmins_v2.json").get("contract_validation") or {})
+    probability_tolerance = float(xmins_contract["probability_sum_tolerance"])
     for row in pr.get("players", []):
         xm = row.get("xmins", {})
         prob = sum(float(xm.get(k, 0)) for k in ("start_probability", "bench_probability", "dnp_probability"))
-        xmins_contract = (load_config("config/intelligence/xmins_v2.json").get("contract_validation") or {})
-        probability_tolerance = float(xmins_contract["probability_sum_tolerance"])
         assert abs(prob - 1.0) < probability_tolerance
         assert len(row.get("xpts_by_gw", [])) == STRATEGIC_HORIZON_GWS
         assert len(xm.get("expected_minutes_interval", [])) == 2

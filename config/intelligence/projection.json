@@ -2,78 +2,30 @@
   "schema_version": 3,
   "model_id": "player_projection_interpretable_v1",
   "historical_model_id": "player_projection_historical_prior_v3_robust_rates_dc_probability",
-  "published_horizons": [
-    3,
-    5,
-    10,
-    15
-  ],
+  "published_horizons": [3, 5, 10, 15],
   "rate_shrinkage_minutes": 450.0,
   "early_season_robust_rates": {
     "model": "adaptive_shrinkage_winsor_v1",
     "absolute_upper_rate90": 1.5,
     "tiers": [
-      {
-        "max_minutes": 90,
-        "shrink_minutes": 900,
-        "upper_prior_multiplier": 2.5
-      },
-      {
-        "max_minutes": 270,
-        "shrink_minutes": 675,
-        "upper_prior_multiplier": 3.5
-      },
-      {
-        "max_minutes": 450,
-        "shrink_minutes": 525,
-        "upper_prior_multiplier": 4.5
-      },
-      {
-        "max_minutes": null,
-        "shrink_minutes": 450,
-        "upper_prior_multiplier": 6.0
-      }
+      {"max_minutes": 90, "shrink_minutes": 900, "upper_prior_multiplier": 2.5},
+      {"max_minutes": 270, "shrink_minutes": 675, "upper_prior_multiplier": 3.5},
+      {"max_minutes": 450, "shrink_minutes": 525, "upper_prior_multiplier": 4.5},
+      {"max_minutes": null, "shrink_minutes": 450, "upper_prior_multiplier": 6.0}
     ],
     "zero_observation_is_allowed": true,
     "cap_relaxes_with_evidence": true,
     "breakout_protection": "upper bound relaxes as evidence minutes accumulate"
   },
   "position_priors": {
-    "GK": {
-      "xg90": 0.01,
-      "xa90": 0.01,
-      "bonus90": 0.2,
-      "dc90": 0.0,
-      "saves90": 3.0
-    },
-    "DEF": {
-      "xg90": 0.08,
-      "xa90": 0.1,
-      "bonus90": 0.25,
-      "dc90": 0.55,
-      "saves90": 0.0
-    },
-    "MID": {
-      "xg90": 0.22,
-      "xa90": 0.2,
-      "bonus90": 0.28,
-      "dc90": 0.3,
-      "saves90": 0.0
-    },
-    "FWD": {
-      "xg90": 0.38,
-      "xa90": 0.13,
-      "bonus90": 0.3,
-      "dc90": 0.16,
-      "saves90": 0.0
-    }
+    "GK": {"xg90": 0.01, "xa90": 0.01, "bonus90": 0.20, "dc90": 0.00, "saves90": 3.0},
+    "DEF": {"xg90": 0.08, "xa90": 0.10, "bonus90": 0.25, "dc90": 0.55, "saves90": 0.0},
+    "MID": {"xg90": 0.22, "xa90": 0.20, "bonus90": 0.28, "dc90": 0.30, "saves90": 0.0},
+    "FWD": {"xg90": 0.38, "xa90": 0.13, "bonus90": 0.30, "dc90": 0.16, "saves90": 0.0}
   },
   "attack_multiplier_min": 0.55,
   "attack_multiplier_max": 1.75,
-  "appearance_60_probability_transition": {
-    "start_minutes_low": 55.0,
-    "start_minutes_high": 70.0
-  },
+  "appearance_60_probability_transition": {"start_minutes_low": 55.0, "start_minutes_high": 70.0},
   "uncertainty": {
     "minimum_points_std": 1.15,
     "coefficient_of_variation": 0.42,

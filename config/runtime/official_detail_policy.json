@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "registry": "V3_OFFICIAL_DETAIL_POLICY_V1",
+  "element_summary_max": 40,
+  "element_summary_workers": 8,
+  "request_retries": 1,
+  "policy": {
+    "bounded_parallel_element_summary_fetch": true,
+    "preserve_detail_id_order": true,
+    "same_official_endpoints": true,
+    "same_detail_universe": true,
+    "no_decision_authority_change": true,
+    "failure_semantics_unchanged": true
+  }
+}

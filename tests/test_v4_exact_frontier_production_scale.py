@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections import Counter
+from multiprocessing import get_context
+from queue import Empty
 from time import perf_counter
 
 from src.engines.v4_full_universe_exact_state_frontier import ExactIncomingFrontierIndex
@@ -66,26 +68,68 @@ def _diagnostics() -> dict:
     }
 
 
-def test_production_scale_indexed_frontier_regression_hundreds_of_candidates():
+def _exercise(queue) -> None:
     pools = _pool()
-    assert sum(len(rows) for rows in pools.values()) == 500
-    assert len({player.team_id for rows in pools.values() for player in rows}) == 20
-
     index = ExactIncomingFrontierIndex(
         pools,
         _risks(pools),
         frontier_epsilon=0.01,
         top_keep=12,
     )
-
     started = perf_counter()
-    k2 = list(index.iter_legal(Counter({"MID": 2}), tuple(), 10_000, _diagnostics()))
-    k3 = list(index.iter_legal(Counter({"DEF": 1, "MID": 1, "FWD": 1}), tuple(), 10_000, _diagnostics()))
+    k2_count = sum(
+        1
+        for _ in index.iter_legal(
+            Counter({"MID": 2}),
+            tuple(),
+            10_000,
+            _diagnostics(),
+        )
+    )
+    k3_count = sum(
+        1
+        for _ in index.iter_legal(
+            Counter({"DEF": 1, "MID": 1, "FWD": 1}),
+            tuple(),
+            10_000,
+            _diagnostics(),
+        )
+    )
     elapsed = perf_counter() - started
+    queue.put(
+        {
+            "candidate_count": sum(len(rows) for rows in pools.values()),
+            "club_count": len({player.team_id for rows in pools.values() for player in rows}),
+            "k2_count": k2_count,
+            "k3_count": k3_count,
+            "elapsed": elapsed,
+            "proof": index.proof_summary(),
+        }
+    )
 
-    assert k2
-    assert k3
-    proof = index.proof_summary()
+
+def test_production_scale_indexed_frontier_regression_hundreds_of_candidates():
+    ctx = get_context("spawn")
+    queue = ctx.Queue()
+    process = ctx.Process(target=_exercise, args=(queue,))
+    process.start()
+    process.join(25.0)
+    if process.is_alive():
+        process.terminate()
+        process.join(3.0)
+        raise AssertionError("production-scale exact frontier regression exceeded 25s")
+    assert process.exitcode == 0
+
+    try:
+        result = queue.get(timeout=2.0)
+    except Empty as exc:
+        raise AssertionError("production-scale frontier worker returned no result") from exc
+
+    assert result["candidate_count"] == 500
+    assert result["club_count"] == 20
+    assert result["k2_count"] > 0
+    assert result["k3_count"] > 0
+    proof = result["proof"]
     assert proof["canonical_top_n_best_and_frontier_exact"] is True
     assert proof["heuristic"] is False
     assert proof["candidate_cutoff"] is False
@@ -94,7 +138,4 @@ def test_production_scale_indexed_frontier_regression_hundreds_of_candidates():
     assert proof["x5_index_is_necessary_condition_only"] is True
     assert proof["scalar_rank_prefilter_before_gw_shape"] is True
     assert proof["dominance_pairs_skipped_by_x5_index"] > 0
-    # This is intentionally generous for shared CI runners. The pre-fix real
-    # k<=2 path exceeded 280s, so a 25s regression bound still catches the
-    # structural O(N x F) failure without turning normal runner jitter red.
-    assert elapsed < 25.0
+    assert result["elapsed"] < 25.0

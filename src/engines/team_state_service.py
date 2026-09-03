@@ -5,6 +5,7 @@ from typing import Any
 
 from src.engines.base_state import bootstrap_maps, native_entry_summary, resolve_locked_player
 from src.engines.team_value import build_transfer_spells, sell_cost
+from src.models.transfer_state import build_transfer_state
 from src.rules import CHIP_DISPLAY_NAMES, LINEUP_RULES, SQUAD_RULES, build_chip_ledger, ruleset_metadata
 from src.settings import FAIL_CLOSED, PURCHASE_RECONSTRUCTION_BASELINE_GW, TEAM_ID
 from src.utils import CONFIG, DATA, atomic_json, iso_now, parse_dt, read_json, utcnow
@@ -547,9 +548,18 @@ def run() -> dict[str, Any]:
     fetched_at = (health.get("entry") or {}).get("fetched_at")
     entry_summary = native_entry_summary(entry, fetched_at)
     used_chips = list(history.get("chips") or [])
-    planning_gw = phase.get("planning_gw") or phase.get("current_gw")
+    planning_gw = int(phase.get("planning_gw") or phase.get("current_gw") or 1)
     chip_ledger = build_chip_ledger(used_chips, planning_gw)
     ruleset = ruleset_metadata()
+    transfer_state = build_transfer_state(
+        lock=lock,
+        projection_baseline=projection_baseline,
+        entry=entry,
+        history=history,
+        transfers=transfers,
+        planning_gw=planning_gw,
+        submitted_gw=phase.get("submitted_gw"),
+    )
     itb = lock.get("itb_tenths") if use_lock else entry.get("last_deadline_bank")
     totals = {
         "market_value": sum(int(row["now_cost"]) for row in ledger),
@@ -568,12 +578,16 @@ def run() -> dict[str, Any]:
         "entry": entry_summary,
         "squad_authority": authority,
         "projection_baseline": projection_baseline,
+        "transfer_state": transfer_state,
         "squad": squad,
         "team_value_ledger": ledger,
         "totals": totals,
         "governance": {
             "ruleset_id": ruleset["id"],
             "sell_value_formula_owned_by_team_value_engine": True,
+            "transfer_state_owned_by_team_state": True,
+            "transfer_hit_rule_registry_owned": True,
+            "current_private_transfer_state_not_inferred_from_public_absence": True,
             "squad_identity_is_element_id_authoritative": True,
             "purchase_reconstruction_baseline_gw": baseline_gw,
             "planning_override_must_target_exact_gw": True,
@@ -605,6 +619,7 @@ if __name__ == "__main__":
                 "team_id": out.get("team_id"),
                 "squad_authority": out.get("squad_authority"),
                 "projection_baseline": out.get("projection_baseline"),
+                "transfer_state": out.get("transfer_state"),
                 "players": len(out.get("team_value_ledger") or []),
                 "totals": out.get("totals"),
             },

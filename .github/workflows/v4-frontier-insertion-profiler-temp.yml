@@ -26,52 +26,202 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Profile frontier-only exact mixed k3
+      - name: Probe vectorized exact layer index
         run: |
-          python - <<'PY'
-          import cProfile
-          import io
-          import pstats
+          python -u - <<'PY'
+          from collections import Counter
           from time import perf_counter
-          from src.engines.v4_full_universe_exact_state_frontier import (
-              ExactIncomingFrontierIndex,
-              _flatten_frontier,
-              _front_insert,
-              _merge_disjoint_position,
-              frontier_dominates,
-          )
-          from tests.test_v4_exact_frontier_production_scale import _pool, _risks
+          import numpy as np
+          import src.engines.v4_full_universe_exact_state_frontier as mod
+          from tests.test_v4_exact_frontier_production_scale import _pool, _risks, _diagnostics
 
+          original = mod._front_insert
+          cache = {}
+
+          def flat_gw(state):
+              return tuple(value for pos in state.gw_values for gw in pos for value in gw)
+
+          scalar_fields = (
+              'cost','x3','x5','x10','x15','projection_uncertainty','xmins_uncertainty',
+              'tactical_uncertainty','roster_change_uncertainty','price_risk',
+              'tactical_role_confidence','opponent_matchup_confidence',
+          )
+
+          def build(layer):
+              out = {key: np.asarray([getattr(row, key) for row in layer], dtype=np.float64) for key in scalar_fields}
+              flats = [flat_gw(row) for row in layer]
+              width = len(flats[0]) if flats else 0
+              if any(len(row) != width for row in flats):
+                  out['gw'] = None
+              else:
+                  out['gw'] = np.asarray(flats, dtype=np.float64).reshape(len(layer), width)
+              out['length'] = len(layer)
+              cache[id(layer)] = out
+              return out
+
+          def index_for(layer):
+              idx = cache.get(id(layer))
+              if idx is None or idx['length'] != len(layer):
+                  return build(layer)
+              return idx
+
+          def state_values(state):
+              return {key: float(getattr(state, key)) for key in scalar_fields}
+
+          def rank_masks(idx, candidate, cand_gw):
+              c = state_values(candidate)
+              no_worse = (
+                  (idx['cost'] <= c['cost']) & (idx['x5'] >= c['x5']) & (idx['x15'] >= c['x15'])
+                  & (idx['projection_uncertainty'] <= c['projection_uncertainty'])
+                  & (idx['xmins_uncertainty'] <= c['xmins_uncertainty'])
+                  & (idx['tactical_uncertainty'] <= c['tactical_uncertainty'])
+                  & (idx['roster_change_uncertainty'] <= c['roster_change_uncertainty'])
+              )
+              strict = (
+                  (idx['x5'] > c['x5'] + mod._TWO_DP_ROUND_ERROR)
+                  | (idx['x15'] > c['x15'] + mod._TWO_DP_ROUND_ERROR)
+                  | (idx['cost'] < c['cost'])
+              )
+              reverse_no_worse = (
+                  (c['cost'] <= idx['cost']) & (c['x5'] >= idx['x5']) & (c['x15'] >= idx['x15'])
+                  & (c['projection_uncertainty'] <= idx['projection_uncertainty'])
+                  & (c['xmins_uncertainty'] <= idx['xmins_uncertainty'])
+                  & (c['tactical_uncertainty'] <= idx['tactical_uncertainty'])
+                  & (c['roster_change_uncertainty'] <= idx['roster_change_uncertainty'])
+              )
+              reverse_strict = (
+                  (c['x5'] > idx['x5'] + mod._TWO_DP_ROUND_ERROR)
+                  | (c['x15'] > idx['x15'] + mod._TWO_DP_ROUND_ERROR)
+                  | (c['cost'] < idx['cost'])
+              )
+              if idx['gw'] is not None and idx['gw'].shape[1] == len(cand_gw):
+                  gw_dom = np.all(idx['gw'] >= cand_gw, axis=1)
+                  gw_reverse = np.all(cand_gw >= idx['gw'], axis=1)
+                  no_worse &= gw_dom
+                  reverse_no_worse &= gw_reverse
+              else:
+                  return None, None
+              return no_worse & strict, reverse_no_worse & reverse_strict
+
+          def frontier_masks(idx, candidate, epsilon):
+              c = state_values(candidate)
+              no_worse = (
+                  (idx['cost'] <= c['cost'])
+                  & (idx['projection_uncertainty'] <= c['projection_uncertainty'])
+                  & (idx['xmins_uncertainty'] <= c['xmins_uncertainty'])
+                  & (idx['tactical_uncertainty'] <= c['tactical_uncertainty'])
+                  & (idx['roster_change_uncertainty'] <= c['roster_change_uncertainty'])
+                  & (idx['price_risk'] <= c['price_risk'])
+                  & (idx['x3'] >= c['x3']) & (idx['x5'] >= c['x5'])
+                  & (idx['x10'] >= c['x10']) & (idx['x15'] >= c['x15'])
+                  & (idx['tactical_role_confidence'] >= c['tactical_role_confidence'])
+                  & (idx['opponent_matchup_confidence'] >= c['opponent_matchup_confidence'])
+              )
+              k = max(1, len(candidate.players))
+              horizon_gap = float(epsilon) + mod._TWO_DP_ROUND_ERROR
+              sum_gap = (float(epsilon) + mod._FOUR_DP_ROUND_ERROR) * k
+              strict = (
+                  (idx['x3'] > c['x3'] + horizon_gap)
+                  | (idx['x5'] > c['x5'] + horizon_gap)
+                  | (idx['x10'] > c['x10'] + horizon_gap)
+                  | (idx['x15'] > c['x15'] + horizon_gap)
+                  | (idx['price_risk'] + sum_gap < c['price_risk'])
+                  | (idx['tactical_role_confidence'] > c['tactical_role_confidence'] + sum_gap)
+                  | (idx['opponent_matchup_confidence'] > c['opponent_matchup_confidence'] + sum_gap)
+              )
+              reverse_no_worse = (
+                  (c['cost'] <= idx['cost'])
+                  & (c['projection_uncertainty'] <= idx['projection_uncertainty'])
+                  & (c['xmins_uncertainty'] <= idx['xmins_uncertainty'])
+                  & (c['tactical_uncertainty'] <= idx['tactical_uncertainty'])
+                  & (c['roster_change_uncertainty'] <= idx['roster_change_uncertainty'])
+                  & (c['price_risk'] <= idx['price_risk'])
+                  & (c['x3'] >= idx['x3']) & (c['x5'] >= idx['x5'])
+                  & (c['x10'] >= idx['x10']) & (c['x15'] >= idx['x15'])
+                  & (c['tactical_role_confidence'] >= idx['tactical_role_confidence'])
+                  & (c['opponent_matchup_confidence'] >= idx['opponent_matchup_confidence'])
+              )
+              reverse_strict = (
+                  (c['x3'] > idx['x3'] + horizon_gap)
+                  | (c['x5'] > idx['x5'] + horizon_gap)
+                  | (c['x10'] > idx['x10'] + horizon_gap)
+                  | (c['x15'] > idx['x15'] + horizon_gap)
+                  | (c['price_risk'] + sum_gap < idx['price_risk'])
+                  | (c['tactical_role_confidence'] > idx['tactical_role_confidence'] + sum_gap)
+                  | (c['opponent_matchup_confidence'] > idx['opponent_matchup_confidence'] + sum_gap)
+              )
+              return no_worse & strict, reverse_no_worse & reverse_strict
+
+          def fast(layer, candidate, *, frontier_epsilon, relation, metrics=None):
+              mod._metric_add(metrics, 'frontier_insert_calls')
+              if not layer:
+                  layer.append(candidate)
+                  build(layer)
+                  return True, []
+              if relation not in (mod.rank_dominates, mod.frontier_dominates, mod.dominates):
+                  return original(layer, candidate, frontier_epsilon=frontier_epsilon, relation=relation, metrics=metrics)
+              idx = index_for(layer)
+              cand_gw = np.asarray(flat_gw(candidate), dtype=np.float64)
+              rank_dom = rank_disp = None
+              front_dom = front_disp = None
+              if relation in (mod.rank_dominates, mod.dominates):
+                  rank_dom, rank_disp = rank_masks(idx, candidate, cand_gw)
+                  if rank_dom is None:
+                      cache.pop(id(layer), None)
+                      return original(layer, candidate, frontier_epsilon=frontier_epsilon, relation=relation, metrics=metrics)
+              if relation in (mod.frontier_dominates, mod.dominates):
+                  front_dom, front_disp = frontier_masks(idx, candidate, frontier_epsilon)
+              dom = rank_dom if relation is mod.rank_dominates else front_dom if relation is mod.frontier_dominates else (rank_dom & front_dom)
+              disp = rank_disp if relation is mod.rank_dominates else front_disp if relation is mod.frontier_dominates else (rank_disp & front_disp)
+              mod._metric_add(metrics, 'dominance_full_checks', len(layer))
+              if np.any(dom):
+                  mod._metric_add(metrics, 'frontier_insert_rejected')
+                  return False, []
+              displaced = [row for row, flag in zip(layer, disp.tolist()) if flag]
+              keep = ~disp
+              if displaced:
+                  mod._metric_add(metrics, 'frontier_states_displaced', len(displaced))
+                  layer[:] = [row for row, flag in zip(layer, keep.tolist()) if flag]
+                  for key in scalar_fields:
+                      idx[key] = idx[key][keep]
+                  if idx['gw'] is not None:
+                      idx['gw'] = idx['gw'][keep]
+              insert_at = int(np.searchsorted(-idx['x5'], -float(candidate.x5), side='right'))
+              layer.insert(insert_at, candidate)
+              values = state_values(candidate)
+              for key in scalar_fields:
+                  idx[key] = np.insert(idx[key], insert_at, values[key])
+              if idx['gw'] is not None:
+                  idx['gw'] = np.insert(idx['gw'], insert_at, cand_gw, axis=0)
+              idx['length'] = len(layer)
+              return True, displaced
+
+          # Exact insertion-equivalence probe on deterministic production-scale single states.
           pools = _pool()
-          index = ExactIncomingFrontierIndex(pools, _risks(pools), frontier_epsilon=0.01, top_keep=12)
-          states = None
-          profiler = cProfile.Profile()
-          profiler.enable()
+          probe_index = mod.ExactIncomingFrontierIndex(pools, _risks(pools), frontier_epsilon=0.01, top_keep=12)
+          sample = tuple(probe_index._single_state[p.element] for p in probe_index.pools['MID'][:60])
+          for relation in (mod.rank_dominates, mod.frontier_dominates, mod.dominates):
+              baseline = []
+              accelerated = []
+              cache.clear()
+              for state in sample:
+                  a = original(baseline, state, frontier_epsilon=0.01, relation=relation, metrics=None)
+                  b = fast(accelerated, state, frontier_epsilon=0.01, relation=relation, metrics=None)
+                  if a[0] != b[0] or [mod._state_key(x) for x in a[1]] != [mod._state_key(x) for x in b[1]] or [mod._state_key(x) for x in baseline] != [mod._state_key(x) for x in accelerated]:
+                      raise AssertionError(f'vectorized insertion parity failed for {relation.__name__}')
+          print('INSERTION_PARITY PASS')
+
+          mod._front_insert = fast
+          cache.clear()
+          pools = _pool()
+          index = mod.ExactIncomingFrontierIndex(pools, _risks(pools), frontier_epsilon=0.01, top_keep=12)
           started = perf_counter()
-          for position in ('DEF', 'MID', 'FWD'):
-              group = tuple(index._single_state[p.element] for p in index.pools[position])
-              if states is None:
-                  states = group
-                  print(position, 'singletons', len(states))
-                  continue
-              buckets = {}
-              considered = 0
-              for left in states:
-                  for right in group:
-                      considered += 1
-                      merged = _merge_disjoint_position(left, right, position)
-                      _front_insert(
-                          buckets.setdefault(merged.club_signature, []),
-                          merged,
-                          frontier_epsilon=0.01,
-                          relation=frontier_dominates,
-                          metrics=None,
-                      )
-              states = _flatten_frontier(buckets)
-              print(position, 'considered', considered, 'retained', len(states), 'elapsed', perf_counter() - started)
-          profiler.disable()
-          print('FINAL', len(states), 'elapsed', perf_counter() - started)
-          stream = io.StringIO()
-          pstats.Stats(profiler, stream=stream).strip_dirs().sort_stats('cumulative').print_stats(30)
-          print(stream.getvalue())
+          k2 = sum(1 for _ in index.iter_legal(Counter({'MID': 2}), tuple(), 10_000, _diagnostics()))
+          mid = perf_counter()
+          k3 = sum(1 for _ in index.iter_legal(Counter({'DEF': 1, 'MID': 1, 'FWD': 1}), tuple(), 10_000, _diagnostics()))
+          elapsed = perf_counter() - started
+          print('RESULT', {'k2': k2, 'k3': k3, 'k2_elapsed': mid-started, 'total_elapsed': elapsed})
+          print('PROOF', index.proof_summary())
+          if elapsed >= 25.0:
+              raise SystemExit(f'vectorized exact frontier still too slow: {elapsed:.3f}s')
           PY

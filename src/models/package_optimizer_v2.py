@@ -8,6 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from src.models.transfer_state import incremental_hit_cost
 from src.rules import LINEUP_RULES, SQUAD_RULES
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -153,7 +154,7 @@ def _team_cluster_penalty(players: list[dict[str, Any]], cfg: dict[str, Any]) ->
     return _cluster_penalty_from_team_ids([int(p.get("team_id") or -1) for p in players], cfg)
 
 
-def _scoring_context(cfg: dict[str, Any], planning_gw: int) -> dict[str, Any]:
+def _scoring_context(cfg: dict[str, Any], planning_gw: int, transfer_state: dict[str, Any] | None = None) -> dict[str, Any]:
     horizons = [int(x) for x in cfg.get("horizons") or [3, 5, 10, 15]]
     change_cap, change_guard = _effective_change_cap(cfg, planning_gw)
     return {
@@ -166,6 +167,7 @@ def _scoring_context(cfg: dict[str, Any], planning_gw: int) -> dict[str, Any]:
         "captain_weight": _f(cfg.get("captain_bonus_weight"), 1.0),
         "risk_aversion": _f(cfg.get("risk_aversion"), 0.12),
         "change_penalty_points": _f(cfg.get("change_penalty_points"), 0.20),
+        "transfer_state": dict(transfer_state or {}),
         "change_cap": change_cap,
         "change_guard": change_guard,
         "_compiled_player_cache": {},
@@ -185,12 +187,31 @@ def _compile_player(player: dict[str, Any], planning_gw: int, max_horizon: int) 
         std = _f(row.get("std"))
         means.append(mean)
         variances.append(std * std)
+    xmins = player.get("xmins") or {}
+    tactical = player.get("tactical_matchup") or {}
+    historical = player.get("historical_prior") or {}
+    adaptation = historical.get("transfer_adaptation") or {}
+    price = player.get("price_risk_context") or {}
+    tactical_confidence = str(tactical.get("evidence_confidence") or tactical.get("tactical_confidence") or "NONE").upper()
+    roster_uncertain = bool(adaptation.get("confidence_ceiling"))
+    adverse_price = bool(
+        price.get("evidence_available") is True
+        and price.get("direction") == "FALL"
+        and price.get("predicted_change_cycle") not in {None, "", "NONE"}
+    )
     return {
         "element": int(player.get("element") or -1),
         "position": str(player.get("position") or ""),
         "team_id": int(player.get("team_id") or -1),
         "means": tuple(means),
         "variances": tuple(variances),
+        "xmins_minutes_std": _f(xmins.get("minutes_std"), 90.0),
+        "tactical_uncertain": tactical_confidence != "HIGH",
+        "tactical_confidence": tactical_confidence,
+        "roster_change_uncertain": roster_uncertain,
+        "roster_change_state": adaptation.get("state"),
+        "price_risk_adverse": adverse_price,
+        "price_evidence_available": price.get("evidence_available") is True,
     }
 
 
@@ -240,6 +261,21 @@ def _compiled_best_lineup(by_position: dict[str, list[dict[str, Any]]], offset: 
     if best_mean is None:
         return False, 0.0, 0.0, set()
     return True, best_mean, best_var, best_ids
+
+
+def _package_evidence(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    clubs = Counter(int(row.get("team_id") or -1) for row in rows if int(row.get("team_id") or -1) > 0)
+    max_club = int(SQUAD_RULES.get("max_players_per_club") or 3)
+    max_count = max(clubs.values(), default=0)
+    return {
+        "xmins_uncertainty_mean_minutes_std": round(sum(_f(row.get("xmins_minutes_std"), 90.0) for row in rows) / max(1, len(rows)), 4),
+        "tactical_role_uncertainty_count": sum(bool(row.get("tactical_uncertain")) for row in rows),
+        "price_risk_adverse_count": sum(bool(row.get("price_risk_adverse")) for row in rows),
+        "price_evidence_available_count": sum(bool(row.get("price_evidence_available")) for row in rows),
+        "roster_change_uncertainty_count": sum(bool(row.get("roster_change_uncertain")) for row in rows),
+        "structural_flexibility_club_slot_headroom": max(0, max_club - max_count),
+        "clubs_at_cap": sum(count >= max_club for count in clubs.values()),
+    }
 
 
 def _score_compiled_rows(rows: list[dict[str, Any]], changes: int, context: dict[str, Any]) -> dict[str, Any]:
@@ -303,15 +339,19 @@ def _score_compiled_rows(rows: list[dict[str, Any]], changes: int, context: dict
     objective_var = sum((weights.get(str(h), 0.0) / weight_sum) ** 2 * row["std"] ** 2 for h, row in available)
     objective_std = math.sqrt(objective_var)
     change_penalty = int(changes) * context["change_penalty_points"]
-    robust = objective_mean - context["risk_aversion"] * objective_std - change_penalty - cluster_penalty
+    hit_cost, hit_exact = incremental_hit_cost(int(changes), context.get("transfer_state"))
+    robust = objective_mean - context["risk_aversion"] * objective_std - change_penalty - cluster_penalty - hit_cost
     return {
         "valid": True,
         "horizons": horizon_results,
         "objective_mean": round(objective_mean, 3),
         "objective_std": round(objective_std, 3),
         "change_penalty_points": round(change_penalty, 3),
+        "hit_cost_points": round(hit_cost, 3),
+        "hit_cost_exact": hit_exact,
         "team_cluster_penalty_points": round(cluster_penalty, 3),
         "robust_score": round(robust, 3),
+        "package_evidence": _package_evidence(rows),
         "guardrails": guardrails,
     }
 

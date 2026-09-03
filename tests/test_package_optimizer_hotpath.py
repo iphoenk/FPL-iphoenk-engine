@@ -135,12 +135,13 @@ def test_exact_batch_scorer_matches_canonical_randomized_single_and_pair_layouts
     assert checked >= 60
 
 
-def test_exact_batch_scorer_preserves_captain_and_formation_ties():
+def test_exact_batch_scorer_preserves_captain_and_formation_ties_without_tie_fallback():
     squad = _squad()
     extras = [_candidate(200, "MID", 18, 1), _candidate(201, "MID", 19, 2)]
     for row in squad + extras:
         for gw_row in row["xpts_by_gw"]:
             gw_row["mean"] = 5.0
+            gw_row["std"] = 1.0
     extras[0]["xpts_by_gw"][0]["std"] = 0.4
     extras[1]["xpts_by_gw"][0]["std"] = 2.4
     candidate = [row for row in squad if row["element"] not in {8, 9}] + extras
@@ -150,6 +151,8 @@ def test_exact_batch_scorer_preserves_captain_and_formation_ties():
     expected = score_package(candidate, 3, changes=2, scoring_context=context)
     actual = batch.score_ids_compact([[int(row["element"]) for row in candidate]], changes=2)[0]
     assert _numeric_surface(actual) == _numeric_surface(expected)
+    assert batch.last_formation_tie_count > 0
+    assert batch.last_scalar_fallback_count == 0
 
 
 def _python_skyline(metrics: np.ndarray) -> list[int]:

@@ -45,9 +45,9 @@ jobs:
             exit "$code"
           fi
 
-  cardinality:
+  estimate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 3
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
@@ -61,16 +61,17 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt
-      - name: Count exact legal package space and outgoing skew
+      - name: Estimate outgoing-task work without enumerating incoming packages
         shell: bash
         run: |
           python - <<'PY'
           from collections import Counter, defaultdict
           from itertools import combinations
+          from math import comb
           from time import perf_counter
           from src.engines.v4_decision_pipeline import effective_planning_squad
           from src.engines.v4_full_universe_package_search import safe_prune_incoming_players
-          from src.engines.v4_full_universe_package_search_core import _incoming_combinations
+          from src.engines.v4_tactical_interaction import build_tactical_interactions
           from src.engines.v4_wc_optimizer import POSITION_COUNTS, build_candidates, reconcile_owned_costs
           from src.utils import CONFIG, DATA, read_json
 
@@ -79,34 +80,58 @@ jobs:
           universe = read_json(DATA / 'universe.json', {})
           team = read_json(DATA / 'team.json', {})
           latest = read_json(DATA / 'latest.json', {})
+          prices = read_json(DATA / 'prices.json', {})
+          understat = read_json(DATA / 'understat_tactical_v4.json', {})
           configured = read_json(CONFIG / 'locked_squad.json', {})
           locked = effective_planning_squad(team, configured, latest)
           candidates = build_candidates(predictions, universe)
+          interactions = build_tactical_interactions(predictions, universe, understat)
           reconciled, affordability = reconcile_owned_costs(candidates, locked)
           budget = int(affordability['available_budget_tenths'])
           owned = {int(r.get('element')) for r in locked.get('players') or [] if r.get('element') is not None}
           by_id = {p.element: p for p in reconciled}
           current = tuple(by_id[e] for e in sorted(owned))
-          external, proofs = safe_prune_incoming_players(reconciled, owned)
+          external, proofs = safe_prune_incoming_players(
+              reconciled, owned, interactions=interactions, prices=prices,
+              predictions=predictions, universe=universe,
+          )
           pools = {pos: [] for pos in POSITION_COUNTS}
           for p in external:
               pools[p.position].append(p)
-          for pos in pools:
-              pools[pos].sort(key=lambda p: p.element)
-          d = {'search_nodes':0,'incoming_combinations_considered':0,'packages_rejected_by_budget':0,'packages_rejected_by_budget_bound':0,'packages_rejected_by_club_limit':0}
-          by_k = defaultdict(int)
+
           rows = []
+          by_k = defaultdict(int)
           total = 0
-          for k in range(1,4):
-              for outs_raw in combinations(current,k):
-                  outs = tuple(sorted(outs_raw,key=lambda p:(p.position,p.element)))
+          for k in range(1, 4):
+              for outs_raw in combinations(current, k):
+                  outs = tuple(sorted(outs_raw, key=lambda p: (p.position, p.element)))
                   out_ids = {p.element for p in outs}
-                  keep = tuple(p for p in current if p.element not in out_ids)
+                  keep_cost = sum(p.cost for p in current if p.element not in out_ids)
                   need = Counter(p.position for p in outs)
-                  local = sum(1 for _ in _incoming_combinations(pools,need,keep,budget,d))
-                  total += local
-                  by_k[k] += local
-                  rows.append((local,k,tuple(sorted(out_ids)),tuple(sorted(need.items()))))
+                  filtered_sizes = {
+                      pos: sum(1 for p in pools[pos] if keep_cost + p.cost <= budget)
+                      for pos in need
+                  }
+                  weight = 1
+                  for pos, count in need.items():
+                      n = filtered_sizes[pos]
+                      weight *= comb(n, count) if n >= count else 0
+                  task = tuple(sorted(out_ids))
+                  total += weight
+                  by_k[k] += weight
+                  rows.append((weight, k, task, tuple(sorted(need.items())), filtered_sizes))
           rows.sort(reverse=True)
-          print({'elapsed_s':round(perf_counter()-started,3),'candidate_count':len(candidates),'safe_pruned':len(proofs),'remaining_external':len(external),'pool_sizes':{p:len(v) for p,v in pools.items()},'total_legal_packages':total,'legal_packages_by_k':dict(by_k),'diagnostics':d,'top_20_outgoing_subtrees':rows[:20]}, flush=True)
+          task_count = len(rows)
+          print({
+              'elapsed_s': round(perf_counter()-started, 3),
+              'candidate_count': len(candidates),
+              'safe_pruned': len(proofs),
+              'remaining_external': len(external),
+              'pool_sizes': {p: len(v) for p,v in pools.items()},
+              'outgoing_task_count': task_count,
+              'estimated_incoming_combinations_upper_bound': total,
+              'estimated_by_k': dict(by_k),
+              'mean_weight': round(total/max(1,task_count), 2),
+              'top_30_tasks': rows[:30],
+          }, flush=True)
           PY

@@ -54,19 +54,18 @@ def _squad() -> tuple[Candidate, ...]:
 
 
 def _risk(players) -> dict[int, dict]:
-    out = {}
-    for player in players:
-        seed = player.element % 7
-        out[player.element] = {
-            "projection_uncertainty": 0.08 + seed * 0.002,
-            "xmins_uncertainty": 0.09 + seed * 0.002,
-            "tactical_uncertainty": 0.07 + seed * 0.002,
-            "roster_change_uncertainty": 0.02 + seed * 0.001,
-            "price_risk": 0.12 + seed * 0.002,
-            "tactical_role_confidence": 0.70 - seed * 0.002,
-            "opponent_matchup_confidence": 0.68 - seed * 0.002,
+    return {
+        player.element: {
+            "projection_uncertainty": 0.10,
+            "xmins_uncertainty": 0.10,
+            "tactical_uncertainty": 0.10,
+            "roster_change_uncertainty": 0.02,
+            "price_risk": 0.12,
+            "tactical_role_confidence": 0.75,
+            "opponent_matchup_confidence": 0.72,
         }
-    return out
+        for player in players
+    }
 
 
 def _rows_for(
@@ -206,18 +205,7 @@ def test_rounding_boundary_and_exact_ties_are_not_compressed():
     left = _candidate(302, "MID", 11, 50, 3.0, x5_offset=0.015)
     tie = _candidate(303, "MID", 11, 50, 3.0)
     pools = {"GK": [], "DEF": [], "MID": [right, left, tie], "FWD": []}
-    risks = {
-        player.element: {
-            "projection_uncertainty": 0.1,
-            "xmins_uncertainty": 0.1,
-            "tactical_uncertainty": 0.1,
-            "roster_change_uncertainty": 0.0,
-            "price_risk": 0.1,
-            "tactical_role_confidence": 0.8,
-            "opponent_matchup_confidence": 0.8,
-        }
-        for player in (right, left, tie)
-    }
+    risks = _risk((right, left, tie))
     index = ExactIncomingFrontierIndex(pools, risks, frontier_epsilon=0.01)
     diagnostics = {"incoming_combinations_considered": 0, "packages_rejected_by_budget": 0, "packages_rejected_by_club_limit": 0}
     rows = list(index.iter_legal(Counter({"MID": 1}), tuple(), 1000, diagnostics))

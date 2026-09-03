@@ -19,247 +19,21 @@ def main() -> None:
 
     marker = "def search_full_universe_packages(\n"
     insert_at = text.index(marker)
-    helpers = r'''_PARALLEL_SEARCH_CONTEXT: dict | None = None
-
-
-def _search_diag_template() -> dict:
-    return {
-        "search_nodes": 0,
-        "incoming_combinations_considered": 0,
-        "packages_evaluated": 0,
-        "packages_rejected_by_budget": 0,
-        "packages_rejected_by_budget_bound": 0,
-        "packages_rejected_by_club_limit": 0,
-        "packages_rejected_by_legality": 0,
-        "packages_dominated_on_frontier": 0,
-        "packages_pruned_by_admissible_branch_bound": 0,
-        "exact_utility_evaluations": 0,
-        "exact_utility_pruned_by_admissible_bound": 0,
-    }
-
-
-def _merge_numeric_diagnostics(target: dict, source: dict) -> None:
-    for key, value in source.items():
-        if isinstance(value, bool):
-            continue
-        if isinstance(value, (int, float)):
-            target[key] = target.get(key, 0) + value
-
-
-def _parallel_search_shard(jobs: tuple[tuple[int, tuple[int, ...]], ...]) -> dict:
-    ctx = _PARALLEL_SEARCH_CONTEXT
-    if ctx is None:
-        raise RuntimeError("parallel package-search context not initialized")
-
-    current = ctx["current"]
-    by_id = ctx["by_id"]
-    pools = ctx["pools"]
-    derived_budget = ctx["derived_budget"]
-    baseline_profile = ctx["baseline_profile"]
-    baseline_metrics = ctx["baseline_metrics"]
-    locked = ctx["locked"]
-    policy = ctx["policy"]
-    risk_by_element = ctx["risk_by_element"]
-    top_per_size = ctx["top_per_size"]
-    frontier_epsilon = ctx["frontier_epsilon"]
-    position_extrema = ctx["position_extrema"]
-    roll = ctx["roll"]
-
-    diagnostics = _search_diag_template()
-    local_top = {k: [] for k in range(1, int(ctx["max_replacements"]) + 1)}
-    # Keep a lossless exact-dominance frontier locally. Configured epsilon is
-    # applied only by the parent merge, preserving canonical tolerance semantics.
-    local_frontier: list[dict] = [_compact_for_frontier(roll)]
-
-    keep_profile_cache: dict[tuple[int, ...], dict] = {}
-    chosen_profile_cache: dict[tuple[int, ...], dict] = {}
-    incoming_risk_cache: dict[tuple[int, ...], dict] = {}
-    position_prefix_cache: dict = {}
-
-    for k, out_ids in jobs:
-        outs = tuple(by_id[element] for element in out_ids)
-        out_set = set(out_ids)
-        keep = tuple(player for player in current if player.element not in out_set)
-        need = Counter(player.position for player in outs)
-        keep_profile = keep_profile_cache.get(out_ids)
-        if keep_profile is None:
-            keep_profile = _keep_profile_from_baseline(baseline_profile, outs)
-            keep_profile_cache[out_ids] = keep_profile
-        outgoing_risk = _risk_aggregate(outs, risk_by_element)
-
-        def prefix_prunable(chosen_prefix, remaining_need):
-            bound_vec, utility_upper = _admissible_prefix_bounds(
-                chosen_prefix,
-                remaining_need,
-                outs=outs,
-                outgoing_risk=outgoing_risk,
-                risk_by_element=risk_by_element,
-                extrema=position_extrema,
-                baseline_metrics=baseline_metrics,
-                locked=locked,
-                policy=policy,
-                k=k,
-            )
-            frontier_blocked = any(
-                _dominates_vector(_frontier_tuple(incumbent), bound_vec, frontier_epsilon)
-                for incumbent in local_frontier
-            )
-            if not frontier_blocked or len(local_top[k]) < top_per_size:
-                return False
-            threshold = _f(local_top[k][-1].get("adjusted_utility_gain_5"), float("-inf"))
-            return utility_upper + 1e-12 < threshold
-
-        for ins_raw in _incoming_combinations(
-            pools,
-            need,
-            keep,
-            derived_budget,
-            diagnostics,
-            prefix_prunable=prefix_prunable,
-        ):
-            ins = tuple(sorted(ins_raw, key=lambda row: (_POSITION_ORDER.get(row.position, 99), row.element)))
-            diagnostics["packages_evaluated"] += 1
-            in_ids = tuple(player.element for player in ins)
-            incoming_risk = incoming_risk_cache.get(in_ids)
-            if incoming_risk is None:
-                incoming_risk = _risk_aggregate(ins, risk_by_element)
-                incoming_risk_cache[in_ids] = incoming_risk
-            cheap = _cheap_package_row(
-                outs,
-                ins,
-                baseline_metrics,
-                locked,
-                policy,
-                outgoing_risk,
-                incoming_risk,
-            )
-
-            compact = _compact_for_frontier(cheap)
-            retained, removed = _frontier_insert(local_frontier, compact, 0.0)
-            if not retained:
-                diagnostics["packages_dominated_on_frontier"] += 1
-            elif removed:
-                diagnostics["packages_dominated_on_frontier"] += removed
-
-            if not _can_enter_exact_top(cheap, local_top[k], top_per_size):
-                diagnostics["exact_utility_pruned_by_admissible_bound"] += 1
-                continue
-
-            chosen_profile = chosen_profile_cache.get(in_ids)
-            if chosen_profile is None:
-                chosen_profile = _chosen_profile(ins)
-                chosen_profile_cache[in_ids] = chosen_profile
-            target_metrics = _metrics_from_profiles(
-                keep_profile,
-                chosen_profile,
-                position_prefix_cache=position_prefix_cache,
-            )
-            exact = _exactify_package(cheap, target_metrics, baseline_metrics)
-            diagnostics["exact_utility_evaluations"] += 1
-            _retain_top(local_top[k], exact, top_per_size)
-
-    return {
-        "top_by_k": local_top,
-        "frontier": [row for row in local_frontier if row.get("package_id") != "ROLL_BASELINE"],
-        "diagnostics": diagnostics,
-    }
-
-
-def _outgoing_job_cost(job: tuple[int, tuple[int, ...]], by_id: dict[int, Candidate], pools: dict[str, list[Candidate]]) -> int:
-    _k, out_ids = job
-    need = Counter(by_id[element].position for element in out_ids)
-    estimate = 1
-    for pos, count in need.items():
-        available = len(pools.get(pos, ()))
-        if available < count:
-            return 0
-        estimate *= comb(available, int(count))
-    return estimate
-
-
-def _balanced_outgoing_shards(
-    jobs: list[tuple[int, tuple[int, ...]]],
-    workers: int,
-    by_id: dict[int, Candidate],
-    pools: dict[str, list[Candidate]],
-) -> list[tuple[tuple[int, tuple[int, ...]], ...]]:
-    workers = max(1, min(int(workers), len(jobs)))
-    shards: list[list[tuple[int, tuple[int, ...]]]] = [[] for _ in range(workers)]
-    loads = [0] * workers
-    ranked = sorted(
-        jobs,
-        key=lambda job: (_outgoing_job_cost(job, by_id, pools), job[0], job[1]),
-        reverse=True,
-    )
-    for job in ranked:
-        index = min(range(workers), key=lambda idx: (loads[idx], idx))
-        shards[index].append(job)
-        loads[index] += _outgoing_job_cost(job, by_id, pools)
-    return [tuple(shard) for shard in shards if shard]
-
-'''
+    helpers = '''_PARALLEL_SEARCH_CONTEXT: dict | None = None\n\n\ndef _search_diag_template() -> dict:\n    return {\n        "search_nodes": 0,\n        "incoming_combinations_considered": 0,\n        "packages_evaluated": 0,\n        "packages_rejected_by_budget": 0,\n        "packages_rejected_by_budget_bound": 0,\n        "packages_rejected_by_club_limit": 0,\n        "packages_rejected_by_legality": 0,\n        "packages_dominated_on_frontier": 0,\n        "packages_pruned_by_admissible_branch_bound": 0,\n        "exact_utility_evaluations": 0,\n        "exact_utility_pruned_by_admissible_bound": 0,\n    }\n\n\ndef _merge_numeric_diagnostics(target: dict, source: dict) -> None:\n    for key, value in source.items():\n        if isinstance(value, bool):\n            continue\n        if isinstance(value, (int, float)):\n            target[key] = target.get(key, 0) + value\n\n\ndef _parallel_search_shard(jobs: tuple[tuple[int, tuple[int, ...]], ...]) -> dict:\n    ctx = _PARALLEL_SEARCH_CONTEXT\n    if ctx is None:\n        raise RuntimeError("parallel package-search context not initialized")\n\n    current = ctx["current"]\n    by_id = ctx["by_id"]\n    pools = ctx["pools"]\n    derived_budget = ctx["derived_budget"]\n    baseline_profile = ctx["baseline_profile"]\n    baseline_metrics = ctx["baseline_metrics"]\n    locked = ctx["locked"]\n    policy = ctx["policy"]\n    risk_by_element = ctx["risk_by_element"]\n    top_per_size = ctx["top_per_size"]\n    frontier_epsilon = ctx["frontier_epsilon"]\n    position_extrema = ctx["position_extrema"]\n    roll = ctx["roll"]\n\n    diagnostics = _search_diag_template()\n    local_top = {k: [] for k in range(1, int(ctx["max_replacements"]) + 1)}\n    local_frontier: list[dict] = [_compact_for_frontier(roll)]\n    keep_profile_cache: dict[tuple[int, ...], dict] = {}\n    chosen_profile_cache: dict[tuple[int, ...], dict] = {}\n    incoming_risk_cache: dict[tuple[int, ...], dict] = {}\n    position_prefix_cache: dict = {}\n\n    for k, out_ids in jobs:\n        outs = tuple(by_id[element] for element in out_ids)\n        out_set = set(out_ids)\n        keep = tuple(player for player in current if player.element not in out_set)\n        need = Counter(player.position for player in outs)\n        keep_profile = keep_profile_cache.get(out_ids)\n        if keep_profile is None:\n            keep_profile = _keep_profile_from_baseline(baseline_profile, outs)\n            keep_profile_cache[out_ids] = keep_profile\n        outgoing_risk = _risk_aggregate(outs, risk_by_element)\n\n        def prefix_prunable(chosen_prefix, remaining_need):\n            bound_vec, utility_upper = _admissible_prefix_bounds(\n                chosen_prefix, remaining_need, outs=outs, outgoing_risk=outgoing_risk,\n                risk_by_element=risk_by_element, extrema=position_extrema, baseline_metrics=baseline_metrics,\n                locked=locked, policy=policy, k=k,\n            )\n            frontier_blocked = any(\n                _dominates_vector(_frontier_tuple(incumbent), bound_vec, frontier_epsilon)\n                for incumbent in local_frontier\n            )\n            if not frontier_blocked or len(local_top[k]) < top_per_size:\n                return False\n            threshold = _f(local_top[k][-1].get("adjusted_utility_gain_5"), float("-inf"))\n            return utility_upper + 1e-12 < threshold\n\n        for ins_raw in _incoming_combinations(\n            pools, need, keep, derived_budget, diagnostics, prefix_prunable=prefix_prunable,\n        ):\n            ins = tuple(sorted(ins_raw, key=lambda row: (_POSITION_ORDER.get(row.position, 99), row.element)))\n            diagnostics["packages_evaluated"] += 1\n            in_ids = tuple(player.element for player in ins)\n            incoming_risk = incoming_risk_cache.get(in_ids)\n            if incoming_risk is None:\n                incoming_risk = _risk_aggregate(ins, risk_by_element)\n                incoming_risk_cache[in_ids] = incoming_risk\n            cheap = _cheap_package_row(outs, ins, baseline_metrics, locked, policy, outgoing_risk, incoming_risk)\n            compact = _compact_for_frontier(cheap)\n            retained, removed = _frontier_insert(local_frontier, compact, 0.0)\n            if not retained:\n                diagnostics["packages_dominated_on_frontier"] += 1\n            elif removed:\n                diagnostics["packages_dominated_on_frontier"] += removed\n            if not _can_enter_exact_top(cheap, local_top[k], top_per_size):\n                diagnostics["exact_utility_pruned_by_admissible_bound"] += 1\n                continue\n            chosen_profile = chosen_profile_cache.get(in_ids)\n            if chosen_profile is None:\n                chosen_profile = _chosen_profile(ins)\n                chosen_profile_cache[in_ids] = chosen_profile\n            target_metrics = _metrics_from_profiles(keep_profile, chosen_profile, position_prefix_cache=position_prefix_cache)\n            exact = _exactify_package(cheap, target_metrics, baseline_metrics)\n            diagnostics["exact_utility_evaluations"] += 1\n            _retain_top(local_top[k], exact, top_per_size)\n\n    return {\n        "top_by_k": local_top,\n        "frontier": [row for row in local_frontier if row.get("package_id") != "ROLL_BASELINE"],\n        "diagnostics": diagnostics,\n    }\n\n\ndef _outgoing_job_cost(job: tuple[int, tuple[int, ...]], by_id: dict[int, Candidate], pools: dict[str, list[Candidate]]) -> int:\n    _k, out_ids = job\n    need = Counter(by_id[element].position for element in out_ids)\n    estimate = 1\n    for pos, count in need.items():\n        available = len(pools.get(pos, ()))\n        if available < count:\n            return 0\n        estimate *= comb(available, int(count))\n    return estimate\n\n\ndef _balanced_outgoing_shards(jobs, workers, by_id, pools):\n    workers = max(1, min(int(workers), len(jobs)))\n    shards = [[] for _ in range(workers)]\n    loads = [0] * workers\n    ranked = sorted(jobs, key=lambda job: (_outgoing_job_cost(job, by_id, pools), job[0], job[1]), reverse=True)\n    for job in ranked:\n        index = min(range(workers), key=lambda idx: (loads[idx], idx))\n        shards[index].append(job)\n        loads[index] += _outgoing_job_cost(job, by_id, pools)\n    return [tuple(shard) for shard in shards if shard]\n\n'''
     text = text[:insert_at] + helpers + text[insert_at:]
+
+    # Python requires the global declaration before any read/use in the function.
+    function_header = "def search_full_universe_packages(\n"
+    header_at = text.index(function_header)
+    body_marker = ") -> dict:\n"
+    body_at = text.index(body_marker, header_at) + len(body_marker)
+    text = text[:body_at] + "    global _PARALLEL_SEARCH_CONTEXT\n" + text[body_at:]
 
     start = "    keep_profile_cache: dict[tuple[int, ...], dict] = {}\n"
     end = "    frontier.sort(key=_rank, reverse=True)\n"
     a = text.index(start)
     b = text.index(end, a)
-    parallel_block = r'''    position_extrema = _build_position_extrema(pools, risk_by_element, max_replacements)
-    all_jobs: list[tuple[int, tuple[int, ...]]] = []
-    for k in range(1, max_replacements + 1):
-        for outs_raw in combinations(current, k):
-            outs = tuple(sorted(outs_raw, key=lambda row: (_POSITION_ORDER.get(row.position, 99), row.element)))
-            all_jobs.append((k, tuple(player.element for player in outs)))
-
-    configured_workers = max(1, int(search_cfg.get("parallel_shards") or 4))
-    cpu_workers = max(1, int(os.cpu_count() or 1))
-    workers = min(configured_workers, cpu_workers, len(all_jobs))
-    shards = _balanced_outgoing_shards(all_jobs, workers, by_id, pools)
-    diagnostics["parallel_shards"] = len(shards)
-    diagnostics["outgoing_jobs"] = len(all_jobs)
-
-    global _PARALLEL_SEARCH_CONTEXT
-    _PARALLEL_SEARCH_CONTEXT = {
-        "current": current,
-        "by_id": by_id,
-        "pools": pools,
-        "derived_budget": derived_budget,
-        "baseline_profile": baseline_profile,
-        "baseline_metrics": baseline_metrics,
-        "locked": locked,
-        "policy": policy,
-        "risk_by_element": risk_by_element,
-        "top_per_size": top_per_size,
-        "frontier_epsilon": frontier_epsilon,
-        "position_extrema": position_extrema,
-        "roll": roll,
-        "max_replacements": max_replacements,
-    }
-    try:
-        if len(shards) <= 1 or not hasattr(os, "fork"):
-            shard_results = [_parallel_search_shard(shard) for shard in shards]
-        else:
-            with ProcessPoolExecutor(max_workers=len(shards), mp_context=get_context("fork")) as executor:
-                shard_results = list(executor.map(_parallel_search_shard, shards))
-    finally:
-        _PARALLEL_SEARCH_CONTEXT = None
-
-    for result in shard_results:
-        _merge_numeric_diagnostics(diagnostics, result.get("diagnostics") or {})
-        for k in range(1, max_replacements + 1):
-            for row in (result.get("top_by_k") or {}).get(k, []):
-                _retain_top(top_by_k[k], row, top_per_size)
-        for compact in result.get("frontier") or []:
-            retained, removed = _frontier_insert(frontier, compact, frontier_epsilon)
-            if not retained:
-                diagnostics["packages_dominated_on_frontier"] += 1
-            elif removed:
-                diagnostics["packages_dominated_on_frontier"] += removed
-
-    for k in range(1, max_replacements + 1):
-        best_by_k[str(k)] = top_by_k[k][0] if top_by_k[k] else None
-
-'''
+    parallel_block = '''    position_extrema = _build_position_extrema(pools, risk_by_element, max_replacements)\n    all_jobs: list[tuple[int, tuple[int, ...]]] = []\n    for k in range(1, max_replacements + 1):\n        for outs_raw in combinations(current, k):\n            outs = tuple(sorted(outs_raw, key=lambda row: (_POSITION_ORDER.get(row.position, 99), row.element)))\n            all_jobs.append((k, tuple(player.element for player in outs)))\n\n    configured_workers = max(1, int(search_cfg.get("parallel_shards") or 4))\n    cpu_workers = max(1, int(os.cpu_count() or 1))\n    workers = min(configured_workers, cpu_workers, len(all_jobs))\n    shards = _balanced_outgoing_shards(all_jobs, workers, by_id, pools)\n    diagnostics["parallel_shards"] = len(shards)\n    diagnostics["outgoing_jobs"] = len(all_jobs)\n\n    _PARALLEL_SEARCH_CONTEXT = {\n        "current": current, "by_id": by_id, "pools": pools, "derived_budget": derived_budget,\n        "baseline_profile": baseline_profile, "baseline_metrics": baseline_metrics, "locked": locked,\n        "policy": policy, "risk_by_element": risk_by_element, "top_per_size": top_per_size,\n        "frontier_epsilon": frontier_epsilon, "position_extrema": position_extrema, "roll": roll,\n        "max_replacements": max_replacements,\n    }\n    try:\n        if len(shards) <= 1 or not hasattr(os, "fork"):\n            shard_results = [_parallel_search_shard(shard) for shard in shards]\n        else:\n            with ProcessPoolExecutor(max_workers=len(shards), mp_context=get_context("fork")) as executor:\n                shard_results = list(executor.map(_parallel_search_shard, shards))\n    finally:\n        _PARALLEL_SEARCH_CONTEXT = None\n\n    for result in shard_results:\n        _merge_numeric_diagnostics(diagnostics, result.get("diagnostics") or {})\n        for k in range(1, max_replacements + 1):\n            for row in (result.get("top_by_k") or {}).get(k, []):\n                _retain_top(top_by_k[k], row, top_per_size)\n        for compact in result.get("frontier") or []:\n            retained, removed = _frontier_insert(frontier, compact, frontier_epsilon)\n            if not retained:\n                diagnostics["packages_dominated_on_frontier"] += 1\n            elif removed:\n                diagnostics["packages_dominated_on_frontier"] += removed\n\n    for k in range(1, max_replacements + 1):\n        best_by_k[str(k)] = top_by_k[k][0] if top_by_k[k] else None\n\n'''
     text = text[:a] + parallel_block + text[b:]
 
     old_governance = '            "branch_pruning_requires_frontier_and_top_impossibility": True,\n'
@@ -267,7 +41,6 @@ def _balanced_outgoing_shards(
     if old_governance not in text:
         raise SystemExit("parallel governance target missing")
     text = text.replace(old_governance, new_governance, 1)
-
     PATH.write_text(text, encoding="utf-8")
 
 

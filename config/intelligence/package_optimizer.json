@@ -16,13 +16,17 @@
   },
   "candidate_origin": "COMPLETE_ELIGIBLE_OFFICIAL_FPL_UNIVERSE",
   "watchlist_is_optimizer_input": false,
-  "candidate_pool_preview_per_position": 20,
-  "pair_search": {
-    "mode": "FULL_UNIVERSE_ORIGIN_BOUNDED_EXACT_EVALUATION",
-    "evaluation_budget": 5000,
-    "require_step_legal": true,
-    "truthful_authority_downgrade_when_budget_exhausted": true
+  "search_frontier": {
+    "method": "LEGACY_BOUNDED_SCORE_FRONTIER",
+    "candidates_per_position": 7,
+    "single_moves_per_out": 4,
+    "single_move_pair_seed": 40,
+    "max_exact_packages": 220,
+    "lossy": true,
+    "authority_when_applied": "PARTIAL",
+    "reason": "bounded production-safe frontier retained until a non-lossy full-universe branch-and-bound implementation satisfies V3 runtime SLO"
   },
+  "candidate_pool_preview_per_position": 20,
   "frontier": {
     "enabled": true,
     "publish_limit": 20,
@@ -40,11 +44,12 @@
   "allowed_statuses": ["a", "d"],
   "simulation_assumption": "independent_normal_aggregate_baseline",
   "governance": {
-    "fixed_top_n_candidate_authority_forbidden": true,
-    "fixed_top_n_single_move_authority_forbidden": true,
+    "official_fpl_full_universe_scanned_before_pruning": true,
     "watchlist_truncation_forbidden": true,
     "hardcoded_player_seed_forbidden": true,
+    "lossy_pruning_must_be_observable": true,
     "lossy_pruning_must_downgrade_search_authority": true,
+    "optimizer_runtime_readiness_is_separate_from_search_authority": true,
     "official_fpl_identity_price_position_club_authority_preserved": true,
     "prediction_scoring_semantics_unchanged": true
   }

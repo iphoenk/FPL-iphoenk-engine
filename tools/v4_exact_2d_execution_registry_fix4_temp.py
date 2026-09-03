@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,32 +15,21 @@ def replace_once(relative: str, old: str, new: str) -> None:
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
 
-def replace_once_or_already(relative: str, old: str, new: str) -> None:
-    path = ROOT / relative
-    text = path.read_text(encoding="utf-8")
-    old_count = text.count(old)
-    new_count = text.count(new)
-    if old_count == 1:
-        path.write_text(text.replace(old, new, 1), encoding="utf-8")
-        return
-    if old_count == 0 and new_count == 1:
-        return
-    raise RuntimeError(
-        f"expected old once or new already once in {relative}, old={old_count} new={new_count}: {old[:160]!r}"
-    )
-
-
 worker = "src/services/package_optimization_shard_service.py"
 replace_once(
     worker,
     '''    started = perf_counter(); predictions=read_json(DATA/"predictions_v4.json",{}); universe=read_json(DATA/"universe.json",{}); locked=read_json(CONFIG/"locked_squad.json",{}); understat=read_json(DATA/"understat_v4.json",{}); prices=read_json(DATA/"prices.json",{})\n    planning = effective_planning_squad(locked, predictions); locked_for_search = dict(locked); locked_for_search["players"] = list(planning.get("players") or [])\n    for key in ("bank","free_transfers","transfer_cost_points","free_hit_active"): locked_for_search[key] = planning.get(key, locked.get(key))\n    candidates=build_candidates(predictions); tactical=build_tactical_interactions(predictions, universe, understat, team_system_evidence=read_json(DATA/"team_system_evidence_v4.json",{}), roster_events=read_json(DATA/"roster_events_v4.json",{}))\n''',
     '''    started = perf_counter()\n    predictions = read_json(DATA / "predictions_v4.json", {})\n    universe = read_json(DATA / "universe.json", {})\n    configured_lock = read_json(CONFIG / "locked_squad.json", {})\n    team = read_json(DATA / "team.json", {})\n    latest = read_json(DATA / "latest.json", {})\n    understat = read_json(DATA / "understat_tactical_v4.json", {})\n    prices = read_json(DATA / "prices.json", {})\n    locked_for_search = effective_planning_squad(team, configured_lock, latest)\n    candidates = build_candidates(predictions, universe)\n    tactical = build_tactical_interactions(predictions, universe, understat)\n''',
 )
-replace_once_or_already(
-    worker,
-    '''"semantic_fingerprint":_semantic_fingerprint(candidates, locked_for_search, predictions=predictions, universe=universe, understat=understat,tactical_interactions=tactical,prices=prices)''',
-    '''"semantic_fingerprint":_semantic_fingerprint(predictions, universe, locked_for_search, understat, candidates=candidates, tactical_interactions=tactical, prices=prices)''',
-)
+path = ROOT / worker
+text = path.read_text(encoding="utf-8")
+replacement = '"semantic_fingerprint":_semantic_fingerprint(predictions, universe, locked_for_search, understat, candidates=candidates, tactical_interactions=tactical, prices=prices)'
+if replacement not in text:
+    pattern = r'"semantic_fingerprint"\s*:\s*_semantic_fingerprint\([^\n}]+\)'
+    text, count = re.subn(pattern, replacement, text, count=1)
+    if count != 1:
+        raise RuntimeError("unable to normalize shard semantic fingerprint call")
+    path.write_text(text, encoding="utf-8")
 
 merge = "src/services/package_optimization_merge_service.py"
 replace_once(

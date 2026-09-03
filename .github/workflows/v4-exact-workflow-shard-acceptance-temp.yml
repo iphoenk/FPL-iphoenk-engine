@@ -27,10 +27,11 @@ jobs:
           python tools/v4_package_optimization_service_split_runner_v4_temp.py
           python tools/v4_exact_workflow_shard_patch_temp.py
           python tools/v4_exact_workflow_shard_fix1_temp.py
+          python tools/v4_exact_workflow_shard_fix2_temp.py
       - name: Compile shard architecture
         run: python -m py_compile src/engines/v4_full_universe_package_search_core.py src/engines/v4_full_universe_package_search.py src/engines/v4_full_universe_package_shard_merge.py src/services/package_optimization_shard_service.py src/services/package_optimization_merge_service.py src/services/package_optimization_service.py
       - name: Focused shard proof tests
-        run: python -m pytest -q tests/test_v4_exact_workflow_shard_merge.py tests/test_v4_package_optimization_service_boundary.py tests/test_v4_full_universe_package_search_proof.py tests/test_v4_full_universe_authority_fail_closed.py tests/test_service_orchestrator.py
+        run: python -m pytest -q tests/test_v4_exact_workflow_shard_merge.py tests/test_v4_package_optimization_service_boundary.py tests/test_v4_full_universe_package_search_proof.py tests/test_v4_full_universe_authority_fail_closed.py tests/test_service_orchestrator.py tests/test_v4_p1_structural_hardening.py
       - name: Refresh and verify architecture attestation
         run: |
           python tools/v4_architecture_guard_attest.py
@@ -65,6 +66,7 @@ jobs:
           python tools/v4_package_optimization_service_split_runner_v4_temp.py
           python tools/v4_exact_workflow_shard_patch_temp.py
           python tools/v4_exact_workflow_shard_fix1_temp.py
+          python tools/v4_exact_workflow_shard_fix2_temp.py
       - name: Run exact non-authoritative shard
         run: timeout 75s python -m src.services.package_optimization_shard_service
       - name: Verify shard SLO and authority
@@ -113,6 +115,7 @@ jobs:
           python tools/v4_package_optimization_service_split_runner_v4_temp.py
           python tools/v4_exact_workflow_shard_patch_temp.py
           python tools/v4_exact_workflow_shard_fix1_temp.py
+          python tools/v4_exact_workflow_shard_fix2_temp.py
       - uses: actions/download-artifact@v4
         with:
           pattern: v4-exact-package-shard-*

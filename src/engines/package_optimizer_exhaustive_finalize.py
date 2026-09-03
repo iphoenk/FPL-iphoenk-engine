@@ -185,12 +185,65 @@ def _structural_ok(clubs: Counter[int], outs: list[dict[str, Any]], ins: list[di
     return True, None
 
 
-def _pair_sequence(current: list[dict[str, Any]], outs: list[dict[str, Any]], ins: list[dict[str, Any]], itb: int) -> tuple[bool, list[dict[str, Any]], dict[str, Any]]:
+def _fast_step_sequence(current: list[dict[str, Any]], clubs: Counter[int], outs: list[dict[str, Any]], ins: list[dict[str, Any]], itb: int) -> tuple[bool, dict[str, Any]]:
+    """Exact hot-path adapter for 1-2 same-position replacements from a prevalidated legal squad.
+
+    Candidate construction guarantees unique non-owned incoming elements and position-preserving
+    replacements. Therefore the canonical legality checks reduce exactly to running cash and club
+    cap checks after each step. Differential tests keep this adapter locked to the canonical helper.
+    """
+    if len(outs) != len(ins) or len(outs) not in (1, 2):
+        return _step_legal_transfer_sequence(current, outs, ins, itb)
+    for out, inn in zip(outs, ins):
+        if str(out.get("position") or "") != str(inn.get("position") or ""):
+            return _step_legal_transfer_sequence(current, outs, ins, itb)
+    current_ids = {int(x.get("element") or -1) for x in current}
+    out_ids = [int(x.get("element") or -1) for x in outs]
+    in_ids = [int(x.get("element") or -1) for x in ins]
+    if len(set(out_ids)) != len(out_ids) or len(set(in_ids)) != len(in_ids) or any(x not in current_ids for x in out_ids) or any(x in current_ids for x in in_ids):
+        return _step_legal_transfer_sequence(current, outs, ins, itb)
+    orders = [(0,)] if len(outs) == 1 else [(0, 1), (1, 0)]
+    for order in orders:
+        cash = int(itb)
+        c = clubs.copy()
+        steps: list[dict[str, Any]] = []
+        valid = True
+        for idx in order:
+            outgoing, incoming = outs[idx], ins[idx]
+            cash_before = cash
+            cash += int(outgoing.get("sell_cost") or 0)
+            incoming_cost = int(incoming.get("now_cost") or 0)
+            if incoming_cost > cash:
+                valid = False
+                break
+            out_team = int(outgoing.get("team_id") or -1)
+            in_team = int(incoming.get("team_id") or -1)
+            c[out_team] -= 1
+            c[in_team] += 1
+            if in_team > 0 and c[in_team] > MAX_CLUB:
+                valid = False
+                break
+            cash -= incoming_cost
+            steps.append({
+                "out": int(outgoing.get("element") or -1),
+                "in": int(incoming.get("element") or -1),
+                "itb_before": cash_before,
+                "sell_value": int(outgoing.get("sell_cost") or 0),
+                "buy_price": incoming_cost,
+                "itb_after": cash,
+                "legal_squad_after_step": True,
+            })
+        if valid and len(steps) == len(outs):
+            return True, {"resulting_itb": cash, "steps": steps, "execution_order": list(order), "orders_checked": len(orders)}
+    return False, {"reason": "no_step_legal_execution_order", "orders_checked": len(orders)}
+
+
+def _pair_sequence(current: list[dict[str, Any]], clubs: Counter[int], outs: list[dict[str, Any]], ins: list[dict[str, Any]], itb: int) -> tuple[bool, list[dict[str, Any]], dict[str, Any]]:
     assignments = [ins]
     if outs[0].get("position") == outs[1].get("position"):
         assignments.append([ins[1], ins[0]])
     for idx, assignment in enumerate(assignments):
-        ok, seq = _step_legal_transfer_sequence(current, outs, assignment, itb)
+        ok, seq = _fast_step_sequence(current, clubs, outs, assignment, itb)
         if ok:
             seq = dict(seq)
             seq["incoming_assignment_swapped"] = bool(idx)
@@ -261,7 +314,7 @@ def _pair_partition(task: tuple[int, int]) -> dict[str, Any]:
             p_cash += reason == "cash"
             p_club += reason == "club"
             continue
-        ok, assigned, seq = _pair_sequence(_WORKER_CURRENT, outs, ins, _WORKER_ITB)
+        ok, assigned, seq = _pair_sequence(_WORKER_CURRENT, _WORKER_CLUBS, outs, ins, _WORKER_ITB)
         if not ok:
             continue
         ps += 1
@@ -310,7 +363,7 @@ def build_exhaustive(projections: dict[str, Any], team: dict[str, Any], *, top_k
                 s_cash += reason == "cash"
                 s_club += reason == "club"
                 continue
-            ok, seq = _step_legal_transfer_sequence(current, [out], [inn], itb)
+            ok, seq = _fast_step_sequence(current, clubs, [out], [inn], itb)
             if not ok:
                 continue
             ss += 1
@@ -324,35 +377,18 @@ def build_exhaustive(projections: dict[str, Any], team: dict[str, Any], *, top_k
     pc = ps = pscore = p_cash = p_club = 0
 
     if workers > 1:
-        with ProcessPoolExecutor(
-            max_workers=workers,
-            initializer=_init_pair_worker,
-            initargs=(projections.get("players") or [], current, pool, itb, context, keep, hold_h),
-        ) as executor:
-            results = executor.map(_pair_partition, pair_tasks, chunksize=1)
-            for result in results:
-                pc += int(result["pair_candidate_combinations"])
-                p_cash += int(result["pair_structural_cash_rejected"])
-                p_club += int(result["pair_structural_club_rejected"])
-                ps += int(result["pair_step_legal"])
-                pscore += int(result["pair_candidates_exact_scored"])
-                for package in result["top"]:
-                    _push(heap, package, keep)
-                for package in result["frontier"]:
-                    frontier.add(package)
+        with ProcessPoolExecutor(max_workers=workers, initializer=_init_pair_worker, initargs=(projections.get("players") or [], current, pool, itb, context, keep, hold_h)) as executor:
+            for result in executor.map(_pair_partition, pair_tasks, chunksize=1):
+                pc += int(result["pair_candidate_combinations"]); p_cash += int(result["pair_structural_cash_rejected"]); p_club += int(result["pair_structural_club_rejected"]); ps += int(result["pair_step_legal"]); pscore += int(result["pair_candidates_exact_scored"])
+                for package in result["top"]: _push(heap, package, keep)
+                for package in result["frontier"]: frontier.add(package)
     else:
         _init_pair_worker(projections.get("players") or [], current, pool, itb, context, keep, hold_h)
         for task in pair_tasks:
             result = _pair_partition(task)
-            pc += int(result["pair_candidate_combinations"])
-            p_cash += int(result["pair_structural_cash_rejected"])
-            p_club += int(result["pair_structural_club_rejected"])
-            ps += int(result["pair_step_legal"])
-            pscore += int(result["pair_candidates_exact_scored"])
-            for package in result["top"]:
-                _push(heap, package, keep)
-            for package in result["frontier"]:
-                frontier.add(package)
+            pc += int(result["pair_candidate_combinations"]); p_cash += int(result["pair_structural_cash_rejected"]); p_club += int(result["pair_structural_club_rejected"]); ps += int(result["pair_step_legal"]); pscore += int(result["pair_candidates_exact_scored"])
+            for package in result["top"]: _push(heap, package, keep)
+            for package in result["frontier"]: frontier.add(package)
 
     evaluated = 1 + sscore + pscore
     top = [x[2] for x in heap]
@@ -380,6 +416,7 @@ def build_exhaustive(projections: dict[str, Any], team: dict[str, Any], *, top_k
         "pair_candidate_combinations": pc, "pair_structural_cash_rejected": p_cash, "pair_structural_club_rejected": p_club, "pair_step_legal": ps, "pair_candidates_exact_scored": pscore,
         "pair_budget_applied": False, "exact_package_limit_applied": False, "all_step_legal_packages_scored": sscore == ss and pscore == ps,
         "lossy_pruning": False, "search_authority": "FULL", "compiled_exact_kernel": True,
+        "fast_step_legality_adapter": True, "fast_step_legality_semantics": "EXACT_UNDER_PREVALIDATED_POSITION_PRESERVING_NONOWNED_REPLACEMENT_INVARIANTS_WITH_CANONICAL_FALLBACK",
         "parallel_partitioning": workers > 1, "parallel_workers": workers, "estimated_pair_combinations": estimated_pairs,
         "partition_semantics": "OUTGOING_PAIR_DISJOINT_EXACT_PARTITIONS_LOCAL_SKYLINES_MERGED_EXACTLY",
         "authority_reason": "complete eligible Official FPL universe; zero candidate pruning; only provably illegal structural rejects; every sequentially legal package scored by the shared canonical exact kernel",
@@ -397,6 +434,7 @@ def build_exhaustive(projections: dict[str, Any], team: dict[str, Any], *, top_k
             "hardcoded_player_seed_forbidden": True, "pair_search_not_seeded_by_single_legality": True, "step_legal_transfer_recomputation": True,
             "final_squad_reoptimized_by_existing_score_package": True, "prediction_scoring_semantics_unchanged": True,
             "canonical_score_package_reused_for_every_legal_package": True, "compiled_adapter_uses_same_canonical_scoring_kernel": True,
+            "fast_step_legality_is_exact_adapter_not_new_rules_engine": True,
             "parallel_partitions_are_execution_only_not_search_pruning": True, "local_skyline_union_is_exact_global_frontier_input": True,
             "efficient_frontier_from_all_evaluated_legal_packages": True, "efficient_frontier_never_second_scoring_authority": True, "lossy_pruning_is_explicit": False,
         },

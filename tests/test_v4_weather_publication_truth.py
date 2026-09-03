@@ -45,6 +45,16 @@ def test_governed_weather_falls_back_to_raw_when_overlay_missing():
     assert out["health"]["raw_collection_status"] == "STALE"
 
 
+def test_unknown_governed_weather_state_cannot_greenwash_raw_collection():
+    weather = {"health": {"status": "PARTIAL", "reason": "SOURCE_GAP"}}
+    framework = {"weather_context": {"status": "GREEN", "reason": "INVALID_FOR_WEATHER_CONTRACT"}}
+
+    out = v4_serving_contract._governed_weather_for_publication(framework, weather)
+
+    assert out["health"]["status"] == "PARTIAL"
+    assert out["health"]["raw_collection_status"] == "PARTIAL"
+
+
 def test_weather_provider_hardening_is_bounded_and_semantics_unchanged():
     cfg = json.loads((CONFIG / "intelligence" / "weather_context.json").read_text(encoding="utf-8"))
 

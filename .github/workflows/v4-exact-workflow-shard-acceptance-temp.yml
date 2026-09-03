@@ -1,0 +1,145 @@
+name: V4 temporary exact workflow-shard acceptance
+on:
+  push:
+    branches: [codex/v4-full-universe-tactical-20260903]
+    paths:
+      - .github/workflows/v4-exact-workflow-shard-acceptance-temp.yml
+permissions:
+  contents: read
+jobs:
+  structural:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: codex/v4-full-universe-tactical-20260903
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Stage split and workflow-shard topology
+        run: |
+          python tools/v4_package_optimization_service_split_runner_v4_temp.py
+          python tools/v4_exact_workflow_shard_patch_temp.py
+      - name: Compile shard architecture
+        run: python -m py_compile src/engines/v4_full_universe_package_search_core.py src/engines/v4_full_universe_package_search.py src/engines/v4_full_universe_package_shard_merge.py src/services/package_optimization_shard_service.py src/services/package_optimization_merge_service.py src/services/package_optimization_service.py
+      - name: Focused shard proof tests
+        run: python -m pytest -q tests/test_v4_exact_workflow_shard_merge.py tests/test_v4_package_optimization_service_boundary.py tests/test_v4_full_universe_package_search_proof.py tests/test_v4_full_universe_authority_fail_closed.py tests/test_service_orchestrator.py
+      - name: Refresh and verify architecture attestation
+        run: |
+          python tools/v4_architecture_guard_attest.py
+          python -m src.services.architecture_guard_service
+      - name: Full V4 regression
+        run: python -m pytest -q
+
+  shard:
+    needs: structural
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0,1,2,3,4,5,6,7]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      V4_PACKAGE_SHARD_INDEX: ${{ matrix.shard }}
+      V4_PACKAGE_SHARD_COUNT: '8'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: codex/v4-full-universe-tactical-20260903
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install --disable-pip-version-check -r requirements.txt
+      - name: Stage exact shard implementation
+        run: |
+          python tools/v4_package_optimization_service_split_runner_v4_temp.py
+          python tools/v4_exact_workflow_shard_patch_temp.py
+      - name: Run exact non-authoritative shard
+        run: timeout 75s python -m src.services.package_optimization_shard_service
+      - name: Verify shard SLO and authority
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          i=int(os.environ['V4_PACKAGE_SHARD_INDEX'])
+          p=Path('data/package_shards')/f'shard-{i:02d}.json'
+          s=json.loads(p.read_text())
+          r=s['result']; q=r['search']; d=q['diagnostics']
+          assert s['duration_ms'] < 60000, s['duration_ms']
+          assert q['status']=='SHARD_PARTIAL_EXACT', q
+          assert q['authoritative_for_recommendation'] is False, q
+          assert r['decision_authority']=='SHARD_PARTIAL_NO_AUTHORITY', r['decision_authority']
+          assert q['heuristic_candidate_cutoff'] is False and q['beam_cutoff'] is False
+          assert d['outgoing_shard_index']==i and d['outgoing_shard_count']==8
+          assert len(d['outgoing_job_keys'])==d['outgoing_jobs_selected'] > 0
+          print({'shard':i,'duration_ms':s['duration_ms'],'outgoing_jobs':d['outgoing_jobs_selected'],'packages':d['packages_evaluated']})
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v4-exact-package-shard-${{ matrix.shard }}
+          path: data/package_shards/shard-*.json
+          if-no-files-found: error
+          retention-days: 1
+
+  fan-in:
+    needs: shard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: codex/v4-full-universe-tactical-20260903
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Stage exact shard implementation
+        run: |
+          python tools/v4_package_optimization_service_split_runner_v4_temp.py
+          python tools/v4_exact_workflow_shard_patch_temp.py
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: v4-exact-package-shard-*
+          path: data/package_shards
+          merge-multiple: true
+      - name: Exact fan-in and global proof
+        run: timeout 30s python -m src.services.package_optimization_merge_service
+      - name: Decision consumer must be fast after fan-in
+        run: /usr/bin/time -f 'decision_consumer_elapsed=%e' timeout 12s python -m src.services.optimization_slo_service
+      - name: Verify global authority and SLO split
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open('data/wc_package_audit_v4.json'))
+          m=json.load(open('data/package_optimization_manifest_v4.json'))
+          d=json.load(open('data/decision_pipeline_v4.json'))
+          s=p['search']; x=s['diagnostics']
+          assert s['status']=='FULL_UNIVERSE_PROVEN'
+          assert s['authoritative_for_recommendation'] is True
+          assert p['decision_authority']=='ENGINE_ADVISORY_ONLY_FULL_UNIVERSE_PROVEN'
+          assert s['heuristic_candidate_cutoff'] is False and s['beam_cutoff'] is False
+          assert x['workflow_shard_count']==8
+          assert x['shard_partitions_disjoint'] is True and x['shard_partitions_complete'] is True
+          assert len(x['outgoing_job_keys'])==x['outgoing_jobs_total']==x['outgoing_jobs_selected']
+          assert m['status']=='PASS' and m['execution']['topology']=='WORKFLOW_MATRIX_FANOUT_FANIN'
+          assert m['execution']['max_shard_duration_ms'] < 60000
+          assert m['execution']['merge_duration_ms'] < 15000
+          assert m['duration_ms'] < 75000
+          assert d['timings']['total_pipeline_ms'] < 5000, d['timings']
+          assert d['performance_guardrails']['package_artifact_lineage_verified'] is True
+          assert d['performance_guardrails']['package_search_recompute_in_decision_boundary'] is False
+          print({'search':s['status'],'outgoing_jobs':x['outgoing_jobs_total'],'max_shard_ms':m['execution']['max_shard_duration_ms'],'merge_ms':m['execution']['merge_duration_ms'],'decision_ms':d['timings']['total_pipeline_ms']})
+          PY

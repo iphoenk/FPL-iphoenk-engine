@@ -99,4 +99,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 420s python -m src.engines.package_optimizer_exhaustive_finalize --no-persist | tee "$RUNNER_TEMP/exhaustive-finalizer.json"
+          timeout 420s python -m src.engines.package_optimizer_exhaustive_accelerated --no-persist | tee "$RUNNER_TEMP/exhaustive-finalizer.json"

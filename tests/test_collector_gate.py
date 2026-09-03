@@ -12,7 +12,7 @@ from src.engines.collector_gate import (
     visible_report_decision,
 )
 
-ADAPTIVE_SCHEDULE = "0,5,10,20,25,35,40,45,50,55 * * * *"
+ADAPTIVE_SCHEDULE = "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
 
 
 def utc(y, m, d, hh, mm=0, ss=0):
@@ -37,7 +37,7 @@ def test_hourly_primary_always_collects():
 
 def test_adaptive_slot_skips_normal_day():
     collect, reason = should_collect(
-        "schedule", ADAPTIVE_SCHEDULE, utc(2026, 8, 25, 18, 0), utc(2026, 8, 28, 17, 30), False
+        "schedule", ADAPTIVE_SCHEDULE, utc(2026, 8, 25, 18, 2), utc(2026, 8, 28, 17, 30), False
     )
     assert collect is False
     assert reason == "adaptive_slot_not_needed"
@@ -57,14 +57,14 @@ def test_deadline_day_window_is_exactly_24h_and_adaptive_only_runs_for_final_rev
 
     daytime_deadline = utc(2026, 8, 29, 11, 30)
     final_collect, final_reason = should_collect(
-        "schedule", ADAPTIVE_SCHEDULE, utc(2026, 8, 29, 10, 0), daytime_deadline, False
+        "schedule", ADAPTIVE_SCHEDULE, utc(2026, 8, 29, 10, 2), daytime_deadline, False
     )
     assert final_collect is True
     assert final_reason == "adaptive_final_review"
 
 
 def test_adaptive_slot_runs_for_live_refresh_without_authorizing_match_report_by_itself():
-    now = utc(2026, 8, 29, 13, 0)
+    now = utc(2026, 8, 29, 13, 2)
     collect, reason = should_collect(
         "schedule", ADAPTIVE_SCHEDULE, now, utc(2026, 9, 5, 17, 30), True
     )

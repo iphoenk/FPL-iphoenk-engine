@@ -1,20 +1,30 @@
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import numpy as np
 
-from src.models.package_optimizer_v2 import PARSED_FORMATIONS, POSITIONS, _f, _scoring_context, load_config
+from src.models.package_optimizer_v2 import (
+    PARSED_FORMATIONS,
+    POSITIONS,
+    CompiledPackageScorer,
+    _f,
+    _scoring_context,
+    load_config,
+)
 
 
 class ExactBatchScorer:
-    """Vectorized accelerator for canonical package scoring semantics.
+    """Guarded vectorized accelerator for canonical package scoring semantics.
 
-    This is not an independent scoring authority. It consumes the same governed
-    scoring context and is accepted for exhaustive traversal only behind
-    differential tests against ``score_package`` / ``CompiledPackageScorer``.
-    The public decision surface is rehydrated by the canonical scalar scorer.
+    This class is never an independent scoring authority. Candidates close to a
+    floating publication boundary or formation tie are re-scored by the canonical
+    ``CompiledPackageScorer`` before any result is exposed.
     """
+
+    ROUND_BOUNDARY_SCALED_EPS = 1e-5
+    FORMATION_MARGIN_EPS = 1e-9
 
     def __init__(
         self,
@@ -28,11 +38,13 @@ class ExactBatchScorer:
         self.max_horizon = int(self.context["max_horizon"])
         self.elements: list[int] = []
         self.element_to_index: dict[int, int] = {}
+        self.player_by_element: dict[int, dict[str, Any]] = {}
         positions: list[int] = []
         teams: list[int] = []
         means: list[list[float]] = []
         variances: list[list[float]] = []
         position_code = {position: index for index, position in enumerate(POSITIONS)}
+        canonical_universe: list[dict[str, Any]] = []
 
         for player in universe:
             element = int(player.get("element") or -1)
@@ -50,6 +62,8 @@ class ExactBatchScorer:
                 row_vars.append(std * std)
             self.element_to_index[element] = len(self.elements)
             self.elements.append(element)
+            self.player_by_element[element] = player
+            canonical_universe.append(player)
             positions.append(position_code[position])
             teams.append(int(player.get("team_id") or -1))
             means.append(row_means)
@@ -60,10 +74,19 @@ class ExactBatchScorer:
         self.means = np.asarray(means, dtype=np.float64)
         self.variances = np.asarray(variances, dtype=np.float64)
         self.formations = tuple((int(d), int(m), int(f)) for _, (d, m, f) in PARSED_FORMATIONS)
+        self.canonical = CompiledPackageScorer(canonical_universe, self.planning_gw, scoring_context=self.context)
+        self.last_scalar_fallback_count = 0
+        self.total_scalar_fallback_count = 0
 
     @staticmethod
     def _round3(values: np.ndarray) -> np.ndarray:
         return np.fromiter((round(float(value), 3) for value in values), dtype=np.float64, count=len(values))
+
+    @classmethod
+    def _near_round_boundary(cls, values: np.ndarray) -> np.ndarray:
+        scaled = np.asarray(values, dtype=np.float64) * 1000.0
+        fractional = scaled - np.floor(scaled)
+        return np.abs(fractional - 0.5) <= cls.ROUND_BOUNDARY_SCALED_EPS
 
     def _indices(self, candidate_ids: list[list[int]]) -> np.ndarray:
         flat: list[int] = []
@@ -84,14 +107,37 @@ class ExactBatchScorer:
 
     @staticmethod
     def _ordered_sum(values: np.ndarray, columns: list[np.ndarray], rows: np.ndarray) -> np.ndarray:
-        """Vectorize across packages while preserving scalar left-to-right sum order."""
         total = np.zeros(len(rows), dtype=np.float64)
         for column in columns:
             total = total + values[rows, column]
         return total
 
+    @staticmethod
+    def _numeric_surface(score: dict[str, Any]) -> dict[str, Any]:
+        return {
+            key: score.get(key)
+            for key in (
+                "valid",
+                "horizons",
+                "objective_mean",
+                "objective_std",
+                "change_penalty_points",
+                "team_cluster_penalty_points",
+                "robust_score",
+            )
+            if key in score
+        }
+
+    def _canonical_surface(self, ids: list[int], changes: int) -> dict[str, Any]:
+        return self._numeric_surface(
+            self.canonical.score(
+                [self.player_by_element[int(element)] for element in ids],
+                changes=int(changes),
+            )
+        )
+
     def score_ids_compact(self, candidate_ids: list[list[int]], *, changes: int) -> list[dict[str, Any]]:
-        """Score equal-layout legal squads and return decision-bearing numeric fields."""
+        self.last_scalar_fallback_count = 0
         if not candidate_ids:
             return []
         if int(changes) > int(self.context["change_cap"]):
@@ -116,6 +162,7 @@ class ExactBatchScorer:
         total_var = np.zeros(n, dtype=np.float64)
         horizon_means: dict[int, np.ndarray] = {}
         horizon_stds: dict[int, np.ndarray] = {}
+        scalar_required = np.zeros(n, dtype=bool)
         bench_weight = float(self.context["bench_weight"])
         captain_weight = float(self.context["captain_weight"])
 
@@ -138,6 +185,9 @@ class ExactBatchScorer:
                 formation_means.append(self._ordered_sum(gw_means, selected_columns, rows))
             fm = np.stack(formation_means, axis=1)
             best_formation = np.argmax(fm, axis=1)
+            if fm.shape[1] > 1:
+                sorted_fm = np.sort(fm, axis=1)
+                scalar_required |= (sorted_fm[:, -1] - sorted_fm[:, -2]) <= self.FORMATION_MARGIN_EPS
             selected_counts = np.asarray(self.formations, dtype=np.int8)[best_formation]
 
             starter_mask = np.zeros((n, width), dtype=bool)
@@ -162,10 +212,6 @@ class ExactBatchScorer:
                     lineup_mean = lineup_mean + np.where(selected, gw_means[rows, column], 0.0)
                     lineup_var = lineup_var + np.where(selected, gw_vars[rows, column], 0.0)
 
-            # Canonical scorer does not sum the bench directly. It Python-sums
-            # the complete candidate in input order, then subtracts lineup.
-            # Preserve that exact floating operation order to keep 0.001 output
-            # boundaries identical to _score_compiled_rows.
             all_mean = np.zeros(n, dtype=np.float64)
             all_var = np.zeros(n, dtype=np.float64)
             for column in range(width):
@@ -187,8 +233,11 @@ class ExactBatchScorer:
 
             elapsed = offset + 1
             if elapsed in self.context["horizon_set"]:
+                raw_std = np.sqrt(total_var)
+                scalar_required |= self._near_round_boundary(total_mean)
+                scalar_required |= self._near_round_boundary(raw_std)
                 horizon_means[elapsed] = self._round3(total_mean)
-                horizon_stds[elapsed] = self._round3(np.sqrt(total_var))
+                horizon_stds[elapsed] = self._round3(raw_std)
 
         cfg = self.context["cfg"]
         cluster = cfg.get("team_cluster_penalty") or {}
@@ -208,18 +257,21 @@ class ExactBatchScorer:
         horizons = [int(x) for x in self.context["horizons"]]
         weights = self.context["weights"]
         weight_sum = sum(float(weights.get(str(h), 0.0)) for h in horizons)
-        if weight_sum <= 0:
-            return [{"valid": False, "reason": "invalid_horizon_weight_sum"} for _ in candidate_ids]
         normalized = {h: float(weights.get(str(h), 0.0)) / weight_sum for h in horizons}
         change_penalty = int(changes) * float(self.context["change_penalty_points"])
         risk_aversion = float(self.context["risk_aversion"])
 
         out: list[dict[str, Any]] = []
         for row_index in range(n):
+            if bool(scalar_required[row_index]):
+                out.append(self._canonical_surface(candidate_ids[row_index], int(changes)))
+                self.last_scalar_fallback_count += 1
+                self.total_scalar_fallback_count += 1
+                continue
             horizon_rows = {str(h): {"valid": True, "mean": float(horizon_means[h][row_index]), "std": float(horizon_stds[h][row_index])} for h in horizons}
             objective_mean = sum(normalized[h] * horizon_rows[str(h)]["mean"] for h in horizons)
             objective_var = sum((normalized[h] ** 2) * (horizon_rows[str(h)]["std"] ** 2) for h in horizons)
-            objective_std = objective_var ** 0.5
+            objective_std = math.sqrt(objective_var)
             robust = objective_mean - risk_aversion * objective_std - change_penalty - float(cluster_penalty[row_index])
             out.append({
                 "valid": True,
@@ -234,7 +286,6 @@ class ExactBatchScorer:
 
 
 def exact_skyline_indices(metrics: np.ndarray, *, eps: float = 1e-12) -> np.ndarray:
-    """Return exact Pareto skyline indices for [max4, min changes, min std]."""
     values = np.asarray(metrics, dtype=np.float64)
     if values.ndim != 2 or values.shape[1] != 6:
         raise ValueError("skyline metrics must have shape (n, 6)")

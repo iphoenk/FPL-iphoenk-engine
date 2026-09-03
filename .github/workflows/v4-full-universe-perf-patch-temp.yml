@@ -1,0 +1,240 @@
+name: V4 temporary exact-search performance patch
+
+on:
+  push:
+    branches:
+      - codex/v4-full-universe-tactical-20260903
+    paths:
+      - .github/workflows/v4-full-universe-perf-patch-temp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: codex/v4-full-universe-tactical-20260903
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Patch exact full-universe hot path without search truncation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/engines/v4_full_universe_package_search_core.py')
+          text = path.read_text(encoding='utf-8')
+
+          def replace_between(source, start, end, replacement):
+              a = source.index(start)
+              b = source.index(end, a)
+              return source[:a] + replacement.rstrip() + '\n\n' + source[b:]
+
+          risk_block = r'''def _package_risk_delta(
+              outs: tuple[Candidate, ...],
+              ins: tuple[Candidate, ...],
+              interaction_map: dict[int, dict],
+              price_map: dict[int, dict],
+              risk_by_element: dict[int, dict] | None = None,
+          ) -> dict:
+              cache = risk_by_element if risk_by_element is not None else {}
+
+              def risk(player: Candidate) -> dict:
+                  cached = cache.get(player.element)
+                  if cached is not None:
+                      return cached
+                  row = _player_risk(player, interaction_map, price_map)
+                  cache[player.element] = row
+                  return row
+
+              in_rows = [risk(player) for player in ins]
+              out_rows = [risk(player) for player in outs]
+
+              def avg(rows: list[dict], key: str, default: float = 0.0) -> float:
+                  return _mean([_f(row.get(key), default) for row in rows], default)
+
+              return {
+                  "projection_uncertainty": round(max(0.0, avg(in_rows, "projection_uncertainty") - avg(out_rows, "projection_uncertainty")), 4),
+                  "xmins_uncertainty": round(max(0.0, avg(in_rows, "xmins_uncertainty") - avg(out_rows, "xmins_uncertainty")), 4),
+                  "tactical_uncertainty": round(max(0.0, avg(in_rows, "tactical_uncertainty") - avg(out_rows, "tactical_uncertainty")), 4),
+                  "roster_change_uncertainty": round(max(0.0, avg(in_rows, "roster_change_uncertainty") - avg(out_rows, "roster_change_uncertainty")), 4),
+                  "price_risk": round(avg(in_rows, "price_risk", 0.2), 4),
+                  "tactical_role_confidence": round(avg(in_rows, "tactical_role_confidence"), 4),
+                  "opponent_matchup_confidence": round(avg(in_rows, "opponent_matchup_confidence"), 4),
+                  "incoming_evidence_states": [row.get("evidence_state") for row in in_rows],
+              }
+          '''
+          text = replace_between(text, 'def _package_risk_delta(', 'def _hit_cost(', risk_block)
+
+          compact_block = r'''def _compact_for_frontier(row: dict) -> dict:
+              keys = (
+                  "package_id", "replacements", "target_cost", "target_itb", "hit_cost",
+                  "net_xpts_3", "net_xpts_5", "net_xpts_10", "net_xpts_15", "adjusted_best_xi_gain_5",
+                  "adjusted_utility_gain_5", "xmins_uncertainty", "projection_uncertainty", "tactical_uncertainty",
+                  "price_risk", "roster_change_uncertainty", "tactical_role_confidence", "opponent_matchup_confidence",
+                  "structural_flexibility", "classification",
+              )
+              compact = {key: row.get(key) for key in keys}
+              compact["_out_ids"] = tuple(row.get("_out_ids") or ())
+              compact["_in_ids"] = tuple(row.get("_in_ids") or ())
+              return compact
+          '''
+          text = replace_between(text, 'def _compact_for_frontier(', 'def _rank(', compact_block)
+
+          materialize_block = r'''def _evaluate_package(
+              outs: tuple[Candidate, ...],
+              ins: tuple[Candidate, ...],
+              target: tuple[Candidate, ...],
+              target_metrics: dict,
+              baseline_metrics: dict,
+              locked: dict,
+              policy: dict,
+              interaction_map: dict[int, dict],
+              price_map: dict[int, dict],
+              risk_by_element: dict[int, dict],
+          ) -> dict:
+              k = len(ins)
+              hit = _hit_cost(k, locked, policy)
+              dx3 = _f(target_metrics.get("squad_xpts_3")) - _f(baseline_metrics.get("squad_xpts_3"))
+              dx5 = _f(target_metrics.get("squad_xpts_5")) - _f(baseline_metrics.get("squad_xpts_5"))
+              dx10 = _f(target_metrics.get("squad_xpts_10")) - _f(baseline_metrics.get("squad_xpts_10"))
+              dx15 = _f(target_metrics.get("squad_xpts_15")) - _f(baseline_metrics.get("squad_xpts_15"))
+              dxi = _f(target_metrics.get("best_xi_xpts_5")) - _f(baseline_metrics.get("best_xi_xpts_5"))
+              du = _f(target_metrics.get("bench_adjusted_utility_5")) - _f(baseline_metrics.get("bench_adjusted_utility_5"))
+              risks = _package_risk_delta(outs, ins, interaction_map, price_map, risk_by_element)
+              risk_penalty = (
+                  0.35 * risks["projection_uncertainty"]
+                  + 0.30 * risks["xmins_uncertainty"]
+                  + 0.25 * risks["tactical_uncertainty"]
+                  + 0.20 * risks["roster_change_uncertainty"]
+              )
+              adjusted_xi = dxi - hit - risk_penalty
+              adjusted_util = du - hit - risk_penalty
+              itb = int(locked.get("itb_tenths") or 0) + sum(player.cost for player in outs) - sum(player.cost for player in ins)
+              return {
+                  "package_id": _package_id(outs, ins),
+                  "replacements": k,
+                  "_out_ids": tuple(player.element for player in outs),
+                  "_in_ids": tuple(player.element for player in ins),
+                  "target_cost": int(target_metrics.get("cost") or sum(player.cost for player in target)),
+                  "target_itb": itb,
+                  "delta_cost": sum(player.cost for player in ins) - sum(player.cost for player in outs),
+                  "hit_cost": hit,
+                  "gross_xpts_3": round(dx3, 3),
+                  "gross_xpts_5": round(dx5, 3),
+                  "gross_xpts_10": round(dx10, 3),
+                  "gross_xpts_15": round(dx15, 3),
+                  "net_xpts_3": round(dx3 - hit, 3),
+                  "net_xpts_5": round(dx5 - hit, 3),
+                  "net_xpts_10": round(dx10 - hit, 3),
+                  "net_xpts_15": round(dx15 - hit, 3),
+                  "delta_squad_xpts_3": round(dx3, 3),
+                  "delta_squad_xpts_5": round(dx5, 3),
+                  "delta_squad_xpts_10": round(dx10, 3),
+                  "delta_squad_xpts_15": round(dx15, 3),
+                  "delta_best_xi_xpts_5": round(dxi, 3),
+                  "delta_bench_adjusted_utility_5": round(du, 3),
+                  "risk_penalty": round(risk_penalty, 4),
+                  "adjusted_best_xi_gain_5": round(adjusted_xi, 3),
+                  "adjusted_utility_gain_5": round(adjusted_util, 3),
+                  "projection_uncertainty": risks["projection_uncertainty"],
+                  "xmins_uncertainty": risks["xmins_uncertainty"],
+                  "tactical_uncertainty": risks["tactical_uncertainty"],
+                  "roster_change_uncertainty": risks["roster_change_uncertainty"],
+                  "price_risk": risks["price_risk"],
+                  "tactical_role_confidence": risks["tactical_role_confidence"],
+                  "opponent_matchup_confidence": risks["opponent_matchup_confidence"],
+                  "structural_flexibility": _structural_flexibility(target, itb),
+                  "classification": reference.package_class(adjusted_xi, adjusted_util, k) if k else "ROLL_BASELINE",
+              }
+
+
+          def _finalize_package(
+              row: dict,
+              *,
+              by_id: dict[int, Candidate],
+              current: tuple[Candidate, ...],
+              locked: dict,
+              prices: dict | None,
+              policy: dict,
+              budget: int,
+          ) -> dict:
+              outs = tuple(by_id[element] for element in row.get("_out_ids") or ())
+              ins = tuple(by_id[element] for element in row.get("_in_ids") or ())
+              out_ids = {player.element for player in outs}
+              target = tuple(player for player in current if player.element not in out_ids) + ins
+              legal, reason = validate_squad(target, budget)
+              if not legal:
+                  raise RuntimeError(f"retained full-universe package failed final legality proof: {reason}")
+              finalized = {key: value for key, value in row.items() if not key.startswith("_")}
+              finalized["out"] = [reference.payload(player) for player in sorted(outs, key=lambda item: (_POSITION_ORDER.get(item.position, 99), item.element))]
+              finalized["in"] = [reference.payload(player) for player in sorted(ins, key=lambda item: (_POSITION_ORDER.get(item.position, 99), item.element))]
+              finalized["price_scenario"] = projected_price_scenario(outs, ins, locked, prices)
+              finalized["staggered_best_route"] = _staggered_best_route(outs, ins, locked, policy)
+              finalized["governance"] = {
+                  "tactical_direct_xpts_mutation": False,
+                  "price_alone_can_authorize_transfer": False,
+                  "watchlist_candidate_authority": False,
+                  "post_transfer_legality_recomputed": True,
+                  "expensive_evidence_materialized_only_after_exact_selection": True,
+              }
+              return finalized
+          '''
+          text = replace_between(text, 'def _materialize_package(', 'def _frontier_categories(', materialize_block)
+
+          old_setup = '''    interaction_map = _interaction_rows(interactions)\n    price_map = _price_rows(prices)\n\n    pruned_external, pruning_proofs = safe_prune_incoming_players(reconciled, owned_ids)'''
+          new_setup = '''    interaction_map = _interaction_rows(interactions)\n    price_map = _price_rows(prices)\n    risk_by_element = {player.element: _player_risk(player, interaction_map, price_map) for player in reconciled}\n\n    pruned_external, pruning_proofs = safe_prune_incoming_players(reconciled, owned_ids)'''
+          if old_setup not in text:
+              raise SystemExit('setup replacement target missing')
+          text = text.replace(old_setup, new_setup, 1)
+
+          old_cache = '''    keep_profile_cache: dict[tuple[int, ...], dict] = {}\n    for k in range(1, max_replacements + 1):'''
+          new_cache = '''    keep_profile_cache: dict[tuple[int, ...], dict] = {}\n    chosen_profile_cache: dict[tuple[int, ...], dict] = {}\n    position_prefix_cache: dict = {}\n    for k in range(1, max_replacements + 1):'''
+          if old_cache not in text:
+              raise SystemExit('cache replacement target missing')
+          text = text.replace(old_cache, new_cache, 1)
+
+          old_loop = '''            for ins_raw in _incoming_combinations(pools, need, keep, derived_budget, diagnostics):\n                ins = tuple(sorted(ins_raw, key=lambda row: (_POSITION_ORDER.get(row.position, 99), row.element)))\n                target = keep + ins\n                ok, why = validate_squad(target, derived_budget)\n                if not ok:\n                    diagnostics["packages_rejected_by_legality"] += 1\n                    continue\n                diagnostics["packages_evaluated"] += 1\n                chosen_profile = _chosen_profile(ins)\n                target_metrics = _metrics_from_profiles(keep_profile, chosen_profile)\n                row = _materialize_package(\n                    outs, ins, target, target_metrics, baseline_metrics, locked, policy, interaction_map, prices,\n                )'''
+          new_loop = '''            for ins_raw in _incoming_combinations(pools, need, keep, derived_budget, diagnostics):\n                ins = tuple(sorted(ins_raw, key=lambda row: (_POSITION_ORDER.get(row.position, 99), row.element)))\n                target = keep + ins\n                # Exact legality is enforced by construction in _incoming_combinations:\n                # position counts are restored from `need`, candidates are unowned/unique,\n                # budget is bounded, and keep+incoming club counts are checked <= MAX_PER_CLUB.\n                diagnostics["packages_evaluated"] += 1\n                in_ids = tuple(player.element for player in ins)\n                chosen_profile = chosen_profile_cache.get(in_ids)\n                if chosen_profile is None:\n                    chosen_profile = _chosen_profile(ins)\n                    chosen_profile_cache[in_ids] = chosen_profile\n                target_metrics = _metrics_from_profiles(\n                    keep_profile, chosen_profile, position_prefix_cache=position_prefix_cache,\n                )\n                row = _evaluate_package(\n                    outs, ins, target, target_metrics, baseline_metrics, locked, policy, interaction_map, price_map, risk_by_element,\n                )'''
+          if old_loop not in text:
+              raise SystemExit('main loop replacement target missing')
+          text = text.replace(old_loop, new_loop, 1)
+
+          old_tail = '''    frontier.sort(key=_rank, reverse=True)\n    diagnostics["packages_retained_on_frontier"] = len(frontier)\n    packages = [row for k in range(1, max_replacements + 1) for row in top_by_k[k]]\n    best_candidates = [row for row in best_by_k.values() if row]\n    recommended = max(best_candidates, key=_rank) if best_candidates else None\n    if recommended and _f(recommended.get("adjusted_utility_gain_5")) <= 0:\n        recommended = None\n    overall = (recommended or roll).get("classification") or "ROLL_BASELINE"\n    categories = _frontier_categories(frontier, _compact_for_frontier(roll))'''
+          new_tail = '''    frontier.sort(key=_rank, reverse=True)\n    diagnostics["packages_retained_on_frontier"] = len(frontier)\n\n    finalized_cache: dict[str, dict] = {}\n    def finalize(row: dict | None) -> dict | None:\n        if row is None:\n            return None\n        package_id = str(row.get("package_id") or "")\n        if package_id == "ROLL_BASELINE":\n            return roll\n        cached = finalized_cache.get(package_id)\n        if cached is None:\n            cached = _finalize_package(\n                row, by_id=by_id, current=current, locked=locked, prices=prices, policy=policy, budget=derived_budget,\n            )\n            finalized_cache[package_id] = cached\n        return cached\n\n    frontier = [finalize(row) for row in frontier]\n    top_by_k = {k: [finalize(row) for row in rows] for k, rows in top_by_k.items()}\n    best_by_k = {key: finalize(row) for key, row in best_by_k.items()}\n    packages = [row for k in range(1, max_replacements + 1) for row in top_by_k[k]]\n    best_candidates = [row for row in best_by_k.values() if row]\n    recommended = max(best_candidates, key=_rank) if best_candidates else None\n    if recommended and _f(recommended.get("adjusted_utility_gain_5")) <= 0:\n        recommended = None\n    overall = (recommended or roll).get("classification") or "ROLL_BASELINE"\n    categories = _frontier_categories(frontier, roll)'''
+          if old_tail not in text:
+              raise SystemExit('tail replacement target missing')
+          text = text.replace(old_tail, new_tail, 1)
+
+          old_governance = '''            "global_optimality_claim_requires_safe_pruning_proof": True,\n        },'''
+          new_governance = '''            "global_optimality_claim_requires_safe_pruning_proof": True,\n            "all_enumerated_packages_legal_by_exact_generator_constraints": True,\n            "retained_packages_revalidated_with_canonical_validate_squad": True,\n            "expensive_evidence_materialized_only_after_exact_selection": True,\n        },'''
+          if old_governance not in text:
+              raise SystemExit('governance replacement target missing')
+          text = text.replace(old_governance, new_governance, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Run focused regression tests
+        run: |
+          python -m pytest -q \
+            tests/test_v4_full_universe_package_search_proof.py \
+            tests/test_v4_full_universe_authority_fail_closed.py \
+            tests/test_v496_e2e_performance_hardening.py \
+            tests/test_v4_p1_structural_hardening.py
+      - name: Refresh governed architecture attestation
+        run: python tools/v4_architecture_guard_attest.py
+      - name: Commit exact performance hardening
+        run: |
+          set -euo pipefail
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/engines/v4_full_universe_package_search_core.py config/architecture_guard_attestation.json
+          git diff --cached --quiet && exit 0
+          git commit -m "perf(v4): defer full-universe package evidence materialization"
+          git push origin HEAD:codex/v4-full-universe-tactical-20260903

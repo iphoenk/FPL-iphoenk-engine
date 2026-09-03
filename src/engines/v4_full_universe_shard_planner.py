@@ -51,6 +51,13 @@ def load_registry() -> dict[str, Any]:
     return registry
 
 
+def load_plan(path: Path = PLAN_FILE) -> dict[str, Any]:
+    plan = read_json(path, {}) or {}
+    if plan.get("contract") != CONTRACT:
+        raise RuntimeError("invalid V4 full-universe shard plan")
+    return plan
+
+
 def _execution_code_fingerprint() -> str:
     payload = {
         str(path): file_digest(path)

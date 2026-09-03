@@ -7,6 +7,11 @@ from typing import Any
 
 from src.utils import DATA, ROOT, atomic_json, read_json
 
+XMINS_CONTRACT_VALIDATION = read_json(ROOT / "config" / "intelligence" / "xmins_v2.json", {}).get("contract_validation") or {}
+PROJECTION_VALIDATION = read_json(ROOT / "config" / "intelligence" / "projection.json", {}).get("validation") or {}
+XMINS_PROBABILITY_SUM_TOLERANCE = float(XMINS_CONTRACT_VALIDATION["probability_sum_tolerance"])
+MINIMUM_PLAYER_COVERAGE_RATIO = float(PROJECTION_VALIDATION["minimum_player_coverage_ratio"])
+
 HEALTH_PATH = DATA / "framework_health.json"
 PREFLIGHT_PATH = DATA / "framework_health_preflight.json"
 CHALLENGER_REGISTRY_PATH = ROOT / "config" / "intelligence" / "challenger_registry.json"
@@ -30,7 +35,7 @@ def _projection_probe() -> tuple[bool, dict[str, Any]]:
         probs = sum(float(x.get(k) or 0) for k in ("start_probability", "bench_probability", "dnp_probability"))
         interval = x.get("expected_minutes_interval") or []
         rows = p.get("xpts_by_gw") or []
-        if abs(probs - 1.0) < 0.002 and 0 <= float(x.get("expected_minutes") or 0) <= 90:
+        if abs(probs - 1.0) < XMINS_PROBABILITY_SUM_TOLERANCE and 0 <= float(x.get("expected_minutes") or 0) <= 90:
             valid += 1
         if len(interval) == 2 and all(r.get("std") is not None for r in rows):
             uncertainty += 1
@@ -39,7 +44,7 @@ def _projection_probe() -> tuple[bool, dict[str, Any]]:
         if len(rows) >= 15:
             horizon15 += 1
     coverage = valid / max(1, expected)
-    ok = expected > 0 and len(players) == expected and coverage >= 0.95 and uncertainty == len(players) and horizon15 == len(players)
+    ok = expected > 0 and len(players) == expected and coverage >= MINIMUM_PLAYER_COVERAGE_RATIO and uncertainty == len(players) and horizon15 == len(players)
     return ok, {
         "players": len(players),
         "expected": expected,

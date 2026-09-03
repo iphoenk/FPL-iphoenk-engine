@@ -289,7 +289,9 @@ def run() -> dict:
     for row in pr.get("players", []):
         xm = row.get("xmins", {})
         prob = sum(float(xm.get(k, 0)) for k in ("start_probability", "bench_probability", "dnp_probability"))
-        assert abs(prob - 1.0) < 0.002
+        xmins_contract = (load_config("config/intelligence/xmins_v2.json").get("contract_validation") or {})
+        probability_tolerance = float(xmins_contract["probability_sum_tolerance"])
+        assert abs(prob - 1.0) < probability_tolerance
         assert len(row.get("xpts_by_gw", [])) == STRATEGIC_HORIZON_GWS
         assert len(xm.get("expected_minutes_interval", [])) == 2
 

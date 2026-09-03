@@ -524,16 +524,14 @@ def main() -> int:
     args = parser.parse_args()
     if args.command == "plan":
         result = build_plan()
-        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.output).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        atomic_json(Path(args.output), result)
         print(json.dumps({"status": "READY", "matrix": result["matrix"], "shard_count": result["shard_count"], "task_count": result["task_count"], "estimated_pair_combinations": result["estimated_pair_combinations"]}, ensure_ascii=False))
         return 0
     if args.command == "run-shard":
         plan = json.loads(Path(args.plan).read_text(encoding="utf-8"))
         result = run_shard(plan, args.shard_id)
         output = Path(args.output)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+        atomic_json(output, result)
         print(json.dumps({"status": "READY", "shard_id": result["shard_id"], "tasks": result["task_count"], "pair_exact_scored": (result.get("counters") or {}).get("pair_candidates_exact_scored"), "scalar_fallbacks": (result.get("counters") or {}).get("batch_scalar_fallback_count")}, ensure_ascii=False))
         return 0
     if args.command == "reduce":

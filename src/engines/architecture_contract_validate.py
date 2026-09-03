@@ -296,7 +296,7 @@ def run() -> dict:
     if battle_threshold_value <= 0:
         errors.append("lineup battle close_margin_threshold must be positive and config-owned")
     lineup_text = (ROOT / "src" / "engines" / "lineup_governance.py").read_text(encoding="utf-8")
-    if "margin < 0.75" in lineup_text:
+    if re.search(r"\bmargin\s*(?:<|<=|>|>=)\s*\d+(?:\.\d+)?\b", lineup_text):
         errors.append("lineup battle threshold is hardcoded instead of config-owned")
 
     orchestrator_text = (ROOT / "src" / "runtime_v3" / "orchestrator.py").read_text(encoding="utf-8")

@@ -7,6 +7,8 @@ import subprocess
 import time
 from pathlib import Path
 
+from src.utils import atomic_json
+
 
 def run(command: list[str], output: Path) -> int:
     if not command:
@@ -22,8 +24,7 @@ def run(command: list[str], output: Path) -> int:
         "exit_code": int(completed.returncode),
         "command_module": command[2] if len(command) >= 3 and command[0].endswith("python") and command[1] == "-m" else command[0],
     }
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+    atomic_json(output, payload)
     print(json.dumps(payload, ensure_ascii=False))
     return int(completed.returncode)
 

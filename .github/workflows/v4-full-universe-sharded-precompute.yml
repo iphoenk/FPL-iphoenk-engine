@@ -15,6 +15,10 @@ on:
       - src/engines/v4_full_universe_shard_worker.py
       - src/engines/v4_full_universe_shard_reducer.py
 
+concurrency:
+  group: v4-full-universe-sharded-precompute-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

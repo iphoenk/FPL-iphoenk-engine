@@ -77,7 +77,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with: {name: v4-full-universe-plan, path: data/runtime}
       - name: Run exact non-authoritative shard
-        run: timeout "${{ needs.plan.outputs.worker_timeout }}s" python -m src.engines.v4_full_universe_shard_worker --shard-id ${{ matrix.shard.id }}
+        run: timeout "${{ needs.plan.outputs.worker_timeout }}s" python -m src.engines.v4_full_universe_shard_worker --shard-id ${{ matrix.shard.shard_id }}
       - name: Verify shard authority is blocked
         run: |
           python - <<'PY'
@@ -94,7 +94,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: v4-full-universe-shard-${{ matrix.shard.id }}
+          name: v4-full-universe-shard-${{ matrix.shard.shard_id }}
           path: data/runtime/v4_full_universe_shards/shard_*.json
           if-no-files-found: error
           retention-days: 1

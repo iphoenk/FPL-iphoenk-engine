@@ -16,6 +16,7 @@
     "cheap_decision_consumers_execute_and_validate_directly": true,
     "expensive_deterministic_enrichment_may_use_exact_fingerprint_reuse": true,
     "self_owned_rolling_state_may_record_post_execution_fingerprint_only_when_idempotent": true,
+    "full_optimizer_reuse_requires_optimizer_config_in_prediction_fingerprint": true,
     "football_formulas_unchanged": true
   },
   "services": {
@@ -33,7 +34,8 @@
         "config/locked_squad.json",
         "config/intelligence/projection.json",
         "config/intelligence/team_strength.json",
-        "config/intelligence/xmins_v2.json"
+        "config/intelligence/xmins_v2.json",
+        "config/intelligence/package_optimizer.json"
       ]
     },
     "tactical_context": {

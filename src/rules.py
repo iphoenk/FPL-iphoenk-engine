@@ -38,7 +38,7 @@ def load_active_ruleset() -> dict[str, Any]:
     if rules.get("season") != manifest.get("season"):
         raise RuntimeError("active ruleset season does not match rules manifest")
     required_sections = {
-        "sources", "squad", "lineup", "scoring", "defensive_contributions",
+        "sources", "squad", "lineup", "transfers", "scoring", "defensive_contributions",
         "chips", "finance", "bonus_bps",
     }
     missing = sorted(required_sections - set(rules))
@@ -61,6 +61,7 @@ OFFICIAL_RULES_SOURCES = dict(ACTIVE_RULESET["sources"])
 
 SQUAD_RULES = dict(ACTIVE_RULESET["squad"])
 LINEUP_RULES = dict(ACTIVE_RULESET["lineup"])
+TRANSFER_RULES = dict(ACTIVE_RULESET["transfers"])
 SCORING_RULES = dict(ACTIVE_RULESET["scoring"])
 FINANCE_RULES = dict(ACTIVE_RULESET["finance"])
 
@@ -212,6 +213,7 @@ def ruleset_metadata() -> dict:
         "dc_rules": DC_RULES,
         "dc_cap": DC_POINTS_CAP_PER_MATCH,
         "chip_rules": CHIP_RULES,
+        "transfer_rules": TRANSFER_RULES,
         "squad_rules": SQUAD_RULES,
         "lineup_rules": LINEUP_RULES,
         "finance_rules": FINANCE_RULES,

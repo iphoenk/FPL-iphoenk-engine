@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from threading import RLock
-from typing import Any, Iterable
+from typing import Any
 
 from src.engines import v4_full_universe_package_search_core as _core
 from src.engines.v4_recommendation_sanity import _player_evidence
@@ -15,8 +15,8 @@ POLICY_FILE = _core.POLICY_FILE
 _SEARCH_LOCK = RLock()
 _POSITION_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 
-# Public compatibility aliases. The exhaustive enumeration/frontier mechanics stay
-# in one implementation module; this facade owns the production proof contract.
+# Public compatibility alias. Exhaustive enumeration/frontier mechanics stay in
+# one core implementation; this facade owns production proof and authority.
 projected_price_scenario = _core.projected_price_scenario
 
 
@@ -72,7 +72,6 @@ def _dominance_dimensions(
     future0, future1, future2 = _future_buy_costs(player, price_map)
     gw1, gw2, gw3, gw4, gw5 = _gw5(player)
     return {
-        # Minimize dimensions.
         "cost": float(player.cost),
         "projection_uncertainty": _f(risk.get("projection_uncertainty"), 1.0),
         "xmins_uncertainty": _f(risk.get("xmins_uncertainty"), 1.0),
@@ -84,7 +83,6 @@ def _dominance_dimensions(
         "projected_buy_cost_2": float(future2),
         "dnp_probability_5": _f(sanity.get("dnp_probability_5"), 1.0),
         "rate_spike_risk": _f(sanity.get("rate_spike_risk"), 1.0),
-        # Maximize dimensions.
         "xpts_3": float(player.x3),
         "xpts_5": float(player.x5),
         "xpts_10": float(player.x10),
@@ -172,14 +170,7 @@ def safe_prune_incoming_players(
     universe: dict | None = None,
     epsilon: float | None = None,
 ) -> tuple[list[Candidate], list[dict]]:
-    """Prune only when replacement is safe for search *and* downstream sanity.
-
-    Legality equivalence requires identical FPL position and club. The dominator
-    must then be no worse across every numeric dimension that can affect package
-    frontier/risk, projected affordability, or recommendation-sanity confidence.
-    This makes the pruning proof compatible with the full decision chain rather
-    than xPts-only shortlist semantics.
-    """
+    """Prune only when replacement is safe for search and downstream sanity."""
     policy = _core._policy()
     cfg = policy.get("search") or {}
     epsilon = _f(cfg.get("dominance_epsilon"), 1e-6) if epsilon is None else float(epsilon)
@@ -230,7 +221,6 @@ def safe_prune_incoming_players(
             ]
             if not dominators:
                 continue
-            # Deterministic proof selection independent of names/watchlist/benchmarks.
             left = min(dominators, key=lambda row: (row.cost, -row.x5, -row.x15, row.element))
             pruned.add(right.element)
             proofs.append({
@@ -250,6 +240,32 @@ def safe_prune_incoming_players(
             })
     kept = [row for row in external if row.element not in pruned]
     return kept, proofs
+
+
+def _apply_authority_gate(out: dict, *, global_proof: bool) -> dict:
+    search = out.setdefault("search", {})
+    search["authoritative_for_recommendation"] = global_proof
+    if global_proof:
+        out["decision_authority"] = "ENGINE_ADVISORY_ONLY_FULL_UNIVERSE_PROVEN"
+        return out
+
+    # Preserve heuristic discovery for diagnostics only. Canonical consumers use
+    # the legacy field names below, so clear them rather than risk silent use.
+    out["heuristic_discovery"] = {
+        "overall_verdict": out.get("overall_verdict"),
+        "recommended_package": out.get("recommended_package"),
+        "best_by_replacement_count": out.get("best_by_replacement_count"),
+        "packages": out.get("packages"),
+        "efficient_frontier": out.get("efficient_frontier"),
+    }
+    out["overall_verdict"] = "FULL_UNIVERSE_HEURISTIC"
+    out["recommended_package"] = None
+    out["best_by_replacement_count"] = None
+    out["packages"] = {}
+    out["decision_authority"] = "BLOCKED_HEURISTIC_SEARCH"
+    out.setdefault("governance", {})["heuristic_discovery_is_diagnostic_only"] = True
+    out["governance"]["canonical_recommendation_fields_fail_closed"] = True
+    return out
 
 
 def search_full_universe_packages(
@@ -287,10 +303,6 @@ def search_full_universe_packages(
             epsilon=epsilon,
         )
 
-    # The core owns exhaustive enumeration/frontier mechanics. Replace only its
-    # pruning callback for the duration of one search call, under a process-local
-    # lock, then restore it. Package runtime runs in its own worker process, but
-    # the lock also makes direct threaded test/use safe and deterministic.
     with _SEARCH_LOCK:
         original = _core.safe_prune_incoming_players
         _core.safe_prune_incoming_players = governed_pruner
@@ -320,7 +332,10 @@ def search_full_universe_packages(
         and proof.get("safe_recommendation_sanity_equivalence") is True
         for proof in proofs
     )
-    configured_exact = not bool((_core._policy().get("search") or {}).get("allow_heuristic_candidate_cutoff")) and not bool((_core._policy().get("search") or {}).get("allow_beam_cutoff"))
+    configured_exact = (
+        not bool((_core._policy().get("search") or {}).get("allow_heuristic_candidate_cutoff"))
+        and not bool((_core._policy().get("search") or {}).get("allow_beam_cutoff"))
+    )
     global_proof = configured_exact and all_safe
     search.update({
         "status": "FULL_UNIVERSE_PROVEN" if global_proof else "FULL_UNIVERSE_HEURISTIC",
@@ -339,4 +354,4 @@ def search_full_universe_packages(
     })
     if not global_proof:
         (out.get("efficient_frontier") or {})["status"] = "PARTIAL"
-    return out
+    return _apply_authority_gate(out, global_proof=global_proof)

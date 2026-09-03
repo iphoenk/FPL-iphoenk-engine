@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
+
+from src.utils import atomic_json, read_json
 
 PRICE_MOVER_COUNT = 20
 _CYCLE_RANK = {"NEXT_UPDATE": 4, "PLUS_1_UPDATE": 3, "PLUS_2_UPDATE": 2, "NONE": 1}
@@ -100,18 +101,14 @@ def apply_ranked_price_movers(payload: dict[str, Any], limit: int = PRICE_MOVER_
     return out
 
 
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-
 def patch_price_artifacts(data_dir: str | Path = "data") -> dict[str, Any]:
     root = Path(data_dir)
     prices_path = root / "prices.json"
     if not prices_path.exists():
         raise FileNotFoundError(prices_path)
-    prices = json.loads(prices_path.read_text(encoding="utf-8"))
+    prices = read_json(prices_path, {})
     patched = apply_ranked_price_movers(prices)
-    _write_json(prices_path, patched)
+    atomic_json(prices_path, patched)
 
     summary = {
         "top_20_risers": patched["top_20_risers"],
@@ -120,13 +117,13 @@ def patch_price_artifacts(data_dir: str | Path = "data") -> dict[str, Any]:
     }
     latest_path = root / "latest.json"
     if latest_path.exists():
-        latest = json.loads(latest_path.read_text(encoding="utf-8"))
+        latest = read_json(latest_path, {})
         latest.setdefault("price_summary", {}).update(summary)
-        _write_json(latest_path, latest)
+        atomic_json(latest_path, latest)
 
     alerts_path = root / "price_alerts.json"
     if alerts_path.exists():
-        alerts = json.loads(alerts_path.read_text(encoding="utf-8"))
+        alerts = read_json(alerts_path, {})
         alerts.update(summary)
-        _write_json(alerts_path, alerts)
+        atomic_json(alerts_path, alerts)
     return patched["price_mover_serving_contract"]

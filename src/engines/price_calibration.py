@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from src.utils import ROOT
+from src.utils import ROOT, atomic_json, read_json
 
 CONFIG_PATH = ROOT / "config" / "intelligence" / "price_radar.json"
 
@@ -26,12 +26,7 @@ def _config() -> dict[str, Any]:
 
 def capture_previous_state(root: Path) -> dict[str, Any]:
     path = root / "price_trajectory.json"
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
+    payload = read_json(path, {})
     return copy.deepcopy(payload) if isinstance(payload, dict) else {}
 
 
@@ -179,8 +174,8 @@ def patch_files(root: Path, previous_state: dict[str, Any] | None = None) -> dic
     if not trajectory_path.exists() or not prices_path.exists():
         return {}
 
-    trajectory = json.loads(trajectory_path.read_text(encoding="utf-8"))
-    prices = json.loads(prices_path.read_text(encoding="utf-8"))
+    trajectory = read_json(trajectory_path, {})
+    prices = read_json(prices_path, {})
     current_rows = list(prices.get("players") or [])
     current_map = {str(row.get("element")): row for row in current_rows if row.get("element") is not None}
     prior_players = previous_state.get("players") or {}
@@ -217,10 +212,10 @@ def patch_files(root: Path, previous_state: dict[str, Any] | None = None) -> dic
         "events": events,
         "summary": summary,
     }
-    trajectory_path.write_text(json.dumps(trajectory, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    atomic_json(trajectory_path, trajectory)
 
     if latest_path.exists():
-        latest = json.loads(latest_path.read_text(encoding="utf-8"))
+        latest = read_json(latest_path, {})
         latest["price_model_health"] = summary
-        latest_path.write_text(json.dumps(latest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        atomic_json(latest_path, latest)
     return summary

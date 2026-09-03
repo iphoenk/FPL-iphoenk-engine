@@ -35,25 +35,70 @@ helper = r'''    def _capacity_key(
         return value
 
     @staticmethod
-    def _scalar_index(capacity: int) -> dict[str, Any]:
+    def _gw_flat(row: IncomingState) -> tuple[float, ...]:
+        return tuple(
+            value
+            for position_values in row.gw_values
+            for gw_values in position_values
+            for value in gw_values
+        )
+
+    def _rank_monotone_key(self, row: IncomingState) -> tuple:
+        # Dominance-consistent total order. If A rank-dominates B, A must sort
+        # before B. Therefore later rows can never displace earlier rows.
+        return (
+            -row.x5,
+            -row.x15,
+            row.cost,
+            row.projection_uncertainty,
+            row.xmins_uncertainty,
+            row.tactical_uncertainty,
+            row.roster_change_uncertainty,
+            tuple(-value for value in self._gw_flat(row)),
+            _state_key(row),
+        )
+
+    @staticmethod
+    def _frontier_monotone_key(row: IncomingState) -> tuple:
+        # Includes every scalar no-worse dimension used by frontier_dominates.
+        return (
+            -row.x5,
+            -row.x15,
+            -row.x10,
+            -row.x3,
+            row.cost,
+            row.projection_uncertainty,
+            row.xmins_uncertainty,
+            row.tactical_uncertainty,
+            row.roster_change_uncertainty,
+            row.price_risk,
+            -row.tactical_role_confidence,
+            -row.opponent_matchup_confidence,
+            _state_key(row),
+        )
+
+    @staticmethod
+    def _scalar_index(capacity: int, gw_width: int = 0) -> dict[str, Any]:
         names = (
             "cost", "x3", "x5", "x10", "x15",
             "projection_uncertainty", "xmins_uncertainty", "tactical_uncertainty",
             "roster_change_uncertainty", "price_risk", "tactical_role_confidence",
             "opponent_matchup_confidence",
         )
-        return {
+        result = {
             "capacity": int(capacity),
             "count": 0,
-            "rows": [],
+            "gw_width": int(gw_width),
             **{
                 name: np.empty(int(capacity), dtype=np.int64 if name == "cost" else np.float64)
                 for name in names
             },
         }
+        if gw_width:
+            result["gw"] = np.empty((int(capacity), int(gw_width)), dtype=np.float64)
+        return result
 
-    @staticmethod
-    def _scalar_index_add(index: dict[str, Any], row: IncomingState) -> None:
+    def _scalar_index_add(self, index: dict[str, Any], row: IncomingState) -> None:
         pos = int(index["count"])
         index["cost"][pos] = row.cost
         index["x3"][pos] = row.x3
@@ -67,14 +112,13 @@ helper = r'''    def _capacity_key(
         index["price_risk"][pos] = row.price_risk
         index["tactical_role_confidence"][pos] = row.tactical_role_confidence
         index["opponent_matchup_confidence"][pos] = row.opponent_matchup_confidence
-        index["rows"].append(row)
+        gw_width = int(index.get("gw_width") or 0)
+        if gw_width:
+            values = self._gw_flat(row)
+            if len(values) != gw_width:
+                raise RuntimeError("rank GW vector width drifted inside exact stage")
+            index["gw"][pos, :] = values
         index["count"] = pos + 1
-
-    def _scalar_index_rebuild(self, index: dict[str, Any], rows: list[IncomingState]) -> None:
-        index["count"] = 0
-        index["rows"] = []
-        for row in rows:
-            self._scalar_index_add(index, row)
 
     def _rank_index_dominated(self, index: dict[str, Any], candidate: IncomingState) -> bool:
         n = int(index["count"])
@@ -92,19 +136,18 @@ helper = r'''    def _capacity_key(
             | (index["x15"][:n] > candidate.x15 + _TWO_DP_ROUND_ERROR)
             | (index["cost"][:n] < candidate.cost)
         )
-        candidates = np.flatnonzero(mask)
+        gw_width = int(index.get("gw_width") or 0)
+        if gw_width:
+            candidate_gw = np.asarray(self._gw_flat(candidate), dtype=np.float64)
+            mask &= np.all(index["gw"][:n, :] >= candidate_gw, axis=1)
+        matched = int(np.count_nonzero(mask))
+        self.stats["dominance_full_checks"] += matched
         self.stats["dominance_pairs_skipped_by_scalar_mask"] = int(
             self.stats.get("dominance_pairs_skipped_by_scalar_mask") or 0
-        ) + max(0, n - int(candidates.size))
-        checks = 0
-        rows = index["rows"]
-        for idx in candidates:
-            checks += 1
-            if _gw_no_worse(rows[int(idx)], candidate):
-                self.stats["dominance_full_checks"] += checks
-                self.stats["frontier_insert_rejected"] += 1
-                return True
-        self.stats["dominance_full_checks"] += checks
+        ) + max(0, n - matched)
+        if matched:
+            self.stats["frontier_insert_rejected"] += 1
+            return True
         return False
 
     def _frontier_index_dominated(self, index: dict[str, Any], candidate: IncomingState) -> bool:
@@ -150,23 +193,13 @@ helper = r'''    def _capacity_key(
         candidates: list[IncomingState],
     ) -> list[list[IncomingState]]:
         layers = self._new_rank_layers()
-        indexes = [self._scalar_index(len(candidates)) for _ in range(self.top_keep)]
-        previous_x5: float | None = None
+        if not candidates:
+            return layers
+        gw_width = len(self._gw_flat(candidates[0]))
+        indexes = [self._scalar_index(len(candidates), gw_width) for _ in range(self.top_keep)]
         started = __import__("time").perf_counter()
-        for ordinal, candidate in enumerate(sorted(candidates, key=lambda row: (-row.x5, _state_key(row))), 1):
-            if previous_x5 is not None and candidate.x5 == previous_x5:
-                _skyband_insert(
-                    layers,
-                    candidate,
-                    top_keep=self.top_keep,
-                    frontier_epsilon=self.frontier_epsilon,
-                    relation=rank_dominates,
-                    metrics=self.stats,
-                )
-                for layer_index, layer in enumerate(layers):
-                    self._scalar_index_rebuild(indexes[layer_index], layer)
-                previous_x5 = candidate.x5
-                continue
+        ordered = sorted(candidates, key=self._rank_monotone_key)
+        for ordinal, candidate in enumerate(ordered, 1):
             for layer_index in range(self.top_keep):
                 self.stats["frontier_insert_calls"] += 1
                 if self._rank_index_dominated(indexes[layer_index], candidate):
@@ -174,7 +207,6 @@ helper = r'''    def _capacity_key(
                 layers[layer_index].append(candidate)
                 self._scalar_index_add(indexes[layer_index], candidate)
                 break
-            previous_x5 = candidate.x5
             if ordinal % 5000 == 0:
                 print(
                     "RANK_MASK_PROGRESS", ordinal, len(candidates),
@@ -192,25 +224,13 @@ helper = r'''    def _capacity_key(
     ) -> list[IncomingState]:
         layer: list[IncomingState] = []
         index = self._scalar_index(len(candidates))
-        previous_x5: float | None = None
         started = __import__("time").perf_counter()
-        for ordinal, candidate in enumerate(sorted(candidates, key=lambda row: (-row.x5, _state_key(row))), 1):
-            if previous_x5 is not None and candidate.x5 == previous_x5:
-                _front_insert(
-                    layer,
-                    candidate,
-                    frontier_epsilon=self.frontier_epsilon,
-                    relation=frontier_dominates,
-                    metrics=self.stats,
-                )
-                self._scalar_index_rebuild(index, layer)
-                previous_x5 = candidate.x5
-                continue
+        ordered = sorted(candidates, key=self._frontier_monotone_key)
+        for ordinal, candidate in enumerate(ordered, 1):
             self.stats["frontier_insert_calls"] += 1
             if not self._frontier_index_dominated(index, candidate):
                 layer.append(candidate)
                 self._scalar_index_add(index, candidate)
-            previous_x5 = candidate.x5
             if ordinal % 5000 == 0:
                 print(
                     "FRONTIER_MASK_PROGRESS", ordinal, len(candidates),

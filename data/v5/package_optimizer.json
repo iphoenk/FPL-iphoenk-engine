@@ -2237,10 +2237,10 @@
         "candidate_score": 16.173
       },
       {
-        "element": 79,
-        "name": "Evanilson",
-        "now_cost": 60,
-        "candidate_score": 15.643
+        "element": 316,
+        "name": "Emersonn",
+        "now_cost": 55,
+        "candidate_score": 15.742
       }
     ]
   },
@@ -4514,7 +4514,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 69 active price alerts"
+      "market timing context contains 71 active price alerts"
     ],
     "evidence": [
       {
@@ -4617,7 +4617,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 69
+    "alert_count": 71
   },
   "governance": {
     "candidate_generation_only": true,

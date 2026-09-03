@@ -6155,7 +6155,7 @@
       "gw": 3,
       "deadline_time": "2026-09-04T17:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-03T11:30:47.076127+00:00",
+        "generated_at": "2026-09-03T15:07:56.651190+00:00",
         "players": [
           {
             "element": 1,
@@ -7690,6 +7690,16 @@
           {
             "element": 639,
             "name": "Andrés",
+            "position": "MID",
+            "xpts": 2.493,
+            "xpts_std": 2.712,
+            "xmins": 46.2,
+            "start_probability": 0.5726,
+            "clean_sheet_probability": 0.2527
+          },
+          {
+            "element": 652,
+            "name": "Azeez",
             "position": "MID",
             "xpts": 2.493,
             "xpts_std": 2.712,
@@ -9541,10 +9551,10 @@
             "element": 340,
             "name": "Gelhardt",
             "position": "MID",
-            "xpts": 0.0,
-            "xpts_std": 1.15,
-            "xmins": 0.0,
-            "start_probability": 0.0,
+            "xpts": 2.987,
+            "xpts_std": 2.92,
+            "xmins": 46.2,
+            "start_probability": 0.5726,
             "clean_sheet_probability": 0.5171
           },
           {
@@ -9871,10 +9881,10 @@
             "element": 316,
             "name": "Emersonn",
             "position": "FWD",
-            "xpts": 2.348,
-            "xpts_std": 2.625,
-            "xmins": 40.8,
-            "start_probability": 0.5868,
+            "xpts": 3.246,
+            "xpts_std": 2.859,
+            "xmins": 54.4,
+            "start_probability": 0.7825,
             "clean_sheet_probability": 0.2382
           },
           {
@@ -10081,10 +10091,10 @@
             "element": 329,
             "name": "Rodon",
             "position": "DEF",
-            "xpts": 1.461,
-            "xpts_std": 2.207,
-            "xmins": 39.7,
-            "start_probability": 0.4348,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.1572
           },
           {
@@ -12521,10 +12531,10 @@
             "element": 543,
             "name": "Diarra",
             "position": "MID",
-            "xpts": 1.703,
-            "xpts_std": 2.416,
-            "xmins": 46.7,
-            "start_probability": 0.4848,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.0836
           },
           {
@@ -12672,6 +12682,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-03T11:30:47.784190+00:00",
+  "updated_at": "2026-09-03T15:07:57.731516+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

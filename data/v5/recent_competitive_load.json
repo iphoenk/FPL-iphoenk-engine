@@ -2,10 +2,10 @@
   "status": "ACTIVE",
   "contract": "V5_COMPETITIVE_LOAD_PRIMITIVE_V1",
   "planning_gw": 3,
-  "player_count": 651,
+  "player_count": 652,
   "state_counts": {
     "NORMAL": 100,
-    "RESTED": 551
+    "RESTED": 552
   },
   "players": {
     "1": {
@@ -2764,6 +2764,24 @@
     },
     "639": {
       "element": 639,
+      "team_id": 5,
+      "planning_gw": 3,
+      "next_pl_kickoff": "2026-09-05T14:00:00Z",
+      "last_verified_competitive_match": "2026-08-30T13:00:00+00:00",
+      "rest_hours": 145.0,
+      "last_match_minutes": 0.0,
+      "extra_time_minutes": 0.0,
+      "matches_7d": 1,
+      "matches_14d": 2,
+      "state": "RESTED",
+      "verified_non_pl_observation_count": 0,
+      "non_pl_evidence_state": "UNAVAILABLE",
+      "international_evidence": false,
+      "long_haul_evidence": false,
+      "travel_context": null
+    },
+    "652": {
+      "element": 652,
       "team_id": 5,
       "planning_gw": 3,
       "next_pl_kickoff": "2026-09-05T14:00:00Z",

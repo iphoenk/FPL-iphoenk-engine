@@ -265,7 +265,7 @@ def build_exhaustive(projections: dict[str, Any], team: dict[str, Any], *, top_k
         "candidate_origin": "COMPLETE_ELIGIBLE_OFFICIAL_FPL_UNIVERSE",
         "eligible_universe_count": sum(eligible.values()),
         "eligible_by_position": eligible,
-        "search_method": "ZERO_CANDIDATE_PRUNING_EXHAUSTIVE_SEQUENTIAL_EXACT_V4_GUARDED_BATCH",
+        "search_method": "ZERO_CANDIDATE_PRUNING_EXHAUSTIVE_SEQUENTIAL_EXACT_V3_GUARDED_BATCH",
         "candidate_pruning_applied": False,
         "candidate_pruned_count": 0,
         "fixed_top_n_per_position_applied": False,

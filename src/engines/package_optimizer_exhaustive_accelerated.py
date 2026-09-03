@@ -16,10 +16,14 @@ import numpy as np
 
 from src.engines import package_optimizer_exhaustive_finalize as base
 from src.engines.lineup_governance import build_package_decision
-from src.models.package_optimizer_exact_batch import ExactBatchScorer, exact_skyline_indices
+from src.models.package_optimizer_exact_batch import ExactBatchScorer
 from src.models.package_optimizer_v2 import CompiledPackageScorer, _scoring_context, load_config as load_optimizer_config, simulate_objective
 from src.rules import RULESET_ID
+from src.runtime_v3.frontier_evidence_contract import install as _install_frontier_evidence_contract, skyline_indices as exact_skyline_indices
 from src.utils import CONFIG, DATA, atomic_json, iso_now, read_json
+
+_install_frontier_evidence_contract()
+del _install_frontier_evidence_contract
 
 BATCH_SIZE = 512
 PAIR_PARALLEL_THRESHOLD = 50_000

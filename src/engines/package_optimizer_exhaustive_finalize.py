@@ -5,6 +5,7 @@ import heapq
 import json
 import math
 import time
+from collections import Counter
 from itertools import combinations
 from pathlib import Path
 from statistics import NormalDist
@@ -12,18 +13,14 @@ from typing import Any
 
 from src.engines.decision_intelligence import _candidate_score, _optimizer_row, _step_legal_transfer_sequence
 from src.engines.lineup_governance import build_package_decision
-from src.models.package_optimizer_v2 import (
-    _scoring_context,
-    legal_squad,
-    load_config as load_optimizer_config,
-    score_package,
-    simulate_objective,
-)
-from src.rules import RULESET_ID
+from src.models.package_optimizer_v2 import CompiledPackageScorer, _scoring_context, legal_squad, load_config as load_optimizer_config, simulate_objective
+from src.rules import RULESET_ID, SQUAD_RULES
 from src.utils import CONFIG, DATA, atomic_json, iso_now, read_json
 
 TOP_KEEP_DEFAULT = 500
-POSITION_ORDER = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
+POSITIONS = ("GK", "DEF", "MID", "FWD")
+POSITION_ORDER = {p: i for i, p in enumerate(POSITIONS)}
+MAX_CLUB = int(SQUAD_RULES.get("max_players_per_club") or 3)
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -34,7 +31,7 @@ def _f(value: Any, default: float = 0.0) -> float:
 
 
 def _gw_index(row: dict[str, Any]) -> dict[int, tuple[float, float]]:
-    out: dict[int, tuple[float, float]] = {}
+    out = {}
     for gw_row in row.get("xpts_by_gw") or []:
         try:
             gw = int(gw_row.get("gw") or -1)
@@ -46,24 +43,14 @@ def _gw_index(row: dict[str, Any]) -> dict[int, tuple[float, float]]:
 
 
 def safe_per_gw_dominates(left: dict[str, Any], right: dict[str, Any], planning_gw: int, max_horizon: int) -> bool:
-    """Research-only local dominance diagnostic; never used to prune FULL search.
-
-    Per-GW player dominance is useful evidence but is not sufficient to prove
-    dominance of the complete risk-adjusted package scorer because a higher-mean
-    player may alter XI/captain selection and therefore aggregate variance. FULL
-    production authority consequently performs zero candidate pruning.
-    """
-    if str(left.get("position") or "") != str(right.get("position") or ""):
+    """Diagnostic only. FULL production search never uses this to prune candidates."""
+    if left.get("position") != right.get("position") or int(left.get("team_id") or -1) != int(right.get("team_id") or -1):
         return False
-    if int(left.get("team_id") or -1) != int(right.get("team_id") or -1):
+    lc, rc = int(left.get("now_cost") or 0), int(right.get("now_cost") or 0)
+    if lc > rc:
         return False
-    left_cost = int(left.get("now_cost") or 0)
-    right_cost = int(right.get("now_cost") or 0)
-    if left_cost > right_cost:
-        return False
-    strict = left_cost < right_cost
-    li = _gw_index(left)
-    ri = _gw_index(right)
+    strict = lc < rc
+    li, ri = _gw_index(left), _gw_index(right)
     for gw in range(int(planning_gw), int(planning_gw) + int(max_horizon)):
         if gw not in li or gw not in ri:
             return False
@@ -75,216 +62,137 @@ def safe_per_gw_dominates(left: dict[str, Any], right: dict[str, Any], planning_
     return strict
 
 
-def _package_record(
-    changes: int,
-    outs: list[dict[str, Any]],
-    ins: list[dict[str, Any]],
-    score: dict[str, Any],
-    sequence: dict[str, Any],
-    itb: int,
-) -> dict[str, Any]:
-    out_ids = [int(row["element"]) for row in outs]
-    in_ids = [int(row["element"]) for row in ins]
-    if changes == 0:
-        package_id = "HOLD"
-    elif changes == 1:
-        package_id = f"1:{out_ids[0]}->{in_ids[0]}"
-    else:
-        package_id = f"2:{','.join(str(x) for x in out_ids)}->{','.join(str(x) for x in in_ids)}"
-    cash_available = int(itb) + sum(int(row.get("sell_cost") or 0) for row in outs)
-    incoming_cost = sum(int(row.get("now_cost") or 0) for row in ins)
+def _record(changes: int, outs: list[dict[str, Any]], ins: list[dict[str, Any]], score: dict[str, Any], seq: dict[str, Any], itb: int) -> dict[str, Any]:
+    out_ids = [int(x["element"]) for x in outs]
+    in_ids = [int(x["element"]) for x in ins]
+    pid = "HOLD" if not changes else (f"1:{out_ids[0]}->{in_ids[0]}" if changes == 1 else f"2:{','.join(map(str, out_ids))}->{','.join(map(str, in_ids))}")
+    cash = int(itb) + sum(int(x.get("sell_cost") or 0) for x in outs)
+    cost = sum(int(x.get("now_cost") or 0) for x in ins)
     return {
-        "id": package_id,
-        "changes": int(changes),
-        "outs": [
-            {"element": row["element"], "name": row.get("name"), "sell_cost": row.get("sell_cost")}
-            for row in outs
-        ],
-        "ins": [
-            {"element": row["element"], "name": row.get("name"), "now_cost": row.get("now_cost")}
-            for row in ins
-        ],
-        "affordability": {
-            "cash_available": cash_available,
-            "incoming_cost": incoming_cost,
-            "resulting_itb": int(sequence.get("resulting_itb") if sequence.get("resulting_itb") is not None else itb),
-        },
+        "id": pid,
+        "changes": changes,
+        "outs": [{"element": x["element"], "name": x.get("name"), "sell_cost": x.get("sell_cost")} for x in outs],
+        "ins": [{"element": x["element"], "name": x.get("name"), "now_cost": x.get("now_cost")} for x in ins],
+        "affordability": {"cash_available": cash, "incoming_cost": cost, "resulting_itb": int(seq.get("resulting_itb", itb))},
         "score": score,
         "legal": True,
-        "sequential_legality": sequence,
+        "sequential_legality": seq,
     }
 
 
-def _push_top(heap: list[tuple[float, str, dict[str, Any]]], package: dict[str, Any], keep: int) -> None:
-    score = _f((package.get("score") or {}).get("robust_score"))
-    package_id = str(package.get("id") or "")
-    item = (score, package_id, package)
-    if len(heap) < keep:
-        heapq.heappush(heap, item)
-    elif (score, package_id) > (heap[0][0], heap[0][1]):
-        heapq.heapreplace(heap, item)
+def _metrics(package: dict[str, Any], hold_h: dict[str, Any]) -> tuple[float, float, float, float, int, float]:
+    h = (package.get("score") or {}).get("horizons") or {}
+    return tuple(_f((h.get(str(n)) or {}).get("mean")) - _f((hold_h.get(str(n)) or {}).get("mean")) for n in (3, 5, 10, 15)) + (int(package.get("changes") or 0), _f((package.get("score") or {}).get("objective_std"), 1e9))
 
 
-def _frontier_metrics(package: dict[str, Any], hold_horizons: dict[str, Any]) -> dict[str, Any]:
-    score = package.get("score") or {}
-    horizons = score.get("horizons") or {}
-    net = {
-        str(h): _f((horizons.get(str(h)) or {}).get("mean")) - _f((hold_horizons.get(str(h)) or {}).get("mean"))
-        for h in (3, 5, 10, 15)
-    }
-    return {
-        "net": net,
-        "changes": int(package.get("changes") or 0),
-        "uncertainty": _f(score.get("objective_std"), 1e9),
-    }
-
-
-def _dominates(left: dict[str, Any], right: dict[str, Any]) -> bool:
-    left_net = left["metrics"]["net"]
-    right_net = right["metrics"]["net"]
-    no_worse = (
-        all(left_net[str(h)] >= right_net[str(h)] - 1e-12 for h in (3, 5, 10, 15))
-        and left["metrics"]["changes"] <= right["metrics"]["changes"]
-        and left["metrics"]["uncertainty"] <= right["metrics"]["uncertainty"] + 1e-12
-    )
-    strict = (
-        any(left_net[str(h)] > right_net[str(h)] + 1e-12 for h in (3, 5, 10, 15))
-        or left["metrics"]["changes"] < right["metrics"]["changes"]
-        or left["metrics"]["uncertainty"] < right["metrics"]["uncertainty"] - 1e-12
-    )
+def _dominates(a: tuple, b: tuple) -> bool:
+    no_worse = all(a[i] >= b[i] - 1e-12 for i in range(4)) and a[4] <= b[4] and a[5] <= b[5] + 1e-12
+    strict = any(a[i] > b[i] + 1e-12 for i in range(4)) or a[4] < b[4] or a[5] < b[5] - 1e-12
     return no_worse and strict
 
 
-class _StreamingFrontier:
-    """Exact order-independent skyline over every evaluated legal package."""
-
+class _Frontier:
     def __init__(self, hold: dict[str, Any]) -> None:
-        self.hold_horizons = ((hold.get("score") or {}).get("horizons") or {})
-        self.rows: list[dict[str, Any]] = []
+        self.hold_h = ((hold.get("score") or {}).get("horizons") or {})
+        self.rows: list[tuple[tuple, dict[str, Any]]] = []
 
     def add(self, package: dict[str, Any]) -> None:
-        candidate = {"package": package, "metrics": _frontier_metrics(package, self.hold_horizons)}
-        for existing in self.rows:
-            if _dominates(existing, candidate):
+        m = _metrics(package, self.hold_h)
+        for em, _ in self.rows:
+            if _dominates(em, m):
                 return
-        self.rows = [existing for existing in self.rows if not _dominates(candidate, existing)]
-        self.rows.append(candidate)
+        self.rows = [(em, ep) for em, ep in self.rows if not _dominates(m, em)]
+        self.rows.append((m, package))
 
-    def output(self, publish_limit: int, evaluated_count: int) -> dict[str, Any]:
-        rows = []
-        for row in self.rows:
-            package = row["package"]
-            metrics = row["metrics"]
-            rows.append({
-                "id": package.get("id"),
-                "changes": package.get("changes"),
-                "robust_score": (package.get("score") or {}).get("robust_score"),
-                "net_xpts": metrics["net"],
-                "objective_std": metrics["uncertainty"],
-                "resulting_itb": (package.get("affordability") or {}).get("resulting_itb"),
-            })
-        rows.sort(key=lambda row: (_f(row.get("robust_score")), str(row.get("id") or "")), reverse=True)
+    def output(self, limit: int, evaluated: int) -> dict[str, Any]:
+        rows = [{
+            "id": p.get("id"), "changes": p.get("changes"), "robust_score": (p.get("score") or {}).get("robust_score"),
+            "net_xpts": {str(h): m[i] for i, h in enumerate((3, 5, 10, 15))}, "objective_std": m[5],
+            "resulting_itb": (p.get("affordability") or {}).get("resulting_itb"),
+        } for m, p in self.rows]
+        rows.sort(key=lambda r: (_f(r.get("robust_score")), str(r.get("id") or "")), reverse=True)
         return {
-            "count": len(rows),
-            "packages": rows[: max(1, int(publish_limit))],
-            "authority": "REPRESENTATION_ONLY",
+            "count": len(rows), "packages": rows[:max(1, int(limit))], "authority": "REPRESENTATION_ONLY",
             "dimensions_used": ["net_xpts3", "net_xpts5", "net_xpts10", "net_xpts15", "changes", "objective_std"],
             "dimensions_pending_richer_runtime_evidence": ["tactical_role_uncertainty", "price_risk", "structural_flexibility"],
-            "never_second_scoring_authority": True,
-            "search_authority": "FULL",
-            "representation_input": "ALL_EVALUATED_LEGAL_PACKAGES",
-            "evaluated_legal_package_count": int(evaluated_count),
+            "never_second_scoring_authority": True, "search_authority": "FULL",
+            "representation_input": "ALL_EVALUATED_LEGAL_PACKAGES", "evaluated_legal_package_count": evaluated,
         }
 
 
-def _candidate_universe(projections: dict[str, Any], current_ids: set[int], cfg: dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]]], dict[str, int]]:
-    full_pool: dict[str, list[dict[str, Any]]] = {pos: [] for pos in ("GK", "DEF", "MID", "FWD")}
-    require_available = bool(cfg.get("require_available_status", True))
-    allowed = set(cfg.get("allowed_statuses") or ["a", "d"])
-    risk = _f(cfg.get("risk_aversion"), 0.12)
-    counters = {
-        "official_projection_universe_count": 0,
-        "owned_excluded_count": 0,
-        "status_excluded_count": 0,
-        "invalid_excluded_count": 0,
-    }
-    for proj in projections.get("players") or []:
-        counters["official_projection_universe_count"] += 1
-        try:
-            element = int(proj["element"])
-        except (KeyError, TypeError, ValueError):
-            counters["invalid_excluded_count"] += 1
-            continue
-        position = str(proj.get("position") or "")
-        if position not in full_pool:
-            counters["invalid_excluded_count"] += 1
-            continue
-        if element in current_ids:
-            counters["owned_excluded_count"] += 1
-            continue
-        if require_available and proj.get("status") not in allowed:
-            counters["status_excluded_count"] += 1
-            continue
-        row = _optimizer_row(proj)
-        row["candidate_score"] = _candidate_score(proj, risk)
-        full_pool[position].append(row)
-    for rows in full_pool.values():
-        rows.sort(
-            key=lambda row: (_f(row.get("candidate_score")), -int(row.get("now_cost") or 0), -int(row.get("element") or -1)),
-            reverse=True,
-        )
-    return full_pool, counters
-
-
-def _current_squad(projections: dict[str, Any], team: dict[str, Any]) -> list[dict[str, Any]]:
-    pmap = {int(row["element"]): row for row in projections.get("players") or [] if row.get("element") is not None}
-    current: list[dict[str, Any]] = []
-    for ledger in team.get("team_value_ledger") or []:
-        element = int(ledger.get("element") or -1)
-        proj = pmap.get(element)
-        if proj:
-            current.append(_optimizer_row(proj, ledger.get("sell_cost")))
-    current.sort(key=lambda row: (POSITION_ORDER.get(str(row.get("position")), 9), int(row["element"])))
-    if not legal_squad(current):
+def _current(projections: dict[str, Any], team: dict[str, Any]) -> list[dict[str, Any]]:
+    pmap = {int(p["element"]): p for p in projections.get("players") or []}
+    rows = [_optimizer_row(pmap[int(x["element"])], x.get("sell_cost")) for x in team.get("team_value_ledger") or [] if int(x.get("element") or -1) in pmap]
+    rows.sort(key=lambda x: (POSITION_ORDER.get(str(x.get("position")), 9), int(x["element"])))
+    if not legal_squad(rows):
         raise RuntimeError("certified exhaustive finalizer: current squad failed legality precheck")
-    return current
+    return rows
 
 
-def _pair_sequence(
-    current: list[dict[str, Any]],
-    out_a: dict[str, Any],
-    out_b: dict[str, Any],
-    in_a: dict[str, Any],
-    in_b: dict[str, Any],
-    itb: int,
-) -> tuple[bool, list[dict[str, Any]], dict[str, Any]]:
-    assignments = [([in_a, in_b], False)]
-    if str(out_a.get("position")) == str(out_b.get("position")) and int(in_a["element"]) != int(in_b["element"]):
-        assignments.append(([in_b, in_a], True))
-    for ins, swapped in assignments:
-        ok, sequence = _step_legal_transfer_sequence(current, [out_a, out_b], ins, itb)
+def _pool(projections: dict[str, Any], owned: set[int], cfg: dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]]], dict[str, int]]:
+    pool = {p: [] for p in POSITIONS}
+    allowed = set(cfg.get("allowed_statuses") or ["a", "d"])
+    require_available = bool(cfg.get("require_available_status", True))
+    risk = _f(cfg.get("risk_aversion"), 0.12)
+    counts = {"official_projection_universe_count": 0, "owned_excluded_count": 0, "status_excluded_count": 0, "invalid_excluded_count": 0}
+    for proj in projections.get("players") or []:
+        counts["official_projection_universe_count"] += 1
+        try:
+            element, position = int(proj["element"]), str(proj.get("position") or "")
+        except (KeyError, TypeError, ValueError):
+            counts["invalid_excluded_count"] += 1
+            continue
+        if position not in pool:
+            counts["invalid_excluded_count"] += 1
+        elif element in owned:
+            counts["owned_excluded_count"] += 1
+        elif require_available and proj.get("status") not in allowed:
+            counts["status_excluded_count"] += 1
+        else:
+            row = _optimizer_row(proj)
+            row["candidate_score"] = _candidate_score(proj, risk)
+            pool[position].append(row)
+    for rows in pool.values():
+        rows.sort(key=lambda x: (_f(x.get("candidate_score")), -int(x.get("now_cost") or 0), -int(x["element"])), reverse=True)
+    return pool, counts
+
+
+def _structural_ok(clubs: Counter[int], outs: list[dict[str, Any]], ins: list[dict[str, Any]], itb: int) -> tuple[bool, str | None]:
+    if int(itb) + sum(int(x.get("sell_cost") or 0) for x in outs) < sum(int(x.get("now_cost") or 0) for x in ins):
+        return False, "cash"
+    c = clubs.copy()
+    for x in outs:
+        c[int(x.get("team_id") or -1)] -= 1
+    for x in ins:
+        c[int(x.get("team_id") or -1)] += 1
+    if any(v > MAX_CLUB for k, v in c.items() if k > 0):
+        return False, "club"
+    return True, None
+
+
+def _pair_sequence(current: list[dict[str, Any]], outs: list[dict[str, Any]], ins: list[dict[str, Any]], itb: int) -> tuple[bool, list[dict[str, Any]], dict[str, Any]]:
+    assignments = [ins]
+    if outs[0].get("position") == outs[1].get("position"):
+        assignments.append([ins[1], ins[0]])
+    for idx, assignment in enumerate(assignments):
+        ok, seq = _step_legal_transfer_sequence(current, outs, assignment, itb)
         if ok:
-            sequence = dict(sequence)
-            sequence["incoming_assignment_swapped"] = swapped
-            return True, ins, sequence
+            seq = dict(seq)
+            seq["incoming_assignment_swapped"] = bool(idx)
+            return True, assignment, seq
     return False, [], {"reason": "no_step_legal_execution_order_or_assignment", "orders_checked": 2 * len(assignments)}
 
 
-def _score_and_collect(
-    candidate: list[dict[str, Any]],
-    planning_gw: int,
-    changes: int,
-    scoring_context: dict[str, Any],
-    package: dict[str, Any],
-    heap: list[tuple[float, str, dict[str, Any]]],
-    frontier: _StreamingFrontier,
-    top_keep: int,
-) -> bool:
-    score = score_package(candidate, planning_gw, changes=changes, scoring_context=scoring_context)
+def _collect(package: dict[str, Any], candidate: list[dict[str, Any]], changes: int, scorer: CompiledPackageScorer, heap: list, frontier: _Frontier, keep: int) -> bool:
+    score = scorer.score(candidate, changes=changes)
     if not score.get("valid"):
         return False
     package["score"] = score
-    _push_top(heap, package, top_keep)
+    item = (_f(score.get("robust_score")), str(package["id"]), package)
+    if len(heap) < keep:
+        heapq.heappush(heap, item)
+    elif item[:2] > heap[0][:2]:
+        heapq.heapreplace(heap, item)
     frontier.add(package)
     return True
 
@@ -292,221 +200,130 @@ def _score_and_collect(
 def build_exhaustive(projections: dict[str, Any], team: dict[str, Any], *, top_keep: int = TOP_KEEP_DEFAULT) -> dict[str, Any]:
     started = time.perf_counter()
     cfg = load_optimizer_config()
-    planning_gw = int(projections.get("planning_gw") or 1)
-    scoring_context = _scoring_context(cfg, planning_gw)
-    current = _current_squad(projections, team)
-    current_ids = {int(row["element"]) for row in current}
+    gw = int(projections.get("planning_gw") or 1)
+    context = _scoring_context(cfg, gw)
+    current = _current(projections, team)
+    owned = {int(x["element"]) for x in current}
+    pool, universe_counts = _pool(projections, owned, cfg)
+    eligible = {p: len(v) for p, v in pool.items()}
     itb = int((team.get("totals") or {}).get("itb") or 0)
-    full_pool, universe_counters = _candidate_universe(projections, current_ids, cfg)
-    eligible_by_position = {pos: len(rows) for pos, rows in full_pool.items()}
+    clubs = Counter(int(x.get("team_id") or -1) for x in current)
+    scorer = CompiledPackageScorer(projections.get("players") or [], gw, scoring_context=context)
 
-    hold_score = score_package(current, planning_gw, changes=0, scoring_context=scoring_context)
-    hold = _package_record(0, [], [], hold_score, {"resulting_itb": itb, "steps": [], "execution_order": [], "orders_checked": 1}, itb)
+    hold_score = scorer.score(current, changes=0)
+    hold = _record(0, [], [], hold_score, {"resulting_itb": itb, "steps": [], "execution_order": [], "orders_checked": 1}, itb)
     keep = max(20, int(top_keep))
-    heap: list[tuple[float, str, dict[str, Any]]] = []
-    _push_top(heap, hold, keep)
-    frontier = _StreamingFrontier(hold)
+    heap = [(_f(hold_score.get("robust_score")), "HOLD", hold)]
+    frontier = _Frontier(hold)
     frontier.add(hold)
 
-    singles_considered = singles_step_legal = singles_scored = 0
-    for outgoing in current:
-        position = str(outgoing.get("position") or "")
-        for incoming in full_pool.get(position, []):
-            singles_considered += 1
-            ok, sequence = _step_legal_transfer_sequence(current, [outgoing], [incoming], itb)
+    sc = ss = sscore = s_cash = s_club = 0
+    for out in current:
+        base = [x for x in current if int(x["element"]) != int(out["element"])]
+        for inn in pool[str(out.get("position"))]:
+            sc += 1
+            ok_struct, reason = _structural_ok(clubs, [out], [inn], itb)
+            if not ok_struct:
+                s_cash += reason == "cash"; s_club += reason == "club"; continue
+            ok, seq = _step_legal_transfer_sequence(current, [out], [inn], itb)
             if not ok:
                 continue
-            singles_step_legal += 1
-            candidate = [row for row in current if int(row["element"]) != int(outgoing["element"])] + [incoming]
-            package = _package_record(1, [outgoing], [incoming], {}, sequence, itb)
-            if _score_and_collect(candidate, planning_gw, 1, scoring_context, package, heap, frontier, keep):
-                singles_scored += 1
+            ss += 1
+            package = _record(1, [out], [inn], {}, seq, itb)
+            sscore += _collect(package, base + [inn], 1, scorer, heap, frontier, keep)
 
-    pair_candidate_combinations = pair_distinct_incoming = pair_step_legal = pair_scored = 0
-    for out_a, out_b in combinations(current, 2):
-        pos_a = str(out_a.get("position") or "")
-        pos_b = str(out_b.get("position") or "")
-        if pos_a == pos_b:
-            incoming_iter = combinations(full_pool.get(pos_a, []), 2)
-        else:
-            incoming_iter = (
-                (left, right)
-                for left in full_pool.get(pos_a, [])
-                for right in full_pool.get(pos_b, [])
-            )
-        for in_a, in_b in incoming_iter:
-            pair_candidate_combinations += 1
-            if int(in_a["element"]) == int(in_b["element"]):
-                continue
-            pair_distinct_incoming += 1
-            ok, assigned_ins, sequence = _pair_sequence(current, out_a, out_b, in_a, in_b, itb)
+    pc = ps = pscore = p_cash = p_club = 0
+    for oa, ob in combinations(current, 2):
+        outs = [oa, ob]
+        out_ids = {int(oa["element"]), int(ob["element"])}
+        base = [x for x in current if int(x["element"]) not in out_ids]
+        pa, pb = str(oa.get("position")), str(ob.get("position"))
+        incoming_iter = combinations(pool[pa], 2) if pa == pb else ((a, b) for a in pool[pa] for b in pool[pb])
+        for ia, ib in incoming_iter:
+            pc += 1
+            ins = [ia, ib]
+            ok_struct, reason = _structural_ok(clubs, outs, ins, itb)
+            if not ok_struct:
+                p_cash += reason == "cash"; p_club += reason == "club"; continue
+            ok, assigned, seq = _pair_sequence(current, outs, ins, itb)
             if not ok:
                 continue
-            pair_step_legal += 1
-            out_ids = {int(out_a["element"]), int(out_b["element"])}
-            candidate = [row for row in current if int(row["element"]) not in out_ids] + assigned_ins
-            package = _package_record(2, [out_a, out_b], assigned_ins, {}, sequence, itb)
-            if _score_and_collect(candidate, planning_gw, 2, scoring_context, package, heap, frontier, keep):
-                pair_scored += 1
+            ps += 1
+            package = _record(2, outs, assigned, {}, seq, itb)
+            pscore += _collect(package, base + assigned, 2, scorer, heap, frontier, keep)
 
-    evaluated = 1 + singles_scored + pair_scored
-    top_packages = [row[2] for row in heap]
-    top_packages.sort(
-        key=lambda package: (_f((package.get("score") or {}).get("robust_score")), str(package.get("id") or "")),
-        reverse=True,
-    )
+    evaluated = 1 + sscore + pscore
+    top = [x[2] for x in heap]
+    top.sort(key=lambda p: (_f((p.get("score") or {}).get("robust_score")), str(p.get("id") or "")), reverse=True)
     mc_top = int(cfg.get("monte_carlo_top_n") or 20)
-    simulations = int(cfg.get("monte_carlo_simulations") or 300)
-    seed = int(cfg.get("monte_carlo_seed") or 1)
-    hold_mean = _f(hold_score.get("objective_mean"))
-    hold_std = _f(hold_score.get("objective_std"))
-    for idx, package in enumerate(top_packages[:mc_top]):
-        mean = _f((package.get("score") or {}).get("objective_mean"))
-        std = _f((package.get("score") or {}).get("objective_std"))
-        package["monte_carlo"] = simulate_objective(mean, std, simulations, seed + idx)
-        diff_std = math.sqrt(std * std + hold_std * hold_std)
-        if diff_std > 0:
-            p_out = 1.0 - NormalDist(mu=mean - hold_mean, sigma=diff_std).cdf(0.0)
-        else:
-            p_out = 1.0 if mean > hold_mean else 0.5 if mean == hold_mean else 0.0
-        package["monte_carlo"]["p_outperform_hold_independent_baseline"] = round(p_out, 4)
+    hold_mean, hold_std = _f(hold_score.get("objective_mean")), _f(hold_score.get("objective_std"))
+    for idx, package in enumerate(top[:mc_top]):
+        score = package.get("score") or {}; mean, std = _f(score.get("objective_mean")), _f(score.get("objective_std"))
+        mc = simulate_objective(mean, std, int(cfg.get("monte_carlo_simulations") or 300), int(cfg.get("monte_carlo_seed") or 1) + idx)
+        ds = math.sqrt(std * std + hold_std * hold_std)
+        mc["p_outperform_hold_independent_baseline"] = round(1.0 - NormalDist(mu=mean - hold_mean, sigma=ds).cdf(0.0), 4) if ds > 0 else (1.0 if mean > hold_mean else 0.5 if mean == hold_mean else 0.0)
+        package["monte_carlo"] = mc
 
-    frontier_cfg = cfg.get("frontier") or {}
-    efficient_frontier = frontier.output(int(frontier_cfg.get("publish_limit") or 20), evaluated)
-    preview_limit = max(1, int(cfg.get("candidate_pool_preview_per_position") or 20))
-    preview = {
-        pos: [
-            {
-                "element": row["element"],
-                "name": row.get("name"),
-                "now_cost": row.get("now_cost"),
-                "candidate_score": round(_f(row.get("candidate_score")), 3),
-            }
-            for row in rows[:preview_limit]
-        ]
-        for pos, rows in full_pool.items()
+    preview_n = max(1, int(cfg.get("candidate_pool_preview_per_position") or 20))
+    preview = {p: [{"element": x["element"], "name": x.get("name"), "now_cost": x.get("now_cost"), "candidate_score": round(_f(x.get("candidate_score")), 3)} for x in rows[:preview_n]] for p, rows in pool.items()}
+    frontier_out = frontier.output(int((cfg.get("frontier") or {}).get("publish_limit") or 20), evaluated)
+    elapsed = round((time.perf_counter() - started) * 1000.0, 3)
+    diagnostics = {
+        **universe_counts, "candidate_origin": "COMPLETE_ELIGIBLE_OFFICIAL_FPL_UNIVERSE", "eligible_universe_count": sum(eligible.values()), "eligible_by_position": eligible,
+        "search_method": "ZERO_CANDIDATE_PRUNING_EXHAUSTIVE_SEQUENTIAL_EXACT_V2_COMPILED_KERNEL", "candidate_pruning_applied": False, "candidate_pruned_count": 0,
+        "fixed_top_n_per_position_applied": False, "fixed_top_n_per_outgoing_applied": False, "watchlist_used_as_optimizer_input": False,
+        "single_candidates_considered": sc, "single_structural_cash_rejected": s_cash, "single_structural_club_rejected": s_club, "single_step_legal": ss, "single_exact_scored": sscore, "single_budget_applied": False,
+        "pair_generation_origin": "DIRECT_OUTGOING_PAIR_X_COMPLETE_POSITION_ELIGIBLE_INCOMING_POOLS", "pair_requires_single_move_seed": False,
+        "pair_candidate_combinations": pc, "pair_structural_cash_rejected": p_cash, "pair_structural_club_rejected": p_club, "pair_step_legal": ps, "pair_candidates_exact_scored": pscore,
+        "pair_budget_applied": False, "exact_package_limit_applied": False, "all_step_legal_packages_scored": sscore == ss and pscore == ps,
+        "lossy_pruning": False, "search_authority": "FULL", "compiled_exact_kernel": True,
+        "authority_reason": "complete eligible Official FPL universe; zero candidate pruning; only provably illegal structural rejects; every sequentially legal package scored by the shared canonical exact kernel",
+        "optimizer_runtime_status_separate_from_search_authority": True, "finalizer_elapsed_ms": elapsed,
     }
-    elapsed_ms = round((time.perf_counter() - started) * 1000.0, 3)
     return {
-        "generated_at": iso_now(),
-        "model": cfg.get("model_id"),
-        "status": "READY",
-        "planning_gw": planning_gw,
-        "ruleset_id": RULESET_ID,
-        "gate0_prevalidated": True,
-        "simulation_assumption": cfg.get("simulation_assumption"),
-        "candidate_pool": preview,
-        "candidate_pool_is_preview_only": True,
-        "package_count": evaluated,
-        "hold": hold,
-        "packages": top_packages[:mc_top],
-        "efficient_frontier": efficient_frontier,
-        "search_diagnostics": {
-            **universe_counters,
-            "candidate_origin": "COMPLETE_ELIGIBLE_OFFICIAL_FPL_UNIVERSE",
-            "eligible_universe_count": sum(eligible_by_position.values()),
-            "eligible_by_position": eligible_by_position,
-            "search_method": "ZERO_CANDIDATE_PRUNING_EXHAUSTIVE_SEQUENTIAL_EXACT_V1",
-            "candidate_pruning_applied": False,
-            "candidate_pruned_count": 0,
-            "fixed_top_n_per_position_applied": False,
-            "fixed_top_n_per_outgoing_applied": False,
-            "watchlist_used_as_optimizer_input": False,
-            "single_candidates_considered": singles_considered,
-            "single_step_legal": singles_step_legal,
-            "single_exact_scored": singles_scored,
-            "single_budget_applied": False,
-            "pair_generation_origin": "DIRECT_OUTGOING_PAIR_X_COMPLETE_POSITION_ELIGIBLE_INCOMING_POOLS",
-            "pair_requires_single_move_seed": False,
-            "pair_candidate_combinations": pair_candidate_combinations,
-            "pair_distinct_incoming": pair_distinct_incoming,
-            "pair_step_legal": pair_step_legal,
-            "pair_candidates_exact_scored": pair_scored,
-            "pair_budget_applied": False,
-            "exact_package_limit_applied": False,
-            "all_step_legal_packages_scored": singles_scored == singles_step_legal and pair_scored == pair_step_legal,
-            "lossy_pruning": False,
-            "search_authority": "FULL",
-            "authority_reason": "complete eligible Official FPL universe; zero candidate pruning; direct pair enumeration independent of single legality; every step-legal package scored by canonical score_package",
-            "optimizer_runtime_status_separate_from_search_authority": True,
-            "finalizer_elapsed_ms": elapsed_ms,
-        },
+        "generated_at": iso_now(), "model": cfg.get("model_id"), "status": "READY", "planning_gw": gw, "ruleset_id": RULESET_ID, "gate0_prevalidated": True,
+        "simulation_assumption": cfg.get("simulation_assumption"), "candidate_pool": preview, "candidate_pool_is_preview_only": True,
+        "package_count": evaluated, "hold": hold, "packages": top[:mc_top], "efficient_frontier": frontier_out, "search_diagnostics": diagnostics,
         "governance": {
-            "candidate_generation_only": True,
-            "final_go_requires_framework_governance_and_postflight_gate0": True,
-            "price_uses_sell_value_for_outs_and_now_cost_for_ins": True,
-            "official_fpl_full_universe_scanned": True,
-            "candidate_pruning_for_full_authority": False,
-            "fixed_top_n_per_position_forbidden": True,
-            "fixed_top_n_per_outgoing_forbidden": True,
-            "watchlist_is_output_only": True,
-            "hardcoded_player_seed_forbidden": True,
-            "pair_search_not_seeded_by_single_legality": True,
-            "step_legal_transfer_recomputation": True,
-            "final_squad_reoptimized_by_existing_score_package": True,
-            "prediction_scoring_semantics_unchanged": True,
-            "canonical_score_package_reused_for_every_legal_package": True,
-            "efficient_frontier_from_all_evaluated_legal_packages": True,
-            "efficient_frontier_never_second_scoring_authority": True,
-            "lossy_pruning_is_explicit": False,
+            "candidate_generation_only": True, "final_go_requires_framework_governance_and_postflight_gate0": True,
+            "price_uses_sell_value_for_outs_and_now_cost_for_ins": True, "official_fpl_full_universe_scanned": True,
+            "candidate_pruning_for_full_authority": False, "structural_prefilters_reject_only_provably_illegal_packages": True,
+            "fixed_top_n_per_position_forbidden": True, "fixed_top_n_per_outgoing_forbidden": True, "watchlist_is_output_only": True,
+            "hardcoded_player_seed_forbidden": True, "pair_search_not_seeded_by_single_legality": True, "step_legal_transfer_recomputation": True,
+            "final_squad_reoptimized_by_existing_score_package": True, "prediction_scoring_semantics_unchanged": True,
+            "canonical_score_package_reused_for_every_legal_package": True, "compiled_adapter_uses_same_canonical_scoring_kernel": True,
+            "efficient_frontier_from_all_evaluated_legal_packages": True, "efficient_frontier_never_second_scoring_authority": True, "lossy_pruning_is_explicit": False,
         },
     }
 
 
 def finalize(data_dir: Path = DATA, *, top_keep: int = TOP_KEEP_DEFAULT, persist: bool = True) -> dict[str, Any]:
-    projections = read_json(data_dir / "projections.json", {})
-    team = read_json(data_dir / "team.json", {})
+    projections, team = read_json(data_dir / "projections.json", {}), read_json(data_dir / "team.json", {})
     if not projections or not team:
         raise RuntimeError("certified exhaustive finalizer requires projections.json and team.json")
     optimizer = build_exhaustive(projections, team, top_keep=top_keep)
     diag = optimizer.get("search_diagnostics") or {}
-    if optimizer.get("status") != "READY" or diag.get("search_authority") != "FULL" or diag.get("lossy_pruning") is not False:
-        raise RuntimeError("certified exhaustive finalizer did not produce truthful FULL search authority")
-    if diag.get("all_step_legal_packages_scored") is not True:
-        raise RuntimeError("certified exhaustive finalizer did not score every step-legal package")
-    frontier = optimizer.get("efficient_frontier") or {}
-    if frontier.get("representation_input") != "ALL_EVALUATED_LEGAL_PACKAGES":
+    if optimizer.get("status") != "READY" or diag.get("search_authority") != "FULL" or diag.get("lossy_pruning") is not False or diag.get("all_step_legal_packages_scored") is not True:
+        raise RuntimeError("certified exhaustive finalizer did not produce truthful FULL authority")
+    if (optimizer.get("efficient_frontier") or {}).get("representation_input") != "ALL_EVALUATED_LEGAL_PACKAGES":
         raise RuntimeError("efficient frontier was not built from all evaluated legal packages")
     lock = json.loads((CONFIG / "locked_squad.json").read_text(encoding="utf-8"))
     package = build_package_decision(optimizer, projections, lock, team)
     if package.get("gate0_revalidated") is not True:
         raise RuntimeError("certified exhaustive finalizer package decision failed Gate0 revalidation")
     if persist:
-        atomic_json(data_dir / "package_optimizer.json", optimizer)
-        atomic_json(data_dir / "package_decision.json", package)
-        latest = read_json(data_dir / "latest.json", {})
-        latest.setdefault("files", {})["package_decision"] = "data/package_decision.json"
-        latest["package_decision_summary"] = {
-            "selected_package_id": package.get("selected_package_id"),
-            "manual_authority_override": package.get("manual_authority_override"),
-            "gate0_revalidated": package.get("gate0_revalidated"),
-            "optimizer_search_authority": "FULL",
-        }
+        atomic_json(data_dir / "package_optimizer.json", optimizer); atomic_json(data_dir / "package_decision.json", package)
+        latest = read_json(data_dir / "latest.json", {}); latest.setdefault("files", {})["package_decision"] = "data/package_decision.json"
+        latest["package_decision_summary"] = {"selected_package_id": package.get("selected_package_id"), "manual_authority_override": package.get("manual_authority_override"), "gate0_revalidated": True, "optimizer_search_authority": "FULL"}
         atomic_json(data_dir / "latest.json", latest)
     return {"optimizer": optimizer, "package": package}
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--data-dir", default=str(DATA))
-    parser.add_argument("--top-keep", type=int, default=TOP_KEEP_DEFAULT)
-    parser.add_argument("--no-persist", action="store_true")
-    args = parser.parse_args()
-    result = finalize(Path(args.data_dir), top_keep=max(20, args.top_keep), persist=not args.no_persist)
-    diag = result["optimizer"]["search_diagnostics"]
-    print(json.dumps({
-        "status": result["optimizer"].get("status"),
-        "search_authority": diag.get("search_authority"),
-        "eligible_universe_count": diag.get("eligible_universe_count"),
-        "candidate_pruned_count": diag.get("candidate_pruned_count"),
-        "single_exact_scored": diag.get("single_exact_scored"),
-        "pair_exact_scored": diag.get("pair_candidates_exact_scored"),
-        "package_count": result["optimizer"].get("package_count"),
-        "frontier_count": (result["optimizer"].get("efficient_frontier") or {}).get("count"),
-        "elapsed_ms": diag.get("finalizer_elapsed_ms"),
-        "selected_package_id": result["package"].get("selected_package_id"),
-        "gate0_revalidated": result["package"].get("gate0_revalidated"),
-    }, ensure_ascii=False))
+    parser = argparse.ArgumentParser(); parser.add_argument("--data-dir", default=str(DATA)); parser.add_argument("--top-keep", type=int, default=TOP_KEEP_DEFAULT); parser.add_argument("--no-persist", action="store_true")
+    args = parser.parse_args(); result = finalize(Path(args.data_dir), top_keep=max(20, args.top_keep), persist=not args.no_persist)
+    d = result["optimizer"]["search_diagnostics"]
+    print(json.dumps({"status": result["optimizer"].get("status"), "search_authority": d.get("search_authority"), "eligible_universe_count": d.get("eligible_universe_count"), "candidate_pruned_count": d.get("candidate_pruned_count"), "single_exact_scored": d.get("single_exact_scored"), "pair_exact_scored": d.get("pair_candidates_exact_scored"), "package_count": result["optimizer"].get("package_count"), "frontier_count": (result["optimizer"].get("efficient_frontier") or {}).get("count"), "elapsed_ms": d.get("finalizer_elapsed_ms"), "selected_package_id": result["package"].get("selected_package_id"), "gate0_revalidated": result["package"].get("gate0_revalidated")}, ensure_ascii=False))
     return 0
 
 

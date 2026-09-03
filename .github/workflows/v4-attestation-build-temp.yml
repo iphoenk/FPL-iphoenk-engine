@@ -1,0 +1,104 @@
+name: V4 temporary full-universe attestation refresh
+
+on:
+  push:
+    branches:
+      - codex/v4-full-universe-tactical-20260903
+    paths:
+      - .github/workflows/v4-attestation-build-temp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: codex/v4-full-universe-tactical-20260903
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Patch governed architecture and health semantics
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if text.count(old) != 1:
+                  raise SystemExit(f'{path}: expected exactly one replacement target, got {text.count(old)}')
+              p.write_text(text.replace(old, new), encoding='utf-8')
+
+          replace_once(
+              'src/services/architecture_guard_service.py',
+              '    CONFIG / "intelligence/owned_challenger_decision_v4.json",\n)',
+              '    CONFIG / "intelligence/owned_challenger_decision_v4.json",\n'
+              '    CONFIG / "optimizer_equivalence_registry.json",\n'
+              '    CONFIG / "intelligence/full_universe_package_search.json",\n'
+              ')',
+          )
+
+          replace_once(
+              'src/services/framework_postflight_truth_service.py',
+              '    package_state = "ACTIVE" if packages.get("best_by_replacement_count") is not None and packages.get("overall_verdict") else "UNAVAILABLE"',
+              '    package_search = packages.get("search") or {}\n'
+              '    package_proven = (\n'
+              '        package_search.get("status") == "FULL_UNIVERSE_PROVEN"\n'
+              '        and package_search.get("authoritative_for_recommendation") is True\n'
+              '        and packages.get("decision_authority") == "ENGINE_ADVISORY_ONLY_FULL_UNIVERSE_PROVEN"\n'
+              '    )\n'
+              '    package_state = (\n'
+              '        "ACTIVE" if package_proven and packages.get("best_by_replacement_count") is not None and packages.get("overall_verdict")\n'
+              '        else "BLOCKED" if package_search.get("status") == "FULL_UNIVERSE_HEURISTIC"\n'
+              '        else "UNAVAILABLE"\n'
+              '    )',
+          )
+
+          replace_once(
+              'src/services/framework_postflight_truth_service.py',
+              '        "Package Optimizer": (package_state, {"verdict": packages.get("overall_verdict")}),',
+              '        "Package Optimizer": (package_state, {\n'
+              '            "verdict": packages.get("overall_verdict"),\n'
+              '            "search_status": package_search.get("status"),\n'
+              '            "authoritative_for_recommendation": package_search.get("authoritative_for_recommendation"),\n'
+              '            "decision_authority": packages.get("decision_authority"),\n'
+              '            "false_green_forbidden": True,\n'
+              '        }),',
+          )
+
+          replace_once(
+              'config/architecture_ownership_registry.json',
+              '      "input_contract": "canonical candidates + exact finance + planning squad",\n'
+              '      "output_artifact": "data/wc_package_audit_v4.json",\n'
+              '      "consumers": [\n'
+              '        "recommendation_sanity",\n'
+              '        "decision_arbitration"\n'
+              '      ],\n'
+              '      "duplicates_overlap": "v4_wc_package_audit.py retained as reference/equivalence implementation, not runtime owner",',
+              '      "input_contract": "full Official candidate universe + safe dominance proof + exact finance + tactical/price evidence + planning squad",\n'
+              '      "output_artifact": "data/wc_package_audit_v4.json",\n'
+              '      "consumers": [\n'
+              '        "recommendation_sanity",\n'
+              '        "decision_arbitration"\n'
+              '      ],\n'
+              '      "duplicates_overlap": "v4_full_universe_package_search is the transfer-package runtime owner; v4_full_universe_package_search_core is internal exhaustive mechanics; v4_wc_package_audit.py and v4_wc_package_audit_fast are legacy reference/equivalence implementations only",',
+          )
+          PY
+      - name: Build architecture attestation from final governed bytes
+        run: python tools/v4_architecture_guard_attest.py
+      - name: Commit governed patches and attestation
+        run: |
+          set -euo pipefail
+          git config user.name "fpl-iphoenk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/services/architecture_guard_service.py \
+                  src/services/framework_postflight_truth_service.py \
+                  config/architecture_ownership_registry.json \
+                  config/architecture_guard_attestation.json
+          git diff --cached --quiet && exit 0
+          git commit -m "governance(v4): bind full-universe search to health and attestation"
+          git push origin HEAD:codex/v4-full-universe-tactical-20260903

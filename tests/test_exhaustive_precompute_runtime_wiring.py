@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
 from src.engines import prediction_service
-from src.runtime_v3 import domain_orchestrator
+from src.runtime_v3 import domain_orchestrator, precompute_checkpoint
 from src.runtime_v3.execution_profile_resolver import resolve_execution_profile
 from src.runtime_v3.publication_verify import _verify_exhaustive_precompute_contract
 
@@ -189,3 +190,35 @@ def test_exhaustive_publication_required_artifacts_are_whitelisted():
         "framework_health.json",
         "dss_watchlist.json",
     } <= publish_paths
+
+
+def test_ci_deployment_exhaustive_refresh_is_not_checkpoint_authority(monkeypatch):
+    target = datetime(2026, 9, 3, 10, 30, tzinfo=timezone.utc)
+    monkeypatch.setattr(precompute_checkpoint, "_precompute_decision", lambda now: {
+        "should_collect": True,
+        "reason": "precompute_next_checkpoint",
+        "visible_mode": "EXHAUSTIVE_PRECOMPUTE",
+        "snapshot_role": precompute_checkpoint.PRECOMPUTE_ROLE,
+        "visible_report": False,
+        "target_checkpoint_utc": target.isoformat(),
+    })
+    result = precompute_checkpoint._ci_deployment_decision(datetime(2026, 9, 3, 10, 0, tzinfo=timezone.utc))
+    assert result["visible_mode"] == "EXHAUSTIVE_PRECOMPUTE"
+    assert result["snapshot_role"] == precompute_checkpoint.CI_DEPLOYMENT_ROLE
+    assert result["snapshot_role"] != precompute_checkpoint.PRECOMPUTE_ROLE
+    assert result["reason"] == "post_ci_exhaustive_deployment_refresh"
+
+    manifest = {
+        "generated_at": "2026-09-03T10:00:00+00:00",
+        "source_commit": "abc",
+        "checkpoint": {
+            "snapshot_role": precompute_checkpoint.CI_DEPLOYMENT_ROLE,
+            "target_checkpoint": target.isoformat(),
+            "materialization_complete": True,
+        },
+    }
+    assert precompute_checkpoint._manifest_precompute_valid(
+        manifest,
+        target_utc=target,
+        source_commit="abc",
+    ) is False

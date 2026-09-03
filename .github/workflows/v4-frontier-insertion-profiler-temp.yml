@@ -12,7 +12,7 @@ permissions:
 jobs:
   profile:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 4
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
@@ -26,6 +26,91 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Apply local hot-counter patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/engines/v4_full_universe_exact_state_frontier.py')
+          text = path.read_text()
+          start = text.index('def _front_insert(')
+          end = text.index('\ndef _skyband_insert(', start)
+          replacement = '''def _front_insert(
+              layer: list[IncomingState],
+              candidate: IncomingState,
+              *,
+              frontier_epsilon: float,
+              relation: Callable[..., bool],
+              metrics: dict[str, int] | None = None,
+          ) -> tuple[bool, list[IncomingState]]:
+              """Insert into an exact Pareto layer ordered by descending x5."""
+              _metric_add(metrics, "frontier_insert_calls")
+              if not layer:
+                  layer.append(candidate)
+                  return True, []
+
+              if not _supports_x5_index(relation):
+                  checks = 0
+                  for incumbent in layer:
+                      checks += 1
+                      if relation(incumbent, candidate, frontier_epsilon=frontier_epsilon):
+                          _metric_add(metrics, "dominance_full_checks", checks)
+                          _metric_add(metrics, "frontier_insert_rejected")
+                          return False, []
+                  displaced = []
+                  for incumbent in layer:
+                      checks += 1
+                      if relation(candidate, incumbent, frontier_epsilon=frontier_epsilon):
+                          displaced.append(incumbent)
+                  _metric_add(metrics, "dominance_full_checks", checks)
+                  if displaced:
+                      displaced_ids = {id(row) for row in displaced}
+                      layer[:] = [row for row in layer if id(row) not in displaced_ids]
+                      _metric_add(metrics, "frontier_states_displaced", len(displaced))
+                  layer.append(candidate)
+                  return True, displaced
+
+              candidate_key = -candidate.x5
+              layer_size = len(layer)
+              dominator_end = bisect_right(layer, candidate_key, key=_x5_sort_key)
+              displaced_start = bisect_left(layer, candidate_key, key=_x5_sort_key)
+              _metric_add(
+                  metrics,
+                  "dominance_pairs_skipped_by_x5_index",
+                  max(0, 2 * layer_size - dominator_end - (layer_size - displaced_start)),
+              )
+
+              checks = 0
+              for index in range(dominator_end):
+                  incumbent = layer[index]
+                  checks += 1
+                  if relation(incumbent, candidate, frontier_epsilon=frontier_epsilon):
+                      _metric_add(metrics, "dominance_full_checks", checks)
+                      _metric_add(metrics, "frontier_insert_rejected")
+                      return False, []
+
+              displaced: list[IncomingState] = []
+              for index in range(displaced_start, layer_size):
+                  incumbent = layer[index]
+                  checks += 1
+                  if relation(candidate, incumbent, frontier_epsilon=frontier_epsilon):
+                      displaced.append(incumbent)
+              _metric_add(metrics, "dominance_full_checks", checks)
+
+              if displaced:
+                  displaced_ids = {id(row) for row in displaced}
+                  layer[displaced_start:] = [
+                      row for row in layer[displaced_start:] if id(row) not in displaced_ids
+                  ]
+                  _metric_add(metrics, "frontier_states_displaced", len(displaced))
+
+              insert_at = bisect_right(layer, candidate_key, key=_x5_sort_key)
+              layer.insert(insert_at, candidate)
+              return True, displaced
+          '''
+          path.write_text(text[:start] + replacement + text[end:])
+          PY
+          python -m py_compile src/engines/v4_full_universe_exact_state_frontier.py
+          python -m pytest -q tests/test_v4_full_universe_exact_state_frontier.py
       - name: Profile k2 and k3 exact state compression
         run: |
           python - <<'PY'
@@ -39,12 +124,9 @@ jobs:
 
           class ProbeTimeout(Exception):
               pass
-
           def alarm(_signum, _frame):
               raise ProbeTimeout()
-
           signal.signal(signal.SIGALRM, alarm)
-
           for name, need in (
               ('k2_mid2', Counter({'MID': 2})),
               ('k3_def_mid_fwd', Counter({'DEF': 1, 'MID': 1, 'FWD': 1})),
@@ -67,6 +149,6 @@ jobs:
               print(f'=== {name} completed={completed} yielded={count} ===')
               print(index.proof_summary())
               stream = io.StringIO()
-              pstats.Stats(profiler, stream=stream).strip_dirs().sort_stats('cumulative').print_stats(35)
+              pstats.Stats(profiler, stream=stream).strip_dirs().sort_stats('cumulative').print_stats(30)
               print(stream.getvalue())
           PY

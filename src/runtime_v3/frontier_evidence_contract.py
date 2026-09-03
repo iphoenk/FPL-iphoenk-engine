@@ -4,6 +4,8 @@ from collections import Counter
 from functools import lru_cache
 from typing import Any
 
+import numpy as np
+
 from src.rules import SQUAD_RULES
 from src.utils import DATA, read_json
 
@@ -15,6 +17,9 @@ DIMENSIONS = [
     "price_risk_adverse_progress_percent", "resulting_itb", "club_slot_headroom",
     "roster_change_uncertainty_players",
 ]
+MAXIMIZE_IDX = np.asarray((0, 1, 2, 3, 9, 10), dtype=np.intp)
+MINIMIZE_IDX = np.asarray((4, 5, 6, 7, 8, 11), dtype=np.intp)
+EPS = 1e-12
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -81,11 +86,9 @@ def metrics(package: dict[str, Any], hold_horizons: dict[str, Any]) -> tuple[flo
     )
 
 
-def dominates(left: tuple[float, ...], right: tuple[float, ...], eps: float = 1e-12) -> bool:
-    maximize = (0, 1, 2, 3, 9, 10)
-    minimize = (4, 5, 6, 7, 8, 11)
-    no_worse = all(left[index] >= right[index] - eps for index in maximize) and all(left[index] <= right[index] + eps for index in minimize)
-    strict = any(left[index] > right[index] + eps for index in maximize) or any(left[index] < right[index] - eps for index in minimize)
+def dominates(left: tuple[float, ...], right: tuple[float, ...], eps: float = EPS) -> bool:
+    no_worse = all(left[index] >= right[index] - eps for index in MAXIMIZE_IDX) and all(left[index] <= right[index] + eps for index in MINIMIZE_IDX)
+    strict = any(left[index] > right[index] + eps for index in MAXIMIZE_IDX) or any(left[index] < right[index] - eps for index in MINIMIZE_IDX)
     return no_worse and strict
 
 
@@ -105,6 +108,7 @@ class Frontier:
     def __init__(self, hold_horizons: dict[str, Any]) -> None:
         self.hold_horizons = hold_horizons
         self.rows: list[tuple[tuple[float, ...], dict[str, Any]]] = []
+        self._matrix = np.empty((0, len(DIMENSIONS)), dtype=np.float64)
 
     @classmethod
     def from_hold(cls, hold: dict[str, Any]) -> "Frontier":
@@ -112,10 +116,35 @@ class Frontier:
 
     def add(self, package: dict[str, Any]) -> None:
         metric = metrics(package, self.hold_horizons)
-        if any(dominates(existing, metric) for existing, _ in self.rows):
-            return
-        self.rows = [(existing, row) for existing, row in self.rows if not dominates(metric, existing)]
+        target = np.asarray(metric, dtype=np.float64)
+        if self._matrix.shape[0]:
+            existing = self._matrix
+            existing_no_worse = (
+                np.all(existing[:, MAXIMIZE_IDX] >= target[MAXIMIZE_IDX] - EPS, axis=1)
+                & np.all(existing[:, MINIMIZE_IDX] <= target[MINIMIZE_IDX] + EPS, axis=1)
+            )
+            existing_strict = (
+                np.any(existing[:, MAXIMIZE_IDX] > target[MAXIMIZE_IDX] + EPS, axis=1)
+                | np.any(existing[:, MINIMIZE_IDX] < target[MINIMIZE_IDX] - EPS, axis=1)
+            )
+            if np.any(existing_no_worse & existing_strict):
+                return
+
+            target_no_worse = (
+                np.all(target[MAXIMIZE_IDX] >= existing[:, MAXIMIZE_IDX] - EPS, axis=1)
+                & np.all(target[MINIMIZE_IDX] <= existing[:, MINIMIZE_IDX] + EPS, axis=1)
+            )
+            target_strict = (
+                np.any(target[MAXIMIZE_IDX] > existing[:, MAXIMIZE_IDX] + EPS, axis=1)
+                | np.any(target[MINIMIZE_IDX] < existing[:, MINIMIZE_IDX] - EPS, axis=1)
+            )
+            keep = ~(target_no_worse & target_strict)
+            if not np.all(keep):
+                self.rows = [row for row, retain in zip(self.rows, keep.tolist()) if retain]
+                self._matrix = existing[keep]
+
         self.rows.append((metric, package))
+        self._matrix = np.concatenate((self._matrix, target.reshape(1, -1)), axis=0)
 
     def output(self, limit: int, evaluated: int) -> dict[str, Any]:
         rows = [_row(metric, package) for metric, package in self.rows]
@@ -136,16 +165,13 @@ class Frontier:
         }
 
 
-def skyline_indices(values: Any, *, eps: float = 1e-12):
-    import numpy as np
+def skyline_indices(values: Any, *, eps: float = EPS):
     array = np.asarray(values, dtype=np.float64)
     if array.ndim != 2 or array.shape[1] != len(DIMENSIONS):
         raise ValueError(f"skyline metrics must have shape (n, {len(DIMENSIONS)})")
     n = array.shape[0]
     if n <= 1:
         return np.arange(n, dtype=np.int32)
-    maximize = np.asarray((0, 1, 2, 3, 9, 10), dtype=np.int8)
-    minimize = np.asarray((4, 5, 6, 7, 8, 11), dtype=np.int8)
     dominated_mask = np.zeros(n, dtype=bool)
     block = 256
     for start in range(0, n, block):
@@ -153,8 +179,8 @@ def skyline_indices(values: Any, *, eps: float = 1e-12):
         target = array[start:stop]
         for source_start in range(0, n, block):
             source = array[source_start:min(n, source_start + block)]
-            no_worse = np.all(source[:, None, maximize] >= target[None, :, maximize] - eps, axis=2) & np.all(source[:, None, minimize] <= target[None, :, minimize] + eps, axis=2)
-            strict = np.any(source[:, None, maximize] > target[None, :, maximize] + eps, axis=2) | np.any(source[:, None, minimize] < target[None, :, minimize] - eps, axis=2)
+            no_worse = np.all(source[:, None, MAXIMIZE_IDX] >= target[None, :, MAXIMIZE_IDX] - eps, axis=2) & np.all(source[:, None, MINIMIZE_IDX] <= target[None, :, MINIMIZE_IDX] + eps, axis=2)
+            strict = np.any(source[:, None, MAXIMIZE_IDX] > target[None, :, MAXIMIZE_IDX] + eps, axis=2) | np.any(source[:, None, MINIMIZE_IDX] < target[None, :, MINIMIZE_IDX] - eps, axis=2)
             dominated_mask[start:stop] |= np.any(no_worse & strict, axis=0)
             if np.all(dominated_mask[start:stop]):
                 break

@@ -12,7 +12,7 @@ permissions:
 jobs:
   profile:
     runs-on: ubuntu-24.04
-    timeout-minutes: 4
+    timeout-minutes: 8
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
@@ -26,40 +26,61 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Measure exact shard plan against governed throughput
+      - name: Exact scalar versus batch task benchmark
         run: |
-          python -u -m src.engines.v4_full_universe_shard_planner --emit-matrix
           python -u - <<'PY'
           import json
-          plan=json.load(open('data/runtime/v4_full_universe_shard_plan.json'))
-          registry=plan['registry']
-          planner=registry['planner']
-          workflow=registry['workflow']
-          throughput=float(planner['observed_hotpath_packages_per_second'])
-          target_seconds=float(planner['target_worker_seconds'])
-          target_combinations=int(planner['target_combinations_per_shard'])
-          balance=plan['balance']
-          max_work=int(balance['max_estimated_shard_work'])
-          total=int(balance['estimated_total_work'])
-          shards=int(balance['derived_shard_count'])
-          expected_by_target=int(throughput*target_seconds)
-          estimate_seconds=max_work/max(1.0,throughput)
-          configured_target_seconds=target_combinations/max(1.0,throughput)
-          print('PLAN_SUMMARY', {
-              'shards': shards,
-              'tasks': plan['partition_proof']['task_count'],
-              'estimated_total_work': total,
-              'max_estimated_shard_work': max_work,
-              'observed_hotpath_packages_per_second': throughput,
-              'target_worker_seconds': target_seconds,
-              'throughput_implied_target_combinations': expected_by_target,
-              'configured_target_combinations_per_shard': target_combinations,
-              'configured_target_implied_seconds': round(configured_target_seconds,2),
-              'max_shard_estimated_seconds_at_observed_throughput': round(estimate_seconds,2),
-              'worker_timeout_seconds': workflow['worker_timeout_seconds'],
+          from time import perf_counter
+          from src.engines.v4_full_universe_shard_planner import build_plan, _load_material
+          from src.engines import v4_full_universe_shard_kernel as scalar
+          from src.engines import v4_full_universe_shard_batch_kernel as batch
+
+          plan=build_plan()
+          material=_load_material()
+          tasks=[task for shard in plan['shards'] for task in shard['tasks'] if int(task.get('estimated_work') or 0)>0]
+          task=max(tasks, key=lambda row:(int(row.get('estimated_work') or 0), str(row.get('task_id'))))
+          work=int(task['estimated_work'])
+          top_keep=int(plan['registry']['planner']['top_keep_per_shard'])
+          print('TASK', {'task_id':task['task_id'],'estimated_work':work,'replacements':task['replacements']})
+
+          started=perf_counter()
+          scalar_result, scalar_processed=scalar.execute_tasks(material,[task],top_per_size=top_keep)
+          scalar_elapsed=perf_counter()-started
+          scalar_diag=(scalar_result.get('search') or {}).get('diagnostics') or {}
+
+          rows={}
+          for size in (256,1024,4096,8192):
+              started=perf_counter()
+              result, processed=batch.execute_tasks(material,[task],top_per_size=top_keep,batch_size=size)
+              elapsed=perf_counter()-started
+              diag=(result.get('search') or {}).get('diagnostics') or {}
+              assert processed==scalar_processed
+              assert int(diag.get('packages_evaluated') or 0)==int(scalar_diag.get('packages_evaluated') or 0)
+              # Reducer-facing exact survivors must match by package identity before scalar rehydration.
+              def ids(payload):
+                  return sorted(str(row.get('package_id')) for row in (payload.get('packages') or []))
+              def frontier_ids(payload):
+                  return sorted(str(row.get('package_id')) for row in ((payload.get('efficient_frontier') or {}).get('rows') or []))
+              assert ids(result)==ids(scalar_result), (size,'top')
+              assert frontier_ids(result)==frontier_ids(scalar_result), (size,'frontier')
+              evaluated=int(diag.get('packages_evaluated') or 0)
+              rows[size]={
+                  'elapsed_s':round(elapsed,4),
+                  'packages_evaluated':evaluated,
+                  'packages_per_second':round(evaluated/max(elapsed,1e-9),1),
+                  'batch_flushes':int(diag.get('batch_flushes') or 0),
+              }
+              print('BATCH', size, rows[size])
+
+          scalar_eval=int(scalar_diag.get('packages_evaluated') or 0)
+          scalar_pps=scalar_eval/max(scalar_elapsed,1e-9)
+          best_size=max(rows, key=lambda size:rows[size]['packages_per_second'])
+          best=rows[best_size]
+          print('RESULT', {
+              'scalar':{'elapsed_s':round(scalar_elapsed,4),'packages_evaluated':scalar_eval,'packages_per_second':round(scalar_pps,1)},
+              'best_batch_size':best_size,
+              'best_batch':best,
+              'speedup':round(best['packages_per_second']/max(scalar_pps,1e-9),2),
+              'exact_survivor_parity':True,
           })
-          assert plan['partition_proof']['all_task_ids_unique'] is True
-          assert plan['partition_proof']['root_ranges_complete_and_disjoint_per_outgoing_set'] is True
-          assert balance['task_cover_complete'] is True
-          assert balance['task_assignment_disjoint'] is True
           PY

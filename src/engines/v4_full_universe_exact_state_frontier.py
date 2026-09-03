@@ -9,7 +9,7 @@ from src.engines.v4_optimizer_primitives import gw_value
 from src.engines.v4_wc_optimizer import MAX_PER_CLUB, POSITION_COUNTS, Candidate
 
 
-CONTRACT = "V4_FULL_UNIVERSE_EXACT_DUAL_SURVIVOR_V2"
+CONTRACT = "V4_FULL_UNIVERSE_EXACT_PARALLEL_OBJECTIVE_DP_V3"
 _POSITIONS = tuple(POSITION_COUNTS)
 _POSITION_ORDER = {position: index for index, position in enumerate(_POSITIONS)}
 _TWO_DP_ROUND_ERROR = 0.010000000001
@@ -177,14 +177,6 @@ def _guaranteed_frontier_strict(left: IncomingState, right: IncomingState, front
 
 
 def rank_dominates(left: IncomingState, right: IncomingState, *, frontier_epsilon: float = 0.0) -> bool:
-    """Sufficient transitive dominance for the canonical package rank only.
-
-    For one fixed need-pattern and club signature, any suffix/keep legal for the
-    right state is legal for the left. Component-wise GW dominance makes the
-    canonical five-GW XI/bench utility non-decreasing after the same merge.
-    Lower incoming uncertainty sums cannot increase the fixed-outgoing risk
-    penalty. x5/x15 and cost cover every remaining rank tie-break dimension.
-    """
     del frontier_epsilon
     if not _gw_no_worse(left, right):
         return False
@@ -201,7 +193,6 @@ def rank_dominates(left: IncomingState, right: IncomingState, *, frontier_epsilo
 
 
 def frontier_dominates(left: IncomingState, right: IncomingState, *, frontier_epsilon: float) -> bool:
-    """Sufficient transitive dominance for the canonical efficient frontier only."""
     if frontier_epsilon < 0:
         raise ValueError("frontier_epsilon must be non-negative")
     minimize_pairs = (
@@ -228,7 +219,6 @@ def frontier_dominates(left: IncomingState, right: IncomingState, *, frontier_ep
 
 
 def dominates(left: IncomingState, right: IncomingState, *, frontier_epsilon: float) -> bool:
-    """Backward-compatible combined proof relation used by existing tests/audits."""
     return rank_dominates(left, right) and frontier_dominates(left, right, frontier_epsilon=frontier_epsilon)
 
 
@@ -259,7 +249,7 @@ def _skyband_insert(
     top_keep: int,
     frontier_epsilon: float,
     relation: Callable[..., bool],
-) -> int:
+) -> None:
     pending = [candidate]
     for layer_index in range(top_keep):
         layer = layers[layer_index]
@@ -278,51 +268,35 @@ def _skyband_insert(
         pending = next_pending
         if not pending:
             break
-    return len(pending)
 
 
 def _state_key(state: IncomingState) -> tuple[int, ...]:
     return tuple(player.element for player in state.players)
 
 
-class _DualExactBucket:
-    """Union of exact rank-skyband and exact frontier survivors."""
+def _flatten_rank(buckets: dict[int, list[list[IncomingState]]]) -> tuple[IncomingState, ...]:
+    return tuple(
+        row
+        for signature in sorted(buckets)
+        for layer in buckets[signature]
+        for row in sorted(layer, key=_state_key)
+    )
 
-    def __init__(self, top_keep: int, frontier_epsilon: float):
-        self.rank_layers: list[list[IncomingState]] = [[] for _ in range(top_keep)]
-        self.frontier: list[IncomingState] = []
-        self.top_keep = top_keep
-        self.frontier_epsilon = frontier_epsilon
 
-    def insert(self, candidate: IncomingState) -> None:
-        _skyband_insert(
-            self.rank_layers,
-            candidate,
-            top_keep=self.top_keep,
-            frontier_epsilon=self.frontier_epsilon,
-            relation=rank_dominates,
-        )
-        _front_insert(
-            self.frontier,
-            candidate,
-            frontier_epsilon=self.frontier_epsilon,
-            relation=frontier_dominates,
-        )
+def _flatten_frontier(buckets: dict[int, list[IncomingState]]) -> tuple[IncomingState, ...]:
+    return tuple(
+        row
+        for signature in sorted(buckets)
+        for row in sorted(buckets[signature], key=_state_key)
+    )
 
-    def survivors(self) -> tuple[IncomingState, ...]:
-        unique: dict[tuple[int, ...], IncomingState] = {}
-        for layer in self.rank_layers:
-            for row in layer:
-                unique[_state_key(row)] = row
-        for row in self.frontier:
+
+def _union_states(*groups: tuple[IncomingState, ...]) -> tuple[IncomingState, ...]:
+    unique: dict[tuple[int, ...], IncomingState] = {}
+    for rows in groups:
+        for row in rows:
             unique[_state_key(row)] = row
-        return tuple(unique[key] for key in sorted(unique))
-
-    def rank_count(self) -> int:
-        return sum(len(layer) for layer in self.rank_layers)
-
-    def frontier_count(self) -> int:
-        return len(self.frontier)
+    return tuple(unique[key] for key in sorted(unique))
 
 
 def _need_key(need: Counter) -> tuple[tuple[str, int], ...]:
@@ -333,17 +307,18 @@ def _need_key(need: Counter) -> tuple[tuple[str, int], ...]:
     )
     total = sum(count for _position, count in rows)
     if total < 1 or total > 3:
-        raise RuntimeError(f"exact dual survivor index supports governed package sizes 1..3, got {total}")
+        raise RuntimeError(f"exact parallel objective DP supports governed package sizes 1..3, got {total}")
     return rows
 
 
 class ExactIncomingFrontierIndex:
-    """Reusable exact dual-survivor index for all outgoing sets in one search.
+    """Exact rank and frontier dynamic programs with union only at full packages.
 
-    Top-N rank preservation and efficient-frontier preservation are different
-    mathematical obligations. They are therefore reduced independently and only
-    their survivor union is propagated. A state is discarded only when it is
-    provably irrelevant to both published surfaces.
+    Partial states irrelevant to canonical rank never enter frontier DP, and
+    partial states irrelevant to the canonical efficient frontier never enter
+    rank DP. Each relation is suffix-closed inside an identical club signature,
+    so independent pruning is exact. The two survivor sets are united only after
+    the full incoming need pattern is complete.
     """
 
     def __init__(
@@ -365,78 +340,105 @@ class ExactIncomingFrontierIndex:
         self.risk_by_element = risk_by_element
         self.frontier_epsilon = float(frontier_epsilon)
         self.top_keep = int(top_keep)
-        self._group_cache: dict[tuple[str, int], tuple[IncomingState, ...]] = {}
-        self._need_cache: dict[tuple[tuple[str, int], ...], tuple[IncomingState, ...]] = {}
+        self._group_cache: dict[tuple[str, int], tuple[tuple[IncomingState, ...], tuple[IncomingState, ...]]] = {}
+        self._need_cache: dict[tuple[tuple[str, int], ...], tuple[tuple[IncomingState, ...], tuple[IncomingState, ...]]] = {}
         self.stats = {
             "group_raw_combinations": 0,
-            "group_states_retained": 0,
-            "group_states_pruned_exact": 0,
-            "merge_states_considered": 0,
-            "merge_states_retained": 0,
-            "merge_states_pruned_exact": 0,
-            "rank_survivor_memberships": 0,
-            "frontier_survivor_memberships": 0,
+            "group_rank_states_retained": 0,
+            "group_frontier_states_retained": 0,
+            "rank_merge_states_considered": 0,
+            "frontier_merge_states_considered": 0,
+            "rank_merge_states_retained": 0,
+            "frontier_merge_states_retained": 0,
+            "full_union_states_retained": 0,
             "legal_state_filter_considered": 0,
             "legal_state_filter_retained": 0,
             "legal_state_rejected_budget": 0,
             "legal_state_rejected_club_limit": 0,
         }
 
-    def _new_bucket(self) -> _DualExactBucket:
-        return _DualExactBucket(self.top_keep, self.frontier_epsilon)
+    def _new_rank_layers(self) -> list[list[IncomingState]]:
+        return [[] for _ in range(self.top_keep)]
 
-    def _flatten_buckets(self, buckets: dict[int, _DualExactBucket]) -> tuple[IncomingState, ...]:
-        rows: list[IncomingState] = []
-        for signature in sorted(buckets):
-            bucket = buckets[signature]
-            self.stats["rank_survivor_memberships"] += bucket.rank_count()
-            self.stats["frontier_survivor_memberships"] += bucket.frontier_count()
-            rows.extend(bucket.survivors())
-        return tuple(rows)
-
-    def _group_frontier(self, position: str, count: int) -> tuple[IncomingState, ...]:
+    def _group_survivors(self, position: str, count: int) -> tuple[tuple[IncomingState, ...], tuple[IncomingState, ...]]:
         key = (position, int(count))
         cached = self._group_cache.get(key)
         if cached is not None:
             return cached
         if position not in self.pools or count < 1 or count > 3:
             raise RuntimeError(f"invalid exact state group {key}")
-        buckets: dict[int, _DualExactBucket] = {}
-        raw_before = self.stats["group_raw_combinations"]
+        rank_buckets: dict[int, list[list[IncomingState]]] = {}
+        frontier_buckets: dict[int, list[IncomingState]] = {}
         for combo in combinations(self.pools[position], count):
             self.stats["group_raw_combinations"] += 1
             state = _state(tuple(combo), self.risk_by_element)
-            buckets.setdefault(state.club_signature, self._new_bucket()).insert(state)
-        rows = self._flatten_buckets(buckets)
-        raw_this = self.stats["group_raw_combinations"] - raw_before
-        self.stats["group_states_retained"] += len(rows)
-        self.stats["group_states_pruned_exact"] += max(0, raw_this - len(rows))
-        self._group_cache[key] = rows
-        return rows
+            _skyband_insert(
+                rank_buckets.setdefault(state.club_signature, self._new_rank_layers()),
+                state,
+                top_keep=self.top_keep,
+                frontier_epsilon=self.frontier_epsilon,
+                relation=rank_dominates,
+            )
+            _front_insert(
+                frontier_buckets.setdefault(state.club_signature, []),
+                state,
+                frontier_epsilon=self.frontier_epsilon,
+                relation=frontier_dominates,
+            )
+        rank_rows = _flatten_rank(rank_buckets)
+        frontier_rows = _flatten_frontier(frontier_buckets)
+        self.stats["group_rank_states_retained"] += len(rank_rows)
+        self.stats["group_frontier_states_retained"] += len(frontier_rows)
+        cached = (rank_rows, frontier_rows)
+        self._group_cache[key] = cached
+        return cached
 
-    def _states_for_need(self, need: Counter) -> tuple[IncomingState, ...]:
+    def _states_for_need(self, need: Counter) -> tuple[tuple[IncomingState, ...], tuple[IncomingState, ...]]:
         key = _need_key(need)
         cached = self._need_cache.get(key)
         if cached is not None:
             return cached
-        states = (_empty_state(),)
+
+        rank_states = (_empty_state(),)
+        frontier_states = (_empty_state(),)
         for position, count in key:
-            group_states = self._group_frontier(position, count)
-            buckets: dict[int, _DualExactBucket] = {}
-            considered_before = self.stats["merge_states_considered"]
-            for left in states:
-                for right in group_states:
-                    self.stats["merge_states_considered"] += 1
+            group_rank, group_frontier = self._group_survivors(position, count)
+
+            rank_buckets: dict[int, list[list[IncomingState]]] = {}
+            for left in rank_states:
+                for right in group_rank:
+                    self.stats["rank_merge_states_considered"] += 1
                     merged = _merge(left, right)
-                    buckets.setdefault(merged.club_signature, self._new_bucket()).insert(merged)
-            states = self._flatten_buckets(buckets)
-            considered_this = self.stats["merge_states_considered"] - considered_before
-            self.stats["merge_states_retained"] += len(states)
-            self.stats["merge_states_pruned_exact"] += max(0, considered_this - len(states))
-            if not states:
+                    _skyband_insert(
+                        rank_buckets.setdefault(merged.club_signature, self._new_rank_layers()),
+                        merged,
+                        top_keep=self.top_keep,
+                        frontier_epsilon=self.frontier_epsilon,
+                        relation=rank_dominates,
+                    )
+            rank_states = _flatten_rank(rank_buckets)
+            self.stats["rank_merge_states_retained"] += len(rank_states)
+
+            frontier_buckets: dict[int, list[IncomingState]] = {}
+            for left in frontier_states:
+                for right in group_frontier:
+                    self.stats["frontier_merge_states_considered"] += 1
+                    merged = _merge(left, right)
+                    _front_insert(
+                        frontier_buckets.setdefault(merged.club_signature, []),
+                        merged,
+                        frontier_epsilon=self.frontier_epsilon,
+                        relation=frontier_dominates,
+                    )
+            frontier_states = _flatten_frontier(frontier_buckets)
+            self.stats["frontier_merge_states_retained"] += len(frontier_states)
+
+            if not rank_states and not frontier_states:
                 break
-        self._need_cache[key] = states
-        return states
+
+        cached = (rank_states, frontier_states)
+        self._need_cache[key] = cached
+        return cached
 
     def iter_legal(
         self,
@@ -445,17 +447,21 @@ class ExactIncomingFrontierIndex:
         budget: int,
         diagnostics: dict[str, Any],
     ) -> Iterator[tuple[Candidate, ...]]:
-        states = self._states_for_need(need)
+        rank_states, frontier_states = self._states_for_need(need)
+        states = _union_states(rank_states, frontier_states)
+        self.stats["full_union_states_retained"] += len(states)
         keep_cost = sum(player.cost for player in keep)
         keep_signature = _signature(tuple(keep))
+
         diagnostics.setdefault("exact_state_compression", {})
         local = diagnostics["exact_state_compression"]
         local.setdefault("contract", CONTRACT)
         local.setdefault("canonical_top_n_best_and_frontier_exact", True)
+        local.setdefault("pareto_skyband_depth", self.top_keep)
         local.setdefault("rank_pareto_skyband_depth", self.top_keep)
         local.setdefault("frontier_pareto_depth", 1)
-        local.setdefault("rank_and_frontier_pruned_independently", True)
-        local.setdefault("survivor_union_propagated", True)
+        local.setdefault("rank_and_frontier_dp_independent_until_full_package", True)
+        local.setdefault("survivor_union_only_after_full_need_pattern", True)
         local.setdefault("same_signature_partial_dominance_only", True)
         local.setdefault("cross_signature_partial_pruning", False)
         local.setdefault("package_id_exact_ties_preserved", True)
@@ -466,7 +472,9 @@ class ExactIncomingFrontierIndex:
         local.setdefault("need_pattern_cache_reused_across_outgoing_sets", True)
         local["frontier_epsilon"] = self.frontier_epsilon
         local["calls"] = int(local.get("calls") or 0) + 1
-        local["cached_need_states"] = len(states)
+        local["cached_rank_states"] = len(rank_states)
+        local["cached_frontier_states"] = len(frontier_states)
+        local["cached_union_states"] = len(states)
 
         for state in states:
             self.stats["legal_state_filter_considered"] += 1
@@ -483,17 +491,26 @@ class ExactIncomingFrontierIndex:
             yield state.players
 
     def proof_summary(self) -> dict[str, Any]:
-        raw = int(self.stats["group_raw_combinations"] + self.stats["merge_states_considered"])
-        pruned = int(self.stats["group_states_pruned_exact"] + self.stats["merge_states_pruned_exact"])
+        considered = int(
+            self.stats["group_raw_combinations"]
+            + self.stats["rank_merge_states_considered"]
+            + self.stats["frontier_merge_states_considered"]
+        )
+        retained_memberships = int(
+            self.stats["group_rank_states_retained"]
+            + self.stats["group_frontier_states_retained"]
+            + self.stats["rank_merge_states_retained"]
+            + self.stats["frontier_merge_states_retained"]
+        )
         return {
-            "schema_version": 2,
+            "schema_version": 3,
             "contract": CONTRACT,
             "canonical_top_n_best_and_frontier_exact": True,
             "pareto_skyband_depth": self.top_keep,
             "rank_pareto_skyband_depth": self.top_keep,
             "frontier_pareto_depth": 1,
-            "rank_and_frontier_pruned_independently": True,
-            "survivor_union_propagated": True,
+            "rank_and_frontier_dp_independent_until_full_package": True,
+            "survivor_union_only_after_full_need_pattern": True,
             "heuristic": False,
             "beam_cutoff": False,
             "candidate_cutoff": False,
@@ -510,7 +527,7 @@ class ExactIncomingFrontierIndex:
             "need_pattern_cache_reused_across_outgoing_sets": True,
             "group_cache_entries": len(self._group_cache),
             "need_cache_entries": len(self._need_cache),
-            "raw_state_work_observed": raw,
-            "exact_states_pruned": pruned,
+            "raw_state_work_observed": considered,
+            "exact_states_pruned": max(0, considered - retained_memberships),
             "stats": dict(self.stats),
         }

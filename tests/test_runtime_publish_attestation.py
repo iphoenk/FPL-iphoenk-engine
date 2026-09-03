@@ -50,6 +50,7 @@ def test_runtime_materialization_embeds_verified_workflow_attestation(
 
     assert manifest["schema_version"] == 4
     assert manifest["attestation"]["registry"] == publish_snapshot.ATTESTATION_REGISTRY
+    assert manifest["attestation"]["workflow_name"] == "V3 Runtime"
     assert manifest["attestation"]["workflow_run_id"] == 123456
     assert manifest["attestation"]["workflow_run_attempt"] == 2
     assert result["status"] == "PASS"
@@ -57,6 +58,35 @@ def test_runtime_materialization_embeds_verified_workflow_attestation(
     assert result["workflow_run_id"] == 123456
     assert result["workflow_run_attempt"] == 2
     assert result["snapshot_sha256"] == manifest["attestation"]["snapshot_sha256"]
+
+
+def test_package_precompute_materialization_embeds_its_workflow_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    registry = _registry(tmp_path)
+    _wire_registry(monkeypatch, registry)
+    source = tmp_path / "source"
+    output = tmp_path / "publish"
+    source.mkdir()
+    (source / "a.json").write_text('{"x":1}\n', encoding="utf-8")
+    monkeypatch.setenv("GITHUB_WORKFLOW", "V3 Package Precompute")
+    monkeypatch.setenv("GITHUB_RUN_ID", "654321")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "3")
+
+    manifest = publish_snapshot.materialize(
+        source, output, "exhaustive_precompute", "d" * 40
+    )
+    result = publication_verify.verify_publication(
+        output / "data", source_commit="d" * 40, profile="exhaustive_precompute"
+    )
+
+    assert manifest["schema_version"] == 4
+    assert manifest["attestation"]["registry"] == publish_snapshot.ATTESTATION_REGISTRY
+    assert manifest["attestation"]["workflow_name"] == "V3 Package Precompute"
+    assert manifest["attestation"]["workflow_run_id"] == 654321
+    assert manifest["attestation"]["workflow_run_attempt"] == 3
+    assert result["status"] == "PASS"
+    assert result["embedded_attestation_verified"] is True
 
 
 def test_runtime_materialization_fails_closed_without_attempt_identity(

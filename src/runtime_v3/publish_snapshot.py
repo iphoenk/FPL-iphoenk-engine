@@ -130,17 +130,33 @@ def _checkpoint_metadata(
     }
 
 
-def _authorized_workflow_identity() -> tuple[str, int, int] | None:
-    workflow = str(os.getenv("GITHUB_WORKFLOW") or "").strip()
-    if workflow not in AUTHORIZED_SNAPSHOT_WORKFLOWS:
-        return None
+def _workflow_run_identity(workflow: str) -> tuple[int, int]:
     raw_run_id = str(os.getenv("GITHUB_RUN_ID") or "").strip()
     raw_attempt = str(os.getenv("GITHUB_RUN_ATTEMPT") or "").strip()
     if not raw_run_id.isdigit() or int(raw_run_id) <= 0:
         raise RuntimeError(f"{workflow} publication requires a valid GITHUB_RUN_ID")
     if not raw_attempt.isdigit() or int(raw_attempt) <= 0:
         raise RuntimeError(f"{workflow} publication requires a valid GITHUB_RUN_ATTEMPT")
-    return workflow, int(raw_run_id), int(raw_attempt)
+    return int(raw_run_id), int(raw_attempt)
+
+
+def _runtime_workflow_identity() -> tuple[int, int] | None:
+    if str(os.getenv("GITHUB_WORKFLOW") or "").strip() != "V3 Runtime":
+        return None
+    return _workflow_run_identity("V3 Runtime")
+
+
+def _authorized_workflow_identity() -> tuple[str, int, int] | None:
+    runtime_identity = _runtime_workflow_identity()
+    if runtime_identity is not None:
+        run_id, run_attempt = runtime_identity
+        return "V3 Runtime", run_id, run_attempt
+
+    workflow = str(os.getenv("GITHUB_WORKFLOW") or "").strip()
+    if workflow not in AUTHORIZED_SNAPSHOT_WORKFLOWS:
+        return None
+    run_id, run_attempt = _workflow_run_identity(workflow)
+    return workflow, run_id, run_attempt
 
 
 def snapshot_digest(data_dir: Path, manifest: dict[str, Any]) -> str:

@@ -25,6 +25,21 @@ def _resume_domain(policy: dict[str, Any]) -> str:
     return name
 
 
+def _resume_waves(plan: dict[str, Any], start: str) -> tuple[list[list[str]], list[list[str]]]:
+    waves = [
+        [str(name) for name in wave]
+        for wave in plan.get("domain_waves") or []
+        if isinstance(wave, list) and wave
+    ]
+    if not waves:
+        raise RuntimeError("compiled runtime plan contains no topological domain waves")
+    matches = [index for index, wave in enumerate(waves) if start in wave]
+    if len(matches) != 1:
+        raise RuntimeError(f"sharded optimizer resume boundary is not uniquely present in compiled domain waves: {start}")
+    start_wave = matches[0]
+    return waves[:start_wave], waves[start_wave:]
+
+
 def resume(*, mode: str = "daily", stats: bool = True, deep_stats: bool = False, profile: str = "exhaustive_precompute") -> dict[str, Any]:
     policy = _policy()
     domain_registry = registry_compiler.load_domain_registry()
@@ -37,53 +52,77 @@ def resume(*, mode: str = "daily", stats: bool = True, deep_stats: bool = False,
     start = _resume_domain(policy)
     if start not in domain_order:
         raise RuntimeError(f"sharded optimizer resume boundary is not a registered execution domain: {start}")
-    start_index = domain_order.index(start)
-    precompleted_domains = set(domain_order[:start_index])
-    selected_domains = domain_order[start_index:]
+
+    precompleted_waves, selected_waves = _resume_waves(plan, start)
+    precompleted_order = [name for wave in precompleted_waves for name in wave]
     domains = domain_registry.get("domains") or {}
     services = service_registry.get("services") or {}
-    completed_domains = set(precompleted_domains)
+    completed_domains = set(precompleted_order)
     completed_capabilities = {
         str(capability)
-        for domain_name in precompleted_domains
+        for domain_name in precompleted_order
         for capability in (domains.get(domain_name) or {}).get("capabilities") or []
     }
     results: dict[str, Any] = {}
+    executed_waves: list[list[str]] = []
 
-    for domain_name in selected_domains:
-        domain = domains.get(domain_name) or {}
-        dependencies = {str(dep) for dep in domain.get("depends_on") or []}
-        missing_domains = sorted(dependencies - completed_domains)
-        if missing_domains:
-            raise RuntimeError(f"sharded resume domain dependency not satisfied: {domain_name} missing={missing_domains}")
-        capabilities = [str(name) for name in domain.get("capabilities") or []]
-        domain_set = set(capabilities)
-        for capability in capabilities:
-            spec = services.get(capability) or {}
-            external = {str(dep) for dep in spec.get("depends_on") or []} - domain_set
-            missing_capabilities = sorted(external - completed_capabilities)
-            if missing_capabilities:
-                raise RuntimeError(
-                    f"sharded resume capability dependency not satisfied: {domain_name}:{capability} missing={missing_capabilities}"
-                )
-        payload = domain_process_runner.run_domain(domain_name, mode, stats, deep_stats, profile)
-        if payload.get("status") != "SUCCESS":
-            raise RuntimeError(f"sharded resume domain failed: {domain_name}")
-        results[domain_name] = payload
-        completed_domains.add(domain_name)
-        completed_capabilities.update(capabilities)
+    for wave in selected_waves:
+        wave_domains = set(wave)
+        # Every dependency of a topological wave must already be completed before
+        # that wave begins. Siblings in one wave are intentionally independent.
+        for domain_name in wave:
+            domain = domains.get(domain_name) or {}
+            dependencies = {str(dep) for dep in domain.get("depends_on") or []}
+            missing_domains = sorted(dependencies - completed_domains)
+            if missing_domains:
+                raise RuntimeError(f"sharded resume domain dependency not satisfied: {domain_name} missing={missing_domains}")
+            capabilities = [str(name) for name in domain.get("capabilities") or []]
+            domain_set = set(capabilities)
+            for capability in capabilities:
+                spec = services.get(capability) or {}
+                external = {str(dep) for dep in spec.get("depends_on") or []} - domain_set
+                external_owners = {
+                    str(plan.get("capability_owner", {}).get(dep) or "")
+                    for dep in external
+                }
+                if external_owners & wave_domains:
+                    raise RuntimeError(
+                        f"compiled domain wave contains an external capability dependency inside the same wave: {domain_name}:{capability}"
+                    )
+                missing_capabilities = sorted(external - completed_capabilities)
+                if missing_capabilities:
+                    raise RuntimeError(
+                        f"sharded resume capability dependency not satisfied: {domain_name}:{capability} missing={missing_capabilities}"
+                    )
+
+        completed_this_wave: list[tuple[str, list[str]]] = []
+        for domain_name in wave:
+            capabilities = [str(name) for name in (domains.get(domain_name) or {}).get("capabilities") or []]
+            payload = domain_process_runner.run_domain(domain_name, mode, stats, deep_stats, profile)
+            if payload.get("status") != "SUCCESS":
+                raise RuntimeError(f"sharded resume domain failed: {domain_name}")
+            results[domain_name] = payload
+            completed_this_wave.append((domain_name, capabilities))
+
+        for domain_name, capabilities in completed_this_wave:
+            completed_domains.add(domain_name)
+            completed_capabilities.update(capabilities)
+        executed_waves.append(list(wave))
 
     return {
         "status": "SUCCESS",
         "registry": policy["registry"],
         "resume_from_domain": start,
-        "precompleted_domains": domain_order[:start_index],
+        "precompleted_domains": precompleted_order,
         "executed_domains": list(results),
+        "executed_domain_waves": executed_waves,
         "profile": profile,
         "mode": mode,
         "results": results,
         "governance": {
             "domain_order_from_compiled_registry": True,
+            "domain_waves_from_compiled_registry": True,
+            "resume_boundary_expands_to_complete_topological_wave": True,
             "downstream_business_modules_not_hardcoded": True,
             "capability_dependencies_checked": True,
             "business_authority_unchanged": True,
@@ -103,6 +142,7 @@ def main() -> int:
         "status": result["status"],
         "resume_from_domain": result["resume_from_domain"],
         "executed_domains": result["executed_domains"],
+        "executed_domain_waves": result["executed_domain_waves"],
         "profile": result["profile"],
     }, ensure_ascii=False))
     return 0

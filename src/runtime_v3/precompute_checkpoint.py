@@ -220,6 +220,27 @@ def _checkpoint_recovery_decision(now_utc: datetime, target: datetime) -> dict[s
     }
 
 
+def _sharded_current_recovery_decision(now_utc: datetime, target: datetime) -> dict[str, Any]:
+    """Convert a missed current checkpoint into one late exhaustive shard recovery."""
+    base = _checkpoint_recovery_decision(now_utc, target)
+    return {
+        **base,
+        "reason": "adaptive_missing_current_checkpoint_sharded_exhaustive_recovery",
+        "deadline_intensive": False,
+        "match_window": False,
+        "deep_stats": False,
+        "visible_report": False,
+        "visible_mode": PRECOMPUTE_EXECUTION_MODE,
+        "post_deadline_reconciliation": False,
+        "snapshot_role": LATE_PRECOMPUTE_ROLE,
+        "target_deadline_intensive": bool(base.get("deadline_intensive")),
+        "target_match_window": bool(base.get("match_window")),
+        "target_post_deadline_reconciliation": bool(base.get("post_deadline_reconciliation")),
+        "target_visible_report": bool(base.get("visible_report")),
+        "target_visible_mode": base.get("visible_mode") or "SILENT",
+    }
+
+
 def _delegated_result(reason: str) -> dict[str, Any]:
     return {
         "should_collect": False,
@@ -312,7 +333,14 @@ def main() -> int:
                 return 0
         elif recovery_kind == "CURRENT" and target is not None:
             if not _manifest_satisfies_checkpoint(manifest, target_utc=target, source_commit=source_commit):
-                result = _checkpoint_recovery_decision(now, target)
+                if workflow == LEGACY_RUNTIME_WORKFLOW:
+                    result = _delegated_result("adaptive_missing_current_checkpoint_delegated_to_sharded_workflow")
+                    result["target_checkpoint_utc"] = target.isoformat()
+                    result["target_checkpoint_local"] = target.astimezone(_local_tz()).isoformat()
+                elif workflow == SHARDED_PRECOMPUTE_WORKFLOW:
+                    result = _sharded_current_recovery_decision(now, target)
+                else:
+                    result = _checkpoint_recovery_decision(now, target)
                 _append_outputs(result)
                 print(json.dumps(result, ensure_ascii=False))
                 return 0

@@ -13,6 +13,7 @@ from src.engines.v4_wc_optimizer import build_candidates
 from src.utils import CONFIG, DATA, read_json
 
 
+# Profiling harness only. Production code must not depend on this module.
 def main() -> None:
     predictions = read_json(DATA / "predictions_v4.json", {})
     universe = read_json(DATA / "universe.json", {})

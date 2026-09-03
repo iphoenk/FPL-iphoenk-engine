@@ -304,9 +304,20 @@ def _package_risk_delta(
     ins: tuple[Candidate, ...],
     interaction_map: dict[int, dict],
     price_map: dict[int, dict],
+    risk_by_element: dict[int, dict] | None = None,
 ) -> dict:
-    in_rows = [_player_risk(player, interaction_map, price_map) for player in ins]
-    out_rows = [_player_risk(player, interaction_map, price_map) for player in outs]
+    cache = risk_by_element if risk_by_element is not None else {}
+
+    def risk(player: Candidate) -> dict:
+        cached = cache.get(player.element)
+        if cached is not None:
+            return cached
+        row = _player_risk(player, interaction_map, price_map)
+        cache[player.element] = row
+        return row
+
+    in_rows = [risk(player) for player in ins]
+    out_rows = [risk(player) for player in outs]
 
     def avg(rows: list[dict], key: str, default: float = 0.0) -> float:
         return _mean([_f(row.get(key), default) for row in rows], default)
@@ -321,7 +332,6 @@ def _package_risk_delta(
         "opponent_matchup_confidence": round(avg(in_rows, "opponent_matchup_confidence"), 4),
         "incoming_evidence_states": [row.get("evidence_state") for row in in_rows],
     }
-
 
 def _hit_cost(replacements: int, locked: dict, policy: dict) -> int:
     if replacements <= 0:
@@ -384,14 +394,16 @@ def _frontier_insert(frontier: list[dict], row: dict, epsilon: float) -> None:
 
 def _compact_for_frontier(row: dict) -> dict:
     keys = (
-        "package_id", "replacements", "out", "in", "target_cost", "target_itb", "hit_cost",
+        "package_id", "replacements", "target_cost", "target_itb", "hit_cost",
         "net_xpts_3", "net_xpts_5", "net_xpts_10", "net_xpts_15", "adjusted_best_xi_gain_5",
         "adjusted_utility_gain_5", "xmins_uncertainty", "projection_uncertainty", "tactical_uncertainty",
         "price_risk", "roster_change_uncertainty", "tactical_role_confidence", "opponent_matchup_confidence",
-        "structural_flexibility", "classification", "price_scenario", "staggered_best_route",
+        "structural_flexibility", "classification",
     )
-    return {key: row.get(key) for key in keys}
-
+    compact = {key: row.get(key) for key in keys}
+    compact["_out_ids"] = tuple(row.get("_out_ids") or ())
+    compact["_in_ids"] = tuple(row.get("_in_ids") or ())
+    return compact
 
 def _rank(row: dict) -> tuple:
     return (
@@ -478,7 +490,7 @@ def _package_id(outs: tuple[Candidate, ...], ins: tuple[Candidate, ...]) -> str:
     return f"OUT[{out_ids}]_IN[{in_ids}]"
 
 
-def _materialize_package(
+def _evaluate_package(
     outs: tuple[Candidate, ...],
     ins: tuple[Candidate, ...],
     target: tuple[Candidate, ...],
@@ -487,7 +499,8 @@ def _materialize_package(
     locked: dict,
     policy: dict,
     interaction_map: dict[int, dict],
-    prices: dict | None,
+    price_map: dict[int, dict],
+    risk_by_element: dict[int, dict],
 ) -> dict:
     k = len(ins)
     hit = _hit_cost(k, locked, policy)
@@ -497,8 +510,7 @@ def _materialize_package(
     dx15 = _f(target_metrics.get("squad_xpts_15")) - _f(baseline_metrics.get("squad_xpts_15"))
     dxi = _f(target_metrics.get("best_xi_xpts_5")) - _f(baseline_metrics.get("best_xi_xpts_5"))
     du = _f(target_metrics.get("bench_adjusted_utility_5")) - _f(baseline_metrics.get("bench_adjusted_utility_5"))
-    price_map = _price_rows(prices)
-    risks = _package_risk_delta(outs, ins, interaction_map, price_map)
+    risks = _package_risk_delta(outs, ins, interaction_map, price_map, risk_by_element)
     risk_penalty = (
         0.35 * risks["projection_uncertainty"]
         + 0.30 * risks["xmins_uncertainty"]
@@ -508,12 +520,11 @@ def _materialize_package(
     adjusted_xi = dxi - hit - risk_penalty
     adjusted_util = du - hit - risk_penalty
     itb = int(locked.get("itb_tenths") or 0) + sum(player.cost for player in outs) - sum(player.cost for player in ins)
-    price_scenario = projected_price_scenario(outs, ins, locked, prices)
-    row = {
+    return {
         "package_id": _package_id(outs, ins),
         "replacements": k,
-        "out": [reference.payload(player) for player in sorted(outs, key=lambda row: (_POSITION_ORDER.get(row.position, 99), row.element))],
-        "in": [reference.payload(player) for player in sorted(ins, key=lambda row: (_POSITION_ORDER.get(row.position, 99), row.element))],
+        "_out_ids": tuple(player.element for player in outs),
+        "_in_ids": tuple(player.element for player in ins),
         "target_cost": int(target_metrics.get("cost") or sum(player.cost for player in target)),
         "target_itb": itb,
         "delta_cost": sum(player.cost for player in ins) - sum(player.cost for player in outs),
@@ -544,17 +555,39 @@ def _materialize_package(
         "opponent_matchup_confidence": risks["opponent_matchup_confidence"],
         "structural_flexibility": _structural_flexibility(target, itb),
         "classification": reference.package_class(adjusted_xi, adjusted_util, k) if k else "ROLL_BASELINE",
-        "price_scenario": price_scenario,
-        "staggered_best_route": _staggered_best_route(outs, ins, locked, policy),
-        "governance": {
-            "tactical_direct_xpts_mutation": False,
-            "price_alone_can_authorize_transfer": False,
-            "watchlist_candidate_authority": False,
-            "post_transfer_legality_recomputed": True,
-        },
     }
-    return row
 
+
+def _finalize_package(
+    row: dict,
+    *,
+    by_id: dict[int, Candidate],
+    current: tuple[Candidate, ...],
+    locked: dict,
+    prices: dict | None,
+    policy: dict,
+    budget: int,
+) -> dict:
+    outs = tuple(by_id[element] for element in row.get("_out_ids") or ())
+    ins = tuple(by_id[element] for element in row.get("_in_ids") or ())
+    out_ids = {player.element for player in outs}
+    target = tuple(player for player in current if player.element not in out_ids) + ins
+    legal, reason = validate_squad(target, budget)
+    if not legal:
+        raise RuntimeError(f"retained full-universe package failed final legality proof: {reason}")
+    finalized = {key: value for key, value in row.items() if not key.startswith("_")}
+    finalized["out"] = [reference.payload(player) for player in sorted(outs, key=lambda item: (_POSITION_ORDER.get(item.position, 99), item.element))]
+    finalized["in"] = [reference.payload(player) for player in sorted(ins, key=lambda item: (_POSITION_ORDER.get(item.position, 99), item.element))]
+    finalized["price_scenario"] = projected_price_scenario(outs, ins, locked, prices)
+    finalized["staggered_best_route"] = _staggered_best_route(outs, ins, locked, policy)
+    finalized["governance"] = {
+        "tactical_direct_xpts_mutation": False,
+        "price_alone_can_authorize_transfer": False,
+        "watchlist_candidate_authority": False,
+        "post_transfer_legality_recomputed": True,
+        "expensive_evidence_materialized_only_after_exact_selection": True,
+    }
+    return finalized
 
 def _frontier_categories(frontier: list[dict], roll: dict) -> dict:
     rows = frontier or [roll]
@@ -613,6 +646,7 @@ def search_full_universe_packages(
         ) if predictions is not None and universe is not None else {"players": {}, "health": {"status": "UNAVAILABLE"}}
     interaction_map = _interaction_rows(interactions)
     price_map = _price_rows(prices)
+    risk_by_element = {player.element: _player_risk(player, interaction_map, price_map) for player in reconciled}
 
     pruned_external, pruning_proofs = safe_prune_incoming_players(reconciled, owned_ids)
     pools = {pos: [] for pos in POSITION_COUNTS}
@@ -688,6 +722,8 @@ def search_full_universe_packages(
     _frontier_insert(frontier, _compact_for_frontier(roll), frontier_epsilon)
 
     keep_profile_cache: dict[tuple[int, ...], dict] = {}
+    chosen_profile_cache: dict[tuple[int, ...], dict] = {}
+    position_prefix_cache: dict = {}
     for k in range(1, max_replacements + 1):
         for outs_raw in combinations(current, k):
             outs = tuple(sorted(outs_raw, key=lambda row: (_POSITION_ORDER.get(row.position, 99), row.element)))
@@ -701,15 +737,20 @@ def search_full_universe_packages(
             for ins_raw in _incoming_combinations(pools, need, keep, derived_budget, diagnostics):
                 ins = tuple(sorted(ins_raw, key=lambda row: (_POSITION_ORDER.get(row.position, 99), row.element)))
                 target = keep + ins
-                ok, why = validate_squad(target, derived_budget)
-                if not ok:
-                    diagnostics["packages_rejected_by_legality"] += 1
-                    continue
+                # Exact legality is enforced by construction in _incoming_combinations:
+                # position counts are restored from `need`, candidates are unowned/unique,
+                # budget is bounded, and keep+incoming club counts are checked <= MAX_PER_CLUB.
                 diagnostics["packages_evaluated"] += 1
-                chosen_profile = _chosen_profile(ins)
-                target_metrics = _metrics_from_profiles(keep_profile, chosen_profile)
-                row = _materialize_package(
-                    outs, ins, target, target_metrics, baseline_metrics, locked, policy, interaction_map, prices,
+                in_ids = tuple(player.element for player in ins)
+                chosen_profile = chosen_profile_cache.get(in_ids)
+                if chosen_profile is None:
+                    chosen_profile = _chosen_profile(ins)
+                    chosen_profile_cache[in_ids] = chosen_profile
+                target_metrics = _metrics_from_profiles(
+                    keep_profile, chosen_profile, position_prefix_cache=position_prefix_cache,
+                )
+                row = _evaluate_package(
+                    outs, ins, target, target_metrics, baseline_metrics, locked, policy, interaction_map, price_map, risk_by_element,
                 )
                 _retain_top(top_by_k[k], row, top_per_size)
                 incumbent = best_by_k[str(k)]
@@ -726,13 +767,32 @@ def search_full_universe_packages(
 
     frontier.sort(key=_rank, reverse=True)
     diagnostics["packages_retained_on_frontier"] = len(frontier)
+
+    finalized_cache: dict[str, dict] = {}
+    def finalize(row: dict | None) -> dict | None:
+        if row is None:
+            return None
+        package_id = str(row.get("package_id") or "")
+        if package_id == "ROLL_BASELINE":
+            return roll
+        cached = finalized_cache.get(package_id)
+        if cached is None:
+            cached = _finalize_package(
+                row, by_id=by_id, current=current, locked=locked, prices=prices, policy=policy, budget=derived_budget,
+            )
+            finalized_cache[package_id] = cached
+        return cached
+
+    frontier = [finalize(row) for row in frontier]
+    top_by_k = {k: [finalize(row) for row in rows] for k, rows in top_by_k.items()}
+    best_by_k = {key: finalize(row) for key, row in best_by_k.items()}
     packages = [row for k in range(1, max_replacements + 1) for row in top_by_k[k]]
     best_candidates = [row for row in best_by_k.values() if row]
     recommended = max(best_candidates, key=_rank) if best_candidates else None
     if recommended and _f(recommended.get("adjusted_utility_gain_5")) <= 0:
         recommended = None
     overall = (recommended or roll).get("classification") or "ROLL_BASELINE"
-    categories = _frontier_categories(frontier, _compact_for_frontier(roll))
+    categories = _frontier_categories(frontier, roll)
 
     global_proof = (
         not bool(search_cfg.get("allow_heuristic_candidate_cutoff"))
@@ -790,5 +850,8 @@ def search_full_universe_packages(
             "tactical_direct_xpts_multiplier": False,
             "tactical_direct_xmins_mutation": False,
             "global_optimality_claim_requires_safe_pruning_proof": True,
+            "all_enumerated_packages_legal_by_exact_generator_constraints": True,
+            "retained_packages_revalidated_with_canonical_validate_squad": True,
+            "expensive_evidence_materialized_only_after_exact_selection": True,
         },
     }

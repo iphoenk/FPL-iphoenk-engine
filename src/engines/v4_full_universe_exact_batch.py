@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Sequence
+from typing import Sequence
 
 import numpy as np
 
@@ -26,14 +26,13 @@ def _gw(player: Candidate, index: int) -> float:
     return float(player.gw_xpts[index]) if index < len(player.gw_xpts) else 0.0
 
 
-def _player_arrays(players: Sequence[Candidate]) -> dict[str, np.ndarray]:
-    return {
-        "cost": np.asarray([p.cost for p in players], dtype=np.float64),
-        "x3": np.asarray([p.x3 for p in players], dtype=np.float64),
-        "x5": np.asarray([p.x5 for p in players], dtype=np.float64),
-        "x10": np.asarray([p.x10 for p in players], dtype=np.float64),
-        "x15": np.asarray([p.x15 for p in players], dtype=np.float64),
-    }
+def _round_array(values: np.ndarray, digits: int) -> np.ndarray:
+    """Apply CPython ``round`` elementwise so batch publication matches scalar semantics."""
+    return np.fromiter(
+        (round(float(value), digits) for value in values),
+        dtype=np.float64,
+        count=len(values),
+    )
 
 
 def _risk_matrix(rows: Sequence[tuple[Candidate, ...]], risk_by_element: dict[int, dict]) -> dict[str, np.ndarray]:
@@ -72,7 +71,6 @@ def _best_xi_and_utility(keep: tuple[Candidate, ...], incoming_rows: Sequence[tu
     keep_by_pos = {pos: tuple(p for p in keep if p.position == pos) for pos in _POSITIONS}
 
     for gw_index in range(5):
-        position_sorted: dict[str, np.ndarray] = {}
         position_prefix: dict[str, np.ndarray] = {}
         total = np.zeros(batch, dtype=np.float64)
         for pos in _POSITIONS:
@@ -90,7 +88,6 @@ def _best_xi_and_utility(keep: tuple[Candidate, ...], incoming_rows: Sequence[tu
                 values = np.broadcast_to(fixed, (batch, len(fixed))).copy()
             values.sort(axis=1)
             values = values[:, ::-1]
-            position_sorted[pos] = values
             position_prefix[pos] = np.concatenate((np.zeros((batch, 1), dtype=np.float64), np.cumsum(values, axis=1)), axis=1)
             total += values.sum(axis=1)
 
@@ -112,9 +109,10 @@ def _best_xi_and_utility(keep: tuple[Candidate, ...], incoming_rows: Sequence[tu
 def evaluate_batch(context: BatchContext, incoming_rows: Sequence[tuple[Candidate, ...]]) -> list[dict]:
     """Exact numeric batch evaluation for legal incoming tuples.
 
-    This function changes execution topology only. Legality remains the caller's
-    responsibility and published survivors must be scalar-rehydrated by the
-    canonical V4 package-search helpers before authority is granted.
+    This changes execution topology only. Scalar V4 semantics remain authoritative:
+    target horizon, XI and utility metrics are rounded at the same boundary as the
+    canonical scalar kernel before package deltas are calculated. Published survivors
+    are still scalar-rehydrated before authority is granted.
     """
     if not incoming_rows:
         return []
@@ -122,33 +120,41 @@ def evaluate_batch(context: BatchContext, incoming_rows: Sequence[tuple[Candidat
     if any(len(row) != k for row in incoming_rows):
         raise ValueError("incoming batch replacement count differs from outgoing set")
 
-    n = len(incoming_rows)
     outs = context.outs
     baseline = context.baseline_metrics
     incoming_cost = np.asarray([sum(p.cost for p in row) for row in incoming_rows], dtype=np.float64)
     outgoing_cost = float(sum(p.cost for p in outs))
-    out_h = {
-        "x3": float(sum(p.x3 for p in outs)),
-        "x5": float(sum(p.x5 for p in outs)),
-        "x10": float(sum(p.x10 for p in outs)),
-        "x15": float(sum(p.x15 for p in outs)),
+
+    keep_h = {
+        key: float(sum(getattr(p, key) for p in context.keep))
+        for key in ("x3", "x5", "x10", "x15")
     }
-    in_h = {
+    incoming_h = {
         key: np.asarray([sum(getattr(p, key) for p in row) for row in incoming_rows], dtype=np.float64)
         for key in ("x3", "x5", "x10", "x15")
     }
-    delta = {key: in_h[key] - out_h[key] for key in in_h}
+    target_h = {
+        key: _round_array(incoming_h[key] + keep_h[key], 2)
+        for key in incoming_h
+    }
+    baseline_h = {
+        "x3": float(baseline.get("squad_xpts_3") or 0.0),
+        "x5": float(baseline.get("squad_xpts_5") or 0.0),
+        "x10": float(baseline.get("squad_xpts_10") or 0.0),
+        "x15": float(baseline.get("squad_xpts_15") or 0.0),
+    }
+    delta = {key: target_h[key] - baseline_h[key] for key in target_h}
 
     hit = float(core._hit_cost(k, context.locked, context.policy))
     incoming_risk = _risk_matrix(incoming_rows, context.risk_by_element)
     outgoing_risk = _outgoing_risk(outs, context.risk_by_element)
     risk = {
-        key: np.maximum(0.0, incoming_risk[key] - outgoing_risk[key])
+        key: _round_array(np.maximum(0.0, incoming_risk[key] - outgoing_risk[key]), 4)
         for key in ("projection_uncertainty", "xmins_uncertainty", "tactical_uncertainty", "roster_change_uncertainty")
     }
-    risk["price_risk"] = incoming_risk["price_risk"]
-    risk["tactical_role_confidence"] = incoming_risk["tactical_role_confidence"]
-    risk["opponent_matchup_confidence"] = incoming_risk["opponent_matchup_confidence"]
+    risk["price_risk"] = _round_array(incoming_risk["price_risk"], 4)
+    risk["tactical_role_confidence"] = _round_array(incoming_risk["tactical_role_confidence"], 4)
+    risk["opponent_matchup_confidence"] = _round_array(incoming_risk["opponent_matchup_confidence"], 4)
     risk_penalty = (
         0.35 * risk["projection_uncertainty"]
         + 0.30 * risk["xmins_uncertainty"]
@@ -156,7 +162,9 @@ def evaluate_batch(context: BatchContext, incoming_rows: Sequence[tuple[Candidat
         + 0.20 * risk["roster_change_uncertainty"]
     )
 
-    xi5, utility5 = _best_xi_and_utility(context.keep, incoming_rows)
+    xi5_raw, utility5_raw = _best_xi_and_utility(context.keep, incoming_rows)
+    xi5 = _round_array(xi5_raw, 2)
+    utility5 = _round_array(utility5_raw, 2)
     dxi = xi5 - float(baseline.get("best_xi_xpts_5") or 0.0)
     du = utility5 - float(baseline.get("bench_adjusted_utility_5") or 0.0)
     adjusted_xi = dxi - hit - risk_penalty
@@ -194,13 +202,13 @@ def evaluate_batch(context: BatchContext, incoming_rows: Sequence[tuple[Candidat
             "risk_penalty": round(float(risk_penalty[index]), 4),
             "adjusted_best_xi_gain_5": round(float(adjusted_xi[index]), 3),
             "adjusted_utility_gain_5": round(float(adjusted_utility[index]), 3),
-            "projection_uncertainty": round(float(risk["projection_uncertainty"][index]), 4),
-            "xmins_uncertainty": round(float(risk["xmins_uncertainty"][index]), 4),
-            "tactical_uncertainty": round(float(risk["tactical_uncertainty"][index]), 4),
-            "roster_change_uncertainty": round(float(risk["roster_change_uncertainty"][index]), 4),
-            "price_risk": round(float(risk["price_risk"][index]), 4),
-            "tactical_role_confidence": round(float(risk["tactical_role_confidence"][index]), 4),
-            "opponent_matchup_confidence": round(float(risk["opponent_matchup_confidence"][index]), 4),
+            "projection_uncertainty": float(risk["projection_uncertainty"][index]),
+            "xmins_uncertainty": float(risk["xmins_uncertainty"][index]),
+            "tactical_uncertainty": float(risk["tactical_uncertainty"][index]),
+            "roster_change_uncertainty": float(risk["roster_change_uncertainty"][index]),
+            "price_risk": float(risk["price_risk"][index]),
+            "tactical_role_confidence": float(risk["tactical_role_confidence"][index]),
+            "opponent_matchup_confidence": float(risk["opponent_matchup_confidence"][index]),
             "structural_flexibility": round(float(flexibility[index]), 4),
             "classification": core.reference.package_class(float(adjusted_xi[index]), float(adjusted_utility[index]), k),
             "batch_execution_only": True,

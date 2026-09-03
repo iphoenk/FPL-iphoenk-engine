@@ -15,6 +15,7 @@ from src.models.official_role_evidence import attach_official_role_evidence
 from src.models.prediction_quality import evaluate as evaluate_prediction_quality
 from src.models.tactical_matchup import attach_tactical_matchups
 from src.models.team_strength import build_team_strength
+from src.runtime_v3.full_authority_cache import reusable_full_optimizer
 from src.settings import STRATEGIC_HORIZON_GWS
 from src.utils import DATA, atomic_json, read_json
 
@@ -55,11 +56,32 @@ def _build_packages(projections: dict, team: dict) -> dict:
         packages.setdefault("governance", {}).update({
             "production_owner": "prediction",
             "execution_profile": profile,
+            "authority_execution_profile": profile,
             "package_decision_writer": "lineup_governance",
             "exhaustive_precompute": True,
         })
         return packages
-    return build_package_optimizer(projections, team)
+
+    reused = reusable_full_optimizer()
+    if reused is not None:
+        reused.setdefault("governance", {}).update({
+            "production_owner": "prediction",
+            "package_decision_writer": "lineup_governance",
+            "authority_execution_profile": EXHAUSTIVE_PRECOMPUTE_PROFILE,
+            "runtime_reuse_profile": profile or "standard",
+            "full_authority_exact_input_reuse": True,
+        })
+        return reused
+
+    packages = build_package_optimizer(projections, team)
+    packages.setdefault("governance", {}).update({
+        "production_owner": "prediction",
+        "execution_profile": profile or "standard",
+        "authority_execution_profile": profile or "standard",
+        "package_decision_writer": "lineup_governance",
+        "full_authority_exact_input_reuse": False,
+    })
+    return packages
 
 
 def run() -> dict:
@@ -137,13 +159,17 @@ def run() -> dict:
     atomic_json(DATA / "prediction_quality.json", quality)
     tactical = projections.get("tactical_matchup_summary") or {}
     search_authority = (packages.get("search_diagnostics") or {}).get("search_authority")
+    package_governance = packages.get("governance") or {}
+    authority_profile = str(package_governance.get("authority_execution_profile") or execution_profile)
     latest.setdefault("files", {}).update({"team_strength": "data/team_strength.json", "projections": "data/projections.json", "package_optimizer": "data/package_optimizer.json", "prediction_quality": "data/prediction_quality.json"})
     latest["decision_intelligence"] = {
         "service": "prediction_service", "model": projections.get("model"), "planning_gw": planning_gw, "projection_horizon_gws": STRATEGIC_HORIZON_GWS,
         "projection_players": len(projections.get("players") or []), "team_strength_model": strength.get("model"), "team_strength_teams": len(strength.get("teams") or []),
         "historical_prior_model": projections.get("historical_prior_model"), "historical_prior_players_used": projections.get("historical_prior_players_used"),
         "prediction_quality": quality.get("status"), "package_optimizer_status": packages.get("status"), "package_count": packages.get("package_count", 0),
-        "package_optimizer_search_authority": search_authority, "package_optimizer_execution_profile": execution_profile,
+        "package_optimizer_search_authority": search_authority, "package_optimizer_execution_profile": authority_profile,
+        "package_optimizer_runtime_profile": execution_profile,
+        "package_optimizer_exact_full_reuse": package_governance.get("full_authority_exact_input_reuse") is True,
         "best_package": (packages.get("packages") or [{}])[0].get("id") if packages.get("packages") else None, "candidate_generation_only": True,
         "official_role_evidence": official_role_evidence,
         "tactical_matchup": {
@@ -154,7 +180,7 @@ def run() -> dict:
         },
         "player_feature_model": {"contract": projections.get("player_feature_contract"), "opt_in": projections.get("player_feature_model_opt_in"), "defensive_contribution_model": projections.get("defensive_contribution_model"), "advanced_defensive_evidence_players_used": projections.get("advanced_defensive_evidence_players_used")},
         "projection_calibration": {"status": projection_diagnostics.get("status"), "comparison_authority": projection_diagnostics.get("comparison_authority"), "mutates_xpts": False, "positions": projection_diagnostics.get("positions")},
-        "risk_guardrails": {"team_cluster_penalty_enabled": (packages.get("governance") or {}).get("team_cluster_penalty_enabled"), "early_season_change_cap_enabled": (packages.get("governance") or {}).get("early_season_change_cap_enabled"), "effective_max_changes": (packages.get("governance") or {}).get("effective_max_changes")},
+        "risk_guardrails": {"team_cluster_penalty_enabled": package_governance.get("team_cluster_penalty_enabled"), "early_season_change_cap_enabled": package_governance.get("early_season_change_cap_enabled"), "effective_max_changes": package_governance.get("effective_max_changes")},
     }
     latest["prediction_quality_summary"] = {"status": quality.get("status"), "failed_checks": quality.get("failed_checks"), "checks": quality.get("checks")}
     atomic_json(DATA / "latest.json", latest)

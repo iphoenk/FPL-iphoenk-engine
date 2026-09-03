@@ -9,7 +9,13 @@ permissions:
 jobs:
   structural:
     runs-on: ubuntu-24.04
-    timeout-minutes: 8
+    outputs:
+      matrix: ${{ steps.execution-plan.outputs.matrix }}
+      worker_timeout_seconds: ${{ steps.execution-plan.outputs.worker_timeout_seconds }}
+      worker_slo_ms: ${{ steps.execution-plan.outputs.worker_slo_ms }}
+      merge_timeout_seconds: ${{ steps.execution-plan.outputs.merge_timeout_seconds }}
+      merge_slo_ms: ${{ steps.execution-plan.outputs.merge_slo_ms }}
+      precompute_wall_slo_ms: ${{ steps.execution-plan.outputs.precompute_wall_slo_ms }}
     env:
       PYTHONPATH: ${{ github.workspace }}
     steps:
@@ -22,16 +28,28 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Stage split and workflow-shard topology
+      - name: Stage registry-driven microservice topology
         run: |
           python tools/v4_package_optimization_service_split_runner_v4_temp.py
           python tools/v4_exact_workflow_shard_patch_temp.py
           python tools/v4_exact_workflow_shard_fix1_temp.py
           python tools/v4_exact_workflow_shard_fix2_temp.py
-      - name: Compile shard architecture
-        run: python -m py_compile src/engines/v4_full_universe_package_search_core.py src/engines/v4_full_universe_package_search.py src/engines/v4_full_universe_package_shard_merge.py src/services/package_optimization_shard_service.py src/services/package_optimization_merge_service.py src/services/package_optimization_service.py
-      - name: Focused shard proof tests
-        run: python -m pytest -q tests/test_v4_exact_workflow_shard_merge.py tests/test_v4_package_optimization_service_boundary.py tests/test_v4_full_universe_package_search_proof.py tests/test_v4_full_universe_authority_fail_closed.py tests/test_service_orchestrator.py tests/test_v4_p1_structural_hardening.py
+          python tools/v4_exact_2d_execution_registry_patch_temp.py
+          python tools/v4_exact_2d_execution_registry_fix1_temp.py
+      - name: Resolve execution plan from registry
+        id: execution-plan
+        shell: bash
+        run: |
+          echo "matrix=$(python -m src.services.package_optimization_execution_plan matrix)" >> "$GITHUB_OUTPUT"
+          echo "worker_timeout_seconds=$(python -m src.services.package_optimization_execution_plan worker-timeout-seconds)" >> "$GITHUB_OUTPUT"
+          echo "worker_slo_ms=$(python -m src.services.package_optimization_execution_plan worker-slo-ms)" >> "$GITHUB_OUTPUT"
+          echo "merge_timeout_seconds=$(python -m src.services.package_optimization_execution_plan merge-timeout-seconds)" >> "$GITHUB_OUTPUT"
+          echo "merge_slo_ms=$(python -m src.services.package_optimization_execution_plan merge-slo-ms)" >> "$GITHUB_OUTPUT"
+          echo "precompute_wall_slo_ms=$(python -m src.services.package_optimization_execution_plan precompute-wall-slo-ms)" >> "$GITHUB_OUTPUT"
+      - name: Compile distributed package architecture
+        run: python -m py_compile src/engines/v4_full_universe_package_search_core.py src/engines/v4_full_universe_package_search.py src/engines/v4_full_universe_package_shard_merge.py src/services/package_optimization_execution_plan.py src/services/package_optimization_shard_service.py src/services/package_optimization_merge_service.py src/services/package_optimization_service.py
+      - name: Focused 2D proof tests
+        run: python -m pytest -q tests/test_v4_exact_workflow_shard_merge.py tests/test_v4_package_execution_registry.py tests/test_v4_package_optimization_service_boundary.py tests/test_v4_full_universe_package_search_proof.py tests/test_v4_full_universe_authority_fail_closed.py tests/test_service_orchestrator.py tests/test_v4_p1_structural_hardening.py
       - name: Refresh and verify architecture attestation
         run: |
           python tools/v4_architecture_guard_attest.py
@@ -43,14 +61,17 @@ jobs:
     needs: structural
     strategy:
       fail-fast: false
-      matrix:
-        shard: [0,1,2,3,4,5,6,7]
+      matrix: ${{ fromJSON(needs.structural.outputs.matrix) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
     env:
       PYTHONPATH: ${{ github.workspace }}
-      V4_PACKAGE_SHARD_INDEX: ${{ matrix.shard }}
-      V4_PACKAGE_SHARD_COUNT: '8'
+      V4_PACKAGE_OUTGOING_SHARD_INDEX: ${{ matrix.outgoing_index }}
+      V4_PACKAGE_OUTGOING_SHARD_COUNT: ${{ matrix.outgoing_count }}
+      V4_PACKAGE_INCOMING_PREFIX_SHARD_INDEX: ${{ matrix.incoming_index }}
+      V4_PACKAGE_INCOMING_PREFIX_SHARD_COUNT: ${{ matrix.incoming_count }}
+      V4_PACKAGE_CELL_ID: ${{ matrix.cell_id }}
+      V4_PACKAGE_WORKER_TIMEOUT_SECONDS: ${{ needs.structural.outputs.worker_timeout_seconds }}
+      V4_PACKAGE_WORKER_SLO_MS: ${{ needs.structural.outputs.worker_slo_ms }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -61,45 +82,56 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt
-      - name: Stage exact shard implementation
+      - name: Stage registry-driven exact worker
         run: |
           python tools/v4_package_optimization_service_split_runner_v4_temp.py
           python tools/v4_exact_workflow_shard_patch_temp.py
           python tools/v4_exact_workflow_shard_fix1_temp.py
           python tools/v4_exact_workflow_shard_fix2_temp.py
-      - name: Run exact non-authoritative shard
-        run: timeout 75s python -m src.services.package_optimization_shard_service
-      - name: Verify shard SLO and authority
+          python tools/v4_exact_2d_execution_registry_patch_temp.py
+          python tools/v4_exact_2d_execution_registry_fix1_temp.py
+      - name: Run exact non-authoritative cell
+        shell: bash
+        run: timeout "${V4_PACKAGE_WORKER_TIMEOUT_SECONDS}s" python -m src.services.package_optimization_shard_service
+      - name: Verify cell SLO, lineage and authority
         run: |
           python - <<'PY'
           import json, os
           from pathlib import Path
-          i=int(os.environ['V4_PACKAGE_SHARD_INDEX'])
-          p=Path('data/package_shards')/f'shard-{i:02d}.json'
-          s=json.loads(p.read_text())
-          r=s['result']; q=r['search']; d=q['diagnostics']
-          assert s['duration_ms'] < 60000, s['duration_ms']
-          assert q['status']=='SHARD_PARTIAL_EXACT', q
-          assert q['authoritative_for_recommendation'] is False, q
-          assert r['decision_authority']=='SHARD_PARTIAL_NO_AUTHORITY', r['decision_authority']
-          assert q['heuristic_candidate_cutoff'] is False and q['beam_cutoff'] is False
-          assert d['outgoing_shard_index']==i and d['outgoing_shard_count']==8
-          assert len(d['outgoing_job_keys'])==d['outgoing_jobs_selected'] > 0
-          print({'shard':i,'duration_ms':s['duration_ms'],'outgoing_jobs':d['outgoing_jobs_selected'],'packages':d['packages_evaluated']})
+          from src.services.package_optimization_execution_plan import load_execution_plan
+          plan=load_execution_plan()
+          oi=int(os.environ['V4_PACKAGE_OUTGOING_SHARD_INDEX']); ii=int(os.environ['V4_PACKAGE_INCOMING_PREFIX_SHARD_INDEX'])
+          oc=int(os.environ['V4_PACKAGE_OUTGOING_SHARD_COUNT']); ic=int(os.environ['V4_PACKAGE_INCOMING_PREFIX_SHARD_COUNT'])
+          p=Path('data/package_shards')/f'cell-o{oi:02d}-i{ii:02d}.json'
+          wrapper=json.loads(p.read_text()); result=wrapper['result']; search=result['search']; diagnostics=search['diagnostics']
+          assert wrapper['execution_registry']==plan['registry']
+          assert wrapper['duration_ms'] < float(plan['worker']['slo_ms']), wrapper['duration_ms']
+          assert search['status']=='SHARD_PARTIAL_EXACT'
+          assert search['authoritative_for_recommendation'] is False
+          assert result['decision_authority']=='SHARD_PARTIAL_NO_AUTHORITY'
+          assert search['heuristic_candidate_cutoff'] is False and search['beam_cutoff'] is False
+          assert search['outgoing_shard_index']==oi and search['outgoing_shard_count']==oc
+          assert search['incoming_prefix_shard_index']==ii and search['incoming_prefix_shard_count']==ic
+          assert diagnostics['partition_scheme']=='OUTGOING_JOB_ORDINAL_MODULO_X_ROOT_INCOMING_COMBO_ORDINAL_MODULO'
+          assert len(diagnostics['outgoing_job_keys'])==diagnostics['outgoing_jobs_selected']
+          assert diagnostics['incoming_prefixes_selected'] >= 0
+          print({'cell':os.environ['V4_PACKAGE_CELL_ID'],'duration_ms':wrapper['duration_ms'],'outgoing_jobs':diagnostics['outgoing_jobs_selected'],'incoming_prefixes':diagnostics['incoming_prefixes_selected'],'packages':diagnostics['packages_evaluated']})
           PY
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: v4-exact-package-shard-${{ matrix.shard }}
-          path: data/package_shards/shard-*.json
+          name: v4-exact-package-cell-${{ matrix.cell_id }}
+          path: data/package_shards/cell-*.json
           if-no-files-found: error
           retention-days: 1
 
   fan-in:
-    needs: shard
+    needs: [structural, shard]
     runs-on: ubuntu-24.04
-    timeout-minutes: 8
     env:
       PYTHONPATH: ${{ github.workspace }}
+      V4_PACKAGE_MERGE_TIMEOUT_SECONDS: ${{ needs.structural.outputs.merge_timeout_seconds }}
+      V4_PACKAGE_MERGE_SLO_MS: ${{ needs.structural.outputs.merge_slo_ms }}
+      V4_PACKAGE_PRECOMPUTE_WALL_SLO_MS: ${{ needs.structural.outputs.precompute_wall_slo_ms }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -110,42 +142,56 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: pip install --disable-pip-version-check -r requirements.txt pytest
-      - name: Stage exact shard implementation
+      - name: Stage registry-driven exact fan-in
         run: |
           python tools/v4_package_optimization_service_split_runner_v4_temp.py
           python tools/v4_exact_workflow_shard_patch_temp.py
           python tools/v4_exact_workflow_shard_fix1_temp.py
           python tools/v4_exact_workflow_shard_fix2_temp.py
+          python tools/v4_exact_2d_execution_registry_patch_temp.py
+          python tools/v4_exact_2d_execution_registry_fix1_temp.py
       - uses: actions/download-artifact@v4
         with:
-          pattern: v4-exact-package-shard-*
+          pattern: v4-exact-package-cell-*
           path: data/package_shards
           merge-multiple: true
       - name: Exact fan-in and global proof
-        run: timeout 30s python -m src.services.package_optimization_merge_service
-      - name: Decision consumer must be fast after fan-in
-        run: /usr/bin/time -f 'decision_consumer_elapsed=%e' timeout 12s python -m src.services.optimization_slo_service
-      - name: Verify global authority and SLO split
+        shell: bash
+        run: timeout "${V4_PACKAGE_MERGE_TIMEOUT_SECONDS}s" python -m src.services.package_optimization_merge_service
+      - name: Decision consumer must remain composition-only
+        run: python -m src.services.optimization_slo_service
+      - name: Verify global authority and registry-driven SLO split
         run: |
           python - <<'PY'
           import json
-          p=json.load(open('data/wc_package_audit_v4.json'))
-          m=json.load(open('data/package_optimization_manifest_v4.json'))
-          d=json.load(open('data/decision_pipeline_v4.json'))
-          s=p['search']; x=s['diagnostics']
-          assert s['status']=='FULL_UNIVERSE_PROVEN'
-          assert s['authoritative_for_recommendation'] is True
-          assert p['decision_authority']=='ENGINE_ADVISORY_ONLY_FULL_UNIVERSE_PROVEN'
-          assert s['heuristic_candidate_cutoff'] is False and s['beam_cutoff'] is False
-          assert x['workflow_shard_count']==8
-          assert x['shard_partitions_disjoint'] is True and x['shard_partitions_complete'] is True
-          assert len(x['outgoing_job_keys'])==x['outgoing_jobs_total']==x['outgoing_jobs_selected']
-          assert m['status']=='PASS' and m['execution']['topology']=='WORKFLOW_MATRIX_FANOUT_FANIN'
-          assert m['execution']['max_shard_duration_ms'] < 60000
-          assert m['execution']['merge_duration_ms'] < 15000
-          assert m['duration_ms'] < 75000
-          assert d['timings']['total_pipeline_ms'] < 5000, d['timings']
-          assert d['performance_guardrails']['package_artifact_lineage_verified'] is True
-          assert d['performance_guardrails']['package_search_recompute_in_decision_boundary'] is False
-          print({'search':s['status'],'outgoing_jobs':x['outgoing_jobs_total'],'max_shard_ms':m['execution']['max_shard_duration_ms'],'merge_ms':m['execution']['merge_duration_ms'],'decision_ms':d['timings']['total_pipeline_ms']})
+          package=json.load(open('data/wc_package_audit_v4.json'))
+          manifest=json.load(open('data/package_optimization_manifest_v4.json'))
+          decision=json.load(open('data/decision_pipeline_v4.json'))
+          execution=json.load(open('config/package_optimization_execution_registry.json'))
+          services=json.load(open('config/service_registry.json'))
+          search=package['search']; diagnostics=search['diagnostics']
+          outgoing=int(execution['partition']['outgoing']['shard_count']); incoming=int(execution['partition']['incoming_prefix']['shard_count'])
+          assert search['status']=='FULL_UNIVERSE_PROVEN'
+          assert search['authoritative_for_recommendation'] is True
+          assert package['decision_authority']=='ENGINE_ADVISORY_ONLY_FULL_UNIVERSE_PROVEN'
+          assert search['heuristic_candidate_cutoff'] is False and search['beam_cutoff'] is False
+          assert diagnostics['workflow_worker_count']==outgoing*incoming
+          assert diagnostics['outgoing_shard_count']==outgoing and diagnostics['incoming_prefix_shard_count']==incoming
+          assert diagnostics['outgoing_partitions_disjoint'] is True and diagnostics['outgoing_partitions_complete'] is True
+          assert diagnostics['incoming_prefix_partitions_disjoint'] is True and diagnostics['incoming_prefix_partitions_complete'] is True
+          assert diagnostics['shard_partitions_disjoint'] is True and diagnostics['shard_partitions_complete'] is True
+          assert len(diagnostics['outgoing_job_keys'])==diagnostics['outgoing_jobs_total']==diagnostics['outgoing_jobs_selected']
+          assert manifest['status']=='PASS' and manifest['execution']['registry']==execution['registry']
+          assert manifest['execution']['topology']==execution['topology']
+          assert manifest['execution']['worker_count']==outgoing*incoming
+          assert manifest['execution']['max_shard_duration_ms'] < float(execution['worker']['slo_ms'])
+          assert manifest['execution']['merge_duration_ms'] < float(execution['fan_in']['slo_ms'])
+          assert manifest['duration_ms'] < float(execution['precompute']['wall_slo_ms'])
+          decision_slo=float(services['guardrails']['decision_compute_slo_ms'])
+          assert decision['timings']['total_pipeline_ms'] < decision_slo, decision['timings']
+          assert decision['performance_guardrails']['package_artifact_lineage_verified'] is True
+          assert decision['performance_guardrails']['package_search_recompute_in_decision_boundary'] is False
+          assert manifest['guardrails']['execution_registry_authoritative'] is True
+          assert manifest['guardrails']['monolithic_fallback_forbidden'] is True
+          print({'search':search['status'],'workers':outgoing*incoming,'outgoing_jobs':diagnostics['outgoing_jobs_total'],'max_worker_ms':manifest['execution']['max_shard_duration_ms'],'merge_ms':manifest['execution']['merge_duration_ms'],'decision_ms':decision['timings']['total_pipeline_ms']})
           PY

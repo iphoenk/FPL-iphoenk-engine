@@ -14,6 +14,7 @@ from src.runtime_v3.publish_snapshot import (
     ATTESTATION_DIGEST_CONTRACT,
     ATTESTATION_REGISTRY,
     ATTESTATION_REGISTRY_V1,
+    AUTHORIZED_SNAPSHOT_WORKFLOWS,
     snapshot_digest,
 )
 from src.utils import ROOT
@@ -152,6 +153,8 @@ def _verify_embedded_attestation(root: Path, manifest: dict, actual_paths: list[
             raise RuntimeError("runtime hydration rejected: legacy attestation registry mismatch")
         if attestation.get("workflow_run_attempt") is not None:
             raise RuntimeError("runtime hydration rejected: legacy attestation may not declare workflow attempt")
+        if attestation.get("workflow_name") != EXPECTED_WORKFLOW:
+            raise RuntimeError("runtime hydration rejected: legacy attestation workflow mismatch")
         run_attempt = None
     else:
         if registry != ATTESTATION_REGISTRY:
@@ -159,11 +162,11 @@ def _verify_embedded_attestation(root: Path, manifest: dict, actual_paths: list[
         run_attempt = attestation.get("workflow_run_attempt")
         if not isinstance(run_attempt, int) or run_attempt <= 0:
             raise RuntimeError("runtime hydration rejected: attestation workflow run attempt invalid")
+        if attestation.get("workflow_name") not in AUTHORIZED_SNAPSHOT_WORKFLOWS:
+            raise RuntimeError("runtime hydration rejected: attestation workflow mismatch")
 
     if attestation.get("digest_contract") != ATTESTATION_DIGEST_CONTRACT:
         raise RuntimeError("runtime hydration rejected: attestation digest contract mismatch")
-    if attestation.get("workflow_name") != EXPECTED_WORKFLOW:
-        raise RuntimeError("runtime hydration rejected: attestation workflow mismatch")
 
     run_id = attestation.get("workflow_run_id")
     if not isinstance(run_id, int) or run_id <= 0:
@@ -204,7 +207,7 @@ def _validate_attempt_metadata(metadata: dict, attestation: dict, attempt: int) 
         raise RuntimeError("runtime hydration rejected: workflow run attempt metadata invalid")
     if actual_attempt != attempt:
         raise RuntimeError("runtime hydration rejected: workflow run attempt mismatch")
-    if metadata.get("name") != EXPECTED_WORKFLOW:
+    if metadata.get("name") != attestation.get("workflow_name"):
         raise RuntimeError("runtime hydration rejected: workflow run name mismatch")
     if metadata.get("head_branch") != "main":
         raise RuntimeError("runtime hydration rejected: attesting workflow was not canonical main")

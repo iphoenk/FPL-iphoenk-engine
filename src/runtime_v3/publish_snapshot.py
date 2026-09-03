@@ -19,6 +19,7 @@ PUBLIC_AUTH_PROJECTION = "PUBLIC_AUTH_HEALTH_V1"
 ATTESTATION_REGISTRY_V1 = "V3_RUNTIME_WORKFLOW_ATTESTATION_V1"
 ATTESTATION_REGISTRY = "V3_RUNTIME_WORKFLOW_ATTESTATION_V2"
 ATTESTATION_DIGEST_CONTRACT = "MANIFEST_CORE_PLUS_DECLARED_PAYLOAD_V1"
+AUTHORIZED_SNAPSHOT_WORKFLOWS = frozenset({"V3 Runtime", "V3 Package Precompute"})
 
 
 def _registry() -> dict[str, Any]:
@@ -129,16 +130,33 @@ def _checkpoint_metadata(
     }
 
 
-def _runtime_workflow_identity() -> tuple[int, int] | None:
-    if os.getenv("GITHUB_WORKFLOW") != "V3 Runtime":
-        return None
+def _workflow_run_identity(workflow: str) -> tuple[int, int]:
     raw_run_id = str(os.getenv("GITHUB_RUN_ID") or "").strip()
     raw_attempt = str(os.getenv("GITHUB_RUN_ATTEMPT") or "").strip()
     if not raw_run_id.isdigit() or int(raw_run_id) <= 0:
-        raise RuntimeError("V3 Runtime publication requires a valid GITHUB_RUN_ID")
+        raise RuntimeError(f"{workflow} publication requires a valid GITHUB_RUN_ID")
     if not raw_attempt.isdigit() or int(raw_attempt) <= 0:
-        raise RuntimeError("V3 Runtime publication requires a valid GITHUB_RUN_ATTEMPT")
+        raise RuntimeError(f"{workflow} publication requires a valid GITHUB_RUN_ATTEMPT")
     return int(raw_run_id), int(raw_attempt)
+
+
+def _runtime_workflow_identity() -> tuple[int, int] | None:
+    if str(os.getenv("GITHUB_WORKFLOW") or "").strip() != "V3 Runtime":
+        return None
+    return _workflow_run_identity("V3 Runtime")
+
+
+def _authorized_workflow_identity() -> tuple[str, int, int] | None:
+    runtime_identity = _runtime_workflow_identity()
+    if runtime_identity is not None:
+        run_id, run_attempt = runtime_identity
+        return "V3 Runtime", run_id, run_attempt
+
+    workflow = str(os.getenv("GITHUB_WORKFLOW") or "").strip()
+    if workflow not in AUTHORIZED_SNAPSHOT_WORKFLOWS:
+        return None
+    run_id, run_attempt = _workflow_run_identity(workflow)
+    return workflow, run_id, run_attempt
 
 
 def snapshot_digest(data_dir: Path, manifest: dict[str, Any]) -> str:
@@ -187,7 +205,7 @@ def materialize(
     target_visible_mode: str | None = None,
 ) -> dict[str, Any]:
     registry = _registry()
-    workflow_identity = _runtime_workflow_identity()
+    workflow_identity = _authorized_workflow_identity()
     canonical_runtime_source = source_root.resolve() == DATA.resolve()
     authority_assurance = None
     if workflow_identity is not None and canonical_runtime_source:
@@ -242,12 +260,12 @@ def materialize(
         manifest["optimizer_authority"] = authority_assurance
 
     if workflow_identity is not None:
-        run_id, run_attempt = workflow_identity
+        workflow_name, run_id, run_attempt = workflow_identity
         digest = snapshot_digest(output_data, manifest)
         manifest["attestation"] = {
             "registry": ATTESTATION_REGISTRY,
             "digest_contract": ATTESTATION_DIGEST_CONTRACT,
-            "workflow_name": "V3 Runtime",
+            "workflow_name": workflow_name,
             "workflow_run_id": run_id,
             "workflow_run_attempt": run_attempt,
             "source_commit": manifest.get("source_commit"),

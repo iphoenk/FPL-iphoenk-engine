@@ -10,6 +10,7 @@ from src.runtime_v3.publish_snapshot import (
     ATTESTATION_DIGEST_CONTRACT,
     ATTESTATION_REGISTRY,
     ATTESTATION_REGISTRY_V1,
+    AUTHORIZED_SNAPSHOT_WORKFLOWS,
     PUBLIC_AUTH_PROJECTION,
     REGISTRY_PATH,
     snapshot_digest,
@@ -177,17 +178,19 @@ def _verify_embedded_attestation(data_dir: Path, manifest: dict[str, Any]) -> di
             raise RuntimeError("runtime workflow attestation registry mismatch")
         if attestation.get("workflow_run_attempt") is not None:
             raise RuntimeError("runtime manifest v3 may not carry attempt-aware attestation")
+        if attestation.get("workflow_name") != "V3 Runtime":
+            raise RuntimeError("runtime legacy workflow attestation workflow mismatch")
     else:
         if registry != ATTESTATION_REGISTRY:
             raise RuntimeError("runtime workflow attestation registry mismatch")
         run_attempt = attestation.get("workflow_run_attempt")
         if not isinstance(run_attempt, int) or run_attempt <= 0:
             raise RuntimeError("runtime manifest workflow attempt invalid")
+        if attestation.get("workflow_name") not in AUTHORIZED_SNAPSHOT_WORKFLOWS:
+            raise RuntimeError("runtime workflow attestation workflow mismatch")
 
     if attestation.get("digest_contract") != ATTESTATION_DIGEST_CONTRACT:
         raise RuntimeError("runtime workflow attestation digest contract mismatch")
-    if attestation.get("workflow_name") != "V3 Runtime":
-        raise RuntimeError("runtime workflow attestation workflow mismatch")
     run_id = attestation.get("workflow_run_id")
     if not isinstance(run_id, int) or run_id <= 0:
         raise RuntimeError("runtime workflow attestation run id invalid")

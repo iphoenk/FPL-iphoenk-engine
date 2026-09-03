@@ -16,11 +16,11 @@ RUN_ID = 123456
 RUN_ATTEMPT = 1
 
 
-def _attestation() -> dict:
+def _attestation(workflow_name: str = guard.EXPECTED_WORKFLOW) -> dict:
     return {
         "registry": guard.ATTESTATION_REGISTRY,
         "digest_contract": guard.ATTESTATION_DIGEST_CONTRACT,
-        "workflow_name": guard.EXPECTED_WORKFLOW,
+        "workflow_name": workflow_name,
         "workflow_run_id": RUN_ID,
         "workflow_run_attempt": RUN_ATTEMPT,
         "source_commit": SOURCE_SHA,
@@ -49,7 +49,7 @@ def _wire_success(monkeypatch: pytest.MonkeyPatch, attestation: dict) -> None:
         "_fetch_json",
         lambda url: {
             "id": RUN_ID,
-            "name": guard.EXPECTED_WORKFLOW,
+            "name": attestation["workflow_name"],
             "head_branch": "main",
             "head_sha": SOURCE_SHA,
             "conclusion": "success",
@@ -71,6 +71,19 @@ def test_immutable_workflow_evidence_accepts_exact_successful_run_marker(
     assert result["immutable_log_attestation_verified"] is True
     assert result["workflow_run_attempt"] == RUN_ATTEMPT
     assert result["legacy_attempt_migration"] is False
+
+
+def test_immutable_workflow_evidence_accepts_package_precompute_producer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attestation = _attestation("V3 Package Precompute")
+    _wire_success(monkeypatch, attestation)
+
+    result = guard._verify_immutable_workflow_evidence(attestation)
+
+    assert result["workflow_run_success_verified"] is True
+    assert result["immutable_log_attestation_verified"] is True
+    assert result["workflow_run_attempt"] == RUN_ATTEMPT
 
 
 def test_immutable_workflow_evidence_rejects_unsuccessful_run(
@@ -108,6 +121,21 @@ def test_immutable_workflow_evidence_rejects_missing_exact_marker(
 
     with pytest.raises(RuntimeError, match="immutable workflow attestation marker missing"):
         guard._verify_immutable_workflow_evidence(attestation)
+
+
+def test_embedded_attestation_rejects_unapproved_producer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(guard, "_production_actions_context", lambda: True)
+    manifest = {
+        "schema_version": 4,
+        "source_commit": SOURCE_SHA,
+        "publication": {"paths": []},
+        "attestation": _attestation("V3 CI"),
+    }
+
+    with pytest.raises(RuntimeError, match="attestation workflow mismatch"):
+        guard._verify_embedded_attestation(Path("."), manifest, [])
 
 
 def test_production_actions_rejects_legacy_unattested_snapshot(

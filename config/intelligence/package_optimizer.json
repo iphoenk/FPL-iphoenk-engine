@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "model_id": "multi_horizon_package_optimizer_v2",
   "horizons": [3, 5, 10, 15],
   "horizon_weights": {"3": 0.42, "5": 0.33, "10": 0.15, "15": 0.10},
@@ -14,9 +14,24 @@
     "free_players_per_club": 2,
     "points_per_extra_player": 0.05
   },
-  "max_candidates_per_position": 7,
-  "max_single_moves_per_out": 4,
-  "max_deterministic_packages": 220,
+  "candidate_origin": "COMPLETE_ELIGIBLE_OFFICIAL_FPL_UNIVERSE",
+  "watchlist_is_optimizer_input": false,
+  "search_frontier": {
+    "method": "LEGACY_BOUNDED_SCORE_FRONTIER",
+    "candidates_per_position": 7,
+    "single_moves_per_out": 4,
+    "single_move_pair_seed": 40,
+    "max_exact_packages": 220,
+    "lossy": true,
+    "authority_when_applied": "PARTIAL",
+    "reason": "bounded production-safe frontier retained until a non-lossy full-universe branch-and-bound implementation satisfies V3 runtime SLO"
+  },
+  "candidate_pool_preview_per_position": 20,
+  "frontier": {
+    "enabled": true,
+    "publish_limit": 20,
+    "never_second_scoring_authority": true
+  },
   "monte_carlo_top_n": 20,
   "monte_carlo_simulations": 300,
   "monte_carlo_seed": 31800,
@@ -27,5 +42,15 @@
   "change_penalty_points": 0.20,
   "require_available_status": true,
   "allowed_statuses": ["a", "d"],
-  "simulation_assumption": "independent_normal_aggregate_baseline"
+  "simulation_assumption": "independent_normal_aggregate_baseline",
+  "governance": {
+    "official_fpl_full_universe_scanned_before_pruning": true,
+    "watchlist_truncation_forbidden": true,
+    "hardcoded_player_seed_forbidden": true,
+    "lossy_pruning_must_be_observable": true,
+    "lossy_pruning_must_downgrade_search_authority": true,
+    "optimizer_runtime_readiness_is_separate_from_search_authority": true,
+    "official_fpl_identity_price_position_club_authority_preserved": true,
+    "prediction_scoring_semantics_unchanged": true
+  }
 }

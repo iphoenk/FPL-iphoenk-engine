@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.runtime_v3 import domain_process_runner, registry_compiler
+from src.runtime_v3 import domain_process_runner, registry_compiler, rules_drift_refresh
 from src.utils import ROOT
 
 SHARD_POLICY_PATH = ROOT / "config" / "runtime" / "package_optimizer_sharding.json"
@@ -40,7 +40,14 @@ def _resume_waves(plan: dict[str, Any], start: str) -> tuple[list[list[str]], li
     return waves[:start_wave], waves[start_wave:]
 
 
-def resume(*, mode: str = "daily", stats: bool = True, deep_stats: bool = False, profile: str = "exhaustive_precompute") -> dict[str, Any]:
+def resume(
+    *,
+    mode: str = "daily",
+    stats: bool = True,
+    deep_stats: bool = False,
+    profile: str = "exhaustive_precompute",
+    refresh_rules: bool = False,
+) -> dict[str, Any]:
     policy = _policy()
     domain_registry = registry_compiler.load_domain_registry()
     service_registry = registry_compiler.load_capability_registry()
@@ -65,6 +72,17 @@ def resume(*, mode: str = "daily", stats: bool = True, deep_stats: bool = False,
     }
     results: dict[str, Any] = {}
     executed_waves: list[list[str]] = []
+    rules_refresh = (
+        rules_drift_refresh.refresh_if_due()
+        if refresh_rules
+        else {
+            "status": "NOT_REQUESTED",
+            "remote_check_executed": False,
+            "drift_before": None,
+            "drift_after": None,
+            "rules_overall": None,
+        }
+    )
 
     for wave in selected_waves:
         wave_domains = set(wave)
@@ -118,6 +136,7 @@ def resume(*, mode: str = "daily", stats: bool = True, deep_stats: bool = False,
         "executed_domain_waves": executed_waves,
         "profile": profile,
         "mode": mode,
+        "rules_drift_refresh": rules_refresh,
         "results": results,
         "governance": {
             "domain_order_from_compiled_registry": True,
@@ -126,6 +145,8 @@ def resume(*, mode: str = "daily", stats: bool = True, deep_stats: bool = False,
             "downstream_business_modules_not_hardcoded": True,
             "capability_dependencies_checked": True,
             "business_authority_unchanged": True,
+            "rules_drift_freshness_hook_owned_by_sharded_resume": True,
+            "rules_remote_refresh_threshold_owned_by_rules_auditor": True,
         },
     }
 
@@ -137,13 +158,20 @@ def main() -> int:
     parser.add_argument("--deep-stats", action="store_true")
     parser.add_argument("--profile", default=str((_policy().get("workflow") or {}).get("authority_profile") or "exhaustive_precompute"))
     args = parser.parse_args()
-    result = resume(mode=args.mode, stats=args.stats, deep_stats=args.deep_stats, profile=args.profile)
+    result = resume(
+        mode=args.mode,
+        stats=args.stats,
+        deep_stats=args.deep_stats,
+        profile=args.profile,
+        refresh_rules=True,
+    )
     print(json.dumps({
         "status": result["status"],
         "resume_from_domain": result["resume_from_domain"],
         "executed_domains": result["executed_domains"],
         "executed_domain_waves": result["executed_domain_waves"],
         "profile": result["profile"],
+        "rules_drift_refresh": result["rules_drift_refresh"],
     }, ensure_ascii=False))
     return 0
 

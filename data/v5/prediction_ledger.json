@@ -6155,7 +6155,7 @@
       "gw": 3,
       "deadline_time": "2026-09-04T17:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-03T15:07:56.651190+00:00",
+        "generated_at": "2026-09-03T18:50:01.712121+00:00",
         "players": [
           {
             "element": 1,
@@ -10941,10 +10941,10 @@
             "element": 407,
             "name": "Echeverri",
             "position": "MID",
-            "xpts": 2.833,
-            "xpts_std": 2.855,
-            "xmins": 46.2,
-            "start_probability": 0.5726,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.4374
           },
           {
@@ -12682,6 +12682,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-03T15:07:57.731516+00:00",
+  "updated_at": "2026-09-03T18:50:02.781183+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

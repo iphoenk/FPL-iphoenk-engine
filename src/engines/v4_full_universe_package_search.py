@@ -279,7 +279,7 @@ def search_full_universe_packages(
     roster_events: dict | None = None,
     prices: dict | None = None,
     max_replacements: int | None = None,
-    top_per_size: int = 12,
+    top_per_size: int | None = None,
 ) -> dict:
     if interactions is None and predictions is not None and universe is not None:
         interactions = build_tactical_interactions(
@@ -293,6 +293,13 @@ def search_full_universe_packages(
     policy = _core._policy()
     search_cfg = policy.get("search") or {}
     frontier_epsilon = _f(search_cfg.get("frontier_epsilon"), 0.01)
+    if top_per_size is None:
+        configured_top = search_cfg.get("top_per_size")
+        if configured_top is None:
+            raise RuntimeError("full-universe search registry requires search.top_per_size")
+        top_per_size = int(configured_top)
+    else:
+        top_per_size = int(top_per_size)
     if top_per_size < 1:
         raise ValueError("top_per_size must be positive")
 
@@ -380,6 +387,8 @@ def search_full_universe_packages(
         "proof_maximize_dimensions": list(_MAXIMIZE),
         "exact_incoming_state_skyband": compression_proof,
         "exact_state_skyband_preserves_top_n_best_and_frontier": compression_exact,
+        "top_per_size": top_per_size,
+        "top_per_size_source": "config/intelligence/full_universe_package_search.json",
     })
     out.setdefault("governance", {}).update({
         "full_decision_chain_safe_pruning": all_safe,
@@ -391,6 +400,7 @@ def search_full_universe_packages(
             compression_proof.get("pareto_skyband_depth") == top_per_size
         ),
         "state_compression_must_preserve_top_n_best_and_frontier": True,
+        "operational_top_per_size_registry_owned": True,
     })
     if not global_proof:
         (out.get("efficient_frontier") or {})["status"] = "PARTIAL"

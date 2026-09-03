@@ -188,10 +188,9 @@ def materialize(
 ) -> dict[str, Any]:
     registry = _registry()
     workflow_identity = _runtime_workflow_identity()
+    canonical_runtime_source = source_root.resolve() == DATA.resolve()
     authority_assurance = None
-    if workflow_identity is not None:
-        if source_root.resolve() != DATA.resolve():
-            raise RuntimeError("V3 Runtime FULL authority gate requires the canonical data directory")
+    if workflow_identity is not None and canonical_runtime_source:
         authority_assurance = verify_full_authority(profile)
 
     output_data = output_dir / "data"
@@ -235,7 +234,7 @@ def materialize(
             "paths": sorted(copied),
             "rolling_snapshot_intended": True,
             "private_authenticated_state_projected_to_public_health": True,
-            "full_optimizer_authority_fail_closed": workflow_identity is not None,
+            "full_optimizer_authority_fail_closed": workflow_identity is not None and canonical_runtime_source,
             "file_count": len(copied) + 1,
         },
     }

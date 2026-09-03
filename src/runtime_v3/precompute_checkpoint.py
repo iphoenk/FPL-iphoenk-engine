@@ -13,6 +13,7 @@ MANIFEST_PATH = DATA / "runtime_manifest.json"
 PRECOMPUTE_ROLE = "PRECOMPUTE_NEXT_CHECKPOINT"
 LATE_PRECOMPUTE_ROLE = "LATE_PRECOMPUTE_RECOVERY"
 PRIMARY_FALLBACK_ROLE = "PRIMARY_FALLBACK_CURRENT_CHECKPOINT"
+CI_DEPLOYMENT_ROLE = "CI_DEPLOYMENT_EXHAUSTIVE_REFRESH"
 PRECOMPUTE_EXECUTION_MODE = "EXHAUSTIVE_PRECOMPUTE"
 
 
@@ -170,6 +171,17 @@ def _precompute_decision(now_utc: datetime) -> dict[str, Any]:
     }
 
 
+def _ci_deployment_decision(now_utc: datetime) -> dict[str, Any]:
+    """Publish exhaustive truth after green main CI without becoming checkpoint authority."""
+    result = _precompute_decision(now_utc)
+    result.update({
+        "reason": "post_ci_exhaustive_deployment_refresh",
+        "snapshot_role": CI_DEPLOYMENT_ROLE,
+        "visible_report": False,
+    })
+    return result
+
+
 def _checkpoint_recovery_decision(now_utc: datetime, target: datetime) -> dict[str, Any]:
     target = target.astimezone(timezone.utc)
     persisted = collector_gate.persisted_phase()
@@ -213,6 +225,11 @@ def main() -> int:
     schedule_expr = os.getenv("FPL_SCHEDULE_EXPR", "")
     source_commit = os.getenv("SOURCE_COMMIT", os.getenv("GITHUB_SHA", ""))
     now = datetime.now(timezone.utc)
+    if event == "workflow_run":
+        result = _ci_deployment_decision(now)
+        _append_outputs(result)
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
     if event == "schedule" and is_precompute_schedule(schedule_expr):
         result = _precompute_decision(now)
         _append_outputs(result)

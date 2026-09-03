@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "model_id": "multi_horizon_package_optimizer_v2",
   "horizons": [3, 5, 10, 15],
   "horizon_weights": {"3": 0.42, "5": 0.33, "10": 0.15, "15": 0.10},
@@ -17,14 +17,25 @@
   "candidate_origin": "COMPLETE_ELIGIBLE_OFFICIAL_FPL_UNIVERSE",
   "watchlist_is_optimizer_input": false,
   "search_frontier": {
-    "method": "LEGACY_BOUNDED_SCORE_FRONTIER",
-    "candidates_per_position": 7,
-    "single_moves_per_out": 4,
-    "single_move_pair_seed": 40,
+    "method": "TEAM_POSITION_PARETO_DIVERSITY_BUDGET_V1",
+    "pareto_dimensions": [
+      "lower_now_cost",
+      "higher_xpts3_mean",
+      "higher_xpts5_mean",
+      "higher_xpts10_mean",
+      "higher_xpts15_mean",
+      "lower_xpts3_std",
+      "lower_xpts5_std",
+      "lower_xpts10_std",
+      "lower_xpts15_std"
+    ],
+    "pareto_scope": "POSITION_AND_OFFICIAL_TEAM",
+    "single_exact_evaluation_budget": 80,
     "max_exact_packages": 220,
+    "mandatory_seed_dimensions": ["incoming_team_position", "outgoing_element"],
     "lossy": true,
     "authority_when_applied": "PARTIAL",
-    "reason": "bounded production-safe frontier retained until a non-lossy full-universe branch-and-bound implementation satisfies V3 runtime SLO"
+    "reason": "full Official universe is scanned and reduced by observable team-position Pareto dominance; exact scoring then uses a deterministic diversity budget until a proven non-lossy branch-and-bound implementation satisfies V3 runtime SLO"
   },
   "candidate_pool_preview_per_position": 20,
   "frontier": {
@@ -45,8 +56,11 @@
   "simulation_assumption": "independent_normal_aggregate_baseline",
   "governance": {
     "official_fpl_full_universe_scanned_before_pruning": true,
+    "fixed_top_n_per_position_forbidden": true,
+    "fixed_top_n_per_outgoing_forbidden": true,
     "watchlist_truncation_forbidden": true,
     "hardcoded_player_seed_forbidden": true,
+    "team_diversity_preserved_before_exact_budget": true,
     "lossy_pruning_must_be_observable": true,
     "lossy_pruning_must_downgrade_search_authority": true,
     "optimizer_runtime_readiness_is_separate_from_search_authority": true,

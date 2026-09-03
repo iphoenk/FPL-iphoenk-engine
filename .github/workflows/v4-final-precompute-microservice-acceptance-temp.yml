@@ -1,0 +1,80 @@
+name: V4 final precompute microservice acceptance
+on:
+  push:
+    branches: [codex/v4-full-universe-tactical-20260903]
+    paths:
+      - .github/workflows/v4-final-precompute-microservice-acceptance-temp.yml
+      - tools/v4_precompute_microservice_finalize_temp.py
+permissions:
+  contents: write
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: codex/v4-full-universe-tactical-20260903
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: Stage registry-driven precompute microservice architecture
+        run: python tools/v4_precompute_microservice_finalize_temp.py
+      - name: Compile production boundaries
+        run: python -m py_compile src/services/package_optimization_service.py src/services/optimization_slo_service.py src/services/orchestrator.py src/services/hot_orchestrator.py src/engines/v4_decision_pipeline.py src/engines/v4_package_artifact_contract.py
+      - name: Focused architecture and exactness tests
+        run: python -m pytest -q tests/test_v4_precompute_microservice_governance.py tests/test_v4_package_optimization_service_boundary.py tests/test_v4_full_universe_package_search_proof.py tests/test_v4_full_universe_authority_fail_closed.py tests/test_service_orchestrator.py tests/test_v4_p1_structural_hardening.py
+      - name: Refresh and verify architecture attestation
+        run: |
+          python tools/v4_architecture_guard_attest.py
+          python -m src.services.architecture_guard_service
+      - name: Full V4 regression
+        run: python -m pytest -q
+      - name: Cold exact package precompute under governed SLO
+        run: /usr/bin/time -f 'cold_package_precompute_elapsed=%e' timeout 225s python -m src.services.package_optimization_service
+      - name: Prove exact artifact and governed search authority
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('config/service_registry.json'))
+          p=json.load(open('data/wc_package_audit_v4.json'))
+          m=json.load(open('data/package_optimization_manifest_v4.json'))
+          s=p['search']; g=r['guardrails']
+          assert m['status']=='PASS', m
+          assert m['duration_ms'] < g['package_optimization_slo_ms'], (m['duration_ms'],g['package_optimization_slo_ms'])
+          assert s['status']=='FULL_UNIVERSE_PROVEN', s
+          assert s['authoritative_for_recommendation'] is True, s
+          assert p['decision_authority']=='ENGINE_ADVISORY_ONLY_FULL_UNIVERSE_PROVEN'
+          assert s['heuristic_candidate_cutoff'] is False and s['beam_cutoff'] is False
+          print({'precompute_ms':m['duration_ms'],'slo_ms':g['package_optimization_slo_ms'],'search':s['status']})
+          PY
+      - name: Warm package service must reuse exact artifact
+        run: /usr/bin/time -f 'warm_package_reuse_elapsed=%e' timeout 8s python -m src.services.package_optimization_service
+      - name: Decision consumer hard SLO
+        run: /usr/bin/time -f 'decision_consumer_elapsed=%e' timeout 12s python -m src.services.optimization_slo_service
+      - name: Verify decision consumer did not recompute package search
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('data/decision_pipeline_v4.json'))
+          t=d['timings']; g=d['performance_guardrails']
+          assert t['total_pipeline_ms'] < 5000, t
+          assert g['package_artifact_lineage_verified'] is True, g
+          assert g['package_search_recompute_in_decision_boundary'] is False, g
+          print({'decision_ms':t['total_pipeline_ms'],'package_precompute_ms':t.get('package_precompute_ms')})
+          PY
+      - name: Commit accepted production split
+        run: |
+          set -euo pipefail
+          git config user.name 'fpl-iphoenk-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add config/service_registry.json config/service_contract_registry.json config/architecture_ownership_registry.json config/optimizer_equivalence_registry.json config/release_manifest.json config/architecture_guard_attestation.json src/engines/v4_decision_pipeline.py src/engines/v4_package_artifact_contract.py src/services/package_optimization_service.py src/services/orchestrator.py src/services/hot_orchestrator.py tests/test_v4_package_optimization_service_boundary.py tests/test_v4_precompute_microservice_governance.py tests/test_v4943_reconciliation_truth_runtime.py tests/test_v495_official_first_reporting.py tests/test_v496_housekeeping_integrity.py tests/test_v4_final_yellow_closeout.py tests/test_v4_match_mode_live_score_contract.py tests/test_v4_p1_structural_hardening.py tests/test_v496_e2e_performance_hardening.py .github/workflows/fpl-engine-core.yml || true
+          git diff --cached --quiet && exit 0
+          git commit -m 'arch(v4): split exact package precompute from decision service'
+          git push origin HEAD:codex/v4-full-universe-tactical-20260903

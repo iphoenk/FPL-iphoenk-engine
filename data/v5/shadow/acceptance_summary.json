@@ -1,11 +1,11 @@
 {
   "schema_version": 6,
   "model": "v5_postvalidated_shadow_acceptance_v6",
-  "generated_at": "2026-09-03T06:00:35.851242+00:00",
+  "generated_at": "2026-09-03T11:30:51.056213+00:00",
   "v5_version": "5.0.0-beta.4",
   "release_fingerprint": "sha256:0b5395b2a2d2e04001a4404fc2a3c590ada93e55ce1b3cc1794782d7d623a01a",
   "production_baseline_version": "v3.20.0",
-  "production_main_sha": "08a4b954b25c2df7128db580d982e6ed4a99391f",
+  "production_main_sha": "88ca91153acbef841e0f94d3d677c2649e74e7b4",
   "required_validated_cycles": 3,
   "validated_successful_cycles": 1,
   "remaining_validated_cycles": 2,
@@ -35,9 +35,9 @@
   "official_auth_proof_valid_for_latest_cycle": true,
   "validated_cycles": [
     {
-      "cycle_id": "20260903T060035.682979+0000",
-      "generated_at": "2026-09-03T06:00:35.682979+00:00",
-      "validated_at": "2026-09-03T06:00:35.851242+00:00",
+      "cycle_id": "20260903T113050.937909+0000",
+      "generated_at": "2026-09-03T11:30:50.937909+00:00",
+      "validated_at": "2026-09-03T11:30:51.056213+00:00",
       "v3_engine_version": "3.39.0",
       "v5_engine_version": "5.0.0-beta.4",
       "release_fingerprint": "sha256:0b5395b2a2d2e04001a4404fc2a3c590ada93e55ce1b3cc1794782d7d623a01a",

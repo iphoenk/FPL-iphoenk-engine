@@ -45,6 +45,11 @@ helper = r'''    def _capacity_key(
         if cached is not None:
             return cached
 
+        raw_need = 1
+        for position, count in key:
+            raw_need *= comb(len(self.pools.get(position, tuple())), count)
+        self.stats["need_raw_combinations_theoretical"] += raw_need
+
         total_picks = sum(count for _position, count in key)
         rank_states = (_empty_state(),)
         frontier_states = (_empty_state(),)
@@ -142,6 +147,8 @@ helper = r'''    def _capacity_key(
             if not rank_states and not frontier_states:
                 break
 
+        union_count = len(_union_states(rank_states, frontier_states))
+        self.stats["need_union_states_retained"] += union_count
         cached = (rank_states, frontier_states)
         keep_cache[cache_key] = cached
         return cached

@@ -3,7 +3,7 @@
   "season": "2026/27",
   "authority": "Official FPL",
   "status": "VERIFIED",
-  "verified_at": "2026-08-26",
+  "verified_at": "2026-09-03",
   "sources": {
     "general_rules": "https://fantasy.premierleague.com/help/rules",
     "scoring": "https://www.premierleague.com/en/news/2174909/fpl-basics-explained-scoring-points",
@@ -14,6 +14,7 @@
   "rule_provenance": {
     "squad": {"source": "general_rules", "verification": "VERIFIED"},
     "lineup": {"source": "general_rules", "verification": "VERIFIED"},
+    "transfers": {"source": "general_rules", "verification": "VERIFIED"},
     "scoring": {"source": "scoring", "verification": "VERIFIED"},
     "defensive_contributions": {"source": "defensive_contributions", "verification": "VERIFIED"},
     "chips": {"source": "chips", "verification": "VERIFIED"},
@@ -35,6 +36,17 @@
     "bench": {"goalkeepers": 1, "outfield": 3},
     "captain": {"must_be_in_starting_xi": true},
     "vice_captain": {"must_be_in_starting_xi": true, "must_differ_from_captain": true}
+  },
+  "transfers": {
+    "unlimited_before_first_deadline": true,
+    "free_transfers_per_gameweek": 1,
+    "max_bank_free_transfers": 5,
+    "additional_transfer_cost_points": 4,
+    "max_transfers_per_gameweek": 20,
+    "wildcard_and_free_hit_exempt_transfer_limit": true,
+    "wildcard_all_transfers_free": true,
+    "free_hit_all_transfers_free": true,
+    "saved_free_transfers_preserved_after_wildcard_or_free_hit": true
   },
   "scoring": {
     "appearance": {"under_60": 1, "at_least_60": 2},

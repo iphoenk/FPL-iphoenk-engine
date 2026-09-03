@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from src.engines.package_optimizer_exhaustive_finalize import build_exhaustive, safe_per_gw_dominates
 
 
@@ -8,14 +10,12 @@ def _player(element: int, position: str, team_id: int, means: list[float], cost:
         {"gw": 3 + index, "mean": float(mean), "std": float(std)}
         for index, mean in enumerate(means)
     ]
-    cumulative = []
     running = 0.0
     variance = 0.0
     horizon_rows = {}
     for index, mean in enumerate(means, start=1):
         running += mean
         variance += std * std
-        cumulative.append(running)
         if index in (3, 5, 10, 15):
             horizon_rows[str(index)] = {"mean": running, "std": variance ** 0.5}
     return {
@@ -50,7 +50,6 @@ def _team(owned: list[dict]) -> dict:
 
 
 def test_safe_dominance_requires_every_gw_not_only_cumulative_horizons():
-    # Same total across the first 3 GWs, but left loses one individual GW.
     left = _player(100, "MID", 16, [5.0, 1.0, 6.0] + [4.0] * 12, 50, 1.0)
     right = _player(101, "MID", 16, [4.0, 4.0, 4.0] + [4.0] * 12, 50, 1.0)
     assert safe_per_gw_dominates(left, right, 3, 15) is False
@@ -84,3 +83,21 @@ def test_exhaustive_small_universe_has_full_authority_and_no_budget():
     assert diag["single_exact_scored"] == diag["legal_single_stubs"]
     assert diag["pair_candidates_exact_scored"] == diag["pair_step_legal"]
     assert result["package_count"] == 1 + diag["single_exact_scored"] + diag["pair_candidates_exact_scored"]
+
+
+def test_exhaustive_finalizer_reuses_canonical_owners_and_has_no_target_bias():
+    text = Path("src/engines/package_optimizer_exhaustive_finalize.py").read_text(encoding="utf-8")
+    assert "def score_package" not in text
+    assert "def build_package_decision" not in text
+    assert "from src.models.package_optimizer_v2 import" in text
+    assert "from src.engines.lineup_governance import build_package_decision" in text
+    assert '"search_authority": "FULL"' in text
+    assert '"lossy_pruning": False' in text
+    assert '"single_budget_applied": False' in text
+    assert '"pair_budget_applied": False' in text
+    assert '"exact_package_limit_applied": False' in text
+    assert "canonical_score_package_reused_for_every_legal_package" in text
+    assert "dss_watchlist" not in text
+    assert "watchlist.json" not in text
+    for name in ("Mbeumo", "Cherki", "Foden", "Schade", "Barry", "Guehi", "Guéhi"):
+        assert name not in text

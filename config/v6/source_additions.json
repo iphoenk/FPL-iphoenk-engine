@@ -27,7 +27,7 @@
       "name": "Open-Meteo Matchday Weather",
       "category": "fixture_weather_context",
       "adapter": "open_meteo_weather",
-      "critical": false,
+      "critical": true,
       "required_for_platform": true,
       "depends_on": ["official_fpl"],
       "check_freshness_minutes": 90,

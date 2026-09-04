@@ -8,11 +8,10 @@ ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "config" / "v6" / "source_registry.json"
 
 EXPECTED_SOURCE_IDS = (
-    "official_fpl", "official_price_predictor", "understat", "opta_the_analyst",
-    "statmuse", "onside", "ben_crellin", "fffix", "ffhub", "onefpl", "livefpl",
-    "ffscout", "fbref", "fotmob", "sofascore", "statsbomb", "rotowire",
-    "premierleague_stats", "clubelo", "football_data_uk", "sportmonks", "api_football",
-    "transfermarkt", "whoscored", "espn", "football_data_org", "vaastav_fpl",
+    "official_fpl", "official_price_predictor", "understat", "statmuse", "onside",
+    "ben_crellin", "fffix", "ffhub", "onefpl", "livefpl", "ffscout", "statsbomb",
+    "rotowire", "premierleague_stats", "football_data_uk", "api_football",
+    "transfermarkt", "vaastav_fpl",
 )
 
 class RegistryError(ValueError):

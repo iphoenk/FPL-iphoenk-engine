@@ -3,13 +3,21 @@ name: FPL V6 hourly fresh-data acquisition
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: "Governed V6 invocation mode"
+        required: true
+        default: "master_orchestrated"
+        type: choice
+        options:
+          - master_orchestrated
+          - manual_recovery
       reason:
-        description: "Emergency V6 recovery reason"
+        description: "Audit reason for governed V6 invocation"
         required: true
         type: string
       confirm:
-        description: "Type RECOVER_V6 to confirm non-authoritative manual recovery"
-        required: true
+        description: "For manual_recovery only: type RECOVER_V6"
+        required: false
         type: string
   schedule:
     - cron: "23 * * * *"
@@ -45,11 +53,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Authorize governed manual recovery
+      - name: Authorize governed workflow dispatch
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         env:
-          V6_MANUAL_REASON: ${{ inputs.reason }}
+          V6_DISPATCH_MODE: ${{ inputs.mode }}
+          V6_DISPATCH_REASON: ${{ inputs.reason }}
           V6_MANUAL_CONFIRM: ${{ inputs.confirm }}
         run: |
           set -euo pipefail
@@ -59,16 +68,29 @@ jobs:
           from pathlib import Path
 
           policy = json.loads(Path(os.environ["V6_SCHEDULE_POLICY"]).read_text(encoding="utf-8"))
-          manual = dict(policy.get("manual_recovery") or {})
-          if manual.get("enabled") is not True:
-              raise SystemExit("V6 governed manual recovery is disabled")
+          mode = str(os.environ.get("V6_DISPATCH_MODE") or "")
+          reason = str(os.environ.get("V6_DISPATCH_REASON") or "").strip()
           if os.environ.get("GITHUB_ACTOR") != os.environ.get("GITHUB_REPOSITORY_OWNER"):
-              raise SystemExit("V6 manual recovery is restricted to the repository owner")
-          if os.environ.get("V6_MANUAL_CONFIRM") != str(manual.get("confirmation_phrase") or ""):
-              raise SystemExit("V6 manual recovery confirmation phrase mismatch")
-          if not str(os.environ.get("V6_MANUAL_REASON") or "").strip():
-              raise SystemExit("V6 manual recovery requires an audit reason")
-          print("Governed V6 manual recovery authorized")
+              raise SystemExit("V6 governed dispatch is restricted to the repository owner")
+          if not reason:
+              raise SystemExit("V6 governed dispatch requires an audit reason")
+
+          if mode == "master_orchestrated":
+              master = dict(policy.get("master_orchestrated") or {})
+              if master.get("enabled") is not True:
+                  raise SystemExit("V6 master orchestration is disabled")
+              if master.get("authoritative_runtime_snapshot") is not True:
+                  raise SystemExit("V6 master orchestration policy is not authoritative")
+              print("Governed V6 FPL Master orchestration authorized")
+          elif mode == "manual_recovery":
+              manual = dict(policy.get("manual_recovery") or {})
+              if manual.get("enabled") is not True:
+                  raise SystemExit("V6 governed manual recovery is disabled")
+              if os.environ.get("V6_MANUAL_CONFIRM") != str(manual.get("confirmation_phrase") or ""):
+                  raise SystemExit("V6 manual recovery confirmation phrase mismatch")
+              print("Governed V6 manual recovery authorized")
+          else:
+              raise SystemExit(f"Unsupported V6 governed dispatch mode: {mode}")
           PY
 
       - name: Hydrate previous V6 last-good snapshot
@@ -118,8 +140,14 @@ jobs:
           }
           if event_name == "schedule":
               kind = scheduled_kinds.get(schedule, "scheduled_unknown")
-          elif event_name == "workflow_dispatch" and (policy.get("manual_recovery") or {}).get("enabled") is True:
-              kind = str((policy.get("manual_recovery") or {}).get("schedule_kind") or "manual_recovery")
+          elif event_name == "workflow_dispatch":
+              mode = str((event.get("inputs") or {}).get("mode") or "")
+              if mode == "master_orchestrated" and (policy.get("master_orchestrated") or {}).get("enabled") is True:
+                  kind = str((policy.get("master_orchestrated") or {}).get("schedule_kind") or "master_orchestrated")
+              elif mode == "manual_recovery" and (policy.get("manual_recovery") or {}).get("enabled") is True:
+                  kind = str((policy.get("manual_recovery") or {}).get("schedule_kind") or "manual_recovery")
+              else:
+                  kind = "governed_dispatch_unknown"
           else:
               kind = "non_production_local"
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
@@ -148,6 +176,7 @@ jobs:
               previous,
               scheduler_interval_minutes=interval,
               event_name=os.environ.get("GITHUB_EVENT_NAME"),
+              schedule_kind=os.environ.get("V6_SCHEDULE_KIND"),
           )
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
               handle.write(f"skip={'true' if skip else 'false'}\n")
@@ -216,7 +245,9 @@ jobs:
           assert manifest["governance"]["data_only"] is True
           assert manifest["governance"]["decision_authority"] == "NONE"
           assert manifest["governance"]["weather_direct_xpts_multiplier"] is False
-          assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is True
+          assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is False
+          assert manifest["governance"]["production_authoritative_snapshots_require_governed_trigger"] is True
+          assert manifest["governance"]["master_orchestrated_is_authoritative"] is True
           assert manifest["governance"]["manual_recovery_is_authoritative"] is False
           assert manifest["governance"]["single_logical_acquisition_per_scheduler_slot"] is True
           assert manifest["governance"]["scheduled_recovery_is_idempotent"] is True
@@ -235,11 +266,18 @@ jobs:
               assert control["authoritative_runtime_snapshot"] is True
               assert control["manual_recovery"] is False
               assert manifest["governance"]["production_ingestion_schedule_only"] is True
-          elif event_name == "workflow_dispatch":
+          elif event_name == "workflow_dispatch" and os.environ["V6_SCHEDULE_KIND"] == "master_orchestrated":
               assert control["scheduled_cycle"] is False
+              assert control["master_orchestrated"] is True
+              assert control["authoritative_runtime_snapshot"] is True
+              assert control["manual_recovery"] is False
+              assert control["counts_as_completed_operational_slot"] is True
+              assert "NON_AUTHORITATIVE_MANUAL_RECOVERY" not in manifest["control_failures"]
+          elif event_name == "workflow_dispatch" and os.environ["V6_SCHEDULE_KIND"] == "manual_recovery":
+              assert control["scheduled_cycle"] is False
+              assert control["master_orchestrated"] is False
               assert control["authoritative_runtime_snapshot"] is False
               assert control["manual_recovery"] is True
-              assert manifest["governance"]["production_ingestion_schedule_only"] is False
               assert "NON_AUTHORITATIVE_MANUAL_RECOVERY" in manifest["control_failures"]
           else:
               raise AssertionError(f"unexpected V6 production event: {event_name}")
@@ -341,7 +379,8 @@ jobs:
           assert manifest["governance"]["decision_authority"] == "NONE"
           assert manifest["governance"]["prediction_authority"] == "NONE"
           assert manifest["governance"]["optimizer_authority"] == "NONE"
-          assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is True
+          assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is False
+          assert manifest["governance"]["production_authoritative_snapshots_require_governed_trigger"] is True
           assert manifest["governance"]["manual_recovery_is_authoritative"] is False
           assert integrity["status"] == "PASS", integrity
           assert integrity["resolved_registry_exact"] is True
@@ -412,7 +451,8 @@ jobs:
           integrity = json.loads((root / "health" / "publish_integrity.json").read_text(encoding="utf-8"))
           assert manifest["governance"]["data_only"] is True
           assert manifest["governance"]["decision_authority"] == "NONE"
-          assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is True
+          assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is False
+          assert manifest["governance"]["production_authoritative_snapshots_require_governed_trigger"] is True
           assert integrity["status"] == "PASS", integrity
           assert integrity["resolved_registry_exact"] is True
           print({

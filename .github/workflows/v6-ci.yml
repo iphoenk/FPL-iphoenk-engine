@@ -7,6 +7,7 @@ on:
     paths:
       - "config/v6/**"
       - "config/venues/**"
+      - "docs/V6_*.md"
       - "src/runtime_v6/**"
       - "tests/test_data_ingestion_engine.py"
       - "tests/test_adaptive_polling.py"
@@ -26,6 +27,7 @@ on:
     paths:
       - "config/v6/**"
       - "config/venues/**"
+      - "docs/V6_*.md"
       - "src/runtime_v6/**"
       - "tests/test_data_ingestion_engine.py"
       - "tests/test_adaptive_polling.py"

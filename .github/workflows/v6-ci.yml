@@ -48,6 +48,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
@@ -69,3 +71,40 @@ jobs:
           tests/test_data_platform_identity.py
           tests/test_data_platform_publisher_governance.py
           tests/test_data_platform_consumer.py
+
+  publisher-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    environment: v6-runtime-publisher
+    permissions:
+      contents: read
+    env:
+      V6_RUNTIME_APP_ID: ${{ vars.V6_RUNTIME_APP_ID }}
+      V6_RUNTIME_APP_PRIVATE_KEY: ${{ secrets.V6_RUNTIME_APP_PRIVATE_KEY }}
+    steps:
+      - name: Verify dedicated V6 publisher configuration is provisioned
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${V6_RUNTIME_APP_ID}" ]; then
+            echo "V6_RUNTIME_APP_ID is not provisioned in v6-runtime-publisher"
+            exit 1
+          fi
+          if [ -z "${V6_RUNTIME_APP_PRIVATE_KEY}" ]; then
+            echo "V6_RUNTIME_APP_PRIVATE_KEY is not provisioned in v6-runtime-publisher"
+            exit 1
+          fi
+          case "${V6_RUNTIME_APP_ID}" in
+            *[!0-9]*|'')
+              echo "V6_RUNTIME_APP_ID must be numeric"
+              exit 1
+              ;;
+          esac
+          case "${V6_RUNTIME_APP_PRIVATE_KEY}" in
+            *"BEGIN "*"PRIVATE KEY"*) ;;
+            *)
+              echo "V6_RUNTIME_APP_PRIVATE_KEY is not a private-key payload"
+              exit 1
+              ;;
+          esac
+          echo "Dedicated V6 publisher configuration is present"

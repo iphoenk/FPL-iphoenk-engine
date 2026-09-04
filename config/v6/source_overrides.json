@@ -140,8 +140,8 @@
       "daily_request_budget": 100,
       "check_freshness_minutes": 1500,
       "verification_required": true,
-      "verification_status": "PENDING",
-      "verification_note": "Before scheduled polling, verify the active key with /status and one 2026-season fixture request.",
+      "verification_status": "FAILED",
+      "verification_note": "Runtime verification on 2026-09-04 returned provider error: free plans do not have access to season 2026. Keep scheduled polling disabled until the provider plan/access changes and verification is rerun.",
       "requests": [
         {
           "id": "epl_fixtures",

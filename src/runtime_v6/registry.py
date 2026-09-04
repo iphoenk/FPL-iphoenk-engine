@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "config" / "v6" / "source_registry.json"
+OVERRIDES = ROOT / "config" / "v6" / "source_overrides.json"
 
 EXPECTED_SOURCE_IDS = (
     "official_fpl", "official_price_predictor", "understat", "opta_the_analyst",
@@ -15,13 +17,51 @@ EXPECTED_SOURCE_IDS = (
     "transfermarkt", "whoscored", "espn", "football_data_org", "vaastav_fpl",
 )
 
+
 class RegistryError(ValueError):
     pass
 
+
+def _merge_source(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = deepcopy(base)
+    for key, value in override.items():
+        if key == "id":
+            continue
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = {**merged[key], **deepcopy(value)}
+        else:
+            merged[key] = deepcopy(value)
+    return merged
+
+
+def _apply_overrides(payload: dict[str, Any], path: Path = OVERRIDES) -> dict[str, Any]:
+    if not path.exists():
+        return payload
+    override_payload = json.loads(path.read_text(encoding="utf-8"))
+    overrides = dict(override_payload.get("sources") or {})
+    if not overrides:
+        return payload
+
+    out = deepcopy(payload)
+    known = {str(source.get("id")) for source in out.get("sources") or []}
+    unknown = sorted(set(overrides) - known)
+    if unknown:
+        raise RegistryError(f"unknown V6 source override ids: {unknown!r}")
+
+    out["sources"] = [
+        _merge_source(source, dict(overrides.get(str(source.get("id"))) or {}))
+        for source in out.get("sources") or []
+    ]
+    out["source_overrides_applied"] = sorted(overrides)
+    return out
+
+
 def load_registry(path: Path = CONFIG) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = _apply_overrides(payload)
     validate_registry(payload)
     return payload
+
 
 def validate_registry(payload: dict[str, Any]) -> None:
     if payload.get("engine") != "V6_FRESH_DATA_PLATFORM":
@@ -51,6 +91,7 @@ def validate_registry(payload: dict[str, Any]) -> None:
                 raise RegistryError(f"unsupported auth mode: {source['id']}")
             if not auth.get("env") or not auth.get("name"):
                 raise RegistryError(f"incomplete auth configuration: {source['id']}")
+
 
 def source_map(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {str(source["id"]): source for source in payload["sources"]}

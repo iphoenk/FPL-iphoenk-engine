@@ -20,6 +20,16 @@ _LAYER_SCHEMA_VERSIONS = {
 _ALLOWED_ACQUISITION_KINDS = {"derived", "rest_json", "rest_csv", "html_scrape", "rss", "generic_http"}
 _ALLOWED_VERIFICATION_STATUSES = {"PENDING", "VERIFIED", "FAILED"}
 _ALLOWED_SOURCE_TIERS = {"core", "pilot", "reference_only"}
+ZERO_AUTHORITY_KEYS = (
+    "decision_authority",
+    "prediction_authority",
+    "optimizer_authority",
+    "tactical_authority",
+    "transfer_authority",
+    "captain_authority",
+    "chip_authority",
+    "formation_authority",
+)
 
 
 class RegistryError(ValueError):
@@ -305,9 +315,8 @@ def validate_registry(payload: dict[str, Any]) -> None:
     if payload.get("engine") != "V6_FRESH_DATA_PLATFORM":
         raise RegistryError("unexpected V6 engine contract")
     policy = payload.get("policy") or {}
-    forbidden_authorities = ("decision_authority", "prediction_authority", "optimizer_authority")
-    if any(policy.get(key) != "NONE" for key in forbidden_authorities):
-        raise RegistryError("V6 must have zero decision/prediction/optimizer authority")
+    if any(policy.get(key) != "NONE" for key in ZERO_AUTHORITY_KEYS):
+        raise RegistryError(f"V6 must have zero authority for: {', '.join(ZERO_AUTHORITY_KEYS)}")
     if policy.get("data_only") is not True:
         raise RegistryError("V6 must remain data-only")
     if policy.get("no_fabrication") is not True:

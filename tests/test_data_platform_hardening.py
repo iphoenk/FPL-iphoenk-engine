@@ -10,6 +10,7 @@ import pytest
 
 from src.runtime_v6.http_client import _read_bounded, _redact_url
 from src.runtime_v6.registry import (
+    ZERO_AUTHORITY_KEYS,
     RegistryError,
     _apply_activation,
     _read_json,
@@ -25,12 +26,18 @@ from src.runtime_v6.registry import (
 def test_workflow_cron_matches_v6_schedule_policy():
     workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
+    source_registry = json.loads(Path("config/v6/source_registry.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
     assert policy["schema_version"] == 1
     assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
     assert workflow_crons == [policy["primary_cron_utc"], policy["recovery_cron_utc"]]
     assert workflow_crons == ["5 * * * *", "35 * * * *"]
+    assert policy["schedule_authority"] is True
+    assert policy["source_registry_schedule_metadata_authoritative"] is False
+    assert policy["governance"]["single_schedule_owner"] == "config/v6/schedule_policy.json"
+    assert "workflow_cron_utc" not in source_registry["cadence"]
+    assert source_registry["cadence"]["schedule"] == "hourly"
     assert policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
     assert policy["manual_recovery"]["authoritative_runtime_snapshot"] is False
 
@@ -147,8 +154,27 @@ def test_resolved_registry_snapshot_exposes_effective_layers_without_hidden_auth
     assert resolved["source_count"] == registry["activation"]["active_source_count"]
     assert resolved["dependency_layers"] == dependency_layers(registry)
     assert resolved["policy"]["data_only"] is True
-    assert resolved["policy"]["decision_authority"] == "NONE"
+    assert tuple(ZERO_AUTHORITY_KEYS) == (
+        "decision_authority",
+        "prediction_authority",
+        "optimizer_authority",
+        "tactical_authority",
+        "transfer_authority",
+        "captain_authority",
+        "chip_authority",
+        "formation_authority",
+    )
+    assert all(resolved["policy"][key] == "NONE" for key in ZERO_AUTHORITY_KEYS)
     assert resolved["config_layers"]["overrides"]["schema_version"] == 2
+
+
+def test_zero_authority_contract_fails_closed_for_every_business_authority():
+    registry = load_registry()
+    for key in ZERO_AUTHORITY_KEYS:
+        mutated = deepcopy(registry)
+        mutated["policy"][key] = "ENABLED"
+        with pytest.raises(RegistryError, match="zero authority"):
+            validate_registry(mutated)
 
 
 def test_query_auth_redaction_is_key_based_and_encoding_safe():

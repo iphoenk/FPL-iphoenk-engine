@@ -32,10 +32,16 @@ def test_workflow_cron_matches_v6_schedule_policy():
     assert policy["schema_version"] == 1
     assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
     assert workflow_crons == [policy["primary_cron_utc"], policy["recovery_cron_utc"]]
-    assert workflow_crons == ["5 * * * *", "35 * * * *"]
+    assert len(workflow_crons) == 2
+    cron_minutes = [int(cron.split()[0]) for cron in workflow_crons]
+    assert all(cron.split()[1:] == ["*", "*", "*", "*"] for cron in workflow_crons)
+    assert len(set(cron_minutes)) == 2
+    assert all(10 <= minute <= 59 for minute in cron_minutes)
+    assert (cron_minutes[1] - cron_minutes[0]) % 60 == 30
     assert policy["schedule_authority"] is True
     assert policy["source_registry_schedule_metadata_authoritative"] is False
     assert policy["governance"]["single_schedule_owner"] == "config/v6/schedule_policy.json"
+    assert policy["governance"]["avoid_top_of_hour_scheduler_load"] is True
     assert "workflow_cron_utc" not in source_registry["cadence"]
     assert source_registry["cadence"]["schedule"] == "hourly"
     assert policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False

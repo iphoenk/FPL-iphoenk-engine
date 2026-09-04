@@ -12,14 +12,14 @@ V6 never reads V3/V4/V5 runtime branches, data trees, caches, manifests, or engi
 
 ## Production schedule
 
-The authoritative production cadence is scheduler-owned and intentionally offset from other repository cron traffic:
+The authoritative production cadence is scheduler-owned and intentionally offset from other repository cron traffic and from GitHub's high-load start-of-hour window:
 
-- primary acquisition: minute `05` of every UTC hour;
-- idempotent recovery acquisition: minute `35` of every UTC hour.
+- primary acquisition: minute `23` of every UTC hour;
+- idempotent recovery acquisition: minute `53` of every UTC hour.
 
 Both scheduled invocations belong to the same logical hourly scheduler slot. If the primary cycle already published that slot, the scheduled recovery invocation exits without a second acquisition. Normal pushes and pull requests never trigger production acquisition. CI is a separate read-only workflow.
 
-The schedule expressions and emergency-recovery policy are declared in `config/v6/schedule_policy.json`. GitHub's `on.schedule` expressions must remain literal in the workflow, so contract tests verify that those trigger expressions exactly match the policy file. The classifier reads the policy file instead of duplicating cron literals in executable logic.
+The schedule expressions and emergency-recovery policy are declared in `config/v6/schedule_policy.json`. GitHub's `on.schedule` expressions must remain literal in the workflow, so contract tests verify that those trigger expressions exactly match the policy file. The classifier reads the policy file instead of duplicating cron literals in executable logic. The contract also requires both schedule minutes to stay away from the top of the hour and keeps recovery 30 minutes behind primary without hard-coding a second schedule registry.
 
 `runtime_control` records the logical slot, GitHub run ID, schedule kind, schedule lag, duplicate detection, and missed-cycle state. Missed scheduled cycles are explicit control-plane evidence and are never hidden by manual or off-cadence activity.
 

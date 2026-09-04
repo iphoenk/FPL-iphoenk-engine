@@ -12,8 +12,8 @@ on:
         required: true
         type: string
   schedule:
-    - cron: "5 * * * *"
-    - cron: "35 * * * *"
+    - cron: "23 * * * *"
+    - cron: "53 * * * *"
 
 # The built-in GITHUB_TOKEN remains read-only. Runtime write authority is minted
 # only from the dedicated V6 publisher GitHub App inside the publish job.

@@ -17,7 +17,7 @@ def test_source_overrides_preserve_dynamic_active_contract_and_repair_routes():
     assert activation["reference_only_source_count"] == len(registry.REFERENCE_ONLY_SOURCE_IDS)
     assert sources["opta_the_analyst"]["requests"][0]["url"] == "https://theanalyst.com/competition/premier-league/stats"
     assert sources["fotmob"]["requests"][0]["url"] == "https://www.fotmob.com/api/data/leagues"
-    assert sources["clubelo"]["requests"][0]["url"] == "https://api.clubelo.com/{utc_date}"
+    assert "clubelo" in registry.REFERENCE_ONLY_SOURCE_IDS
     assert sources["espn"]["requests"][0]["use_default_user_agent"] is True
     assert sources["open_meteo_weather"]["adapter"] == "open_meteo_weather"
 

@@ -102,6 +102,33 @@ def test_verification_gate_blocks_scheduled_poll_until_verified():
     assert poll_decision(source, None, now=now)["due"] is True
 
 
+def test_daily_budget_reserves_worst_case_retry_attempts_before_poll():
+    now = datetime(2026, 9, 4, 5, 0, tzinfo=timezone.utc)
+    source = {
+        "id": "budgeted",
+        "daily_request_budget": 3,
+        "requests": [{"id": "one"}],
+    }
+    previous = {
+        "budget": {
+            "date_wib": "2026-09-04",
+            "requests_used": 2,
+        }
+    }
+
+    decision = poll_decision(
+        source,
+        previous,
+        now=now,
+        max_attempts_per_request=2,
+    )
+
+    assert decision["due"] is False
+    assert decision["reason"] == "BUDGET_EXHAUSTED"
+    assert decision["budget"]["reserved_requests_next_poll"] == 2
+    assert decision["budget"]["remaining"] == 1
+
+
 def test_daily_budget_is_counted_from_real_provider_attempts():
     now = datetime(2026, 9, 4, 5, 0, tzinfo=timezone.utc)
     source = {

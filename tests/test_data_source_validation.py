@@ -4,11 +4,14 @@ from src.runtime_v6 import registry
 from src.runtime_v6.http_client import _validate_payload
 
 
-def test_source_overrides_preserve_27_and_repair_routes():
+def test_source_overrides_preserve_active_20_and_repair_routes():
     cfg = registry.load_registry()
     sources = registry.source_map(cfg)
     assert tuple(row["id"] for row in cfg["sources"]) == registry.EXPECTED_SOURCE_IDS
-    assert len(cfg["sources"]) == 27
+    assert len(cfg["sources"]) == 20
+    assert set(sources).isdisjoint(registry.DROPPED_SOURCE_IDS)
+    assert cfg["activation"]["base_source_count"] == 27
+    assert cfg["activation"]["active_source_count"] == 20
     assert sources["opta_the_analyst"]["requests"][0]["url"] == "https://theanalyst.com/competition/premier-league/stats"
     assert sources["fotmob"]["requests"][0]["url"] == "https://www.fotmob.com/api/data/leagues"
     assert sources["clubelo"]["requests"][0]["url"].endswith("/{utc_date}")

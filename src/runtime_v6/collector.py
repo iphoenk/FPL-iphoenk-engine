@@ -17,7 +17,16 @@ from .normalizer import (
 )
 from .polling import attach_poll_result, carry_forward_skipped, deadline_window_active, poll_decision
 from .registry import load_registry, source_map
-from .store import EVIDENCE, HEALTH, MANIFEST, NORMALIZED, load_previous_sources, write_json, write_source
+from .store import (
+    EVIDENCE,
+    HEALTH,
+    MANIFEST,
+    NORMALIZED,
+    load_previous_sources,
+    prune_inactive_sources,
+    write_json,
+    write_source,
+)
 
 
 def _isolated_failure(source: dict[str, Any], exc: Exception) -> dict[str, Any]:
@@ -49,8 +58,10 @@ def _isolated_failure(source: dict[str, Any], exc: Exception) -> dict[str, Any]:
 def run() -> dict[str, Any]:
     config = load_registry()
     sources = list(config["sources"])
+    source_ids = [source["id"] for source in sources]
     by_id = source_map(config)
     previous = load_previous_sources()
+    pruned_runtime_source_files = prune_inactive_sources(source_ids)
     client = AcquisitionClient(config["policy"])
     results: dict[str, dict[str, Any]] = {}
     started = time.perf_counter()
@@ -139,7 +150,6 @@ def run() -> dict[str, Any]:
     for source in sources:
         write_source(source["id"], results[source["id"]])
 
-    source_ids = [source["id"] for source in sources]
     write_json(NORMALIZED / "canonical_players.json", build_canonical_players(official, source_ids))
     write_json(NORMALIZED / "canonical_teams.json", build_canonical_teams(official))
     write_json(NORMALIZED / "canonical_fixtures.json", build_canonical_fixtures(official))
@@ -165,6 +175,8 @@ def run() -> dict[str, Any]:
         for source_id, payload in results.items()
         if (payload.get("polling") or {}).get("skipped") is True
     }
+    activation = dict(config.get("activation") or {})
+    activation["pruned_runtime_source_files"] = pruned_runtime_source_files
 
     manifest = {
         "schema_version": 3,
@@ -174,6 +186,7 @@ def run() -> dict[str, Any]:
         "elapsed_ms": elapsed,
         "source_count": len(sources),
         "source_ids": source_ids,
+        "activation": activation,
         "overall": "RED" if critical_failures else health["overall"],
         "health_counts": health["counts"],
         "critical_failures": critical_failures,
@@ -214,6 +227,7 @@ def run() -> dict[str, Any]:
             "unchanged_upstream_is_not_degraded": True,
             "last_good_cache_hydrated_by_workflow": True,
             "adaptive_polling_is_registry_driven": True,
+            "active_source_pruning_is_registry_driven": True,
             "daily_budget_timezone": "Asia/Jakarta",
         },
     }

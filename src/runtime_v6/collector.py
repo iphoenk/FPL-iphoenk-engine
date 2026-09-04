@@ -15,6 +15,7 @@ from .normalizer import (
     build_evidence_index,
     build_lineage_catalog,
 )
+from .polling import attach_poll_result, carry_forward_skipped, deadline_window_active, poll_decision
 from .registry import load_registry, source_map
 from .store import EVIDENCE, HEALTH, MANIFEST, NORMALIZED, load_previous_sources, write_json, write_source
 
@@ -54,48 +55,80 @@ def run() -> dict[str, Any]:
     results: dict[str, dict[str, Any]] = {}
     started = time.perf_counter()
 
+    deadline_window = deadline_window_active(
+        previous,
+        hours=int(config["policy"].get("deadline_window_hours") or 48),
+    )
+
     # Only the derived Official price source has a dependency. All network-backed
-    # sources, including Official FPL, start together so one slow authority does
-    # not block unrelated acquisition.
+    # sources that are due start together so one slow authority does not block
+    # unrelated acquisition. Sources not due are carried forward explicitly.
     runnable = [source for source in sources if source["id"] != "official_price_predictor"]
+    decisions = {
+        source["id"]: poll_decision(
+            source,
+            previous.get(source["id"]),
+            deadline_window=deadline_window,
+        )
+        for source in runnable
+    }
+    due_sources = [source for source in runnable if decisions[source["id"]]["due"]]
+    for source in runnable:
+        decision = decisions[source["id"]]
+        if not decision["due"]:
+            results[source["id"]] = carry_forward_skipped(
+                source,
+                previous.get(source["id"]),
+                decision,
+            )
+
     source_workers = max(
         1,
         min(
-            len(runnable),
+            max(1, len(due_sources)),
             int(config["policy"].get("source_workers") or config["policy"].get("max_workers") or 12),
         ),
     )
 
-    with ThreadPoolExecutor(max_workers=source_workers) as pool:
-        futures = {
-            pool.submit(
-                collect_source,
-                source,
-                client,
-                previous=previous.get(source["id"]),
-            ): source
-            for source in runnable
-        }
-        for future in as_completed(futures):
-            source = futures[future]
-            try:
-                results[source["id"]] = future.result()
-            except Exception as exc:
-                results[source["id"]] = _isolated_failure(source, exc)
+    if due_sources:
+        with ThreadPoolExecutor(max_workers=source_workers) as pool:
+            futures = {
+                pool.submit(
+                    collect_source,
+                    source,
+                    client,
+                    previous=previous.get(source["id"]),
+                ): source
+                for source in due_sources
+            }
+            for future in as_completed(futures):
+                source = futures[future]
+                decision = decisions[source["id"]]
+                try:
+                    payload = future.result()
+                except Exception as exc:
+                    payload = _isolated_failure(source, exc)
+                results[source["id"]] = attach_poll_result(
+                    source,
+                    payload,
+                    previous.get(source["id"]),
+                    decision,
+                )
 
     official = results.get("official_fpl") or _isolated_failure(
         by_id["official_fpl"],
         RuntimeError("official_fpl_missing_from_results"),
     )
+    price_source = by_id["official_price_predictor"]
     try:
         results["official_price_predictor"] = collect_source(
-            by_id["official_price_predictor"],
+            price_source,
             client,
             previous=previous.get("official_price_predictor"),
             official_payload=official,
         )
     except Exception as exc:
-        results["official_price_predictor"] = _isolated_failure(by_id["official_price_predictor"], exc)
+        results["official_price_predictor"] = _isolated_failure(price_source, exc)
 
     for source in sources:
         write_source(source["id"], results[source["id"]])
@@ -121,6 +154,11 @@ def run() -> dict[str, Any]:
         for source_id, payload in results.items()
         if payload.get("duration_ms") is not None
     }
+    skipped = {
+        source_id: (payload.get("polling") or {}).get("reason")
+        for source_id, payload in results.items()
+        if (payload.get("polling") or {}).get("skipped") is True
+    }
 
     manifest = {
         "schema_version": 3,
@@ -139,6 +177,14 @@ def run() -> dict[str, Any]:
             "source_duration_ms": durations,
             "slowest_source_ms": max(durations.values()) if durations else None,
             "official_blocks_unrelated_sources": False,
+        },
+        "polling": {
+            "adaptive": True,
+            "deadline_window_active": deadline_window,
+            "deadline_window_hours": int(config["policy"].get("deadline_window_hours") or 48),
+            "due_source_count": len(due_sources),
+            "skipped_source_count": len(skipped),
+            "skipped_sources": skipped,
         },
         "paths": {
             "current_sources": "data/v6/current/",
@@ -160,6 +206,8 @@ def run() -> dict[str, Any]:
             "request_failures_are_isolated": True,
             "unchanged_upstream_is_not_degraded": True,
             "last_good_cache_hydrated_by_workflow": True,
+            "adaptive_polling_is_registry_driven": True,
+            "daily_budget_timezone": "Asia/Jakarta",
         },
     }
     write_json(MANIFEST, manifest)

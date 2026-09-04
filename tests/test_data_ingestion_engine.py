@@ -35,15 +35,15 @@ def test_all_active_sources_are_fail_isolated_and_concurrent():
     assert cfg["policy"]["conditional_revalidation"] is True
 
 
-def test_dropped_paid_and_restricted_sources_never_enter_active_source_map():
+def test_dropped_and_reference_only_sources_never_enter_active_source_map():
     cfg = registry.load_registry()
     sources = registry.source_map(cfg)
     for source_id in registry.DROPPED_SOURCE_IDS:
         assert source_id not in sources
     for source_id in registry.REFERENCE_ONLY_SOURCE_IDS:
         assert source_id not in sources
-    assert sources["ffhub"]["activation_constraint"] == "FREE_OR_PUBLIC_PARTIAL_ONLY_NO_PRO_UPGRADE"
-    assert sources["fffix"]["activation_constraint"] == "FREE_OR_PUBLIC_ONLY"
+    assert "fffix" in registry.REFERENCE_ONLY_SOURCE_IDS
+    assert "ffhub" in registry.REFERENCE_ONLY_SOURCE_IDS
     assert sources["clubelo"]["activation_constraint"] == "KEEP_AND_REPAIR"
 
 
@@ -61,6 +61,8 @@ def test_free_source_expansion_is_registered_with_safe_tiers():
     assert sources["check_the_chance"]["source_tier"] == "pilot"
     assert sources["fantasy_football_pundit"]["source_tier"] == "pilot"
     assert set(registry.REFERENCE_ONLY_SOURCE_IDS) == {
+        "fffix",
+        "ffhub",
         "bbc_team_news",
         "premier_injuries",
         "fpl_form",

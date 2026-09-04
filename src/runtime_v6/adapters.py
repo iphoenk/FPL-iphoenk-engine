@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from .http_client import AcquisitionClient, utc_now
-from .weather import enrich_open_meteo_payload
+from .weather import enrich_open_meteo_payload, materialize_open_meteo_source
 
 _SUCCESS_STATUSES = {"AVAILABLE", "NOT_MODIFIED"}
 
@@ -262,7 +262,8 @@ def collect_open_meteo_weather(
     official_payload: dict[str, Any],
     previous: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    payload = collect_http(source, client, previous)
+    materialized = materialize_open_meteo_source(source)
+    payload = collect_http(materialized, client, previous)
     return enrich_open_meteo_payload(source, payload, official_payload)
 
 

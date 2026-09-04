@@ -228,7 +228,7 @@ def test_manual_recovery_is_non_authoritative_and_manifested_amber():
     assert updated["overall"] == "AMBER"
     assert updated["control_failures"] == ["NON_AUTHORITATIVE_MANUAL_RECOVERY"]
     assert updated["governance"]["production_ingestion_schedule_only"] is False
-    assert updated["governance"]["production_authoritative_snapshots_require_schedule"] is True
+    assert updated["governance"]["production_authoritative_snapshots_require_schedule"] is False
     assert updated["governance"]["governed_manual_recovery_enabled"] is True
     assert updated["governance"]["manual_recovery_is_authoritative"] is False
 

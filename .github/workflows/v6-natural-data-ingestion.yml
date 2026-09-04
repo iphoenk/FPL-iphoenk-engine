@@ -19,6 +19,8 @@ on:
         description: "For manual_recovery only: type RECOVER_V6"
         required: false
         type: string
+  issue_comment:
+    types: [created]
   schedule:
     - cron: "23 * * * *"
     - cron: "53 * * * *"
@@ -38,6 +40,13 @@ env:
 
 jobs:
   collect:
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (
+        github.event.issue.number == 431 &&
+        github.actor == github.repository_owner &&
+        startsWith(github.event.comment.body, '/v6-master-acquire')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -93,6 +102,33 @@ jobs:
               raise SystemExit(f"Unsupported V6 governed dispatch mode: {mode}")
           PY
 
+      - name: Authorize FPL Master issue-command orchestration
+        if: github.event_name == 'issue_comment'
+        shell: bash
+        env:
+          V6_COMMENT_BODY: ${{ github.event.comment.body }}
+          V6_ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          policy = json.loads(Path(os.environ["V6_SCHEDULE_POLICY"]).read_text(encoding="utf-8"))
+          master = dict(policy.get("master_orchestrated") or {})
+          if master.get("enabled") is not True:
+              raise SystemExit("V6 master orchestration is disabled")
+          if os.environ.get("GITHUB_ACTOR") != os.environ.get("GITHUB_REPOSITORY_OWNER"):
+              raise SystemExit("V6 Master issue command is restricted to repository owner")
+          if int(os.environ.get("V6_ISSUE_NUMBER") or "0") != int(master.get("control_issue_number") or 0):
+              raise SystemExit("V6 Master issue number mismatch")
+          body = str(os.environ.get("V6_COMMENT_BODY") or "").strip()
+          command = str(master.get("issue_comment_command") or "")
+          if not body.startswith(command):
+              raise SystemExit("V6 Master issue command mismatch")
+          print("Governed V6 FPL Master issue-command orchestration authorized")
+          PY
+
       - name: Hydrate previous V6 last-good snapshot
         shell: bash
         run: |
@@ -140,6 +176,17 @@ jobs:
           }
           if event_name == "schedule":
               kind = scheduled_kinds.get(schedule, "scheduled_unknown")
+          elif event_name == "issue_comment":
+              master = dict(policy.get("master_orchestrated") or {})
+              issue = dict(event.get("issue") or {})
+              comment = dict(event.get("comment") or {})
+              if (
+                  int(issue.get("number") or 0) == int(master.get("control_issue_number") or 0)
+                  and str(comment.get("body") or "").strip().startswith(str(master.get("issue_comment_command") or ""))
+              ):
+                  kind = str(master.get("schedule_kind") or "master_orchestrated")
+              else:
+                  kind = "governed_issue_command_unknown"
           elif event_name == "workflow_dispatch":
               mode = str((event.get("inputs") or {}).get("mode") or "")
               if mode == "master_orchestrated" and (policy.get("master_orchestrated") or {}).get("enabled") is True:
@@ -266,7 +313,7 @@ jobs:
               assert control["authoritative_runtime_snapshot"] is True
               assert control["manual_recovery"] is False
               assert manifest["governance"]["production_ingestion_schedule_only"] is True
-          elif event_name == "workflow_dispatch" and os.environ["V6_SCHEDULE_KIND"] == "master_orchestrated":
+          elif event_name in {"workflow_dispatch", "issue_comment"} and os.environ["V6_SCHEDULE_KIND"] == "master_orchestrated":
               assert control["scheduled_cycle"] is False
               assert control["master_orchestrated"] is True
               assert control["authoritative_runtime_snapshot"] is True

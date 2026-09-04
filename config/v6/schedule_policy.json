@@ -24,7 +24,8 @@
     "authoritative_operational_triggers": [
       "schedule:primary",
       "schedule:recovery",
-      "workflow_dispatch:master_orchestrated"
+      "workflow_dispatch:master_orchestrated",
+      "issue_comment:master_orchestrated"
     ],
     "master_orchestrated_is_authoritative": true,
     "master_orchestrated_never_masks_natural_scheduler_evidence": true
@@ -36,6 +37,8 @@
     "counts_as_completed_operational_slot": true,
     "counts_as_completed_scheduled_slot": false,
     "allowed_actor": "repository_owner",
-    "reason_required": true
+    "reason_required": true,
+    "control_issue_number": 431,
+    "issue_comment_command": "/v6-master-acquire"
   }
 }

@@ -56,7 +56,7 @@ def scheduled_slot_already_completed(
     kind = str(schedule_kind or os.getenv("V6_SCHEDULE_KIND") or "")
     authoritative_invocation = (
         event == "schedule"
-        or (event == "workflow_dispatch" and kind == "master_orchestrated")
+        or (event in {"workflow_dispatch", "issue_comment"} and kind == "master_orchestrated")
     )
     if not authoritative_invocation:
         return False
@@ -92,7 +92,7 @@ def build_runtime_control(
         or os.getenv("V6_SCHEDULE_KIND")
         or ("scheduled" if scheduled_cycle else "manual")
     )
-    master_orchestrated = event == "workflow_dispatch" and kind == "master_orchestrated"
+    master_orchestrated = event in {"workflow_dispatch", "issue_comment"} and kind == "master_orchestrated"
     manual_recovery = event == "workflow_dispatch" and kind == "manual_recovery"
     authoritative_runtime_snapshot = (
         (scheduled_cycle and kind in {"primary", "recovery"})

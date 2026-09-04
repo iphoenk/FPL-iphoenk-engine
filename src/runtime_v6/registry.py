@@ -17,6 +17,9 @@ EXPECTED_SOURCE_IDS = (
     "transfermarkt", "whoscored", "espn", "football_data_org", "vaastav_fpl",
 )
 
+_ALLOWED_ACQUISITION_KINDS = {"derived", "rest_json", "rest_csv", "html_scrape", "rss", "generic_http"}
+_ALLOWED_VERIFICATION_STATUSES = {"PENDING", "VERIFIED", "FAILED"}
+
 
 class RegistryError(ValueError):
     pass
@@ -56,11 +59,48 @@ def _apply_overrides(payload: dict[str, Any], path: Path = OVERRIDES) -> dict[st
     return out
 
 
+def _infer_acquisition_kind(source: dict[str, Any]) -> str:
+    if source.get("adapter") == "official_price_predictor":
+        return "derived"
+    if source.get("adapter") == "official_fpl":
+        return "rest_json"
+    expects = {str(request.get("expect") or "").lower() for request in source.get("requests") or []}
+    if expects == {"json"}:
+        return "rest_json"
+    if expects == {"csv"}:
+        return "rest_csv"
+    return "generic_http"
+
+
+def _normalize_ingestion_policy(payload: dict[str, Any]) -> dict[str, Any]:
+    out = deepcopy(payload)
+    normalized = []
+    for source in out.get("sources") or []:
+        row = deepcopy(source)
+        row.setdefault("acquisition_kind", _infer_acquisition_kind(row))
+        normalized.append(row)
+    out["sources"] = normalized
+    return out
+
+
 def load_registry(path: Path = CONFIG) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     payload = _apply_overrides(payload)
+    payload = _normalize_ingestion_policy(payload)
     validate_registry(payload)
     return payload
+
+
+def _positive_int(source: dict[str, Any], key: str) -> None:
+    value = source.get(key)
+    if value is None:
+        return
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise RegistryError(f"invalid {key}: {source['id']}") from exc
+    if parsed <= 0:
+        raise RegistryError(f"invalid {key}: {source['id']}")
 
 
 def validate_registry(payload: dict[str, Any]) -> None:
@@ -85,6 +125,16 @@ def validate_registry(payload: dict[str, Any]) -> None:
             raise RegistryError(f"incomplete source metadata: {source.get('id')}")
         if source["adapter"] == "http" and not source.get("requests"):
             raise RegistryError(f"http source has no requests: {source['id']}")
+        if source.get("acquisition_kind") not in _ALLOWED_ACQUISITION_KINDS:
+            raise RegistryError(f"unsupported acquisition kind: {source['id']}")
+        for key in ("poll_interval_minutes", "poll_interval_minutes_deadline_window", "daily_request_budget"):
+            _positive_int(source, key)
+        if source.get("content_hash_dedup") not in {None, True, False}:
+            raise RegistryError(f"invalid content_hash_dedup: {source['id']}")
+        if source.get("verification_required") is True:
+            status = str(source.get("verification_status") or "").upper()
+            if status not in _ALLOWED_VERIFICATION_STATUSES:
+                raise RegistryError(f"verification status required: {source['id']}")
         auth = source.get("auth")
         if auth:
             if auth.get("mode") not in {"header", "query"}:

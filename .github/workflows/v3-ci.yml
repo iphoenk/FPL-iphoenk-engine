@@ -2,13 +2,40 @@ name: V3 CI
 
 on:
   pull_request:
+    paths-ignore:
+      - 'data/**'
+      - 'src/runtime_v6/**'
+      - 'config/v6/**'
+      - 'docs/V6_*.md'
+      - 'tests/test_data_ingestion_engine.py'
+      - 'tests/test_adaptive_polling.py'
+      - 'tests/test_weather_context.py'
+      - 'tests/test_data_platform_*.py'
+      - 'tests/test_v6_architecture_independence.py'
+      - 'requirements-v6.lock'
+      - 'requirements-v6-ci.lock'
+      - '.github/workflows/v6-ci.yml'
+      - '.github/workflows/v6-hourly-data-ingestion.yml'
+      - '.github/workflows/v4-prediction.yml'
+      - '.github/workflows/v4-timing-probe.yml'
+      - '.github/workflows/fpl-engine-recovery.yml'
+      - '.github/workflows/v5-evidence-dispatcher.yml'
   push:
     branches: [main]
     paths-ignore:
       - 'data/**'
-      # Default-branch workflows below are version-owned and do not change V3
-      # code, contracts, or runtime semantics. PR validation remains broad; only
-      # post-merge main execution is suppressed for strictly isolated changes.
+      - 'src/runtime_v6/**'
+      - 'config/v6/**'
+      - 'docs/V6_*.md'
+      - 'tests/test_data_ingestion_engine.py'
+      - 'tests/test_adaptive_polling.py'
+      - 'tests/test_weather_context.py'
+      - 'tests/test_data_platform_*.py'
+      - 'tests/test_v6_architecture_independence.py'
+      - 'requirements-v6.lock'
+      - 'requirements-v6-ci.lock'
+      - '.github/workflows/v6-ci.yml'
+      - '.github/workflows/v6-hourly-data-ingestion.yml'
       - '.github/workflows/v4-prediction.yml'
       - '.github/workflows/v4-timing-probe.yml'
       - '.github/workflows/fpl-engine-recovery.yml'
@@ -23,7 +50,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  v3-verify:
+    name: v3-verify
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:

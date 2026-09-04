@@ -10,34 +10,54 @@ Consumers such as V3, V4, reporting, price models, and the Master Monitor may re
 
 ## Production schedule
 
-The production workflow is schedule-only:
+The authoritative production cadence is scheduler-owned and intentionally offset from other repository cron traffic:
 
-- primary acquisition: minute `00` of every UTC hour;
-- idempotent recovery acquisition: minute `12` of every UTC hour.
+- primary acquisition: minute `05` of every UTC hour;
+- idempotent recovery acquisition: minute `35` of every UTC hour.
 
-Both invocations belong to the same logical hourly scheduler slot. If the primary cycle already published that slot, the recovery invocation exits without a second acquisition. Normal pushes and pull requests never trigger production acquisition. CI is a separate read-only workflow.
+Both scheduled invocations belong to the same logical hourly scheduler slot. If the primary cycle already published that slot, the scheduled recovery invocation exits without a second acquisition. Normal pushes and pull requests never trigger production acquisition. CI is a separate read-only workflow.
+
+The schedule expressions and emergency-recovery policy are declared in `config/v6/schedule_policy.json`. GitHub's `on.schedule` expressions must remain literal in the workflow, so contract tests verify that those trigger expressions exactly match the policy file. The classifier reads the policy file instead of duplicating cron literals in executable logic.
 
 `runtime_control` records the logical slot, GitHub run ID, schedule kind, schedule lag, duplicate detection, and missed-cycle state. Missed scheduled cycles are explicit control-plane evidence and are never hidden by manual or off-cadence activity.
+
+## Governed manual recovery
+
+`workflow_dispatch` exists only as an emergency recovery valve. It is not a substitute for the scheduler and is deliberately non-authoritative.
+
+A manual recovery:
+
+- requires an explicit audit reason and the confirmation phrase defined by `config/v6/schedule_policy.json`;
+- is restricted by the workflow contract to the repository owner;
+- still uses the same isolated dedicated V6 GitHub App publisher and governed `runtime-data-v6` branch;
+- is published as `schedule_kind: manual_recovery` with `scheduled_cycle: false`;
+- does not advance `last_scheduled_cycle_at` and does not count as a completed scheduled slot;
+- is manifested as AMBER/non-authoritative rather than pretending to restore scheduled health;
+- remains invalid as primary V6 consumer authority until a real `schedule` cycle succeeds.
+
+This recovery path can refresh last-good evidence and caches during an incident without hiding `MISSED_SCHEDULED_CYCLE` evidence or creating false freshness. Consumers continue to use their documented minimum-scope direct fallback whenever the latest V6 snapshot is stale or invalid.
 
 ## Production workflow boundaries
 
 The production workflow has two jobs with different authority:
 
-1. `collect` is read-only. It hydrates the previous last-good snapshot, runs a lightweight registry/runtime preflight, acquires active sources, applies runtime-control health, validates publish integrity, and transfers one verified artifact.
+1. `collect` is read-only. It hydrates the previous last-good snapshot, runs a lightweight registry/runtime preflight, acquires active sources, applies runtime-control health, validates publish integrity, and transfers one verified artifact. Governed manual recovery is authorized before acquisition and remains non-authoritative in runtime control.
 2. `publish` is the only writer. It requires the `v6-runtime-publisher` environment and a dedicated V6 GitHub App token. There is no generic `github.token` publisher fallback. It publishes an atomic orphan snapshot to `runtime-data-v6` using a branch lease and then verifies the exact published tree.
 
 Runtime dependencies are installed from `requirements.lock` with hashes. Full unit and regression contracts run in `v6-ci.yml` using `requirements-ci.lock`; the hourly acquisition hot path does not rerun the unit-test suite.
 
 ## Registry and configuration
 
-V6 configuration is layered and schema-versioned:
+V6 source configuration is layered and schema-versioned:
 
 1. `config/v6/source_registry.json` contains canonical base definitions.
 2. `config/v6/source_additions.json` contains additive source definitions.
 3. `config/v6/source_overrides.json` is a repair/incubation layer, not a second canonical registry.
 4. `config/v6/source_activation.json` owns disabled, reference-only, activation constraints, and source tiers.
 
-The loader fails closed on schema mismatch, unknown source IDs, duplicate IDs, invalid auth/request configuration, missing required sources, invalid activation overlap, dependency gaps, and dependency cycles. The resulting dependency DAG is converted into topological execution layers. The effective registry is published as `data/v6/evidence/resolved_registry.json` for drift review.
+Operational scheduler policy is separately owned by `config/v6/schedule_policy.json`; it does not define source membership and therefore is not a second source registry.
+
+The loader fails closed on schema mismatch, unknown source IDs, duplicate IDs, invalid auth/request configuration, missing required sources, invalid activation overlap, dependency gaps, and dependency cycles. The resulting dependency DAG is converted into topological execution layers. The effective source registry is published as `data/v6/evidence/resolved_registry.json` for drift review.
 
 Stable endpoint repairs should be promoted out of `source_overrides.json` into their canonical source definition after they have proven stable. Overrides should remain a small repair/incubation surface.
 
@@ -108,7 +128,7 @@ Fuzzy player-name matching is not allowed in V6 identity publication. Partial de
 
 The Master Monitor and other consumers apply a hard V6 freshness threshold of 90 minutes unless a stricter consumer contract is explicitly supplied. A static historical manifest that says GREEN is not sufficient. The consumer must verify current age, runtime-control provenance, exact source set, exact resolved registry, identity consistency, stored tree digest, recomputed tree digest, and control/critical failures.
 
-If a published V6 snapshot is fresh and usable, V6 is the primary data acquisition authority and consumers should not duplicate upstream retrieval. If it is stale or invalid, only the consumer's documented minimum-scope direct fallback is eligible.
+Only a real scheduled snapshot with valid `primary` or `recovery` provenance may become primary V6 consumer authority. A governed `manual_recovery` snapshot remains invalid for that role by design. If the latest V6 snapshot is stale or invalid, only the consumer's documented minimum-scope direct fallback is eligible.
 
 ## Runtime branch governance
 

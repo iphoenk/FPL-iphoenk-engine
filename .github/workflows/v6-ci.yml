@@ -2,9 +2,12 @@ name: FPL V6 CI contracts
 
 on:
   pull_request:
+    # GitHub scopes path filters per event. Keep this list identical to
+    # push.paths below; config/v6/** includes schedule_policy.json.
     paths:
       - "config/v6/**"
       - "config/venues/**"
+      - "docs/V6_*.md"
       - "src/runtime_v6/**"
       - "tests/test_data_ingestion_engine.py"
       - "tests/test_adaptive_polling.py"
@@ -19,9 +22,12 @@ on:
       - ".github/workflows/v6-hourly-data-ingestion.yml"
   push:
     branches: [main]
+    # Intentionally mirrors pull_request.paths above. Do not change one side
+    # without the other; keeping event-local filters avoids repo-wide V6 CI.
     paths:
       - "config/v6/**"
       - "config/venues/**"
+      - "docs/V6_*.md"
       - "src/runtime_v6/**"
       - "tests/test_data_ingestion_engine.py"
       - "tests/test_adaptive_polling.py"

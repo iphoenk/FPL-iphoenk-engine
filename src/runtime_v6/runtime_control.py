@@ -81,6 +81,8 @@ def build_runtime_control(
         or os.getenv("V6_SCHEDULE_KIND")
         or ("scheduled" if scheduled_cycle else "manual")
     )
+    manual_recovery = event == "workflow_dispatch" and kind == "manual_recovery"
+    authoritative_runtime_snapshot = scheduled_cycle and kind in {"primary", "recovery"}
     previous = dict(previous_manifest or {})
     previous_control = dict(previous.get("runtime_control") or {})
 
@@ -109,17 +111,26 @@ def build_runtime_control(
     else:
         last_scheduled_cycle = previous_scheduled
 
-    health = "RED" if missed_cycle_count else ("AMBER" if duplicate_scheduled_cycle else "GREEN")
+    if scheduled_cycle:
+        health = "RED" if missed_cycle_count else ("AMBER" if duplicate_scheduled_cycle else "GREEN")
+    else:
+        # A governed manual recovery is deliberately non-authoritative. It may
+        # refresh last-good evidence/caches, but consumers must wait for a real
+        # scheduled cycle before treating V6 as fresh production authority.
+        health = "AMBER"
     expected = slot if scheduled_cycle else None
     schedule_lag_seconds = max(0.0, (current - slot).total_seconds()) if scheduled_cycle else None
 
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "health": health,
         "event_name": event,
         "schedule_kind": kind,
         "run_id": str(run_id or os.getenv("GITHUB_RUN_ID") or "") or None,
         "scheduled_cycle": scheduled_cycle,
+        "manual_recovery": manual_recovery,
+        "authoritative_runtime_snapshot": authoritative_runtime_snapshot,
+        "counts_as_completed_scheduled_slot": scheduled_cycle,
         "scheduler_interval_minutes": scheduler_interval,
         "expected_cycle_at": expected.isoformat() if expected else None,
         "cycle_observed_at": current.isoformat(),
@@ -160,6 +171,8 @@ def apply_runtime_control(
         control_failures.append("MISSED_SCHEDULED_CYCLE")
     if control["duplicate_scheduled_cycle"]:
         control_failures.append("DUPLICATE_SCHEDULED_CYCLE")
+    if control["manual_recovery"]:
+        control_failures.append("NON_AUTHORITATIVE_MANUAL_RECOVERY")
 
     out["runtime_control"] = control
     out["control_failures"] = control_failures
@@ -169,7 +182,10 @@ def apply_runtime_control(
     governance = dict(out.get("governance") or {})
     governance.update(
         {
-            "production_ingestion_schedule_only": True,
+            "production_ingestion_schedule_only": control["scheduled_cycle"],
+            "production_authoritative_snapshots_require_schedule": True,
+            "governed_manual_recovery_enabled": True,
+            "manual_recovery_is_authoritative": False,
             "single_logical_acquisition_per_scheduler_slot": True,
             "runtime_schedule_health_is_manifested": True,
             "scheduled_recovery_is_idempotent": True,

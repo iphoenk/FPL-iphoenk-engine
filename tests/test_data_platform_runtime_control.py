@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -59,6 +61,8 @@ def test_runtime_control_detects_missed_scheduled_cycle():
     assert control["expected_cycle_at"] == "2026-09-04T08:00:00+00:00"
     assert control["last_scheduled_cycle_at"] == "2026-09-04T08:00:00+00:00"
     assert control["schedule_kind"] == "primary"
+    assert control["authoritative_runtime_snapshot"] is True
+    assert control["manual_recovery"] is False
 
 
 def test_manual_cycle_does_not_mask_missing_scheduled_baseline():
@@ -72,9 +76,14 @@ def test_manual_cycle_does_not_mask_missing_scheduled_baseline():
         scheduler_interval_minutes=60,
         now=datetime(2026, 9, 4, 7, 30, tzinfo=timezone.utc),
         event_name="workflow_dispatch",
+        schedule_kind="manual_recovery",
     )
 
+    assert control["health"] == "AMBER"
     assert control["scheduled_cycle"] is False
+    assert control["manual_recovery"] is True
+    assert control["authoritative_runtime_snapshot"] is False
+    assert control["counts_as_completed_scheduled_slot"] is False
     assert control["last_scheduled_cycle_at"] == "2026-09-04T06:00:00+00:00"
     assert control["missed_cycle"] is False
 
@@ -89,7 +98,7 @@ def test_recovery_schedule_skips_when_primary_already_published_same_slot():
     assert scheduled_slot_already_completed(
         previous,
         scheduler_interval_minutes=60,
-        now=datetime(2026, 9, 4, 8, 12, tzinfo=timezone.utc),
+        now=datetime(2026, 9, 4, 8, 35, tzinfo=timezone.utc),
         event_name="schedule",
     ) is True
 
@@ -104,7 +113,7 @@ def test_recovery_schedule_runs_when_current_slot_has_not_been_published():
     assert scheduled_slot_already_completed(
         previous,
         scheduler_interval_minutes=60,
-        now=datetime(2026, 9, 4, 8, 12, tzinfo=timezone.utc),
+        now=datetime(2026, 9, 4, 8, 35, tzinfo=timezone.utc),
         event_name="schedule",
     ) is False
 
@@ -150,21 +159,63 @@ def test_runtime_control_escalates_manifest_overall_on_missed_cycle():
     assert updated["control_failures"] == ["MISSED_SCHEDULED_CYCLE"]
     assert updated["paths"]["runtime_control"] == "data/v6/health/runtime_control.json"
     assert updated["governance"]["production_ingestion_schedule_only"] is True
+    assert updated["governance"]["production_authoritative_snapshots_require_schedule"] is True
     assert updated["governance"]["scheduled_recovery_is_idempotent"] is True
 
 
-def test_production_workflow_is_scheduler_only_and_not_triggered_by_ad_hoc_events():
-    workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
+def test_manual_recovery_is_non_authoritative_and_manifested_amber():
+    manifest = {
+        "overall": "GREEN",
+        "polling": {"scheduler_interval_minutes": 60},
+        "paths": {},
+        "governance": {},
+    }
+    previous = {
+        "runtime_control": {
+            "last_scheduled_cycle_at": "2026-09-04T06:00:00+00:00"
+        }
+    }
 
-    assert 'cron: "0 * * * *"' in workflow
-    assert 'cron: "12 * * * *"' in workflow
-    assert "workflow_dispatch:" not in workflow
+    updated, control = apply_runtime_control(
+        manifest,
+        previous,
+        now=datetime(2026, 9, 4, 8, 20, tzinfo=timezone.utc),
+        event_name="workflow_dispatch",
+        schedule_kind="manual_recovery",
+    )
+
+    assert control["health"] == "AMBER"
+    assert control["scheduled_cycle"] is False
+    assert control["manual_recovery"] is True
+    assert control["last_scheduled_cycle_at"] == "2026-09-04T06:00:00+00:00"
+    assert updated["overall"] == "AMBER"
+    assert updated["control_failures"] == ["NON_AUTHORITATIVE_MANUAL_RECOVERY"]
+    assert updated["governance"]["production_ingestion_schedule_only"] is False
+    assert updated["governance"]["production_authoritative_snapshots_require_schedule"] is True
+    assert updated["governance"]["governed_manual_recovery_enabled"] is True
+    assert updated["governance"]["manual_recovery_is_authoritative"] is False
+
+
+def test_production_workflow_has_off_minute_schedule_and_governed_manual_recovery():
+    workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
+    policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
+    workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
+
+    assert workflow_crons == [policy["primary_cron_utc"], policy["recovery_cron_utc"]]
+    assert workflow_crons == ["5 * * * *", "35 * * * *"]
+    assert "workflow_dispatch:" in workflow
+    assert "Authorize governed manual recovery" in workflow
+    assert "RECOVER_V6" in workflow
+    assert "schedule_policy.json" in workflow
+    assert "manual_recovery" in workflow
     assert "  push:" not in workflow
     assert "  pull_request:" not in workflow
     assert "python -m src.runtime_v6.collector" in workflow
     assert "python -m src.runtime_v6.runtime_control" in workflow
     assert "scheduled_slot_already_completed" in workflow
     assert "steps.slot_guard.outputs.skip != 'true'" in workflow
+    assert policy["manual_recovery"]["authoritative_runtime_snapshot"] is False
+    assert policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
 
 
 def test_v6_ci_never_acquires_or_writes_runtime_branch():

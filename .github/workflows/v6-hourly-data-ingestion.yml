@@ -111,21 +111,32 @@ jobs:
           print(f"logical scheduler slot already published: {skip}")
           PY
 
-      - name: Install dependencies
+      - name: Install locked runtime dependencies
         if: steps.slot_guard.outputs.skip != 'true'
-        run: pip install -r requirements.txt pytest
+        run: python -m pip install --require-hashes -r requirements.lock
 
-      - name: Validate V6 production contracts
+      - name: Validate V6 production preflight
         if: steps.slot_guard.outputs.skip != 'true'
-        run: >-
-          python -m pytest -q
-          tests/test_data_ingestion_engine.py
-          tests/test_adaptive_polling.py
-          tests/test_weather_context.py
-          tests/test_data_platform_hardening.py
-          tests/test_data_platform_runtime_control.py
-          tests/test_data_platform_publish_integrity.py
-          tests/test_data_platform_identity.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m compileall -q src/runtime_v6
+          python - <<'PY'
+          from src.runtime_v6.registry import dependency_layers, load_registry
+
+          registry = load_registry()
+          assert registry["engine"] == "V6_FRESH_DATA_PLATFORM"
+          assert registry["policy"]["data_only"] is True
+          assert registry["policy"]["decision_authority"] == "NONE"
+          assert registry["policy"]["prediction_authority"] == "NONE"
+          assert registry["policy"]["optimizer_authority"] == "NONE"
+          assert dependency_layers(registry)
+          print({
+              "active_sources": registry["activation"]["active_source_count"],
+              "required_sources": registry["activation"]["required_active_sources"],
+              "dependency_layers": dependency_layers(registry),
+          })
+          PY
 
       - name: Run active V6 acquisition cycle
         if: steps.slot_guard.outputs.skip != 'true'
@@ -169,6 +180,7 @@ jobs:
           assert identity["governance"]["fuzzy_name_matching_allowed"] is False
           assert integrity["status"] == "PASS", integrity
           assert integrity["current_source_files_exact"] is True
+          assert integrity["resolved_registry_exact"] is True
           assert integrity["identity_map_consistent"] is True
           assert control["event_name"] == os.environ["GITHUB_EVENT_NAME"]
           assert control["schedule_kind"] == os.environ["V6_SCHEDULE_KIND"]
@@ -213,23 +225,19 @@ jobs:
       contents: write
       actions: read
     steps:
-      - name: Select V6 publisher identity
-        id: publisher_mode
+      - name: Require dedicated V6 publisher app configuration
         shell: bash
         env:
           V6_RUNTIME_APP_ID: ${{ vars.V6_RUNTIME_APP_ID }}
+          V6_RUNTIME_APP_PRIVATE_KEY: ${{ secrets.V6_RUNTIME_APP_PRIVATE_KEY }}
         run: |
-          if [ -n "$V6_RUNTIME_APP_ID" ]; then
-            echo "use_app=true" >> "$GITHUB_OUTPUT"
-            echo "mode=dedicated_v6_github_app" >> "$GITHUB_OUTPUT"
-          else
-            echo "use_app=false" >> "$GITHUB_OUTPUT"
-            echo "mode=scoped_github_token_fallback" >> "$GITHUB_OUTPUT"
-          fi
+          set -euo pipefail
+          test -n "$V6_RUNTIME_APP_ID"
+          test -n "$V6_RUNTIME_APP_PRIVATE_KEY"
+          echo "Dedicated V6 publisher app configuration present"
 
       - name: Mint governed V6 runtime publisher token
         id: runtime_app_token
-        if: steps.publisher_mode.outputs.use_app == 'true'
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
         with:
           app-id: ${{ vars.V6_RUNTIME_APP_ID }}
@@ -242,7 +250,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
-          token: ${{ steps.runtime_app_token.outputs.token || github.token }}
+          token: ${{ steps.runtime_app_token.outputs.token }}
           persist-credentials: false
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
@@ -276,6 +284,7 @@ jobs:
           assert manifest["governance"]["prediction_authority"] == "NONE"
           assert manifest["governance"]["optimizer_authority"] == "NONE"
           assert integrity["status"] == "PASS", integrity
+          assert integrity["resolved_registry_exact"] is True
           print({"overall": manifest["overall"], "tree_sha256": integrity.get("tree_sha256")})
           PY
 
@@ -290,7 +299,7 @@ jobs:
       - name: Publish atomic V6 runtime snapshot
         shell: bash
         env:
-          PUBLISH_TOKEN: ${{ steps.runtime_app_token.outputs.token || github.token }}
+          PUBLISH_TOKEN: ${{ steps.runtime_app_token.outputs.token }}
         run: |
           set -euo pipefail
           publish_tree="$RUNNER_TEMP/v6-runtime-worktree"
@@ -304,7 +313,7 @@ jobs:
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           tar -xf "$RUNNER_TEMP/v6-runtime-publication/v6-runtime-data.tar"
           git add -f data/v6
-          git commit -m "data(v6): atomic hourly snapshot ${{ github.run_id }} [${{ needs.collect.outputs.schedule_kind }}] [${{ steps.publisher_mode.outputs.mode }}]"
+          git commit -m "data(v6): atomic hourly snapshot ${{ github.run_id }} [${{ needs.collect.outputs.schedule_kind }}] [dedicated_v6_github_app]"
           published_sha="$(git rev-parse HEAD)"
           basic_auth="$(printf 'x-access-token:%s' "$PUBLISH_TOKEN" | base64 -w0)"
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $basic_auth" push \
@@ -344,11 +353,13 @@ jobs:
           assert manifest["governance"]["data_only"] is True
           assert manifest["governance"]["decision_authority"] == "NONE"
           assert integrity["status"] == "PASS", integrity
+          assert integrity["resolved_registry_exact"] is True
           print({
               "published": True,
               "overall": manifest["overall"],
               "generated_at": manifest["generated_at"],
               "schedule_kind": manifest["runtime_control"]["schedule_kind"],
+              "publisher_mode": "dedicated_v6_github_app",
               "tree_sha256": integrity.get("tree_sha256"),
           })
           PY

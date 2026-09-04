@@ -31,7 +31,8 @@ def test_registry_keeps_dynamic_active_contract_and_adds_ingestion_metadata():
     assert sources["official_fpl"]["acquisition_kind"] == "rest_json"
     assert sources["understat"]["acquisition_kind"] == "html_scrape"
     assert sources["understat"]["content_hash_dedup"] is True
-    assert sources["ffhub"]["activation_constraint"] == "FREE_OR_PUBLIC_PARTIAL_ONLY_NO_PRO_UPGRADE"
+    assert "ffhub" in REFERENCE_ONLY_SOURCE_IDS
+    assert "fffix" in REFERENCE_ONLY_SOURCE_IDS
     assert sources["open_meteo_weather"]["poll_interval_minutes"] == 60
     assert sources["solio_analytics"]["poll_interval_minutes"] == 240
     assert sources["solio_analytics"]["poll_interval_minutes_deadline_window"] == 60

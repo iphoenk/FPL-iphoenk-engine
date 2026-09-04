@@ -60,6 +60,7 @@ def build_source_health(config: dict[str, Any], results: dict[str, dict[str, Any
         check_age = _minutes_since(checked_at)
         max_data_age = _max_data_age_minutes(payload)
         coverage = payload.get("coverage") or {}
+        polling = payload.get("polling") or {}
 
         sources.append(
             {
@@ -78,20 +79,29 @@ def build_source_health(config: dict[str, Any], results: dict[str, dict[str, Any
                 "check_freshness_target_minutes": source.get("check_freshness_minutes"),
                 "duration_ms": payload.get("duration_ms"),
                 "coverage": coverage,
+                "polling": {
+                    "acquisition_kind": source.get("acquisition_kind"),
+                    "poll_interval_minutes": polling.get("poll_interval_minutes"),
+                    "deadline_window": polling.get("deadline_window"),
+                    "skipped": polling.get("skipped", False),
+                    "reason": polling.get("reason"),
+                    "last_polled_at": polling.get("last_polled_at"),
+                },
+                "budget": payload.get("budget"),
             }
         )
 
     overall = "RED" if counts.get("RED", 0) else ("AMBER" if counts.get("AMBER", 0) else "GREEN")
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "generated_at": utc_now(),
         "overall": overall,
         "counts": counts,
         "source_count": len(sources),
         "sources": sources,
         "semantics": {
-            "GREEN": "Current cycle acquisition or conditional revalidation succeeded. Unchanged upstream data is still GREEN.",
-            "AMBER": "Usable but partial, cached, credential-required, truncated, or otherwise degraded.",
+            "GREEN": "Latest required acquisition/revalidation succeeded, or the source is intentionally not due yet under its registry polling contract. Unchanged upstream data is not degraded.",
+            "AMBER": "Usable but partial/cached, credential or verification required, budget exhausted, truncated, or otherwise degraded.",
             "RED": "Critical source has no usable current or cached data.",
         },
     }

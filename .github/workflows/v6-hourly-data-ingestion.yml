@@ -114,6 +114,7 @@ jobs:
           tests/test_data_platform_hardening.py
           tests/test_data_platform_runtime_control.py
           tests/test_data_platform_publish_integrity.py
+          tests/test_data_platform_identity.py
 
       - name: Run active V6 acquisition cycle
         if: steps.slot_guard.outputs.skip != 'true'
@@ -138,6 +139,7 @@ jobs:
 
           manifest = json.loads(Path("data/v6/manifest.json").read_text())
           integrity = json.loads(Path("data/v6/health/publish_integrity.json").read_text())
+          identity = json.loads(Path("data/v6/evidence/player_identity_map.json").read_text())
           registry = load_registry()
           expected_active = registry["activation"]["active_source_count"]
           required_active = registry["activation"]["required_active_sources"]
@@ -151,8 +153,12 @@ jobs:
           assert manifest["governance"]["single_logical_acquisition_per_scheduler_slot"] is True
           assert manifest["governance"]["scheduled_recovery_is_idempotent"] is True
           assert manifest["governance"]["publish_integrity_required"] is True
+          assert manifest["governance"]["identity_mapping_is_deterministic_only"] is True
+          assert manifest["governance"]["fuzzy_identity_matching"] is False
+          assert identity["governance"]["fuzzy_name_matching_allowed"] is False
           assert integrity["status"] == "PASS", integrity
           assert integrity["current_source_files_exact"] is True
+          assert integrity["identity_map_consistent"] is True
           assert control["event_name"] == os.environ["GITHUB_EVENT_NAME"]
           assert control["schedule_kind"] == os.environ["V6_SCHEDULE_KIND"]
           assert control["scheduled_cycle"] is (os.environ["GITHUB_EVENT_NAME"] == "schedule")
@@ -165,6 +171,7 @@ jobs:
               "control_failures": manifest["control_failures"],
               "runtime_control": control,
               "publish_integrity": integrity,
+              "identity_coverage": identity["coverage"],
               "activation": manifest["activation"],
           }, indent=2))
           PY

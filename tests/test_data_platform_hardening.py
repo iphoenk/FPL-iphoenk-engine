@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from copy import deepcopy
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -21,14 +22,17 @@ from src.runtime_v6.registry import (
 )
 
 
-def test_workflow_cron_matches_registry_cadence_metadata():
-    registry = load_registry()
+def test_workflow_cron_matches_v6_schedule_policy():
     workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
-    cron = str((registry.get("cadence") or {}).get("workflow_cron_utc") or "")
+    policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
+    workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
-    assert cron == "0 * * * *"
-    assert f'cron: "{cron}"' in workflow
-    assert 'cron: "12 * * * *"' in workflow
+    assert policy["schema_version"] == 1
+    assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
+    assert workflow_crons == [policy["primary_cron_utc"], policy["recovery_cron_utc"]]
+    assert workflow_crons == ["5 * * * *", "35 * * * *"]
+    assert policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
+    assert policy["manual_recovery"]["authoritative_runtime_snapshot"] is False
 
 
 def test_required_platform_sources_are_active_but_context_source_is_not_availability_critical():

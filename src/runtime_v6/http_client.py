@@ -7,6 +7,7 @@ import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
 
@@ -29,10 +30,19 @@ def sha256_bytes(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def _redact_url(url: str, secret: str | None) -> str:
-    if not secret:
-        return url
-    return url.replace(secret, "<redacted>")
+def _redact_url(url: str, secret: str | None, query_key: str | None = None) -> str:
+    """Redact credentials without depending on their encoded representation."""
+    safe = url
+    if query_key:
+        parts = urlsplit(safe)
+        query = [
+            (key, "<redacted>" if key == query_key else value)
+            for key, value in parse_qsl(parts.query, keep_blank_values=True)
+        ]
+        safe = urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+    if secret:
+        safe = safe.replace(secret, "<redacted>")
+    return safe
 
 
 def _retry_delay(response: requests.Response | None, base: float, attempt: int) -> float:
@@ -284,7 +294,8 @@ class AcquisitionClient:
             }
 
         checked_at = utc_now()
-        safe_url = _redact_url(str(response.url), secret)
+        query_auth_name = str(auth.get("name")) if auth.get("mode") == "query" and auth.get("name") else None
+        safe_url = _redact_url(str(response.url), secret, query_auth_name)
 
         if response.status_code == 304 and previous:
             return {
